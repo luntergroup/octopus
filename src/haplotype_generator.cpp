@@ -419,6 +419,7 @@ void HaplotypeGenerator::update_next_active_region() const
                     } else if (begins_before(current_active_region_, *next_active_region_)) {
                         const auto final_indicator_region = overlapped_region(current_active_region_,
                                                                               *next_active_region_);
+                        
                         const auto& first_indicator_allele = contained_range(initial_indicator_alleles,
                                                                              final_indicator_region).front();
                         

@@ -258,14 +258,19 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
                 const auto phase = find_phase_region(p.second, call_region);
                 
                 if (phase) {
-                    if (begins_before(phase->get().region, calling_region)
-                        && !is_before(phase->get().region, calling_region)) {
-                        const Phaser::PhaseSet::PhaseRegion clipped_phase {
-                            expand_lhs(phase->get().region, begin_distance(calling_region, phase->get().region)),
-                            phase->get().score
-                        };
+                    if (begins_before(phase->get().region, calling_region)) {
+                        const auto output_call_region = overlapped_region(calling_region, phase->get().region);
                         
-                        set_phase(p.first, clipped_phase, call_regions, call);
+                        const auto output_calls = overlap_range(call_regions, output_call_region);
+                        
+                        if (!output_calls.empty()) {
+                            const Phaser::PhaseSet::PhaseRegion clipped_phase {
+                                expand_lhs(phase->get().region, begin_distance(output_calls.front(), phase->get().region)),
+                                phase->get().score
+                            };
+                            
+                            set_phase(p.first, clipped_phase, call_regions, call);
+                        }
                     } else {
                         set_phase(p.first, *phase, call_regions, call);
                     }
@@ -275,33 +280,51 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
     }
 }
 
+namespace
+{
+    auto mapped_region(const VcfRecord& record)
+    {
+        using SizeType = GenomicRegion::SizeType;
+        const auto begin = record.pos() - 1;
+        return GenomicRegion {record.chrom(), begin, begin + static_cast<SizeType>(record.ref().size())};
+    }
+} // namespace
+
 void remove_calls_outside_call_region(std::vector<VcfRecord>& calls, const GenomicRegion& call_region)
 {
     const auto it = std::remove_if(std::begin(calls), std::end(calls),
                                    [&call_region] (const auto& call) {
-                                       return (call.pos() - 1) < call_region.begin()
-                                                || (call.pos() - 1) >= call_region.end();
+                                       return !overlaps(mapped_region(call), call_region);
                                    });
     calls.erase(it, std::end(calls));
 }
 
-void merge(std::vector<CallWrapper>&& new_calls, std::deque<VcfRecord>& curr_records,
+void merge(std::vector<CallWrapper>&& src, std::deque<VcfRecord>& dst,
            const VcfRecordFactory& factory, const GenomicRegion& call_region)
 {
-    if (new_calls.empty()) return;
+    if (src.empty()) return;
     
-    auto new_records = factory.make(unwrap(std::move(new_calls)));
+    auto new_records = factory.make(unwrap(std::move(src)));
     
     remove_calls_outside_call_region(new_records, call_region);
     
-    const auto it = curr_records.insert(std::end(curr_records),
-                                        std::make_move_iterator(std::begin(new_records)),
-                                        std::make_move_iterator(std::end(new_records)));
+    const auto it = dst.insert(std::end(dst),
+                               std::make_move_iterator(std::begin(new_records)),
+                               std::make_move_iterator(std::end(new_records)));
     
-    std::inplace_merge(std::begin(curr_records), it, std::end(curr_records),
+    std::inplace_merge(std::begin(dst), it, std::end(dst),
                        [] (const auto& lhs, const auto& rhs) {
                            return lhs.pos() < rhs.pos();
                        });
+    
+    // sometimes duplicates are called on active region boundries
+    const auto it2 = std::unique(std::begin(dst), std::end(dst),
+                                 [] (const auto& lhs, const auto& rhs) {
+                                     return lhs.pos() == rhs.pos() && lhs.ref() == rhs.ref()
+                                            && lhs.alt() == rhs.alt();
+                                 });
+    
+    dst.erase(it2, std::end(dst));
 }
 
 VariantCaller::CallTypeSet VariantCaller::get_call_types() const

@@ -174,6 +174,8 @@ namespace Octopus
             }
         }
         
+        std::sort(begin(wrapped_calls), end(wrapped_calls));
+        
         const auto itr = std::remove_if(begin(modified_calls), end(modified_calls),
                                         [this] (const auto& call) {
                                             return std::none_of(begin(samples_), cend(samples_),
@@ -186,10 +188,7 @@ namespace Octopus
         
         modified_calls.erase(itr, end(modified_calls));
         
-        std::sort(begin(modified_calls), end(modified_calls),
-                  [] (const auto& lhs, const auto& rhs) {
-                      return lhs.get() < rhs.get();
-                  });
+        std::sort(begin(modified_calls), end(modified_calls));
         
         for (auto& call : modified_calls) {
             for (const auto& sample : samples_) {
@@ -238,8 +237,6 @@ namespace Octopus
         }
         
         modified_calls.shrink_to_fit();
-        
-        std::sort(begin(wrapped_calls), end(wrapped_calls));
         
         std::vector<VcfRecord> result {};
         result.reserve(calls.size());

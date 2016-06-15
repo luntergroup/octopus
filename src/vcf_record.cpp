@@ -501,12 +501,7 @@ VcfRecord::Builder& VcfRecord::Builder::set_info(const KeyType& key, const Value
 
 VcfRecord::Builder& VcfRecord::Builder::set_info(const KeyType& key, std::vector<ValueType> values)
 {
-    const auto p = info_.emplace(key, values);
-    
-    if (!p.second) {
-        p.first->second = std::move(values);
-    }
-    
+    info_[key] = std::move(values);
     return *this;
 }
 
@@ -601,12 +596,7 @@ VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample, c
 VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample, const KeyType& key,
                                                    std::vector<ValueType> values)
 {
-    const auto p = samples_[sample].emplace(key, values);
-    
-    if (!p.second) {
-        p.first->second = std::move(values);
-    }
-    
+    samples_[sample][key] = std::move(values);
     return *this;
 }
 
