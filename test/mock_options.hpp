@@ -46,8 +46,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -81,7 +81,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22:18,714,888-18,724,656",
+        //"--regions", "22",
+        
+        "--regions", "22:31,702,947-31,703,111", // should be the insertion
+        //"--regions", "22:31,978,136-31,978,300", // should be the deletion
+        //"--regions", "22:30,993,234-30,993,630", // low dummy model posterior?
+        //"--regions", "22:32,960,775-32,961,105", // low dummy model posterior
         
         //"--regions", "6:31,236,339-31,240,057", // HLA-C
         
@@ -282,9 +287,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls_fast.vcf",
+        //"--output", "octopus_calls_slow.vcf",
         //"--output", "octopus_cancer.vcf",
         "--output", "octopus_calls_debug.vcf",
-        //"--output", "octopus_calls2.vcf",
+        //"--output", "octopus_calls3.vcf",
         
         nullptr
     };

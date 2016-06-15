@@ -48,7 +48,6 @@ namespace Octopus
         virtual bool parsimonise(const ReferenceGenome& reference) override;
         
     protected:
-        
         Variant variant_;
         
         bool all_genotypes_are_self_contained() const;

@@ -257,7 +257,7 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
             for (const auto& p : phase_set.phase_regions) {
                 const auto phase = find_phase_region(p.second, call_region);
                 
-                if (phase) {
+                if (phase && overlaps(calling_region, phase->get().region)) {
                     if (begins_before(phase->get().region, calling_region)) {
                         const auto output_call_region = overlapped_region(calling_region, phase->get().region);
                         
@@ -314,7 +314,7 @@ void merge(std::vector<CallWrapper>&& src, std::deque<VcfRecord>& dst,
     
     std::inplace_merge(std::begin(dst), it, std::end(dst),
                        [] (const auto& lhs, const auto& rhs) {
-                           return lhs.pos() < rhs.pos();
+                           return mapped_region(lhs) < mapped_region(rhs);
                        });
     
     // sometimes duplicates are called on active region boundries

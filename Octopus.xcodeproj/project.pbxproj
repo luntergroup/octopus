@@ -97,7 +97,6 @@
 		D42F72FA1C5F7B6200995F54 /* read_manager_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72F91C5F7B6200995F54 /* read_manager_tests.cpp */; };
 		D42F72FD1C61098600995F54 /* mappable_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72FC1C61098600995F54 /* mappable_tests.cpp */; };
 		D42F73001C621C4C00995F54 /* trio_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72FE1C621C4C00995F54 /* trio_caller.cpp */; };
-		D435E9F91B2B345700945EC7 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = D435E9F81B2B345700945EC7 /* Makefile */; };
 		D44ADE731C43C22700A854C6 /* variant_caller_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */; };
 		D44ADE761C43D89B00A854C6 /* candidate_generator_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE741C43D89B00A854C6 /* candidate_generator_builder.cpp */; };
 		D44ADE781C452B9B00A854C6 /* compression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE771C452B9B00A854C6 /* compression.cpp */; };
@@ -436,7 +435,6 @@
 		D42F72FE1C621C4C00995F54 /* trio_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = trio_caller.cpp; sourceTree = "<group>"; };
 		D42F72FF1C621C4C00995F54 /* trio_caller.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = trio_caller.hpp; sourceTree = "<group>"; };
 		D42F90131AE7A8000003F791 /* testing.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = testing.txt; sourceTree = "<group>"; };
-		D435E9F81B2B345700945EC7 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller_builder.cpp; sourceTree = "<group>"; };
 		D44ADE721C43C22700A854C6 /* variant_caller_builder.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = variant_caller_builder.hpp; sourceTree = "<group>"; };
 		D44ADE741C43D89B00A854C6 /* candidate_generator_builder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = candidate_generator_builder.cpp; sourceTree = "<group>"; };
@@ -857,7 +855,6 @@
 		CAA4DC181A81981400DD3E9A = {
 			isa = PBXGroup;
 			children = (
-				D435E9F81B2B345700945EC7 /* Makefile */,
 				CAA4DC361A83A3BA00DD3E9A /* bin */,
 				CAA4DC311A82B36300DD3E9A /* README.md */,
 				D47686611BD0F48A0067E03D /* todo.md */,
@@ -1426,7 +1423,6 @@
 				D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */,
 				D44ADE781C452B9B00A854C6 /* compression.cpp in Sources */,
 				D490E4211C74CE1200883184 /* pair_hmm.cpp in Sources */,
-				D435E9F91B2B345700945EC7 /* Makefile in Sources */,
 				D4BEA9FE1B861BE200E53CFD /* utils.c in Sources */,
 				CA0D83EB1BD466F40020366B /* read_pipe.cpp in Sources */,
 				D463C19D1B062F7F00739A66 /* vcf_tests.cpp in Sources */,

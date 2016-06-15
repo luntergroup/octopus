@@ -1366,6 +1366,8 @@ namespace Octopus
             
             const VcfReader vcf {components->output().path()};
             VcfWriter out {get_legacy_path(*components)};
+//            const VcfReader vcf {"/Users/dcooke/Genomics/octopus_test/octopus_calls3_filtered.vcf"};
+//            VcfWriter out {"/Users/dcooke/Genomics/octopus_test/octopus_calls3_filtered.legacy.vcf.gz"};
             convert_to_legacy(vcf, out);
             
             cleanup(*components);

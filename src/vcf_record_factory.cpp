@@ -174,69 +174,70 @@ namespace Octopus
             }
         }
         
-        std::sort(begin(wrapped_calls), end(wrapped_calls));
-        
-        const auto itr = std::remove_if(begin(modified_calls), end(modified_calls),
-                                        [this] (const auto& call) {
-                                            return std::none_of(begin(samples_), cend(samples_),
-                                                                [&call] (const auto& sample) {
-                                                                    const auto& old_phase = call.get()->get_genotype_call(sample).phase;
-                                                                    
-                                                                    return old_phase && begins_before(mapped_region(call.get()), old_phase->region());
-                                                                });
-                                        });
-        
-        modified_calls.erase(itr, end(modified_calls));
-        
-        std::sort(begin(modified_calls), end(modified_calls));
-        
-        for (auto& call : modified_calls) {
-            for (const auto& sample : samples_) {
-                const auto& old_phase = call.get()->get_genotype_call(sample).phase;
-                
-                if (old_phase && begins_before(mapped_region(call.get()), old_phase->region())) {
-                    auto new_phase_region = expand_lhs(old_phase->region(), 1);
-                    Call::PhaseCall new_phase {move(new_phase_region), old_phase->score()};
-                    call.get()->set_phase(sample, move(new_phase));
-                }
-            }
-        }
-        
         if (!modified_calls.empty()) {
-            for (auto& call : wrapped_calls) {
+            std::sort(begin(wrapped_calls), end(wrapped_calls));
+            
+            const auto itr = std::remove_if(begin(modified_calls), end(modified_calls),
+                                            [this] (const auto& call) {
+                                                return std::none_of(begin(samples_), cend(samples_),
+                                                                    [&call] (const auto& sample) {
+                                                                        const auto& old_phase = call.get()->get_genotype_call(sample).phase;
+                                                                        return old_phase && begins_before(mapped_region(call.get()), old_phase->region());
+                                                                    });
+                                            });
+            
+            modified_calls.erase(itr, end(modified_calls));
+            
+            std::sort(begin(modified_calls), end(modified_calls));
+            
+            for (auto& call : modified_calls) {
                 for (const auto& sample : samples_) {
-                    const auto& phase = call->get_genotype_call(sample).phase;
+                    const auto& old_phase = call.get()->get_genotype_call(sample).phase;
                     
-                    if (phase) {
-                        auto overlapped = overlap_range(modified_calls, phase->region());
-                        
-                        if (overlapped.empty()) {
-                            overlapped = overlap_range(modified_calls, expand_lhs(phase->region(), 1));
-                            
-                            if (!overlapped.empty()) {
-                                if (begin_distance(overlapped.front(), phase->region()) != 1) {
-                                    overlapped.advance_begin(1);
-                                }
-                            }
-                        }
-                        
-                        if (!overlapped.empty() && overlapped.front().get() != call) {
-                            const auto& old_phase = call->get_genotype_call(sample).phase;
-                            
-                            auto new_phase_region = encompassing_region(overlapped.front(), old_phase->region());
-                            
-                            Call::PhaseCall new_phase {move(new_phase_region), old_phase->score()};
-                            
-                            call->set_phase(sample, move(new_phase));
-                        }
+                    if (old_phase && begins_before(mapped_region(call.get()), old_phase->region())) {
+                        auto new_phase_region = expand_lhs(old_phase->region(), 1);
+                        Call::PhaseCall new_phase {move(new_phase_region), old_phase->score()};
+                        call.get()->set_phase(sample, move(new_phase));
                     }
                 }
             }
             
-            modified_calls.clear();
+            if (!modified_calls.empty()) {
+                for (auto& call : wrapped_calls) {
+                    for (const auto& sample : samples_) {
+                        const auto& phase = call->get_genotype_call(sample).phase;
+                        
+                        if (phase) {
+                            auto overlapped = overlap_range(modified_calls, phase->region());
+                            
+                            if (overlapped.empty()) {
+                                overlapped = overlap_range(modified_calls, expand_lhs(phase->region(), 1));
+                                
+                                if (!overlapped.empty()) {
+                                    if (begin_distance(overlapped.front(), phase->region()) != 1) {
+                                        overlapped.advance_begin(1);
+                                    }
+                                }
+                            }
+                            
+                            if (!overlapped.empty() && overlapped.front().get() != call) {
+                                const auto& old_phase = call->get_genotype_call(sample).phase;
+                                
+                                auto new_phase_region = encompassing_region(overlapped.front(), old_phase->region());
+                                
+                                Call::PhaseCall new_phase {move(new_phase_region), old_phase->score()};
+                                
+                                call->set_phase(sample, move(new_phase));
+                            }
+                        }
+                    }
+                }
+                
+                modified_calls.clear();
+            }
+            
+            modified_calls.shrink_to_fit();
         }
-        
-        modified_calls.shrink_to_fit();
         
         std::vector<VcfRecord> result {};
         result.reserve(calls.size());

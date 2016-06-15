@@ -11,7 +11,7 @@
 #include <iostream> // DEBUG
 
 // defined here because it is used in fastAlignmentRoutine and calculateFlankScore
-constexpr short N_SCORE {0 * 4};
+constexpr short N_SCORE {0 << 2};
 constexpr int BAND_SIZE {8};
 constexpr short POS_INF {0x7800};
 
@@ -27,10 +27,12 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
     // n=8 entries diagonally across.  This fixes the length of the
     // longer (horizontal) sequence to 15 (2*8-1) more than the shorter
     
+    // the << 2's are because the lower two bits are reserved for back tracing
+    
     assert(len1 > BAND_SIZE && (len1 == len2 + 2 * BAND_SIZE - 1));
     
-    const auto gap_extend = static_cast<short>(gapextend * 4);
-    const auto nuc_prior  = static_cast<short>(nucprior * 4);
+    const auto gap_extend = static_cast<short>(gapextend << 2);
+    const auto nuc_prior  = static_cast<short>(nucprior << 2);
     
     using SimdInt = __m128i;
     
@@ -50,15 +52,15 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
     // sequence 2 is initialized as empty; reverse direction
     SimdInt _seq1win  {_mm_set_epi16(seq1[7], seq1[6], seq1[5], seq1[4], seq1[3], seq1[2], seq1[1], seq1[0])};
     SimdInt _seq2win  {_m1};
-    SimdInt _qual2win {_mm_set1_epi16(64 * 4)};
+    SimdInt _qual2win {_mm_set1_epi16(64 << 2)};
     
     // if N, make N_SCORE; if != N, make POS_INF
     SimdInt _seq1nqual {_mm_add_epi16(_mm_and_si128(_mm_cmpeq_epi16(_seq1win, _mm_set1_epi16('N')),
                                              _mm_set1_epi16(N_SCORE - POS_INF)),
                                       _mm_set1_epi16(POS_INF))};
     
-    SimdInt _gap_open {_mm_set_epi16(4*localgapopen[7],4*localgapopen[6],4*localgapopen[5],4*localgapopen[4],
-                                     4*localgapopen[3],4*localgapopen[2],4*localgapopen[1],4*localgapopen[0])};
+    SimdInt _gap_open {_mm_set_epi16(localgapopen[7] << 2,localgapopen[6] << 2,localgapopen[5] << 2,localgapopen[4] << 2,
+                                     localgapopen[3] << 2,localgapopen[2] << 2,localgapopen[1] << 2,localgapopen[0] << 2)};
     
     short cur_score {0}, minscore {POS_INF};
     
@@ -69,15 +71,14 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
         
         if (s / 2 < len2) {
             _seq2win  = _mm_insert_epi16(_seq2win, seq2[s / 2], 0);
-            _qual2win = _mm_insert_epi16(_qual2win, 4 * qual2[s / 2], 0);
+            _qual2win = _mm_insert_epi16(_qual2win, qual2[s / 2] << 2, 0);
         } else {
             _seq2win  = _mm_insert_epi16(_seq2win, '0', 0);
-            _qual2win = _mm_insert_epi16(_qual2win, 64 * 4, 0);
+            _qual2win = _mm_insert_epi16(_qual2win, 64 << 2, 0);
         }
         
         // S even
         
-        // initialize to -0x8000
         _m1 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m1));
         _m2 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m2));
         _m1 = _mm_min_epi16(_m1, _mm_min_epi16(_i1, _d1));
@@ -103,7 +104,8 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
         _d1 = _mm_insert_epi16(_mm_slli_si128(_d1, 2), POS_INF, 0);
         
         _i1 = _mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_i2, _gap_extend),
-                                          _mm_add_epi16(_m2, _gap_open)), _nuc_prior);
+                                          _mm_add_epi16(_m2, _gap_open)),
+                            _nuc_prior);
         
         // S odd
         
@@ -114,8 +116,7 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
         _seq1nqual = _mm_insert_epi16(_mm_srli_si128(_seq1nqual, 2), (c == 'N')
                                       ? N_SCORE : POS_INF, BAND_SIZE - 1);
         _gap_open  = _mm_insert_epi16(_mm_srli_si128(_gap_open,  2),
-                                      4 * localgapopen[BAND_SIZE + s / 2 < len1
-                                                       ? BAND_SIZE + s / 2 : len1 - 1], BAND_SIZE - 1);
+                                      localgapopen[BAND_SIZE + s / 2 < len1 ? BAND_SIZE + s / 2 : len1 - 1] << 2, BAND_SIZE - 1);
         
         _initmask  = _mm_slli_si128(_initmask, 2);
         _initmask2 = _mm_slli_si128(_initmask2, 2);
