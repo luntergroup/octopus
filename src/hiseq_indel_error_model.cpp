@@ -1,16 +1,17 @@
 //
-//  hiseq_read_indel_error_model.cpp
+//  hiseq_indel_error_model.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 13/06/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#include "hiseq_read_indel_error_model.hpp"
+#include "hiseq_indel_error_model.hpp"
 
 #include <algorithm>
 #include <iterator>
 
+#include "haplotype.hpp"
 #include "tandem.hpp"
 
 #include <iostream> // DEBUG
@@ -18,11 +19,11 @@
 namespace Octopus
 {
     
-    constexpr decltype(HiSeqReadIndelErrorModel::Homopolymer_errors_) HiSeqReadIndelErrorModel::Homopolymer_errors_;
-    constexpr decltype(HiSeqReadIndelErrorModel::Homopolymer_errors_) HiSeqReadIndelErrorModel::Di_nucleotide_tandem_repeat_errors_;
-    constexpr decltype(HiSeqReadIndelErrorModel::Homopolymer_errors_) HiSeqReadIndelErrorModel::Tri_nucleotide_tandem_repeat_errors_;
-    constexpr decltype(HiSeqReadIndelErrorModel::Homopolymer_errors_) HiSeqReadIndelErrorModel::Poly_nucleotide_tandem_repeat_errors_;
-    constexpr decltype(HiSeqReadIndelErrorModel::default_gap_extension_) HiSeqReadIndelErrorModel::default_gap_extension_;
+    constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Homopolymer_errors_;
+    constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Di_nucleotide_tandem_repeat_errors_;
+    constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Tri_nucleotide_tandem_repeat_errors_;
+    constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Poly_nucleotide_tandem_repeat_errors_;
+    constexpr decltype(HiSeqIndelErrorModel::default_gap_extension_) HiSeqIndelErrorModel::default_gap_extension_;
     
     namespace
     {
@@ -38,8 +39,8 @@ namespace Octopus
         return (length < penalties.size()) ? penalties[length - 1] : penalties.back();
     }
     
-    HiSeqReadIndelErrorModel::PenaltyType
-    HiSeqReadIndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalities) const
+    HiSeqIndelErrorModel::PenaltyType
+    HiSeqIndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalities) const
     {
         using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
         

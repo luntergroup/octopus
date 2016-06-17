@@ -43,7 +43,10 @@ HaplotypeLikelihoodModel::ShortHaplotypeError::required_extension() const noexce
 void HaplotypeLikelihoodModel::set(const Haplotype& haplotype, boost::optional<FlankState> flank_state)
 {
     haplotype_ = std::addressof(haplotype);
+    
     haplotype_flank_state_ = std::move(flank_state);
+    
+    snv_error_model_.evaluate(haplotype, haplotype_snv_forward_priors_, haplotype_snv_reverse_priors_);
     
     haplotype_gap_extension_penalty_ = indel_error_model_.evaluate(haplotype, haplotype_gap_open_penalities_);
 }
@@ -75,10 +78,10 @@ namespace
     }
 } // namespace
 
-template <typename InputIt, typename T>
+template <typename InputIt>
 double log_probability(const AlignedRead& read, const Haplotype& haplotype,
                        InputIt first_mapping_position, InputIt last_mapping_position,
-                       const T& gap_open_penalities, const PairHMM::Model& model)
+                       const PairHMM::Model& model)
 {
     assert(contains(haplotype, read));
     
@@ -97,12 +100,8 @@ double log_probability(const AlignedRead& read, const Haplotype& haplotype,
                       if (is_in_range(position, read, haplotype)) {
                           has_in_range_mapping_position = true;
                           
-                          auto cur = PairHMM::align_around_offset(haplotype.sequence(),
-                                                                  read.sequence(),
-                                                                  read.qualities(),
-                                                                  gap_open_penalities,
-                                                                  position,
-                                                                  model);
+                          auto cur = PairHMM::align(haplotype.sequence(), read.sequence(),
+                                                    read.qualities(), position, model);
                           
                           if (cur > max_log_probability) {
                               max_log_probability = cur;
@@ -113,9 +112,8 @@ double log_probability(const AlignedRead& read, const Haplotype& haplotype,
     if (!is_original_position_mapped && is_in_range(original_mapping_position, read, haplotype)) {
         has_in_range_mapping_position = true;
         
-        auto cur = PairHMM::align_around_offset(haplotype.sequence(), read.sequence(),
-                                                read.qualities(), gap_open_penalities,
-                                                original_mapping_position, model);
+        auto cur = PairHMM::align(haplotype.sequence(), read.sequence(), read.qualities(),
+                                  original_mapping_position, model);
         
         if (cur > max_log_probability) {
             max_log_probability = cur;
@@ -132,12 +130,8 @@ double log_probability(const AlignedRead& read, const Haplotype& haplotype,
         
         const auto final_mapping_position = original_mapping_position - min_shift;
         
-        max_log_probability = PairHMM::align_around_offset(haplotype.sequence(),
-                                                           read.sequence(),
-                                                           read.qualities(),
-                                                           gap_open_penalities,
-                                                           final_mapping_position,
-                                                           model);
+        max_log_probability = PairHMM::align(haplotype.sequence(), read.sequence(), read.qualities(),
+                                             final_mapping_position, model);
     }
     
     assert(max_log_probability > std::numeric_limits<double>::lowest());
@@ -148,12 +142,12 @@ double log_probability(const AlignedRead& read, const Haplotype& haplotype,
 // public methods
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel()
-: HaplotypeLikelihoodModel {2, ReadIndelErrorModel {}} {}
+: HaplotypeLikelihoodModel {SnvErrorModel {}, IndelErrorModel {}} {}
 
-HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(PenaltyType base_change_penalty,
-                                                   ReadIndelErrorModel indel_model)
+HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model,
+                                                   IndelErrorModel indel_model)
 :
-base_change_penalty_ {base_change_penalty},
+snv_error_model_ {std::move(snv_model)},
 indel_error_model_ {std::move(indel_model)},
 haplotype_ {nullptr},
 haplotype_flank_state_ {},
@@ -161,11 +155,11 @@ haplotype_gap_open_penalities_ {},
 haplotype_gap_extension_penalty_ {}
 {}
 
-HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(PenaltyType base_change_penalty,
-                                                   ReadIndelErrorModel indel_model,
+HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model,
+                                                   IndelErrorModel indel_model,
                                                    const Haplotype& haplotype,
                                                    boost::optional<FlankState> flank_state)
-: HaplotypeLikelihoodModel {base_change_penalty, std::move(indel_model)}
+: HaplotypeLikelihoodModel {std::move(snv_model), std::move(indel_model)}
 {
     this->set(haplotype, std::move(flank_state));
 }
@@ -178,20 +172,21 @@ double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
         throw std::runtime_error {"HaplotypeLikelihoodModel: no buffered Haplotype"};
     }
     
-    PairHMM::Model hmm_model;
-    hmm_model.nucprior  = base_change_penalty_;
-    hmm_model.gapextend = haplotype_gap_extension_penalty_;
+    PairHMM::Model model {
+        (read.is_marked_reverse_mapped()) ? haplotype_snv_reverse_priors_ : haplotype_snv_forward_priors_,
+        haplotype_gap_open_penalities_,
+        haplotype_gap_extension_penalty_
+    };
     
     if (haplotype_flank_state_) {
-        hmm_model.lhs_flank_size = haplotype_flank_state_->lhs_flank;
-        hmm_model.rhs_flank_size = haplotype_flank_state_->rhs_flank;
+        model.lhs_flank_size = haplotype_flank_state_->lhs_flank;
+        model.rhs_flank_size = haplotype_flank_state_->rhs_flank;
     } else {
-        hmm_model.lhs_flank_size = 0;
-        hmm_model.rhs_flank_size = 0;
+        model.lhs_flank_size = 0;
+        model.rhs_flank_size = 0;
     }
     
-    return Octopus::log_probability(read, *haplotype_,
-                                    first_mapping_position, last_mapping_position,
-                                    haplotype_gap_open_penalities_, hmm_model);
+    return Octopus::log_probability(read, *haplotype_, first_mapping_position, last_mapping_position,
+                                    model);
 }
 } // namespace Octopus

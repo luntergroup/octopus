@@ -121,6 +121,8 @@ public:
     
     std::size_t get_hash() const;
     
+    void cap_qualities(QualityType max_quality) noexcept;
+    
     void zero_front_qualities(SizeType num_bases) noexcept;
     void zero_back_qualities(SizeType num_bases) noexcept;
     

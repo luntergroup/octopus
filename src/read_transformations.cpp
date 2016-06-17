@@ -12,6 +12,14 @@ namespace Octopus
 {
 namespace ReadTransforms
 {
+    CapBaseQualities::CapBaseQualities(QualityType max_quality)
+    : max_quality_ {max_quality} {}
+    
+    void CapBaseQualities::operator()(AlignedRead& read) const noexcept
+    {
+        read.cap_qualities(max_quality_);
+    }
+    
     void MaskOverlappedSegment::operator()(AlignedRead& read) const noexcept
     {
         // Only reads in the forward direction are masked to prevent double masking

@@ -13,6 +13,20 @@
 
 namespace Octopus { namespace ReadTransforms
 {
+    struct CapBaseQualities
+    {
+        using QualityType = AlignedRead::QualityType;
+        
+        CapBaseQualities() = default;
+        
+        explicit CapBaseQualities(QualityType max_quality);
+        
+        void operator()(AlignedRead& read) const noexcept;
+        
+    private:
+        QualityType max_quality_;
+    };
+    
     struct MaskOverlappedSegment
     {
         void operator()(AlignedRead& read) const noexcept;

@@ -1318,6 +1318,8 @@ namespace Octopus
         
         ReadTransform result {};
         
+        result.register_transform(ReadTransforms::CapBaseQualities {125});
+        
         if (options.at("disable-read-transforms").as<bool>()) {
             return result;
         }
@@ -1325,25 +1327,25 @@ namespace Octopus
         const auto tail_mask_size = options.at("mask-tails").as<SizeType>();
         
         if (tail_mask_size > 0) {
-            result.register_transform(ReadTransforms::MaskTail(tail_mask_size));
+            result.register_transform(ReadTransforms::MaskTail {tail_mask_size});
         }
         
         if (!options.at("disable-soft-clip-masking").as<bool>()) {
             const auto soft_clipped_mask_size = options.at("mask-soft-clipped-boundries").as<SizeType>();
             
             if (soft_clipped_mask_size > 0) {
-                result.register_transform(ReadTransforms::MaskSoftClippedBoundries(soft_clipped_mask_size));
+                result.register_transform(ReadTransforms::MaskSoftClippedBoundries {soft_clipped_mask_size});
             } else {
-                result.register_transform(ReadTransforms::MaskSoftClipped());
+                result.register_transform(ReadTransforms::MaskSoftClipped {});
             }
         }
         
         if (!options.at("disable-adapter-masking").as<bool>()) {
-            result.register_transform(ReadTransforms::MaskAdapters());
+            result.register_transform(ReadTransforms::MaskAdapters {});
         }
         
         if (!options.at("disable-overlap-masking").as<bool>()) {
-            result.register_transform(ReadTransforms::MaskOverlappedSegment());
+            result.register_transform(ReadTransforms::MaskOverlappedSegment {});
         }
         
         result.shrink_to_fit();

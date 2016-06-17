@@ -26,7 +26,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--version",
         
         "--debug",
-        //"--trace",
+        "--trace",
         
         //"--sites-only",
         
@@ -46,8 +46,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -81,9 +81,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        //"--regions", "22",
+        "--regions", "22:31,758,829-31,758,980", // run through
+        //"--regions", "22:31,346,313-31,346,353", // run through, indel
         
-        "--regions", "22:31,702,947-31,703,111", // should be the insertion
+        //"--regions", "22:27,053,358-27,053,398",
+        //"--regions", "22:24,037,473-24,037,777",
+        
+        //"--regions", "22:31,702,947-31,703,111", // should be the insertion
         //"--regions", "22:31,978,136-31,978,300", // should be the deletion
         //"--regions", "22:30,993,234-30,993,630", // low dummy model posterior?
         //"--regions", "22:32,960,775-32,961,105", // low dummy model posterior

@@ -155,6 +155,12 @@ std::size_t AlignedRead::get_hash() const
     return hash_;
 }
 
+void AlignedRead::cap_qualities(const QualityType max_quality) noexcept
+{
+    std::transform(std::cbegin(qualities_), std::cend(qualities_), std::begin(qualities_),
+                   [max_quality] (const auto q) { return std::min(q, max_quality); });
+}
+
 void AlignedRead::zero_front_qualities(const SizeType num_bases) noexcept
 {
     std::fill_n(std::begin(qualities_),

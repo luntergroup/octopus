@@ -2,38 +2,33 @@
 //  read_indel_error_model.hpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 17/02/2016.
+//  Created by Daniel Cooke on 13/06/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#ifndef read_indel_error_model_hpp
-#define read_indel_error_model_hpp
+#ifndef hiseq_indel_error_model_hpp
+#define hiseq_indel_error_model_hpp
 
-#include <vector>
-#include <array>
-#include <cstdint>
+#include "indel_error_model.hpp"
 
-#include "haplotype.hpp"
+class Haplotype;
 
 namespace Octopus
 {
-    class ReadIndelErrorModel
+    class HiSeqIndelErrorModel : public IndelErrorModel
     {
     public:
-        using PenaltyType = std::int8_t;
+        using IndelErrorModel::PenaltyType;
+        using IndelErrorModel::PenaltyVector;
         
-        using PenaltyVector = std::vector<PenaltyType>;
+        HiSeqIndelErrorModel() = default;
         
-        ReadIndelErrorModel() = default;
+        HiSeqIndelErrorModel(const HiSeqIndelErrorModel&)            = default;
+        HiSeqIndelErrorModel& operator=(const HiSeqIndelErrorModel&) = default;
+        HiSeqIndelErrorModel(HiSeqIndelErrorModel&&)                 = default;
+        HiSeqIndelErrorModel& operator=(HiSeqIndelErrorModel&&)      = default;
         
-        virtual ~ReadIndelErrorModel() = default;
-        
-        ReadIndelErrorModel(const ReadIndelErrorModel&)            = default;
-        ReadIndelErrorModel& operator=(const ReadIndelErrorModel&) = default;
-        ReadIndelErrorModel(ReadIndelErrorModel&&)                 = default;
-        ReadIndelErrorModel& operator=(ReadIndelErrorModel&&)      = default;
-        
-        virtual PenaltyType evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const;
+        PenaltyType evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const;
         
     private:
         static constexpr std::array<PenaltyType, 50> Homopolymer_errors_ =
@@ -64,4 +59,4 @@ namespace Octopus
     };
 } // namespace Octopus
 
-#endif /* read_indel_error_model_hpp */
+#endif /* hiseq_indel_error_model_hpp */

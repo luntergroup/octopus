@@ -22,7 +22,8 @@
 #include "common.hpp"
 #include "contig_region.hpp"
 #include "haplotype.hpp"
-#include "read_indel_error_model.hpp"
+#include "snv_error_model.hpp"
+#include "indel_error_model.hpp"
 #include "pair_hmm.hpp"
 
 #include "timers.hpp"
@@ -34,7 +35,7 @@ namespace Octopus
 class HaplotypeLikelihoodModel
 {
 public:
-    using PenaltyType = ReadIndelErrorModel::PenaltyType;
+    using PenaltyType = PairHMM::Model::PenaltyType;
     
     struct FlankState
     {
@@ -47,9 +48,9 @@ public:
     
     HaplotypeLikelihoodModel();
     
-    HaplotypeLikelihoodModel(PenaltyType base_change_penalty, ReadIndelErrorModel indel_model);
+    HaplotypeLikelihoodModel(SnvErrorModel snv_model, IndelErrorModel indel_model);
     
-    HaplotypeLikelihoodModel(PenaltyType base_change_penalty, ReadIndelErrorModel indel_model,
+    HaplotypeLikelihoodModel(SnvErrorModel snv_model, IndelErrorModel indel_model,
                              const Haplotype& haplotype, boost::optional<FlankState> flank_state);
     
     ~HaplotypeLikelihoodModel() = default;
@@ -69,13 +70,16 @@ public:
                            MapPositionItr last_mapping_position) const;
     
 private:
-    PenaltyType base_change_penalty_;
-    ReadIndelErrorModel indel_error_model_;
+    SnvErrorModel snv_error_model_;
+    IndelErrorModel indel_error_model_;
     
     const Haplotype* haplotype_;
+    
     boost::optional<FlankState> haplotype_flank_state_;
     
-    std::vector<std::int8_t> haplotype_gap_open_penalities_;
+    std::vector<PenaltyType> haplotype_snv_forward_priors_, haplotype_snv_reverse_priors_;
+    
+    std::vector<PenaltyType> haplotype_gap_open_penalities_;
     PenaltyType haplotype_gap_extension_penalty_;
 };
 

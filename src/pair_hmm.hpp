@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <functional>
 
 namespace PairHMM
 {
@@ -19,17 +20,23 @@ namespace PairHMM
     
     struct Model
     {
-        int nucprior;
-        int gapextend;
+        using PenaltyType = std::int8_t;
+        
+        std::reference_wrapper<const std::vector<PenaltyType>> snv_priors;
+        std::reference_wrapper<const std::vector<PenaltyType>> gap_open_penalties;
+        
+        short gap_extend;
+        
+        short nuc_prior = 2;
+        
         std::size_t lhs_flank_size = 0;
         std::size_t rhs_flank_size = 0;
     };
     
-    // p(target | truth, target_qualities, target_gap_open_penalties, model)
-    double align_around_offset(const std::string& truth, const std::string& target,
-                               const std::vector<std::uint8_t>& target_qualities,
-                               const std::vector<std::int8_t>& truth_gap_open_penalties,
-                               std::size_t target_offset, const Model& model);
+    // p(target | truth, target_qualities, model)
+    double align(const std::string& truth, const std::string& target,
+                 const std::vector<std::uint8_t>& target_qualities,
+                 std::size_t target_offset, const Model& model);
 } // namespace PairHMM
 
 #endif /* pair_hmm_hpp */
