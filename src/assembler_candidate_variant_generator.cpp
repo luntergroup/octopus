@@ -461,6 +461,9 @@ bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assemble
         return false;
     }
     
+//    std::cout << "assembler: " << assembler.kmer_size() << std::endl;
+//    ::debug::print(assembler);
+    
     auto variants = assembler.extract_variants();
     
     assembler.clear();

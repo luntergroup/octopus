@@ -81,7 +81,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22:39,396,398-39,396,728", // run through!
+        "--regions", "22:42,943,057-42,943,471", // why is GATK now calling these?
+        
+        //"--regions", "22:39,396,398-39,396,728", // run through!
         
         //"--regions", "22:31,758,829-31,758,980", // run through
         //"--regions", "22:31,346,313-31,346,353", // run through, indel
@@ -261,7 +263,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
         "--no-assembly-candidates",
-        //"--kmer-size", "45",
+        //"--kmer-size", "10",
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         

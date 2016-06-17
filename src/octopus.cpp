@@ -1333,41 +1333,41 @@ namespace Octopus
             
             options.clear();
             
-            try {
-                if (is_multithreaded(*components)) {
-                    if (DEBUG_MODE) {
-                        Logging::WarningLogger warn_log {};
-                        warn_log << "Running in parallel mode can make debug log difficult to interpret";
-                    }
-                    
-                    run_octopus_multi_threaded(*components);
-                } else {
-                    run_octopus_single_threaded(*components);
-                }
-                
-                components->output().close();
-            } catch (const std::exception& e) {
-                Logging::FatalLogger lg {};
-                stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
-                
-                cleanup(*components);
-                
-                if (DEBUG_MODE) {
-                    stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
-                } else {
-                    stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
-                                    " log file to " << Octopus_bug_email;
-                }
-                
-                return;
-            }
+//            try {
+//                if (is_multithreaded(*components)) {
+//                    if (DEBUG_MODE) {
+//                        Logging::WarningLogger warn_log {};
+//                        warn_log << "Running in parallel mode can make debug log difficult to interpret";
+//                    }
+//                    
+//                    run_octopus_multi_threaded(*components);
+//                } else {
+//                    run_octopus_single_threaded(*components);
+//                }
+//                
+//                components->output().close();
+//            } catch (const std::exception& e) {
+//                Logging::FatalLogger lg {};
+//                stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
+//                
+//                cleanup(*components);
+//                
+//                if (DEBUG_MODE) {
+//                    stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
+//                } else {
+//                    stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
+//                                    " log file to " << Octopus_bug_email;
+//                }
+//                
+//                return;
+//            }
+//            
+//            filter_calls(*components);
             
-            filter_calls(*components);
-            
-            const VcfReader vcf {components->output().path()};
-            VcfWriter out {get_legacy_path(*components)};
-//            const VcfReader vcf {"/Users/dcooke/Genomics/octopus_test/octopus_calls3_filtered.vcf"};
-//            VcfWriter out {"/Users/dcooke/Genomics/octopus_test/octopus_calls3_filtered.legacy.vcf.gz"};
+//            const VcfReader vcf {components->output().path()};
+//            VcfWriter out {get_legacy_path(*components)};
+            const VcfReader vcf {"/Users/dcooke/Genomics/octopus_test/octopus_calls_snv_model_filtered.vcf.gz"};
+            VcfWriter out {"/Users/dcooke/Genomics/octopus_test/octopus_calls_snv_model_filtered.legacy.vcf.gz"};
             convert_to_legacy(vcf, out);
             
             cleanup(*components);
