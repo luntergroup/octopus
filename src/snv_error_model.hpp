@@ -33,9 +33,9 @@ namespace Octopus
                       PenaltyVector& reverse_snv_priors) const;
         
     private:
-        static constexpr std::array<PenaltyType, 51> Homopolymer_errors_ =
+        static constexpr std::array<PenaltyType, 51> Max_qualities_ =
         {{
-            125,125,60,55,40,30,25,20,16,14,13,12,12,11,11,10,10,10,9,8,
+            125,125,60,55,40,30,25,16,15,14,13,12,12,10,10,10,10,10,9,8,
             7,7,7,6,6,6,6,6,6,5,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1
         }};
     };
