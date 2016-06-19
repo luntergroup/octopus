@@ -397,11 +397,16 @@ void HaplotypeGenerator::update_next_active_region() const
                         return;
                     }
                     
-                    ++num_regions_added;
-                    
                     if (test_tree.num_haplotypes() >= soft_max_haplotypes_) {
+                        if (num_regions_added == 0) {
+                            ++num_regions_added;
+                        } else {
+                            test_tree.remove_overlapped(region);
+                        }
                         break;
                     }
+                    
+                    ++num_regions_added;
                 }
                 
                 // the trees encompassing region may be beyond the indicator boundry

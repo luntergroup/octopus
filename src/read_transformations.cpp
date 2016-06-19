@@ -23,7 +23,8 @@ namespace ReadTransforms
     void MaskOverlappedSegment::operator()(AlignedRead& read) const noexcept
     {
         // Only reads in the forward direction are masked to prevent double masking
-        if (read.is_chimeric() && !read.is_marked_reverse_mapped()) {
+        if (read.is_chimeric() && contig_name(read) == read.next_segment().contig_name()
+            && !read.is_marked_reverse_mapped()) {
             const auto next_segment_begin = read.next_segment().begin();
             
             if (next_segment_begin < mapped_end(read)) {
@@ -35,17 +36,17 @@ namespace ReadTransforms
     
     void MaskAdapters::operator()(AlignedRead& read) const noexcept
     {
-        if (read.is_chimeric()) {
+        if (read.is_chimeric() && contig_name(read) == read.next_segment().contig_name()) {
             const auto insert_size = read.next_segment().inferred_template_length();
             const auto read_size   = sequence_size(read);
             
-            if (insert_size <= read_size) {
+            if (insert_size < read_size) {
                 const auto num_adapter_bases = read_size - insert_size;
                 
                 if (read.is_marked_reverse_mapped()) {
-                    read.zero_back_qualities(num_adapter_bases);
-                } else {
                     read.zero_front_qualities(num_adapter_bases);
+                } else {
+                    read.zero_back_qualities(num_adapter_bases);
                 }
             }
         }

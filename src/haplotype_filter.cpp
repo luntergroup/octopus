@@ -320,20 +320,21 @@ filter_to_n(std::vector<Haplotype>& haplotypes, const std::vector<SampleIdType>&
         return result;
     }
     
-    num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
-                                LikelihoodSum {});
+//    num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
+//                                LikelihoodSum {});
+//    
+//    if (DEBUG_MODE) {
+//        stream(debug_log) << "There are " << haplotypes.size()
+//                            << " remaining haplotypes after likelihood sum filtering";
+//    }
+//    
+//    if (num_to_filter == 0) {
+//        return result;
+//    }
     
     if (DEBUG_MODE) {
-        stream(debug_log) << "There are " << haplotypes.size()
-                            << " remaining haplotypes after likelihood sum filtering";
-    }
-    
-    if (num_to_filter == 0) {
-        return result;
-    }
-    
-    if (DEBUG_MODE) {
-        stream(debug_log) << "Force filtering " << haplotypes.size() << " haplotypes with assignment count filtering";
+        stream(debug_log) << "Force filtering " << num_to_filter << " of "
+                        << haplotypes.size() << " haplotypes with assignment count filtering";
     }
     
     force_filter(haplotypes, samples, haplotype_likelihoods, n, result,
