@@ -40,7 +40,7 @@ HaplotypeLikelihoodModel::ShortHaplotypeError::required_extension() const noexce
     return required_extension_;
 }
 
-void HaplotypeLikelihoodModel::set(const Haplotype& haplotype, boost::optional<FlankState> flank_state)
+void HaplotypeLikelihoodModel::reset(const Haplotype& haplotype, boost::optional<FlankState> flank_state)
 {
     haplotype_ = std::addressof(haplotype);
     
@@ -62,7 +62,7 @@ namespace
     std::size_t num_out_of_range_bases(const std::size_t mapping_position, const AlignedRead& read,
                                        const Haplotype& haplotype)
     {
-        const auto alignment_size = sequence_size(read) + mapping_position + PairHMM::AlignmenetPad;
+        const auto alignment_size = sequence_size(read) + mapping_position + 2 * PairHMM::min_flank_pad();
         
         if (alignment_size > sequence_size(haplotype)) {
             return alignment_size - sequence_size(haplotype);
@@ -161,7 +161,7 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model,
                                                    boost::optional<FlankState> flank_state)
 : HaplotypeLikelihoodModel {std::move(snv_model), std::move(indel_model)}
 {
-    this->set(haplotype, std::move(flank_state));
+    this->reset(haplotype, std::move(flank_state));
 }
 
 double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,

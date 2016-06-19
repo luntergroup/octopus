@@ -44,7 +44,8 @@ public:
     HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
                        const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
                        unsigned soft_max_haplotypes, unsigned hard_max_haplotypes,
-                       LaggingPolicy lagging = LaggingPolicy::None);
+                       LaggingPolicy lagging = LaggingPolicy::None,
+                       Haplotype::SizeType min_pad = 30);
     
     ~HaplotypeGenerator() = default;
     
@@ -73,6 +74,8 @@ private:
     boost::optional<GenomeWalker> lagged_walker_;
     
     unsigned soft_max_haplotypes_, hard_max_haplotypes_;
+    
+    Haplotype::SizeType min_pad_ = 30;
     
     MappableFlatSet<Allele> alleles_;
     std::reference_wrapper<const ReadMap> reads_;
@@ -159,13 +162,15 @@ public:
     Builder& set_soft_max_haplotypes(unsigned n) noexcept;
     Builder& set_soft_hard_haplotypes(unsigned n) noexcept;
     Builder& set_lagging_policy(LaggingPolicy policy) noexcept;
+    Builder& set_min_pad(Haplotype::SizeType val) noexcept;
     
     HaplotypeGenerator build(const ReferenceGenome& reference, const GenomicRegion& window,
                              const MappableFlatSet<Variant>& candidates, const ReadMap& reads) const;
     
 private:
     unsigned soft_max_haplotypes_, hard_max_haplotypes_;
-    LaggingPolicy lagging_policy_;
+    LaggingPolicy lagging_policy_ = LaggingPolicy::None;
+    Haplotype::SizeType min_pad_ = 30;
 };
 } // namespace Octopus
 

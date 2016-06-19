@@ -89,13 +89,14 @@ namespace debug
 HaplotypeGenerator::HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
                                        const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
                                        unsigned soft_max_haplotypes, unsigned hard_max_haplotypes,
-                                       LaggingPolicy lagging)
+                                       LaggingPolicy lagging, Haplotype::SizeType min_pad)
 :
 tree_ {window.contig_name(), reference},
 walker_ {max_included(soft_max_haplotypes)},
 lagged_walker_ {},
 soft_max_haplotypes_ {soft_max_haplotypes},
 hard_max_haplotypes_ {hard_max_haplotypes},
+min_pad_ {min_pad},
 alleles_ {variants_to_alleles(candidates)},
 reads_ {reads},
 current_active_region_ {shift(head_region(alleles_.leftmost(), 0), -1)},
@@ -520,7 +521,7 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
     // reference sequence for full read re-mapping and alignment (i.e. the read must be
     // contained by the haplotype). Note the sum of the indel sizes may not be sufficient
     // as the candidate generator may not propopse all variation in the original reads.
-    const auto additional_padding = 2 * sum_indel_sizes(overlapped) + 30;
+    const auto additional_padding = 2 * sum_indel_sizes(overlapped) + min_pad_;
     
     if (has_overlapped(reads_.get(), current_active_region_)) {
         const auto& lhs_read = *leftmost_overlapped(reads_.get(), current_active_region_);
@@ -566,12 +567,19 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_lagging_policy(Lag
     return *this;
 }
 
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_min_pad(Haplotype::SizeType val) noexcept
+{
+    min_pad_ = val;
+    return *this;
+}
+
 HaplotypeGenerator HaplotypeGenerator::Builder::build(const ReferenceGenome& reference, const GenomicRegion& window,
                          const MappableFlatSet<Variant>& candidates,
                          const ReadMap& reads) const
 {
     return HaplotypeGenerator {
-        window, reference, candidates, reads, soft_max_haplotypes_, hard_max_haplotypes_, lagging_policy_
+        window, reference, candidates, reads, soft_max_haplotypes_, hard_max_haplotypes_,
+        lagging_policy_, min_pad_
     };
 }
 

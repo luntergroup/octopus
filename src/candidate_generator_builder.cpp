@@ -133,10 +133,12 @@ namespace Octopus
     {
         return GeneratorFactoryMap {
             {Generator::Alignment, [this] () {
-                return std::make_unique<AlignmentCandidateVariantGenerator>(*parameters_.reference,
-                                                                            parameters_.min_base_quality,
-                                                                            parameters_.min_supporting_reads,
-                                                                            parameters_.max_variant_size);
+                AlignmentCandidateVariantGenerator::Options options {
+                    parameters_.min_base_quality,
+                    parameters_.min_supporting_reads,
+                    parameters_.max_variant_size
+                };
+                return std::make_unique<AlignmentCandidateVariantGenerator>(*parameters_.reference, options);
             }},
             {Generator::Assembler, [this] () {
                 const auto quality = (parameters_.min_assembler_base_quality)

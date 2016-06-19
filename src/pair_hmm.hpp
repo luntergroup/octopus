@@ -16,7 +16,7 @@
 
 namespace PairHMM
 {
-    static constexpr unsigned AlignmenetPad {15};
+    unsigned min_flank_pad() noexcept;
     
     struct Model
     {

@@ -23,7 +23,6 @@ inline std::ostream& operator<<(std::ostream& os, const std::chrono::system_cloc
 struct TimeInterval
 {
     using TimePoint = std::chrono::system_clock::time_point;
-    
     TimePoint start, end;
 };
 
@@ -45,17 +44,17 @@ inline std::ostream& operator<<(std::ostream& os, const TimeInterval& interval)
     const auto duration_s = duration<std::chrono::seconds>(interval);
     
     if (duration_s.count() < 60) {
-        os << duration_s.count() << "s";
+        os << duration_s.count() << 's';
         return os;
     }
     
     const auto duration_m = duration<std::chrono::minutes>(interval);
     
     if (duration_m.count() < 60) {
-        os << duration_m.count() << "." << ((100 * (duration_s.count() % 60)) / 60) << "m";
+        os << duration_m.count() << '.' << std::setw(2) << std::setfill('0') << ((100 * (duration_s.count() % 60)) / 60) << 'm';
     } else {
         const auto duration_h = duration<std::chrono::hours>(interval);
-        os << duration_h.count() << "." << ((100 * (duration_m.count() % 60)) / 60) << "h";
+        os << duration_h.count() << '.' << std::setw(2) << std::setfill('0') << ((100 * (duration_m.count() % 60)) / 60) << 'h';
     }
     
     return os;

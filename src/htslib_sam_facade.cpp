@@ -726,7 +726,7 @@ AlignedRead::SequenceType extract_sequence(const bam1_t* b)
     
     SequenceType result(sequence_length, 'N');
     
-    uint32_t i {};
+    std::uint32_t i {0};
     std::generate_n(std::begin(result), sequence_length,
                     [&i, &hts_sequence] () { return extract_base(hts_sequence, i++); });
     

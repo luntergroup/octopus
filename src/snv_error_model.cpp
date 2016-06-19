@@ -28,12 +28,6 @@ namespace Octopus
         return Tandem::find_maximal_repetitions(haplotype.sequence(), 1, 3);
     }
     
-    template <typename C, typename T>
-    static auto get_penalty(const C& penalties, const T length)
-    {
-        return (length <= penalties.size()) ? penalties[length] : penalties.back();
-    }
-    
     template <typename ForwardIt, typename OutputIt>
     OutputIt count_runs(ForwardIt first, ForwardIt last, OutputIt result,
                         const unsigned max_gap = 1)
@@ -78,6 +72,12 @@ namespace Octopus
                               });
     }
     
+    template <typename C, typename T>
+    static auto get_penalty(const C& penalties, const T length)
+    {
+        return (length <= penalties.size()) ? penalties[length] : penalties.back();
+    }
+    
     template <typename T, typename C>
     void convert_to_priors(std::vector<T>& run_lengths, const C& penalties)
     {
@@ -89,11 +89,11 @@ namespace Octopus
     {
         using T = std::int8_t;
         switch(b) {
-            case 'A': return T {0};
-            case 'C': return T {1};
-            case 'G': return T {2};
-            case 'T': return T {3};
-            default: return T {4};
+            case 'A': return T {1};
+            case 'C': return T {2};
+            case 'G': return T {3};
+            case 'T': return T {4};
+            default: return T {5};
         }
     }
     
@@ -141,7 +141,7 @@ namespace Octopus
 //                       std::ostreambuf_iterator<char>(std::cout),
 //                       [] (const auto i) -> char { return std::min(i + 48, 126); });
 //        std::cout << std::endl;
-        //exit(0);
+//        exit(0);
         
         convert_to_priors(forward_snv_priors, Max_qualities_);
         convert_to_priors(reverse_snv_priors, Max_qualities_);

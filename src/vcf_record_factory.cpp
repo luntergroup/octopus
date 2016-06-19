@@ -89,7 +89,7 @@ namespace Octopus
     
     bool are_in_phase(const Call::GenotypeCall& lhs, const Call::GenotypeCall& rhs)
     {
-        return overlaps(lhs.phase->region(), rhs.genotype);
+        return lhs.phase && overlaps(lhs.phase->region(), rhs.genotype);
     }
     
     std::vector<VcfRecord>
@@ -344,7 +344,7 @@ namespace Octopus
                 }
             }
             
-            if (it3 != end(wrapped_calls)) {
+            if (it3 != end(wrapped_calls) && overlaps(*prev(it3), *it3)) {
                 it = find_first_not_overlapped(next(it3), end(wrapped_calls), *prev(it3));
                 
                 while (it != end(wrapped_calls)) {
@@ -688,9 +688,11 @@ namespace Octopus
         
         const auto& region = calls.front()->mapped_region();
         
+        const auto& ref = calls.front()->reference().sequence();
+        
         result.set_chrom(contig_name(region));
         result.set_pos(mapped_begin(region) + 1);
-        result.set_ref(calls.front()->reference().sequence());
+        result.set_ref(ref);
         result.set_qual(phred_quality);
         
         std::vector<std::vector<VcfRecord::SequenceType>> resolved_genotypes {};
@@ -715,10 +717,10 @@ namespace Octopus
                 std::transform(std::cbegin(called_genotype), std::cend(called_genotype),
                                std::cbegin(resolved_sample_genotype),
                                std::begin(resolved_sample_genotype),
-                               [] (const Allele& allele, const auto& curr) {
+                               [&ref] (const Allele& allele, const auto& curr) {
                                    const auto& seq = allele.sequence();
                                    
-                                   if (seq.front() == '.' || seq.front() == '*') {
+                                   if (seq.front() == '.' || seq.front() == '*' || seq == ref) {
                                        return curr;
                                    }
                                    

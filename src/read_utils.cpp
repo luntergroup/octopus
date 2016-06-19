@@ -19,7 +19,7 @@ AlignedRead find_next_segment(const AlignedRead& read,
         throw std::runtime_error {"cannot find next segment as read is not chimeric"};
     }
     
-    auto segment_region = read.next_segment().inferred_region();
+    //auto segment_region = read.next_segment().inferred_region();
     
     return read;
 }

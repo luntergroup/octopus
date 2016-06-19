@@ -403,7 +403,7 @@ namespace Octopus
              "The minimum allele frequency that can be considered as a viable somatic mutation")
             ("credible-mass", po::value<float>()->default_value(0.99),
              "The mass of the posterior density to use for evaluating allele frequencies")
-            ("min-somatic-posterior", po::value<float>()->default_value(5.0),
+            ("min-somatic-posterior", po::value<float>()->default_value(2.0),
              "The minimum somatic mutation call posterior probability (phred scale)")
             ("somatics-only", po::bool_switch()->default_value(false),
              "Only output somatic calls (for somatic calling models only)")
@@ -609,9 +609,9 @@ namespace Octopus
             auto resolved_path = resolve_path(path, options);
             
             if (resolved_path) {
-                good_paths.emplace_back(*std::move(resolved_path));
+                good_paths.push_back(*std::move(resolved_path));
             } else {
-                bad_paths.emplace_back(*std::move(resolved_path));
+                bad_paths.push_back(*std::move(resolved_path));
             }
         }
         
@@ -774,12 +774,6 @@ namespace Octopus
     std::vector<GenomicRegion> extract_regions_from_file(const fs::path& file_path,
                                                          const ReferenceGenome& reference)
     {
-        if (!fs::exists(file_path)) {
-            Logging::ErrorLogger log {};
-            stream(log) << "File does not exist " << file_path;
-            return {};
-        }
-        
         std::ifstream file {file_path.string()};
         
         if (is_bed_file(file_path)) {
@@ -789,7 +783,8 @@ namespace Octopus
         std::vector<boost::optional<GenomicRegion>> parsed_lines {};
         
         std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
-                       std::back_inserter(parsed_lines), make_region_line_parser(file_path, reference));
+                       std::back_inserter(parsed_lines),
+                       make_region_line_parser(file_path, reference));
         
         file.close();
         
@@ -798,7 +793,7 @@ namespace Octopus
         
         for (auto&& region : parsed_lines) {
             if (region) {
-                result.emplace_back(*std::move(region));
+                result.push_back(*std::move(region));
             }
         }
         
@@ -919,7 +914,7 @@ namespace Octopus
         for (const auto& unparsed_region : unparsed_regions) {
             Logging::WarningLogger log {};
             try {
-                result.emplace_back(parse_region(unparsed_region, reference));
+                result.push_back(parse_region(unparsed_region, reference));
             } catch (std::exception& e) {
                 all_region_parsed = false;
                 stream(log) << "Could not parse input region \"" << unparsed_region
@@ -942,7 +937,11 @@ namespace Octopus
         result.reserve(one_based_regions.size());
         
         for (auto&& region : one_based_regions) {
-            result.emplace_back(shift(std::move(region), -1));
+            if (region.begin() > 0) {
+                result.push_back(shift(std::move(region), -1));
+            } else {
+                result.push_back(std::move(region));
+            }
         }
         
         return result;
@@ -953,7 +952,7 @@ namespace Octopus
         MappableFlatSet<GenomicRegion> result {};
         
         for (auto&& region : one_based_regions) {
-            result.emplace(shift(std::move(region), -1));
+            result.insert(shift(std::move(region), -1));
         }
         
         return result;
@@ -972,6 +971,8 @@ namespace Octopus
     
     InputRegionMap get_search_regions(const po::variables_map& options, const ReferenceGenome& reference)
     {
+        Logging::ErrorLogger log {};
+        
         std::vector<GenomicRegion> skip_regions {};
         
         bool all_parsed {true};
@@ -987,8 +988,26 @@ namespace Octopus
         }
         
         if (options.count("skip-regions-file") == 1) {
-            const auto& skip_path = options.at("skip-regions-file").as<std::string>();
-            append(extract_regions_from_file(skip_path, reference), skip_regions);
+            const auto& input_path = options.at("skip-regions-file").as<std::string>();
+            
+            auto resolved_path = resolve_path(input_path, options);
+            
+            if (!resolved_path) {
+                stream(log) << "Could not resolve the path " << input_path
+                            << " given in the input option (--skip-regions-file)";
+            }
+            
+            if (!fs::exists(*resolved_path)) {
+                stream(log) << "The path " << input_path
+                            << " given in the input option (--skip-regions-file) does not exist";
+            }
+            
+            if (!is_file_readable(*resolved_path)) {
+                stream(log) << "The path " << input_path
+                            << " given in the input option (--skip-regions-file) is not readable";
+            } else {
+                append(extract_regions_from_file(*resolved_path, reference), skip_regions);
+            }
         }
         
         if (options.at("use-one-based-indexing").as<bool>()) {
@@ -1015,8 +1034,26 @@ namespace Octopus
         }
         
         if (options.count("regions-file") == 1) {
-            const auto& regions_path = options.at("regions-file").as<std::string>();
-            append(extract_regions_from_file(regions_path, reference), input_regions);
+            const auto& input_path = options.at("regions-file").as<std::string>();
+            
+            auto resolved_path = resolve_path(input_path, options);
+            
+            if (!resolved_path) {
+                stream(log) << "Could not resolve the path " << input_path
+                            << " given in the input option (--skip-regions-file)";
+            }
+            
+            if (!fs::exists(*resolved_path)) {
+                stream(log) << "The path " << input_path
+                            << " given in the input option (--skip-regions-file) does not exist";
+            }
+            
+            if (!is_file_readable(*resolved_path)) {
+                stream(log) << "The path " << input_path
+                            << " given in the input option (--skip-regions-file) is not readable";
+            } else {
+                append(extract_regions_from_file(*resolved_path, reference), input_regions);
+            }
         }
         
         if (!all_parsed) {

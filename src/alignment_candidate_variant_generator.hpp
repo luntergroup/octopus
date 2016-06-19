@@ -30,12 +30,18 @@ public:
     using QualityType = AlignedRead::QualityType;
     using SizeType    = GenomicRegion::SizeType;
     
+    struct Options
+    {
+        QualityType min_base_quality;
+        unsigned min_support = 1;
+        SizeType max_variant_size = 100;
+        bool always_include_overlapping_indels = true;
+        unsigned max_poor_quality_insertion_bases = 1;
+    };
+    
     AlignmentCandidateVariantGenerator() = delete;
     
-    AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,
-                                       QualityType min_base_quality = 0,
-                                       unsigned min_support = 2,
-                                       SizeType max_variant_size = 100);
+    AlignmentCandidateVariantGenerator(const ReferenceGenome& reference, Options options);
     
     ~AlignmentCandidateVariantGenerator() override = default;
     
@@ -59,10 +65,8 @@ private:
     using QualitiesIterator = AlignedRead::Qualities::const_iterator;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
-    QualityType min_base_quality_;
-    unsigned max_poor_quality_insertion_bases_;
-    unsigned min_support_;
-    SizeType max_variant_size_;
+    
+    Options options_;
     
     std::deque<Variant> candidates_;
     SizeType max_seen_candidate_size_;
@@ -79,7 +83,7 @@ void AlignmentCandidateVariantGenerator::add_candidate(T1&& region, T2&& sequenc
 {
     const auto candidate_size = region_size(region);
     
-    if (candidate_size <= max_variant_size_) {
+    if (candidate_size <= options_.max_variant_size) {
         candidates_.emplace_back(std::forward<T1>(region), std::forward<T2>(sequence_removed),
                                  std::forward<T3>(sequence_added));
         

@@ -31,15 +31,10 @@ namespace Octopus
 // public methods
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,
-                                                                       QualityType min_base_quality,
-                                                                       unsigned min_support,
-                                                                       SizeType max_variant_size)
+                                                                       Options options)
 :
 reference_ {reference},
-min_base_quality_ {min_base_quality},
-max_poor_quality_insertion_bases_ {1},
-min_support_ {min_support},
-max_variant_size_ {max_variant_size},
+options_ {options},
 candidates_ {},
 max_seen_candidate_size_ {}
 {}
@@ -90,11 +85,13 @@ namespace
 
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
+    using std::cbegin; using std::next; using std::move;
+    
     const auto& read_contig   = contig_name(read);
     const auto& read_sequence = read.sequence();
     
-    auto sequence_itr  = std::cbegin(read_sequence);
-    auto qualities_itr = std::cbegin(read.qualities());
+    auto sequence_itr  = cbegin(read_sequence);
+    auto qualities_itr = cbegin(read.qualities());
     
     auto ref_index = mapped_begin(read);
     AlignedRead::SizeType read_index {0};
@@ -106,8 +103,9 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
         switch (cigar_operation.flag()) {
             case CigarOperation::ALIGNMENT_MATCH:
                 add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
-                                        sequence_itr + read_index, sequence_itr + read_index + op_size,
-                                        qualities_itr + read_index);
+                                        next(sequence_itr, read_index),
+                                        next(sequence_itr, read_index + op_size),
+                                        next(qualities_itr, read_index));
                 
                 read_index += op_size;
                 ref_index  += op_size;
@@ -122,13 +120,12 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
-                if (op_size <= max_variant_size_) {
+                if (op_size <= options_.max_variant_size) {
                     auto removed_sequence = reference_.get().fetch_sequence(region);
                     auto added_sequence   = splice(read_sequence, read_index, op_size);
                     
                     if (is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
-                        add_candidate(std::move(region), std::move(removed_sequence),
-                                      std::move(added_sequence));
+                        add_candidate(move(region), move(removed_sequence), move(added_sequence));
                     }
                 }
                 
@@ -139,13 +136,13 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             }
             case CigarOperation::INSERTION:
             {
-                if (count_bad_qualities(read.qualities(), read_index, op_size, min_base_quality_)
-                        <= max_poor_quality_insertion_bases_) {
+                if (count_bad_qualities(read.qualities(), read_index, op_size, options_.min_base_quality)
+                        <= options_.max_poor_quality_insertion_bases) {
                     auto added_sequence = splice(read_sequence, read_index, op_size);
                     
                     if (is_good_sequence(added_sequence)) {
                         add_candidate(GenomicRegion {read_contig, ref_index, ref_index},
-                                      "", std::move(added_sequence));
+                                      "", move(added_sequence));
                     }
                 }
                 
@@ -155,11 +152,13 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             }
             case CigarOperation::DELETION:
             {
-                region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
-                
-                auto removed_sequence = reference_.get().fetch_sequence(region);
-                
-                add_candidate(std::move(region), std::move(removed_sequence), "");
+                if (*next(qualities_itr, read_index) > 0 && *next(qualities_itr, read_index + 1) > 0) {
+                    region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
+                    
+                    auto removed_sequence = reference_.get().fetch_sequence(region);
+                    
+                    add_candidate(move(region), move(removed_sequence), "");
+                }
                 
                 ref_index += op_size;
                 
@@ -200,7 +199,7 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(con
     
     std::vector<Variant> result {};
     
-    if (min_support_ < 2) {
+    if (options_.min_support < 2) {
         result.insert(end(result), begin(overlapped), end(overlapped));
         result.erase(std::unique(begin(result), end(result)), end(result));
     } else {
@@ -220,13 +219,36 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(con
             
             const auto duplicate_count = distance(it, it2);
             
-            if (duplicate_count >= min_support_) {
-                result.emplace_back(duplicate);
+            if (duplicate_count >= options_.min_support) {
+                result.push_back(duplicate);
             }
             
             if (it2 == end(overlapped)) break;
             
             overlapped.advance_begin(distance(begin(overlapped), it) + duplicate_count);
+        }
+        
+        if (options_.always_include_overlapping_indels) {
+            std::deque<Variant> overlapped_indels {};
+            
+            for (const auto& candidate : result) {
+                const auto overlapped = overlap_range(candidates_, candidate);
+                
+                std::copy_if(cbegin(overlapped), cend(overlapped), std::back_inserter(overlapped_indels),
+                             [] (const auto& v) { return is_indel(v); });
+            }
+            
+            std::sort(begin(overlapped_indels), end(overlapped_indels));
+            
+            result.reserve(result.size() + overlapped_indels.size());
+            
+            const auto it = end(result);
+            
+            std::unique_copy(begin(overlapped_indels), end(overlapped_indels), std::back_inserter(result));
+            
+            std::inplace_merge(begin(result), it, end(result));
+            
+            result.erase(std::unique(begin(result), end(result)), end(result));
         }
         
         result.shrink_to_fit();
@@ -270,7 +292,7 @@ add_snvs_in_match_range(const GenomicRegion& region, const SequenceIterator firs
                  const char ref_base  {t.get<0>()}, read_base {t.get<1>()};
                  
                  if (ref_base != read_base && ref_base != 'N' && read_base != 'N'
-                     && t.get<2>() >= min_base_quality_) {
+                     && t.get<2>() >= options_.min_base_quality) {
                      add_candidate(GenomicRegion {contig, ref_index, ref_index + 1}, ref_base, read_base);
                  }
                  

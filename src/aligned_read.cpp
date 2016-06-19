@@ -33,11 +33,6 @@ AlignedRead::SizeType AlignedRead::NextSegment::inferred_template_length() const
     return inferred_template_length_;
 }
 
-GenomicRegion AlignedRead::NextSegment::inferred_region() const
-{
-    return GenomicRegion {contig_name_, begin_, inferred_template_length_};
-}
-
 bool AlignedRead::NextSegment::is_marked_unmapped() const
 {
     return flags_[0];

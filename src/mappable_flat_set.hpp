@@ -388,8 +388,8 @@ MappableFlatSet<MappableType, Allocator>::emplace(Args... args)
         elements_.pop_back();
         return std::make_pair(it, false);
     }
-    const auto rit = std::make_reverse_iterator(it);
-    std::rotate(rit, std::next(rit), std::rend(elements_));
+    std::rotate(std::rbegin(elements_), std::next(std::rbegin(elements_)),
+                std::make_reverse_iterator(it));
     if (is_bidirectionally_sorted_) {
         const auto overlapped = overlap_range(*it);
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);

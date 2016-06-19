@@ -44,8 +44,8 @@ public:
         
         NextSegment() = default;
         
-        template <typename String_>
-        NextSegment(String_&& contig_name, SizeType begin,
+        template <typename S>
+        NextSegment(S&& contig_name, SizeType begin,
                     SizeType inferred_template_length, Flags data);
         
         ~NextSegment() = default;
@@ -55,10 +55,10 @@ public:
         NextSegment(NextSegment&&)                 = default;
         NextSegment& operator=(NextSegment&&)      = default;
         
-        const std::string& contig_name() const;
+        const GenomicRegion::ContigNameType& contig_name() const;
         SizeType begin() const noexcept;
         SizeType inferred_template_length() const noexcept;
-        GenomicRegion inferred_region() const;
+        
         bool is_marked_unmapped() const;
         bool is_marked_reverse_mapped() const;
         
@@ -67,7 +67,7 @@ public:
     private:
         using FlagBits = std::bitset<2>;
         
-        std::string contig_name_;
+        GenomicRegion::ContigNameType contig_name_;
         SizeType begin_;
         SizeType inferred_template_length_;
         FlagBits flags_;

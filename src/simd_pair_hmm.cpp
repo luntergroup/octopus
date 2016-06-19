@@ -139,7 +139,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         const char base {(pos < truth_len) ? truth[pos] : 'N'};
         
-        _truthwin   = _mm_insert_epi16(_mm_srli_si128(_truthwin,   2), base, BAND_SIZE - 1);
+        _truthwin   = _mm_insert_epi16(_mm_srli_si128(_truthwin, 2), base, BAND_SIZE - 1);
         _truthnqual = _mm_insert_epi16(_mm_srli_si128(_truthnqual, 2), (base == 'N')
                                        ? N_SCORE : INF, BAND_SIZE - 1);
         _gap_open   = _mm_insert_epi16(_mm_srli_si128(_gap_open, 2),

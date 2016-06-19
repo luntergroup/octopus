@@ -46,8 +46,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -81,10 +81,22 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22:42,943,057-42,943,471", // why is GATK now calling these?
+        //"--use-one-based-indexing",
+        
+        "--regions", "22:17,882,936-17,885,377",
+        
+        //"--regions", "22:48744706-48744869", // tricky GIAB hcr
+        
+        //"--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions.bed",
+        
+        //"--regions", "22:44,695,012-44,695,163", // alignment routine going over bounds causing FP
+        //"--regions", "22:35,392,836-35,393,140", // alignment routine going over bounds causing wrong genotype call
+        //"--regions", "22:33,862,663-33,862,749", // SNV error model causing FN
+        //"--regions", "22:47,711,210-47,711,361", // SNV error model causing low qual TP
+        
+        //"--regions", "22:42,943,057-42,943,471", // why is GATK now calling these?
         
         //"--regions", "22:39,396,398-39,396,728", // run through!
-        
         //"--regions", "22:31,758,829-31,758,980", // run through
         //"--regions", "22:31,346,313-31,346,353", // run through, indel
         
@@ -97,8 +109,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:32,960,775-32,961,105", // low dummy model posterior
         
         //"--regions", "6:31,236,339-31,240,057", // HLA-C
-        
-        //"--use-one-based-indexing",
         
         //"--regions", "22:36,922,640-36,922,687", // FP ins?
         //"--regions", "22:35,834,436-35,834,740", // difficult region
@@ -284,7 +294,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--somatic-mutation-rate", "0.001",
         //"--min-somatic-frequency", "0.01",
         //"--credible-mass", "0.99",
-        "--min-somatic-posterior", "2",
+        //"--min-somatic-posterior", "2",
         
         //"--somatics-only",
         
@@ -298,7 +308,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_calls_slow.vcf",
         //"--output", "octopus_cancer.vcf",
         "--output", "octopus_calls_debug.vcf",
-        //"--output", "octopus_calls_snv_model.vcf",
+        //"--output", "octopus_calls_snv_model3.vcf",
         
         nullptr
     };

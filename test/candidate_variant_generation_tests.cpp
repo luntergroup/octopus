@@ -93,7 +93,10 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
     
     auto reads = read_manager.fetch_reads(sample, region);
     
-    Octopus::AlignmentCandidateVariantGenerator candidate_generator {human, 14};
+    Octopus::AlignmentCandidateVariantGenerator candidate_generator {
+        human,
+        Octopus::AlignmentCandidateVariantGenerator::Options {14}
+    };
     
     add_reads(reads, candidate_generator);
     
@@ -181,7 +184,10 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_
     
     auto reads = read_manager.fetch_reads(sample, region);
     
-    Octopus::AlignmentCandidateVariantGenerator candidate_generator {human, 10};
+    Octopus::AlignmentCandidateVariantGenerator candidate_generator {
+        human,
+        Octopus::AlignmentCandidateVariantGenerator::Options {10}
+    };
     
     add_reads(reads, candidate_generator);
     

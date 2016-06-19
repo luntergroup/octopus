@@ -101,8 +101,8 @@ IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_pe
     
     switch (max_repeat.period) {
         case 1: return 3;
-        case 2: return 2;
-        case 3: return 1;
+        case 2: return 5;
+        case 3: return 5;
         default: return default_gap_extension_;
     }
 }

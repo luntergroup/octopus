@@ -302,29 +302,31 @@ void remove_calls_outside_call_region(std::vector<VcfRecord>& calls, const Genom
 void merge(std::vector<CallWrapper>&& src, std::deque<VcfRecord>& dst,
            const VcfRecordFactory& factory, const GenomicRegion& call_region)
 {
+    using std::begin; using std::end;
+    
     if (src.empty()) return;
     
     auto new_records = factory.make(unwrap(std::move(src)));
     
     remove_calls_outside_call_region(new_records, call_region);
     
-    const auto it = dst.insert(std::end(dst),
-                               std::make_move_iterator(std::begin(new_records)),
-                               std::make_move_iterator(std::end(new_records)));
+    const auto it = dst.insert(end(dst),
+                               std::make_move_iterator(begin(new_records)),
+                               std::make_move_iterator(end(new_records)));
     
-    std::inplace_merge(std::begin(dst), it, std::end(dst),
+    std::inplace_merge(begin(dst), it, end(dst),
                        [] (const auto& lhs, const auto& rhs) {
                            return mapped_region(lhs) < mapped_region(rhs);
                        });
     
     // sometimes duplicates are called on active region boundries
-    const auto it2 = std::unique(std::begin(dst), std::end(dst),
+    const auto it2 = std::unique(begin(dst), end(dst),
                                  [] (const auto& lhs, const auto& rhs) {
                                      return lhs.pos() == rhs.pos() && lhs.ref() == rhs.ref()
                                             && lhs.alt() == rhs.alt();
                                  });
     
-    dst.erase(it2, std::end(dst));
+    dst.erase(it2, end(dst));
 }
 
 VariantCaller::CallTypeSet VariantCaller::get_call_types() const

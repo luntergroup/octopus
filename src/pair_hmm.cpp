@@ -56,7 +56,7 @@ bool is_target_in_truth_flank(const std::string& truth, const std::string& targe
                               const std::size_t target_offset, const Model& model)
 {
     return target_offset < model.lhs_flank_size
-    || (target_offset + target.size()) > (truth.size() - model.rhs_flank_size);
+                || (target_offset + target.size()) > (truth.size() - model.rhs_flank_size);
 }
 
 namespace debug
@@ -77,20 +77,22 @@ auto simd_align(const std::string& truth, const std::string& target,
                 const std::vector<std::uint8_t>& target_qualities,
                 const std::size_t target_offset, const Model& model)
 {
-    const auto truth_alignment_size = static_cast<int>(target.size() + 15);
+    constexpr auto Pad = static_cast<int>(SimdPairHmm::min_flank_pad());
     
-    const auto alignement_offset = static_cast<std::size_t>(std::max(0, static_cast<int>(target_offset) - 8));
+    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * Pad - 1);
     
-    if (alignement_offset + truth_alignment_size > truth.size()) {
+    const auto alignment_offset = static_cast<std::size_t>(std::max(0, static_cast<int>(target_offset) - Pad));
+    
+    if (alignment_offset + truth_alignment_size > truth.size()) {
         return std::numeric_limits<double>::lowest();
     }
     
     if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
-        const auto score = SimdPairHmm::align(truth.data() + alignement_offset, target.data(),
+        const auto score = SimdPairHmm::align(truth.data() + alignment_offset, target.data(),
                                               reinterpret_cast<const std::int8_t*>(target_qualities.data()),
                                               truth_alignment_size, static_cast<int>(target.size()),
-                                              model.snv_priors.get().data() + alignement_offset,
-                                              model.gap_open_penalties.get().data() + alignement_offset,
+                                              model.snv_priors.get().data() + alignment_offset,
+                                              model.gap_open_penalties.get().data() + alignment_offset,
                                               model.gap_extend, model.nuc_prior);
         
         return -ln_10_div_10 * static_cast<double>(score);
@@ -98,7 +100,7 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     std::vector<char> align1 {}, align2 {};
     
-    const auto max_alignment_size = 2 * (target.size() + 8);
+    const auto max_alignment_size = 2 * (target.size() + Pad);
     
     if (align1.size() < max_alignment_size) {
         align1.assign(max_alignment_size, '\0');
@@ -110,12 +112,12 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     int first_pos;
     
-    const auto score = SimdPairHmm::align(truth.data() + alignement_offset, target.data(),
+    const auto score = SimdPairHmm::align(truth.data() + alignment_offset, target.data(),
                                           reinterpret_cast<const std::int8_t*>(target_qualities.data()),
                                           truth_alignment_size,
                                           static_cast<int>(target.size()),
-                                          model.snv_priors.get().data() + alignement_offset,
-                                          model.gap_open_penalties.get().data() + alignement_offset,
+                                          model.snv_priors.get().data() + alignment_offset,
+                                          model.gap_open_penalties.get().data() + alignment_offset,
                                           model.gap_extend, model.nuc_prior,
                                           align1.data(), align2.data(), &first_pos);
     
@@ -125,18 +127,18 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
     
-    if (lhs_flank_size < alignement_offset) {
+    if (lhs_flank_size < alignment_offset) {
         lhs_flank_size = 0;
     } else {
-        lhs_flank_size -= alignement_offset;
+        lhs_flank_size -= alignment_offset;
     }
     
     auto rhs_flank_size = static_cast<int>(model.rhs_flank_size);
     
-    if (alignement_offset + truth_alignment_size < (truth.size() - model.rhs_flank_size)) {
+    if (alignment_offset + truth_alignment_size < (truth.size() - model.rhs_flank_size)) {
         rhs_flank_size = 0;
     } else {
-        rhs_flank_size += alignement_offset + truth_alignment_size;
+        rhs_flank_size += alignment_offset + truth_alignment_size;
         rhs_flank_size -= truth_size;
     }
     
@@ -147,10 +149,15 @@ auto simd_align(const std::string& truth, const std::string& target,
                                                                 reinterpret_cast<const std::int8_t*>(target_qualities.data()),
                                                                 model.gap_open_penalties.get().data(),
                                                                 model.gap_extend, model.nuc_prior,
-                                                                static_cast<int>(first_pos + alignement_offset),
+                                                                static_cast<int>(first_pos + alignment_offset),
                                                                 align1.data(), align2.data());
     
     return -ln_10_div_10 * static_cast<double>(score - flank_score);
+}
+
+unsigned min_flank_pad() noexcept
+{
+    return SimdPairHmm::min_flank_pad();
 }
 
 double align(const std::string& truth, const std::string& target,
@@ -195,7 +202,7 @@ double align(const std::string& truth, const std::string& target,
         return Ln_probability[model.gap_open_penalties.get()[mismatch_index]];
     }
     
-    // TODO: we should be able to optimise the alignement based of the first mismatch postition
+    // TODO: we should be able to optimise the alignment based of the first mismatch postition
     
     return simd_align(truth, target, target_qualities, target_offset, model);
 }

@@ -78,10 +78,14 @@ namespace Octopus
     start_ {std::chrono::system_clock::now()},
     last_log_ {start_},
     done_ {false},
-    position_tab_length_ {calculate_position_tab_length(regions_)},
+    position_tab_length_ {},
     block_compute_times_ {},
     log_ {}
-    {}
+    {
+        if (!regions_.empty()) {
+            position_tab_length_ = calculate_position_tab_length(regions_);
+        }
+    }
     
     ProgressMeter::ProgressMeter(GenomicRegion region)
     :

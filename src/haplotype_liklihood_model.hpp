@@ -60,8 +60,7 @@ public:
     HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)                 = default;
     HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
     
-    void set(const Haplotype& haplotype, boost::optional<FlankState> flank_state);
-    
+    void reset(const Haplotype& haplotype, boost::optional<FlankState> flank_state);
     void clear() noexcept;
     
     // ln p(read | haplotype, model)

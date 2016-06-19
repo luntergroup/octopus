@@ -93,7 +93,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                             std::forward_as_tuple(haplotype),
                                             std::forward_as_tuple(num_samples)).first->second);
         
-        likelihood_model_.set(haplotype, flank_state);
+        likelihood_model_.reset(haplotype, flank_state);
         
         auto read_hash_itr = std::cbegin(read_hashes);
         
