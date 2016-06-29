@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        "--debug",
+        //"--debug",
         //"--trace",
         
         //"--sites-only",
@@ -38,7 +38,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
-        //"--threads", "0",
+        "--threads", "0",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
@@ -46,8 +46,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -83,11 +83,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22:39290746-39291257",
-        
         //"--regions", "22:23,947,647-23,948,717", // Assembler bug
         
-        //"--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions.bed",
+        "--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions.bed",
         
         //"--regions", "22:41,165,299-41,165,603",
         
@@ -314,7 +312,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_cancer.vcf",
-        "--output", "octopus_calls_debug.vcf",
+        //"--output", "octopus_calls_debug.vcf",
         //"--output", "octopus_calls_assemble.vcf",
         //"--output", "octopus_calls2.vcf",
         

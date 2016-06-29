@@ -508,10 +508,15 @@ namespace Octopus
             }
         };
         
-        std::istream& operator>>(std::istream& str, Line& data)
+        std::istream& operator>>(std::istream& is, Line& data)
         {
-            std::getline(str, data.line_data);
-            return str;
+            std::getline(is, data.line_data);
+            
+            if (!data.line_data.empty() && data.line_data.back() == '\r') {
+                data.line_data.pop_back();
+            }
+            
+            return is;
         }
     } // namespace
     

@@ -1295,12 +1295,16 @@ namespace Octopus
         }
     }
     
-    auto get_legacy_path(const GenomeCallingComponents& components)
+    auto get_legacy_path(const fs::path& base)
     {
         const std::string identifier {"legacy"};
-        const auto base = components.output().path();
         const fs::path new_stem {base.stem().string() + "." + identifier + base.extension().string()};
         return base.parent_path() / new_stem;
+    }
+                
+    auto get_legacy_path(const GenomeCallingComponents& components)
+    {
+        return get_legacy_path(components.output().path());
     }
     
     void run_octopus(po::variables_map& options)
@@ -1365,8 +1369,10 @@ namespace Octopus
             
             filter_calls(*components);
             
-            const VcfReader vcf {components->output().path()};
-            VcfWriter out {get_legacy_path(*components)};
+            const auto filtered_path = get_filtered_path(*components);
+            
+            const VcfReader vcf {filtered_path};
+            VcfWriter out {get_legacy_path(filtered_path)};
 //            const VcfReader vcf {"/Users/danielcooke/Genomics/octopus_test/octopus_calls4_filtered.vcf"};
 //            VcfWriter out {"/Users/danielcooke/Genomics/octopus_test/octopus_calls4_filtered.legacy.vcf.gz"};
             convert_to_legacy(vcf, out);
