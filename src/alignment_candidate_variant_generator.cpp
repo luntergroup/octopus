@@ -35,6 +35,12 @@ AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(const Ref
 :
 reference_ {reference},
 options_ {options},
+match_ {[] (const Variant& lhs, const Variant& rhs) -> bool {
+    if (is_insertion(lhs)) {
+        return is_same_region(lhs, rhs);
+    }
+    return lhs == rhs;
+}},
 candidates_ {},
 max_seen_candidate_size_ {}
 {}
@@ -206,21 +212,25 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(con
         result.reserve(size(overlapped, BidirectionallySortedTag {})); // the maximum
         
         while (true) {
-            const auto it = std::adjacent_find(begin(overlapped), end(overlapped));
+            const auto it = std::adjacent_find(begin(overlapped), end(overlapped), match_);
             
             if (it == end(overlapped)) break;
             
             const Variant& duplicate {*it};
             
             const auto it2 = std::find_if_not(std::next(it), end(overlapped),
-                                              [&] (const auto& variant) {
-                                                  return variant == duplicate;
+                                              [this, &duplicate] (const auto& variant) {
+                                                  return match_(variant, duplicate);
                                               });
             
             const auto duplicate_count = distance(it, it2);
             
             if (duplicate_count >= options_.min_support) {
-                result.push_back(duplicate);
+                if (duplicate == *std::prev(it2)) {
+                    result.push_back(duplicate);
+                } else {
+                    std::unique_copy(it, it2, std::back_inserter(result));
+                }
             }
             
             if (it2 == end(overlapped)) break;

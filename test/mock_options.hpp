@@ -46,8 +46,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -83,11 +83,19 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22:50,894,133-50,896,784",
+        "--regions", "22:39290746-39291257",
         
-        //"--regions", "22:48744706-48744869", // tricky GIAB hcr
+        //"--regions", "22:23,947,647-23,948,717", // Assembler bug
         
         //"--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions.bed",
+        
+        //"--regions", "22:41,165,299-41,165,603",
+        
+        //"--regions", "22:19,659,923-19,661,143", // very cool assembler deletion
+        //"--regions", "22:49,217,985-49,218,594", // very cool assembler deletion
+        //"--regions", "22:24,712,696-24,713,000", // assembler proposing insane deletion
+        
+        //"--regions", "22:48744706-48744869", // tricky GIAB hcr
         
         //"--regions", "22:44,695,012-44,695,163", // alignment routine going over bounds causing FP
         //"--regions", "22:35,392,836-35,393,140", // alignment routine going over bounds causing wrong genotype call
@@ -246,7 +254,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // read transforms
         //"--disable-read-transforms",
         //"--disable-soft-clip-masking",
-        //"--mask-soft-clipped-boundries", "2",
+        //"--mask-soft-clipped-boundries", "20",
         //"--disable-adapter-masking",
         //"--disable-overlap-masking",
         
@@ -260,6 +268,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--allow-marked-duplicates",
         //"--allow-octopus-duplicates",
         //"--allow-qc-fails",
+        //"--consider-reads-with-unmapped-segments",
+        //"--allow-adapter-contaminated-reads",
         
         // downsampling
         //"--disable-downsampling",
@@ -268,16 +278,16 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // candidate generation
         //"--min-supporting-reads", "1",
-        //"--min-base-quality", "25",
+        //"--min-base-quality", "15",
         //"--no-raw-cigar-candidates",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
         "--no-assembly-candidates",
-        //"--kmer-size", "10",
+        //"--kmer-size", "75",
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        "--phasing-level", "Conservative", // Minimal, Conservative, Aggressive
+        //"--phasing-level", "Conservative", // Minimal, Conservative, Aggressive
         //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "256",
         //"--min-haplotype-posterior", "1e-30",
@@ -287,7 +297,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-variant-posterior", "2",
         //"--min-refcall-posterior", "0",
         
-        //"--snp-heterozygosity", "0.0001",
+        //"--snp-heterozygosity", "0.000333",
         //"--indel-heterozygosity", "0.01",
         
         // cancer
@@ -303,12 +313,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", test_out_vcf.c_str(),
         //"--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
-        //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
-        //"--output", "octopus_calls_fast.vcf",
-        //"--output", "octopus_calls_slow.vcf",
         //"--output", "octopus_cancer.vcf",
         "--output", "octopus_calls_debug.vcf",
-        //"--output", "octopus_calls_snv_model3.vcf",
+        //"--output", "octopus_calls_assemble.vcf",
+        //"--output", "octopus_calls2.vcf",
         
         nullptr
     };

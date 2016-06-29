@@ -56,7 +56,7 @@ namespace Options
     
     std::size_t get_target_read_buffer_size(const po::variables_map& options);
     
-    boost::optional<ReferenceGenome> make_reference(const po::variables_map& options);
+    ReferenceGenome make_reference(const po::variables_map& options);
     
     InputRegionMap get_search_regions(const po::variables_map& options,
                                      const ReferenceGenome& reference);
@@ -65,7 +65,7 @@ namespace Options
     
     boost::optional<std::vector<SampleIdType>> get_user_samples(const po::variables_map& options);
     
-    boost::optional<ReadManager> make_read_manager(const po::variables_map& options);
+    ReadManager make_read_manager(const po::variables_map& options);
     
     ReadFilterer make_read_filter(const po::variables_map& options);
     

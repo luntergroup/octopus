@@ -36,7 +36,7 @@ default_kmer_sizes_ {kmer_sizes},
 fallback_kmer_sizes_ {},
 bin_size_ {1000},
 bins_ {},
-min_base_quality_ {min_base_quality},
+min_base_quality_ {0},
 min_supporting_reads_ {min_supporting_reads},
 max_variant_size_ {max_variant_size}
 {
@@ -98,8 +98,7 @@ bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
 bool are_all_bases_good_quality(const AlignedRead& read,
                                 const AlignedRead::QualityType min_quality)
 {
-    return std::all_of(std::cbegin(read.qualities()),
-                       std::cend(read.qualities()),
+    return std::all_of(std::cbegin(read.qualities()), std::cend(read.qualities()),
                        [min_quality] (const char quality) {
                            return quality >= min_quality;
                        });
@@ -204,8 +203,7 @@ AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& reg
         
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
-            stream(log) << "Assembling reads in bin " << mapped_region(bin)
-                        << " with " << bin.read_sequences.size() << " reads";
+            stream(log) << "Assembling " << bin.read_sequences.size() << " reads in bin " << mapped_region(bin);
         }
         
         unsigned num_defaults_unsuccessful {0};
@@ -444,10 +442,7 @@ bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size,
         assembler.insert_read(sequence);
     }
     
-    const auto success = try_assemble_region(assembler, reference_sequence,
-                                             assembler_region, result);
-    
-    return success;
+    return try_assemble_region(assembler, reference_sequence, assembler_region, result);
 }
 
 bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assembler,
@@ -460,9 +455,6 @@ bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assemble
     if (!assembler.prune(min_supporting_reads_)) {
         return false;
     }
-    
-//    std::cout << "assembler: " << assembler.kmer_size() << std::endl;
-//    ::debug::print(assembler);
     
     auto variants = assembler.extract_variants();
     

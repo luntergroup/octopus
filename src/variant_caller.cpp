@@ -376,6 +376,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     
     std::vector<Haplotype> haplotypes;
     GenomicRegion active_region;
+    bool no_holdout;
     
     auto completed_region = head_region(call_region);
     
@@ -384,8 +385,8 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     while (true) {
         resume_timer(haplotype_generation_timer);
         try {
-            std::tie(haplotypes, active_region) = haplotype_generator.generate();
-        } catch(const HaplotypeGenerator::HaplotypeOverflowError& e) {
+            std::tie(haplotypes, active_region, no_holdout) = haplotype_generator.generate();
+        } catch (const HaplotypeGenerator::HaplotypeOverflowError& e) {
             // TODO: we could try to eliminate some more haplotypes and recall the region
             haplotype_generator.stop();
             haplotype_likelihoods.clear();
@@ -408,7 +409,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             break;
         }
         
-        remove_passed_candidates(candidates, candidate_region, haplotype_region(haplotypes));
+        if (no_holdout) {
+            remove_passed_candidates(candidates, candidate_region, haplotype_region(haplotypes));
+        }
         
         const auto active_reads = copy_overlapped(reads, active_region);
         
@@ -501,7 +504,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             }
         }
         
-        if (phase_set && overlaps(active_region, call_region)) {
+        if (no_holdout && phase_set && overlaps(active_region, call_region)) {
             assert(!is_empty(phase_set->region));
             
             if (debug_log_) stream(*debug_log_) << "Phased region is " << phase_set->region;
@@ -571,7 +574,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         const auto next_active_region = haplotype_generator.tell_next_active_region();
         pause_timer(haplotype_generation_timer);
         
-        if (begins_before(active_region, next_active_region) && overlaps(active_region, call_region)) {
+        if (no_holdout && begins_before(active_region, next_active_region) && overlaps(active_region, call_region)) {
             auto passed_region   = left_overhang_region(active_region, next_active_region);
             auto uncalled_region = overlapped_region(active_region, passed_region);
             
@@ -1095,9 +1098,9 @@ namespace debug
             stream << "There are no lhs inactive flanking candidates" << '\n';
             
             if (num_rhs_inactives == 1) {
-                stream << "There is 1 rhs inactive flanking candidates: " << '\n';
+                stream << "There is 1 possible rhs inactive flanking candidates: " << '\n';
             } else {
-                stream << "There are " << num_rhs_inactives << " rhs inactive flanking candidates: " << '\n';
+                stream << "There are " << num_rhs_inactives << " possible rhs inactive flanking candidates: " << '\n';
             }
             
             if (!number_only) {
@@ -1108,9 +1111,9 @@ namespace debug
         }
         
         if (num_lhs_inactives == 1) {
-            stream << "There is 1 lhs inactive flanking candidates: " << '\n';
+            stream << "There is 1 possible lhs inactive flanking candidates: " << '\n';
         } else {
-            stream << "There are " << num_lhs_inactives << " lhs inactive flanking candidates: " << '\n';
+            stream << "There are " << num_lhs_inactives << " possible lhs inactive flanking candidates: " << '\n';
         }
         
         if (!number_only) {
@@ -1121,9 +1124,9 @@ namespace debug
             stream << "There are no rhs inactive flanking candidates" << '\n';
         } else {
             if (num_rhs_inactives == 1) {
-                stream << "There is 1 rhs inactive flanking candidates: " << '\n';
+                stream << "There is 1 possible rhs inactive flanking candidates: " << '\n';
             } else {
-                stream << "There are " << num_rhs_inactives << " rhs inactive flanking candidates: " << '\n';
+                stream << "There are " << num_rhs_inactives << " possible rhs inactive flanking candidates: " << '\n';
             }
             
             if (!number_only) {

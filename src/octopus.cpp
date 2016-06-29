@@ -255,7 +255,7 @@ namespace Octopus
             + sequence_size(read) * sizeof(AlignedRead::QualityType)
             + read.cigar_string().size() * sizeof(CigarOperation)
             + contig_name(read).size()
-            + (read.is_chimeric() ? sizeof(AlignedRead::NextSegment) : 0);
+            + (read.has_other_segment() ? sizeof(AlignedRead::NextSegment) : 0);
     }
     
     auto estimate_mean_read_size(const std::vector<SampleIdType>& samples,
@@ -523,33 +523,16 @@ namespace Octopus
     boost::optional<GenomeCallingComponents>
     collate_genome_calling_components(const po::variables_map& options)
     {
-        Logging::FatalLogger log {};
-        
-        auto reference = Options::make_reference(options);
-        
-        if (!reference) {
-            log << "Could not make reference genome";
-            return boost::none;
-        }
-        
-        auto read_manager = Options::make_read_manager(options);
-        
-        if (!read_manager) {
-            log << "There are no read files";
-            return boost::none;
-        }
-        
-        auto output = Options::make_output_vcf_writer(options);
-        
-        if (!output.is_open()) {
-            log << "Could not make output file";
-            return boost::none;
-        }
-        
         try {
+            auto reference = Options::make_reference(options);
+            
+            auto read_manager = Options::make_read_manager(options);
+            
+            auto output = Options::make_output_vcf_writer(options);
+            
             GenomeCallingComponents result {
-                std::move(*reference),
-                std::move(*read_manager),
+                std::move(reference),
+                std::move(read_manager),
                 std::move(output),
                 options
             };
@@ -563,6 +546,7 @@ namespace Octopus
         } catch (const fs::filesystem_error& e) {
             return boost::none; // should already have logged this
         } catch (const std::exception& e) {
+            Logging::FatalLogger log {};
             stream(log) << "Could not collate options due to error '" << e.what() << "'";
             return boost::none;
         }
@@ -1174,12 +1158,19 @@ namespace Octopus
     
     auto make_filter_read_pipe(const GenomeCallingComponents& components)
     {
+        using std::make_unique;
+        
         ReadTransform transform {};
         transform.register_transform(ReadTransforms::MaskSoftClipped {});
         
         ReadFilterer filter {};
-        //filter.register_filter(std::make_unique<ReadFilters::IsNotMarkedQcFail>());
-        //filter.register_filter(std::make_unique<ReadFilters::IsNotMarkedDuplicate>());
+        filter.register_filter(make_unique<ReadFilters::HasValidQualities>());
+        filter.register_filter(make_unique<ReadFilters::HasWellFormedCigar>());
+        filter.register_filter(make_unique<ReadFilters::IsMapped>());
+        filter.register_filter(make_unique<ReadFilters::IsNotMarkedQcFail>());
+        filter.register_filter(make_unique<ReadFilters::IsNotMarkedDuplicate>());
+        filter.register_filter(make_unique<ReadFilters::IsNotDuplicate<ReadFilterer::BidirIt>>());
+        filter.register_filter(make_unique<ReadFilters::IsProperTemplate>());
         
         return ReadPipe {
             components.read_manager(), std::move(transform), std::move(filter), boost::none,
@@ -1187,12 +1178,20 @@ namespace Octopus
         };
     }
     
-    auto get_filtered_path(const GenomeCallingComponents& components)
+    auto get_filtered_path(const fs::path& unfiltered_output_path)
     {
         const std::string identifier {"filtered"};
-        const auto unfiltered = components.output().path();
-        const fs::path new_stem {unfiltered.stem().string() + "_" + identifier + unfiltered.extension().string()};
-        return unfiltered.parent_path() / new_stem;
+        const fs::path new_stem {
+            unfiltered_output_path.stem().string()
+            + "_" + identifier
+            + unfiltered_output_path.extension().string()
+        };
+        return unfiltered_output_path.parent_path() / new_stem;
+    }
+                
+    auto get_filtered_path(const GenomeCallingComponents& components)
+    {
+        return get_filtered_path(components.output().path());
     }
     
     void filter_calls(const GenomeCallingComponents& components)
@@ -1200,9 +1199,10 @@ namespace Octopus
         //assert(!components.output().is_open());
         
         const VcfReader calls {components.output().path()};
-        //const VcfReader calls {"/Users/dcooke/Genomics/octopus_test/octopus_calls.vcf"};
+        //const VcfReader calls {"/Users/danielcooke/Genomics/octopus_test/octopus_calls4.vcf"};
         
         const auto filtered_path = get_filtered_path(components);
+        //const auto filtered_path = get_filtered_path(calls.path());
         
         VcfWriter filtered_calls {filtered_path};
         
@@ -1225,7 +1225,8 @@ namespace Octopus
         for (const auto& p : components.search_regions()) {
             regions.emplace(std::piecewise_construct,
                             std::forward_as_tuple(p.first),
-                            std::forward_as_tuple(std::cbegin(p.second), std::cend(p.second)));
+                            std::forward_as_tuple(std::initializer_list<GenomicRegion> {encompassing_region(p.second)}));
+                            //std::forward_as_tuple(std::cbegin(p.second), std::cend(p.second)));
         }
         
         filter.filter(calls, filtered_calls, regions);
@@ -1362,12 +1363,12 @@ namespace Octopus
                 return;
             }
             
-            //filter_calls(*components);
+            filter_calls(*components);
             
             const VcfReader vcf {components->output().path()};
             VcfWriter out {get_legacy_path(*components)};
-//            const VcfReader vcf {"/Users/danielcooke/Genomics/octopus_test/octopus_calls_snv_model2.vcf.gz"};
-//            VcfWriter out {"/Users/danielcooke/Genomics/octopus_test/octopus_calls_snv_model2.legacy.vcf.gz"};
+//            const VcfReader vcf {"/Users/danielcooke/Genomics/octopus_test/octopus_calls4_filtered.vcf"};
+//            VcfWriter out {"/Users/danielcooke/Genomics/octopus_test/octopus_calls4_filtered.legacy.vcf.gz"};
             convert_to_legacy(vcf, out);
             
             cleanup(*components);

@@ -112,11 +112,7 @@ private:
         GraphNode() = default;
         template <typename T>
         explicit GraphNode(std::size_t index, T&& kmer, bool is_reference = false)
-        :
-        index {index},
-        kmer {std::forward<T>(kmer)},
-        is_reference {is_reference}
-        {}
+        : index {index}, kmer {std::forward<T>(kmer)}, is_reference {is_reference} {}
         
         std::size_t index;
         Kmer kmer;

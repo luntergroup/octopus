@@ -436,7 +436,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                 
                 cb.clear_info("DMBF");
                 
-                if (dummy_model_posterior > 0.05) {
+                if (dummy_model_posterior > 0.1) {
                     cb.add_filter("MODEL");
                     filtered = true;
                 }
@@ -446,7 +446,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                     filtered = true;
                 }
                 
-                const auto rmq = rmq_mapping_quality(call_reads);
+                const auto rmq = std::ceil(rmq_mapping_quality(call_reads));
                 
                 if (rmq < 40) {
                     cb.add_filter("MQ");
@@ -466,7 +466,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                     const auto& sample_call_reads = call_reads.at(sample);
                     
                     if (rmq >= 40) {
-                        const auto sample_rmq = rmq_mapping_quality(sample_call_reads);
+                        const auto sample_rmq = std::ceil(rmq_mapping_quality(sample_call_reads));
                         
                         if (sample_rmq < 40) {
                             sample_rmq_failed = true;
@@ -490,7 +490,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                         const auto pval = calculate_strand_bias(variant_support, sample_variants.first->second,
                                                                 sample_call_reads);
                         
-                        if (pval > 0.01) {
+                        if (pval > 0.00005) {
                             strand_biased = false;
                         }
                         

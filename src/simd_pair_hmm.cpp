@@ -6,11 +6,11 @@
 #include "simd_pair_hmm.hpp"
 
 #include <emmintrin.h>
+#include <algorithm>
 #include <cassert>
 
 //#include <iostream> // DEBUG
 //#include <iterator> // DEBUG
-//#include <algorithm> // DEBUG
 //
 //struct Seq { __m128i val; };
 //struct Qual { __m128i val; };
@@ -761,8 +761,8 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
     auto prev_state = MATCH;
     
     int x {first_pos}; // index into haplotype
-    int y {0};        // index into read
-    int i {0};        // index into alignment
+    int y {0};         // index into read
+    int i {0};         // index into alignment
     
     int result {0}; // alignment score (within flank)
     
@@ -777,9 +777,79 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
             {
                 if ((aln1[i] != aln2[i]) && (x < lhs_flank_len || x >= (truth_len - rhs_flank_len))) {
                     if (aln1[i] == 'N') {
-                        result += N_SCORE / 4;
+                        result += N_SCORE >> 2;
                     } else {
                         result += quals[y];
+                    }
+                }
+                ++x;
+                ++y;
+                break;
+            }
+            case INSERTION:
+            {
+                if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                    if (prev_state == INSERTION) {
+                        result += gap_extend + nuc_prior;
+                    } else {
+                        // gap open score is charged for insertions just after the corresponding base,
+                        // hence the -1
+                        result += gap_open[x - 1] + nuc_prior;
+                    }
+                }
+                ++y;
+                break;
+            }
+            case DELETION:
+            {
+                if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                    if (prev_state == DELETION) {
+                        result += gap_extend;
+                    } else {
+                        result += gap_open[x];
+                    }
+                }
+                ++x;
+                break;
+            }
+        }
+        
+        ++i;
+        prev_state = new_state;
+    }
+    
+    return result;
+}
+
+int calculate_flank_score(const int truth_len, const int lhs_flank_len, const int rhs_flank_len,
+                          const std::int8_t* quals, const std::int8_t* snv_prior,
+                          const std::int8_t* gap_open, const short gap_extend, const short nuc_prior,
+                          const int first_pos, const char* aln1, const char* aln2)
+{
+    static constexpr char MATCH {'M'}, INSERTION {'I'}, DELETION {'D'};
+    
+    auto prev_state = MATCH;
+    
+    int x {first_pos}; // index into haplotype
+    int y {0};         // index into read
+    int i {0};         // index into alignment
+    
+    int result {0}; // alignment score (within flank)
+    
+    while (aln1[i]) {
+        auto new_state = MATCH;
+        
+        if (aln1[i] == Gap) new_state = INSERTION;
+        if (aln2[i] == Gap) new_state = DELETION;  // can't be both '-'
+        
+        switch (new_state) {
+            case MATCH:
+            {
+                if ((aln1[i] != aln2[i]) && (x < lhs_flank_len || x >= (truth_len - rhs_flank_len))) {
+                    if (aln1[i] == 'N') {
+                        result += N_SCORE >> 2;
+                    } else {
+                        result += std::min(quals[y], snv_prior[x]);
                     }
                 }
                 ++x;

@@ -126,13 +126,13 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
             break;
     }
     
-    auto num_included = max_included_;
-    
     auto first_included_itr = prev(included_itr, num_indicators);
     
     auto num_remaining_candidates = static_cast<unsigned>(distance(included_itr, last_candidate_itr));
     
     unsigned num_excluded_candidates {0};
+    
+    auto num_included = max_included_;
     
     if (extension_policy_ == ExtensionPolicy::IncludeIfWithinReadLengthOfFirstIncluded) {
         auto max_candidates_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads, first_included_itr, last_candidate_itr));

@@ -105,13 +105,13 @@ public:
     const Qualities& qualities() const noexcept;
     QualityType mapping_quality() const noexcept;
     const CigarString& cigar_string() const noexcept;
-    bool is_chimeric() const noexcept;
+    bool has_other_segment() const noexcept;
     const NextSegment& next_segment() const;
     
     Flags flags() const;
     
     bool is_marked_all_segments_in_read_aligned() const noexcept;
-    bool is_marked_multiple_read_template() const noexcept;
+    bool is_marked_multiple_segment_template() const noexcept;
     bool is_marked_unmapped() const noexcept;
     bool is_marked_reverse_mapped() const noexcept;
     bool is_marked_secondary_alignment() const noexcept;
@@ -158,22 +158,22 @@ private:
 
 struct AlignedRead::NextSegment::Flags
 {
-    bool is_marked_unmapped;
-    bool is_marked_reverse_mapped;
+    bool unmapped;
+    bool reverse_mapped;
 };
 
 struct AlignedRead::Flags
 {
-    bool is_marked_multiple_read_template;
-    bool is_marked_all_segments_in_read_aligned;
-    bool is_marked_unmapped;
-    bool is_marked_reverse_mapped;
-    bool is_marked_first_template_segment;
-    bool is_marked_last_template_segmenet;
-    bool is_marked_secondary_alignment;
-    bool is_marked_qc_fail;
-    bool is_marked_duplicate;
-    bool is_marked_supplementary_alignment;
+    bool multiple_segment_template;
+    bool all_segments_in_read_aligned;
+    bool unmapped;
+    bool reverse_mapped;
+    bool first_template_segment;
+    bool last_template_segmenet;
+    bool secondary_alignment;
+    bool qc_fail;
+    bool duplicate;
+    bool supplementary_alignment;
 };
 
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>

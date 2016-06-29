@@ -134,7 +134,7 @@ double log_probability(const AlignedRead& read, const Haplotype& haplotype,
                                              final_mapping_position, model);
     }
     
-    assert(max_log_probability > std::numeric_limits<double>::lowest());
+    assert(max_log_probability > std::numeric_limits<double>::lowest() && max_log_probability <= 0);
     
     return max_log_probability;
 }

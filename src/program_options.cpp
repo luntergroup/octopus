@@ -332,6 +332,10 @@ namespace Octopus
              "Filters reads marked as supplementary alignments")
             ("consider-reads-with-unmapped-segments", po::bool_switch()->default_value(false),
              "Allows reads with unmapped template segmenets to be used for calling")
+            ("consider-reads-with-distant-segments", po::bool_switch()->default_value(false),
+             "Allows reads with template segmenets that are on different contigs")
+            ("allow-adapter-contaminated-reads", po::bool_switch()->default_value(false),
+             "Allows reads with possible adapter contamination")
             ("disable-downsampling", po::bool_switch()->default_value(false),
              "Diables all downsampling")
             ("downsample-above", po::value<unsigned>()->default_value(500),
@@ -424,7 +428,7 @@ namespace Octopus
             ("min-haplotype-posterior", po::value<float>()->default_value(1e-10),
              "Haplotypes with posterior less than this can be filtered, allowing greater"
              " longer haplotype extesion in complex regions")
-            ("phasing-level", po::value<PhasingLevel>()->default_value(PhasingLevel::Minimal),
+            ("phasing-level", po::value<PhasingLevel>()->default_value(PhasingLevel::Conservative),
              "The level of data driven phasing"
              "\tAggressive  : Lags haplotypes as much as the data allows\n")
             ("disable-inactive-flank-scoring", po::bool_switch()->default_value(false),
@@ -492,21 +496,24 @@ namespace Octopus
         return options.at("trace").as<bool>();
     }
     
-    struct Line
+    namespace
     {
-        std::string line_data;
-        
-        operator std::string() const
+        struct Line
         {
-            return line_data;
+            std::string line_data;
+            
+            operator std::string() const
+            {
+                return line_data;
+            }
+        };
+        
+        std::istream& operator>>(std::istream& str, Line& data)
+        {
+            std::getline(str, data.line_data);
+            return str;
         }
-    };
-    
-    std::istream& operator>>(std::istream& str, Line& data)
-    {
-        std::getline(str, data.line_data);
-        return str;
-    }
+    } // namespace
     
     boost::optional<fs::path> get_home_dir()
     {
@@ -585,7 +592,9 @@ namespace Octopus
         std::ifstream file {file_path.string()};
         
         if (!file.good()) {
-            throw std::runtime_error {"Could not read from file " + file_path.string()};
+            std::ostringstream ss {};
+            ss << "Could not open path file " << file_path;
+            throw std::runtime_error {ss.str()};
         }
         
         std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
@@ -615,9 +624,6 @@ namespace Octopus
             }
         }
         
-        good_paths.shrink_to_fit();
-        bad_paths.shrink_to_fit();
-        
         return std::make_pair(std::move(good_paths), std::move(bad_paths));
     }
     
@@ -627,7 +633,7 @@ namespace Octopus
         std::vector<fs::path> paths {std::cbegin(path_strings), std::cend(path_strings)};
         return resolve_paths(paths, options);
     }
-        
+    
     bool is_file_readable(const fs::path& path)
     {
         std::ifstream tmp {path.string()};
@@ -636,7 +642,13 @@ namespace Octopus
     
     bool is_file_writable(const fs::path& path)
     {
-        return true; // TODO
+        std::ofstream test {path.string()};
+        
+        const auto result = test.is_open();
+        
+        fs::remove(path);
+        
+        return result;
     }
     
     bool is_threading_allowed(const po::variables_map& options)
@@ -690,7 +702,7 @@ namespace Octopus
         return boost::none;
     }
     
-    boost::optional<ReferenceGenome> make_reference(const po::variables_map& options)
+    ReferenceGenome make_reference(const po::variables_map& options)
     {
         Logging::ErrorLogger log {};
         
@@ -701,19 +713,16 @@ namespace Octopus
         if (!resolved_path) {
             stream(log) << "Could not resolve the path " << input_path
                 << " given in the input option (--reference)";
-            return boost::none;
         }
         
         if (!fs::exists(*resolved_path)) {
             stream(log) << "The path " << input_path
                 << " given in the input option (--reference) does not exist";
-            return boost::none;
         }
         
         if (!is_file_readable(*resolved_path)) {
             stream(log) << "The path " << input_path
                 << " given in the input option (--reference) is not readable";
-            return boost::none;
         }
         
         const auto ref_cache_size = options.at("reference-cache-size").as<float>();
@@ -1243,28 +1252,23 @@ namespace Octopus
         return result;
     }
     
-    boost::optional<ReadManager> make_read_manager(const po::variables_map& options)
+    ReadManager make_read_manager(const po::variables_map& options)
     {
         auto read_paths = get_read_paths(options);
         
         if (read_paths) {
             const auto max_open_files = options.at("max-open-read-files").as<unsigned>();
             
-            try {
-                return ReadManager {*std::move(read_paths), max_open_files};
-            } catch (const std::runtime_error& e) {
-                Logging::ErrorLogger log {};
-                log << e.what();
-                return boost::none;
-            }
-            
+            return ReadManager {*std::move(read_paths), max_open_files};
         }
         
-        return boost::none;
+        throw std::runtime_error {"Unable to load read paths"};
     }
     
     ReadFilterer make_read_filter(const po::variables_map& options)
     {
+        using std::make_unique;
+        
         using QualityType = AlignedRead::QualityType;
         using SizeType    = AlignedRead::SizeType;
         
@@ -1272,64 +1276,77 @@ namespace Octopus
         
         ReadFilterer result {};
         
+        // these filters are mandatory
+        result.register_filter(make_unique<HasValidQualities>());
+        result.register_filter(make_unique<HasWellFormedCigar>());
+        
         if (options.at("disable-read-filtering").as<bool>()) {
             return result;
         }
         
         if (!options.at("consider-unmapped-reads").as<bool>()) {
-            result.register_filter(std::make_unique<IsMapped>());
+            result.register_filter(make_unique<IsMapped>());
         }
         
         const auto min_mapping_quality = options.at("min-mapping-quality").as<unsigned>();
         
         if (min_mapping_quality > 0) {
-            result.register_filter(std::make_unique<IsGoodMappingQuality>(min_mapping_quality));
+            result.register_filter(make_unique<IsGoodMappingQuality>(min_mapping_quality));
         }
         
         const auto min_base_quality = options.at("good-base-quality").as<unsigned>();
         const auto min_good_bases   = options.at("min-good-bases").as<unsigned>();
         
         if (min_base_quality > 0 && min_good_bases > 0) {
-            result.register_filter(std::make_unique<HasSufficientGoodQualityBases>(min_base_quality,
+            result.register_filter(make_unique<HasSufficientGoodQualityBases>(min_base_quality,
                                                                               min_good_bases));
         }
         
         if (min_base_quality > 0 && options.count("min-good-base-fraction") == 1) {
             auto min_good_base_fraction = options.at("min-good-base-fraction").as<double>();
-            result.register_filter(std::make_unique<HasSufficientGoodBaseFraction>(min_base_quality,
+            result.register_filter(make_unique<HasSufficientGoodBaseFraction>(min_base_quality,
                                                                               min_good_base_fraction));
         }
         
         if (options.count("min-read-length") == 1) {
-            result.register_filter(std::make_unique<IsShort>(options.at("min-read-length").as<SizeType>()));
+            result.register_filter(make_unique<IsShort>(options.at("min-read-length").as<SizeType>()));
         }
         
         if (options.count("max-read-length") == 1) {
-            result.register_filter(std::make_unique<IsLong>(options.at("max-read-length").as<SizeType>()));
+            result.register_filter(make_unique<IsLong>(options.at("max-read-length").as<SizeType>()));
         }
         
         if (!options.at("allow-marked-duplicates").as<bool>()) {
-            result.register_filter(std::make_unique<IsNotMarkedDuplicate>());
+            result.register_filter(make_unique<IsNotMarkedDuplicate>());
         }
         
         if (!options.at("allow-octopus-duplicates").as<bool>()) {
-            result.register_filter(std::make_unique<IsNotDuplicate<ReadFilterer::BidirIt>>());
+            result.register_filter(make_unique<IsNotDuplicate<ReadFilterer::BidirIt>>());
         }
         
         if (!options.at("allow-qc-fails").as<bool>()) {
-            result.register_filter(std::make_unique<IsNotMarkedQcFail>());
+            result.register_filter(make_unique<IsNotMarkedQcFail>());
         }
         
         if (options.at("no-secondary-alignments").as<bool>()) {
-            result.register_filter(std::make_unique<IsNotSecondaryAlignment>());
+            result.register_filter(make_unique<IsNotSecondaryAlignment>());
         }
         
         if (options.at("no-supplementary-alignmenets").as<bool>()) {
-            result.register_filter(std::make_unique<IsNotSupplementaryAlignment>());
+            result.register_filter(make_unique<IsNotSupplementaryAlignment>());
         }
         
         if (!options.at("consider-reads-with-unmapped-segments").as<bool>()) {
-            result.register_filter(std::make_unique<IsNextSegmentMapped>());
+            result.register_filter(make_unique<IsNextSegmentMapped>());
+            result.register_filter(make_unique<IsProperTemplate>());
+        }
+        
+        if (!options.at("consider-reads-with-distant-segments").as<bool>()) {
+            result.register_filter(make_unique<IsLocalTemplate>());
+        }
+        
+        if (!options.at("allow-adapter-contaminated-reads").as<bool>()) {
+            result.register_filter(make_unique<IsNotContaminated>());
         }
         
         result.shrink_to_fit();
@@ -1360,6 +1377,8 @@ namespace Octopus
         if (options.at("disable-read-transforms").as<bool>()) {
             return result;
         }
+        
+        //result.register_transform(ReadTransforms::QualityAdjustedSoftClippedMasker {});
         
         const auto tail_mask_size = options.at("mask-tails").as<SizeType>();
         
@@ -1728,7 +1747,7 @@ namespace Octopus
         
         if (!is_file_writable(*resolved_path)) {
             stream(log) << "The path " << input_path
-                << " given in the input option output is not readable";
+                        << " given in the input option output is not writable";
             return boost::none;
         }
         

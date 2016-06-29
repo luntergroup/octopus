@@ -15,7 +15,7 @@ namespace Octopus
 AlignedRead find_next_segment(const AlignedRead& read,
                               const MappableMap<GenomicRegion::ContigNameType, AlignedRead>& reads)
 {
-    if (!read.is_chimeric()) {
+    if (!read.has_other_segment()) {
         throw std::runtime_error {"cannot find next segment as read is not chimeric"};
     }
     

@@ -23,16 +23,16 @@ namespace Octopus
     
     namespace
     {
-    auto extract_repeats(const Haplotype& haplotype)
+    auto extract_repeats(const Haplotype& haplotype, const unsigned max_period)
     {
-        return Tandem::find_maximal_repetitions(haplotype.sequence(), 1, 3);
+        return Tandem::find_maximal_repetitions(haplotype.sequence(), 1, max_period);
     }
     
     template <typename ForwardIt, typename OutputIt>
     OutputIt count_runs(ForwardIt first, ForwardIt last, OutputIt result,
-                        const unsigned max_gap = 1)
+                        const unsigned max_gap = 4)
     {
-        using ValueType = typename std::iterator_traits<ForwardIt>::value_type;
+        using ValueType = typename std::iterator_traits<OutputIt>::value_type;
         
         if (first == last) return result;
         
@@ -72,19 +72,6 @@ namespace Octopus
                               });
     }
     
-    template <typename C, typename T>
-    static auto get_penalty(const C& penalties, const T length)
-    {
-        return (length <= penalties.size()) ? penalties[length] : penalties.back();
-    }
-    
-    template <typename T, typename C>
-    void convert_to_priors(std::vector<T>& run_lengths, const C& penalties)
-    {
-        std::transform(std::cbegin(run_lengths), std::cend(run_lengths), std::begin(run_lengths),
-                       [&penalties] (const auto l) { return get_penalty(penalties, l); } );
-    }
-    
     constexpr auto base_hash(const char b) noexcept
     {
         using T = std::int8_t;
@@ -93,7 +80,7 @@ namespace Octopus
             case 'C': return T {2};
             case 'G': return T {3};
             case 'T': return T {4};
-            default: return T {5};
+            default:  return T {5};
         }
     }
     
@@ -107,43 +94,54 @@ namespace Octopus
                                    return curr + base_hash(b);
                                });
     }
+    
+    template <typename C, typename T>
+    static auto get_penalty(const C& penalties, const T length)
+    {
+        return (length <= penalties.size()) ? penalties[length] : penalties.back();
+    }
+    
+    template <typename T1, typename T2, typename C>
+    void set_priors(const std::vector<T1>& run_lengths, std::vector<T2>& result, const C& penalties)
+    {
+        std::transform(std::cbegin(run_lengths), std::cend(run_lengths), std::cbegin(result),
+                       std::begin(result),
+                       [&penalties] (const auto l, const auto curr) {
+                           return std::min(get_penalty(penalties, l), curr);
+                       } );
+    }
     } // namespace
     
     void SnvErrorModel::evaluate(const Haplotype& haplotype,
-                                     PenaltyVector& forward_snv_priors,
-                                     PenaltyVector& reverse_snv_priors) const
+                                 PenaltyVector& forward_snv_priors,
+                                 PenaltyVector& reverse_snv_priors) const
     {
-        const auto repeats = extract_repeats(haplotype);
+        constexpr auto Max_period = Max_qualities_.size();
         
-        std::vector<std::int8_t> repeat_mask(sequence_size(haplotype), 0);
+        const auto repeats = extract_repeats(haplotype, Max_period);
+        
+        const auto num_bases = sequence_size(haplotype);
+        
+        std::array<std::vector<std::int8_t>, Max_period> repeat_masks {};
+        
+        repeat_masks.fill(std::vector<std::int8_t>(num_bases, 0));
         
         for (const auto& repeat : repeats) {
-            std::fill_n(std::next(std::begin(repeat_mask), repeat.pos), repeat.length,
+            std::fill_n(std::next(std::begin(repeat_masks[repeat.period - 1]), repeat.pos), repeat.length,
                         repeat_hash(haplotype, repeat));
         }
         
-        forward_snv_priors.resize(sequence_size(haplotype));
-        reverse_snv_priors.resize(sequence_size(haplotype));
+        forward_snv_priors.assign(num_bases, Max_qualities_.front().front());
+        reverse_snv_priors.assign(num_bases, Max_qualities_.front().front());
         
-        count_runs(std::cbegin(repeat_mask), std::cend(repeat_mask), std::begin(forward_snv_priors));
-        count_runs(std::crbegin(repeat_mask), std::crend(repeat_mask), std::rbegin(reverse_snv_priors));
+        std::vector<unsigned> runs(num_bases);
         
-//        ::debug::print_variant_alleles(haplotype); std::cout << '\n';
-//        std::cout << haplotype.sequence() << std::endl;
-//        std::copy(std::cbegin(repeat_mask), std::cend(repeat_mask),
-//                  std::ostream_iterator<int>(std::cout));
-//        std::cout << std::endl;
-//        std::transform(std::cbegin(forward_snv_priors), std::cend(forward_snv_priors),
-//                       std::ostreambuf_iterator<char>(std::cout),
-//                       [] (const auto i) -> char { return std::min(i + 48, 126); });
-//        std::cout << std::endl;
-//        std::transform(std::cbegin(reverse_snv_priors), std::cend(reverse_snv_priors),
-//                       std::ostreambuf_iterator<char>(std::cout),
-//                       [] (const auto i) -> char { return std::min(i + 48, 126); });
-//        std::cout << std::endl;
-//        exit(0);
-        
-        convert_to_priors(forward_snv_priors, Max_qualities_);
-        convert_to_priors(reverse_snv_priors, Max_qualities_);
+        for (std::size_t i {0}; i < Max_period; ++i) {
+            const auto& repeat_mask = repeat_masks[i];
+            count_runs(std::cbegin(repeat_mask), std::cend(repeat_mask), std::begin(runs));
+            set_priors(runs, forward_snv_priors, Max_qualities_[i]);
+            count_runs(std::crbegin(repeat_mask), std::crend(repeat_mask), std::rbegin(runs));
+            set_priors(runs, reverse_snv_priors, Max_qualities_[i]);
+        }
     }
 } // namespace Octopus

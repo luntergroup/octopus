@@ -69,6 +69,11 @@ namespace Octopus { namespace ReadTransforms
     private:
         const SizeType num_bases_;
     };
+    
+    struct QualityAdjustedSoftClippedMasker
+    {
+        void operator()(AlignedRead& read) const noexcept;
+    };
 } // namespace ReadTransforms
 } // namespace Octopus
 

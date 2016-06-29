@@ -761,34 +761,50 @@ CigarString extract_cigar_string(const bam1_t* b)
 }
 
 // Some of these flags will need to be changes when htslib catches up to the new SAM spec
-AlignedRead::Flags extract_flags(const bam1_t* b) noexcept
+AlignedRead::Flags extract_flags(const bam1_core_t& c) noexcept
 {
-    const auto c = b->core;
-    
     AlignedRead::Flags result {};
     
-    result.is_marked_multiple_read_template       = (c.flag & BAM_FPAIRED)        != 0;
-    result.is_marked_all_segments_in_read_aligned = (c.flag & BAM_FPROPER_PAIR)   != 0;
-    result.is_marked_unmapped                     = (c.flag & BAM_FUNMAP)         != 0;
-    result.is_marked_reverse_mapped               = (c.flag & BAM_FREVERSE)       != 0;
-    result.is_marked_first_template_segment       = (c.flag & BAM_FREAD1)         != 0;
-    result.is_marked_last_template_segmenet       = (c.flag & BAM_FREAD2)         != 0;
-    result.is_marked_secondary_alignment          = (c.flag & BAM_FSECONDARY)     != 0;
-    result.is_marked_qc_fail                      = (c.flag & BAM_FQCFAIL)        != 0;
-    result.is_marked_duplicate                    = (c.flag & BAM_FDUP)           != 0;
-    result.is_marked_supplementary_alignment      = (c.flag & BAM_FSUPPLEMENTARY) != 0;
+    result.multiple_segment_template    = (c.flag & BAM_FPAIRED)        != 0;
+    result.all_segments_in_read_aligned = (c.flag & BAM_FPROPER_PAIR)   != 0;
+    result.unmapped                     = (c.flag & BAM_FUNMAP)         != 0;
+    result.reverse_mapped               = (c.flag & BAM_FREVERSE)       != 0;
+    result.first_template_segment       = (c.flag & BAM_FREAD1)         != 0;
+    result.last_template_segmenet       = (c.flag & BAM_FREAD2)         != 0;
+    result.secondary_alignment          = (c.flag & BAM_FSECONDARY)     != 0;
+    result.qc_fail                      = (c.flag & BAM_FQCFAIL)        != 0;
+    result.duplicate                    = (c.flag & BAM_FDUP)           != 0;
+    result.supplementary_alignment      = (c.flag & BAM_FSUPPLEMENTARY) != 0;
     
     return result;
 }
-
-AlignedRead::NextSegment::Flags extract_next_segment_flags(const bam1_t* b)
+        
+auto mapping_quality(const bam1_core_t& c) noexcept
 {
-    const auto c = b->core;
+    return static_cast<AlignedRead::QualityType>(c.qual);
+}
+        
+bool has_multiple_segments(const bam1_core_t& c) noexcept
+{
+    return c.mtid != -1;
+}
     
+auto next_segment_position(const bam1_core_t& c) noexcept
+{
+    return static_cast<AlignedRead::SizeType>(c.mpos);
+}
+
+auto template_length(const bam1_core_t& c) noexcept
+{
+    return static_cast<AlignedRead::SizeType>(std::abs(c.isize));
+}
+    
+auto extract_next_segment_flags(const bam1_core_t& c) noexcept
+{
     AlignedRead::NextSegment::Flags result {};
     
-    result.is_marked_unmapped       = (c.flag & BAM_FMUNMAP)   != 0;
-    result.is_marked_reverse_mapped = (c.flag & BAM_FMREVERSE) != 0;
+    result.unmapped       = (c.flag & BAM_FMUNMAP)   != 0;
+    result.reverse_mapped = (c.flag & BAM_FMREVERSE) != 0;
     
     return result;
 }
@@ -805,13 +821,9 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
     
     auto cigar = extract_cigar_string(hts_bam1_.get());
     
-    if (!is_valid_cigar(cigar)) {
-        throw InvalidBamRecord {hts_facade_.file_path_, extract_read_name(hts_bam1_.get()), "empty cigar string"};
-    }
+    const auto& info = hts_bam1_->core;
     
-    const auto c = hts_bam1_->core;
-    
-    auto read_begin_tmp = soft_clipped_read_begin(cigar, c.pos);
+    auto read_begin_tmp = soft_clipped_read_begin(cigar, info.pos);
     
     auto sequence = extract_sequence(hts_bam1_.get());
     
@@ -837,16 +849,20 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
     
     const auto read_begin = static_cast<AlignedRead::SizeType>(read_begin_tmp);
     
-    const auto& contig_name = hts_facade_.contig_name(c.tid);
+    const auto& contig_name = hts_facade_.contig_name(info.tid);
     
-    if (c.mtid == -1) { // i.e. has no mate TODO: check if this is always true
+    if (has_multiple_segments(info)) {
         return AlignedRead {
             GenomicRegion {contig_name, read_begin, read_begin + reference_size<GenomicRegion::SizeType>(cigar)},
             move(sequence),
             move(qualities),
             move(cigar),
-            static_cast<AlignedRead::QualityType>(c.qual),
-            extract_flags(hts_bam1_.get())
+            mapping_quality(info),
+            extract_flags(info),
+            hts_facade_.contig_name(info.mtid),
+            next_segment_position(info),
+            template_length(info),
+            extract_next_segment_flags(info)
         };
     } else {
         return AlignedRead {
@@ -854,12 +870,8 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
             move(sequence),
             move(qualities),
             move(cigar),
-            static_cast<AlignedRead::QualityType>(c.qual),
-            extract_flags(hts_bam1_.get()),
-            contig_name,
-            static_cast<AlignedRead::SizeType>(c.mpos),
-            static_cast<AlignedRead::SizeType>(std::abs(c.isize)),
-            extract_next_segment_flags(hts_bam1_.get())
+            mapping_quality(info),
+            extract_flags(info)
         };
     }
 }

@@ -103,11 +103,11 @@ auto simd_align(const std::string& truth, const std::string& target,
     const auto max_alignment_size = 2 * (target.size() + Pad);
     
     if (align1.size() < max_alignment_size) {
-        align1.assign(max_alignment_size, '\0');
-        align2.assign(max_alignment_size, '\0');
+        align1.assign(max_alignment_size, 0);
+        align2.assign(max_alignment_size, 0);
     } else {
-        std::fill_n(std::begin(align1), max_alignment_size, '\0');
-        std::fill_n(std::begin(align2), max_alignment_size, '\0');
+        std::fill_n(std::begin(align1), max_alignment_size, 0);
+        std::fill_n(std::begin(align2), max_alignment_size, 0);
     }
     
     int first_pos;
@@ -147,10 +147,13 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     const auto flank_score = SimdPairHmm::calculate_flank_score(truth_size, lhs_flank_size, rhs_flank_size,
                                                                 reinterpret_cast<const std::int8_t*>(target_qualities.data()),
+                                                                model.snv_priors.get().data(),
                                                                 model.gap_open_penalties.get().data(),
                                                                 model.gap_extend, model.nuc_prior,
                                                                 static_cast<int>(first_pos + alignment_offset),
                                                                 align1.data(), align2.data());
+    
+    assert(flank_score <= score);
     
     return -ln_10_div_10 * static_cast<double>(score - flank_score);
 }
@@ -164,7 +167,7 @@ double align(const std::string& truth, const std::string& target,
              const std::vector<std::uint8_t>& target_qualities,
              const std::size_t target_offset, const Model& model)
 {
-    using std::cbegin; using std::cend; using std::next;
+    using std::cbegin; using std::cend; using std::next; using std::distance;
     
     static constexpr auto Ln_probability = make_phred_to_ln_prob_lookup<std::uint8_t>();
     
@@ -189,17 +192,18 @@ double align(const std::string& truth, const std::string& target,
     
     if (m2.first == cend(target)) {
         // then there is only a single base difference between the sequences
-        const auto mismatch_index = std::distance(offsetted_truth_begin_itr, m1.second);
+        const auto truth_index  = distance(offsetted_truth_begin_itr, m1.second) + target_offset;
+        const auto target_index = distance(cbegin(target), m1.first);
         
-        const auto mispatch_penalty = std::min(target_qualities[mismatch_index],
-                                               static_cast<std::uint8_t>(model.snv_priors.get()[mismatch_index]));
+        const auto mispatch_penalty = std::min(target_qualities[target_index],
+                                               static_cast<std::uint8_t>(model.snv_priors.get()[truth_index]));
         
-        if (mispatch_penalty <= model.gap_open_penalties.get()[mismatch_index]
+        if (mispatch_penalty <= model.gap_open_penalties.get()[truth_index]
             || !std::equal(next(m1.first), cend(target), m1.second)) {
             return Ln_probability[mispatch_penalty];
         }
         
-        return Ln_probability[model.gap_open_penalties.get()[mismatch_index]];
+        return Ln_probability[model.gap_open_penalties.get()[truth_index]];
     }
     
     // TODO: we should be able to optimise the alignment based of the first mismatch postition

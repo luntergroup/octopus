@@ -68,6 +68,8 @@ private:
     
     Options options_;
     
+    std::function<bool(const Variant&, const Variant&)> match_;
+    
     std::deque<Variant> candidates_;
     SizeType max_seen_candidate_size_;
     

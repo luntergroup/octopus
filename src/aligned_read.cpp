@@ -72,14 +72,14 @@ const CigarString& AlignedRead::cigar_string() const noexcept
     return cigar_string_;
 }
 
-bool AlignedRead::is_chimeric() const noexcept
+bool AlignedRead::has_other_segment() const noexcept
 {
     return static_cast<bool>(next_segment_);
 }
 
 const AlignedRead::NextSegment& AlignedRead::next_segment() const
 {
-    if (is_chimeric()) {
+    if (has_other_segment()) {
         return *next_segment_;
     } else {
         throw std::runtime_error {"AlignedRead: read does not have a next segment"};
@@ -90,14 +90,14 @@ AlignedRead::Flags AlignedRead::flags() const
 {
     Flags flags {};
     
-    flags.is_marked_multiple_read_template       = is_marked_multiple_read_template();
-    flags.is_marked_all_segments_in_read_aligned = is_marked_all_segments_in_read_aligned();
-    flags.is_marked_unmapped                     = is_marked_unmapped();
-    flags.is_marked_reverse_mapped               = is_marked_reverse_mapped();
-    flags.is_marked_secondary_alignment          = is_marked_secondary_alignment();
-    flags.is_marked_qc_fail                      = is_marked_qc_fail();
-    flags.is_marked_duplicate                    = is_marked_duplicate();
-    flags.is_marked_supplementary_alignment      = is_marked_supplementary_alignment();
+    flags.multiple_segment_template    = is_marked_multiple_segment_template();
+    flags.all_segments_in_read_aligned = is_marked_all_segments_in_read_aligned();
+    flags.unmapped                     = is_marked_unmapped();
+    flags.reverse_mapped               = is_marked_reverse_mapped();
+    flags.secondary_alignment          = is_marked_secondary_alignment();
+    flags.qc_fail                      = is_marked_qc_fail();
+    flags.duplicate                    = is_marked_duplicate();
+    flags.supplementary_alignment      = is_marked_supplementary_alignment();
     
     return flags;
 }
@@ -107,7 +107,7 @@ bool AlignedRead::is_marked_all_segments_in_read_aligned() const noexcept
     return flags_[0];
 }
 
-bool AlignedRead::is_marked_multiple_read_template() const noexcept
+bool AlignedRead::is_marked_multiple_segment_template() const noexcept
 {
     return flags_[1];
 }
@@ -206,14 +206,14 @@ AlignedRead::FlagBits AlignedRead::compress(const Flags& flags)
 {
     FlagBits result {};
     
-    result[0] = flags.is_marked_all_segments_in_read_aligned;
-    result[1] = flags.is_marked_multiple_read_template;
-    result[2] = flags.is_marked_unmapped;
-    result[3] = flags.is_marked_reverse_mapped;
-    result[4] = flags.is_marked_secondary_alignment;
-    result[5] = flags.is_marked_qc_fail;
-    result[6] = flags.is_marked_duplicate;
-    result[7] = flags.is_marked_supplementary_alignment;
+    result[0] = flags.all_segments_in_read_aligned;
+    result[1] = flags.multiple_segment_template;
+    result[2] = flags.unmapped;
+    result[3] = flags.reverse_mapped;
+    result[4] = flags.secondary_alignment;
+    result[5] = flags.qc_fail;
+    result[6] = flags.duplicate;
+    result[7] = flags.supplementary_alignment;
     
     result[compression_flag_] = false;
     
@@ -223,8 +223,8 @@ AlignedRead::FlagBits AlignedRead::compress(const Flags& flags)
 AlignedRead::NextSegment::FlagBits AlignedRead::NextSegment::compress(const Flags& flags)
 {
     FlagBits result {};
-    result[0] = flags.is_marked_unmapped;
-    result[1] = flags.is_marked_reverse_mapped;
+    result[0] = flags.unmapped;
+    result[1] = flags.reverse_mapped;
     return result;
 }
 
@@ -355,7 +355,7 @@ bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
 
 bool are_other_segments_duplicates(const AlignedRead &lhs, const AlignedRead &rhs)
 {
-    if (lhs.is_chimeric() && rhs.is_chimeric()) {
+    if (lhs.has_other_segment() && rhs.has_other_segment()) {
         return lhs.next_segment() == rhs.next_segment();
     }
     return false;
@@ -365,7 +365,7 @@ bool IsDuplicate::operator()(const AlignedRead &lhs, const AlignedRead &rhs) con
 {
     return lhs.mapped_region() == rhs.mapped_region()
         && lhs.cigar_string() == rhs.cigar_string()
-        && lhs.flags().is_marked_reverse_mapped == rhs.flags().is_marked_reverse_mapped
+        && lhs.flags().reverse_mapped == rhs.flags().reverse_mapped
         && are_other_segments_duplicates(lhs, rhs);
 }
 
@@ -392,7 +392,7 @@ std::ostream& operator<<(std::ostream& os, const AlignedRead& read)
     os << read.qualities() << ' ';
     os << read.cigar_string() << ' ';
     os << static_cast<unsigned>(read.mapping_quality()) << ' ';
-    if (read.is_chimeric()) {
+    if (read.has_other_segment()) {
         os << read.next_segment().contig_name() << ' ';
         os << read.next_segment().begin() << ' ';
         os << read.next_segment().inferred_template_length();

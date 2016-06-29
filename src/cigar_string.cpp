@@ -110,12 +110,12 @@ bool is_minimal_cigar(const CigarString& cigar) noexcept
 
 bool is_front_soft_clipped(const CigarString& cigar_string) noexcept
 {
-    return cigar_string.empty() || cigar_string.front().flag() == CigarOperation::SOFT_CLIPPED;
+    return !cigar_string.empty() && cigar_string.front().flag() == CigarOperation::SOFT_CLIPPED;
 }
 
 bool is_back_soft_clipped(const CigarString& cigar_string) noexcept
 {
-    return cigar_string.empty() || cigar_string.back().flag() == CigarOperation::SOFT_CLIPPED;
+    return !cigar_string.empty() && cigar_string.back().flag() == CigarOperation::SOFT_CLIPPED;
 }
 
 bool is_soft_clipped(const CigarString& cigar_string) noexcept

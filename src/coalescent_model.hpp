@@ -37,10 +37,9 @@ namespace Octopus
     public:
         CoalescentModel() = delete;
         
-        explicit CoalescentModel(Haplotype reference,
-                                 double snp_heterozygosity = 0.001,
-                                 double indel_heterozygosity = 0.001,
-                                 unsigned max_haplotypes = 1024);
+        CoalescentModel(Haplotype reference,
+                        double snp_heterozygosity = 0.001, double indel_heterozygosity = 0.0001,
+                        unsigned max_haplotypes = 1024);
         
         ~CoalescentModel() = default;
         
@@ -251,7 +250,6 @@ namespace Octopus
         
         const auto num_indels = std::count_if(std::cbegin(site_buffer1_), std::cend(site_buffer1_),
                                               [] (const auto& v) { return is_indel(v); });
-        
         
         return std::make_tuple(site_buffer1_.size() - num_indels, num_indels,
                                static_cast<unsigned>(detail::size(haplotypes) + 1));

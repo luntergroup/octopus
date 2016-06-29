@@ -10,6 +10,7 @@
 #define haplotype_generator_hpp
 
 #include <vector>
+#include <tuple>
 #include <functional>
 #include <utility>
 #include <unordered_set>
@@ -39,6 +40,8 @@ public:
     
     class Builder;
     
+    using HaplotypePacket = std::tuple<std::vector<Haplotype>, GenomicRegion, bool>;
+    
     HaplotypeGenerator() = delete;
     
     HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
@@ -60,7 +63,7 @@ public:
     
     void stop() noexcept;
     
-    std::pair<std::vector<Haplotype>, GenomicRegion> generate();
+    HaplotypePacket generate();
     
     bool removal_has_impact() const;
     unsigned max_removal_impact() const;
@@ -90,14 +93,14 @@ private:
     
     boost::optional<Allele> rightmost_allele_;
     
-    bool is_lagged() const noexcept;
+    bool is_lagging_enabled() const noexcept;
     bool is_active_region_lagged() const;
     
     void reset_next_active_region() const noexcept;
     void update_next_active_region() const;
     
     void set_holdout_set(const GenomicRegion& active_region);
-    void rientroduce_holdout_set();
+    void try_reintroducing_holdout_set();
     
     GenomicRegion calculate_haplotype_region() const;
 };
@@ -139,7 +142,13 @@ void HaplotypeGenerator::remove(const Container& haplotypes)
     
     if (!is_active_region_lagged() || haplotypes.size() == tree_.num_haplotypes()) {
         tree_.clear();
-        alleles_.erase_overlapped(current_active_region_);
+        if (holdout_set_.empty()) {
+            alleles_.erase_overlapped(current_active_region_);
+        } else {
+            // TODO: in this case we must be more selective and only erase those alleles
+            // which are not present in the remaining haplotype set
+            alleles_.erase_overlapped(current_active_region_);
+        }
     } else {
         prune_all(haplotypes, tree_);
     }

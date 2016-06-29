@@ -33,17 +33,17 @@ BOOST_AUTO_TEST_CASE(aligned_read_copies_and_moves_correctly)
         parse_cigar_string("4M"), 10, AlignedRead::Flags {}, "1", 10, 30,
         AlignedRead::NextSegment::Flags {}};
     
-    BOOST_CHECK(read.is_chimeric());
+    BOOST_CHECK(read.has_other_segment());
     BOOST_CHECK(read.next_segment().inferred_template_length() == 30);
     
     const auto moved_read = std::move(read);
     
-    BOOST_CHECK(moved_read.is_chimeric());
+    BOOST_CHECK(moved_read.has_other_segment());
     BOOST_CHECK(moved_read.next_segment().inferred_template_length() == 30);
     
     const auto copied_read = moved_read;
     
-    BOOST_CHECK(copied_read.is_chimeric());
+    BOOST_CHECK(copied_read.has_other_segment());
     BOOST_CHECK(copied_read.next_segment().inferred_template_length() == 30);
     BOOST_CHECK(moved_read == copied_read);
 }

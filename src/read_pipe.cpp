@@ -139,7 +139,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
                     stream(*debug_log_) << "In sample " << p.first;
                     if (!p.second.empty()) {
                         for (const auto& c : p.second) {
-                            stream(*debug_log_) << c.second << " reads were removed by the " << c.first << " filter";
+                            stream(*debug_log_) << c.second << " failed the " << c.first << " filter";
                         }
                     } else {
                         *debug_log_ << "No reads were filtered";

@@ -111,16 +111,8 @@ private:
 
 namespace detail
 {
-    template <typename InputIt>
-    void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, ContigAllele)
-    {
-        std::for_each(first, last, [&] (const auto& allele) {
-            tree.extend(allele);
-        });
-    }
-    
-    template <typename InputIt>
-    void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, Allele)
+    template <typename InputIt, typename A>
+    void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, A)
     {
         std::for_each(first, last, [&] (const auto& allele) {
             tree.extend(allele);
@@ -136,35 +128,39 @@ namespace detail
         });
     }
     
-    template <typename InputIt>
+    template <typename InputIt, typename A>
     InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
-                           const unsigned max_haplotypes, ContigAllele)
+                              const unsigned max_haplotypes, A)
     {
-        return std::find_if(first, last, [&] (const auto& allele) {
-            tree.extend(allele);
-            return tree.num_haplotypes() >= max_haplotypes;
-        });
+        if (first == last) return last;
+        const auto it = std::find_if(first, last,
+                                     [&] (const auto& allele) {
+                                         tree.extend(allele);
+                                         return tree.num_haplotypes() >= max_haplotypes;
+                                     });
+        if (tree.num_haplotypes() == max_haplotypes) {
+            return std::next(it);
+        } else {
+            return it;
+        }
     }
     
     template <typename InputIt>
     InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
-                           const unsigned max_haplotypes, Allele)
+                              const unsigned max_haplotypes, Variant)
     {
-        return std::find_if(first, last, [&] (const auto& allele) {
-            tree.extend(allele);
-            return tree.num_haplotypes() >= max_haplotypes;
-        });
-    }
-    
-    template <typename InputIt>
-    InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
-                           const unsigned max_haplotypes, Variant)
-    {
-        return std::find_if(first, last, [&] (const auto& variant) {
-            tree.extend(variant.ref_allele());
-            tree.extend(variant.alt_allele());
-            return tree.num_haplotypes() >= max_haplotypes;
-        });
+        if (first == last) return last;
+        const auto it = std::find_if(first, last,
+                                     [&] (const auto& variant) {
+                                         tree.extend(variant.ref_allele());
+                                         tree.extend(variant.alt_allele());
+                                         return tree.num_haplotypes() >= max_haplotypes;
+                                     });
+        if (tree.num_haplotypes() == max_haplotypes) {
+            return std::next(it);
+        } else {
+            return it;
+        }
     }
     
     template <typename T>

@@ -56,6 +56,22 @@ private:
     virtual bool passes(const AlignedRead&) const noexcept = 0;
 };
 
+struct HasWellFormedCigar : BasicReadFilter
+{
+    HasWellFormedCigar();
+    HasWellFormedCigar(std::string name);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+};
+
+struct HasValidQualities : BasicReadFilter
+{
+    HasValidQualities();
+    HasValidQualities(std::string name);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+};
+
 struct IsNotSecondaryAlignment : BasicReadFilter
 {
     IsNotSecondaryAlignment();
@@ -194,6 +210,22 @@ struct IsNotMarkedQcFail : BasicReadFilter
 {
     IsNotMarkedQcFail();
     IsNotMarkedQcFail(std::string name);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+};
+
+struct IsProperTemplate : BasicReadFilter
+{
+    IsProperTemplate();
+    IsProperTemplate(std::string name);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+};
+    
+struct IsLocalTemplate : BasicReadFilter
+{
+    IsLocalTemplate();
+    IsLocalTemplate(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };

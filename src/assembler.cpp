@@ -45,7 +45,7 @@ namespace
             return sequence.size() - kmer_size + 1;
         }
     }
-}
+} // namespace
 
 // public methods
 
@@ -481,13 +481,16 @@ bool Assembler::is_reference_unique_path() const
     return std::none_of(p.first, p.second, is_reference_edge);
 }
 
-template <typename T>
-bool is_dna(const T& sequence)
+namespace
 {
-    return std::all_of(std::cbegin(sequence), std::cend(sequence),
-                       [] (const char base) {
-                           return base == 'A' || base == 'C' || base == 'G' || base == 'T';
-                       });
+    template <typename T>
+    bool is_dna(const T& sequence)
+    {
+        return std::all_of(std::cbegin(sequence), std::cend(sequence),
+                           [] (const char base) {
+                               return base == 'A' || base == 'C' || base == 'G' || base == 'T';
+                           });
+    }
 }
 
 Assembler::Vertex Assembler::null_vertex() const
@@ -633,8 +636,7 @@ Assembler::Vertex Assembler::reference_tail() const
 Assembler::Vertex Assembler::next_reference(const Vertex u) const
 {
     const auto p = boost::out_edges(u, graph_);
-    const auto it = std::find_if(p.first, p.second,
-                                 [this] (const Edge e) { return is_reference(e); });
+    const auto it = std::find_if(p.first, p.second, [this] (const Edge e) { return is_reference(e); });
     assert(it != p.second);
     return boost::target(*it, graph_);
 }
@@ -659,9 +661,8 @@ Assembler::SequenceType Assembler::make_sequence(const Path& path) const
     SequenceType result {};
     result.reserve(k_ + path.size() - 1);
     
-    result.insert(std::end(result),
-                  std::cbegin(kmer_of(path.front())),
-                  std::cend(kmer_of(path.front())));
+    const auto& first_kmer = kmer_of(path.front());
+    result.insert(std::end(result), std::cbegin(first_kmer), std::cend(first_kmer));
     
     std::for_each(std::next(std::cbegin(path)), std::cend(path),
                   [this, &result] (const Vertex v) {
@@ -692,7 +693,8 @@ Assembler::SequenceType Assembler::make_reference(Vertex from, const Vertex to) 
     
     result.reserve(2 * k_);
     
-    result.insert(std::end(result), std::cbegin(kmer_of(from)), std::cend(kmer_of(from)));
+    const auto& first_kmer = kmer_of(from);
+    result.insert(std::end(result), std::cbegin(first_kmer), std::cend(first_kmer));
     
     from = next_reference(from);
     
@@ -818,8 +820,8 @@ void Assembler::remove_low_weight_edges(const unsigned min_weight)
 void Assembler::remove_disconnected_vertices()
 {
     VertexIterator vi, vi_end, vi_next;
-    
     std::tie(vi, vi_end) = boost::vertices(graph_);
+    
     for (vi_next = vi; vi != vi_end; vi = vi_next) {
         ++vi_next;
         if (boost::degree(*vi, graph_) == 0) {
@@ -849,8 +851,8 @@ void Assembler::remove_vertices_that_cant_be_reached_from(const Vertex v)
     const auto reachables = find_reachable_kmers(v);
     
     VertexIterator vi, vi_end, vi_next;
-    
     std::tie(vi, vi_end) = boost::vertices(graph_);
+    
     for (vi_next = vi; vi != vi_end; vi = vi_next) {
         ++vi_next;
         if (reachables.count(*vi) == 0) {
@@ -871,16 +873,15 @@ void Assembler::remove_vertices_that_cant_reach(const Vertex v)
     
     std::unordered_set<Vertex> reachables {};
     
-    auto vis = boost::make_bfs_visitor(
-                                       boost::write_property(boost::typed_identity_property_map<Vertex>(),
+    auto vis = boost::make_bfs_visitor(boost::write_property(boost::typed_identity_property_map<Vertex>(),
                                                              std::inserter(reachables, std::begin(reachables)),
                                                              boost::on_discover_vertex()));
     
     boost::breadth_first_search(transpose, v, boost::visitor(vis).vertex_index_map(index_map));
     
     VertexIterator vi, vi_end, vi_next;
-    
     std::tie(vi, vi_end) = boost::vertices(graph_);
+    
     for (vi_next = vi; vi != vi_end; vi = vi_next) {
         ++vi_next;
         if (reachables.count(*vi) == 0) {
@@ -1046,7 +1047,7 @@ auto count_out_weight(const V& v, const G& g)
 }
 
 template <typename R, typename T>
-auto compute_transition_score(const T edge_weight, const T total_out_weight,  const R max_score = 100)
+auto compute_transition_score(const T edge_weight, const T total_out_weight, const R max_score = 100)
 {
     if (total_out_weight == 0) {
         return R {0};
@@ -1281,8 +1282,8 @@ void erase_all(const Path& path, Map& dominator_tree)
 }
 
 template <typename V, typename BidirectionalIt, typename Map>
-bool dominated_by_path(const V& vertex, const BidirectionalIt first, const BidirectionalIt last,
-                       const Map& dominator_tree)
+bool is_dominated_by_path(const V& vertex, const BidirectionalIt first, const BidirectionalIt last,
+                          const Map& dominator_tree)
 {
     const auto& dominator = dominator_tree.at(vertex);
     const auto rfirst = std::make_reverse_iterator(last);
@@ -1293,6 +1294,8 @@ bool dominated_by_path(const V& vertex, const BidirectionalIt first, const Bidir
 
 std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths(unsigned k)
 {
+    // TODO: should implement Eppstein's algorithm here
+    
     auto dominator_tree = build_dominator_tree(reference_head());
     
     auto num_remaining_alt_kmers = num_kmers() - num_reference_kmers();
@@ -1395,7 +1398,7 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
                         erase_all(alt_path, dominator_tree);
                         num_remaining_alt_kmers -= alt_path.size();
                         break;
-                    } else if (dominated_by_path(*it, std::cbegin(alt_path), it, dominator_tree)) {
+                    } else if (is_dominated_by_path(*it, std::cbegin(alt_path), it, dominator_tree)) {
                         vertex_before_bridge = *it;
                         alt_path.erase(std::begin(alt_path), std::next(it));
                     } else {
@@ -1416,7 +1419,6 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             std::tie(alt, ref, kmer_count_to_alt) = backtrack_until_nonreference(predecessors, ref_before_bubble);
             
             rhs_kmer_count += kmer_count_to_alt;
-            
             --k;
         }
         

@@ -8,8 +8,34 @@
 
 #include "read_filters.hpp"
 
+#include "cigar_string.hpp"
+
+#include <iostream> // DEBUG
+
 namespace Octopus { namespace ReadFilters
 {
+    HasWellFormedCigar::HasWellFormedCigar()
+    : BasicReadFilter {"HasWellFormedCigar"} {}
+    
+    HasWellFormedCigar::HasWellFormedCigar(std::string name)
+    : BasicReadFilter {std::move(name)} {}
+    
+    bool HasWellFormedCigar::passes(const AlignedRead& read) const noexcept
+    {
+        return is_valid_cigar(read.cigar_string()) && is_minimal_cigar(read.cigar_string());
+    }
+    
+    HasValidQualities::HasValidQualities()
+    : BasicReadFilter {"HasValidQualities"} {}
+    
+    HasValidQualities::HasValidQualities(std::string name)
+    : BasicReadFilter {std::move(name)} {}
+    
+    bool HasValidQualities::passes(const AlignedRead& read) const noexcept
+    {
+        return read.sequence().size() == read.qualities().size();
+    }
+    
     IsNotSecondaryAlignment::IsNotSecondaryAlignment()
     : BasicReadFilter {"IsNotSecondaryAlignment"} {}
     
@@ -69,8 +95,7 @@ namespace Octopus { namespace ReadFilters
                                                 return quality >= good_base_quality_;
                                             });
         
-        auto good_base_fraction = static_cast<double>(num_good_bases)
-                    / static_cast<double>(sequence_size(read));
+        auto good_base_fraction = static_cast<double>(num_good_bases) / static_cast<double>(sequence_size(read));
         
         return good_base_fraction >= min_good_base_fraction_;
     }
@@ -110,7 +135,7 @@ namespace Octopus { namespace ReadFilters
     
     bool IsNotChimeric::passes(const AlignedRead& read) const noexcept
     {
-        return !read.is_chimeric();
+        return !read.has_other_segment();
     }
     
     IsNextSegmentMapped::IsNextSegmentMapped() : BasicReadFilter {"IsNextSegmentMapped"} {}
@@ -118,7 +143,7 @@ namespace Octopus { namespace ReadFilters
     
     bool IsNextSegmentMapped::passes(const AlignedRead& read) const noexcept
     {
-        return !read.is_chimeric() || !read.next_segment().is_marked_unmapped();
+        return !read.has_other_segment() || !read.next_segment().is_marked_unmapped();
     }
     
     IsNotMarkedDuplicate::IsNotMarkedDuplicate() : BasicReadFilter {"IsNotMarkedDuplicate"} {}
@@ -164,7 +189,13 @@ namespace Octopus { namespace ReadFilters
     
     bool IsNotContaminated::passes(const AlignedRead& read) const noexcept
     {
-        return !read.is_chimeric() || sequence_size(read) >= read.next_segment().inferred_template_length();
+        if (!read.has_other_segment() || read.next_segment().is_marked_unmapped()) {
+            return true;
+        }
+        
+        const auto template_length = read.next_segment().inferred_template_length();
+        
+        return template_length > region_size(read);
     }
     
     IsNotMarkedQcFail::IsNotMarkedQcFail() : BasicReadFilter {"IsNotMarkedQcFail"} {}
@@ -173,6 +204,22 @@ namespace Octopus { namespace ReadFilters
     bool IsNotMarkedQcFail::passes(const AlignedRead& read) const noexcept
     {
         return !read.is_marked_qc_fail();
+    }
+    
+    IsProperTemplate::IsProperTemplate() : BasicReadFilter {"IsProperTemplate"} {}
+    IsProperTemplate::IsProperTemplate(std::string name) :  BasicReadFilter {std::move(name)} {}
+    
+    bool IsProperTemplate::passes(const AlignedRead& read) const noexcept
+    {
+        return !read.has_other_segment() || read.is_marked_all_segments_in_read_aligned();
+    }
+    
+    IsLocalTemplate::IsLocalTemplate() : BasicReadFilter {"IsLocalTemplate"} {}
+    IsLocalTemplate::IsLocalTemplate(std::string name) :  BasicReadFilter {std::move(name)} {}
+    
+    bool IsLocalTemplate::passes(const AlignedRead& read) const noexcept
+    {
+        return !read.has_other_segment() || read.next_segment().contig_name() == contig_name(read);
     }
 } // namespace ReadFilters
 } // namespace Octopus

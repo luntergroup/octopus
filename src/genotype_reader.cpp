@@ -42,13 +42,13 @@ namespace
     
     auto extract_phase_region(const VcfRecord& call, const SampleIdType& sample)
     {
-        if (call.is_sample_phased(sample)) {
-            assert(call.has_format("PS"));
+        if (call.is_sample_phased(sample) && call.has_format("PS")) {
             return GenomicRegion {
                 call.chrom(),
                 boost::lexical_cast<ContigRegion::SizeType>(call.get_sample_value(sample, "PS").front()) - 1,
                 static_cast<ContigRegion::SizeType>(call.pos() + call.ref().size()) - 1
             };
+            
         }
         return GenomicRegion {call.chrom(), mapped_contig_region(call)};
     }
@@ -127,11 +127,6 @@ namespace
                                          const ReferenceGenome& reference)
     {
         assert(!phased_calls.empty());
-        
-        if (!contains(region, encompassing_region(phased_calls))) {
-            std::cout << region << std::endl;
-        }
-        
         assert(contains(region, encompassing_region(phased_calls)));
         
         const auto ploidy = extract_ploidy(phased_calls, sample);

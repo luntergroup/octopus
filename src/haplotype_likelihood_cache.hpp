@@ -67,7 +67,7 @@ public:
     void clear() noexcept;
     
 private:
-    static constexpr unsigned char MAPPER_KMER_SIZE {5};
+    static constexpr unsigned char MAPPER_KMER_SIZE {6};
     static constexpr std::size_t MAX_MAPPING_POSITIONS {10};
     
     HaplotypeLikelihoodModel likelihood_model_;
