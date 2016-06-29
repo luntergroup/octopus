@@ -38,7 +38,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
-        "--threads", "0",
+        //"--threads", "0",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
@@ -83,12 +83,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
+        "--regions", "22:46,812,860-46,812,900",
+        
+        //"--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions.bed",
+        
         //"--regions", "22:23,947,647-23,948,717", // Assembler bug
-        
-        "--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions.bed",
-        
-        //"--regions", "22:41,165,299-41,165,603",
-        
         //"--regions", "22:19,659,923-19,661,143", // very cool assembler deletion
         //"--regions", "22:49,217,985-49,218,594", // very cool assembler deletion
         //"--regions", "22:24,712,696-24,713,000", // assembler proposing insane deletion
@@ -102,70 +101,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--regions", "22:42,943,057-42,943,471", // why is GATK now calling these?
         
-        //"--regions", "22:39,396,398-39,396,728", // run through!
-        //"--regions", "22:31,758,829-31,758,980", // run through
-        //"--regions", "22:31,346,313-31,346,353", // run through, indel
-        
-        //"--regions", "22:27,053,358-27,053,398",
-        //"--regions", "22:24,037,473-24,037,777",
-        
-        //"--regions", "22:31,702,947-31,703,111", // should be the insertion
-        //"--regions", "22:31,978,136-31,978,300", // should be the deletion
-        //"--regions", "22:30,993,234-30,993,630", // low dummy model posterior?
-        //"--regions", "22:32,960,775-32,961,105", // low dummy model posterior
-        
         //"--regions", "6:31,236,339-31,240,057", // HLA-C
-        
-        //"--regions", "22:36,922,640-36,922,687", // FP ins?
-        //"--regions", "22:35,834,436-35,834,740", // difficult region
-        //"--regions", "22:35,909,479-35,909,519", // FP SNV
-        //"--regions", "22:36,120,404-36,120,444", // FP SNV
-        //"--regions", "22:36,468,698-36,468,773", // FP SNV
         
         // MCG
         //"--regions", "2:47,640,494-47,644,304", // whole region
         //"--regions", "2:47,643,156-47,643,222", // true snp
         //"--regions", "2:47,640,572-47,642,302", // first block (no variants)
         //"--regions", "2:47,641,997-47,644,890", // second block (one SNP)
-        
-        // for population
-        
-        //"--regions", "22:48,501,236-48,501,662", // NA12878 FN: indel error model & prior model
-        //"--regions", "22:44,300,644-44,301,124",  // NA12878 FN: indel error model & prior model
-        //"--regions", "22:43,238,234-43,238,385", // NA12878 FN: indel error model
-        
-        // NA12878_high_coverage interesting regions / possible errors
-        //"--regions", "22:37,894,887-37,895,035", // is the insertion there (both GATK & Platypus call - I'm not so sure)?
-        //"--regions", "22:37,616,864-37,617,015", // false negative insertion?
-        //"--regions", "22:37,622,869-37,622,909", // SNPs or indels?
-        //"--regions", "22:37,622,803-37,623,840", // very repetitive region
-        //"--regions", "22:34,974,205-34,975,215", // Another very repetitive region
-        //"--regions", "22:35,834,230-35,835,616", // Another very repetitive region
-        //"--regions", "22:37,777,920-37,778,151", // is the deletion homozygous?
-        //"--regions", "22:38,092,378-38,092,418", // not left aligning the insertion at 38092390
-        //"--regions", "22:39,517,648-39,517,952", // is the deletion & insetion homozygous?
-        //"--regions", "22:40,946,793-40,946,944", // where is the deletion?
-        //"--regions", "22:41,509,085-41,509,236", // false negative insertion (GATK calls, Platypus doesn't)?
-        //"--regions", "22:41,988,173-41,988,324", // GATK is calling a deletion at 41988249...
-        //"--regions", "22:31,846,671-31,847,001", // interesting deletions
-        //"--regions", "22:37,268,614-37,268,778", // sc filter removing true haplotype
-        //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
-        //"--regions", "22:32,033,026-32,033,280", // interesting deletions
-        //"--regions", "16:62,432,702-62,432,933", // interesting insertions
-        //"--regions", "22:47,397,181-47,397,224", // interesting deletions
-        
-        // Tricky VCF representation
-        //"--regions", "22:19,091,876-19,091,927", // whoa
-        //"--regions", "22:16,190,278-16,190,318",  // overlapping deletions
-        //"--regions", "22:51004206-51004246", // overlapping deletions
-        //"--regions", "22:47,857,586-47,857,737", // snps overlapping deletion
-        //"--regions", "22:47,134,127-47,134,167", // SNP followed by insertion
-        //"--regions", "22:49929368-49929408", // deletion overlapping SNP
-        //"--regions", "22:50957441-50957481", // insertion & SNP, and SNP!
-        //"--regions", "22:33,920,251-33,920,291", // insertion followed by SNP
-        //"--regions", "22:16,909,216-16,909,255", // insertion followed by 2 SNPs
-        //"--regions", "22:25,808,709-25,808,749", // insertions followed by hom SNP
-        //"--regions", "22:37,980,669-37,980,708", // overlapping deletion & insertion
         
         // for cancer
         
@@ -312,9 +254,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_cancer.vcf",
-        //"--output", "octopus_calls_debug.vcf",
+        "--output", "octopus_calls_debug.vcf",
         //"--output", "octopus_calls_assemble.vcf",
-        //"--output", "octopus_calls2.vcf",
+        //"--output", "octopus_calls4.vcf",
         
         nullptr
     };

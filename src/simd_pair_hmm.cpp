@@ -9,26 +9,34 @@
 #include <algorithm>
 #include <cassert>
 
-//#include <iostream> // DEBUG
-//#include <iterator> // DEBUG
-//
-//struct Seq { __m128i val; };
-//struct Qual { __m128i val; };
-//
-//std::ostream& operator<<(std::ostream& os, const Seq s)
-//{
-//    const auto val = (std::uint16_t*) &s.val;
-//    std::copy(val, val + 8, std::ostreambuf_iterator<char>(os));
-//    return os;
-//}
-//
-//std::ostream& operator<<(std::ostream& os, const Qual q)
-//{
-//    const auto val = (std::uint16_t*) &q.val;
-//    std::transform(val, val + 8, std::ostream_iterator<unsigned>(os, " "),
-//                   [] (const auto x) { return x >> 2; });
-//    return os;
-//}
+#include <iostream> // DEBUG
+#include <iterator> // DEBUG
+
+struct Seq { __m128i val; };
+struct Qual { __m128i val; };
+struct Mask { __m128i val; };
+
+std::ostream& operator<<(std::ostream& os, const Seq s)
+{
+    const auto val = (std::uint16_t*) &s.val;
+    std::copy(val, val + 8, std::ostreambuf_iterator<char>(os));
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Qual q)
+{
+    const auto val = (std::uint16_t*) &q.val;
+    std::transform(val, val + 8, std::ostream_iterator<unsigned>(os, " "),
+                   [] (const auto x) { return x >> 2; });
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Mask m)
+{
+    const auto val = (std::uint16_t*) &m.val;
+    std::copy(val, val + 8, std::ostream_iterator<bool>(os));
+    return os;
+}
 
 namespace SimdPairHmm
 {
@@ -167,7 +175,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _d2 = _mm_min_epi16(_mm_add_epi16(_d1, _gap_extend),
                             _mm_add_epi16(_mm_min_epi16(_m1, _i1), _gap_open)); // allow I->D
         
-        
         _i2 = _mm_insert_epi16(_mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_mm_srli_si128(_i1, 2),
                                                                          _gap_extend),
                                                            _mm_add_epi16(_mm_srli_si128(_m1, 2),
@@ -181,8 +188,8 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           const int truth_len, const int target_len,
-          const std::int8_t* snv_prior, const std::int8_t* gap_open,
-          short gap_extend, short nuc_prior)
+          const char* snv_mask, const std::int8_t* snv_prior,
+          const std::int8_t* gap_open, short gap_extend, short nuc_prior)
 {
     assert(truth_len > BAND_SIZE && (truth_len == target_len + 2 * BAND_SIZE - 1));
     
@@ -208,8 +215,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     SimdInt _targetwin  {_m1};
     SimdInt _qualitieswin {_mm_set1_epi16(64 << 2)};
     
+    SimdInt _snvmaskwin  {_mm_set_epi16(snv_mask[7], snv_mask[6], snv_mask[5], snv_mask[4],
+                                        snv_mask[3], snv_mask[2], snv_mask[1], snv_mask[0])};
     SimdInt _snv_priorwin {_mm_set_epi16(snv_prior[7] << 2, snv_prior[6] << 2, snv_prior[5] << 2, snv_prior[4] << 2,
                                          snv_prior[3] << 2, snv_prior[2] << 2, snv_prior[1] << 2, snv_prior[0] << 2)};
+    
+    SimdInt _snvmask;
     
     // if N, make N_SCORE; if != N, make INF
     SimdInt _truthnqual {_mm_add_epi16(_mm_and_si128(_mm_cmpeq_epi16(_truthwin, _mm_set1_epi16('N')),
@@ -248,8 +259,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
             }
         }
         
+        _snvmask = _mm_cmpeq_epi16(_targetwin, _snvmaskwin);
+        
         _m1 = _mm_add_epi16(_m1, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
-                                                                _mm_min_epi16(_qualitieswin, _snv_priorwin)),
+                                                                 _mm_min_epi16(_qualitieswin,
+                                                                               _mm_or_si128(_mm_and_si128(_snvmask, _snv_priorwin),
+                                                                                            _mm_andnot_si128(_snvmask, _qualitieswin)))),
                                                _truthnqual));
         
         _d1 = _mm_min_epi16(_mm_add_epi16(_d2, _gap_extend),
@@ -269,10 +284,17 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         const char base {pos < truth_len ? truth[pos] : 'N'};
         
-        _truthwin     = _mm_insert_epi16(_mm_srli_si128(_truthwin, 2), base, BAND_SIZE - 1);
+        _truthwin     = _mm_insert_epi16(_mm_srli_si128(_truthwin, 2),
+                                         base,
+                                         BAND_SIZE - 1);
         
         _truthnqual   = _mm_insert_epi16(_mm_srli_si128(_truthnqual, 2),
-                                         base == 'N' ? N_SCORE : INF, BAND_SIZE - 1);
+                                         base == 'N' ? N_SCORE : INF,
+                                         BAND_SIZE - 1);
+        
+        _snvmaskwin   = _mm_insert_epi16(_mm_srli_si128(_snvmaskwin, 2),
+                                         pos < truth_len ? snv_mask[pos] : 'N',
+                                         BAND_SIZE - 1);
         
         _snv_priorwin = _mm_insert_epi16(_mm_srli_si128(_snv_priorwin, 2),
                                          (pos < truth_len ? snv_prior[pos] : INF) << 2,
@@ -295,13 +317,16 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
             }
         }
         
+        _snvmask = _mm_cmpeq_epi16(_targetwin, _snvmaskwin);
+        
         _m2 = _mm_add_epi16(_m2, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
-                                                                _mm_min_epi16(_qualitieswin, _snv_priorwin)),
+                                                                _mm_min_epi16(_qualitieswin,
+                                                                              _mm_or_si128(_mm_and_si128(_snvmask, _snv_priorwin),
+                                                                                           _mm_andnot_si128(_snvmask, _qualitieswin)))),
                                                _truthnqual));
         
         _d2 = _mm_min_epi16(_mm_add_epi16(_d1, _gap_extend),
                             _mm_add_epi16(_mm_min_epi16(_m1, _i1), _gap_open)); // allow I->D
-        
         
         _i2 = _mm_insert_epi16(_mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_mm_srli_si128(_i1, 2),
                                                                          _gap_extend),
@@ -436,8 +461,8 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         _truthwin   = _mm_insert_epi16(_mm_srli_si128(_truthwin,   2), c, BAND_SIZE - 1);
         _truthnqual = _mm_insert_epi16(_mm_srli_si128(_truthnqual, 2), (c == 'N') ? N_SCORE : INF, BAND_SIZE - 1);
-        _gap_open  = _mm_insert_epi16(_mm_srli_si128(_gap_open,  2),
-                                      gap_open[BAND_SIZE + s / 2 < truth_len ? BAND_SIZE + s / 2 : truth_len - 1] << 2, BAND_SIZE - 1);
+        _gap_open   = _mm_insert_epi16(_mm_srli_si128(_gap_open,  2),
+                                       gap_open[BAND_SIZE + s / 2 < truth_len ? BAND_SIZE + s / 2 : truth_len - 1] << 2, BAND_SIZE - 1);
         
         _initmask  = _mm_slli_si128(_initmask, 2);
         _initmask2 = _mm_slli_si128(_initmask2, 2);
@@ -533,8 +558,8 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           int truth_len, int target_len,
-          const std::int8_t* snv_prior, const std::int8_t* gap_open,
-          short gap_extend, short nuc_prior,
+          const char* snv_mask, const std::int8_t* snv_prior,
+          const std::int8_t* gap_open, short gap_extend, short nuc_prior,
           char* aln1, char* aln2, int* first_pos)
 {
     assert(truth_len > BAND_SIZE && (truth_len == target_len + 2 * BAND_SIZE - 1));
@@ -569,8 +594,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     SimdInt _targetwin  {_m1};
     SimdInt _qualitieswin {_mm_set1_epi16(64 << 2)};
     
+    SimdInt _snvmaskwin  {_mm_set_epi16(snv_mask[7], snv_mask[6], snv_mask[5], snv_mask[4],
+                                        snv_mask[3], snv_mask[2], snv_mask[1], snv_mask[0])};
     SimdInt _snv_priorwin {_mm_set_epi16(snv_prior[7] << 2, snv_prior[6] << 2, snv_prior[5] << 2, snv_prior[4] << 2,
                                          snv_prior[3] << 2, snv_prior[2] << 2, snv_prior[1] << 2, snv_prior[0] << 2)};
+    
+    SimdInt _snvmask;
     
     // if N, make N_SCORE; if != N, make INF
     SimdInt _truthnqual {_mm_add_epi16(_mm_and_si128(_mm_cmpeq_epi16(_truthwin, _mm_set1_epi16('N')),
@@ -615,8 +644,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
             }                        // have to store the state at s-2
         }
         
+        _snvmask = _mm_cmpeq_epi16(_targetwin, _snvmaskwin);
+        
         _m1 = _mm_add_epi16(_m1, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
-                                                                _mm_min_epi16(_qualitieswin, _snv_priorwin)),
+                                                                _mm_min_epi16(_qualitieswin,
+                                                                              _mm_or_si128(_mm_and_si128(_snvmask, _snv_priorwin),
+                                                                                           _mm_andnot_si128(_snvmask, _qualitieswin)))),
                                                _truthnqual));
         
         _d1 = _mm_min_epi16(_mm_add_epi16(_d2, _gap_extend),
@@ -650,6 +683,9 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _truthnqual = _mm_insert_epi16(_mm_srli_si128(_truthnqual, 2),
                                        (base == 'N') ? N_SCORE : INF, BAND_SIZE - 1);
         
+        _snvmaskwin   = _mm_insert_epi16(_mm_srli_si128(_snvmaskwin, 2),
+                                         pos < truth_len ? snv_mask[pos] : 'N', BAND_SIZE - 1);
+        
         _snv_priorwin = _mm_insert_epi16(_mm_srli_si128(_snv_priorwin, 2),
                                          (pos < truth_len) ? snv_prior[pos] << 2 : INF << 2,
                                          BAND_SIZE - 1);
@@ -674,8 +710,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
             }
         }
         
+        _snvmask = _mm_cmpeq_epi16(_targetwin, _snvmaskwin);
+        
         _m2 = _mm_add_epi16(_m2, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
-                                                                _mm_min_epi16(_qualitieswin, _snv_priorwin)),
+                                                                _mm_min_epi16(_qualitieswin,
+                                                                              _mm_or_si128(_mm_and_si128(_snvmask, _snv_priorwin),
+                                                                                           _mm_andnot_si128(_snvmask, _qualitieswin)))),
                                                _truthnqual));
         
         _d2 = _mm_min_epi16(_mm_add_epi16(_d1, _gap_extend),
@@ -776,10 +816,10 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
             case MATCH:
             {
                 if ((aln1[i] != aln2[i]) && (x < lhs_flank_len || x >= (truth_len - rhs_flank_len))) {
-                    if (aln1[i] == 'N') {
-                        result += N_SCORE >> 2;
-                    } else {
+                    if (aln1[i] != 'N') {
                         result += quals[y];
+                    } else {
+                        result += N_SCORE >> 2;
                     }
                 }
                 ++x;
@@ -822,7 +862,8 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
 }
 
 int calculate_flank_score(const int truth_len, const int lhs_flank_len, const int rhs_flank_len,
-                          const std::int8_t* quals, const std::int8_t* snv_prior,
+                          const char* target, const std::int8_t* quals,
+                          const char* snv_mask, const std::int8_t* snv_prior,
                           const std::int8_t* gap_open, const short gap_extend, const short nuc_prior,
                           const int first_pos, const char* aln1, const char* aln2)
 {
@@ -846,10 +887,10 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
             case MATCH:
             {
                 if ((aln1[i] != aln2[i]) && (x < lhs_flank_len || x >= (truth_len - rhs_flank_len))) {
-                    if (aln1[i] == 'N') {
-                        result += N_SCORE >> 2;
+                    if (aln1[i] != 'N') {
+                        result += (snv_mask[x] == target[y]) ? std::min(quals[y], snv_prior[x]) : quals[y];
                     } else {
-                        result += std::min(quals[y], snv_prior[x]);
+                        result += N_SCORE >> 2;
                     }
                 }
                 ++x;

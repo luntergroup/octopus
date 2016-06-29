@@ -22,6 +22,7 @@ namespace PairHMM
     {
         using PenaltyType = std::int8_t;
         
+        std::reference_wrapper<const std::vector<char>> snv_mask;
         std::reference_wrapper<const std::vector<PenaltyType>> snv_priors;
         std::reference_wrapper<const std::vector<PenaltyType>> gap_open_penalties;
         

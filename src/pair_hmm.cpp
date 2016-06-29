@@ -87,10 +87,13 @@ auto simd_align(const std::string& truth, const std::string& target,
         return std::numeric_limits<double>::lowest();
     }
     
+    const auto qualities = reinterpret_cast<const std::int8_t*>(target_qualities.data());
+    
     if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
         const auto score = SimdPairHmm::align(truth.data() + alignment_offset, target.data(),
-                                              reinterpret_cast<const std::int8_t*>(target_qualities.data()),
+                                              qualities,
                                               truth_alignment_size, static_cast<int>(target.size()),
+                                              model.snv_mask.get().data() + alignment_offset,
                                               model.snv_priors.get().data() + alignment_offset,
                                               model.gap_open_penalties.get().data() + alignment_offset,
                                               model.gap_extend, model.nuc_prior);
@@ -113,9 +116,10 @@ auto simd_align(const std::string& truth, const std::string& target,
     int first_pos;
     
     const auto score = SimdPairHmm::align(truth.data() + alignment_offset, target.data(),
-                                          reinterpret_cast<const std::int8_t*>(target_qualities.data()),
+                                          qualities,
                                           truth_alignment_size,
                                           static_cast<int>(target.size()),
+                                          model.snv_mask.get().data() + alignment_offset,
                                           model.snv_priors.get().data() + alignment_offset,
                                           model.gap_open_penalties.get().data() + alignment_offset,
                                           model.gap_extend, model.nuc_prior,
@@ -146,7 +150,8 @@ auto simd_align(const std::string& truth, const std::string& target,
     assert(rhs_flank_size >= 0);
     
     const auto flank_score = SimdPairHmm::calculate_flank_score(truth_size, lhs_flank_size, rhs_flank_size,
-                                                                reinterpret_cast<const std::int8_t*>(target_qualities.data()),
+                                                                target.data(), qualities,
+                                                                model.snv_mask.get().data(),
                                                                 model.snv_priors.get().data(),
                                                                 model.gap_open_penalties.get().data(),
                                                                 model.gap_extend, model.nuc_prior,
@@ -191,12 +196,21 @@ double align(const std::string& truth, const std::string& target,
     const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
     
     if (m2.first == cend(target)) {
-        // then there is only a single base difference between the sequences
-        const auto truth_index  = distance(offsetted_truth_begin_itr, m1.second) + target_offset;
+        // then there is only a single base difference between the sequences, can optimise
+        const auto truth_index = distance(offsetted_truth_begin_itr, m1.second) + target_offset;
+        
+        if (truth_index < model.lhs_flank_size || truth_index >= (truth.size() - model.rhs_flank_size)) {
+            return 0;
+        }
+        
         const auto target_index = distance(cbegin(target), m1.first);
         
-        const auto mispatch_penalty = std::min(target_qualities[target_index],
-                                               static_cast<std::uint8_t>(model.snv_priors.get()[truth_index]));
+        auto mispatch_penalty = target_qualities[target_index];
+        
+        if (model.snv_mask.get()[truth_index] == *m1.first) {
+            mispatch_penalty = std::min(target_qualities[target_index],
+                                        static_cast<std::uint8_t>(model.snv_priors.get()[truth_index]));
+        }
         
         if (mispatch_penalty <= model.gap_open_penalties.get()[truth_index]
             || !std::equal(next(m1.first), cend(target), m1.second)) {

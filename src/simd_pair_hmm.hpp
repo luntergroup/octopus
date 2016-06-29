@@ -18,8 +18,8 @@ namespace SimdPairHmm
     
     int align(const char* truth, const char* target, const std::int8_t* qualities,
               int truth_len, int target_len,
-              const std::int8_t* snv_prior, const std::int8_t* gap_open,
-              short gap_extend, short nuc_prior);
+              const char* snv_mask, const std::int8_t* snv_prior,
+              const std::int8_t* gap_open, short gap_extend, short nuc_prior);
     
     int align(const char* truth, const char* target, const std::int8_t* qualities,
               int truth_len, int target_len,
@@ -28,12 +28,13 @@ namespace SimdPairHmm
     
     int align(const char* truth, const char* target, const std::int8_t* qualities,
               int truth_len, int target_len,
-              const std::int8_t* snv_prior, const std::int8_t* gap_open,
-              short gap_extend, short nuc_prior,
+              const char* snv_mask, const std::int8_t* snv_prior,
+              const std::int8_t* gap_open, short gap_extend, short nuc_prior,
               char* aln1, char* aln2, int* first_pos);
     
     int calculate_flank_score(int truth_len, int lhs_flank_len, int rhs_flank_len,
-                              const std::int8_t* quals, const std::int8_t* snv_prior,
+                              const char* target, const std::int8_t* quals,
+                              const char* snv_mask, const std::int8_t* snv_prior,
                               const std::int8_t* gap_open, short gap_extend, short nuc_prior,
                               int first_pos, const char* aln1, const char* aln2);
     

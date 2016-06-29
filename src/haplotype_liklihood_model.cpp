@@ -46,7 +46,9 @@ void HaplotypeLikelihoodModel::reset(const Haplotype& haplotype, boost::optional
     
     haplotype_flank_state_ = std::move(flank_state);
     
-    snv_error_model_.evaluate(haplotype, haplotype_snv_forward_priors_, haplotype_snv_reverse_priors_);
+    snv_error_model_.evaluate(haplotype,
+                              haplotype_snv_forward_mask_, haplotype_snv_forward_priors_,
+                              haplotype_snv_reverse_mask_, haplotype_snv_reverse_priors_);
     
     haplotype_gap_extension_penalty_ = indel_error_model_.evaluate(haplotype, haplotype_gap_open_penalities_);
 }
@@ -172,8 +174,12 @@ double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
         throw std::runtime_error {"HaplotypeLikelihoodModel: no buffered Haplotype"};
     }
     
+    
+    const auto is_forward = !read.is_marked_reverse_mapped();
+    
     PairHMM::Model model {
-        (read.is_marked_reverse_mapped()) ? haplotype_snv_reverse_priors_ : haplotype_snv_forward_priors_,
+        is_forward ? haplotype_snv_forward_mask_ : haplotype_snv_reverse_mask_,
+        is_forward ? haplotype_snv_forward_priors_ : haplotype_snv_reverse_priors_,
         haplotype_gap_open_penalities_,
         haplotype_gap_extension_penalty_
     };

@@ -76,6 +76,7 @@ private:
     
     boost::optional<FlankState> haplotype_flank_state_;
     
+    std::vector<char> haplotype_snv_forward_mask_, haplotype_snv_reverse_mask_;
     std::vector<PenaltyType> haplotype_snv_forward_priors_, haplotype_snv_reverse_priors_;
     
     std::vector<PenaltyType> haplotype_gap_open_penalities_;

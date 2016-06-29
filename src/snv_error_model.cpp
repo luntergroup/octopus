@@ -113,9 +113,12 @@ namespace Octopus
     } // namespace
     
     void SnvErrorModel::evaluate(const Haplotype& haplotype,
-                                 PenaltyVector& forward_snv_priors,
-                                 PenaltyVector& reverse_snv_priors) const
+                                 MutationVector& forward_snv_mask, PenaltyVector& forward_snv_priors,
+                                 MutationVector& reverse_snv_mask, PenaltyVector& reverse_snv_priors) const
     {
+        using std::cbegin; using std::cend; using std::crbegin; using std::crend;
+        using std::begin; using std::rbegin; using std::next;
+        
         constexpr auto Max_period = Max_qualities_.size();
         
         const auto repeats = extract_repeats(haplotype, Max_period);
@@ -127,7 +130,7 @@ namespace Octopus
         repeat_masks.fill(std::vector<std::int8_t>(num_bases, 0));
         
         for (const auto& repeat : repeats) {
-            std::fill_n(std::next(std::begin(repeat_masks[repeat.period - 1]), repeat.pos), repeat.length,
+            std::fill_n(next(begin(repeat_masks[repeat.period - 1]), repeat.pos), repeat.length,
                         repeat_hash(haplotype, repeat));
         }
         
@@ -136,12 +139,20 @@ namespace Octopus
         
         std::vector<unsigned> runs(num_bases);
         
-        for (std::size_t i {0}; i < Max_period; ++i) {
+        for (unsigned i {0}; i < Max_period; ++i) {
+            const auto max_gap = i + 2;
             const auto& repeat_mask = repeat_masks[i];
-            count_runs(std::cbegin(repeat_mask), std::cend(repeat_mask), std::begin(runs));
+            count_runs(cbegin(repeat_mask), cend(repeat_mask), begin(runs), max_gap);
             set_priors(runs, forward_snv_priors, Max_qualities_[i]);
-            count_runs(std::crbegin(repeat_mask), std::crend(repeat_mask), std::rbegin(runs));
+            count_runs(crbegin(repeat_mask), crend(repeat_mask), rbegin(runs), max_gap);
             set_priors(runs, reverse_snv_priors, Max_qualities_[i]);
         }
+        
+        const auto& sequence = haplotype.sequence();
+        
+        forward_snv_mask.resize(num_bases);
+        std::rotate_copy(crbegin(sequence), next(crbegin(sequence)), crend(sequence), rbegin(forward_snv_mask));
+        reverse_snv_mask.resize(num_bases);
+        std::rotate_copy(cbegin(sequence), next(cbegin(sequence)), cend(sequence), begin(reverse_snv_mask));
     }
 } // namespace Octopus
