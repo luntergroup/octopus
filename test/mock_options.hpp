@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        //"--debug",
+        "--debug",
         //"--trace",
         
         //"--sites-only",
@@ -46,8 +46,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -83,7 +83,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22:46,812,860-46,812,900",
+        "--regions", "22:48,744,207-48,745,427",
         
         //"--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions.bed",
         
@@ -256,7 +256,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_cancer.vcf",
         "--output", "octopus_calls_debug.vcf",
         //"--output", "octopus_calls_assemble.vcf",
-        //"--output", "octopus_calls4.vcf",
+        //"--output", "octopus_calls2.vcf",
         
         nullptr
     };

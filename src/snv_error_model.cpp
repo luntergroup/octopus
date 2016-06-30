@@ -98,7 +98,7 @@ namespace Octopus
     template <typename C, typename T>
     static auto get_penalty(const C& penalties, const T length)
     {
-        return (length <= penalties.size()) ? penalties[length] : penalties.back();
+        return length < penalties.size() ? penalties[length] : penalties.back();
     }
     
     template <typename T1, typename T2, typename C>

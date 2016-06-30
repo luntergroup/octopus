@@ -255,6 +255,18 @@ namespace
         return result;
     }
     
+    auto calculate_alt_frequency_credible_region(const VariantSupportMap& support, const Variant& v,
+                                                 const ReadContainer& reads)
+    {
+        const auto er = support.equal_range(v);
+        
+        const auto num_alt = std::distance(er.first, er.second);
+        
+        const auto num_ref = count_overlapped(reads, mapped_region(v)) - num_alt;
+        
+        return Maths::beta_hdi(num_alt + 0.5, num_ref + 0.5, 0.9999);
+    }
+    
     struct ReadDirectionCounts
     {
         unsigned forward, reverse;
@@ -395,6 +407,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
     if (!dest.is_header_written()) {
         VcfHeader::Builder hb {header};
         
+        hb.add_filter("AB", "Alt allele frequency is less than expected");
         hb.add_filter("MODEL", "The caller specific model filter failed");
         
         dest << hb.build_once();
@@ -458,6 +471,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                 bool strand_biased {true};
                 bool sample_rmq_failed {false};
                 bool sample_kl_failed {false};
+                bool sample_allele_biased {false};
                 bool all_homozygous {true};
                 
                 for (const auto& sample : samples) {
@@ -487,6 +501,13 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                         const auto variant_support = calculate_variant_support(genotype, sample_call_reads,
                                                                                sample_variants);
                         
+//                        const auto cr = calculate_alt_frequency_credible_region(variant_support, sample_variants.first->second,
+//                                                                                sample_call_reads);
+//                        
+//                        if (cr.second < 0.5) {
+//                            sample_allele_biased = true;
+//                        }
+                        
                         const auto pval = calculate_strand_bias(variant_support, sample_variants.first->second,
                                                                 sample_call_reads);
                         
@@ -513,6 +534,11 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                 }
                 
                 if (!all_homozygous) {
+                    if (sample_allele_biased) {
+                        cb.add_filter("AB");
+                        filtered = true;
+                    }
+                    
                     if (sample_kl_failed) {
                         cb.add_filter("KL");
                         filtered = true;

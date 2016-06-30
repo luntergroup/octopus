@@ -238,7 +238,7 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
     const auto novel_active_alleles = overlap_range(alleles_, novel_active_region);
     
     if (novel_active_alleles.empty()) {
-        return std::make_tuple(std::vector<Haplotype> {}, *next_active_region_, true);
+        return std::make_tuple(std::vector<Haplotype> {}, current_active_region_, true);
     }
     
     const auto it = extend_tree_until(novel_active_alleles, tree_, hard_max_haplotypes_);
@@ -352,7 +352,7 @@ void HaplotypeGenerator::update_next_active_region() const
                     
                     const auto it = extend_tree_until(novel_alleles, test_tree, soft_max_haplotypes_);
                     
-                    test_tree.remove_overlapped(novel_region); // revert
+                    test_tree.remove_overlapped(novel_region); // undo previous extension
                     
                     if (it == std::cend(novel_alleles)) {
                         max_lagged_region = encompassing_region(current_active_region_, max_lagged_region);
@@ -407,7 +407,7 @@ void HaplotypeGenerator::update_next_active_region() const
                                                       hard_max_haplotypes_);
                     
                     if (it != std::cend(interacting_alleles)) {
-                        next_active_region_ = novel_region; // reverts to non-lagged behaviour
+                        next_active_region_ = novel_region; // revert to non-lagged behaviour
                         return;
                     }
                     
@@ -423,9 +423,13 @@ void HaplotypeGenerator::update_next_active_region() const
                     ++num_regions_added;
                 }
                 
-                // the trees encompassing region may be beyond the indicator boundry
-                // if all haplotypes containing indicator alleles have been pruned
-                next_active_region_ = test_tree.encompassing_region();
+                if (!test_tree.empty()) {
+                    // the trees encompassing region may be beyond the indicator boundry
+                    // if all haplotypes containing indicator alleles have been pruned
+                    next_active_region_ = test_tree.encompassing_region();
+                } else {
+                    next_active_region_ = novel_region; // revert to non-lagged behaviour
+                }
                 
                 if (num_regions_added > 0 && is_empty(mutually_exclusive_novel_regions[num_regions_added - 1])) {
                     // to ensure we progress on a single novel insertion

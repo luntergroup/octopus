@@ -186,7 +186,7 @@ HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
 GenomicRegion HaplotypeTree::encompassing_region() const
 {
     if (empty()) {
-        throw std::runtime_error {"HaplotypeTree::mapped_region called on empty tree"};
+        throw std::runtime_error {"HaplotypeTree::encompassing_region called on empty tree"};
     }
     
     const auto vertex_range = boost::adjacent_vertices(root_, tree_);
