@@ -83,9 +83,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions_expanded.bed",
+        //"--regions", "22:48,744,696-48,744,879", // difficult region (FPs)
+        "--regions", "22:47,416,419-47,417,744", // bad model filtering
         
-        //"--regions", "22:23,947,647-23,948,717", // Assembler bug
+        //"--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions_expanded.bed",
+        
         //"--regions", "22:19,659,923-19,661,143", // very cool assembler deletion
         //"--regions", "22:49,217,985-49,218,594", // very cool assembler deletion
         //"--regions", "22:24,712,696-24,713,000", // assembler proposing insane deletion
@@ -220,14 +222,14 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--no-raw-cigar-candidates",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
-        //"--no-assembly-candidates",
+        "--no-assembly-candidates",
         //"--kmer-size", "75",
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        //"--phasing-level", "Conservative", // Minimal, Conservative, Aggressive
-        //"--disable-inactive-flank-scoring",
-        //"--max-haplotypes", "256",
+//        "--phasing-level", "Minimal", // Minimal, Conservative, Aggressive
+//        "--disable-inactive-flank-scoring",
+//        "--max-haplotypes", "50",
         //"--min-haplotype-posterior", "1e-30",
         
         //"--disable-model-filtering",
@@ -248,13 +250,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--max-open-read-files", "1",
         
-        //"--output", test_out_vcf.c_str(),
         //"--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_cancer.vcf",
         "--output", "octopus_calls_debug.vcf",
         //"--output", "octopus_calls_assemble.vcf",
-        //"--output", "octopus_calls2.vcf",
+        //"--output", "octopus_calls_fast.vcf",
         
         nullptr
     };

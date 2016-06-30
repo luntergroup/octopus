@@ -93,9 +93,7 @@ void Assembler::insert_reference(const SequenceType& sequence)
 
 void Assembler::insert_read(const SequenceType& sequence)
 {
-    if (sequence.size() < k_) {
-        return;
-    }
+    if (sequence.size() < k_) return;
     
     auto it1 = std::cbegin(sequence);
     auto it2 = std::next(it1, k_);
@@ -179,9 +177,7 @@ protected:
 
 bool Assembler::is_acyclic() const
 {
-    if (graph_has_trivial_cycle()) {
-        return false;
-    }
+    if (graph_has_trivial_cycle()) return false;
     
     bool is_acyclic {true};
     
@@ -217,9 +213,7 @@ bool Assembler::prune(const unsigned min_weight)
     
     auto old_size = boost::num_vertices(graph_);
     
-    if (old_size < 2) {
-        return true;
-    }
+    if (old_size < 2) return true;
     
     remove_low_weight_edges(min_weight);
     
@@ -241,9 +235,7 @@ bool Assembler::prune(const unsigned min_weight)
     
     if (new_size != old_size) {
         regenerate_vertex_indices();
-        if (new_size < 2) {
-            return true;
-        }
+        if (new_size < 2) return true;
         old_size = new_size;
     }
     
@@ -252,9 +244,7 @@ bool Assembler::prune(const unsigned min_weight)
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
-        if (new_size < 2) {
-            return true;
-        }
+        if (new_size < 2) return true;
         old_size = new_size;
     }
     
@@ -263,9 +253,7 @@ bool Assembler::prune(const unsigned min_weight)
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
-        if (new_size < 2) {
-            return true;
-        }
+        if (new_size < 2) return true;
         old_size = new_size;
     }
     
@@ -469,7 +457,7 @@ bool Assembler::is_reference_unique_path() const
     while (u != tail) {
         const auto p = boost::out_edges(u, graph_);
         const auto it = std::find_if(p.first, p.second, is_reference_edge);
-        assert(it != p.second); // must be a reference edge
+        assert(it != p.second);
         if (std::any_of(boost::next(it), p.second, is_reference_edge)) {
             return false;
         }
@@ -500,9 +488,7 @@ Assembler::Vertex Assembler::null_vertex() const
 
 boost::optional<Assembler::Vertex> Assembler::add_vertex(const Kmer& kmer, const bool is_reference)
 {
-    if (!is_dna(kmer)) {
-        return boost::none;
-    }
+    if (!is_dna(kmer)) return boost::none;
     const auto next_index = static_cast<unsigned>(boost::num_vertices(graph_));
     const auto u = boost::add_vertex(GraphNode {next_index, kmer, is_reference}, graph_);
     vertex_cache_.emplace(kmer, u);
@@ -787,9 +773,7 @@ bool Assembler::is_simple_deletion(Edge e) const
 
 bool Assembler::is_on_path(const Edge e, const Path& path) const
 {
-    if (path.size() < 2) {
-        return false;
-    }
+    if (path.size() < 2) return false;
     
     auto it1 = std::cbegin(path);
     auto it2 = std::next(it1);
@@ -802,9 +786,7 @@ bool Assembler::is_on_path(const Edge e, const Path& path) const
     for (; it2 != last; ++it1, ++it2) {
         std::tie(path_edge, good) = boost::edge(*it1, *it2, graph_);
         assert(good);
-        if (path_edge == e) {
-            return true;
-        }
+        if (path_edge == e) return true;
     }
     
     return false;
@@ -863,9 +845,7 @@ void Assembler::remove_vertices_that_cant_be_reached_from(const Vertex v)
 
 void Assembler::remove_vertices_that_cant_reach(const Vertex v)
 {
-    if (is_reference_empty()) {
-        return;
-    }
+    if (is_reference_empty()) return;
     
     const auto transpose = boost::make_reverse_graph(graph_);
     
@@ -910,9 +890,7 @@ bool Assembler::can_prune_reference_flanks() const
 
 void Assembler::prune_reference_flanks()
 {
-    if (is_reference_empty()) {
-        return;
-    }
+    if (is_reference_empty()) return;
     
     // NB: I don't think this topological_sort is really needed (just iterate from reference_head
     // and reference_tail). Leaving it in for now as it's helping to uncover bugs!
@@ -1239,9 +1217,7 @@ Assembler::backtrack_until_nonreference(const PredecessorMap& predecessors, Vert
         assert(from != v); // was not reachable from source
         const auto p = boost::edge(v, from, graph_);
         assert(p.second);
-        if (!is_reference(p.first)) {
-            break;
-        }
+        if (!is_reference(p.first)) break;
         from = v;
         assert(predecessors.count(from) == 1);
         v = predecessors.at(from);
@@ -1255,8 +1231,6 @@ Assembler::Path
 Assembler::extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const
 {
     Path result {from};
-    
-    if (is_reference(from)) return result;
     
     from = predecessors.at(from);
     
