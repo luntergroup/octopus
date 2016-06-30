@@ -389,23 +389,25 @@ namespace Octopus
                             
                             Genotype<Allele> new_genotype {ploidy};
                             
+                            const auto& call_region = mapped_region(curr_call);
+                            
                             if (are_in_phase(prev_genotype_call, genotype_call)) {
                                 for (unsigned i {0}; i < ploidy; ++i) {
                                     if (old_genotype[i].sequence().empty()) {
                                         Allele::SequenceType new_sequence(region_size(curr_call), '*');
-                                        Allele new_allele {mapped_region(curr_call), move(new_sequence)};
+                                        Allele new_allele {call_region, move(new_sequence)};
                                         new_genotype.emplace(move(new_allele));
                                     } else if (old_genotype[i].sequence().front() == '#') {
                                         if (splice(prev_genotype[i], head_position(curr_call)).sequence().front() == actual_reference_base) {
                                             auto new_sequence = old_genotype[i].sequence();
                                             new_sequence.front() = actual_reference_base;
-                                            Allele new_allele {mapped_region(*it2), move(new_sequence)};
+                                            Allele new_allele {call_region, move(new_sequence)};
                                             replacements.emplace(old_genotype[i], new_allele);
                                             new_genotype.emplace(move(new_allele));
                                         } else {
                                             auto new_sequence = old_genotype[i].sequence();
                                             new_sequence.front() = '*';
-                                            Allele new_allele {mapped_region(curr_call), move(new_sequence)};
+                                            Allele new_allele {call_region, move(new_sequence)};
                                             new_genotype.emplace(move(new_allele));
                                         }
                                     } else {
@@ -416,12 +418,12 @@ namespace Octopus
                                 for (unsigned i {0}; i < ploidy; ++i) {
                                     if (old_genotype[i].sequence().empty()) {
                                         Allele::SequenceType new_sequence(region_size(curr_call), '*');
-                                        Allele new_allele {mapped_region(curr_call), move(new_sequence)};
+                                        Allele new_allele {call_region, move(new_sequence)};
                                         new_genotype.emplace(move(new_allele));
                                     } else if (old_genotype[i].sequence().front() == '#') {
                                         auto new_sequence = old_genotype[i].sequence();
                                         new_sequence.front() = '.';
-                                        Allele new_allele {mapped_region(curr_call), move(new_sequence)};
+                                        Allele new_allele {call_region, move(new_sequence)};
                                         new_genotype.emplace(move(new_allele));
                                     } else {
                                         new_genotype.emplace(old_genotype[i]);
@@ -656,7 +658,7 @@ namespace Octopus
                 set_vcf_genotype(sample, genotype_call, result);
                 
                 //result.set_format_missing(sample, "FT"); // TODO
-                result.set_format(sample, "GQ", Octopus::to_string(Maths::probability_to_phred<float>(genotype_call.posterior), 2));
+                result.set_format(sample, "GQ", std::to_string(std::min(99, Maths::probability_to_phred<int>(genotype_call.posterior))));
                 result.set_format(sample, "DP", max_coverage(reads_.at(sample), region));
                 result.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region)));
                 result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region)));
@@ -782,7 +784,7 @@ namespace Octopus
                 result.set_genotype(sample, *sample_itr++, VcfRecord::Builder::Phasing::Phased);
                 
                 //result.set_format_missing(sample, "FT"); // TODO
-                result.set_format(sample, "GQ", Octopus::to_string(Maths::probability_to_phred<float>(posterior), 2));
+                result.set_format(sample, "GQ", std::to_string(std::min(99, Maths::probability_to_phred<int>(posterior))));
                 result.set_format(sample, "DP", max_coverage(reads_.at(sample), region));
                 result.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region)));
                 result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region)));

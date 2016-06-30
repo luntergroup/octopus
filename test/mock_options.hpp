@@ -46,8 +46,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -83,9 +83,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22:48,744,207-48,745,427",
-        
-        //"--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions.bed",
+        "--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions_expanded.bed",
         
         //"--regions", "22:23,947,647-23,948,717", // Assembler bug
         //"--regions", "22:19,659,923-19,661,143", // very cool assembler deletion
@@ -222,7 +220,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--no-raw-cigar-candidates",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
-        "--no-assembly-candidates",
+        //"--no-assembly-candidates",
         //"--kmer-size", "75",
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",

@@ -2,9 +2,7 @@
 
 ## Problems
 
-- [] Haplotype filtering is not good.
 - [] Cancer genotype filtering is not good.
-- [] CoalescentModel does not distinguish indel and snp heterozygousity.
 - [] ReadIndelErrorModel needs improving.
 
 ## Features

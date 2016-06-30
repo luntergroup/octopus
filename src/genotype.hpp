@@ -310,6 +310,18 @@ bool is_tetraploid(const Genotype<MappableType>& genotype)
 }
 
 template <typename MappableType2, typename MappableType1>
+Genotype<MappableType2> convert(const Genotype<MappableType1>& genotype)
+{
+    Genotype<MappableType2> result {genotype.ploidy()};
+    
+    for (const auto& mappable : genotype) {
+        result.emplace(mappable);
+    }
+    
+    return result;
+}
+
+template <typename MappableType2, typename MappableType1>
 Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const GenomicRegion& region)
 {
     Genotype<MappableType2> result {genotype.ploidy()};
@@ -343,10 +355,62 @@ bool contains(const Genotype<MappableType>& genotype, const MappableType& elemen
     return genotype.contains(element);
 }
 
+namespace detail
+{
+    template <typename MappableType>
+    bool contains(const Genotype<Haplotype>& lhs, const Genotype<MappableType>& rhs, std::true_type)
+    {
+        using std::cbegin; using std::cend; using std::begin; using std::end;
+        
+        using AlleleReference = std::reference_wrapper<const MappableType>;
+        
+        if (lhs.ploidy() != rhs.ploidy()) return false;
+        
+        const auto lhs_spliced_genotype = splice<MappableType>(lhs, mapped_region(rhs));
+        
+        if (std::is_sorted(cbegin(lhs_spliced_genotype), cend(lhs_spliced_genotype))) {
+            if (std::is_sorted(cbegin(rhs), cend(rhs))) {
+                return std::equal(cbegin(rhs), cend(rhs), cbegin(lhs_spliced_genotype));
+            }
+            
+            std::vector<AlleleReference> rhs_alleles {cbegin(rhs), cend(rhs)};
+            std::sort(begin(rhs_alleles), end(rhs_alleles),
+                      [] (const auto& lhs, const auto& rhs) { return lhs.get() < rhs.get(); });
+            
+            return std::equal(cbegin(lhs_spliced_genotype), cend(lhs_spliced_genotype), cbegin(rhs_alleles),
+                              [] (const auto& lhs, const auto& rhs) { return lhs == rhs.get(); });
+        }
+        
+        std::vector<AlleleReference> lhs_alleles {cbegin(lhs_spliced_genotype), cend(lhs_spliced_genotype)};
+        std::sort(begin(lhs_alleles), end(lhs_alleles),
+                  [] (const auto& lhs, const auto& rhs) { return lhs.get() < rhs.get(); });
+        
+        if (std::is_sorted(cbegin(rhs), cend(rhs))) {
+            return std::equal(cbegin(rhs), cend(rhs), cbegin(lhs_alleles),
+                              [] (const auto& lhs, const auto& rhs) { return lhs == rhs.get(); });
+        }
+        
+        std::vector<AlleleReference> rhs_alleles {cbegin(rhs), cend(rhs)};
+        std::sort(begin(rhs_alleles), end(rhs_alleles),
+                  [] (const auto& lhs, const auto& rhs) { return lhs.get() < rhs.get(); });
+        
+        return std::equal(cbegin(lhs_alleles), cend(lhs_alleles), cbegin(rhs_alleles),
+                          [] (const auto& lhs, const auto& rhs) { return lhs.get() == rhs.get(); });
+    }
+    
+    template <typename MappableType1, typename MappableType2>
+    bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs, std::false_type)
+    {
+        return splice<MappableType2>(lhs, mapped_region(rhs)) == rhs;
+    }
+} // namespace detail
+
 template <typename MappableType1, typename MappableType2>
 bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs)
 {
-    return splice<MappableType2>(lhs, rhs.mapped_region()) == rhs;
+    using B = std::integral_constant<bool, std::is_same<MappableType1, Haplotype>::value
+                                       && !std::is_same<MappableType2, Haplotype>::value>;
+    return detail::contains(lhs, rhs, B {});
 }
 
 template <typename MappableType2, typename MappableType1>
@@ -375,7 +439,8 @@ struct GenotypeLess
     template <typename T>
     bool operator()(const Genotype<T>& lhs, const Genotype<T>& rhs) const
     {
-        return std::lexicographical_compare(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
+        return std::lexicographical_compare(std::cbegin(lhs), std::cend(lhs),
+                                            std::cbegin(rhs), std::cend(rhs));
     }
 };
 
@@ -385,7 +450,7 @@ namespace std
     {
         size_t operator()(const Genotype<MappableType>& genotype) const
         {
-            return boost::hash_range(std::cbegin(genotype), std::cend(genotype));
+            return boost::hash_range(cbegin(genotype), cend(genotype));
         }
     };
     

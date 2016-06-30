@@ -290,7 +290,7 @@ double marginalise(const Genotype<Allele>& genotype, const GenotypeProbabilityMa
 {
     return std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
                            [&genotype] (const double curr, const auto& p) {
-                               return curr + ((contains(p.first, genotype)) ? p.second : 0.0);
+                               return curr + (contains(p.first, genotype) ? p.second : 0.0);
                            });
 }
 

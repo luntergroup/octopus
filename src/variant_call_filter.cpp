@@ -264,7 +264,7 @@ namespace
         
         const auto num_ref = count_overlapped(reads, mapped_region(v)) - num_alt;
         
-        return Maths::beta_hdi(num_alt + 0.5, num_ref + 0.5, 0.9999);
+        return Maths::beta_hdi(num_alt + 5.0, num_ref + 5.0, 0.999999);
     }
     
     struct ReadDirectionCounts
