@@ -366,7 +366,7 @@ std::vector<Assembler::Variant> split_mnv(Assembler::Variant&& v)
 }
 
 template <typename Container>
-void split_mnvs(Container& candidates)
+void split_complex(Container& candidates)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     
@@ -378,8 +378,8 @@ void split_mnvs(Container& candidates)
     std::deque<Assembler::Variant> snps {};
     
     std::for_each(make_move_iterator(it), make_move_iterator(end(candidates)),
-                  [&snps] (auto&& mnp) {
-                      auto mnv_snps = split_mnv(std::move(mnp));
+                  [&snps] (auto&& mnv) {
+                      auto mnv_snps = split_mnv(std::move(mnv));
                       snps.insert(end(snps),
                                   make_move_iterator(begin(mnv_snps)),
                                   make_move_iterator(end(mnv_snps)));
@@ -461,7 +461,8 @@ bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assemble
     assembler.clear();
     
     trim_reference(variants);
-    split_mnvs(variants);
+    
+    split_complex(variants);
     
     add_to_mapped_variants(result, std::move(variants), reference_region);
     

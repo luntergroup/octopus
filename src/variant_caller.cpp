@@ -382,6 +382,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     
     pause_timer(init_timer);
     
+    debug::run_likelihood_calculation("< {22:48744516-48744517 G} {22:48744610-48744611 C} {22:48744656-48744656 CT} {22:48744662-48744663 G} {22:48744667-48744668 A} {22:48744671-48744672 T} >", "22:48744440-48744944", "22:48744516-48744672", "22:48744637-48744873", "19S34M2D18M2I26M6I38M2D32M12I27M2D20M16S", reads, candidates, reference_);
+    exit(0);
+    
     while (true) {
         resume_timer(haplotype_generation_timer);
         try {

@@ -657,8 +657,10 @@ namespace Octopus
                 
                 set_vcf_genotype(sample, genotype_call, result);
                 
+                auto gq = std::min(99, static_cast<int>(std::round(Maths::probability_to_phred<float>(genotype_call.posterior))));
+                
                 //result.set_format_missing(sample, "FT"); // TODO
-                result.set_format(sample, "GQ", std::to_string(std::min(99, Maths::probability_to_phred<int>(genotype_call.posterior))));
+                result.set_format(sample, "GQ", std::to_string(gq));
                 result.set_format(sample, "DP", max_coverage(reads_.at(sample), region));
                 result.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region)));
                 result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region)));
@@ -783,8 +785,10 @@ namespace Octopus
                 
                 result.set_genotype(sample, *sample_itr++, VcfRecord::Builder::Phasing::Phased);
                 
+                auto gq = std::min(99, static_cast<int>(std::round(Maths::probability_to_phred<float>(posterior))));
+                
                 //result.set_format_missing(sample, "FT"); // TODO
-                result.set_format(sample, "GQ", std::to_string(std::min(99, Maths::probability_to_phred<int>(posterior))));
+                result.set_format(sample, "GQ", std::to_string(gq));
                 result.set_format(sample, "DP", max_coverage(reads_.at(sample), region));
                 result.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region)));
                 result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region)));
