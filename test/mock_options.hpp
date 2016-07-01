@@ -25,14 +25,14 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        //"--debug",
+        "--debug",
         //"--trace",
         
         //"--sites-only",
         
         //"--samples", "NOT-A-SAMPLE",
         
-        "--working-directory", "~/Genomics/octopus_test",
+        "--working-directory", "~/Genomics/giab_benchmark",
         //"--working-directory", "~/Genomics/MCG",
         //"--working-directory", "~/Genomics/cancer/TCGA/benchmark",
         
@@ -46,8 +46,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -83,10 +83,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22:48,744,696-48,744,879", // difficult region (FPs)
+        "--regions", "22:40,015,869-40,016,339", // FP
+        //"--regions", "22:48,744,696-48,744,879", // difficult region (FPs)
         //"--regions", "22:47,416,419-47,417,744", // bad model filtering
         
-        //"--regions-file", "~/Genomics/octopus_test/NA12878_GIAB_highconf_regions_expanded.bed",
+        //"--regions-file", "giab/NA12878_GIAB_chr22_highconf_regions_big_expanded.bed",
         
         //"--regions", "22:19,659,923-19,661,143", // very cool assembler deletion
         //"--regions", "22:49,217,985-49,218,594", // very cool assembler deletion

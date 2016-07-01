@@ -573,18 +573,27 @@ namespace Octopus
         
         const auto parent_dir = path.parent_path();
         
-        if (fs::exists(parent_dir)) {
-            return path; // must yet-to-be-created root path
+        const auto wd = get_working_directory(options);
+        
+        if (fs::exists(parent_dir) && fs::is_directory(parent_dir)) {
+            if (wd) {
+                auto tmp = *wd;
+                tmp /= path;
+                auto wd_parent = tmp.parent_path();
+                if (fs::exists(wd_parent) && fs::is_directory(wd_parent)) {
+                    return tmp; // prefer working directory in case of name clash
+                }
+            }
+            return path; // must be yet-to-be-created root path
         }
         
-        auto result = get_working_directory(options);
-        
-        if (result) {
-            *result /= path;
-            return *result;
+        if (wd) {
+            auto result = *wd;
+            result /= path;
+            return result;
         }
         
-        return result;
+        return boost::none;
     }
     
     std::vector<fs::path>
@@ -1009,14 +1018,10 @@ namespace Octopus
             if (!resolved_path) {
                 stream(log) << "Could not resolve the path " << input_path
                             << " given in the input option (--skip-regions-file)";
-            }
-            
-            if (!fs::exists(*resolved_path)) {
+            } else if (!fs::exists(*resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--skip-regions-file) does not exist";
-            }
-            
-            if (!is_file_readable(*resolved_path)) {
+            }else if (!is_file_readable(*resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--skip-regions-file) is not readable";
             } else {
@@ -1055,14 +1060,10 @@ namespace Octopus
             if (!resolved_path) {
                 stream(log) << "Could not resolve the path " << input_path
                             << " given in the input option (--skip-regions-file)";
-            }
-            
-            if (!fs::exists(*resolved_path)) {
+            } else if (!fs::exists(*resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--skip-regions-file) does not exist";
-            }
-            
-            if (!is_file_readable(*resolved_path)) {
+            } else if (!is_file_readable(*resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--skip-regions-file) is not readable";
             } else {
@@ -1434,9 +1435,7 @@ namespace Octopus
             if (!resolved_path) {
                 stream(log) << "Could not resolve the path " << input_path
                             << " given in the input option (--candidates-from-source)";
-            }
-            
-            if (!fs::exists(*resolved_path)) {
+            } else if (!fs::exists(*resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--candidates-from-source) does not exist";
             }
@@ -1464,9 +1463,7 @@ namespace Octopus
             if (!resolved_path) {
                 stream(log) << "Could not resolve the path " << regenotype_path
                     << " given in the input option (--candidates-from-source)";
-            }
-            
-            if (!fs::exists(*resolved_path)) {
+            } else if (!fs::exists(*resolved_path)) {
                 stream(log) << "The path " << regenotype_path
                     << " given in the input option (--candidates-from-source) does not exist";
             }
@@ -1570,9 +1567,7 @@ namespace Octopus
                 stream(log) << "Could not resolve the path " << input_path
                             << " given in the input option (--contig-ploidies-file)";
                 return boost::none;
-            }
-            
-            if (!fs::exists(*resolved_path)) {
+            } else if (!fs::exists(*resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--contig-ploidies-file) does not exist";
                 return boost::none;
@@ -1748,9 +1743,7 @@ namespace Octopus
             stream(log) << "Could not resolve the path " << input_path
                 << " given in the input option output";
             return boost::none;
-        }
-        
-        if (!is_file_writable(*resolved_path)) {
+        } else if (!is_file_writable(*resolved_path)) {
             stream(log) << "The path " << input_path
                         << " given in the input option output is not writable";
             return boost::none;

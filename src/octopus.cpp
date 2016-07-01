@@ -530,6 +530,10 @@ namespace Octopus
             
             auto output = Options::make_output_vcf_writer(options);
             
+            if (!output.is_open()) {
+                return boost::none;
+            }
+            
             GenomeCallingComponents result {
                 std::move(reference),
                 std::move(read_manager),

@@ -351,7 +351,8 @@ bool is_validated(const VcfRecord& record) noexcept
 bool operator==(const VcfRecord& lhs, const VcfRecord& rhs)
 {
     // TODO: this should really compare other fields
-    return lhs.chrom() == rhs.chrom() && lhs.pos() == rhs.pos();
+    return lhs.chrom() == rhs.chrom() && lhs.pos() == rhs.pos()
+            && lhs.ref() == rhs.ref() && lhs.alt() == rhs.alt();
 }
 
 bool operator<(const VcfRecord& lhs, const VcfRecord& rhs)

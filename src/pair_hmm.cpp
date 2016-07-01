@@ -146,16 +146,16 @@ auto simd_align(const std::string& truth, const std::string& target,
         rhs_flank_size -= truth_size;
     }
     
-    assert(lhs_flank_size >= 0);
-    assert(rhs_flank_size >= 0);
+    assert(lhs_flank_size >= 0 && rhs_flank_size >= 0);
     
-    const auto flank_score = SimdPairHmm::calculate_flank_score(truth_size, lhs_flank_size, rhs_flank_size,
+    const auto flank_score = SimdPairHmm::calculate_flank_score(truth_alignment_size,
+                                                                lhs_flank_size, rhs_flank_size,
                                                                 target.data(), qualities,
-                                                                model.snv_mask.get().data(),
-                                                                model.snv_priors.get().data(),
-                                                                model.gap_open_penalties.get().data(),
+                                                                model.snv_mask.get().data() + alignment_offset,
+                                                                model.snv_priors.get().data() + alignment_offset,
+                                                                model.gap_open_penalties.get().data() + alignment_offset,
                                                                 model.gap_extend, model.nuc_prior,
-                                                                static_cast<int>(first_pos + alignment_offset),
+                                                                first_pos,
                                                                 align1.data(), align2.data());
     
     assert(flank_score <= score);

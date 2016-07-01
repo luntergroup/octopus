@@ -73,6 +73,13 @@ void write(const Container& records, VcfWriter& dst)
     }
 }
 
+template <typename Container>
+VcfWriter& operator<<(VcfWriter& dst, const Container& records)
+{
+    write(records, dst);
+    return dst;
+}
+
 bool operator==(const VcfWriter& lhs, const VcfWriter& rhs);
 
 namespace std {

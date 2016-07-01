@@ -39,6 +39,8 @@ std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers);
 
 void copy(const VcfReader& src, VcfWriter& dst);
 
+void sort(const VcfReader& src, VcfWriter& dst);
+
 VcfHeader merge(const std::vector<VcfHeader>& headers);
 
 void merge(const std::vector<VcfReader>& sources, VcfWriter& dst, const std::vector<std::string>& contigs);

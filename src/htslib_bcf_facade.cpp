@@ -20,6 +20,7 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/optional.hpp>
+#include <boost/algorithm/string/join.hpp>
 
 #include "genomic_region.hpp"
 #include "vcf_header.hpp"
@@ -294,6 +295,10 @@ auto hts_tag_type(const std::string& tag)
 
 void HtslibBcfFacade::write(const VcfHeader& header)
 {
+    if (file_ == nullptr) {
+        throw std::runtime_error {"HtslibBcfFacade: trying to write header to closed file"};
+    }
+    
     auto hdr = bcf_hdr_init("w");
     
     bcf_hdr_set_version(hdr, header.file_format().c_str());
@@ -375,6 +380,10 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
 
 void HtslibBcfFacade::write(const VcfRecord& record)
 {
+    if (file_ == nullptr) {
+        throw std::runtime_error {"HtslibBcfFacade: trying to write record to closed file"};
+    }
+    
     if (header_ == nullptr) {
         throw std::runtime_error {"HtslibBcfFacade: trying to write record without a header"};
     }
@@ -672,10 +681,8 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             }
             case BCF_HT_STR:
             {
-                std::vector<const char*> vals(num_values);
-                std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
-                               [] (const auto& value) { return value.c_str(); });
-                bcf_update_info_string(header, dest, key.c_str(), vals.data());
+                const auto vals = boost::join(values, ",");
+                bcf_update_info_string(header, dest, key.c_str(), vals.c_str());
                 break;
             }
             case BCF_HT_FLAG:

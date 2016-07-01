@@ -872,11 +872,13 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
     
     auto prev_state = MATCH;
     
-    int x {first_pos}; // index into haplotype
-    int y {0};         // index into read
+    int x {first_pos}; // index into truth
+    int y {0};         // index into target
     int i {0};         // index into alignment
     
     int result {0}; // alignment score (within flank)
+    
+    const auto rhs_flank_begin = truth_len - rhs_flank_len;
     
     while (aln1[i]) {
         auto new_state = MATCH;
@@ -887,7 +889,7 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
         switch (new_state) {
             case MATCH:
             {
-                if ((aln1[i] != aln2[i]) && (x < lhs_flank_len || x >= (truth_len - rhs_flank_len))) {
+                if ((aln1[i] != aln2[i]) && (x < lhs_flank_len || x >= rhs_flank_begin)) {
                     if (aln1[i] != 'N') {
                         result += (snv_mask[x] == target[y]) ? std::min(quals[y], snv_prior[x]) : quals[y];
                     } else {
@@ -900,7 +902,7 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
             }
             case INSERTION:
             {
-                if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                if (x < lhs_flank_len || x >= rhs_flank_begin) {
                     if (prev_state == INSERTION) {
                         result += gap_extend + nuc_prior;
                     } else {
@@ -914,7 +916,7 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
             }
             case DELETION:
             {
-                if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                if (x < lhs_flank_len || x >= rhs_flank_begin) {
                     if (prev_state == DELETION) {
                         result += gap_extend;
                     } else {

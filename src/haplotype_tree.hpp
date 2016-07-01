@@ -28,7 +28,6 @@
 
 namespace Octopus
 {
-
 class HaplotypeTree
 {
 public:
@@ -42,8 +41,8 @@ public:
     
     HaplotypeTree(const HaplotypeTree&);
     HaplotypeTree& operator=(HaplotypeTree);
-    HaplotypeTree(HaplotypeTree&&)                 = default;
-    HaplotypeTree& operator=(HaplotypeTree&&)      = default;
+    HaplotypeTree(HaplotypeTree&&)            = default;
+    HaplotypeTree& operator=(HaplotypeTree&&) = default;
     
     bool empty() const noexcept;
     unsigned num_haplotypes() const noexcept;

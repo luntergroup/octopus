@@ -86,6 +86,7 @@ private:
     GenomicRegion current_active_region_;
     
     mutable boost::optional<GenomicRegion> next_active_region_;
+    mutable bool expanded_lhs_;
     
     mutable MappableFlatMultiSet<Allele> holdout_set_;
     mutable boost::optional<GenomicRegion> current_holdout_region_;

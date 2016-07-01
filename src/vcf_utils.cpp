@@ -104,12 +104,22 @@ std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers)
 void copy(const VcfReader& src, VcfWriter& dst)
 {
     if (!dst.is_header_written()) {
-        dst.write(src.fetch_header());
+        dst << src.fetch_header();
+    }
+    dst << src.fetch_records();
+}
+
+void sort(const VcfReader& src, VcfWriter& dst)
+{
+    if (!dst.is_header_written()) {
+        dst << src.fetch_header();
     }
     
-    const auto records = src.fetch_records();
+    auto records = src.fetch_records();
     
-    write(records, dst);
+    std::sort(std::begin(records), std::end(records));
+    
+    dst << records;
 }
 
 bool all_same_format(const std::vector<VcfHeader>& headers)

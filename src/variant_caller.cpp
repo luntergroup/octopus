@@ -382,9 +382,6 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     
     pause_timer(init_timer);
     
-    debug::run_likelihood_calculation("< {22:48744516-48744517 G} {22:48744610-48744611 C} {22:48744656-48744656 CT} {22:48744662-48744663 G} {22:48744667-48744668 A} {22:48744671-48744672 T} >", "22:48744440-48744944", "22:48744516-48744672", "22:48744637-48744873", "19S34M2D18M2I26M6I38M2D32M12I27M2D20M16S", reads, candidates, reference_);
-    exit(0);
-    
     while (true) {
         resume_timer(haplotype_generation_timer);
         try {
@@ -696,15 +693,15 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
     auto lhs_flank = left_overhang_region(haplotype_region, active_region);
     auto rhs_flank = right_overhang_region(haplotype_region, active_region);
     
-    const auto active_candidates = overlap_range(candidates, active_region);
+    const auto active_candidates = contained_range(candidates, active_region);
     
     assert(!active_candidates.empty());
     
     if (is_empty_region(*leftmost_mappable(active_candidates)) && !is_empty(lhs_flank)) {
-        lhs_flank = expand_rhs(lhs_flank, -1); // stops boundry insertions being considerd inactive
+        lhs_flank = expand_rhs(lhs_flank, -1); // stops boundry insertions being inactive
     }
     
-    const auto lhs_inactive_candidates = overlap_range(candidates, lhs_flank);
+    const auto lhs_inactive_candidates = contained_range(candidates, lhs_flank);
     
     if (lhs_inactive_candidates.empty()) {
         lhs_flank = head_region(lhs_flank);
@@ -713,10 +710,10 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
     }
     
     if (is_empty_region(*rightmost_mappable(active_candidates)) && !is_empty(rhs_flank)) {
-        rhs_flank = expand_lhs(rhs_flank, -1); // stops boundry insertions being considerd inactive
+        rhs_flank = expand_lhs(rhs_flank, -1); // stops boundry insertions being inactive
     }
     
-    const auto rhs_inactive_candidates = overlap_range(candidates, rhs_flank);
+    const auto rhs_inactive_candidates = contained_range(candidates, rhs_flank);
     
     if (rhs_inactive_candidates.empty()) {
         rhs_flank = tail_region(rhs_flank);
