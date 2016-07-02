@@ -24,16 +24,7 @@
 
 namespace Octopus
 {
-Phaser::Phaser(const double min_phase_score)
-:
-min_phase_score_ {min_phase_score}
-{
-    if (min_phase_score_ < 0) {
-        min_phase_score_ = 0;
-    } else if (min_phase_score_ > 1) {
-        min_phase_score_ = 1;
-    }
-}
+Phaser::Phaser(Phred<double> min_phase_score) : min_phase_score_ {min_phase_score} {}
 
 namespace
 {
@@ -164,20 +155,21 @@ namespace
     }
     
     template <typename Map>
-    double calculate_phase_score(const PhaseComplementSet& phase_set,
-                                 const Map& genotype_posteriors)
+    auto calculate_phase_score(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
     {
         return marginalise(phase_set, genotype_posteriors) * calculate_relative_entropy(phase_set, genotype_posteriors);
     }
     
     template <typename Map>
-    double calculate_phase_score(const PhaseComplementSets& phase_sets,
-                                 const Map& genotype_posteriors)
+    Phred<double> calculate_phase_score(const PhaseComplementSets& phase_sets, const Map& genotype_posteriors)
     {
-        return std::accumulate(std::cbegin(phase_sets), std::cend(phase_sets), 0.0,
-                               [&] (const auto curr, const auto& phase_set) {
-                                   return curr + calculate_phase_score(phase_set, genotype_posteriors);
-                               });
+        
+        return Phred<double> { Phred<double>::Probability {
+            std::max(0.0, 1.0 - std::accumulate(std::cbegin(phase_sets), std::cend(phase_sets), 0.0,
+                                               [&] (const auto curr, const auto& phase_set) {
+                                                   return curr + calculate_phase_score(phase_set, genotype_posteriors);
+                                               }))
+        }};
     }
     
     std::vector<GenotypeReference>
@@ -222,7 +214,7 @@ Phaser::PhaseSet::SamplePhaseRegions
 force_phase_sample(const GenomicRegion& region, const std::vector<GenomicRegion>& partitions,
                    const std::vector<GenotypeReference>& genotypes,
                    const Phaser::SampleGenotypePosteriorMap& genotype_posteriors,
-                   const double min_phase_score)
+                   const Phred<double> min_phase_score)
 {
     auto first_partition = std::cbegin(partitions);
     auto last_partition  = std::cend(partitions);
@@ -292,7 +284,8 @@ Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
     
     if (genotypes.front().get().ploidy() == 1 || partitions.size() == 1) {
         for (const auto& p : genotype_posteriors) {
-            result.phase_regions[p.first].emplace_back(haplotype_region, 1);
+            static const Phred<double> Max_posterior {Phred<double>::Probability {0.0}};
+            result.phase_regions[p.first].emplace_back(haplotype_region, Max_posterior);
         }
         return result;
     }

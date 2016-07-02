@@ -16,6 +16,7 @@
 #include <boost/optional.hpp>
 
 #include "common.hpp"
+#include "phred.hpp"
 #include "variant_caller.hpp"
 #include "individual_genotype_model.hpp"
 #include "variant_call.hpp"
@@ -37,8 +38,8 @@ public:
     
     struct CallerParameters
     {
-        double min_variant_posterior;
-        double min_refcall_posterior;
+        Phred<double> min_variant_posterior;
+        Phred<double> min_refcall_posterior;
         unsigned ploidy;
         double snp_heterozygosity;
         double indel_heterozygosity;

@@ -205,7 +205,7 @@ namespace Octopus
     
     ProgressMeter::~ProgressMeter()
     {
-        if (!done_ && !regions_.empty()) {
+        if (!done_ && !regions_.empty() && num_bp_completed_ > 0) {
             const TimeInterval duration {start_, std::chrono::system_clock::now()};
             
             const auto time_taken = to_string(duration);

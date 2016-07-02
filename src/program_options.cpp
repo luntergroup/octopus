@@ -40,6 +40,7 @@
 #include "mappable_algorithms.hpp"
 #include "string_utils.hpp"
 #include "append.hpp"
+#include "phred.hpp"
 #include "maths.hpp"
 #include "logging.hpp"
 
@@ -377,15 +378,15 @@ namespace Octopus
              "Space-seperated list of contig=ploidy pairs")
             ("contig-ploidies-file", po::value<std::string>(),
              "List of contig=ploidy pairs, one per line")
-            ("min-variant-posterior", po::value<float>()->default_value(2),
+            ("min-variant-posterior", po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
              "Minimum variant call posterior probability (phred scale)")
-            ("min-refcall-posterior", po::value<float>()->default_value(2),
+            ("min-refcall-posterior", po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
              "Minimum homozygous reference call posterior probability (phred scale)")
 //            ("refcalls", po::value<RefCallType>()->default_value(RefCallType::None),
 //             "Caller will output reference confidence calls")
             ("sites-only", po::bool_switch()->default_value(false),
              "Only outout variant call sites (i.e. without sample genotype information)")
-            ("min-phase-score", po::value<float>()->default_value(20),
+            ("min-phase-score", po::value<Phred<double>>()->default_value(Phred<double> {20.0}),
              "Minimum phase score required to output a phased call (phred scale)")
             ;
             
@@ -407,7 +408,7 @@ namespace Octopus
              "The minimum allele frequency that can be considered as a viable somatic mutation")
             ("credible-mass", po::value<float>()->default_value(0.99),
              "The mass of the posterior density to use for evaluating allele frequencies")
-            ("min-somatic-posterior", po::value<float>()->default_value(2.0),
+            ("min-somatic-posterior", po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
              "The minimum somatic mutation call posterior probability (phred scale)")
             ("somatics-only", po::bool_switch()->default_value(false),
              "Only output somatic calls (for somatic calling models only)")
@@ -536,32 +537,44 @@ namespace Octopus
         return !path.empty() && path.string().front() == '~';
     }
     
-    boost::optional<fs::path> expand_user_path(const fs::path& path)
+    fs::path expand_user_path(const fs::path& path)
     {
         if (is_shorthand_user_path(path)) {
             if (path.string().size() > 1 && path.string()[1] == '/') {
                 const auto home_dir = get_home_dir();
-                
                 if (home_dir) {
                     return fs::path {home_dir->string() + path.string().substr(1)};
                 }
-                
-                return boost::none;
+                std::ostringstream ss {};
+                ss << "Unable to expand user path";
+                ss << path;
+                ss << " as the user home directory cannot be located";
+                throw std::runtime_error {ss.str()};
             }
-            return boost::none;
+            return path;
         }
         return path;
     }
     
-    boost::optional<fs::path> get_working_directory(const po::variables_map& options)
+    fs::path get_working_directory(const po::variables_map& options)
     {
         if (options.count("working-directory") == 1) {
-            return expand_user_path(options.at("working-directory").as<std::string>());
+            auto result = expand_user_path(options.at("working-directory").as<std::string>());
+            
+            if (!fs::exists(result) && !fs::is_directory(result)) {
+                std::ostringstream ss {};
+                ss << "The working directory ";
+                ss << result;
+                ss << " given in the option (--working-directory) does not exist";
+                throw std::runtime_error {ss.str()};
+            }
+            
+            return result;
         }
         return fs::current_path();
     }
     
-    boost::optional<fs::path> resolve_path(const fs::path& path, const po::variables_map& options)
+    fs::path resolve_path(const fs::path& path, const po::variables_map& options)
     {
         if (is_shorthand_user_path(path)) {
             return expand_user_path(path); // must be a root path
@@ -576,24 +589,18 @@ namespace Octopus
         const auto wd = get_working_directory(options);
         
         if (fs::exists(parent_dir) && fs::is_directory(parent_dir)) {
-            if (wd) {
-                auto tmp = *wd;
-                tmp /= path;
-                auto wd_parent = tmp.parent_path();
-                if (fs::exists(wd_parent) && fs::is_directory(wd_parent)) {
-                    return tmp; // prefer working directory in case of name clash
-                }
+            auto tmp = wd;
+            tmp /= path;
+            auto wd_parent = tmp.parent_path();
+            if (fs::exists(wd_parent) && fs::is_directory(wd_parent)) {
+                return tmp; // prefer working directory in case of name clash
             }
             return path; // must be yet-to-be-created root path
         }
         
-        if (wd) {
-            auto result = *wd;
-            result /= path;
-            return result;
-        }
-        
-        return boost::none;
+        auto result = wd;
+        result /= path;
+        return result;
     }
     
     std::vector<fs::path>
@@ -625,16 +632,13 @@ namespace Octopus
     auto resolve_paths(const std::vector<fs::path>& paths, const po::variables_map& options)
     {
         std::vector<fs::path> good_paths {}, bad_paths {};
-        
         good_paths.reserve(paths.size());
         
         for (const auto& path : paths) {
-            auto resolved_path = resolve_path(path, options);
-            
-            if (resolved_path) {
-                good_paths.push_back(*std::move(resolved_path));
-            } else {
-                bad_paths.push_back(*std::move(resolved_path));
+            try {
+                good_paths.push_back(resolve_path(path, options));
+            } catch (...) {
+                bad_paths.push_back(path);
             }
         }
         
@@ -656,6 +660,10 @@ namespace Octopus
     
     bool is_file_writable(const fs::path& path)
     {
+        if (!fs::exists(path.parent_path())) {
+            return false;
+        }
+        
         std::ofstream test {path.string()};
         
         const auto result = test.is_open();
@@ -689,30 +697,16 @@ namespace Octopus
     boost::optional<fs::path> get_debug_log_file_name(const po::variables_map& options)
     {
         if (options.at("debug").as<bool>()) {
-            const auto result = resolve_path("octopus_debug.log", options);
-            
-            if (!result) {
-                throw std::runtime_error {"Could not resolve debug log file"};
-            }
-            
-            return *result;
+            return resolve_path("octopus_debug.log", options);
         }
-        
         return boost::none;
     }
     
     boost::optional<fs::path> get_trace_log_file_name(const po::variables_map& options)
     {
         if (options.at("trace").as<bool>()) {
-            const auto result = resolve_path("octopus_trace.log", options);
-            
-            if (!result) {
-                throw std::runtime_error {"Could not resolve trace log file"};
-            }
-            
-            return *result;
+            return resolve_path("octopus_trace.log", options);
         }
-        
         return boost::none;
     }
     
@@ -724,17 +718,12 @@ namespace Octopus
         
         auto resolved_path = resolve_path(input_path, options);
         
-        if (!resolved_path) {
-            stream(log) << "Could not resolve the path " << input_path
-                << " given in the input option (--reference)";
-        }
-        
-        if (!fs::exists(*resolved_path)) {
+        if (!fs::exists(resolved_path)) {
             stream(log) << "The path " << input_path
                 << " given in the input option (--reference) does not exist";
         }
         
-        if (!is_file_readable(*resolved_path)) {
+        if (!is_file_readable(resolved_path)) {
             stream(log) << "The path " << input_path
                 << " given in the input option (--reference) is not readable";
         }
@@ -743,7 +732,7 @@ namespace Octopus
         
         static constexpr unsigned Scale {1'000'000};
         
-        return ::make_reference(*std::move(resolved_path),
+        return ::make_reference(std::move(resolved_path),
                                 static_cast<ReferenceGenome::SizeType>(Scale * ref_cache_size),
                                 is_threading_allowed(options));
     }
@@ -1015,17 +1004,14 @@ namespace Octopus
             
             auto resolved_path = resolve_path(input_path, options);
             
-            if (!resolved_path) {
-                stream(log) << "Could not resolve the path " << input_path
-                            << " given in the input option (--skip-regions-file)";
-            } else if (!fs::exists(*resolved_path)) {
+            if (!fs::exists(resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--skip-regions-file) does not exist";
-            }else if (!is_file_readable(*resolved_path)) {
+            }else if (!is_file_readable(resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--skip-regions-file) is not readable";
             } else {
-                append(extract_regions_from_file(*resolved_path, reference), skip_regions);
+                append(extract_regions_from_file(resolved_path, reference), skip_regions);
             }
         }
         
@@ -1057,17 +1043,14 @@ namespace Octopus
             
             auto resolved_path = resolve_path(input_path, options);
             
-            if (!resolved_path) {
-                stream(log) << "Could not resolve the path " << input_path
-                            << " given in the input option (--skip-regions-file)";
-            } else if (!fs::exists(*resolved_path)) {
+            if (!fs::exists(resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--skip-regions-file) does not exist";
-            } else if (!is_file_readable(*resolved_path)) {
+            } else if (!is_file_readable(resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--skip-regions-file) is not readable";
             } else {
-                append(extract_regions_from_file(*resolved_path, reference), input_regions);
+                append(extract_regions_from_file(resolved_path, reference), input_regions);
             }
         }
         
@@ -1111,7 +1094,7 @@ namespace Octopus
             Logging::WarningLogger log {};
             for (const auto& path : paths) {
                 stream(log) << "Could not resolve the path " << path
-                << " given in the input option (--" + option +")";
+                            << " given in the input option (--" + option +")";
             }
         }
         
@@ -1127,7 +1110,7 @@ namespace Octopus
             Logging::WarningLogger log {};
             std::for_each(first, last, [&option, &log] (const auto& path) {
                 stream(log) << "The path " << path
-                << " given in the input option (--" + option + ") does not exist";
+                            << " given in the input option (--" + option + ") does not exist";
             });
         }
         
@@ -1192,20 +1175,16 @@ namespace Octopus
             
             auto resolved_path = resolve_path(input_path, options);
             
-            if (!resolved_path) {
-                stream(log) << "Could not resolve the path " << input_path
-                    << " given in the input option (--reads-file)";
-                all_paths_good = false;
-            } else if (!fs::exists(*resolved_path)) {
+            if (!fs::exists(resolved_path)) {
                 stream(log) << "The path " << input_path
-                    << " given in the input option (--reads-file) does not exist";
+                            << " given in the input option (--reads-file) does not exist";
                 all_paths_good = false;
-            } else if (!is_file_readable(*resolved_path)) {
+            } else if (!is_file_readable(resolved_path)) {
                 stream(log) << "The path " << input_path
-                    << " given in the input option (--reads-file) is not readable";
+                            << " given in the input option (--reads-file) is not readable";
                 all_paths_good = false;
             } else {
-                auto paths = extract_paths_from_file(*resolved_path, options);
+                auto paths = extract_paths_from_file(resolved_path, options);
                 
                 std::tie(resolved_paths, unresolved_paths) = resolve_paths(paths, options);
                 
@@ -1241,8 +1220,7 @@ namespace Octopus
         
         if (num_duplicates > 0) {
             Logging::WarningLogger log {};
-            stream(log) << "There are " << num_duplicates
-                        << " duplicate read paths, only unique paths will be considered";
+            stream(log) << "There are " << num_duplicates << " duplicate read paths but only unique paths will be considered";
         }
         
         result.erase(it, std::end(result));
@@ -1432,15 +1410,12 @@ namespace Octopus
             
             auto resolved_path = resolve_path(input_path, options);
             
-            if (!resolved_path) {
-                stream(log) << "Could not resolve the path " << input_path
-                            << " given in the input option (--candidates-from-source)";
-            } else if (!fs::exists(*resolved_path)) {
+            if (!fs::exists(resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--candidates-from-source) does not exist";
             }
             
-            result.set_variant_source(*std::move(resolved_path));
+            result.set_variant_source(std::move(resolved_path));
         }
         
         if (options.count("regenotype") == 1) {
@@ -1460,15 +1435,12 @@ namespace Octopus
             
             auto resolved_path = resolve_path(regenotype_path, options);
             
-            if (!resolved_path) {
-                stream(log) << "Could not resolve the path " << regenotype_path
-                    << " given in the input option (--candidates-from-source)";
-            } else if (!fs::exists(*resolved_path)) {
+            if (!fs::exists(resolved_path)) {
                 stream(log) << "The path " << regenotype_path
-                    << " given in the input option (--candidates-from-source) does not exist";
+                            << " given in the input option (--candidates-from-source) does not exist";
             }
             
-            result.set_variant_source(*std::move(resolved_path));
+            result.set_variant_source(std::move(resolved_path));
         }
         
         result.set_min_base_quality(options.at("min-base-quality").as<unsigned>());
@@ -1477,7 +1449,7 @@ namespace Octopus
         auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
         
         if (min_supporting_reads == 0) {
-            warning_log << "Given option --min_supporting_reads 0, assuming this is a type and setting to 1";
+            warning_log << "The option --min_supporting_reads was set to 0 - assuming this is a typo and setting to 1";
             ++min_supporting_reads;
         }
         
@@ -1563,17 +1535,13 @@ namespace Octopus
             
             Logging::ErrorLogger log {};
             
-            if (!resolved_path) {
-                stream(log) << "Could not resolve the path " << input_path
-                            << " given in the input option (--contig-ploidies-file)";
-                return boost::none;
-            } else if (!fs::exists(*resolved_path)) {
+            if (!fs::exists(resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--contig-ploidies-file) does not exist";
                 return boost::none;
             }
             
-            std::ifstream file {resolved_path->string()};
+            std::ifstream file {resolved_path.string()};
             
             std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
                            std::back_inserter(result), [] (const Line& line) {
@@ -1645,27 +1613,28 @@ namespace Octopus
         
         //vc_builder.set_refcall_type(options.at("refcalls").as<VariantCaller::RefCallType>());
         
-        const auto min_variant_posterior_phred = options.at("min-variant-posterior").as<float>();
+        auto min_variant_posterior = options.at("min-variant-posterior").as<Phred<double>>();
         
         if (options.count("regenotype") == 1) {
             if (caller == "cancer") {
-                vc_builder.set_min_variant_posterior(phred_to_probability(min_variant_posterior_phred));
+                vc_builder.set_min_variant_posterior(min_variant_posterior);
             } else {
-                vc_builder.set_min_variant_posterior(0);
+                vc_builder.set_min_variant_posterior(Phred<double> {1});
             }
         } else {
-            vc_builder.set_min_variant_posterior(phred_to_probability(min_variant_posterior_phred));
+            vc_builder.set_min_variant_posterior(min_variant_posterior);
         }
         
-        const auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<float>();
-        vc_builder.set_min_refcall_posterior(phred_to_probability(min_refcall_posterior_phred));
+        auto min_refcall_posterior = options.at("min-refcall-posterior").as<Phred<double>>();
+        
+        vc_builder.set_min_refcall_posterior(min_refcall_posterior);
         
         vc_builder.set_max_haplotypes(options.at("max-haplotypes").as<unsigned>());
         
         vc_builder.set_min_haplotype_posterior(options.at("min-haplotype-posterior").as<float>());
         
-        const auto min_phase_score_phred = options.at("min-phase-score").as<float>();
-        vc_builder.set_min_phase_score(phred_to_probability(min_phase_score_phred));
+        auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
+        vc_builder.set_min_phase_score(min_phase_score);
         
         vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
         vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
@@ -1693,8 +1662,9 @@ namespace Octopus
             vc_builder.set_min_somatic_frequency(options.at("min-somatic-frequency").as<float>());
             vc_builder.set_credible_mass(options.at("credible-mass").as<float>());
             
-            const auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<float>();
-            vc_builder.set_min_somatic_posterior(phred_to_probability(min_somatic_posterior_phred));
+            Phred<double> min_somatic_posterior {options.at("min-somatic-posterior").as<double>()};
+            
+            vc_builder.set_min_somatic_posterior(min_somatic_posterior);
         } else if (caller == "trio") {
             vc_builder.set_maternal_sample(options.at("maternal-sample").as<std::string>());
             vc_builder.set_paternal_sample(options.at("paternal-sample").as<std::string>());
@@ -1739,13 +1709,8 @@ namespace Octopus
         
         const auto resolved_path = resolve_path(input_path, options);
         
-        if (!resolved_path) {
-            stream(log) << "Could not resolve the path " << input_path
-                << " given in the input option output";
-            return boost::none;
-        } else if (!is_file_writable(*resolved_path)) {
-            stream(log) << "The path " << input_path
-                        << " given in the input option output is not writable";
+        if (!is_file_writable(resolved_path)) {
+            stream(log) << "The path " << input_path << " given in the input option output is not writable";
             return boost::none;
         }
         
@@ -1767,42 +1732,40 @@ namespace Octopus
     {
         const auto working_directory = get_working_directory(options);
         
-        if (working_directory) {
-            auto result = *working_directory;
-            
-            const fs::path temp_dir_base_name {"octopus-temp"};
-            
-            result /= temp_dir_base_name;
-            
-            constexpr unsigned temp_dir_name_count_limit {10000};
-            
-            unsigned temp_dir_counter {2};
-            
-            Logging::WarningLogger log {};
-            
-            while (fs::exists(result) && temp_dir_counter <= temp_dir_name_count_limit) {
-                if (fs::is_empty(result)) {
-                    stream(log) << "Found empty temporary directory " << result
-                        << ", it may need to be deleted manually";
-                }
-                
-                result = *working_directory;
-                result /= temp_dir_base_name.string() + "-" + std::to_string(temp_dir_counter);
-                ++temp_dir_counter;
+        auto result = working_directory;
+        
+        const fs::path temp_dir_base_name {"octopus-temp"};
+        
+        result /= temp_dir_base_name;
+        
+        constexpr unsigned temp_dir_name_count_limit {10000};
+        
+        unsigned temp_dir_counter {2};
+        
+        Logging::WarningLogger log {};
+        
+        while (fs::exists(result) && temp_dir_counter <= temp_dir_name_count_limit) {
+            if (fs::is_empty(result)) {
+                stream(log) << "Found empty temporary directory " << result
+                            << ", it may need to be deleted manually";
             }
-            
-            if (temp_dir_counter > temp_dir_name_count_limit) {
-                log << "Too many temporary directories in working directory";
-                return boost::none;
-            }
-            
-            if (!fs::create_directory(result)) {
-                stream(log) << "Failed to create temporary directory " << result;
-                return boost::none;
-            }
-            
-            return result;
+            result = working_directory;
+            result /= temp_dir_base_name.string() + "-" + std::to_string(temp_dir_counter);
+            ++temp_dir_counter;
         }
+        
+        if (temp_dir_counter > temp_dir_name_count_limit) {
+            log << "There are many temporary directories in working directory indicating an error"
+            " - new directory request blocked";
+            return boost::none;
+        }
+        
+        if (!fs::create_directory(result)) {
+            stream(log) << "Failed to create temporary directory " << result << " - check permissions";
+            return boost::none;
+        }
+        
+        return result;
         
         return boost::none;
     }

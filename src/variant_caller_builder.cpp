@@ -83,7 +83,7 @@ VariantCallerBuilder::set_candidate_generator_builder(const CandidateGeneratorBu
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_ploidy(const unsigned ploidy) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_ploidy(unsigned ploidy) noexcept
 {
     parameters_.ploidy = ploidy;
     return *this;
@@ -95,7 +95,7 @@ VariantCallerBuilder& VariantCallerBuilder::set_caller(std::string caller)
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_refcall_type(const VariantCaller::RefCallType type) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_refcall_type(VariantCaller::RefCallType type) noexcept
 {
     parameters_.refcall_type = type;
     return *this;
@@ -107,31 +107,31 @@ VariantCallerBuilder& VariantCallerBuilder::set_sites_only() noexcept
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_min_variant_posterior(const double posterior) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_min_variant_posterior(Phred<double> posterior) noexcept
 {
     parameters_.min_variant_posterior = posterior;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_min_refcall_posterior(const double posterior) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_min_refcall_posterior(Phred<double> posterior) noexcept
 {
     parameters_.min_refcall_posterior = posterior;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_max_haplotypes(const unsigned n) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_max_haplotypes(unsigned n) noexcept
 {
     parameters_.max_haplotypes = n;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_min_haplotype_posterior(const double p) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_min_haplotype_posterior(double p) noexcept
 {
     parameters_.min_haplotype_posterior = p;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_flank_scoring(const bool b) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_flank_scoring(bool b) noexcept
 {
     parameters_.allow_flank_scoring = b;
     return *this;
@@ -143,19 +143,19 @@ VariantCallerBuilder& VariantCallerBuilder::set_model_filtering(bool b) noexcept
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_min_phase_score(const double score) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_min_phase_score(Phred<double> score) noexcept
 {
     parameters_.min_phase_score = score;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_snp_heterozygosity(const double heterozygosity) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_snp_heterozygosity(double heterozygosity) noexcept
 {
     parameters_.snp_heterozygosity = heterozygosity;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_indel_heterozygosity(const double heterozygosity) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_indel_heterozygosity(double heterozygosity) noexcept
 {
     parameters_.indel_heterozygosity = heterozygosity;
     return *this;
@@ -168,25 +168,25 @@ VariantCallerBuilder& VariantCallerBuilder::set_normal_sample(SampleIdType norma
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_somatic_mutation_rate(const double rate) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_somatic_mutation_rate(double rate) noexcept
 {
     parameters_.somatic_mutation_rate = rate;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_frequency(const double frequency) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_frequency(double frequency) noexcept
 {
     parameters_.min_somatic_frequency = frequency;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_credible_mass(const double mass) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_credible_mass(double mass) noexcept
 {
     parameters_.credible_mass = mass;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_posterior(const double posterior) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_posterior(Phred<double> posterior) noexcept
 {
     parameters_.min_somatic_posterior = posterior;
     return *this;

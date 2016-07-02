@@ -18,6 +18,7 @@
 #include "variant_caller.hpp"
 #include "population_genotype_model.hpp"
 #include "variant_call.hpp"
+#include "phred.hpp"
 
 class GenomicRegion;
 class ReadPipe;
@@ -34,8 +35,8 @@ public:
     
     struct CallerParameters
     {
-        double min_variant_posterior;
-        double min_refcall_posterior;
+        Phred<double> min_variant_posterior;
+        Phred<double> min_refcall_posterior;
         unsigned ploidy;
     };
     
@@ -86,9 +87,7 @@ private:
         calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
     };
     
-    unsigned ploidy_;
-    double min_variant_posterior_;
-    double min_refcall_posterior_;
+    CallerParameters parameters_;
     
     CallTypeSet do_get_call_types() const override;
     

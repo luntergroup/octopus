@@ -17,6 +17,7 @@
 #include <boost/optional.hpp>
 
 #include "common.hpp"
+#include "phred.hpp"
 #include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "allele.hpp"
@@ -34,34 +35,34 @@ namespace Octopus
         public:
             PhaseCall() = delete;
             
-            template <typename R> PhaseCall(R&& region, double score);
+            template <typename R> PhaseCall(R&& region, Phred<double> score);
             
             const GenomicRegion& region() const noexcept { return region_; }
             
-            double score() const noexcept { return score_; };
+            Phred<double> score() const noexcept { return score_; };
             
         private:
             GenomicRegion region_;
-            double score_;
+            Phred<double> score_;
         };
         
         struct GenotypeCall
         {
             GenotypeCall() = delete;
             
-            template <typename G> GenotypeCall(G&& genotype, double posterior);
-            template <typename G, typename P> GenotypeCall(G&& genotype, double posterior, P&& phase);
+            template <typename G> GenotypeCall(G&& genotype, Phred<double> posterior);
+            template <typename G, typename P> GenotypeCall(G&& genotype, Phred<double> posterior, P&& phase);
             
             Genotype<Allele> genotype;
-            double posterior;
+            Phred<double> posterior;
             boost::optional<PhaseCall> phase;
         };
         
         Call() = delete;
         
-        explicit Call(double quality);
+        explicit Call(Phred<double> quality);
         
-        template <typename T> explicit Call(T&& genotype_calls, double quality);
+        template <typename T> explicit Call(T&& genotype_calls, Phred<double> quality);
         
         virtual ~Call() = default;
         
@@ -70,7 +71,7 @@ namespace Octopus
         Call(Call&&)                 = default;
         Call& operator=(Call&&)      = default;
         
-        double quality() const noexcept;
+        Phred<double> quality() const noexcept;
         
         GenotypeCall& get_genotype_call(const SampleIdType& sample);
         const GenotypeCall& get_genotype_call(const SampleIdType& sample) const;
@@ -93,41 +94,41 @@ namespace Octopus
         
         virtual void decorate(VcfRecord::Builder& record) const = 0;
         
-        void set_dummy_model_bayes_factor(double bf) noexcept;
-        boost::optional<double> dummy_model_bayes_factor() const noexcept;
+        void set_dummy_model_posterior(double p) noexcept;
+        boost::optional<double> dummy_model_posterior() const noexcept;
         
     protected:
         std::unordered_map<SampleIdType, GenotypeCall> genotype_calls_;
         
-        double quality_;
+        Phred<double> quality_;
         
-        boost::optional<double> dummy_model_bayes_factor_;
+        boost::optional<double> dummy_model_posterior_;
         
     private:
         virtual void replace_called_alleles(const char old_base, const char replacement_base) = 0;
     };
     
     template <typename T>
-    Call::Call(T&& genotype_calls, double quality)
+    Call::Call(T&& genotype_calls, Phred<double> quality)
     :
     genotype_calls_ {std::begin(genotype_calls),
     std::end(genotype_calls)},
     quality_ {quality},
-    dummy_model_bayes_factor_ {}
+    dummy_model_posterior_ {}
     {}
     
     template <typename R>
-    Call::PhaseCall::PhaseCall(R&& region, double score)
+    Call::PhaseCall::PhaseCall(R&& region, Phred<double> score)
     : region_ {std::forward<R>(region)}, score_ {score}
     {}
     
     template <typename G>
-    Call::GenotypeCall::GenotypeCall(G&& genotype, double posterior)
+    Call::GenotypeCall::GenotypeCall(G&& genotype, Phred<double> posterior)
     : genotype {std::forward<G>(genotype)}, posterior {posterior}, phase {}
     {}
     
     template <typename G, typename P>
-    Call::GenotypeCall::GenotypeCall(G&& genotype, double posterior, P&& phase)
+    Call::GenotypeCall::GenotypeCall(G&& genotype, Phred<double> posterior, P&& phase)
     : genotype {std::forward<G>(genotype)}, posterior {posterior}, phase {std::forward<P>(phase)}
     {}
 } // namespace Octopus

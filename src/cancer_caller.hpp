@@ -25,6 +25,7 @@
 #include "cnv_genotype_model.hpp"
 #include "somatic_genotype_model.hpp"
 #include "variant_call.hpp"
+#include "phred.hpp"
 
 class GenomicRegion;
 class ReadPipe;
@@ -40,9 +41,9 @@ public:
     
     struct CallerParameters
     {
-        double min_variant_posterior;
-        double min_somatic_posterior;
-        double min_refcall_posterior;
+        Phred<double> min_variant_posterior;
+        Phred<double> min_somatic_posterior;
+        Phred<double> min_refcall_posterior;
         unsigned ploidy;
         boost::optional<SampleIdType> normal_sample;
         double somatic_mutation_rate;
@@ -125,15 +126,13 @@ private:
     
     ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
     
-    GermlineGenotypeProbabilityMap
-    calculate_germline_genotype_posteriors(const Latents& inferences,
-                                           const ModelPosteriors& model_posteriors) const;
+    GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& inferences,
+                                                                          const ModelPosteriors& model_posteriors) const;
     
-    ProbabilityVector
-    calculate_probability_samples_not_somatic(const Latents& inferences) const;
+    ProbabilityVector calculate_probability_samples_not_somatic(const Latents& inferences) const;
     
-    double calculate_somatic_probability(const ProbabilityVector& sample_somatic_posteriors,
-                                         const ModelPosteriors& model_posteriors) const;
+    Phred<double> calculate_somatic_probability(const ProbabilityVector& sample_somatic_posteriors,
+                                                const ModelPosteriors& model_posteriors) const;
 };
 
 class CancerVariantCaller::Latents : public CallerLatents

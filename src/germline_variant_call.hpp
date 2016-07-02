@@ -27,7 +27,7 @@ namespace Octopus
         GermlineVariantCall() = delete;
         
         template <typename V, typename T>
-        GermlineVariantCall(V&& variant, T&& genotype_calls, double quality);
+        GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality);
         
         virtual ~GermlineVariantCall() = default;
         
@@ -40,7 +40,7 @@ namespace Octopus
     };
     
     template <typename V, typename T>
-    GermlineVariantCall::GermlineVariantCall(V&& variant, T&& genotype_calls, double quality)
+    GermlineVariantCall::GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality)
     : VariantCall {std::forward<V>(variant), std::forward<T>(genotype_calls), quality}
     {}
 } // namespace Octopus

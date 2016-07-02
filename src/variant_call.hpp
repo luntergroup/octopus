@@ -26,7 +26,7 @@ namespace Octopus
         VariantCall() = delete;
         
         template <typename V, typename T>
-        VariantCall(V&& variant, T&& genotype_calls, double quality);
+        VariantCall(V&& variant, T&& genotype_calls, Phred<double> quality);
         
         virtual ~VariantCall() = default;
         
@@ -57,7 +57,7 @@ namespace Octopus
     };
     
     template <typename V, typename T>
-    VariantCall::VariantCall(V&& variant, T&& genotype_calls, double quality)
+    VariantCall::VariantCall(V&& variant, T&& genotype_calls, Phred<double> quality)
     : Call {std::forward<T>(genotype_calls), quality}, variant_ {std::forward<V>(variant)}
     {}
 } // namespace Octopus

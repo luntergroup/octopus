@@ -177,20 +177,20 @@ using GM = GenotypeModel::Individual;
 using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
 
 using VariantReference  = std::reference_wrapper<const Variant>;
-using VariantPosteriors = std::vector<std::pair<VariantReference, double>>;
+using VariantPosteriors = std::vector<std::pair<VariantReference, Phred<double>>>;
 
 struct VariantCall : Mappable<VariantCall>
 {
     VariantCall() = delete;
-    VariantCall(const std::pair<VariantReference, double>& p)
+    VariantCall(const std::pair<VariantReference, Phred<double>>& p)
     : variant {p.first}, posterior {p.second} {}
-    VariantCall(const Variant& variant, double posterior)
+    VariantCall(const Variant& variant, Phred<double> posterior)
     : variant {variant}, posterior {posterior} {}
     
     const GenomicRegion& mapped_region() const noexcept { return ::mapped_region(variant.get()); }
     
     VariantReference variant;
-    double posterior;
+    Phred<double> posterior;
     bool is_dummy_filtered = false;
 };
 
@@ -198,12 +198,11 @@ using VariantCalls = std::vector<VariantCall>;
 
 struct GenotypeCall
 {
-    GenotypeCall() = default;
-    template <typename T> GenotypeCall(T&& genotype, double posterior)
+    template <typename T> GenotypeCall(T&& genotype, Phred<double> posterior)
     : genotype {std::forward<T>(genotype)}, posterior {posterior} {}
     
     Genotype<Allele> genotype;
-    double posterior;
+    Phred<double> posterior;
 };
 
 using GenotypeCalls = std::vector<GenotypeCall>;
@@ -228,16 +227,14 @@ namespace
 {
 // allele posterior calculations
 
-auto marginalise(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
+auto compute_posterior(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
 {
-    auto result = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                                  0.0, [&allele] (const auto curr, const auto& p) {
-                                      return curr + (contains(p.first, allele) ? p.second : 0);
-                                  });
-    
-    if (result > 1.0) result = 1.0; // just to account for floating point error
-    
-    return result;
+    return Phred<double> { Phred<double>::Probability {
+        std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                        0.0, [&allele] (const auto curr, const auto& p) {
+                            return curr + (contains(p.first, allele) ? 0.0 : p.second);
+                        })
+    }};
 }
 
 VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candidates,
@@ -247,7 +244,7 @@ VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candi
     result.reserve(candidates.size());
     
     for (const auto& candidate : candidates) {
-        result.emplace_back(candidate, marginalise(candidate.alt_allele(), genotype_posteriors));
+        result.emplace_back(candidate, compute_posterior(candidate.alt_allele(), genotype_posteriors));
     }
     
     return result;
@@ -262,7 +259,7 @@ bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReferen
 
 VariantCalls call_candidates(const VariantPosteriors& candidate_posteriors,
                              const Genotype<Haplotype>& genotype_call,
-                             const double min_posterior)
+                             const Phred<double> min_posterior)
 {
     VariantCalls result {};
     result.reserve(candidate_posteriors.size());
@@ -286,12 +283,14 @@ auto call_genotype(const GenotypeProbabilityMap& genotype_posteriors)
                             })->first;
 }
 
-double marginalise(const Genotype<Allele>& genotype, const GenotypeProbabilityMap& genotype_posteriors)
+auto compute_posterior(const Genotype<Allele>& genotype, const GenotypeProbabilityMap& genotype_posteriors)
 {
-    return std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
-                           [&genotype] (const double curr, const auto& p) {
-                               return curr + (contains(p.first, genotype) ? p.second : 0.0);
-                           });
+    return Phred<double> { Phred<double>::Probability {
+        std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
+                        [&genotype] (const double curr, const auto& p) {
+                            return curr + (contains(p.first, genotype) ? 0.0 : p.second);
+                        })
+    }};
 }
 
 GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
@@ -304,7 +303,7 @@ GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
     for (const auto& region : variant_regions) {
         auto spliced_genotype = splice<Allele>(genotype_call, region);
         
-        const auto posterior = marginalise(spliced_genotype, genotype_posteriors);
+        const auto posterior = compute_posterior(spliced_genotype, genotype_posteriors);
         
         result.emplace_back(std::move(spliced_genotype), posterior);
     }
@@ -543,7 +542,7 @@ namespace debug
             stream << "Printing top " << m << " candidate variant posteriors " << '\n';
         }
         
-        std::vector<std::pair<VariantReference, double>> v {};
+        std::vector<std::pair<VariantReference, Phred<double>>> v {};
         v.reserve(candidate_posteriors.size());
         
         std::copy(std::cbegin(candidate_posteriors), std::cend(candidate_posteriors),
@@ -558,7 +557,7 @@ namespace debug
         
         std::for_each(std::begin(v), mth,
                       [&] (const auto& p) {
-                          stream << p.first.get() << " " << p.second << '\n';
+                          stream << p.first.get() << " " << p.second.probability_true() << '\n';
                       });
     }
     

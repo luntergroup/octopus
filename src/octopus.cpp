@@ -165,10 +165,21 @@ namespace Octopus
                                                return is_in_file_samples(sample, file_samples);
                                            });
             
-            if (it != std::end(*user_samples)) {
+            const auto num_not_found = std::distance(it, std::end(*user_samples));
+            
+            if (num_not_found > 0) {
                 std::ostringstream ss {};
-                ss << "User samples not found in read files: ";
-                std::copy(it, std::end(*user_samples), std::ostream_iterator<SampleIdType>(ss, " "));
+                ss << "The requested calling sample";
+                if (num_not_found > 1) ss << 's';
+                ss << " ";
+                std::transform(it, std::end(*user_samples), std::ostream_iterator<SampleIdType>(ss, ", "),
+                               [] (auto sample) { return "'" + sample + "'"; });
+                if (num_not_found == 1) {
+                    ss << "is";
+                } else {
+                    ss << "are";
+                }
+                ss << " not present in any of the read files";
                 Logging::WarningLogger log {};
                 log << ss.str();
                 user_samples->erase(it, std::end(*user_samples));
@@ -490,17 +501,17 @@ namespace Octopus
         Logging::FatalLogger log {};
         
         if (components.samples().empty()) {
-            log << "No samples detected";
+            log << "No samples detected - at least one is required for calling";
             return false;
         }
         
         if (components.search_regions().empty()) {
-            log << "There are no input regions";
+            log << "There are no input regions - at least one is required for calling";
             return false;
         }
         
         if (components.candidate_generator_builder().num_generators() == 0) {
-            log << "There are no candidate generators";
+            log << "There are no candidate generators - at least one is required for calling";
             return false;
         }
         

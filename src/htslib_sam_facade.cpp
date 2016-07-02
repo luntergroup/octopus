@@ -31,19 +31,21 @@ public:
     MissingBamIndex(boost::filesystem::path file_path)
     :
     runtime_error {"Missing BAM index"},
-    file_path_ {std::move(file_path)}
+    file_path_ {std::move(file_path)},
+    str_ {}, msg_ {}
     {}
     
     const char* what() const noexcept override
     {
         str_ << runtime_error::what() << ": a BAM index file (.bai) is required for the BAM file "
                 << file_path_ << " but is missing";
-        return str_.str().c_str();
+        msg_ = str_.str();
+        return msg_.c_str();
     }
 private:
     boost::filesystem::path file_path_;
-    
     mutable std::ostringstream str_;
+    mutable std::string msg_;
 };
 
 class MissingCramIndex : public std::runtime_error
@@ -52,19 +54,21 @@ public:
     MissingCramIndex(boost::filesystem::path file_path)
     :
     runtime_error {"Missing CRAM index"},
-    file_path_ {std::move(file_path)}
+    file_path_ {std::move(file_path)},
+    str_ {}, msg_ {}
     {}
     
     const char* what() const noexcept override
     {
         str_ << runtime_error::what() << ": a CRAM index file (.crai) is required for the CRAM file "
-            << file_path_ << " but is missing";
-        return str_.str().c_str();
+             << file_path_ << " but is missing";
+        msg_ = str_.str();
+        return msg_.c_str();
     }
 private:
     boost::filesystem::path file_path_;
-    
     mutable std::ostringstream str_;
+    mutable std::string msg_;
 };
 
 class InvalidBamHeader : public std::runtime_error {
@@ -74,19 +78,20 @@ public:
     runtime_error {"Invalid BAM header"},
     file_path_ {std::move(file_path)},
     message_ {std::move(message)},
-    str_ {}
+    str_ {}, msg_ {}
     {}
     
     const char* what() const noexcept override
     {
         str_ << runtime_error::what() << ": in file " << file_path_ << ": " << message_;
-        return str_.str().c_str();
+        msg_ = str_.str();
+        return msg_.c_str();
     }
 private:
     boost::filesystem::path file_path_;
     std::string message_;
-    
     mutable std::ostringstream str_;
+    mutable std::string msg_;
 };
 
 class InvalidBamRecord : public std::runtime_error {
@@ -96,20 +101,22 @@ public:
     runtime_error {"Invalid BAM record"},
     file_path_ {std::move(file_path)},
     read_name_ {std::move(read_name)},
-    message_ {std::move(message)}
+    message_ {std::move(message)},
+    str_ {}, msg_ {}
     {}
     
     const char* what() const noexcept override
     {
         str_ << runtime_error::what() << ": in file " << file_path_ << ", in read " << read_name_
                 << ": " << message_;
-        return str_.str().c_str();
+        msg_ = str_.str();
+        return msg_.c_str();
     }
 private:
     boost::filesystem::path file_path_;
     std::string message_, read_name_;
-    
     mutable std::ostringstream str_;
+    mutable std::string msg_;
 };
 
 // public methods
@@ -125,7 +132,7 @@ contig_names_ {},
 sample_names_ {},
 samples_ {}
 {
-    if (!hts_index_) {
+    if (hts_file_ && !hts_index_) {
         if (hts_file_->is_cram) {
             throw MissingCramIndex {file_path};
         } else {
@@ -178,7 +185,7 @@ void HtslibSamFacade::close()
 unsigned HtslibSamFacade::count_reference_contigs() const
 {
     if (!is_open()) {
-        throw std::runtime_error {"HtslibSamFacade: file not open"};
+        throw std::runtime_error {"HtslibSamFacade: attempting operation on closed file"};
     }
     return hts_header_->n_targets;
 }

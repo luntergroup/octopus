@@ -338,6 +338,7 @@
 		CAB0DFD91BBF035D001D2F99 /* genotype.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genotype.cpp; sourceTree = "<group>"; };
 		CAB0DFDE1BC01E2A001D2F99 /* random_candidate_variant_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = random_candidate_variant_generator.cpp; sourceTree = "<group>"; };
 		CAB0DFDF1BC01E2A001D2F99 /* random_candidate_variant_generator.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = random_candidate_variant_generator.hpp; sourceTree = "<group>"; };
+		CAB7B6E81D27CE490046C3E5 /* phred.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = phred.hpp; sourceTree = "<group>"; };
 		CAB89DF11C753551002D6F8E /* indel_error_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = indel_error_model.cpp; sourceTree = "<group>"; };
 		CAB89DF21C753551002D6F8E /* indel_error_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = indel_error_model.hpp; sourceTree = "<group>"; };
 		CAB89DF41C78D95F002D6F8E /* haplotype_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_generator.cpp; sourceTree = "<group>"; };
@@ -839,10 +840,10 @@
 			isa = PBXGroup;
 			children = (
 				D402C5411CC9349C00C8B8A7 /* call-factory */,
-				CA91C2D11B8DF76300609FFA /* variant_caller.hpp */,
-				D4807FB11BA843B900657D4F /* variant_caller.cpp */,
 				CACF81361C870E8300E9E6BD /* haplotype_filter.hpp */,
 				CACF81351C870E8300E9E6BD /* haplotype_filter.cpp */,
+				CA91C2D11B8DF76300609FFA /* variant_caller.hpp */,
+				D4807FB11BA843B900657D4F /* variant_caller.cpp */,
 				D40B11A21CAEBC270050145D /* individual_caller.hpp */,
 				D40B11A11CAEBC270050145D /* individual_caller.cpp */,
 				D4807FAF1BA826DB00657D4F /* population_caller.hpp */,
@@ -1059,6 +1060,7 @@
 				D4B69CC41C4FEF2700F3135B /* timing.hpp */,
 				CADA44321C6D41A800D432E8 /* matrix_map.hpp */,
 				CAE0A90A1C6384DC00F88871 /* probability_matrix.hpp */,
+				CAB7B6E81D27CE490046C3E5 /* phred.hpp */,
 			);
 			name = utils;
 			sourceTree = "<group>";

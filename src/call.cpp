@@ -12,7 +12,7 @@
 
 namespace Octopus
 {
-double Call::quality() const noexcept
+Phred<double> Call::quality() const noexcept
 {
     return quality_;
 }
@@ -87,13 +87,13 @@ void Call::replace(const char old_base, const char replacement_base)
     }
 }
 
-void Call::set_dummy_model_bayes_factor(const double bf) noexcept
+void Call::set_dummy_model_posterior(double p) noexcept
 {
-    dummy_model_bayes_factor_ = bf;
+    dummy_model_posterior_ = p;
 }
 
-boost::optional<double> Call::dummy_model_bayes_factor() const noexcept
+boost::optional<double> Call::dummy_model_posterior() const noexcept
 {
-    return dummy_model_bayes_factor_;
+    return dummy_model_posterior_;
 }
 } // namespace Octopus

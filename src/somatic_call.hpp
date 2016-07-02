@@ -40,7 +40,7 @@ public:
     
     template <typename V, typename C>
     SomaticCall(V&& variant, const CancerGenotype<Allele>& genotype_call,
-                double genotype_posteriors, C&& credible_regions, double quality);
+                Phred<double> genotype_posterior, C&& credible_regions, Phred<double> quality);
     
     virtual ~SomaticCall() = default;
     
@@ -57,7 +57,7 @@ protected:
 
 template <typename V, typename C>
 SomaticCall::SomaticCall(V&& variant, const CancerGenotype<Allele>& genotype_call,
-                         double genotype_posteriors, C&& credible_regions, double quality)
+                         Phred<double> genotype_posterior, C&& credible_regions, Phred<double> quality)
 :
 VariantCall {std::forward<V>(variant), decltype(genotype_calls_) {}, quality},
 credible_regions_ {std::forward<C>(credible_regions)}
@@ -74,9 +74,9 @@ credible_regions_ {std::forward<C>(credible_regions)}
     
     for (const auto& p : credible_regions_) {
         if (p.second.somatic) {
-            genotype_calls_.emplace(p.first, GenotypeCall {convert(genotype_call), genotype_posteriors});
+            genotype_calls_.emplace(p.first, GenotypeCall {convert(genotype_call), genotype_posterior});
         } else {
-            genotype_calls_.emplace(p.first, GenotypeCall {genotype_call.germline_genotype(), genotype_posteriors});
+            genotype_calls_.emplace(p.first, GenotypeCall {genotype_call.germline_genotype(), genotype_posterior});
         }
     }
 }

@@ -26,7 +26,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--version",
         
         "--debug",
-        //"--trace",
+        "--trace",
         
         //"--sites-only",
         
@@ -46,8 +46,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -83,7 +83,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22:40,015,869-40,016,339", // FP
+        //"--regions", "22:22,583,864-22,584,168", // FN
+        "--regions", "22:40,015,775-40,016,384", // FP
         //"--regions", "22:48,744,696-48,744,879", // difficult region (FPs)
         //"--regions", "22:47,416,419-47,417,744", // bad model filtering
         
@@ -235,7 +236,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--disable-model-filtering",
         
-        //"--min-variant-posterior", "2",
+        //"--min-variant-posterior", "0.5",
         //"--min-refcall-posterior", "0",
         
         //"--snp-heterozygosity", "0.000333",

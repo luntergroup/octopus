@@ -17,14 +17,14 @@ namespace Octopus
     VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
     {
         {std::type_index(typeid(GermlineVariantCall)), [] (auto& hb) {
-            hb.add_info("DMBF", "1", "Float", "Dummy model Bayes Factor");
+            hb.add_info("DMP", "1", "Float", "Dummy model posterior");
         }},
         {std::type_index(typeid(ReferenceCall)), [] (auto& hb) {
-            hb.add_info("DMBF", "1", "Float", "Dummy model Bayes Factor");
+            hb.add_info("DMP", "1", "Float", "Dummy model posterior");
         }},
         {std::type_index(typeid(SomaticCall)), [] (auto& hb) {
             hb.add_format("SCR", "2", "Float", "99% credible region of the somatic allele frequency");
-            hb.add_info("DMBF", "1", "Float", "Dummy model Bayes Factor");
+            hb.add_info("DMP", "1", "Float", "Dummy model posterior");
         }}
     };
     

@@ -620,16 +620,15 @@ namespace Octopus
     {
         auto result = VcfRecord::Builder {};
         
-        const auto phred_quality = Maths::probability_to_phred<float>(call->quality(), 2);
-        
         const auto& region = call->mapped_region();
         
         result.set_chrom(contig_name(region));
         result.set_pos(mapped_begin(region) + 1);
-        result.set_ref(call->reference().sequence());
-        result.set_qual(phred_quality);
         
+        result.set_ref(call->reference().sequence());
         set_alt_alleles(call.get(), result, samples_);
+        
+        result.set_qual(std::min(5000.0, Maths::round(call->quality().score(), 2)));
         
         //result.add_info("AC",  to_strings(count_alt_alleles(*call)));
         //result.add_info("AN",  to_string(count_alleles(*call)));
@@ -641,8 +640,8 @@ namespace Octopus
         result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
         result.set_info("MQ0", count_mapq_zero(reads_, region));
         
-        if (call->dummy_model_bayes_factor()) {
-            result.set_info("DMBF", *call->dummy_model_bayes_factor());
+        if (call->dummy_model_posterior()) {
+            result.set_info("DMP", *call->dummy_model_posterior());
         }
         
         if (!sites_only_) {
@@ -657,7 +656,7 @@ namespace Octopus
                 
                 set_vcf_genotype(sample, genotype_call, result);
                 
-                auto gq = std::min(99, static_cast<int>(std::round(Maths::probability_to_phred<float>(genotype_call.posterior))));
+                auto gq = std::min(99, static_cast<int>(std::round(genotype_call.posterior.score())));
                 
                 //result.set_format_missing(sample, "FT"); // TODO
                 result.set_format(sample, "GQ", std::to_string(gq));
@@ -668,7 +667,10 @@ namespace Octopus
                 if (call->is_phased(sample)) {
                     const auto& phase = *genotype_call.phase;
                     result.set_format(sample, "PS", mapped_begin(phase.region()) + 1);
-                    result.set_format(sample, "PQ", Octopus::to_string(Maths::probability_to_phred<float>(phase.score()), 2)); // TODO
+                    
+                    auto pq = std::min(99, static_cast<int>(std::round(phase.score().score())));
+                    
+                    result.set_format(sample, "PQ", std::to_string(pq));
                 }
             }
         }
@@ -688,16 +690,14 @@ namespace Octopus
         
         auto result = VcfRecord::Builder {};
         
-        const auto phred_quality = Maths::probability_to_phred<float>(calls.front()->quality(), 2);
-        
         const auto& region = calls.front()->mapped_region();
         
         const auto& ref = calls.front()->reference().sequence();
         
         result.set_chrom(contig_name(region));
         result.set_pos(mapped_begin(region) + 1);
+        
         result.set_ref(ref);
-        result.set_qual(phred_quality);
         
         std::vector<std::vector<VcfRecord::SequenceType>> resolved_genotypes {};
         resolved_genotypes.reserve(samples_.size());
@@ -757,6 +757,13 @@ namespace Octopus
         
         result.set_alt(std::move(alt_alleles));
         
+        auto q = std::max_element(std::cbegin(calls), std::cend(calls),
+                                  [] (const auto& lhs, const auto& rhs) {
+                                      return lhs->quality() < rhs->quality();
+                                  });
+        
+        result.set_qual(std::min(5000.0, Maths::round(q->get()->quality().score(), 2)));
+        
         //result.add_info("AC",  to_strings(count_alt_alleles(*call)));
         //result.add_info("AN",  to_string(count_alleles(*call)));
         
@@ -767,8 +774,21 @@ namespace Octopus
         result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
         result.set_info("MQ0", count_mapq_zero(reads_, region));
         
-        if (calls.front()->dummy_model_bayes_factor()) {
-            result.set_info("DMBF", *calls.front()->dummy_model_bayes_factor());
+        boost::optional<double> dmp {};
+        
+        for (const auto& call : calls) {
+            const auto call_dmp = call->dummy_model_posterior();
+            if (call_dmp) {
+                if (dmp) {
+                    if (*dmp < *call_dmp) dmp = *call_dmp;
+                } else {
+                    dmp = *call_dmp;
+                }
+            }
+        }
+        
+        if (dmp) {
+            result.set_info("DMP", *dmp);
         }
         
         if (!sites_only_) {
@@ -785,7 +805,7 @@ namespace Octopus
                 
                 result.set_genotype(sample, *sample_itr++, VcfRecord::Builder::Phasing::Phased);
                 
-                auto gq = std::min(99, static_cast<int>(std::round(Maths::probability_to_phred<float>(posterior))));
+                auto gq = std::min(99, static_cast<int>(std::round(posterior.score())));
                 
                 //result.set_format_missing(sample, "FT"); // TODO
                 result.set_format(sample, "GQ", std::to_string(gq));
@@ -796,7 +816,10 @@ namespace Octopus
                 if (calls.front()->is_phased(sample)) {
                     const auto phase = *calls.front()->get_genotype_call(sample).phase;
                     result.set_format(sample, "PS", mapped_begin(phase.region()) + 1);
-                    result.set_format(sample, "PQ", Octopus::to_string(Maths::probability_to_phred<float>(phase.score()), 2)); // TODO
+                    
+                    auto pq = std::min(99, static_cast<int>(std::round(phase.score().score())));
+                    
+                    result.set_format(sample, "PQ", std::to_string(pq));
                 }
             }
         }

@@ -52,13 +52,13 @@ namespace Octopus {
         VariantCallerBuilder& set_caller(std::string caller);
         VariantCallerBuilder& set_refcall_type(VariantCaller::RefCallType type) noexcept;
         VariantCallerBuilder& set_sites_only() noexcept;
-        VariantCallerBuilder& set_min_variant_posterior(double posterior) noexcept;
-        VariantCallerBuilder& set_min_refcall_posterior(double posterior) noexcept;
+        VariantCallerBuilder& set_min_variant_posterior(Phred<double> posterior) noexcept;
+        VariantCallerBuilder& set_min_refcall_posterior(Phred<double> posterior) noexcept;
         VariantCallerBuilder& set_max_haplotypes(unsigned n) noexcept;
         VariantCallerBuilder& set_min_haplotype_posterior(double p) noexcept;
         VariantCallerBuilder& set_flank_scoring(bool b) noexcept;
         VariantCallerBuilder& set_model_filtering(bool b) noexcept;
-        VariantCallerBuilder& set_min_phase_score(double score) noexcept;
+        VariantCallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
         
         VariantCallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
         VariantCallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
@@ -68,7 +68,7 @@ namespace Octopus {
         VariantCallerBuilder& set_somatic_mutation_rate(double rate) noexcept;
         VariantCallerBuilder& set_credible_mass(double mass) noexcept;
         VariantCallerBuilder& set_min_somatic_frequency(double frequency) noexcept;
-        VariantCallerBuilder& set_min_somatic_posterior(double posterior) noexcept;
+        VariantCallerBuilder& set_min_somatic_posterior(Phred<double> posterior) noexcept;
         
         // trio
         
@@ -109,8 +109,8 @@ namespace Octopus {
             HaplotypeGenerator::Builder haplotype_generator_builder;
             VariantCaller::RefCallType refcall_type = VariantCaller::RefCallType::None;
             bool call_sites_only = false;
-            double min_variant_posterior;
-            double min_refcall_posterior;
+            Phred<double> min_variant_posterior;
+            Phred<double> min_refcall_posterior;
             unsigned max_haplotypes;
             double min_haplotype_posterior;
             bool allow_flank_scoring;
@@ -119,7 +119,7 @@ namespace Octopus {
             double snp_heterozygosity;
             double indel_heterozygosity;
             
-            double min_phase_score;
+            Phred<double> min_phase_score;
             
             // cancer
             
@@ -127,7 +127,7 @@ namespace Octopus {
             double somatic_mutation_rate;
             double min_somatic_frequency;
             double credible_mass;
-            double min_somatic_posterior;
+            Phred<double> min_somatic_posterior;
             bool call_somatics_only;
             
             // trio

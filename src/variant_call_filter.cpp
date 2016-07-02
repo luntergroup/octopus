@@ -394,9 +394,13 @@ namespace
         return symmetric_kl_divergence(variant_dist, other_dist);
     }
     
-    auto get_dummy_model_posterior(const VcfRecord& call)
+    boost::optional<double> get_dummy_model_posterior(const VcfRecord& call)
     {
-        return std::stod(call.info_value("DMBF").front());
+        if (call.has_info("DMP")) {
+            return std::stod(call.info_value("DMP").front());
+        } else {
+            return boost::none;
+        }
     }
 } // namespace
 
@@ -447,11 +451,13 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                 
                 const auto dummy_model_posterior = get_dummy_model_posterior(call);
                 
-                cb.clear_info("DMBF");
-                
-                if (dummy_model_posterior > 0.1) {
-                    cb.add_filter("MODEL");
-                    filtered = true;
+                if (dummy_model_posterior) {
+                    cb.clear_info("DMP");
+                    
+                    if (*dummy_model_posterior > 0.1) {
+                        cb.add_filter("MODEL");
+                        filtered = true;
+                    }
                 }
                 
                 if (call.qual() && *call.qual() < 10) {

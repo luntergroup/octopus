@@ -59,8 +59,7 @@ namespace Logging
     public:
         Logger() : lg_ {logger::get()} {}
         
-        template <typename T>
-        void write(const T& msg) { BOOST_LOG_SEV(lg_, L) << msg; }
+        template <typename T> void write(const T& msg) { BOOST_LOG_SEV(lg_, L) << msg; }
         
     private:
         src::severity_logger<severity_level> lg_;

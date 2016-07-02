@@ -21,7 +21,7 @@ namespace Octopus
         ReferenceCall() = delete;
         
         template <typename A>
-        ReferenceCall(A&& reference, double quality);
+        ReferenceCall(A&& reference, Phred<double> quality);
         
         virtual ~ReferenceCall() = default;
         
@@ -46,7 +46,7 @@ namespace Octopus
     };
     
     template <typename A>
-    ReferenceCall::ReferenceCall(A&& reference, double quality)
+    ReferenceCall::ReferenceCall(A&& reference, Phred<double> quality)
     : Call {quality}, reference_ {std::forward<A>(reference)}
     {}
 } // namespace Octopus

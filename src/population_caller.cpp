@@ -40,9 +40,7 @@ PopulationVariantCaller::PopulationVariantCaller(CallerComponents&& components,
                                                  CallerParameters specific_parameters)
 :
 VariantCaller {std::move(components), std::move(general_parameters)},
-ploidy_ {specific_parameters.ploidy},
-min_variant_posterior_ {specific_parameters.min_variant_posterior},
-min_refcall_posterior_ {specific_parameters.min_refcall_posterior}
+parameters_ {specific_parameters}
 {}
 
 // IndividualVariantCaller::Latents public methods
@@ -139,7 +137,7 @@ PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     GenotypeModel::Population model {prior_model};
     
-    auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
+    auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
     
     if (DEBUG_MODE) {
         Logging::DebugLogger log {};

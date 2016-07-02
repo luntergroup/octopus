@@ -26,6 +26,7 @@
 #include "mappable.hpp"
 #include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
+#include "phred.hpp"
 
 namespace Octopus
 {
@@ -39,7 +40,7 @@ namespace Octopus
         
         Phaser() = default;
         
-        explicit Phaser(double min_phase_score);
+        explicit Phaser(Phred<double> min_phase_score);
         
         ~Phaser() = default;
         
@@ -57,7 +58,7 @@ namespace Octopus
                              const std::vector<Variant>& candidates) const;
         
     private:
-        double min_phase_score_;
+        Phred<double> min_phase_score_;
     };
     
     struct Phaser::PhaseSet
@@ -66,7 +67,7 @@ namespace Octopus
         {
             PhaseRegion() = default;
             
-            template <typename Region> PhaseRegion(Region&& region, double score);
+            template <typename Region> PhaseRegion(Region&& region, Phred<double> score);
             
             ~PhaseRegion() = default;
             
@@ -76,7 +77,7 @@ namespace Octopus
             PhaseRegion& operator=(PhaseRegion&&)      = default;
             
             GenomicRegion region;
-            double score;
+            Phred<double> score;
             
             const GenomicRegion& mapped_region() const noexcept { return region; }
         };
@@ -101,7 +102,7 @@ namespace Octopus
     };
     
     template <typename Region>
-    Phaser::PhaseSet::PhaseRegion::PhaseRegion(Region&& region, const double score)
+    Phaser::PhaseSet::PhaseRegion::PhaseRegion(Region&& region, const Phred<double> score)
     :
     region {std::forward<Region>(region)},
     score {score}

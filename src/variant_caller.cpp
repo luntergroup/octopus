@@ -524,7 +524,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                         
                         if (dummy_posterior) {
                             for (auto& call : variant_calls) {
-                                call->set_dummy_model_bayes_factor(*dummy_posterior);
+                                call->set_dummy_model_posterior(*dummy_posterior);
                             }
                         }
                     }
@@ -601,7 +601,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                         
                         if (dummy_posterior) {
                             for (auto& call : variant_calls) {
-                                call->set_dummy_model_bayes_factor(*dummy_posterior);
+                                call->set_dummy_model_posterior(*dummy_posterior);
                             }
                         }
                     }
