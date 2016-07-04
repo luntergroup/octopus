@@ -20,7 +20,7 @@ namespace detail
 {
 struct Cell
 {
-    int score = 0;
+    int score      = 0;
     char traceback = '$';
 };
 
@@ -50,7 +50,7 @@ auto init_dp_matrix(const std::string& target, const std::string& query,
     
     result[0][0] = Cell {};
     
-    using S = decltype(model.gap_open);
+    using S = decltype(Cell::score);
     
     for (std::size_t i {1}; i < ncols(result); ++i) {
         result[i][0].score = model.gap_open + static_cast<S>(i - 1) * model.gap_extend;
@@ -90,9 +90,9 @@ auto deletion(const DPMatrix& matrix, const std::size_t i, const std::size_t j,
     return Cell {matrix[i - 1][j].score + score, 'D'};
 }
 
-Cell max(const std::string& target, const std::string& query,
-         const DPMatrix& matrix, const std::size_t i, const std::size_t j,
-         const Model& model) noexcept
+Cell extract_max(const std::string& target, const std::string& query,
+                 const DPMatrix& matrix, const std::size_t i, const std::size_t j,
+                 const Model& model) noexcept
 {
     return std::max({
         match(target, query, matrix, i, j, model),
@@ -106,7 +106,7 @@ void fill(DPMatrix& matrix, const std::string& target, const std::string& query,
 {
     for (std::size_t i {1}; i < ncols(matrix); ++i) {
         for (std::size_t j {1}; j < nrows(matrix); ++j) {
-            matrix[i][j] = max(target, query, matrix, i, j, model);
+            matrix[i][j] = extract_max(target, query, matrix, i, j, model);
         }
     }
 }
@@ -185,13 +185,15 @@ std::pair<std::string, int> align(const std::string& target, const std::string& 
     
     if (target.empty()) {
         if (query.empty()) {
-            return make_pair("", 0);
+            return make_pair(std::string {}, 0);
         }
-        return make_pair(std::to_string(query.size()) + "I", 0);
+        return make_pair(std::to_string(query.size()) + std::string {"I"},
+                         model.gap_open + static_cast<int>(query.size() - 1) * model.gap_extend);
     }
     
     if (query.empty()) {
-        return make_pair(std::to_string(target.size()) + "D", 0);
+        return make_pair(std::to_string(target.size()) + std::string {"D"},
+                         model.gap_open + static_cast<int>(target.size() - 1) * model.gap_extend);
     }
     
     auto matrix = detail::init_dp_matrix(target, query, model);

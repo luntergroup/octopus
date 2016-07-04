@@ -900,8 +900,7 @@ void Assembler::prune_reference_flanks()
     boost::topological_sort(graph_, std::front_inserter(sorted_vertices),
                             boost::vertex_index_map(boost::get(&GraphNode::index, graph_)));
     
-    assert(sorted_vertices.front() == reference_head());
-    assert(sorted_vertices.back() == reference_tail());
+    assert(sorted_vertices.front() == reference_head() && sorted_vertices.back() == reference_tail());
     
     const auto it = std::find_if_not(std::cbegin(sorted_vertices), std::cend(sorted_vertices),
                                      [this] (const Vertex v) {
