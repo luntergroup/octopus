@@ -467,7 +467,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                 
                 const auto rmq = std::ceil(rmq_mapping_quality(call_reads));
                 
-                if (rmq < 40) {
+                if (rmq < 35) {
                     cb.add_filter("MQ");
                     filtered = true;
                 }
@@ -485,10 +485,10 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                     
                     const auto& sample_call_reads = call_reads.at(sample);
                     
-                    if (rmq >= 40) {
+                    if (rmq >= 35) {
                         const auto sample_rmq = std::ceil(rmq_mapping_quality(sample_call_reads));
                         
-                        if (sample_rmq < 40) {
+                        if (sample_rmq < 35) {
                             sample_rmq_failed = true;
                         }
                     }
@@ -507,22 +507,27 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                         const auto variant_support = calculate_variant_support(genotype, sample_call_reads,
                                                                                sample_variants);
                         
-//                        const auto cr = calculate_alt_frequency_credible_region(variant_support, sample_variants.first->second,
-//                                                                                sample_call_reads);
-//                        
-//                        if (cr.second < 0.5) {
-//                            sample_allele_biased = true;
-//                        }
+                        if (call.qual()) {
+                            const auto qual_by_depth = *call.qual() / sample_call_reads.size();
+                            
+                            const auto cr = calculate_alt_frequency_credible_region(variant_support,
+                                                                                    sample_variants.first->second,
+                                                                                    sample_call_reads);
+                            
+                            if (qual_by_depth < 1.0 && cr.second < 0.5) {
+                                sample_allele_biased = true;
+                            }
+                        }
                         
-                        const auto pval = calculate_strand_bias(variant_support, sample_variants.first->second,
-                                                                sample_call_reads);
+                        auto pval = calculate_strand_bias(variant_support, sample_variants.first->second,
+                                                          sample_call_reads);
                         
                         if (pval > 0.00005) {
                             strand_biased = false;
                         }
                         
-                        const auto mq_bias = calculate_mq_bias(variant_support, sample_variants.first->second,
-                                                               sample_call_reads);
+                        auto mq_bias = calculate_mq_bias(variant_support, sample_variants.first->second,
+                                                         sample_call_reads);
                         
                         if (mq_bias > 0.5) {
                             sample_kl_failed = true;

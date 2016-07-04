@@ -80,6 +80,7 @@ protected:
     std::vector<SampleIdType> samples_;
     
     mutable boost::optional<Logging::DebugLogger> debug_log_;
+    mutable boost::optional<Logging::TraceLogger> trace_log_;
     
     struct CallerLatents
     {

@@ -27,7 +27,6 @@
 
 namespace Octopus
 {
-
 // public methods
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,

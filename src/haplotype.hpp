@@ -18,6 +18,7 @@
 #include <iosfwd>
 
 #include <boost/functional/hash.hpp>
+#include <boost/optional.hpp>
 
 #include "contig_region.hpp"
 #include "mappable.hpp"
@@ -259,15 +260,14 @@ MappableType splice(const Haplotype& haplotype, const GenomicRegion& region)
 ContigAllele splice(const Haplotype& haplotype, const ContigRegion& region);
 
 template <typename MappableType, typename Container,
-    typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
+          typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
 std::vector<MappableType> splice_all(const Container& haplotypes, const GenomicRegion& region)
 {
     std::vector<MappableType> result {};
     result.reserve(haplotypes.size());
     
-    for (const auto& haplotype : haplotypes) {
-        result.emplace_back(splice<MappableType>(haplotype, region));
-    }
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(result),
+                   [&region] (const auto& haplotype) { return splice<MappableType>(haplotype, region); });
     
     std::sort(std::begin(result), std::end(result));
     
@@ -276,7 +276,8 @@ std::vector<MappableType> splice_all(const Container& haplotypes, const GenomicR
     return result;
 }
 
-template <typename Container>
+template <typename Container,
+          typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
 std::vector<ContigAllele> splice_all(const Container& haplotypes, const ContigRegion& region)
 {
     std::vector<ContigAllele> result {};
@@ -309,27 +310,18 @@ struct HaveSameAlleles
 
 struct IsLessComplex
 {
+    IsLessComplex() = default;
+    explicit IsLessComplex(boost::optional<Haplotype> reference);
     bool operator()(const Haplotype& lhs, const Haplotype& rhs) const noexcept;
+private:
+    boost::optional<Haplotype> reference_;
 };
 
-unsigned unique_least_complex(std::vector<Haplotype>& haplotypes);
+unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optional<Haplotype> = boost::none);
 
 bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
 
 bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region);
-
-template <typename MappableType, typename Container,
-          typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
-std::deque<MappableType> splice_all(const Container& haplotypes, const GenomicRegion& region)
-{
-    std::deque<MappableType> result {};
-    
-    for (const auto& haplotype : haplotypes) {
-        result.push_back(splice<MappableType>(haplotype, region));
-    }
-    
-    return result;
-}
 
 namespace std
 {

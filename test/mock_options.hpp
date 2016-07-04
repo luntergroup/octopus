@@ -25,8 +25,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        "--debug",
-        "--trace",
+        //"--debug",
+        //"--trace",
         
         //"--sites-only",
         
@@ -38,7 +38,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
-        //"--threads", "0",
+        "--threads", "0",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
@@ -70,10 +70,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", "~/Genomics/MCG/D59597_Cov3.RG.bam",
         
         //"--caller", "cancer", // default "population"
-        "--normal-sample", "HCC1143 BL",
+        //"--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
-        "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
+        "--contig-ploidies", "MT=1", "Y=1",
         //"--contig-ploidies-file", contig_ploidies_txt_file.c_str(),
         
         //"--make-blocked-refcalls",
@@ -84,11 +84,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--use-one-based-indexing",
         
         //"--regions", "22:22,583,864-22,584,168", // FN
-        "--regions", "22:40,015,775-40,016,384", // FP
+        //"--regions", "22:40,015,775-40,016,384", // FP
         //"--regions", "22:48,744,696-48,744,879", // difficult region (FPs)
         //"--regions", "22:47,416,419-47,417,744", // bad model filtering
         
-        //"--regions-file", "giab/NA12878_GIAB_chr22_highconf_regions_big_expanded.bed",
+        "--regions-file", "giab/NA12878_GIAB_chr22_highconf_regions_big_expanded.bed",
         
         //"--regions", "22:19,659,923-19,661,143", // very cool assembler deletion
         //"--regions", "22:49,217,985-49,218,594", // very cool assembler deletion
@@ -101,7 +101,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:33,862,663-33,862,749", // SNV error model causing FN
         //"--regions", "22:47,711,210-47,711,361", // SNV error model causing low qual TP
         
-        //"--regions", "22:42,943,057-42,943,471", // why is GATK now calling these?
+        //"--regions", "22:42,943,057-42,943,471", // why is GATK calling these?
         
         //"--regions", "6:31,236,339-31,240,057", // HLA-C
         
@@ -224,7 +224,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--no-raw-cigar-candidates",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
-        "--no-assembly-candidates",
+        //"--no-assembly-candidates",
         //"--kmer-size", "75",
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
@@ -255,8 +255,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_cancer.vcf",
-        "--output", "octopus_calls_debug.vcf",
-        //"--output", "octopus_calls_assemble.vcf",
+        //"--output", "octopus_calls_debug.vcf",
+        "--output", "octopus_calls_assemble.vcf",
         //"--output", "octopus_calls_fast.vcf",
         
         nullptr

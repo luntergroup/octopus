@@ -48,7 +48,8 @@ auto calculate_base_indel_heterozygosities(const Haplotype& haplotype,
         
         const auto n = repeat.length / repeat.period;
         
-        const auto t = std::min(base_indel_heterozygosity * std::pow(n, 2.5), 1.0);
+        // TODO: implement a proper model for this
+        const auto t = std::min(base_indel_heterozygosity * std::pow(n, 2.6), 1.0);
         
         std::transform(it1, it2, it1, [t] (const auto h) { return std::max(h, t); });
     }

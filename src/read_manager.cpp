@@ -102,20 +102,52 @@ const std::vector<ReadManager::SampleIdType>& ReadManager::samples() const
     return samples_;
 }
 
-bool ReadManager::has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig) const
-{
-    return has_contig_reads({sample}, contig);
-}
-
-bool ReadManager::has_contig_reads(const std::vector<SampleIdType>& samples,
-                                   const GenomicRegion::ContigNameType& contig) const
-{
-    return true; // TODO
-}
+//bool ReadManager::has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig) const
+//{
+//    return has_contig_reads({sample}, contig);
+//}
+//
+//bool ReadManager::has_contig_reads(const std::vector<SampleIdType>& samples,
+//                                   const GenomicRegion::ContigNameType& contig) const
+//{
+//    auto reader_paths = get_reader_paths_containing_samples(samples);
+//    
+//    auto it = partition_open(reader_paths);
+//    
+//    while (!reader_paths.empty()) {
+//        if (std::any_of(it, end(reader_paths),
+//                        [this, &contig] (const auto& reader_path) {
+//                            return open_readers_.at(reader_path).has_contig_reads(contig);
+//                        })) {
+//                            return true;
+//                        }
+//        
+//        reader_paths.erase(it, end(reader_paths));
+//        it = open_readers(begin(reader_paths), end(reader_paths));
+//    }
+//    
+//    return false;
+//}
 
 bool ReadManager::has_contig_reads(const GenomicRegion::ContigNameType& contig) const
 {
-    return has_contig_reads(samples(), contig);
+    auto reader_paths = get_reader_paths_containing_samples(samples());
+    
+    auto it = partition_open(reader_paths);
+    
+    while (!reader_paths.empty()) {
+        if (std::any_of(it, end(reader_paths),
+                        [this, &contig] (const auto& reader_path) {
+                            return open_readers_.at(reader_path).has_contig_reads(contig);
+                        })) {
+                            return true;
+                        }
+        
+        reader_paths.erase(it, end(reader_paths));
+        it = open_readers(begin(reader_paths), end(reader_paths));
+    }
+    
+    return false;
 }
 
 std::size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion& region) const

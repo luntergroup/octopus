@@ -208,21 +208,6 @@ struct GenotypeCall
 using GenotypeCalls = std::vector<GenotypeCall>;
 } // namespace
 
-namespace debug
-{
-    template <typename S>
-    void print_genotype_posteriors(S&& stream, const GenotypeProbabilityMap& genotype_posteriors,
-                                   std::size_t n = 5);
-    void print_genotype_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
-                                   std::size_t n = 5);
-    template <typename S>
-    void print_candidate_posteriors(S&& stream, const VariantPosteriors& candidate_posteriors,
-                                    std::size_t n = 10);
-    void print_candidate_posteriors(const VariantPosteriors& candidate_posteriors,
-                                    std::size_t n = 10);
-//        void print_variant_calls(const VariantCallBlocks& calls);
-} // namespace debug
-
 namespace
 {
 // allele posterior calculations
@@ -357,6 +342,17 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
+    
+namespace debug
+{
+    void log(const GenotypeProbabilityMap& genotype_posteriors,
+             boost::optional<Logging::DebugLogger>& debug_log,
+             boost::optional<Logging::TraceLogger>& trace_log);
+    
+    void log(const VariantPosteriors& candidate_posteriors,
+             boost::optional<Logging::DebugLogger>& debug_log,
+             boost::optional<Logging::TraceLogger>& trace_log);
+} // namespace debug
 
 std::vector<std::unique_ptr<Octopus::VariantCall>>
 IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
@@ -364,21 +360,11 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
 {
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
     
-    if (TRACE_MODE) {
-        Logging::TraceLogger log {};
-        debug::print_genotype_posteriors(stream(log), genotype_posteriors, -1);
-    } else if (debug_log_) {
-        debug::print_genotype_posteriors(stream(*debug_log_), genotype_posteriors);
-    }
+    debug::log(genotype_posteriors, debug_log_, trace_log_);
     
     const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
     
-    if (TRACE_MODE) {
-        Logging::TraceLogger log {};
-        debug::print_candidate_posteriors(stream(log), candidate_posteriors, -1);
-    } else if (debug_log_) {
-        debug::print_candidate_posteriors(stream(*debug_log_), candidate_posteriors);
-    }
+    debug::log(candidate_posteriors, debug_log_, trace_log_);
     
     const auto genotype_call = call_genotype(genotype_posteriors);
     
@@ -565,6 +551,30 @@ namespace debug
                                     const std::size_t n)
     {
         print_candidate_posteriors(std::cout, candidate_posteriors, n);
+    }
+    
+    void log(const GenotypeProbabilityMap& genotype_posteriors,
+             boost::optional<Logging::DebugLogger>& debug_log,
+             boost::optional<Logging::TraceLogger>& trace_log)
+    {
+        if (trace_log) {
+            print_genotype_posteriors(stream(*trace_log), genotype_posteriors, -1);
+        }
+        if (debug_log) {
+            print_genotype_posteriors(stream(*debug_log), genotype_posteriors, 5);
+        }
+    }
+    
+    void log(const VariantPosteriors& candidate_posteriors,
+             boost::optional<Logging::DebugLogger>& debug_log,
+             boost::optional<Logging::TraceLogger>& trace_log)
+    {
+        if (trace_log) {
+            print_candidate_posteriors(stream(*trace_log), candidate_posteriors, -1);
+        }
+        if (debug_log) {
+            print_candidate_posteriors(stream(*debug_log), candidate_posteriors, 5);
+        }
     }
 } // namespace debug
 } // namespace Octopus

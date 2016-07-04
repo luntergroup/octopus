@@ -550,10 +550,19 @@ bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
     return HaveSameAlleles()(lhs, rhs);
 }
 
+IsLessComplex::IsLessComplex(boost::optional<Haplotype> reference)
+:
+reference_ {std::move(reference)}
+{}
+
 bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const noexcept
 {
     if (lhs.explicit_alleles_.size() != rhs.explicit_alleles_.size()) {
         return lhs.explicit_alleles_.size() < rhs.explicit_alleles_.size();
+    }
+    
+    if (reference_) {
+        return lhs.difference(*reference_).size() < rhs.difference(*reference_).size();
     }
     
     // otherwise prefer the sequence with the least amount of indels
@@ -580,7 +589,7 @@ bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const
     return score >= 0;
 }
 
-unsigned unique_least_complex(std::vector<Haplotype>& haplotypes)
+unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optional<Haplotype> reference)
 {
     using std::begin; using std::end;
     
@@ -589,7 +598,7 @@ unsigned unique_least_complex(std::vector<Haplotype>& haplotypes)
     auto first_dup  = begin(haplotypes);
     const auto last = end(haplotypes);
     
-    const IsLessComplex cmp {};
+    const IsLessComplex cmp {std::move(reference)};
     
     while (true) {
         first_dup = std::adjacent_find(first_dup, last);

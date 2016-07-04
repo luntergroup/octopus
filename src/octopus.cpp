@@ -616,6 +616,7 @@ namespace Octopus
     
     bool region_has_reads(const GenomicRegion& region, ContigCallingComponents& components)
     {
+        // TODO: update this to ReadManager::has_contig_reads when implemented
         return components.read_manager.get().count_reads(components.samples.get(), region) > 0;
     }
     
@@ -870,6 +871,10 @@ namespace Octopus
                 result.emplace(subregion, policy);
                 subregion = propose_call_subregion(components, subregion, region);
             }
+            
+            if (result.empty()) {
+                result.emplace(region, policy);
+            }
         }
         
         return result;
@@ -965,17 +970,17 @@ namespace Octopus
         return std::async(std::launch::async,
                           [task = std::move(task), components = std::move(contig_components),
                            &sync] () -> CompletedTask {
-                                CompletedTask result {
-                                    task,
-                                    components.caller->call(task.region, components.progress_meter)
-                                };
-                                
-                                std::unique_lock<std::mutex> lk {sync.mutex};
-                                ++sync.count_finished;
-                                lk.unlock();
-                                sync.cv.notify_all();
-                                
-                                return result;
+                              CompletedTask result {
+                                  task,
+                                  components.caller->call(task.region, components.progress_meter)
+                              };
+                              
+                              std::unique_lock<std::mutex> lk {sync.mutex};
+                              ++sync.count_finished;
+                              lk.unlock();
+                              sync.cv.notify_all();
+                              
+                              return result;
                           });
     }
     

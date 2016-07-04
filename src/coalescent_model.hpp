@@ -23,6 +23,8 @@
 #include <tuple>
 #include <cassert>
 
+#include <iostream>
+
 #include <boost/math/special_functions/binomial.hpp>
 #include <boost/functional/hash.hpp>
 
@@ -184,12 +186,15 @@ namespace Octopus
     {
         const auto t = count_segregating_sites(haplotypes);
         
-        const auto it = result_cache_.find(t);
-        
-        if (it != std::cend(result_cache_)) return it->second;
-        
         unsigned k_snp, k_indel, n;
         std::tie(k_snp, k_indel, n) = t;
+        
+        if (k_indel == 0) {
+            // indel heterozygosity is default in this case
+            const auto it = result_cache_.find(t);
+            
+            if (it != std::cend(result_cache_)) return it->second;
+        }
         
         auto indel_heterozygosity = indel_heterozygosity_;
         
@@ -209,7 +214,9 @@ namespace Octopus
         
         const auto result = detail::coalescent(n, k_snp, k_indel, snp_heterozygosity_, indel_heterozygosity);
         
-        result_cache_.emplace(t, result);
+        if (k_indel > 0) {
+            result_cache_.emplace(t, result);
+        }
         
         return result;
     }

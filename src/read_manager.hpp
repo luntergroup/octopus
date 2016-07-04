@@ -57,9 +57,10 @@ public:
     unsigned num_samples() const noexcept;
     const std::vector<SampleIdType>& samples() const;
     
-    bool has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig) const;
-    bool has_contig_reads(const std::vector<SampleIdType>& samples,
-                          const GenomicRegion::ContigNameType& contig) const;
+    // TODO
+//    bool has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig) const;
+//    bool has_contig_reads(const std::vector<SampleIdType>& samples,
+//                          const GenomicRegion::ContigNameType& contig) const;
     bool has_contig_reads(const GenomicRegion::ContigNameType& contig) const;
     
     std::size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) const;

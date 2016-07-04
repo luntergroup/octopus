@@ -1393,7 +1393,8 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             std::tie(alt, ref, kmer_count_to_alt) = backtrack_until_nonreference(predecessors, ref_before_bubble);
             
             rhs_kmer_count += kmer_count_to_alt;
-            --k;
+            
+            if (k > 0) --k;
         }
         
         assert(boost::out_degree(reference_head(), graph_) > 0);

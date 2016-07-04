@@ -771,14 +771,15 @@ auto make_element_ref_count_map(const Genotype<MappableType>& genotype)
     return result;
 }
 
-template <typename MappableType2, typename Container>
+template <typename MappableType2, typename Container,
+          typename = std::enable_if_t<!std::is_same<typename Container::value_type, Haplotype>::value>>
 auto splice_all(const Container& genotypes, const GenomicRegion& region)
 {
     std::vector<Genotype<MappableType2>> result {};
     result.reserve(genotypes.size());
     
     for (const auto& genotype : genotypes) {
-        result.emplace_back(splice<MappableType2>(genotype, region));
+        result.push_back(splice<MappableType2>(genotype, region));
     }
     
     std::sort(std::begin(result), std::end(result), GenotypeLess {});

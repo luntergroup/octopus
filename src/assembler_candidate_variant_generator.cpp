@@ -21,6 +21,8 @@
 #include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
 #include "sequence_utils.hpp"
+#include "global_aligner.hpp"
+#include "cigar_string.hpp"
 #include "logging.hpp"
 
 namespace Octopus
@@ -88,6 +90,11 @@ void AssemblerCandidateVariantGenerator::Bin::clear() noexcept
 {
     read_sequences.clear();
     read_sequences.shrink_to_fit();
+}
+
+bool AssemblerCandidateVariantGenerator::Bin::empty() const noexcept
+{
+    return read_sequences.empty();
 }
 
 bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
@@ -334,33 +341,88 @@ void trim_reference(Container& variants)
     }
 }
 
-bool is_mnv(const Assembler::Variant& v)
+bool is_complex(const Assembler::Variant& v)
+{
+    return (v.ref.size() > 1 && !v.alt.empty()) || (v.alt.size() > 1 && !v.ref.empty());
+}
+
+bool is_mnp(const Assembler::Variant& v)
 {
     return v.ref.size() > 1 && v.ref.size() == v.alt.size();
 }
 
-std::vector<Assembler::Variant> split_mnv(Assembler::Variant&& v)
+std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
 {
     using std::begin; using std::end; using std::next; using std::prev; using std::distance;
     
     std::vector<Assembler::Variant> result {};
-    result.reserve(4);
     
-    result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
-    
-    auto p = std::mismatch(next(begin(v.ref)), prev(end(v.ref)), next(begin(v.alt)));
-    
-    while (p.first != prev(end(v.ref))) {
-        result.emplace_back(v.begin_pos + distance(begin(v.ref), p.first), *p.first, *p.second);
-        p = std::mismatch(next(p.first), prev(end(v.ref)), next(p.second));
+    if (is_mnp(v)) {
+        result.reserve(4);
+        
+        result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
+        
+        auto p = std::mismatch(next(begin(v.ref)), prev(end(v.ref)), next(begin(v.alt)));
+        
+        while (p.first != prev(end(v.ref))) {
+            result.emplace_back(v.begin_pos + distance(begin(v.ref), p.first), *p.first, *p.second);
+            p = std::mismatch(next(p.first), prev(end(v.ref)), next(p.second));
+        }
+        
+        const auto pos = v.begin_pos + v.ref.size() - 1;
+        
+        v.ref.erase(begin(v.ref), prev(end(v.ref)));
+        v.alt.erase(begin(v.alt), prev(end(v.alt)));
+        
+        result.emplace_back(pos, std::move(v.ref), std::move(v.alt));
+        
+        return result;
     }
     
-    const auto pos = v.begin_pos + v.ref.size() - 1;
+    auto cigar = parse_cigar_string(align(v.ref, v.alt).first);
     
-    v.ref.erase(begin(v.ref), prev(end(v.ref)));
-    v.alt.erase(begin(v.alt), prev(end(v.alt)));
+    auto ref_it = std::cbegin(v.ref);
+    auto alt_it = std::cbegin(v.alt);
     
-    result.emplace_back(pos, std::move(v.ref), std::move(v.alt));
+    auto pos = v.begin_pos;
+    
+    result.reserve(cigar.size());
+    
+    for (const auto& op : cigar) {
+        switch(op.flag()) {
+            case CigarOperation::SEQUENCE_MATCH:
+            {
+                pos += op.size();
+                ref_it += op.size();
+                alt_it += op.size();
+                break;
+            }
+            case CigarOperation::SUBSTITUTION:
+            {
+                std::transform(ref_it, std::next(ref_it, op.size()), alt_it,
+                               std::back_inserter(result),
+                               [&pos] (const auto ref, const auto alt) {
+                                   return Assembler::Variant {pos++, ref, alt};
+                               });
+                ref_it += op.size();
+                alt_it += op.size();
+                break;
+            }
+            case CigarOperation::INSERTION:
+            {
+                result.emplace_back(pos, "", Assembler::SequenceType {alt_it, std::next(alt_it, op.size())});
+                alt_it += op.size();
+                break;
+            }
+            case CigarOperation::DELETION:
+            {
+                result.emplace_back(pos, Assembler::SequenceType {ref_it, std::next(ref_it, op.size())}, "");
+                pos += op.size();
+                ref_it += op.size();
+                break;
+            }
+        }
+    }
     
     return result;
 }
@@ -372,17 +434,17 @@ void split_complex(Container& candidates)
     
     const auto it = std::stable_partition(begin(candidates), end(candidates),
                                           [] (const auto& candidate) {
-                                              return !is_mnv(candidate);
+                                              return !is_complex(candidate);
                                           });
     
     std::deque<Assembler::Variant> snps {};
     
     std::for_each(make_move_iterator(it), make_move_iterator(end(candidates)),
                   [&snps] (auto&& mnv) {
-                      auto mnv_snps = split_mnv(std::move(mnv));
+                      auto split = split_complex(std::move(mnv));
                       snps.insert(end(snps),
-                                  make_move_iterator(begin(mnv_snps)),
-                                  make_move_iterator(end(mnv_snps)));
+                                  make_move_iterator(begin(split)),
+                                  make_move_iterator(end(split)));
                   });
     
     const auto variant_less = [] (const auto& lhs, const auto& rhs) {
@@ -396,8 +458,7 @@ void split_complex(Container& candidates)
     const auto num_mnvs = std::distance(it, end(candidates));
     
     if (snps.size() < num_mnvs) {
-        const auto it3 = std::move(begin(snps), end(snps), it);
-        candidates.erase(it3, end(candidates));
+        candidates.erase(std::move(begin(snps), end(snps), it), end(candidates));
         std::inplace_merge(begin(candidates), it, end(candidates), variant_less);
     } else {
         const auto it2 = std::next(begin(snps), num_mnvs);
@@ -419,15 +480,15 @@ void add_to_mapped_variants(C1& result, C2&& variants, const GenomicRegion& regi
         result.emplace_back(contig_name(region),
                             region.begin() + static_cast<GenomicRegion::SizeType>(variant.begin_pos),
                             std::move(variant.ref),
-                            std::move(variant.alt)
-                            );
+                            std::move(variant.alt));
     }
 }
 
-bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size,
-                                                      const Bin& bin,
+bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size, const Bin& bin,
                                                       std::deque<Variant>& result) const
 {
+    if (bin.empty()) return true;
+    
     const auto assembler_region = propose_assembler_region(bin.region, kmer_size);
     
     const auto reference_sequence = reference_.get().fetch_sequence(assembler_region);

@@ -68,6 +68,7 @@ private:
         void insert(const SequenceType& sequence);
         
         void clear() noexcept;
+        bool empty() const noexcept;
         
         GenomicRegion region;
         std::deque<std::reference_wrapper<const SequenceType>> read_sequences;
