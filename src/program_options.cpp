@@ -430,8 +430,7 @@ namespace Octopus
              "Haplotypes with posterior less than this can be filtered, allowing greater"
              " longer haplotype extesion in complex regions")
             ("phasing-level", po::value<PhasingLevel>()->default_value(PhasingLevel::Conservative),
-             "The level of data driven phasing"
-             "\tAggressive  : Lags haplotypes as much as the data allows\n")
+             "The level of data driven phasing")
             ("disable-inactive-flank-scoring", po::bool_switch()->default_value(false),
              "Disables additional calculation to adjust alignment score when there are inactive candidates"
              " in haplotype flanking regions")

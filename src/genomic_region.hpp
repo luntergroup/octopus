@@ -58,21 +58,22 @@ private:
     ContigRegion contig_region_;
 };
 
-class RegionError : public std::runtime_error
+class RegionError : public std::logic_error
 {
 public:
     RegionError(GenomicRegion::ContigNameType first, GenomicRegion::ContigNameType second)
     :
-    runtime_error {"cannot compare regions on different contigs"},
+    logic_error {"RegionError: comparings regions on different contigs"},
     first_ {first}, second_ {second} {}
     
     const char* what() const noexcept
     {
-        return (std::string{runtime_error::what()} + ": " + first_ + " & " + second_).c_str();
+        msg_ = std::string {logic_error::what()} + ": " + first_ + " & " + second_;
+        return msg_.c_str();
     }
-    
 private:
     GenomicRegion::ContigNameType first_, second_;
+    mutable std::string msg_;
 };
 
 // public member methods

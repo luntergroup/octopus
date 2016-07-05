@@ -555,42 +555,40 @@ MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt 
     size_type result {0};
     
     if (first == last) return result;
+    
     auto from = std::cbegin(elements_);
     
     typename RegionType<MappableType>::SizeType max_erased_size {0};
     
-    while (first != last) {
-        const auto contained = contained_range(from, std::cend(elements_), *first);
+    std::for_each(first, last, [this, &result, &from, &max_erased_size] (const auto& element) {
+        const auto er = elements_.equal_range(element);
         
-        const auto it = std::find(std::cbegin(contained), std::cend(contained), *first);
-        
-        if (it != std::cend(contained)) {
-            const auto it2 = std::find_if_not(std::next(it), std::cend(contained),
-                                              [first] (const auto& mappable) { return *first == mappable; });
-            
-            from = erase(it, it2);
-            
-            if (region_size(*first) > max_erased_size) {
-                max_erased_size = region_size(*first);
+        if (er.first != er.second) {
+            if (region_size(element) > max_erased_size) {
+                max_erased_size = region_size(element);
             }
             
-            result += std::distance(it.base(), it2.base());
+            result += std::distance(er.first, er.second);
+            
+            elements_.erase(er.first, er.second);
         }
-        
-        ++first;
-    }
+    });
     
     if (result > 0) {
-        if (!is_bidirectionally_sorted_) {
-            is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
-        }
-        
-        if (max_element_size_ == max_erased_size) {
-            max_element_size_ = region_size(*largest_mappable(elements_));
+        if (!elements_.empty()) {
+            if (!is_bidirectionally_sorted_) {
+                is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+            }
+            if (max_element_size_ == max_erased_size) {
+                max_element_size_ = region_size(*largest_mappable(elements_));
+            }
+        } else {
+            max_element_size_ = 0;
+            is_bidirectionally_sorted_ = true;
         }
     }
     
-    return 0;
+    return result;
 }
 
 template <typename MappableType, typename Allocator>

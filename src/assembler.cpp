@@ -271,7 +271,11 @@ bool Assembler::prune(const unsigned min_weight)
         return true;
     }
     
-    assert(!can_prune_reference_flanks());
+    if (can_prune_reference_flanks()) {
+        // something is wrong, have seen cases, bug?
+        clear();
+        return false;
+    }
     
     new_size = boost::num_vertices(graph_);
     
@@ -883,9 +887,7 @@ void Assembler::remove_vertices_past(const Vertex v)
 
 bool Assembler::can_prune_reference_flanks() const
 {
-    const auto head_degree = boost::out_degree(reference_head(), graph_);
-    const auto tail_degree = boost::in_degree(reference_tail(), graph_);
-    return head_degree == 1 || tail_degree == 1;
+    return boost::out_degree(reference_head(), graph_) == 1 || boost::in_degree(reference_tail(), graph_) == 1;
 }
 
 void Assembler::prune_reference_flanks()
@@ -910,8 +912,7 @@ void Assembler::prune_reference_flanks()
     
     std::for_each(std::cbegin(sorted_vertices), it,
                   [this] (const Vertex u) {
-                      const auto v = *boost::adjacent_vertices(u, graph_).first;
-                      remove_edge(u, v);
+                      remove_edge(u, *boost::adjacent_vertices(u, graph_).first);
                       remove_vertex(u);
                       reference_kmers_.pop_front();
                       ++reference_head_position_;
@@ -925,8 +926,7 @@ void Assembler::prune_reference_flanks()
     
     std::for_each(std::crbegin(sorted_vertices), it2,
                   [this] (const Vertex u) {
-                      const auto v = *boost::inv_adjacent_vertices(u, graph_).first;
-                      remove_edge(v, u);
+                      remove_edge(*boost::inv_adjacent_vertices(u, graph_).first, u);
                       remove_vertex(u);
                       reference_kmers_.pop_back();
                   });

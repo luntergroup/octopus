@@ -730,10 +730,10 @@ namespace Octopus
         for (const auto& input_region : components.regions) {
             auto subregion = propose_call_subregion(components, input_region);
             
-            if (is_empty(subregion) && !region_has_reads(input_region, components)) {
-                Logging::WarningLogger log {};
-                stream(log) << "No reads found in input region " << input_region;
-            }
+//            if (is_empty(subregion) && !region_has_reads(input_region, components)) {
+//                Logging::WarningLogger log {};
+//                stream(log) << "No reads found in input region " << input_region;
+//            }
             
             while (!is_empty(subregion)) {
                 if (DEBUG_MODE) {

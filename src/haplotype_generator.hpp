@@ -36,6 +36,11 @@ class HaplotypeGenerator
 public:
     enum class LaggingPolicy { None, Conservative, Aggressive };
     
+    struct HaplotypeLimits
+    {
+        unsigned soft_max, holdout_max, hard_max;
+    };
+    
     class HaplotypeOverflowError;
     
     class Builder;
@@ -46,7 +51,7 @@ public:
     
     HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
                        const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
-                       unsigned soft_max_haplotypes, unsigned hard_max_haplotypes,
+                       HaplotypeLimits haplotype_limits,
                        LaggingPolicy lagging = LaggingPolicy::None,
                        Haplotype::SizeType min_pad = 30);
     
@@ -76,7 +81,7 @@ private:
     GenomeWalker walker_;
     boost::optional<GenomeWalker> lagged_walker_;
     
-    unsigned soft_max_haplotypes_, hard_max_haplotypes_;
+    HaplotypeLimits haplotype_limits_;
     
     Haplotype::SizeType min_pad_ = 30;
     
@@ -86,9 +91,8 @@ private:
     GenomicRegion current_active_region_;
     
     mutable boost::optional<GenomicRegion> next_active_region_;
-    mutable bool expanded_lhs_;
     
-    mutable MappableFlatMultiSet<Allele> holdout_set_;
+    mutable MappableFlatSet<Allele> holdout_set_;
     mutable boost::optional<GenomicRegion> current_holdout_region_;
     mutable std::unordered_set<GenomicRegion> previous_holdout_regions_;
     
@@ -101,7 +105,7 @@ private:
     void update_next_active_region() const;
     
     void set_holdout_set(const GenomicRegion& active_region);
-    void try_reintroducing_holdout_set();
+    bool try_reintroducing_holdout_set();
     
     GenomicRegion calculate_haplotype_region() const;
 };
@@ -160,7 +164,7 @@ class HaplotypeGenerator::Builder
 public:
     using LaggingPolicy = HaplotypeGenerator::LaggingPolicy;
     
-    Builder();
+    Builder() = default;
     
     ~Builder() = default;
     
@@ -170,7 +174,7 @@ public:
     Builder& operator=(Builder&&)      = default;
     
     Builder& set_soft_max_haplotypes(unsigned n) noexcept;
-    Builder& set_soft_hard_haplotypes(unsigned n) noexcept;
+    Builder& set_hard_max_haplotypes(unsigned n) noexcept;
     Builder& set_lagging_policy(LaggingPolicy policy) noexcept;
     Builder& set_min_pad(Haplotype::SizeType val) noexcept;
     
@@ -178,7 +182,7 @@ public:
                              const MappableFlatSet<Variant>& candidates, const ReadMap& reads) const;
     
 private:
-    unsigned soft_max_haplotypes_, hard_max_haplotypes_;
+    HaplotypeGenerator::HaplotypeLimits haplotype_limits_ = {128, 2048, 16384};
     LaggingPolicy lagging_policy_ = LaggingPolicy::None;
     Haplotype::SizeType min_pad_ = 30;
 };

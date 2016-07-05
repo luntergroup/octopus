@@ -64,14 +64,25 @@ template <typename KeyType, typename Container>
 auto encompassing_region(const MappableMap<KeyType, typename Container::value_type, Container>& mappables)
 {
     if (mappables.empty()) {
-        throw std::runtime_error {"get_encompassing_region called with empty MappableMap"};
+        throw std::runtime_error {"encompassing_region called with empty MappableMap"};
     }
     
-    auto result = encompassing_region(std::cbegin(mappables)->second);
+    RegionType<typename Container::value_type> result;
     
-    std::for_each(std::next(std::cbegin(mappables)), std::cend(mappables),
+    const auto it = std::find_if_not(std::cbegin(mappables), std::cend(mappables),
+                                     [] (const auto& p) { return p.second.empty(); });
+    
+    if (it == std::cend(mappables)) {
+        throw std::runtime_error {"encompassing_region called with map of empty mappables"};
+    }
+    
+    result = encompassing_region(it->second);
+    
+    std::for_each(std::next(it), std::cend(mappables),
                   [&result] (const auto& p) {
-                      result = encompassing_region(result, encompassing_region(p.second));
+                      if (!p.second.empty()) {
+                          result = encompassing_region(result, encompassing_region(p.second));
+                      }
                   });
     
     return result;

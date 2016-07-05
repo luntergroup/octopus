@@ -88,20 +88,18 @@ namespace debug
 
 HaplotypeGenerator::HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
                                        const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
-                                       unsigned soft_max_haplotypes, unsigned hard_max_haplotypes,
+                                       HaplotypeLimits haplotype_limits,
                                        LaggingPolicy lagging, Haplotype::SizeType min_pad)
 :
 tree_ {window.contig_name(), reference},
-walker_ {max_included(soft_max_haplotypes)},
+walker_ {max_included(haplotype_limits.soft_max)},
 lagged_walker_ {},
-soft_max_haplotypes_ {soft_max_haplotypes},
-hard_max_haplotypes_ {hard_max_haplotypes},
+haplotype_limits_ {haplotype_limits},
 min_pad_ {min_pad},
 alleles_ {variants_to_alleles(candidates)},
 reads_ {reads},
 current_active_region_ {shift(head_region(alleles_.leftmost(), 0), -1)},
 next_active_region_ {},
-expanded_lhs_ {false},
 holdout_set_ {},
 current_holdout_region_ {},
 previous_holdout_regions_ {}
@@ -115,7 +113,7 @@ previous_holdout_regions_ {}
             policy = GenomeWalker::IndicatorPolicy::IncludeIfLinkableToNovelRegion;
         }
         
-        lagged_walker_ = GenomeWalker {max_included(soft_max_haplotypes_), policy};
+        lagged_walker_ = GenomeWalker {max_included(haplotype_limits_.soft_max), policy};
     }
     
     if (alleles_.empty()) {
@@ -129,7 +127,7 @@ previous_holdout_regions_ {}
 GenomicRegion HaplotypeGenerator::tell_next_active_region() const
 {
     update_next_active_region();
-    assert(!holdout_set_.empty() || current_active_region_ <= *next_active_region_);
+    assert(current_active_region_ <= *next_active_region_ || !holdout_set_.empty());
     return *next_active_region_;
 }
 
@@ -158,7 +156,12 @@ bool requires_staged_removal(const Range& passed_alleles)
 
 void HaplotypeGenerator::progress(GenomicRegion to)
 {
-    assert(to > current_active_region_);
+    if (to == current_active_region_) return;
+    
+    if (to < current_active_region_ && holdout_set_.empty()) {
+        throw std::runtime_error {"HaplotypeGenerator: trying to progress backwards from "
+            + to_string(current_active_region_) + " to " + to_string(to)};
+    }
     
     next_active_region_ = std::move(to);
     
@@ -215,46 +218,62 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
         return std::make_tuple(std::vector<Haplotype> {}, current_active_region_, true);
     }
     
-    try_reintroducing_holdout_set();
-    
-    update_next_active_region();
-    
-    assert(next_active_region_ != boost::none);
-    
-    if (is_after(*next_active_region_, *rightmost_allele_)) {
-        return std::make_tuple(std::vector<Haplotype> {}, *next_active_region_, true);
-    }
-    
-    progress(*next_active_region_);
-    
-    auto novel_active_region = *next_active_region_;
-    
-    if (!tree_.empty()) {
-        novel_active_region = right_overhang_region(*next_active_region_, current_active_region_);
-    }
-    
-    current_active_region_ = std::move(*next_active_region_);
-    
-    reset_next_active_region();
-    
-    const auto novel_active_alleles = overlap_range(alleles_, novel_active_region);
-    
-    if (novel_active_alleles.empty()) {
-        return std::make_tuple(std::vector<Haplotype> {}, current_active_region_, true);
-    }
-    
-    const auto it = extend_tree_until(novel_active_alleles, tree_, hard_max_haplotypes_);
-    
-    if (it != std::cend(novel_active_alleles)) {
-        assert(holdout_set_.empty());
+    if (try_reintroducing_holdout_set()) {
+        next_active_region_ = boost::none;
         
-        tree_.remove_overlapped(novel_active_region); // reverts tree
+        if (tree_.num_haplotypes() > haplotype_limits_.hard_max) {
+            throw HaplotypeOverflowError {current_active_region_};
+        }
+    } else {
+        update_next_active_region();
         
-        set_holdout_set(current_active_region_);
+        assert(next_active_region_ != boost::none);
         
-        current_active_region_ = walker_.walk(head_region(current_active_region_), reads_, alleles_);
+        if (is_after(*next_active_region_, *rightmost_allele_)) {
+            return std::make_tuple(std::vector<Haplotype> {}, *next_active_region_, true);
+        }
         
-        extend_tree(overlap_range(alleles_, current_active_region_), tree_);
+        progress(*next_active_region_);
+        
+        auto novel_active_region = *next_active_region_;
+        
+        if (!tree_.empty()) {
+            novel_active_region = right_overhang_region(*next_active_region_, current_active_region_);
+        }
+        
+        current_active_region_ = *std::move(next_active_region_);
+        
+        reset_next_active_region();
+        
+        auto novel_active_alleles = overlap_range(alleles_, novel_active_region);
+        
+        if (novel_active_alleles.empty()) {
+            return std::make_tuple(std::vector<Haplotype> {}, current_active_region_, true);
+        }
+        
+        auto it = extend_tree_until(novel_active_alleles, tree_, haplotype_limits_.holdout_max);
+        
+        if (it != std::cend(novel_active_alleles)) {
+            assert(holdout_set_.empty());
+            
+            tree_.remove_overlapped(novel_active_region); // reverts tree
+            
+            try {
+                set_holdout_set(novel_active_region);
+                
+                novel_active_alleles = overlap_range(alleles_, novel_active_region);
+                
+                extend_tree_until(novel_active_alleles, tree_, haplotype_limits_.soft_max);
+            } catch (const HaplotypeOverflowError&) {
+                it = extend_tree_until(novel_active_alleles, tree_, haplotype_limits_.hard_max);
+                
+                if (it != std::cend(novel_active_alleles)) {
+                    throw;
+                }
+            }
+            
+            extend_tree(overlap_range(alleles_, current_active_region_), tree_);
+        }
     }
     
     auto haplotypes = tree_.extract_haplotypes(calculate_haplotype_region());
@@ -291,9 +310,9 @@ unsigned HaplotypeGenerator::max_removal_impact() const
     
     if (num_novel_alleles == 0) return 0;
     
-    const auto max_new_haplotypes = std::max(static_cast<unsigned>(std::pow(2, num_novel_alleles / 2)), 1u);
+    const auto max_new_haplotypes = std::max(static_cast<unsigned>(std::exp2(num_novel_alleles / 2)), 1u);
     
-    const auto num_leftover_haplotypes = soft_max_haplotypes_ / max_new_haplotypes;
+    const auto num_leftover_haplotypes = haplotype_limits_.soft_max / max_new_haplotypes;
     
     const auto cur_num_haplotypes = tree_.num_haplotypes();
     
@@ -329,18 +348,12 @@ void HaplotypeGenerator::update_next_active_region() const
 {
     if (!next_active_region_) {
         if (is_lagging_enabled()) {
-            expanded_lhs_ = false;
-            
             if (contains(current_active_region_, *rightmost_allele_)) {
                 next_active_region_ = shift(tail_region(*rightmost_allele_), 2);
                 return;
             }
             
             auto max_lagged_region = lagged_walker_->walk(current_active_region_, reads_, alleles_);
-            
-            if (expanded_lhs_) {
-                max_lagged_region = expand_lhs(max_lagged_region, 1);
-            }
             
             if (!overlaps(current_active_region_, max_lagged_region)) {
                 next_active_region_ = std::move(max_lagged_region);
@@ -350,7 +363,6 @@ void HaplotypeGenerator::update_next_active_region() const
                 if (!active_alleles.empty() && is_empty_region(active_alleles.front())) {
                     // to be explicit about insertion containment
                     next_active_region_ = expand_lhs(*next_active_region_, 1);
-                    expanded_lhs_ = true;
                 }
             } else {
                 auto test_tree = tree_; // use a temporary tree to see how much we can lag
@@ -359,7 +371,7 @@ void HaplotypeGenerator::update_next_active_region() const
                     const auto novel_region  = right_overhang_region(max_lagged_region, current_active_region_);
                     const auto novel_alleles = overlap_range(alleles_, novel_region);
                     
-                    const auto it = extend_tree_until(novel_alleles, test_tree, soft_max_haplotypes_);
+                    const auto it = extend_tree_until(novel_alleles, test_tree, haplotype_limits_.soft_max);
                     
                     test_tree.remove_overlapped(novel_region); // undo previous extension
                     
@@ -393,7 +405,7 @@ void HaplotypeGenerator::update_next_active_region() const
                 
                 // prefer sacrificing indicators over novel alleles
                 for (const auto& region : mutually_exclusive_indicator_regions) {
-                    if (test_tree.num_haplotypes() < soft_max_haplotypes_) {
+                    if (test_tree.num_haplotypes() < haplotype_limits_.soft_max) {
                         break;
                     }
                     test_tree.remove_overlapped(region);
@@ -413,14 +425,14 @@ void HaplotypeGenerator::update_next_active_region() const
                     assert(!interacting_alleles.empty());
                     
                     const auto it = extend_tree_until(interacting_alleles, test_tree,
-                                                      hard_max_haplotypes_);
+                                                      haplotype_limits_.hard_max);
                     
                     if (it != std::cend(interacting_alleles)) {
                         next_active_region_ = novel_region; // revert to non-lagged behaviour
                         return;
                     }
                     
-                    if (test_tree.num_haplotypes() >= soft_max_haplotypes_) {
+                    if (test_tree.num_haplotypes() >= haplotype_limits_.soft_max) {
                         if (num_regions_added == 0) {
                             ++num_regions_added;
                         } else {
@@ -459,7 +471,6 @@ void HaplotypeGenerator::update_next_active_region() const
                         if (is_empty_region(first_indicator_allele)) {
                             // to be explicit about insertion containment
                             next_active_region_ = expand_lhs(*next_active_region_, 1);
-                            expanded_lhs_ = true;
                         }
                     }
                 }
@@ -478,53 +489,69 @@ void HaplotypeGenerator::set_holdout_set(const GenomicRegion& active_region)
         throw HaplotypeOverflowError {active_region};
     } else {
         previous_holdout_regions_.emplace(active_region);
-        current_holdout_region_ = active_region;
     }
     
-    auto active_alleles = copy_overlapped(alleles_, active_region);
+    auto active_alleles = copy_contained(alleles_, active_region);
     
-    std::vector<Allele> tmp {std::cbegin(active_alleles), std::cend(active_alleles)};
+    assert(!active_alleles.empty());
     
-    auto it = std::end(tmp);
+    auto active_regions = extract_regions(active_alleles);
     
-    while (true) {
-        const auto holdout_region = largest_region(std::begin(tmp), it);
-        
-        it = std::partition(std::begin(tmp), it,
-                            [&holdout_region] (const Allele& allele) {
-                                return !is_same_region(allele, holdout_region);
-                            });
-        
-        MappableFlatSet<Allele> cur {std::begin(tmp), it};
-        
-        const auto re = walker_.walk(head_region(cur.leftmost()), reads_, cur);
-        
-        if (std::exp2(count_overlapped(cur, re)) < hard_max_haplotypes_) break;
-    }
+    active_regions.erase(std::unique(std::begin(active_regions), std::end(active_regions)),
+                         std::end(active_regions));
     
-    holdout_set_.insert(std::make_move_iterator(it), std::make_move_iterator(std::end(tmp)));
+    std::vector<std::pair<GenomicRegion, unsigned>> interaction_counts {};
+    interaction_counts.reserve(active_regions.size());
+    
+    std::transform(std::cbegin(active_regions), std::cend(active_regions),
+                   std::back_inserter(interaction_counts),
+                   [&active_alleles] (const auto& region) {
+                       return std::make_pair(region, count_overlapped(active_alleles, region));
+                   });
+    
+    std::sort(std::begin(interaction_counts), std::end(interaction_counts),
+              [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+    
+    auto new_active_region = current_active_region_;
+    
+    do {
+        const auto& holdout_region = interaction_counts.back().first;
+        
+        // it is safe to take base iterators as alleles with the same region must be adjacent
+        auto contained = bases(contained_range(active_alleles, holdout_region));
+        
+        const auto is_holdout = [&holdout_region] (const auto& allele) { return is_same_region(allele, holdout_region); };
+        
+        const auto it1 = std::find_if(std::cbegin(contained), std::cend(contained), is_holdout);
+        assert(it1 != std::cend(contained));
+        const auto it2 = std::find_if_not(std::next(it1), std::cend(contained), is_holdout);
+        
+        holdout_set_.insert(it1, it2);
+        active_alleles.erase(it1, it2);
+        
+        new_active_region = walker_.walk(head_region(current_active_region_), reads_, active_alleles);
+        
+        interaction_counts.pop_back();
+    } while (!active_alleles.empty()
+             && std::exp2(count_overlapped(active_alleles, new_active_region)) > haplotype_limits_.hard_max);
     
     if (DEBUG_MODE) {
         Logging::DebugLogger log {};
         stream(log) << "Adding " << holdout_set_.size() << " alleles to the holdout set";
     }
     
-    current_holdout_region_ = encompassing_region(*current_holdout_region_, rightmost_region(holdout_set_));
+    current_holdout_region_ = encompassing_region(holdout_set_);
     
     alleles_.erase_all(std::cbegin(holdout_set_), std::cend(holdout_set_));
 }
 
-void HaplotypeGenerator::try_reintroducing_holdout_set()
+bool HaplotypeGenerator::try_reintroducing_holdout_set()
 {
-    if (holdout_set_.empty()) return;
+    if (holdout_set_.empty()) return false;
     
-    if (ends_before(current_active_region_, *current_holdout_region_)) {
-        const auto remaining_holdout_region = right_overhang_region(*current_holdout_region_,
-                                                                    current_active_region_);
-        
-        if (has_overlapped(alleles_, remaining_holdout_region)) {
-            return;
-        }
+    if (ends_before(current_active_region_, *current_holdout_region_)
+        && has_overlapped(alleles_, right_overhang_region(*current_holdout_region_, current_active_region_))) {
+        return false;
     }
     
     if (DEBUG_MODE) {
@@ -532,17 +559,68 @@ void HaplotypeGenerator::try_reintroducing_holdout_set()
         stream(log) << "Reintroducing " << holdout_set_.size() << " holdout alleles";
     }
     
-    alleles_.insert(std::make_move_iterator(std::begin(holdout_set_)),
-                    std::make_move_iterator(std::end(holdout_set_)));
+    // We want to add the holdout alleles to the existing tree without regenerating already
+    // pruned haplotypes. HaplotypeTree does not support threading alleles into the existing structure
+    // (only extension), so we will need to re-construct a full tree (with the holdout alleles)
+    // and then prune haplotypes that are made up of only non-holdout alleles and
+    // were not in the current tree
+    
+    auto existing_haplotypes = tree_.extract_haplotypes();
+    
+    auto holdout_interaction_region = closed_region(*current_holdout_region_, current_active_region_);
+    
+    tree_.remove_overlapped(holdout_interaction_region);
+    
+    alleles_.insert(std::begin(holdout_set_), std::end(holdout_set_));
+    
+    auto holdout_interation_alleles = overlap_range(alleles_, holdout_interaction_region);
+    
+    extend_tree(holdout_interation_alleles, tree_);
+    
+    auto all_possible_haplotypes = tree_.extract_haplotypes();
+    
+    std::sort(std::begin(existing_haplotypes), std::end(existing_haplotypes));
+    std::sort(std::begin(all_possible_haplotypes), std::end(all_possible_haplotypes));
+    
+    // we only need to consider unqiue haplotypes as we will remove all duplicates from the tree
+    existing_haplotypes.erase(std::unique(std::begin(existing_haplotypes),
+                                          std::end(existing_haplotypes)),
+                              std::end(existing_haplotypes));
+    all_possible_haplotypes.erase(std::unique(std::begin(all_possible_haplotypes),
+                                              std::end(all_possible_haplotypes)),
+                                  std::end(all_possible_haplotypes));
+    
+    std::deque<Haplotype> haplotypes_to_remove {};
+    
+    std::set_difference(std::make_move_iterator(std::begin(all_possible_haplotypes)),
+                        std::make_move_iterator(std::end(all_possible_haplotypes)),
+                        std::cbegin(existing_haplotypes),
+                        std::cend(existing_haplotypes),
+                        std::back_inserter(haplotypes_to_remove));
+    
+    all_possible_haplotypes.clear();
+    all_possible_haplotypes.shrink_to_fit();
+    existing_haplotypes.clear();
+    existing_haplotypes.shrink_to_fit();
+    
+    auto it = std::remove_if(std::begin(haplotypes_to_remove), std::end(haplotypes_to_remove),
+                             [this] (const auto& haplotype) {
+                                 return std::any_of(std::cbegin(holdout_set_), std::cend(holdout_set_),
+                                                    [&haplotype] (const auto& allele) {
+                                                        return haplotype.contains_exact(allele);
+                                                    });
+                              });
+    
+    haplotypes_to_remove.erase(it, std::end(haplotypes_to_remove));
+    
+    prune_all(haplotypes_to_remove, tree_);
     
     holdout_set_.clear();
     holdout_set_.shrink_to_fit();
     
-    current_active_region_ = head_region(*current_holdout_region_);
-    
-    reset_next_active_region();
-    
     current_holdout_region_ = boost::none;
+    
+    return true;
 }
 
 template <typename Range>
@@ -586,24 +664,20 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
     
     return expand(current_active_region_, additional_padding / 2);
 }
-    
-// Builder
 
-HaplotypeGenerator::Builder::Builder()
-:
-soft_max_haplotypes_ {128}, hard_max_haplotypes_ {4'000},
-lagging_policy_ {LaggingPolicy::None}
-{}
+// Builder
 
 HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_soft_max_haplotypes(unsigned n) noexcept
 {
-    soft_max_haplotypes_ = n;
+    haplotype_limits_.soft_max = n;
+    haplotype_limits_.holdout_max = std::max(haplotype_limits_.holdout_max, n + 1);
+    haplotype_limits_.hard_max = std::max(haplotype_limits_.hard_max, n + 1);
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_soft_hard_haplotypes(unsigned n) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_hard_max_haplotypes(unsigned n) noexcept
 {
-    hard_max_haplotypes_ = n;
+    haplotype_limits_.hard_max = n;
     return *this;
 }
 
@@ -624,20 +698,7 @@ HaplotypeGenerator HaplotypeGenerator::Builder::build(const ReferenceGenome& ref
                          const ReadMap& reads) const
 {
     return HaplotypeGenerator {
-        window, reference, candidates, reads, soft_max_haplotypes_, hard_max_haplotypes_,
-        lagging_policy_, min_pad_
+        window, reference, candidates, reads, haplotype_limits_, lagging_policy_, min_pad_
     };
 }
-
-namespace debug
-{
-    template <typename Range>
-    void print_active_alleles(const Range& alleles, const GenomicRegion& active_region)
-    {
-        std::cout << "printing " << std::distance(std::cbegin(alleles), std::cend(alleles))
-                    << " alleles in active region " << active_region << '\n';
-        std::copy(std::cbegin(alleles), std::cend(alleles),
-                  std::ostream_iterator<Allele>(std::cout, "\n"));
-    }
-} // namespace debug
 } // namespace Octopus

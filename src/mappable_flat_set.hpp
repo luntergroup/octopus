@@ -581,50 +581,69 @@ MappableFlatSet<MappableType, Allocator>::erase(const_iterator first, const_iter
 template <typename MappableType, typename Allocator>
 template <typename InputIt>
 typename MappableFlatSet<MappableType, Allocator>::size_type
-MappableFlatSet<MappableType, Allocator>::erase_all(InputIt first, InputIt last)
+MappableFlatSet<MappableType, Allocator>::erase_all(InputIt first, const InputIt last)
 {
-    size_type result {0};
+    size_type num_erased {0};
     
-    if (first == last) return result;
+    if (first == last) return num_erased;
     
     const auto region = encompassing_region(first, last);
     
-    const auto p = bases(contained_range(region));
+    auto contained_elements = bases(::contained_range(std::begin(elements_), std::end(elements_), region));
     
-    auto from     = std::cbegin(p);
-    const auto to = std::cend(p);
+    if (contained_elements.empty()) return num_erased;
     
     typename RegionType<MappableType>::SizeType max_erased_size {0};
     
+    auto first_contained = std::begin(contained_elements);
+    auto last_contained  = std::end(contained_elements);
+    
+    auto last_element = std::end(elements_);
+    
     while (first != last) {
-        const auto contained = contained_range(from, to, *first);
+        const auto it = std::lower_bound(first_contained, last_contained, *first);
         
-        const auto it = std::find(std::cbegin(contained), std::cend(contained), *first);
-        
-        if (it != std::cend(contained)) {
-            from = erase(it.base());
+        if (it != last_contained) {
+            const auto p = std::mismatch(std::next(it), last_contained, std::next(first), last);
             
-            if (region_size(*first) > max_erased_size) {
-                max_erased_size = region_size(*first);
+            const auto n = std::distance(p.first, last_contained);
+            
+            last_element = std::rotate(it, p.first, last_element);
+            
+            first_contained = it;
+            last_contained  = std::next(it, n);
+            
+            const auto m = region_size(*largest_mappable(first, p.second));
+            
+            if (m > max_erased_size) {
+                max_erased_size = m;
             }
             
-            ++result;
-        }
-        
-        ++first;
-    }
-    
-    if (result > 0) {
-//        if (!is_bidirectionally_sorted_) {
-//            is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
-//        }
-        
-        if (max_element_size_ == max_erased_size) {
-            max_element_size_ = region_size(*largest_mappable(elements_));
+            num_erased += std::distance(first, p.second);
+            
+            first = p.second;
+        } else {
+            ++first;
         }
     }
     
-    return 0;
+    if (num_erased > 0) {
+        elements_.erase(last_element, std::end(elements_));
+        
+        if (!elements_.empty()) {
+            if (!is_bidirectionally_sorted_) {
+                is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+            }
+            if (max_element_size_ == max_erased_size) {
+                max_element_size_ = region_size(*largest_mappable(elements_));
+            }
+        } else {
+            max_element_size_ = 0;
+            is_bidirectionally_sorted_ = true;
+        }
+    }
+    
+    return num_erased;
 }
 
 template <typename MappableType, typename Allocator>

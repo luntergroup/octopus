@@ -426,8 +426,8 @@ bool can_add_to_branch(const ContigAllele& new_allele, const ContigAllele& leaf)
         !((is_insertion(leaf) && is_deletion(new_allele)) || (is_deletion(leaf) && is_insertion(new_allele)));
 }
 
-HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator leaf_itr,
-                                                            const ContigAllele& new_allele)
+HaplotypeTree::LeafIterator
+HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const ContigAllele& new_allele)
 {
     if (*leaf_itr == root_) {
         const auto new_leaf = boost::add_vertex(new_allele, tree_);
