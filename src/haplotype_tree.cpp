@@ -14,6 +14,7 @@
 
 #include <boost/property_map/property_map.hpp>
 #include <boost/graph/breadth_first_search.hpp>
+#include <boost/graph/depth_first_search.hpp>
 #include <boost/graph/visitors.hpp>
 #include <boost/graph/copy.hpp>
 
@@ -181,6 +182,67 @@ HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
         throw std::logic_error {"HaplotypeTree: trying to extend with Allele on different contig"};
     }
     return extend(demote(allele));
+}
+
+template <typename Container>
+struct Splicer : public boost::default_dfs_visitor
+{
+    Splicer() = delete;
+    Splicer(const ContigAllele& allele, bool& is_splice_site, Container& splice_sites)
+    : allele_ {allele}, is_splice_site_ {is_splice_site}, splice_sites_ {splice_sites} {}
+    
+    template <typename V, typename G>
+    void finish_vertex(const V v, const G& tree)
+    {
+        if (is_splice_site_ && (boost::in_degree(v, tree) == 0 || is_before(tree[v], allele_.get()))) {
+            std::cout << "SPLICE " << tree[v] << std::endl;
+            splice_sites_.push_back(v);
+            is_splice_site_ = false;
+        }
+    }
+private:
+    std::reference_wrapper<const ContigAllele> allele_;
+    bool& is_splice_site_;
+    Container& splice_sites_;
+};
+
+void HaplotypeTree::splice(const ContigAllele& allele)
+{
+    std::unordered_map<Vertex, boost::default_color_type> colours {};
+    colours.reserve(boost::num_vertices(tree_));
+    
+    std::deque<Vertex> splice_sites {};
+    bool root_done {false}, is_splice_site {false};
+    
+    boost::depth_first_visit(tree_, root_,
+                             Splicer<decltype(splice_sites)> {allele, is_splice_site, splice_sites},
+                             boost::make_assoc_property_map(colours),
+                             [&] (const Vertex v, const Tree& tree) -> bool {
+                                 if (!root_done) {
+                                     root_done = true;
+                                     return false;
+                                 }
+                                 is_splice_site = is_splice_site || begins_before(allele, tree[v]);
+                                 std::cout << tree[v];
+                                 if (is_splice_site) std::cout << " SS";
+                                 std::cout << std::endl;
+                                 return is_splice_site;
+                             });
+    
+    for (const Vertex v : splice_sites) {
+        std::cout << tree_[v] << std::endl;
+        const auto spliced = boost::add_vertex(allele, tree_);
+        boost::add_edge(v, spliced, tree_);
+        haplotype_leafs_.push_back(spliced);
+    }
+}
+
+void HaplotypeTree::splice(const Allele& allele)
+{
+    if (contig_name(allele) != contig_) {
+        throw std::logic_error {"HaplotypeTree: trying to splicing with Allele on different contig"};
+    }
+    return splice(demote(allele));
 }
 
 GenomicRegion HaplotypeTree::encompassing_region() const
@@ -375,7 +437,9 @@ void HaplotypeTree::clear() noexcept
 
 HaplotypeTree::Vertex HaplotypeTree::get_previous_allele(const Vertex allele) const
 {
-    return *boost::inv_adjacent_vertices(allele, tree_).first;
+    const auto p = boost::inv_adjacent_vertices(allele, tree_);
+    assert(std::distance(p.first, p.second) == 1);
+    return *p.first;
 }
 
 bool HaplotypeTree::is_bifurcating(const Vertex v) const
@@ -385,7 +449,9 @@ bool HaplotypeTree::is_bifurcating(const Vertex v) const
 
 HaplotypeTree::Vertex HaplotypeTree::remove_forward(Vertex u)
 {
-    const auto v = *boost::adjacent_vertices(u, tree_).first;
+    const auto p = boost::adjacent_vertices(u, tree_);
+    assert(p.first != p.second);
+    const auto v = *p.first;
     boost::remove_edge(u, v, tree_);
     boost::remove_vertex(u, tree_);
     return v;
@@ -550,9 +616,9 @@ HaplotypeTree::remove_external(Vertex leaf, const ContigRegion& region)
             return std::make_pair(leaf, false);
         } else if (begins_before(tree_[leaf], region)) {
             return std::make_pair(leaf, true);
+        } else {
+            leaf = remove_backward(leaf);
         }
-        
-        leaf = remove_backward(leaf);
     }
     
     // the root should only be indicated as a leaf node if there are no other nodes in the tree

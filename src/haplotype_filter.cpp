@@ -226,9 +226,8 @@ public:
     AssignmentCount(const std::vector<Haplotype>& haplotypes,
                     const std::vector<SampleIdType>& samples,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods)
-    : AssignmentCount {
-        std::cbegin(haplotypes), std::cend(haplotypes), samples, haplotype_likelihoods
-    }
+    :
+    AssignmentCount {std::cbegin(haplotypes), std::cend(haplotypes), samples, haplotype_likelihoods}
     {}
     
     auto operator()(const Haplotype& haplotype) const

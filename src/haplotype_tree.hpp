@@ -54,6 +54,9 @@ public:
     HaplotypeTree& extend(const ContigAllele& allele);
     HaplotypeTree& extend(const Allele& allele);
     
+    void splice(const ContigAllele& allele);
+    void splice(const Allele& allele);
+    
     GenomicRegion encompassing_region() const;
     
     std::vector<Haplotype> extract_haplotypes() const;

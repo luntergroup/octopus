@@ -260,19 +260,22 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
             
             try {
                 set_holdout_set(novel_active_region);
-                
-                novel_active_alleles = overlap_range(alleles_, novel_active_region);
-                
-                extend_tree_until(novel_active_alleles, tree_, haplotype_limits_.soft_max);
+                current_active_region_ = head_region(current_active_region_);
+                update_next_active_region();
+                progress(*next_active_region_);
+                current_active_region_ = *std::move(next_active_region_);
+                reset_next_active_region();
+                extend_tree_until(overlap_range(alleles_, current_active_region_), tree_,
+                                  haplotype_limits_.soft_max);
             } catch (const HaplotypeOverflowError&) {
                 it = extend_tree_until(novel_active_alleles, tree_, haplotype_limits_.hard_max);
                 
                 if (it != std::cend(novel_active_alleles)) {
                     throw;
                 }
+                
+                current_active_region_ = tree_.encompassing_region();
             }
-            
-            extend_tree(overlap_range(alleles_, current_active_region_), tree_);
         }
     }
     
@@ -407,7 +410,15 @@ void HaplotypeGenerator::update_next_active_region() const
                 
                 assert(!novel_alleles.empty());
                 
-                const auto mutually_exclusive_novel_regions = extract_mutually_exclusive_regions(novel_alleles);
+                auto mutually_exclusive_novel_regions = extract_mutually_exclusive_regions(novel_alleles);
+                
+                if (mutually_exclusive_indicator_regions.back() == mutually_exclusive_novel_regions.front()) {
+                    assert(is_empty(mutually_exclusive_novel_regions.front()));
+                    // always consider lhs boundry insertions
+                    mutually_exclusive_novel_regions.erase(std::begin(mutually_exclusive_novel_regions));
+                }
+                
+                assert(!mutually_exclusive_indicator_regions.empty());
                 
                 for (const auto& region : mutually_exclusive_novel_regions) {
                     const auto interacting_alleles = overlap_range(novel_alleles, region);
@@ -522,61 +533,77 @@ bool HaplotypeGenerator::try_reintroducing_holdout_set()
         stream(log) << "Reintroducing " << holdout_set_.size() << " holdout alleles";
     }
     
-    // We want to add the holdout alleles to the existing tree without regenerating already
-    // pruned haplotypes. HaplotypeTree does not support threading alleles into the existing structure
-    // (only extension), so we will need to re-construct a full tree (with the holdout alleles)
-    // and then prune haplotypes that are made up of only non-holdout alleles and
-    // were not in the current tree
+//    std::cout << "haplotypes before splice" << std::endl;
+//    for (const auto& haplotype : tree_.extract_haplotypes()) {
+//        ::debug::print_alleles(haplotype); std::cout << '\n';
+//    }
     
-    auto existing_haplotypes = tree_.extract_haplotypes();
+    tree_.splice(Allele {"22", 49189922, "T"});
     
-    auto holdout_interaction_region = closed_region(*current_holdout_region_, current_active_region_);
+//    for (const auto& allele : holdout_set_) {
+//        tree_.splice(allele);
+//    }
     
-    tree_.remove_overlapped(holdout_interaction_region);
+//    std::cout << "haplotypes after splice" << std::endl;
+//    for (const auto& haplotype : tree_.extract_haplotypes()) {
+//        ::debug::print_alleles(haplotype); std::cout << '\n';
+//    }
     
-    alleles_.insert(std::begin(holdout_set_), std::end(holdout_set_));
-    
-    auto holdout_interation_alleles = overlap_range(alleles_, holdout_interaction_region);
-    
-    extend_tree(holdout_interation_alleles, tree_);
-    
-    auto all_possible_haplotypes = tree_.extract_haplotypes();
-    
-    std::sort(std::begin(existing_haplotypes), std::end(existing_haplotypes));
-    std::sort(std::begin(all_possible_haplotypes), std::end(all_possible_haplotypes));
-    
-    // we only need to consider unqiue haplotypes as we will remove all duplicates from the tree
-    existing_haplotypes.erase(std::unique(std::begin(existing_haplotypes),
-                                          std::end(existing_haplotypes)),
-                              std::end(existing_haplotypes));
-    all_possible_haplotypes.erase(std::unique(std::begin(all_possible_haplotypes),
-                                              std::end(all_possible_haplotypes)),
-                                  std::end(all_possible_haplotypes));
-    
-    std::deque<Haplotype> haplotypes_to_remove {};
-    
-    std::set_difference(std::make_move_iterator(std::begin(all_possible_haplotypes)),
-                        std::make_move_iterator(std::end(all_possible_haplotypes)),
-                        std::cbegin(existing_haplotypes),
-                        std::cend(existing_haplotypes),
-                        std::back_inserter(haplotypes_to_remove));
-    
-    all_possible_haplotypes.clear();
-    all_possible_haplotypes.shrink_to_fit();
-    existing_haplotypes.clear();
-    existing_haplotypes.shrink_to_fit();
-    
-    auto it = std::remove_if(std::begin(haplotypes_to_remove), std::end(haplotypes_to_remove),
-                             [this] (const auto& haplotype) {
-                                 return std::any_of(std::cbegin(holdout_set_), std::cend(holdout_set_),
-                                                    [&haplotype] (const auto& allele) {
-                                                        return haplotype.contains_exact(allele);
-                                                    });
-                              });
-    
-    haplotypes_to_remove.erase(it, std::end(haplotypes_to_remove));
-    
-    prune_all(haplotypes_to_remove, tree_);
+//    // We want to add the holdout alleles to the existing tree without regenerating already
+//    // pruned haplotypes. HaplotypeTree does not support threading alleles into the existing structure
+//    // (only extension), so we will need to re-construct a full tree (with the holdout alleles)
+//    // and then prune haplotypes that are made up of only non-holdout alleles and
+//    // were not in the current tree
+//    
+//    auto existing_haplotypes = tree_.extract_haplotypes();
+//    
+//    auto holdout_interaction_region = closed_region(*current_holdout_region_, current_active_region_);
+//    
+//    tree_.remove_overlapped(holdout_interaction_region);
+//    
+//    alleles_.insert(std::begin(holdout_set_), std::end(holdout_set_));
+//    
+//    auto holdout_interation_alleles = overlap_range(alleles_, holdout_interaction_region);
+//    
+//    extend_tree(holdout_interation_alleles, tree_);
+//    
+//    auto all_possible_haplotypes = tree_.extract_haplotypes();
+//    
+//    std::sort(std::begin(existing_haplotypes), std::end(existing_haplotypes));
+//    std::sort(std::begin(all_possible_haplotypes), std::end(all_possible_haplotypes));
+//    
+//    // we only need to consider unqiue haplotypes as we will remove all duplicates from the tree
+//    existing_haplotypes.erase(std::unique(std::begin(existing_haplotypes),
+//                                          std::end(existing_haplotypes)),
+//                              std::end(existing_haplotypes));
+//    all_possible_haplotypes.erase(std::unique(std::begin(all_possible_haplotypes),
+//                                              std::end(all_possible_haplotypes)),
+//                                  std::end(all_possible_haplotypes));
+//    
+//    std::deque<Haplotype> haplotypes_to_remove {};
+//    
+//    std::set_difference(std::make_move_iterator(std::begin(all_possible_haplotypes)),
+//                        std::make_move_iterator(std::end(all_possible_haplotypes)),
+//                        std::cbegin(existing_haplotypes),
+//                        std::cend(existing_haplotypes),
+//                        std::back_inserter(haplotypes_to_remove));
+//    
+//    all_possible_haplotypes.clear();
+//    all_possible_haplotypes.shrink_to_fit();
+//    existing_haplotypes.clear();
+//    existing_haplotypes.shrink_to_fit();
+//    
+//    auto it = std::remove_if(std::begin(haplotypes_to_remove), std::end(haplotypes_to_remove),
+//                             [this] (const auto& haplotype) {
+//                                 return std::any_of(std::cbegin(holdout_set_), std::cend(holdout_set_),
+//                                                    [&haplotype] (const auto& allele) {
+//                                                        return haplotype.contains_exact(allele);
+//                                                    });
+//                              });
+//    
+//    haplotypes_to_remove.erase(it, std::end(haplotypes_to_remove));
+//    
+//    prune_all(haplotypes_to_remove, tree_);
     
     holdout_set_.clear();
     holdout_set_.shrink_to_fit();
