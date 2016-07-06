@@ -136,11 +136,27 @@ namespace debug
                                     const ReferenceGenome& reference);
 }
 
-auto copy_overlapped_to_vector(const MappableFlatSet<Variant>& candidates,
-                               const GenomicRegion& region)
+auto copy_contained_to_vector(const MappableFlatSet<Variant>& candidates,
+                              const GenomicRegion& region,
+                              const bool remove_rhs_boundry_insertions = false)
 {
-    const auto overlapped = overlap_range(candidates, region);
-    return std::vector<Variant> {std::cbegin(overlapped), std::cend(overlapped)};
+    const auto contained = contained_range(candidates, region);
+    
+    std::vector<Variant> result {std::cbegin(contained), std::cend(contained)};
+    
+    if (!result.empty() && remove_rhs_boundry_insertions && is_empty_region(result.back())) {
+        const auto adjacent_candidates = overlap_range(candidates, shift(tail_region(region), 1));
+        
+        if (!adjacent_candidates.empty()) {
+            auto it = std::find_if_not(std::rbegin(result), std::rend(result),
+                                       [&adjacent_candidates] (const auto& candidate) {
+                                           return overlaps(candidate, adjacent_candidates.front());
+                                       }).base();
+            result.erase(it, std::end(result));
+        }
+    }
+    
+    return result;
 }
 
 const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
@@ -154,13 +170,6 @@ void remove_passed_candidates(MappableFlatSet<Variant>& candidates,
 {
     if (begins_before(candidate_region, haplotype_region)) {
         const auto passed_region = left_overhang_region(candidate_region, haplotype_region);
-        
-        if (DEBUG_MODE) {
-            Logging::DebugLogger log {};
-            stream(log) << "Removing " << count_overlapped(candidates, passed_region)
-                        << " passed candidates in region " << passed_region;
-        }
-        
         candidates.erase_overlapped(passed_region);
     }
 }
@@ -484,7 +493,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         
         resume_timer(phasing_timer);
         const auto phase_set = phaser_.try_phase(haplotypes, *caller_latents->genotype_posteriors(),
-                                                 copy_overlapped_to_vector(candidates, haplotype_region(haplotypes)));
+                                                 copy_contained_to_vector(candidates, haplotype_region(haplotypes)));
         pause_timer(phasing_timer);
         
         if (debug_log_) {
@@ -500,7 +509,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             
             if (debug_log_) stream(*debug_log_) << "Phased region is " << phase_set->region;
             
-            const auto active_candidates = copy_overlapped_to_vector(candidates, phase_set->region);
+            const auto active_candidates = copy_contained_to_vector(candidates, phase_set->region);
             
             if (!active_candidates.empty()) {
                 auto variant_calls = wrap(this->call_variants(active_candidates, *caller_latents));
@@ -563,7 +572,8 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);
             }
             
-            const auto active_candidates = copy_overlapped_to_vector(candidates, uncalled_region);
+            auto active_candidates = copy_contained_to_vector(candidates, uncalled_region,
+                                                              are_adjacent(uncalled_region, next_active_region));
             
             std::vector<GenomicRegion> called_regions;
             

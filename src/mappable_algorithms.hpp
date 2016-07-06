@@ -1516,6 +1516,49 @@ auto encompassing_region(const Container& mappables)
     return encompassing_region(leftmost_region(mappables), rightmost_region(mappables));
 }
 
+// extract_*_regions
+
+namespace detail
+{
+    template <typename ForwardIt, typename Compare>
+    auto extract_overlapping_regions(ForwardIt first, const ForwardIt last, Compare cmp)
+    {
+        using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
+        
+        static_assert(is_region_or_mappable<MappableTp>,
+                      "mappable algorithms only work for regions and mappable types");
+        
+        using ResultType = std::vector<RegionType<MappableTp>>;
+        
+        ResultType result {};
+        
+        if (first == last) return result;
+        
+        result.reserve(std::distance(first, last));
+        
+        auto first_overlapped = first;
+        auto rightmost        = first;
+        
+        for (; first != last; ++first) {
+            if (cmp(mapped_begin(*first), mapped_end(*rightmost))) {
+                if (result.empty() || !ends_equal(result.back(), *rightmost)) {
+                    result.push_back(closed_region(*first_overlapped, *rightmost));
+                }
+                rightmost        = first;
+                first_overlapped = first;
+            } else if (ends_before(*rightmost, *first)) {
+                rightmost = first;
+            }
+        }
+        
+        result.push_back(closed_region(*first_overlapped, *rightmost));
+        
+        result.shrink_to_fit();
+        
+        return result;
+    }
+} // namespace detail
+
 // extract_covered_regions
 
 /**
@@ -1527,44 +1570,40 @@ auto encompassing_region(const Container& mappables)
 template <typename ForwardIt>
 auto extract_covered_regions(ForwardIt first, ForwardIt last)
 {
-    using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
-    
-    static_assert(is_region_or_mappable<MappableTp>,
-                  "mappable algorithms only work for regions and mappable types");
-    
-    using ResultType = std::vector<RegionType<MappableTp>>;
-    
-    ResultType result {};
-    
-    if (first == last) return result;
-    
-    auto first_overlapped = first;
-    auto rightmost        = first;
-    
-    while (first != last) {
-        if (mapped_begin(*first) > mapped_end(*rightmost)) {
-            result.emplace_back(contig_name(*first_overlapped),
-                                mapped_begin(*first_overlapped), mapped_end(*rightmost));
-            rightmost        = first;
-            first_overlapped = first;
-        } else if (ends_before(*rightmost, *first)) {
-            rightmost = first;
-        }
-        ++first;
-    }
-    
-    result.emplace_back(contig_name(*first_overlapped),
-                        mapped_begin(*first_overlapped), mapped_end(*rightmost));
-    
-    result.shrink_to_fit();
-    
-    return result;
+    return detail::extract_overlapping_regions(first, last,
+                                               [] (const auto& a, const auto b) {
+                                                   return a > b;
+                                               });
 }
 
 template <typename Container>
 auto extract_covered_regions(const Container& mappables)
 {
     return extract_covered_regions(std::cbegin(mappables), std::cend(mappables));
+}
+
+// extract_mutually_exclusive_regions
+
+/**
+ Returns the maximal range of non-overlapping GenomicRegion's such that each element in the range [first, last)
+ is contained within a single region.
+ 
+ Requires [first_mappable, last_mappable) is sorted w.r.t GenomicRegion::operator<
+ */
+
+template <typename ForwardIt>
+auto extract_mutually_exclusive_regions(ForwardIt first, const ForwardIt last)
+{
+    return detail::extract_overlapping_regions(first, last,
+                                               [] (const auto& a, const auto b) {
+                                                   return a >= b;
+                                               });
+}
+
+template <typename Container>
+auto extract_mutually_exclusive_regions(const Container& mappables)
+{
+    return extract_mutually_exclusive_regions(std::cbegin(mappables), std::cend(mappables));
 }
 
 // extract_intervening_regions
