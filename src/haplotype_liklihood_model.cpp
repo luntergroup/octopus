@@ -167,14 +167,25 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model,
     this->reset(haplotype, std::move(flank_state));
 }
 
+double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read) const
+{
+    const static MappingPositionVector empty {};
+    return this->log_probability(read, std::cbegin(empty), std::cend(empty));
+}
+
 double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
-                                                 MapPositionItr first_mapping_position,
-                                                 MapPositionItr last_mapping_position) const
+                                                 const MappingPositionVector& mapping_positions) const
+{
+    return this->log_probability(read, std::cbegin(mapping_positions), std::cend(mapping_positions));
+}
+
+double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
+                                                 MappingPositionItr first_mapping_position,
+                                                 MappingPositionItr last_mapping_position) const
 {
     if (haplotype_ == nullptr) {
         throw std::runtime_error {"HaplotypeLikelihoodModel: no buffered Haplotype"};
     }
-    
     
     const auto is_forward = !read.is_marked_reverse_mapped();
     
@@ -193,7 +204,8 @@ double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
         model.rhs_flank_size = 0;
     }
     
-    return Octopus::log_probability(read, *haplotype_, first_mapping_position, last_mapping_position,
+    return Octopus::log_probability(read, *haplotype_,
+                                    first_mapping_position, last_mapping_position,
                                     model);
 }
 } // namespace Octopus

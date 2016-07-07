@@ -9,6 +9,7 @@
 #include "haplotype_tree.hpp"
 
 #include <deque>
+#include <stack>
 #include <stdexcept>
 #include <cassert>
 
@@ -67,14 +68,10 @@ bool is_tree(const G& graph, const V& root, const Container& leafs) {
                            return visited_vertices.count(v) == 1;
                        }));
     
-    const auto leafs_terminate_tree = std::none_of(std::cbegin(leafs), std::cend(leafs),
-                                                   [&graph] (const auto& v) {
-                                                       return boost::out_degree(v, graph) > 0;
-                                                   });
-    
     return std::all_of(std::cbegin(leafs), std::cend(leafs),
                        [&graph, &root] (const auto& v) {
-                           return v == root || boost::in_degree(v, graph) == 1;
+                           return v == root
+                           || (boost::in_degree(v, graph) == 1 && boost::out_degree(v, graph) == 0);
                        });
 }
 } // namespace debug
@@ -184,53 +181,70 @@ HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
     return extend(demote(allele));
 }
 
-template <typename Container>
+template <typename Container, typename V>
 struct Splicer : public boost::default_dfs_visitor
 {
-    Splicer() = delete;
-    Splicer(const ContigAllele& allele, bool& is_splice_site, Container& splice_sites)
-    : allele_ {allele}, is_splice_site_ {is_splice_site}, splice_sites_ {splice_sites} {}
+    Splicer(const ContigAllele& allele, std::stack<V>& candidate_splice_sites, Container& splice_sites,
+            V root)
+    : allele_ {allele}, candidate_splice_sites_ {candidate_splice_sites},
+    splice_sites_ {splice_sites}, root_ {root} {}
     
-    template <typename V, typename G>
+    template <typename G>
     void finish_vertex(const V v, const G& tree)
     {
-        if (is_splice_site_ && (boost::in_degree(v, tree) == 0 || is_before(tree[v], allele_.get()))) {
-            std::cout << "SPLICE " << tree[v] << std::endl;
-            splice_sites_.push_back(v);
-            is_splice_site_ = false;
+        if (!candidate_splice_sites_.empty() && v == candidate_splice_sites_.top()) {
+            candidate_splice_sites_.pop();
+            if (v == root_ || is_after(allele_.get(), tree[v])) {
+                splice_sites_.push_back(v);
+            } else {
+                candidate_splice_sites_.push(*boost::inv_adjacent_vertices(v, tree).first);
+            }
         }
     }
 private:
     std::reference_wrapper<const ContigAllele> allele_;
-    bool& is_splice_site_;
+    std::stack<V>& candidate_splice_sites_;
     Container& splice_sites_;
+    V root_;
 };
+
+template <typename Container, typename V>
+auto make_splicer(const ContigAllele& allele, std::stack<V>& candidate_splice_sites,
+                  Container& splice_sites, V root)
+{
+    return Splicer<Container, V> {allele, candidate_splice_sites, splice_sites, root};
+}
 
 void HaplotypeTree::splice(const ContigAllele& allele)
 {
+    if (empty()) {
+        extend(allele);
+        return;
+    }
+    
     std::unordered_map<Vertex, boost::default_color_type> colours {};
     colours.reserve(boost::num_vertices(tree_));
     
     std::deque<Vertex> splice_sites {};
-    bool root_done {false}, is_splice_site {false};
+    std::stack<Vertex> candidate_splice_sites {};
     
     boost::depth_first_visit(tree_, root_,
-                             Splicer<decltype(splice_sites)> {allele, is_splice_site, splice_sites},
+                             make_splicer(allele, candidate_splice_sites, splice_sites, root_),
                              boost::make_assoc_property_map(colours),
                              [&] (const Vertex v, const Tree& tree) -> bool {
-                                 if (!root_done) {
-                                     root_done = true;
-                                     return false;
+                                 if (v != root_ && begins_before(allele, tree[v])) {
+                                     const auto u = *boost::inv_adjacent_vertices(v, tree).first;
+                                     if (candidate_splice_sites.empty() || candidate_splice_sites.top() != u) {
+                                         candidate_splice_sites.push(u);
+                                     }
+                                     return true;
                                  }
-                                 is_splice_site = is_splice_site || begins_before(allele, tree[v]);
-                                 std::cout << tree[v];
-                                 if (is_splice_site) std::cout << " SS";
-                                 std::cout << std::endl;
-                                 return is_splice_site;
+                                 return false;
                              });
     
-    for (const Vertex v : splice_sites) {
-        std::cout << tree_[v] << std::endl;
+    assert(candidate_splice_sites.empty());
+    
+    for (const auto v : splice_sites) {
         const auto spliced = boost::add_vertex(allele, tree_);
         boost::add_edge(v, spliced, tree_);
         haplotype_leafs_.push_back(spliced);
@@ -344,33 +358,39 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
 
 void HaplotypeTree::prune_unique(const Haplotype& haplotype)
 {
-    using std::cbegin; using std::cend; using std::for_each; using std::find_if; using std::find;
+    using std::cbegin; using std::cend; using std::for_each;
     
     if (empty()) return;
     
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
         const auto possible_leafs = haplotype_leaf_cache_.equal_range(haplotype);
         
-        const auto leaf_to_keep_itr = find_if(possible_leafs.first, possible_leafs.second,
-                                              [this, &haplotype] (const auto& leaf_pair) {
-                                                  return is_branch_exact_haplotype(leaf_pair.second, haplotype);
-                                              })->second;
+        const auto it = std::find_if(possible_leafs.first, possible_leafs.second,
+                                     [this, &haplotype] (const auto& leaf_pair) {
+                                         return is_branch_exact_haplotype(leaf_pair.second, haplotype);
+                                     });
         
-        for_each(possible_leafs.first, possible_leafs.second,
-                 [this, &haplotype, leaf_to_keep_itr] (auto& leaf_pair) {
-                     if (leaf_pair.second != leaf_to_keep_itr) {
-                         const auto p = remove(leaf_pair.second, contig_region(haplotype));
-                         
-                         auto leaf_itr = find(cbegin(haplotype_leafs_), cend(haplotype_leafs_),
-                                              leaf_pair.second);
-                         
-                         leaf_itr = haplotype_leafs_.erase(leaf_itr);
-                         
-                         if (p.second) {
-                             haplotype_leafs_.insert(leaf_itr, p.first);
-                         }
-                     }
-                 });
+        if (it == possible_leafs.second) {
+            throw std::runtime_error {"HaplotypeTree::prune_unique called with matching Haplotype not in tree"};
+        }
+        
+        const auto leaf_to_keep_itr = it->second;
+        
+        std::for_each(possible_leafs.first, possible_leafs.second,
+                      [this, &haplotype, leaf_to_keep_itr] (auto& leaf_pair) {
+                          if (leaf_pair.second != leaf_to_keep_itr) {
+                              const auto p = remove(leaf_pair.second, contig_region(haplotype));
+                              
+                              auto leaf_itr = std::find(cbegin(haplotype_leafs_), cend(haplotype_leafs_),
+                                                        leaf_pair.second);
+                              
+                              leaf_itr = haplotype_leafs_.erase(leaf_itr);
+                              
+                              if (p.second) {
+                                  haplotype_leafs_.insert(leaf_itr, p.first);
+                              }
+                          }
+                      });
         
         haplotype_leaf_cache_.erase(haplotype);
         haplotype_leaf_cache_.emplace(haplotype, leaf_to_keep_itr);

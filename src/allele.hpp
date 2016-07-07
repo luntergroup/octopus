@@ -34,7 +34,9 @@ public:
     
     template <typename R, typename S>
     BaseAllele(R&& region, S&& sequence);
-    template <typename T, typename S>
+    template <typename S> // RegionTp=ContigRegion
+    BaseAllele(SizeType begin_pos, S&& sequence);
+    template <typename T, typename S> // RegionTp=GenomicRegion
     BaseAllele(T&& contig_name, SizeType begin_pos, S&& sequence);
     
     ~BaseAllele() = default;
@@ -67,6 +69,14 @@ BaseAllele<RegionTp>::BaseAllele(R&& region, S&& sequence)
 :
 sequence_ {std::forward<S>(sequence)},
 region_ {std::forward<R>(region)}
+{}
+
+template <typename RegionTp>
+template <typename S>
+BaseAllele<RegionTp>::BaseAllele(const SizeType begin_pos, S&& sequence)
+:
+sequence_ {std::forward<S>(sequence)},
+region_ {begin_pos, static_cast<SizeType>(begin_pos + sequence_.size())}
 {}
 
 template <typename RegionTp>

@@ -19,7 +19,6 @@
 #include "genomic_region.hpp"
 #include "aligned_read.hpp"
 #include "cigar_string.hpp"
-#include "aligned_read_builder.hpp"
 
 inline auto generate_random_regions(const GenomicRegion::SizeType contig_size,
                                     const GenomicRegion::SizeType mean_region_size,
@@ -57,7 +56,7 @@ inline auto get_mock_region()
 
 inline auto region_to_read(const GenomicRegion& region)
 {
-    return AlignedReadBuilder().set_region(region).set_sequence("").build_once();
+    return AlignedRead {};
 }
 
 template <typename Container>
@@ -73,7 +72,7 @@ auto regions_to_reads(const Container& regions)
 
 inline auto get_mock_aligned_read(std::string sequence)
 {
-    return AlignedReadBuilder().set_region(get_mock_region()).set_sequence(std::move(sequence)).build_once();
+    return AlignedRead {};
 }
 
 #endif

@@ -389,15 +389,16 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     
     std::vector<Haplotype> haplotypes;
     GenomicRegion active_region;
-    bool no_holdout;
     
     auto completed_region = head_region(call_region);
     
     while (true) {
         try {
-            std::tie(haplotypes, active_region, no_holdout) = haplotype_generator.generate();
-        } catch (const HaplotypeGenerator::HaplotypeOverflowError& e) {
+            std::tie(haplotypes, active_region) = haplotype_generator.generate();
+        } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
             // TODO: we could try to eliminate some more haplotypes and recall the region
+            Logging::WarningLogger wlog {};
+            stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
             haplotype_generator.stop();
             haplotype_likelihoods.clear();
             continue;
@@ -418,9 +419,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             break;
         }
         
-        if (no_holdout) {
-            remove_passed_candidates(candidates, candidate_region, haplotype_region(haplotypes));
-        }
+        remove_passed_candidates(candidates, candidate_region, haplotype_region(haplotypes));
         
         const auto active_reads = copy_overlapped(reads, active_region);
         
@@ -504,7 +503,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             }
         }
         
-        if (no_holdout && phase_set && overlaps(active_region, call_region)) {
+        if (phase_set && overlaps(active_region, call_region)) {
             assert(!is_empty(phase_set->region));
             
             if (debug_log_) stream(*debug_log_) << "Phased region is " << phase_set->region;
@@ -562,9 +561,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             haplotype_likelihoods.clear();
         }
         
-        const auto next_active_region = haplotype_generator.tell_next_active_region();
+        const auto next_active_region = haplotype_generator.peek_next_active_region();
         
-        if (no_holdout && begins_before(active_region, next_active_region) && overlaps(active_region, call_region)) {
+        if (begins_before(active_region, next_active_region) && overlaps(active_region, call_region)) {
             auto passed_region   = left_overhang_region(active_region, next_active_region);
             auto uncalled_region = overlapped_region(active_region, passed_region);
             
@@ -1033,7 +1032,7 @@ namespace debug
     void print_active_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
                                  const GenomicRegion& active_region, bool number_only)
     {
-        const auto active_candidates = overlap_range(candidates, active_region);
+        const auto active_candidates = contained_range(candidates, active_region);
         
         if (active_candidates.empty()) {
             stream << "There are no active candidates" << '\n';
@@ -1068,8 +1067,8 @@ namespace debug
         
         stream << "Haplotype flank regions are " << flanks.first << " and " << flanks.second << '\n';
         
-        const auto lhs_inactive_candidates = overlap_range(candidates, flanks.first);
-        const auto rhs_inactive_candidates = overlap_range(candidates, flanks.second);
+        const auto lhs_inactive_candidates = contained_range(candidates, flanks.first);
+        const auto rhs_inactive_candidates = contained_range(candidates, flanks.second);
         
         const auto num_lhs_inactives = size(lhs_inactive_candidates);
         const auto num_rhs_inactives = size(rhs_inactive_candidates);

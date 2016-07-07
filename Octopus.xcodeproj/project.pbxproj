@@ -13,7 +13,6 @@
 		CA0A329D1B863B5A001BE30F /* tandem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0A329B1B863B5A001BE30F /* tandem.cpp */; };
 		CA0B467B1AE8E8F700158BBA /* genotype_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0B467A1AE8E8F700158BBA /* genotype_benchmarks.cpp */; };
 		CA0C55C01C5FC776009F3704 /* read_pipe_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0C55BF1C5FC776009F3704 /* read_pipe_tests.cpp */; };
-		CA0C55C31C5FC8A9009F3704 /* aligned_read_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0C55C11C5FC8A9009F3704 /* aligned_read_builder.cpp */; };
 		CA0D83E81BD2B0210020366B /* genome_walker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83E61BD2B0210020366B /* genome_walker.cpp */; };
 		CA0D83EB1BD466F40020366B /* read_pipe.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83E91BD466F40020366B /* read_pipe.cpp */; };
 		CA0D83EE1BD467BE0020366B /* downsampler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83EC1BD467BE0020366B /* downsampler.cpp */; };
@@ -183,8 +182,6 @@
 		CA0B467A1AE8E8F700158BBA /* genotype_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genotype_benchmarks.cpp; sourceTree = "<group>"; };
 		CA0B467E1AE9309A00158BBA /* model_prototype.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = model_prototype.py; sourceTree = "<group>"; };
 		CA0C55BF1C5FC776009F3704 /* read_pipe_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_pipe_tests.cpp; sourceTree = "<group>"; };
-		CA0C55C11C5FC8A9009F3704 /* aligned_read_builder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = aligned_read_builder.cpp; sourceTree = "<group>"; };
-		CA0C55C21C5FC8A9009F3704 /* aligned_read_builder.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = aligned_read_builder.hpp; sourceTree = "<group>"; };
 		CA0D83E61BD2B0210020366B /* genome_walker.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genome_walker.cpp; sourceTree = "<group>"; };
 		CA0D83E71BD2B0210020366B /* genome_walker.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = genome_walker.hpp; sourceTree = "<group>"; };
 		CA0D83E91BD466F40020366B /* read_pipe.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_pipe.cpp; sourceTree = "<group>"; };
@@ -368,7 +365,6 @@
 		CAE3B59C1CFE3E3E005EEDE6 /* variant_call_filter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_call_filter.cpp; sourceTree = "<group>"; };
 		CAE3B59D1CFE3E3E005EEDE6 /* variant_call_filter.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = variant_call_filter.hpp; sourceTree = "<group>"; };
 		CAE3E2921A9A882000C01B2C /* mock_objects.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mock_objects.hpp; sourceTree = "<group>"; };
-		CAE3E2941A9CF97700C01B2C /* storage_policies.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = storage_policies.hpp; sourceTree = "<group>"; };
 		CAE3E29B1AA139A000C01B2C /* program_options.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = program_options.cpp; sourceTree = "<group>"; };
 		CAE3E29C1AA139A000C01B2C /* program_options.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = program_options.hpp; sourceTree = "<group>"; };
 		CAE3E2A01AA1D39100C01B2C /* compression.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = compression.hpp; sourceTree = "<group>"; };
@@ -808,6 +804,7 @@
 				CACF81391C876EE900E9E6BD /* mappable_flat_set.hpp */,
 				CA386DA61B5BBBDE0057A5A8 /* mappable_flat_multi_set.hpp */,
 				D413B0401B5D0431007EFDE0 /* mappable_map.hpp */,
+				CA487AF11C1F06D600488577 /* mappable_debug.hpp */,
 			);
 			name = mappable;
 			sourceTree = "<group>";
@@ -839,30 +836,21 @@
 			name = snv_error_models;
 			sourceTree = "<group>";
 		};
-		CA91C2CC1B8DE63A00609FFA /* callers */ = {
+		CA91C2CC1B8DE63A00609FFA /* calling-engines */ = {
 			isa = PBXGroup;
 			children = (
-				D402C5411CC9349C00C8B8A7 /* call-factory */,
-				CACF81361C870E8300E9E6BD /* haplotype_filter.hpp */,
-				CACF81351C870E8300E9E6BD /* haplotype_filter.cpp */,
 				CA91C2D11B8DF76300609FFA /* variant_caller.hpp */,
 				D4807FB11BA843B900657D4F /* variant_caller.cpp */,
-				D40B11A21CAEBC270050145D /* individual_caller.hpp */,
-				D40B11A11CAEBC270050145D /* individual_caller.cpp */,
-				D4807FAF1BA826DB00657D4F /* population_caller.hpp */,
-				D4807FAE1BA826DB00657D4F /* population_caller.cpp */,
-				D4807FB41BA9716700657D4F /* cancer_caller.hpp */,
-				D4807FB31BA9716700657D4F /* cancer_caller.cpp */,
-				D42F72FF1C621C4C00995F54 /* trio_caller.hpp */,
-				D42F72FE1C621C4C00995F54 /* trio_caller.cpp */,
-				CAD552E71BE3BC6E00362016 /* pedigree_caller.hpp */,
-				CAD552E61BE3BC6E00362016 /* pedigree_caller.cpp */,
-				CAE7DC2C1C510905009411B6 /* variant_caller_factory.hpp */,
-				CAE7DC2B1C510905009411B6 /* variant_caller_factory.cpp */,
-				D44ADE721C43C22700A854C6 /* variant_caller_builder.hpp */,
-				D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */,
+				D402C5411CC9349C00C8B8A7 /* call-factory */,
+				CAB7B6EF1D2DE8130046C3E5 /* individual */,
+				CAB7B6F01D2DE8250046C3E5 /* population */,
+				CAB7B6F11D2DE8340046C3E5 /* cancer */,
+				CAB7B6F21D2DE83A0046C3E5 /* trio */,
+				CAB7B6F31D2DE8400046C3E5 /* pedigree */,
+				CAB7B6F41D2DE85D0046C3E5 /* factory */,
+				CAB7B6EE1D2DE7B20046C3E5 /* utils */,
 			);
-			name = callers;
+			name = "calling-engines";
 			sourceTree = "<group>";
 		};
 		CAA4DC181A81981400DD3E9A = {
@@ -893,8 +881,8 @@
 			isa = PBXGroup;
 			children = (
 				CA1472771AACECAF005FDCD1 /* octopus */,
-				CAFA2CE41CF37FF200C109D5 /* filters */,
-				CA91C2CC1B8DE63A00609FFA /* callers */,
+				CAFA2CE41CF37FF200C109D5 /* callset-filtering */,
+				CA91C2CC1B8DE63A00609FFA /* calling-engines */,
 				D413B0421B5D4E84007EFDE0 /* models */,
 				CAFA19771AC62BEB00F953D9 /* core */,
 				CABA377B1A8F66E400BBE598 /* utils */,
@@ -975,19 +963,7 @@
 			path = bin;
 			sourceTree = "<group>";
 		};
-		CAA4DC3B1A83B64A00DD3E9A /* allele-variant */ = {
-			isa = PBXGroup;
-			children = (
-				D4E41DA31AD81C390010D25D /* allele.hpp */,
-				D463C1A11B0A160000739A66 /* allele.cpp */,
-				CAA4DC621A88238C00DD3E9A /* variant.hpp */,
-				D463C1A31B0A174B00739A66 /* variant.cpp */,
-				CAB0DFDB1BBFF6D1001D2F99 /* candidate-generators */,
-			);
-			name = "allele-variant";
-			sourceTree = "<group>";
-		};
-		CAB0DFDB1BBFF6D1001D2F99 /* candidate-generators */ = {
+		CAB0DFDB1BBFF6D1001D2F99 /* candidate-generator */ = {
 			isa = PBXGroup;
 			children = (
 				CAF23F6D1BA17B47006B673F /* candidate_generators.hpp */,
@@ -1007,7 +983,158 @@
 				D44ADE751C43D89B00A854C6 /* candidate_generator_builder.hpp */,
 				D44ADE741C43D89B00A854C6 /* candidate_generator_builder.cpp */,
 			);
-			name = "candidate-generators";
+			name = "candidate-generator";
+			sourceTree = "<group>";
+		};
+		CAB7B6ED1D2DE78D0046C3E5 /* phaser */ = {
+			isa = PBXGroup;
+			children = (
+				CAB89DF81C78F5AF002D6F8E /* phaser.hpp */,
+				CAB89DF71C78F5AF002D6F8E /* phaser.cpp */,
+			);
+			name = phaser;
+			sourceTree = "<group>";
+		};
+		CAB7B6EE1D2DE7B20046C3E5 /* utils */ = {
+			isa = PBXGroup;
+			children = (
+				CACF81361C870E8300E9E6BD /* haplotype_filter.hpp */,
+				CACF81351C870E8300E9E6BD /* haplotype_filter.cpp */,
+			);
+			name = utils;
+			sourceTree = "<group>";
+		};
+		CAB7B6EF1D2DE8130046C3E5 /* individual */ = {
+			isa = PBXGroup;
+			children = (
+				D40B11A21CAEBC270050145D /* individual_caller.hpp */,
+				D40B11A11CAEBC270050145D /* individual_caller.cpp */,
+			);
+			name = individual;
+			sourceTree = "<group>";
+		};
+		CAB7B6F01D2DE8250046C3E5 /* population */ = {
+			isa = PBXGroup;
+			children = (
+				D4807FAF1BA826DB00657D4F /* population_caller.hpp */,
+				D4807FAE1BA826DB00657D4F /* population_caller.cpp */,
+			);
+			name = population;
+			sourceTree = "<group>";
+		};
+		CAB7B6F11D2DE8340046C3E5 /* cancer */ = {
+			isa = PBXGroup;
+			children = (
+				CAB0DFD61BBD5CA9001D2F99 /* cancer_genotype.hpp */,
+				CA2D59FD1CB972FE005EA347 /* cancer_genotype.cpp */,
+				D4807FB41BA9716700657D4F /* cancer_caller.hpp */,
+				D4807FB31BA9716700657D4F /* cancer_caller.cpp */,
+			);
+			name = cancer;
+			sourceTree = "<group>";
+		};
+		CAB7B6F21D2DE83A0046C3E5 /* trio */ = {
+			isa = PBXGroup;
+			children = (
+				D42F72EE1C5B8A4D00995F54 /* trio.hpp */,
+				D42F72ED1C5B8A4D00995F54 /* trio.cpp */,
+				D42F72FF1C621C4C00995F54 /* trio_caller.hpp */,
+				D42F72FE1C621C4C00995F54 /* trio_caller.cpp */,
+			);
+			name = trio;
+			sourceTree = "<group>";
+		};
+		CAB7B6F31D2DE8400046C3E5 /* pedigree */ = {
+			isa = PBXGroup;
+			children = (
+				CA53D3031C03B746009A216D /* pedigree.hpp */,
+				CA53D3021C03B746009A216D /* pedigree.cpp */,
+				CAD552E71BE3BC6E00362016 /* pedigree_caller.hpp */,
+				CAD552E61BE3BC6E00362016 /* pedigree_caller.cpp */,
+			);
+			name = pedigree;
+			sourceTree = "<group>";
+		};
+		CAB7B6F41D2DE85D0046C3E5 /* factory */ = {
+			isa = PBXGroup;
+			children = (
+				CAE7DC2C1C510905009411B6 /* variant_caller_factory.hpp */,
+				CAE7DC2B1C510905009411B6 /* variant_caller_factory.cpp */,
+				D44ADE721C43C22700A854C6 /* variant_caller_builder.hpp */,
+				D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */,
+			);
+			name = factory;
+			sourceTree = "<group>";
+		};
+		CAB7B6F71D2DEAF90046C3E5 /* mappable-types */ = {
+			isa = PBXGroup;
+			children = (
+				D4907F6A1A8BC06800639203 /* aligned_read.hpp */,
+				CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */,
+				D4E41DA31AD81C390010D25D /* allele.hpp */,
+				D463C1A11B0A160000739A66 /* allele.cpp */,
+				CAA4DC621A88238C00DD3E9A /* variant.hpp */,
+				D463C1A31B0A174B00739A66 /* variant.cpp */,
+				CAFA19631ABF75D400F953D9 /* haplotype.hpp */,
+				CAFA19621ABF75D400F953D9 /* haplotype.cpp */,
+				CAFA196D1AC1B4AF00F953D9 /* genotype.hpp */,
+				CAB0DFD91BBF035D001D2F99 /* genotype.cpp */,
+			);
+			name = "mappable-types";
+			sourceTree = "<group>";
+		};
+		CAB7B6F81D2DEBC80046C3E5 /* filter */ = {
+			isa = PBXGroup;
+			children = (
+				CAE3E2CC1AAB46BC00C01B2C /* read_filters.hpp */,
+				CA7148B51CD00ABA0017820B /* read_filters.cpp */,
+				CA28EBFA1AAC99D4009F8622 /* read_filter.hpp */,
+			);
+			name = filter;
+			sourceTree = "<group>";
+		};
+		CAB7B6F91D2DEBD80046C3E5 /* transform */ = {
+			isa = PBXGroup;
+			children = (
+				CA28EBF61AABDEE2009F8622 /* read_transform.hpp */,
+				CA487B241C42833000488577 /* read_transform.cpp */,
+				CA28EBF31AABA2FC009F8622 /* read_transformations.hpp */,
+				CA2D59F81CAEFB4B005EA347 /* read_transformations.cpp */,
+			);
+			name = transform;
+			sourceTree = "<group>";
+		};
+		CAB7B6FA1D2DEBF50046C3E5 /* downsample */ = {
+			isa = PBXGroup;
+			children = (
+				CA0D83ED1BD467BE0020366B /* downsampler.hpp */,
+				CA0D83EC1BD467BE0020366B /* downsampler.cpp */,
+			);
+			name = downsample;
+			sourceTree = "<group>";
+		};
+		CAB7B6FB1D2DECF90046C3E5 /* hmm */ = {
+			isa = PBXGroup;
+			children = (
+				D490E41E1C74CE1200883184 /* simd_pair_hmm.hpp */,
+				D490E41C1C74CE1200883184 /* simd_pair_hmm.cpp */,
+				D490E4251C74CE2300883184 /* pair_hmm.hpp */,
+				D490E41A1C74CE1200883184 /* pair_hmm.cpp */,
+				D48D2AE31BB5753F00C5596E /* haplotype_liklihood_model.hpp */,
+				D48D2AE21BB5753F00C5596E /* haplotype_liklihood_model.cpp */,
+			);
+			name = hmm;
+			sourceTree = "<group>";
+		};
+		CAB7B6FC1D2E6F170046C3E5 /* utils */ = {
+			isa = PBXGroup;
+			children = (
+				D490E41F1C74CE1200883184 /* kmer_mapping.hpp */,
+				D490E4201C74CE1200883184 /* kmer_mapping.cpp */,
+				D46F9EDC1C05D4E700DCC18D /* haplotype_likelihood_cache.hpp */,
+				D46F9EDB1C05D4E700DCC18D /* haplotype_likelihood_cache.cpp */,
+			);
+			name = utils;
 			sourceTree = "<group>";
 		};
 		CABA37791A8F668E00BBE598 /* reference */ = {
@@ -1028,7 +1155,7 @@
 			name = reference;
 			sourceTree = "<group>";
 		};
-		CABA377A1A8F66A300BBE598 /* reads */ = {
+		CABA377A1A8F66A300BBE598 /* read */ = {
 			isa = PBXGroup;
 			children = (
 				CABA37811A8FA49800BBE598 /* read_manager.hpp */,
@@ -1039,19 +1166,20 @@
 				CA03C1501A8C0D3D000D3494 /* htslib_sam_facade.hpp */,
 				CA03C14F1A8C0D3D000D3494 /* htslib_sam_facade.cpp */,
 			);
-			name = reads;
+			name = read;
 			sourceTree = "<group>";
 		};
 		CABA377B1A8F66E400BBE598 /* utils */ = {
 			isa = PBXGroup;
 			children = (
+				CA03C22B1A8D2C5D000D3494 /* cigar_string.hpp */,
+				CA386DA21B5AC2870057A5A8 /* cigar_string.cpp */,
 				D4907F731A8E255200639203 /* equitable.hpp */,
 				D4907F711A8E04B900639203 /* comparable.hpp */,
 				CA487B261C4318C100488577 /* type_tricks.hpp */,
 				D4F886511CE6046A005F9772 /* append.hpp */,
 				D463C18B1AEF7D2200739A66 /* map_utils.hpp */,
 				CAFA196A1AC0D0D500F953D9 /* maths.hpp */,
-				CAE3E2941A9CF97700C01B2C /* storage_policies.hpp */,
 				CAE3E2A01AA1D39100C01B2C /* compression.hpp */,
 				D44ADE771C452B9B00A854C6 /* compression.cpp */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.hpp */,
@@ -1059,7 +1187,6 @@
 				D4BB95001CA0590B00886B57 /* sequence_complexity.hpp */,
 				CA8A66451B7E5E0C008CE1D8 /* sequence_utils.hpp */,
 				CA53D3051C0A7881009A216D /* merge_transform.hpp */,
-				CA487AF11C1F06D600488577 /* mappable_debug.hpp */,
 				D4B69CC41C4FEF2700F3135B /* timing.hpp */,
 				CADA44321C6D41A800D432E8 /* matrix_map.hpp */,
 				CAE0A90A1C6384DC00F88871 /* probability_matrix.hpp */,
@@ -1108,17 +1235,17 @@
 			isa = PBXGroup;
 			children = (
 				CA2D59F71CABD865005EA347 /* mappable */,
-				D48C00B81AAA0F5300E76FC8 /* read */,
-				CAA4DC3B1A83B64A00DD3E9A /* allele-variant */,
-				D42F72F41C5BAADE00995F54 /* haplotype-genotype */,
-				D42F72F61C5BAB6D00995F54 /* common-calling-components */,
-				D42F72F51C5BAB2900995F54 /* caller-specific-components */,
+				CAB7B6F71D2DEAF90046C3E5 /* mappable-types */,
+				D48C00B81AAA0F5300E76FC8 /* read-processing */,
 				CABA377C1A8F762200BBE598 /* assembler */,
+				CAB0DFDB1BBFF6D1001D2F99 /* candidate-generator */,
+				D42F72F61C5BAB6D00995F54 /* haplotype-generator */,
+				CAB7B6ED1D2DE78D0046C3E5 /* phaser */,
 			);
 			name = core;
 			sourceTree = "<group>";
 		};
-		CAFA2CE41CF37FF200C109D5 /* filters */ = {
+		CAFA2CE41CF37FF200C109D5 /* callset-filtering */ = {
 			isa = PBXGroup;
 			children = (
 				CAFA2CEC1CF3ACA700C109D5 /* genotype_reader.hpp */,
@@ -1126,7 +1253,7 @@
 				CAE3B59D1CFE3E3E005EEDE6 /* variant_call_filter.hpp */,
 				CAE3B59C1CFE3E3E005EEDE6 /* variant_call_filter.cpp */,
 			);
-			name = filters;
+			name = "callset-filtering";
 			sourceTree = "<group>";
 		};
 		D402C5411CC9349C00C8B8A7 /* call-factory */ = {
@@ -1173,31 +1300,7 @@
 			name = "genotype-models";
 			sourceTree = "<group>";
 		};
-		D42F72F41C5BAADE00995F54 /* haplotype-genotype */ = {
-			isa = PBXGroup;
-			children = (
-				CAFA19631ABF75D400F953D9 /* haplotype.hpp */,
-				CAFA19621ABF75D400F953D9 /* haplotype.cpp */,
-				CAFA196D1AC1B4AF00F953D9 /* genotype.hpp */,
-				CAB0DFD91BBF035D001D2F99 /* genotype.cpp */,
-			);
-			name = "haplotype-genotype";
-			sourceTree = "<group>";
-		};
-		D42F72F51C5BAB2900995F54 /* caller-specific-components */ = {
-			isa = PBXGroup;
-			children = (
-				CAB0DFD61BBD5CA9001D2F99 /* cancer_genotype.hpp */,
-				CA2D59FD1CB972FE005EA347 /* cancer_genotype.cpp */,
-				D42F72EE1C5B8A4D00995F54 /* trio.hpp */,
-				D42F72ED1C5B8A4D00995F54 /* trio.cpp */,
-				CA53D3031C03B746009A216D /* pedigree.hpp */,
-				CA53D3021C03B746009A216D /* pedigree.cpp */,
-			);
-			name = "caller-specific-components";
-			sourceTree = "<group>";
-		};
-		D42F72F61C5BAB6D00995F54 /* common-calling-components */ = {
+		D42F72F61C5BAB6D00995F54 /* haplotype-generator */ = {
 			isa = PBXGroup;
 			children = (
 				CAFA195A1ABF3DF400F953D9 /* haplotype_tree.hpp */,
@@ -1206,10 +1309,8 @@
 				CA0D83E61BD2B0210020366B /* genome_walker.cpp */,
 				CAB89DF51C78D95F002D6F8E /* haplotype_generator.hpp */,
 				CAB89DF41C78D95F002D6F8E /* haplotype_generator.cpp */,
-				CAB89DF81C78F5AF002D6F8E /* phaser.hpp */,
-				CAB89DF71C78F5AF002D6F8E /* phaser.cpp */,
 			);
-			name = "common-calling-components";
+			name = "haplotype-generator";
 			sourceTree = "<group>";
 		};
 		D42F72F71C5BAC3100995F54 /* read-error-models */ = {
@@ -1217,16 +1318,8 @@
 			children = (
 				CA704FC11D11F488004218BB /* snv_error_models */,
 				D482E0081D0EB8E80096A269 /* indel_error_models */,
-				D490E41F1C74CE1200883184 /* kmer_mapping.hpp */,
-				D490E4201C74CE1200883184 /* kmer_mapping.cpp */,
-				D490E41E1C74CE1200883184 /* simd_pair_hmm.hpp */,
-				D490E41C1C74CE1200883184 /* simd_pair_hmm.cpp */,
-				D490E4251C74CE2300883184 /* pair_hmm.hpp */,
-				D490E41A1C74CE1200883184 /* pair_hmm.cpp */,
-				D48D2AE31BB5753F00C5596E /* haplotype_liklihood_model.hpp */,
-				D48D2AE21BB5753F00C5596E /* haplotype_liklihood_model.cpp */,
-				D46F9EDC1C05D4E700DCC18D /* haplotype_likelihood_cache.hpp */,
-				D46F9EDB1C05D4E700DCC18D /* haplotype_likelihood_cache.cpp */,
+				CAB7B6FB1D2DECF90046C3E5 /* hmm */,
+				CAB7B6FC1D2E6F170046C3E5 /* utils */,
 			);
 			name = "read-error-models";
 			sourceTree = "<group>";
@@ -1261,37 +1354,25 @@
 			name = indel_error_models;
 			sourceTree = "<group>";
 		};
-		D48C00B81AAA0F5300E76FC8 /* read */ = {
+		D48C00B81AAA0F5300E76FC8 /* read-processing */ = {
 			isa = PBXGroup;
 			children = (
-				CA03C22B1A8D2C5D000D3494 /* cigar_string.hpp */,
-				CA386DA21B5AC2870057A5A8 /* cigar_string.cpp */,
-				D4907F6A1A8BC06800639203 /* aligned_read.hpp */,
-				CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */,
-				CA0C55C21C5FC8A9009F3704 /* aligned_read_builder.hpp */,
-				CA0C55C11C5FC8A9009F3704 /* aligned_read_builder.cpp */,
-				CAE3E2CC1AAB46BC00C01B2C /* read_filters.hpp */,
-				CA7148B51CD00ABA0017820B /* read_filters.cpp */,
-				CA28EBFA1AAC99D4009F8622 /* read_filter.hpp */,
-				CA28EBF61AABDEE2009F8622 /* read_transform.hpp */,
-				CA487B241C42833000488577 /* read_transform.cpp */,
-				CA28EBF31AABA2FC009F8622 /* read_transformations.hpp */,
-				CA2D59F81CAEFB4B005EA347 /* read_transformations.cpp */,
+				CAB7B6F91D2DEBD80046C3E5 /* transform */,
+				CAB7B6F81D2DEBC80046C3E5 /* filter */,
+				CAB7B6FA1D2DEBF50046C3E5 /* downsample */,
 				CAD5EC091AD6FD1E00892816 /* read_utils.hpp */,
 				CAD5EC081AD6FD1E00892816 /* read_utils.cpp */,
-				CA0D83ED1BD467BE0020366B /* downsampler.hpp */,
-				CA0D83EC1BD467BE0020366B /* downsampler.cpp */,
 				CA0D83EA1BD466F40020366B /* read_pipe.hpp */,
 				CA0D83E91BD466F40020366B /* read_pipe.cpp */,
 			);
-			name = read;
+			name = "read-processing";
 			sourceTree = "<group>";
 		};
 		D4907F421A88D6C600639203 /* io */ = {
 			isa = PBXGroup;
 			children = (
 				CABA37791A8F668E00BBE598 /* reference */,
-				CABA377A1A8F66A300BBE598 /* reads */,
+				CABA377A1A8F66A300BBE598 /* read */,
 				CAE3E2A51AA24D6000C01B2C /* variant */,
 			);
 			name = io;
@@ -1418,7 +1499,6 @@
 				CA386D9D1B5AA3C80057A5A8 /* reference_genome.cpp in Sources */,
 				D42061161ACC3DA500D11553 /* fixed_ploidy_genotype_likelihood_model.cpp in Sources */,
 				D4A04BD41CBD205100193D63 /* somatic_mutation_model.cpp in Sources */,
-				CA0C55C31C5FC8A9009F3704 /* aligned_read_builder.cpp in Sources */,
 				CAFA195B1ABF3DF400F953D9 /* haplotype_tree.cpp in Sources */,
 				D48D2AE41BB5753F00C5596E /* haplotype_liklihood_model.cpp in Sources */,
 				D42061181ACC418500D11553 /* error_model_tests.cpp in Sources */,

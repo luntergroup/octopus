@@ -44,14 +44,17 @@ public:
     
     class ShortHaplotypeError;
     
-    using MapPositionItr = std::vector<std::size_t>::const_iterator;
+    using MappingPosition       = std::size_t;
+    using MappingPositionVector = std::vector<MappingPosition>;
+    using MappingPositionItr    = MappingPositionVector::const_iterator;
     
     HaplotypeLikelihoodModel();
     
     HaplotypeLikelihoodModel(SnvErrorModel snv_model, IndelErrorModel indel_model);
     
     HaplotypeLikelihoodModel(SnvErrorModel snv_model, IndelErrorModel indel_model,
-                             const Haplotype& haplotype, boost::optional<FlankState> flank_state);
+                             const Haplotype& haplotype,
+                             boost::optional<FlankState> flank_state = boost::none);
     
     ~HaplotypeLikelihoodModel() = default;
     
@@ -60,13 +63,19 @@ public:
     HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)                 = default;
     HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
     
-    void reset(const Haplotype& haplotype, boost::optional<FlankState> flank_state);
+    void reset(const Haplotype& haplotype, boost::optional<FlankState> flank_state = boost::none);
     void clear() noexcept;
     
     // ln p(read | haplotype, model)
+    
+    double log_probability(const AlignedRead& read) const;
+    
     double log_probability(const AlignedRead& read,
-                           MapPositionItr first_mapping_position,
-                           MapPositionItr last_mapping_position) const;
+                           const MappingPositionVector& mapping_positions) const;
+    
+    double log_probability(const AlignedRead& read,
+                           MappingPositionItr first_mapping_position,
+                           MappingPositionItr last_mapping_position) const;
     
 private:
     SnvErrorModel snv_error_model_;

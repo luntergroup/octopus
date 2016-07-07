@@ -222,6 +222,14 @@ void prune_unique(const Container& haplotypes, HaplotypeTree& tree)
     }
 }
 
+template <typename Container>
+void splice(const Container& haplotypes, HaplotypeTree& tree)
+{
+    for (const auto& haplotype : haplotypes) {
+        tree.splice(haplotype);
+    }
+}
+
 template <typename InputIt>
 std::vector<Haplotype>
 generate_all_haplotypes(InputIt first, InputIt last, const ReferenceGenome& reference)

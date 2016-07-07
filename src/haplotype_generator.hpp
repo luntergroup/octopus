@@ -13,7 +13,7 @@
 #include <tuple>
 #include <functional>
 #include <utility>
-#include <unordered_set>
+#include <stack>
 #include <stdexcept>
 
 #include <boost/optional.hpp>
@@ -34,26 +34,28 @@ namespace Octopus
 class HaplotypeGenerator
 {
 public:
-    enum class LaggingPolicy { None, Conservative, Aggressive };
-    
-    struct HaplotypeLimits
+    struct Policies
     {
-        unsigned soft_max, holdout_max, hard_max;
+        enum class Lagging { None, Conservative, Aggressive } lagging = Lagging::None;
+        
+        struct HaplotypeLimits { unsigned target, holdout, overflow; } haplotype_limits;
+        
+        unsigned max_holdout_depth = 2;
     };
     
-    class HaplotypeOverflowError;
-    
+    class HaplotypeOverflow;
     class Builder;
     
-    using HaplotypePacket = std::tuple<std::vector<Haplotype>, GenomicRegion, bool>;
+    using HaplotypePacket = std::pair<std::vector<Haplotype>, GenomicRegion>;
     
     HaplotypeGenerator() = delete;
     
-    HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
-                       const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
-                       HaplotypeLimits haplotype_limits,
-                       LaggingPolicy lagging = LaggingPolicy::None,
-                       Haplotype::SizeType min_pad = 30);
+    HaplotypeGenerator(const GenomicRegion& window,
+                       const ReferenceGenome& reference,
+                       const MappableFlatSet<Variant>& candidates,
+                       const ReadMap& reads,
+                       Policies policies,
+                       Haplotype::SizeType min_flank_pad = 30);
     
     ~HaplotypeGenerator() = default;
     
@@ -62,13 +64,13 @@ public:
     HaplotypeGenerator(HaplotypeGenerator&&)                 = default;
     HaplotypeGenerator& operator=(HaplotypeGenerator&&)      = default;
     
-    GenomicRegion tell_next_active_region() const;
+    HaplotypePacket generate();
     
-    void progress(GenomicRegion to);
+    GenomicRegion peek_next_active_region() const;
+    
+    void force_progress(GenomicRegion to);
     
     void stop() noexcept;
-    
-    HaplotypePacket generate();
     
     bool removal_has_impact() const;
     unsigned max_removal_impact() const;
@@ -77,26 +79,29 @@ public:
     template <typename Container> void remove(const Container& haplotypes);
     
 private:
+    Policies policies_;
+    Haplotype::SizeType min_flank_pad_;
+    
     HaplotypeTree tree_;
     GenomeWalker walker_;
     boost::optional<GenomeWalker> lagged_walker_;
     
-    HaplotypeLimits haplotype_limits_;
-    
-    Haplotype::SizeType min_pad_ = 30;
-    
     MappableFlatSet<Allele> alleles_;
     std::reference_wrapper<const ReadMap> reads_;
     
-    GenomicRegion current_active_region_;
-    
+    GenomicRegion active_region_;
     mutable boost::optional<GenomicRegion> next_active_region_;
     
-    mutable MappableFlatSet<Allele> holdout_set_;
-    mutable boost::optional<GenomicRegion> current_holdout_region_;
-    mutable std::unordered_set<GenomicRegion> previous_holdout_regions_;
+    struct HoldoutSet
+    {
+        std::vector<Allele> alleles;
+        GenomicRegion region;
+    };
     
-    boost::optional<Allele> rightmost_allele_;
+    mutable std::stack<HoldoutSet> active_holdouts_;
+    mutable boost::optional<GenomicRegion> holdout_region_;
+    
+    Allele rightmost_allele_;
     
     bool is_lagging_enabled() const noexcept;
     bool is_active_region_lagged() const;
@@ -104,25 +109,31 @@ private:
     void reset_next_active_region() const noexcept;
     void update_next_active_region() const;
     
-    void set_holdout_set(const GenomicRegion& active_region);
-    bool try_reintroducing_holdout_set();
+    void progress(GenomicRegion to);
+    
+    bool in_holdout_mode() const noexcept;
+    bool can_extract_holdouts(const GenomicRegion& region) const noexcept;
+    void extract_holdouts(const GenomicRegion& region);
+    bool can_reintroduce_holdouts() const noexcept;
+    void reintroduce_holdouts();
     
     GenomicRegion calculate_haplotype_region() const;
 };
 
-class HaplotypeGenerator::HaplotypeOverflowError : public std::runtime_error
+class HaplotypeGenerator::HaplotypeOverflow : public std::runtime_error
 {
 public:
-    HaplotypeOverflowError(GenomicRegion region);
+    HaplotypeOverflow(GenomicRegion region, unsigned size);
     
     virtual const char* what() const noexcept override;
     
     const GenomicRegion& region() const noexcept;
     
-    unsigned overflow_size() const noexcept;
+    unsigned size() const noexcept;
     
 private:
     GenomicRegion region_;
+    unsigned size_;
     std::string message_;
 };
 
@@ -162,29 +173,35 @@ void HaplotypeGenerator::remove(const Container& haplotypes)
 class HaplotypeGenerator::Builder
 {
 public:
-    using LaggingPolicy = HaplotypeGenerator::LaggingPolicy;
+    using Policies = HaplotypeGenerator::Policies;
     
     Builder() = default;
-    
-    ~Builder() = default;
     
     Builder(const Builder&)            = default;
     Builder& operator=(const Builder&) = default;
     Builder(Builder&&)                 = default;
     Builder& operator=(Builder&&)      = default;
     
-    Builder& set_soft_max_haplotypes(unsigned n) noexcept;
-    Builder& set_hard_max_haplotypes(unsigned n) noexcept;
-    Builder& set_lagging_policy(LaggingPolicy policy) noexcept;
-    Builder& set_min_pad(Haplotype::SizeType val) noexcept;
+    ~Builder() = default;
     
-    HaplotypeGenerator build(const ReferenceGenome& reference, const GenomicRegion& window,
-                             const MappableFlatSet<Variant>& candidates, const ReadMap& reads) const;
+    Builder& set_lagging_policy(Policies::Lagging policy) noexcept;
+    
+    Builder& set_target_limit(unsigned n) noexcept;
+    Builder& set_holdout_limit(unsigned n) noexcept;
+    Builder& set_overflow_limit(unsigned n) noexcept;
+    
+    Builder& set_max_holdout_depth(unsigned n) noexcept;
+    
+    Builder& set_min_flank_pad(Haplotype::SizeType n) noexcept;
+    
+    HaplotypeGenerator build(const ReferenceGenome& reference,
+                             const GenomicRegion& window,
+                             const MappableFlatSet<Variant>& candidates,
+                             const ReadMap& reads) const;
     
 private:
-    HaplotypeGenerator::HaplotypeLimits haplotype_limits_ = {128, 2048, 16384};
-    LaggingPolicy lagging_policy_ = LaggingPolicy::None;
-    Haplotype::SizeType min_pad_ = 30;
+    Policies policies_;
+    Haplotype::SizeType min_flank_pad_ = 30;
 };
 } // namespace Octopus
 

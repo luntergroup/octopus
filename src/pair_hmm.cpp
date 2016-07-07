@@ -75,7 +75,8 @@ namespace debug
 
 auto simd_align(const std::string& truth, const std::string& target,
                 const std::vector<std::uint8_t>& target_qualities,
-                const std::size_t target_offset, const Model& model)
+                const std::size_t target_offset,
+                const Model& model)
 {
     constexpr auto Pad = static_cast<int>(SimdPairHmm::min_flank_pad());
     
@@ -93,9 +94,9 @@ auto simd_align(const std::string& truth, const std::string& target,
         const auto score = SimdPairHmm::align(truth.data() + alignment_offset, target.data(),
                                               qualities,
                                               truth_alignment_size, static_cast<int>(target.size()),
-                                              model.snv_mask.get().data() + alignment_offset,
-                                              model.snv_priors.get().data() + alignment_offset,
-                                              model.gap_open_penalties.get().data() + alignment_offset,
+                                              model.snv_mask.data() + alignment_offset,
+                                              model.snv_priors.data() + alignment_offset,
+                                              model.gap_open_penalties.data() + alignment_offset,
                                               model.gap_extend, model.nuc_prior);
         
         return -ln_10_div_10 * static_cast<double>(score);
@@ -119,9 +120,9 @@ auto simd_align(const std::string& truth, const std::string& target,
                                           qualities,
                                           truth_alignment_size,
                                           static_cast<int>(target.size()),
-                                          model.snv_mask.get().data() + alignment_offset,
-                                          model.snv_priors.get().data() + alignment_offset,
-                                          model.gap_open_penalties.get().data() + alignment_offset,
+                                          model.snv_mask.data() + alignment_offset,
+                                          model.snv_priors.data() + alignment_offset,
+                                          model.gap_open_penalties.data() + alignment_offset,
                                           model.gap_extend, model.nuc_prior,
                                           align1.data(), align2.data(), &first_pos);
     
@@ -151,9 +152,9 @@ auto simd_align(const std::string& truth, const std::string& target,
     const auto flank_score = SimdPairHmm::calculate_flank_score(truth_alignment_size,
                                                                 lhs_flank_size, rhs_flank_size,
                                                                 target.data(), qualities,
-                                                                model.snv_mask.get().data() + alignment_offset,
-                                                                model.snv_priors.get().data() + alignment_offset,
-                                                                model.gap_open_penalties.get().data() + alignment_offset,
+                                                                model.snv_mask.data() + alignment_offset,
+                                                                model.snv_priors.data() + alignment_offset,
+                                                                model.gap_open_penalties.data() + alignment_offset,
                                                                 model.gap_extend, model.nuc_prior,
                                                                 first_pos,
                                                                 align1.data(), align2.data());
@@ -168,22 +169,35 @@ unsigned min_flank_pad() noexcept
     return SimdPairHmm::min_flank_pad();
 }
 
+void validate(const std::string& truth, const std::string& target,
+              const std::vector<std::uint8_t>& target_qualities,
+              const std::size_t target_offset,
+              const Model& model)
+{
+    if (target.size() != target_qualities.size()) {
+        throw std::invalid_argument {"PairHMM::align: target size not equal to target qualities length"};
+    }
+    if (truth.size() != model.snv_priors.size()) {
+        throw std::invalid_argument {"PairHMM::align: truth size not equal to snv priors length"};
+    }
+    if (truth.size() != model.gap_open_penalties.size()) {
+        throw std::invalid_argument {"PairHMM::align: truth size not equal to gap open penalties length"};
+    }
+    if (target_offset + target.size() > truth.size()) {
+        throw std::invalid_argument {"PairHMM::align: target is not contained by truth"};
+    }
+}
+
 double align(const std::string& truth, const std::string& target,
              const std::vector<std::uint8_t>& target_qualities,
-             const std::size_t target_offset, const Model& model)
+             const std::size_t target_offset,
+             const Model& model)
 {
     using std::cbegin; using std::cend; using std::next; using std::distance;
     
     static constexpr auto Ln_probability = make_phred_to_ln_prob_lookup<std::uint8_t>();
     
-    assert(target.size() == target_qualities.size());
-    assert(truth.size() == model.snv_priors.get().size());
-    assert(truth.size() == model.gap_open_penalties.get().size());
-    assert(std::max(truth.size(), target.size()) > target_offset);
-    
-    if (target_offset + target.size() > truth.size()) {
-        return std::numeric_limits<double>::lowest();
-    }
+    validate(truth, target, target_qualities, target_offset, model);
     
     const auto offsetted_truth_begin_itr = next(cbegin(truth), target_offset);
     
@@ -207,17 +221,17 @@ double align(const std::string& truth, const std::string& target,
         
         auto mispatch_penalty = target_qualities[target_index];
         
-        if (model.snv_mask.get()[truth_index] == *m1.first) {
+        if (model.snv_mask[truth_index] == *m1.first) {
             mispatch_penalty = std::min(target_qualities[target_index],
-                                        static_cast<std::uint8_t>(model.snv_priors.get()[truth_index]));
+                                        static_cast<std::uint8_t>(model.snv_priors[truth_index]));
         }
         
-        if (mispatch_penalty <= model.gap_open_penalties.get()[truth_index]
+        if (mispatch_penalty <= model.gap_open_penalties[truth_index]
             || !std::equal(next(m1.first), cend(target), m1.second)) {
             return Ln_probability[mispatch_penalty];
         }
         
-        return Ln_probability[model.gap_open_penalties.get()[truth_index]];
+        return Ln_probability[model.gap_open_penalties[truth_index]];
     }
     
     // TODO: we should be able to optimise the alignment based of the first mismatch postition
