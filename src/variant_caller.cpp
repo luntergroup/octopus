@@ -383,7 +383,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         reads = read_pipe_.get().fetch_reads(extract_regions(candidates));
     }
     
-    auto haplotype_generator   = make_haplotype_generator(candidate_region, candidates, reads);
+    auto haplotype_generator   = make_haplotype_generator(candidates, reads);
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
     const auto record_factory  = make_record_factory(reads);
     
@@ -534,7 +534,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             
             active_region = right_overhang_region(active_region, phase_set->region);
             
-            haplotype_generator.progress(active_region);
+            haplotype_generator.force_progress(active_region);
         } else {
             if (has_removal_impact) { // if there was no impact before then there can't be now either
                 has_removal_impact = haplotype_generator.removal_has_impact();
@@ -655,11 +655,10 @@ MappableFlatSet<Variant> VariantCaller::generate_candidates(const GenomicRegion&
     };
 }
 
-HaplotypeGenerator VariantCaller::make_haplotype_generator(const GenomicRegion& region,
-                                                           const MappableFlatSet<Variant>& candidates,
+HaplotypeGenerator VariantCaller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
                                                            const ReadMap& reads) const
 {
-    return haplotype_generator_builder_.build(reference_, region, candidates, reads);
+    return haplotype_generator_builder_.build(reference_, candidates, reads);
 }
 
 HaplotypeLikelihoodCache VariantCaller::make_haplotype_likelihood_cache() const

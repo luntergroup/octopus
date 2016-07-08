@@ -190,13 +190,13 @@ namespace Octopus
             return file_samples;
         }
     }
-        
+    
     using CallTypeSet = std::set<std::type_index>;
     
-    VcfHeader make_header(const std::vector<SampleIdType>& samples,
-                          const std::vector<GenomicRegion::ContigNameType>& contigs,
-                          const ReferenceGenome& reference,
-                          const CallTypeSet& call_types)
+    VcfHeader make_vcf_header(const std::vector<SampleIdType>& samples,
+                              const std::vector<GenomicRegion::ContigNameType>& contigs,
+                              const ReferenceGenome& reference,
+                              const CallTypeSet& call_types)
     {
         auto builder = Vcf::make_octopus_header_template().set_samples(samples);
         
@@ -218,13 +218,13 @@ namespace Octopus
         return builder.build_once();
     }
     
-    VcfHeader make_header(const std::vector<SampleIdType>& samples,
-                          const GenomicRegion::ContigNameType& contig,
-                          const ReferenceGenome& reference,
-                          const CallTypeSet& call_types)
+    VcfHeader make_vcf_header(const std::vector<SampleIdType>& samples,
+                              const GenomicRegion::ContigNameType& contig,
+                              const ReferenceGenome& reference,
+                              const CallTypeSet& call_types)
     {
-        return make_header(samples, std::vector<GenomicRegion::ContigNameType> {contig},
-                           reference, call_types);
+        return make_vcf_header(samples, std::vector<GenomicRegion::ContigNameType> {contig},
+                               reference, call_types);
     }
     
     GenomicRegion::SizeType calculate_total_search_size(const InputRegionMap& regions)
@@ -641,10 +641,10 @@ namespace Octopus
         const auto call_types = get_call_types(components, components.contigs_in_output_order());
         
         if (sites_only) {
-            components.output() << make_header({}, components.contigs_in_output_order(),
+            components.output() << make_vcf_header({}, components.contigs_in_output_order(),
                                                    components.reference(), call_types);
         } else {
-            components.output() << make_header(components.samples(),
+            components.output() << make_vcf_header(components.samples(),
                                                    components.contigs_in_output_order(),
                                                    components.reference(), call_types);
         }
@@ -790,7 +790,7 @@ namespace Octopus
         
         const auto call_types = get_call_types(components, {region.contig_name()});
         
-        auto header = make_header(components.samples(), contig, components.reference(), call_types);
+        auto header = make_vcf_header(components.samples(), contig, components.reference(), call_types);
         
         return VcfWriter {std::move(path), std::move(header)};
     }
@@ -1007,6 +1007,9 @@ namespace Octopus
     void run_octopus_multi_threaded(GenomeCallingComponents& components)
     {
         const auto num_task_threads = calculate_num_task_threads(components);
+        
+        // TODO: start running tasks as soon as they are added into the task map,
+        // this will require some additional syncronisation on the task map
         
         auto tasks = make_tasks(components, num_task_threads);
         

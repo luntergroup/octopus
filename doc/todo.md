@@ -29,3 +29,7 @@
 
 - [] Remove ReferenceGenome dependency from Haplotype
 - [] Make Genotype::operator[] version non const so can modify in place
+
+## Testing
+
+- [] In dire need of proper unit testing

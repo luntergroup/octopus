@@ -38,7 +38,7 @@ public:
     {
         enum class Lagging { None, Conservative, Aggressive } lagging = Lagging::None;
         
-        struct HaplotypeLimits { unsigned target, holdout, overflow; } haplotype_limits;
+        struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         
         unsigned max_holdout_depth = 2;
     };
@@ -50,8 +50,7 @@ public:
     
     HaplotypeGenerator() = delete;
     
-    HaplotypeGenerator(const GenomicRegion& window,
-                       const ReferenceGenome& reference,
+    HaplotypeGenerator(const ReferenceGenome& reference,
                        const MappableFlatSet<Variant>& candidates,
                        const ReadMap& reads,
                        Policies policies,
@@ -94,6 +93,9 @@ private:
     
     struct HoldoutSet
     {
+        template <typename InputIt>
+        HoldoutSet(InputIt first, InputIt last, GenomicRegion region)
+        : alleles {first, last}, region {std::move(region)} {}
         std::vector<Allele> alleles;
         GenomicRegion region;
     };
@@ -116,6 +118,7 @@ private:
     void extract_holdouts(const GenomicRegion& region);
     bool can_reintroduce_holdouts() const noexcept;
     void reintroduce_holdouts();
+    void clear_holdouts() noexcept;
     
     GenomicRegion calculate_haplotype_region() const;
 };
@@ -158,12 +161,12 @@ void HaplotypeGenerator::remove(const Container& haplotypes)
     
     if (!is_active_region_lagged() || haplotypes.size() == tree_.num_haplotypes()) {
         tree_.clear();
-        if (holdout_set_.empty()) {
-            alleles_.erase_overlapped(current_active_region_);
+        if (!in_holdout_mode()) {
+            alleles_.erase_overlapped(active_region_);
         } else {
             // TODO: in this case we must be more selective and only erase those alleles
             // which are not present in the remaining haplotype set
-            alleles_.erase_overlapped(current_active_region_);
+            alleles_.erase_overlapped(active_region_);
         }
     } else {
         prune_all(haplotypes, tree_);
@@ -195,7 +198,6 @@ public:
     Builder& set_min_flank_pad(Haplotype::SizeType n) noexcept;
     
     HaplotypeGenerator build(const ReferenceGenome& reference,
-                             const GenomicRegion& window,
                              const MappableFlatSet<Variant>& candidates,
                              const ReadMap& reads) const;
     

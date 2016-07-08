@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        //"--debug",
+        "--debug",
         //"--trace",
         
         //"--sites-only",
@@ -81,14 +81,14 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
+        "--regions", "22:41,122,220-41,122,829",
+        
         //"--use-one-based-indexing",
         
         //"--regions", "22:22,583,864-22,584,168", // FN
         //"--regions", "22:40,015,775-40,016,384", // FP
         //"--regions", "22:48,744,696-48,744,879", // difficult region (FPs)
         //"--regions", "22:47,416,419-47,417,744", // bad model filtering
-        
-        "--regions", "22:19,654,953-19,664,721",
         
         //"--regions-file", "data/NA12878_GIAB_highconf_regions_big_expanded.bed",
         //"--regions-file", "data/NA12878_GIAB_chr22_highconf_regions_big_expanded.bed",

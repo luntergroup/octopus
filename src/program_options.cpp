@@ -746,7 +746,7 @@ namespace Octopus
         // TODO
     }
     
-    boost::optional<std::string> convert_bed_line_to_region_str(const std::string& bed_line)
+    std::string convert_bed_line_to_region_str(const std::string& bed_line)
     {
         constexpr static char bed_delim {'\t'};
         
@@ -754,36 +754,31 @@ namespace Octopus
         
         switch (tokens.size()) {
             case 0:
-                return boost::none;
+                throw std::runtime_error {"BadBED: found empty BED record"};
             case 1:
                 return std::string {tokens[0]};
             case 2:
-                // Assume this represents a half range rather than a point
+                // Assume this represents a half range rather than a position
                 return std::string {tokens[0] + ':' + tokens[1] + '-'};
             default:
                 return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
         }
     }
     
-    std::function<boost::optional<GenomicRegion>(const std::string&)>
+    std::function<GenomicRegion(const std::string&)>
     make_region_line_parser(const fs::path& region_path, const ReferenceGenome& reference)
     {
         if (is_bed_file(region_path)) {
-            return [&] (const std::string& line) -> boost::optional<GenomicRegion>
+            return [&] (const std::string& line) -> GenomicRegion
             {
-                auto region_str = convert_bed_line_to_region_str(line);
-                if (region_str) {
-                    return parse_region(*std::move(region_str), reference);
-                }
-                return boost::none;
+                return parse_region(convert_bed_line_to_region_str(line), reference);
             };
         } else {
             return [&] (const std::string& line) { return parse_region(line, reference); };
         }
     }
     
-    std::vector<GenomicRegion> extract_regions_from_file(const fs::path& file_path,
-                                                         const ReferenceGenome& reference)
+    auto extract_regions_from_file(const fs::path& file_path, const ReferenceGenome& reference)
     {
         std::ifstream file {file_path.string()};
         
@@ -791,22 +786,11 @@ namespace Octopus
             seek_past_bed_header(file);
         }
         
-        std::vector<boost::optional<GenomicRegion>> parsed_lines {};
+        std::deque<GenomicRegion> result {};
         
         std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
-                       std::back_inserter(parsed_lines),
+                       std::back_inserter(result),
                        make_region_line_parser(file_path, reference));
-        
-        file.close();
-        
-        std::vector<GenomicRegion> result {};
-        result.reserve(parsed_lines.size());
-        
-        for (auto&& region : parsed_lines) {
-            if (region) {
-                result.push_back(*std::move(region));
-            }
-        }
         
         result.shrink_to_fit();
         
@@ -1576,27 +1560,26 @@ namespace Octopus
                                                      const InputRegionMap& regions,
                                                      const po::variables_map& options)
     {
-        using Maths::phred_to_probability;
+        using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
         
-        HaplotypeGenerator::Builder hg_builder;
-        
-        hg_builder.set_soft_max_haplotypes(options.at("max-haplotypes").as<unsigned>());
-        
-        HaplotypeGenerator::Builder::LaggingPolicy lagging_policy;
-        
+        LaggingPolicy lagging_policy;
         switch (options.at("phasing-level").as<PhasingLevel>()) {
             case PhasingLevel::Minimal:
-                lagging_policy = HaplotypeGenerator::Builder::LaggingPolicy::None;
+                lagging_policy = LaggingPolicy::None;
                 break;
             case PhasingLevel::Conservative:
-                lagging_policy = HaplotypeGenerator::Builder::LaggingPolicy::Conservative;
+                lagging_policy = LaggingPolicy::Conservative;
                 break;
             case PhasingLevel::Aggressive:
-                lagging_policy = HaplotypeGenerator::Builder::LaggingPolicy::Aggressive;
+                lagging_policy = LaggingPolicy::Aggressive;
                 break;
         }
         
-        hg_builder.set_lagging_policy(lagging_policy);
+        const auto max_haplotypes = options.at("max-haplotypes").as<unsigned>();
+        
+        auto hg_builder = HaplotypeGenerator::Builder()
+            .set_target_limit(max_haplotypes).set_holdout_limit(2048).set_overflow_limit(16384)
+            .set_lagging_policy(lagging_policy).set_max_holdout_depth(3);
         
         VariantCallerBuilder vc_builder {
             reference, read_pipe, candidate_generator_builder, std::move(hg_builder)

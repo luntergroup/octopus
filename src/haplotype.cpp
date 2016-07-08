@@ -44,9 +44,29 @@ const GenomicRegion& Haplotype::mapped_region() const
 
 bool Haplotype::contains(const ContigAllele& allele) const
 {
-    using std::cbegin; using std::cend;
-    
     if (::contains(region_.contig_region(), allele)) {
+        if (begins_before(allele, explicit_allele_region_)) {
+            if (is_before(allele, explicit_allele_region_)) {
+                return allele.sequence() == fetch_reference_sequence(contig_region(allele));
+            }
+            const auto flank_region = left_overhang_region(explicit_allele_region_, contig_region(allele));
+            if (splice(allele, flank_region).sequence() != fetch_reference_sequence(flank_region)) {
+                return false;
+            }
+        }
+        
+        if (ends_before(explicit_allele_region_, allele)) {
+            if (is_after(allele, explicit_allele_region_)) {
+                return allele.sequence() == fetch_reference_sequence(contig_region(allele));
+            }
+            const auto flank_region = right_overhang_region(contig_region(allele), explicit_allele_region_);
+            if (splice(allele, flank_region).sequence() != fetch_reference_sequence(flank_region)) {
+                return false;
+            }
+        }
+        
+        using std::cbegin; using std::cend;
+        
         const auto it = std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
                                          allele.mapped_region());
         
@@ -57,9 +77,8 @@ bool Haplotype::contains(const ContigAllele& allele) const
                 // If the allele is not explcitly contained but the region is then it must be a different
                 // allele, unless it is an insertion, in which case we must check the sequence
                 if (is_insertion(allele)) {
-                    const auto it = std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
-                                                     allele.mapped_region());
-                    return ::contains(*it, allele);
+                    return ::contains(*std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
+                                                        allele.mapped_region()), allele);
                 }
                 
                 return false;
@@ -112,15 +131,12 @@ bool is_in_reference_flank(const ContigRegion& region, const ContigRegion& expli
     if (overlaps(region, explicit_allele_region_)) {
         return false;
     }
-    
     if (!are_adjacent(region, explicit_allele_region_)) {
         return true;
     }
-    
     if (begins_before(region, explicit_allele_region_)) {
         return !is_insertion(explicit_alleles.front());
     }
-    
     return !is_insertion(explicit_alleles.back());
 }
 
@@ -289,11 +305,11 @@ void Haplotype::Builder::push_back(const ContigAllele& allele)
             throw std::logic_error {"Haplotype::push_back called with out-of-order Allele"};
         }
         if (!are_adjacent(explicit_alleles_.back(), allele)) {
-            explicit_alleles_.emplace_back(get_intervening_reference_allele(explicit_alleles_.back(), allele));
+            explicit_alleles_.push_back(get_intervening_reference_allele(explicit_alleles_.back(), allele));
         }
     }
     update_region(allele);
-    explicit_alleles_.emplace_back(allele);
+    explicit_alleles_.push_back(allele);
 }
 
 void Haplotype::Builder::push_back(ContigAllele&& allele)
@@ -303,11 +319,11 @@ void Haplotype::Builder::push_back(ContigAllele&& allele)
             throw std::logic_error {"Haplotype::push_back called with out-of-order Allele"};
         }
         if (!are_adjacent(explicit_alleles_.back(), allele)) {
-            explicit_alleles_.emplace_back(get_intervening_reference_allele(explicit_alleles_.back(), allele));
+            explicit_alleles_.push_back(get_intervening_reference_allele(explicit_alleles_.back(), allele));
         }
     }
     update_region(allele);
-    explicit_alleles_.emplace_back(std::move(allele));
+    explicit_alleles_.push_back(std::move(allele));
 }
 
 void Haplotype::Builder::push_front(const ContigAllele& allele)
@@ -317,11 +333,11 @@ void Haplotype::Builder::push_front(const ContigAllele& allele)
             throw std::logic_error {"Haplotype::push_front called with out-of-order Allele"};
         }
         if (!are_adjacent(allele, explicit_alleles_.front())) {
-            explicit_alleles_.emplace_front(get_intervening_reference_allele(allele, explicit_alleles_.front()));
+            explicit_alleles_.push_front(get_intervening_reference_allele(allele, explicit_alleles_.front()));
         }
     }
     update_region(allele);
-    explicit_alleles_.emplace_front(allele);
+    explicit_alleles_.push_front(allele);
 }
 
 void Haplotype::Builder::push_front(ContigAllele&& allele)
@@ -331,17 +347,17 @@ void Haplotype::Builder::push_front(ContigAllele&& allele)
             throw std::logic_error {"Haplotype::push_front called with out-of-order Allele"};
         }
         if (!are_adjacent(allele, explicit_alleles_.front())) {
-            explicit_alleles_.emplace_front(get_intervening_reference_allele(allele, explicit_alleles_.front()));
+            explicit_alleles_.push_front(get_intervening_reference_allele(allele, explicit_alleles_.front()));
         }
     }
     update_region(allele);
-    explicit_alleles_.emplace_front(std::move(allele));
+    explicit_alleles_.push_front(std::move(allele));
 }
 
 void Haplotype::Builder::push_back(const Allele& allele)
 {
     if (!is_same_contig(allele, region_)) {
-        throw std::logic_error {"Haplotype::push_back called with Allele on different contig"};
+        throw std::domain_error {"Haplotype::push_back called with Allele on different contig"};
     }
     push_back(ContigAllele {contig_region(allele), allele.sequence()});
 }
@@ -349,7 +365,7 @@ void Haplotype::Builder::push_back(const Allele& allele)
 void Haplotype::Builder::push_front(const Allele& allele)
 {
     if (!is_same_contig(allele, region_)) {
-        throw std::logic_error {"Haplotype::push_front called with Allele on different contig"};
+        throw std::domain_error {"Haplotype::push_front called with Allele on different contig"};
     }
     push_front(ContigAllele {contig_region(allele), allele.sequence()});
 }
@@ -357,7 +373,7 @@ void Haplotype::Builder::push_front(const Allele& allele)
 void Haplotype::Builder::push_back(Allele&& allele)
 {
     if (!is_same_contig(allele, region_)) {
-        throw std::logic_error {"Haplotype::push_back called with Allele on different contig"};
+        throw std::domain_error {"Haplotype::push_back called with Allele on different contig"};
     }
     push_back(ContigAllele {contig_region(allele), allele.sequence()});
 }
@@ -365,7 +381,7 @@ void Haplotype::Builder::push_back(Allele&& allele)
 void Haplotype::Builder::push_front(Allele&& allele)
 {
     if (!is_same_contig(allele, region_)) {
-        throw std::logic_error {"Haplotype::push_front called with Allele on different contig"};
+        throw std::domain_error {"Haplotype::push_front called with Allele on different contig"};
     }
     push_front(ContigAllele {contig_region(allele), allele.sequence()});
 }

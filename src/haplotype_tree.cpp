@@ -32,12 +32,18 @@ root_ {boost::add_vertex(tree_)},
 haplotype_leafs_ {root_},
 contig_ {contig},
 haplotype_leaf_cache_ {}
-{}
+{
+    if (!reference.has_contig(contig)) {
+        throw std::invalid_argument {"HaplotypeTree: constructed with contig "
+            + contig + " which is not in the reference " + reference.name()};
+    }
+}
 
 namespace debug
 {
 template <typename G, typename V, typename Container>
-bool is_tree(const G& graph, const V& root, const Container& leafs) {
+bool is_tree(const G& graph, const V& root, const Container& leafs)
+{
     std::unordered_set<V> visited_vertices {};
     visited_vertices.reserve(boost::num_vertices(graph));
     
@@ -176,7 +182,7 @@ HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
 HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
 {
     if (contig_name(allele) != contig_) {
-        throw std::logic_error {"HaplotypeTree: trying to extend with Allele on different contig"};
+        throw std::domain_error {"HaplotypeTree: trying to extend with Allele on different contig"};
     }
     return extend(demote(allele));
 }
@@ -197,7 +203,10 @@ struct Splicer : public boost::default_dfs_visitor
             if (v == root_ || is_after(allele_.get(), tree[v])) {
                 splice_sites_.push_back(v);
             } else {
-                candidate_splice_sites_.push(*boost::inv_adjacent_vertices(v, tree).first);
+                const auto u = *boost::inv_adjacent_vertices(v, tree).first;
+                if (candidate_splice_sites_.empty() || candidate_splice_sites_.top() != u) {
+                    candidate_splice_sites_.push(u);
+                }
             }
         }
     }
@@ -254,7 +263,7 @@ void HaplotypeTree::splice(const ContigAllele& allele)
 void HaplotypeTree::splice(const Allele& allele)
 {
     if (contig_name(allele) != contig_) {
-        throw std::logic_error {"HaplotypeTree: trying to splicing with Allele on different contig"};
+        throw std::domain_error {"HaplotypeTree: trying to splicing with Allele on different contig"};
     }
     return splice(demote(allele));
 }
@@ -304,7 +313,7 @@ std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& re
         // are the haplotypes that will be pruned next
         haplotype_leaf_cache_.emplace(haplotype, leaf);
         
-        result.emplace_back(std::move(haplotype));
+        result.push_back(std::move(haplotype));
     }
     
     return result;
@@ -592,6 +601,7 @@ bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& hapl
 
 bool HaplotypeTree::is_branch_equal_haplotype(const Vertex leaf, const Haplotype& haplotype) const
 {
+    // TODO: check if this is quicker than calling Haplotype::contains for each ContigAllele
     return leaf != root_ && overlaps(contig_region(haplotype), tree_[leaf])
             && extract_haplotype(leaf, haplotype.mapped_region()) == haplotype;
 }
@@ -708,7 +718,7 @@ HaplotypeTree::remove_internal(const Vertex leaf, const ContigRegion& region)
         const auto it = std::find_if(vertex_range.first, vertex_range.second,
                                      [this, allele_to_move] (const Vertex allele) {
                                          return tree_[allele_to_move] == tree_[allele];
-                                        });
+                                     });
         
         if (it == vertex_range.second) break;
         

@@ -68,6 +68,7 @@ public:
     
     bool contains(const MappableType& element) const;
     unsigned count(const MappableType& element) const;
+    
     bool is_homozygous() const;
     unsigned zygosity() const;
     
@@ -115,6 +116,7 @@ public:
     
     bool contains(const Haplotype& haplotype) const;
     unsigned count(const Haplotype& haplotype) const;
+    
     bool is_homozygous() const;
     unsigned zygosity() const;
     

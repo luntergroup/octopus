@@ -175,7 +175,6 @@ BaseAllele<RegionTp> splice(const BaseAllele<RegionTp>& allele, const RegionTp& 
     if (!contains(allele, region)) {
         throw std::logic_error {"Allele: trying to splice an uncontained region"};
     }
-    
     return BaseAllele<RegionTp> {region, detail::subsequence(allele, region)};
 }
 

@@ -166,8 +166,7 @@ private:
     
     MappableFlatSet<Variant> generate_candidates(const GenomicRegion& region) const;
     
-    HaplotypeGenerator make_haplotype_generator(const GenomicRegion& region,
-                                                const MappableFlatSet<Variant>& candidates,
+    HaplotypeGenerator make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
                                                 const ReadMap& reads) const;
     HaplotypeLikelihoodCache make_haplotype_likelihood_cache() const;
     VcfRecordFactory make_record_factory(const ReadMap& reads) const;
