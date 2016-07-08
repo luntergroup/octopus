@@ -348,10 +348,11 @@ namespace debug
     void log(const GenotypeProbabilityMap& genotype_posteriors,
              boost::optional<Logging::DebugLogger>& debug_log,
              boost::optional<Logging::TraceLogger>& trace_log);
-    
     void log(const VariantPosteriors& candidate_posteriors,
              boost::optional<Logging::DebugLogger>& debug_log,
              boost::optional<Logging::TraceLogger>& trace_log);
+    void log(const Genotype<Haplotype>& called_genotype,
+             boost::optional<Logging::DebugLogger>& debug_log);
 } // namespace debug
 
 std::vector<std::unique_ptr<Octopus::VariantCall>>

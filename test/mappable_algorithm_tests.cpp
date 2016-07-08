@@ -34,15 +34,15 @@ BOOST_AUTO_TEST_CASE(find_first_after_returns_the_first_element_that_is_after_th
         ContigRegion {3, 4}, ContigRegion {5, 5}, ContigRegion {5, 6}, ContigRegion {5, 8}
     };
     
-    BOOST_CHECK(*find_first_after(regions, regions[0]) == regions[2]);
-    BOOST_CHECK(*find_first_after(regions, regions[1]) == regions[2]);
-    BOOST_CHECK(*find_first_after(regions, regions[3]) == regions[4]);
-    BOOST_CHECK(*find_first_after(regions, regions[4]) == regions[5]);
-    BOOST_CHECK(*find_first_after(regions, regions[5]) == regions[6]);
-    BOOST_CHECK(find_first_after(regions, regions[6])  == std::cend(regions));
+    BOOST_CHECK_EQUAL(*find_first_after(regions, regions[0]), regions[2]);
+    BOOST_CHECK_EQUAL(*find_first_after(regions, regions[1]), regions[2]);
+    BOOST_CHECK_EQUAL(*find_first_after(regions, regions[3]), regions[4]);
+    BOOST_CHECK_EQUAL(*find_first_after(regions, regions[4]), regions[5]);
+    BOOST_CHECK_EQUAL(*find_first_after(regions, regions[5]), regions[6]);
+    BOOST_CHECK(find_first_after(regions, regions[6]) == std::cend(regions));
     
-    BOOST_CHECK(*find_first_after(regions, ContigRegion {2, 3}) == regions[4]);
-    BOOST_CHECK(*find_first_after(regions, ContigRegion {2, 4}) == regions[5]);
+    BOOST_CHECK_EQUAL(*find_first_after(regions, ContigRegion {2, 3}), regions[4]);
+    BOOST_CHECK_EQUAL(*find_first_after(regions, ContigRegion {2, 4}), regions[5]);
 }
 
 BOOST_AUTO_TEST_CASE(overlap_range_returns_an_iterator_range_that_includes_all_overlapped_elements)

@@ -16,6 +16,16 @@
 
 #include <boost/lexical_cast.hpp>
 
+constexpr char CigarOperation::ALIGNMENT_MATCH;
+constexpr char CigarOperation::SEQUENCE_MATCH;
+constexpr char CigarOperation::SUBSTITUTION;
+constexpr char CigarOperation::INSERTION;
+constexpr char CigarOperation::DELETION;
+constexpr char CigarOperation::SOFT_CLIPPED;
+constexpr char CigarOperation::HARD_CLIPPED;
+constexpr char CigarOperation::PADDING;
+constexpr char CigarOperation::SKIPPED;
+
 CigarOperation::CigarOperation(const SizeType size, const char flag) noexcept
 :
 size_ {size},

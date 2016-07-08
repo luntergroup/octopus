@@ -21,6 +21,8 @@
 
 #include "simd_pair_hmm.hpp"
 
+#include "cigar_string.hpp"
+
 #include <iostream> // DEBUG
 
 namespace PairHMM
@@ -59,6 +61,64 @@ bool is_target_in_truth_flank(const std::string& truth, const std::string& targe
                 || (target_offset + target.size()) > (truth.size() - model.rhs_flank_size);
 }
 
+auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2)
+{
+    assert(!align1.empty());
+    
+    CigarString result {};
+    result.reserve(align1.size());
+    
+    auto it1 = std::cbegin(align1);
+    auto it2 = std::cbegin(align2);
+    
+    const auto last1 = std::find_if_not(std::crbegin(align1), std::crend(align1),
+                                        [] (const auto x) { return x == 0; }).base();
+    const auto last2 = std::next(it1, std::distance(it1, last1));
+    
+    while (it1 != last1) {
+        const auto p = std::mismatch(it1, last1, it2);
+        
+        if (p.first != it1) {
+            result.emplace_back(std::distance(it1, p.first), CigarOperation::SEQUENCE_MATCH);
+            
+            if (p.first == last1) break;
+        }
+        
+        const static auto is_gap = [] (const auto b) { return b == '-'; };
+        
+        if (*p.first == '-') {
+            const auto it3 = std::find_if_not(std::next(p.first), last1, is_gap);
+            
+            const auto n = std::distance(p.first, it3);
+            
+            result.emplace_back(n, CigarOperation::INSERTION);
+            
+            it1 = it3;
+            it2 = std::next(p.second, n);
+        } else if (*p.second == '-') {
+            const auto it3 = std::find_if_not(std::next(p.second), last2, is_gap);
+            
+            const auto n = std::distance(p.second, it3);
+            
+            result.emplace_back(n, CigarOperation::DELETION);
+            
+            it1 = std::next(p.first, n);
+            it2 = it3;
+        } else {
+            const auto p2 = std::mismatch(std::next(p.first), last1, std::next(p.second),
+                                          std::not_equal_to<> {});
+            
+            result.emplace_back(std::distance(p.first, p2.first), CigarOperation::SUBSTITUTION);
+            
+            std::tie(it1, it2) = p2;
+        }
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
 namespace debug
 {
     void print_alignment(const std::vector<char>& align1, const std::vector<char>& align2)
@@ -91,7 +151,8 @@ auto simd_align(const std::string& truth, const std::string& target,
     const auto qualities = reinterpret_cast<const std::int8_t*>(target_qualities.data());
     
     if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
-        const auto score = SimdPairHmm::align(truth.data() + alignment_offset, target.data(),
+        const auto score = SimdPairHmm::align(truth.data() + alignment_offset,
+                                              target.data(),
                                               qualities,
                                               truth_alignment_size, static_cast<int>(target.size()),
                                               model.snv_mask.data() + alignment_offset,
@@ -102,21 +163,17 @@ auto simd_align(const std::string& truth, const std::string& target,
         return -ln_10_div_10 * static_cast<double>(score);
     }
     
-    std::vector<char> align1 {}, align2 {};
+    thread_local std::vector<char> align1 {}, align2 {};
     
     const auto max_alignment_size = 2 * (target.size() + Pad);
     
-    if (align1.size() < max_alignment_size) {
-        align1.assign(max_alignment_size, 0);
-        align2.assign(max_alignment_size, 0);
-    } else {
-        std::fill_n(std::begin(align1), max_alignment_size, 0);
-        std::fill_n(std::begin(align2), max_alignment_size, 0);
-    }
+    align1.assign(max_alignment_size + 1, 0);
+    align2.assign(max_alignment_size + 1, 0);
     
     int first_pos;
     
-    const auto score = SimdPairHmm::align(truth.data() + alignment_offset, target.data(),
+    const auto score = SimdPairHmm::align(truth.data() + alignment_offset,
+                                          target.data(),
                                           qualities,
                                           truth_alignment_size,
                                           static_cast<int>(target.size()),
@@ -124,11 +181,10 @@ auto simd_align(const std::string& truth, const std::string& target,
                                           model.snv_priors.data() + alignment_offset,
                                           model.gap_open_penalties.data() + alignment_offset,
                                           model.gap_extend, model.nuc_prior,
-                                          align1.data(), align2.data(), &first_pos);
+                                          align1.data(), align2.data(), first_pos);
     
-    //debug::print_alignment(align1, align2);
-    
-    const auto truth_size = static_cast<int>(truth.size());
+//    debug::print_alignment(align1, align2);
+//    std::cout << make_cigar(align1, align2) << std::endl;
     
     auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
     
@@ -144,10 +200,11 @@ auto simd_align(const std::string& truth, const std::string& target,
         rhs_flank_size = 0;
     } else {
         rhs_flank_size += alignment_offset + truth_alignment_size;
-        rhs_flank_size -= truth_size;
+        rhs_flank_size -= truth.size();
     }
     
     assert(lhs_flank_size >= 0 && rhs_flank_size >= 0);
+    assert(align1.back() == 0); // required by calculate_flank_score
     
     const auto flank_score = SimdPairHmm::calculate_flank_score(truth_alignment_size,
                                                                 lhs_flank_size, rhs_flank_size,

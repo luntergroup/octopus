@@ -563,8 +563,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         
         const auto next_active_region = haplotype_generator.peek_next_active_region();
         
-        if (begins_before(active_region, next_active_region) && overlaps(active_region, call_region)) {
-            auto passed_region   = left_overhang_region(active_region, next_active_region);
+        if (next_active_region && begins_before(active_region, *next_active_region)
+            && overlaps(active_region, call_region)) {
+            auto passed_region   = left_overhang_region(active_region, *next_active_region);
             auto uncalled_region = overlapped_region(active_region, passed_region);
             
             if (phase_set && ends_before(phase_set->region, passed_region)) {
@@ -572,7 +573,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             }
             
             auto active_candidates = copy_contained_to_vector(candidates, uncalled_region,
-                                                              are_adjacent(uncalled_region, next_active_region));
+                                                              are_adjacent(uncalled_region, *next_active_region));
             
             std::vector<GenomicRegion> called_regions;
             

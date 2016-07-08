@@ -65,7 +65,7 @@ public:
     
     HaplotypePacket generate();
     
-    GenomicRegion peek_next_active_region() const;
+    boost::optional<GenomicRegion> peek_next_active_region() const;
     
     void force_progress(GenomicRegion to);
     
@@ -82,7 +82,7 @@ private:
     Haplotype::SizeType min_flank_pad_;
     
     HaplotypeTree tree_;
-    GenomeWalker walker_;
+    GenomeWalker default_walker_, holdout_walker_;
     boost::optional<GenomeWalker> lagged_walker_;
     
     MappableFlatSet<Allele> alleles_;
@@ -115,7 +115,7 @@ private:
     
     bool in_holdout_mode() const noexcept;
     bool can_extract_holdouts(const GenomicRegion& region) const noexcept;
-    void extract_holdouts(const GenomicRegion& region);
+    void extract_holdouts(GenomicRegion region);
     bool can_reintroduce_holdouts() const noexcept;
     void reintroduce_holdouts();
     void clear_holdouts() noexcept;

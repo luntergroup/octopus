@@ -2,6 +2,7 @@
 
 ## Problems
 
+- [] Duplicates calls can be emitted as calls can overlap multiple calling regions.
 - [] Cancer genotype filtering is not good.
 - [] Model filtering needs to be more selective - filters some TP when haplotypes get long.
 - [] The MaskOverlappedSegment read transformation should mask segments equally rather than masking just one.

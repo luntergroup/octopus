@@ -640,11 +640,7 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
     
     HaplotypeTree haplotype_tree {"4", human};
     
-    haplotype_tree.extend(allele1);
-    haplotype_tree.extend(allele2);
-    haplotype_tree.extend(allele3);
-    haplotype_tree.extend(allele4);
-    haplotype_tree.extend(allele5);
+    haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4).extend(allele5);
     
     const auto haplotype1 = make_haplotype(human, region, {allele1, allele4});
     

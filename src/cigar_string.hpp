@@ -39,12 +39,12 @@ public:
     
     explicit CigarOperation(SizeType size, char type) noexcept;
     
-    ~CigarOperation() = default;
-    
     CigarOperation(const CigarOperation&)            = default;
     CigarOperation& operator=(const CigarOperation&) = default;
     CigarOperation(CigarOperation&&)                 = default;
     CigarOperation& operator=(CigarOperation&&)      = default;
+    
+    ~CigarOperation() = default;
     
     SizeType size() const noexcept;
     char flag() const noexcept;

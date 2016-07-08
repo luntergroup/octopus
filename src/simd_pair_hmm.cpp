@@ -9,34 +9,34 @@
 #include <algorithm>
 #include <cassert>
 
-#include <iostream> // DEBUG
-#include <iterator> // DEBUG
-
-struct Seq { __m128i val; };
-struct Qual { __m128i val; };
-struct Mask { __m128i val; };
-
-std::ostream& operator<<(std::ostream& os, const Seq s)
-{
-    const auto val = (std::uint16_t*) &s.val;
-    std::copy(val, val + 8, std::ostreambuf_iterator<char>(os));
-    return os;
-}
-
-std::ostream& operator<<(std::ostream& os, const Qual q)
-{
-    const auto val = (std::uint16_t*) &q.val;
-    std::transform(val, val + 8, std::ostream_iterator<unsigned>(os, " "),
-                   [] (const auto x) { return x >> 2; });
-    return os;
-}
-
-std::ostream& operator<<(std::ostream& os, const Mask m)
-{
-    const auto val = (std::uint16_t*) &m.val;
-    std::copy(val, val + 8, std::ostream_iterator<bool>(os));
-    return os;
-}
+//#include <iostream> // DEBUG
+//#include <iterator> // DEBUG
+//
+//struct Seq { __m128i val; };
+//struct Qual { __m128i val; };
+//struct Mask { __m128i val; };
+//
+//std::ostream& operator<<(std::ostream& os, const Seq s)
+//{
+//    const auto val = (std::uint16_t*) &s.val;
+//    std::copy(val, val + 8, std::ostreambuf_iterator<char>(os));
+//    return os;
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const Qual q)
+//{
+//    const auto val = (std::uint16_t*) &q.val;
+//    std::transform(val, val + 8, std::ostream_iterator<unsigned>(os, " "),
+//                   [] (const auto x) { return x >> 2; });
+//    return os;
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const Mask m)
+//{
+//    const auto val = (std::uint16_t*) &m.val;
+//    std::copy(val, val + 8, std::ostream_iterator<bool>(os));
+//    return os;
+//}
 
 namespace SimdPairHmm
 {
@@ -343,7 +343,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           const int truth_len, const int target_len,
           const std::int8_t* gap_open, short gap_extend, short nuc_prior,
-          char* aln1, char* aln2, int* first_pos)
+          char* aln1, char* aln2, int& first_pos)
 {
     // target is the read; the shorter of the sequences
     // no checks for overflow are done
@@ -540,7 +540,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     aln1[alnidx] = 0;
     aln2[alnidx] = 0;
     
-    if (first_pos) *first_pos = x;
+    first_pos = x;
     
     // reverse them
     int j;
@@ -561,7 +561,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
           int truth_len, int target_len,
           const char* snv_mask, const std::int8_t* snv_prior,
           const std::int8_t* gap_open, short gap_extend, short nuc_prior,
-          char* aln1, char* aln2, int* first_pos)
+          char* aln1, char* aln2, int& first_pos)
 {
     assert(truth_len > BAND_SIZE && (truth_len == target_len + 2 * BAND_SIZE - 1));
     assert(aln1 != nullptr && aln2 != nullptr);
@@ -775,7 +775,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     aln1[alnidx] = 0;
     aln2[alnidx] = 0;
     
-    if (first_pos) *first_pos = x;
+    first_pos = x;
     
     // reverse them
     int j;
