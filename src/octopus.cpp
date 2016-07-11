@@ -729,44 +729,182 @@ namespace Octopus
         return propose_call_subregion(components, right_overhang_region(input_region, current_subregion));
     }
     
+    namespace
+    {
+        auto mapped_begin(const VcfRecord& call)
+        {
+            return call.pos() - 1;
+        }
+        
+        auto mapped_end(const VcfRecord& call)
+        {
+            return mapped_begin(call) + static_cast<GenomicRegion::SizeType>(call.ref().size());
+        }
+        
+        auto mapped_region(const VcfRecord& call)
+        {
+            return GenomicRegion {call.chrom(), mapped_begin(call), mapped_end(call)};
+        }
+        
+        template <typename Container>
+        auto encompassing_call_region(const Container& calls)
+        {
+            auto it = std::max_element(std::cbegin(calls), std::cend(calls),
+                                       [] (const auto& lhs, const auto& rhs) {
+                                           return mapped_end(lhs) < mapped_end(rhs);
+                                       });
+            return GenomicRegion {it->chrom(), mapped_begin(calls.front()), mapped_end(*it)};
+        }
+    } // namespace
+    
+    void buffer_connecting_calls(std::deque<VcfRecord>& calls,
+                                 const GenomicRegion& next_calling_region,
+                                 std::vector<VcfRecord>& buffer)
+    {
+        const auto it = std::find_if(std::begin(calls), std::end(calls),
+                                     [&next_calling_region] (const auto& call) {
+                                         return mapped_end(call) > next_calling_region.begin();
+                                     });
+        
+        buffer.insert(std::end(buffer),
+                      std::make_move_iterator(it),
+                      std::make_move_iterator(std::end(calls)));
+        
+        calls.erase(it, std::end(calls));
+    }
+    
+    void buffer_connecting_calls(const GenomicRegion& buffered_region,
+                                 std::deque<VcfRecord>& calls,
+                                 std::vector<VcfRecord>& buffer)
+    {
+        const auto it = std::find_if_not(std::begin(calls), std::end(calls),
+                                         [&buffered_region] (const auto& call) {
+                                             return mapped_begin(call) < buffered_region.end();
+                                         });
+        
+        buffer.insert(std::end(buffer),
+                      std::make_move_iterator(std::begin(calls)),
+                      std::make_move_iterator(it));
+        
+        calls.erase(std::begin(calls), it);
+    }
+                
+    bool is_consistent(const std::deque<VcfRecord>& merged_calls)
+    {
+        return true; // TODO
+    }
+                
+    void resolve_connecting_calls(std::vector<VcfRecord>& old_connecting_calls,
+                                  std::deque<VcfRecord>& calls,
+                                  const ContigCallingComponents& components)
+    {
+        using std::begin; using std::end; using std::make_move_iterator;
+        
+        if (!old_connecting_calls.empty()) {
+            const auto old_connecting_calls_region = encompassing_call_region(old_connecting_calls);
+            
+            std::vector<VcfRecord> new_connecting_calls {};
+            
+            buffer_connecting_calls(old_connecting_calls_region, calls, new_connecting_calls);
+            
+            std::deque<VcfRecord> merged_calls {};
+            
+            std::set_union(make_move_iterator(begin(old_connecting_calls)),
+                           make_move_iterator(end(old_connecting_calls)),
+                           make_move_iterator(begin(new_connecting_calls)),
+                           make_move_iterator(end(new_connecting_calls)),
+                           std::back_inserter(merged_calls));
+            
+            old_connecting_calls.clear();
+            old_connecting_calls.shrink_to_fit();
+            new_connecting_calls.clear();
+            new_connecting_calls.shrink_to_fit();
+            
+            merged_calls.erase(std::unique(begin(merged_calls), end(merged_calls),
+                                           [] (const auto& lhs, const auto& rhs) {
+                                               return lhs.pos() == rhs.pos()
+                                               && lhs.ref() == rhs.ref()
+                                               && lhs.alt() == rhs.alt();
+                                           }),
+                               end(merged_calls));
+            
+            if (is_consistent(merged_calls)) {
+                calls.insert(begin(calls),
+                             make_move_iterator(begin(merged_calls)),
+                             make_move_iterator(end(merged_calls)));
+            } else {
+                const auto unresolved_region = encompassing_call_region(merged_calls);
+                
+                merged_calls.clear();
+                merged_calls.shrink_to_fit();
+                
+                auto new_calls = components.caller->call(unresolved_region, components.progress_meter);
+                
+                // TODO: we need to make sure the new calls don't contain any calls
+                // outside the unresolved_region, and also possibly adjust phase regions
+                // in calls past unresolved_region.
+                
+                calls.insert(begin(calls),
+                             make_move_iterator(begin(new_calls)),
+                             make_move_iterator(end(new_calls)));
+            }
+        }
+    }
+    
     void run_octopus_on_contig(ContigCallingComponents&& components)
     {
+        assert(!components.regions.empty());
+        
         #ifdef BENCHMARK
         init_timers();
         #endif
         
         std::deque<VcfRecord> calls;
+        std::vector<VcfRecord> connecting_calls {};
         
-        for (const auto& input_region : components.regions) {
-            auto subregion = propose_call_subregion(components, input_region);
-            
-//            if (is_empty(subregion) && !region_has_reads(input_region, components)) {
-//                Logging::WarningLogger log {};
-//                stream(log) << "No reads found in input region " << input_region;
-//            }
-            
-            while (!is_empty(subregion)) {
-                if (DEBUG_MODE) {
-                    Logging::DebugLogger log {};
-                    stream(log) << "Processing subregion " << subregion;
-                }
-                
-                try {
-                    calls = components.caller->call(subregion, components.progress_meter);
-                } catch(...) {
-                    // TODO: which exceptions can we recover from?
-                    throw;
-                }
-                
-                try {
-                    write_calls(std::move(calls), components.output);
-                } catch(...) {
-                    // TODO: which exceptions can we recover from?
-                    throw;
-                }
-                
-                subregion = propose_call_subregion(components, subregion, input_region);
+        auto input_region = components.regions.front();
+        auto subregion    = propose_call_subregion(components, input_region);
+        
+        auto first_input_region      = std::cbegin(components.regions);
+        const auto last_input_region = std::cend(components.regions);
+        
+        while (!is_empty(subregion)) {
+            if (DEBUG_MODE) {
+                Logging::DebugLogger log {};
+                stream(log) << "Processing subregion " << subregion;
             }
+            
+            try {
+                calls = components.caller->call(subregion, components.progress_meter);
+            } catch(...) {
+                // TODO: which exceptions can we recover from?
+                throw;
+            }
+            
+            resolve_connecting_calls(connecting_calls, calls, components);
+            
+            auto next_subregion = propose_call_subregion(components, subregion, input_region);
+            
+            if (is_empty(next_subregion)) {
+                ++first_input_region;
+                if (first_input_region != last_input_region) {
+                    input_region = *first_input_region;
+                    next_subregion = propose_call_subregion(components, input_region);
+                }
+            }
+            
+            assert(connecting_calls.empty());
+            
+            buffer_connecting_calls(calls, next_subregion, connecting_calls);
+            
+            try {
+                write_calls(std::move(calls), components.output);
+            } catch(...) {
+                // TODO: which exceptions can we recover from?
+                throw;
+            }
+            
+            subregion = std::move(next_subregion);
         }
         
         #ifdef BENCHMARK
@@ -1000,7 +1138,7 @@ namespace Octopus
         std::vector<VcfWriter> result {};
         result.reserve(writers.size());
         
-        for (auto& p : writers) result.emplace_back(std::move(p.second));
+        for (auto& p : writers) result.push_back(std::move(p.second));
         
         writers.clear();
         
@@ -1167,7 +1305,6 @@ namespace Octopus
                 Logging::DebugLogger log {};
                 stream(log) << "Writing remaining completed task " << task.region;
             }
-            
             write_calls(std::move(task.calls), temp_writers.at(contig_name(task)));
         }
         

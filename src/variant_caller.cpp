@@ -302,12 +302,12 @@ namespace
     }
 } // namespace
 
-void remove_calls_outside_call_region(std::vector<VcfRecord>& calls, const GenomicRegion& call_region)
+void erase_calls_outside_region(std::vector<VcfRecord>& calls, const GenomicRegion& region)
 {
-    const auto it = std::remove_if(std::begin(calls), std::end(calls),
-                                   [&call_region] (const auto& call) {
-                                       return !overlaps(mapped_region(call), call_region);
-                                   });
+    auto it = std::remove_if(std::begin(calls), std::end(calls),
+                             [&region] (const auto& call) {
+                                 return !overlaps(mapped_region(call), region);
+                             });
     calls.erase(it, std::end(calls));
 }
 
@@ -320,7 +320,7 @@ void merge(std::vector<CallWrapper>&& src, std::deque<VcfRecord>& dst,
     
     auto new_records = factory.make(unwrap(std::move(src)));
     
-    remove_calls_outside_call_region(new_records, call_region);
+    erase_calls_outside_region(new_records, call_region);
     
     const auto it = dst.insert(end(dst),
                                std::make_move_iterator(begin(new_records)),

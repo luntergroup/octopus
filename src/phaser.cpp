@@ -28,177 +28,177 @@ Phaser::Phaser(Phred<double> min_phase_score) : min_phase_score_ {min_phase_scor
 
 namespace
 {
-    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+
+using PhaseComplementSet = std::deque<GenotypeReference>;
+
+using PartitionIterator = std::vector<GenomicRegion>::const_iterator;
+
+struct PhaseComplementHash
+{
+    PhaseComplementHash(PartitionIterator first, PartitionIterator last) : first_ {first}, last_ {last} {}
     
-    using PhaseComplementSet = std::deque<GenotypeReference>;
-    
-    using PartitionIterator = std::vector<GenomicRegion>::const_iterator;
-    
-    struct PhaseComplementHash
+    auto operator()(const GenotypeReference& genotype) const
     {
-        PhaseComplementHash(PartitionIterator first, PartitionIterator last) : first_ {first}, last_ {last} {}
+        using boost::hash_combine;
         
-        auto operator()(const GenotypeReference& genotype) const
-        {
-            using boost::hash_combine;
-            
-            std::size_t result {0};
-            
-            std::for_each(first_, last_, [&] (const auto& region) {
-                hash_combine(result, std::hash<Genotype<Haplotype>>()(splice<Haplotype>(genotype.get(), region)));
-            });
-            
-            return result;
-        }
-    private:
-        PartitionIterator first_, last_;
-    };
-    
-    struct PhaseComplementEqual
-    {
-        PhaseComplementEqual(PartitionIterator first, PartitionIterator last)
-        : first_ {first}, last_ {last} {}
+        std::size_t result {0};
         
-        bool operator()(const GenotypeReference& lhs, const GenotypeReference& rhs) const
-        {
-            return std::all_of(first_, last_,
-                               [&] (const auto& region) {
-                                   return are_equal_in_region<Haplotype>(lhs.get(), rhs.get(), region);
-                               });
-        }
-    private:
-        PartitionIterator first_, last_;
-    };
-    
-    using PhaseComplementSetMap = std::unordered_map<GenotypeReference, PhaseComplementSet,
-                                                        PhaseComplementHash,
-                                                        PhaseComplementEqual>;
-    
-    using PhaseComplementSets = std::vector<PhaseComplementSet>;
-    
-    template <typename Container>
-    auto make_phase_completement_set_map(const Container& genotypes,
-                                         PartitionIterator first, PartitionIterator last)
-    {
-        PhaseComplementSetMap result {genotypes.size(), PhaseComplementHash {first, last},
-                                        PhaseComplementEqual {first, last}};
-        result.reserve(genotypes.size());
-        return result;
-    }
-    
-    void insert(const Genotype<Haplotype>& genotype, PhaseComplementSetMap& curr_result)
-    {
-        const auto it = curr_result.find(genotype);
-        if (it == std::end(curr_result)) {
-            curr_result.emplace(std::piecewise_construct,
-                                std::forward_as_tuple(genotype),
-                                std::forward_as_tuple(1, genotype));
-        } else {
-            it->second.emplace_back(genotype);
-        }
-    }
-    
-    template <typename Container>
-    PhaseComplementSets
-    generate_phase_complement_sets(const Container& genotypes,
-                                   PartitionIterator first, PartitionIterator last)
-    {
-        auto complement_sets = make_phase_completement_set_map(genotypes, first, last);
-        
-        complement_sets.emplace(std::piecewise_construct,
-                                std::forward_as_tuple(genotypes.front()),
-                                std::forward_as_tuple(1, genotypes.front()));
-        
-        std::for_each(std::next(std::cbegin(genotypes)), std::cend(genotypes),
-                      [&] (const auto& genotype) { insert(genotype, complement_sets); });
-        
-        PhaseComplementSets result {};
-        result.reserve(complement_sets.size());
-        
-        for (auto&& p : complement_sets) {
-            result.emplace_back(std::move(p.second));
-        }
+        std::for_each(first_, last_, [&] (const auto& region) {
+            hash_combine(result, std::hash<Genotype<Haplotype>>()(splice<Haplotype>(genotype.get(), region)));
+        });
         
         return result;
     }
+private:
+    PartitionIterator first_, last_;
+};
+
+struct PhaseComplementEqual
+{
+    PhaseComplementEqual(PartitionIterator first, PartitionIterator last)
+    : first_ {first}, last_ {last} {}
     
-    template <typename Map>
-    double marginalise(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
+    bool operator()(const GenotypeReference& lhs, const GenotypeReference& rhs) const
     {
-        return std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
-                               [&] (const auto curr, const auto& genotype) {
-                                   return curr + genotype_posteriors.at(genotype);
-                               });
+        return std::all_of(first_, last_,
+                           [&] (const auto& region) {
+                               return are_equal_in_region<Haplotype>(lhs.get(), rhs.get(), region);
+                           });
+    }
+private:
+    PartitionIterator first_, last_;
+};
+
+using PhaseComplementSetMap = std::unordered_map<GenotypeReference, PhaseComplementSet,
+                                                    PhaseComplementHash,
+                                                    PhaseComplementEqual>;
+
+using PhaseComplementSets = std::vector<PhaseComplementSet>;
+
+template <typename Container>
+auto make_phase_completement_set_map(const Container& genotypes,
+                                     PartitionIterator first, PartitionIterator last)
+{
+    PhaseComplementSetMap result {genotypes.size(), PhaseComplementHash {first, last},
+                                    PhaseComplementEqual {first, last}};
+    result.reserve(genotypes.size());
+    return result;
+}
+
+void insert(const Genotype<Haplotype>& genotype, PhaseComplementSetMap& curr_result)
+{
+    const auto it = curr_result.find(genotype);
+    if (it == std::end(curr_result)) {
+        curr_result.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(genotype),
+                            std::forward_as_tuple(1, genotype));
+    } else {
+        it->second.emplace_back(genotype);
+    }
+}
+
+template <typename Container>
+PhaseComplementSets
+generate_phase_complement_sets(const Container& genotypes,
+                               PartitionIterator first, PartitionIterator last)
+{
+    auto complement_sets = make_phase_completement_set_map(genotypes, first, last);
+    
+    complement_sets.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(genotypes.front()),
+                            std::forward_as_tuple(1, genotypes.front()));
+    
+    std::for_each(std::next(std::cbegin(genotypes)), std::cend(genotypes),
+                  [&] (const auto& genotype) { insert(genotype, complement_sets); });
+    
+    PhaseComplementSets result {};
+    result.reserve(complement_sets.size());
+    
+    for (auto&& p : complement_sets) {
+        result.emplace_back(std::move(p.second));
     }
     
-    template <typename Map>
-    double calculate_entropy(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
-    {
-        const auto norm = marginalise(phase_set, genotype_posteriors);
-        return std::max(0.0, -std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
-                                              [&genotype_posteriors, norm] (const auto curr, const auto& genotype) {
-                                                  const auto p = genotype_posteriors.at(genotype) / norm;
-                                                  return curr + p * std::log2(p);
-                                              }));
+    return result;
+}
+
+template <typename Map>
+double marginalise(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
+{
+    return std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
+                           [&] (const auto curr, const auto& genotype) {
+                               return curr + genotype_posteriors.at(genotype);
+                           });
+}
+
+template <typename Map>
+double calculate_entropy(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
+{
+    const auto norm = marginalise(phase_set, genotype_posteriors);
+    return std::max(0.0, -std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
+                                          [&genotype_posteriors, norm] (const auto curr, const auto& genotype) {
+                                              const auto p = genotype_posteriors.at(genotype) / norm;
+                                              return curr + p * std::log2(p);
+                                          }));
+}
+
+double maximum_entropy(const size_t num_elements)
+{
+    return std::log2(num_elements);
+}
+
+template <typename Map>
+double calculate_relative_entropy(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
+{
+    if (phase_set.size() < 2) return 1.0;
+    return 1.0 - calculate_entropy(phase_set, genotype_posteriors) / maximum_entropy(phase_set.size());
+}
+
+template <typename Map>
+auto calculate_phase_score(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
+{
+    return marginalise(phase_set, genotype_posteriors) * calculate_relative_entropy(phase_set, genotype_posteriors);
+}
+
+template <typename Map>
+Phred<double> calculate_phase_score(const PhaseComplementSets& phase_sets, const Map& genotype_posteriors)
+{
+    
+    return Phred<double> { Phred<double>::Probability {
+        std::max(0.0, 1.0 - std::accumulate(std::cbegin(phase_sets), std::cend(phase_sets), 0.0,
+                                           [&] (const auto curr, const auto& phase_set) {
+                                               return curr + calculate_phase_score(phase_set, genotype_posteriors);
+                                           }))
+    }};
+}
+
+std::vector<GenotypeReference>
+extract_genotypes(const Phaser::GenotypePosteriorMap& genotype_posteriors)
+{
+    return extract_key_refs(genotype_posteriors);
+}
+
+using GenotypeSplicePosteriorMap = std::unordered_map<Genotype<Haplotype>, double>;
+
+template <typename Container>
+auto splice_and_marginalise(const Container& genotypes,
+                            const Phaser::SampleGenotypePosteriorMap& genotype_posteriors,
+                            const GenomicRegion& region)
+{
+    auto splices = splice_all<Haplotype>(genotypes, region);
+    
+    GenotypeSplicePosteriorMap splice_posteriors {splices.size()};
+    
+    for (const auto& splice : splices) {
+        splice_posteriors.emplace(splice, 0.0);
     }
     
-    double maximum_entropy(const size_t num_elements)
-    {
-        return std::log2(num_elements);
+    for (const auto& p : genotype_posteriors) {
+        splice_posteriors.at(splice<Haplotype>(p.first, region)) += p.second;
     }
     
-    template <typename Map>
-    double calculate_relative_entropy(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
-    {
-        if (phase_set.size() < 2) return 1.0;
-        return 1.0 - calculate_entropy(phase_set, genotype_posteriors) / maximum_entropy(phase_set.size());
-    }
-    
-    template <typename Map>
-    auto calculate_phase_score(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
-    {
-        return marginalise(phase_set, genotype_posteriors) * calculate_relative_entropy(phase_set, genotype_posteriors);
-    }
-    
-    template <typename Map>
-    Phred<double> calculate_phase_score(const PhaseComplementSets& phase_sets, const Map& genotype_posteriors)
-    {
-        
-        return Phred<double> { Phred<double>::Probability {
-            std::max(0.0, 1.0 - std::accumulate(std::cbegin(phase_sets), std::cend(phase_sets), 0.0,
-                                               [&] (const auto curr, const auto& phase_set) {
-                                                   return curr + calculate_phase_score(phase_set, genotype_posteriors);
-                                               }))
-        }};
-    }
-    
-    std::vector<GenotypeReference>
-    extract_genotypes(const Phaser::GenotypePosteriorMap& genotype_posteriors)
-    {
-        return extract_key_refs(genotype_posteriors);
-    }
-    
-    using GenotypeSplicePosteriorMap = std::unordered_map<Genotype<Haplotype>, double>;
-    
-    template <typename Container>
-    auto splice_and_marginalise(const Container& genotypes,
-                                const Phaser::SampleGenotypePosteriorMap& genotype_posteriors,
-                                const GenomicRegion& region)
-    {
-        auto splices = splice_all<Haplotype>(genotypes, region);
-        
-        GenotypeSplicePosteriorMap splice_posteriors {splices.size()};
-        
-        for (const auto& splice : splices) {
-            splice_posteriors.emplace(splice, 0.0);
-        }
-        
-        for (const auto& p : genotype_posteriors) {
-            splice_posteriors.at(splice<Haplotype>(p.first, region)) += p.second;
-        }
-        
-        return std::make_pair(std::move(splices), std::move(splice_posteriors));
-    }
+    return std::make_pair(std::move(splices), std::move(splice_posteriors));
+}
 } // namespace
 
 boost::optional<Phaser::PhaseSet>

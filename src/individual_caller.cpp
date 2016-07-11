@@ -158,17 +158,13 @@ IndividualVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplo
                                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                                          const Latents& latents) const
 {
-    resume_timer(misc_timer[0]);
     const auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
-    pause_timer(misc_timer[0]);
     
     const auto prior_model = make_prior_model(haplotypes);
     
     const GenotypeModel::Individual model {prior_model, debug_log_};
     
-    resume_timer(misc_timer[1]);
     const auto inferences = model.infer_latents(sample(), genotypes, haplotype_likelihoods);
-    pause_timer(misc_timer[1]);
     
     return ::Octopus::calculate_dummy_model_posterior(latents.model_log_evidence_,
                                                       inferences.log_evidence);

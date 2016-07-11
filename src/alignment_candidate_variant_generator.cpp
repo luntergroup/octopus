@@ -206,12 +206,14 @@ auto copy_overlapped_indels(ForwardIt first, const ForwardIt last, const Contain
     for (const auto& candidate : candidates) {
         const auto overlapped = overlap_range(first, last, candidate, max_indel_size);
         
-        std::copy_if(std::cbegin(overlapped), std::cend(overlapped), std::back_inserter(result),
-                     [] (const auto& v) { return is_indel(v); });
-        
-        first = std::cbegin(overlapped).base();
-        
-        if (first == last) break;
+        if (!overlapped.empty()) {
+            std::copy_if(std::cbegin(overlapped), std::cend(overlapped), std::back_inserter(result),
+                         [] (const auto& v) { return is_indel(v); });
+            
+            first = std::cbegin(overlapped).base();
+            
+            if (first == last) break;
+        }
     }
     
     return result;
