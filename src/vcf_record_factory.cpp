@@ -29,6 +29,8 @@
 #include "string_utils.hpp"
 #include "maths.hpp"
 
+#include "timers.hpp"
+
 namespace Octopus
 {
     VcfRecordFactory::VcfRecordFactory(const ReferenceGenome& reference, const ReadMap& reads,
@@ -105,7 +107,7 @@ namespace Octopus
         calls.clear();
         calls.shrink_to_fit();
         
-        assert(std::is_sorted(cbegin(wrapped_calls), cend(wrapped_calls)));
+        //assert(std::is_sorted(cbegin(wrapped_calls), cend(wrapped_calls)));
         
         for (auto it = begin(wrapped_calls); it != end(wrapped_calls);) {
             if (is_empty(it->mapped_region())) {
@@ -166,77 +168,75 @@ namespace Octopus
             }
         }
         
-        std::deque<CallWrapperReference> modified_calls {};
+        const auto first_modified = std::stable_partition(begin(wrapped_calls), end(wrapped_calls),
+                                                          [] (const auto& call) {
+                                                              return !call->parsimonise('#');
+                                                          });
         
-        for (auto& call : wrapped_calls) {
-            if (call->parsimonise('#')) {
-                modified_calls.emplace_back(call);
-            }
-        }
-        
-        if (!modified_calls.empty()) {
-            std::sort(begin(wrapped_calls), end(wrapped_calls));
+        if (first_modified != end(wrapped_calls)) {
+            const auto last = end(wrapped_calls);
             
-            const auto itr = std::remove_if(begin(modified_calls), end(modified_calls),
+            const auto first_phase_adjusted = std::partition(first_modified, last,
                                             [this] (const auto& call) {
                                                 return std::none_of(begin(samples_), cend(samples_),
                                                                     [&call] (const auto& sample) {
-                                                                        const auto& old_phase = call.get()->get_genotype_call(sample).phase;
-                                                                        return old_phase && begins_before(mapped_region(call.get()), old_phase->region());
+                                                                        const auto& old_phase = call->get_genotype_call(sample).phase;
+                                                                        return old_phase && begins_before(mapped_region(call), old_phase->region());
                                                                     });
                                             });
             
-            modified_calls.erase(itr, end(modified_calls));
-            
-            std::sort(begin(modified_calls), end(modified_calls));
-            
-            for (auto& call : modified_calls) {
-                for (const auto& sample : samples_) {
-                    const auto& old_phase = call.get()->get_genotype_call(sample).phase;
-                    
-                    if (old_phase && begins_before(mapped_region(call.get()), old_phase->region())) {
-                        auto new_phase_region = expand_lhs(old_phase->region(), 1);
-                        Call::PhaseCall new_phase {move(new_phase_region), old_phase->score()};
-                        call.get()->set_phase(sample, move(new_phase));
-                    }
-                }
-            }
-            
-            if (!modified_calls.empty()) {
-                for (auto& call : wrapped_calls) {
-                    for (const auto& sample : samples_) {
-                        const auto& phase = call->get_genotype_call(sample).phase;
-                        
-                        if (phase) {
-                            auto overlapped = overlap_range(modified_calls, phase->region());
-                            
-                            if (overlapped.empty()) {
-                                overlapped = overlap_range(modified_calls, expand_lhs(phase->region(), 1));
-                                
-                                if (!overlapped.empty()) {
-                                    if (begin_distance(overlapped.front(), phase->region()) != 1) {
-                                        overlapped.advance_begin(1);
-                                    }
-                                }
-                            }
-                            
-                            if (!overlapped.empty() && overlapped.front().get() != call) {
-                                const auto& old_phase = call->get_genotype_call(sample).phase;
-                                
-                                auto new_phase_region = encompassing_region(overlapped.front(), old_phase->region());
-                                
-                                Call::PhaseCall new_phase {move(new_phase_region), old_phase->score()};
-                                
-                                call->set_phase(sample, move(new_phase));
-                            }
-                        }
-                    }
-                }
+            if (first_phase_adjusted != last) {
+                std::sort(first_phase_adjusted, last);
                 
-                modified_calls.clear();
+                for_each(first_phase_adjusted, last,
+                         [this] (auto& call) {
+                             for (const auto& sample : samples_) {
+                                 const auto& old_phase = call->get_genotype_call(sample).phase;
+                                 
+                                 if (old_phase && begins_before(mapped_region(call), old_phase->region())) {
+                                     auto new_phase_region = expand_lhs(old_phase->region(), 1);
+                                     Call::PhaseCall new_phase {move(new_phase_region), old_phase->score()};
+                                     call->set_phase(sample, move(new_phase));
+                                 }
+                             }
+                         });
+                
+                for_each(begin(wrapped_calls), first_phase_adjusted,
+                         [this, first_phase_adjusted, last] (auto& call) {
+                             for (const auto& sample : samples_) {
+                                 const auto& phase = call->get_genotype_call(sample).phase;
+                                 
+                                 if (phase) {
+                                     auto overlapped = overlap_range(first_phase_adjusted, last, phase->region());
+                                     
+                                     if (overlapped.empty()) {
+                                         overlapped = overlap_range(first_phase_adjusted, last, expand_lhs(phase->region(), 1));
+                                         
+                                         if (!overlapped.empty()) {
+                                             if (begin_distance(overlapped.front(), phase->region()) != 1) {
+                                                 overlapped.advance_begin(1);
+                                             }
+                                         }
+                                     }
+                                     
+                                     if (!overlapped.empty() && overlapped.front() != call) {
+                                         const auto& old_phase = call->get_genotype_call(sample).phase;
+                                         
+                                         auto new_phase_region = encompassing_region(overlapped.front(), old_phase->region());
+                                         
+                                         Call::PhaseCall new_phase {move(new_phase_region), old_phase->score()};
+                                         
+                                         call->set_phase(sample, move(new_phase));
+                                     }
+                                 }
+                             }
+                         });
             }
             
-            modified_calls.shrink_to_fit();
+            std::sort(first_modified, first_phase_adjusted);
+            
+            std::inplace_merge(first_modified, first_phase_adjusted, last);
+            std::inplace_merge(begin(wrapped_calls), first_modified, last);
         }
         
         std::vector<VcfRecord> result {};
@@ -633,12 +633,14 @@ namespace Octopus
         //result.add_info("AC",  to_strings(count_alt_alleles(*call)));
         //result.add_info("AN",  to_string(count_alleles(*call)));
         
-        result.set_info("NS",  count_samples_with_coverage(reads_, region));
-        result.set_info("DP",  sum_max_coverages(reads_, region));
-        result.set_info("SB",  Octopus::to_string(strand_bias(reads_, region), 2));
-        result.set_info("BQ",  static_cast<unsigned>(rmq_base_quality(reads_, region)));
-        result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
-        result.set_info("MQ0", count_mapq_zero(reads_, region));
+        const auto call_reads = copy_overlapped(reads_, region);
+        
+        result.set_info("NS",  count_samples_with_coverage(call_reads));
+        result.set_info("DP",  sum_max_coverages(call_reads));
+        result.set_info("SB",  Octopus::to_string(strand_bias(call_reads), 2));
+        result.set_info("BQ",  static_cast<unsigned>(rmq_base_quality(call_reads)));
+        result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
+        result.set_info("MQ0", count_mapq_zero(call_reads));
         
         if (call->dummy_model_posterior()) {
             result.set_info("DMP", *call->dummy_model_posterior());
@@ -660,9 +662,9 @@ namespace Octopus
                 
                 //result.set_format_missing(sample, "FT"); // TODO
                 result.set_format(sample, "GQ", std::to_string(gq));
-                result.set_format(sample, "DP", max_coverage(reads_.at(sample), region));
-                result.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region)));
-                result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region)));
+                result.set_format(sample, "DP", max_coverage(call_reads.at(sample)));
+                result.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(call_reads.at(sample))));
+                result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(call_reads.at(sample))));
                 
                 if (call->is_phased(sample)) {
                     const auto& phase = *genotype_call.phase;

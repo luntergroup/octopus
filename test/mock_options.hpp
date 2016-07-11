@@ -38,15 +38,15 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
-        "--threads", "0",
+        //"--threads", "0",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -81,6 +81,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
+        "--regions", "22",
+        
         //"--use-one-based-indexing",
         
         //"--regions", "22:22,583,864-22,584,168", // FN
@@ -89,7 +91,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:47,416,419-47,417,744", // bad model filtering
         
         //"--regions-file", "data/NA12878_GIAB_highconf_regions_big_expanded.bed",
-        "--regions-file", "data/NA12878_GIAB_chr22_highconf_regions_big_expanded.bed",
+        //"--regions-file", "data/NA12878_GIAB_chr22_highconf_regions_big_expanded.bed",
         
         //"--regions", "22:19,659,923-19,661,143", // very cool assembler deletion
         //"--regions", "22:49,217,985-49,218,594", // very cool assembler deletion
@@ -225,17 +227,17 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--no-raw-cigar-candidates",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
-        //"--no-assembly-candidates",
+        "--no-assembly-candidates",
         //"--kmer-size", "75",
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-//        "--phasing-level", "Minimal", // Minimal, Conservative, Aggressive
-//        "--disable-inactive-flank-scoring",
-//        "--max-haplotypes", "50",
+        //"--phasing-level", "Minimal", // Minimal, Conservative, Aggressive
+        //"--disable-inactive-flank-scoring",
+        //"--max-haplotypes", "50",
         //"--min-haplotype-posterior", "1e-30",
         
-        //"--disable-model-filtering",
+        "--disable-model-filtering",
         
         //"--min-variant-posterior", "0.5",
         //"--min-refcall-posterior", "0",
@@ -257,9 +259,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_cancer.vcf",
         //"--output", "octopus_calls_debug.vcf",
-        "--output", "octopus_calls_assemble.vcf",
+        //"--output", "octopus_calls_assemble.vcf",
         //"--output", "octopus_calls_fast.vcf",
-        //"--output", "octopus/octopus_NA12878_LC.vcf",
+        "--output", "octopus/octopus_NA12878_LC.vcf",
         
         nullptr
     };

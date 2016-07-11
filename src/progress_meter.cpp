@@ -102,6 +102,7 @@ namespace Octopus
         completed_regions_ = move(other.completed_regions_);
         num_bp_to_search_ = move(other.num_bp_to_search_);
         num_bp_completed_ = move(other.num_bp_completed_);
+        percent_block_size_ = move(other.percent_block_size_);
         percent_unitl_log_ = move(other.percent_unitl_log_);
         percent_at_last_log_ = move(other.percent_at_last_log_);
         start_ = move(other.start_);
@@ -112,14 +113,12 @@ namespace Octopus
         log_ = move(other.log_);
     }
     
-    double percent_completed(const std::size_t num_bp_completed,
-                             const std::size_t num_bp_to_search)
+    double percent_completed(const std::size_t num_bp_completed, const std::size_t num_bp_to_search)
     {
         return 100 * static_cast<double>(num_bp_completed) / num_bp_to_search;
     }
     
-    auto percent_completed_str(const std::size_t num_bp_completed,
-                               const std::size_t num_bp_to_search)
+    auto percent_completed_str(const std::size_t num_bp_completed, const std::size_t num_bp_to_search)
     {
         return Octopus::to_string(percent_completed(num_bp_completed, num_bp_to_search), 1) + '%';
     }
@@ -219,6 +218,13 @@ namespace Octopus
                          << ttc_pad("-")
                          << "-";
         }
+    }
+    
+    void ProgressMeter::set_percent_block_size(const double size)
+    {
+        block_compute_times_.clear(); // TODO: can we use old block times to estimate new block times?
+        percent_block_size_ = size;
+        percent_unitl_log_  = std::min(size, percent_unitl_log_);
     }
     
     void ProgressMeter::start()
@@ -389,25 +395,27 @@ namespace Octopus
         
         const auto num_blocks_completed = static_cast<std::size_t>(std::floor(percent_since_last_log / percent_block_size_));
         
-        const auto duration_since_last_log = std::chrono::duration_cast<DurationUnits>(now - last_log_);
+        std::string ttc {"-"};
         
-        const DurationUnits duration_per_block {static_cast<std::size_t>(duration_since_last_log.count() / num_blocks_completed)};
-        
-        std::fill_n(std::back_inserter(block_compute_times_),
-                    static_cast<std::size_t>(num_blocks_completed),
-                    duration_per_block);
-        
-        const auto num_remaining_blocks = static_cast<std::size_t>((100.0 - percent_done) / percent_block_size_);
-        
-        remove_outliers(block_compute_times_);
-        
-        const auto ttc = estimate_ttc(now, block_compute_times_, num_remaining_blocks);
-        auto ttc_str   = to_string(ttc);
-        
-        assert(!ttc_str.empty());
-        
-        if (ttc_str.front() == '0') {
-            ttc_str = "-";
+        if (num_blocks_completed > 0) {
+            const auto duration_since_last_log = std::chrono::duration_cast<DurationUnits>(now - last_log_);
+            
+            const DurationUnits duration_per_block {duration_since_last_log.count() / num_blocks_completed};
+            
+            std::fill_n(std::back_inserter(block_compute_times_), num_blocks_completed,
+                        duration_per_block);
+            
+            const auto num_remaining_blocks = static_cast<std::size_t>((100.0 - percent_done) / percent_block_size_);
+            
+            remove_outliers(block_compute_times_);
+            
+            ttc = to_string(estimate_ttc(now, block_compute_times_, num_remaining_blocks));
+            
+            assert(!ttc.empty());
+            
+            if (ttc.front() == '0') {
+                ttc = "-";
+            }
         }
         
         const auto percent_completed = percent_completed_str(num_bp_completed_, num_bp_to_search_);
@@ -418,8 +426,8 @@ namespace Octopus
                      << percent_completed
                      << time_taken_pad(time_taken)
                      << time_taken
-                     << ttc_pad(ttc_str)
-                     << ttc_str;
+                     << ttc_pad(ttc)
+                     << ttc;
         
         last_log_            = now;
         percent_unitl_log_   = percent_block_size_;

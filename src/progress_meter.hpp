@@ -30,12 +30,14 @@ namespace Octopus
         ProgressMeter(InputRegionMap regions);
         ProgressMeter(GenomicRegion region);
         
-        ~ProgressMeter();
-        
         ProgressMeter(const ProgressMeter&)            = delete;
         ProgressMeter& operator=(const ProgressMeter&) = delete;
         ProgressMeter(ProgressMeter&&);
         ProgressMeter& operator=(ProgressMeter&&)      = default;
+        
+        ~ProgressMeter();
+        
+        void set_percent_block_size(double size);
         
         void start();
         void resume();

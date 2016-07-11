@@ -455,7 +455,17 @@ namespace Octopus
             temp_directory {((!num_threads || *num_threads > 1) ? Options::create_temp_file_directory(options) : boost::none)},
             progress_meter {regions}
             {
-                if (!(samples.empty() || regions.empty() || !read_manager.good())) {
+                const auto num_bp_to_process = sum_region_sizes(regions);
+                
+                if (num_bp_to_process < 100000000) {
+                    progress_meter.set_percent_block_size(1.0);
+                } else if (num_bp_to_process < 1000000000) {
+                    progress_meter.set_percent_block_size(0.5);
+                } else {
+                    progress_meter.set_percent_block_size(0.1);
+                }
+                
+                if (!samples.empty() && !regions.empty() && read_manager.good()) {
                     read_buffer_size = calculate_max_num_reads(Options::get_target_read_buffer_size(options),
                                                                this->samples, this->regions,
                                                                this->read_manager);

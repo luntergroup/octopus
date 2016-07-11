@@ -194,9 +194,50 @@ void AlignmentCandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedR
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }
 
+template <typename ForwardIt, typename Container>
+auto copy_overlapped_indels(ForwardIt first, const ForwardIt last, const Container& candidates)
+{
+    std::deque<Variant> result {};
+    
+    if (first == last || candidates.empty()) return result;
+    
+    const auto max_indel_size = size(largest_region(first, last));
+    
+    for (const auto& candidate : candidates) {
+        const auto overlapped = overlap_range(first, last, candidate, max_indel_size);
+        
+        std::copy_if(std::cbegin(overlapped), std::cend(overlapped), std::back_inserter(result),
+                     [] (const auto& v) { return is_indel(v); });
+        
+        first = std::cbegin(overlapped).base();
+        
+        if (first == last) break;
+    }
+    
+    return result;
+}
+
+template <typename Container1, typename Container2>
+auto copy_overlapped_indels(const Container1& all_candidates, const Container2& selected_candidates)
+{
+    using std::cbegin; using std::cend; using std::begin; using std::end;
+    
+    std::vector<Variant> indels {};
+    
+    static const auto is_indel = [] (const auto& v) { return ::is_indel(v); };
+    
+    indels.reserve(std::count_if(cbegin(all_candidates), cend(all_candidates), is_indel));
+    
+    std::copy_if(cbegin(all_candidates), cend(all_candidates), std::back_inserter(indels), is_indel);
+    
+    indels.erase(std::unique(begin(indels), end(indels)), end(indels));
+    
+    return copy_overlapped_indels(cbegin(indels), cend(indels), selected_candidates);
+}
+
 std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
-    using std::begin; using std::end; using std::distance;
+    using std::begin; using std::end; using std::cbegin; using std::cend; using std::distance;
     
     std::sort(begin(candidates_), end(candidates_));
     
@@ -238,14 +279,7 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(con
         }
         
         if (options_.always_include_overlapping_indels) {
-            std::deque<Variant> overlapped_indels {};
-            
-            for (const auto& candidate : result) {
-                const auto overlapped = overlap_range(candidates_, candidate);
-                
-                std::copy_if(cbegin(overlapped), cend(overlapped), std::back_inserter(overlapped_indels),
-                             [] (const auto& v) { return is_indel(v); });
-            }
+            auto overlapped_indels = copy_overlapped_indels(candidates_, result);
             
             std::sort(begin(overlapped_indels), end(overlapped_indels));
             
@@ -253,7 +287,8 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(con
             
             const auto it = end(result);
             
-            std::unique_copy(begin(overlapped_indels), end(overlapped_indels), std::back_inserter(result));
+            std::unique_copy(begin(overlapped_indels), end(overlapped_indels),
+                             std::back_inserter(result));
             
             std::inplace_merge(begin(result), it, end(result));
             

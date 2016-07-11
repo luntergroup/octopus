@@ -473,10 +473,9 @@ Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std
     if (is_empty(contig_region)) {
         if (!is_empty_region(overlapped.front()) && are_adjacent(contig_region, overlapped.front())) {
             overlapped.advance_begin(1);
-            assert(!overlapped.empty());
         }
         
-        if (is_empty_region(overlapped.front())) {
+        if (!overlapped.empty() && is_empty_region(overlapped.front())) {
             result.push_back(overlapped.front());
         } else {
             result.push_back(ContigAllele {contig_region, ""});

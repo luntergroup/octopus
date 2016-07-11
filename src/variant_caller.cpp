@@ -349,6 +349,8 @@ VariantCaller::CallTypeSet VariantCaller::get_call_types() const
 std::deque<VcfRecord>
 VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
 {
+    resume_timer(init_timer);
+    
     ReadMap reads;
     std::deque<VcfRecord> result {};
     
@@ -375,6 +377,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     
     if (!refcalls_requested() && candidates.empty()) {
         progress_meter.log_completed(call_region);
+        pause_timer(init_timer);
         return result;
     }
     
@@ -391,6 +394,8 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     GenomicRegion active_region;
     
     auto completed_region = head_region(call_region);
+    
+    pause_timer(init_timer);
     
     while (true) {
         try {
@@ -473,6 +478,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         } else {
             haplotype_generator.stop();
         }
+        
         removed_haplotypes.clear();
         removed_haplotypes.shrink_to_fit();
         

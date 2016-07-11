@@ -348,7 +348,7 @@ namespace Octopus
             po::options_description candidates("Candidate generation options");
             candidates.add_options()
             ("no-raw-cigar-candidates", po::bool_switch()->default_value(false),
-             "Disables candidate generation from raw read alignmenets (CIGAR strings)")
+             "Disables candidate generation from raw read alignments (CIGAR strings)")
             ("no-assembly-candidates", po::bool_switch()->default_value(false),
              "Disables candidate generation using local re-assembly")
             ("candidates-from-source", po::value<std::string>(),
@@ -1554,11 +1554,7 @@ namespace Octopus
         return options.at("sites-only").as<bool>();
     }
     
-    VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
-                                                     ReadPipe& read_pipe,
-                                                     const CandidateGeneratorBuilder& candidate_generator_builder,
-                                                     const InputRegionMap& regions,
-                                                     const po::variables_map& options)
+    auto make_haplotype_generator_builder(const po::variables_map& options)
     {
         using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
         
@@ -1577,12 +1573,21 @@ namespace Octopus
         
         const auto max_haplotypes = options.at("max-haplotypes").as<unsigned>();
         
-        auto hg_builder = HaplotypeGenerator::Builder()
+        return HaplotypeGenerator::Builder()
             .set_target_limit(max_haplotypes).set_holdout_limit(2048).set_overflow_limit(16384)
             .set_lagging_policy(lagging_policy).set_max_holdout_depth(3);
-        
+    }
+    
+    VariantCallerFactory
+    make_variant_caller_factory(const ReferenceGenome& reference,
+                                ReadPipe& read_pipe,
+                                const CandidateGeneratorBuilder& candidate_generator_builder,
+                                const InputRegionMap& regions,
+                                const po::variables_map& options)
+    {
         VariantCallerBuilder vc_builder {
-            reference, read_pipe, candidate_generator_builder, std::move(hg_builder)
+            reference, read_pipe, candidate_generator_builder,
+            make_haplotype_generator_builder(options)
         };
         
         auto caller = options.at("caller").as<std::string>();
@@ -1610,9 +1615,7 @@ namespace Octopus
         auto min_refcall_posterior = options.at("min-refcall-posterior").as<Phred<double>>();
         
         vc_builder.set_min_refcall_posterior(min_refcall_posterior);
-        
         vc_builder.set_max_haplotypes(options.at("max-haplotypes").as<unsigned>());
-        
         vc_builder.set_min_haplotype_posterior(options.at("min-haplotype-posterior").as<float>());
         
         auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();

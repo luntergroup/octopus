@@ -211,7 +211,8 @@ Phaser::try_phase(const std::vector<Haplotype>& haplotypes,
 }
 
 Phaser::PhaseSet::SamplePhaseRegions
-force_phase_sample(const GenomicRegion& region, const std::vector<GenomicRegion>& partitions,
+force_phase_sample(const GenomicRegion& region,
+                   const std::vector<GenomicRegion>& partitions,
                    const std::vector<GenotypeReference>& genotypes,
                    const Phaser::SampleGenotypePosteriorMap& genotype_posteriors,
                    const Phred<double> min_phase_score)
