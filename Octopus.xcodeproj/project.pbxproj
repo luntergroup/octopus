@@ -301,7 +301,7 @@
 		CA704FC31D11F4B2004218BB /* snv_error_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = snv_error_model.hpp; sourceTree = "<group>"; };
 		CA7148B51CD00ABA0017820B /* read_filters.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filters.cpp; sourceTree = "<group>"; };
 		CA76E6F31BF155A90074E336 /* human_skip_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = human_skip_regions.txt; sourceTree = "<group>"; };
-		CA8A66431B7E2CC7008CE1D8 /* i_vcf_reader_impl.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = i_vcf_reader_impl.hpp; sourceTree = "<group>"; };
+		CA8A66431B7E2CC7008CE1D8 /* vcf_reader_impl.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = vcf_reader_impl.hpp; sourceTree = "<group>"; };
 		CA8A66451B7E5E0C008CE1D8 /* sequence_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = sequence_utils.hpp; sourceTree = "<group>"; };
 		CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = threadsafe_fasta.cpp; sourceTree = "<group>"; };
 		CA8A66491B81CA7E008CE1D8 /* threadsafe_fasta.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = threadsafe_fasta.hpp; sourceTree = "<group>"; };
@@ -787,6 +787,13 @@
 			name = mappable;
 			sourceTree = "<group>";
 		};
+		CA3B6CE41D344379005298BE /* metrics */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = metrics;
+			sourceTree = "<group>";
+		};
 		CA566E301D045BD2007C5180 /* call-types */ = {
 			isa = PBXGroup;
 			children = (
@@ -1195,7 +1202,7 @@
 				D4636C621B6788C500FEA7D2 /* vcf_record.cpp */,
 				CAF23F6F1BA2C308006B673F /* vcf_utils.hpp */,
 				CAF23F6E1BA2C308006B673F /* vcf_utils.cpp */,
-				CA8A66431B7E2CC7008CE1D8 /* i_vcf_reader_impl.hpp */,
+				CA8A66431B7E2CC7008CE1D8 /* vcf_reader_impl.hpp */,
 				D4636C601B6788AC00FEA7D2 /* vcf_reader.hpp */,
 				D4636C5F1B6788AC00FEA7D2 /* vcf_reader.cpp */,
 				D4636C691B6919B500FEA7D2 /* vcf_writer.hpp */,
@@ -1225,6 +1232,7 @@
 		CAFA2CE41CF37FF200C109D5 /* callset-filtering */ = {
 			isa = PBXGroup;
 			children = (
+				CA3B6CE41D344379005298BE /* metrics */,
 				CAFA2CEC1CF3ACA700C109D5 /* genotype_reader.hpp */,
 				CAFA2CEB1CF3ACA700C109D5 /* genotype_reader.cpp */,
 				CAE3B59D1CFE3E3E005EEDE6 /* variant_call_filter.hpp */,
@@ -1769,6 +1777,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

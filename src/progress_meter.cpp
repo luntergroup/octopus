@@ -233,6 +233,8 @@ namespace Octopus
             completed_regions_.reserve(regions_.size());
             write_header();
         }
+        start_ = std::chrono::system_clock::now();
+        last_log_ = start_;
     }
     
     void ProgressMeter::resume()

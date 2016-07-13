@@ -31,7 +31,7 @@ public:
     VcfWriter(Path file_path);
     VcfWriter(Path file_path, const VcfHeader& header);
     
-    ~VcfWriter() = default;
+    ~VcfWriter();
     
     VcfWriter(const VcfWriter&)            = delete;
     VcfWriter& operator=(const VcfWriter&) = delete;

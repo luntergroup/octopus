@@ -20,6 +20,7 @@
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "downsampler.hpp"
+#include "variant_call_filter.hpp"
 
 class VcfWriter;
 
@@ -87,7 +88,6 @@ namespace Options
     VcfWriter make_output_vcf_writer(const po::variables_map& options);
     
     boost::optional<fs::path> create_temp_file_directory(const po::variables_map& options);
-        
 } // namespace Options
 } // namespace Octopus
 

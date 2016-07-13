@@ -13,20 +13,27 @@
 #include <string>
 #include <cstddef>
 #include <fstream>
+#include <iterator>
 
 #include <boost/filesystem/path.hpp>
 
-#include "i_vcf_reader_impl.hpp"
+#include "vcf_reader_impl.hpp"
 #include "vcf_header.hpp"
+#include "vcf_record.hpp"
 
 namespace fs = boost::filesystem;
 
 class GenomicRegion;
-class VcfRecord;
 
 class VcfParser : public IVcfReaderImpl
 {
 public:
+    using IVcfReaderImpl::RecordContainer;
+    
+    class RecordIterator;
+    
+    using IVcfReaderImpl::RecordIteratorPtrPair;
+    
     VcfParser() = delete;
     
     VcfParser(const fs::path& file_path);
@@ -44,9 +51,11 @@ public:
     std::size_t count_records(const std::string& contig) const override;
     std::size_t count_records(const GenomicRegion& region) const override;
     
-    std::vector<VcfRecord> fetch_records(UnpackPolicy level) const override;
-    std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level) const override;
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, UnpackPolicy level) const override;
+    RecordIteratorPtrPair iterate(UnpackPolicy level) const override;
+    
+    RecordContainer fetch_records(UnpackPolicy level) const override;
+    RecordContainer fetch_records(const std::string& contig, UnpackPolicy level) const override;
+    RecordContainer fetch_records(const GenomicRegion& region, UnpackPolicy level) const override;
     
 private:
     fs::path file_path_;
@@ -59,6 +68,39 @@ private:
     const std::streampos first_record_pos_; // must go after header_!
     
     void reset_vcf() const; // logically
+};
+
+class VcfParser::RecordIterator : public IVcfReaderImpl::RecordIterator
+{
+public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type        = VcfRecord;
+    using difference_type   = std::ptrdiff_t;
+    using pointer           = const VcfRecord*;
+    using reference         = const VcfRecord&;
+    
+    RecordIterator() = default;
+    
+    ~RecordIterator() noexcept = default;
+    
+    RecordIterator(const RecordIterator&)            = default;
+    RecordIterator& operator=(const RecordIterator&) = default;
+    RecordIterator(RecordIterator&&)                 = default;
+    RecordIterator& operator=(RecordIterator&&)      = default;
+    
+    reference operator*() const override { return record_; }
+    pointer operator->() const override { return &record_; }
+    
+    void next() override {}
+    //RecordIterator& operator++();
+    
+    friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs)
+    {
+        return lhs.record_ == rhs.record_;
+    }
+    
+private:
+    VcfRecord record_;
 };
 
 #endif /* defined(__Octopus__vcf_parser__) */

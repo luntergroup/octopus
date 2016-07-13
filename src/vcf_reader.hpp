@@ -14,10 +14,13 @@
 #include <cstddef>
 #include <memory>
 #include <mutex>
+#include <iterator>
+#include <typeindex>
+#include <utility>
 
 #include <boost/filesystem.hpp>
 
-#include "i_vcf_reader_impl.hpp"
+#include "vcf_reader_impl.hpp"
 
 class VcfHeader;
 class VcfRecord;
@@ -29,6 +32,32 @@ public:
     using Path = boost::filesystem::path;
     
     using UnpackPolicy = IVcfReaderImpl::UnpackPolicy;
+    
+    using RecordContainer = IVcfReaderImpl::RecordContainer;
+    
+    class RecordIterator
+    {
+    public:
+        using iterator_category = std::input_iterator_tag;
+        using value_type        = VcfRecord;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = const VcfRecord*;
+        using reference         = const VcfRecord&;
+        
+        RecordIterator(IVcfReaderImpl::RecordIteratorPtr itr);
+        
+        reference operator*() const;
+        pointer operator->() const;
+        
+        RecordIterator& operator++();
+        
+        friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
+    private:
+        IVcfReaderImpl::RecordIteratorPtr itr_;
+        std::type_index type_;
+    };
+    
+    using RecordIteratorPair = std::pair<RecordIterator, RecordIterator>;
     
     VcfReader() = default;
     
@@ -55,9 +84,11 @@ public:
     std::size_t count_records(const std::string& contig) const;
     std::size_t count_records(const GenomicRegion& region) const;
     
-    std::vector<VcfRecord> fetch_records(UnpackPolicy level = UnpackPolicy::All) const; // fetches all records
-    std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level = UnpackPolicy::All) const;
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::All) const;
+    RecordContainer fetch_records(UnpackPolicy level = UnpackPolicy::All) const; // fetches all records
+    RecordContainer fetch_records(const std::string& contig, UnpackPolicy level = UnpackPolicy::All) const;
+    RecordContainer fetch_records(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::All) const;
+    
+    RecordIteratorPair iterate(UnpackPolicy level = UnpackPolicy::All) const;
     
 private:
     Path file_path_;
@@ -67,6 +98,8 @@ private:
 };
 
 bool operator==(const VcfReader& lhs, const VcfReader& rhs);
+
+bool operator!=(const VcfReader::RecordIterator& lhs, const VcfReader::RecordIterator& rhs);
 
 namespace std {
     template <> struct hash<VcfReader>

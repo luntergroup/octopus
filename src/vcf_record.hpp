@@ -19,6 +19,7 @@
 #include <initializer_list>
 
 #include <boost/optional.hpp>
+#include <boost/container/flat_map.hpp>
 
 #include "comparable.hpp"
 
@@ -97,7 +98,7 @@ public:
     
 private:
     using Genotype = std::pair<std::vector<SequenceType>, bool>;
-    using ValueMap = std::unordered_map<KeyType, std::vector<ValueType>>;
+    using ValueMap = boost::container::flat_map<KeyType, std::vector<ValueType>>;
     
     // mandatory fields
     std::string chrom_;
@@ -111,8 +112,8 @@ private:
     
     // optional fields
     std::vector<KeyType> format_;
-    std::unordered_map<SampleIdType, Genotype> genotypes_;
-    std::unordered_map<SampleIdType, ValueMap> samples_;
+    boost::container::flat_map<SampleIdType, Genotype> genotypes_;
+    boost::container::flat_map<SampleIdType, ValueMap> samples_;
     
     std::string get_allele_number(const SequenceType& allele) const;
     
@@ -219,6 +220,7 @@ public:
     Builder& set_filter(std::vector<KeyType> filter);
     Builder& set_filter(std::initializer_list<KeyType> filter);
     Builder& add_filter(KeyType filter);
+    Builder& reserve_info(unsigned n);
     Builder& add_info(const KeyType& key); // flags
     Builder& set_info(const KeyType& key, const ValueType& value);
     template <typename T> Builder& set_info(const KeyType& key, const T& value); // calls std::to_string
@@ -231,7 +233,8 @@ public:
     Builder& set_format(std::initializer_list<KeyType> format);
     Builder& add_format(KeyType key);
     Builder& set_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy);
-    Builder& set_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, Phasing phasing);
+    Builder& reserve_samples(unsigned n);
+    Builder& set_genotype(const SampleIdType& sample, std::vector<SequenceType> alleles, Phasing phasing);
     Builder& set_genotype(const SampleIdType& sample, const std::vector<boost::optional<unsigned>>& alleles, Phasing is_phased);
     Builder& set_format(const SampleIdType& sample, const KeyType& key, const ValueType& value);
     template <typename T>
@@ -249,17 +252,17 @@ public:
     VcfRecord build_once() noexcept;
     
 private:
-    std::string chrom_ = ".";
-    SizeType pos_ = 0;
-    IdType id_ = ".";
-    SequenceType ref_ = ".";
-    std::vector<SequenceType> alt_ = {"."};
-    boost::optional<QualityType> qual_ = boost::none;
-    std::vector<KeyType> filter_ = {};
-    std::unordered_map<KeyType, std::vector<ValueType>> info_ = {};
-    std::vector<KeyType> format_ = {};
-    std::unordered_map<SampleIdType, Genotype> genotypes_ = {};
-    std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<ValueType>>> samples_ = {};
+    decltype(VcfRecord::chrom_) chrom_ = ".";
+    decltype(VcfRecord::pos_) pos_ = 0;
+    decltype(VcfRecord::id_) id_ = ".";
+    decltype(VcfRecord::ref_) ref_ = ".";
+    decltype(VcfRecord::alt_) alt_ = {"."};
+    decltype(VcfRecord::qual_) qual_ = boost::none;
+    decltype(VcfRecord::filter_) filter_ = {};
+    decltype(VcfRecord::info_) info_ = {};
+    decltype(VcfRecord::format_) format_ = {};
+    decltype(VcfRecord::genotypes_) genotypes_ = {};
+    decltype(VcfRecord::samples_) samples_ = {};
 };
 
 template <typename T>

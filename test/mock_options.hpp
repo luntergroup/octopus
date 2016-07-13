@@ -88,11 +88,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:48,744,696-48,744,879", // difficult region (FPs)
         //"--regions", "22:47,416,419-47,417,744", // bad model filtering
         
-        "--regions", "4:10726422-10904878", "4:10904914-10946803",
-        //"--regions", "4:174504991-174508498", "4:174508532-174520940",
-        //"--regions", "4:176997245-176997379", "4:176997382-176997552",
-        
-        //"--regions-file", "data/NA12878_GIAB_highconf_regions_big_expanded.bed",
+        "--regions-file", "data/NA12878_GIAB_highconf_regions_big_expanded.bed",
         //"--regions-file", "data/NA12878_GIAB_chr22_highconf_regions_big_expanded.bed",
         
         //"--regions", "22:19,659,923-19,661,143", // very cool assembler deletion
@@ -239,7 +235,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-haplotypes", "50",
         //"--min-haplotype-posterior", "1e-30",
         
-        "--disable-model-filtering",
+        //"--disable-model-filtering",
+        "--disable-call-filtering",
         
         //"--min-variant-posterior", "0.5",
         //"--min-refcall-posterior", "0",
@@ -260,10 +257,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_cancer.vcf",
-        //"--output", "octopus_calls_debug.vcf",
+        "--output", "octopus_calls_debug.vcf",
         //"--output", "octopus_calls_assemble.vcf",
         //"--output", "octopus_calls_fast.vcf",
-        "--output", "octopus/octopus_NA12878_LC.vcf",
+        //"--output", "octopus/octopus_NA12878_LC.vcf.gz",
+        
+        "--legacy",
         
         nullptr
     };

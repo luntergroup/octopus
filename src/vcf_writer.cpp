@@ -16,6 +16,7 @@
 
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
+#include "vcf_utils.hpp"
 
 #include <iostream> // TEST
 
@@ -25,12 +26,14 @@ file_path_ {std::move(file_path)},
 writer_ {nullptr},
 is_header_written_ {false}
 {
-    if (boost::filesystem::exists(file_path_)) {
-        boost::filesystem::remove(file_path_);
+    using namespace boost::filesystem;
+    
+    if (exists(file_path_)) {
+        remove(file_path_);
     } else {
         const auto dir = file_path_.parent_path();
         
-        if (!(boost::filesystem::is_directory(dir) && boost::filesystem::exists(dir))) {
+        if (!(is_directory(dir) && exists(dir))) {
             std::ostringstream ss {};
             ss << "VcfWriter: the path ";
             ss << file_path_;
@@ -38,6 +41,14 @@ is_header_written_ {false}
             
             throw std::runtime_error {ss.str()};
         }
+    }
+    
+    Path index_path1 {file_path_.string() + ".csi"}, index_path2 {file_path_.string() + ".tbi"};
+    
+    if (exists(index_path1)) {
+        remove(index_path1);
+    } else if (exists(index_path2)) {
+        remove(index_path2);
     }
     
     writer_ = std::make_unique<HtslibBcfFacade>(file_path_, "w");
@@ -56,6 +67,18 @@ VcfWriter::VcfWriter(VcfWriter&& other)
     file_path_         = std::move(other.file_path_);
     is_header_written_ = other.is_header_written_;
     writer_            = std::move(other.writer_);
+}
+
+VcfWriter::~VcfWriter()
+{
+    try {
+        this->close();
+        if (!file_path_.empty() && file_path_ != "-" && boost::filesystem::exists(file_path_)) {
+            index_vcf(file_path_);
+        }
+    } catch(...) {
+        return;
+    }
 }
 
 void swap(VcfWriter& lhs, VcfWriter& rhs) noexcept

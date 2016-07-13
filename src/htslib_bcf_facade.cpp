@@ -12,7 +12,6 @@
 #include <unordered_map>
 #include <stdexcept>
 #include <algorithm>
-#include <iterator>
 #include <utility>
 #include <cstdlib>
 #include <cstring>
@@ -28,6 +27,11 @@
 #include "string_utils.hpp"
 
 #include <iostream> // TEST
+
+namespace
+{
+    static const std::string VcfMissingValue {"."};
+}
 
 char* convert(const std::string& source)
 {
@@ -178,7 +182,7 @@ std::size_t HtslibBcfFacade::count_records(const GenomicRegion& region) const
     return count_records(sr);
 }
 
-HtslibBcfFacade::RecordIteratorRange HtslibBcfFacade::records(const UnpackPolicy level) const
+HtslibBcfFacade::RecordIteratorPtrPair HtslibBcfFacade::iterate(const UnpackPolicy level) const
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
@@ -187,49 +191,50 @@ HtslibBcfFacade::RecordIteratorRange HtslibBcfFacade::records(const UnpackPolicy
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
-    return std::make_pair(RecordIterator {*this, std::move(sr), level},
-                          RecordIterator {*this});
+    return std::make_pair(std::make_unique<RecordIterator>(*this, std::move(sr), level),
+                          std::make_unique<RecordIterator>(*this));
 }
 
-HtslibBcfFacade::RecordIteratorRange
-HtslibBcfFacade::records(const std::string& contig, const UnpackPolicy level) const
-{
-    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
-    
-    if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) {
-        throw std::runtime_error {"failed load contig " + contig};
-    }
-    
-    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
-        sr.release();
-        throw std::runtime_error {"failed to open file " + file_path_.string()};
-    }
-    
-    return std::make_pair(RecordIterator {*this, std::move(sr), level},
-                          RecordIterator {*this});
-}
+//HtslibBcfFacade::RecordIteratorPtrPair
+//HtslibBcfFacade::iterate(const std::string& contig, const UnpackPolicy level)
+//{
+//    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
+//    
+//    if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) {
+//        throw std::runtime_error {"failed load contig " + contig};
+//    }
+//    
+//    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
+//        sr.release();
+//        throw std::runtime_error {"failed to open file " + file_path_.string()};
+//    }
+//    
+//    return std::make_pair(std::make_unique<RecordIterator>(*this, std::move(sr), level),
+//                          std::make_unique<RecordIterator>(*this));
+//}
+//
+//HtslibBcfFacade::RecordIteratorPtrPair
+//HtslibBcfFacade::iterate(const GenomicRegion& region, const UnpackPolicy level)
+//{
+//    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
+//    
+//    const auto region_str = to_string(region);
+//    
+//    if (bcf_sr_set_regions(sr.get(), region_str.c_str(), 0) != 0) {
+//        throw std::runtime_error {"failed load region " + region_str};
+//    }
+//    
+//    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
+//        sr.release();
+//        throw std::runtime_error {"failed to open file " + file_path_.string()};
+//    }
+//    
+//    return std::make_pair(std::make_unique<RecordIterator>(*this, std::move(sr), level),
+//                          std::make_unique<RecordIterator>(*this));
+//}
 
-HtslibBcfFacade::RecordIteratorRange
-HtslibBcfFacade::records(const GenomicRegion& region, const UnpackPolicy level) const
-{
-    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
-    
-    const auto region_str = to_string(region);
-    
-    if (bcf_sr_set_regions(sr.get(), region_str.c_str(), 0) != 0) {
-        throw std::runtime_error {"failed load region " + region_str};
-    }
-    
-    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
-        sr.release();
-        throw std::runtime_error {"failed to open file " + file_path_.string()};
-    }
-    
-    return std::make_pair(RecordIterator {*this, std::move(sr), level},
-                          RecordIterator {*this});
-}
-
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const UnpackPolicy level) const
+HtslibBcfFacade::RecordContainer
+HtslibBcfFacade::fetch_records(const UnpackPolicy level) const
 {
     const auto n_records = count_records();
     
@@ -243,7 +248,8 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const UnpackPolicy level) 
     return fetch_records(sr.get(), level, n_records);
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig, const UnpackPolicy level) const
+HtslibBcfFacade::RecordContainer
+HtslibBcfFacade::fetch_records(const std::string& contig, const UnpackPolicy level) const
 {
     const auto n_records = count_records(contig);
     
@@ -261,7 +267,8 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig,
     return fetch_records(sr.get(), level, n_records);
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
+HtslibBcfFacade::RecordContainer
+HtslibBcfFacade::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
 {
     const auto n_records = count_records(region);
     
@@ -421,15 +428,17 @@ HtslibBcfFacade::RecordIterator::RecordIterator(const HtslibBcfFacade& facade)
 :
 facade_ {facade},
 hts_iterator_ {nullptr},
+level_ {},
 record_ {nullptr}
 {}
 
-HtslibBcfFacade::RecordIterator::RecordIterator(const HtslibBcfFacade& facade, HtsBcfSrPtr hts_iterator,
+HtslibBcfFacade::RecordIterator::RecordIterator(const HtslibBcfFacade& facade,
+                                                HtsBcfSrPtr hts_iterator,
                                                 UnpackPolicy level)
 :
 facade_ {facade},
-hts_iterator_ {std::move(hts_iterator), },
-record_ {}
+hts_iterator_ {std::move(hts_iterator)},
+level_ {level}
 {
     if (bcf_sr_next_line(hts_iterator_.get())) {
         record_ = std::make_shared<VcfRecord>(facade_.get().fetch_record(hts_iterator_.get(), level_));
@@ -448,13 +457,18 @@ HtslibBcfFacade::RecordIterator::pointer HtslibBcfFacade::RecordIterator::operat
     return record_.get();
 }
 
-HtslibBcfFacade::RecordIterator& HtslibBcfFacade::RecordIterator::operator++()
+void HtslibBcfFacade::RecordIterator::next()
 {
     if (bcf_sr_next_line(hts_iterator_.get())) {
         *record_ = facade_.get().fetch_record(hts_iterator_.get(), level_);
     } else {
         hts_iterator_ = nullptr;
     }
+}
+
+HtslibBcfFacade::RecordIterator& HtslibBcfFacade::RecordIterator::operator++()
+{
+    this->next();
     return *this;
 }
 
@@ -484,9 +498,9 @@ std::unordered_map<std::string, std::string> extract_format(const bcf_hrec_t* li
     return result;
 }
 
-auto extract_chrom(const bcf_hdr_t* header, const bcf1_t* record)
+void extract_chrom(const bcf_hdr_t* header, const bcf1_t* record, VcfRecord::Builder& builder)
 {
-    return bcf_hdr_id2name(header, record->rid);
+    builder.set_chrom(bcf_hdr_id2name(header, record->rid));
 }
 
 void set_chrom(const bcf_hdr_t* header, bcf1_t* record, const std::string& chrom)
@@ -494,9 +508,9 @@ void set_chrom(const bcf_hdr_t* header, bcf1_t* record, const std::string& chrom
     record->rid = bcf_hdr_name2id(header, chrom.c_str());
 }
 
-auto extract_pos(const bcf1_t* record)
+void extract_pos(const bcf1_t* record, VcfRecord::Builder& builder)
 {
-    return static_cast<GenomicRegion::SizeType>(record->pos) + 1;
+    builder.set_pos(record->pos + 1);
 }
 
 void set_pos(bcf1_t* record, const VcfRecord::SizeType pos)
@@ -504,9 +518,9 @@ void set_pos(bcf1_t* record, const VcfRecord::SizeType pos)
     record->pos = static_cast<std::uint32_t>(pos);
 }
 
-auto extract_id(const bcf1_t* record)
+void extract_id(const bcf1_t* record, VcfRecord::Builder& builder)
 {
-    return record->d.id;
+    builder.set_id(record->d.id);
 }
 
 void set_id(bcf1_t* record, const std::string& id)
@@ -514,9 +528,9 @@ void set_id(bcf1_t* record, const std::string& id)
     record->d.id = convert(id);
 }
 
-auto extract_ref(const bcf1_t* record)
+void extract_ref(const bcf1_t* record, VcfRecord::Builder& builder)
 {
-    return record->d.allele[0];
+    builder.set_ref(record->d.allele[0]);
 }
 
 void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::SequenceType& ref,
@@ -534,26 +548,25 @@ void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::Seque
     bcf_update_alleles(header, record, alleles.data(), static_cast<int>(num_alleles));
 }
 
-auto extract_alt(const bcf1_t* record)
+void extract_alt(const bcf1_t* record, VcfRecord::Builder& builder)
 {
     const auto num_alleles = record->n_allele;
     
-    std::vector<VcfRecord::SequenceType> result {};
-    result.reserve(num_alleles - 1); // first is the reference
+    std::vector<VcfRecord::SequenceType> alleles {};
+    alleles.reserve(num_alleles - 1); // first is the reference
     
     for (unsigned i {1}; i < num_alleles; ++i) {
-        result.emplace_back(record->d.allele[i]);
+        alleles.emplace_back(record->d.allele[i]);
     }
     
-    return result;
+    builder.set_alt(std::move(alleles));
 }
 
-boost::optional<VcfRecord::QualityType> extract_qual(const bcf1_t* record)
+void extract_qual(const bcf1_t* record, VcfRecord::Builder& builder)
 {
-    if (std::isnan(record->qual)) {
-        return boost::none;
+    if (!std::isnan(record->qual)) {
+        builder.set_qual(record->qual);
     }
-    return record->qual;
 }
 
 void set_qual(bcf1_t* record, const VcfRecord::QualityType qual)
@@ -561,16 +574,16 @@ void set_qual(bcf1_t* record, const VcfRecord::QualityType qual)
     record->qual = (qual == -0) ? 0 : static_cast<float>(qual);
 }
 
-auto extract_filter(const bcf_hdr_t* header, const bcf1_t* record)
+void extract_filter(const bcf_hdr_t* header, const bcf1_t* record, VcfRecord::Builder& builder)
 {
-    std::vector<VcfRecord::KeyType> result {};
-    result.reserve(record->d.n_flt);
+    std::vector<VcfRecord::KeyType> filter {};
+    filter.reserve(record->d.n_flt);
     
     for (unsigned i {0}; i < record->d.n_flt; ++i) {
-        result.emplace_back(bcf_hdr_int2id(header, BCF_DT_ID, record->d.flt[i]));
+        filter.emplace_back(bcf_hdr_int2id(header, BCF_DT_ID, record->d.flt[i]));
     }
     
-    return result;
+    builder.set_filter(std::move(filter));
 }
 
 void set_filter(const bcf_hdr_t* header, bcf1_t* record, const std::vector<std::string>& filters)
@@ -595,15 +608,14 @@ namespace
     }
 } // namespace
 
-auto extract_info(const bcf_hdr_t* header, bcf1_t* record)
+void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& builder)
 {
-    std::unordered_map<VcfRecord::KeyType, std::vector<std::string>> result {};
-    result.reserve(record->n_info);
-    
     int* intinfo {nullptr};
     float* floatinfo {nullptr};
     char* stringinfo {nullptr};
     int* flaginfo {nullptr}; // not actually populated
+    
+    builder.reserve_info(record->n_info);
     
     for (unsigned i {0}; i < record->n_info; ++i) {
         int nintinfo {0};
@@ -611,23 +623,33 @@ auto extract_info(const bcf_hdr_t* header, bcf1_t* record)
         int nstringinfo {0};
         int nflaginfo {0};
         
-        const char* key {header->id[BCF_DT_ID][record->d.info[i].key].key};
+        const auto key_id = record->d.info[i].key;
+        
+        if (key_id >= header->n[BCF_DT_ID]) {
+            throw std::runtime_error {"HtslibBcfFacade: found INFO key not present in header file"};
+        }
+        
+        const char* key {header->id[BCF_DT_ID][key_id].key};
         
         std::vector<std::string> values {};
         
-        switch (bcf_hdr_id2type(header, BCF_HL_INFO, record->d.info[i].key)) {
+        switch (bcf_hdr_id2type(header, BCF_HL_INFO, key_id)) {
             case BCF_HT_INT:
                 if (bcf_get_info_int32(header, record, key, &intinfo, &nintinfo) > 0) {
                     values.reserve(nintinfo);
                     std::transform(intinfo, intinfo + nintinfo, std::back_inserter(values),
-                                   [] (auto v) { return std::to_string(v); });
+                                   [] (auto v) {
+                                       return v != bcf_int32_missing ? std::to_string(v) : VcfMissingValue;
+                                   });
                 }
                 break;
             case BCF_HT_REAL:
                 if (bcf_get_info_float(header, record, key, &floatinfo, &nfloatinfo) > 0) {
                     values.reserve(nfloatinfo);
                     std::transform(floatinfo, floatinfo + nfloatinfo, std::back_inserter(values),
-                                   [] (auto v) { return std::to_string(v); });
+                                   [] (auto v) {
+                                       return v != bcf_float_missing ? std::to_string(v) : VcfMissingValue;
+                                   });
                 }
                 break;
             case BCF_HT_STR:
@@ -645,15 +667,13 @@ auto extract_info(const bcf_hdr_t* header, bcf1_t* record)
                 break;
         }
         
-        result.emplace(key, std::move(values));
+        builder.set_info(key, std::move(values));
     }
     
     if (intinfo != nullptr) std::free(intinfo);
     if (floatinfo != nullptr) std::free(floatinfo);
     if (stringinfo != nullptr) std::free(stringinfo);
     if (flaginfo != nullptr) std::free(flaginfo);
-    
-    return result;
 }
 
 void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
@@ -667,7 +687,9 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             {
                 std::vector<int> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
-                               [] (const auto& v) { return std::stoi(v); });
+                               [] (const auto& v) {
+                                   return v != VcfMissingValue ? std::stoi(v) : bcf_int32_missing;
+                               });
                 bcf_update_info_int32(header, dest, key.c_str(), vals.data(), num_values);
                 break;
             }
@@ -675,7 +697,9 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             {
                 std::vector<float> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
-                               [] (const auto& v) { return std::stof(v); });
+                               [] (const auto& v) {
+                                   return v != VcfMissingValue ? std::stof(v) : bcf_float_missing;
+                               });
                 bcf_update_info_float(header, dest, key.c_str(), vals.data(), num_values);
                 break;
             }
@@ -705,18 +729,25 @@ auto extract_format(const bcf_hdr_t* header, const bcf1_t* record)
     result.reserve(record->n_fmt);
     
     for (unsigned i {0}; i < record->n_fmt; ++i) {
-        result.emplace_back(header->id[BCF_DT_ID][record->d.fmt[i].id].key);
+        const auto key_id = record->d.fmt[i].id;
+        
+        if (key_id >= header->n[BCF_DT_ID]) {
+            throw std::runtime_error {"HtslibBcfFacade: found FORMAT key not present in header file"};
+        }
+        
+        result.emplace_back(header->id[BCF_DT_ID][key_id].key);
     }
     
     return result;
 }
 
-auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfRecord::KeyType>& format)
+void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& builder)
 {
+    auto format = extract_format(header, record);
+    
     const auto num_samples = record->n_sample;
     
-    std::unordered_map<VcfRecord::SampleIdType, std::pair<std::vector<VcfRecord::SequenceType>, bool>> genotypes {};
-    genotypes.reserve(num_samples);
+    builder.reserve_samples(num_samples);
     
     if (format.front() == "GT") { // the first key must be GT if present
         int ngt {}, g {};
@@ -737,28 +768,26 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
                     alleles.shrink_to_fit();
                     break;
                 } else if (bcf_gt_is_missing(g)) {
-                    alleles.emplace_back(".");
+                    alleles.push_back(VcfMissingValue);
                 } else {
                     const auto idx = bcf_gt_allele(g);
                     
                     if (idx < record->n_allele) {
                         alleles.emplace_back(record->d.allele[idx]);
                     } else {
-                        alleles.emplace_back(".");
+                        alleles.push_back(VcfMissingValue);
                     }
                 }
             }
             
-            genotypes.emplace(std::piecewise_construct,
-                              std::forward_as_tuple(header->samples[sample]),
-                              std::forward_as_tuple(std::move(alleles), bcf_gt_is_phased(g)));
+            using Phasing = VcfRecord::Builder::Phasing;
+            
+            builder.set_genotype(header->samples[sample], std::move(alleles),
+                                 bcf_gt_is_phased(g) ? Phasing::Phased : Phasing::Unphased);
         }
         
         std::free(gt);
     }
-    
-    std::unordered_map<VcfRecord::SampleIdType, std::unordered_map<VcfRecord::KeyType, std::vector<std::string>>> other_data {};
-    other_data.reserve(num_samples);
     
     int nintformat {};
     int* intformat {nullptr};
@@ -782,7 +811,9 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
                         values[sample].reserve(num_values_per_sample);
                         
                         std::transform(ptr, ptr + num_values_per_sample, std::back_inserter(values[sample]),
-                                       [] (auto v) { return std::to_string(v); });
+                                       [] (auto v) {
+                                           return v != bcf_int32_missing ? std::to_string(v) : VcfMissingValue;
+                                       });
                     }
                 }
                 break;
@@ -795,7 +826,9 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
                         values[sample].reserve(num_values_per_sample);
                         
                         std::transform(ptr, ptr + num_samples, std::back_inserter(values[sample]),
-                                       [] (auto v) { return std::to_string(v); });
+                                       [] (auto v) {
+                                           return v != bcf_float_missing ? std::to_string(v) : VcfMissingValue;
+                                       });
                     }
                 }
                 break;
@@ -812,9 +845,11 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
         }
         
         for (unsigned sample {0}; sample < num_samples; ++sample) {
-            other_data[header->samples[sample]].emplace(key, std::move(values[sample]));
+            builder.set_format(header->samples[sample], key, std::move(values[sample]));
         }
     }
+    
+    builder.set_format(std::move(format));
     
     if (intformat != nullptr) std::free(intformat);
     if (floatformat != nullptr) std::free(floatformat);
@@ -823,14 +858,12 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
         std::free(stringformat[0]);
         std::free(stringformat);
     }
-    
-    return std::make_pair(std::move(genotypes), std::move(other_data));
 }
 
 template <typename T, typename Container>
 auto genotype_number(const T& allele, const Container& alleles, const bool is_phased)
 {
-    if (allele == ".") {
+    if (allele == VcfMissingValue) {
         return (is_phased) ? bcf_gt_missing + 1 : bcf_gt_missing;
     }
     
@@ -907,7 +940,9 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
                   it = std::transform(std::cbegin(values), std::cend(values), it,
-                                      [] (const auto& value) { return std::stoi(value); });
+                                      [] (const auto& v) {
+                                          return v != VcfMissingValue ? std::stoi(v) : bcf_int32_missing;
+                                      });
               }
               bcf_update_format_int32(header, dest, key.c_str(), typed_values.data(), num_values);
               break;
@@ -919,7 +954,9 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
                   it = std::transform(std::cbegin(values), std::cend(values), it,
-                                      [] (const auto& value) { return std::stof(value); });
+                                      [] (const auto& v) {
+                                          return v != VcfMissingValue ? std::stof(v) : bcf_float_missing;
+                                      });
               }
               bcf_update_format_float(header, dest, key.c_str(), typed_values.data(), num_values);
               break;
@@ -949,66 +986,36 @@ std::size_t HtslibBcfFacade::count_records(HtsBcfSrPtr& sr) const
 
 VcfRecord HtslibBcfFacade::fetch_record(const bcf_srs_t* sr, UnpackPolicy level) const
 {
-    auto result = bcf_sr_get_line(sr, 0);
+    auto hts_record = bcf_sr_get_line(sr, 0);
     
-    bcf_unpack(result, (level == UnpackPolicy::All) ? BCF_UN_ALL : BCF_UN_SHR);
+    bcf_unpack(hts_record, level == UnpackPolicy::All ? BCF_UN_ALL : BCF_UN_SHR);
     
-    auto chrom  = extract_chrom(header_.get(), result);
-    auto pos    = extract_pos(result);
-    auto id     = extract_id(result);
-    auto ref    = extract_ref(result);
-    auto alt    = extract_alt(result);
-    auto qual   = extract_qual(result);
-    auto filter = extract_filter(header_.get(), result);
-    auto info   = extract_info(header_.get(), result);
+    VcfRecord::Builder record_builder {};
+    
+    extract_chrom(header_.get(), hts_record, record_builder);
+    extract_pos(hts_record, record_builder);
+    extract_id(hts_record, record_builder);
+    extract_ref(hts_record, record_builder);
+    extract_alt(hts_record, record_builder);
+    extract_qual(hts_record, record_builder);
+    extract_filter(header_.get(), hts_record, record_builder);
+    extract_info(header_.get(), hts_record, record_builder);
     
     if (level == UnpackPolicy::All && has_samples(header_.get())) {
-        auto format  = extract_format(header_.get(), result);
-        auto samples = extract_samples(header_.get(), result, format);
-        
-        return VcfRecord {
-            chrom, pos, std::move(id), std::move(ref), std::move(alt), qual,
-            std::move(filter), std::move(info), std::move(format),
-            std::move(samples.first), std::move(samples.second)
-        };
-    } else {
-        return VcfRecord {
-            chrom, pos, std::move(id), std::move(ref), std::move(alt), qual,
-            std::move(filter), std::move(info)
-        };
+        extract_samples(header_.get(), hts_record, record_builder);
     }
+    
+    return record_builder.build_once();
 }
 
-std::vector<VcfRecord>
-HtslibBcfFacade::fetch_records(bcf_srs_t* sr, UnpackPolicy level,  const size_t num_records) const
+HtslibBcfFacade::RecordContainer
+HtslibBcfFacade::fetch_records(bcf_srs_t* sr, const UnpackPolicy level, const size_t num_records) const
 {
-    std::vector<VcfRecord> result {};
+    RecordContainer result {};
     result.reserve(num_records);
     
     while (bcf_sr_next_line(sr)) {
-        auto record = bcf_sr_get_line(sr, 0);
-        
-        bcf_unpack(record, (level == UnpackPolicy::All) ? BCF_UN_ALL : BCF_UN_SHR);
-        
-        auto chrom  = extract_chrom(header_.get(), record);
-        auto pos    = extract_pos(record);
-        auto id     = extract_id(record);
-        auto ref    = extract_ref(record);
-        auto alt    = extract_alt(record);
-        auto qual   = extract_qual(record);
-        auto filter = extract_filter(header_.get(), record);
-        auto info   = extract_info(header_.get(), record);
-        
-        if (level == UnpackPolicy::All && has_samples(header_.get())) {
-            auto format  = extract_format(header_.get(), record);
-            auto samples = extract_samples(header_.get(), record, format);
-            result.emplace_back(chrom, pos, std::move(id), std::move(ref), std::move(alt), qual,
-                                std::move(filter), std::move(info), std::move(format),
-                                std::move(samples.first), std::move(samples.second));
-        } else {
-            result.emplace_back(chrom, pos, std::move(id), std::move(ref), std::move(alt), qual,
-                                std::move(filter), std::move(info));
-        }
+        result.push_back(fetch_record(sr, level));
     }
     
     return result;

@@ -106,14 +106,13 @@ namespace Octopus
         return out;
     }
     
-    std::istream& operator>>(std::istream& in, VariantCallerBuilder::RefCallType& result)
+    enum class RefCallType { Positional, Blocked };
+    
+    std::istream& operator>>(std::istream& in, RefCallType& result)
     {
-        using RefCallType = VariantCallerBuilder::RefCallType;
         std::string token;
         in >> token;
-        if (token == "None")
-            result = RefCallType::None;
-        else if (token == "Positional")
+        if (token == "Positional")
             result = RefCallType::Positional;
         else if (token == "Blocked")
             result = RefCallType::Blocked;
@@ -122,13 +121,9 @@ namespace Octopus
         return in;
     }
     
-    std::ostream& operator<<(std::ostream& out, const VariantCallerBuilder::RefCallType& type)
+    std::ostream& operator<<(std::ostream& out, const RefCallType& type)
     {
-        using RefCallType = VariantCallerBuilder::RefCallType;
         switch (type) {
-            case RefCallType::None:
-                out << "None";
-                break;
             case RefCallType::Positional:
                 out << "Positional";
                 break;
@@ -222,7 +217,60 @@ namespace Octopus
         }
         return out;
     }
-        
+    
+    void check_reads_present(const po::variables_map& vm)
+    {
+        if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
+            throw po::required_option {"--reads | --reads-file"};
+        }
+    }
+    
+    void check_region_files_consistent(const po::variables_map& vm)
+    {
+        if (vm.count("regions-file") == 1 && vm.count("skip-regions-file") == 1) {
+            const auto regions_file = vm.at("regions-file").as<std::string>();
+            const auto skip_regions_file = vm.at("skip-regions-file").as<std::string>();
+            if (regions_file == skip_regions_file) {
+                throw std::invalid_argument {"options 'regions-file' and 'skip-regions-file' must"
+                    " have unique values"};
+            }
+        }
+    }
+    
+    void check_trio_consistent(const po::variables_map& vm)
+    {
+        if (vm.at("caller").as<std::string>() == "trio"
+            && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
+            throw std::logic_error {"option 'maternal-sample' and 'paternal-sample' are required"
+                " when caller=trio"};
+        }
+    }
+    
+    void validate_caller(const po::variables_map& vm)
+    {
+        if (vm.count("caller") == 1) {
+            const auto caller = vm.at("caller").as<std::string>();
+            
+            static const std::vector<std::string> valid_callers {
+                "individual", "population", "cancer", "trio"
+            };
+            
+            if (std::find(std::cbegin(valid_callers), std::cend(valid_callers), caller)
+                == std::cend(valid_callers)) {
+                po::validation_error {po::validation_error::kind_t::invalid_option_value, caller,
+                    "caller"};
+            }
+        }
+    }
+    
+    void validate_options(const po::variables_map& vm)
+    {
+        check_reads_present(vm);
+        check_region_files_consistent(vm);
+        check_trio_consistent(vm);
+        validate_caller(vm);
+    }
+    
     boost::optional<po::variables_map> parse_options(int argc, const char** argv)
     {
         try {
@@ -230,247 +278,452 @@ namespace Octopus
             
             p.add("caller", -1);
             
-            po::options_description general("General options");
+            po::options_description general("General");
             general.add_options()
             ("help,h", "Produce help message")
+            
             ("version", "Output the version number")
-            ("debug", po::bool_switch()->default_value(false),
+            
+            ("config", "A config file, used to populate command line options")
+            
+            ("debug",
+             po::bool_switch()->default_value(false),
              "Writes verbose debug information to debug.log in the working directory")
-            ("trace", po::bool_switch()->default_value(false),
-             "Writes very verbose debug information to trace.log in the working directory. For developer use only")
+            
+            ("trace",
+             po::bool_switch()->default_value(false),
+             "Writes very verbose debug information to trace.log in the working directory")
             ;
             
-            po::options_description backend("Backend options");
+            po::options_description backend("Backend");
             backend.add_options()
-            ("threads,t", po::value<unsigned>()->default_value(1),
-             "Sets the number of threads used by the application, set to 0 to let the"
-             " application decide the number of threads")
-            ("reference-cache-size", po::value<float>()->default_value(50),
-             "The maximum memory (in megabytes) that can be used to cache reference sequence")
-            ("target-read-buffer-size", po::value<float>()->default_value(0.5),
-             "Will try to limit the amount of memory (in gigabytes) occupied by reads to this amount")
-            ("compress-reads", po::bool_switch()->default_value(false),
-             "Compresses all read data (slower)")
-            ("max-open-read-files", po::value<unsigned>()->default_value(200),
-             "Limits the number of read files that can be open simultaneously")
-            ("working-directory,w", po::value<std::string>(),
+            ("working-directory,wd",
+             po::value<std::string>(),
              "Sets the working directory")
+            
+            ("threads,t",
+             po::value<unsigned>()->default_value(1),
+             "Maximum number of threads to be used, setting to 0 (recommended) lets the application"
+             " decide the number of threads ands enables specific algorithm parallelisation")
+            
+            ("max-reference-cache-footprint,mrcf",
+             po::value<float>()->default_value(50),
+             "Maximum memory footprint for cached reference sequence (in megabytes)")
+            
+            ("target-read-buffer-footprint,trbf",
+             po::value<float>()->default_value(0.5),
+             "None binding request to limit the memory footprint of buffered read data (in gigabytes)")
+            
+            ("compress-reads,cr",
+             po::bool_switch()->default_value(false),
+             "Compresses all read data when not being used resulting in a smaller memory footprint"
+             " but slower processing")
+            
+            ("max-open-read-files,morf",
+             po::value<unsigned>()->default_value(250),
+             "Limits the number of read files that can be open simultaneously")
             ;
             
-            po::options_description input("Input/output options");
+            po::options_description input("Input/output");
             input.add_options()
-            ("reference,R", po::value<std::string>()->required(),
-             "The reference genome file")
-            ("reads,I", po::value<std::vector<std::string>>()->multitoken(),
-             "Space-seperated list of BAM/CRAM paths")
-            ("reads-file", po::value<std::string>(),
-             "File of BAM/CRAM paths, one per line")
-            ("use-one-based-indexing", po::bool_switch()->default_value(false),
-             "Uses one based indexing for input regions rather than zero based")
-            ("regions,L", po::value<std::vector<std::string>>()->multitoken(),
-             "Space-seperated list of regions (chrom:begin-end) that will be analysed")
-            ("regions-file", po::value<std::string>(),
-             "File of regions (chrom:begin-end), one per line")
-            ("skip-regions", po::value<std::vector<std::string>>()->multitoken(),
-             "Space-seperated list of regions (chrom:begin-end) to skip")
-            ("skip-regions-file", po::value<std::string>(),
-             "File of regions (chrom:begin-end) to skip, one per line")
-            ("samples,S", po::value<std::vector<std::string>>()->multitoken(),
+            ("reference,R",
+             po::value<std::string>()->required(),
+             "FASTA format reference genome file to be analysed. Target regions"
+             " will be extracted from the reference index if not provded explicitly")
+            
+            ("reads,r",
+             po::value<std::vector<std::string>>()->multitoken(),
+             "Space-seperated list of BAM/CRAM files to be analysed."
+             " May be specified multiple times")
+            
+            ("reads-file,rf",
+             po::value<std::string>(),
+             "File containing a list of BAM/CRAM files, one per line, to be analysed")
+            
+            ("one-based-indexing,1bi",
+             po::bool_switch()->default_value(false),
+             "Notifies that input regions are given using one based indexing rather than zero based")
+            
+            ("regions,T",
+             po::value<std::vector<std::string>>()->multitoken(),
+             "Space-seperated list of regions (chrom:begin-end) to be analysed."
+             " May be specified multiple times")
+            
+            ("regions-file,TF",
+             po::value<std::string>(),
+             "File containing a list of regions (chrom:begin-end), one per line, to be analysed")
+            
+            ("skip-regions,sr",
+             po::value<std::vector<std::string>>()->multitoken(),
+             "Space-seperated list of regions (chrom:begin-end) to skip"
+             " May be specified multiple times")
+            
+            ("skip-regions-file,srf",
+             po::value<std::string>(),
+             "File of regions (chrom:begin-end), one per line, to skip")
+            
+            ("samples,S",
+             po::value<std::vector<std::string>>()->multitoken(),
              "Space-seperated list of sample names to analyse")
-            ("samples-file", po::value<std::string>(),
-             "File of sample names to analyse, one per line")
-            ("output,o", po::value<std::string>()->default_value("octopus_calls.vcf"),
+            
+            ("samples-file,SF",
+             po::value<std::string>(),
+             "File of sample names to analyse, one per line, which must be a subset of the samples"
+             " that appear in the read files")
+            
+            ("output,o",
+             po::value<std::string>()->default_value("octopus_calls.vcf"),
              "File to where output is written")
-            ("contig-output-order", po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::AsInReferenceIndex),
+            
+            ("contig-output-order,coo",
+             po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::AsInReferenceIndex),
              "The order contigs should be written to the output")
-            ("regenotype", po::value<std::string>(),
-             "A VCF file. Calls will be restricted to exactly the sites in this file")
+            
+            ("legacy",
+             po::bool_switch()->default_value(false),
+             "Outputs a legacy version of the final callset in addition to the native version")
+            
+            ("regenotype",
+             po::value<std::string>(),
+             "VCF file specifying calls to regenotype, only sites in this files will appear in the"
+             " final output")
             ;
             
-            po::options_description transforms("Read transform options");
+            po::options_description transforms("Read transformations");
             transforms.add_options()
-            ("disable-read-transforms", po::bool_switch()->default_value(false),
+            ("disable-all-read-transforms",
+             po::bool_switch()->default_value(false),
              "Disables all read transformations")
-            ("disable-soft-clip-masking", po::bool_switch()->default_value(false),
-             "Disables soft clipped masking, thus allowing all soft clipped bases to be used for candidate generation")
-            ("mask-tails", po::value<AlignedRead::SizeType>()->default_value(0),
+            
+            ("disable-soft-clip-masking",
+             po::bool_switch()->default_value(false),
+             "Disables soft clipped masking, thus allowing all soft clipped bases to be used"
+             " for candidate generation")
+            
+            ("mask-tails",
+             po::value<AlignedRead::SizeType>()->implicit_value(3),
              "Masks this number of bases of the tail of all reads")
-            ("mask-soft-clipped-boundries", po::value<AlignedRead::SizeType>()->default_value(2),
-             "Masks this number of non soft clipped bases when soft clipped bases are present")
-            ("disable-adapter-masking", po::bool_switch()->default_value(false),
+            
+            ("mask-soft-clipped-boundries",
+             po::value<AlignedRead::SizeType>()->default_value(2),
+             "Masks this number of adjacent non soft clipped bases when soft clipped bases are present")
+            
+            ("disable-adapter-masking",
+             po::bool_switch()->default_value(false),
              "Disables adapter detection and masking")
-            ("disable-overlap-masking", po::bool_switch()->default_value(false),
+            
+            ("disable-overlap-masking",
+             po::bool_switch()->default_value(false),
              "Disables read segment overlap masking")
             ;
             
-            po::options_description filters("Read filter options");
+            po::options_description filters("Read filtering");
             filters.add_options()
-            ("disable-read-filtering", po::bool_switch()->default_value(false),
+            ("disable-read-filtering",
+             po::bool_switch()->default_value(false),
              "Disables all read filters")
-            ("consider-unmapped-reads", po::bool_switch()->default_value(false),
+            
+            ("consider-unmapped-reads,allow-unmapped",
+             po::bool_switch()->default_value(false),
              "Allows reads marked as unmapped to be used for calling")
-            ("min-mapping-quality", po::value<unsigned>()->default_value(20),
+            
+            ("min-mapping-quality,min-mq",
+             po::value<unsigned>()->default_value(20),
              "Minimum read mapping quality required to consider a read for calling")
-            ("good-base-quality", po::value<unsigned>()->default_value(20),
+            
+            ("good-base-quality,good-bq",
+             po::value<unsigned>()->default_value(20),
+             "Base quality threshold used by min-good-bases and min-good-base-fraction filters")
+            
+            ("min-good-base-fraction,min-good-bp-frac",
+             po::value<double>()->implicit_value(0.5),
              "Base quality threshold used by min-good-bases filter")
-            ("min-good-base-fraction", po::value<double>(),
-             "Base quality threshold used by min-good-bases filter")
-            ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(20),
+            
+            ("min-good-bases,min-good-bps",
+             po::value<AlignedRead::SizeType>()->default_value(20),
              "Minimum number of bases with quality min-base-quality before read is considered")
-            ("allow-qc-fails", po::bool_switch()->default_value(false),
+            
+            ("allow-qc-fails",
+             po::bool_switch()->default_value(false),
              "Filters reads marked as QC failed")
-            ("min-read-length", po::value<AlignedRead::SizeType>(),
+            
+            ("min-read-length,min-read-len",
+             po::value<AlignedRead::SizeType>(),
              "Filters reads shorter than this")
-            ("max-read-length", po::value<AlignedRead::SizeType>(),
+            
+            ("max-read-length,max-read-len",
+             po::value<AlignedRead::SizeType>(),
              "Filter reads longer than this")
-            ("allow-marked-duplicates", po::bool_switch()->default_value(false),
+            
+            ("allow-marked-duplicates,allow-marked-dups",
+             po::bool_switch()->default_value(false),
              "Allows reads marked as duplicate in alignment record")
-            ("allow-octopus-duplicates", po::bool_switch()->default_value(false),
+            
+            ("allow-octopus-duplicates,allow-dups",
+             po::bool_switch()->default_value(false),
              "Allows reads considered duplicates by Octopus")
-            ("no-secondary-alignments", po::bool_switch()->default_value(false),
+            
+            ("no-secondary-alignments",
+             po::bool_switch()->default_value(false),
              "Filters reads marked as secondary alignments")
-            ("no-supplementary-alignmenets", po::bool_switch()->default_value(false),
+            
+            ("no-supplementary-alignmenets",
+             po::bool_switch()->default_value(false),
              "Filters reads marked as supplementary alignments")
-            ("consider-reads-with-unmapped-segments", po::bool_switch()->default_value(false),
+            
+            ("consider-reads-with-unmapped-segments",
+             po::bool_switch()->default_value(false),
              "Allows reads with unmapped template segmenets to be used for calling")
-            ("consider-reads-with-distant-segments", po::bool_switch()->default_value(false),
+            
+            ("consider-reads-with-distant-segments",
+             po::bool_switch()->default_value(false),
              "Allows reads with template segmenets that are on different contigs")
-            ("allow-adapter-contaminated-reads", po::bool_switch()->default_value(false),
+            
+            ("allow-adapter-contaminated-reads",
+             po::bool_switch()->default_value(false),
              "Allows reads with possible adapter contamination")
-            ("disable-downsampling", po::bool_switch()->default_value(false),
+            
+            ("disable-downsampling,no-downsampling",
+             po::bool_switch()->default_value(false),
              "Diables all downsampling")
-            ("downsample-above", po::value<unsigned>()->default_value(500),
+            
+            ("downsample-above",
+             po::value<unsigned>()->default_value(500),
              "Downsample reads in regions where coverage is over this")
-            ("downsample-target", po::value<unsigned>()->default_value(400),
+            
+            ("downsample-target",
+             po::value<unsigned>()->default_value(400),
              "The target coverage for the downsampler")
             ;
             
-            po::options_description candidates("Candidate generation options");
+            po::options_description candidates("Candidate variant generation");
             candidates.add_options()
-            ("no-raw-cigar-candidates", po::bool_switch()->default_value(false),
+            ("disable-raw-cigar-candidate-generator,no-cigar-candidates",
+             po::bool_switch()->default_value(false),
              "Disables candidate generation from raw read alignments (CIGAR strings)")
-            ("no-assembly-candidates", po::bool_switch()->default_value(false),
+            
+            ("disable-assembly-candidate-generator,no-assembly-candidates",
+             po::bool_switch()->default_value(false),
              "Disables candidate generation using local re-assembly")
-            ("candidates-from-source", po::value<std::string>(),
-             "Variant file path containing known variants. These variants will automatically become candidates")
-            ("min-base-quality", po::value<unsigned>()->default_value(20),
+            
+            ("candidates-from-source,source",
+             po::value<std::string>(),
+             "Variant file path containing known variants. These variants will automatically become"
+             " candidates")
+            
+            ("min-base-quality,min-bq",
+             po::value<unsigned>()->default_value(20),
              "Only bases with quality above this value are considered for candidate generation")
-            ("min-supporting-reads", po::value<unsigned>()->default_value(2),
-             "Minimum number of reads that must support a variant if it is to be considered a candidate")
-            ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(500),
-             "Maximum candidate varaint size from alignmenet CIGAR")
-            ("kmer-size", po::value<std::vector<unsigned>>()->multitoken()
-                ->default_value(std::vector<unsigned> {15, 25}, "15 25")->composing(),
+            
+            ("min-supporting-reads,min-support",
+             po::value<unsigned>()->implicit_value(2),
+             "Minimum number of reads that must support a variant if it is to be considered a candidate."
+             " By default Octopus will automatically determine this value")
+            
+            ("max-variant-size,max-var-size",
+             po::value<AlignedRead::SizeType>()->default_value(2000),
+             "Maximum candidate varaint size to consider (in region space)")
+            
+            ("kmer-size,kmer",
+             po::value<std::vector<unsigned>>()->multitoken()
+                ->default_value(std::vector<unsigned> {10, 25}, "10 25")->composing(),
              "K-mer sizes to use for local re-assembly")
-            ("min-assembler-base-quality", po::value<unsigned>()->default_value(15),
-             "Only bases with quality above this value are considered for candidate generation by the assembler")
+            
+            ("min-assembler-base-quality",
+             po::value<unsigned>()->default_value(15),
+             "Only bases with quality above this value are considered for candidate generation by"
+             " the assembler")
             ;
             
-            using RefCallType = VariantCallerBuilder::RefCallType;
-            
-            po::options_description caller("General caller options");
+            po::options_description caller("Common caller options");
             caller.add_options()
-            ("caller", po::value<std::string>()->default_value("population"),
+            ("caller,C",
+             po::value<std::string>()->default_value("population"),
              "Which of the Octopus callers to use")
-            ("organism-ploidy,ploidy", po::value<unsigned>()->default_value(2),
-             "Organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
-            ("contig-ploidies", po::value<std::vector<ContigPloidy>>()->multitoken(),
-             "Space-seperated list of contig=ploidy pairs")
-            ("contig-ploidies-file", po::value<std::string>(),
-             "List of contig=ploidy pairs, one per line")
-            ("min-variant-posterior", po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
-             "Minimum variant call posterior probability (phred scale)")
-            ("min-refcall-posterior", po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
-             "Minimum homozygous reference call posterior probability (phred scale)")
-//            ("refcalls", po::value<RefCallType>()->default_value(RefCallType::None),
-//             "Caller will output reference confidence calls")
-            ("sites-only", po::bool_switch()->default_value(false),
-             "Only outout variant call sites (i.e. without sample genotype information)")
-            ("min-phase-score", po::value<Phred<double>>()->default_value(Phred<double> {20.0}),
-             "Minimum phase score required to output a phased call (phred scale)")
-            ;
             
-            po::options_description model("Common model options");
-            model.add_options()
-            ("snp-heterozygosity", po::value<float>()->default_value(0.001),
+            ("organism-ploidy,ploidy",
+             po::value<unsigned>()->default_value(2),
+             "All contigs with unspecified ploidies are assumed the organism ploidy")
+            
+            ("contig-ploidies",
+             po::value<std::vector<ContigPloidy>>()->multitoken(),
+             "Space-seperated list of contig=ploidy pairs")
+            
+            ("contig-ploidies-file",
+             po::value<std::string>(),
+             "File containing a list of contig=ploidy pairs, one per line")
+            
+            ("min-variant-posterior,min-post",
+             po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
+             "Report variant alleles with posterior probability (phred scale) greater than this")
+            
+            ("min-refcall-posterior,min-ref-post",
+             po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
+             "Report reference alleles with posterior probability (phred scale) greater than this")
+            
+            ("report-refcalls,gvcf",
+             po::value<RefCallType>()->implicit_value(RefCallType::Blocked),
+             "Caller will report reference confidence calls for each position (Positional),"
+             " or in automatically sized blocks (Blocked)")
+            
+            ("sites-only",
+             po::bool_switch()->default_value(false),
+             "Only outout call sites (i.e. without sample genotype information)")
+            
+            ("snp-heterozygosity,snp-hets",
+             po::value<float>()->default_value(0.001, "0.001"),
              "The germline SNP heterozygosity used to calculate genotype priors")
-            ("indel-heterozygosity", po::value<float>()->default_value(0.0001),
+            
+            ("indel-heterozygosity,indel-hets",
+             po::value<float>()->default_value(0.0001, "0.0001"),
              "The germline indel heterozygosity used to calculate genotype priors")
             ;
             
-            po::options_description cancer("Cancer caller/model options");
+            po::options_description cancer("Cancer caller");
             cancer.add_options()
-            ("normal-sample", po::value<std::string>(),
-             "Normal sample used in cancer model")
-            ("somatic-mutation-rate", po::value<float>()->default_value(0.00001),
+            ("normal-sample,normal",
+             po::value<std::string>(),
+             "Normal sample - all other samples are considered tumour")
+            
+            ("somatic-mutation-rate,somatic-rate",
+             po::value<float>()->default_value(0.00001, "0.00001"),
              "Expected somatic mutation rate, per megabase pair, for this sample")
-            ("min-somatic-frequency", po::value<float>()->default_value(0.01),
-             "The minimum allele frequency that can be considered as a viable somatic mutation")
-            ("credible-mass", po::value<float>()->default_value(0.99),
-             "The mass of the posterior density to use for evaluating allele frequencies")
-            ("min-somatic-posterior", po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
-             "The minimum somatic mutation call posterior probability (phred scale)")
-            ("somatics-only", po::bool_switch()->default_value(false),
-             "Only output somatic calls (for somatic calling models only)")
+            
+            ("min-somatic-frequency,min-somatic-freq",
+             po::value<float>()->default_value(0.01, "0.01"),
+             "minimum allele frequency that can be considered as a viable somatic mutation")
+            
+            ("credible-mass,cm",
+             po::value<float>()->default_value(0.99, "0.99"),
+             "Mass of the posterior density to use for evaluating allele frequencies")
+            
+            ("min-somatic-posterior,min-somatic-post",
+             po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
+             "Minimum somatic mutation call posterior probability (phred scale)")
+            
+            ("somatics-only",
+             po::bool_switch()->default_value(false),
+             "Only report somatic variant calls")
             ;
             
-            po::options_description trio("Trio caller/model options");
+            po::options_description trio("Trio caller");
             trio.add_options()
-            ("maternal-sample", po::value<std::string>(),
-             "Maternal sample for trio caller")
-            ("paternal-sample", po::value<std::string>(),
-             "Paternal sample for trio caller")
+            ("maternal-sample,mother",
+             po::value<std::string>(),
+             "Maternal sample")
+            
+            ("paternal-sample,father",
+             po::value<std::string>(),
+             "Paternal sample")
+            
+            ("denovos-only",
+             po::bool_switch()->default_value(false),
+             "Only report de novo variant calls (i.e. alleles unique to the child)")
             ;
             
-            po::options_description advanced("Advanced options");
+            po::options_description phaser("Phasing options");
+            phaser.add_options()
+            ("phasing-level,phase",
+             po::value<PhasingLevel>()->default_value(PhasingLevel::Conservative),
+             "Level of phasing - longer range phasing can improve calling accuracy at the cost"
+             " of runtime speed. Possible values are: Minimal, Conservative, Aggressive")
+            
+            ("min-phase-score",
+             po::value<Phred<double>>()->default_value(Phred<double> {20.0}),
+             "Minimum phase score (phred scale) required to report sites as phased")
+            
+            ("use-unconditional-phase-score",
+             po::bool_switch()->default_value(false),
+             "Computes unconditional phase scores rather than conditioning on called genotypes")
+            
+            ("disable-read-guided-phasing",
+             po::bool_switch()->default_value(false),
+             "Restricts phase score computation to use only genotype posteriors")
+            ;
+            
+            po::options_description advanced("Advanced calling algorithm");
             advanced.add_options()
-            ("max-haplotypes", po::value<unsigned>()->default_value(128),
-             "The maximum number of candidate haplotypes the caller may consider")
-            ("min-haplotype-posterior", po::value<float>()->default_value(1e-10),
+            ("max-haplotypes,max-haps",
+             po::value<unsigned>()->default_value(128),
+             "Maximum number of candidate haplotypes the caller may consider")
+            
+            ("min-haplotype-filter-posterior,min-hap-post",
+             po::value<float>()->default_value(1e-10, "1e-10"),
              "Haplotypes with posterior less than this can be filtered, allowing greater"
              " longer haplotype extesion in complex regions")
-            ("phasing-level", po::value<PhasingLevel>()->default_value(PhasingLevel::Conservative),
-             "The level of data driven phasing")
-            ("disable-inactive-flank-scoring", po::bool_switch()->default_value(false),
-             "Disables additional calculation to adjust alignment score when there are inactive candidates"
-             " in haplotype flanking regions")
+            
+            ("disable-inactive-flank-scoring,noIFS",
+             po::bool_switch()->default_value(false),
+             "Disables additional calculation to adjust alignment score when there are inactive"
+             " candidates in haplotype flanking regions")
             ;
             
-            po::options_description filtering("Filtering options");
-            filtering.add_options()
-            ("disable-model-filtering", po::bool_switch()->default_value(false),
+            po::options_description call_filtering("Callset filtering");
+            call_filtering.add_options()
+            ("disable-call-filtering,no-filtering",
+             po::bool_switch()->default_value(false),
+             "Disables all callset filtering")
+            
+            ("disable-model-filtering,noMF",
+             po::bool_switch()->default_value(false),
              "Disables model based filtering of variant calls")
             ;
             
             po::options_description all("Octopus options");
             all.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(candidates).add(caller).add(model).add(advanced).add(cancer)
-                .add(filtering);
+            .add(candidates).add(caller).add(advanced).add(cancer).add(trio).add(phaser)
+            .add(call_filtering);
+            
+            po::variables_map vm_init;
+            
+            po::store(po::command_line_parser(argc, argv).options(general)
+                      .allow_unregistered().run(), vm_init);
+            
+            if (vm_init.count("help") == 1) {
+                po::store(po::command_line_parser(argc, argv).options(caller)
+                          .allow_unregistered().run(), vm_init);
+                
+                if (vm_init.count("caller") == 1) {
+                    const auto caller = vm_init.at("caller").as<std::string>();
+                    
+                    validate_caller(vm_init);
+                    
+                    if (caller == "individual") {
+                        std::cout << all << std::endl;
+                    } else if (caller == "population") {
+                        std::cout << all << std::endl;
+                    } else if (caller == "cancer") {
+                        std::cout << all << std::endl;
+                    } else {
+                        std::cout << all << std::endl;
+                    }
+                } else {
+                    std::cout << all << std::endl;
+                }
+                
+                return vm_init;
+            }
+            
+            if (vm_init.count("version") == 1) {
+                std::cout << "Octopus version " << Octopus_version << std::endl;
+                return vm_init;
+            }
             
             po::variables_map vm;
+            
+            if (vm_init.count("config") == 1) {
+                std::ifstream config {vm.at("config").as<std::string>()};
+                if (config) {
+                    po::store(po::parse_config_file(config, all), vm);
+                }
+            }
+            
+            vm_init.clear();
+            
             po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
             
-            if (vm.count("help")) {
-                std::cout << "Usage: octopus <command> [options]" << std::endl;
-                std::cout << all << std::endl;
-                return vm;
-            }
-            
-            if (vm.count("version")) {
-                std::cout << "Octopus version " << Octopus_version << std::endl;
-                return vm;
-            }
-            
             // boost::option cannot handle option dependencies so we must do our own checks
-            
-            if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
-                throw po::required_option {"--reads | --reads-file"};
-            }
-            
-            if (vm.at("caller").as<std::string>() == "trio"
-                && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
-                throw std::logic_error {"option maternal-sample and paternal-sample are required when caller=trio"};
-            }
+            validate_options(vm);
             
             po::notify(vm);
             
@@ -1347,10 +1600,12 @@ namespace Octopus
         
         //result.register_transform(ReadTransforms::QualityAdjustedSoftClippedMasker {});
         
-        const auto tail_mask_size = options.at("mask-tails").as<SizeType>();
-        
-        if (tail_mask_size > 0) {
-            result.register_transform(ReadTransforms::MaskTail {tail_mask_size});
+        if (options.count("mask-tails")) {
+            const auto tail_mask_size = options.at("mask-tails").as<SizeType>();
+            
+            if (tail_mask_size > 0) {
+                result.register_transform(ReadTransforms::MaskTail {tail_mask_size});
+            }
         }
         
         if (!options.at("disable-soft-clip-masking").as<bool>()) {
@@ -1429,14 +1684,18 @@ namespace Octopus
         result.set_min_base_quality(options.at("min-base-quality").as<unsigned>());
         result.set_max_variant_size(options.at("max-variant-size").as<CandidateGeneratorBuilder::SizeType>());
         
-        auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
-        
-        if (min_supporting_reads == 0) {
-            warning_log << "The option --min_supporting_reads was set to 0 - assuming this is a typo and setting to 1";
-            ++min_supporting_reads;
+        if (options.count("min-supporting-reads")) {
+            auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
+            
+            if (min_supporting_reads == 0) {
+                warning_log << "The option --min_supporting_reads was set to 0 - assuming this is a typo and setting to 1";
+                ++min_supporting_reads;
+            }
+            
+            result.set_min_supporting_reads(min_supporting_reads);
+        } else {
+            result.set_min_supporting_reads(2); // TODO: Octopus should automatically calculate this
         }
-        
-        result.set_min_supporting_reads(min_supporting_reads);
         
         if (!options.at("no-raw-cigar-candidates").as<bool>()) {
             result.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
@@ -1598,7 +1857,17 @@ namespace Octopus
         
         vc_builder.set_caller(caller);
         
-        //vc_builder.set_refcall_type(options.at("refcalls").as<VariantCaller::RefCallType>());
+        if (options.count("report-refcalls") == 1) {
+            const auto refcall_type = options.at("report-refcalls").as<RefCallType>();
+            
+            if (refcall_type == RefCallType::Positional) {
+                vc_builder.set_refcall_type(VariantCallerBuilder::RefCallType::Positional);
+            } else {
+                vc_builder.set_refcall_type(VariantCallerBuilder::RefCallType::Blocked);
+            }
+        } else {
+            vc_builder.set_refcall_type(VariantCallerBuilder::RefCallType::None);
+        }
         
         auto min_variant_posterior = options.at("min-variant-posterior").as<Phred<double>>();
         
@@ -1655,7 +1924,8 @@ namespace Octopus
             vc_builder.set_paternal_sample(options.at("paternal-sample").as<std::string>());
         }
         
-        vc_builder.set_model_filtering(!options.at("disable-model-filtering").as<bool>());
+        vc_builder.set_model_filtering(!(options.at("disable-call-filtering").as<bool>()
+                                       || options.at("disable-model-filtering").as<bool>()));
         
         const auto contig_ploidies = extract_contig_ploidies(options);
         

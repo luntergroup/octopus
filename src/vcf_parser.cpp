@@ -9,14 +9,12 @@
 #include "vcf_parser.hpp"
 
 #include <algorithm>
-#include <iterator>
 #include <stdexcept>
 
 #include <boost/optional.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "genomic_region.hpp"
-#include "vcf_record.hpp"
 
 #include <iostream> // TEST
 
@@ -96,9 +94,15 @@ std::size_t VcfParser::count_records(const GenomicRegion& region) const
     return result;
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records(const UnpackPolicy level) const
+VcfParser::RecordIteratorPtrPair VcfParser::iterate(UnpackPolicy level) const
 {
-    std::vector<VcfRecord> result {};
+    return std::make_pair(std::make_unique<RecordIterator>(),
+                          std::make_unique<RecordIterator>());
+}
+
+VcfParser::RecordContainer VcfParser::fetch_records(const UnpackPolicy level) const
+{
+    RecordContainer result {};
     
     result.reserve(count_records());
     
@@ -114,9 +118,9 @@ std::vector<VcfRecord> VcfParser::fetch_records(const UnpackPolicy level) const
     return result;
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records(const std::string& contig, const UnpackPolicy level) const
+VcfParser::RecordContainer VcfParser::fetch_records(const std::string& contig, const UnpackPolicy level) const
 {
-    std::vector<VcfRecord> result {};
+    RecordContainer result {};
     
     result.reserve(count_records(contig));
     
@@ -134,9 +138,9 @@ std::vector<VcfRecord> VcfParser::fetch_records(const std::string& contig, const
     return result;
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
+VcfParser::RecordContainer VcfParser::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
 {
-    std::vector<VcfRecord> result {};
+    RecordContainer result {};
     
     result.reserve(count_records(region));
     

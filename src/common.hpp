@@ -12,6 +12,8 @@
 #include <string>
 #include <cstdint>
 
+#include <boost/optional.hpp>
+
 #include "genomic_region.hpp"
 #include "read_manager.hpp"
 #include "mappable_flat_set.hpp"
@@ -19,6 +21,7 @@
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
 #include "read_filter.hpp"
+#include "logging.hpp"
 
 namespace Octopus
 {
@@ -39,6 +42,9 @@ namespace Octopus
     using ReadMap       = MappableMap<SampleIdType, AlignedRead>;
     
     using ReadFilterer = ReadFilter<ReadManager::ReadContainer::iterator>;
+    
+    boost::optional<Logging::DebugLogger> get_debug_log();
+    boost::optional<Logging::TraceLogger> get_trace_log();
 }
 
 #endif

@@ -26,7 +26,6 @@
 #include <condition_variable>
 #include <mutex>
 #include <atomic>
-#include <array>
 #include <set>
 #include <typeinfo>
 #include <cassert>
@@ -146,6 +145,24 @@ namespace Octopus
         return result;
     }
     
+    template <typename S>
+    void print_input_regions(S&& stream, const InputRegionMap& regions)
+    {
+        stream << "All input regions:" << '\n';
+        for (const auto& p : regions) {
+            stream << "Contig " << p.first << '\n';
+            for (const auto& region : p.second) {
+                stream << region << ' ';
+            }
+            stream << '\n';
+        }
+    }
+    
+    void print_input_regions(const InputRegionMap& regions)
+    {
+        print_input_regions(std::cout, regions);
+    }
+    
     template <typename Container>
     bool is_in_file_samples(const SampleIdType& sample, const Container& file_samples)
     {
@@ -225,14 +242,6 @@ namespace Octopus
     {
         return make_vcf_header(samples, std::vector<GenomicRegion::ContigNameType> {contig},
                                reference, call_types);
-    }
-    
-    GenomicRegion::SizeType calculate_total_search_size(const InputRegionMap& regions)
-    {
-        return std::accumulate(std::cbegin(regions), std::cend(regions), GenomicRegion::SizeType {},
-                               [] (const auto curr, const auto& p) {
-                                   return curr + sum_region_sizes(p.second);
-                               });
     }
     
     ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleIdType> samples,
@@ -688,10 +697,8 @@ namespace Octopus
     
     void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
     {
-        if (DEBUG_MODE) {
-            Logging::DebugLogger log {};
-            stream(log) << "Writing " << calls.size() << " calls to output";
-        }
+        static auto debug_log = get_debug_log();
+        if (debug_log) stream(*debug_log) << "Writing " << calls.size() << " calls to output";
         write(calls, out);
         calls.clear();
         calls.shrink_to_fit();
@@ -700,9 +707,13 @@ namespace Octopus
     auto find_max_window(const ContigCallingComponents& components,
                         const GenomicRegion& remaining_call_region)
     {
-        return components.read_manager.get().find_covered_subregion(components.samples,
-                                                                    remaining_call_region,
-                                                                    components.read_buffer_size);
+        const auto& rm = components.read_manager.get();
+        if (rm.count_reads(components.samples, remaining_call_region) <= components.read_buffer_size) {
+            return remaining_call_region;
+        } else {
+            return rm.find_covered_subregion(components.samples, remaining_call_region,
+                                             components.read_buffer_size);
+        }
     }
     
     auto propose_call_subregion(const ContigCallingComponents& components,
@@ -853,6 +864,8 @@ namespace Octopus
     
     void run_octopus_on_contig(ContigCallingComponents&& components)
     {
+        static auto debug_log = get_debug_log();
+        
         assert(!components.regions.empty());
         
         #ifdef BENCHMARK
@@ -868,11 +881,8 @@ namespace Octopus
         auto first_input_region      = std::cbegin(components.regions);
         const auto last_input_region = std::cend(components.regions);
         
-        while (!is_empty(subregion)) {
-            if (DEBUG_MODE) {
-                Logging::DebugLogger log {};
-                stream(log) << "Processing subregion " << subregion;
-            }
+        while (first_input_region != last_input_region && !is_empty(subregion)) {
+            if (debug_log) stream(*debug_log) << "Processing subregion " << subregion;
             
             try {
                 calls = components.caller->call(subregion, components.progress_meter);
@@ -983,6 +993,12 @@ namespace Octopus
         const GenomicRegion& mapped_region() const noexcept { return region; }
     };
     
+    std::ostream& operator<<(std::ostream& os, const Task& task)
+    {
+        os << task.region;
+        return os;
+    }
+    
     struct ContigOrder
     {
         using ContigNameType = GenomicRegion::ContigNameType;
@@ -1003,7 +1019,7 @@ namespace Octopus
     };
     
     using TaskQueue = std::queue<Task>;
-    using ContigTaskMap = std::map<ContigNameType, TaskQueue, ContigOrder>;
+    using TaskMap   = std::map<ContigNameType, TaskQueue, ContigOrder>;
     
     TaskQueue divide_work_into_tasks(const ContigCallingComponents& components,
                                      const Task::ExecutionPolicy policy)
@@ -1036,11 +1052,11 @@ namespace Octopus
         return Task::ExecutionPolicy::Threaded;
     }
     
-    ContigTaskMap make_tasks(GenomeCallingComponents& components, const unsigned num_threads)
+    TaskMap make_tasks(GenomeCallingComponents& components, const unsigned num_threads)
     {
         const auto policy = make_execution_policy(components);
         
-        ContigTaskMap result {ContigOrder {components.contigs_in_output_order()}};
+        TaskMap result {ContigOrder {components.contigs_in_output_order()}};
         
         for (const auto& contig : components.contigs_in_output_order()) {
             ContigCallingComponents contig_components {contig, components};
@@ -1072,7 +1088,7 @@ namespace Octopus
         return std::min(num_files, 8u);
     }
     
-    Task pop(ContigTaskMap& tasks)
+    Task pop(TaskMap& tasks)
     {
         assert(!tasks.empty());
         auto it = std::begin(tasks);
@@ -1093,11 +1109,18 @@ namespace Octopus
     
     struct CompletedTask : public Task, public Mappable<CompletedTask>
     {
+        CompletedTask(Task task) : Task {std::move(task)} {}
         CompletedTask(Task task, std::deque<VcfRecord>&& calls)
         : Task {std::move(task)}, calls {std::move(calls)} {}
         
         std::deque<VcfRecord> calls;
     };
+    
+    std::ostream& operator<<(std::ostream& os, const CompletedTask& task)
+    {
+        os << task.region;
+        return os;
+    }
     
     struct SyncPacket
     {
@@ -1108,10 +1131,9 @@ namespace Octopus
     
     auto run(Task task, GenomeCallingComponents& components, SyncPacket& sync)
     {
-        if (DEBUG_MODE) {
-            Logging::DebugLogger log {};
-            stream(log) << "Spawning task with region " << task.region;
-        }
+        static auto debug_log = get_debug_log();
+        
+        if (debug_log) stream(*debug_log) << "Spawning task with region " << task.region;
         
         ContigCallingComponents contig_components {contig_name(task), components};
         
@@ -1132,6 +1154,54 @@ namespace Octopus
                           });
     }
     
+    using CompletedTaskMap = std::map<ContigNameType, std::map<ContigRegion, CompletedTask>>;
+    
+    void write_or_buffer(CompletedTask&& task, CompletedTaskMap& buffered_tasks,
+                         TaskMap& pending_tasks, TempVcfWriterMap& temp_writers)
+    {
+        static auto debug_log = get_debug_log();
+        
+        const auto& ready_contig = contig_name(task);
+        
+        assert(pending_tasks.count(ready_contig) == 1);
+        
+        auto& contig_pending_tasks = pending_tasks.at(ready_contig);
+        
+        const auto& next_pending_task = contig_pending_tasks.front();
+        
+        if (is_same_region(task, next_pending_task)) {
+            if (debug_log) stream(*debug_log) << "Writing completed task " << task;
+            
+            write_calls(std::move(task.calls), temp_writers.at(ready_contig));
+            
+            contig_pending_tasks.pop();
+            
+            if (buffered_tasks.count(ready_contig) == 1) {
+                auto& contig_buffered_tasks = buffered_tasks.at(ready_contig);
+                
+                while (!contig_pending_tasks.empty()) {
+                    const auto it = contig_buffered_tasks.find(contig_region(next_pending_task));
+                    
+                    if (it != std::end(contig_buffered_tasks)) {
+                        if (debug_log) {
+                            stream(*debug_log) << "Writing completed buffered task " << next_pending_task;
+                        }
+                        
+                        write_calls(std::move(it->second.calls), temp_writers.at(ready_contig));
+                        
+                        contig_buffered_tasks.erase(it);
+                        contig_pending_tasks.pop();
+                    } else {
+                        break;
+                    }
+                }
+            }
+        } else {
+            if (debug_log) stream(*debug_log) << "Buffering completed task " << task;
+            buffered_tasks[ready_contig].emplace(contig_region(task), std::move(task));
+        }
+    }
+    
     template <typename K>
     auto extract(std::unordered_map<K, VcfWriter>& writers)
     {
@@ -1146,14 +1216,25 @@ namespace Octopus
     }
     
     template <typename K>
-    auto convert_temp_writers(std::unordered_map<K, VcfWriter>& writers)
+    auto extract_readers(std::unordered_map<K, VcfWriter>& writers)
     {
         auto tmp = extract(writers);
+        writers.clear();
         return writers_to_readers(tmp);
+    }
+    
+    template <typename K>
+    void merge_temps(std::unordered_map<K, VcfWriter>&& temp_writers,
+                     GenomeCallingComponents& components)
+    {
+        auto temp_readers = extract_readers(temp_writers);
+        merge(temp_readers, components.output(), components.contigs_in_output_order());
     }
     
     void run_octopus_multi_threaded(GenomeCallingComponents& components)
     {
+        static auto debug_log = get_debug_log();
+        
         const auto num_task_threads = calculate_num_task_threads(components);
         
         // TODO: start running tasks as soon as they are added into the task map,
@@ -1161,20 +1242,12 @@ namespace Octopus
         
         auto tasks = make_tasks(components, num_task_threads);
         
-        TempVcfWriterMap temp_writers;
-        try {
-            temp_writers = make_temp_writers(components);
-        } catch (...) {
-            Logging::ErrorLogger log {};
-            log << "Could not make required temporary files";
-            return;
-        }
+        auto temp_writers = make_temp_writers(components);
         
         std::vector<std::future<CompletedTask>> futures(num_task_threads);
         
-        ContigTaskMap pending_tasks {ContigOrder {components.contigs_in_output_order()}};
-        
-        MappableSetMap<ContigNameType, CompletedTask> buffered_tasks {};
+        TaskMap pending_tasks {ContigOrder {components.contigs_in_output_order()}};
+        CompletedTaskMap buffered_tasks {};
         
         SyncPacket sync {};
         
@@ -1183,68 +1256,23 @@ namespace Octopus
         while (!tasks.empty()) {
             for (auto& future : futures) {
                 if (is_ready(future)) {
+                    std::lock_guard<std::mutex> lk {sync.mutex};
+                    
                     try {
-                        std::lock_guard<std::mutex> lk {sync.mutex};
+                        auto completed_task = future.get();
                         
-                        auto result = future.get();
-                        
-                        const auto& contig = contig_name(result);
-                        
-                        assert(pending_tasks.count(contig) == 1);
-                        
-                        auto& contig_pending_tasks = pending_tasks.at(contig);
-                        
-                        if (is_same_region(result, contig_pending_tasks.front())) {
-                            if (DEBUG_MODE) {
-                                Logging::DebugLogger log {};
-                                stream(log) << "Writing completed task " << result.region;
-                            }
-                            
-                            write_calls(std::move(result.calls), temp_writers.at(contig_name(result)));
-                            
-                            contig_pending_tasks.pop();
-                            
-                            if (buffered_tasks.count(contig) == 1) {
-                                auto& contig_buffered_tasks = buffered_tasks.at(contig);
-                                
-                                while (!contig_pending_tasks.empty()) {
-                                    if (contig_buffered_tasks.has_contained(contig_pending_tasks.front())) {
-                                        if (DEBUG_MODE) {
-                                            Logging::DebugLogger log {};
-                                            stream(log) << "Writing completed buffered task " << contig_pending_tasks.front().region;
-                                        }
-                                        
-                                        auto buffered_task = contig_buffered_tasks.contained_range(contig_pending_tasks.front()).front();
-                                        
-                                        contig_buffered_tasks.erase(buffered_task);
-                                        
-                                        write_calls(std::move(buffered_task.calls),
-                                                    temp_writers.at(contig_name(result)));
-                                        
-                                        contig_pending_tasks.pop();
-                                    } else {
-                                        break;
-                                    }
-                                }
-                            }
-                        } else {
-                            if (DEBUG_MODE) {
-                                Logging::DebugLogger log {};
-                                stream(log) << "Buffering completed task " << result.region;
-                            }
-                            
-                            buffered_tasks[contig].insert(std::move(result));
-                        }
-                        
-                        --sync.count_finished;
+                        write_or_buffer(std::move(completed_task), buffered_tasks,
+                                        pending_tasks, temp_writers);
                     } catch (...) {
-                        // TODO: which exceptions can we recover from?
-                        throw;
+                        throw; // TODO: which exceptions can we recover from?
                     }
+                    
+                    --sync.count_finished;
                 }
                 
                 if (!tasks.empty() && !future.valid()) {
                     std::lock_guard<std::mutex> lk {sync.mutex};
+                    
                     auto task = pop(tasks);
                     
                     future = run(task, components, sync);
@@ -1274,8 +1302,7 @@ namespace Octopus
                            try {
                                return fut.get();
                            } catch (...) {
-                               // TODO: which exceptions can we recover from?
-                               throw;
+                               throw; // TODO: which exceptions can we recover from?
                            }
                        });
         
@@ -1283,11 +1310,11 @@ namespace Octopus
         futures.shrink_to_fit();
         
         for (auto& p : buffered_tasks) {
-            remaining_tasks.insert(std::end(remaining_tasks),
-                                   std::make_move_iterator(std::begin(p.second)),
-                                   std::make_move_iterator(std::end(p.second)));
+            std::transform(std::make_move_iterator(std::begin(p.second)),
+                           std::make_move_iterator(std::end(p.second)),
+                           std::back_inserter(remaining_tasks),
+                           [] (auto&& p) { return std::move(p.second); });
             p.second.clear();
-            p.second.shrink_to_fit();
         }
         
         buffered_tasks.clear();
@@ -1301,10 +1328,7 @@ namespace Octopus
                   });
         
         for (auto& task : remaining_tasks) {
-            if (DEBUG_MODE) {
-                Logging::DebugLogger log {};
-                stream(log) << "Writing remaining completed task " << task.region;
-            }
+            if (debug_log) stream(*debug_log) << "Writing remaining completed task " << task.region;
             write_calls(std::move(task.calls), temp_writers.at(contig_name(task)));
         }
         
@@ -1313,11 +1337,7 @@ namespace Octopus
         
         components.progress_meter().stop();
         
-        auto results = convert_temp_writers(temp_writers);
-        
-        index_vcfs(results);
-        
-        merge(results, components.output(), components.contigs_in_output_order());
+        merge_temps(std::move(temp_writers), components);
     }
     } // namespace
     
@@ -1348,17 +1368,28 @@ namespace Octopus
         };
     }
     
+    auto get_identified_path(const fs::path& base, const std::string& identifier)
+    {
+        const auto old_stem  = base.stem();
+        const auto extension = base.extension();
+        
+        fs::path new_stem;
+        
+        if (extension.string() == ".gz") {
+            new_stem = old_stem.stem().string() + "." + identifier
+            + old_stem.extension().string() + extension.string();
+        } else {
+            new_stem = old_stem.string() + "." + identifier + extension.string();
+        }
+        
+        return base.parent_path() / new_stem;
+    }
+    
     auto get_filtered_path(const fs::path& unfiltered_output_path)
     {
-        const std::string identifier {"filtered"};
-        const fs::path new_stem {
-            unfiltered_output_path.stem().string()
-            + "_" + identifier
-            + unfiltered_output_path.extension().string()
-        };
-        return unfiltered_output_path.parent_path() / new_stem;
+        return get_identified_path(unfiltered_output_path, "filtered");
     }
-                
+    
     auto get_filtered_path(const GenomeCallingComponents& components)
     {
         return get_filtered_path(components.output().path());
@@ -1366,13 +1397,11 @@ namespace Octopus
     
     void filter_calls(const GenomeCallingComponents& components)
     {
-        //assert(!components.output().is_open());
+        assert(!components.output().is_open());
         
         const VcfReader calls {components.output().path()};
-        //const VcfReader calls {"/Users/danielcooke/Genomics/octopus_test/octopus_calls4.vcf"};
         
         const auto filtered_path = get_filtered_path(components);
-        //const auto filtered_path = get_filtered_path(calls.path());
         
         VcfWriter filtered_calls {filtered_path};
         
@@ -1380,17 +1409,7 @@ namespace Octopus
         
         const VariantCallFilter filter {components.reference(), read_pipe};
         
-        VariantCallFilter::RegionMap regions {
-            [contigs = components.contigs_in_output_order()]
-            (const auto& lhs, const auto& rhs) -> bool {
-                std::array<std::reference_wrapper<const std::decay_t<decltype(lhs)>>, 2> values {lhs, rhs};
-                return *std::find_first_of(std::cbegin(contigs), std::cend(contigs),
-                                           std::cbegin(values), std::cend(values),
-                                           [] (const auto& lhs, const auto& rhs) {
-                                               return lhs == rhs.get();
-                                           }) == lhs;
-            }
-        };
+        VariantCallFilter::RegionMap regions {ContigOrder {components.contigs_in_output_order()}};
         
         for (const auto& p : components.search_regions()) {
             regions.emplace(std::piecewise_construct,
@@ -1401,80 +1420,10 @@ namespace Octopus
         
         filter.filter(calls, filtered_calls, regions);
     }
-                
-    void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
-    {
-        if (!dst.is_header_written()) {
-            dst << src.fetch_header();
-        }
-        
-        auto calls = src.fetch_records();
-        
-        const auto samples = src.fetch_header().samples();
-        
-        const static char Deleted {'*'};
-        const static std::string Missing {"."};
-        
-        const auto has_deleted = [] (const auto& allele) {
-            return std::find(std::cbegin(allele), std::cend(allele), Deleted) != std::cend(allele);
-        };
-        
-        for (const auto& call : calls) {
-            const auto& alt = call.alt();
-            
-            VcfRecord::Builder cb {call};
-            
-            const auto it = std::find_if(std::cbegin(alt), std::cend(alt), has_deleted);
-            
-            if (it != std::cend(alt)) {
-                const auto i = std::distance(std::cbegin(alt), it);
-                
-                auto new_alt = alt;
-                
-                new_alt.erase(std::next(std::begin(new_alt), i));
-                
-                cb.set_alt(std::move(new_alt));
-            }
-            
-            for (const auto& sample : samples) {
-                const auto& gt = call.get_sample_value(sample, "GT");
-                
-                const auto it2 = std::find_if(std::cbegin(gt), std::cend(gt), has_deleted);
-                const auto it3 = std::find(std::cbegin(gt), std::cend(gt), Missing);
-                
-                const auto& ref = call.ref();
-                
-                if (it2 != std::cend(gt) || it3 != std::cend(gt)) {
-                    auto new_gt = gt;
-                    
-                    std::replace_if(std::begin(new_gt), std::end(new_gt), has_deleted, ref);
-                    
-                    std::replace(std::begin(new_gt), std::end(new_gt), Missing, ref);
-                    
-                    auto phasing = VcfRecord::Builder::Phasing::Phased;
-                    
-                    if (!call.is_sample_phased(sample)) {
-                        phasing = VcfRecord::Builder::Phasing::Unphased;
-                    }
-                    
-                    cb.set_genotype(sample, std::move(new_gt), phasing);
-                }
-            }
-            
-            dst << cb.build_once();
-        }
-    }
     
-    auto get_legacy_path(const fs::path& base)
+    auto get_legacy_path(const fs::path& native)
     {
-        const std::string identifier {"legacy"};
-        const fs::path new_stem {base.stem().string() + "." + identifier + base.extension().string()};
-        return base.parent_path() / new_stem;
-    }
-                
-    auto get_legacy_path(const GenomeCallingComponents& components)
-    {
-        return get_legacy_path(components.output().path());
+        return get_identified_path(native, "legacy");
     }
     
     void run_octopus(po::variables_map& options)
@@ -1482,15 +1431,17 @@ namespace Octopus
         DEBUG_MODE = Options::is_debug_mode(options);
         TRACE_MODE = Options::is_trace_mode(options);
         
+        static auto debug_log = get_debug_log();
+        
         log_startup();
         
-        Logging::InfoLogger log {};
+        Logging::InfoLogger info_log {};
         
         const auto start = std::chrono::system_clock::now();
         
         auto end = start;
         
-        unsigned search_size {0};
+        std::size_t search_size {0};
         
         // open scope to ensure calling components are destroyed before end message
         {
@@ -1500,13 +1451,17 @@ namespace Octopus
             
             end = std::chrono::system_clock::now();
             
-            stream(log) << "Done initialising calling components in " << TimeInterval {start, end};
+            stream(info_log) << "Done initialising calling components in " << TimeInterval {start, end};
             
             log_startup_info(*components);
             
+            if (debug_log) {
+                print_input_regions(stream(*debug_log), components->search_regions());
+            }
+            
             write_caller_output_header(*components, Options::call_sites_only(options));
             
-            options.clear();
+            //options.clear();
             
             try {
                 if (is_multithreaded(*components)) {
@@ -1522,39 +1477,47 @@ namespace Octopus
                 
                 components->output().close();
             } catch (const std::exception& e) {
-                Logging::FatalLogger lg {};
-                stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
+                Logging::FatalLogger fatal_log {};
+                stream(fatal_log) << "Encountered error '" << e.what() << "'. Attempting to cleanup...";
                 
                 cleanup(*components);
                 
                 if (DEBUG_MODE) {
-                    stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
+                    stream(info_log) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
                 } else {
-                    stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
-                                    " log file to " << Octopus_bug_email;
+                    stream(info_log) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
+                                        " log file to " << Octopus_bug_email;
                 }
                 
                 return;
             }
             
-            filter_calls(*components);
-            
-            const auto filtered_path = get_filtered_path(*components);
-            
-            const VcfReader vcf {filtered_path};
-            VcfWriter out {get_legacy_path(filtered_path)};
-//            const VcfReader vcf {"/Users/danielcooke/Genomics/octopus_test/octopus_calls4_filtered.vcf"};
-//            VcfWriter out {"/Users/danielcooke/Genomics/octopus_test/octopus_calls4_filtered.legacy.vcf.gz"};
-            convert_to_legacy(vcf, out);
+            if (!options.at("disable-call-filtering").as<bool>()) {
+                filter_calls(*components);
+                
+                if (options.at("legacy").as<bool>()) {
+                    const auto filtered_path = get_filtered_path(*components);
+                    
+                    const VcfReader native {filtered_path};
+                    VcfWriter legacy {get_legacy_path(native.path())};
+                    
+                    convert_to_legacy(native, legacy);
+                }
+            } else if (options.at("legacy").as<bool>()) {
+                const VcfReader native {components->output().path()};
+                VcfWriter legacy {get_legacy_path(native.path())};
+                
+                convert_to_legacy(native, legacy);
+            }
             
             cleanup(*components);
             
             end = std::chrono::system_clock::now();
             
-            search_size= calculate_total_search_size(components->search_regions());
+            search_size = sum_region_sizes(components->search_regions());
         }
         
-        stream(log) << "Finished processing " << search_size << "bp, total runtime " << TimeInterval {start, end};
+        stream(info_log) << "Finished processing " << search_size << "bp, total runtime " << TimeInterval {start, end};
     }
     
 } // namespace Octopus

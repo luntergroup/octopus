@@ -219,7 +219,8 @@ std::size_t calculate_total_number_of_records(const ReaderContigRecordCountMap& 
                            });
 }
 
-void merge(const std::vector<VcfReader>& sources, VcfWriter& dst, const std::vector<std::string>& contigs)
+void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
+           const std::vector<std::string>& contigs)
 {
     if (sources.empty()) return;
     
@@ -308,4 +309,67 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst)
     const auto contigs = get_contigs(header);
     
     return merge(sources, dst, contigs);
+}
+
+void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
+{
+    if (!dst.is_header_written()) {
+        dst << src.fetch_header();
+    }
+    
+    const auto samples = src.fetch_header().samples();
+    
+    const static char Deleted {'*'};
+    const static std::string Missing {"."};
+    
+    const auto has_deleted = [] (const auto& allele) {
+        return std::find(std::cbegin(allele), std::cend(allele), Deleted) != std::cend(allele);
+    };
+    
+    auto p = src.iterate();
+    
+    std::for_each(std::move(p.first), std::move(p.second), [&] (const auto& call) {
+        const auto& alt = call.alt();
+        
+        VcfRecord::Builder cb {call};
+        
+        const auto it = std::find_if(std::cbegin(alt), std::cend(alt), has_deleted);
+        
+        if (it != std::cend(alt)) {
+            const auto i = std::distance(std::cbegin(alt), it);
+            
+            auto new_alt = alt;
+            
+            new_alt.erase(std::next(std::begin(new_alt), i));
+            
+            cb.set_alt(std::move(new_alt));
+        }
+        
+        for (const auto& sample : samples) {
+            const auto& gt = call.get_sample_value(sample, "GT");
+            
+            const auto it2 = std::find_if(std::cbegin(gt), std::cend(gt), has_deleted);
+            const auto it3 = std::find(std::cbegin(gt), std::cend(gt), Missing);
+            
+            const auto& ref = call.ref();
+            
+            if (it2 != std::cend(gt) || it3 != std::cend(gt)) {
+                auto new_gt = gt;
+                
+                std::replace_if(std::begin(new_gt), std::end(new_gt), has_deleted, ref);
+                
+                std::replace(std::begin(new_gt), std::end(new_gt), Missing, ref);
+                
+                auto phasing = VcfRecord::Builder::Phasing::Phased;
+                
+                if (!call.is_sample_phased(sample)) {
+                    phasing = VcfRecord::Builder::Phasing::Unphased;
+                }
+                
+                cb.set_genotype(sample, std::move(new_gt), phasing);
+            }
+        }
+        
+        dst << cb.build_once();
+    });
 }

@@ -44,6 +44,9 @@ namespace Octopus
     private:
         std::reference_wrapper<const ReferenceGenome> reference_;
         std::reference_wrapper<const ReadPipe> read_pipe_;
+        
+//        virtual void write_header(VcfWriter& dest) const;
+//        virtual void do_filter(const VcfReader& source, VcfWriter& dest, const RegionMap& regions) const;
     };
 } // namespace Octopus
 

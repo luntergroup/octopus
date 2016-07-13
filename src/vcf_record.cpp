@@ -489,6 +489,12 @@ VcfRecord::Builder& VcfRecord::Builder::add_filter(KeyType filter)
     return *this;
 }
 
+VcfRecord::Builder& VcfRecord::Builder::reserve_info(unsigned n)
+{
+    info_.reserve(n);
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key)
 {
     info_.emplace(key, std::vector<ValueType> {});
@@ -546,26 +552,24 @@ VcfRecord::Builder& VcfRecord::Builder::add_format(KeyType key)
     return *this;
 }
 
-VcfRecord::Builder&VcfRecord::Builder:: set_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy)
+VcfRecord::Builder& VcfRecord::Builder::reserve_samples(unsigned n)
+{
+    genotypes_.reserve(n);
+    return *this;
+}
+
+VcfRecord::Builder&VcfRecord::Builder:: set_homozygous_ref_genotype(const SampleIdType& sample,
+                                                                    unsigned ploidy)
 {
     std::vector<SequenceType> tmp(ploidy, ref_);
     return set_genotype(sample, tmp, Phasing::Phased);
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_genotype(const SampleIdType& sample,
-                                                     const std::vector<SequenceType>& alleles,
+                                                     std::vector<SequenceType> alleles,
                                                      Phasing phasing)
 {
-    const auto p = genotypes_.emplace(std::piecewise_construct,
-                                      std::forward_as_tuple(sample),
-                                      std::forward_as_tuple(alleles, phasing == Phasing::Phased));
-    
-    
-    if (!p.second) {
-        p.first->second.first  = alleles;
-        p.first->second.second = phasing == Phasing::Phased;
-    }
-    
+    genotypes_[sample] = std::make_pair(std::move(alleles), phasing == Phasing::Phased);
     return *this;
 }
 
@@ -588,26 +592,30 @@ VcfRecord::Builder& VcfRecord::Builder::set_genotype(const SampleIdType& sample,
     return set_genotype(sample, tmp, phasing);
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample, const KeyType& key,
+VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample,
+                                                   const KeyType& key,
                                                    const ValueType& value)
 {
     return this->set_format(sample, key, std::vector<ValueType> {value});
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample, const KeyType& key,
+VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample,
+                                                   const KeyType& key,
                                                    std::vector<ValueType> values)
 {
     samples_[sample][key] = std::move(values);
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample, const KeyType& key,
+VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample,
+                                                   const KeyType& key,
                                                    std::initializer_list<ValueType> values)
 {
     return this->set_format(sample, key, std::vector<ValueType> {values});
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_format_missing(const SampleIdType& sample, const KeyType& key)
+VcfRecord::Builder& VcfRecord::Builder::set_format_missing(const SampleIdType& sample,
+                                                           const KeyType& key)
 {
     return this->set_format(sample, key, std::string {"."});
 }
@@ -630,9 +638,13 @@ VcfRecord::SizeType VcfRecord::Builder::pos() const noexcept
 VcfRecord VcfRecord::Builder::build() const
 {
     if (genotypes_.empty() && samples_.empty()) {
-        return VcfRecord {chrom_, pos_, id_, ref_, alt_, qual_, filter_, info_};
+        return VcfRecord {
+            chrom_, pos_, id_, ref_, alt_, qual_, filter_, info_
+        };
     } else {
-        return VcfRecord {chrom_, pos_, id_, ref_, alt_, qual_, filter_, info_, format_, genotypes_, samples_};
+        return VcfRecord {
+            chrom_, pos_, id_, ref_, alt_, qual_, filter_, info_, format_, genotypes_, samples_
+        };
     }
 }
 

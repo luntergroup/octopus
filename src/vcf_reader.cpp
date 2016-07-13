@@ -46,6 +46,56 @@ std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path
     }
 }
 
+// VcfReader::Iterator
+
+VcfReader::RecordIterator::RecordIterator(IVcfReaderImpl::RecordIteratorPtr itr)
+:
+itr_ {std::move(itr)},
+type_ {typeid(*itr_)}
+{}
+
+VcfReader::RecordIterator::reference VcfReader::RecordIterator::operator*() const
+{
+    return itr_->operator*();
+}
+
+VcfReader::RecordIterator::pointer VcfReader::RecordIterator::operator->() const
+{
+    return itr_->operator->();
+}
+
+VcfReader::RecordIterator& VcfReader::RecordIterator::operator++()
+{
+    itr_->next();
+    return *this;
+}
+
+bool operator==(const VcfReader::RecordIterator& lhs, const VcfReader::RecordIterator& rhs)
+{
+    const static std::type_index hts_type {typeid(HtslibBcfFacade::RecordIterator)};
+    const static std::type_index parser_type {typeid(VcfParser::RecordIterator)};
+    
+    if (lhs.type_ == hts_type) {
+        try {
+            const auto& typed_lhs = dynamic_cast<HtslibBcfFacade::RecordIterator&>(*lhs.itr_);
+            const auto& typed_rhs = dynamic_cast<HtslibBcfFacade::RecordIterator&>(*rhs.itr_);
+            return typed_lhs == typed_rhs;
+        } catch(const std::bad_cast&) {
+            throw std::runtime_error {"VcfReader: trying to compare incompatible iterators"};
+        }
+    } else if (lhs.type_ == parser_type) {
+        try {
+            const auto& typed_lhs = dynamic_cast<VcfParser::RecordIterator&>(*lhs.itr_);
+            const auto& typed_rhs = dynamic_cast<VcfParser::RecordIterator&>(*rhs.itr_);
+            return typed_lhs == typed_rhs;
+        } catch (const std::bad_cast&) {
+            throw std::runtime_error {"VcfReader: trying to compare incompatible iterators"};
+        }
+    } else {
+        throw std::runtime_error {"VcfReader: trying to compare unknown iterator types"};
+    }
+}
+
 VcfReader::VcfReader(Path file_path)
 :
 file_path_ {std::move(file_path)},
@@ -120,22 +170,29 @@ std::size_t VcfReader::count_records(const GenomicRegion& region) const
     return reader_->count_records(region);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records(const UnpackPolicy level) const
+VcfReader::RecordContainer VcfReader::fetch_records(const UnpackPolicy level) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->fetch_records(level);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records(const std::string& contig, const UnpackPolicy level) const
+VcfReader::RecordContainer VcfReader::fetch_records(const std::string& contig, const UnpackPolicy level) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->fetch_records(contig, level);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
+VcfReader::RecordContainer VcfReader::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->fetch_records(region, level);
+}
+
+VcfReader::RecordIteratorPair VcfReader::iterate(const UnpackPolicy level) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    auto p = reader_->iterate(level);
+    return std::make_pair(std::move(p.first), std::move(p.second));
 }
 
 // non member methods
@@ -143,4 +200,9 @@ std::vector<VcfRecord> VcfReader::fetch_records(const GenomicRegion& region, con
 bool operator==(const VcfReader& lhs, const VcfReader& rhs)
 {
     return lhs.path() == rhs.path();
+}
+
+bool operator!=(const VcfReader::RecordIterator& lhs, const VcfReader::RecordIterator& rhs)
+{
+    return !(lhs == rhs);
 }
