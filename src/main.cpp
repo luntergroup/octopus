@@ -20,7 +20,8 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include "program_options.hpp"
+#include "option_parser.hpp"
+#include "option_collation.hpp"
 #include "octopus.hpp"
 
 #include "logging.hpp"

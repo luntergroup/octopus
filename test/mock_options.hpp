@@ -12,7 +12,7 @@
 #include <boost/program_options.hpp>
 #include <boost/optional.hpp>
 
-#include "program_options.hpp"
+#include "option_parser.hpp"
 #include "test_common.hpp"
 
 namespace po = boost::program_options;

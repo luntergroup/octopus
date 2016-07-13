@@ -1,0 +1,81 @@
+//
+//  option_collation.hpp
+//  Octopus
+//
+//  Created by Daniel Cooke on 13/07/2016.
+//  Copyright © 2016 Oxford University. All rights reserved.
+//
+
+#ifndef option_collation_hpp
+#define option_collation_hpp
+
+#include <vector>
+#include <cstddef>
+
+#include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
+
+#include "common.hpp"
+#include "option_parser.hpp"
+#include "reference_genome.hpp"
+#include "read_manager.hpp"
+#include "downsampler.hpp"
+#include "variant_call_filter.hpp"
+
+namespace fs = boost::filesystem;
+
+namespace Octopus
+{
+class ReadTransform;
+class ReadPipe;
+class CandidateGeneratorBuilder;
+class VariantCallerFactory;
+
+namespace Options
+{
+    bool is_debug_mode(const OptionMap& options);
+    bool is_trace_mode(const OptionMap& options);
+    
+    boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options);
+    boost::optional<fs::path> get_trace_log_file_name(const OptionMap& options);
+    
+    boost::optional<unsigned> get_num_threads(const OptionMap& options);
+    
+    std::size_t get_target_read_buffer_size(const OptionMap& options);
+    
+    ReferenceGenome make_reference(const OptionMap& options);
+    
+    InputRegionMap get_search_regions(const OptionMap& options,
+                                      const ReferenceGenome& reference);
+    
+    ContigOutputOrder get_contig_output_order(const OptionMap& options);
+    
+    boost::optional<std::vector<SampleIdType>> get_user_samples(const OptionMap& options);
+    
+    ReadManager make_read_manager(const OptionMap& options);
+    
+    ReadFilterer make_read_filter(const OptionMap& options);
+    
+    boost::optional<Downsampler> make_downsampler(const OptionMap& options);
+    
+    ReadTransform make_read_transform(const OptionMap& options);
+    
+    CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& options,
+                                                               const ReferenceGenome& reference);
+    
+    bool call_sites_only(const OptionMap& options);
+    
+    VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
+                                                     ReadPipe& read_pipe,
+                                                     const CandidateGeneratorBuilder& candidate_generator_builder,
+                                                     const InputRegionMap& regions,
+                                                     const OptionMap& options);
+    
+    VcfWriter make_output_vcf_writer(const OptionMap& options);
+    
+    boost::optional<fs::path> create_temp_file_directory(const OptionMap& options);
+} // namespace Options
+} // namespace Octopus
+
+#endif /* option_collation_hpp */

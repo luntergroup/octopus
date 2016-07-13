@@ -33,7 +33,7 @@
 #include <boost/optional.hpp>
 
 #include "common.hpp"
-#include "program_options.hpp"
+#include "option_collation.hpp"
 #include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "mappable_flat_multi_set.hpp"
@@ -65,6 +65,8 @@
 
 namespace Octopus
 {
+    using Options::OptionMap;
+    
     void log_startup()
     {
         Logging::InfoLogger log {};
@@ -170,7 +172,7 @@ namespace Octopus
                     != std::cend(file_samples);
     }
     
-    std::vector<SampleIdType> extract_samples(const po::variables_map& options,
+    std::vector<SampleIdType> extract_samples(const OptionMap& options,
                                               const ReadManager& read_manager)
     {
         auto user_samples = Options::get_user_samples(options);
@@ -245,7 +247,7 @@ namespace Octopus
     }
     
     ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleIdType> samples,
-                            const po::variables_map& options)
+                            const OptionMap& options)
     {
         return ReadPipe {
             read_manager, Options::make_read_transform(options),
@@ -338,7 +340,7 @@ namespace Octopus
         GenomeCallingComponents() = delete;
         
         GenomeCallingComponents(ReferenceGenome&& reference, ReadManager&& read_manager,
-                                VcfWriter&& output, const po::variables_map& options)
+                                VcfWriter&& output, const OptionMap& options)
         :
         components_ {std::move(reference), std::move(read_manager), std::move(output), options}
         {}
@@ -443,7 +445,7 @@ namespace Octopus
             Components() = delete;
             
             Components(ReferenceGenome&& reference, ReadManager&& read_manager,
-                       VcfWriter&& output, const po::variables_map& options)
+                       VcfWriter&& output, const OptionMap& options)
             :
             reference {std::move(reference)},
             read_manager {std::move(read_manager)},
@@ -551,7 +553,7 @@ namespace Octopus
     }
     
     boost::optional<GenomeCallingComponents>
-    collate_genome_calling_components(const po::variables_map& options)
+    collate_genome_calling_components(const OptionMap& options)
     {
         try {
             auto reference = Options::make_reference(options);
@@ -1426,7 +1428,7 @@ namespace Octopus
         return get_identified_path(native, "legacy");
     }
     
-    void run_octopus(po::variables_map& options)
+    void run_octopus(OptionMap& options)
     {
         DEBUG_MODE = Options::is_debug_mode(options);
         TRACE_MODE = Options::is_trace_mode(options);

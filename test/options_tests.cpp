@@ -19,7 +19,8 @@
 #include "genomic_region.hpp"
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
-#include "program_options.hpp"
+#include "option_parser.hpp"
+#include "option_collation.hpp"
 
 namespace po = boost::program_options;
 

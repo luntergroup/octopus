@@ -11,11 +11,11 @@
 
 #include <boost/program_options.hpp>
 
-namespace po = boost::program_options;
+#include "option_parser.hpp"
 
 namespace Octopus
 {
-    void run_octopus(po::variables_map& options);
+    void run_octopus(Options::OptionMap& options);
 }
 
 #endif /* defined(__Octopus__octopus__) */
