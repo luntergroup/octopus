@@ -16,195 +16,19 @@
 
 namespace po = boost::program_options;
 
-namespace Octopus
+namespace Octopus { namespace Options
 {
-namespace Options
-{
-void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2)
-{
-    if (vm.count(opt1) && !vm[opt1].defaulted() && vm.count(opt2) && !vm[opt2].defaulted()) {
-        throw std::logic_error(std::string("conflicting options '") + opt1 + "' and '" + opt2 + "'.");
-    }
-}
-
-void option_dependency(const OptionMap& vm, const std::string& for_what,
-                       const std::string& required_option)
-{
-    if (vm.count(for_what) && !vm[for_what].defaulted())
-        if (vm.count(required_option) == 0 || vm[required_option].defaulted()) {
-            throw std::logic_error(std::string("option '") + for_what
-                                   + "' requires option '" + required_option + "'.");
-        }
-}
-
-std::istream& operator>>(std::istream& in, RefCallType& result)
-{
-    std::string token;
-    in >> token;
-    if (token == "Positional")
-        result = RefCallType::Positional;
-    else if (token == "Blocked")
-        result = RefCallType::Blocked;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "refcalls"};
-    return in;
-}
-
-std::ostream& operator<<(std::ostream& out, const RefCallType& type)
-{
-    switch (type) {
-        case RefCallType::Positional:
-            out << "Positional";
-            break;
-        case RefCallType::Blocked:
-            out << "Blocked";
-            break;
-    }
-    return out;
-}
-
-std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
-{
-    std::string token;
-    in >> token;
-    if (token == "LexicographicalAscending")
-        result = ContigOutputOrder::LexicographicalAscending;
-    else if (token == "LexicographicalDescending")
-        result = ContigOutputOrder::LexicographicalDescending;
-    else if (token == "ContigSizeAscending")
-        result = ContigOutputOrder::ContigSizeAscending;
-    else if (token == "ContigSizeDescending")
-        result = ContigOutputOrder::ContigSizeDescending;
-    else if (token == "AsInReference")
-        result = ContigOutputOrder::AsInReferenceIndex;
-    else if (token == "AsInReferenceReversed")
-        result = ContigOutputOrder::AsInReferenceIndexReversed;
-    else if (token == "Unspecified")
-        result = ContigOutputOrder::Unspecified;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "contig-output-order"};
-    return in;
-}
-
-std::ostream& operator<<(std::ostream& out, const ContigOutputOrder& order)
-{
-    switch (order) {
-        case ContigOutputOrder::LexicographicalAscending:
-            out << "LexicographicalAscending";
-            break;
-        case ContigOutputOrder::LexicographicalDescending:
-            out << "LexicographicalDescending";
-            break;
-        case ContigOutputOrder::ContigSizeAscending:
-            out << "ContigSizeAscending";
-            break;
-        case ContigOutputOrder::ContigSizeDescending:
-            out << "ContigSizeDescending";
-            break;
-        case ContigOutputOrder::AsInReferenceIndex:
-            out << "AsInReferenceIndex";
-            break;
-        case ContigOutputOrder::AsInReferenceIndexReversed:
-            out << "AsInReferenceIndexReversed";
-            break;
-        case ContigOutputOrder::Unspecified:
-            out << "Unspecified";
-            break;
-    }
-    return out;
-}
-
-std::istream& operator>>(std::istream& in, PhasingLevel& result)
-{
-    std::string token;
-    in >> token;
-    if (token == "Minimal")
-        result = PhasingLevel::Minimal;
-    else if (token == "Conservative")
-        result = PhasingLevel::Conservative;
-    else if (token == "Aggressive")
-        result = PhasingLevel::Aggressive;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "phasing-level"};
-    return in;
-}
-
-std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
-{
-    switch (level) {
-        case PhasingLevel::Minimal:
-            out << "Minimal";
-            break;
-        case PhasingLevel::Conservative:
-            out << "Conservative";
-            break;
-        case PhasingLevel::Aggressive:
-            out << "Aggressive";
-            break;
-    }
-    return out;
-}
-
-void check_reads_present(const OptionMap& vm)
-{
-    if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
-        throw po::required_option {"--reads | --reads-file"};
-    }
-}
-
-void check_region_files_consistent(const OptionMap& vm)
-{
-    if (vm.count("regions-file") == 1 && vm.count("skip-regions-file") == 1) {
-        const auto regions_file = vm.at("regions-file").as<std::string>();
-        const auto skip_regions_file = vm.at("skip-regions-file").as<std::string>();
-        if (regions_file == skip_regions_file) {
-            throw std::invalid_argument {"options 'regions-file' and 'skip-regions-file' must"
-                " have unique values"};
-        }
-    }
-}
-
-void check_trio_consistent(const OptionMap& vm)
-{
-    if (vm.at("caller").as<std::string>() == "trio"
-        && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
-        throw std::logic_error {"option 'maternal-sample' and 'paternal-sample' are required"
-            " when caller=trio"};
-    }
-}
-
-void validate_caller(const OptionMap& vm)
-{
-    if (vm.count("caller") == 1) {
-        const auto caller = vm.at("caller").as<std::string>();
-        
-        static const std::vector<std::string> valid_callers {
-            "individual", "population", "cancer", "trio"
-        };
-        
-        if (std::find(std::cbegin(valid_callers), std::cend(valid_callers), caller)
-            == std::cend(valid_callers)) {
-            po::validation_error {po::validation_error::kind_t::invalid_option_value, caller,
-                "caller"};
-        }
-    }
-}
-
-void validate_options(const OptionMap& vm)
-{
-    check_reads_present(vm);
-    check_region_files_consistent(vm);
-    check_trio_consistent(vm);
-    validate_caller(vm);
-}
+void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2);
+void option_dependency(const OptionMap& vm, const std::string& for_what, const std::string& required_option);
+void check_reads_present(const OptionMap& vm);
+void check_region_files_consistent(const OptionMap& vm);
+void check_trio_consistent(const OptionMap& vm);
+void validate_caller(const OptionMap& vm);
+void validate_options(const OptionMap& vm);
 
 boost::optional<OptionMap> parse_options(const int argc, const char** argv)
 {
     try {
-        po::positional_options_description p;
-        
-        p.add("caller", -1);
-        
         po::options_description general("General");
         general.add_options()
         ("help,h", "Produce help message")
@@ -229,8 +53,8 @@ boost::optional<OptionMap> parse_options(const int argc, const char** argv)
          "Sets the working directory")
         
         ("threads,t",
-         po::value<unsigned>()->default_value(1),
-         "Maximum number of threads to be used, setting to 0 (recommended) lets the application"
+         po::value<unsigned>()->implicit_value(0),
+         "Maximum number of threads to be used, enabling this option with no argument lets the application"
          " decide the number of threads ands enables specific algorithm parallelisation")
         
         ("max-reference-cache-footprint,mrcf",
@@ -318,7 +142,7 @@ boost::optional<OptionMap> parse_options(const int argc, const char** argv)
         
         po::options_description transforms("Read transformations");
         transforms.add_options()
-        ("disable-all-read-transforms",
+        ("disable-read-transforms",
          po::bool_switch()->default_value(false),
          "Disables all read transformations")
         
@@ -433,7 +257,7 @@ boost::optional<OptionMap> parse_options(const int argc, const char** argv)
          po::bool_switch()->default_value(false),
          "Disables candidate generation using local re-assembly")
         
-        ("candidates-from-source,source",
+        ("generate-candidates-from-source,source",
          po::value<std::string>(),
          "Variant file path containing known variants. These variants will automatically become"
          " candidates")
@@ -495,7 +319,7 @@ boost::optional<OptionMap> parse_options(const int argc, const char** argv)
         
         ("sites-only",
          po::bool_switch()->default_value(false),
-         "Only outout call sites (i.e. without sample genotype information)")
+         "Only reports call sites (i.e. without sample genotype information)")
         
         ("snp-heterozygosity,snp-hets",
          po::value<float>()->default_value(0.001, "0.001"),
@@ -647,7 +471,7 @@ boost::optional<OptionMap> parse_options(const int argc, const char** argv)
         
         vm_init.clear();
         
-        po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
+        po::store(po::command_line_parser(argc, argv).options(all).run(), vm);
         
         // boost::option cannot handle option dependencies so we must do our own checks
         validate_options(vm);
@@ -661,9 +485,74 @@ boost::optional<OptionMap> parse_options(const int argc, const char** argv)
     }
 }
 
-bool is_run_command(const OptionMap& options)
+void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2)
 {
-    return options.count("help") == 0 && options.count("version") == 0;
+    if (vm.count(opt1) && !vm[opt1].defaulted() && vm.count(opt2) && !vm[opt2].defaulted()) {
+        throw std::logic_error(std::string("conflicting options '") + opt1 + "' and '" + opt2 + "'.");
+    }
+}
+
+void option_dependency(const OptionMap& vm, const std::string& for_what,
+                       const std::string& required_option)
+{
+    if (vm.count(for_what) && !vm[for_what].defaulted())
+        if (vm.count(required_option) == 0 || vm[required_option].defaulted()) {
+            throw std::logic_error(std::string("option '") + for_what
+                                   + "' requires option '" + required_option + "'.");
+        }
+}
+
+void check_reads_present(const OptionMap& vm)
+{
+    if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
+        throw po::required_option {"--reads | --reads-file"};
+    }
+}
+
+void check_region_files_consistent(const OptionMap& vm)
+{
+    if (vm.count("regions-file") == 1 && vm.count("skip-regions-file") == 1) {
+        const auto regions_file = vm.at("regions-file").as<std::string>();
+        const auto skip_regions_file = vm.at("skip-regions-file").as<std::string>();
+        if (regions_file == skip_regions_file) {
+            throw std::invalid_argument {"options 'regions-file' and 'skip-regions-file' must"
+                " have unique values"};
+        }
+    }
+}
+
+void check_trio_consistent(const OptionMap& vm)
+{
+    if (vm.at("caller").as<std::string>() == "trio"
+        && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
+        throw std::logic_error {"option 'maternal-sample' and 'paternal-sample' are required"
+            " when caller=trio"};
+    }
+}
+
+void validate_caller(const OptionMap& vm)
+{
+    if (vm.count("caller") == 1) {
+        const auto caller = vm.at("caller").as<std::string>();
+        
+        static const std::vector<std::string> valid_callers {
+            "individual", "population", "cancer", "trio"
+        };
+        
+        if (std::find(std::cbegin(valid_callers), std::cend(valid_callers), caller)
+            == std::cend(valid_callers)) {
+            throw po::validation_error {po::validation_error::kind_t::invalid_option_value, caller,
+                "caller"};
+        }
+    }
+}
+
+void validate_options(const OptionMap& vm)
+{
+    check_reads_present(vm);
+    check_region_files_consistent(vm);
+    check_trio_consistent(vm);
+    validate_caller(vm);
 }
 
 std::istream& operator>>(std::istream& in, ContigPloidy& result)
@@ -677,7 +566,6 @@ std::istream& operator>>(std::istream& in, ContigPloidy& result)
     }
     
     const auto pos = token.find('=');
-    
     const auto rhs = token.substr(pos + 1);
     
     try {
@@ -695,9 +583,117 @@ std::istream& operator>>(std::istream& in, ContigPloidy& result)
     return in;
 }
 
-std::ostream& operator<<(std::ostream& out, const ContigPloidy contig_ploidy)
+std::ostream& operator<<(std::ostream& out, const ContigPloidy& contig_ploidy)
 {
     out << contig_ploidy.contig << "=" << contig_ploidy.ploidy;
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, RefCallType& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "Positional")
+        result = RefCallType::Positional;
+    else if (token == "Blocked")
+        result = RefCallType::Blocked;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
+        "refcalls"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const RefCallType& type)
+{
+    switch (type) {
+        case RefCallType::Positional:
+            out << "Positional";
+            break;
+        case RefCallType::Blocked:
+            out << "Blocked";
+            break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "LexicographicalAscending")
+        result = ContigOutputOrder::LexicographicalAscending;
+    else if (token == "LexicographicalDescending")
+        result = ContigOutputOrder::LexicographicalDescending;
+    else if (token == "ContigSizeAscending")
+        result = ContigOutputOrder::ContigSizeAscending;
+    else if (token == "ContigSizeDescending")
+        result = ContigOutputOrder::ContigSizeDescending;
+    else if (token == "AsInReference")
+        result = ContigOutputOrder::AsInReferenceIndex;
+    else if (token == "AsInReferenceReversed")
+        result = ContigOutputOrder::AsInReferenceIndexReversed;
+    else if (token == "Unspecified")
+        result = ContigOutputOrder::Unspecified;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
+        "contig-output-order"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const ContigOutputOrder& order)
+{
+    switch (order) {
+        case ContigOutputOrder::LexicographicalAscending:
+            out << "LexicographicalAscending";
+            break;
+        case ContigOutputOrder::LexicographicalDescending:
+            out << "LexicographicalDescending";
+            break;
+        case ContigOutputOrder::ContigSizeAscending:
+            out << "ContigSizeAscending";
+            break;
+        case ContigOutputOrder::ContigSizeDescending:
+            out << "ContigSizeDescending";
+            break;
+        case ContigOutputOrder::AsInReferenceIndex:
+            out << "AsInReferenceIndex";
+            break;
+        case ContigOutputOrder::AsInReferenceIndexReversed:
+            out << "AsInReferenceIndexReversed";
+            break;
+        case ContigOutputOrder::Unspecified:
+            out << "Unspecified";
+            break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, PhasingLevel& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "Minimal")
+        result = PhasingLevel::Minimal;
+    else if (token == "Conservative")
+        result = PhasingLevel::Conservative;
+    else if (token == "Aggressive")
+        result = PhasingLevel::Aggressive;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
+        "phasing-level"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
+{
+    switch (level) {
+        case PhasingLevel::Minimal:
+            out << "Minimal";
+            break;
+        case PhasingLevel::Conservative:
+            out << "Conservative";
+            break;
+        case PhasingLevel::Aggressive:
+            out << "Aggressive";
+            break;
+    }
     return out;
 }
 } // namespace Options

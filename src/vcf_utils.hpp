@@ -31,6 +31,8 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfR
                                              const VcfRecord::SampleIdType sample,
                                              const VcfHeader::StructuredKey& key);
 
+bool is_indexable(const boost::filesystem::path& vcf_path);
+
 void index_vcf(const boost::filesystem::path& vcf_path, int lidx_shift = 14);
 void index_vcf(const VcfReader& reader, int lidx_shift = 14);
 void index_vcfs(const std::vector<VcfReader>& readers, int lidx_shift = 14);

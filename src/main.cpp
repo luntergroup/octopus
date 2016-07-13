@@ -28,16 +28,18 @@
 
 #include "mock_options.hpp"
 
+using namespace Octopus;
+
 int main(int argc, const char **argv)
 {
     auto options = get_basic_mock_options();
     
     try {
         if (options) {
-            if (Octopus::Options::is_run_command(*options)) {
-                Octopus::Logging::init(Octopus::Options::get_debug_log_file_name(*options),
-                                       Octopus::Options::get_trace_log_file_name(*options));
-                Octopus::run_octopus(*options);
+            if (Options::is_run_command(*options)) {
+                Logging::init(Options::get_debug_log_file_name(*options),
+                              Options::get_trace_log_file_name(*options));
+                run_octopus(*options);
             }
         } else {
             std::clog << "Could not parse input options. Did not run Octopus." << std::endl;

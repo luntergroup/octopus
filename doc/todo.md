@@ -13,18 +13,19 @@
 - [] Improve variant filtering.
 - [] Improve IndelErrorModel/SnvErrorModel and make them polymorphic.
 - [] Allow VariantCallers to parrallise algorithms - will need to pass policies.
-- [] ReadReader and VcfReader/Writer should be able to use iterators.
+- [] ReadReader and VcfReader should be able to use iterators.
 
 # Refactoring
 
-- [] VcfRecordFactory is pretty horrible right now
-- [] VariantCaller::call could do with splitting up into smaller methods
+- [] VcfRecordFactory is pretty horrible
+- [] VariantCaller::call needs refactoring into smaller methods
 
 ## Bottlenecks
 
 - [] SSE log_exp_calculation.
-- [] Improve Assembler.
-- [] Improve Phaser.
+- [] Assembler.
+- [] Phaser.
+- [] Variational Bayes models
 
 ## To consider
 
@@ -33,4 +34,5 @@
 
 ## Testing
 
-- [] In dire need of proper unit testing
+- [] In dire need of proper unit testing!
+- [] Add regression testing

@@ -13,6 +13,7 @@
 #include <vector>
 #include <cstdint>
 #include <fstream>
+#include <stdexcept>
 
 #include <boost/filesystem/path.hpp>
 
@@ -24,6 +25,8 @@ class GenomicRegion;
 class Fasta : public ReferenceGenomeImpl
 {
 public:
+    class MissingFastaIndex;
+    
     using Path = boost::filesystem::path;
     
     using ContigNameType = ReferenceGenomeImpl::ContigNameType;
@@ -56,6 +59,23 @@ private:
     SequenceType do_fetch_sequence(const GenomicRegion& region) const override;
     
     bool is_valid() const noexcept;
+};
+
+class Fasta::MissingFastaIndex : public std::runtime_error
+{
+public:
+    using Path = Fasta::Path;
+    
+    MissingFastaIndex(Path fasta_path, Path expected_index_path);
+    
+    const Path& fasta_path() const noexcept;
+    const Path& expected_index_path() const noexcept;
+    
+    virtual const char* what() const noexcept;
+    
+private:
+    Path fasta_path_, expected_index_path_;
+    mutable std::string msg_;
 };
 
 #endif /* defined(__Octopus__fasta__) */

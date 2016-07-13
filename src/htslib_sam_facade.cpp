@@ -32,19 +32,19 @@ public:
     :
     runtime_error {"Missing BAM index"},
     file_path_ {std::move(file_path)},
-    str_ {}, msg_ {}
+    msg_ {}
     {}
     
     const char* what() const noexcept override
     {
-        str_ << runtime_error::what() << ": a BAM index file (.bai) is required for the BAM file "
+        std::ostringstream ss {};
+        ss << runtime_error::what() << ": a BAM index file (.bai) is required for the BAM file "
                 << file_path_ << " but is missing";
-        msg_ = str_.str();
+        msg_ = ss.str();
         return msg_.c_str();
     }
 private:
     boost::filesystem::path file_path_;
-    mutable std::ostringstream str_;
     mutable std::string msg_;
 };
 
@@ -55,19 +55,19 @@ public:
     :
     runtime_error {"Missing CRAM index"},
     file_path_ {std::move(file_path)},
-    str_ {}, msg_ {}
+    msg_ {}
     {}
     
     const char* what() const noexcept override
     {
-        str_ << runtime_error::what() << ": a CRAM index file (.crai) is required for the CRAM file "
+        std::ostringstream ss {};
+        ss << runtime_error::what() << ": a CRAM index file (.crai) is required for the CRAM file "
              << file_path_ << " but is missing";
-        msg_ = str_.str();
+        msg_ = ss.str();
         return msg_.c_str();
     }
 private:
     boost::filesystem::path file_path_;
-    mutable std::ostringstream str_;
     mutable std::string msg_;
 };
 
@@ -78,19 +78,19 @@ public:
     runtime_error {"Invalid BAM header"},
     file_path_ {std::move(file_path)},
     message_ {std::move(message)},
-    str_ {}, msg_ {}
+    msg_ {}
     {}
     
     const char* what() const noexcept override
     {
-        str_ << runtime_error::what() << ": in file " << file_path_ << ": " << message_;
-        msg_ = str_.str();
+        std::ostringstream ss {};
+        ss << runtime_error::what() << ": in file " << file_path_ << ": " << message_;
+        msg_ = ss.str();
         return msg_.c_str();
     }
 private:
     boost::filesystem::path file_path_;
     std::string message_;
-    mutable std::ostringstream str_;
     mutable std::string msg_;
 };
 
@@ -102,20 +102,20 @@ public:
     file_path_ {std::move(file_path)},
     read_name_ {std::move(read_name)},
     message_ {std::move(message)},
-    str_ {}, msg_ {}
+    msg_ {}
     {}
     
     const char* what() const noexcept override
     {
-        str_ << runtime_error::what() << ": in file " << file_path_ << ", in read " << read_name_
+        std::ostringstream ss {};
+        ss << runtime_error::what() << ": in file " << file_path_ << ", in read " << read_name_
                 << ": " << message_;
-        msg_ = str_.str();
+        msg_ = ss.str();
         return msg_.c_str();
     }
 private:
     boost::filesystem::path file_path_;
     std::string message_, read_name_;
-    mutable std::ostringstream str_;
     mutable std::string msg_;
 };
 

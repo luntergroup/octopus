@@ -144,7 +144,6 @@
 		D4BEA9FE1B861BE200E53CFD /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9FA1B861BE200E53CFD /* utils.c */; };
 		D4CC78951C7E1EF700F9CCB3 /* libboost_timer.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D4CC78941C7E1EF700F9CCB3 /* libboost_timer.a */; };
 		D4CC78981C7E370400F9CCB3 /* timers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4CC78971C7E370400F9CCB3 /* timers.cpp */; };
-		D4F8864D1CE4A5F1005F9772 /* reference_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4F8864B1CE4A5F1005F9772 /* reference_factory.cpp */; };
 		D4F886541CE608BA005F9772 /* parallel_transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4F886521CE608BA005F9772 /* parallel_transform.cpp */; };
 /* End PBXBuildFile section */
 
@@ -521,8 +520,6 @@
 		D4E41DA11AD801EF0010D25D /* mappable.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mappable.hpp; sourceTree = "<group>"; };
 		D4E41DA21AD80C1B0010D25D /* mappable_algorithms.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mappable_algorithms.hpp; sourceTree = "<group>"; };
 		D4E41DA31AD81C390010D25D /* allele.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = allele.hpp; sourceTree = "<group>"; };
-		D4F8864B1CE4A5F1005F9772 /* reference_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_factory.cpp; sourceTree = "<group>"; };
-		D4F8864C1CE4A5F1005F9772 /* reference_factory.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = reference_factory.hpp; sourceTree = "<group>"; };
 		D4F886511CE6046A005F9772 /* append.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = append.hpp; sourceTree = "<group>"; };
 		D4F886521CE608BA005F9772 /* parallel_transform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = parallel_transform.cpp; sourceTree = "<group>"; };
 		D4F886531CE608BA005F9772 /* parallel_transform.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = parallel_transform.hpp; sourceTree = "<group>"; };
@@ -1144,8 +1141,6 @@
 				CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */,
 				CA386DAC1B603C380057A5A8 /* caching_fasta.hpp */,
 				CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */,
-				D4F8864C1CE4A5F1005F9772 /* reference_factory.hpp */,
-				D4F8864B1CE4A5F1005F9772 /* reference_factory.cpp */,
 			);
 			name = reference;
 			sourceTree = "<group>";
@@ -1622,7 +1617,6 @@
 				CAFA2CED1CF3ACA700C109D5 /* genotype_reader.cpp in Sources */,
 				CA2D59F91CAEFB4B005EA347 /* read_transformations.cpp in Sources */,
 				CAE3E2CB1AAB42C900C01B2C /* read_filter_tests.cpp in Sources */,
-				D4F8864D1CE4A5F1005F9772 /* reference_factory.cpp in Sources */,
 				CA28EBF51AABB80E009F8622 /* read_filter_benchmarks.cpp in Sources */,
 				D42F72F21C5BA2C600995F54 /* trio_genotype_model.cpp in Sources */,
 				CA53D3011C03AF46009A216D /* pedigree_genotype_model.cpp in Sources */,

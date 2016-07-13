@@ -44,10 +44,13 @@
 #include "maths.hpp"
 #include "logging.hpp"
 
-namespace Octopus
+namespace Octopus { namespace Options
 {
-namespace Options
+bool is_run_command(const OptionMap& options)
 {
+    return options.count("help") == 0 && options.count("version") == 0;
+}
+
 bool is_debug_mode(const OptionMap& options)
 {
     return options.at("debug").as<bool>();
@@ -57,30 +60,6 @@ bool is_trace_mode(const OptionMap& options)
 {
     return options.at("trace").as<bool>();
 }
-
-namespace
-{
-    struct Line
-    {
-        std::string line_data;
-        
-        operator std::string() const
-        {
-            return line_data;
-        }
-    };
-    
-    std::istream& operator>>(std::istream& is, Line& data)
-    {
-        std::getline(is, data.line_data);
-        
-        if (!data.line_data.empty() && data.line_data.back() == '\r') {
-            data.line_data.pop_back();
-        }
-        
-        return is;
-    }
-} // namespace
 
 boost::optional<fs::path> get_home_dir()
 {
@@ -164,6 +143,30 @@ fs::path resolve_path(const fs::path& path, const OptionMap& options)
     return result;
 }
 
+namespace
+{
+    struct Line
+    {
+        std::string line_data;
+        
+        operator std::string() const
+        {
+            return line_data;
+        }
+    };
+    
+    std::istream& operator>>(std::istream& is, Line& data)
+    {
+        std::getline(is, data.line_data);
+        
+        if (!data.line_data.empty() && data.line_data.back() == '\r') {
+            data.line_data.pop_back();
+        }
+        
+        return is;
+    }
+} // namespace
+
 std::vector<fs::path>
 extract_paths_from_file(const fs::path& file_path, const OptionMap& options)
 {
@@ -182,10 +185,9 @@ extract_paths_from_file(const fs::path& file_path, const OptionMap& options)
     std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
                    std::back_inserter(result), [] (const Line& line) { return line.line_data; });
     
-    const auto it = std::remove_if(std::begin(result), std::end(result),
-                                   [] (const auto& path) { return path.empty(); });
-    
-    result.erase(it, std::end(result));
+    result.erase(std::remove_if(std::begin(result), std::end(result),
+                                [] (const auto& path) { return path.empty(); }),
+                 std::end(result));
     
     return result;
 }
@@ -236,13 +238,22 @@ bool is_file_writable(const fs::path& path)
 
 bool is_threading_allowed(const OptionMap& options)
 {
-    const auto num_threads = options.at("threads").as<unsigned>();
+    unsigned num_threads {1};
+    
+    if (options.count("threads") == 1) {
+        num_threads = options.at("threads").as<unsigned>();
+    }
+    
     return num_threads != 1;
 }
 
 boost::optional<unsigned> get_num_threads(const OptionMap& options)
 {
-    const auto num_threads = options.at("threads").as<unsigned>();
+    unsigned num_threads {1};
+    
+    if (options.count("threads") == 1) {
+        num_threads = options.at("threads").as<unsigned>();
+    }
     
     if (num_threads > 0) return num_threads;
     
@@ -252,7 +263,7 @@ boost::optional<unsigned> get_num_threads(const OptionMap& options)
 std::size_t get_target_read_buffer_size(const OptionMap& options)
 {
     static constexpr std::size_t scale {1000000000};
-        return static_cast<std::size_t>(scale * options.at("target-read-buffer-size").as<float>());
+    return static_cast<std::size_t>(scale * options.at("target-read-buffer-footprint").as<float>());
 }
     
 boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options)
@@ -289,7 +300,7 @@ ReferenceGenome make_reference(const OptionMap& options)
         << " given in the input option (--reference) is not readable";
     }
     
-    const auto ref_cache_size = options.at("reference-cache-size").as<float>();
+    const auto ref_cache_size = options.at("max-reference-cache-footprint").as<float>();
     
     static constexpr unsigned Scale {1'000'000};
     
@@ -351,8 +362,7 @@ auto extract_regions_from_file(const fs::path& file_path, const ReferenceGenome&
     std::deque<GenomicRegion> result {};
     
     std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
-                   std::back_inserter(result),
-                   make_region_line_parser(file_path, reference));
+                   std::back_inserter(result), make_region_line_parser(file_path, reference));
     
     result.shrink_to_fit();
     
@@ -560,7 +570,7 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
         }
     }
     
-    if (options.at("use-one-based-indexing").as<bool>()) {
+    if (options.at("one-based-indexing").as<bool>()) {
         skip_regions = transform_to_zero_based(std::move(skip_regions));
     }
     
@@ -611,7 +621,7 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
     
     auto result = extract_search_regions(input_regions, skip_regions);
     
-    if (options.at("use-one-based-indexing").as<bool>()) {
+    if (options.at("one-based-indexing").as<bool>()) {
         return transform_to_zero_based(std::move(result));
     }
     
@@ -765,7 +775,8 @@ boost::optional<std::vector<fs::path>> get_read_paths(const OptionMap& options)
     
     if (num_duplicates > 0) {
         Logging::WarningLogger log {};
-        stream(log) << "There are " << num_duplicates << " duplicate read paths but only unique paths will be considered";
+        stream(log) << "There are " << num_duplicates
+        << " duplicate read paths but only unique paths will be considered";
     }
     
     result.erase(it, std::end(result));
@@ -907,8 +918,6 @@ ReadTransform make_read_transform(const OptionMap& options)
         return result;
     }
     
-    //result.register_transform(ReadTransforms::QualityAdjustedSoftClippedMasker {});
-    
     if (options.count("mask-tails")) {
         const auto tail_mask_size = options.at("mask-tails").as<SizeType>();
         
@@ -950,16 +959,16 @@ CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& opti
     
     result.set_reference(reference);
     
-    if (options.count("candidates-from-source") == 1) {
+    if (options.count("generate-candidates-from-source") == 1) {
         result.add_generator(CandidateGeneratorBuilder::Generator::External);
         
-        const fs::path input_path {options.at("candidates-from-source").as<std::string>()};
+        const fs::path input_path {options.at("generate-candidates-from-source").as<std::string>()};
         
         auto resolved_path = resolve_path(input_path, options);
         
         if (!fs::exists(resolved_path)) {
             stream(log) << "The path " << input_path
-            << " given in the input option (--candidates-from-source) does not exist";
+            << " given in the input option (--generate-candidates-from-source) does not exist";
         }
         
         result.set_variant_source(std::move(resolved_path));
@@ -968,8 +977,8 @@ CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& opti
     if (options.count("regenotype") == 1) {
         fs::path regenotype_path {options.at("regenotype").as<std::string>()};
         
-        if (options.count("candidates-from-source") == 1) {
-            fs::path input_path {options.at("candidates-from-source").as<std::string>()};
+        if (options.count("generate-candidates-from-source") == 1) {
+            fs::path input_path {options.at("generate-candidates-from-source").as<std::string>()};
             
             if (regenotype_path != input_path) {
                 warning_log << "Running in regenotype mode but given a different source variant file";
@@ -984,7 +993,7 @@ CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& opti
         
         if (!fs::exists(resolved_path)) {
             stream(log) << "The path " << regenotype_path
-            << " given in the input option (--candidates-from-source) does not exist";
+            << " given in the input option (--generate-candidates-from-source) does not exist";
         }
         
         result.set_variant_source(std::move(resolved_path));
@@ -1006,11 +1015,11 @@ CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& opti
         result.set_min_supporting_reads(2); // TODO: Octopus should automatically calculate this
     }
     
-    if (!options.at("no-raw-cigar-candidates").as<bool>()) {
+    if (!options.at("disable-raw-cigar-candidate-generator").as<bool>()) {
         result.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
     }
     
-    if (!options.at("no-assembly-candidates").as<bool>()) {
+    if (!options.at("disable-assembly-candidate-generator").as<bool>()) {
         result.add_generator(CandidateGeneratorBuilder::Generator::Assembler);
         const auto kmer_sizes = options.at("kmer-size").as<std::vector<unsigned>>();
         for (const auto k : kmer_sizes) {
@@ -1195,7 +1204,7 @@ make_variant_caller_factory(const ReferenceGenome& reference,
     
     vc_builder.set_min_refcall_posterior(min_refcall_posterior);
     vc_builder.set_max_haplotypes(options.at("max-haplotypes").as<unsigned>());
-    vc_builder.set_min_haplotype_posterior(options.at("min-haplotype-posterior").as<float>());
+    vc_builder.set_min_haplotype_posterior(options.at("min-haplotype-filter-posterior").as<float>());
     
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
@@ -1331,8 +1340,6 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
     }
     
     return result;
-    
-    return boost::none;
 }
 } // namespace Options
 } // namespace Octopus

@@ -102,23 +102,27 @@ ReferenceGenome make_reference(boost::filesystem::path reference_path,
 {
     std::unique_ptr<ReferenceGenomeImpl> impl_ {};
     
-    if (is_threaded) {
-        impl_ = std::make_unique<ThreadsafeFasta>(std::make_unique<Fasta>(reference_path));
-    } else {
-        impl_ = std::make_unique<Fasta>(std::move(reference_path));
-    }
-    
-    if (max_cached_bases > 0) {
-        double locality_bias {0.99}, forward_bias {0.99};
-        
+    try {
         if (is_threaded) {
-            locality_bias = 0.25;
+            impl_ = std::make_unique<ThreadsafeFasta>(std::make_unique<Fasta>(reference_path));
+        } else {
+            impl_ = std::make_unique<Fasta>(std::move(reference_path));
         }
         
-        return ReferenceGenome {std::make_unique<CachingFasta>(std::move(impl_), max_cached_bases,
-                                                               locality_bias, forward_bias)};
-    } else {
-        return ReferenceGenome {std::move(impl_)};
+        if (max_cached_bases > 0) {
+            double locality_bias {0.99}, forward_bias {0.99};
+            
+            if (is_threaded) {
+                locality_bias = 0.25;
+            }
+            
+            return ReferenceGenome {std::make_unique<CachingFasta>(std::move(impl_), max_cached_bases,
+                                                                   locality_bias, forward_bias)};
+        } else {
+            return ReferenceGenome {std::move(impl_)};
+        }
+    } catch (const Fasta::MissingFastaIndex& e) {
+        throw; // TODO: we could optionally make the index
     }
 }
 

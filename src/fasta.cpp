@@ -9,7 +9,7 @@
 #include "fasta.hpp"
 
 #include <iostream>
-#include <stdexcept>
+#include <sstream>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -28,20 +28,24 @@ fasta_index_path_ {std::move(fasta_index_path)}
     using boost::filesystem::exists;
     
     if (!exists(fasta_path_)) {
-        throw std::runtime_error {"Fasta: given fasta path " + fasta_path_.string() + " does not exist"};
+        std::ostringstream ss {};
+        ss << "Fasta: given fasta path ";
+        ss << fasta_path;
+        ss << " does not exist";
+        throw std::runtime_error {ss.str()};
     }
     
     if (!exists(fasta_index_path_)) {
-        fasta_index_path_ = fasta_path_.replace_extension("fai");
+        fasta_index_path_ = fasta_path_;
+        fasta_index_path_.replace_extension("fai");
         
         if (!exists(fasta_index_path_)) {
-            throw std::runtime_error { "Fasta: given fasta index path " + fasta_index_path_.string()
-                + " does not exist"};
+            throw MissingFastaIndex {fasta_path_, fasta_index_path_};
         }
     }
     
     if (is_valid()) {
-        fasta_ = std::ifstream(fasta_path_.string());
+        fasta_       = std::ifstream(fasta_path_.string());
         fasta_index_ = bioio::read_fasta_index(fasta_index_path_.string());
     }
 }
@@ -92,4 +96,33 @@ bool Fasta::is_valid() const noexcept
     }
     
     return true; // TODO: could actually check valid fasta format
+}
+
+// MissingFastaIndex
+
+Fasta::MissingFastaIndex::MissingFastaIndex(Path fasta_path, Path expected_index_path)
+:
+std::runtime_error {"MissingFastaIndex"},
+fasta_path_ {std::move(fasta_path)},
+expected_index_path_ {expected_index_path},
+msg_ {}
+{}
+
+const Fasta::MissingFastaIndex::Path& Fasta::MissingFastaIndex::fasta_path() const noexcept
+{
+    return fasta_path_;
+}
+
+const Fasta::MissingFastaIndex::Path& Fasta::MissingFastaIndex::expected_index_path() const noexcept
+{
+    return expected_index_path_;
+}
+
+const char* Fasta::MissingFastaIndex::what() const noexcept
+{
+    std::ostringstream ss {};
+    ss << runtime_error::what() << ": expected index " << expected_index_path_ << " for FASTA file "
+        << fasta_path_ << " but it is missing";
+    msg_ = ss.str();
+    return msg_.c_str();
 }

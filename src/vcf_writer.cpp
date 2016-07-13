@@ -73,7 +73,7 @@ VcfWriter::~VcfWriter()
 {
     try {
         this->close();
-        if (!file_path_.empty() && file_path_ != "-" && boost::filesystem::exists(file_path_)) {
+        if (!file_path_.empty() && is_indexable(file_path_) && boost::filesystem::exists(file_path_)) {
             index_vcf(file_path_);
         }
     } catch(...) {

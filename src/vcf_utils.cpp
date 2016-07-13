@@ -56,6 +56,12 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfR
     return get_typed_format_values(header, key, record.get_sample_value(sample, key.value));
 }
 
+bool is_indexable(const boost::filesystem::path& vcf_path)
+{
+    const auto extension = vcf_path.extension();
+    return extension == "bcf" || extension == "gz";
+}
+
 void index_vcf(const boost::filesystem::path& vcf_path, const int lidx_shift)
 {
     auto* const fp = hts_open(vcf_path.c_str(), "r");

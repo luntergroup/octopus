@@ -218,7 +218,9 @@ VariantCallerBuilder& VariantCallerBuilder::set_pedigree(Pedigree pedigree)
 
 std::unique_ptr<VariantCaller> VariantCallerBuilder::build() const
 {
-    if (factory_.count(parameters_.caller) == 0) return nullptr;
+    if (factory_.count(parameters_.caller) == 0) {
+        throw std::runtime_error {"VariantCallerBuilder: unknown caller " + parameters_.caller};
+    }
     return factory_.at(parameters_.caller)();
 }
 

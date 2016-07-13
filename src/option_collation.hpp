@@ -31,9 +31,10 @@ class ReadTransform;
 class ReadPipe;
 class CandidateGeneratorBuilder;
 class VariantCallerFactory;
-
 namespace Options
 {
+    bool is_run_command(const OptionMap& options);
+    
     bool is_debug_mode(const OptionMap& options);
     bool is_trace_mode(const OptionMap& options);
     
@@ -46,8 +47,7 @@ namespace Options
     
     ReferenceGenome make_reference(const OptionMap& options);
     
-    InputRegionMap get_search_regions(const OptionMap& options,
-                                      const ReferenceGenome& reference);
+    InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenome& reference);
     
     ContigOutputOrder get_contig_output_order(const OptionMap& options);
     

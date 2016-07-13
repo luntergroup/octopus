@@ -288,6 +288,12 @@ namespace bioio
         return result;
     }
     
+    inline std::istream& operator>>(std::istream& is, FastaIndex& index)
+    {
+        index = read_fasta_index(is);
+        return is;
+    }
+    
     inline FastaIndex read_fasta_index(const std::string& fasta_index_path)
     {
         std::ifstream fasta_index {fasta_index_path, std::ios::binary};
@@ -317,6 +323,26 @@ namespace bioio
     {
         std::ifstream fasta_index {fasta_index_path, std::ios::binary};
         return calculate_contig_size(fasta_index, contig_name);
+    }
+    
+    inline std::ostream& operator<<(std::ostream& os, const FastaContigIndex& row)
+    {
+        os << row.contig_name << '\t' << row.length << '\t' << row.offset << '\t'
+            << row.line_length << '\t' << row.line_byte_length;
+        return os;
+    }
+    
+    inline void write_fasta_index(const FastaIndex& index, std::ostream& os)
+    {
+        std::transform(std::cbegin(index), std::cend(index),
+                       std::ostream_iterator<FastaContigIndex> {os, "\n"},
+                       [] (const auto& p) { return p.second; });
+    }
+    
+    inline std::ostream& operator<<(std::ostream& os, const FastaIndex& index)
+    {
+        write_fasta_index(index, os);
+        return os;
     }
     
     /*=======================================================================================
