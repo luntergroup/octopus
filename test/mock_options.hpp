@@ -85,7 +85,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--regions", "2:120,098,309-120,098,368", // NA12878 LC - GQ is too high
         
-        "--regions", "2:126,804,853-126,805,048",
+        "--regions", "22",
         
         //"--regions", "22:22,583,864-22,584,168", // FN
         //"--regions", "22:40,015,775-40,016,384", // FP
@@ -224,12 +224,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--downsample-target", "200",
         
         // candidate generation
-        "--min-supporting-reads=1",
+        //"--min-supporting-reads=1",
         //"--min-base-quality", "15",
-        //"--no-raw-cigar-candidates",
+        "--disable-raw-cigar-candidate-generator",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
-        //"--no-assembly-candidates",
+        //"--disable-assembly-candidate-generator",
         //"--kmer-size", "75",
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
@@ -266,7 +266,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_calls_fast.vcf",
         //"--output", "octopus/octopus_NA12878_LC.vcf.gz",
         
-        "--legacy",
+        //"--legacy",
         
         nullptr
     };

@@ -966,7 +966,7 @@ VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigNameType& co
 
 using TempVcfWriterMap = std::unordered_map<ContigNameType, VcfWriter>;
 
-TempVcfWriterMap make_temp_writers(const GenomeCallingComponents& components)
+TempVcfWriterMap make_temp_vcf_writers(const GenomeCallingComponents& components)
 {
     if (!components.temp_directory()) {
         throw std::runtime_error {"Could not make temp writers"};
@@ -1133,16 +1133,14 @@ struct SyncPacket
     std::atomic<unsigned> count_finished;
 };
 
-auto run(Task task, GenomeCallingComponents& components, SyncPacket& sync)
+auto run(Task task, ContigCallingComponents components, SyncPacket& sync)
 {
     static auto debug_log = get_debug_log();
     
     if (debug_log) stream(*debug_log) << "Spawning task with region " << task.region;
     
-    ContigCallingComponents contig_components {contig_name(task), components};
-    
     return std::async(std::launch::async,
-                      [task = std::move(task), components = std::move(contig_components),
+                      [task = std::move(task), components = std::move(components),
                        &sync] () -> CompletedTask {
                           CompletedTask result {
                               task,
@@ -1160,73 +1158,202 @@ auto run(Task task, GenomeCallingComponents& components, SyncPacket& sync)
 
 using CompletedTaskMap = std::map<ContigNameType, std::map<ContigRegion, CompletedTask>>;
 
-auto get_writable_completed_tasks(CompletedTask&& task,
-                                  CompletedTaskMap& buffered_tasks,
-                                  TaskQueue& running_tasks)
+using HoldbackTask = boost::optional<std::reference_wrapper<const CompletedTask>>;
+
+auto get_writable_completed_tasks(CompletedTask&& task, CompletedTaskMap::mapped_type& buffered_tasks,
+                                  TaskQueue& running_tasks, HoldbackTask& holdback)
 {
     std::deque<CompletedTask> result {std::move(task)};
     
-    if (buffered_tasks.count(contig_name(result.front()))) {
-        auto& contig_buffered_tasks = buffered_tasks.at(contig_name(result.front()));
+    while (!running_tasks.empty()) {
+        const auto it = buffered_tasks.find(contig_region(running_tasks.front()));
         
-        while (!running_tasks.empty()) {
-            const auto it = contig_buffered_tasks.find(contig_region(result.front()));
-            
-            if (it != std::end(contig_buffered_tasks)) {
-                result.push_back(std::move(it->second));
-                
-                contig_buffered_tasks.erase(it);
-                running_tasks.pop();
-            } else {
-                break;
-            }
+        if (it != std::end(buffered_tasks)) {
+            result.push_back(std::move(it->second));
+            buffered_tasks.erase(it);
+            running_tasks.pop();
+        } else {
+            break;
         }
+    }
+    
+    if (holdback) {
+        const auto it = buffered_tasks.find(contig_region(holdback->get()));
+        assert(it->second < result.front());
+        result.push_front(std::move(it->second));
+        buffered_tasks.erase(it);
+        holdback = boost::none;
     }
     
     return result;
 }
 
-void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks)
+auto encompassing_call_region(const CompletedTask& task)
 {
-    
+    return encompassing_call_region(task.calls);
 }
 
-void write(std::deque<CompletedTask>&& tasks, VcfWriter& temp_writer)
+using ContigCallingComponentFactory    = std::function<ContigCallingComponents()>;
+using ContigCallingComponentFactoryMap = std::map<ContigNameType, ContigCallingComponentFactory>;
+
+auto make_contig_calling_component_factory_map(GenomeCallingComponents& components)
+{
+    ContigCallingComponentFactoryMap result {};
+    
+    for (const auto& contig : components.contigs_in_output_order()) {
+        result.emplace(contig, [&components, contig] () -> ContigCallingComponents
+                       { return ContigCallingComponents {contig, components}; });
+    }
+    
+    return result;
+}
+
+auto find_first_lhs_connecting(CompletedTask& lhs, const GenomicRegion& rhs_region)
+{
+    const auto rhs_begin = mapped_begin(rhs_region);
+    return std::find_if(std::begin(lhs.calls), std::end(lhs.calls),
+                        [&rhs_begin] (const auto& call) {
+                            return mapped_end(call) > rhs_begin;
+                        });
+}
+
+auto find_last_rhs_connecting(const GenomicRegion& lhs_region, CompletedTask& rhs)
+{
+    const auto lhs_end = mapped_end(lhs_region);
+    return std::find_if_not(std::begin(rhs.calls), std::end(rhs.calls),
+                            [&lhs_end] (const auto& call) {
+                                return mapped_begin(call) < lhs_end;
+                            });
+}
+
+void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
+                              const ContigCallingComponentFactory& calling_components)
+{
+    auto first_lhs_connecting = find_first_lhs_connecting(lhs, encompassing_call_region(rhs));
+    auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_call_region(lhs), rhs);
+    
+    using std::begin; using std::end; using std::make_move_iterator;
+    
+    if (first_lhs_connecting == end(lhs.calls) && last_rhs_connecting == begin(rhs.calls)) {
+        return;
+    }
+    
+    static auto debug_log = get_debug_log();
+    
+    if (debug_log) stream(*debug_log) << "Resolving connecting calls between tasks " << lhs << " & " << rhs;
+    
+    std::deque<VcfRecord> merged_calls {};
+    
+    std::set_union(make_move_iterator(first_lhs_connecting),
+                   make_move_iterator(end(lhs.calls)),
+                   make_move_iterator(begin(rhs.calls)),
+                   make_move_iterator(last_rhs_connecting),
+                   std::back_inserter(merged_calls));
+    
+    lhs.calls.erase(first_lhs_connecting, end(lhs.calls));
+    rhs.calls.erase(begin(rhs.calls), last_rhs_connecting);
+    
+    merged_calls.erase(std::unique(begin(merged_calls), end(merged_calls),
+                                   [] (const auto& lhs, const auto& rhs) {
+                                       return lhs.pos() == rhs.pos()
+                                       && lhs.ref() == rhs.ref()
+                                       && lhs.alt() == rhs.alt();
+                                   }),
+                       end(merged_calls));
+    
+    if (is_consistent(merged_calls)) {
+        rhs.calls.insert(begin(rhs.calls),
+                         make_move_iterator(begin(merged_calls)),
+                         make_move_iterator(end(merged_calls)));
+    } else {
+        const auto unresolved_region = encompassing_region(mapped_region(merged_calls.front()),
+                                                           mapped_region(merged_calls.back()));
+        
+        const auto components = calling_components();
+        
+        auto num_unresolved_region_reads = components.read_manager.get().count_reads(components.samples, unresolved_region);
+        
+        if (num_unresolved_region_reads <= components.read_buffer_size) {
+            merged_calls.clear();
+            merged_calls.shrink_to_fit();
+            
+            if (debug_log) {
+                stream(*debug_log) << "Calls are inconsistent in connecting region " << unresolved_region
+                << ". Recalling the region";
+            }
+            
+            auto resolved_calls = components.caller->call(unresolved_region, components.progress_meter);
+            
+            if (!resolved_calls.empty()) {
+                if (!contains(unresolved_region, encompassing_call_region(resolved_calls))) {
+                    // TODO
+                }
+                
+                // TODO: we may need to adjust phase regions in calls past the unresolved_region
+                
+                rhs.calls.insert(begin(rhs.calls),
+                                 make_move_iterator(begin(resolved_calls)),
+                                 make_move_iterator(end(resolved_calls)));
+            }
+        } else {
+            // TODO: we could try to manually resolve the calls. Very difficult.
+            Logging::WarningLogger log {};
+            stream(log) << "Skipping region " << unresolved_region << " as there are too many reads"
+                        " to analyse the whole region, and partitions give inconsistent calls";
+        }
+    }
+}
+
+void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks,
+                              const ContigCallingComponentFactory& calling_components)
+{
+    assert(std::is_sorted(std::cbegin(adjacent_tasks), std::cend(adjacent_tasks)));
+    auto lhs = std::begin(adjacent_tasks);
+    std::for_each(std::next(lhs), std::end(adjacent_tasks),
+                  [&] (auto& rhs) { resolve_connecting_calls(*lhs++, rhs, calling_components); });
+}
+
+void write(std::deque<CompletedTask>&& tasks, VcfWriter& temp_vcf)
 {
     static auto debug_log = get_debug_log();
     for (auto&& task : tasks) {
         if (debug_log) stream(*debug_log) << "Writing completed task " << task;
-        write_calls(std::move(task.calls), temp_writer);
+        write_calls(std::move(task.calls), temp_vcf);
     }
 }
 
-void write_or_buffer(CompletedTask&& task, CompletedTaskMap& buffered_tasks,
-                     TaskMap& running_tasks, TempVcfWriterMap& temp_writers)
+void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffered_tasks,
+                     TaskQueue& running_tasks, HoldbackTask& holdback,
+                     VcfWriter& temp_vcf, const ContigCallingComponentFactory& calling_components)
 {
     static auto debug_log = get_debug_log();
     
-    const auto& ready_contig = contig_name(task);
-    
-    assert(running_tasks.count(ready_contig) == 1);
-    
-    auto& contig_running_tasks = running_tasks.at(ready_contig);
-    
-    if (is_same_region(task, contig_running_tasks.front())) {
-        contig_running_tasks.pop();
+    if (is_same_region(task, running_tasks.front())) {
+        running_tasks.pop();
         
         auto writable_tasks = get_writable_completed_tasks(std::move(task), buffered_tasks,
-                                                           contig_running_tasks);
+                                                           running_tasks, holdback);
         
-        resolve_connecting_calls(writable_tasks);
+        assert(holdback == boost::none);
         
-        // TODO: we need to check that the last (rightmost) writable task does not connect
-        // with the next running or pending task, and if it does buffer those calls which
-        // need to be resolved once the next adjacent task completes
+        resolve_connecting_calls(writable_tasks, calling_components);
         
-        write(std::move(writable_tasks), temp_writers.at(ready_contig));
+        // keep the last task buffered to enable connection resolution when the next task finishes
+        
+        const auto p = buffered_tasks.emplace(contig_region(writable_tasks.back()),
+                                              std::move(writable_tasks.back()));
+        
+        assert(p.second);
+        holdback = p.first->second;
+        
+        if (debug_log) stream(*debug_log) << "Holding back completed task " << *holdback;
+        
+        writable_tasks.pop_back();
+        
+        write(std::move(writable_tasks), temp_vcf);
     } else {
         if (debug_log) stream(*debug_log) << "Buffering completed task " << task;
-        buffered_tasks[ready_contig].emplace(contig_region(task), std::move(task));
+        buffered_tasks.emplace(contig_region(task), std::move(task));
     }
 }
 
@@ -1274,53 +1401,55 @@ auto extract_remaining_tasks(FutureCompletedTasks& futures, CompletedTaskMap& bu
     return result;
 }
 
-void resolve_connecting_calls(RemainingTaskMap& remaining_tasks)
+void resolve_connecting_calls(RemainingTaskMap& remaining_tasks,
+                              const ContigCallingComponentFactoryMap& calling_components)
 {
     for (auto& p : remaining_tasks) {
-        resolve_connecting_calls(p.second);
+        resolve_connecting_calls(p.second, calling_components.at(p.first));
     }
 }
 
-void write(RemainingTaskMap&& remaining_tasks, TempVcfWriterMap& temp_writers)
+void write(RemainingTaskMap&& remaining_tasks, TempVcfWriterMap& temp_vcfs)
 {
     for (auto& p : remaining_tasks) {
-        write(std::move(p.second), temp_writers.at(p.first));
+        write(std::move(p.second), temp_vcfs.at(p.first));
     }
 }
 
 void write_remaining_tasks(FutureCompletedTasks& futures, CompletedTaskMap& buffered_tasks,
-                           TempVcfWriterMap& temp_writers)
+                           TempVcfWriterMap& temp_vcfs,
+                           const ContigCallingComponentFactoryMap& calling_components)
 {
     auto remaining_tasks = extract_remaining_tasks(futures, buffered_tasks);
-    resolve_connecting_calls(remaining_tasks);
-    write(std::move(remaining_tasks), temp_writers);
+    resolve_connecting_calls(remaining_tasks, calling_components);
+    write(std::move(remaining_tasks), temp_vcfs);
 }
 
 template <typename K>
-auto extract(std::unordered_map<K, VcfWriter>& writers)
+auto extract(std::unordered_map<K, VcfWriter>& vcfs)
 {
     std::vector<VcfWriter> result {};
-    result.reserve(writers.size());
+    result.reserve(vcfs.size());
     
-    for (auto& p : writers) result.push_back(std::move(p.second));
+    for (auto& p : vcfs) result.push_back(std::move(p.second));
     
-    writers.clear();
+    vcfs.clear();
     
     return result;
 }
 
 template <typename K>
-auto extract_readers(std::unordered_map<K, VcfWriter>& writers)
+auto extract_as_readers(std::unordered_map<K, VcfWriter>&& vcfs)
 {
-    auto tmp = extract(writers);
-    writers.clear();
+    auto tmp = extract(vcfs);
+    vcfs.clear();
     return writers_to_readers(tmp);
 }
 
 template <typename K>
-void merge(std::unordered_map<K, VcfWriter>&& temp_writers, GenomeCallingComponents& components)
+void merge(std::unordered_map<K, VcfWriter>&& temp_vcf_writers, GenomeCallingComponents& components)
 {
-    auto temp_readers = extract_readers(temp_writers);
+    auto temp_readers = extract_as_readers(std::move(temp_vcf_writers));
     merge(temp_readers, components.output(), components.contigs_in_output_order());
 }
 
@@ -1335,12 +1464,24 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     auto pending_tasks = make_tasks(components, num_task_threads);
     
-    auto temp_writers = make_temp_writers(components);
+    auto temp_vcfs = make_temp_vcf_writers(components);
     
     FutureCompletedTasks futures(num_task_threads);
+    
     TaskMap running_tasks {ContigOrder {components.contigs_in_output_order()}};
     CompletedTaskMap buffered_tasks {};
+    std::map<ContigNameType, HoldbackTask> holdbacks {};
+    
+    // populate the all the maps first so we can make unchecked acceses
+    for (const auto& contig : components.contigs_in_output_order()) {
+        running_tasks.insert({contig, {}});
+        buffered_tasks.insert({contig, {}});
+        holdbacks.emplace(contig, boost::none);
+    }
+    
     SyncPacket sync {};
+    
+    const auto calling_components = make_contig_calling_component_factory_map(components);
     
     components.progress_meter().start();
     
@@ -1352,8 +1493,11 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
                 try {
                     auto completed_task = future.get();
                     
-                    write_or_buffer(std::move(completed_task), buffered_tasks,
-                                    running_tasks, temp_writers);
+                    const auto& contig = contig_name(completed_task);
+                    
+                    write_or_buffer(std::move(completed_task), buffered_tasks.at(contig),
+                                    running_tasks.at(contig), holdbacks.at(contig),
+                                    temp_vcfs.at(contig), calling_components.at(contig));
                 } catch (...) {
                     throw; // TODO: which exceptions can we recover from?
                 }
@@ -1366,9 +1510,9 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
                 
                 auto task = pop(pending_tasks);
                 
-                future = run(task, components, sync);
+                future = run(task, calling_components.at(contig_name(task))(), sync);
                 
-                running_tasks[task.region.contig_name()].push(std::move(task));
+                running_tasks.at(contig_name(task)).push(std::move(task));
             }
         }
         
@@ -1381,12 +1525,13 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     }
     
     running_tasks.clear();
+    holdbacks.clear();
     
-    write_remaining_tasks(futures, buffered_tasks, temp_writers);
+    write_remaining_tasks(futures, buffered_tasks, temp_vcfs, calling_components);
     
     components.progress_meter().stop();
     
-    merge(std::move(temp_writers), components);
+    merge(std::move(temp_vcfs), components);
 }
 } // namespace
 

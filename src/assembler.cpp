@@ -359,6 +359,8 @@ void Assembler::insert_reference_into_empty_graph(const SequenceType& sequence)
         }
     }
     
+    std::cout << vertex_cache_.size() << " " << sequence.size() + std::pow(4, 5) << std::endl;
+    
     reference_kmers_.shrink_to_fit();
 }
 
@@ -493,8 +495,8 @@ Assembler::Vertex Assembler::null_vertex() const
 boost::optional<Assembler::Vertex> Assembler::add_vertex(const Kmer& kmer, const bool is_reference)
 {
     if (!is_dna(kmer)) return boost::none;
-    const auto next_index = static_cast<unsigned>(boost::num_vertices(graph_));
-    const auto u = boost::add_vertex(GraphNode {next_index, kmer, is_reference}, graph_);
+    const auto u = boost::add_vertex(GraphNode {boost::num_vertices(graph_), kmer, is_reference},
+                                     graph_);
     vertex_cache_.emplace(kmer, u);
     return u;
 }

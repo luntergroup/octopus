@@ -12,8 +12,19 @@
 #include <algorithm>
 #include <iterator>
 #include <vector>
+#include <utility>
 
 #include "type_tricks.hpp"
+
+template <typename MapType, typename T>
+auto insert_or_assign(MapType& map, const typename MapType::key_type& k, T&& obj)
+{
+    const auto p = m.insert(std::make_pair(k, std::forward<T>(obj)));
+    if (!p.second) {
+        p.first->second = std::forward<T>(obj);
+    }
+    return p;
+}
 
 template <typename MapType>
 auto extract_keys(const MapType& map)
