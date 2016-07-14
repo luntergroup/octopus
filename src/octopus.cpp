@@ -637,10 +637,9 @@ struct ContigCallingComponents
     ContigCallingComponents& operator=(ContigCallingComponents&&)      = default;
 };
 
-bool region_has_reads(const GenomicRegion& region, ContigCallingComponents& components)
+bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
 {
-    // TODO: update this to ReadManager::has_contig_reads when implemented
-    return components.read_manager.get().count_reads(components.samples.get(), region) > 0;
+    return components.read_manager.get().has_reads(components.samples.get(), region);
 }
 
 auto get_call_types(const GenomeCallingComponents& components,
@@ -709,15 +708,26 @@ void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
 }
 
 auto find_max_window(const ContigCallingComponents& components,
-                    const GenomicRegion& remaining_call_region)
+                     const GenomicRegion& remaining_call_region)
 {
     const auto& rm = components.read_manager.get();
-    if (rm.count_reads(components.samples, remaining_call_region) <= components.read_buffer_size) {
+    
+    if (!rm.has_reads(components.samples.get(), remaining_call_region)) {
         return remaining_call_region;
-    } else {
-        return rm.find_covered_subregion(components.samples, remaining_call_region,
-                                         components.read_buffer_size);
     }
+    
+    auto result = rm.find_covered_subregion(components.samples, remaining_call_region,
+                                            components.read_buffer_size);
+    
+    if (ends_before(result, remaining_call_region)) {
+        auto rest = right_overhang_region(remaining_call_region, result);
+        
+        if (!rm.has_reads(components.samples.get(), rest)) {
+            result = remaining_call_region;
+        }
+    }
+    
+    return result;
 }
 
 auto propose_call_subregion(const ContigCallingComponents& components,

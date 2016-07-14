@@ -96,7 +96,7 @@ std::size_t VcfParser::count_records(const GenomicRegion& region) const
 
 VcfParser::RecordIteratorPtrPair VcfParser::iterate(UnpackPolicy level) const
 {
-    return std::make_pair(std::make_unique<RecordIterator>(),
+    return std::make_pair(std::make_unique<RecordIterator>(*this, level),
                           std::make_unique<RecordIterator>());
 }
 
@@ -475,4 +475,59 @@ VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::Sam
     }
     
     return rb.build_once();
+}
+
+// VcfParser::RecordIterator
+
+VcfParser::RecordIterator::RecordIterator(const VcfParser& vcf, UnpackPolicy unpack)
+:
+parent_vcf_ {&vcf},
+unpack_ {unpack},
+local_ {vcf.file_path_.string()}
+{
+    if (std::getline(local_, line_)) {
+        if (unpack == UnpackPolicy::All) {
+            record_ = std::make_shared<VcfRecord>(parse_record(line_, vcf.samples_));
+        } else {
+            record_ = std::make_shared<VcfRecord>(parse_record(line_));
+        }
+    } else {
+        record_ = nullptr;
+    }
+}
+
+VcfParser::RecordIterator::reference VcfParser::RecordIterator::operator*() const
+{
+    return *record_;
+}
+
+VcfParser::RecordIterator::pointer VcfParser::RecordIterator::operator->() const
+{
+    return record_.get();
+}
+
+void VcfParser::RecordIterator::next()
+{
+    std::getline(local_, line_);
+    if (unpack_ == UnpackPolicy::All) {
+        *record_ = parse_record(line_, parent_vcf_->samples_);
+    } else {
+        *record_ = parse_record(line_);
+    }
+}
+
+VcfParser::RecordIterator& VcfParser::RecordIterator::operator++()
+{
+    this->next();
+    return *this;
+}
+
+bool operator==(const VcfParser::RecordIterator& lhs, const VcfParser::RecordIterator& rhs)
+{
+    return lhs.local_.tellg() == rhs.local_.tellg();
+}
+
+bool operator!=(const VcfParser::RecordIterator& lhs, const VcfParser::RecordIterator& rhs)
+{
+    return !(lhs == rhs);
 }

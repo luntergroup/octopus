@@ -59,20 +59,32 @@ public:
     std::vector<SampleIdType> extract_samples() const override;
     std::vector<ReadGroupIdType> extract_read_groups_in_sample(const SampleIdType& sample) const override;
     
-    bool has_contig_reads(const GenomicRegion::ContigNameType& contig) const override;
+    bool has_reads(const GenomicRegion& region) const override;
+    bool has_reads(const SampleIdType& sample,
+                   const GenomicRegion& region) const override;
+    bool has_reads(const std::vector<SampleIdType>& samples,
+                   const GenomicRegion& region) const override;
     
     std::size_t count_reads(const GenomicRegion& region) const override;
-    std::size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) const override;
+    std::size_t count_reads(const SampleIdType& sample,
+                            const GenomicRegion& region) const override;
+    std::size_t count_reads(const std::vector<SampleIdType>& samples,
+                            const GenomicRegion& region) const override;
     
-    CoveragePair find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage) const override;
-    CoveragePair find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
+    CoveragePair find_covered_subregion(const GenomicRegion& region,
                                         std::size_t max_coverage) const override;
-    CoveragePair find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region,
+    CoveragePair find_covered_subregion(const SampleIdType& sample,
+                                        const GenomicRegion& region,
+                                        std::size_t max_coverage) const override;
+    CoveragePair find_covered_subregion(const std::vector<SampleIdType>& samples,
+                                        const GenomicRegion& region,
                                         std::size_t max_coverage) const override;
     
     SampleReadMap fetch_reads(const GenomicRegion& region) const override;
-    ReadContainer fetch_reads(const SampleIdType& sample, const GenomicRegion& region) const override;
-    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const override;
+    ReadContainer fetch_reads(const SampleIdType& sample,
+                              const GenomicRegion& region) const override;
+    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples,
+                              const GenomicRegion& region) const override;
     
     unsigned count_reference_contigs() const override;
     std::vector<std::string> extract_reference_contig_names() const override;

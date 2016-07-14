@@ -163,6 +163,8 @@ samples_ {}
         }
         
         samples_.shrink_to_fit();
+        
+        std::sort(std::begin(samples_), std::end(samples_));
     } else {
         close();
     }
@@ -228,11 +230,75 @@ std::vector<std::string> HtslibSamFacade::extract_read_groups_in_sample(const Sa
     return result;
 }
 
-bool HtslibSamFacade::has_contig_reads(const GenomicRegion::ContigNameType& contig) const
+namespace
 {
-    HtslibIterator it {*this, contig};
+    // is rhs a subset of lhs?
+    bool is_subset(std::vector<HtslibSamFacade::SampleIdType> lhs,
+                   std::vector<HtslibSamFacade::SampleIdType> rhs)
+    {
+        std::sort(std::begin(lhs), std::end(lhs));
+        std::sort(std::begin(rhs), std::end(rhs));
+        return std::includes(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
+    }
+    
+    template <typename S>
+    auto get_readable_samples(std::vector<S> request_samples,
+                              const std::vector<S>& file_samples)
+    {
+        std::sort(std::begin(request_samples), std::end(request_samples));
+        
+        std::vector<S> result {};
+        result.reserve(request_samples.size());
+        
+        std::set_intersection(std::make_move_iterator(std::begin(request_samples)),
+                              std::make_move_iterator(std::end(request_samples)),
+                              std::cbegin(file_samples), std::cend(file_samples),
+                              std::back_inserter(result));
+        
+        return result;
+    }
+}
+
+// has_reads
+
+bool HtslibSamFacade::has_reads(const GenomicRegion& region) const
+{
+    HtslibIterator it {*this, region};
     return ++it;
 }
+
+bool HtslibSamFacade::has_reads(const SampleIdType& sample,
+                                const GenomicRegion& region) const
+{
+    if (samples_.size() == 1 && samples_.front() == sample) return has_reads(region);
+    HtslibIterator it {*this, region};
+    while (++it) if (sample_names_.at(it.read_group()) == sample) return true;
+    return false;
+}
+
+bool HtslibSamFacade::has_reads(const std::vector<SampleIdType>& samples,
+                                const GenomicRegion& region) const
+{
+    if (samples.empty()) return false;
+    if (samples.size() == 1) return has_reads(samples.front(), region);
+    if (is_subset(samples, samples_)) return has_reads(region);
+    
+    const auto readable_samples = get_readable_samples(samples, samples_);
+    
+    HtslibIterator it {*this, region};
+    
+    while (++it) {
+        if (std::binary_search(std::cbegin(readable_samples),
+                               std::cend(readable_samples),
+                               sample_names_.at(it.read_group()))) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// count_reads
 
 std::size_t HtslibSamFacade::count_reads(const GenomicRegion& region) const
 {
@@ -245,8 +311,11 @@ std::size_t HtslibSamFacade::count_reads(const GenomicRegion& region) const
     return result;
 }
 
-std::size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const GenomicRegion& region) const
+std::size_t HtslibSamFacade::count_reads(const SampleIdType& sample,
+                                         const GenomicRegion& region) const
 {
+    if (samples_.size() == 1 && samples_.front() == sample) return count_reads(region);
+    
     HtslibIterator it {*this, region};
     
     std::size_t result {0};
@@ -256,7 +325,29 @@ std::size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const Genom
     return result;
 }
 
-GenomicRegion expand_subregion(const GenomicRegion& region,const std::size_t remaining_coverage_quota,
+std::size_t HtslibSamFacade::count_reads(const std::vector<SampleIdType>& samples,
+                                         const GenomicRegion& region) const
+{
+    if (samples.empty()) return 0;
+    if (samples.size() == 1) return count_reads(samples.front(), region);
+    if (is_subset(samples, samples_)) return count_reads(region);
+    
+    const auto readable_samples = get_readable_samples(samples, samples_);
+    
+    HtslibIterator it {*this, region};
+    
+    std::size_t result {0};
+    
+    while (++it && std::binary_search(std::cbegin(readable_samples),
+                                      std::cend(readable_samples),
+                                      sample_names_.at(it.read_group()))) ++result;
+    
+    return result;
+}
+        
+// find_covered_subregion
+
+GenomicRegion expand_subregion(const GenomicRegion& region, const std::size_t remaining_coverage_quota,
                                const std::size_t first_read_begin, const std::size_t last_read_begin,
                                std::vector<unsigned>& position_counts)
 {
@@ -388,18 +479,13 @@ HtslibSamFacade::find_covered_subregion(const SampleIdType& sample,
     return std::make_pair(std::move(result_region), std::move(position_counts));
 }
 
-bool is_subset(std::vector<HtslibSamFacade::SampleIdType> lhs,
-               std::vector<HtslibSamFacade::SampleIdType> rhs)
-{
-    std::sort(std::begin(lhs), std::end(lhs));
-    std::sort(std::begin(rhs), std::end(rhs));
-    return std::includes(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
-}
-
 HtslibSamFacade::CoveragePair
 HtslibSamFacade::find_covered_subregion(const std::vector<SampleIdType>& samples,
-                                        const GenomicRegion& region, std::size_t max_coverage) const
+                                        const GenomicRegion& region,
+                                        std::size_t max_coverage) const
 {
+    if (samples.empty()) return {head_region(region), {}};
+    
     if (samples.size() == 1) {
         return find_covered_subregion(samples.front(), region, max_coverage);
     }
@@ -446,6 +532,8 @@ HtslibSamFacade::find_covered_subregion(const std::vector<SampleIdType>& samples
     
     return std::make_pair(std::move(result_region), std::move(position_counts));
 }
+        
+// fetch_reads
 
 HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion& region) const
 {

@@ -132,6 +132,7 @@ public:
         void next() override;
         RecordIterator& operator++();
         
+        friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
     private:
         using HtsBcfSrSharedPtr = std::shared_ptr<bcf_srs_t>;
         
@@ -141,8 +142,6 @@ public:
         UnpackPolicy level_;
         
         std::shared_ptr<VcfRecord> record_;
-        
-        friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
     };
 };
 

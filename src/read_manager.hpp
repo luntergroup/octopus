@@ -40,6 +40,7 @@ public:
     ReadManager() = default;
     
     ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files);
+    
     ReadManager(std::initializer_list<Path> read_file_paths);
     
     ~ReadManager() = default;
@@ -57,24 +58,31 @@ public:
     unsigned num_samples() const noexcept;
     const std::vector<SampleIdType>& samples() const;
     
-    // TODO
-//    bool has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig) const;
-//    bool has_contig_reads(const std::vector<SampleIdType>& samples,
-//                          const GenomicRegion::ContigNameType& contig) const;
-    bool has_contig_reads(const GenomicRegion::ContigNameType& contig) const;
+    bool has_reads(const SampleIdType& sample,
+                   const GenomicRegion& region) const;
+    bool has_reads(const std::vector<SampleIdType>& samples,
+                   const GenomicRegion& region) const;
+    bool has_reads(const GenomicRegion& region) const;
     
-    std::size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) const;
-    std::size_t count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const;
+    std::size_t count_reads(const SampleIdType& sample,
+                            const GenomicRegion& region) const;
+    std::size_t count_reads(const std::vector<SampleIdType>& samples,
+                            const GenomicRegion& region) const;
     std::size_t count_reads(const GenomicRegion& region) const;
     
-    GenomicRegion find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
+    GenomicRegion find_covered_subregion(const SampleIdType& sample,
+                                         const GenomicRegion& region,
                                          std::size_t max_reads) const;
     GenomicRegion find_covered_subregion(const std::vector<SampleIdType>& samples,
-                                         const GenomicRegion& region, std::size_t max_reads) const;
-    GenomicRegion find_covered_subregion(const GenomicRegion& region, std::size_t max_reads) const;
+                                         const GenomicRegion& region,
+                                         std::size_t max_reads) const;
+    GenomicRegion find_covered_subregion(const GenomicRegion& region,
+                                         std::size_t max_reads) const;
     
-    ReadContainer fetch_reads(const SampleIdType& sample, const GenomicRegion& region) const;
-    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const;
+    ReadContainer fetch_reads(const SampleIdType& sample,
+                              const GenomicRegion& region) const;
+    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples,
+                              const GenomicRegion& region) const;
     SampleReadMap fetch_reads(const GenomicRegion& region) const;
     
 private:

@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <fstream>
 #include <iterator>
+#include <memory>
 
 #include <boost/filesystem/path.hpp>
 
@@ -57,6 +58,8 @@ public:
     RecordContainer fetch_records(const std::string& contig, UnpackPolicy level) const override;
     RecordContainer fetch_records(const GenomicRegion& region, UnpackPolicy level) const override;
     
+    friend RecordIterator;
+    friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
 private:
     fs::path file_path_;
     
@@ -81,6 +84,8 @@ public:
     
     RecordIterator() = default;
     
+    RecordIterator(const VcfParser& vcf, UnpackPolicy unpack);
+    
     ~RecordIterator() noexcept = default;
     
     RecordIterator(const RecordIterator&)            = default;
@@ -88,19 +93,21 @@ public:
     RecordIterator(RecordIterator&&)                 = default;
     RecordIterator& operator=(RecordIterator&&)      = default;
     
-    reference operator*() const override { return record_; }
-    pointer operator->() const override { return &record_; }
+    reference operator*() const override;
+    pointer operator->() const override;
     
-    void next() override {}
-    //RecordIterator& operator++();
+    void next() override;
+    RecordIterator& operator++();
     
-    friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs)
-    {
-        return lhs.record_ == rhs.record_;
-    }
-    
+    friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
 private:
-    VcfRecord record_;
+    std::shared_ptr<VcfRecord> record_;
+    const VcfParser* parent_vcf_;
+    UnpackPolicy unpack_;
+    mutable std::ifstream local_;
+    mutable std::string line_;
 };
+
+bool operator!=(const VcfParser::RecordIterator& lhs, const VcfParser::RecordIterator& rhs);
 
 #endif /* defined(__Octopus__vcf_parser__) */
