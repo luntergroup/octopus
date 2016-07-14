@@ -66,7 +66,9 @@ public:
     logic_error {"RegionError: comparings regions on different contigs"},
     first_ {first}, second_ {second} {}
     
-    const char* what() const noexcept
+    virtual ~RegionError() noexcept = default;
+    
+    virtual const char* what() const noexcept override
     {
         msg_ = std::string {logic_error::what()} + ": " + first_ + " & " + second_;
         return msg_.c_str();

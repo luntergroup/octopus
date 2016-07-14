@@ -24,6 +24,7 @@ class CigarOperation : public Comparable<CigarOperation> // Comparable so can co
 {
 public:
     using SizeType = std::uint_fast32_t;
+    using FlagType = char;
     
     static constexpr char ALIGNMENT_MATCH {'M'};
     static constexpr char SEQUENCE_MATCH  {'='};
@@ -37,7 +38,7 @@ public:
     
     CigarOperation() = default;
     
-    explicit CigarOperation(SizeType size, char type) noexcept;
+    explicit CigarOperation(SizeType size, FlagType type) noexcept;
     
     CigarOperation(const CigarOperation&)            = default;
     CigarOperation& operator=(const CigarOperation&) = default;
@@ -47,15 +48,19 @@ public:
     ~CigarOperation() = default;
     
     SizeType size() const noexcept;
-    char flag() const noexcept;
+    FlagType flag() const noexcept;
     
     bool advances_reference() const noexcept;
     bool advances_sequence() const noexcept;
     
 private:
     SizeType size_;
-    char flag_;
+    FlagType flag_;
 };
+
+bool is_match(const CigarOperation& op) noexcept;
+bool is_indel(const CigarOperation& op) noexcept;
+bool is_clipping(const CigarOperation& op) noexcept;
 
 using CigarString = std::vector<CigarOperation>;
 

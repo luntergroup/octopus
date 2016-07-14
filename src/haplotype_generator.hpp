@@ -128,6 +128,8 @@ class HaplotypeGenerator::HaplotypeOverflow : public std::runtime_error
 public:
     HaplotypeOverflow(GenomicRegion region, unsigned size);
     
+    virtual ~HaplotypeOverflow() noexcept = default;
+    
     virtual const char* what() const noexcept override;
     
     const GenomicRegion& region() const noexcept;

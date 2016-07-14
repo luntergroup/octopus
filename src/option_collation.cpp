@@ -1022,10 +1022,14 @@ CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& opti
     if (!options.at("disable-assembly-candidate-generator").as<bool>()) {
         result.add_generator(CandidateGeneratorBuilder::Generator::Assembler);
         const auto kmer_sizes = options.at("kmer-size").as<std::vector<unsigned>>();
+        
         for (const auto k : kmer_sizes) {
             result.add_kmer_size(k);
         }
-        result.set_assembler_min_base_quality(options.at("min-assembler-base-quality").as<unsigned>());
+        
+        if (options.count("assembler-mask-base-quality") == 1) {
+            result.set_assembler_min_base_quality(options.at("assembler-mask-base-quality").as<unsigned>());
+        }
     }
     
     return result;

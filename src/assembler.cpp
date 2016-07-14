@@ -14,7 +14,9 @@
 #include <numeric>
 #include <limits>
 #include <cassert>
+#include <iostream>
 
+#include <boost/functional/hash.hpp>
 #include <boost/property_map/property_map.hpp>
 #include <boost/graph/depth_first_search.hpp>
 #include <boost/graph/breadth_first_search.hpp>
@@ -26,7 +28,7 @@
 #include <boost/graph/graph_utility.hpp>
 #include <boost/graph/exception.hpp>
 
-#include <iostream>
+#include "timers.hpp"
 
 namespace
 {
@@ -112,11 +114,8 @@ void Assembler::insert_read(const SequenceType& sequence)
     ++it1;
     ++it2;
     
-    SequenceType kmer;
-    kmer.resize(k_);
-    
     for (; it2 <= std::cend(sequence); ++it1, ++it2) {
-        std::copy(it1, it2, std::begin(kmer));
+        Kmer kmer {it1, it2};
         
         if (!contains_kmer(kmer)) {
             const auto v = add_vertex(kmer);
@@ -193,15 +192,7 @@ bool Assembler::is_acyclic() const
 bool Assembler::is_all_reference() const
 {
     const auto p = boost::edges(graph_);
-    return std::all_of(p.first, p.second,
-                       [this] (const Edge& e) { return is_reference(e); });
-}
-
-void Assembler::remove_trivial_nonreference_cycles()
-{
-    boost::remove_edge_if([this] (const Edge e) {
-        return !is_reference(e) && is_trivial_cycle(e);
-    }, graph_);
+    return std::all_of(p.first, p.second, [this] (const Edge& e) { return is_reference(e); });
 }
 
 bool Assembler::prune(const unsigned min_weight)
@@ -215,11 +206,23 @@ bool Assembler::prune(const unsigned min_weight)
     
     if (old_size < 2) return true;
     
+    remove_trivial_nonreference_cycles();
+    
+    auto new_size = boost::num_vertices(graph_);
+    
+    if (new_size != old_size) {
+        regenerate_vertex_indices();
+        if (new_size < 2) {
+            return true;
+        }
+        old_size = new_size;
+    }
+    
     remove_low_weight_edges(min_weight);
     
     remove_disconnected_vertices();
     
-    auto new_size = boost::num_vertices(graph_);
+    new_size = boost::num_vertices(graph_);
     
     if (new_size != old_size) {
         regenerate_vertex_indices();
@@ -310,13 +313,63 @@ std::deque<Assembler::Variant> Assembler::extract_variants(const unsigned max)
     return extract_k_highest_scoring_bubble_paths(max);
 }
 
-// private methods
+// Assembler private types
 
 Assembler::GraphEdge::GraphEdge(const GraphEdge::WeightType weight, const bool is_reference)
 :
 weight {weight},
 is_reference {is_reference}
 {}
+
+// Kmer
+
+Assembler::Kmer::Kmer(SequenceIterator first, SequenceIterator last) noexcept
+:
+first_ {first}, last_ {last},
+hash_ {boost::hash_range(first_, last_)}
+{}
+
+char Assembler::Kmer::front() const noexcept
+{
+    return *first_;
+}
+
+char Assembler::Kmer::back() const noexcept
+{
+    return *std::prev(last_);
+}
+
+Assembler::Kmer::SequenceIterator Assembler::Kmer::begin() const noexcept
+{
+    return first_;
+}
+
+Assembler::Kmer::SequenceIterator Assembler::Kmer::end() const noexcept
+{
+    return last_;
+}
+
+Assembler::Kmer::operator SequenceType() const
+{
+    return SequenceType {first_, last_};
+}
+
+std::size_t Assembler::Kmer::hash() const noexcept
+{
+    return hash_;
+}
+
+bool operator==(const Assembler::Kmer& lhs, const Assembler::Kmer& rhs) noexcept
+{
+    return std::equal(lhs.first_, lhs.last_, rhs.first_);
+}
+
+bool operator<(const Assembler::Kmer& lhs, const Assembler::Kmer& rhs) noexcept
+{
+    return std::lexicographical_compare(lhs.first_, lhs.last_, rhs.first_, rhs.last_);
+}
+
+// Assembler private methods
 
 void Assembler::insert_reference_into_empty_graph(const SequenceType& sequence)
 {
@@ -344,8 +397,10 @@ void Assembler::insert_reference_into_empty_graph(const SequenceType& sequence)
     for (; it2 <= std::cend(sequence); ++it1, ++it2) {
         reference_kmers_.emplace_back(it1, it2);
         
-        if (!contains_kmer(reference_kmers_.back())) {
-            const auto v = add_vertex(reference_kmers_.back(), true);
+        const auto& kmer = reference_kmers_.back();
+        
+        if (!contains_kmer(kmer)) {
+            const auto v = add_vertex(kmer, true);
             if (v) {
                 const auto u = vertex_cache_.at(std::crbegin(reference_kmers_)[1]);
                 add_reference_edge(u, *v);
@@ -354,12 +409,10 @@ void Assembler::insert_reference_into_empty_graph(const SequenceType& sequence)
             }
         } else {
             const auto u = vertex_cache_.at(std::crbegin(reference_kmers_)[1]);
-            const auto v = vertex_cache_.at(reference_kmers_.back());
+            const auto v = vertex_cache_.at(kmer);
             add_reference_edge(u, v);
         }
     }
-    
-    std::cout << vertex_cache_.size() << " " << sequence.size() + std::pow(4, 5) << std::endl;
     
     reference_kmers_.shrink_to_fit();
 }
@@ -485,7 +538,7 @@ namespace
                                return base == 'A' || base == 'C' || base == 'G' || base == 'T';
                            });
     }
-}
+} // namespace
 
 Assembler::Vertex Assembler::null_vertex() const
 {
@@ -678,7 +731,7 @@ Assembler::SequenceType Assembler::make_reference(Vertex from, const Vertex to) 
     
     if (last == null) {
         if (from == reference_tail()) {
-            return kmer_of(from);
+            return static_cast<SequenceType>(kmer_of(from));
         }
         last = reference_tail();
     }
@@ -796,6 +849,13 @@ bool Assembler::is_on_path(const Edge e, const Path& path) const
     }
     
     return false;
+}
+
+void Assembler::remove_trivial_nonreference_cycles()
+{
+    boost::remove_edge_if([this] (const Edge e) {
+        return !is_reference(e) && is_trivial_cycle(e);
+    }, graph_);
 }
 
 void Assembler::remove_low_weight_edges(const unsigned min_weight)
@@ -1409,6 +1469,14 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
     }
     
     return result;
+}
+
+// debug
+
+std::ostream& operator<<(std::ostream& os, const Assembler::Kmer& kmer)
+{
+    std::copy(std::cbegin(kmer), std::cend(kmer), std::ostreambuf_iterator<char> {os});
+    return os;
 }
 
 void Assembler::print_reference_head() const

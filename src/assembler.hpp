@@ -18,9 +18,12 @@
 #include <utility>
 #include <tuple>
 #include <stdexcept>
+#include <iosfwd>
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional.hpp>
+
+#include "comparable.hpp"
 
 class Assembler;
 
@@ -55,6 +58,7 @@ public:
     {
     public:
         BadReferenceSequence(SequenceType reference_sequence);
+        ~BadReferenceSequence() noexcept = default;
         const char* what() const noexcept override;
     private:
         SequenceType reference_sequence_;
@@ -65,12 +69,12 @@ public:
     Assembler(unsigned kmer_size);
     Assembler(unsigned kmer_size, const SequenceType& reference);
     
-    ~Assembler() = default;
-    
     Assembler(const Assembler&)            = delete;
     Assembler& operator=(const Assembler&) = delete;
     Assembler(Assembler&&)                 = default;
     Assembler& operator=(Assembler&&)      = default;
+    
+    ~Assembler() = default;
     
     unsigned kmer_size() const noexcept;
     
@@ -82,7 +86,6 @@ public:
     bool is_acyclic() const;
     bool is_all_reference() const;
     
-    void remove_trivial_nonreference_cycles();
     bool prune(unsigned min_weight);
     void clear();
     
@@ -91,7 +94,47 @@ public:
     friend void debug::print(const Assembler& assembler);
     
 private:
-    using Kmer = SequenceType;
+    class Kmer : public Comparable<Kmer>
+    {
+    public:
+        using SequenceType     = Assembler::SequenceType;
+        using SequenceIterator = SequenceType::const_iterator;
+        
+        Kmer() = delete;
+        
+        Kmer(SequenceIterator first, SequenceIterator last) noexcept;
+        
+        Kmer(const Kmer&)            = default;
+        Kmer& operator=(const Kmer&) = default;
+        Kmer(Kmer&&)                 = default;
+        Kmer& operator=(Kmer&&)      = default;
+        
+        ~Kmer() = default;
+        
+        char front() const noexcept;
+        char back() const noexcept;
+        
+        SequenceIterator begin() const noexcept;
+        SequenceIterator end() const noexcept;
+        
+        explicit operator SequenceType() const;
+        
+        std::size_t hash() const noexcept;
+        
+        friend bool operator==(const Kmer& lhs, const Kmer& rhs) noexcept;
+        friend bool operator<(const Kmer& lhs, const Kmer& rhs) noexcept;
+    private:
+        SequenceIterator first_, last_;
+        std::size_t hash_;
+    };
+    
+    friend bool operator==(const Kmer& lhs, const Kmer& rhs) noexcept;
+    friend bool operator<(const Kmer& lhs, const Kmer& rhs) noexcept;
+    
+    struct KmerHash
+    {
+        std::size_t operator()(const Kmer& k) const noexcept { return k.hash(); }
+    };
     
     struct GraphEdge
     {
@@ -142,7 +185,7 @@ private:
     
     KmerGraph graph_;
     
-    std::unordered_map<Kmer, Vertex> vertex_cache_;
+    std::unordered_map<Kmer, Vertex, KmerHash> vertex_cache_;
     
     // methods
     
@@ -198,6 +241,7 @@ private:
     bool is_simple_deletion(Edge e) const;
     bool is_on_path(Edge e, const Path& path) const;
     
+    void remove_trivial_nonreference_cycles();
     void remove_low_weight_edges(unsigned min_weight);
     void remove_disconnected_vertices();
     std::unordered_set<Vertex> find_reachable_kmers(Vertex from) const;
@@ -235,6 +279,8 @@ private:
     std::deque<Variant> extract_k_highest_scoring_bubble_paths(unsigned k);
     
     // for debug
+    friend std::ostream& operator<<(std::ostream& os, const Kmer& kmer);
+    
     void print_reference_head() const;
     void print_reference_tail() const;
     void print(Edge e) const;

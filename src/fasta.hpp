@@ -68,6 +68,8 @@ public:
     
     MissingFastaIndex(Path fasta_path, Path expected_index_path);
     
+    virtual ~MissingFastaIndex() noexcept = default;
+    
     const Path& fasta_path() const noexcept;
     const Path& expected_index_path() const noexcept;
     

@@ -31,7 +31,7 @@ namespace Octopus
 {
 AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
                                                                        std::vector<unsigned> kmer_sizes,
-                                                                       QualityType min_base_quality,
+                                                                       QualityType mask_threshold,
                                                                        unsigned min_supporting_reads,
                                                                        SizeType max_variant_size)
 :
@@ -40,7 +40,7 @@ default_kmer_sizes_ {kmer_sizes},
 fallback_kmer_sizes_ {},
 bin_size_ {1000},
 bins_ {},
-min_base_quality_ {0},
+mask_threshold_ {mask_threshold},
 min_supporting_reads_ {min_supporting_reads},
 max_variant_size_ {max_variant_size}
 {
@@ -104,21 +104,81 @@ bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
     return true;
 }
 
-bool are_all_bases_good_quality(const AlignedRead& read,
-                                const AlignedRead::QualityType min_quality)
+bool has_low_quality_match(const AlignedRead& read, const AlignedRead::QualityType good_quality)
 {
-    return std::all_of(std::cbegin(read.qualities()), std::cend(read.qualities()),
-                       [min_quality] (const char quality) { return quality >= min_quality; });
+    if (good_quality == 0) return false;
+    auto quality_itr = std::cbegin(read.qualities());
+    return std::any_of(std::cbegin(read.cigar_string()), std::cend(read.cigar_string()),
+                       [&] (const auto& op) {
+                           if (is_match(op)) {
+                               auto result = std::any_of(quality_itr, std::next(quality_itr, op.size()),
+                                                         [=] (auto q) { return q < good_quality; });
+                               std::advance(quality_itr, op.size());
+                               return result;
+                           } else if (op.advances_sequence()) {
+                               std::advance(quality_itr, op.size());
+                           }
+                           return false;
+                       });
+}
+
+namespace
+{
+    auto expand_cigar(const AlignedRead& read)
+    {
+        std::string result {};
+        result.reserve(sequence_size(read));
+        
+        for (const auto& op : read.cigar_string()) {
+            result.append(op.size(), op.flag());
+        }
+        
+        return result;
+    }
+    
+    bool is_match(const CigarOperation::FlagType op)
+    {
+        switch (op) {
+            case CigarOperation::ALIGNMENT_MATCH:
+            case CigarOperation::SEQUENCE_MATCH:
+            case CigarOperation::SUBSTITUTION: return true;
+            default: return false;
+        }
+    }
 }
 
 AlignedRead::SequenceType
-transform_low_base_qualities_to_n(const AlignedRead& read, const AlignedRead::QualityType min_quality)
+transform_low_quality_matches_to_reference(const AlignedRead& read,
+                                           const AlignedRead::QualityType min_quality,
+                                           const ReferenceGenome& reference)
 {
     auto result = read.sequence();
     
+    const auto cigar = expand_cigar(read);
+    
+    auto cigar_op_itr = std::find_if_not(std::cbegin(cigar), std::cend(cigar),
+                                         [] (auto op) { return op == CigarOperation::HARD_CLIPPED; });
+    
+    const auto ref_sequence = reference.fetch_sequence(mapped_region(read));
+    
+    auto ref_itr = std::cbegin(ref_sequence);
+    
     std::transform(std::cbegin(result), std::cend(result), std::cbegin(read.qualities()),
-                   std::begin(result), [min_quality] (const char base, const auto quality) {
-                       return (quality >= min_quality) ? base : 'N';
+                   std::begin(result), [&] (const char base, const auto quality) {
+                       const auto cigar_op = *cigar_op_itr++;
+                       
+                       if (!is_match(cigar_op)) {
+                           if (cigar_op != CigarOperation::INSERTION) ++ref_itr;
+                           while (*cigar_op_itr == CigarOperation::DELETION) {
+                               ++cigar_op_itr;
+                               ++ref_itr;
+                           }
+                           return base;
+                       }
+                       
+                       auto ref_base = *ref_itr++;
+                       
+                       return quality >= min_quality ? base : ref_base;
                    });
     
     return result;
@@ -127,8 +187,7 @@ transform_low_base_qualities_to_n(const AlignedRead& read, const AlignedRead::Qu
 template <typename C, typename R>
 auto overlapped_bins(C& bins, const R& read)
 {
-    return bases(overlap_range(std::begin(bins), std::end(bins), read,
-                               BidirectionallySortedTag {}));
+    return bases(overlap_range(std::begin(bins), std::end(bins), read, BidirectionallySortedTag {}));
 }
 
 void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
@@ -139,12 +198,13 @@ void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
     
     assert(!active_bins.empty());
     
-    if (are_all_bases_good_quality(read, min_base_quality_)) {
+    if (!has_low_quality_match(read, mask_threshold_)) {
         for (auto& bin : active_bins) {
             bin.insert(read);
         }
     } else {
-        auto masked_sequence = transform_low_base_qualities_to_n(read, min_base_quality_);
+        auto masked_sequence = transform_low_quality_matches_to_reference(read, mask_threshold_,
+                                                                          reference_);
         
         masked_sequence_buffer_.emplace_back(std::move(masked_sequence));
         
@@ -485,15 +545,11 @@ bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size, 
         throw std::runtime_error {"Bad reference"};
     }
     
-    resume_timer(misc_timer[3]);
     Assembler assembler {kmer_size, reference_sequence};
-    pause_timer(misc_timer[3]);
     
-    resume_timer(misc_timer[4]);
     for (const auto& sequence : bin.read_sequences) {
         assembler.insert_read(sequence);
     }
-    pause_timer(misc_timer[4]);
     
     return try_assemble_region(assembler, reference_sequence, assembler_region, result);
 }
@@ -503,26 +559,20 @@ bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assemble
                                                              const GenomicRegion& reference_region,
                                                              std::deque<Variant>& result) const
 {
-    resume_timer(misc_timer[5]);
-    assembler.remove_trivial_nonreference_cycles();
-    pause_timer(misc_timer[5]);
-    
-    resume_timer(misc_timer[6]);
     if (!assembler.prune(min_supporting_reads_)) {
         return false;
     }
-    pause_timer(misc_timer[6]);
     
-    resume_timer(misc_timer[7]);
     auto variants = assembler.extract_variants();
-    pause_timer(misc_timer[7]);
     
     assembler.clear();
     
+    if (variants.empty()) {
+        return true;
+    }
+    
     trim_reference(variants);
-    
     split_complex(variants);
-    
     add_to_mapped_variants(result, std::move(variants), reference_region);
     
     return true;

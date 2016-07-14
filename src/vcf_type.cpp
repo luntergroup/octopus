@@ -104,7 +104,9 @@ public:
     type_ {std::move(type)}
     {}
     
-    const char* what() const noexcept
+    virtual ~UnknownVcfType() noexcept = default;
+    
+    virtual const char* what() const noexcept
     {
         return (std::string{runtime_error::what()} + ": " + type_).c_str();
     }
@@ -123,7 +125,9 @@ public:
     value_ {std::move(value)}
     {}
     
-    const char* what() const noexcept
+    virtual ~BadVcfType() noexcept = default;
+    
+    virtual const char* what() const noexcept
     {
         return (std::string{invalid_argument::what()} + ": " + value_ + " to VcfType " + type_).c_str();
     }

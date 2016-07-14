@@ -280,10 +280,10 @@ boost::optional<OptionMap> parse_options(const int argc, const char** argv)
             ->default_value(std::vector<unsigned> {10, 25}, "10 25")->composing(),
          "K-mer sizes to use for local re-assembly")
         
-        ("min-assembler-base-quality",
-         po::value<unsigned>()->default_value(15),
-         "Only bases with quality above this value are considered for candidate generation by"
-         " the assembler")
+        ("assembler-mask-base-quality",
+         po::value<unsigned>()->implicit_value(10),
+         "Matching alignment bases with quality less than this will be reference masked before."
+         " Ff no value is specified then min-base-quality is used")
         ;
         
         po::options_description caller("Common caller options");

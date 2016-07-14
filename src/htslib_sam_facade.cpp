@@ -35,7 +35,9 @@ public:
     msg_ {}
     {}
     
-    const char* what() const noexcept override
+    virtual ~MissingBamIndex() noexcept = default;
+    
+    virtual const char* what() const noexcept override
     {
         std::ostringstream ss {};
         ss << runtime_error::what() << ": a BAM index file (.bai) is required for the BAM file "
@@ -58,7 +60,9 @@ public:
     msg_ {}
     {}
     
-    const char* what() const noexcept override
+    virtual ~MissingCramIndex() noexcept = default;
+    
+    virtual const char* what() const noexcept override
     {
         std::ostringstream ss {};
         ss << runtime_error::what() << ": a CRAM index file (.crai) is required for the CRAM file "
@@ -81,7 +85,9 @@ public:
     msg_ {}
     {}
     
-    const char* what() const noexcept override
+    virtual ~InvalidBamHeader() noexcept = default;
+    
+    virtual const char* what() const noexcept override
     {
         std::ostringstream ss {};
         ss << runtime_error::what() << ": in file " << file_path_ << ": " << message_;
@@ -105,7 +111,9 @@ public:
     msg_ {}
     {}
     
-    const char* what() const noexcept override
+    virtual ~InvalidBamRecord() noexcept = default;
+    
+    virtual const char* what() const noexcept override
     {
         std::ostringstream ss {};
         ss << runtime_error::what() << ": in file " << file_path_ << ", in read " << read_name_

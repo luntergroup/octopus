@@ -35,7 +35,7 @@ public:
     
     AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
                                        std::vector<unsigned> kmer_sizes,
-                                       QualityType min_base_quality = 10,
+                                       QualityType mask_threshold = 0,
                                        unsigned min_supporting_reads = 2,
                                        SizeType max_variant_size = 500);
     
@@ -47,12 +47,15 @@ public:
     AssemblerCandidateVariantGenerator& operator=(AssemblerCandidateVariantGenerator&&)      = default;
     
     bool requires_reads() const noexcept override;
+    
     void add_read(const AlignedRead& read) override;
     void add_reads(std::vector<AlignedRead>::const_iterator first,
                    std::vector<AlignedRead>::const_iterator last) override;
     void add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
                    MappableFlatMultiSet<AlignedRead>::const_iterator last) override;
+    
     std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
+    
     void clear() override;
     
 private:
@@ -83,7 +86,7 @@ private:
     std::deque<Bin> bins_;
     std::deque<SequenceType> masked_sequence_buffer_;
     
-    QualityType min_base_quality_;
+    QualityType mask_threshold_;
     unsigned min_supporting_reads_;
     SizeType max_variant_size_;
     

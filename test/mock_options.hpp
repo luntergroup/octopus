@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        "--debug",
+        //"--debug",
         //"--trace",
         
         //"--sites-only",
@@ -38,7 +38,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
-        //"--threads",
+        "--threads",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
@@ -85,7 +85,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--regions", "2:120,098,309-120,098,368", // NA12878 LC - GQ is too high
         
-        "--regions", "22",
+        "--regions", "1",
         
         //"--regions", "22:22,583,864-22,584,168", // FN
         //"--regions", "22:40,015,775-40,016,384", // FP
@@ -201,7 +201,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // read transforms
         //"--disable-read-transforms",
         //"--disable-soft-clip-masking",
-        //"--mask-soft-clipped-boundries", "20",
+        //"--mask-soft-clipped-boundries", "0",
         //"--disable-adapter-masking",
         //"--disable-overlap-masking",
         
@@ -226,12 +226,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // candidate generation
         //"--min-supporting-reads=1",
         //"--min-base-quality", "15",
-        "--disable-raw-cigar-candidate-generator",
+        //"--disable-raw-cigar-candidate-generator",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--disable-assembly-candidate-generator",
         //"--kmer-size", "75",
-        //"--min-assembler-base-quality", "10",
+        //"--assembler-mask-base-quality=2",
         //"--max-variant-size", "25",
         
         //"--phasing-level", "Minimal", // Minimal, Conservative, Aggressive

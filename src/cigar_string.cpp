@@ -26,7 +26,7 @@ constexpr char CigarOperation::HARD_CLIPPED;
 constexpr char CigarOperation::PADDING;
 constexpr char CigarOperation::SKIPPED;
 
-CigarOperation::CigarOperation(const SizeType size, const char flag) noexcept
+CigarOperation::CigarOperation(const SizeType size, const FlagType flag) noexcept
 :
 size_ {size},
 flag_ {flag}
@@ -37,7 +37,7 @@ CigarOperation::SizeType CigarOperation::size() const noexcept
     return size_;
 }
 
-char CigarOperation::flag() const noexcept
+CigarOperation::FlagType CigarOperation::flag() const noexcept
 {
     return flag_;
 }
@@ -51,6 +51,28 @@ bool CigarOperation::advances_sequence() const noexcept
 {
     return !(flag_ == DELETION || flag_ == HARD_CLIPPED);
 }
+
+bool is_match(const CigarOperation& op) noexcept
+{
+    switch (op.flag()) {
+        case CigarOperation::ALIGNMENT_MATCH:
+        case CigarOperation::SEQUENCE_MATCH:
+        case CigarOperation::SUBSTITUTION: return true;
+        default: return false;
+    }
+}
+
+bool is_indel(const CigarOperation& op) noexcept
+{
+    return op.flag() == CigarOperation::INSERTION || op.flag() == CigarOperation::DELETION;
+}
+
+bool is_clipping(const CigarOperation& op) noexcept
+{
+    return op.flag() == CigarOperation::SOFT_CLIPPED || op.flag() == CigarOperation::HARD_CLIPPED;
+}
+
+// CigarString
 
 CigarString parse_cigar_string(const std::string& cigar_string)
 {
