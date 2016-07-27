@@ -214,12 +214,11 @@ namespace
 
 auto compute_posterior(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
 {
-    return Phred<double> { Phred<double>::Probability {
-        std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                        0.0, [&allele] (const auto curr, const auto& p) {
-                            return curr + (contains(p.first, allele) ? 0.0 : p.second);
-                        })
-    }};
+    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                             0.0, [&allele] (const auto curr, const auto& p) {
+                                 return curr + (contains(p.first, allele) ? 0.0 : p.second);
+                             });
+    return probability_to_phred(p);
 }
 
 VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candidates,
@@ -270,12 +269,11 @@ auto call_genotype(const GenotypeProbabilityMap& genotype_posteriors)
 
 auto compute_posterior(const Genotype<Allele>& genotype, const GenotypeProbabilityMap& genotype_posteriors)
 {
-    return Phred<double> { Phred<double>::Probability {
-        std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
-                        [&genotype] (const double curr, const auto& p) {
-                            return curr + (contains(p.first, genotype) ? 0.0 : p.second);
-                        })
-    }};
+    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
+                             [&genotype] (const double curr, const auto& p) {
+                                 return curr + (contains(p.first, genotype) ? 0.0 : p.second);
+                             });
+    return probability_to_phred(p);
 }
 
 GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,

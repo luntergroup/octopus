@@ -58,12 +58,12 @@ public:
                         VariantCaller::CallerParameters general_parameters,
                         CallerParameters specific_parameters);
     
-    ~CancerVariantCaller() = default;
-    
     CancerVariantCaller(const CancerVariantCaller&)            = delete;
     CancerVariantCaller& operator=(const CancerVariantCaller&) = delete;
     CancerVariantCaller(CancerVariantCaller&&)                 = delete;
     CancerVariantCaller& operator=(CancerVariantCaller&&)      = delete;
+    
+    ~CancerVariantCaller() = default;
     
 private:
     using GermlineModel = GenotypeModel::Individual;

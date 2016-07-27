@@ -1218,28 +1218,14 @@ make_variant_caller_factory(const ReferenceGenome& reference,
     
     if (caller == "cancer") {
         if (options.count("normal-sample") == 1) {
-            auto normal_sample = options.at("normal-sample").as<std::string>();
-            
-            const auto& samples = read_pipe.samples();
-            
-            if (std::find(std::cbegin(samples), std::cend(samples),
-                          normal_sample) == std::cend(samples)) {
-                Logging::WarningLogger log {};
-                stream(log) << "The given normal sample \"" << normal_sample
-                << "\" was not found in the read files";
-            } else {
-                vc_builder.set_normal_sample(std::move(normal_sample));
-            }
-        } else {
-            Logging::WarningLogger log {};
-            stream(log) << "No normal sample was given so assuming all samples are tumour";
+            vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
         }
         
         vc_builder.set_somatic_mutation_rate(options.at("somatic-mutation-rate").as<float>());
         vc_builder.set_min_somatic_frequency(options.at("min-somatic-frequency").as<float>());
         vc_builder.set_credible_mass(options.at("credible-mass").as<float>());
         
-        Phred<double> min_somatic_posterior {options.at("min-somatic-posterior").as<double>()};
+        auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
     } else if (caller == "trio") {

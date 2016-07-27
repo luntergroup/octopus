@@ -76,6 +76,12 @@ private:
 };
 
 template <typename Q>
+auto probability_to_phred(const Q p)
+{
+    return Phred<Q> {typename Phred<Q>::Probability {p}};
+}
+
+template <typename Q>
 bool operator==(const Phred<Q>& lhs, const Phred<Q>& rhs) noexcept
 {
     return lhs.score() == rhs.score();

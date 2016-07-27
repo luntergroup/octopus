@@ -487,12 +487,12 @@ auto find_map_genotype(const L& posteriors)
 template <typename M>
 Phred<double> marginalise(const Allele& allele, const M& genotype_posteriors)
 {
-    return Phred<double> {
-        std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                        0.0, [&allele] (const auto curr, const auto& p) {
-                            return curr + (contains(p.first, allele) ? 0.0 : p.second);
-                        })
-    };
+    auto p = std::accumulate(std::cbegin(genotype_posteriors),
+                             std::cend(genotype_posteriors),
+                             0.0, [&allele] (const auto curr, const auto& p) {
+                                 return curr + (contains(p.first, allele) ? 0.0 : p.second);
+                             });
+    return probability_to_phred(p);
 }
 
 template <typename M>
@@ -575,7 +575,7 @@ auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& can
                                            return curr;
                                        });
         
-        result.emplace_back(candidate, Phred<double> {1.0 - somatic_model_posterior * p * somatic_posterior});
+        result.emplace_back(candidate, probability_to_phred(1.0 - somatic_model_posterior * p * somatic_posterior));
     }
     
     return result;
@@ -591,7 +591,8 @@ auto call_somatic_variants(const VariantPosteriors& somatic_variant_posteriors,
     std::copy_if(std::begin(somatic_variant_posteriors), std::end(somatic_variant_posteriors),
                  std::back_inserter(result),
                  [min_posterior, &called_genotype] (const auto& p) {
-                     return p.second >= min_posterior && contains_exact(called_genotype, p.first.get().alt_allele());
+                     return p.second >= min_posterior
+                            && contains_exact(called_genotype, p.first.get().alt_allele());
                  });
     
     return result;
@@ -652,12 +653,6 @@ auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
     return result;
 }
 
-//    auto indentify_background(const CancerGenotype<Haplotype>& genotype,
-//                              const SomaticVariantCalls& variants)
-//    {
-//        
-//    }
-
 // output
 
 Octopus::VariantCall::GenotypeCall convert(GermlineGenotypeCall call)
@@ -686,22 +681,6 @@ transform_germline_call(GermlineVariantCall&& variant_call, GermlineGenotypeCall
                                                           std::move(genotypes),
                                                           variant_call.posterior);
 }
-
-//auto transform_germline_calls(GermlineVariantCalls&& variant_calls, GermlineGenotypeCalls&& genotype_calls)
-//{
-//    std::vector<std::unique_ptr<Octopus::VariantCall>> result {};
-//    result.reserve(variant_calls.size());
-//    
-//    std::transform(std::make_move_iterator(std::begin(variant_calls)),
-//                   std::make_move_iterator(std::end(variant_calls)),
-//                   std::make_move_iterator(std::begin(genotype_calls)),
-//                   std::back_inserter(result),
-//                   [] (GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call) {
-//                       return transform_germline_call(std::move(variant_call), std::move(genotype_call));
-//                   });
-//    
-//    return result;
-//}
 
 auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotypeCalls&& genotype_calls,
                              const std::vector<SampleIdType>& somatic_samples)
@@ -765,14 +744,12 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
     
     const auto germline_genotype_posteriors = calculate_germline_genotype_posteriors(latents, model_posteriors);
     
-    const auto germline_candidate_posteriors = compute_candidate_posteriors(candidates,
-                                                                            germline_genotype_posteriors);
+    const auto germline_candidate_posteriors = compute_candidate_posteriors(candidates, germline_genotype_posteriors);
     
     const auto& called_germline_genotype = find_map_genotype(germline_genotype_posteriors)->first;
     
     GermlineVariantCalls germline_variant_calls;
     std::vector<VariantReference> uncalled_germline_candidates;
-    
     std::tie(germline_variant_calls, uncalled_germline_candidates) = call_candidates(germline_candidate_posteriors,
                                                                                      called_germline_genotype,
                                                                                      parameters_.min_variant_posterior);
@@ -956,7 +933,7 @@ Phred<double> CancerVariantCaller::calculate_somatic_probability(const Probabili
     
     result *= model_posteriors.somatic;
     
-    return Phred<double> {1.0 - result};
+    return probability_to_phred(1 - result);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>

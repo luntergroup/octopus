@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        //"--debug",
+        "--debug",
         //"--trace",
         
         //"--sites-only",
@@ -45,7 +45,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
@@ -62,15 +62,15 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", "~/Genomics/Illumina/NA12878HC_HLA_C.bam",
         
         // TCGA
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MCG
         //"--reads", "~/Genomics/MCG/10120_chr2_47641558_GTA_G.RG.bam",
         //"--reads", "~/Genomics/MCG/D59597_Cov3.RG.bam",
         
-        //"--caller", "cancer", // default "population"
-        //"--normal-sample", "HCC1143 BL",
+        "--caller", "cancer", // default "population"
+        "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
         "--contig-ploidies", "MT=1", "Y=1",
@@ -84,8 +84,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--use-one-based-indexing",
         
         //"--regions", "2:120,098,309-120,098,368", // NA12878 LC - GQ is too high
-        
-        "--regions", "20:30,000,000-30,001,000",
         
         //"--regions", "22:22,583,864-22,584,168", // FN
         //"--regions", "22:40,015,775-40,016,384", // FP
@@ -136,7 +134,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:46,729,130-46,730,350", // PASSing FP SNV
         //"--regions", "22:40,946,818-40,946,893", // PASSing FP SNV
         //"--regions", "22:41,607,540-41,607,580", // tricky PASSing FP SNVs
-        //"--regions", "22:42,905,833-42,905,873", // PASSing FP SNV
+        "--regions", "22:42,905,833-42,905,873", // PASSing FP SNV
         //"--regions", "22:43,410,348-43,410,423", // PASSing FP SNV
         //"--regions", "22:43,622,482-43,622,832", // PASSing FP SNV. Fixed: haplotype filtering
         //"--regions", "22:47,094,596-47,094,671", // PASSing FP SNV
@@ -239,8 +237,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-haplotypes", "50",
         //"--min-haplotype-posterior", "1e-30",
         
+        // filtering
         //"--disable-model-filtering",
-        //"--disable-call-filtering",
+        "--disable-call-filtering",
         
         //"--min-variant-posterior", "0.5",
         //"--min-refcall-posterior", "0",
