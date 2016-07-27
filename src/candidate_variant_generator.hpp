@@ -24,13 +24,14 @@ namespace Octopus {
 class CandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
-    CandidateVariantGenerator()           = default;
-    ~CandidateVariantGenerator() override = default;
+    CandidateVariantGenerator() = default;
     
     CandidateVariantGenerator(const CandidateVariantGenerator&)            = delete;
     CandidateVariantGenerator& operator=(const CandidateVariantGenerator&) = delete;
     CandidateVariantGenerator(CandidateVariantGenerator&&)                 = default;
     CandidateVariantGenerator& operator=(CandidateVariantGenerator&&)      = default;
+    
+    ~CandidateVariantGenerator() override = default;
     
     void register_generator(std::unique_ptr<ICandidateVariantGenerator> generator);
     
@@ -44,7 +45,7 @@ public:
     
     std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
     
-    void reserve(size_t n) override;
+    void reserve(std::size_t n) override;
     void clear() override;
     
 private:

@@ -20,18 +20,6 @@
 
 // public methods
 
-Variant::Variant(const Allele& reference, const Allele& alternative)
-:
-reference_ {reference},
-alternative_ {alternative}
-{}
-
-Variant::Variant(Allele&& reference, Allele&& alternative)
-:
-reference_ {std::move(reference)},
-alternative_ {std::move(alternative)}
-{}
-
 const GenomicRegion& Variant::mapped_region() const noexcept
 {
     return reference_.mapped_region();

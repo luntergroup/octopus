@@ -42,12 +42,13 @@ public:
     using FilterCountMap = std::unordered_map<std::string, std::size_t>;
     
     ReadFilter()  = default;
-    ~ReadFilter() = default;
     
     ReadFilter(const ReadFilter&)            = default;
     ReadFilter& operator=(const ReadFilter&) = default;
     ReadFilter(ReadFilter&&)                 = default;
     ReadFilter& operator=(ReadFilter&&)      = default;
+    
+    ~ReadFilter() = default;
     
     void register_filter(BasicFilterPtr filter);
     void register_filter(ContextFilterPtr filter);

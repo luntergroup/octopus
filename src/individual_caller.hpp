@@ -50,13 +50,13 @@ public:
     IndividualVariantCaller(CallerComponents&& components,
                             VariantCaller::CallerParameters general_parameters,
                             CallerParameters specific_parameters);
-    
-    ~IndividualVariantCaller() = default;
 
     IndividualVariantCaller(const IndividualVariantCaller&)            = delete;
     IndividualVariantCaller& operator=(const IndividualVariantCaller&) = delete;
     IndividualVariantCaller(IndividualVariantCaller&&)                 = delete;
     IndividualVariantCaller& operator=(IndividualVariantCaller&&)      = delete;
+    
+    ~IndividualVariantCaller() = default;
     
 private:
     class Latents;

@@ -14,7 +14,6 @@
 #include <cmath>
 #include <utility>
 #include <initializer_list>
-#include <mutex>
 #include <cassert>
 
 #include "mappable_algorithms.hpp"

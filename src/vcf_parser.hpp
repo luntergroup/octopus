@@ -70,7 +70,7 @@ private:
     const std::vector<std::string> samples_;
     const std::streampos first_record_pos_; // must go after header_!
     
-    void reset_vcf() const; // logically
+    void reset_vcf() const; // logically const
 };
 
 class VcfParser::RecordIterator : public IVcfReaderImpl::RecordIterator

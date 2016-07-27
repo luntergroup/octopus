@@ -108,13 +108,12 @@ bool Haplotype::contains_exact(const ContigAllele& allele) const
     if (!::contains(region_.contig_region(), allele)) return false;
     
     if (::contains(explicit_allele_region_, allele)) {
-        return has_exact_overlap(explicit_alleles_, allele, BidirectionallySortedTag {});
+        return std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele);
     }
     
     if (overlaps(explicit_allele_region_, allele) || is_indel(allele)) return false;
     
-    const auto it = std::next(std::cbegin(sequence_),
-                              begin_distance(contig_region(region_), allele));
+    auto it = std::next(std::cbegin(sequence_), begin_distance(contig_region(region_), allele));
     
     return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()), it);
 }

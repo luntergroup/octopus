@@ -33,14 +33,14 @@ public:
     explicit Phred(Q score) : score_ {score} // to convert -0.0 to +0.0
     {
         if (score_ < Q {0}) {
-            throw std::domain_error {"Phred: given negative score " + std::to_string(score)};
+            throw std::domain_error {"Phred: negative score " + std::to_string(score)};
         }
     }
     
     explicit Phred(Probability error)
     {
         if (error < Q {0}) {
-            throw std::domain_error {"Phred: given negative error probability " + std::to_string(error)};
+            throw std::domain_error {"Phred: negative error probability " + std::to_string(error)};
         }
         
         static const Q Min_probability = std::nextafter(Q {0}, Q {1});
@@ -71,7 +71,6 @@ public:
         static constexpr Q Ten {10};
         return Probability {std::pow(Ten, -score_ / Ten)};
     }
-    
 private:
     Q score_;
 };

@@ -17,6 +17,7 @@
 #include <boost/filesystem/operations.hpp>
 
 #include "aligned_read.hpp"
+#include "append.hpp"
 
 #include <iostream> // TEST
 
@@ -301,29 +302,9 @@ GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, c
 namespace
 {
     template <typename Container>
-    auto append(Container&& src, Container& dst)
-    {
-        typename Container::iterator result;
-        
-        if (dst.empty()) {
-            dst = std::move(src);
-            result = std::begin(dst);
-        } else {
-            result = dst.insert(std::end(dst),
-                                std::make_move_iterator(std::begin(src)),
-                                std::make_move_iterator(std::end(src)));
-        }
-        
-        src.clear();
-        src.shrink_to_fit();
-        
-        return result;
-    }
-    
-    template <typename Container>
     void merge_insert(Container&& src, Container& dst)
     {
-        const auto it = append(std::move(src), dst);
+        auto it = append(std::move(src), dst);
         std::inplace_merge(std::begin(dst), it, std::end(dst));
     }
 } // namespace

@@ -23,8 +23,10 @@
 #include "mappable.hpp"
 #include "reference_genome.hpp"
 
+template <typename RegionTp, typename = EnableIfRegion<RegionTp>> class BaseAllele;
+
 template <typename RegionTp>
-class BaseAllele : public Comparable<BaseAllele<RegionTp>>, public Mappable<BaseAllele<RegionTp>>
+class BaseAllele<RegionTp> : public Comparable<BaseAllele<RegionTp>>, public Mappable<BaseAllele<RegionTp>>
 {
 public:
     using SizeType     = typename RegionTp::SizeType;
@@ -39,14 +41,15 @@ public:
     template <typename T, typename S> // RegionTp=GenomicRegion
     BaseAllele(T&& contig_name, SizeType begin_pos, S&& sequence);
     
-    ~BaseAllele() = default;
-    
     BaseAllele(const BaseAllele&)            = default;
     BaseAllele& operator=(const BaseAllele&) = default;
     BaseAllele(BaseAllele&&)                 = default;
     BaseAllele& operator=(BaseAllele&&)      = default;
     
+    ~BaseAllele() = default;
+    
     const RegionTp& mapped_region() const noexcept;
+    
     const SequenceType& sequence() const noexcept;
     
     friend BaseAllele<ContigRegion> demote(BaseAllele<GenomicRegion>&&);

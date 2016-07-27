@@ -30,12 +30,12 @@ public:
     ExternalCandidateVariantGenerator(std::unique_ptr<const VcfReader> reader);
     ExternalCandidateVariantGenerator(const std::shared_ptr<const VcfReader>& reader);
     
-    ~ExternalCandidateVariantGenerator() override = default;
-    
     ExternalCandidateVariantGenerator(const ExternalCandidateVariantGenerator&)            = default;
     ExternalCandidateVariantGenerator& operator=(const ExternalCandidateVariantGenerator&) = default;
     ExternalCandidateVariantGenerator(ExternalCandidateVariantGenerator&&)                 = default;
     ExternalCandidateVariantGenerator& operator=(ExternalCandidateVariantGenerator&&)      = default;
+    
+    ~ExternalCandidateVariantGenerator() override = default;
     
     std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
     

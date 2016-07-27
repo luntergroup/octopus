@@ -2,7 +2,6 @@
 
 ## Problems
 
-- [] Duplicates calls can be emitted as calls can overlap multiple calling regions.
 - [] Cancer genotype filtering is not good.
 - [] Model filtering needs to be more selective - filters some TP when haplotypes get long.
 - [] The MaskOverlappedSegment read transformation should mask segments equally rather than masking just one.
@@ -13,7 +12,7 @@
 - [] Improve variant filtering.
 - [] Improve IndelErrorModel/SnvErrorModel and make them polymorphic.
 - [] Allow VariantCallers to parrallise algorithms - will need to pass policies.
-- [] ReadReader and VcfReader should be able to use iterators.
+- [] ReadReader should be able to use iterators.
 
 # Refactoring
 

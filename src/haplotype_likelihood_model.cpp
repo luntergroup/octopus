@@ -1,12 +1,12 @@
 //
-//  haplotype_liklihood_model.cpp
+//  haplotype_likelihood_model.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 25/09/2015.
 //  Copyright © 2015 Oxford University. All rights reserved.
 //
 
-#include "haplotype_liklihood_model.hpp"
+#include "haplotype_likelihood_model.hpp"
 
 #include <utility>
 #include <memory>
@@ -81,9 +81,9 @@ namespace
 } // namespace
 
 template <typename InputIt>
-double log_probability(const AlignedRead& read, const Haplotype& haplotype,
-                       InputIt first_mapping_position, InputIt last_mapping_position,
-                       const PairHMM::Model& model)
+double ln_probability(const AlignedRead& read, const Haplotype& haplotype,
+                      InputIt first_mapping_position, InputIt last_mapping_position,
+                      const PairHMM::Model& model)
 {
     assert(contains(haplotype, read));
     
@@ -167,21 +167,21 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model,
     this->reset(haplotype, std::move(flank_state));
 }
 
-double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read) const
+double HaplotypeLikelihoodModel::ln_probability(const AlignedRead& read) const
 {
     const static MappingPositionVector empty {};
-    return this->log_probability(read, std::cbegin(empty), std::cend(empty));
+    return this->ln_probability(read, std::cbegin(empty), std::cend(empty));
 }
 
-double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
-                                                 const MappingPositionVector& mapping_positions) const
+double HaplotypeLikelihoodModel::ln_probability(const AlignedRead& read,
+                                                const MappingPositionVector& mapping_positions) const
 {
-    return this->log_probability(read, std::cbegin(mapping_positions), std::cend(mapping_positions));
+    return this->ln_probability(read, std::cbegin(mapping_positions), std::cend(mapping_positions));
 }
 
-double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
-                                                 MappingPositionItr first_mapping_position,
-                                                 MappingPositionItr last_mapping_position) const
+double HaplotypeLikelihoodModel::ln_probability(const AlignedRead& read,
+                                                MappingPositionItr first_mapping_position,
+                                                MappingPositionItr last_mapping_position) const
 {
     if (haplotype_ == nullptr) {
         throw std::runtime_error {"HaplotypeLikelihoodModel: no buffered Haplotype"};
@@ -204,8 +204,8 @@ double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
         model.rhs_flank_size = 0;
     }
     
-    return Octopus::log_probability(read, *haplotype_,
-                                    first_mapping_position, last_mapping_position,
-                                    model);
+    return Octopus::ln_probability(read, *haplotype_,
+                                   first_mapping_position, last_mapping_position,
+                                   model);
 }
 } // namespace Octopus

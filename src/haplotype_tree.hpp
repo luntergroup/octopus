@@ -37,12 +37,12 @@ public:
     
     HaplotypeTree(const ContigNameType& contig, const ReferenceGenome& reference);
     
-    ~HaplotypeTree() = default;
-    
     HaplotypeTree(const HaplotypeTree&);
     HaplotypeTree& operator=(HaplotypeTree);
     HaplotypeTree(HaplotypeTree&&)            = default;
     HaplotypeTree& operator=(HaplotypeTree&&) = default;
+    
+    ~HaplotypeTree() = default;
     
     bool empty() const noexcept;
     unsigned num_haplotypes() const noexcept;
@@ -51,9 +51,11 @@ public:
     
     bool is_unique(const Haplotype& haplotype) const;
     
+    // Only extends existing leafs
     HaplotypeTree& extend(const ContigAllele& allele);
     HaplotypeTree& extend(const Allele& allele);
     
+    // Splices into the tree wherever allele can be made a new leaf
     void splice(const ContigAllele& allele);
     void splice(const Allele& allele);
     

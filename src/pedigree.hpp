@@ -22,12 +22,13 @@ public:
     using Member = Octopus::SampleIdType;
     
     Pedigree() = default;
-    ~Pedigree() = default;
     
     Pedigree(const Pedigree&)            = default;
     Pedigree& operator=(const Pedigree&) = default;
     Pedigree(Pedigree&&)                 = default;
     Pedigree& operator=(Pedigree&&)      = default;
+    
+    ~Pedigree() = default;
     
     void add_relationship(Member parent, Member child);
     void clear();

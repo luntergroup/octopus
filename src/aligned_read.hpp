@@ -48,12 +48,12 @@ public:
         NextSegment(S&& contig_name, SizeType begin,
                     SizeType inferred_template_length, Flags data);
         
-        ~NextSegment() = default;
-        
         NextSegment(const NextSegment&)            = default;
         NextSegment& operator=(const NextSegment&) = default;
         NextSegment(NextSegment&&)                 = default;
         NextSegment& operator=(NextSegment&&)      = default;
+        
+        ~NextSegment() = default;
         
         const GenomicRegion::ContigNameType& contig_name() const;
         SizeType begin() const noexcept;
@@ -92,12 +92,12 @@ public:
                 String2_&& next_segment_contig_name, SizeType next_segment_begin,
                 SizeType inferred_template_length, const NextSegment::Flags& next_segment_flags);
     
-    ~AlignedRead() = default;
-    
     AlignedRead(const AlignedRead& other)            = default;
     AlignedRead& operator=(const AlignedRead& other) = default;
     AlignedRead(AlignedRead&&)                       = default;
     AlignedRead& operator=(AlignedRead&&)            = default;
+    
+    ~AlignedRead() = default;
     
     const ReadGroupType& read_group() const;
     const GenomicRegion& mapped_region() const noexcept;

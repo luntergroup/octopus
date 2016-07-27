@@ -30,12 +30,12 @@ public:
     
     OnlineCandidateVariantGenerator(const ReferenceGenome& reference, SizeType max_variant_size = 100);
     
-    ~OnlineCandidateVariantGenerator() override = default;
-    
     OnlineCandidateVariantGenerator(const OnlineCandidateVariantGenerator&)            = default;
     OnlineCandidateVariantGenerator& operator=(const OnlineCandidateVariantGenerator&) = default;
     OnlineCandidateVariantGenerator(OnlineCandidateVariantGenerator&&)                 = default;
     OnlineCandidateVariantGenerator& operator=(OnlineCandidateVariantGenerator&&)      = default;
+    
+    ~OnlineCandidateVariantGenerator() override = default;
     
     std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
 

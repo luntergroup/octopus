@@ -50,12 +50,12 @@ public:
                  IndicatorPolicy indicator_policy = IndicatorPolicy::IncludeNone,
                  ExtensionPolicy extension_policy = ExtensionPolicy::IncludeIfSharedWithFrontier);
     
-    ~GenomeWalker() = default;
-    
     GenomeWalker(const GenomeWalker&)            = default;
     GenomeWalker& operator=(const GenomeWalker&) = default;
     GenomeWalker(GenomeWalker&&)                 = default;
     GenomeWalker& operator=(GenomeWalker&&)      = default;
+    
+    ~GenomeWalker() = default;
     
     GenomicRegion walk(const ContigNameType& contig, const ReadMap& reads,
                        const Candidates& candidates) const;

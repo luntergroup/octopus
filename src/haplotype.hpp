@@ -63,12 +63,12 @@ public:
     Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele,
               const ReferenceGenome& reference);
     
-    ~Haplotype() = default;
-    
     Haplotype(const Haplotype&)            = default;
     Haplotype& operator=(const Haplotype&) = default;
     Haplotype(Haplotype&&)                 = default;
     Haplotype& operator=(Haplotype&&)      = default;
+    
+    ~Haplotype() = default;
     
     const GenomicRegion& mapped_region() const;
     
@@ -84,7 +84,7 @@ public:
     SizeType sequence_size(const ContigRegion& region) const;
     SizeType sequence_size(const GenomicRegion& region) const;
     
-    std::vector<Variant> difference(const Haplotype& other) const;
+    std::vector<Variant> difference(const Haplotype& other) const; // w.r.t. this
     
     std::size_t get_hash() const noexcept;
     
@@ -210,12 +210,12 @@ public:
     
     explicit Builder(const GenomicRegion& region, const ReferenceGenome& reference);
     
-    ~Builder() = default;
-    
     Builder(const Builder&)            = default;
     Builder& operator=(const Builder&) = default;
     Builder(Builder&&)                 = default;
     Builder& operator=(Builder&&)      = default;
+    
+    ~Builder() = default;
     
     void push_back(const ContigAllele& allele);
     void push_front(const ContigAllele& allele);

@@ -19,7 +19,7 @@
 #include "mappable.hpp"
 #include "mappable_algorithms.hpp"
 #include "read_utils.hpp"
-#include "haplotype_liklihood_model.hpp"
+#include "haplotype_likelihood_model.hpp"
 #include "haplotype_filter.hpp"
 #include "maths.hpp"
 
@@ -175,7 +175,7 @@ void remove_passed_candidates(MappableFlatSet<Variant>& candidates,
 }
 
 template <typename Container>
-void remove_duplicate_haplotypes(Container& haplotypes, const ReferenceGenome& reference)
+void remove_duplicates(Container& haplotypes, const ReferenceGenome& reference)
 {
     const auto n = unique_least_complex(haplotypes, Haplotype {haplotype_region(haplotypes), reference});
     if (DEBUG_MODE) {
@@ -360,7 +360,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         add_reads(reads, candidate_generator_);
         
         if (!refcalls_requested() && all_empty(reads)) {
-            if (debug_log_) stream(*debug_log_) << "No reads found in call region";
+            if (debug_log_) stream(*debug_log_) << "Stopping early as no reads found in call region";
             return result;
         }
         
@@ -369,9 +369,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     
     const auto candidate_region = calculate_candidate_region(call_region, reads, candidate_generator_);
     
-    if (debug_log_) stream(*debug_log_) << "Generating candidates in region " << candidate_region;
-    
-    auto candidates = generate_candidates(candidate_region);
+    auto candidates = generate_candidate_variants(candidate_region);
     
     if (debug_log_) debug::print_final_candidates(stream(*debug_log_), candidates);
     
@@ -437,7 +435,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             stream(*debug_log_) << "There are " << count_reads(active_reads) << " active reads";
         }
         
-        remove_duplicate_haplotypes(haplotypes, reference_);
+        remove_duplicates(haplotypes, reference_);
         
         try {
             populate(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads);
@@ -644,8 +642,10 @@ bool VariantCaller::refcalls_requested() const noexcept
     return parameters_.refcall_type != RefCallType::None;
 }
 
-MappableFlatSet<Variant> VariantCaller::generate_candidates(const GenomicRegion& region) const
+MappableFlatSet<Variant> VariantCaller::generate_candidate_variants(const GenomicRegion& region) const
 {
+    if (debug_log_) stream(*debug_log_) << "Generating candidate variants in region " << region;
+    
     auto raw_candidates = candidate_generator_.generate_candidates(region);
     
     if (debug_log_) {
@@ -752,12 +752,10 @@ void VariantCaller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
         }
     }
     
-    resume_timer(haplotype_likelihood_timer);
     haplotype_likelihoods.populate(active_reads, haplotypes, std::move(flank_state));
-    pause_timer(haplotype_likelihood_timer);
     
     if (trace_log_) {
-        debug::print_read_haplotype_liklihoods(stream(*trace_log_), haplotypes, active_reads,
+        debug::print_read_haplotype_likelihoods(stream(*trace_log_), haplotypes, active_reads,
                                                haplotype_likelihoods, -1);
     }
 }
@@ -766,10 +764,8 @@ std::vector<Haplotype>
 VariantCaller::filter(std::vector<Haplotype>& haplotypes,
                       const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    resume_timer(haplotype_fitler_timer);
     auto removed_haplotypes = filter_to_n(haplotypes, samples_, haplotype_likelihoods,
                                           parameters_.max_haplotypes);
-    pause_timer(haplotype_fitler_timer);
     
     if (debug_log_) {
         if (haplotypes.empty()) {

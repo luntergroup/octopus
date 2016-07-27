@@ -17,8 +17,8 @@
 #include "common.hpp"
 #include "haplotype.hpp"
 #include "aligned_read.hpp"
-#include "kmer_mapping.hpp"
-#include "haplotype_liklihood_model.hpp"
+#include "kmer_mapper.hpp"
+#include "haplotype_likelihood_model.hpp"
 
 namespace Octopus
 {
@@ -120,7 +120,7 @@ namespace debug
                     const HaplotypeLikelihoodCache& haplotype_likelihoods);
     
     template <typename S>
-    void print_read_haplotype_liklihoods(S&& stream,
+    void print_read_haplotype_likelihoods(S&& stream,
                                          const std::vector<Haplotype>& haplotypes,
                                          const ReadMap& reads,
                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
@@ -193,10 +193,10 @@ namespace debug
         }
     }
     
-    void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes,
-                                         const ReadMap& reads,
-                                         const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                         std::size_t n = 5);
+    void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
+                                          const ReadMap& reads,
+                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                          std::size_t n = 5);
 } // namespace debug
 } // namespace Octopus
 

@@ -30,15 +30,17 @@ namespace Octopus {
         
         RandomCandidateVariantGenerator(const ReferenceGenome& reference);
         
-        ~RandomCandidateVariantGenerator() override = default;
-        
         RandomCandidateVariantGenerator(const RandomCandidateVariantGenerator&)            = default;
         RandomCandidateVariantGenerator& operator=(const RandomCandidateVariantGenerator&) = default;
         RandomCandidateVariantGenerator(RandomCandidateVariantGenerator&&)                 = default;
         RandomCandidateVariantGenerator& operator=(RandomCandidateVariantGenerator&&)      = default;
         
-        void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) override;
-        void add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first, MappableFlatMultiSet<AlignedRead>::const_iterator last) override;
+        ~RandomCandidateVariantGenerator() override = default;
+        
+        void add_reads(std::vector<AlignedRead>::const_iterator first,
+                       std::vector<AlignedRead>::const_iterator last) override;
+        void add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
+                       MappableFlatMultiSet<AlignedRead>::const_iterator last) override;
         
         std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
         

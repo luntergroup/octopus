@@ -26,12 +26,12 @@ namespace Octopus
         
         IndelErrorModel() = default;
         
-        virtual ~IndelErrorModel() = default;
-        
         IndelErrorModel(const IndelErrorModel&)            = default;
         IndelErrorModel& operator=(const IndelErrorModel&) = default;
         IndelErrorModel(IndelErrorModel&&)                 = default;
         IndelErrorModel& operator=(IndelErrorModel&&)      = default;
+        
+        virtual ~IndelErrorModel() = default;
         
         PenaltyType evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const;
         

@@ -25,12 +25,13 @@ public:
     using ReadTransformation = std::function<void(AlignedRead&)>;
     
     ReadTransform()  = default;
-    ~ReadTransform() = default;
     
     ReadTransform(const ReadTransform&)            = default;
     ReadTransform& operator=(const ReadTransform&) = default;
     ReadTransform(ReadTransform&&)                 = default;
     ReadTransform& operator=(ReadTransform&&)      = default;
+    
+    ~ReadTransform() = default;
     
     void register_transform(ReadTransformation transform);
     

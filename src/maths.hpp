@@ -264,7 +264,7 @@ inline RealType log_multinomial_coefficient(Iterator first, Iterator last)
     std::vector<RealType> denoms(std::distance(first, last));
     std::transform(first, last, std::begin(denoms), log_factorial<RealType, IntegerType>);
     return log_factorial<RealType, IntegerType>(std::accumulate(first, last, IntegerType {0}))
-                - std::accumulate(denoms.cbegin(), denoms.cend(), RealType {0});
+            - std::accumulate(std::cbegin(denoms), std::cend(denoms), RealType {0});
 }
 
 template <typename RealType, typename Container>
@@ -307,7 +307,7 @@ inline RealType multinomial_pdf(const std::vector<IntegerType>& z, const std::ve
 template <typename RealType>
 inline RealType digamma_inv(const RealType x, const RealType epsilon = 10e-8)
 {
-    RealType l {1.0};
+    RealType l {1};
     auto y = std::exp(x);
     
     while (l > epsilon) {

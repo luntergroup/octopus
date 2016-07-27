@@ -33,6 +33,7 @@ namespace Octopus
                 using GenotypeProbabilityVector = std::vector<double>;
                 
                 Latents() = default;
+                
                 Latents(GenotypeProbabilityVector&& genotype_probabilities);
                 
                 GenotypeProbabilityVector genotype_probabilities;
@@ -42,7 +43,7 @@ namespace Octopus
             {
                 InferredLatents() = default;
                 
-                explicit InferredLatents(Latents&& posteriors, double log_evidence);
+                InferredLatents(Latents&& posteriors, double log_evidence);
                 
                 Latents posteriors;
                 double log_evidence;
@@ -53,19 +54,19 @@ namespace Octopus
             Individual(const CoalescentModel& genotype_prior_model,
                        boost::optional<Logging::DebugLogger> debug_log = boost::none);
             
-            ~Individual() = default;
-            
             Individual(const Individual&)            = delete;
             Individual& operator=(const Individual&) = delete;
             Individual(Individual&&)                 = delete;
             Individual& operator=(Individual&&)      = delete;
+            
+            ~Individual() = default;
             
             InferredLatents infer_latents(const SampleIdType& sample,
                                           const std::vector<Genotype<Haplotype>>& genotypes,
                                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
             
         private:
-            std::reference_wrapper<const CoalescentModel> genotype_prior_model_;
+            const CoalescentModel& genotype_prior_model_;
             
             mutable boost::optional<Logging::DebugLogger> debug_log_;
         };

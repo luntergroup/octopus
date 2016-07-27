@@ -27,16 +27,16 @@ namespace GenotypeModel
     class FixedPloidyGenotypeLikelihoodModel
     {
     public:
-        FixedPloidyGenotypeLikelihoodModel()  = delete;
+        FixedPloidyGenotypeLikelihoodModel() = delete;
         
         FixedPloidyGenotypeLikelihoodModel(unsigned ploidy, const HaplotypeLikelihoodCache& haplotype_likelihoods);
-        
-        ~FixedPloidyGenotypeLikelihoodModel() = default;
         
         FixedPloidyGenotypeLikelihoodModel(const FixedPloidyGenotypeLikelihoodModel&)            = default;
         FixedPloidyGenotypeLikelihoodModel& operator=(const FixedPloidyGenotypeLikelihoodModel&) = default;
         FixedPloidyGenotypeLikelihoodModel(FixedPloidyGenotypeLikelihoodModel&&)                 = default;
         FixedPloidyGenotypeLikelihoodModel& operator=(FixedPloidyGenotypeLikelihoodModel&&)      = default;
+        
+        ~FixedPloidyGenotypeLikelihoodModel() = default;
         
         double log_likelihood(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
         

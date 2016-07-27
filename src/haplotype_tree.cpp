@@ -517,8 +517,9 @@ HaplotypeTree::Vertex HaplotypeTree::find_allele_before(Vertex v, const ContigAl
 
 bool can_add_to_branch(const ContigAllele& new_allele, const ContigAllele& leaf)
 {
-    return !are_adjacent(leaf, new_allele) ||
-        !((is_insertion(leaf) && is_deletion(new_allele)) || (is_deletion(leaf) && is_insertion(new_allele)));
+    return !are_adjacent(leaf, new_allele)
+            || !((is_insertion(leaf) && is_deletion(new_allele))
+             || (is_deletion(leaf) && is_insertion(new_allele)));
 }
 
 HaplotypeTree::LeafIterator

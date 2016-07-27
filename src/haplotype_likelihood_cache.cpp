@@ -109,8 +109,8 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                
                                reset_mapping_counts(haplotype_mapping_counts);
                                
-                               return likelihood_model_.log_probability(read, first_mapping_position,
-                                                                        last_mapping_position);
+                               return likelihood_model_.ln_probability(read, first_mapping_position,
+                                                                       last_mapping_position);
                            });
             
             ++read_hash_itr;
@@ -241,12 +241,12 @@ namespace debug
         return result;
     }
     
-    void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes,
-                                         const ReadMap& reads,
-                                         const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                         const std::size_t n)
+    void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
+                                          const ReadMap& reads,
+                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                          const std::size_t n)
     {
-        print_read_haplotype_liklihoods(std::cout, haplotypes, reads, haplotype_likelihoods);
+        print_read_haplotype_likelihoods(std::cout, haplotypes, reads, haplotype_likelihoods);
     }
 } // namespace debug
 } // namespace Octopus

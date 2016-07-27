@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <chrono>
 #include <deque>
+#include <mutex>
 
 #include "common.hpp"
 #include "contig_region.hpp"

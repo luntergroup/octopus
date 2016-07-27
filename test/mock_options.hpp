@@ -38,7 +38,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
-        "--threads",
+        //"--threads",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
@@ -85,7 +85,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--regions", "2:120,098,309-120,098,368", // NA12878 LC - GQ is too high
         
-        "--regions", "1",
+        "--regions", "20:30,000,000-30,001,000",
         
         //"--regions", "22:22,583,864-22,584,168", // FN
         //"--regions", "22:40,015,775-40,016,384", // FP
@@ -240,7 +240,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-haplotype-posterior", "1e-30",
         
         //"--disable-model-filtering",
-        "--disable-call-filtering",
+        //"--disable-call-filtering",
         
         //"--min-variant-posterior", "0.5",
         //"--min-refcall-posterior", "0",

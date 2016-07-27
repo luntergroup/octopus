@@ -24,8 +24,8 @@
  basic:      key=value
  structured: TAG=<keyA=valueA,...,keyB=valueB>
  
- basic field 'key's must be unique. structured field 'TAG's may not be unique (e.g. INFO), but then there must
- be some unique 'key' within <>.
+ basic field 'key's must be unique. structured field 'TAG's may not be unique (e.g. INFO),
+ but then there must be some unique 'key' within <>.
  */
 class VcfHeader : public Equitable<VcfHeader>
 {

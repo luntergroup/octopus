@@ -36,8 +36,7 @@ using EnableIfGenotypable = std::enable_if_t<
                                 || std::is_same<T, ContigAllele>::value
                             >;
 
-template <typename MappableType, typename = EnableIfGenotypable<MappableType>>
-class Genotype;
+template <typename MappableType, typename = EnableIfGenotypable<MappableType>> class Genotype;
 
 template <typename MappableType>
 class Genotype<MappableType> : public Equitable<Genotype<MappableType>>, public Mappable<Genotype<MappableType>>
@@ -98,12 +97,12 @@ public:
     explicit Genotype(std::initializer_list<Haplotype> elements);
     explicit Genotype(std::initializer_list<std::shared_ptr<Haplotype>> elements);
     
-    ~Genotype() = default;
-    
     Genotype(const Genotype&)            = default;
     Genotype& operator=(const Genotype&) = default;
     Genotype(Genotype&&)                 = default;
     Genotype& operator=(Genotype&&)      = default;
+    
+    ~Genotype() = default;
     
     template <typename T> void emplace(T&& element);
     void emplace(const std::shared_ptr<Haplotype>& element);
@@ -281,8 +280,8 @@ template <typename T>
 void Genotype<Haplotype>::emplace(T&& haplotype)
 {
     haplotypes_.emplace_back(std::make_shared<Haplotype>(std::forward<T>(haplotype)));
-    std::inplace_merge(std::begin(haplotypes_), std::prev(std::end(haplotypes_)), std::end(haplotypes_),
-                       HaplotypePtrLess {});
+    std::inplace_merge(std::begin(haplotypes_), std::prev(std::end(haplotypes_)),
+                       std::end(haplotypes_), HaplotypePtrLess {});
 }
 
 // non-member methods
@@ -370,6 +369,7 @@ namespace detail
         
         const auto lhs_spliced_genotype = splice<MappableType>(lhs, mapped_region(rhs));
         
+        // Try to avoid sorting if possible
         if (std::is_sorted(cbegin(lhs_spliced_genotype), cend(lhs_spliced_genotype))) {
             if (std::is_sorted(cbegin(rhs), cend(rhs))) {
                 return std::equal(cbegin(rhs), cend(rhs), cbegin(lhs_spliced_genotype));
@@ -579,13 +579,17 @@ namespace detail
         using GenotypeTp = GenotypeType<Container>;
         using ResultType = std::vector<GenotypeTp>;
         
-        if (ploidy == 0 || elements.empty()) return ResultType {};
+        if (ploidy == 0 || elements.empty()) {
+            return ResultType {};
+        }
         
         const auto num_elements = static_cast<unsigned>(elements.size());
         
-        // cheaper to optimise a few simple cases
+        // optimise simple cases
         
-        if (num_elements == 1) return ResultType {GenotypeTp {ploidy, elements.front()}};
+        if (num_elements == 1) {
+            return ResultType {GenotypeTp {ploidy, elements.front()}};
+        }
         
         if (ploidy == 2) {
             switch(num_elements) {
@@ -595,11 +599,15 @@ namespace detail
             }
         }
         
-        if (ploidy == 1) return detail::generate_all_haploid_genotypes(elements);
+        if (ploidy == 1) {
+            return detail::generate_all_haploid_genotypes(elements);
+        }
         
         if (ploidy == 3 && num_elements == 2) {
             return detail::generate_all_triploid_biallelic_genotypes(elements);
         }
+        
+        // otherwise resort to general algorithm
         
         ResultType result {};
         result.reserve(num_genotypes(num_elements, ploidy));

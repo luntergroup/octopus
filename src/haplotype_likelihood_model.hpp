@@ -1,13 +1,13 @@
 //
-//  haplotypeliklihood_model.hpp
+//  haplotype_likelihood_model.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 25/09/2015.
 //  Copyright © 2015 Oxford University. All rights reserved.
 //
 
-#ifndef haplotype_liklihood_model_hpp
-#define haplotype_liklihood_model_hpp
+#ifndef haplotype_likelihood_model_hpp
+#define haplotype_likelihood_model_hpp
 
 #include <vector>
 #include <iterator>
@@ -56,26 +56,26 @@ public:
                              const Haplotype& haplotype,
                              boost::optional<FlankState> flank_state = boost::none);
     
-    ~HaplotypeLikelihoodModel() = default;
-    
     HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = default;
     HaplotypeLikelihoodModel& operator=(const HaplotypeLikelihoodModel&) = default;
     HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)                 = default;
     HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
+    
+    ~HaplotypeLikelihoodModel() = default;
     
     void reset(const Haplotype& haplotype, boost::optional<FlankState> flank_state = boost::none);
     void clear() noexcept;
     
     // ln p(read | haplotype, model)
     
-    double log_probability(const AlignedRead& read) const;
+    double ln_probability(const AlignedRead& read) const;
     
-    double log_probability(const AlignedRead& read,
-                           const MappingPositionVector& mapping_positions) const;
+    double ln_probability(const AlignedRead& read,
+                          const MappingPositionVector& mapping_positions) const;
     
-    double log_probability(const AlignedRead& read,
-                           MappingPositionItr first_mapping_position,
-                           MappingPositionItr last_mapping_position) const;
+    double ln_probability(const AlignedRead& read,
+                          MappingPositionItr first_mapping_position,
+                          MappingPositionItr last_mapping_position) const;
     
 private:
     SnvErrorModel snv_error_model_;
@@ -112,4 +112,4 @@ private:
 };
 } // namespace Octopus
 
-#endif /* haplotype_liklihood_model_hpp */
+#endif /* haplotype_likelihood_model_hpp */

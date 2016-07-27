@@ -40,15 +40,16 @@ namespace Octopus
         CoalescentModel() = delete;
         
         CoalescentModel(Haplotype reference,
-                        double snp_heterozygosity = 0.001, double indel_heterozygosity = 0.0001,
+                        double snp_heterozygosity = 0.001,
+                        double indel_heterozygosity = 0.0001,
                         unsigned max_haplotypes = 1024);
-        
-        ~CoalescentModel() = default;
         
         CoalescentModel(const CoalescentModel&)            = default;
         CoalescentModel& operator=(const CoalescentModel&) = default;
         CoalescentModel(CoalescentModel&&)                 = default;
         CoalescentModel& operator=(CoalescentModel&&)      = default;
+        
+        ~CoalescentModel() = default;
         
         void set_reference(Haplotype reference);
         

@@ -178,6 +178,8 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
                 ref_index  += op_size;
                 
                 break;
+            case CigarOperation::HARD_CLIPPED:
+                break;
         }
     }
 }

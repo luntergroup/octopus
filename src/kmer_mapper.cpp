@@ -6,7 +6,7 @@
 //  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#include "kmer_mapping.hpp"
+#include "kmer_mapper.hpp"
 
 void map_query_to_target(const KmerPerfectHashes& query, const KmerHashTable& target,
                          MappedIndexCounts& mapping_counts, std::vector<std::size_t>& result)

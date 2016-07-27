@@ -45,12 +45,12 @@ public:
     PopulationVariantCaller(CallerComponents&& components, VariantCaller::CallerParameters general_parameters,
                             CallerParameters specific_parameters);
     
-    ~PopulationVariantCaller() = default;
-    
     PopulationVariantCaller(const PopulationVariantCaller&)            = delete;
     PopulationVariantCaller& operator=(const PopulationVariantCaller&) = delete;
     PopulationVariantCaller(PopulationVariantCaller&&)                 = delete;
     PopulationVariantCaller& operator=(PopulationVariantCaller&&)      = delete;
+    
+    ~PopulationVariantCaller() = default;
     
 private:
     class Latents : public CallerLatents

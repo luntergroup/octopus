@@ -39,12 +39,12 @@ public:
                                        unsigned min_supporting_reads = 2,
                                        SizeType max_variant_size = 500);
     
-    ~AssemblerCandidateVariantGenerator() override = default;
-    
     AssemblerCandidateVariantGenerator(const AssemblerCandidateVariantGenerator&)            = default;
     AssemblerCandidateVariantGenerator& operator=(const AssemblerCandidateVariantGenerator&) = default;
     AssemblerCandidateVariantGenerator(AssemblerCandidateVariantGenerator&&)                 = default;
     AssemblerCandidateVariantGenerator& operator=(AssemblerCandidateVariantGenerator&&)      = default;
+    
+    ~AssemblerCandidateVariantGenerator() override = default;
     
     bool requires_reads() const noexcept override;
     

@@ -38,12 +38,12 @@ public:
     template <typename G, typename C>
     CancerGenotype(G&& germline_genotype, C&& somatic_element);
     
-    ~CancerGenotype() = default;
-    
     CancerGenotype(const CancerGenotype&)            = default;
     CancerGenotype& operator=(const CancerGenotype&) = default;
     CancerGenotype(CancerGenotype&&)                 = default;
     CancerGenotype& operator=(CancerGenotype&&)      = default;
+    
+    ~CancerGenotype() = default;
     
     const GenomicRegion& mapped_region() const noexcept;
     

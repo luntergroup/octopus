@@ -15,6 +15,7 @@
 #include <iterator>
 #include <utility>
 #include <iosfwd>
+#include <stdexcept>
 
 #include <boost/functional/hash.hpp>
 
@@ -36,8 +37,8 @@ public:
     
     Variant() = default;
     
-    Variant(const Allele& reference, const Allele& alternative);
-    Variant(Allele&& reference, Allele&& alternative);
+    template <typename R, typename A>
+    Variant(R&& reference, A&& alternative);
     
     template <typename GenomicRegion_, typename SequenceType1, typename SequenceType2>
     Variant(GenomicRegion_&& reference_allele_region, SequenceType1&& reference_allele,
@@ -47,12 +48,12 @@ public:
     Variant(StringType&& reference_contig_name, SizeType reference_begin,
             SequenceType1&& reference_allele, SequenceType2&& alternative_allele);
     
-    ~Variant() = default;
-    
     Variant(const Variant&)            = default;
     Variant& operator=(const Variant&) = default;
     Variant(Variant&&)                 = default;
     Variant& operator=(Variant&&)      = default;
+    
+    ~Variant() = default;
     
     const GenomicRegion& mapped_region() const noexcept;
     
@@ -62,6 +63,17 @@ public:
 private:
     Allele reference_, alternative_;
 };
+
+template <typename R, typename A>
+Variant::Variant(R&& reference, A&& alternative)
+:
+reference_ {std::forward<R>(reference)},
+alternative_ {std::forward<A>(alternative)}
+{
+    if (!is_same_region(reference_, alternative_)) {
+        throw std::logic_error {"Variant: reference & alternative alleles must define the same region"};
+    }
+}
 
 template <typename GenomicRegion_, typename SequenceType1, typename SequenceType2>
 Variant::Variant(GenomicRegion_&& ref_region, SequenceType1&& ref_sequence,

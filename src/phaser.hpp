@@ -42,12 +42,12 @@ namespace Octopus
         
         explicit Phaser(Phred<double> min_phase_score);
         
-        ~Phaser() = default;
-        
         Phaser(const Phaser&)            = default;
         Phaser& operator=(const Phaser&) = default;
         Phaser(Phaser&&)                 = default;
         Phaser& operator=(Phaser&&)      = default;
+        
+        ~Phaser() = default;
         
         boost::optional<PhaseSet> try_phase(const std::vector<Haplotype>& haplotypes,
                                             const GenotypePosteriorMap& genotype_posteriors,
@@ -90,12 +90,12 @@ namespace Octopus
         template <typename R> PhaseSet(R&& region);
         template <typename R, typename T> PhaseSet(R&& region, T&& phase_regions);
         
-        ~PhaseSet() = default;
-        
         PhaseSet(const PhaseSet&)            = default;
         PhaseSet& operator=(const PhaseSet&) = default;
         PhaseSet(PhaseSet&&)                 = default;
         PhaseSet& operator=(PhaseSet&&)      = default;
+        
+        ~PhaseSet() = default;
         
         GenomicRegion region;
         PhaseRegions phase_regions;

@@ -57,6 +57,9 @@
 #include "timing.hpp"
 
 #include "variant_call_filter.hpp"
+#include "measure.hpp"
+#include "quality_by_depth.hpp"
+#include "threshold_filter.hpp"
 #include "read_transformations.hpp"
 
 #include "timers.hpp" // BENCHMARK
@@ -878,6 +881,8 @@ void resolve_connecting_calls(std::vector<VcfRecord>& old_connecting_calls,
 
 void run_octopus_on_contig(ContigCallingComponents&& components)
 {
+    // TODO: refactor to use connection resolution developed for multithreaded version
+    
     static auto debug_log = get_debug_log();
     
     assert(!components.regions.empty());
@@ -1611,18 +1616,20 @@ void filter_calls(const GenomeCallingComponents& components)
     
     const auto read_pipe = make_filter_read_pipe(components);
     
-    const VariantCallFilter filter {components.reference(), read_pipe};
+    using CallFiltering::ThresholdVariantCallFilter;
+    using CallFiltering::Measure;
+    using CallFiltering::MeasureWrapper;
     
-    VariantCallFilter::RegionMap regions {ContigOrder {components.contigs_in_output_order()}};
+    std::vector<MeasureWrapper> measures {};
     
-    for (const auto& p : components.search_regions()) {
-        regions.emplace(std::piecewise_construct,
-                        std::forward_as_tuple(p.first),
-                        std::forward_as_tuple(std::initializer_list<GenomicRegion> {encompassing_region(p.second)}));
-                        //std::forward_as_tuple(std::cbegin(p.second), std::cend(p.second)));
-    }
+    measures.push_back(CallFiltering::make_wrapped_measure<CallFiltering::QualityByDepth>());
     
-    filter.filter(calls, filtered_calls, regions);
+    auto call_filter = std::make_unique<ThresholdVariantCallFilter>(components.reference(),
+                                                                    read_pipe,
+                                                                    std::move(measures),
+                                                                    components.read_buffer_size());
+    
+    call_filter->filter(calls, filtered_calls);
 }
 
 auto get_legacy_path(const fs::path& native)

@@ -57,12 +57,12 @@ public:
     
     VariantCaller(CallerComponents&& components, CallerParameters parameters);
     
-    virtual ~VariantCaller() = default;
-    
     VariantCaller(const VariantCaller&)            = delete;
     VariantCaller& operator=(const VariantCaller&) = delete;
     VariantCaller(VariantCaller&&)                 = delete;
     VariantCaller& operator=(VariantCaller&&)      = delete;
+    
+    virtual ~VariantCaller() = default;
     
     CallTypeSet get_call_types() const;
     
@@ -164,7 +164,7 @@ private:
     
     bool refcalls_requested() const noexcept;
     
-    MappableFlatSet<Variant> generate_candidates(const GenomicRegion& region) const;
+    MappableFlatSet<Variant> generate_candidate_variants(const GenomicRegion& region) const;
     
     HaplotypeGenerator make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
                                                 const ReadMap& reads) const;

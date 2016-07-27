@@ -56,12 +56,12 @@ public:
                        Policies policies,
                        Haplotype::SizeType min_flank_pad = 30);
     
-    ~HaplotypeGenerator() = default;
-    
     HaplotypeGenerator(const HaplotypeGenerator&)            = default;
     HaplotypeGenerator& operator=(const HaplotypeGenerator&) = default;
     HaplotypeGenerator(HaplotypeGenerator&&)                 = default;
     HaplotypeGenerator& operator=(HaplotypeGenerator&&)      = default;
+    
+    ~HaplotypeGenerator() = default;
     
     HaplotypePacket generate();
     

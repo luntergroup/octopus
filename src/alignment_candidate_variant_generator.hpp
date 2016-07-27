@@ -43,20 +43,23 @@ public:
     
     AlignmentCandidateVariantGenerator(const ReferenceGenome& reference, Options options);
     
-    ~AlignmentCandidateVariantGenerator() override = default;
-    
     AlignmentCandidateVariantGenerator(const AlignmentCandidateVariantGenerator&)            = default;
     AlignmentCandidateVariantGenerator& operator=(const AlignmentCandidateVariantGenerator&) = default;
     AlignmentCandidateVariantGenerator(AlignmentCandidateVariantGenerator&&)                 = default;
     AlignmentCandidateVariantGenerator& operator=(AlignmentCandidateVariantGenerator&&)      = default;
     
+    ~AlignmentCandidateVariantGenerator() override = default;
+    
     bool requires_reads() const noexcept override;
+    
     void add_read(const AlignedRead& read) override;
     void add_reads(std::vector<AlignedRead>::const_iterator first,
                    std::vector<AlignedRead>::const_iterator last) override;
     void add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
                    MappableFlatMultiSet<AlignedRead>::const_iterator last) override;
+    
     std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
+    
     void clear() override;
     
 private:

@@ -156,7 +156,7 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
     
     region.erase(std::remove(std::begin(region), std::end(region), ','), std::end(region));
     
-    const static std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
+    static const std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
     
     std::smatch match;
     

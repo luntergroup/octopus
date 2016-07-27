@@ -27,12 +27,12 @@ namespace Octopus
         SomaticMutationModel(const CoalescentModel& germline_model,
                              double somatic_mutation_rate = 0.00001);
         
-        ~SomaticMutationModel() = default;
-        
         SomaticMutationModel(const SomaticMutationModel&)            = default;
         SomaticMutationModel& operator=(const SomaticMutationModel&) = default;
         SomaticMutationModel(SomaticMutationModel&&)                 = default;
         SomaticMutationModel& operator=(SomaticMutationModel&&)      = default;
+        
+        ~SomaticMutationModel() = default;
         
         double evaluate(const CancerGenotype<Haplotype>& genotype) const;
         

@@ -57,9 +57,9 @@ std::vector<Variant> CandidateVariantGenerator::generate_candidates(const Genomi
     
     for (auto& generator : generators_) {
         auto generator_result = generator->generate_candidates(region); // results are sorted
-        const auto it = result.insert(std::end(result),
-                                      std::make_move_iterator(std::begin(generator_result)),
-                                      std::make_move_iterator(std::end(generator_result)));
+        auto it = result.insert(std::end(result),
+                                std::make_move_iterator(std::begin(generator_result)),
+                                std::make_move_iterator(std::end(generator_result)));
         std::inplace_merge(std::begin(result), it, std::end(result));
     }
     
@@ -68,7 +68,7 @@ std::vector<Variant> CandidateVariantGenerator::generate_candidates(const Genomi
     return result;
 }
 
-void CandidateVariantGenerator::reserve(const size_t n)
+void CandidateVariantGenerator::reserve(const std::size_t n)
 {
     for (auto& generator : generators_) {
         generator->reserve(n);
