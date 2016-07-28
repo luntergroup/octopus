@@ -26,7 +26,7 @@
 #include "maths.hpp"
 #include "type_tricks.hpp"
 
-namespace Octopus
+namespace octopus
 {
 
 namespace detail
@@ -923,7 +923,7 @@ std::vector<GenomicRegion>
 find_high_coverage_regions(const T& reads, const GenomicRegion& region,
                            const unsigned max_coverage)
 {
-    using SizeType = GenomicRegion::SizeType;
+    using Position = GenomicRegion::Position;
     
     std::vector<GenomicRegion> result {};
     
@@ -936,7 +936,7 @@ find_high_coverage_regions(const T& reads, const GenomicRegion& region,
     Iterator last {positional_coverage.cend()};
     Iterator high_range_first, high_range_last;
     
-    SizeType high_range_begin, high_range_end;
+    Position high_range_begin, high_range_end;
     
     while (current != last) {
         const auto is_high_coverage = [max_coverage] (const auto coverage) { return coverage > max_coverage; };
@@ -947,8 +947,8 @@ find_high_coverage_regions(const T& reads, const GenomicRegion& region,
         
         high_range_last = std::find_if_not(high_range_first, last, is_high_coverage);
         
-        high_range_begin = mapped_begin(region) + static_cast<SizeType>(std::distance(first, high_range_first));
-        high_range_end   = high_range_begin + static_cast<SizeType>(std::distance(high_range_first, high_range_last));
+        high_range_begin = mapped_begin(region) + static_cast<Position>(std::distance(first, high_range_first));
+        high_range_end   = high_range_begin + static_cast<Position>(std::distance(high_range_first, high_range_last));
         
         result.emplace_back(contig_name(region), high_range_begin, high_range_end);
         
@@ -1080,11 +1080,11 @@ void decompress_reads(Reads& reads)
 }
 
 // TODO
-AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::ContigNameType, AlignedRead>& reads);
+AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::ContigName, AlignedRead>& reads);
 
 // TODO
 MappableFlatMultiSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableFlatMultiSet<AlignedRead>& reads);
 
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__read_utils__) */

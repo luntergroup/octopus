@@ -23,8 +23,8 @@
 using std::cout;
 using std::endl;
 
-using Octopus::CandidateVariantGenerator;
-using Octopus::CandidateGeneratorBuilder;
+using octopus::CandidateVariantGenerator;
+using octopus::CandidateGeneratorBuilder;
 
 BOOST_AUTO_TEST_SUITE(Components)
 BOOST_AUTO_TEST_SUITE(CandidateGenerators)
@@ -93,9 +93,9 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
     
     auto reads = read_manager.fetch_reads(sample, region);
     
-    Octopus::AlignmentCandidateVariantGenerator candidate_generator {
+    octopus::AlignmentCandidateVariantGenerator candidate_generator {
         human,
-        Octopus::AlignmentCandidateVariantGenerator::Options {14}
+        octopus::AlignmentCandidateVariantGenerator::Options {14}
     };
     
     add_reads(reads, candidate_generator);
@@ -184,9 +184,9 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_
     
     auto reads = read_manager.fetch_reads(sample, region);
     
-    Octopus::AlignmentCandidateVariantGenerator candidate_generator {
+    octopus::AlignmentCandidateVariantGenerator candidate_generator {
         human,
-        Octopus::AlignmentCandidateVariantGenerator::Options {10}
+        octopus::AlignmentCandidateVariantGenerator::Options {10}
     };
     
     add_reads(reads, candidate_generator);
@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_onl
     
     const auto region = parse_region("X:10000-10500", human);
     
-    Octopus::OnlineCandidateVariantGenerator candidate_generator {human};
+    octopus::OnlineCandidateVariantGenerator candidate_generator {human};
     
     auto candidates = candidate_generator.generate_candidates(region);
     
@@ -220,7 +220,7 @@ BOOST_AUTO_TEST_CASE(ExternalCandidateVariantGenerator_gets_candidates_from_vcf)
     
     const auto human = make_reference(human_reference_fasta);
     
-    Octopus::ExternalCandidateVariantGenerator generator {sample_vcf};
+    octopus::ExternalCandidateVariantGenerator generator {sample_vcf};
     
     const auto region = parse_region("X:10,095,000-10,100,000", human);
     

@@ -13,7 +13,7 @@
 #include "read_pipe.hpp"
 #include "vcf_record.hpp"
 
-namespace Octopus
+namespace octopus
 {
     // public methods
     
@@ -21,7 +21,7 @@ namespace Octopus
 //                                                 ReadPipe& read_pipe,
 //                                                 CandidateVariantGenerator&& candidate_generator,
 //                                                 unsigned ploidy,
-//                                                 SampleIdType mother, SampleIdType father,
+//                                                 SampleName mother, SampleName father,
 //                                                 double min_variant_posterior)
 //    :
 //    //VariantCaller {reference, read_pipe, std::move(candidate_generator), RefCallType::None},
@@ -35,7 +35,7 @@ namespace Octopus
     
     namespace
     {
-        using GM = GenotypeModel::Pedigree;
+        using GM = model::Pedigree;
     } // namespace
 
-} // namespace Octopus
+} // namespace octopus

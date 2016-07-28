@@ -12,16 +12,15 @@
 #include <numeric>
 #include <tuple>
 
-namespace Octopus
+namespace octopus
 {
 namespace ReadTransforms
 {
-    CapBaseQualities::CapBaseQualities(QualityType max_quality)
-    : max_quality_ {max_quality} {}
+    CapBaseQualities::CapBaseQualities(BaseQuality max) : max_ {max} {}
     
     void CapBaseQualities::operator()(AlignedRead& read) const noexcept
     {
-        read.cap_qualities(max_quality_);
+        read.cap_qualities(max_);
     }
     
     void MaskOverlappedSegment::operator()(AlignedRead& read) const noexcept
@@ -56,7 +55,7 @@ namespace ReadTransforms
         }
     }
     
-    MaskTail::MaskTail(SizeType num_bases) : num_bases_ {num_bases} {};
+    MaskTail::MaskTail(Length num_bases) : num_bases_ {num_bases} {};
     
     void MaskTail::operator()(AlignedRead& read) const noexcept
     {
@@ -76,12 +75,12 @@ namespace ReadTransforms
         }
     }
     
-    MaskSoftClippedBoundries::MaskSoftClippedBoundries(SizeType num_bases) : num_bases_ {num_bases} {};
+    MaskSoftClippedBoundries::MaskSoftClippedBoundries(Length num_bases) : num_bases_ {num_bases} {};
     
     void MaskSoftClippedBoundries::operator()(AlignedRead& read) const noexcept
     {
         if (is_soft_clipped(read)) {
-            AlignedRead::SizeType num_front_bases, num_back_bases;
+            Length num_front_bases, num_back_bases;
             std::tie(num_front_bases, num_back_bases) = get_soft_clipped_sizes(read);
             
             if (num_front_bases > 0) {
@@ -100,14 +99,15 @@ namespace ReadTransforms
             using std::cbegin; using std::crbegin; using std::next;
             using std::accumulate; using std::min_element; using std::min;
             
-            AlignedRead::SizeType num_front_bases, num_back_bases;
+            using S = AlignedRead::NucleotideSequence::size_type;
+            
+            S num_front_bases, num_back_bases;
             
             std::tie(num_front_bases, num_back_bases) = get_soft_clipped_sizes(read);
             
             const auto& qualities = read.qualities();
             
-            using Q = AlignedRead::QualityType;
-            using S = AlignedRead::SizeType;
+            using Q = AlignedRead::BaseQuality;
             
             if (num_front_bases > 0) {
                 const auto sum = accumulate(cbegin(qualities), next(cbegin(qualities), num_front_bases), 0.0);
@@ -135,4 +135,4 @@ namespace ReadTransforms
         }
     }
 } // namespace ReadTransforms
-} // namespace Octopus
+} // namespace octopus

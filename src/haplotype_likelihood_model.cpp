@@ -19,10 +19,10 @@
 
 #include <iostream> // TEST
 
-namespace Octopus
+namespace octopus
 {
 HaplotypeLikelihoodModel::ShortHaplotypeError::ShortHaplotypeError(const Haplotype& haplotype,
-                                                                   SizeType required_extension)
+                                                                   Length required_extension)
 :
 std::runtime_error {"Haplotype is too short for alignment"},
 haplotype_ {haplotype},
@@ -34,7 +34,7 @@ const Haplotype& HaplotypeLikelihoodModel::ShortHaplotypeError::haplotype() cons
     return haplotype_;
 }
 
-HaplotypeLikelihoodModel::ShortHaplotypeError::SizeType
+HaplotypeLikelihoodModel::ShortHaplotypeError::Length
 HaplotypeLikelihoodModel::ShortHaplotypeError::required_extension() const noexcept
 {
     return required_extension_;
@@ -126,7 +126,7 @@ double ln_probability(const AlignedRead& read, const Haplotype& haplotype,
         const auto min_shift = num_out_of_range_bases(original_mapping_position, read, haplotype);
         
         if (original_mapping_position < min_shift) {
-            auto required_extension = static_cast<Haplotype::SizeType>(min_shift - original_mapping_position);
+            auto required_extension = min_shift - original_mapping_position;
             throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, required_extension};
         }
         
@@ -204,8 +204,8 @@ double HaplotypeLikelihoodModel::ln_probability(const AlignedRead& read,
         model.rhs_flank_size = 0;
     }
     
-    return Octopus::ln_probability(read, *haplotype_,
+    return octopus::ln_probability(read, *haplotype_,
                                    first_mapping_position, last_mapping_position,
                                    model);
 }
-} // namespace Octopus
+} // namespace octopus

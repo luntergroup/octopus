@@ -25,7 +25,7 @@
 
 #include "timers.hpp"
 
-namespace Octopus
+namespace octopus
 {
 // public methods
 
@@ -117,7 +117,7 @@ namespace debug
     auto find_read(const std::string& region, const std::string& cigar_str,
                    const ReadContainer& reads);
     
-    auto find_read(const SampleIdType& sample, const std::string& region,
+    auto find_read(const SampleName& sample, const std::string& region,
                    const std::string& cigar_str, const ReadMap& reads);
     
     auto find_first_read(const std::string& region, const std::string& cigar_str,
@@ -244,7 +244,7 @@ auto unwrap(std::vector<CallWrapper>&& calls)
     return result;
 }
 
-void set_phase(const SampleIdType& sample, const Phaser::PhaseSet::PhaseRegion& phase,
+void set_phase(const SampleName& sample, const Phaser::PhaseSet::PhaseRegion& phase,
                const std::vector<GenomicRegion>& call_regions, CallWrapper& call)
 {
     const auto overlapped = overlap_range(call_regions, phase.mapped_region(),
@@ -296,7 +296,7 @@ namespace
 {
     auto mapped_region(const VcfRecord& record)
     {
-        using SizeType = GenomicRegion::SizeType;
+        using SizeType = GenomicRegion::Size;
         const auto begin = record.pos() - 1;
         return GenomicRegion {record.chrom(), begin, begin + static_cast<SizeType>(record.ref().size())};
     }
@@ -1203,7 +1203,7 @@ namespace debug
                             });
     }
     
-    auto find_read(const SampleIdType& sample, const std::string& region,
+    auto find_read(const SampleName& sample, const std::string& region,
                    const std::string& cigar_str, const ReadMap& reads)
     {
         return find_read(region, cigar_str, reads.at(sample));
@@ -1222,14 +1222,14 @@ namespace debug
     double calculate_likelihood(const Haplotype& haplotype, const AlignedRead& read,
                                 HaplotypeLikelihoodModel::FlankState flank_state)
     {
-        SampleIdType test_sample {"*test-sample*"};
+        SampleName test_sample {"*test-sample*"};
         HaplotypeLikelihoodCache cache {1, {test_sample}};
         ReadContainer sample_reads {};
         sample_reads.emplace(read);
         ReadMap reads {};
         reads.emplace(test_sample, sample_reads);
         cache.populate(reads, {haplotype}, std::move(flank_state));
-        return cache.log_likelihoods(test_sample, haplotype).front();
+        return cache(test_sample, haplotype).front();
     }
     
     void run_likelihood_calculation(const std::string& haplotype_str,
@@ -1262,4 +1262,4 @@ namespace debug
         std::cout << "Likelihood = " << likelihood << std::endl;
     }
 } // namespace debug
-} // namespace Octopus
+} // namespace octopus

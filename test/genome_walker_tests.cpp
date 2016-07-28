@@ -24,8 +24,8 @@
 using std::cout;
 using std::endl;
 
-using Octopus::CandidateGeneratorBuilder;
-using Octopus::GenomeWalker;
+using octopus::CandidateGeneratorBuilder;
+using octopus::GenomeWalker;
 
 BOOST_AUTO_TEST_SUITE(Components)
 

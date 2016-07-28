@@ -24,7 +24,7 @@
 #include "contig_region.hpp"
 #include "tandem.hpp"
 
-namespace Octopus
+namespace octopus
 {
 namespace detail
 {
@@ -306,21 +306,21 @@ std::unordered_map<char, size_t> count_bases(const SequenceType& sequence)
 
 struct TandemRepeat
 {
-    using SizeType = GenomicRegion::SizeType;
+    using SizeType = GenomicRegion::Size;
     TandemRepeat() = delete;
     template <typename T>
-    TandemRepeat(T region, GenomicRegion::SizeType period)
+    TandemRepeat(T region, GenomicRegion::Size period)
     : region {std::forward<T>(region)}, period {period} {}
     
     GenomicRegion region;
-    GenomicRegion::SizeType period;
+    GenomicRegion::Size period;
 };
 
 template <typename SequenceType>
 std::vector<TandemRepeat>
 find_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
-                          GenomicRegion::SizeType min_repeat_size = 2,
-                          GenomicRegion::SizeType max_repeat_size = 10000)
+                          GenomicRegion::Size min_repeat_size = 2,
+                          GenomicRegion::Size max_repeat_size = 10000)
 {
     if (sequence.back() != 'N') {
         sequence.reserve(sequence.size() + 1);
@@ -343,8 +343,8 @@ find_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
     
     for (const auto& run : maximal_repetitions) {
         result.emplace_back(GenomicRegion {region.contig_name(),
-            static_cast<GenomicRegion::SizeType>(run.pos + offset),
-            static_cast<GenomicRegion::SizeType>(run.pos + run.length + offset)
+            static_cast<GenomicRegion::Size>(run.pos + offset),
+            static_cast<GenomicRegion::Size>(run.pos + run.length + offset)
         }, run.period);
     }
     
@@ -359,6 +359,6 @@ double gc_bias(const SequenceType& sequence)
     return static_cast<double>(gc_count) / sequence.size();
 }
 
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__sequence_utils__) */

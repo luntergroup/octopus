@@ -8,9 +8,9 @@
 
 #include "trio_genotype_model.hpp"
 
-namespace Octopus
+namespace octopus
 {
-    namespace GenotypeModel
+    namespace model
     {
         namespace {
             
@@ -23,5 +23,5 @@ namespace Octopus
             Trio::Latents result {};
             return result;
         }
-    } // namespace GenotypeModel
-} // namespace Octopus
+    } // namespace model
+} // namespace octopus

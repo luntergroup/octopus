@@ -21,9 +21,9 @@
 class AlignedRead;
 class Haplotype;
 
-namespace Octopus
+namespace octopus
 {
-    namespace GenotypeModel
+    namespace model
     {
         class Trio
         {
@@ -44,7 +44,7 @@ namespace Octopus
             const double em_epsilon_;
         };
         
-    } // namespace GenotypeModel
-} // namespace Octopus
+    } // namespace model
+} // namespace octopus
 
 #endif /* trio_genotype_model_hpp */

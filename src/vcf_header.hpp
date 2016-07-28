@@ -121,12 +121,12 @@ public:
     template <typename T, typename U, typename B, typename S>
     VcfHeader(T&& file_format, U&& samples, B&& basic_fields, S&& structured_fields);
     
-    ~VcfHeader() = default;
-    
     VcfHeader(const VcfHeader&)            = default;
     VcfHeader& operator=(const VcfHeader&) = default;
     VcfHeader(VcfHeader&&)                 = default;
     VcfHeader& operator=(VcfHeader&&)      = default;
+    
+    ~VcfHeader() = default;
     
     const ValueType& file_format() const noexcept;
     

@@ -28,7 +28,7 @@
 
 #include "mock_options.hpp"
 
-using namespace Octopus;
+using namespace octopus;
 
 int main(int argc, const char **argv)
 {

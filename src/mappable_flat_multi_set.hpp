@@ -210,7 +210,7 @@ public:
 private:
     base_t elements_;
     bool is_bidirectionally_sorted_;
-    typename RegionType<MappableType>::SizeType max_element_size_;
+    typename RegionType<MappableType>::Position max_element_size_;
 };
 
 template <typename MappableType, typename Allocator>

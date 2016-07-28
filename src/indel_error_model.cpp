@@ -16,7 +16,7 @@
 
 #include <iostream> // DEBUG
 
-namespace Octopus
+namespace octopus
 {
 
 constexpr decltype(IndelErrorModel::Homopolymer_errors_) IndelErrorModel::Homopolymer_errors_;
@@ -106,4 +106,4 @@ IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_pe
         default: return default_gap_extension_;
     }
 }
-} // namespace Octopus
+} // namespace octopus

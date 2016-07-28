@@ -11,20 +11,20 @@
 
 #include "aligned_read.hpp"
 
-namespace Octopus { namespace ReadTransforms
+namespace octopus { namespace ReadTransforms
 {
     struct CapBaseQualities
     {
-        using QualityType = AlignedRead::QualityType;
+        using BaseQuality = AlignedRead::BaseQuality;
         
         CapBaseQualities() = default;
         
-        explicit CapBaseQualities(QualityType max_quality);
+        explicit CapBaseQualities(BaseQuality max);
         
         void operator()(AlignedRead& read) const noexcept;
         
     private:
-        QualityType max_quality_;
+        BaseQuality max_;
     };
     
     struct MaskOverlappedSegment
@@ -39,16 +39,16 @@ namespace Octopus { namespace ReadTransforms
     
     struct MaskTail
     {
-        using SizeType = AlignedRead::SizeType;
+        using Length = AlignedRead::NucleotideSequence::size_type;
         
         MaskTail() = default;
         
-        explicit MaskTail(SizeType num_bases);
+        explicit MaskTail(Length num_bases);
         
         void operator()(AlignedRead& read) const noexcept;
         
     private:
-        const SizeType num_bases_;
+        const Length num_bases_;
     };
     
     struct MaskSoftClipped
@@ -58,16 +58,16 @@ namespace Octopus { namespace ReadTransforms
     
     struct MaskSoftClippedBoundries
     {
-        using SizeType = AlignedRead::SizeType;
+        using Length = AlignedRead::NucleotideSequence::size_type;
         
         MaskSoftClippedBoundries() = default;
         
-        explicit MaskSoftClippedBoundries(SizeType num_bases);
+        explicit MaskSoftClippedBoundries(Length num_bases);
         
         void operator()(AlignedRead& read) const noexcept;
         
     private:
-        const SizeType num_bases_;
+        const Length num_bases_;
     };
     
     struct QualityAdjustedSoftClippedMasker
@@ -75,6 +75,6 @@ namespace Octopus { namespace ReadTransforms
         void operator()(AlignedRead& read) const noexcept;
     };
 } // namespace ReadTransforms
-} // namespace Octopus
+} // namespace octopus
 
 #endif

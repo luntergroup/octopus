@@ -53,7 +53,7 @@ make_mappable_map(Map map)
 template <typename KeyType, typename Container>
 auto sum_region_sizes(const MappableMap<KeyType, typename Container::value_type, Container>& mappables)
 {
-    using SizeType = typename RegionType<typename Container::value_type>::SizeType;
+    using SizeType = typename RegionType<typename Container::value_type>::Position;
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [] (const auto curr, const auto& p) {
                                return curr + sum_region_sizes(p.second);

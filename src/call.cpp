@@ -10,24 +10,24 @@
 
 #include <algorithm>
 
-namespace Octopus
+namespace octopus
 {
 Phred<double> Call::quality() const noexcept
 {
     return quality_;
 }
 
-Call::GenotypeCall& Call::get_genotype_call(const SampleIdType& sample)
+Call::GenotypeCall& Call::get_genotype_call(const SampleName& sample)
 {
     return genotype_calls_.at(sample);
 }
 
-const Call::GenotypeCall& Call::get_genotype_call(const SampleIdType& sample) const
+const Call::GenotypeCall& Call::get_genotype_call(const SampleName& sample) const
 {
     return genotype_calls_.at(sample);
 }
 
-bool Call::is_phased(const SampleIdType& sample) const
+bool Call::is_phased(const SampleName& sample) const
 {
     return static_cast<bool>(genotype_calls_.at(sample).phase);
 }
@@ -40,7 +40,7 @@ bool Call::all_phased() const noexcept
                        });
 }
 
-void Call::set_phase(const SampleIdType& sample, PhaseCall phase)
+void Call::set_phase(const SampleName& sample, PhaseCall phase)
 {
     genotype_calls_.at(sample).phase = std::move(phase);
 }
@@ -69,7 +69,7 @@ void Call::replace(const char old_base, const char replacement_base)
             
             std::for_each(it, std::cend(called_genotype),
                           [&new_genotype, old_base, replacement_base] (const Allele& allele) {
-                              Allele::SequenceType new_sequence {};
+                              Allele::NucleotideSequence new_sequence {};
                               
                               const auto& old_sequence = allele.sequence();
                               
@@ -96,4 +96,4 @@ boost::optional<double> Call::dummy_model_posterior() const noexcept
 {
     return dummy_model_posterior_;
 }
-} // namespace Octopus
+} // namespace octopus

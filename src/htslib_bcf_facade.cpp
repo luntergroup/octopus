@@ -377,8 +377,8 @@ void HtslibBcfFacade::write(const VcfHeader& header)
 void set_chrom(const bcf_hdr_t* header, bcf1_t* record, const std::string& chrom);
 void set_pos(bcf1_t* record, VcfRecord::SizeType pos);
 void set_id(bcf1_t* record, const std::string& id);
-void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::SequenceType& ref,
-                 const std::vector<VcfRecord::SequenceType>& alts);
+void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::NucleotideSequence& ref,
+                 const std::vector<VcfRecord::NucleotideSequence>& alts);
 void set_qual(bcf1_t* record, VcfRecord::QualityType qual);
 void set_filter(const bcf_hdr_t* header, bcf1_t* record, const std::vector<std::string>& filters);
 void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source);
@@ -533,8 +533,8 @@ void extract_ref(const bcf1_t* record, VcfRecord::Builder& builder)
     builder.set_ref(record->d.allele[0]);
 }
 
-void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::SequenceType& ref,
-                 const std::vector<VcfRecord::SequenceType>& alts)
+void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::NucleotideSequence& ref,
+                 const std::vector<VcfRecord::NucleotideSequence>& alts)
 {
     const auto num_alleles = alts.size() + 1;
     
@@ -552,7 +552,7 @@ void extract_alt(const bcf1_t* record, VcfRecord::Builder& builder)
 {
     const auto num_alleles = record->n_allele;
     
-    std::vector<VcfRecord::SequenceType> alleles {};
+    std::vector<VcfRecord::NucleotideSequence> alleles {};
     alleles.reserve(num_alleles - 1); // first is the reference
     
     for (unsigned i {1}; i < num_alleles; ++i) {
@@ -758,7 +758,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
         const auto max_ploidy = record->d.fmt->n;
         
         for (unsigned sample {0}, i {0}; sample < num_samples; ++sample, i += max_ploidy) {
-            std::vector<VcfRecord::SequenceType> alleles {};
+            std::vector<VcfRecord::NucleotideSequence> alleles {};
             alleles.reserve(max_ploidy);
             
             for (unsigned p {0}; p < max_ploidy; ++p) {
@@ -890,7 +890,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     if (*first_format == "GT") {
         const auto& alt_alleles = source.alt();
         
-        std::vector<VcfRecord::SequenceType> alleles {};
+        std::vector<VcfRecord::NucleotideSequence> alleles {};
         alleles.reserve(alt_alleles.size() + 1);
         
         alleles.push_back(source.ref());

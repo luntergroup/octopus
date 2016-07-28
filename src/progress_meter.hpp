@@ -21,7 +21,7 @@
 #include "mappable_flat_set.hpp"
 #include "logging.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class ProgressMeter
     {
@@ -48,9 +48,9 @@ namespace Octopus
         void log_completed(const GenomicRegion& region);
         
     private:
-        using RegionSizeType = ContigRegion::SizeType;
+        using RegionSizeType = ContigRegion::Position;
         
-        using ContigRegionMap = MappableSetMap<ContigNameType, ContigRegion>;
+        using ContigRegionMap = MappableSetMap<ContigName, ContigRegion>;
         
         using DurationUnits = std::chrono::milliseconds;
         
@@ -86,6 +86,6 @@ namespace Octopus
         std::string time_taken_pad(const std::string& time_taken) const;
         std::string ttc_pad(const std::string& ttc) const;
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* progress_meter_hpp */

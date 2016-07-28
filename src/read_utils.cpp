@@ -8,12 +8,12 @@
 
 #include "read_utils.hpp"
 
-namespace Octopus
+namespace octopus
 {
 
 // TODO
 AlignedRead find_next_segment(const AlignedRead& read,
-                              const MappableMap<GenomicRegion::ContigNameType, AlignedRead>& reads)
+                              const MappableMap<GenomicRegion::ContigName, AlignedRead>& reads)
 {
     if (!read.has_other_segment()) {
         throw std::runtime_error {"cannot find next segment as read is not chimeric"};
@@ -30,4 +30,4 @@ MappableFlatMultiSet<AlignedRead> find_chimeras(const AlignedRead& read, const M
     return MappableFlatMultiSet<AlignedRead> {};
 }
 
-} // namespace Octopus
+} // namespace octopus

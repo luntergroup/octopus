@@ -67,21 +67,21 @@ std::string Fasta::do_fetch_reference_name() const
     return fasta_path_.stem().string();
 }
 
-std::vector<Fasta::ContigNameType> Fasta::do_fetch_contig_names() const
+std::vector<Fasta::ContigName> Fasta::do_fetch_contig_names() const
 {
     return bioio::read_fasta_index_contig_names(fasta_index_path_.string());
 }
 
-Fasta::SizeType Fasta::do_fetch_contig_size(const ContigNameType& contig) const
+Fasta::GenomicSize Fasta::do_fetch_contig_size(const ContigName& contig) const
 {
     if (fasta_index_.count(contig) == 0) {
         throw std::runtime_error {"contig \"" + contig +
             "\" not found in fasta index \"" + fasta_index_path_.string() + "\""};
     }
-    return static_cast<SizeType>(fasta_index_.at(contig).length);
+    return static_cast<GenomicSize>(fasta_index_.at(contig).length);
 }
 
-Fasta::SequenceType Fasta::do_fetch_sequence(const GenomicRegion& region) const
+Fasta::GeneticSequence Fasta::do_fetch_sequence(const GenomicRegion& region) const
 {
     return bioio::read_fasta_contig(fasta_, fasta_index_.at(contig_name(region)),
                                     mapped_begin(region), size(region));

@@ -10,7 +10,7 @@
 
 #include "string_utils.hpp"
 
-namespace Octopus
+namespace octopus
 {
     void SomaticCall::decorate(VcfRecord::Builder& record) const
     {
@@ -23,12 +23,12 @@ namespace Octopus
         for (const auto& p : credible_regions_) {
             if (p.second.somatic) {
                 record.set_format(p.first, "SCR", {
-                    Octopus::to_string(p.second.somatic->first, 2),
-                    Octopus::to_string(p.second.somatic->second, 2)
+                    octopus::to_string(p.second.somatic->first, 2),
+                    octopus::to_string(p.second.somatic->second, 2)
                 });
             } else {
                 record.set_format(p.first, "SCR", {"0", "0"});
             }
         }
     }
-} // namespace Octopus
+} // namespace octopus

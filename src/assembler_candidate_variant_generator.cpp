@@ -27,22 +27,19 @@
 
 #include "timers.hpp"
 
-namespace Octopus
+namespace octopus
 {
 AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
-                                                                       std::vector<unsigned> kmer_sizes,
-                                                                       QualityType mask_threshold,
-                                                                       unsigned min_supporting_reads,
-                                                                       SizeType max_variant_size)
+                                                                       Options options)
 :
 reference_ {reference},
-default_kmer_sizes_ {kmer_sizes},
+default_kmer_sizes_ {std::move(options.kmer_sizes)},
 fallback_kmer_sizes_ {},
 bin_size_ {1000},
 bins_ {},
-mask_threshold_ {mask_threshold},
-min_supporting_reads_ {min_supporting_reads},
-max_variant_size_ {max_variant_size}
+mask_threshold_ {options.mask_threshold},
+min_supporting_reads_ {options.min_supporting_reads},
+max_variant_size_ {options.max_variant_size}
 {
     using std::begin; using std::end;
     
@@ -83,7 +80,7 @@ void AssemblerCandidateVariantGenerator::Bin::insert(const AlignedRead& read)
     read_sequences.emplace_back(read.sequence());
 }
 
-void AssemblerCandidateVariantGenerator::Bin::insert(const SequenceType& sequence)
+void AssemblerCandidateVariantGenerator::Bin::insert(const NucleotideSequence& sequence)
 {
     read_sequences.emplace_back(sequence);
 }
@@ -104,7 +101,7 @@ bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
     return true;
 }
 
-bool has_low_quality_match(const AlignedRead& read, const AlignedRead::QualityType good_quality)
+bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuality good_quality)
 {
     if (good_quality == 0) return false;
     auto quality_itr = std::cbegin(read.qualities());
@@ -136,7 +133,7 @@ namespace
         return result;
     }
     
-    bool is_match(const CigarOperation::FlagType op)
+    bool is_match(const CigarOperation::Flag op)
     {
         switch (op) {
             case CigarOperation::ALIGNMENT_MATCH:
@@ -147,9 +144,9 @@ namespace
     }
 }
 
-AlignedRead::SequenceType
+AlignedRead::NucleotideSequence
 transform_low_quality_matches_to_reference(const AlignedRead& read,
-                                           const AlignedRead::QualityType min_quality,
+                                           const AlignedRead::BaseQuality min_quality,
                                            const ReferenceGenome& reference)
 {
     auto result = read.sequence();
@@ -458,13 +455,13 @@ std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
             }
             case CigarOperation::INSERTION:
             {
-                result.emplace_back(pos, "", Assembler::SequenceType {alt_it, std::next(alt_it, op.size())});
+                result.emplace_back(pos, "", Assembler::NucleotideSequence {alt_it, std::next(alt_it, op.size())});
                 alt_it += op.size();
                 break;
             }
             case CigarOperation::DELETION:
             {
-                result.emplace_back(pos, Assembler::SequenceType {ref_it, std::next(ref_it, op.size())}, "");
+                result.emplace_back(pos, Assembler::NucleotideSequence {ref_it, std::next(ref_it, op.size())}, "");
                 pos += op.size();
                 ref_it += op.size();
                 break;
@@ -555,7 +552,7 @@ bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size, 
 }
 
 bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assembler,
-                                                             const SequenceType& reference_sequence,
+                                                             const NucleotideSequence& reference_sequence,
                                                              const GenomicRegion& reference_region,
                                                              std::deque<Variant>& result) const
 {
@@ -578,4 +575,4 @@ bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assemble
     return true;
 }
 
-} // namespace Octopus
+} // namespace octopus

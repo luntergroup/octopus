@@ -18,7 +18,7 @@
 #include "genotype.hpp"
 #include "variant.hpp"
 
-namespace Octopus
+namespace octopus
 {
     const GenomicRegion& VariantCall::mapped_region() const noexcept
     {
@@ -50,7 +50,7 @@ namespace Octopus
         Allele new_ref, new_alt;
         
         if (it1 != std::cend(ref_seq)) {
-            Allele::SequenceType new_sequence {};
+            Allele::NucleotideSequence new_sequence {};
             new_sequence.reserve(ref_seq.size());
             
             new_sequence.insert(std::end(new_sequence), std::cbegin(ref_seq), it1);
@@ -64,7 +64,7 @@ namespace Octopus
         }
         
         if (it2 != std::cend(alt_seq)) {
-            Allele::SequenceType new_sequence {};
+            Allele::NucleotideSequence new_sequence {};
             new_sequence.reserve(alt_seq.size());
             
             new_sequence.insert(std::end(new_sequence), std::cbegin(alt_seq), it2);
@@ -89,7 +89,8 @@ namespace Octopus
         }
     }
     
-    bool matches(const Allele::SequenceType& lhs, const Allele::SequenceType& rhs, const char ignoring)
+    bool matches(const Allele::NucleotideSequence& lhs, const Allele::NucleotideSequence& rhs,
+                 const char ignoring)
     {
         auto it = std::mismatch(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs),
                                 [ignoring] (const auto a, const auto b) {
@@ -269,4 +270,4 @@ namespace Octopus
                                return contains(p.second.genotype, variant_);
                            });
     }
-} // namespace Octopus
+} // namespace octopus

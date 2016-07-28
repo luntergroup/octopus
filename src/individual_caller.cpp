@@ -36,7 +36,7 @@
 
 #include "timers.hpp"
 
-namespace Octopus
+namespace octopus
 {
 IndividualVariantCaller::IndividualVariantCaller(CallerComponents&& components,
                                                  VariantCaller::CallerParameters general_parameters,
@@ -57,7 +57,7 @@ IndividualVariantCaller::CallTypeSet IndividualVariantCaller::do_get_call_types(
 
 // IndividualVariantCaller::Latents public methods
 
-IndividualVariantCaller::Latents::Latents(const SampleIdType& sample,
+IndividualVariantCaller::Latents::Latents(const SampleName& sample,
                                           const std::vector<Haplotype>& haplotypes,
                                           std::vector<Genotype<Haplotype>>&& genotypes,
                                           ModelInferences&& inferences)
@@ -123,7 +123,7 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     const auto prior_model = make_prior_model(haplotypes);
     
-    const GenotypeModel::Individual model {prior_model, debug_log_};
+    const model::Individual model {prior_model, debug_log_};
     
     auto inferences = model.infer_latents(sample(), genotypes, haplotype_likelihoods);
     
@@ -162,17 +162,17 @@ IndividualVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplo
     
     const auto prior_model = make_prior_model(haplotypes);
     
-    const GenotypeModel::Individual model {prior_model, debug_log_};
+    const model::Individual model {prior_model, debug_log_};
     
     const auto inferences = model.infer_latents(sample(), genotypes, haplotype_likelihoods);
     
-    return ::Octopus::calculate_dummy_model_posterior(latents.model_log_evidence_,
+    return ::octopus::calculate_dummy_model_posterior(latents.model_log_evidence_,
                                                       inferences.log_evidence);
 }
 
 namespace
 {
-using GM = GenotypeModel::Individual;
+using GM = model::Individual;
 
 using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
 
@@ -296,19 +296,19 @@ GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
 
 // output
 
-Octopus::VariantCall::GenotypeCall convert(GenotypeCall&& call)
+octopus::VariantCall::GenotypeCall convert(GenotypeCall&& call)
 {
-    return Octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
+    return octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
 }
 
-std::unique_ptr<Octopus::VariantCall>
-transform_call(const SampleIdType& sample, VariantCall&& variant_call, GenotypeCall&& genotype_call)
+std::unique_ptr<octopus::VariantCall>
+transform_call(const SampleName& sample, VariantCall&& variant_call, GenotypeCall&& genotype_call)
 {
-    std::vector<std::pair<SampleIdType, Call::GenotypeCall>> tmp {
+    std::vector<std::pair<SampleName, Call::GenotypeCall>> tmp {
         std::make_pair(sample, convert(std::move(genotype_call)))
     };
     
-    std::unique_ptr<Octopus::VariantCall> result {
+    std::unique_ptr<octopus::VariantCall> result {
         std::make_unique<GermlineVariantCall>(variant_call.variant.get(), std::move(tmp),
                                               variant_call.posterior)
     };
@@ -316,10 +316,10 @@ transform_call(const SampleIdType& sample, VariantCall&& variant_call, GenotypeC
     return result;
 }
 
-auto transform_calls(const SampleIdType& sample, VariantCalls&& variant_calls,
+auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
                      GenotypeCalls&& genotype_calls)
 {
-    std::vector<std::unique_ptr<Octopus::VariantCall>> result {};
+    std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     result.reserve(variant_calls.size());
     
     std::transform(std::make_move_iterator(std::begin(variant_calls)),
@@ -334,7 +334,7 @@ auto transform_calls(const SampleIdType& sample, VariantCalls&& variant_calls,
 }
 } // namespace
 
-std::vector<std::unique_ptr<Octopus::VariantCall>>
+std::vector<std::unique_ptr<octopus::VariantCall>>
 IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const CallerLatents& latents) const
 {
@@ -353,7 +353,7 @@ namespace debug
              boost::optional<Logging::DebugLogger>& debug_log);
 } // namespace debug
 
-std::vector<std::unique_ptr<Octopus::VariantCall>>
+std::vector<std::unique_ptr<octopus::VariantCall>>
 IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const Latents& latents) const
 {
@@ -458,7 +458,7 @@ IndividualVariantCaller::call_reference(const std::vector<Allele>& alleles, cons
     return {};
 }
 
-const SampleIdType& IndividualVariantCaller::sample() const noexcept
+const SampleName& IndividualVariantCaller::sample() const noexcept
 {
     return samples_.front();
 }
@@ -576,4 +576,4 @@ namespace debug
         }
     }
 } // namespace debug
-} // namespace Octopus
+} // namespace octopus

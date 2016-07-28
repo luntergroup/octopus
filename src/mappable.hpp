@@ -138,12 +138,12 @@ auto is_empty_region(const Mappable<T>& mappable)
     return is_empty(static_cast<const T&>(mappable).mapped_region());
 }
 
-inline ContigRegion::SizeType region_size(const ContigRegion& region) noexcept
+inline auto region_size(const ContigRegion& region) noexcept
 {
     return size(region);
 }
 
-inline GenomicRegion::SizeType region_size(const GenomicRegion& region) noexcept
+inline auto region_size(const GenomicRegion& region) noexcept
 {
     return size(region);
 }
@@ -897,7 +897,7 @@ auto closed_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 }
 
 template <typename T>
-auto head_region(const Mappable<T>& mappable, const GenomicRegion::SizeType n = 0)
+auto head_region(const Mappable<T>& mappable, const GenomicRegion::Size n = 0)
 {
     return head_region(static_cast<const T&>(mappable).mapped_region(), n);
 }
@@ -909,7 +909,7 @@ auto head_position(const Mappable<T>& mappable)
 }
 
 template <typename T>
-auto tail_region(const Mappable<T>& mappable, const GenomicRegion::SizeType n = 0)
+auto tail_region(const Mappable<T>& mappable, const GenomicRegion::Size n = 0)
 {
     return tail_region(static_cast<const T&>(mappable).mapped_region(), n);
 }

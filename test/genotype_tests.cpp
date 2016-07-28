@@ -394,7 +394,7 @@ BOOST_AUTO_TEST_CASE(extract_all_elements_works_correctly)
     
     const std::vector<Variant> variants {variant1, variant2, variant3, variant4};
     
-    auto haplotypes = Octopus::generate_all_haplotypes(variants, human);
+    auto haplotypes = octopus::generate_all_haplotypes(variants, human);
     
     std::sort(std::begin(haplotypes), std::end(haplotypes));
     
@@ -499,7 +499,7 @@ BOOST_AUTO_TEST_CASE(splice_all_works_correctly)
     
     const std::vector<Variant> variants {variant1, variant2, variant3, variant4};
     
-    const auto haplotypes = Octopus::generate_all_haplotypes(variants, human);
+    const auto haplotypes = octopus::generate_all_haplotypes(variants, human);
     const auto genotypes  = generate_all_genotypes(haplotypes, 2);
     
     const auto allele_splices = splice_all<Allele>(genotypes, mapped_region(variant2));

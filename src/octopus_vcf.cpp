@@ -8,7 +8,7 @@
 
 #include "octopus_vcf.hpp"
 
-namespace Octopus
+namespace octopus
 {
     namespace Vcf
     {
@@ -51,4 +51,4 @@ namespace Octopus
             return result;
         }
     } // namespace Vcf
-} // namespace Octopus
+} // namespace octopus

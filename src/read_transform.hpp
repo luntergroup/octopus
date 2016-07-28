@@ -17,7 +17,7 @@
 
 #include "aligned_read.hpp"
 
-namespace Octopus
+namespace octopus
 {
 class ReadTransform
 {
@@ -82,6 +82,6 @@ void transform_reads(Container& reads, const ReadTransform& transformer)
     detail::transform_reads(reads, transformer, std::is_same<ValueType, AlignedRead> {});
 }
 
-} // namespace Octopus
+} // namespace octopus
 
 #endif

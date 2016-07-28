@@ -31,7 +31,7 @@ class GenomicRegion;
 class ReadPipe;
 class Variant;
 
-namespace Octopus
+namespace octopus
 {
 class CancerVariantCaller : public VariantCaller
 {
@@ -45,7 +45,7 @@ public:
         Phred<double> min_somatic_posterior;
         Phred<double> min_refcall_posterior;
         unsigned ploidy;
-        boost::optional<SampleIdType> normal_sample;
+        boost::optional<SampleName> normal_sample;
         double somatic_mutation_rate;
         double min_somatic_frequency;
         double credible_mass;
@@ -66,16 +66,21 @@ public:
     ~CancerVariantCaller() = default;
     
 private:
-    using GermlineModel = GenotypeModel::Individual;
-    using CNVModel      = GenotypeModel::CNV;
-    using SomaticModel  = GenotypeModel::Somatic;
+    using GermlineModel = model::Individual;
+    using CNVModel      = model::CNV;
+    using SomaticModel  = model::Somatic;
     
     class Latents;
     
-    struct ModelPosteriors
+    friend Latents;
+    
+    struct ModelProbabilities
     {
         double germline, cnv, somatic;
     };
+    
+    using ModelPriors     = ModelProbabilities;
+    using ModelPosteriors = ModelProbabilities;
     
     CallerParameters parameters_;
     
@@ -110,7 +115,7 @@ private:
     // helpers
     
     bool has_normal_sample() const noexcept;
-    const SampleIdType& normal_sample() const;
+    const SampleName& normal_sample() const;
     
     void filter(std::vector<CancerGenotype<Haplotype>>& cancer_genotypes,
                 const std::vector<Genotype<Haplotype>>& germline_genotypes,
@@ -121,8 +126,10 @@ private:
     using GermlineGenotypeProbabilityMap = std::unordered_map<GermlineGenotypeReference, double>;
     using ProbabilityVector = std::vector<double>;
     
-    CNVModel::Priors calculate_cnv_model_priors(const CoalescentModel& prior_model) const;
-    SomaticModel::Priors calculate_somatic_model_priors(const SomaticMutationModel& prior_model) const;
+    CNVModel::Priors get_cnv_model_priors(const CoalescentModel& prior_model) const;
+    SomaticModel::Priors get_somatic_model_priors(const SomaticMutationModel& prior_model) const;
+    
+    ModelPriors get_model_priors() const;
     
     ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
     
@@ -144,12 +151,13 @@ public:
     Latents() = delete;
     
     Latents(const std::vector<Haplotype>& haplotypes,
+            CancerVariantCaller::ModelPriors model_priors,
             std::vector<Genotype<Haplotype>>&& germline_genotypes,
             std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
             GermlineModel::InferredLatents&&, CNVModel::InferredLatents&&,
             SomaticModel::InferredLatents&&,
-            const std::vector<SampleIdType>& samples,
-            boost::optional<std::reference_wrapper<const SampleIdType>> normal_sample);
+            const std::vector<SampleName>& samples,
+            boost::optional<std::reference_wrapper<const SampleName>> normal_sample);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const override;
@@ -158,18 +166,20 @@ private:
     std::vector<Genotype<Haplotype>> germline_genotypes_;
     std::vector<CancerGenotype<Haplotype>> somatic_genotypes_;
     
+    CancerVariantCaller::ModelPriors model_priors_;
+    
     GermlineModel::InferredLatents germline_model_inferences_;
     CNVModel::InferredLatents cnv_model_inferences_;
     SomaticModel::InferredLatents somatic_model_inferences_;
     
     std::reference_wrapper<const std::vector<Haplotype>> haplotypes_;
     
-    std::reference_wrapper<const std::vector<SampleIdType>> samples_;
-    boost::optional<std::reference_wrapper<const SampleIdType>> normal_sample_;
+    std::reference_wrapper<const std::vector<SampleName>> samples_;
+    boost::optional<std::reference_wrapper<const SampleName>> normal_sample_;
     
     friend CancerVariantCaller;
 };
 
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__cancer_caller__) */

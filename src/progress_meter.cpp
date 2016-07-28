@@ -22,7 +22,7 @@
 #include "string_utils.hpp"
 #include "maths.hpp"
 
-namespace Octopus
+namespace octopus
 {
     namespace
     {
@@ -119,7 +119,7 @@ namespace Octopus
     
     auto percent_completed_str(const std::size_t num_bp_completed, const std::size_t num_bp_to_search)
     {
-        return Octopus::to_string(percent_completed(num_bp_completed, num_bp_to_search), 1) + '%';
+        return octopus::to_string(percent_completed(num_bp_completed, num_bp_to_search), 1) + '%';
     }
     
     std::string to_string(const TimeInterval& duration)
@@ -465,4 +465,4 @@ namespace Octopus
     {
         return std::string(16 - ttc.size(), ' ');
     }
-} // namespace Octopus
+} // namespace octopus

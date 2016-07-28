@@ -19,9 +19,9 @@
 
 #include <iostream> // TEST
 
-namespace Octopus
+namespace octopus
 {
-namespace GenotypeModel
+namespace model
 {
     static constexpr auto ln(const unsigned n)
     {
@@ -53,7 +53,7 @@ namespace GenotypeModel
     
     // ln p(read | genotype)  = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
     // ln p(reads | genotype) = sum {read in reads} ln p(read | genotype)
-    double FixedPloidyGenotypeLikelihoodModel::log_likelihood(const SampleIdType& sample,
+    double FixedPloidyGenotypeLikelihoodModel::log_likelihood(const SampleName& sample,
                                                               const Genotype<Haplotype>& genotype) const
     {
         // These cases are just for optimisation
@@ -72,23 +72,23 @@ namespace GenotypeModel
         }
     }
     
-    double FixedPloidyGenotypeLikelihoodModel::log_likelihood_haploid(const SampleIdType& sample,
+    double FixedPloidyGenotypeLikelihoodModel::log_likelihood_haploid(const SampleName& sample,
                                                                       const Genotype<Haplotype>& genotype) const
     {
-        const auto& log_likelihoods = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[0]);
+        const auto& log_likelihoods = haplotype_likelihoods_.get()(sample, genotype[0]);
         return std::accumulate(std::cbegin(log_likelihoods), std::cend(log_likelihoods), 0.0);
     }
     
-    double FixedPloidyGenotypeLikelihoodModel::log_likelihood_diploid(const SampleIdType& sample,
+    double FixedPloidyGenotypeLikelihoodModel::log_likelihood_diploid(const SampleName& sample,
                                                                       const Genotype<Haplotype>& genotype) const
     {
-        const auto& log_likelihoods1 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[0]);
+        const auto& log_likelihoods1 = haplotype_likelihoods_.get()(sample, genotype[0]);
         
         if (genotype.is_homozygous()) {
             return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), 0.0);
         }
         
-        const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
+        const auto& log_likelihoods2 = haplotype_likelihoods_.get()(sample, genotype[1]);
         
         return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                   std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
@@ -97,20 +97,20 @@ namespace GenotypeModel
                                   });
     }
     
-    double FixedPloidyGenotypeLikelihoodModel::log_likelihood_triploid(const SampleIdType& sample,
+    double FixedPloidyGenotypeLikelihoodModel::log_likelihood_triploid(const SampleName& sample,
                                                                        const Genotype<Haplotype>& genotype) const
     {
         using std::cbegin; using std::cend;
         
-        const auto& log_likelihoods1 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[0]);
+        const auto& log_likelihoods1 = haplotype_likelihoods_.get()(sample, genotype[0]);
         
         if (genotype.is_homozygous()) {
             return std::accumulate(cbegin(log_likelihoods1), cend(log_likelihoods1), 0.0);
         }
         
         if (genotype.zygosity() == 3) {
-            const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
-            const auto& log_likelihoods3 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[2]);
+            const auto& log_likelihoods2 = haplotype_likelihoods_.get()(sample, genotype[1]);
+            const auto& log_likelihoods3 = haplotype_likelihoods_.get()(sample, genotype[2]);
             return Maths::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
                                         cbegin(log_likelihoods2), cbegin(log_likelihoods3),
                                         0.0, std::plus<> {},
@@ -122,7 +122,7 @@ namespace GenotypeModel
         static const double ln2 {std::log(2)};
         
         if (genotype[0] != genotype[1]) {
-            const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
+            const auto& log_likelihoods2 = haplotype_likelihoods_.get()(sample, genotype[1]);
             return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
                                       cbegin(log_likelihoods2), 0.0, std::plus<> {},
                                       [this] (const auto a, const auto b) -> double {
@@ -130,7 +130,7 @@ namespace GenotypeModel
                                       });
         }
         
-        const auto& log_likelihoods3 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[2]);
+        const auto& log_likelihoods3 = haplotype_likelihoods_.get()(sample, genotype[2]);
         
         return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
                                   cbegin(log_likelihoods3), 0.0, std::plus<> {},
@@ -139,21 +139,21 @@ namespace GenotypeModel
                                   });
     }
     
-    double FixedPloidyGenotypeLikelihoodModel::log_likelihood_tetraploid(const SampleIdType& sample,
+    double FixedPloidyGenotypeLikelihoodModel::log_likelihood_tetraploid(const SampleName& sample,
                                                                          const Genotype<Haplotype>& genotype) const
     {
         const auto z = genotype.zygosity();
         
-        const auto& log_likelihoods1 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[0]);
+        const auto& log_likelihoods1 = haplotype_likelihoods_.get()(sample, genotype[0]);
         
         if (z == 1) {
             return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), 0.0);
         }
         
         if (z == 4) {
-            const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
-            const auto& log_likelihoods3 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[2]);
-            const auto& log_likelihoods4 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[3]);
+            const auto& log_likelihoods2 = haplotype_likelihoods_.get()(sample, genotype[1]);
+            const auto& log_likelihoods3 = haplotype_likelihoods_.get()(sample, genotype[2]);
+            const auto& log_likelihoods4 = haplotype_likelihoods_.get()(sample, genotype[3]);
             return Maths::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                         std::cbegin(log_likelihoods2), std::cbegin(log_likelihoods3),
                                         std::cbegin(log_likelihoods4), 0.0, std::plus<> {},
@@ -167,12 +167,12 @@ namespace GenotypeModel
         return 0;
     }
     
-    double FixedPloidyGenotypeLikelihoodModel::log_likelihood_polyploid(const SampleIdType& sample,
+    double FixedPloidyGenotypeLikelihoodModel::log_likelihood_polyploid(const SampleName& sample,
                                                                         const Genotype<Haplotype>& genotype) const
     {
         const auto z = genotype.zygosity();
         
-        const auto& log_likelihoods1 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[0]);
+        const auto& log_likelihoods1 = haplotype_likelihoods_.get()(sample, genotype[0]);
         
         if (z == 1) {
             return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), 0.0);
@@ -183,7 +183,7 @@ namespace GenotypeModel
             
             const auto unique_haplotypes = genotype.copy_unique_ref();
             
-            const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, unique_haplotypes.back());
+            const auto& log_likelihoods2 = haplotype_likelihoods_.get()(sample, unique_haplotypes.back());
             
             if (genotype.count(unique_haplotypes.front()) == 1) {
                 return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
@@ -200,14 +200,13 @@ namespace GenotypeModel
                                       });
         }
         
-        std::vector<std::reference_wrapper<const HaplotypeLikelihoodCache::Likelihoods>> log_likelihoods {};
+        std::vector<HaplotypeLikelihoodCache::LikelihoodVectorRef> log_likelihoods {};
         log_likelihoods.reserve(ploidy_);
         
-        std::transform(std::cbegin(genotype), std::cend(genotype),
-                       std::back_inserter(log_likelihoods),
+        std::transform(std::cbegin(genotype), std::cend(genotype), std::back_inserter(log_likelihoods),
                        [this, &sample] (const auto& haplotype)
-                            -> const HaplotypeLikelihoodCache::Likelihoods& {
-                           return haplotype_likelihoods_.get().log_likelihoods(sample, haplotype);
+                            -> const HaplotypeLikelihoodCache::LikelihoodVector& {
+                           return haplotype_likelihoods_.get()(sample, haplotype);
                        });
         
         std::vector<double> tmp(ploidy_);
@@ -228,4 +227,4 @@ namespace GenotypeModel
         return result;
     }
 }
-} // namespace Octopus
+} // namespace octopus

@@ -42,28 +42,28 @@ Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference)
     return Variant {make_reference_allele(mapped_region(alt_allele), reference), alt_allele};
 }
 
-Variant make_variant(const std::string& region_str, Variant::SequenceType alt_sequence,
+Variant make_variant(const std::string& region_str, Variant::NucleotideSequence alt_sequence,
                      const ReferenceGenome& reference)
 {
     return make_variant(Allele {parse_region(region_str, reference), std::move(alt_sequence)}, reference);
 }
 
-const Variant::SequenceType& ref_sequence(const Variant& variant)
+const Variant::NucleotideSequence& ref_sequence(const Variant& variant)
 {
     return variant.ref_allele().sequence();
 }
 
-const Variant::SequenceType& alt_sequence(const Variant& variant)
+const Variant::NucleotideSequence& alt_sequence(const Variant& variant)
 {
     return variant.alt_allele().sequence();
 }
 
-Variant::SizeType ref_sequence_size(const Variant& variant)
+Variant::NucleotideSequence::size_type  ref_sequence_size(const Variant& variant)
 {
     return sequence_size(variant.ref_allele());
 }
 
-Variant::SizeType alt_sequence_size(const Variant& variant)
+Variant::NucleotideSequence::size_type  alt_sequence_size(const Variant& variant)
 {
     return sequence_size(variant.alt_allele());
 }
@@ -170,7 +170,7 @@ std::vector<Allele> extract_intervening_reference_alleles(const std::vector<Vari
     return result;
 }
 
-auto allele_minmax(const Variant::SequenceType& lhs, const Variant::SequenceType& rhs)
+auto allele_minmax(const Variant::NucleotideSequence& lhs, const Variant::NucleotideSequence& rhs)
 {
     return std::minmax(lhs, rhs, [] (const auto& lhs, const auto& rhs) { return lhs.size() < rhs.size(); });
 }
@@ -181,17 +181,15 @@ auto count_redundant_bases(ForwardIt first1, ForwardIt last1, ForwardIt first2)
     return std::distance(first1, std::mismatch(first1, last1, first2).first);
 }
 
-template <typename SequenceType>
-auto count_redundant_front_bases(const SequenceType& smaller_sequence,
-                                 const SequenceType& larger_sequence)
+template <typename Sequence>
+auto count_redundant_front_bases(const Sequence& smaller_sequence, const Sequence& larger_sequence)
 {
     return count_redundant_bases(std::cbegin(smaller_sequence), std::cend(smaller_sequence),
                                  std::cbegin(larger_sequence));
 }
 
-template <typename SequenceType>
-auto count_redundant_back_bases(const SequenceType& smaller_sequence,
-                                const SequenceType& larger_sequence)
+template <typename Sequence>
+auto count_redundant_back_bases(const Sequence& smaller_sequence, const Sequence& larger_sequence)
 {
     return count_redundant_bases(std::crbegin(smaller_sequence), std::crend(smaller_sequence),
                                  std::crbegin(larger_sequence));
@@ -219,10 +217,10 @@ Variant trim(const Variant& v)
     const auto m2 = std::mismatch(crbegin(ref), make_reverse_iterator(m1.first),
                                   crbegin(alt), make_reverse_iterator(m1.second));
     
-    using SequenceType = Variant::SequenceType;
+    using NucleotideSequence = Variant::NucleotideSequence;
     
-    SequenceType new_ref {m1.first, m2.first.base()};
-    SequenceType new_alt {m1.second, m2.second.base()};
+    NucleotideSequence new_ref {m1.first, m2.first.base()};
+    NucleotideSequence new_alt {m1.second, m2.second.base()};
     
     const auto pad_front = std::distance(m1.first, cbegin(ref));
     const auto pad_back  = std::distance(m2.first, crbegin(ref));
@@ -270,26 +268,26 @@ bool is_left_alignable(const Variant& variant) noexcept
 
 namespace
 {
-    using AlleleSequence = std::list<Variant::SequenceType::value_type>;
-
-    auto get_alleles(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
+    using NucleotideList = std::list<char>;
+    
+    auto get_alleles(const Variant::NucleotideSequence& allele_a, const Variant::NucleotideSequence& allele_b)
     {
         const auto& alleles = allele_minmax(allele_a, allele_b);
         
-        AlleleSequence big_allele {std::cbegin(alleles.second), std::cend(alleles.second)};
-        AlleleSequence small_allele {std::cbegin(alleles.first), std::cend(alleles.first)};
+        NucleotideList big_allele {std::cbegin(alleles.second), std::cend(alleles.second)};
+        NucleotideList small_allele {std::cbegin(alleles.first), std::cend(alleles.first)};
         
         return std::make_pair(std::move(big_allele), std::move(small_allele));
     }
-
-    void prepend(const ReferenceGenome::SequenceType& src, AlleleSequence& dst)
+    
+    void prepend(const ReferenceGenome::GeneticSequence& src, NucleotideList& dst)
     {
         dst.insert(std::begin(dst), std::cbegin(src), std::cend(src));
     }
     
-    GenomicRegion extend_alleles(AlleleSequence& big_allele, AlleleSequence& small_allele,
+    GenomicRegion extend_alleles(NucleotideList& big_allele, NucleotideList& small_allele,
                                  const ReferenceGenome& reference, const GenomicRegion& current_region,
-                                 const Variant::SizeType extension_size)
+                                 const GenomicRegion::Distance extension_size)
     {
         const auto new_region = shift(current_region, -extension_size);
         
@@ -305,22 +303,19 @@ namespace
 } // namespace
 
 Variant left_align(const Variant& variant, const ReferenceGenome& reference,
-                   const Variant::SizeType extension_size)
+                   const unsigned extension_size)
 {
     using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
     using std::tie; using std::next; using std::mismatch;
     
     if (!is_left_alignable(variant)) return variant;
     
-    static_assert(sizeof(Variant::SizeType) == sizeof(GenomicRegion::SizeType),
-                  "Variant and GenomicRegion have different SizeType");
-    
-    using SizeType = Variant::SizeType;
+    using SizeType = Variant::RegionType::Size;
     
     const auto& ref_allele_sequence = ref_sequence(variant);
     const auto& alt_allele_sequence = alt_sequence(variant);
     
-    AlleleSequence big_allele {}, small_allele {};
+    NucleotideList big_allele {}, small_allele {};
     
     tie(big_allele, small_allele) = get_alleles(ref_allele_sequence, alt_allele_sequence);
     
@@ -366,8 +361,8 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     const auto new_big_allele_begin   = next(cbegin(big_allele), removable_extension);
     const auto new_small_allele_begin = next(cbegin(small_allele), removable_extension);
     
-    Variant::SequenceType new_big_allele {new_big_allele_begin, next(new_big_allele_begin, big_allele_size)};
-    Variant::SequenceType new_small_allele {new_small_allele_begin, next(new_small_allele_begin, small_allele_size)};
+    Variant::NucleotideSequence new_big_allele {new_big_allele_begin, next(new_big_allele_begin, big_allele_size)};
+    Variant::NucleotideSequence new_small_allele {new_small_allele_begin, next(new_small_allele_begin, small_allele_size)};
     
     const auto new_ref_region_begin = current_region.begin() + static_cast<SizeType>(removable_extension);
     const auto new_ref_region_end   = new_ref_region_begin + static_cast<SizeType>(ref_allele_sequence.size());
@@ -382,33 +377,32 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
 }
 
 Variant normalise(const Variant& variant, const ReferenceGenome& reference,
-                  const Variant::SizeType extension_size)
+                  const unsigned extension_size)
 {
     return make_parsimonious(left_align(variant, reference, extension_size), reference);
 }
 
-Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence)
+Variant pad_left(const Variant& variant, const Variant::NucleotideSequence& sequence)
 {
     return Variant {
-        expand_lhs(variant, static_cast<GenomicRegion::DifferenceType>(sequence.size())),
+        expand_lhs(mapped_region(variant), static_cast<GenomicRegion::Distance>(sequence.size())),
         sequence + ref_sequence(variant),
         sequence + alt_sequence(variant)
     };
 }
 
-Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence)
+Variant pad_right(const Variant& variant, const Variant::NucleotideSequence& sequence)
 {
     return Variant {
-        expand_rhs(variant, static_cast<GenomicRegion::DifferenceType>(sequence.size())),
+        expand_rhs(mapped_region(variant), static_cast<GenomicRegion::Distance>(sequence.size())),
         ref_sequence(variant) + sequence,
         alt_sequence(variant) + sequence
     };
 }
 
-Variant pad_left(const Variant& variant, const ReferenceGenome& reference,
-                 const Variant::SizeType n)
+Variant pad_left(const Variant& variant, const ReferenceGenome& reference, const unsigned n)
 {
-    const auto pad_region = expand_lhs(head_region(variant), static_cast<GenomicRegion::DifferenceType>(n));
+    const auto pad_region = expand_lhs(head_region(variant), static_cast<GenomicRegion::Distance>(n));
     
     const auto pad_sequence = reference.fetch_sequence(pad_region);
     
@@ -419,10 +413,9 @@ Variant pad_left(const Variant& variant, const ReferenceGenome& reference,
     };
 }
 
-Variant pad_right(const Variant& variant, const ReferenceGenome& reference,
-                  const Variant::SizeType n)
+Variant pad_right(const Variant& variant, const ReferenceGenome& reference, const unsigned n)
 {
-    const auto pad_region = expand_rhs(tail_region(variant), static_cast<GenomicRegion::DifferenceType>(n));
+    const auto pad_region = expand_rhs(tail_region(variant), static_cast<GenomicRegion::Distance>(n));
     
     const auto pad_sequence = reference.fetch_sequence(pad_region);
     
@@ -574,9 +567,9 @@ bool is_transversion(const Variant& variant) noexcept
     return is_snp(variant) && !is_transition(variant);
 }
 
-std::vector<Allele::SequenceType> extract_alt_allele_sequences(const std::vector<Variant>& variants)
+std::vector<Allele::NucleotideSequence> extract_alt_allele_sequences(const std::vector<Variant>& variants)
 {
-    std::vector<Allele::SequenceType> result {};
+    std::vector<Allele::NucleotideSequence> result {};
     result.reserve(variants.size());
     
     boost::transform(variants, std::back_inserter(result),

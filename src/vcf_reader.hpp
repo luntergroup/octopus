@@ -63,12 +63,12 @@ public:
     
     VcfReader(Path file_path);
     
-    ~VcfReader() = default;
-    
     VcfReader(const VcfReader&)            = delete;
     VcfReader& operator=(const VcfReader&) = delete;
     VcfReader(VcfReader&&);
     VcfReader& operator=(VcfReader&&)      = default;
+    
+    ~VcfReader() = default;
     
     friend void swap(VcfReader& lhs, VcfReader& rhs) noexcept;
     

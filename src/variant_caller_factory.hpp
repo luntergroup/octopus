@@ -20,12 +20,12 @@ class ReferenceGenome;
 class ReadPipe;
 class CandidateGeneratorBuilder;
 
-namespace Octopus
+namespace octopus
 {
     class VariantCallerFactory
     {
     public:
-        using ContigNameType = GenomicRegion::ContigNameType;
+        using ContigName = GenomicRegion::ContigName;
         
         VariantCallerFactory() = delete;
         
@@ -42,15 +42,15 @@ namespace Octopus
         VariantCallerFactory& set_read_pipe(ReadPipe& read_pipe) noexcept;
         VariantCallerFactory& set_candidate_generator_builder(const CandidateGeneratorBuilder& generator) noexcept;
         
-        VariantCallerFactory& set_contig_ploidy(const ContigNameType& contig, unsigned ploidy);
+        VariantCallerFactory& set_contig_ploidy(const ContigName& contig, unsigned ploidy);
         
-        std::unique_ptr<VariantCaller> make(const ContigNameType& contig) const;
+        std::unique_ptr<VariantCaller> make(const ContigName& contig) const;
         
     private:
         mutable VariantCallerBuilder template_builder_;
-        std::unordered_map<ContigNameType, unsigned> contig_ploidies_;
+        std::unordered_map<ContigName, unsigned> contig_ploidies_;
         unsigned default_ploidy_;
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* variant_caller_factory_hpp */

@@ -25,7 +25,7 @@
 #include "vcf_record.hpp"
 #include "reference_genome.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class Call : public Mappable<Call>
     {
@@ -73,12 +73,12 @@ namespace Octopus
         
         Phred<double> quality() const noexcept;
         
-        GenotypeCall& get_genotype_call(const SampleIdType& sample);
-        const GenotypeCall& get_genotype_call(const SampleIdType& sample) const;
+        GenotypeCall& get_genotype_call(const SampleName& sample);
+        const GenotypeCall& get_genotype_call(const SampleName& sample) const;
         
-        bool is_phased(const SampleIdType& sample) const;
+        bool is_phased(const SampleName& sample) const;
         bool all_phased() const noexcept;
-        void set_phase(const SampleIdType& sample, PhaseCall phase);
+        void set_phase(const SampleName& sample, PhaseCall phase);
         
         virtual const GenomicRegion& mapped_region() const noexcept = 0;
         
@@ -98,7 +98,7 @@ namespace Octopus
         boost::optional<double> dummy_model_posterior() const noexcept;
         
     protected:
-        std::unordered_map<SampleIdType, GenotypeCall> genotype_calls_;
+        std::unordered_map<SampleName, GenotypeCall> genotype_calls_;
         
         Phred<double> quality_;
         
@@ -131,6 +131,6 @@ namespace Octopus
     Call::GenotypeCall::GenotypeCall(G&& genotype, Phred<double> posterior, P&& phase)
     : genotype {std::forward<G>(genotype)}, posterior {posterior}, phase {std::forward<P>(phase)}
     {}
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* call_hpp */

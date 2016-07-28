@@ -17,10 +17,10 @@
 #include "common.hpp"
 #include "matrix_map.hpp"
 
-namespace Octopus
+namespace octopus
 {
     template <typename T>
-    using ProbabilityMatrix = MatrixMap<SampleIdType, T, double>;
+    using ProbabilityMatrix = MatrixMap<SampleName, T, double>;
     
     template <typename T>
     using SampleProbabilities = typename ProbabilityMatrix<T>::ZipSlice;
@@ -87,6 +87,6 @@ namespace Octopus
             insert_sample(s.first, s.second, matrix);
         }
     }
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* probability_matrix_hpp */

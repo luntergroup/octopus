@@ -25,18 +25,18 @@
 #include "logging.hpp"
 #include "individual_genotype_model.hpp"
 
-namespace Octopus
+namespace octopus
 {
-namespace GenotypeModel
+namespace model
 {
 // public methods
 
-CNV::CNV(std::vector<SampleIdType> samples, const unsigned ploidy, Priors priors)
+CNV::CNV(std::vector<SampleName> samples, const unsigned ploidy, Priors priors)
 :
 CNV {std::move(samples), ploidy, std::move(priors), AlgorithmParameters {}}
 {}
 
-CNV::CNV(std::vector<SampleIdType> samples, const unsigned ploidy, Priors priors,
+CNV::CNV(std::vector<SampleName> samples, const unsigned ploidy, Priors priors,
          AlgorithmParameters parameters)
 :
 samples_ {std::move(samples)},
@@ -66,7 +66,7 @@ namespace
     
     template <std::size_t K>
     CNV::InferredLatents
-    run_variational_bayes(const std::vector<SampleIdType>& samples,
+    run_variational_bayes(const std::vector<SampleName>& samples,
                           std::vector<Genotype<Haplotype>>&& genotypes,
                           const CNV::Priors& priors,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods,
@@ -107,16 +107,18 @@ namespace
     class ReadLikelihoods
     {
     public:
-        using BaseType = HaplotypeLikelihoodCache::Likelihoods;
+        using BaseType = HaplotypeLikelihoodCache::LikelihoodVector;
         
         ReadLikelihoods() = default;
+        
         explicit ReadLikelihoods(const BaseType&);
-        ~ReadLikelihoods() = default;
         
         ReadLikelihoods(const ReadLikelihoods&)            = default;
         ReadLikelihoods& operator=(const ReadLikelihoods&) = default;
         ReadLikelihoods(ReadLikelihoods&&)                 = default;
         ReadLikelihoods& operator=(ReadLikelihoods&&)      = default;
+        
+        ~ReadLikelihoods() = default;
         
         void operator=(const BaseType&);
         void operator=(std::reference_wrapper<const BaseType>);
@@ -182,7 +184,7 @@ namespace
     
     template <std::size_t K>
     CompressedAlphas<K> flatten_priors(const CNV::Priors& priors,
-                                       const std::vector<SampleIdType>& samples)
+                                       const std::vector<SampleName>& samples)
     {
         CompressedAlphas<K> result(samples.size());
         
@@ -196,7 +198,7 @@ namespace
     
     template <std::size_t K>
     CompressedGenotype<K>
-    compress(const Genotype<Haplotype>& genotype, const SampleIdType& sample,
+    compress(const Genotype<Haplotype>& genotype, const SampleName& sample,
              const HaplotypeLikelihoodCache& haplotype_likelihoods)
     {
         CompressedGenotype<K> result;
@@ -205,7 +207,7 @@ namespace
                        std::begin(result),
                        [&sample, &haplotype_likelihoods] (const Haplotype& haplotype)
                        -> std::reference_wrapper<const ReadLikelihoods::BaseType> {
-                           return std::cref(haplotype_likelihoods.log_likelihoods(sample, haplotype));
+                           return std::cref(haplotype_likelihoods(sample, haplotype));
                        });
         
         return result;
@@ -213,7 +215,7 @@ namespace
     
     template <std::size_t K>
     CompressedGenotypes<K>
-    compress(const std::vector<Genotype<Haplotype>>& genotypes, const SampleIdType& sample,
+    compress(const std::vector<Genotype<Haplotype>>& genotypes, const SampleName& sample,
              const HaplotypeLikelihoodCache& haplotype_likelihoods)
     {
         CompressedGenotypes<K> result(genotypes.size());
@@ -229,7 +231,7 @@ namespace
     template <std::size_t K>
     CompressedReadLikelihoods<K>
     compress(const std::vector<Genotype<Haplotype>>& genotypes,
-             const std::vector<SampleIdType>& samples,
+             const std::vector<SampleName>& samples,
              const HaplotypeLikelihoodCache& haplotype_likelihoods)
     {
         CompressedReadLikelihoods<K> result {};
@@ -692,7 +694,7 @@ namespace
                           const VariationalBayesParameters params,
                           std::vector<LogProbabilityVector> seeds)
     {
-        // Try the main algorithm from different seeds to check local optimum
+        // Try the main algorithm from the seeds to check local optimum
         
         std::vector<CompressedLatents<K>> results;
         results.reserve(seeds.size());
@@ -712,8 +714,7 @@ namespace
                                                         log_likelihoods, latents);
                        });
         
-        const auto it = std::max_element(std::cbegin(result_evidences),
-                                         std::cend(result_evidences));
+        const auto it = std::max_element(std::cbegin(result_evidences), std::cend(result_evidences));
         
         const auto idx = std::distance(std::cbegin(result_evidences), it);
         
@@ -746,7 +747,7 @@ namespace
     
     template <std::size_t K>
     CNV::Latents::GenotypeMixturesDirichletAlphaMap
-    expand(const std::vector<SampleIdType>& samples, CompressedAlphas<K>&& alphas)
+    expand(const std::vector<SampleName>& samples, CompressedAlphas<K>&& alphas)
     {
         CNV::Latents::GenotypeMixturesDirichletAlphaMap result {};
         
@@ -761,7 +762,7 @@ namespace
     
     template <std::size_t K>
     CNV::InferredLatents
-    expand(const std::vector<SampleIdType>& samples, std::vector<Genotype<Haplotype>>&& genotypes,
+    expand(const std::vector<SampleName>& samples, std::vector<Genotype<Haplotype>>&& genotypes,
            CompressedLatents<K>&& inferred_latents, double evidence)
     {
         CNV::Latents posterior_latents {
@@ -777,7 +778,7 @@ namespace
         return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
     }
     
-    auto generate_seeds(const std::vector<SampleIdType>& samples,
+    auto generate_seeds(const std::vector<SampleName>& samples,
                         const std::vector<Genotype<Haplotype>>& genotypes,
                         const LogProbabilityVector& genotype_log_priors,
                         const CNV::Priors& priors,
@@ -788,7 +789,7 @@ namespace
         result.emplace_back(genotype_log_priors);
         result.emplace_back(log_uniform_dist(genotypes.size()));
         
-        GenotypeModel::Individual germline_model {priors.genotype_prior_model};
+        model::Individual germline_model {priors.genotype_prior_model};
         
         for (const auto& sample : samples) {
             const auto latents = germline_model.infer_latents(sample, genotypes,
@@ -809,7 +810,7 @@ namespace
     
     template <std::size_t K>
     CNV::InferredLatents
-    run_variational_bayes(const std::vector<SampleIdType>& samples,
+    run_variational_bayes(const std::vector<SampleName>& samples,
                           std::vector<Genotype<Haplotype>>&& genotypes,
                           const CNV::Priors& priors,
                           const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
@@ -867,5 +868,5 @@ namespace
         return likelihoods->operator[](n);
     }
 }
-} // namespace GenotypeModel
-} // namespace Octopus
+} // namespace model
+} // namespace octopus

@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-namespace Octopus
+namespace octopus
 {
 namespace Logging
 {
@@ -90,4 +90,4 @@ namespace Logging
     }
 
 } // namespace Logging
-} // namespace Octopus
+} // namespace octopus

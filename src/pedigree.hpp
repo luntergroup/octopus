@@ -19,7 +19,7 @@
 class Pedigree
 {
 public:
-    using Member = Octopus::SampleIdType;
+    using Member = octopus::SampleName;
     
     Pedigree() = default;
     

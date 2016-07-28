@@ -23,21 +23,22 @@ class AlignedRead;
 class GenomicRegion;
 class Variant;
 
-namespace Octopus
+namespace octopus
 {
 class AssemblerCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
-    using QualityType = AlignedRead::QualityType;
-    using SizeType    = GenomicRegion::SizeType;
+    struct Options
+    {
+        std::vector<unsigned> kmer_sizes;
+        AlignedRead::BaseQuality mask_threshold = 0;
+        unsigned min_supporting_reads = 2;
+        Variant::RegionType::Size max_variant_size = 500;
+    };
     
     AssemblerCandidateVariantGenerator() = delete;
     
-    AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
-                                       std::vector<unsigned> kmer_sizes,
-                                       QualityType mask_threshold = 0,
-                                       unsigned min_supporting_reads = 2,
-                                       SizeType max_variant_size = 500);
+    AssemblerCandidateVariantGenerator(const ReferenceGenome& reference, Options options);
     
     AssemblerCandidateVariantGenerator(const AssemblerCandidateVariantGenerator&)            = default;
     AssemblerCandidateVariantGenerator& operator=(const AssemblerCandidateVariantGenerator&) = default;
@@ -59,7 +60,7 @@ public:
     void clear() override;
     
 private:
-    using SequenceType = AlignedRead::SequenceType;
+    using NucleotideSequence = AlignedRead::NucleotideSequence;
     
     struct Bin : public Mappable<Bin>
     {
@@ -68,13 +69,13 @@ private:
         const GenomicRegion& mapped_region() const noexcept;
         
         void insert(const AlignedRead& read);
-        void insert(const SequenceType& sequence);
+        void insert(const NucleotideSequence& sequence);
         
         void clear() noexcept;
         bool empty() const noexcept;
         
         GenomicRegion region;
-        std::deque<std::reference_wrapper<const SequenceType>> read_sequences;
+        std::deque<std::reference_wrapper<const NucleotideSequence>> read_sequences;
     };
     
     std::reference_wrapper<const ReferenceGenome> reference_;
@@ -82,24 +83,24 @@ private:
     std::vector<unsigned> default_kmer_sizes_;
     std::vector<unsigned> fallback_kmer_sizes_;
     
-    SizeType bin_size_;
+    ContigRegion::Size bin_size_;
     std::deque<Bin> bins_;
-    std::deque<SequenceType> masked_sequence_buffer_;
+    std::deque<NucleotideSequence> masked_sequence_buffer_;
     
-    QualityType mask_threshold_;
+    AlignedRead::BaseQuality mask_threshold_;
     unsigned min_supporting_reads_;
-    SizeType max_variant_size_;
+    Variant::RegionType::Size max_variant_size_;
     
     void prepare_bins_to_insert(const AlignedRead& read);
     
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;
     bool assemble_bin(unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const;
     bool try_assemble_region(Assembler& assembler,
-                             const SequenceType& reference_sequence,
+                             const NucleotideSequence& reference_sequence,
                              const GenomicRegion& reference_region,
                              std::deque<Variant>& result) const;
 };
 
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__assembler_candidate_variant_generator__) */

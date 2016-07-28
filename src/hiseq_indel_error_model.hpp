@@ -13,7 +13,7 @@
 
 class Haplotype;
 
-namespace Octopus
+namespace octopus
 {
     class HiSeqIndelErrorModel : public IndelErrorModel
     {
@@ -57,6 +57,6 @@ namespace Octopus
         
         static constexpr PenaltyType default_gap_extension_ = 3;
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* hiseq_indel_error_model_hpp */

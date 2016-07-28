@@ -66,7 +66,7 @@
 
 #include "genotype_reader.hpp"
 
-namespace Octopus
+namespace octopus
 {
 using Options::OptionMap;
 
@@ -98,9 +98,9 @@ auto get_contigs(const InputRegionMap& regions, const ReferenceGenome& reference
 {
     using Options::ContigOutputOrder;
     
-    using ContigNameType = GenomicRegion::ContigNameType;
+    using ContigName = GenomicRegion::ContigName;
     
-    std::vector<ContigNameType> result {};
+    std::vector<ContigName> result {};
     result.reserve(regions.size());
     
     std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(result),
@@ -111,7 +111,7 @@ auto get_contigs(const InputRegionMap& regions, const ReferenceGenome& reference
             std::sort(std::begin(result), std::end(result));
             break;
         case ContigOutputOrder::LexicographicalDescending:
-            std::sort(std::begin(result), std::end(result), std::greater<ContigNameType>());
+            std::sort(std::begin(result), std::end(result), std::greater<ContigName>());
             break;
         case ContigOutputOrder::ContigSizeAscending:
             std::sort(std::begin(result), std::end(result),
@@ -169,13 +169,13 @@ void print_input_regions(const InputRegionMap& regions)
 }
 
 template <typename Container>
-bool is_in_file_samples(const SampleIdType& sample, const Container& file_samples)
+bool is_in_file_samples(const SampleName& sample, const Container& file_samples)
 {
     return std::find(std::cbegin(file_samples), std::cend(file_samples), sample)
                 != std::cend(file_samples);
 }
 
-std::vector<SampleIdType> extract_samples(const OptionMap& options,
+std::vector<SampleName> extract_samples(const OptionMap& options,
                                           const ReadManager& read_manager)
 {
     auto user_samples = Options::get_user_samples(options);
@@ -194,7 +194,7 @@ std::vector<SampleIdType> extract_samples(const OptionMap& options,
             ss << "The requested calling sample";
             if (num_not_found > 1) ss << 's';
             ss << " ";
-            std::transform(it, std::end(*user_samples), std::ostream_iterator<SampleIdType>(ss, ", "),
+            std::transform(it, std::end(*user_samples), std::ostream_iterator<SampleName>(ss, ", "),
                            [] (auto sample) { return "'" + sample + "'"; });
             if (num_not_found == 1) {
                 ss << "is";
@@ -215,8 +215,8 @@ std::vector<SampleIdType> extract_samples(const OptionMap& options,
 
 using CallTypeSet = std::set<std::type_index>;
 
-VcfHeader make_vcf_header(const std::vector<SampleIdType>& samples,
-                          const std::vector<GenomicRegion::ContigNameType>& contigs,
+VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
+                          const std::vector<GenomicRegion::ContigName>& contigs,
                           const ReferenceGenome& reference,
                           const CallTypeSet& call_types)
 {
@@ -240,16 +240,16 @@ VcfHeader make_vcf_header(const std::vector<SampleIdType>& samples,
     return builder.build_once();
 }
 
-VcfHeader make_vcf_header(const std::vector<SampleIdType>& samples,
-                          const GenomicRegion::ContigNameType& contig,
+VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
+                          const GenomicRegion::ContigName& contig,
                           const ReferenceGenome& reference,
                           const CallTypeSet& call_types)
 {
-    return make_vcf_header(samples, std::vector<GenomicRegion::ContigNameType> {contig},
+    return make_vcf_header(samples, std::vector<GenomicRegion::ContigName> {contig},
                            reference, call_types);
 }
 
-ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleIdType> samples,
+ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
                         const OptionMap& options)
 {
     return ReadPipe {
@@ -279,13 +279,13 @@ auto estimate_read_size(const AlignedRead& read)
     return sizeof(AlignedRead)
         // Now the dynamically allocated bits
         + sequence_size(read) * sizeof(char)
-        + sequence_size(read) * sizeof(AlignedRead::QualityType)
+        + sequence_size(read) * sizeof(AlignedRead::BaseQuality)
         + read.cigar_string().size() * sizeof(CigarOperation)
         + contig_name(read).size()
         + (read.has_other_segment() ? sizeof(AlignedRead::NextSegment) : 0);
 }
 
-auto estimate_mean_read_size(const std::vector<SampleIdType>& samples,
+auto estimate_mean_read_size(const std::vector<SampleName>& samples,
                              const InputRegionMap& input_regions,
                              ReadManager& read_manager,
                              unsigned max_sample_size = 1000)
@@ -326,7 +326,7 @@ auto estimate_mean_read_size(const std::vector<SampleIdType>& samples,
 }
 
 std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes,
-                                    const std::vector<SampleIdType>& samples,
+                                    const std::vector<SampleName>& samples,
                                     const InputRegionMap& input_regions,
                                     ReadManager& read_manager)
 {
@@ -339,8 +339,8 @@ std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes,
 class GenomeCallingComponents
 {
 public:
-    using Samples = std::vector<SampleIdType>;
-    using Contigs = std::vector<GenomicRegion::ContigNameType>;
+    using Samples = std::vector<SampleName>;
+    using Contigs = std::vector<GenomicRegion::ContigName>;
     
     GenomeCallingComponents() = delete;
     
@@ -598,7 +598,7 @@ struct ContigCallingComponents
     std::reference_wrapper<const ReferenceGenome> reference;
     std::reference_wrapper<ReadManager> read_manager;
     const InputRegionMap::mapped_type regions;
-    std::reference_wrapper<const std::vector<SampleIdType>> samples;
+    std::reference_wrapper<const std::vector<SampleName>> samples;
     std::unique_ptr<const VariantCaller> caller;
     std::size_t read_buffer_size;
     std::reference_wrapper<VcfWriter> output;
@@ -606,7 +606,7 @@ struct ContigCallingComponents
     
     ContigCallingComponents() = delete;
     
-    ContigCallingComponents(const GenomicRegion::ContigNameType& contig,
+    ContigCallingComponents(const GenomicRegion::ContigName& contig,
                             GenomeCallingComponents& genome_components)
     :
     reference {genome_components.reference()},
@@ -619,7 +619,7 @@ struct ContigCallingComponents
     progress_meter {genome_components.progress_meter()}
     {}
     
-    ContigCallingComponents(const GenomicRegion::ContigNameType& contig, VcfWriter& output,
+    ContigCallingComponents(const GenomicRegion::ContigName& contig, VcfWriter& output,
                             GenomeCallingComponents& genome_components)
     :
     reference {genome_components.reference()},
@@ -646,7 +646,7 @@ bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
 }
 
 auto get_call_types(const GenomeCallingComponents& components,
-                    const std::vector<ContigNameType>& contigs)
+                    const std::vector<ContigName>& contigs)
 {
     CallTypeSet result {};
     
@@ -766,7 +766,7 @@ namespace
     
     auto mapped_end(const VcfRecord& call)
     {
-        return mapped_begin(call) + static_cast<GenomicRegion::SizeType>(call.ref().size());
+        return mapped_begin(call) + static_cast<GenomicRegion::Position>(call.ref().size());
     }
     
     auto mapped_region(const VcfRecord& call)
@@ -972,14 +972,14 @@ VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
     return VcfWriter {std::move(path), std::move(header)};
 }
 
-VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigNameType& contig,
+VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigName& contig,
                                          const GenomeCallingComponents& components)
 {
     return create_unique_temp_output_file(components.reference().contig_region(contig),
                                           components);
 }
 
-using TempVcfWriterMap = std::unordered_map<ContigNameType, VcfWriter>;
+using TempVcfWriterMap = std::unordered_map<ContigName, VcfWriter>;
 
 TempVcfWriterMap make_temp_vcf_writers(const GenomeCallingComponents& components)
 {
@@ -1020,13 +1020,13 @@ std::ostream& operator<<(std::ostream& os, const Task& task)
 
 struct ContigOrder
 {
-    using ContigNameType = GenomicRegion::ContigNameType;
+    using ContigName = GenomicRegion::ContigName;
     
     template <typename Container>
     ContigOrder(const Container& contigs)
     : contigs_ {std::cbegin(contigs), std::cend(contigs)} {}
     
-    bool operator()(const ContigNameType& lhs, const ContigNameType& rhs) const
+    bool operator()(const ContigName& lhs, const ContigName& rhs) const
     {
         const auto it1 = std::find(std::cbegin(contigs_), std::cend(contigs_), lhs);
         const auto it2 = std::find(std::cbegin(contigs_), std::cend(contigs_), rhs);
@@ -1034,11 +1034,11 @@ struct ContigOrder
     }
     
 private:
-    std::vector<ContigNameType> contigs_;
+    std::vector<ContigName> contigs_;
 };
 
 using TaskQueue = std::queue<Task>;
-using TaskMap   = std::map<ContigNameType, TaskQueue, ContigOrder>;
+using TaskMap   = std::map<ContigName, TaskQueue, ContigOrder>;
 
 TaskQueue divide_work_into_tasks(const ContigCallingComponents& components,
                                  const Task::ExecutionPolicy policy)
@@ -1171,7 +1171,7 @@ auto run(Task task, ContigCallingComponents components, SyncPacket& sync)
                       });
 }
 
-using CompletedTaskMap = std::map<ContigNameType, std::map<ContigRegion, CompletedTask>>;
+using CompletedTaskMap = std::map<ContigName, std::map<ContigRegion, CompletedTask>>;
 
 using HoldbackTask = boost::optional<std::reference_wrapper<const CompletedTask>>;
 
@@ -1209,7 +1209,7 @@ auto encompassing_call_region(const CompletedTask& task)
 }
 
 using ContigCallingComponentFactory    = std::function<ContigCallingComponents()>;
-using ContigCallingComponentFactoryMap = std::map<ContigNameType, ContigCallingComponentFactory>;
+using ContigCallingComponentFactoryMap = std::map<ContigName, ContigCallingComponentFactory>;
 
 auto make_contig_calling_component_factory_map(GenomeCallingComponents& components)
 {
@@ -1374,7 +1374,7 @@ void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffer
 
 using FutureCompletedTasks = std::vector<std::future<CompletedTask>>;
 
-using RemainingTaskMap = std::map<ContigNameType, std::deque<CompletedTask>>;
+using RemainingTaskMap = std::map<ContigName, std::deque<CompletedTask>>;
 
 auto extract_remaining_tasks(FutureCompletedTasks& futures, CompletedTaskMap& buffered_tasks)
 {
@@ -1485,7 +1485,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     TaskMap running_tasks {ContigOrder {components.contigs_in_output_order()}};
     CompletedTaskMap buffered_tasks {};
-    std::map<ContigNameType, HoldbackTask> holdbacks {};
+    std::map<ContigName, HoldbackTask> holdbacks {};
     
     // populate the all the maps first so we can make unchecked acceses
     for (const auto& contig : components.contigs_in_output_order()) {
@@ -1730,6 +1730,6 @@ void run_octopus(OptionMap& options)
     
     stream(info_log) << "Finished processing " << search_size << "bp, total runtime " << TimeInterval {start, end};
 }
-} // namespace Octopus
+} // namespace octopus
 
 

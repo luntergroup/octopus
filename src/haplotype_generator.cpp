@@ -23,7 +23,7 @@
 #include <iostream> // DEBUG
 #include "timers.hpp"
 
-namespace Octopus
+namespace octopus
 {
 // HaplotypeOverflow
 
@@ -89,7 +89,7 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                        const MappableFlatSet<Variant>& candidates,
                                        const ReadMap& reads,
                                        Policies policies,
-                                       Haplotype::SizeType min_flank_pad)
+                                       Haplotype::RegionType::Size min_flank_pad)
 try :
 policies_ {std::move(policies)},
 min_flank_pad_ {min_flank_pad},
@@ -614,7 +614,7 @@ void HaplotypeGenerator::clear_holdouts() noexcept
 template <typename Range>
 auto sum_indel_sizes(const Range& alleles)
 {
-    return std::accumulate(std::cbegin(alleles), std::cend(alleles), GenomicRegion::SizeType {0},
+    return std::accumulate(std::cbegin(alleles), std::cend(alleles), std::size_t {0},
                            [] (const auto curr, const Allele& allele) {
                                if (is_insertion(allele)) {
                                    return curr + sequence_size(allele);
@@ -689,7 +689,7 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_holdout_depth(
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_min_flank_pad(Haplotype::SizeType n) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_min_flank_pad(Haplotype::RegionType::Size n) noexcept
 {
     min_flank_pad_ = n;
     return *this;
@@ -701,4 +701,4 @@ HaplotypeGenerator HaplotypeGenerator::Builder::build(const ReferenceGenome& ref
 {
     return HaplotypeGenerator {reference, candidates, reads, policies_, min_flank_pad_};
 }
-} // namespace Octopus
+} // namespace octopus

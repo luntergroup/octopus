@@ -15,7 +15,7 @@
 #include "common.hpp"
 #include "logging.hpp"
 
-namespace Octopus
+namespace octopus
 {
     CandidateGeneratorBuilder::CandidateGeneratorBuilder()
     :
@@ -74,9 +74,9 @@ namespace Octopus
         return *this;
     }
     
-    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_min_base_quality(const QualityType quality)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_min_base_quality(const BaseQuality min)
     {
-        parameters_.min_base_quality = quality;
+        parameters_.min_base_quality = min;
         return *this;
     }
     
@@ -86,9 +86,9 @@ namespace Octopus
         return *this;
     }
     
-    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_max_variant_size(const SizeType size)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_max_variant_size(const Variant::RegionType::Size max)
     {
-        parameters_.max_variant_size = size;
+        parameters_.max_variant_size = max;
         return *this;
     }
     
@@ -98,9 +98,9 @@ namespace Octopus
         return *this;
     }
     
-    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_assembler_min_base_quality(const QualityType quality)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_assembler_min_base_quality(const BaseQuality min)
     {
-        parameters_.min_assembler_base_quality = quality;
+        parameters_.min_assembler_base_quality = min;
         return *this;
     }
     
@@ -143,11 +143,14 @@ namespace Octopus
             {Generator::Assembler, [this] () {
                 const auto quality = (parameters_.min_assembler_base_quality)
                         ? *parameters_.min_assembler_base_quality : parameters_.min_base_quality;
+                AssemblerCandidateVariantGenerator::Options options {
+                    parameters_.kmer_sizes,
+                    quality,
+                    parameters_.min_supporting_reads,
+                    parameters_.max_variant_size
+                };
                 return std::make_unique<AssemblerCandidateVariantGenerator>(*parameters_.reference,
-                                                                            parameters_.kmer_sizes,
-                                                                            quality,
-                                                                            parameters_.min_supporting_reads,
-                                                                            parameters_.max_variant_size);
+                                                                            std::move(options));
             }},
             {Generator::External, [this] () {
                 return std::make_unique<ExternalCandidateVariantGenerator>(parameters_.variant_source);
@@ -161,4 +164,4 @@ namespace Octopus
             }}
         };
     }
-} // namespace Octopus
+} // namespace octopus

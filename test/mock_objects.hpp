@@ -20,21 +20,21 @@
 #include "aligned_read.hpp"
 #include "cigar_string.hpp"
 
-inline auto generate_random_regions(const GenomicRegion::SizeType contig_size,
-                                    const GenomicRegion::SizeType mean_region_size,
+inline auto generate_random_regions(const GenomicRegion::Position contig_size,
+                                    const GenomicRegion::Position mean_region_size,
                                     const std::size_t num_regions)
 {
     std::vector<GenomicRegion> result {};
     result.reserve(num_regions);
     
-    GenomicRegion::ContigNameType contig_name = "test";
+    GenomicRegion::ContigName contig_name = "test";
     
     const auto seed = std::chrono::system_clock::now().time_since_epoch().count();
     
     std::default_random_engine generator {static_cast<unsigned>(seed)};
     
-    std::uniform_int_distribution<GenomicRegion::SizeType> begin_dist(0, contig_size - mean_region_size - 1);
-    std::geometric_distribution<GenomicRegion::SizeType> size_dist(1.0 / mean_region_size);
+    std::uniform_int_distribution<GenomicRegion::Position> begin_dist(0, contig_size - mean_region_size - 1);
+    std::geometric_distribution<GenomicRegion::Position> size_dist(1.0 / mean_region_size);
     
     std::generate_n(std::back_inserter(result), num_regions,
                     [&] () {

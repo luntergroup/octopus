@@ -16,7 +16,7 @@
 
 #include "vcf_header.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class VcfHeaderFactory
     {
@@ -42,6 +42,6 @@ namespace Octopus
         
         static AnnotatorMap annotators_;
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* vcf_header_factory_hpp */

@@ -29,7 +29,7 @@
 class Variant;
 class Haplotype;
 
-namespace Octopus
+namespace octopus
 {
 class HaplotypeGenerator
 {
@@ -54,7 +54,7 @@ public:
                        const MappableFlatSet<Variant>& candidates,
                        const ReadMap& reads,
                        Policies policies,
-                       Haplotype::SizeType min_flank_pad = 30);
+                       Haplotype::RegionType::Size min_flank_pad = 30);
     
     HaplotypeGenerator(const HaplotypeGenerator&)            = default;
     HaplotypeGenerator& operator=(const HaplotypeGenerator&) = default;
@@ -79,7 +79,7 @@ public:
     
 private:
     Policies policies_;
-    Haplotype::SizeType min_flank_pad_;
+    Haplotype::RegionType::Size min_flank_pad_;
     
     HaplotypeTree tree_;
     GenomeWalker default_walker_, holdout_walker_;
@@ -197,7 +197,7 @@ public:
     
     Builder& set_max_holdout_depth(unsigned n) noexcept;
     
-    Builder& set_min_flank_pad(Haplotype::SizeType n) noexcept;
+    Builder& set_min_flank_pad(Haplotype::RegionType::Size n) noexcept;
     
     HaplotypeGenerator build(const ReferenceGenome& reference,
                              const MappableFlatSet<Variant>& candidates,
@@ -205,8 +205,8 @@ public:
     
 private:
     Policies policies_;
-    Haplotype::SizeType min_flank_pad_ = 30;
+    Haplotype::RegionType::Size min_flank_pad_ = 30;
 };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* haplotype_generator_hpp */

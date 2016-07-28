@@ -21,9 +21,9 @@
 #include "genotype.hpp"
 #include "logging.hpp"
 
-namespace Octopus
+namespace octopus
 {
-    namespace GenotypeModel
+    namespace model
     {
         class Individual
         {
@@ -61,7 +61,7 @@ namespace Octopus
             
             ~Individual() = default;
             
-            InferredLatents infer_latents(const SampleIdType& sample,
+            InferredLatents infer_latents(const SampleName& sample,
                                           const std::vector<Genotype<Haplotype>>& genotypes,
                                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
             
@@ -71,6 +71,6 @@ namespace Octopus
             mutable boost::optional<Logging::DebugLogger> debug_log_;
         };
     } // namesapce GenotypeModel
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* individual_genotype_model_hpp */

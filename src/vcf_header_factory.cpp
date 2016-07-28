@@ -12,7 +12,7 @@
 
 #include "call_types.hpp"
 
-namespace Octopus
+namespace octopus
 {
     VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
     {
@@ -39,4 +39,4 @@ namespace Octopus
             annotators_.at(type)(hb);
         }
     }
-} // namespace Octopus
+} // namespace octopus

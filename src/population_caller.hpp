@@ -25,7 +25,7 @@ class ReadPipe;
 class Variant;
 class HaplotypeLikelihoodCache;
 
-namespace Octopus
+namespace octopus
 {
 class PopulationVariantCaller : public VariantCaller
 {
@@ -56,18 +56,18 @@ private:
     class Latents : public CallerLatents
     {
     public:
-        using ModelInferences = GenotypeModel::Population::InferredLatents;
+        using ModelInferences = model::Population::InferredLatents;
         
         using CallerLatents::HaplotypeProbabilityMap;
         using CallerLatents::GenotypeProbabilityMap;
         
         friend PopulationVariantCaller;
         
-        explicit Latents(const std::vector<SampleIdType>& samples,
+        explicit Latents(const std::vector<SampleName>& samples,
                          const std::vector<Haplotype>&,
                          std::vector<Genotype<Haplotype>>&& genotypes,
                          ModelInferences&&);
-        explicit Latents(const std::vector<SampleIdType>& samples,
+        explicit Latents(const std::vector<SampleName>& samples,
                          const std::vector<Haplotype>&,
                          std::vector<Genotype<Haplotype>>&& genotypes,
                          ModelInferences&&, ModelInferences&&);
@@ -105,6 +105,6 @@ private:
     call_reference(const std::vector<Allele>& alleles, const CallerLatents& latents,
                    const ReadMap& reads) const override;
 };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__population_caller__) */

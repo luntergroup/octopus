@@ -13,7 +13,7 @@
 
 #include "variant_call_filter.hpp"
 
-namespace Octopus { namespace CallFiltering
+namespace octopus { namespace CallFiltering
 {
 class SupervisedVariantCallFilter : public VariantCallFilter
 {
@@ -46,6 +46,6 @@ private:
     virtual bool is_online() const noexcept = 0;
 };
 } // namespace CallFiltering
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* supervised_variant_call_filter_hpp */

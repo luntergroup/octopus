@@ -10,7 +10,7 @@
 
 #include "mappable.hpp"
 
-namespace Octopus
+namespace octopus
 {
     const GenomicRegion& ReferenceCall::mapped_region() const noexcept
     {
@@ -29,7 +29,7 @@ namespace Octopus
         auto it = std::find(std::cbegin(ref_sequence), std::cend(ref_sequence), old_base);
         
         if (it != std::cend(ref_sequence)) {
-            Allele::SequenceType new_sequence {};
+            Allele::NucleotideSequence new_sequence {};
             new_sequence.reserve(ref_sequence.size());
             
             new_sequence.insert(std::end(new_sequence), std::cbegin(ref_sequence), it);
@@ -55,4 +55,4 @@ namespace Octopus
     {
         
     }
-} // namespace Octopus
+} // namespace octopus

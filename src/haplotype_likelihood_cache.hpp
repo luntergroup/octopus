@@ -14,46 +14,53 @@
 #include <algorithm>
 #include <functional>
 
+#include <boost/optional.hpp>
+
 #include "common.hpp"
 #include "haplotype.hpp"
 #include "aligned_read.hpp"
 #include "kmer_mapper.hpp"
 #include "haplotype_likelihood_model.hpp"
 
-namespace Octopus
+namespace octopus
 {
+/*
+    
+ */
 class HaplotypeLikelihoodCache
 {
 public:
     using FlankState = HaplotypeLikelihoodModel::FlankState;
     
-    using Likelihoods          = std::vector<double>;
-    using LikelihoodsReference = std::reference_wrapper<const Likelihoods>;
-    using HaplotypeReference   = std::reference_wrapper<const Haplotype>;
-    using SampleLikelihoodMap  = std::unordered_map<HaplotypeReference, LikelihoodsReference>;
+    using LikelihoodVector     = std::vector<double>;
+    using LikelihoodVectorRef  = std::reference_wrapper<const LikelihoodVector>;
+    using HaplotypeRef         = std::reference_wrapper<const Haplotype>;
+    using SampleLikelihoodMap  = std::unordered_map<HaplotypeRef, LikelihoodVectorRef>;
     
     HaplotypeLikelihoodCache() = default;
     
-    HaplotypeLikelihoodCache(unsigned max_haplotypes, const std::vector<SampleIdType>& samples);
+    HaplotypeLikelihoodCache(unsigned max_haplotypes, const std::vector<SampleName>& samples);
     
     HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
-                             unsigned max_haplotypes, const std::vector<SampleIdType>& samples);
-    
-    ~HaplotypeLikelihoodCache() = default;
+                             unsigned max_haplotypes, const std::vector<SampleName>& samples);
     
     HaplotypeLikelihoodCache(const HaplotypeLikelihoodCache&)            = default;
     HaplotypeLikelihoodCache& operator=(const HaplotypeLikelihoodCache&) = default;
     HaplotypeLikelihoodCache(HaplotypeLikelihoodCache&&)                 = default;
     HaplotypeLikelihoodCache& operator=(HaplotypeLikelihoodCache&&)      = default;
     
+    ~HaplotypeLikelihoodCache() = default;
+    
     void populate(const ReadMap& reads, const std::vector<Haplotype>& haplotypes,
                   boost::optional<FlankState> flank_state = boost::none);
     
-    std::size_t num_likelihoods(const SampleIdType& sample) const;
+    std::size_t num_likelihoods(const SampleName& sample) const;
     
-    const Likelihoods& log_likelihoods(const SampleIdType& sample, const Haplotype& haplotype) const;
+    const LikelihoodVector& operator()(const SampleName& sample, const Haplotype& haplotype) const;
     
-    SampleLikelihoodMap extract_sample(const SampleIdType& sample) const;
+    const LikelihoodVector& operator()(const Haplotype& haplotype) const; // when primed with a sample
+    
+    SampleLikelihoodMap extract_sample(const SampleName& sample) const;
     
     bool contains(const Haplotype& haplotype) const noexcept;
     
@@ -65,6 +72,9 @@ public:
     bool empty() const noexcept;
     
     void clear() noexcept;
+    
+    void prime(const SampleName& sample) const;
+    void unprime() const noexcept;
     
 private:
     static constexpr unsigned char MAPPER_KMER_SIZE {6};
@@ -80,8 +90,10 @@ private:
         std::size_t num_reads;
     };
     
-    std::unordered_map<Haplotype, std::vector<std::vector<double>>> cache_;
-    std::unordered_map<SampleIdType, std::size_t> sample_indices_;
+    std::unordered_map<Haplotype, std::vector<LikelihoodVector>> cache_;
+    std::unordered_map<SampleName, std::size_t> sample_indices_;
+    
+    mutable boost::optional<std::size_t> primed_sample_;
     
     // Just to optimise population
     std::vector<ReadPacket> read_iterators_;
@@ -108,15 +120,15 @@ void HaplotypeLikelihoodCache::erase(const Container& haplotypes)
 
 // non-member methods
 
-HaplotypeLikelihoodCache merge_samples(const std::vector<SampleIdType>& samples,
-                                       const SampleIdType& new_sample,
+HaplotypeLikelihoodCache merge_samples(const std::vector<SampleName>& samples,
+                                       const SampleName& new_sample,
                                        const std::vector<Haplotype>& haplotypes,
                                        const HaplotypeLikelihoodCache& haplotype_likelihoods);
 
 namespace debug
 {
     std::vector<std::reference_wrapper<const Haplotype>>
-    rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleIdType& sample,
+    rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods);
     
     template <typename S>
@@ -165,7 +177,7 @@ namespace debug
                 likelihoods.reserve(sample_reads.second.size());
                 
                 std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
-                               std::cbegin(haplotype_likelihoods.log_likelihoods(sample, haplotype)),
+                               std::cbegin(haplotype_likelihoods(sample, haplotype)),
                                std::back_inserter(likelihoods),
                                [] (const AlignedRead& read, const double likelihood) {
                                    return std::make_pair(std::cref(read), likelihood);
@@ -198,6 +210,6 @@ namespace debug
                                           const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                           std::size_t n = 5);
 } // namespace debug
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* haplotype_likelihood_cache_hpp */

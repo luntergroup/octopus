@@ -39,7 +39,7 @@
 #include "progress_meter.hpp"
 #include "logging.hpp"
 
-namespace Octopus
+namespace octopus
 {
 class VariantCaller
 {
@@ -51,7 +51,7 @@ public:
     struct CallerComponents;
     struct CallerParameters;
     
-    using ReadMap = Octopus::ReadMap;
+    using ReadMap = octopus::ReadMap;
     
     VariantCaller() = delete;
     
@@ -77,7 +77,7 @@ protected:
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     
-    std::vector<SampleIdType> samples_;
+    std::vector<SampleName> samples_;
     
     mutable boost::optional<Logging::DebugLogger> debug_log_;
     mutable boost::optional<Logging::TraceLogger> trace_log_;
@@ -196,6 +196,6 @@ private:
                                          const std::vector<GenomicRegion>& called_regions) const;
 };
 
-} // namespace Octopus
+} // namespace octopus
 
 #endif

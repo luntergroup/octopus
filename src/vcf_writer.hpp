@@ -31,12 +31,12 @@ public:
     VcfWriter(Path file_path);
     VcfWriter(Path file_path, const VcfHeader& header);
     
-    ~VcfWriter();
-    
     VcfWriter(const VcfWriter&)            = delete;
     VcfWriter& operator=(const VcfWriter&) = delete;
     VcfWriter(VcfWriter&&);
     VcfWriter& operator=(VcfWriter&&)      = default;
+    
+    ~VcfWriter();
     
     friend void swap(VcfWriter& lhs, VcfWriter& rhs) noexcept;
     

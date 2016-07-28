@@ -18,25 +18,25 @@
 class ReferenceGenomeImpl
 {
 public:
-    using ContigNameType = GenomicRegion::ContigNameType;
-    using SizeType       = GenomicRegion::SizeType;
-    using SequenceType   = std::string;
+    using ContigName      = GenomicRegion::ContigName;
+    using GenomicSize     = GenomicRegion::Size;
+    using GeneticSequence = std::string;
     
     bool is_open() const noexcept;
     
     std::string fetch_reference_name() const;
-    std::vector<ContigNameType> fetch_contig_names() const;
-    SizeType fetch_contig_size(const ContigNameType& contig) const;
-    SequenceType fetch_sequence(const GenomicRegion& region) const;
+    std::vector<ContigName> fetch_contig_names() const;
+    GenomicSize fetch_contig_size(const ContigName& contig) const;
+    GeneticSequence fetch_sequence(const GenomicRegion& region) const;
     
     virtual ~ReferenceGenomeImpl() noexcept = default;
     
 private:
     virtual bool do_is_open() const noexcept = 0;
     virtual std::string do_fetch_reference_name() const = 0;
-    virtual std::vector<ContigNameType> do_fetch_contig_names() const = 0;
-    virtual SizeType do_fetch_contig_size(const ContigNameType& contig) const = 0;
-    virtual SequenceType do_fetch_sequence(const GenomicRegion& region) const = 0;
+    virtual std::vector<ContigName> do_fetch_contig_names() const = 0;
+    virtual GenomicSize do_fetch_contig_size(const ContigName& contig) const = 0;
+    virtual GeneticSequence do_fetch_sequence(const GenomicRegion& region) const = 0;
 };
 
 inline bool ReferenceGenomeImpl::is_open() const noexcept
@@ -49,17 +49,17 @@ inline std::string ReferenceGenomeImpl::fetch_reference_name() const
     return do_fetch_reference_name();
 }
 
-inline std::vector<ReferenceGenomeImpl::ContigNameType> ReferenceGenomeImpl::fetch_contig_names() const
+inline std::vector<ReferenceGenomeImpl::ContigName> ReferenceGenomeImpl::fetch_contig_names() const
 {
     return do_fetch_contig_names();
 }
 
-inline ReferenceGenomeImpl::SizeType ReferenceGenomeImpl::fetch_contig_size(const ContigNameType& contig) const
+inline ReferenceGenomeImpl::GenomicSize ReferenceGenomeImpl::fetch_contig_size(const ContigName& contig) const
 {
     return do_fetch_contig_size(contig);
 }
 
-inline ReferenceGenomeImpl::SequenceType ReferenceGenomeImpl::fetch_sequence(const GenomicRegion& region) const
+inline ReferenceGenomeImpl::GeneticSequence ReferenceGenomeImpl::fetch_sequence(const GenomicRegion& region) const
 {
     return do_fetch_sequence(region);
 }

@@ -51,7 +51,7 @@ namespace
 
 // public methods
 
-Assembler::BadReferenceSequence::BadReferenceSequence(SequenceType reference_sequence)
+Assembler::BadReferenceSequence::BadReferenceSequence(NucleotideSequence reference_sequence)
 :
 std::invalid_argument {"bad reference sequence"},
 reference_sequence_ {std::move(reference_sequence)}
@@ -70,7 +70,7 @@ reference_head_position_ {0}
 {}
 
 Assembler::Assembler(const unsigned kmer_size,
-                     const SequenceType& reference)
+                     const NucleotideSequence& reference)
 :
 k_ {kmer_size},
 reference_kmers_ {},
@@ -84,7 +84,7 @@ unsigned Assembler::kmer_size() const noexcept
     return k_;
 }
 
-void Assembler::insert_reference(const SequenceType& sequence)
+void Assembler::insert_reference(const NucleotideSequence& sequence)
 {
     if (empty()) {
         insert_reference_into_empty_graph(sequence);
@@ -93,7 +93,7 @@ void Assembler::insert_reference(const SequenceType& sequence)
     }
 }
 
-void Assembler::insert_read(const SequenceType& sequence)
+void Assembler::insert_read(const NucleotideSequence& sequence)
 {
     if (sequence.size() < k_) return;
     
@@ -349,9 +349,9 @@ Assembler::Kmer::SequenceIterator Assembler::Kmer::end() const noexcept
     return last_;
 }
 
-Assembler::Kmer::operator SequenceType() const
+Assembler::Kmer::operator NucleotideSequence() const
 {
-    return SequenceType {first_, last_};
+    return NucleotideSequence {first_, last_};
 }
 
 std::size_t Assembler::Kmer::hash() const noexcept
@@ -371,7 +371,7 @@ bool operator<(const Assembler::Kmer& lhs, const Assembler::Kmer& rhs) noexcept
 
 // Assembler private methods
 
-void Assembler::insert_reference_into_empty_graph(const SequenceType& sequence)
+void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequence)
 {
     if (sequence.size() < k_) {
         throw std::runtime_error {"Assembler:: reference length must >= kmer_size"};
@@ -417,7 +417,7 @@ void Assembler::insert_reference_into_empty_graph(const SequenceType& sequence)
     reference_kmers_.shrink_to_fit();
 }
 
-void Assembler::insert_reference_into_populated_graph(const SequenceType& sequence)
+void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& sequence)
 {
     if (!reference_kmers_.empty()) {
         throw std::runtime_error {"Assembler: only one reference sequence can be inserted into the graph"};
@@ -701,9 +701,9 @@ std::size_t Assembler::num_reference_kmers() const
     return std::count_if(p.first, p.second, [this] (const Vertex& v) { return is_reference(v); });
 }
 
-Assembler::SequenceType Assembler::make_sequence(const Path& path) const
+Assembler::NucleotideSequence Assembler::make_sequence(const Path& path) const
 {
-    SequenceType result {};
+    NucleotideSequence result {};
     result.reserve(k_ + path.size() - 1);
     
     const auto& first_kmer = kmer_of(path.front());
@@ -717,9 +717,9 @@ Assembler::SequenceType Assembler::make_sequence(const Path& path) const
     return result;
 }
 
-Assembler::SequenceType Assembler::make_reference(Vertex from, const Vertex to) const
+Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Vertex to) const
 {
-    SequenceType result {};
+    NucleotideSequence result {};
     
     const auto null = null_vertex();
     
@@ -731,7 +731,7 @@ Assembler::SequenceType Assembler::make_reference(Vertex from, const Vertex to) 
     
     if (last == null) {
         if (from == reference_tail()) {
-            return static_cast<SequenceType>(kmer_of(from));
+            return static_cast<NucleotideSequence>(kmer_of(from));
         }
         last = reference_tail();
     }

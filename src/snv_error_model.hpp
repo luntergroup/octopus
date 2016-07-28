@@ -15,7 +15,7 @@
 
 class Haplotype;
 
-namespace Octopus
+namespace octopus
 {
     class SnvErrorModel
     {
@@ -49,6 +49,6 @@ namespace Octopus
             }
         }};
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* snv_error_model_hpp */

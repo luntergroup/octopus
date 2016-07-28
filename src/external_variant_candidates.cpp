@@ -15,7 +15,7 @@
 #include "vcf_record.hpp"
 #include "variant.hpp"
 
-namespace Octopus {
+namespace octopus {
 
 ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(boost::filesystem::path path)
 :
@@ -46,7 +46,7 @@ std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, const 
     return result;
 }
 
-static bool is_missing(const VcfRecord::SequenceType& allele)
+static bool is_missing(const VcfRecord::NucleotideSequence& allele)
 {
     return allele == "*";
 }
@@ -76,8 +76,8 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, const VcfReader
                         const auto p = std::mismatch(std::cbegin(ref_allele), std::cend(ref_allele),
                                                      std::cbegin(alt_allele), std::cend(alt_allele));
                         
-                        Variant::SequenceType new_ref_allele {p.first, std::cend(ref_allele)};
-                        Variant::SequenceType new_alt_allele {p.second, std::cend(alt_allele)};
+                        Variant::NucleotideSequence new_ref_allele {p.first, std::cend(ref_allele)};
+                        Variant::NucleotideSequence new_alt_allele {p.second, std::cend(alt_allele)};
                         
                         begin += std::distance(std::cbegin(ref_allele), p.first);
                         
@@ -105,4 +105,4 @@ std::vector<Variant> ExternalCandidateVariantGenerator::generate_candidates(cons
     return fetch_variants(region, *reader_);
 }
 
-} // namespace Octopus
+} // namespace octopus

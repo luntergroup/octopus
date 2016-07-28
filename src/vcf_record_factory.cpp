@@ -31,10 +31,10 @@
 
 #include "timers.hpp"
 
-namespace Octopus
+namespace octopus
 {
     VcfRecordFactory::VcfRecordFactory(const ReferenceGenome& reference, const ReadMap& reads,
-                                       std::vector<SampleIdType> samples, bool sites_only)
+                                       std::vector<SampleName> samples, bool sites_only)
     :
     reference_ {reference},
     reads_ {reads},
@@ -136,7 +136,7 @@ namespace Octopus
                         
                         auto& sample_genotype = call->get_genotype_call(sample).genotype;
                         
-                        std::vector<Allele::SequenceType> resolved_alleles {};
+                        std::vector<Allele::NucleotideSequence> resolved_alleles {};
                         resolved_alleles.reserve(sample_genotype.ploidy());
                         
                         transform(cbegin(sample_genotype), cend(sample_genotype),
@@ -144,7 +144,7 @@ namespace Octopus
                                   [] (const Allele& allele1, const Allele& allele2) {
                                       if (is_insertion(allele2)) {
                                           const auto& old_sequence = allele1.sequence();
-                                          return Allele::SequenceType {
+                                          return Allele::NucleotideSequence {
                                               next(cbegin(old_sequence), sequence_size(allele2)),
                                                    cend(old_sequence)
                                           };
@@ -331,7 +331,7 @@ namespace Octopus
                         for (unsigned i {0}; i < ploidy; ++i) {
                             if (prev_genotype[i].sequence() == old_genotype[i].sequence()
                                 && sequence_size(old_genotype[i]) < region_size(old_genotype)) {
-                                Allele::SequenceType new_sequence(1, '*');
+                                Allele::NucleotideSequence new_sequence(1, '*');
                                 Allele new_allele {mapped_region(curr_call), move(new_sequence)};
                                 new_genotype.emplace(move(new_allele));
                             } else {
@@ -394,7 +394,7 @@ namespace Octopus
                             if (are_in_phase(prev_genotype_call, genotype_call)) {
                                 for (unsigned i {0}; i < ploidy; ++i) {
                                     if (old_genotype[i].sequence().empty()) {
-                                        Allele::SequenceType new_sequence(region_size(curr_call), '*');
+                                        Allele::NucleotideSequence new_sequence(region_size(curr_call), '*');
                                         Allele new_allele {call_region, move(new_sequence)};
                                         new_genotype.emplace(move(new_allele));
                                     } else if (old_genotype[i].sequence().front() == '#') {
@@ -417,7 +417,7 @@ namespace Octopus
                             } else {
                                 for (unsigned i {0}; i < ploidy; ++i) {
                                     if (old_genotype[i].sequence().empty()) {
-                                        Allele::SequenceType new_sequence(region_size(curr_call), '*');
+                                        Allele::NucleotideSequence new_sequence(region_size(curr_call), '*');
                                         Allele new_allele {call_region, move(new_sequence)};
                                         new_genotype.emplace(move(new_allele));
                                     } else if (old_genotype[i].sequence().front() == '#') {
@@ -470,7 +470,7 @@ namespace Octopus
                         
                         for (unsigned i {0}; i < ploidy; ++i) {
                             if (old_genotype[i].sequence().empty()) {
-                                Allele::SequenceType new_sequence(region_size(curr_call), '*');
+                                Allele::NucleotideSequence new_sequence(region_size(curr_call), '*');
                                 Allele new_allele {mapped_region(curr_call), move(new_sequence)};
                                 new_genotype.emplace(move(new_allele));
                             } else {
@@ -548,12 +548,12 @@ namespace Octopus
     //        return static_cast<unsigned>(unique_alleles.size());
     //    }
     
-    std::vector<VcfRecord::SequenceType>
-    extract_all_genotyped_alleles(const Call* call, const std::vector<SampleIdType>& samples)
+    std::vector<VcfRecord::NucleotideSequence>
+    extract_all_genotyped_alleles(const Call* call, const std::vector<SampleName>& samples)
     {
         using std::begin; using std::end; using std::cbegin; using std::cend;
         
-        std::vector<VcfRecord::SequenceType> result {};
+        std::vector<VcfRecord::NucleotideSequence> result {};
         
         for (const auto& sample : samples) {
             const auto& called_genotype = call->get_genotype_call(sample).genotype;
@@ -566,7 +566,7 @@ namespace Octopus
                            });
         }
         
-        const VcfRecord::SequenceType missing_allele(1, '.');
+        const VcfRecord::NucleotideSequence missing_allele(1, '.');
         
         auto it = std::remove(begin(result), end(result), missing_allele);
         
@@ -586,7 +586,7 @@ namespace Octopus
     }
     
     void set_alt_alleles(const Call* call, VcfRecord::Builder& record,
-                         const std::vector<SampleIdType>& samples)
+                         const std::vector<SampleName>& samples)
     {
         auto alts = extract_all_genotyped_alleles(call, samples);
         
@@ -603,10 +603,10 @@ namespace Octopus
         record.set_alt(std::move(alts));
     }
     
-    void set_vcf_genotype(const SampleIdType& sample, const Call::GenotypeCall& genotype_call,
+    void set_vcf_genotype(const SampleName& sample, const Call::GenotypeCall& genotype_call,
                           VcfRecord::Builder& record)
     {
-        std::vector<VcfRecord::SequenceType> result {};
+        std::vector<VcfRecord::NucleotideSequence> result {};
         result.reserve(genotype_call.genotype.ploidy());
         
         for (const auto& allele : genotype_call.genotype) {
@@ -637,7 +637,7 @@ namespace Octopus
         
         result.set_info("NS",  count_samples_with_coverage(call_reads));
         result.set_info("DP",  sum_max_coverages(call_reads));
-        result.set_info("SB",  Octopus::to_string(strand_bias(call_reads), 2));
+        result.set_info("SB",  octopus::to_string(strand_bias(call_reads), 2));
         result.set_info("BQ",  static_cast<unsigned>(rmq_base_quality(call_reads)));
         result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
         result.set_info("MQ0", count_mapq_zero(call_reads));
@@ -701,13 +701,13 @@ namespace Octopus
         
         result.set_ref(ref);
         
-        std::vector<std::vector<VcfRecord::SequenceType>> resolved_genotypes {};
+        std::vector<std::vector<VcfRecord::NucleotideSequence>> resolved_genotypes {};
         resolved_genotypes.reserve(samples_.size());
         
         for (const auto& sample : samples_) {
             const auto ploidy = calls.front()->get_genotype_call(sample).genotype.ploidy();
             
-            std::vector<VcfRecord::SequenceType> resolved_sample_genotype(ploidy);
+            std::vector<VcfRecord::NucleotideSequence> resolved_sample_genotype(ploidy);
             
             const auto& first_called_genotype = calls.front()->get_genotype_call(sample).genotype;
             
@@ -737,13 +737,13 @@ namespace Octopus
             resolved_genotypes.push_back(std::move(resolved_sample_genotype));
         }
         
-        std::vector<VcfRecord::SequenceType> alt_alleles {};
+        std::vector<VcfRecord::NucleotideSequence> alt_alleles {};
         
         for (const auto& genotype : resolved_genotypes) {
             alt_alleles.insert(std::end(alt_alleles), std::cbegin(genotype), std::cend(genotype));
         }
         
-        const VcfRecord::SequenceType missing_allele(1, '.');
+        const VcfRecord::NucleotideSequence missing_allele(1, '.');
         
         auto it = std::remove(std::begin(alt_alleles), std::end(alt_alleles), missing_allele);
         
@@ -771,7 +771,7 @@ namespace Octopus
         
         result.set_info("NS",  count_samples_with_coverage(reads_, region));
         result.set_info("DP",  sum_max_coverages(reads_, region));
-        result.set_info("SB",  Octopus::to_string(strand_bias(reads_, region), 2));
+        result.set_info("SB",  octopus::to_string(strand_bias(reads_, region), 2));
         result.set_info("BQ",  static_cast<unsigned>(rmq_base_quality(reads_, region)));
         result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
         result.set_info("MQ0", count_mapq_zero(reads_, region));
@@ -831,4 +831,4 @@ namespace Octopus
         return result.build_once();
     }
     
-} // namespace Octopus
+} // namespace octopus

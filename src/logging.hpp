@@ -35,7 +35,7 @@
 #include <boost/move/utility.hpp>
 #include <boost/log/sources/logger.hpp>
 
-namespace Octopus
+namespace octopus
 {
 namespace Logging
 {
@@ -143,6 +143,6 @@ namespace Logging
         return lg;
     }
 } // namespace Logging
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* logging_hpp */

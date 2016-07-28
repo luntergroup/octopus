@@ -20,7 +20,7 @@
 #include "allele.hpp"
 #include "cancer_genotype.hpp"
 
-namespace Octopus
+namespace octopus
 {
 class SomaticCall : public VariantCall
 {
@@ -52,7 +52,7 @@ public:
     virtual void decorate(VcfRecord::Builder& record) const override;
     
 protected:
-    std::unordered_map<SampleIdType, GenotypeCredibleRegions> credible_regions_;
+    std::unordered_map<SampleName, GenotypeCredibleRegions> credible_regions_;
 };
 
 template <typename V, typename C>
@@ -63,7 +63,7 @@ VariantCall {std::forward<V>(variant), decltype(genotype_calls_) {}, quality},
 credible_regions_ {std::forward<C>(credible_regions)}
 {
     if (variant_.ref_allele() == variant_.alt_allele()) {
-        Allele::SequenceType missing_sequence(ref_sequence_size(variant_), 'N');
+        Allele::NucleotideSequence missing_sequence(ref_sequence_size(variant_), 'N');
         variant_ = Variant {
             Allele {::mapped_region(variant_), std::move(missing_sequence)},
             variant_.alt_allele()
@@ -80,6 +80,6 @@ credible_regions_ {std::forward<C>(credible_regions)}
         }
     }
 }
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* somatic_call_hpp */

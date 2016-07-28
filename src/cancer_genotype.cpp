@@ -11,7 +11,7 @@
 #include <cassert>
 #include <iostream>
 
-namespace Octopus
+namespace octopus
 {
 bool contains(const CancerGenotype<Haplotype>& genotype, const Allele& allele)
 {
@@ -40,7 +40,7 @@ namespace
         return result;
     }
 } // namespace
-    
+
 std::pair<std::vector<CancerGenotype<Haplotype>>, std::vector<Genotype<Haplotype>>>
 generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const unsigned ploidy)
 {
@@ -78,4 +78,4 @@ namespace debug
         print_variant_alleles(std::cout, genotype);
     }
 } // namespace debug
-} // namespace Octopus
+} // namespace octopus

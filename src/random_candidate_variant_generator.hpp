@@ -19,13 +19,11 @@ class ReferenceGenome;
 class GenomicRegion;
 class Variant;
 
-namespace Octopus {
+namespace octopus {
     
     class RandomCandidateVariantGenerator : public ICandidateVariantGenerator
     {
     public:
-        using SizeType = AlignedRead::SizeType;
-        
         RandomCandidateVariantGenerator() = delete;
         
         RandomCandidateVariantGenerator(const ReferenceGenome& reference);
@@ -46,9 +44,9 @@ namespace Octopus {
         
     private:
         std::reference_wrapper<const ReferenceGenome> reference_;
-        SizeType max_read_size_ = 100;
+        AlignedRead::RegionType::Size max_read_size_ = 100;
     };
     
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* random_candidate_variant_generator_hpp */

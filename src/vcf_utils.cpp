@@ -50,7 +50,7 @@ std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfRec
 }
 
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfRecord& record,
-                                             const VcfRecord::SampleIdType sample,
+                                             const VcfRecord::SampleName sample,
                                              const VcfHeader::StructuredKey& key)
 {
     return get_typed_format_values(header, key, record.get_sample_value(sample, key.value));
@@ -263,7 +263,7 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
         return;
     }
     
-    static constexpr GenomicRegion::SizeType buffer_size {10000}; // maybe make contig dependent
+    static constexpr GenomicRegion::Size buffer_size {10000}; // maybe make contig dependent
     
     for (const auto& contig : contigs) {
         GenomicRegion region {contig, 0, buffer_size};

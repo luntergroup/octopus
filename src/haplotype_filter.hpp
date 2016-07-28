@@ -19,10 +19,10 @@
 class Haplotype;
 class HaplotypeLikelihoodCache;
 
-namespace Octopus
+namespace octopus
 {
     std::vector<Haplotype>
-    filter_to_n(std::vector<Haplotype>& haplotypes, const std::vector<SampleIdType>& samples,
+    filter_to_n(std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& samples,
                 const HaplotypeLikelihoodCache& haplotype_likelihoods, const std::size_t n);
     
     using HaplotypeReference    = std::reference_wrapper<const Haplotype>;
@@ -31,9 +31,9 @@ namespace Octopus
     std::vector<HaplotypeReference>
     extract_removable(const std::vector<Haplotype>& haplotypes,
                       const HaplotypePosteriorMap& haplotype_posteriors,
-                      const std::vector<SampleIdType>& samples,
+                      const std::vector<SampleName>& samples,
                       const HaplotypeLikelihoodCache& haplotype_likelihoods,
                       std::size_t max_to_remove, double min_posterior);
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* haplotype_filter_hpp */

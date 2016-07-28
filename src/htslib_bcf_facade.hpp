@@ -44,12 +44,12 @@ public:
     
     HtslibBcfFacade(Path file_path, const std::string& mode = "r");
     
-    ~HtslibBcfFacade() noexcept override = default;
-    
     HtslibBcfFacade(const HtslibBcfFacade&)            = delete;
     HtslibBcfFacade& operator=(const HtslibBcfFacade&) = delete;
     HtslibBcfFacade(HtslibBcfFacade&&)                 = default;
     HtslibBcfFacade& operator=(HtslibBcfFacade&&)      = default;
+    
+    ~HtslibBcfFacade() noexcept override = default;
     
     bool is_header_written() const noexcept override;
     

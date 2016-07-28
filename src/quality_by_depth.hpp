@@ -17,7 +17,7 @@
 
 class VcfRecord;
 
-namespace Octopus { namespace CallFiltering
+namespace octopus { namespace CallFiltering
 {
     class QualityByDepth : public Measure
     {
@@ -25,6 +25,6 @@ namespace Octopus { namespace CallFiltering
         virtual std::string name() const override;
     };
 } // namespace CallFiltering
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* quality_by_depth_hpp */

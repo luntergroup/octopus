@@ -17,7 +17,7 @@
 
 #include <iostream> // DEBUG
 
-namespace Octopus
+namespace octopus
 {
     constexpr decltype(SnvErrorModel::Max_qualities_) SnvErrorModel::Max_qualities_;
     
@@ -155,4 +155,4 @@ namespace Octopus
         reverse_snv_mask.resize(num_bases);
         std::rotate_copy(cbegin(sequence), next(cbegin(sequence)), cend(sequence), begin(reverse_snv_mask));
     }
-} // namespace Octopus
+} // namespace octopus

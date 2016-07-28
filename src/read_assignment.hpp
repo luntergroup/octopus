@@ -18,7 +18,7 @@
 #include "genotype.hpp"
 #include "allele.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class HaplotypeLikelihoodModel;
     
@@ -37,6 +37,6 @@ namespace Octopus
     
     AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
                                             const HaplotypeSupportMap& haplotype_support);
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* read_assignment_hpp */

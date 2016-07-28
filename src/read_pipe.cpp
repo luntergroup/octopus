@@ -16,16 +16,16 @@
 #include "read_utils.hpp"
 #include "mappable_algorithms.hpp"
 
-namespace Octopus
+namespace octopus
 {
 
 // public members
 
-ReadPipe::ReadPipe(const ReadManager& read_manager, std::vector<SampleIdType> samples)
+ReadPipe::ReadPipe(const ReadManager& read_manager, std::vector<SampleName> samples)
     : ReadPipe {read_manager, {}, {}, boost::none, std::move(samples)} {}
 
 ReadPipe::ReadPipe(const ReadManager& read_manager, ReadTransform read_transform, ReadFilterer read_filter,
-                   boost::optional<Downsampler> downsampler, std::vector<SampleIdType> samples)
+                   boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
 :
 read_manager_ {read_manager},
 read_filter_ {std::move(read_filter)},
@@ -37,9 +37,9 @@ debug_log_ {}
     if (DEBUG_MODE) debug_log_ = Logging::DebugLogger {};
 }
 
-std::vector<std::vector<SampleIdType>> batch_samples(std::vector<SampleIdType> samples)
+std::vector<std::vector<SampleName>> batch_samples(std::vector<SampleName> samples)
 {
-    std::vector<std::vector<SampleIdType>> result {};
+    std::vector<std::vector<SampleName>> result {};
     
     result.emplace_back(std::move(samples)); // TODO: find a better strategy for this
     
@@ -56,7 +56,7 @@ unsigned ReadPipe::num_samples() const noexcept
     return static_cast<unsigned>(samples_.size());
 }
 
-const std::vector<SampleIdType>& ReadPipe::samples() const noexcept
+const std::vector<SampleName>& ReadPipe::samples() const noexcept
 {
     return samples_;
 }
@@ -125,7 +125,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
         transform_reads(batch_reads, read_transform_);
         
         if (debug_log_) {
-            SampleFilterCountMap<SampleIdType, decltype(read_filter_)> filter_counts {};
+            SampleFilterCountMap<SampleName, decltype(read_filter_)> filter_counts {};
             filter_counts.reserve(samples_.size());
             
             for (const auto& sample : samples_) {
@@ -172,9 +172,9 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
     
     return result;
 }
-    
+
 std::vector<GenomicRegion> join_close_regions(const std::vector<GenomicRegion>& regions,
-                                              const GenomicRegion::SizeType max_distance)
+                                              const GenomicRegion::Size max_distance)
 {
     std::vector<GenomicRegion> result {};
     
@@ -242,4 +242,4 @@ ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
     return result;
 }
 
-} // namespace Octopus
+} // namespace octopus

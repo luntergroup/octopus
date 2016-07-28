@@ -17,7 +17,7 @@
 #include "vcf_record.hpp"
 #include "call.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class VcfRecordFactory
     {
@@ -25,7 +25,7 @@ namespace Octopus
         VcfRecordFactory() = delete;
         
         VcfRecordFactory(const ReferenceGenome& reference, const ReadMap& reads,
-                         std::vector<SampleIdType> samples, bool sites_only);
+                         std::vector<SampleName> samples, bool sites_only);
         
         ~VcfRecordFactory() = default;
         
@@ -40,13 +40,13 @@ namespace Octopus
         const ReferenceGenome& reference_;
         const ReadMap& reads_;
         
-        std::vector<SampleIdType> samples_;
+        std::vector<SampleName> samples_;
         
         bool sites_only_;
         
         VcfRecord make(std::unique_ptr<Call> call) const;
         VcfRecord make_segment(std::vector<std::unique_ptr<Call>>&& calls) const;
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* vcf_record_factory_hpp */

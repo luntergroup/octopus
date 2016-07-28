@@ -26,16 +26,16 @@
 #include "genomic_region.hpp"
 #include "reference_genome.hpp"
 
-namespace Octopus
+namespace octopus
 {
 class HaplotypeTree
 {
 public:
-    using ContigNameType = GenomicRegion::ContigNameType;
+    using ContigName = GenomicRegion::ContigName;
     
     HaplotypeTree() = delete;
     
-    HaplotypeTree(const ContigNameType& contig, const ReferenceGenome& reference);
+    HaplotypeTree(const ContigName& contig, const ReferenceGenome& reference);
     
     HaplotypeTree(const HaplotypeTree&);
     HaplotypeTree& operator=(HaplotypeTree);
@@ -84,7 +84,7 @@ private:
     Vertex root_;
     std::list<Vertex> haplotype_leafs_;
     
-    ContigNameType contig_;
+    ContigName contig_;
     
     mutable std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
     
@@ -256,6 +256,6 @@ auto generate_all_haplotypes(const Container& elements, const ReferenceGenome& r
     return generate_all_haplotypes(std::cbegin(elements), std::cend(elements), reference);
 }
     
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__haplotype_tree__) */

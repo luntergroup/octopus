@@ -15,7 +15,7 @@
 #include "aligned_read.hpp"
 #include "variant.hpp"
 
-namespace Octopus {
+namespace octopus {
     
 void CandidateVariantGenerator::register_generator(std::unique_ptr<ICandidateVariantGenerator> generator)
 {
@@ -82,4 +82,4 @@ void CandidateVariantGenerator::clear()
     }
 }
 
-} // namespace Octopus
+} // namespace octopus

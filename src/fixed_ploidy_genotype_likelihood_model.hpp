@@ -20,9 +20,9 @@
 #include "haplotype_likelihood_cache.hpp"
 #include "probability_matrix.hpp"
 
-namespace Octopus
+namespace octopus
 {
-namespace GenotypeModel
+namespace model
 {
     class FixedPloidyGenotypeLikelihoodModel
     {
@@ -38,7 +38,7 @@ namespace GenotypeModel
         
         ~FixedPloidyGenotypeLikelihoodModel() = default;
         
-        double log_likelihood(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
+        double log_likelihood(const SampleName& sample, const Genotype<Haplotype>& genotype) const;
         
     private:
         std::reference_wrapper<const HaplotypeLikelihoodCache> haplotype_likelihoods_;
@@ -46,13 +46,13 @@ namespace GenotypeModel
         unsigned ploidy_;
         
         // These are just for optimisation
-        double log_likelihood_haploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
-        double log_likelihood_diploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
-        double log_likelihood_triploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
-        double log_likelihood_tetraploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
-        double log_likelihood_polyploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
+        double log_likelihood_haploid(const SampleName& sample, const Genotype<Haplotype>& genotype) const;
+        double log_likelihood_diploid(const SampleName& sample, const Genotype<Haplotype>& genotype) const;
+        double log_likelihood_triploid(const SampleName& sample, const Genotype<Haplotype>& genotype) const;
+        double log_likelihood_tetraploid(const SampleName& sample, const Genotype<Haplotype>& genotype) const;
+        double log_likelihood_polyploid(const SampleName& sample, const Genotype<Haplotype>& genotype) const;
     };
-} // namespace GenotypeModel
-} // namespace Octopus
+} // namespace model
+} // namespace octopus
 
 #endif /* defined(__Octopus__fixed_ploidy_genotype_likelihood_model__) */

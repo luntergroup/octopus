@@ -28,7 +28,7 @@ class VcfReader;
 class VcfWriter;
 class VcfHeader;
 
-namespace Octopus { namespace CallFiltering
+namespace octopus { namespace CallFiltering
 {
 class VariantCallFilter
 {
@@ -102,6 +102,6 @@ private:
     std::unique_ptr<VariantCallFilter> filter_;
 };
 } // namespace CallFiltering
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* variant_call_filter_hpp */

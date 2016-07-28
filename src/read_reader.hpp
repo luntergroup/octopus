@@ -24,29 +24,28 @@ class GenomicRegion;
 class AlignedRead;
 
 /*
- ReadReader provides a RAII threadsafe wrapper around a IReadReaderImpl
+ ReadReader is a simple RAII threadsafe wrapper around a IReadReaderImpl
  */
 class ReadReader : public Equitable<ReadReader>
 {
 public:
     using Path = boost::filesystem::path;
     
-    using SampleIdType  = IReadReaderImpl::SampleIdType;
-    using SizeType      = IReadReaderImpl::SizeType;
-    using ReadContainer = IReadReaderImpl::ReadContainer;
-    using SampleReadMap = IReadReaderImpl::SampleReadMap;
-    using CoveragePair  = IReadReaderImpl::CoveragePair;
+    using SampleName      = IReadReaderImpl::SampleName;
+    using ReadContainer   = IReadReaderImpl::ReadContainer;
+    using SampleReadMap   = IReadReaderImpl::SampleReadMap;
+    using CoveragePair    = IReadReaderImpl::CoveragePair;
     
     ReadReader() = default;
     
     ReadReader(const Path& file_path);
     
-    ~ReadReader() = default;
-    
     ReadReader(const ReadReader&)            = delete;
     ReadReader& operator=(const ReadReader&) = delete;
     ReadReader(ReadReader&&);
     ReadReader& operator=(ReadReader&&)      = delete;
+    
+    ~ReadReader() = default;
     
     friend void swap(ReadReader& lhs, ReadReader& rhs) noexcept;
     
@@ -59,36 +58,36 @@ public:
     std::vector<std::string> extract_reference_contig_names() const;
     unsigned count_reference_contigs() const;
     
-    std::vector<SampleIdType> extract_samples() const;
-    std::vector<std::string> extract_read_groups_in_sample(const SampleIdType& sample) const;
+    std::vector<SampleName> extract_samples() const;
+    std::vector<std::string> extract_read_groups_in_sample(const SampleName& sample) const;
     
     std::vector<GenomicRegion> extract_possible_regions_in_file() const;
     
     bool has_reads(const GenomicRegion& region) const;
-    bool has_reads(const SampleIdType& sample,
+    bool has_reads(const SampleName& sample,
                    const GenomicRegion& region) const;
-    bool has_reads(const std::vector<SampleIdType>& samples,
+    bool has_reads(const std::vector<SampleName>& samples,
                    const GenomicRegion& region) const;
     
     std::size_t count_reads(const GenomicRegion& region) const;
-    std::size_t count_reads(const SampleIdType& sample,
+    std::size_t count_reads(const SampleName& sample,
                             const GenomicRegion& region) const;
-    std::size_t count_reads(const std::vector<SampleIdType>& samples,
+    std::size_t count_reads(const std::vector<SampleName>& samples,
                             const GenomicRegion& region) const;
     
     CoveragePair find_covered_subregion(const GenomicRegion& region,
                                         std::size_t max_coverage) const;
-    CoveragePair find_covered_subregion(const SampleIdType& sample,
+    CoveragePair find_covered_subregion(const SampleName& sample,
                                         const GenomicRegion& region,
                                         std::size_t max_coverage) const;
-    CoveragePair find_covered_subregion(const std::vector<SampleIdType>& samples,
+    CoveragePair find_covered_subregion(const std::vector<SampleName>& samples,
                                         const GenomicRegion& region,
                                         std::size_t max_coverage) const;
     
     SampleReadMap fetch_reads(const GenomicRegion& region) const;
-    ReadContainer fetch_reads(const SampleIdType& sample,
+    ReadContainer fetch_reads(const SampleName& sample,
                               const GenomicRegion& region) const;
-    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples,
+    SampleReadMap fetch_reads(const std::vector<SampleName>& samples,
                               const GenomicRegion& region) const;
     
 private:

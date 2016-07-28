@@ -15,7 +15,7 @@
 
 class VcfRecord;
 
-namespace Octopus { namespace CallFiltering
+namespace octopus { namespace CallFiltering
 {
     class Measure
     {
@@ -50,6 +50,6 @@ namespace Octopus { namespace CallFiltering
         return MeasureWrapper {std::make_unique<M>(std::forward<Args>(args)...)};
     }
 } // namespace CallFiltering
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* measure_hpp */

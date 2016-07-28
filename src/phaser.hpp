@@ -28,7 +28,7 @@
 #include "mappable_algorithms.hpp"
 #include "phred.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class Phaser
     {
@@ -83,7 +83,7 @@ namespace Octopus
         };
         
         using SamplePhaseRegions = std::vector<PhaseRegion>;
-        using PhaseRegions       = std::unordered_map<SampleIdType, SamplePhaseRegions>;
+        using PhaseRegions       = std::unordered_map<SampleName, SamplePhaseRegions>;
         
         PhaseSet() = delete;
         
@@ -159,6 +159,6 @@ namespace Octopus
         
         void print_phase_sets(const Phaser::PhaseSet& phasings);
     }
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* phaser_hpp */

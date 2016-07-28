@@ -17,7 +17,7 @@
 #include "haplotype.hpp"
 #include "maths.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class SomaticMutationModel
     {
@@ -59,6 +59,6 @@ namespace Octopus
         
         return result;
     }
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* somatic_mutation_model_hpp */

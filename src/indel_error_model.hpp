@@ -15,7 +15,7 @@
 
 class Haplotype;
 
-namespace Octopus
+namespace octopus
 {
     class IndelErrorModel
     {
@@ -62,6 +62,6 @@ namespace Octopus
         
         static constexpr PenaltyType default_gap_extension_ = 3;
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* indel_error_model_hpp */

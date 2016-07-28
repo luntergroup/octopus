@@ -13,7 +13,7 @@
 #include <numeric>
 #include <stdexcept>
 
-namespace Octopus
+namespace octopus
 {
     SomaticMutationModel::SomaticMutationModel(const CoalescentModel& germline_model,
                                                double somatic_mutation_rate)
@@ -56,4 +56,4 @@ namespace Octopus
         
         return germline_log_prior + std::log(somatic_probability_given_germline);
     }
-} // namespace Octopus
+} // namespace octopus

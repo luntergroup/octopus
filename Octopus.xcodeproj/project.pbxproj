@@ -385,7 +385,6 @@
 		CAE3E2B41AA36EA600C01B2C /* htslib_bcf_facade.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = htslib_bcf_facade.cpp; sourceTree = "<group>"; };
 		CAE3E2B51AA36EA600C01B2C /* htslib_bcf_facade.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = htslib_bcf_facade.hpp; sourceTree = "<group>"; };
 		CAE3E2C61AA895D600C01B2C /* variant_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_benchmarks.cpp; sourceTree = "<group>"; };
-		CAE3E2C81AA9129000C01B2C /* notes.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = notes.txt; sourceTree = "<group>"; };
 		CAE3E2CA1AAB42C900C01B2C /* read_filter_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filter_tests.cpp; sourceTree = "<group>"; };
 		CAE3E2CC1AAB46BC00C01B2C /* read_filters.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = read_filters.hpp; sourceTree = "<group>"; };
 		CAE7DC2B1C510905009411B6 /* variant_caller_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller_factory.cpp; sourceTree = "<group>"; };
@@ -993,9 +992,10 @@
 		CAA4DC2E1A8219DD00DD3E9A /* doc */ = {
 			isa = PBXGroup;
 			children = (
-				CA2D59FF1CC01589005EA347 /* octopus.tex */,
+				D4C8FF9F1D4A50D000BEFC8E /* user-manual */,
+				D4C8FFA01D4A50E700BEFC8E /* dev-manual */,
+				D4C8FF9E1D4A505E00BEFC8E /* paper */,
 				CA1ADDFA1BDE856C00A0F394 /* presentation */,
-				CAE3E2C81AA9129000C01B2C /* notes.txt */,
 			);
 			path = doc;
 			sourceTree = "<group>";
@@ -1582,6 +1582,36 @@
 				D4BEA9FA1B861BE200E53CFD /* utils.c */,
 			);
 			name = tandem;
+			sourceTree = "<group>";
+		};
+		D4C8FF9E1D4A505E00BEFC8E /* paper */ = {
+			isa = PBXGroup;
+			children = (
+				D4C8FFA11D4A5C7700BEFC8E /* supplementary */,
+			);
+			name = paper;
+			sourceTree = "<group>";
+		};
+		D4C8FF9F1D4A50D000BEFC8E /* user-manual */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = "user-manual";
+			sourceTree = "<group>";
+		};
+		D4C8FFA01D4A50E700BEFC8E /* dev-manual */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = "dev-manual";
+			sourceTree = "<group>";
+		};
+		D4C8FFA11D4A5C7700BEFC8E /* supplementary */ = {
+			isa = PBXGroup;
+			children = (
+				CA2D59FF1CC01589005EA347 /* octopus.tex */,
+			);
+			name = supplementary;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

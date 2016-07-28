@@ -23,7 +23,7 @@
 #include "read_filter.hpp"
 #include "logging.hpp"
 
-namespace Octopus
+namespace octopus
 {
     extern bool DEBUG_MODE;
     extern bool TRACE_MODE;
@@ -32,14 +32,14 @@ namespace Octopus
     
     const static std::string Octopus_bug_email {"dcooke@well.ox.ac.uk"};
     
-    using SampleIdType = std::string;
+    using SampleName = std::string;
     
-    using ContigNameType = GenomicRegion::ContigNameType;
+    using ContigName = GenomicRegion::ContigName;
     
-    using InputRegionMap = MappableSetMap<ContigNameType, GenomicRegion>;
+    using InputRegionMap = MappableSetMap<ContigName, GenomicRegion>;
     
     using ReadContainer = MappableFlatMultiSet<AlignedRead>;
-    using ReadMap       = MappableMap<SampleIdType, AlignedRead>;
+    using ReadMap       = MappableMap<SampleName, AlignedRead>;
     
     using ReadFilterer = ReadFilter<ReadManager::ReadContainer::iterator>;
     

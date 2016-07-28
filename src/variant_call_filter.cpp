@@ -34,7 +34,7 @@
 
 #include <boost/math/distributions/hypergeometric.hpp>
 
-namespace Octopus { namespace CallFiltering
+namespace octopus { namespace CallFiltering
 {
 VariantCallFilter::VariantCallFilter(const ReferenceGenome& reference,
                                      const ReadPipe& read_pipe,
@@ -51,9 +51,8 @@ namespace
 {
     auto mapped_region(const VcfRecord& call)
     {
-        using SizeType = GenomicRegion::SizeType;
         const auto begin = call.pos() - 1;
-        return GenomicRegion {call.chrom(), begin, begin + static_cast<SizeType>(call.ref().size())};
+        return GenomicRegion {call.chrom(), begin, begin + static_cast<GenomicRegion::Size>(call.ref().size())};
     }
     
     auto mapped_regions(const std::vector<VcfRecord>& calls)
@@ -137,4 +136,4 @@ void VariantCallFilter::fail(VcfRecord::Builder& call) const
     call.set_passed();
 }
 } // namespace CallFiltering
-} // namespace Octopus
+} // namespace octopus

@@ -19,7 +19,7 @@
 #include <type_traits>
 #include <iomanip>
 
-namespace Octopus
+namespace octopus
 {
 template <typename T>
 std::vector<std::string> split(const T& str, const char delim) {
@@ -88,6 +88,6 @@ std::vector<std::string> to_strings(const std::vector<T>& values, const unsigned
     return result;
 }
 
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__string_utils__) */

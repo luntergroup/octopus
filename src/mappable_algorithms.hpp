@@ -37,9 +37,9 @@ auto sum_region_sizes(InputIt first, InputIt last)
     static_assert(is_region_or_mappable<MappableTp>,
                   "mappable algorithms only work for regions and mappable types");
     
-    using SizeType = typename RegionType<MappableTp>::SizeType;
+    using Position = typename RegionType<MappableTp>::Position;
     
-    return std::accumulate(first, last, SizeType {0},
+    return std::accumulate(first, last, Position {0},
                            [] (const auto curr, const auto& mappable) {
                                return curr + region_size(mappable);
                            });
@@ -511,7 +511,7 @@ overlap_range(BidirIt first, BidirIt last, const MappableTp& mappable)
 template <typename ForwardIt, typename MappableTp>
 OverlapRange<ForwardIt>
 overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
-              const typename RegionType<MappableTp>::SizeType max_mappable_size)
+              const typename RegionType<MappableTp>::Position max_mappable_size)
 {
     using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
     
@@ -559,7 +559,7 @@ namespace detail
     
     template <typename Container, typename MappableTp>
     auto overlap_range(const Container& mappables, const MappableTp& mappable,
-                       const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                       const typename RegionType<MappableTp>::Position max_mappable_size,
                        std::true_type)
     {
         return mappables.overlap_range(mappable);
@@ -567,7 +567,7 @@ namespace detail
     
     template <typename Container, typename MappableTp>
     auto overlap_range(const Container& mappables, const MappableTp& mappable,
-                       const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                       const typename RegionType<MappableTp>::Position max_mappable_size,
                        std::false_type)
     {
         return ::overlap_range(std::cbegin(mappables), std::cend(mappables), mappable,
@@ -585,7 +585,7 @@ auto overlap_range(const Container& mappables, const MappableTp& mappable)
 template <typename Container, typename MappableTp>
 OverlapRange<typename Container::const_iterator>
 overlap_range(const Container& mappables, const MappableTp& mappable,
-              const typename RegionType<MappableTp>::SizeType max_mappable_size)
+              const typename RegionType<MappableTp>::Position max_mappable_size)
 {
     return detail::overlap_range(mappables, mappable, max_mappable_size,
                                  detail::HasMemberOverlapRange<Container, MappableTp> {});
@@ -630,7 +630,7 @@ copy_overlapped(const Container& mappables, const MappableTp& mappable,
 template <typename Container, typename MappableTp>
 Container
 copy_overlapped(const Container& mappables, const MappableTp& mappable,
-                const typename RegionType<MappableTp>::SizeType max_mappable_size)
+                const typename RegionType<MappableTp>::Position max_mappable_size)
 {
     const auto overlapped = overlap_range(mappables, mappable, max_mappable_size);
     return Container {std::cbegin(overlapped), std::cend(overlapped)};
@@ -720,7 +720,7 @@ bool has_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable,
 
 template <typename BidirIt, typename MappableTp>
 bool has_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable,
-                    const typename RegionType<MappableTp>::SizeType max_mappable_size)
+                    const typename RegionType<MappableTp>::Position max_mappable_size)
 {
     const auto overlapped = overlap_range(first, last, mappable, max_mappable_size);
     return !overlapped.empty();
@@ -756,7 +756,7 @@ namespace detail
     
     template <typename Container, typename MappableTp>
     auto has_overlapped(const Container& mappables, const MappableTp& mappable,
-                       const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                       const typename RegionType<MappableTp>::Position max_mappable_size,
                        std::true_type)
     {
         return mappables.has_overlapped(mappable);
@@ -764,7 +764,7 @@ namespace detail
     
     template <typename Container, typename MappableTp>
     auto has_overlapped(const Container& mappables, const MappableTp& mappable,
-                        const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                        const typename RegionType<MappableTp>::Position max_mappable_size,
                         std::false_type)
     {
         return ::has_overlapped(std::cbegin(mappables), std::cend(mappables), mappable,
@@ -791,7 +791,7 @@ has_overlapped(const Container& mappables, const MappableTp& mappable,
 template <typename Container, typename MappableTp>
 auto
 has_overlapped(const Container& mappables, const MappableTp& mappable,
-               const typename RegionType<MappableTp>::SizeType max_mappable_size)
+               const typename RegionType<MappableTp>::Position max_mappable_size)
 {
     return detail::has_overlapped(mappables, mappable, max_mappable_size,
                                   detail::HasMemberHasOverlapped<Container, MappableTp> {});
@@ -838,8 +838,8 @@ std::size_t count_overlapped(ForwardIt first, ForwardIt last, const MappableTp& 
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIt, typename MappableTp>
-size_t count_overlapped(ForwardIt first, ForwardIt last, const MappableTp& mappable,
-                        GenomicRegion::SizeType max_mappable_size)
+std::size_t count_overlapped(ForwardIt first, ForwardIt last, const MappableTp& mappable,
+                             GenomicRegion::Position max_mappable_size)
 {
     using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
     
@@ -880,7 +880,7 @@ namespace detail
     
     template <typename Container, typename MappableTp>
     auto count_overlapped(const Container& mappables, const MappableTp& mappable,
-                        const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                        const typename RegionType<MappableTp>::Position max_mappable_size,
                         std::true_type)
     {
         return mappables.count_overlapped(mappable);
@@ -888,7 +888,7 @@ namespace detail
     
     template <typename Container, typename MappableTp>
     auto count_overlapped(const Container& mappables, const MappableTp& mappable,
-                        const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                        const typename RegionType<MappableTp>::Position max_mappable_size,
                         std::false_type)
     {
         return ::count_overlapped(std::cbegin(mappables), std::cend(mappables), mappable,
@@ -906,7 +906,7 @@ auto count_overlapped(const Container& mappables, const MappableTp& mappable)
 template <typename Container, typename MappableTp>
 auto
 count_overlapped(const Container& mappables, const MappableTp& mappable,
-               const typename RegionType<MappableTp>::SizeType max_mappable_size)
+               const typename RegionType<MappableTp>::Position max_mappable_size)
 {
     return detail::count_overlapped(mappables, mappable, max_mappable_size,
                                   detail::HasMemberCountOverlapped<Container, MappableTp> {});
@@ -1417,7 +1417,7 @@ namespace detail
         
         result.reserve(num_elements);
         
-        ContigRegion::SizeType n {0};
+        ContigRegion::Position n {0};
         
         std::generate_n(std::back_inserter(result), num_elements, [&] () {
             return ContigRegion {begin(mappable) + n, begin(mappable) + ++n};
@@ -1437,7 +1437,7 @@ namespace detail
         
         result.reserve(num_elements);
         
-        GenomicRegion::SizeType n {0};
+        GenomicRegion::Position n {0};
         
         const auto& contig = contig_name(mappable);
         
@@ -1462,7 +1462,7 @@ auto decompose(const MappableTp& mappable)
 }
 
 template <typename MappableTp>
-auto decompose(const MappableTp& mappable, GenomicRegion::SizeType n)
+auto decompose(const MappableTp& mappable, GenomicRegion::Position n)
 {
     static_assert(is_region_or_mappable<MappableTp>,
                   "mappable algorithms only work for regions and mappable types");

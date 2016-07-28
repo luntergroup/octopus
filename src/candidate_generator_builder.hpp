@@ -22,13 +22,13 @@
 #include "reference_genome.hpp"
 #include "vcf_reader.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class CandidateGeneratorBuilder
     {
     public:
-        using QualityType = AlignedRead::QualityType;
-        using SizeType    = GenomicRegion::SizeType;
+        using BaseQuality     = AlignedRead::BaseQuality;
+        using Position = GenomicRegion::Position;
         
         enum class Generator { Alignment, Assembler, External, Online, Random };
         
@@ -44,12 +44,12 @@ namespace Octopus
         
         CandidateGeneratorBuilder& add_generator(Generator type);
         CandidateGeneratorBuilder& set_reference(const ReferenceGenome& reference);
-        CandidateGeneratorBuilder& set_min_base_quality(QualityType quality);
+        CandidateGeneratorBuilder& set_min_base_quality(BaseQuality min);
         CandidateGeneratorBuilder& set_min_supporting_reads(unsigned num_reads);
-        CandidateGeneratorBuilder& set_max_variant_size(SizeType size);
+        CandidateGeneratorBuilder& set_max_variant_size(Position size);
         
         CandidateGeneratorBuilder& add_kmer_size(unsigned kmer_size);
-        CandidateGeneratorBuilder& set_assembler_min_base_quality(QualityType quality);
+        CandidateGeneratorBuilder& set_assembler_min_base_quality(BaseQuality min);
         
         CandidateGeneratorBuilder& set_variant_source(boost::filesystem::path variant_source);
         CandidateGeneratorBuilder& set_variant_source(const std::shared_ptr<const VcfReader>& variant_source);
@@ -62,14 +62,14 @@ namespace Octopus
             // common
             boost::optional<std::reference_wrapper<const ReferenceGenome>> reference;
             
-            QualityType min_base_quality = 10;
+            BaseQuality min_base_quality = 10;
             unsigned min_supporting_reads = 1;
-            SizeType max_variant_size = 500;
+            Position max_variant_size = 500;
             
             // assembler
             
             std::vector<unsigned> kmer_sizes;
-            boost::optional<QualityType> min_assembler_base_quality;
+            boost::optional<BaseQuality> min_assembler_base_quality;
             
             // external
             
@@ -94,6 +94,6 @@ namespace Octopus
         
         GeneratorFactoryMap generate_factory() const;
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* candidate_generator_builder_hpp */

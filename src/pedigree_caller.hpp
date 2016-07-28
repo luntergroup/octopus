@@ -20,7 +20,7 @@ class ReadPipe;
 class Variant;
 class VcfRecord;
 
-namespace Octopus
+namespace octopus
 {
     class PedigreeVariantCaller// : public VariantCaller
     {
@@ -31,7 +31,7 @@ namespace Octopus
 //                                       ReadPipe& read_pipe,
 //                                       CandidateVariantGenerator&& candidate_generator,
 //                                       unsigned ploidy,
-//                                       SampleIdType mother, SampleIdType father,
+//                                       SampleName mother, SampleName father,
 //                                       double min_variant_posterior);
         
         ~PedigreeVariantCaller() = default;
@@ -43,10 +43,10 @@ namespace Octopus
         
     private:
         const unsigned ploidy_;
-        const SampleIdType mother_, father_;
+        const SampleName mother_, father_;
         const double min_variant_posterior_ = 0.95;
     };
     
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* pedigree_caller_hpp */

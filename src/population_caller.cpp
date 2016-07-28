@@ -33,7 +33,7 @@
 #include "reference_call.hpp"
 #include "logging.hpp"
 
-namespace Octopus
+namespace octopus
 {
 PopulationVariantCaller::PopulationVariantCaller(CallerComponents&& components,
                                                  VariantCaller::CallerParameters general_parameters,
@@ -45,7 +45,7 @@ parameters_ {specific_parameters}
 
 // IndividualVariantCaller::Latents public methods
 
-PopulationVariantCaller::Latents::Latents(const std::vector<SampleIdType>& samples,
+PopulationVariantCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                           const std::vector<Haplotype>& haplotypes,
                                           std::vector<Genotype<Haplotype>>&& genotypes,
                                           ModelInferences&& inferences)
@@ -66,7 +66,7 @@ dummy_latents_ {}
 //    haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
 }
 
-PopulationVariantCaller::Latents::Latents(const std::vector<SampleIdType>& samples,
+PopulationVariantCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                           const std::vector<Haplotype>& haplotypes,
                                           std::vector<Genotype<Haplotype>>&& genotypes,
                                           ModelInferences&& inferences,
@@ -135,7 +135,7 @@ PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 {
     CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
     
-    GenotypeModel::Population model {prior_model};
+    model::Population model {prior_model};
     
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
     
@@ -147,7 +147,7 @@ PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     auto inferences = model.infer_latents(samples_, genotypes, haplotypes, haplotype_likelihoods);
     
 //    // TEST
-//    GenotypeModel::Population dummy_model {ploidy_ + 1, prior_model};
+//    model::Population dummy_model {ploidy_ + 1, prior_model};
 //    auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
 //    if (debug_log_) {
 //        stream(*debug_log_) << "Evaluating dummy model with " << dummy_genotypes.size() << " genotypes";
@@ -162,7 +162,7 @@ PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 
 namespace
 {
-    using GM = GenotypeModel::Population;
+    using GM = model::Population;
     
     using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
     
@@ -305,25 +305,25 @@ namespace
     
     // output
     
-//    Octopus::VariantCall::GenotypeCall convert(GenotypeCall&& call)
+//    octopus::VariantCall::GenotypeCall convert(GenotypeCall&& call)
 //    {
-//        return Octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
+//        return octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
 //    }
 //    
-//    std::unique_ptr<Octopus::VariantCall>
-//    transform_call(const SampleIdType& sample, VariantCall&& variant_call, GenotypeCall&& genotype_call)
+//    std::unique_ptr<octopus::VariantCall>
+//    transform_call(const SampleName& sample, VariantCall&& variant_call, GenotypeCall&& genotype_call)
 //    {
-//        std::vector<std::pair<SampleIdType, Call::GenotypeCall>> tmp {
+//        std::vector<std::pair<SampleName, Call::GenotypeCall>> tmp {
 //            std::make_pair(sample, convert(std::move(genotype_call)))
 //        };
 //        return std::make_unique<GermlineVariantCall>(variant_call.variant.get(),
 //                                                     std::move(tmp), variant_call.posterior);
 //    }
     
-//    auto transform_calls(const SampleIdType& sample, VariantCalls&& variant_calls,
+//    auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
 //                         GenotypeCalls&& genotype_calls)
 //    {
-//        std::vector<std::unique_ptr<Octopus::VariantCall>> result {};
+//        std::vector<std::unique_ptr<octopus::VariantCall>> result {};
 //        result.reserve(variant_calls.size());
 //        
 //        std::transform(std::make_move_iterator(std::begin(variant_calls)),
@@ -338,7 +338,7 @@ namespace
 //    }
 } // namespace
 
-std::vector<std::unique_ptr<Octopus::VariantCall>>
+std::vector<std::unique_ptr<octopus::VariantCall>>
 PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const CallerLatents& latents) const
 {
@@ -359,7 +359,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 //    return std::exp(dummy_model_ljp - norm);
 //}
 
-std::vector<std::unique_ptr<Octopus::VariantCall>>
+std::vector<std::unique_ptr<octopus::VariantCall>>
 PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const Latents& latents) const
 {
@@ -563,4 +563,4 @@ PopulationVariantCaller::call_reference(const std::vector<Allele>& alleles,
 //        print_candidate_posteriors(std::cout, candidate_posteriors, n);
 //    }
 //} // namespace debug
-} // namespace Octopus
+} // namespace octopus

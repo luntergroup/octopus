@@ -44,6 +44,8 @@ public:
     VcfParser(VcfParser&&)                 = default;
     VcfParser& operator=(VcfParser&&)      = default;
     
+    ~VcfParser() = default;
+    
     bool is_header_written() const noexcept override;
     
     VcfHeader fetch_header() const override;

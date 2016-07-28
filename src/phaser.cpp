@@ -22,7 +22,7 @@
 
 #include "timers.hpp"
 
-namespace Octopus
+namespace octopus
 {
 Phaser::Phaser(Phred<double> min_phase_score) : min_phase_score_ {min_phase_score} {}
 

@@ -28,25 +28,25 @@
 
 #include <iostream> // DEBUG
 
-namespace Octopus
+namespace octopus
 {
 namespace
 {
     auto mapped_contig_region(const VcfRecord& call)
     {
-        const auto begin = static_cast<ContigRegion::SizeType>(call.pos()) - 1;
+        const auto begin = static_cast<ContigRegion::Position>(call.pos()) - 1;
         return ContigRegion {
-            begin, begin + static_cast<ContigRegion::SizeType>(call.ref().size())
+            begin, begin + static_cast<ContigRegion::Position>(call.ref().size())
         };
     }
     
-    auto extract_phase_region(const VcfRecord& call, const SampleIdType& sample)
+    auto extract_phase_region(const VcfRecord& call, const SampleName& sample)
     {
         if (call.is_sample_phased(sample) && call.has_format("PS")) {
             return GenomicRegion {
                 call.chrom(),
-                boost::lexical_cast<ContigRegion::SizeType>(call.get_sample_value(sample, "PS").front()) - 1,
-                static_cast<ContigRegion::SizeType>(call.pos() + call.ref().size()) - 1
+                boost::lexical_cast<ContigRegion::Position>(call.get_sample_value(sample, "PS").front()) - 1,
+                static_cast<ContigRegion::Position>(call.pos() + call.ref().size()) - 1
             };
             
         }
@@ -55,7 +55,7 @@ namespace
     
     struct CallWrapper : public Mappable<CallWrapper>
     {
-        CallWrapper(const VcfRecord& record, const SampleIdType& sample)
+        CallWrapper(const VcfRecord& record, const SampleName& sample)
         :
         call {std::cref(record)}, phase_region {extract_phase_region(record, sample)} {}
         
@@ -64,7 +64,7 @@ namespace
         const GenomicRegion& mapped_region() const noexcept { return phase_region; }
     };
     
-    auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleIdType& sample)
+    auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleName& sample)
     {
         std::vector<CallWrapper> result {};
         result.reserve(calls.size());
@@ -76,13 +76,13 @@ namespace
         return result;
     }
     
-    decltype(auto) extract_genotype(const CallWrapper& call, const SampleIdType& sample)
+    decltype(auto) extract_genotype(const CallWrapper& call, const SampleName& sample)
     {
         return call.call.get().get_sample_value(sample, "GT");
     }
     
     auto extract_ploidy(const std::vector<CallWrapper>& phased_calls,
-                        const SampleIdType& sample)
+                        const SampleName& sample)
     {
         assert(!phased_calls.empty());
         return extract_genotype(phased_calls.front(), sample).size();
@@ -104,13 +104,13 @@ namespace
         return mapped_contig_region(call.call.get());
     }
     
-    bool is_missing(const VcfRecord::SequenceType& allele)
+    bool is_missing(const VcfRecord::NucleotideSequence& allele)
     {
         return allele == "." || allele == "*";
     }
     
-    auto make_allele(const ContigRegion& region, const VcfRecord::SequenceType& ref_allele,
-                     const VcfRecord::SequenceType& alt_allele)
+    auto make_allele(const ContigRegion& region, const VcfRecord::NucleotideSequence& ref_allele,
+                     const VcfRecord::NucleotideSequence& alt_allele)
     {
         Variant tmp {"$", region.begin(), ref_allele, alt_allele};
         
@@ -123,7 +123,7 @@ namespace
     
     Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_calls,
                                          const GenomicRegion& region,
-                                         const SampleIdType& sample,
+                                         const SampleName& sample,
                                          const ReferenceGenome& reference)
     {
         assert(!phased_calls.empty());
@@ -213,4 +213,4 @@ GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls, const VcfHead
     
     return result;
 }
-} // namespace Octopus
+} // namespace octopus

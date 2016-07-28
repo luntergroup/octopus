@@ -24,27 +24,27 @@ child_  {std::move(child.name)}
     }
 }
 
-bool Trio::is_child(const Sample& member) const noexcept
+bool Trio::is_child(const SampleName& member) const noexcept
 {
     return member == child_;
 }
 
-bool Trio::is_parent(const Sample& member) const noexcept
+bool Trio::is_parent(const SampleName& member) const noexcept
 {
     return member == mother_ || member == father_;
 }
 
-const Trio::Sample& Trio::mother() const noexcept
+const Trio::SampleName& Trio::mother() const noexcept
 {
     return mother_;
 }
 
-const Trio::Sample& Trio::father() const noexcept
+const Trio::SampleName& Trio::father() const noexcept
 {
     return father_;
 }
 
-const Trio::Sample& Trio::child() const noexcept
+const Trio::SampleName& Trio::child() const noexcept
 {
     return child_;
 }

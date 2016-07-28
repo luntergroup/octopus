@@ -36,10 +36,10 @@
 //using std::cout;
 //using std::endl;
 //
-//using Octopus::HaplotypeTree;
-//using Octopus::ReadModel;
-//using Octopus::HaplotypePhaser;
-//using Octopus::VariationalBayesGenotypeModel;
+//using octopus::HaplotypeTree;
+//using octopus::ReadModel;
+//using octopus::HaplotypePhaser;
+//using octopus::VariationalBayesGenotypeModel;
 
 //BOOST_AUTO_TEST_CASE(HaplotypePhaser phases when the data supports one phase)
 //{
@@ -70,7 +70,7 @@
 //    unsigned max_haplotypes {128};
 //    HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
 //    
-//    Octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleIdType,
+//    octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleName,
 //    std::move_iterator<decltype(reads)::mapped_type::iterator>> read_ranges {};
 //    for (const auto& sample : samples) {
 //        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(reads[sample].begin()),
@@ -165,7 +165,7 @@
 //    unsigned max_haplotypes {128};
 //    HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
 //    
-//    Octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleIdType,
+//    octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleName,
 //    std::move_iterator<decltype(reads)::mapped_type::iterator>> read_ranges {};
 //    for (const auto& sample : samples) {
 //        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(reads[sample].begin()),
@@ -218,7 +218,7 @@
 //    unsigned max_haplotypes {64};
 //    HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
 //    
-//    Octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleIdType,
+//    octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleName,
 //            std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
 //    for (const auto& sample : samples) {
 //        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),

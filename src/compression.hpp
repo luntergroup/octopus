@@ -11,7 +11,7 @@
 
 #include <string>
 
-namespace Octopus
+namespace octopus
 {
     std::string compress(const std::string& data);
     std::string decompress(const std::string& data);
@@ -25,6 +25,6 @@ namespace Octopus
     {
         std::string operator()(const std::string str) const;
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif

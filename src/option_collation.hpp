@@ -25,7 +25,7 @@
 
 namespace fs = boost::filesystem;
 
-namespace Octopus
+namespace octopus
 {
 class ReadTransform;
 class ReadPipe;
@@ -51,7 +51,7 @@ namespace Options
     
     ContigOutputOrder get_contig_output_order(const OptionMap& options);
     
-    boost::optional<std::vector<SampleIdType>> get_user_samples(const OptionMap& options);
+    boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& options);
     
     ReadManager make_read_manager(const OptionMap& options);
     
@@ -76,6 +76,6 @@ namespace Options
     
     boost::optional<fs::path> create_temp_file_directory(const OptionMap& options);
 } // namespace Options
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* option_collation_hpp */

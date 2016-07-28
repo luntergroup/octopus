@@ -54,7 +54,7 @@ const std::string& ReferenceGenome::name() const
     return name_;
 }
 
-bool ReferenceGenome::has_contig(const ContigNameType& contig) const noexcept
+bool ReferenceGenome::has_contig(const ContigName& contig) const noexcept
 {
     return std::find(std::cbegin(contig_names_), std::cend(contig_names_), contig) != std::cend(contig_names_);
 }
@@ -69,27 +69,27 @@ std::size_t ReferenceGenome::num_contigs() const noexcept
     return contig_names_.size();
 }
 
-const std::vector<ReferenceGenome::ContigNameType>& ReferenceGenome::contig_names() const noexcept
+const std::vector<ReferenceGenome::ContigName>& ReferenceGenome::contig_names() const noexcept
 {
     return contig_names_;
 }
 
-ReferenceGenome::SizeType ReferenceGenome::contig_size(const ContigNameType& contig) const
+ContigRegion::Size ReferenceGenome::contig_size(const ContigName& contig) const
 {
     return contig_sizes_.at(contig);
 }
 
-ReferenceGenome::SizeType ReferenceGenome::contig_size(const GenomicRegion& region) const
+ContigRegion::Size ReferenceGenome::contig_size(const GenomicRegion& region) const
 {
     return this->contig_size(region.contig_name());
 }
 
-GenomicRegion ReferenceGenome::contig_region(const ContigNameType& contig) const
+GenomicRegion ReferenceGenome::contig_region(const ContigName& contig) const
 {
-    return GenomicRegion {contig, GenomicRegion::SizeType {0}, this->contig_size(contig)};
+    return GenomicRegion {contig, GenomicRegion::Position {0}, this->contig_size(contig)};
 }
 
-ReferenceGenome::SequenceType ReferenceGenome::fetch_sequence(const GenomicRegion& region) const
+ReferenceGenome::GeneticSequence ReferenceGenome::fetch_sequence(const GenomicRegion& region) const
 {
     return impl_->fetch_sequence(region);
 }
@@ -141,10 +141,11 @@ std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& referen
     return result;
 }
 
-GenomicRegion::SizeType calculate_genome_size(const ReferenceGenome& reference)
+GenomicRegion::Position calculate_genome_size(const ReferenceGenome& reference)
 {
     const auto& contigs = reference.contig_names();
-    return std::accumulate(std::cbegin(contigs), std::cend(contigs), GenomicRegion::SizeType {0},
+    return std::accumulate(std::cbegin(contigs), std::cend(contigs),
+                           GenomicRegion::Position {0},
                            [&reference] (const auto curr, const auto& contig) {
                                return curr + reference.contig_size(contig);
                            });
@@ -152,7 +153,7 @@ GenomicRegion::SizeType calculate_genome_size(const ReferenceGenome& reference)
 
 GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
 {
-    using SizeType = GenomicRegion::SizeType;
+    using Position = GenomicRegion::Position;
     
     region.erase(std::remove(std::begin(region), std::end(region), ','), std::end(region));
     
@@ -161,23 +162,23 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
     std::smatch match;
     
     if (std::regex_match(region, match, re) && match.size() == 5) {
-        GenomicRegion::ContigNameType contig {match.str(1)};
+        GenomicRegion::ContigName contig {match.str(1)};
         
         const auto contig_size = reference.contig_size(contig);
         
-        SizeType begin {0}, end {0};
+        Position begin {0}, end {0};
         
         if (match.str(2).empty()) {
             end = contig_size;
         } else {
-            begin = static_cast<SizeType>(std::stoul(match.str(2)));
+            begin = static_cast<Position>(std::stoul(match.str(2)));
             
             if (match.str(3).empty()) {
                 end = begin + 1;
             } else if (match.str(4).empty()) {
                 end = contig_size;
             } else {
-                end = static_cast<SizeType>(std::stoul(match.str(4)));
+                end = static_cast<Position>(std::stoul(match.str(4)));
             }
             
             if (begin > end) {

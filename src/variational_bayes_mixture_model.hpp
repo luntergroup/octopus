@@ -16,7 +16,7 @@
 #include "haplotype.hpp"
 #include "haplotype_likelihood_cache.hpp"
 
-namespace Octopus
+namespace octopus
 {
     template <std::size_t K>
     class VariationalBayesMixtureModel
@@ -48,16 +48,18 @@ namespace Octopus
         }
         
         VariationalBayesMixtureModel() = default;
+        
         VariationalBayesMixtureModel(AlgorithmOptions options);
-        ~VariationalBayesMixtureModel() = default;
         
         VariationalBayesMixtureModel(const VariationalBayesMixtureModel&)            = default;
         VariationalBayesMixtureModel& operator=(const VariationalBayesMixtureModel&) = default;
         VariationalBayesMixtureModel(VariationalBayesMixtureModel&&)                 = default;
         VariationalBayesMixtureModel& operator=(VariationalBayesMixtureModel&&)      = default;
         
+        ~VariationalBayesMixtureModel() = default;
+        
         template <typename Container>
-        InferredLatents infer_latents(const std::vector<SampleIdType>& samples,
+        InferredLatents infer_latents(const std::vector<SampleName>& samples,
                                       const Container& genotypes,
                                       const Latents& latents,
                                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods);
@@ -124,6 +126,6 @@ namespace Octopus
         
         AlgorithmOptions options_;
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* variational_bayes_mixture_model_h */

@@ -13,10 +13,10 @@
 #include "aligned_read.hpp"
 #include "variant.hpp"
 
-namespace Octopus {
-    
+namespace octopus
+{
 OnlineCandidateVariantGenerator::OnlineCandidateVariantGenerator(const ReferenceGenome& reference,
-                                                                 SizeType max_variant_size)
+                                                                 Variant::RegionType::Size max_variant_size)
 :
 reference_ {reference},
 max_variant_size_ {max_variant_size}
@@ -57,4 +57,4 @@ std::vector<Variant> OnlineCandidateVariantGenerator::generate_candidates(const 
     }
 }
 
-} // namespace Octopus
+} // namespace octopus

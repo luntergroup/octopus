@@ -21,7 +21,7 @@
 
 #include <iostream> // DEBUG
 
-namespace Octopus
+namespace octopus
 {
 GenomeWalker::GenomeWalker(unsigned max_included,
                            IndicatorPolicy indicator_policy,
@@ -32,7 +32,7 @@ indicator_policy_ {indicator_policy},
 extension_policy_ {extension_policy}
 {}
 
-GenomicRegion GenomeWalker::walk(const ContigNameType& contig, const ReadMap& reads,
+GenomicRegion GenomeWalker::walk(const ContigName& contig, const ReadMap& reads,
                                  const Candidates& candidates) const
 {
     return walk(GenomicRegion {contig, 0, 0}, reads, candidates);
@@ -169,4 +169,4 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     return encompassing_region(first_included_itr, included_itr);
 }
 
-} // namespace Octopus
+} // namespace octopus

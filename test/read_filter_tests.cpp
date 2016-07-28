@@ -41,12 +41,12 @@ BOOST_AUTO_TEST_CASE(read_filter_test)
 //    
 //    BOOST_CHECK(reads.size() == 485);
 //    
-//    Octopus::ReadFilter<std::vector<AlignedRead>::iterator> read_filter {};
+//    octopus::ReadFilter<std::vector<AlignedRead>::iterator> read_filter {};
     
-//    read_filter.register_filter(Octopus::ReadFilters::IsNotSecondaryAlignment());
-//    read_filter.register_filter(Octopus::ReadFilters::IsGoodMappingQuality(20));
-//    read_filter.register_filter(Octopus::ReadFilters::HasSufficientGoodQualityBases(20, 10));
-//    read_filter.register_filter(Octopus::ReadFilters::FilterDuplicates());
+//    read_filter.register_filter(octopus::ReadFilters::IsNotSecondaryAlignment());
+//    read_filter.register_filter(octopus::ReadFilters::IsGoodMappingQuality(20));
+//    read_filter.register_filter(octopus::ReadFilters::HasSufficientGoodQualityBases(20, 10));
+//    read_filter.register_filter(octopus::ReadFilters::FilterDuplicates());
     
 //    std::vector<AlignedRead> good_reads {}, bad_reads {};
 //    good_reads.reserve(reads.size());

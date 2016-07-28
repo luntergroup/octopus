@@ -14,7 +14,7 @@
 #include "pedigree_caller.hpp"
 #include "phaser.hpp"
 
-namespace Octopus
+namespace octopus
 {
 // public methods
 
@@ -162,7 +162,7 @@ VariantCallerBuilder& VariantCallerBuilder::set_indel_heterozygosity(double hete
 }
 
 // cancer
-VariantCallerBuilder& VariantCallerBuilder::set_normal_sample(SampleIdType normal_sample)
+VariantCallerBuilder& VariantCallerBuilder::set_normal_sample(SampleName normal_sample)
 {
     parameters_.normal_sample = std::move(normal_sample);
     return *this;
@@ -194,13 +194,13 @@ VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_posterior(Phred<doub
 
 // trio
 
-VariantCallerBuilder& VariantCallerBuilder::set_maternal_sample(SampleIdType mother)
+VariantCallerBuilder& VariantCallerBuilder::set_maternal_sample(SampleName mother)
 {
     parameters_.maternal_sample = std::move(mother);
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_paternal_sample(SampleIdType father)
+VariantCallerBuilder& VariantCallerBuilder::set_paternal_sample(SampleName father)
 {
     parameters_.paternal_sample = std::move(father);
     return *this;
@@ -293,4 +293,4 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
         }}
     };
 }
-} // namespace Octopus
+} // namespace octopus

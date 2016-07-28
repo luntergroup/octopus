@@ -21,10 +21,10 @@
 
 #include "mappable_algorithms.hpp"
 
-namespace Octopus
+namespace octopus
 {
 
-HaplotypeTree::HaplotypeTree(const ContigNameType& contig, const ReferenceGenome& reference)
+HaplotypeTree::HaplotypeTree(const ContigName& contig, const ReferenceGenome& reference)
 :
 reference_ {reference},
 tree_ {},
@@ -744,4 +744,4 @@ HaplotypeTree::remove_internal(const Vertex leaf, const ContigRegion& region)
     }
 }
 
-} // namespace Octopus
+} // namespace octopus

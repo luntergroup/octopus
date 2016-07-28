@@ -26,18 +26,18 @@ constexpr char CigarOperation::HARD_CLIPPED;
 constexpr char CigarOperation::PADDING;
 constexpr char CigarOperation::SKIPPED;
 
-CigarOperation::CigarOperation(const SizeType size, const FlagType flag) noexcept
+CigarOperation::CigarOperation(const Size size, const Flag flag) noexcept
 :
 size_ {size},
 flag_ {flag}
 {}
 
-CigarOperation::SizeType CigarOperation::size() const noexcept
+CigarOperation::Size CigarOperation::size() const noexcept
 {
     return size_;
 }
 
-CigarOperation::FlagType CigarOperation::flag() const noexcept
+CigarOperation::Flag CigarOperation::flag() const noexcept
 {
     return flag_;
 }
@@ -87,7 +87,7 @@ CigarString parse_cigar_string(const std::string& cigar_string)
             digits += c;
         } else {
             try {
-                result.emplace_back(boost::lexical_cast<CigarOperation::SizeType>(digits), c);
+                result.emplace_back(boost::lexical_cast<CigarOperation::Size>(digits), c);
                 digits.clear();
             } catch (const boost::bad_lexical_cast&) {
                 throw;
@@ -155,7 +155,7 @@ bool is_soft_clipped(const CigarString& cigar_string) noexcept
     return is_front_soft_clipped(cigar_string) || is_back_soft_clipped(cigar_string);
 }
 
-std::pair<CigarOperation::SizeType, CigarOperation::SizeType>
+std::pair<CigarOperation::Size, CigarOperation::Size>
 get_soft_clipped_sizes(const CigarString& cigar_string) noexcept
 {
     return std::make_pair((is_front_soft_clipped(cigar_string)) ? cigar_string.front().size() : 0,
@@ -165,8 +165,8 @@ get_soft_clipped_sizes(const CigarString& cigar_string) noexcept
 // non-member functions
 
 template <typename Predicate>
-CigarString splice(const CigarString& cigar_string, CigarOperation::SizeType offset,
-                   CigarOperation::SizeType size, Predicate pred)
+CigarString splice(const CigarString& cigar_string, CigarOperation::Size offset,
+                   CigarOperation::Size size, Predicate pred)
 {
     CigarString result {};
     result.reserve(cigar_string.size());
@@ -209,35 +209,35 @@ CigarString splice(const CigarString& cigar_string, CigarOperation::SizeType off
     return result;
 }
 
-CigarString splice(const CigarString& cigar_string, const CigarOperation::SizeType offset,
-                   const CigarOperation::SizeType size)
+CigarString splice(const CigarString& cigar_string, const CigarOperation::Size offset,
+                   const CigarOperation::Size size)
 {
     return splice(cigar_string, offset, size, [] (const auto& op) { return true; });
 }
 
-CigarString splice(const CigarString& cigar_string, const CigarOperation::SizeType size)
+CigarString splice(const CigarString& cigar_string, const CigarOperation::Size size)
 {
     return splice(cigar_string, 0, size);
 }
 
-CigarString splice_reference(const CigarString& cigar_string, const CigarOperation::SizeType offset,
-                             const CigarOperation::SizeType size)
+CigarString splice_reference(const CigarString& cigar_string, const CigarOperation::Size offset,
+                             const CigarOperation::Size size)
 {
     return splice(cigar_string, offset, size, [] (const auto& op) { return op.advances_reference(); });
 }
 
-CigarString splice_reference(const CigarString& cigar_string, const CigarOperation::SizeType size)
+CigarString splice_reference(const CigarString& cigar_string, const CigarOperation::Size size)
 {
     return splice(cigar_string, 0, size);
 }
 
-CigarString splice_sequence(const CigarString& cigar_string, const CigarOperation::SizeType offset,
-                            const CigarOperation::SizeType size)
+CigarString splice_sequence(const CigarString& cigar_string, const CigarOperation::Size offset,
+                            const CigarOperation::Size size)
 {
     return splice(cigar_string, offset, size, [] (const auto& op) { return op.advances_sequence(); });
 }
 
-CigarString splice_sequence(const CigarString& cigar_string, const CigarOperation::SizeType size)
+CigarString splice_sequence(const CigarString& cigar_string, const CigarOperation::Size size)
 {
     return splice(cigar_string, 0, size);
 }

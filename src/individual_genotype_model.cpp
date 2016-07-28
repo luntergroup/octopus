@@ -19,9 +19,9 @@
 
 #include "timers.hpp"
 
-namespace Octopus
+namespace octopus
 {
-namespace GenotypeModel
+namespace model
 {
 Individual::Individual(const CoalescentModel& genotype_prior_model,
                        boost::optional<Logging::DebugLogger> debug_log)
@@ -56,7 +56,7 @@ namespace debug
 }
 
 Individual::InferredLatents
-Individual::infer_latents(const SampleIdType& sample,
+Individual::infer_latents(const SampleName& sample,
                           const std::vector<Genotype<Haplotype>>& genotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
@@ -178,4 +178,4 @@ namespace debug
     }
 } // namespace debug
 } // namesapce GenotypeModel
-} // namespace Octopus
+} // namespace octopus

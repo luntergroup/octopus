@@ -16,7 +16,7 @@
 
 #include <iostream> // DEBUG
 
-namespace Octopus
+namespace octopus
 {
     
     constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Homopolymer_errors_;
@@ -97,4 +97,4 @@ namespace Octopus
             default: return default_gap_extension_;
         }
     }
-} // namespace Octopus
+} // namespace octopus

@@ -33,8 +33,8 @@ using std::endl;
 
 using test::make_haplotype;
 
-using Octopus::HaplotypeTree;
-using Octopus::CandidateGeneratorBuilder;
+using octopus::HaplotypeTree;
+using octopus::CandidateGeneratorBuilder;
 
 BOOST_AUTO_TEST_SUITE(Components)
 BOOST_AUTO_TEST_SUITE(HaplotypeTreeTests)

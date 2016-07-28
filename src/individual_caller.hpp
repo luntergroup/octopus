@@ -26,7 +26,7 @@ class ReadPipe;
 class Variant;
 class HaplotypeLikelihoodCache;
 
-namespace Octopus
+namespace octopus
 {
 class CoalescentModel;
 
@@ -93,7 +93,7 @@ private:
     call_reference(const std::vector<Allele>& alleles, const Latents& latents,
                    const ReadMap& reads) const;
     
-    const SampleIdType& sample() const noexcept;
+    const SampleName& sample() const noexcept;
     
     CoalescentModel make_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
@@ -101,7 +101,7 @@ private:
 class IndividualVariantCaller::Latents : public CallerLatents
 {
 public:
-    using ModelInferences = GenotypeModel::Individual::InferredLatents;
+    using ModelInferences = model::Individual::InferredLatents;
     
     using CallerLatents::HaplotypeProbabilityMap;
     using CallerLatents::GenotypeProbabilityMap;
@@ -110,7 +110,7 @@ public:
     
     Latents() = delete;
     
-    Latents(const SampleIdType& sample, const std::vector<Haplotype>& haplotypes,
+    Latents(const SampleName& sample, const std::vector<Haplotype>& haplotypes,
             std::vector<Genotype<Haplotype>>&& genotypes, ModelInferences&& latents);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
@@ -124,6 +124,6 @@ private:
     
     HaplotypeProbabilityMap calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
 };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* individual_caller_hpp */

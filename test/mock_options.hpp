@@ -134,13 +134,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:46,729,130-46,730,350", // PASSing FP SNV
         //"--regions", "22:40,946,818-40,946,893", // PASSing FP SNV
         //"--regions", "22:41,607,540-41,607,580", // tricky PASSing FP SNVs
-        "--regions", "22:42,905,833-42,905,873", // PASSing FP SNV
+        //"--regions", "22:42,905,833-42,905,873", // PASSing FP SNV
         //"--regions", "22:43,410,348-43,410,423", // PASSing FP SNV
         //"--regions", "22:43,622,482-43,622,832", // PASSing FP SNV. Fixed: haplotype filtering
         //"--regions", "22:47,094,596-47,094,671", // PASSing FP SNV
         //"--regions", "22:47,996,352-47,996,392", // PASSing FP SNV
         
-        //"--regions", "22:40,000,000-50,000,000",
+        "--regions", "22:40,000,000-41,000,000",
         
 //        "--regions", "22:41,120,796-41,120,871", // FP SNP. Strand bias. Run through.
 //        "--regions", "22:43,960,301-43,960,376", // FP SNP. Strand bias. Run through.
@@ -272,7 +272,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
     
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    return Octopus::Options::parse_options(argc, argv);
+    return octopus::Options::parse_options(argc, argv);
 }
 
 #endif

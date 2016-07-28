@@ -24,7 +24,7 @@
 #include "trio.hpp"
 #include "pedigree.hpp"
 
-namespace Octopus {
+namespace octopus {
     
     class VariantCallerBuilder
     {
@@ -64,7 +64,7 @@ namespace Octopus {
         VariantCallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
         
         // cancer
-        VariantCallerBuilder& set_normal_sample(SampleIdType normal_sample);
+        VariantCallerBuilder& set_normal_sample(SampleName normal_sample);
         VariantCallerBuilder& set_somatic_mutation_rate(double rate) noexcept;
         VariantCallerBuilder& set_credible_mass(double mass) noexcept;
         VariantCallerBuilder& set_min_somatic_frequency(double frequency) noexcept;
@@ -72,8 +72,8 @@ namespace Octopus {
         
         // trio
         
-        VariantCallerBuilder& set_maternal_sample(SampleIdType mother);
-        VariantCallerBuilder& set_paternal_sample(SampleIdType father);
+        VariantCallerBuilder& set_maternal_sample(SampleName mother);
+        VariantCallerBuilder& set_paternal_sample(SampleName father);
         
         // pedigree
         
@@ -123,7 +123,7 @@ namespace Octopus {
             
             // cancer
             
-            boost::optional<SampleIdType> normal_sample;
+            boost::optional<SampleName> normal_sample;
             double somatic_mutation_rate;
             double min_somatic_frequency;
             double credible_mass;
@@ -132,7 +132,7 @@ namespace Octopus {
             
             // trio
             
-            boost::optional<SampleIdType> maternal_sample, paternal_sample;
+            boost::optional<SampleName> maternal_sample, paternal_sample;
             
             // pedigree
             
@@ -146,6 +146,6 @@ namespace Octopus {
         
         CallerFactoryMap generate_factory() const;
     };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* variant_caller_builder_hpp */

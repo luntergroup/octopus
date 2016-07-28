@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(aligned_read_copies_and_moves_correctly)
 {
-    AlignedRead read {get_mock_region(), "ACGT", AlignedRead::Qualities {1, 2, 3, 4},
+    AlignedRead read {get_mock_region(), "ACGT", AlignedRead::BaseQualityVector {1, 2, 3, 4},
         parse_cigar_string("4M"), 10, AlignedRead::Flags {}, "1", 10, 30,
         AlignedRead::NextSegment::Flags {}};
     
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(can_splice_reads)
     const AlignedRead read {
         GenomicRegion {"1", 100, 120},
         "AAAAACCCCCCCCCCGGGTTTT",
-        AlignedRead::Qualities(23, 0),
+        AlignedRead::BaseQualityVector(23, 0),
         parse_cigar_string("5M1D10M3I4M"),
         0,
         AlignedRead::Flags {}

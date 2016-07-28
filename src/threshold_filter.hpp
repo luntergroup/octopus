@@ -13,7 +13,7 @@
 
 class VcfHeader;
 
-namespace Octopus { namespace CallFiltering
+namespace octopus { namespace CallFiltering
 {
     class ThresholdVariantCallFilter : public VariantCallFilter
     {
@@ -37,6 +37,6 @@ namespace Octopus { namespace CallFiltering
         virtual Classification classify(const MeasureVector& call_measures) const override;
     };
 } // namespace CallFiltering
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* threshold_filter_hpp */

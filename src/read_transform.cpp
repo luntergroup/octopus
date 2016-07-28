@@ -8,7 +8,7 @@
 
 #include "read_transform.hpp"
 
-namespace Octopus {
+namespace octopus {
     // public methods
     
     void ReadTransform::register_transform(ReadTransformation transform)
@@ -32,4 +32,4 @@ namespace Octopus {
             transform(read);
         }
     }
-} // namespace Octopus
+} // namespace octopus

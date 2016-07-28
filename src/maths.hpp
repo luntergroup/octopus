@@ -28,7 +28,7 @@
 #include <boost/math/special_functions/beta.hpp>
 #include <boost/math/distributions/beta.hpp>
 
-namespace Octopus { namespace Maths {
+namespace octopus { namespace Maths {
 
 template <typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
@@ -647,6 +647,6 @@ auto normalise_exp(Container& logs)
     return norm;
 }
 } // namespace Maths
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__maths__) */

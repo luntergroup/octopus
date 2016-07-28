@@ -9,7 +9,7 @@
 #ifndef variant_call_filter_factory_hpp
 #define variant_call_filter_factory_hpp
 
-namespace Octopus { namespace CallFiltering
+namespace octopus { namespace CallFiltering
 {
     class VariantCallFilterFactory
     {
@@ -19,6 +19,6 @@ namespace Octopus { namespace CallFiltering
         
     };
 } // namespace CallFiltering
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* variant_call_filter_factory_hpp */

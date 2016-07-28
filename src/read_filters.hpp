@@ -17,7 +17,7 @@
 #include "aligned_read.hpp"
 #include "cigar_string.hpp"
 
-namespace Octopus { namespace ReadFilters {
+namespace octopus { namespace ReadFilters {
 
 // All filters are nameable
 
@@ -90,51 +90,51 @@ struct IsNotSupplementaryAlignment : BasicReadFilter
 
 struct IsGoodMappingQuality : BasicReadFilter
 {
-    using QualityType = AlignedRead::QualityType;
+    using MappingQuality = AlignedRead::MappingQuality;
     
     IsGoodMappingQuality() = delete;
     
-    explicit IsGoodMappingQuality(QualityType good_mapping_quality);
+    explicit IsGoodMappingQuality(MappingQuality good_mapping_quality);
     
-    IsGoodMappingQuality(std::string name, QualityType good_mapping_quality);
+    IsGoodMappingQuality(std::string name, MappingQuality good_mapping_quality);
     
     bool passes(const AlignedRead& read) const noexcept override;
     
 private:
-    QualityType good_mapping_quality_;
+    MappingQuality good_mapping_quality_;
 };
 
 struct HasSufficientGoodBaseFraction : BasicReadFilter
 {
-    using QualityType = AlignedRead::QualityType;
+    using BaseQuality = AlignedRead::BaseQuality;
     
     HasSufficientGoodBaseFraction() = delete;
-    explicit HasSufficientGoodBaseFraction(QualityType good_base_quality,
+    explicit HasSufficientGoodBaseFraction(BaseQuality good_base_quality,
                                            double min_good_base_fraction);
-    HasSufficientGoodBaseFraction(std::string name, QualityType good_base_quality,
+    HasSufficientGoodBaseFraction(std::string name, BaseQuality good_base_quality,
                                   double min_good_base_fraction);
     
     bool passes(const AlignedRead& read) const noexcept override;
     
 private:
-    QualityType good_base_quality_;
+    BaseQuality good_base_quality_;
     double min_good_base_fraction_;
 };
 
 struct HasSufficientGoodQualityBases : BasicReadFilter
 {
-    using QualityType = AlignedRead::QualityType;
+    using BaseQuality = AlignedRead::BaseQuality;
     
     HasSufficientGoodQualityBases() = delete;
-    explicit HasSufficientGoodQualityBases(QualityType good_base_quality,
+    explicit HasSufficientGoodQualityBases(BaseQuality good_base_quality,
                                            unsigned min_good_bases);
-    HasSufficientGoodQualityBases(std::string name, QualityType good_base_quality,
+    HasSufficientGoodQualityBases(std::string name, BaseQuality good_base_quality,
                                   unsigned min_good_bases);
     
     bool passes(const AlignedRead& read) const noexcept override;
     
 private:
-    QualityType good_base_quality_;
+    BaseQuality good_base_quality_;
     unsigned min_good_bases_;
 };
 
@@ -172,30 +172,30 @@ struct IsNotMarkedDuplicate : BasicReadFilter
 
 struct IsShort : BasicReadFilter
 {
-    using SizeType = AlignedRead::SizeType;
+    using Length = AlignedRead::NucleotideSequence::size_type;
     
     IsShort() = delete;
-    explicit IsShort(SizeType max_length);
-    IsShort(std::string name, SizeType max_length);
+    explicit IsShort(Length max_length);
+    IsShort(std::string name, Length max_length);
     
     bool passes(const AlignedRead& read) const noexcept override;
 
 private:
-    SizeType max_length_;
+    Length max_length_;
 };
 
 struct IsLong : BasicReadFilter
 {
-    using SizeType = AlignedRead::SizeType;
+    using Length = AlignedRead::AlignedRead::NucleotideSequence::size_type;
     
     IsLong() = delete;
-    explicit IsLong(SizeType min_length);
-    IsLong(std::string name, SizeType min_length);
+    explicit IsLong(Length min_length);
+    IsLong(std::string name, Length min_length);
     
     bool passes(const AlignedRead& read) const noexcept override;
     
 private:
-    SizeType min_length_;
+    Length min_length_;
 };
 
 struct IsNotContaminated : BasicReadFilter
@@ -280,6 +280,6 @@ struct IsNotDuplicate : ContextReadFilter<ForwardIt>
 };
 
 } // namespace ReadFilters
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__read_filters__) */

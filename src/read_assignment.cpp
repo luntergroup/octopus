@@ -20,7 +20,7 @@
 #include "maths.hpp"
 #include "append.hpp"
 
-namespace Octopus
+namespace octopus
 {
     using HaplotypeLikelihoods = std::vector<std::vector<double>>;
     
@@ -66,7 +66,7 @@ namespace Octopus
         return result;
     }
     
-    auto expand(const Genotype<Haplotype>& genotype, Haplotype::SizeType n)
+    auto expand(const Genotype<Haplotype>& genotype, unsigned n)
     {
         Genotype<Haplotype> result {genotype.ploidy()};
         
@@ -172,4 +172,4 @@ namespace Octopus
         return result;
         
     }
-} // namespace Octopus
+} // namespace octopus

@@ -19,16 +19,14 @@ class ReferenceGenome;
 class Variant;
 class AlignedRead;
 
-namespace Octopus {
+namespace octopus {
     
 class OnlineCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
-    using SizeType = GenomicRegion::SizeType;
-    
     OnlineCandidateVariantGenerator() = delete;
     
-    OnlineCandidateVariantGenerator(const ReferenceGenome& reference, SizeType max_variant_size = 100);
+    OnlineCandidateVariantGenerator(const ReferenceGenome& reference, Variant::RegionType::Size max_variant_size = 100);
     
     OnlineCandidateVariantGenerator(const OnlineCandidateVariantGenerator&)            = default;
     OnlineCandidateVariantGenerator& operator=(const OnlineCandidateVariantGenerator&) = default;
@@ -41,9 +39,9 @@ public:
 
 private:
     std::reference_wrapper<const ReferenceGenome> reference_;
-    SizeType max_variant_size_;
+    Variant::RegionType::Size max_variant_size_;
 };
 
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__online_candidate_variant_generator__) */

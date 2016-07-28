@@ -16,7 +16,7 @@
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
 
-namespace Octopus
+namespace octopus
 {
 std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
                        unsigned max_coverage, unsigned min_coverage);
@@ -42,6 +42,6 @@ private:
     unsigned max_coverage_ = 100'000;
     unsigned min_coverage_ = 100'000;
 };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* downsampler_hpp */

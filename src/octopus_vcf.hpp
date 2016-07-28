@@ -13,7 +13,7 @@
 
 #include "vcf_header.hpp"
 
-namespace Octopus
+namespace octopus
 {
     namespace Vcf
     {
@@ -34,6 +34,6 @@ namespace Octopus
         
         VcfHeader::Builder make_octopus_header_template();
     } // namespace Vcf
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* octopus_vcf_hpp */

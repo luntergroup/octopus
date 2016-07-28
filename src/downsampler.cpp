@@ -23,7 +23,7 @@
 
 #include "timers.hpp"
 
-namespace Octopus
+namespace octopus
 {
 namespace
 {
@@ -87,7 +87,7 @@ namespace
     auto pick_sample(BidirIt first_unsampled, BidirIt last_unsampled,
                      const std::vector<GenomicRegion>& positions,
                      const PositionCoverages& required_coverage,
-                     const AlignedRead::SizeType max_read_size)
+                     const AlignedRead::RegionType::Size max_read_size)
     {
         assert(first_unsampled < last_unsampled);
         
@@ -278,7 +278,7 @@ min_coverage_ {min_coverage}
 
 std::size_t Downsampler::downsample(MappableFlatMultiSet<AlignedRead>& reads) const
 {
-    return Octopus::downsample(reads, max_coverage_, min_coverage_);
+    return octopus::downsample(reads, max_coverage_, min_coverage_);
 }
 
 std::size_t Downsampler::downsample(ReadMap& reads) const
@@ -292,4 +292,4 @@ std::size_t Downsampler::downsample(ReadMap& reads) const
     return result;
 }
 
-} // namespace Octopus
+} // namespace octopus

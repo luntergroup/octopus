@@ -16,7 +16,7 @@
 
 #include "allele.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class GermlineVariantCall : public VariantCall
     {
@@ -43,6 +43,6 @@ namespace Octopus
     GermlineVariantCall::GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality)
     : VariantCall {std::forward<V>(variant), std::forward<T>(genotype_calls), quality}
     {}
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* germline_variant_call_hpp */

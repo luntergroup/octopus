@@ -25,7 +25,7 @@
 
 #include <iostream> // DEBUG
 
-namespace Octopus
+namespace octopus
 {
 // public methods
 
@@ -51,22 +51,22 @@ bool AlignmentCandidateVariantGenerator::requires_reads() const noexcept
 
 namespace
 {
-    template <typename SequenceType>
-    bool is_good_sequence(const SequenceType& sequence) noexcept
+    template <typename Sequence>
+    bool is_good_sequence(const Sequence& sequence) noexcept
     {
         return std::none_of(std::cbegin(sequence), std::cend(sequence),
                             [] (auto base) { return base == 'N'; });
     }
     
-    template <typename SequenceType, typename T>
-    SequenceType splice(const SequenceType& sequence, const T pos, const T size)
+    template <typename Sequence, typename P, typename S>
+    Sequence splice(const Sequence& sequence, const P pos, const S size)
     {
         const auto it = std::next(std::cbegin(sequence), pos);
-        return SequenceType {it, std::next(it, size)};
+        return Sequence {it, std::next(it, size)};
     }
     
-    template <typename Q, typename T>
-    bool is_all_good_quality(const Q& qualities, const T pos, const T size,
+    template <typename Q, typename P, typename S>
+    bool is_all_good_quality(const Q& qualities, const P pos, const S size,
                              const typename Q::value_type min_quality)
     {
         const auto it = std::next(std::cbegin(qualities), pos);
@@ -76,8 +76,8 @@ namespace
                            });
     }
     
-    template <typename Q, typename T>
-    auto count_bad_qualities(const Q& qualities, const T pos, const T size,
+    template <typename Q, typename P, typename S>
+    auto count_bad_qualities(const Q& qualities, const P pos, const S size,
                              const typename Q::value_type min_quality)
     {
         const auto it = std::next(std::cbegin(qualities), pos);
@@ -99,7 +99,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
     auto qualities_itr = cbegin(read.qualities());
     
     auto ref_index = mapped_begin(read);
-    AlignedRead::SizeType read_index {0};
+    std::size_t read_index {0};
     GenomicRegion region;
     
     for (const auto& cigar_operation : read.cigar_string()) {
@@ -324,9 +324,9 @@ add_snvs_in_match_range(const GenomicRegion& region, const SequenceIterator firs
 {
     using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
     
-    using Tuple = boost::tuple<char, char, QualityType>;
+    using Tuple = boost::tuple<char, char, AlignedRead::BaseQuality>;
     
-    const SequenceType ref_segment {reference_.get().fetch_sequence(region)};
+    const NucleotideSequence ref_segment {reference_.get().fetch_sequence(region)};
     
     const auto& contig = region.contig_name();
     
@@ -347,4 +347,4 @@ add_snvs_in_match_range(const GenomicRegion& region, const SequenceIterator firs
                  ++ref_index;
              });
 }
-} // namespace Octopus
+} // namespace octopus

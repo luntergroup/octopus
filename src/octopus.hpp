@@ -13,7 +13,7 @@
 
 #include "option_parser.hpp"
 
-namespace Octopus
+namespace octopus
 {
     void run_octopus(Options::OptionMap& options);
 }

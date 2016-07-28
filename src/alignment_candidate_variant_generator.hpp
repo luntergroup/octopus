@@ -22,19 +22,16 @@ class ReferenceGenome;
 class GenomicRegion;
 class Variant;
 
-namespace Octopus {
+namespace octopus {
     
 class AlignmentCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
-    using QualityType = AlignedRead::QualityType;
-    using SizeType    = GenomicRegion::SizeType;
-    
     struct Options
     {
-        QualityType min_base_quality;
+        AlignedRead::BaseQuality min_base_quality;
         unsigned min_support = 1;
-        SizeType max_variant_size = 100;
+        Variant::RegionType::Size max_variant_size = 100;
         bool always_include_overlapping_indels = true;
         unsigned max_poor_quality_insertion_bases = 1;
     };
@@ -63,9 +60,9 @@ public:
     void clear() override;
     
 private:
-    using SequenceType      = AlignedRead::SequenceType;
-    using SequenceIterator  = SequenceType::const_iterator;
-    using QualitiesIterator = AlignedRead::Qualities::const_iterator;
+    using NucleotideSequence = AlignedRead::NucleotideSequence;
+    using SequenceIterator   = NucleotideSequence::const_iterator;
+    using QualitiesIterator  = AlignedRead::BaseQualityVector::const_iterator;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     
@@ -74,7 +71,7 @@ private:
     std::function<bool(const Variant&, const Variant&)> match_;
     
     std::deque<Variant> candidates_;
-    SizeType max_seen_candidate_size_;
+    Variant::RegionType::Size max_seen_candidate_size_;
     
     template <typename T1, typename T2, typename T3>
     void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added);
@@ -96,6 +93,6 @@ void AlignmentCandidateVariantGenerator::add_candidate(T1&& region, T2&& sequenc
     }
 }
 
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__alignment_candidate_variant_generator__) */

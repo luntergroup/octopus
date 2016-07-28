@@ -13,7 +13,7 @@
 
 #include "call.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class ReferenceCall : public Call
     {
@@ -49,6 +49,6 @@ namespace Octopus
     ReferenceCall::ReferenceCall(A&& reference, Phred<double> quality)
     : Call {quality}, reference_ {std::forward<A>(reference)}
     {}
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* reference_call_hpp */

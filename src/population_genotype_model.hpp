@@ -21,9 +21,9 @@
 #include "probability_matrix.hpp"
 #include "logging.hpp"
 
-namespace Octopus
+namespace octopus
 {
-    namespace GenotypeModel
+    namespace model
     {
         class Population
         {
@@ -68,18 +68,18 @@ namespace Octopus
             Population& operator=(Population&&)      = delete;
             
             InferredLatents
-            infer_latents(const std::vector<SampleIdType>& samples, const GenotypeVector& genotypes,
+            infer_latents(const std::vector<SampleName>& samples, const GenotypeVector& genotypes,
                           const std::vector<Haplotype>& haplotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
             
 //            InferredLatents
-//            infer_latents(const std::unordered_map<SampleIdType, GenotypeVector>& genotypes,
+//            infer_latents(const std::unordered_map<SampleName, GenotypeVector>& genotypes,
 //                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
             
         private:
             std::reference_wrapper<const CoalescentModel> genotype_prior_model_;
         };
     } // namesapce GenotypeModel
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__population_genotype_model__) */

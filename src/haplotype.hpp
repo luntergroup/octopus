@@ -46,8 +46,8 @@ namespace detail
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
 {
 public:
-    using SequenceType = Allele::SequenceType;
-    using SizeType     = Allele::SizeType;
+    using RegionType         = Allele::RegionType;
+    using NucleotideSequence = Allele::NucleotideSequence;
     
     class Builder;
     
@@ -77,14 +77,14 @@ public:
     bool contains_exact(const Allele& allele) const;
     bool contains_exact(const ContigAllele& allele) const;
     
-    SequenceType sequence(const ContigRegion& region) const;
-    SequenceType sequence(const GenomicRegion& region) const;
-    const SequenceType& sequence() const noexcept;
+    NucleotideSequence sequence(const ContigRegion& region) const;
+    NucleotideSequence sequence(const GenomicRegion& region) const;
+    const NucleotideSequence& sequence() const noexcept;
     
-    SizeType sequence_size(const ContigRegion& region) const;
-    SizeType sequence_size(const GenomicRegion& region) const;
+    NucleotideSequence::size_type sequence_size(const ContigRegion& region) const;
+    NucleotideSequence::size_type sequence_size(const GenomicRegion& region) const;
     
-    std::vector<Variant> difference(const Haplotype& other) const; // w.r.t. this
+    std::vector<Variant> difference(const Haplotype& other) const; // w.r.t this
     
     std::size_t get_hash() const noexcept;
     
@@ -94,7 +94,7 @@ public:
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     friend bool is_reference(const Haplotype& haplotype);
-    friend Haplotype expand(const Haplotype& haplotype, Haplotype::SizeType n);
+    friend Haplotype expand(const Haplotype& haplotype, RegionType::Position n);
     
     template <typename S> friend void debug::print_alleles(S&&, const Haplotype&);
     template <typename S> friend void debug::print_variant_alleles(S&&, const Haplotype&);
@@ -106,7 +106,7 @@ private:
     
     ContigRegion explicit_allele_region_;
     
-    SequenceType sequence_;
+    NucleotideSequence sequence_;
     
     std::size_t cached_hash_;
     
@@ -114,10 +114,10 @@ private:
     
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
     
-    void append(SequenceType& result, const ContigAllele& allele) const;
-    void append(SequenceType& result, AlleleIterator first, AlleleIterator last) const;
-    void append_reference(SequenceType& result, const ContigRegion& region) const;
-    SequenceType fetch_reference_sequence(const ContigRegion& region) const;
+    void append(NucleotideSequence& result, const ContigAllele& allele) const;
+    void append(NucleotideSequence& result, AlleleIterator first, AlleleIterator last) const;
+    void append_reference(NucleotideSequence& result, const ContigRegion& region) const;
+    NucleotideSequence fetch_reference_sequence(const ContigRegion& region) const;
 };
 
 template <typename R>
@@ -127,7 +127,7 @@ region_ {std::forward<R>(region)},
 explicit_alleles_ {},
 explicit_allele_region_ {},
 sequence_ {reference.fetch_sequence(region_)},
-cached_hash_ {std::hash<SequenceType>()(sequence_)},
+cached_hash_ {std::hash<NucleotideSequence>()(sequence_)},
 reference_ {reference}
 {}
 
@@ -138,7 +138,7 @@ region_ {std::forward<R>(region)},
 explicit_alleles_ {},
 explicit_allele_region_ {region_.contig_region()},
 sequence_ {std::forward<S>(sequence)},
-cached_hash_ {std::hash<SequenceType>()(sequence_)},
+cached_hash_ {std::hash<NucleotideSequence>()(sequence_)},
 reference_ {reference}
 {
     explicit_alleles_.reserve(1);
@@ -149,7 +149,7 @@ namespace detail
 {
     template <typename T>
     void append(T& result, const ReferenceGenome& reference,
-                const GenomicRegion::ContigNameType& contig, const ContigRegion& region)
+                const GenomicRegion::ContigName& contig, const ContigRegion& region)
     {
         result.append(reference.fetch_sequence(GenomicRegion {contig, region}));
     }
@@ -200,7 +200,7 @@ reference_ {reference}
         sequence_ = reference.fetch_sequence(region_);
     }
     
-    cached_hash_ = std::hash<SequenceType>()(sequence_);
+    cached_hash_ = std::hash<NucleotideSequence>()(sequence_);
 }
 
 class Haplotype::Builder
@@ -245,7 +245,7 @@ private:
 
 // non-members
 
-Haplotype::SizeType sequence_size(const Haplotype& haplotype) noexcept;
+Haplotype::NucleotideSequence::size_type sequence_size(const Haplotype& haplotype) noexcept;
 
 bool is_empty_sequence(const Haplotype& haplotype) noexcept;
 
@@ -297,7 +297,7 @@ std::vector<ContigAllele> splice_all(const Container& haplotypes, const ContigRe
 
 bool is_reference(const Haplotype& haplotype);
 
-Haplotype expand(const Haplotype& haplotype, Haplotype::SizeType n);
+Haplotype expand(const Haplotype& haplotype, Haplotype::RegionType::Position n);
 
 std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs);
 

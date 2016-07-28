@@ -26,13 +26,13 @@
 
 #include "fixed_ploidy_genotype_likelihood_model.hpp"
 
-namespace Octopus
+namespace octopus
 {
-    namespace GenotypeModel
+    namespace model
     {
     // public methods
     
-    Somatic::Somatic(std::vector<SampleIdType> samples, const unsigned ploidy, Priors priors)
+    Somatic::Somatic(std::vector<SampleName> samples, const unsigned ploidy, Priors priors)
     :
     Somatic {std::move(samples), ploidy, std::move(priors), AlgorithmParameters {}}
     {}
@@ -43,7 +43,7 @@ namespace Octopus
     approx_log_evidence {approx_log_evidence}
     {}
     
-    Somatic::Somatic(std::vector<SampleIdType> samples, const unsigned ploidy, Priors priors,
+    Somatic::Somatic(std::vector<SampleName> samples, const unsigned ploidy, Priors priors,
                      AlgorithmParameters parameters)
     :
     samples_ {std::move(samples)},
@@ -65,7 +65,7 @@ namespace Octopus
     
     template <std::size_t K>
     Somatic::InferredLatents
-    run_variational_bayes(const std::vector<SampleIdType>& samples,
+    run_variational_bayes(const std::vector<SampleName>& samples,
                           std::vector<CancerGenotype<Haplotype>>&& genotypes,
                           const Somatic::Priors& priors,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods,
@@ -103,7 +103,7 @@ namespace Octopus
     class ReadLikelihoods
     {
     public:
-        using BaseType = HaplotypeLikelihoodCache::Likelihoods;
+        using BaseType = HaplotypeLikelihoodCache::LikelihoodVector;
         
         ReadLikelihoods() = default;
         
@@ -179,7 +179,7 @@ namespace Octopus
     }
     
     template <std::size_t K>
-    CompressedAlphas<K> flatten_priors(const Somatic::Priors& priors, const std::vector<SampleIdType>& samples)
+    CompressedAlphas<K> flatten_priors(const Somatic::Priors& priors, const std::vector<SampleName>& samples)
     {
         CompressedAlphas<K> result(samples.size());
         
@@ -193,7 +193,7 @@ namespace Octopus
     
     template <std::size_t K>
     CompressedGenotype<K>
-    compress(const CancerGenotype<Haplotype>& genotype, const SampleIdType& sample,
+    compress(const CancerGenotype<Haplotype>& genotype, const SampleName& sample,
              const HaplotypeLikelihoodCache& haplotype_likelihoods)
     {
         CompressedGenotype<K> result;
@@ -206,17 +206,17 @@ namespace Octopus
                        std::begin(result),
                        [&sample, &haplotype_likelihoods] (const Haplotype& haplotype)
                             -> std::reference_wrapper<const ReadLikelihoods::BaseType> {
-                           return std::cref(haplotype_likelihoods.log_likelihoods(sample, haplotype));
+                           return std::cref(haplotype_likelihoods(sample, haplotype));
                        });
         
-        result.back() = haplotype_likelihoods.log_likelihoods(sample, genotype.somatic_element());
+        result.back() = haplotype_likelihoods(sample, genotype.somatic_element());
         
         return result;
     }
     
     template <std::size_t K>
     CompressedGenotypes<K>
-    compress(const std::vector<CancerGenotype<Haplotype>>& genotypes, const SampleIdType& sample,
+    compress(const std::vector<CancerGenotype<Haplotype>>& genotypes, const SampleName& sample,
              const HaplotypeLikelihoodCache& haplotype_likelihoods)
     {
         CompressedGenotypes<K> result(genotypes.size());
@@ -232,7 +232,7 @@ namespace Octopus
     template <std::size_t K>
     CompressedReadLikelihoods<K>
     compress(const std::vector<CancerGenotype<Haplotype>>& genotypes,
-             const std::vector<SampleIdType>& samples,
+             const std::vector<SampleName>& samples,
              const HaplotypeLikelihoodCache& haplotype_likelihoods)
     {
         CompressedReadLikelihoods<K> result {};
@@ -774,7 +774,7 @@ namespace Octopus
     
     template <std::size_t K>
     Somatic::Latents::GenotypeMixturesDirichletAlphaMap
-    expand(const std::vector<SampleIdType>& samples, CompressedAlphas<K>&& alphas)
+    expand(const std::vector<SampleName>& samples, CompressedAlphas<K>&& alphas)
     {
         Somatic::Latents::GenotypeMixturesDirichletAlphaMap result {};
         
@@ -789,7 +789,7 @@ namespace Octopus
     
     template <std::size_t K>
     Somatic::InferredLatents
-    expand(const std::vector<SampleIdType>& samples, std::vector<CancerGenotype<Haplotype>>&& genotypes,
+    expand(const std::vector<SampleName>& samples, std::vector<CancerGenotype<Haplotype>>&& genotypes,
            CompressedLatents<K>&& inferred_latents, const double evidence)
     {
         Somatic::Latents posterior_latents {
@@ -800,7 +800,7 @@ namespace Octopus
         return Somatic::InferredLatents {std::move(posterior_latents), evidence};
     }
     
-    auto calculate_log_posteriors_with_germline_model(const SampleIdType& sample,
+    auto calculate_log_posteriors_with_germline_model(const SampleName& sample,
                                                       const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
     {
@@ -822,7 +822,7 @@ namespace Octopus
         return result;
     }
     
-    auto calculate_log_posteriors_with_germline_model(const SampleIdType& sample,
+    auto calculate_log_posteriors_with_germline_model(const SampleName& sample,
                                                       const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                                                       const SomaticMutationModel& genotype_prior_model)
@@ -846,35 +846,12 @@ namespace Octopus
         return result;
     }
     
-//    auto calculate_log_posteriors_with_dummy_germline_model(const SampleIdType& sample,
-//                                                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
-//                                                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-//                                                      const SomaticMutationModel& genotype_prior_model)
-//    {
-//        assert(!genotypes.empty());
-//        
-//        const auto ploidy = genotypes.front().ploidy();
-//        
-//        const FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy + 1, haplotype_log_likelihoods};
-//        
-//        std::vector<double> result(genotypes.size());
-//        
-//        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-//                       [&] (const auto& genotype) {
-//                           return likelihood_model.log_likelihood(sample, convert(genotype));
-//                       });
-//        
-//        Maths::normalise_logs(result);
-//        
-//        return result;
-//    }
-    
     LogProbabilityVector log_uniform_dist(const std::size_t n)
     {
         return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
     }
     
-    auto generate_seeds(const std::vector<SampleIdType>& samples,
+    auto generate_seeds(const std::vector<SampleName>& samples,
                         const std::vector<CancerGenotype<Haplotype>>& genotypes,
                         const LogProbabilityVector& genotype_log_priors,
                         const Somatic::Priors& priors,
@@ -892,9 +869,6 @@ namespace Octopus
             result.emplace_back(calculate_log_posteriors_with_germline_model(sample, genotypes,
                                                                              haplotype_log_likelihoods,
                                                                              priors.genotype_prior_model));
-//            result.emplace_back(calculate_log_posteriors_with_dummy_germline_model(sample, genotypes,
-//                                                                                   haplotype_log_likelihoods,
-//                                                                                   priors.genotype_prior_model));
         }
         
         return result;
@@ -904,7 +878,7 @@ namespace Octopus
     
     template <std::size_t K>
     Somatic::InferredLatents
-    run_variational_bayes(const std::vector<SampleIdType>& samples,
+    run_variational_bayes(const std::vector<SampleName>& samples,
                           std::vector<CancerGenotype<Haplotype>>&& genotypes,
                           const Somatic::Priors& priors,
                           const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
@@ -967,5 +941,5 @@ namespace Octopus
         
     } // namespace debug
     
-    } // namespace GenotypeModel
-} // namespace Octopus
+    } // namespace model
+} // namespace octopus

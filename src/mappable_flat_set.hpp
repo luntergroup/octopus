@@ -180,7 +180,7 @@ public:
 private:
     base_t elements_;
     bool is_bidirectionally_sorted_;
-    typename RegionType<MappableType>::SizeType max_element_size_;
+    typename RegionType<MappableType>::Position max_element_size_;
 };
 
 template <typename MappableType, typename Allocator>
@@ -593,7 +593,7 @@ MappableFlatSet<MappableType, Allocator>::erase_all(InputIt first, const InputIt
     
     if (contained_elements.empty()) return num_erased;
     
-    typename RegionType<MappableType>::SizeType max_erased_size {0};
+    typename RegionType<MappableType>::Size max_erased_size {0};
     
     auto first_contained = std::begin(contained_elements);
     auto last_contained  = std::end(contained_elements);

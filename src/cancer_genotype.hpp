@@ -18,7 +18,7 @@
 #include "equitable.hpp"
 #include "genotype.hpp"
 
-namespace Octopus
+namespace octopus
 {
 template <typename MappableType>
 class CancerGenotype : public Equitable<CancerGenotype<MappableType>>,
@@ -203,13 +203,13 @@ bool operator==(const CancerGenotype<MappableType>& lhs, const CancerGenotype<Ma
     return lhs.somatic_element() == rhs.somatic_element()
                 && lhs.germline_genotype() == rhs.germline_genotype();
 }
-} // namespace Octopus
+} // namespace octopus
 
 namespace std
 {
-    template <typename MappableType> struct hash<Octopus::CancerGenotype<MappableType>>
+    template <typename MappableType> struct hash<octopus::CancerGenotype<MappableType>>
     {
-        size_t operator()(const Octopus::CancerGenotype<MappableType>& genotype) const
+        size_t operator()(const octopus::CancerGenotype<MappableType>& genotype) const
         {
             using boost::hash_combine;
             size_t result {0};
@@ -220,16 +220,16 @@ namespace std
     };
     
     template <typename MappableType>
-    struct hash<reference_wrapper<const Octopus::CancerGenotype<MappableType>>>
+    struct hash<reference_wrapper<const octopus::CancerGenotype<MappableType>>>
     {
-        size_t operator()(const reference_wrapper<const Octopus::CancerGenotype<MappableType>> genotype) const
+        size_t operator()(const reference_wrapper<const octopus::CancerGenotype<MappableType>> genotype) const
         {
-            return hash<Octopus::CancerGenotype<MappableType>>()(genotype);
+            return hash<octopus::CancerGenotype<MappableType>>()(genotype);
         }
     };
 } // namespace std
 
-namespace Octopus
+namespace octopus
 {
 template <typename MappableType>
 std::ostream& operator<<(std::ostream& os, const CancerGenotype<MappableType>& genotype)
@@ -260,6 +260,6 @@ namespace debug
     
     void print_variant_alleles(const CancerGenotype<Haplotype>& genotype);
 } // namespace debug
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* cancer_genotype_h */

@@ -19,7 +19,7 @@ class GenomicRegion;
 class AlignedRead;
 class Variant;
 
-namespace Octopus {
+namespace octopus {
 
 class CandidateVariantGenerator : public ICandidateVariantGenerator
 {
@@ -51,6 +51,6 @@ public:
 private:
     std::vector<std::unique_ptr<ICandidateVariantGenerator>> generators_;
 };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__variant_candidate_generator__) */

@@ -12,7 +12,7 @@
 
 #include <iostream> // DEBUG
 
-namespace Octopus { namespace ReadFilters
+namespace octopus { namespace ReadFilters
 {
     HasWellFormedCigar::HasWellFormedCigar()
     : BasicReadFilter {"HasWellFormedCigar"} {}
@@ -58,12 +58,12 @@ namespace Octopus { namespace ReadFilters
         return !read.is_marked_supplementary_alignment();
     }
     
-    IsGoodMappingQuality::IsGoodMappingQuality(QualityType good_mapping_quality)
+    IsGoodMappingQuality::IsGoodMappingQuality(MappingQuality good_mapping_quality)
     :
     BasicReadFilter {"IsGoodMappingQuality"},
     good_mapping_quality_ {good_mapping_quality} {}
     
-    IsGoodMappingQuality::IsGoodMappingQuality(std::string name, QualityType good_mapping_quality)
+    IsGoodMappingQuality::IsGoodMappingQuality(std::string name, MappingQuality good_mapping_quality)
     :
     BasicReadFilter {std::move(name)},
     good_mapping_quality_ {good_mapping_quality} {}
@@ -73,14 +73,14 @@ namespace Octopus { namespace ReadFilters
         return read.mapping_quality() >= good_mapping_quality_;
     }
     
-    HasSufficientGoodBaseFraction::HasSufficientGoodBaseFraction(QualityType good_base_quality,
+    HasSufficientGoodBaseFraction::HasSufficientGoodBaseFraction(BaseQuality good_base_quality,
                                                                  double min_good_base_fraction)
     :
     BasicReadFilter {"HasSufficientGoodBaseFraction"},
     good_base_quality_ {good_base_quality}, min_good_base_fraction_ {min_good_base_fraction} {}
     
     HasSufficientGoodBaseFraction::HasSufficientGoodBaseFraction(std::string name,
-                                                                 QualityType good_base_quality,
+                                                                 BaseQuality good_base_quality,
                                                                  double min_good_base_fraction)
     :
     BasicReadFilter {std::move(name)},
@@ -100,14 +100,14 @@ namespace Octopus { namespace ReadFilters
         return good_base_fraction >= min_good_base_fraction_;
     }
     
-    HasSufficientGoodQualityBases::HasSufficientGoodQualityBases(QualityType good_base_quality,
+    HasSufficientGoodQualityBases::HasSufficientGoodQualityBases(BaseQuality good_base_quality,
                                                                  unsigned min_good_bases)
     :
     BasicReadFilter {"HasSufficientGoodQualityBases"},
     good_base_quality_ {good_base_quality}, min_good_bases_ {min_good_bases} {}
     
     HasSufficientGoodQualityBases::HasSufficientGoodQualityBases(std::string name,
-                                                                 QualityType good_base_quality,
+                                                                 BaseQuality good_base_quality,
                                                                  unsigned min_good_bases)
     :
     BasicReadFilter {std::move(name)},
@@ -154,12 +154,12 @@ namespace Octopus { namespace ReadFilters
         return !read.is_marked_duplicate();
     }
     
-    IsShort::IsShort(SizeType max_length)
+    IsShort::IsShort(Length max_length)
     :
     BasicReadFilter {"IsShort"},
     max_length_ {max_length} {}
     
-    IsShort::IsShort(std::string name, SizeType max_length)
+    IsShort::IsShort(std::string name, Length max_length)
     :
     BasicReadFilter {std::move(name)},
     max_length_ {max_length} {}
@@ -169,12 +169,12 @@ namespace Octopus { namespace ReadFilters
         return sequence_size(read) <= max_length_;
     }
     
-    IsLong::IsLong(SizeType min_length)
+    IsLong::IsLong(Length min_length)
     :
     BasicReadFilter {"IsLong"},
     min_length_ {min_length} {}
     
-    IsLong::IsLong(std::string name, SizeType min_length)
+    IsLong::IsLong(std::string name, Length min_length)
     :
     BasicReadFilter {std::move(name)},
     min_length_ {min_length} {}
@@ -222,4 +222,4 @@ namespace Octopus { namespace ReadFilters
         return !read.has_other_segment() || read.next_segment().contig_name() == contig_name(read);
     }
 } // namespace ReadFilters
-} // namespace Octopus
+} // namespace octopus

@@ -56,13 +56,13 @@ const ReadReader::Path& ReadReader::path() const noexcept
     return file_path_;
 }
 
-std::vector<ReadReader::SampleIdType> ReadReader::extract_samples() const
+std::vector<ReadReader::SampleName> ReadReader::extract_samples() const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return impl_->extract_samples();
 }
 
-std::vector<std::string> ReadReader::extract_read_groups_in_sample(const SampleIdType& sample) const
+std::vector<std::string> ReadReader::extract_read_groups_in_sample(const SampleName& sample) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return impl_->extract_read_groups_in_sample(sample);
@@ -80,13 +80,13 @@ bool ReadReader::has_reads(const GenomicRegion& region) const
     return impl_->has_reads(region);
 }
 
-bool ReadReader::has_reads(const SampleIdType& sample, const GenomicRegion& region) const
+bool ReadReader::has_reads(const SampleName& sample, const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return impl_->has_reads(sample, region);
 }
 
-bool ReadReader::has_reads(const std::vector<SampleIdType>& samples,
+bool ReadReader::has_reads(const std::vector<SampleName>& samples,
                            const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
@@ -99,13 +99,13 @@ std::size_t ReadReader::count_reads(const GenomicRegion& region) const
     return impl_->count_reads(region);
 }
 
-std::size_t ReadReader::count_reads(const SampleIdType& sample, const GenomicRegion& region) const
+std::size_t ReadReader::count_reads(const SampleName& sample, const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return impl_->count_reads(sample, region);
 }
 
-std::size_t ReadReader::count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const
+std::size_t ReadReader::count_reads(const std::vector<SampleName>& samples, const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return impl_->count_reads(samples, region);
@@ -119,7 +119,7 @@ ReadReader::find_covered_subregion(const GenomicRegion& region, std::size_t max_
 }
 
 ReadReader::CoveragePair
-ReadReader::find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
+ReadReader::find_covered_subregion(const SampleName& sample, const GenomicRegion& region,
                                    std::size_t max_coverage) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
@@ -127,7 +127,7 @@ ReadReader::find_covered_subregion(const SampleIdType& sample, const GenomicRegi
 }
 
 ReadReader::CoveragePair
-ReadReader::find_covered_subregion(const std::vector<SampleIdType>& samples,
+ReadReader::find_covered_subregion(const std::vector<SampleName>& samples,
                                    const GenomicRegion& region, std::size_t max_coverage) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
@@ -140,13 +140,13 @@ ReadReader::SampleReadMap ReadReader::fetch_reads(const GenomicRegion& region) c
     return impl_->fetch_reads(region);
 }
 
-ReadReader::ReadContainer ReadReader::fetch_reads(const SampleIdType& sample, const GenomicRegion& region) const
+ReadReader::ReadContainer ReadReader::fetch_reads(const SampleName& sample, const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return impl_->fetch_reads(sample, region);
 }
 
-ReadReader::SampleReadMap ReadReader::fetch_reads(const std::vector<SampleIdType>& samples,
+ReadReader::SampleReadMap ReadReader::fetch_reads(const std::vector<SampleName>& samples,
                                                   const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};

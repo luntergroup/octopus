@@ -8,7 +8,7 @@
 
 #include "common.hpp"
 
-namespace Octopus
+namespace octopus
 {
     bool DEBUG_MODE {false}, TRACE_MODE {false};
     

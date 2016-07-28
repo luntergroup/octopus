@@ -29,17 +29,17 @@ template <typename RegionTp>
 class BaseAllele<RegionTp> : public Comparable<BaseAllele<RegionTp>>, public Mappable<BaseAllele<RegionTp>>
 {
 public:
-    using SizeType     = typename RegionTp::SizeType;
-    using SequenceType = ReferenceGenome::SequenceType;
+    using RegionType         = RegionTp;
+    using NucleotideSequence = ReferenceGenome::GeneticSequence;
     
     BaseAllele() = default;
     
     template <typename R, typename S>
     BaseAllele(R&& region, S&& sequence);
     template <typename S> // RegionTp=ContigRegion
-    BaseAllele(SizeType begin_pos, S&& sequence);
+    BaseAllele(ContigRegion::Position begin, S&& sequence);
     template <typename T, typename S> // RegionTp=GenomicRegion
-    BaseAllele(T&& contig_name, SizeType begin_pos, S&& sequence);
+    BaseAllele(T&& contig_name, GenomicRegion::Position begin, S&& sequence);
     
     BaseAllele(const BaseAllele&)            = default;
     BaseAllele& operator=(const BaseAllele&) = default;
@@ -50,12 +50,12 @@ public:
     
     const RegionTp& mapped_region() const noexcept;
     
-    const SequenceType& sequence() const noexcept;
+    const NucleotideSequence& sequence() const noexcept;
     
     friend BaseAllele<ContigRegion> demote(BaseAllele<GenomicRegion>&&);
     
 private:
-    SequenceType sequence_;
+    NucleotideSequence sequence_;
     RegionTp region_;
 };
 
@@ -76,18 +76,21 @@ region_ {std::forward<R>(region)}
 
 template <typename RegionTp>
 template <typename S>
-BaseAllele<RegionTp>::BaseAllele(const SizeType begin_pos, S&& sequence)
+BaseAllele<RegionTp>::BaseAllele(const ContigRegion::Position begin, S&& sequence)
 :
 sequence_ {std::forward<S>(sequence)},
-region_ {begin_pos, static_cast<SizeType>(begin_pos + sequence_.size())}
+region_ {begin, static_cast<ContigRegion::Position>(begin + sequence_.size())}
 {}
 
 template <typename RegionTp>
 template <typename T, typename S>
-BaseAllele<RegionTp>::BaseAllele(T&& contig_name, const SizeType begin_pos, S&& sequence)
+BaseAllele<RegionTp>::BaseAllele(T&& contig_name, const GenomicRegion::Position begin, S&& sequence)
 :
 sequence_ {std::forward<S>(sequence)},
-region_ {std::forward<T>(contig_name), begin_pos, static_cast<SizeType>(begin_pos + sequence_.size())}
+region_ {
+    std::forward<T>(contig_name), begin,
+    static_cast<GenomicRegion::Position>(begin + sequence_.size())
+}
 {}
 
 template <typename RegionTp>
@@ -97,7 +100,7 @@ const RegionTp& BaseAllele<RegionTp>::mapped_region() const noexcept
 }
 
 template <typename RegionTp>
-const typename BaseAllele<RegionTp>::SequenceType& BaseAllele<RegionTp>::sequence() const noexcept
+const typename BaseAllele<RegionTp>::NucleotideSequence& BaseAllele<RegionTp>::sequence() const noexcept
 {
     return sequence_;
 }
@@ -110,19 +113,19 @@ ContigAllele demote(Allele&& allele);
 template <typename RegionTp>
 auto sequence_size(const BaseAllele<RegionTp>& allele) noexcept
 {
-    return static_cast<typename BaseAllele<RegionTp>::SizeType>(allele.sequence().size());
+    return allele.sequence().size();
 }
 
 template <typename RegionTp>
-auto is_empty_sequence(const BaseAllele<RegionTp>& allele) noexcept
+bool is_empty_sequence(const BaseAllele<RegionTp>& allele) noexcept
 {
     return allele.sequence().empty();
 }
 
 namespace detail
 {
-    template <typename SequenceType>
-    bool is_subsequence(const SequenceType& lhs, const SequenceType& rhs)
+    template <typename Sequence>
+    bool is_subsequence(const Sequence& lhs, const Sequence& rhs)
     {
         using std::cbegin; using std::cend;
         return std::search(cbegin(lhs), cend(lhs), cbegin(rhs), cend(rhs)) != cend(lhs);
@@ -131,10 +134,10 @@ namespace detail
     template <typename RegionTp>
     auto subsequence(const BaseAllele<RegionTp>& allele, const RegionTp& region)
     {
-        using ResultType = typename BaseAllele<RegionTp>::SequenceType;
+        using NucleotideSequence = typename BaseAllele<RegionTp>::NucleotideSequence;
         
         if (!contains(allele, region)) {
-            return ResultType {};
+            return NucleotideSequence {};
         }
         
         const auto& sequence = allele.sequence();
@@ -145,13 +148,15 @@ namespace detail
         
         if (begins_equal(region, allele) && is_empty(region) && is_insertion(allele)) {
             auto first = std::cbegin(sequence);
-            return ResultType {first, first + sequence.size() - region_size(allele)};
+            return NucleotideSequence {first, std::next(first, sequence.size() - region_size(allele))};
         }
         
         auto first = std::cbegin(allele.sequence()) + begin_distance(allele, region);
         // The minimum of the allele sequence size and region size is used as deletions will
         // result in a sequence size smaller than the region size
-        return ResultType {first, first + std::min(sequence.size(), static_cast<size_t>(region_size(region)))};
+        return NucleotideSequence {
+            first, std::next(first, std::min(sequence.size(), static_cast<std::size_t>(region_size(region))))
+        };
     }
 }
 
@@ -255,7 +260,7 @@ namespace std {
             using boost::hash_combine;
             size_t result {0};
             hash_combine(result, hash<RegionTp>()(allele.mapped_region()));
-            hash_combine(result, hash<typename BaseAllele<RegionTp>::SequenceType>()(allele.sequence()));
+            hash_combine(result, hash<typename BaseAllele<RegionTp>::NucleotideSequence>()(allele.sequence()));
             return result;
         }
     };

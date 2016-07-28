@@ -25,9 +25,9 @@ class ThreadsafeFasta : public ReferenceGenomeImpl
 public:
     using Path = Fasta::Path;
     
-    using ContigNameType = ReferenceGenomeImpl::ContigNameType;
-    using SizeType       = ReferenceGenomeImpl::SizeType;
-    using SequenceType   = ReferenceGenomeImpl::SequenceType;
+    using ContigName       = ReferenceGenomeImpl::ContigName;
+    using GenomicSize      = ReferenceGenomeImpl::GenomicSize;
+    using GeneticSequence  = ReferenceGenomeImpl::GeneticSequence;
     
     ThreadsafeFasta() = delete;
     
@@ -46,9 +46,9 @@ private:
     
     bool do_is_open() const noexcept override;
     std::string do_fetch_reference_name() const override;
-    std::vector<ContigNameType> do_fetch_contig_names() const override;
-    SizeType do_fetch_contig_size(const ContigNameType& contig) const override;
-    SequenceType do_fetch_sequence(const GenomicRegion& region) const override;
+    std::vector<ContigName> do_fetch_contig_names() const override;
+    GenomicSize do_fetch_contig_size(const ContigName& contig) const override;
+    GeneticSequence do_fetch_sequence(const GenomicRegion& region) const override;
 };
 
 #endif /* defined(__Octopus__threadsafe_fasta__) */

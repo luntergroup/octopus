@@ -32,6 +32,7 @@ void init_timers()
     calling_timer.start(); calling_timer.stop();
     
     for (auto& timer : misc_timer) {
+        timer.start();
         timer.stop();
     }
 }

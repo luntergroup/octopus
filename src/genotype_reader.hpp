@@ -26,9 +26,9 @@ class VcfHeader;
 class ReferenceGenome;
 class GenomicRegion;
 
-namespace Octopus
+namespace octopus
 {
-    using GenotypeMap = std::unordered_map<SampleIdType, MappableFlatSet<Genotype<Haplotype>>>;
+    using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
     
     GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls, const VcfHeader& header,
                                   const ReferenceGenome& reference,

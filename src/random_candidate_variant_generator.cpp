@@ -18,7 +18,7 @@
 #include "mappable_algorithms.hpp"
 #include "sequence_utils.hpp"
 
-namespace Octopus {
+namespace octopus {
     
     RandomCandidateVariantGenerator::RandomCandidateVariantGenerator(const ReferenceGenome& reference)
     :
@@ -49,7 +49,9 @@ namespace Octopus {
         
         static std::default_random_engine generator {static_cast<unsigned>(seed)};
         
-        std::uniform_int_distribution<SizeType> uniform {0, std::min(num_positions, max_read_size_)};
+        using T = Variant::RegionType::Size;
+        
+        std::uniform_int_distribution<T> uniform {0, std::min(num_positions, max_read_size_)};
         
         auto positions = decompose(region);
         
@@ -66,4 +68,4 @@ namespace Octopus {
         return result;
     }
     
-} // namespace Octopus
+} // namespace octopus

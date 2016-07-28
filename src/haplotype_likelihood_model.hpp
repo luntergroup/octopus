@@ -30,7 +30,7 @@
 
 class AlignedRead;
 
-namespace Octopus
+namespace octopus
 {
 class HaplotypeLikelihoodModel
 {
@@ -39,7 +39,7 @@ public:
     
     struct FlankState
     {
-        ContigRegion::SizeType lhs_flank, rhs_flank;
+        ContigRegion::Position lhs_flank, rhs_flank;
     };
     
     class ShortHaplotypeError;
@@ -95,21 +95,21 @@ private:
 class HaplotypeLikelihoodModel::ShortHaplotypeError : public std::runtime_error
 {
 public:
-    using SizeType = Haplotype::SizeType;
+    using Length = Haplotype::NucleotideSequence::size_type;
     
     ShortHaplotypeError() = delete;
     
-    ShortHaplotypeError(const Haplotype& haplotype, SizeType required_extension);
+    ShortHaplotypeError(const Haplotype& haplotype, Length required_extension);
     
     const Haplotype& haplotype() const noexcept;
     
-    SizeType required_extension() const noexcept;
+    Length required_extension() const noexcept;
     
 private:
     const Haplotype& haplotype_;
     
-    SizeType required_extension_;
+    Length required_extension_;
 };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* haplotype_likelihood_model_hpp */

@@ -139,7 +139,7 @@ bool is_in_reference_flank(const ContigRegion& region, const ContigRegion& expli
     return !is_insertion(explicit_alleles.back());
 }
 
-Haplotype::SequenceType Haplotype::sequence(const ContigRegion& region) const
+Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) const
 {
     using std::cbegin; using std::cend;
     
@@ -156,7 +156,7 @@ Haplotype::SequenceType Haplotype::sequence(const ContigRegion& region) const
         return fetch_reference_sequence(region);
     }
     
-    SequenceType result {};
+    NucleotideSequence result {};
     result.reserve(region_size(region)); // may be more or less depending on indels
     
     if (begins_before(region, explicit_allele_region_)) {
@@ -209,7 +209,7 @@ Haplotype::SequenceType Haplotype::sequence(const ContigRegion& region) const
     return result;
 }
 
-Haplotype::SequenceType Haplotype::sequence(const GenomicRegion& region) const
+Haplotype::NucleotideSequence Haplotype::sequence(const GenomicRegion& region) const
 {
     if (!is_same_contig(region, region_)) {
         throw std::logic_error {"Haplotype: cannot sequence from different contig"};
@@ -217,17 +217,17 @@ Haplotype::SequenceType Haplotype::sequence(const GenomicRegion& region) const
     return sequence(region.contig_region());
 }
 
-const Haplotype::SequenceType& Haplotype::sequence() const noexcept
+const Haplotype::NucleotideSequence& Haplotype::sequence() const noexcept
 {
     return sequence_;
 }
 
-Haplotype::SizeType Haplotype::sequence_size(const ContigRegion& region) const
+Haplotype::NucleotideSequence::size_type Haplotype::sequence_size(const ContigRegion& region) const
 {
-    return static_cast<SizeType>(sequence(region).size()); // TODO: can be improved
+    return sequence(region).size(); // TODO: can be improved
 }
 
-Haplotype::SizeType Haplotype::sequence_size(const GenomicRegion& region) const
+Haplotype::NucleotideSequence::size_type Haplotype::sequence_size(const GenomicRegion& region) const
 {
     if (!is_same_contig(region, region_)) return 0;
     return sequence_size(region.contig_region());
@@ -258,17 +258,17 @@ std::size_t Haplotype::get_hash() const noexcept
 
 // private methods
 
-void Haplotype::append(SequenceType& result, const ContigAllele& allele) const
+void Haplotype::append(NucleotideSequence& result, const ContigAllele& allele) const
 {
     result.append(allele.sequence());
 }
 
-void Haplotype::append(SequenceType& result, AlleleIterator first, AlleleIterator last) const
+void Haplotype::append(NucleotideSequence& result, AlleleIterator first, AlleleIterator last) const
 {
     std::for_each(first, last, [this, &result] (const auto& allele) { append(result, allele); });
 }
 
-void Haplotype::append_reference(SequenceType& result, const ContigRegion& region) const
+void Haplotype::append_reference(NucleotideSequence& result, const ContigRegion& region) const
 {
     if (is_before(region, explicit_allele_region_)) {
         const auto offset = begin_distance(region_.contig_region(), region);
@@ -281,9 +281,9 @@ void Haplotype::append_reference(SequenceType& result, const ContigRegion& regio
     }
 }
 
-Haplotype::SequenceType Haplotype::fetch_reference_sequence(const ContigRegion& region) const
+Haplotype::NucleotideSequence Haplotype::fetch_reference_sequence(const ContigRegion& region) const
 {
-    SequenceType result {};
+    NucleotideSequence result {};
     result.reserve(region_size(region));
     append_reference(result, region);
     return result;
@@ -414,9 +414,9 @@ ContigAllele Haplotype::Builder::get_intervening_reference_allele(const ContigAl
 
 // non-member methods
 
-Haplotype::SizeType sequence_size(const Haplotype& haplotype) noexcept
+Haplotype::NucleotideSequence::size_type sequence_size(const Haplotype& haplotype) noexcept
 {
-    return static_cast<Haplotype::SizeType>(haplotype.sequence().size());
+    return haplotype.sequence().size();
 }
 
 bool is_empty_sequence(const Haplotype& haplotype) noexcept
@@ -519,7 +519,7 @@ bool is_reference(const Haplotype& haplotype)
     return haplotype.sequence() == haplotype.reference_.get().fetch_sequence(haplotype.mapped_region());
 }
 
-Haplotype expand(const Haplotype& haplotype, Haplotype::SizeType n)
+Haplotype expand(const Haplotype& haplotype, Haplotype::RegionType::Size n)
 {
     if (n == 0) return haplotype;
     return Haplotype {

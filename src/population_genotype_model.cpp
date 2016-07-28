@@ -17,9 +17,9 @@
 #include "fixed_ploidy_genotype_likelihood_model.hpp"
 #include "maths.hpp"
 
-namespace Octopus
+namespace octopus
 {
-namespace GenotypeModel
+namespace model
 {
 
 Population::Population(const CoalescentModel& genotype_prior_model)
@@ -265,7 +265,7 @@ log_evidence {log_evidence}
         }
         
         SampleGenotypeLogLikelihoods
-        compute_genotype_log_likelihoods(const std::vector<SampleIdType>& samples,
+        compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
                                          const std::vector<Genotype<Haplotype>>& genotypes,
                                          const HaplotypeLikelihoodCache& haplotype_likelihoods)
         {
@@ -457,7 +457,7 @@ log_evidence {log_evidence}
         }
         
 //        Population::Latents
-//        make_single_genotype_latents(const std::vector<SampleIdType>& samples,
+//        make_single_genotype_latents(const std::vector<SampleName>& samples,
 //                                     const Genotype<Haplotype>& genotype)
 //        {
 //            Population::Latents::GenotypeProbabilityMap result {};
@@ -565,7 +565,7 @@ log_evidence {log_evidence}
     } // namespace
 
 Population::InferredLatents
-Population::infer_latents(const std::vector<SampleIdType>& samples, const GenotypeVector& genotypes,
+Population::infer_latents(const std::vector<SampleName>& samples, const GenotypeVector& genotypes,
                           const std::vector<Haplotype>& haplotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
@@ -606,6 +606,6 @@ namespace debug
 {
     
 } // namespace debug
-} // namespace GenotypeModel
-} // namespace Octopus
+} // namespace model
+} // namespace octopus
 

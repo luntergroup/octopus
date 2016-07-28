@@ -200,7 +200,7 @@ unsigned HtslibSamFacade::count_reference_contigs() const
     return hts_header_->n_targets;
 }
 
-HtslibSamFacade::SizeType HtslibSamFacade::get_reference_contig_size(const std::string& contig_name) const
+ContigRegion::Size HtslibSamFacade::get_reference_contig_size(const std::string& contig_name) const
 {
     return hts_header_->target_len[get_htslib_tid(contig_name)];
 }
@@ -212,12 +212,12 @@ std::uint64_t HtslibSamFacade::get_num_mapped_reads(const std::string& contig_na
     return num_mapped;
 }
 
-std::vector<HtslibSamFacade::SampleIdType> HtslibSamFacade::extract_samples() const
+std::vector<HtslibSamFacade::SampleName> HtslibSamFacade::extract_samples() const
 {
     return samples_;
 }
 
-std::vector<std::string> HtslibSamFacade::extract_read_groups_in_sample(const SampleIdType& sample) const
+std::vector<std::string> HtslibSamFacade::extract_read_groups_in_sample(const SampleName& sample) const
 {
     std::vector<std::string> result {};
     
@@ -233,8 +233,8 @@ std::vector<std::string> HtslibSamFacade::extract_read_groups_in_sample(const Sa
 namespace
 {
     // is rhs a subset of lhs?
-    bool is_subset(std::vector<HtslibSamFacade::SampleIdType> lhs,
-                   std::vector<HtslibSamFacade::SampleIdType> rhs)
+    bool is_subset(std::vector<HtslibSamFacade::SampleName> lhs,
+                   std::vector<HtslibSamFacade::SampleName> rhs)
     {
         std::sort(std::begin(lhs), std::end(lhs));
         std::sort(std::begin(rhs), std::end(rhs));
@@ -267,7 +267,7 @@ bool HtslibSamFacade::has_reads(const GenomicRegion& region) const
     return ++it;
 }
 
-bool HtslibSamFacade::has_reads(const SampleIdType& sample,
+bool HtslibSamFacade::has_reads(const SampleName& sample,
                                 const GenomicRegion& region) const
 {
     if (samples_.size() == 1 && samples_.front() == sample) return has_reads(region);
@@ -276,7 +276,7 @@ bool HtslibSamFacade::has_reads(const SampleIdType& sample,
     return false;
 }
 
-bool HtslibSamFacade::has_reads(const std::vector<SampleIdType>& samples,
+bool HtslibSamFacade::has_reads(const std::vector<SampleName>& samples,
                                 const GenomicRegion& region) const
 {
     if (samples.empty()) return false;
@@ -311,7 +311,7 @@ std::size_t HtslibSamFacade::count_reads(const GenomicRegion& region) const
     return result;
 }
 
-std::size_t HtslibSamFacade::count_reads(const SampleIdType& sample,
+std::size_t HtslibSamFacade::count_reads(const SampleName& sample,
                                          const GenomicRegion& region) const
 {
     if (samples_.size() == 1 && samples_.front() == sample) return count_reads(region);
@@ -325,7 +325,7 @@ std::size_t HtslibSamFacade::count_reads(const SampleIdType& sample,
     return result;
 }
 
-std::size_t HtslibSamFacade::count_reads(const std::vector<SampleIdType>& samples,
+std::size_t HtslibSamFacade::count_reads(const std::vector<SampleName>& samples,
                                          const GenomicRegion& region) const
 {
     if (samples.empty()) return 0;
@@ -368,8 +368,8 @@ GenomicRegion expand_subregion(const GenomicRegion& region, const std::size_t re
     
     return GenomicRegion {
         region.contig_name(),
-        static_cast<GenomicRegion::SizeType>(result_begin),
-        static_cast<GenomicRegion::SizeType>(result_end)
+        static_cast<GenomicRegion::Size>(result_begin),
+        static_cast<GenomicRegion::Size>(result_end)
     };
 }
 
@@ -409,14 +409,14 @@ HtslibSamFacade::find_covered_subregion(const GenomicRegion& region, std::size_t
     return std::make_pair(std::move(result_region), std::move(position_counts));
 }
 
-bool contains(const std::vector<HtslibSamFacade::SampleIdType>& samples,
-              const HtslibSamFacade::SampleIdType& sample)
+bool contains(const std::vector<HtslibSamFacade::SampleName>& samples,
+              const HtslibSamFacade::SampleName& sample)
 {
     return std::find(std::cbegin(samples), std::cend(samples), sample) != std::cend(samples);
 }
 
 HtslibSamFacade::CoveragePair
-HtslibSamFacade::find_covered_subregion(const SampleIdType& sample,
+HtslibSamFacade::find_covered_subregion(const SampleName& sample,
                                         const GenomicRegion& region,
                                         std::size_t max_coverage) const
 {
@@ -480,7 +480,7 @@ HtslibSamFacade::find_covered_subregion(const SampleIdType& sample,
 }
 
 HtslibSamFacade::CoveragePair
-HtslibSamFacade::find_covered_subregion(const std::vector<SampleIdType>& samples,
+HtslibSamFacade::find_covered_subregion(const std::vector<SampleName>& samples,
                                         const GenomicRegion& region,
                                         std::size_t max_coverage) const
 {
@@ -532,7 +532,7 @@ HtslibSamFacade::find_covered_subregion(const std::vector<SampleIdType>& samples
     
     return std::make_pair(std::move(result_region), std::move(position_counts));
 }
-        
+
 // fetch_reads
 
 HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion& region) const
@@ -548,7 +548,8 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
     HtslibIterator it {*this, region};
     
     for (const auto& sample : samples_) {
-        auto p = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample),
+        auto p = result.emplace(std::piecewise_construct,
+                                std::forward_as_tuple(sample),
                                 std::forward_as_tuple());
         p.first->second.reserve(default_reserve_);
     }
@@ -567,7 +568,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
     return result;
 }
 
-HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleIdType& sample,
+HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleName& sample,
                                                             const GenomicRegion& region) const
 {
     HtslibIterator it {*this, region};
@@ -607,7 +608,7 @@ HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleIdType& 
     return result;
 }
 
-HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<SampleIdType>& samples,
+HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<SampleName>& samples,
                                                             const GenomicRegion& region) const
 {
     if (is_subset(samples_, samples)) return fetch_reads(region);
@@ -618,7 +619,8 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
     
     for (const auto& sample : samples) {
         if (std::find(std::cbegin(samples_), std::cend(samples_), sample) != std::cend(samples_)) {
-            auto p = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample),
+            auto p = result.emplace(std::piecewise_construct,
+                                    std::forward_as_tuple(sample),
                                     std::forward_as_tuple());
             p.first->second.reserve(default_reserve_);
         }
@@ -778,7 +780,7 @@ hts_bam1_ {bam_init1(), HtsBam1Deleter {}}
     }
 }
 
-HtslibSamFacade::HtslibIterator::HtslibIterator(const HtslibSamFacade& hts_facade, const GenomicRegion::ContigNameType& contig)
+HtslibSamFacade::HtslibIterator::HtslibIterator(const HtslibSamFacade& hts_facade, const GenomicRegion::ContigName& contig)
 :
 hts_facade_ {hts_facade},
 hts_iterator_ {hts_facade.is_open() ? sam_itr_querys(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(),
@@ -820,14 +822,14 @@ char extract_base(const uint8_t* hts_sequence, const uint32_t index) noexcept
     return symbol_table[bam_seqi(hts_sequence, index)];
 }
 
-AlignedRead::SequenceType extract_sequence(const bam1_t* b)
+AlignedRead::NucleotideSequence extract_sequence(const bam1_t* b)
 {
-    using SequenceType = AlignedRead::SequenceType;
+    using NucleotideSequence = AlignedRead::NucleotideSequence;
     
-    const auto sequence_length  = static_cast<SequenceType::size_type>(extract_sequence_length(b));
+    const auto sequence_length  = static_cast<NucleotideSequence::size_type>(extract_sequence_length(b));
     const auto hts_sequence     = bam_get_seq(b);
     
-    SequenceType result(sequence_length, 'N');
+    NucleotideSequence result(sequence_length, 'N');
     
     std::uint32_t i {0};
     std::generate_n(std::begin(result), sequence_length,
@@ -836,11 +838,11 @@ AlignedRead::SequenceType extract_sequence(const bam1_t* b)
     return result;
 }
 
-AlignedRead::Qualities extract_qualities(const bam1_t* b)
+AlignedRead::BaseQualityVector extract_qualities(const bam1_t* b)
 {
     const auto qualities = bam_get_qual(b);
     const auto length    = extract_sequence_length(b);
-    return AlignedRead::Qualities(qualities, qualities + length);
+    return AlignedRead::BaseQualityVector(qualities, qualities + length);
 }
 
 auto get_cigar_length(const bam1_t* b) noexcept
@@ -881,10 +883,10 @@ AlignedRead::Flags extract_flags(const bam1_core_t& c) noexcept
     
     return result;
 }
-        
+
 auto mapping_quality(const bam1_core_t& c) noexcept
 {
-    return static_cast<AlignedRead::QualityType>(c.qual);
+    return static_cast<AlignedRead::MappingQuality>(c.qual);
 }
         
 bool has_multiple_segments(const bam1_core_t& c) noexcept
@@ -894,12 +896,12 @@ bool has_multiple_segments(const bam1_core_t& c) noexcept
     
 auto next_segment_position(const bam1_core_t& c) noexcept
 {
-    return static_cast<AlignedRead::SizeType>(c.mpos);
+    return static_cast<AlignedRead::RegionType::Position>(c.mpos);
 }
 
 auto template_length(const bam1_core_t& c) noexcept
 {
-    return static_cast<AlignedRead::SizeType>(std::abs(c.isize));
+    return static_cast<AlignedRead::RegionType::Size>(std::abs(c.isize));
 }
     
 auto extract_next_segment_flags(const bam1_core_t& c) noexcept
@@ -950,13 +952,17 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         read_begin_tmp = 0;
     }
     
-    const auto read_begin = static_cast<AlignedRead::SizeType>(read_begin_tmp);
+    const auto read_begin = static_cast<AlignedRead::RegionType::Position>(read_begin_tmp);
     
     const auto& contig_name = hts_facade_.contig_name(info.tid);
     
     if (has_multiple_segments(info)) {
         return AlignedRead {
-            GenomicRegion {contig_name, read_begin, read_begin + reference_size<GenomicRegion::SizeType>(cigar)},
+            GenomicRegion {
+                contig_name,
+                read_begin,
+                read_begin + reference_size<AlignedRead::RegionType::Position>(cigar)
+            },
             move(sequence),
             move(qualities),
             move(cigar),
@@ -969,7 +975,11 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         };
     } else {
         return AlignedRead {
-            GenomicRegion {contig_name, read_begin, read_begin + reference_size<GenomicRegion::SizeType>(cigar)},
+            GenomicRegion {
+                contig_name,
+                read_begin,
+                read_begin + reference_size<AlignedRead::RegionType::Size>(cigar)
+            },
             move(sequence),
             move(qualities),
             move(cigar),
@@ -1016,5 +1026,5 @@ bool HtslibSamFacade::HtslibIterator::is_good() const noexcept
 
 std::size_t HtslibSamFacade::HtslibIterator::begin() const noexcept
 {
-    return static_cast<ContigRegion::SizeType>(hts_bam1_->core.pos);
+    return hts_bam1_->core.pos;
 }

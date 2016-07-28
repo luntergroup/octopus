@@ -14,12 +14,12 @@
 class Trio
 {
 public:
-    using Sample = Octopus::SampleIdType;
+    using SampleName = octopus::SampleName;
     
     // Use these to make construction order explicit
-    struct Mother { Sample name; };
-    struct Father { Sample name; };
-    struct Child  { Sample name; };
+    struct Mother { SampleName name; };
+    struct Father { SampleName name; };
+    struct Child  { SampleName name; };
     
     Trio() = default;
     
@@ -32,15 +32,15 @@ public:
     
     ~Trio() = default;
     
-    bool is_child(const Sample& member) const noexcept;
-    bool is_parent(const Sample& member) const noexcept;
+    bool is_child(const SampleName& member) const noexcept;
+    bool is_parent(const SampleName& member) const noexcept;
     
-    const Sample& mother() const noexcept;
-    const Sample& father() const noexcept;
-    const Sample& child() const noexcept;
+    const SampleName& mother() const noexcept;
+    const SampleName& father() const noexcept;
+    const SampleName& child() const noexcept;
     
 private:
-    Sample mother_, father_, child_;
+    SampleName mother_, father_, child_;
 };
 
 #endif /* trio_hpp */

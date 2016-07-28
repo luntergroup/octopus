@@ -19,9 +19,9 @@
 #include "haplotype_likelihood_cache.hpp"
 #include "cancer_genotype.hpp"
 
-namespace Octopus
+namespace octopus
 {
-    namespace GenotypeModel
+    namespace model
     {
     class Somatic
     {
@@ -29,7 +29,7 @@ namespace Octopus
         struct Priors
         {
             using GenotypeMixturesDirichletAlphas   = std::vector<double>;
-            using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleIdType, GenotypeMixturesDirichletAlphas>;
+            using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
             
             Priors() = delete;
             template <typename C, typename D> Priors(C&&, D&&);
@@ -49,7 +49,7 @@ namespace Octopus
         struct Latents
         {
             using GenotypeMixturesDirichletAlphas   = std::vector<double>;
-            using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleIdType, GenotypeMixturesDirichletAlphas>;
+            using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
             
             using GenotypeProbabilityMap = std::unordered_map<CancerGenotype<Haplotype>, double>;
             
@@ -70,9 +70,9 @@ namespace Octopus
         
         Somatic() = delete;
         
-        Somatic(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors);
+        Somatic(std::vector<SampleName> samples, unsigned ploidy, Priors priors);
         
-        Somatic(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors,
+        Somatic(std::vector<SampleName> samples, unsigned ploidy, Priors priors,
                 AlgorithmParameters parameters);
         
         ~Somatic() = default;
@@ -86,7 +86,7 @@ namespace Octopus
                                       const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
         
     private:
-        std::vector<SampleIdType> samples_;
+        std::vector<SampleName> samples_;
         
         unsigned ploidy_;
         
@@ -109,7 +109,7 @@ namespace Octopus
     alphas {std::forward<M>(alphas)}
     {}
     
-    } // namespace GenotypeModel
-} // namespace Octopus
+    } // namespace model
+} // namespace octopus
 
 #endif /* defined(__Octopus__somatic_genotype_model__) */

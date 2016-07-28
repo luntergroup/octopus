@@ -43,7 +43,7 @@ namespace debug
 class Assembler
 {
 public:
-    using SequenceType = std::string;
+    using NucleotideSequence = std::string;
     
     struct Variant
     {
@@ -51,23 +51,23 @@ public:
         template <typename S1, typename S2>
         Variant(std::size_t pos, S1&& ref, S2&& alt);
         std::size_t begin_pos;
-        SequenceType ref, alt;
+        NucleotideSequence ref, alt;
     };
     
     class BadReferenceSequence : public std::invalid_argument
     {
     public:
-        BadReferenceSequence(SequenceType reference_sequence);
+        BadReferenceSequence(NucleotideSequence reference_sequence);
         ~BadReferenceSequence() noexcept = default;
         const char* what() const noexcept override;
     private:
-        SequenceType reference_sequence_;
+        NucleotideSequence reference_sequence_;
     };
     
     Assembler() = delete;
     
     Assembler(unsigned kmer_size);
-    Assembler(unsigned kmer_size, const SequenceType& reference);
+    Assembler(unsigned kmer_size, const NucleotideSequence& reference);
     
     Assembler(const Assembler&)            = delete;
     Assembler& operator=(const Assembler&) = delete;
@@ -78,8 +78,8 @@ public:
     
     unsigned kmer_size() const noexcept;
     
-    void insert_reference(const SequenceType& sequence);
-    void insert_read(const SequenceType& sequence);
+    void insert_reference(const NucleotideSequence& sequence);
+    void insert_read(const NucleotideSequence& sequence);
     
     std::size_t num_kmers() const noexcept;
     bool empty() const noexcept;
@@ -97,8 +97,8 @@ private:
     class Kmer : public Comparable<Kmer>
     {
     public:
-        using SequenceType     = Assembler::SequenceType;
-        using SequenceIterator = SequenceType::const_iterator;
+        using NucleotideSequence     = Assembler::NucleotideSequence;
+        using SequenceIterator = NucleotideSequence::const_iterator;
         
         Kmer() = delete;
         
@@ -117,7 +117,7 @@ private:
         SequenceIterator begin() const noexcept;
         SequenceIterator end() const noexcept;
         
-        explicit operator SequenceType() const;
+        explicit operator NucleotideSequence() const;
         
         std::size_t hash() const noexcept;
         
@@ -189,8 +189,8 @@ private:
     
     // methods
     
-    void insert_reference_into_empty_graph(const SequenceType& reference);
-    void insert_reference_into_populated_graph(const SequenceType& reference);
+    void insert_reference_into_empty_graph(const NucleotideSequence& reference);
+    void insert_reference_into_populated_graph(const NucleotideSequence& reference);
     
     bool contains_kmer(const Kmer& kmer) const noexcept;
     std::size_t count_kmer(const Kmer& kmer) const noexcept;
@@ -227,8 +227,8 @@ private:
     Vertex next_reference(Vertex u) const;
     Vertex prev_reference(Vertex v) const;
     std::size_t num_reference_kmers() const;
-    SequenceType make_sequence(const Path& path) const;
-    SequenceType make_reference(Vertex from, Vertex to) const;
+    NucleotideSequence make_sequence(const Path& path) const;
+    NucleotideSequence make_reference(Vertex from, Vertex to) const;
     void remove_path(const Path& path);
     bool is_bridge(Vertex v) const;
     Path::const_iterator is_bridge_until(Path::const_iterator first, Path::const_iterator last) const;

@@ -21,12 +21,12 @@
 class GenomicRegion;
 class Variant;
 
-namespace Octopus
+namespace octopus
 {
 class GenomeWalker
 {
 public:
-    using ContigNameType = GenomicRegion::ContigNameType;
+    using ContigName = GenomicRegion::ContigName;
     using Candidates     = MappableFlatSet<Allele>;
     
     enum class IndicatorPolicy
@@ -57,7 +57,7 @@ public:
     
     ~GenomeWalker() = default;
     
-    GenomicRegion walk(const ContigNameType& contig, const ReadMap& reads,
+    GenomicRegion walk(const ContigName& contig, const ReadMap& reads,
                        const Candidates& candidates) const;
     
     GenomicRegion walk(const GenomicRegion& previous_region, const ReadMap& reads,
@@ -71,6 +71,6 @@ private:
     
     using CandidateIterator = Candidates::const_iterator;
 };
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* genome_walker_hpp */

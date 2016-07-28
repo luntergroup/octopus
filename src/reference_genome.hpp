@@ -23,41 +23,46 @@
 class ReferenceGenome
 {
 public:
-    using ContigNameType = ReferenceGenomeImpl::ContigNameType;
-    using SizeType       = ReferenceGenomeImpl::SizeType;
-    using SequenceType   = ReferenceGenomeImpl::SequenceType;
+    using ContigName      = ReferenceGenomeImpl::ContigName;
+    using GeneticSequence = ReferenceGenomeImpl::GeneticSequence;
     
     ReferenceGenome() = delete;
     
     ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl);
-    
-    ~ReferenceGenome() = default;
     
     ReferenceGenome(const ReferenceGenome&)            = delete;
     ReferenceGenome& operator=(const ReferenceGenome&) = delete;
     ReferenceGenome(ReferenceGenome&&)                 = default;
     ReferenceGenome& operator=(ReferenceGenome&&)      = default;
     
+    ~ReferenceGenome() = default;
+    
     bool is_good() const noexcept;
     
     const std::string& name() const;
     
-    bool has_contig(const ContigNameType& contig) const noexcept;
-    bool contains_region(const GenomicRegion& region) const noexcept;
-    std::size_t num_contigs() const noexcept;
-    const std::vector<ContigNameType>& contig_names() const noexcept;
-    SizeType contig_size(const ContigNameType& contig) const;
-    SizeType contig_size(const GenomicRegion& region) const;
-    GenomicRegion contig_region(const ContigNameType& contig) const;
+    bool has_contig(const ContigName& contig) const noexcept;
     
-    SequenceType fetch_sequence(const GenomicRegion& region) const;
+    bool contains_region(const GenomicRegion& region) const noexcept;
+    
+    std::size_t num_contigs() const noexcept;
+    
+    const std::vector<ContigName>& contig_names() const noexcept;
+    
+    ContigRegion::Size contig_size(const ContigName& contig) const;
+    
+    ContigRegion::Size contig_size(const GenomicRegion& region) const;
+    
+    GenomicRegion contig_region(const ContigName& contig) const;
+    
+    GeneticSequence fetch_sequence(const GenomicRegion& region) const;
     
 private:
     std::unique_ptr<ReferenceGenomeImpl> impl_;
     
     std::string name_;
-    std::vector<ContigNameType> contig_names_;
-    std::unordered_map<ContigNameType, SizeType> contig_sizes_;
+    std::vector<ContigName> contig_names_;
+    std::unordered_map<ContigName, ContigRegion::Size> contig_sizes_;
 };
 
 // non-member functions
@@ -68,7 +73,7 @@ ReferenceGenome make_reference(boost::filesystem::path reference_path,
 
 std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& reference);
 
-GenomicRegion::SizeType calculate_genome_size(const ReferenceGenome& reference);
+GenomicRegion::Position calculate_genome_size(const ReferenceGenome& reference);
 
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
 GenomicRegion parse_region(std::string region, const ReferenceGenome& reference);

@@ -33,62 +33,62 @@ class HtslibSamFacade : public IReadReaderImpl
 public:
     using Path = boost::filesystem::path;
     
-    using IReadReaderImpl::SampleIdType;
+    using IReadReaderImpl::SampleName;
     using IReadReaderImpl::ReadContainer;
     using IReadReaderImpl::SampleReadMap;
-    using IReadReaderImpl::SizeType;
     using IReadReaderImpl::CoveragePair;
     
-    using SequenceType = AlignedRead::SequenceType;
+    using NucleotideSequence = AlignedRead::NucleotideSequence;
     
     using ReadGroupIdType = std::string;
     
     HtslibSamFacade() = delete;
     HtslibSamFacade(Path file_path);
-    ~HtslibSamFacade() noexcept override = default;
     
     HtslibSamFacade(const HtslibSamFacade&)            = delete;
     HtslibSamFacade& operator=(const HtslibSamFacade&) = delete;
     HtslibSamFacade(HtslibSamFacade&&)                 = default;
     HtslibSamFacade& operator=(HtslibSamFacade&&)      = default;
     
+    ~HtslibSamFacade() noexcept override = default;
+    
     bool is_open() const noexcept override;
     void open() override;
     void close() override;
     
-    std::vector<SampleIdType> extract_samples() const override;
-    std::vector<ReadGroupIdType> extract_read_groups_in_sample(const SampleIdType& sample) const override;
+    std::vector<SampleName> extract_samples() const override;
+    std::vector<ReadGroupIdType> extract_read_groups_in_sample(const SampleName& sample) const override;
     
     bool has_reads(const GenomicRegion& region) const override;
-    bool has_reads(const SampleIdType& sample,
+    bool has_reads(const SampleName& sample,
                    const GenomicRegion& region) const override;
-    bool has_reads(const std::vector<SampleIdType>& samples,
+    bool has_reads(const std::vector<SampleName>& samples,
                    const GenomicRegion& region) const override;
     
     std::size_t count_reads(const GenomicRegion& region) const override;
-    std::size_t count_reads(const SampleIdType& sample,
+    std::size_t count_reads(const SampleName& sample,
                             const GenomicRegion& region) const override;
-    std::size_t count_reads(const std::vector<SampleIdType>& samples,
+    std::size_t count_reads(const std::vector<SampleName>& samples,
                             const GenomicRegion& region) const override;
     
     CoveragePair find_covered_subregion(const GenomicRegion& region,
                                         std::size_t max_coverage) const override;
-    CoveragePair find_covered_subregion(const SampleIdType& sample,
+    CoveragePair find_covered_subregion(const SampleName& sample,
                                         const GenomicRegion& region,
                                         std::size_t max_coverage) const override;
-    CoveragePair find_covered_subregion(const std::vector<SampleIdType>& samples,
+    CoveragePair find_covered_subregion(const std::vector<SampleName>& samples,
                                         const GenomicRegion& region,
                                         std::size_t max_coverage) const override;
     
     SampleReadMap fetch_reads(const GenomicRegion& region) const override;
-    ReadContainer fetch_reads(const SampleIdType& sample,
+    ReadContainer fetch_reads(const SampleName& sample,
                               const GenomicRegion& region) const override;
-    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples,
+    SampleReadMap fetch_reads(const std::vector<SampleName>& samples,
                               const GenomicRegion& region) const override;
     
     unsigned count_reference_contigs() const override;
     std::vector<std::string> extract_reference_contig_names() const override;
-    SizeType get_reference_contig_size(const std::string& contig_name) const override;
+    ContigRegion::Size get_reference_contig_size(const std::string& contig_name) const override;
     std::vector<GenomicRegion> extract_possible_regions_in_file() const override;
     
 private:
@@ -102,12 +102,12 @@ private:
         HtslibIterator() = delete;
         
         HtslibIterator(const HtslibSamFacade& hts_facade, const GenomicRegion& region);
-        HtslibIterator(const HtslibSamFacade& hts_facade, const GenomicRegion::ContigNameType& contig);
-        
-        ~HtslibIterator() noexcept = default;
+        HtslibIterator(const HtslibSamFacade& hts_facade, const GenomicRegion::ContigName& contig);
         
         HtslibIterator(const HtslibIterator&) = delete;
         HtslibIterator& operator=(const HtslibIterator&) = delete;
+        
+        ~HtslibIterator() noexcept = default;
         
         bool operator++();
         AlignedRead operator*() const;
@@ -154,9 +154,9 @@ private:
     
     std::unordered_map<std::string, HtsTidType> hts_tids_;
     std::unordered_map<HtsTidType, std::string> contig_names_;
-    std::unordered_map<ReadGroupIdType, SampleIdType> sample_names_;
+    std::unordered_map<ReadGroupIdType, SampleName> sample_names_;
     
-    std::vector<SampleIdType> samples_;
+    std::vector<SampleName> samples_;
     
     void init_maps();
     HtsTidType get_htslib_tid(const std::string& contig_name) const;

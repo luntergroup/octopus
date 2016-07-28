@@ -28,7 +28,7 @@ std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfRec
                                            const VcfHeader::StructuredKey& key);
 
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfRecord& record,
-                                             const VcfRecord::SampleIdType sample,
+                                             const VcfRecord::SampleName sample,
                                              const VcfHeader::StructuredKey& key);
 
 bool is_indexable(const boost::filesystem::path& vcf_path);

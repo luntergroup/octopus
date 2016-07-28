@@ -14,7 +14,7 @@
 #include "read_pipe.hpp"
 #include "candidate_generator_builder.hpp"
 
-namespace Octopus
+namespace octopus
 {
     VariantCallerFactory::VariantCallerFactory(VariantCallerBuilder template_builder,
                                                const unsigned default_ploidy)
@@ -43,13 +43,13 @@ namespace Octopus
         return *this;
     }
     
-    VariantCallerFactory& VariantCallerFactory::set_contig_ploidy(const ContigNameType& contig, const unsigned ploidy)
+    VariantCallerFactory& VariantCallerFactory::set_contig_ploidy(const ContigName& contig, const unsigned ploidy)
     {
         contig_ploidies_[contig] = ploidy;
         return *this;
     }
     
-    std::unique_ptr<VariantCaller> VariantCallerFactory::make(const ContigNameType& contig) const
+    std::unique_ptr<VariantCaller> VariantCallerFactory::make(const ContigName& contig) const
     {
         if (contig_ploidies_.count(contig) == 1) {
             template_builder_.set_ploidy(contig_ploidies_.at(contig));
@@ -58,4 +58,4 @@ namespace Octopus
         }
         return template_builder_.build();
     }
-} // namespace Octopus
+} // namespace octopus

@@ -19,7 +19,7 @@
 
 class GenomicRegion;
 
-namespace Octopus {
+namespace octopus {
 
 class ExternalCandidateVariantGenerator : public ICandidateVariantGenerator
 {
@@ -43,6 +43,6 @@ private:
     std::shared_ptr<const VcfReader> reader_;
 };
 
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__external_variant_candidates__) */

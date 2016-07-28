@@ -19,9 +19,9 @@
 #include "coalescent_model.hpp"
 #include "haplotype_likelihood_cache.hpp"
 
-namespace Octopus
+namespace octopus
 {
-namespace GenotypeModel
+namespace model
 {
     class CNV
     {
@@ -29,7 +29,7 @@ namespace GenotypeModel
         struct Priors
         {
             using GenotypeMixturesDirichletAlphas   = std::vector<double>;
-            using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleIdType, GenotypeMixturesDirichletAlphas>;
+            using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
             
             Priors() = delete;
             template <typename C, typename D> Priors(C&&, D&&);
@@ -49,7 +49,7 @@ namespace GenotypeModel
         struct Latents
         {
             using GenotypeMixturesDirichletAlphas   = std::vector<double>;
-            using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleIdType, GenotypeMixturesDirichletAlphas>;
+            using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
             
             using GenotypeProbabilityMap = std::unordered_map<Genotype<Haplotype>, double>;
             
@@ -70,23 +70,23 @@ namespace GenotypeModel
         
         CNV() = delete;
         
-        CNV(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors);
+        CNV(std::vector<SampleName> samples, unsigned ploidy, Priors priors);
         
-        CNV(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors,
+        CNV(std::vector<SampleName> samples, unsigned ploidy, Priors priors,
             AlgorithmParameters parameters);
-        
-        ~CNV() = default;
         
         CNV(const CNV&)            = default;
         CNV& operator=(const CNV&) = default;
         CNV(CNV&&)                 = default;
         CNV& operator=(CNV&&)      = default;
         
+        ~CNV() = default;
+        
         InferredLatents infer_latents(std::vector<Genotype<Haplotype>> genotypes,
                                       const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
         
     private:
-        std::vector<SampleIdType> samples_;
+        std::vector<SampleName> samples_;
         
         unsigned ploidy_;
         
@@ -109,7 +109,7 @@ namespace GenotypeModel
     alphas {std::forward<M>(alphas)}
     {}
     
-} // namespace GenotypeModel
-} // namespace Octopus
+} // namespace model
+} // namespace octopus
 
 #endif /* cnv_genotype_model_hpp */

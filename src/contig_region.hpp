@@ -25,30 +25,31 @@
 class ContigRegion : public Comparable<ContigRegion>
 {
 public:
-    using SizeType       = std::uint_fast32_t;
-    using DifferenceType = std::int_fast64_t;
+    using Position = std::uint_fast32_t;
+    using Size     = Position;
+    using Distance = std::int_fast64_t;
     
-    ContigRegion() = default; // for use with containers
+    ContigRegion() = default;
     
-    explicit ContigRegion(SizeType begin, SizeType end);
-    
-    ~ContigRegion() = default;
+    explicit ContigRegion(Position begin, Position end);
     
     ContigRegion(const ContigRegion&)            = default;
     ContigRegion& operator=(const ContigRegion&) = default;
     ContigRegion(ContigRegion&&)                 = default;
     ContigRegion& operator=(ContigRegion&&)      = default;
     
-    SizeType begin() const noexcept;
-    SizeType end() const noexcept;
+    ~ContigRegion() = default;
+    
+    Position begin() const noexcept;
+    Position end() const noexcept;
     
 private:
-    SizeType begin_, end_;
+    Position begin_, end_;
 };
 
 // public member methods
 
-inline ContigRegion::ContigRegion(const SizeType begin, const SizeType end)
+inline ContigRegion::ContigRegion(const Position begin, const Position end)
 :
 begin_ {begin},
 end_ {end}
@@ -56,24 +57,24 @@ end_ {end}
     if (end < begin) throw std::runtime_error {"ContigRegion: constructed with end < begin"};
 }
 
-inline ContigRegion::SizeType ContigRegion::begin() const noexcept
+inline ContigRegion::Position ContigRegion::begin() const noexcept
 {
     return begin_;
 }
 
-inline ContigRegion::SizeType ContigRegion::end() const noexcept
+inline ContigRegion::Position ContigRegion::end() const noexcept
 {
     return end_;
 }
 
 // non-member methods
 
-inline ContigRegion::SizeType mapped_begin(const ContigRegion& region) noexcept
+inline ContigRegion::Position mapped_begin(const ContigRegion& region) noexcept
 {
     return region.begin();
 }
 
-inline ContigRegion::SizeType mapped_end(const ContigRegion& region) noexcept
+inline ContigRegion::Position mapped_end(const ContigRegion& region) noexcept
 {
     return region.end();
 }
@@ -83,7 +84,7 @@ inline bool is_empty(const ContigRegion& region) noexcept
     return region.begin() == region.end();
 }
 
-inline ContigRegion::SizeType size(const ContigRegion& region) noexcept
+inline ContigRegion::Size size(const ContigRegion& region) noexcept
 {
     return region.end() - region.begin();
 }
@@ -138,11 +139,11 @@ inline bool are_adjacent(const ContigRegion& lhs, const ContigRegion& rhs) noexc
     return lhs.begin() == rhs.end() || lhs.end() == rhs.begin();
 }
 
-inline ContigRegion::DifferenceType overlap_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion::Distance overlap_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    using DifferenceType = ContigRegion::DifferenceType;
-    return static_cast<DifferenceType>(std::min(lhs.end(), rhs.end())) -
-                    static_cast<DifferenceType>(std::max(lhs.begin(), rhs.begin()));
+    using Distance = ContigRegion::Distance;
+    return static_cast<Distance>(std::min(lhs.end(), rhs.end())) -
+                    static_cast<Distance>(std::max(lhs.begin(), rhs.begin()));
 }
 
 inline bool overlaps(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
@@ -156,35 +157,35 @@ inline bool contains(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
     return lhs.begin() <= rhs.begin() && rhs.end() <= lhs.end();
 }
 
-inline ContigRegion::DifferenceType inner_distance(const ContigRegion& lhs,
-                                                     const ContigRegion& rhs) noexcept
+inline ContigRegion::Distance inner_distance(const ContigRegion& lhs,
+                                                    const ContigRegion& rhs) noexcept
 {
     if (overlaps(lhs, rhs)) return 0;
     
-    return (is_before(lhs, rhs)) ? static_cast<ContigRegion::DifferenceType>(rhs.begin() - lhs.end())
+    return (is_before(lhs, rhs)) ? static_cast<ContigRegion::Distance>(rhs.begin() - lhs.end())
                                 : -inner_distance(rhs, lhs);
 }
 
-inline ContigRegion::DifferenceType outer_distance(const ContigRegion& lhs,
-                                                     const ContigRegion& rhs) noexcept
+inline ContigRegion::Distance outer_distance(const ContigRegion& lhs,
+                                                    const ContigRegion& rhs) noexcept
 {
-    using DifferenceType = ContigRegion::DifferenceType;
+    using Distance = ContigRegion::Distance;
     
     if (contains(lhs, rhs) || contains(rhs, lhs)) return 0;
     
-    return static_cast<DifferenceType>(rhs.end()) - static_cast<DifferenceType>(lhs.begin());
+    return static_cast<Distance>(rhs.end()) - static_cast<Distance>(lhs.begin());
 }
 
-inline ContigRegion shift(const ContigRegion& region, ContigRegion::DifferenceType n)
+inline ContigRegion shift(const ContigRegion& region, ContigRegion::Distance n)
 {
-    using SizeType = ContigRegion::SizeType;
-    
     if (n < 0 && region.begin() + n > region.begin()) {
         throw std::out_of_range {"ContigRegion: shifted past contig start"};
     }
     
+    using P = ContigRegion::Position;
+    
     return ContigRegion {
-            static_cast<SizeType>(region.begin() + n), static_cast<SizeType>(region.end() + n)
+            static_cast<P>(region.begin() + n), static_cast<P>(region.end() + n)
     };
 }
 
@@ -193,7 +194,7 @@ inline ContigRegion next_position(const ContigRegion& region)
     return ContigRegion {region.end(), region.end() + 1};
 }
 
-inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::DifferenceType n)
+inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::Distance n)
 {
     if (n < 0 && region.begin() + n > region.begin()) {
         throw std::out_of_range {"ContigRegion: compressed past contig start"};
@@ -204,12 +205,12 @@ inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::D
     }
     
     return ContigRegion {
-        static_cast<ContigRegion::SizeType>(region.begin() - n),
+        static_cast<ContigRegion::Position>(region.begin() - n),
         region.end()
     };
 }
 
-inline ContigRegion expand_rhs(const ContigRegion& region, const ContigRegion::DifferenceType n)
+inline ContigRegion expand_rhs(const ContigRegion& region, const ContigRegion::Distance n)
 {
     if (region.end() + n < region.begin()) {
         throw std::out_of_range {"ContigRegion: expanded past region begin"};
@@ -217,22 +218,23 @@ inline ContigRegion expand_rhs(const ContigRegion& region, const ContigRegion::D
     
     return ContigRegion {
         region.begin(),
-        static_cast<ContigRegion::SizeType>(region.end() + n)
+        static_cast<ContigRegion::Position>(region.end() + n)
     };
 }
 
-inline ContigRegion expand(const ContigRegion& region, const ContigRegion::DifferenceType n)
+inline ContigRegion expand(const ContigRegion& region, const ContigRegion::Distance n)
 {
-    using S = ContigRegion::SizeType;
-    using D = ContigRegion::DifferenceType;
+    using S = ContigRegion::Position;
+    using D = ContigRegion::Distance;
     return ContigRegion {
         static_cast<S>(std::max(D {0}, static_cast<D>(region.begin()) - n)),
         static_cast<S>(region.end() + n)
     };
 }
 
-inline ContigRegion expand(const ContigRegion& region, const ContigRegion::DifferenceType lhs,
-                           const ContigRegion::DifferenceType rhs)
+inline ContigRegion expand(const ContigRegion& region,
+                           const ContigRegion::Distance lhs,
+                           const ContigRegion::Distance rhs)
 {
     return expand_lhs(expand_rhs(region, rhs), lhs);
 }
@@ -260,12 +262,12 @@ inline ContigRegion intervening_region(const ContigRegion& lhs, const ContigRegi
     return ContigRegion {lhs.end(), rhs.begin()};
 }
 
-inline ContigRegion::SizeType left_overhang_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion::Size left_overhang_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     return (begins_before(lhs, rhs)) ? (rhs.begin() - lhs.begin()) : 0;
 }
 
-inline ContigRegion::SizeType right_overhang_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion::Size right_overhang_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     return (ends_before(lhs, rhs)) ? 0 : (lhs.end() - rhs.end());
 }
@@ -289,7 +291,7 @@ inline ContigRegion closed_region(const ContigRegion& lhs, const ContigRegion& r
     return ContigRegion {lhs.begin(), rhs.end()};
 }
 
-inline ContigRegion head_region(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
+inline ContigRegion head_region(const ContigRegion& region, ContigRegion::Size n = 0) noexcept
 {
     const auto begin = region.begin();
     return ContigRegion {begin, std::min(begin + n, region.end())};
@@ -300,7 +302,7 @@ inline ContigRegion head_position(const ContigRegion& region) noexcept
     return head_region(region, 1);
 }
 
-inline ContigRegion tail_region(const ContigRegion& region, const ContigRegion::SizeType n = 0) noexcept
+inline ContigRegion tail_region(const ContigRegion& region, const ContigRegion::Size n = 0) noexcept
 {
     const auto end = region.end();
     return ContigRegion {(end >= n) ? end - n : 0, end};
@@ -311,14 +313,14 @@ inline ContigRegion tail_position(const ContigRegion& region) noexcept
     return tail_region(region, 1);
 }
 
-inline ContigRegion::DifferenceType begin_distance(const ContigRegion& first, const ContigRegion& second) noexcept
+inline ContigRegion::Distance begin_distance(const ContigRegion& first, const ContigRegion& second) noexcept
 {
-    return static_cast<ContigRegion::DifferenceType>(second.begin()) - first.begin();
+    return static_cast<ContigRegion::Distance>(second.begin()) - first.begin();
 }
 
-inline ContigRegion::DifferenceType end_distance(const ContigRegion& first, const ContigRegion& second) noexcept
+inline ContigRegion::Distance end_distance(const ContigRegion& first, const ContigRegion& second) noexcept
 {
-    return static_cast<ContigRegion::DifferenceType>(second.end()) - first.end();
+    return static_cast<ContigRegion::Distance>(second.end()) - first.end();
 }
 
 namespace std {

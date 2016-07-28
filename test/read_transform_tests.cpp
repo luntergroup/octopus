@@ -45,9 +45,9 @@ BOOST_AUTO_TEST_SUITE(Components)
 //    
 //    BOOST_CHECK(is_back_soft_clipped(a_read.cigar_string()));
 //    
-//    Octopus::ReadTransform transformer {};
-//    transformer.register_transform(Octopus::ReadTransforms::trim_adapters());
-//    transformer.register_transform(Octopus::ReadTransforms::trim_soft_clipped());
+//    octopus::ReadTransform transformer {};
+//    transformer.register_transform(octopus::ReadTransforms::trim_adapters());
+//    transformer.register_transform(octopus::ReadTransforms::trim_soft_clipped());
 //    
 //    transform_reads(reads, transformer);
 //    

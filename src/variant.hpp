@@ -32,21 +32,21 @@ class ReferenceGenome;
 class Variant : public Comparable<Variant>, public Mappable<Variant>
 {
 public:
-    using SizeType     = Allele::SizeType;
-    using SequenceType = Allele::SequenceType;
+    using RegionType         = Allele::RegionType;
+    using NucleotideSequence = Allele::NucleotideSequence;
     
     Variant() = default;
     
     template <typename R, typename A>
     Variant(R&& reference, A&& alternative);
     
-    template <typename GenomicRegion_, typename SequenceType1, typename SequenceType2>
-    Variant(GenomicRegion_&& reference_allele_region, SequenceType1&& reference_allele,
-            SequenceType2&& alternative_allele);
+    template <typename GenomicRegion_, typename Sequence1, typename Sequence2>
+    Variant(GenomicRegion_&& reference_allele_region,
+            Sequence1&& reference_allele, Sequence2&& alternative_allele);
     
-    template <typename StringType, typename SequenceType1, typename SequenceType2>
-    Variant(StringType&& reference_contig_name, SizeType reference_begin,
-            SequenceType1&& reference_allele, SequenceType2&& alternative_allele);
+    template <typename String, typename Sequence1, typename Sequence2>
+    Variant(String&& reference_contig_name, RegionType::Position reference_begin,
+            Sequence1&& reference_allele, Sequence2&& alternative_allele);
     
     Variant(const Variant&)            = default;
     Variant& operator=(const Variant&) = default;
@@ -75,33 +75,32 @@ alternative_ {std::forward<A>(alternative)}
     }
 }
 
-template <typename GenomicRegion_, typename SequenceType1, typename SequenceType2>
-Variant::Variant(GenomicRegion_&& ref_region, SequenceType1&& ref_sequence,
-                 SequenceType2&& alt_sequence)
+template <typename GenomicRegion_, typename Sequence1, typename Sequence2>
+Variant::Variant(GenomicRegion_&& ref_region, Sequence1&& ref_sequence, Sequence2&& alt_sequence)
 :
-reference_ {ref_region, std::forward<SequenceType1>(ref_sequence)},
-alternative_ {std::forward<GenomicRegion_>(ref_region), std::forward<SequenceType2>(alt_sequence)}
+reference_ {ref_region, std::forward<Sequence1>(ref_sequence)},
+alternative_ {std::forward<GenomicRegion_>(ref_region), std::forward<Sequence2>(alt_sequence)}
 {}
 
-template <typename StringType, typename SequenceType1, typename SequenceType2>
-Variant::Variant(StringType&& ref_contig_name, const SizeType ref_begin,
-                 SequenceType1&& ref_sequence, SequenceType2&& alt_sequence)
+template <typename String, typename Sequence1, typename Sequence2>
+Variant::Variant(String&& ref_contig_name, const RegionType::Position ref_begin,
+                 Sequence1&& ref_sequence, Sequence2&& alt_sequence)
 :
-reference_ {std::forward<StringType>(ref_contig_name), ref_begin, std::forward<SequenceType1>(ref_sequence)},
-alternative_ {reference_.mapped_region(), std::forward<SequenceType2>(alt_sequence)}
+reference_ {std::forward<String>(ref_contig_name), ref_begin, std::forward<Sequence1>(ref_sequence)},
+alternative_ {reference_.mapped_region(), std::forward<Sequence2>(alt_sequence)}
 {}
 
 // non-member methods
 
 Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference);
-Variant make_variant(const std::string& region_str, Variant::SequenceType alt_sequence,
+Variant make_variant(const std::string& region_str, Variant::NucleotideSequence alt_sequence,
                      const ReferenceGenome& reference);
 
-const Variant::SequenceType& ref_sequence(const Variant& variant);
-const Variant::SequenceType& alt_sequence(const Variant& variant);
+const Variant::NucleotideSequence& ref_sequence(const Variant& variant);
+const Variant::NucleotideSequence& alt_sequence(const Variant& variant);
 
-Variant::SizeType ref_sequence_size(const Variant& variant);
-Variant::SizeType alt_sequence_size(const Variant& variant);
+Variant::NucleotideSequence::size_type ref_sequence_size(const Variant& variant);
+Variant::NucleotideSequence::size_type alt_sequence_size(const Variant& variant);
 
 bool operator==(const Variant& lhs, const Variant& rhs);
 bool operator<(const Variant& lhs, const Variant& rhs);
@@ -142,7 +141,7 @@ Variant make_parsimonious(const Variant& variant, G generator)
 {
     using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
     
-    using SequenceType = Variant::SequenceType;
+    using NucleotideSequence = Variant::NucleotideSequence;
     
     const auto& old_ref_region   = mapped_region(variant);
     const auto& old_ref_sequence = ref_sequence(variant);
@@ -154,11 +153,11 @@ Variant make_parsimonious(const Variant& variant, G generator)
             
             const char new_base = generator(head_position(new_ref_region));
             
-            SequenceType new_ref_allele(old_ref_sequence.size() + 1, new_base);
+            NucleotideSequence new_ref_allele(old_ref_sequence.size() + 1, new_base);
             std::copy(cbegin(old_ref_sequence), cend(old_ref_sequence),
                       std::next(begin(new_ref_allele)));
             
-            SequenceType new_alt_allele(old_alt_sequence.size() + 1, new_base);
+            NucleotideSequence new_alt_allele(old_alt_sequence.size() + 1, new_base);
             std::copy(cbegin(old_alt_sequence), cend(old_alt_sequence),
                       std::next(begin(new_alt_allele)));
             
@@ -169,10 +168,10 @@ Variant make_parsimonious(const Variant& variant, G generator)
             
             const char new_base = generator(tail_position(new_ref_region));
             
-            SequenceType new_ref_allele(old_ref_sequence.size() + 1, new_base);
+            NucleotideSequence new_ref_allele(old_ref_sequence.size() + 1, new_base);
             std::copy(cbegin(old_ref_sequence), cend(old_ref_sequence), begin(new_ref_allele));
             
-            SequenceType new_alt_allele(old_alt_sequence.size() + 1, new_base);
+            NucleotideSequence new_alt_allele(old_alt_sequence.size() + 1, new_base);
             std::copy(cbegin(old_alt_sequence), cend(old_alt_sequence), begin(new_alt_allele));
             
             return Variant {move(new_ref_region), move(new_ref_allele), move(new_alt_allele)};
@@ -204,10 +203,10 @@ Variant make_parsimonious(const Variant& variant, G generator)
         --pf.second;
     }
     
-    SequenceType new_big_allele   {pf.second, pb.second.base()};
-    SequenceType new_small_allele {pf.first, pb.first.base()};
+    NucleotideSequence new_big_allele   {pf.second, pb.second.base()};
+    NucleotideSequence new_small_allele {pf.first, pb.first.base()};
     
-    using S = GenomicRegion::SizeType;
+    using S = GenomicRegion::Position;
     GenomicRegion new_ref_region {
         old_ref_region.contig_name(),
         old_ref_region.begin() + static_cast<S>(std::distance(cbegin(small_allele), pf.first)),
@@ -233,19 +232,19 @@ bool is_left_alignable(const Variant& variant) noexcept;
  to the left while keeping the length of all its alleles constant.
  */
 Variant left_align(const Variant& variant, const ReferenceGenome& reference,
-                   Variant::SizeType extension_size = 30);
+                   unsigned extension_size = 30);
 
 /*
  A variant is normalised if and only if it is parsimonious and left aligned.
  */
 Variant normalise(const Variant& variant, const ReferenceGenome& reference,
-                  Variant::SizeType extension_size = 30);
+                  unsigned extension_size = 30);
 
-Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence);
-Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence);
-Variant pad_right(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n);
-Variant pad_left(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n);
-Variant pad_right(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n);
+Variant pad_left(const Variant& variant, const Variant::NucleotideSequence& sequence);
+Variant pad_right(const Variant& variant, const Variant::NucleotideSequence& sequence);
+Variant pad_right(const Variant& variant, const ReferenceGenome& reference, unsigned n);
+Variant pad_left(const Variant& variant, const ReferenceGenome& reference, unsigned n);
+Variant pad_right(const Variant& variant, const ReferenceGenome& reference, unsigned n);
 
 /*
  Left aligns all input Variants and removes any resulting duplicates. The returned variants are sorted.
@@ -272,7 +271,7 @@ bool is_mnv(const Variant& variant) noexcept;
 bool is_transition(const Variant& variant) noexcept;
 bool is_transversion(const Variant& variant) noexcept;
 
-std::vector<Allele::SequenceType> extract_alt_allele_sequences(const std::vector<Variant>& variants);
+std::vector<Allele::NucleotideSequence> extract_alt_allele_sequences(const std::vector<Variant>& variants);
 
 namespace std {
     template <> struct hash<Variant>
@@ -282,8 +281,8 @@ namespace std {
             using boost::hash_combine;
             size_t result {};
             hash_combine(result, hash<GenomicRegion>()(variant.mapped_region()));
-            hash_combine(result, hash<Allele::SequenceType>()(ref_sequence(variant)));
-            hash_combine(result, hash<Allele::SequenceType>()(alt_sequence(variant)));
+            hash_combine(result, hash<Allele::NucleotideSequence>()(ref_sequence(variant)));
+            hash_combine(result, hash<Allele::NucleotideSequence>()(alt_sequence(variant)));
             return result;
         }
     };

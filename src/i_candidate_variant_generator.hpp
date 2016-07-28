@@ -22,7 +22,7 @@
 class AlignedRead;
 class GenomicRegion;
 
-namespace Octopus
+namespace octopus
 {
     class ICandidateVariantGenerator
     {
@@ -102,6 +102,6 @@ namespace Octopus
         }
         
     } // namespace debug
-} // namespace Octopus
+} // namespace octopus
 
 #endif

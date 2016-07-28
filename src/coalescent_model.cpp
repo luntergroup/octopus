@@ -12,7 +12,7 @@
 
 #include "tandem.hpp"
 
-namespace Octopus
+namespace octopus
 {
 
 auto percent_of_bases_in_repeat(const Haplotype& haplotype)
@@ -90,4 +90,4 @@ void CoalescentModel::set_reference(Haplotype reference)
                               std::forward_as_tuple(reference_),
                               std::forward_as_tuple());
 }
-} // namespace Octopus
+} // namespace octopus

@@ -32,7 +32,7 @@
 #include "variant.hpp"
 #include "maths.hpp"
 
-namespace Octopus
+namespace octopus
 {
     class CoalescentModel
     {
@@ -279,6 +279,6 @@ namespace Octopus
         
         return result;
     }
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* coalescent_model_hpp */

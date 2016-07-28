@@ -25,13 +25,13 @@ CachingFasta::CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta)
 CachingFasta {std::move(fasta), 10'000'000}
 {}
 CachingFasta::CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta,
-                           SizeType max_cache_size)
+                           GenomicSize max_cache_size)
 :
 CachingFasta {std::move(fasta), max_cache_size, 0.99, 0.5}
 {}
 
 CachingFasta::CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta,
-                           const SizeType max_cache_size,
+                           const GenomicSize max_cache_size,
                            const double locality_bias, const double forward_bias)
 :
 fasta_ {std::move(fasta)},
@@ -69,17 +69,17 @@ std::string CachingFasta::do_fetch_reference_name() const
     return fasta_->fetch_reference_name();
 }
 
-std::vector<CachingFasta::ContigNameType> CachingFasta::do_fetch_contig_names() const
+std::vector<CachingFasta::ContigName> CachingFasta::do_fetch_contig_names() const
 {
     return fasta_->fetch_contig_names();
 }
 
-CachingFasta::SizeType CachingFasta::do_fetch_contig_size(const ContigNameType& contig) const
+CachingFasta::GenomicSize CachingFasta::do_fetch_contig_size(const ContigName& contig) const
 {
     return contig_sizes_.at(contig);
 }
 
-CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& region) const
+CachingFasta::GeneticSequence CachingFasta::do_fetch_sequence(const GenomicRegion& region) const
 {
     if (size(region) > max_cache_size_) {
         return fasta_->fetch_sequence(region);
@@ -130,7 +130,7 @@ void CachingFasta::setup_cache()
     }
 }
 
-CachingFasta::SizeType CachingFasta::get_remaining_cache_size() const
+CachingFasta::GenomicSize CachingFasta::get_remaining_cache_size() const
 {
     assert(max_cache_size_ >= current_cache_size_);
     return max_cache_size_ - current_cache_size_;
@@ -172,18 +172,18 @@ GenomicRegion CachingFasta::get_region_to_fetch(const GenomicRegion& requested_r
     }
 }
 
-CachingFasta::SizeType CachingFasta::get_lhs_extension_size(const GenomicRegion& requested_region) const
+CachingFasta::GenomicSize CachingFasta::get_lhs_extension_size(const GenomicRegion& requested_region) const
 {
     assert(max_cache_size_ >= size(requested_region));
     return std::min(requested_region.begin(),
-                    static_cast<SizeType>((max_cache_size_ - size(requested_region)) * locality_bias_ * (1.0 - forward_bias_)));
+                    static_cast<GenomicSize>((max_cache_size_ - size(requested_region)) * locality_bias_ * (1.0 - forward_bias_)));
 }
 
-CachingFasta::SizeType CachingFasta::get_rhs_extension_size(const GenomicRegion& requested_region) const
+CachingFasta::GenomicSize CachingFasta::get_rhs_extension_size(const GenomicRegion& requested_region) const
 {
     assert(max_cache_size_ >= size(requested_region));
     return std::min(contig_sizes_.at(requested_region.contig_name()) - requested_region.end(),
-                    static_cast<SizeType>((max_cache_size_ - size(requested_region)) * locality_bias_ * forward_bias_));
+                    static_cast<GenomicSize>((max_cache_size_ - size(requested_region)) * locality_bias_ * forward_bias_));
 }
 
 GenomicRegion CachingFasta::get_new_contig_chunk(const GenomicRegion& requested_region) const
@@ -198,7 +198,7 @@ GenomicRegion CachingFasta::get_partial_contig_chunk(const GenomicRegion& reques
     return get_new_contig_chunk(requested_region);
 }
 
-void CachingFasta::add_sequence_to_cache(SequenceType&& sequence, GenomicRegion&& region) const
+void CachingFasta::add_sequence_to_cache(GeneticSequence&& sequence, GenomicRegion&& region) const
 {
     assert(size(region) <= max_cache_size_);
     
@@ -207,7 +207,7 @@ void CachingFasta::add_sequence_to_cache(SequenceType&& sequence, GenomicRegion&
     const auto& contig = region.contig_name();
     
     if (sequence_cache_.count(contig) == 0 && contig_sizes_.at(contig) >= get_remaining_cache_size()) {
-        const auto target_cache_size = static_cast<SizeType>(current_cache_size_ * (1.0 - locality_bias_));
+        const auto target_cache_size = static_cast<GenomicSize>(current_cache_size_ * (1.0 - locality_bias_));
         
         while (current_cache_size_ > target_cache_size) {
             remove_from_sequence_cache(recently_used_regions_.back());
@@ -288,7 +288,7 @@ T get_nonoverlapped(const T& lhs, const T& rhs)
     return (begins_before(lhs, rhs)) ? left_overhang_region(lhs, rhs) : right_overhang_region(lhs, rhs);
 }
 
-void CachingFasta::recache_overlapped_regions(const SequenceType& sequence, const GenomicRegion& region) const
+void CachingFasta::recache_overlapped_regions(const GeneticSequence& sequence, const GenomicRegion& region) const
 {
     if (sequence_cache_.count(region.contig_name()) == 1) {
         auto cached_overlapped = this->overlap_range(region);
@@ -333,9 +333,9 @@ void CachingFasta::recache_overlapped_regions(const SequenceType& sequence, cons
     }
 }
 
-CachingFasta::SequenceType CachingFasta::get_subsequence(const ContigRegion& requested_region,
-                                                         const ContigRegion& sequence_region,
-                                                         const SequenceType& sequence) const
+CachingFasta::GeneticSequence CachingFasta::get_subsequence(const ContigRegion& requested_region,
+                                                            const ContigRegion& sequence_region,
+                                                            const GeneticSequence& sequence) const
 {
     assert(contains(sequence_region, requested_region));
     return sequence.substr(begin_distance(sequence_region, requested_region), size(requested_region));

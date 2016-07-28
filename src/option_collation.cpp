@@ -44,7 +44,7 @@
 #include "maths.hpp"
 #include "logging.hpp"
 
-namespace Octopus { namespace Options
+namespace octopus { namespace Options
 {
 bool is_run_command(const OptionMap& options)
 {
@@ -305,7 +305,7 @@ ReferenceGenome make_reference(const OptionMap& options)
     static constexpr unsigned Scale {1'000'000};
     
     return ::make_reference(std::move(resolved_path),
-                            static_cast<ReferenceGenome::SizeType>(Scale * ref_cache_size),
+                            static_cast<std::size_t>(Scale * ref_cache_size),
                             is_threading_allowed(options));
 }
 
@@ -633,10 +633,10 @@ ContigOutputOrder get_contig_output_order(const OptionMap& options)
     return options.at("contig-output-order").as<ContigOutputOrder>();
 }
 
-boost::optional<std::vector<SampleIdType>> get_user_samples(const OptionMap& options)
+boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& options)
 {
     if (options.count("samples") == 1) {
-        return options.at("samples").as<std::vector<SampleIdType>>();
+        return options.at("samples").as<std::vector<SampleName>>();
     }
     return boost::none;
 }
@@ -809,9 +809,6 @@ ReadFilterer make_read_filter(const OptionMap& options)
 {
     using std::make_unique;
     
-    using QualityType = AlignedRead::QualityType;
-    using SizeType    = AlignedRead::SizeType;
-    
     using namespace ReadFilters;
     
     ReadFilterer result {};
@@ -849,11 +846,11 @@ ReadFilterer make_read_filter(const OptionMap& options)
     }
     
     if (options.count("min-read-length") == 1) {
-        result.register_filter(make_unique<IsShort>(options.at("min-read-length").as<SizeType>()));
+        result.register_filter(make_unique<IsShort>(options.at("min-read-length").as<unsigned>()));
     }
     
     if (options.count("max-read-length") == 1) {
-        result.register_filter(make_unique<IsLong>(options.at("max-read-length").as<SizeType>()));
+        result.register_filter(make_unique<IsLong>(options.at("max-read-length").as<unsigned>()));
     }
     
     if (!options.at("allow-marked-duplicates").as<bool>()) {
@@ -908,8 +905,6 @@ boost::optional<Downsampler> make_downsampler(const OptionMap& options)
 
 ReadTransform make_read_transform(const OptionMap& options)
 {
-    using SizeType = AlignedRead::SizeType;
-    
     ReadTransform result {};
     
     result.register_transform(ReadTransforms::CapBaseQualities {125});
@@ -919,7 +914,7 @@ ReadTransform make_read_transform(const OptionMap& options)
     }
     
     if (options.count("mask-tails")) {
-        const auto tail_mask_size = options.at("mask-tails").as<SizeType>();
+        const auto tail_mask_size = options.at("mask-tails").as<unsigned>();
         
         if (tail_mask_size > 0) {
             result.register_transform(ReadTransforms::MaskTail {tail_mask_size});
@@ -927,7 +922,7 @@ ReadTransform make_read_transform(const OptionMap& options)
     }
     
     if (!options.at("disable-soft-clip-masking").as<bool>()) {
-        const auto soft_clipped_mask_size = options.at("mask-soft-clipped-boundries").as<SizeType>();
+        const auto soft_clipped_mask_size = options.at("mask-soft-clipped-boundries").as<unsigned>();
         
         if (soft_clipped_mask_size > 0) {
             result.register_transform(ReadTransforms::MaskSoftClippedBoundries {soft_clipped_mask_size});
@@ -1000,7 +995,7 @@ CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& opti
     }
     
     result.set_min_base_quality(options.at("min-base-quality").as<unsigned>());
-    result.set_max_variant_size(options.at("max-variant-size").as<CandidateGeneratorBuilder::SizeType>());
+    result.set_max_variant_size(options.at("max-variant-size").as<unsigned>());
     
     if (options.count("min-supporting-reads")) {
         auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
@@ -1332,4 +1327,4 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
     return result;
 }
 } // namespace Options
-} // namespace Octopus
+} // namespace octopus

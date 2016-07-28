@@ -15,7 +15,7 @@
 #include <boost/program_options.hpp>
 #include <boost/optional.hpp>
 
-namespace Octopus { namespace Options
+namespace octopus { namespace Options
 {
     using OptionMap = boost::program_options::variables_map;
     
@@ -48,6 +48,6 @@ namespace Octopus { namespace Options
     std::istream& operator>>(std::istream& in, PhasingLevel& pl);
     std::ostream& operator<<(std::ostream& os, const PhasingLevel& pl);
 } // namespace Options
-} // namespace Octopus
+} // namespace octopus
 
 #endif /* defined(__Octopus__option_parser__) */

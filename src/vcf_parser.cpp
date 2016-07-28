@@ -20,7 +20,7 @@
 
 VcfHeader parse_header(std::ifstream& vcf_file);
 bool overlaps(const std::string& line, const GenomicRegion& region);
-VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::SampleIdType>& samples = {});
+VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::SampleName>& samples = {});
 
 template <char Delim>
 struct Token
@@ -376,7 +376,7 @@ bool is_phased(const std::string& genotype)
     return genotype[pos] == '|';
 }
 
-void parse_genotype(const VcfRecord::SampleIdType& sample, const std::string& genotype,
+void parse_genotype(const VcfRecord::SampleName& sample, const std::string& genotype,
                     VcfRecord::Builder& rb)
 {
     const bool phased {is_phased(genotype)};
@@ -405,7 +405,7 @@ void parse_genotype(const VcfRecord::SampleIdType& sample, const std::string& ge
 
 using SampleField = Token<':'>;
 
-void parse_sample(const std::string& column, const VcfRecord::SampleIdType& sample,
+void parse_sample(const std::string& column, const VcfRecord::SampleName& sample,
                   const std::vector<std::string>& format, VcfRecord::Builder& rb)
 {
     auto first_key = std::cbegin(format);
@@ -428,7 +428,7 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
                   });
 }
 
-VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::SampleIdType>& samples)
+VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::SampleName>& samples)
 {
     std::istringstream ss {line};
     
