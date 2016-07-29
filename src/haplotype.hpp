@@ -29,19 +29,23 @@ class ReferenceGenome;
 class GenomicRegion;
 class Variant;
 
+/*
+    A Haplotype is an ordered, non-overlapping, set of Alleles, and therefore implictly
+    defines a sequence in a given GenomicRegion.
+ */
 class Haplotype;
 
 namespace debug
 {
     template <typename S> void print_alleles(S&& stream, const Haplotype& haplotype);
     template <typename S> void print_variant_alleles(S&& stream, const Haplotype& haplotype);
-} // namespace debug
+}
 
 namespace detail
 {
     Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::false_type);
-} // namespace detail
+}
 
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
 {
@@ -74,8 +78,9 @@ public:
     
     bool contains(const ContigAllele& allele) const;
     bool contains(const Allele& allele) const;
-    bool contains_exact(const Allele& allele) const;
-    bool contains_exact(const ContigAllele& allele) const;
+    
+    bool includes(const ContigAllele& allele) const;
+    bool includes(const Allele& allele) const;
     
     NucleotideSequence sequence(const ContigRegion& region) const;
     NucleotideSequence sequence(const GenomicRegion& region) const;

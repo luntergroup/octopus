@@ -225,8 +225,9 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     const auto merged_likelihoods = merge_samples(samples_, merged_sample, haplotypes,
                                                   haplotype_likelihoods);
     
-    auto germline_inferences = germline_model.infer_latents(merged_sample, germline_genotypes,
-                                                            merged_likelihoods);
+    merged_likelihoods.prime(merged_sample);
+    
+    auto germline_inferences = germline_model.infer_latents(germline_genotypes, merged_likelihoods);
     
     auto cnv_inferences = cnv_model.infer_latents(germline_genotypes, haplotype_likelihoods);
     
@@ -328,14 +329,14 @@ CancerVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplotype
         
         const GermlineModel germline_model {prior_model};
         
-        const auto normal_inferences = germline_model.infer_latents(normal_sample(),
-                                                                    latents.germline_genotypes_,
+        haplotype_likelihoods.prime(normal_sample());
+        
+        const auto normal_inferences = germline_model.infer_latents(latents.germline_genotypes_,
                                                                     haplotype_likelihoods);
         
         const auto dummy_genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
         
-        const auto dummy_inferences = germline_model.infer_latents(normal_sample(),
-                                                                   dummy_genotypes,
+        const auto dummy_inferences = germline_model.infer_latents(dummy_genotypes,
                                                                    haplotype_likelihoods);
         
         return ::octopus::calculate_dummy_model_posterior(normal_inferences.log_evidence,
@@ -503,7 +504,7 @@ VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candi
 
 bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReference& candidate)
 {
-    return contains_exact(genotype_call, candidate.get().alt_allele());
+    return includes(genotype_call, candidate.get().alt_allele());
 }
 
 auto call_candidates(const VariantPosteriors& candidate_posteriors,
@@ -581,8 +582,7 @@ auto call_somatic_variants(const VariantPosteriors& somatic_variant_posteriors,
     std::copy_if(std::begin(somatic_variant_posteriors), std::end(somatic_variant_posteriors),
                  std::back_inserter(result),
                  [min_posterior, &called_genotype] (const auto& p) {
-                     return p.second >= min_posterior
-                            && contains_exact(called_genotype, p.first.get().alt_allele());
+                     return p.second >= min_posterior && includes(called_genotype, p.first.get().alt_allele());
                  });
     
     return result;

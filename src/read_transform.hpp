@@ -2,86 +2,79 @@
 //  read_transform.hpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 08/03/2015.
+//  Created by Daniel Cooke on 07/03/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
 #ifndef Octopus_read_transform_hpp
 #define Octopus_read_transform_hpp
 
-#include <vector>
-#include <functional>
-#include <algorithm>
-#include <iterator>
-#include <type_traits>
-
 #include "aligned_read.hpp"
 
-namespace octopus
+namespace octopus { namespace read_transform
 {
-class ReadTransform
-{
-public:
-    using ReadTransformation = std::function<void(AlignedRead&)>;
-    
-    ReadTransform()  = default;
-    
-    ReadTransform(const ReadTransform&)            = default;
-    ReadTransform& operator=(const ReadTransform&) = default;
-    ReadTransform(ReadTransform&&)                 = default;
-    ReadTransform& operator=(ReadTransform&&)      = default;
-    
-    ~ReadTransform() = default;
-    
-    void register_transform(ReadTransformation transform);
-    
-    unsigned num_transforms() const noexcept;
-    
-    void shrink_to_fit() noexcept;
-    
-    template <typename InputIt>
-    void transform_reads(InputIt first, InputIt last) const;
-    
-private:
-    std::vector<ReadTransformation> transforms_;
-    
-    void transform_read(AlignedRead& read) const;
-};
-
-// private methods
-
-template <typename InputIt>
-void ReadTransform::transform_reads(InputIt first, InputIt last) const
-{
-    std::for_each(first, last, [this] (auto& read) { transform_read(read); });
-}
-
-// non-member methods
-
-namespace detail
-{
-    template <typename Container>
-    void transform_reads(Container& reads, const ReadTransform& transformer, std::true_type)
+    struct CapBaseQualities
     {
-        transformer.transform_reads(std::begin(reads), std::end(reads));
-    }
+        using BaseQuality = AlignedRead::BaseQuality;
+        
+        CapBaseQualities() = default;
+        
+        explicit CapBaseQualities(BaseQuality max);
+        
+        void operator()(AlignedRead& read) const noexcept;
+        
+    private:
+        BaseQuality max_;
+    };
     
-    template <typename ReadMap>
-    void transform_reads(ReadMap& reads, const ReadTransform& transformer, std::false_type)
+    struct MaskOverlappedSegment
     {
-        for (auto& p : reads) {
-            transform_reads(p.second, transformer, std::true_type {});
-        }
-    }
-} // namespace detail
-
-template <typename Container>
-void transform_reads(Container& reads, const ReadTransform& transformer)
-{
-    using ValueType = typename std::decay_t<typename Container::value_type>;
-    detail::transform_reads(reads, transformer, std::is_same<ValueType, AlignedRead> {});
-}
-
+        void operator()(AlignedRead& read) const noexcept;
+    };
+    
+    struct MaskAdapters
+    {
+        void operator()(AlignedRead& read) const noexcept;
+    };
+    
+    struct MaskTail
+    {
+        using Length = AlignedRead::NucleotideSequence::size_type;
+        
+        MaskTail() = default;
+        
+        explicit MaskTail(Length num_bases);
+        
+        void operator()(AlignedRead& read) const noexcept;
+        
+    private:
+        const Length num_bases_;
+    };
+    
+    struct MaskSoftClipped
+    {
+        void operator()(AlignedRead& read) const noexcept;
+    };
+    
+    struct MaskSoftClippedBoundries
+    {
+        using Length = AlignedRead::NucleotideSequence::size_type;
+        
+        MaskSoftClippedBoundries() = default;
+        
+        explicit MaskSoftClippedBoundries(Length num_bases);
+        
+        void operator()(AlignedRead& read) const noexcept;
+        
+    private:
+        const Length num_bases_;
+    };
+    
+    struct QualityAdjustedSoftClippedMasker
+    {
+        void operator()(AlignedRead& read) const noexcept;
+    };
+} // namespace read_transform
 } // namespace octopus
 
 #endif

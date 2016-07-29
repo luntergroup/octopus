@@ -50,7 +50,7 @@ public:
     HtslibSamFacade(HtslibSamFacade&&)                 = default;
     HtslibSamFacade& operator=(HtslibSamFacade&&)      = default;
     
-    ~HtslibSamFacade() noexcept override = default;
+    ~HtslibSamFacade() override = default;
     
     bool is_open() const noexcept override;
     void open() override;

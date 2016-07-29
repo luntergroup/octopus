@@ -634,6 +634,11 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     
     return result;
 }
+    
+std::vector<VcfRecord> VariantCaller::regenotype(const std::vector<Variant>& variants, ProgressMeter& progress_meter) const
+{
+    return {}; // TODO
+}
 
 // private methods
 
@@ -648,9 +653,7 @@ MappableFlatSet<Variant> VariantCaller::generate_candidate_variants(const Genomi
     
     auto raw_candidates = candidate_generator_.generate_candidates(region);
     
-    if (debug_log_) {
-        debug::print_left_aligned_candidates(stream(*debug_log_), raw_candidates, reference_);
-    }
+    if (debug_log_) debug::print_left_aligned_candidates(stream(*debug_log_), raw_candidates, reference_);
     
     auto final_candidates = unique_left_align(std::move(raw_candidates), reference_);
     
@@ -734,7 +737,7 @@ void VariantCaller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
                              const MappableFlatSet<Variant>& candidates,
                              const ReadMap& active_reads) const
 {
-    assert(haplotype_likelihoods.empty());
+    assert(haplotype_likelihoods.is_empty());
     
     boost::optional<HaplotypeLikelihoodCache::FlankState> flank_state {};
     
@@ -1198,7 +1201,7 @@ namespace debug
         const auto cigar = parse_cigar_string(cigar_str);
         return std::find_if(std::cbegin(reads), std::cend(reads),
                             [&] (const AlignedRead& read) {
-                                return read.cigar_string() == cigar
+                                return read.cigar() == cigar
                                 && to_string(mapped_region(read)) == region;
                             });
     }

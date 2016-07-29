@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        "--debug",
+        //"--debug",
         //"--trace",
         
         //"--sites-only",
@@ -45,7 +45,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
@@ -62,14 +62,14 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", "~/Genomics/Illumina/NA12878HC_HLA_C.bam",
         
         // TCGA
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MCG
         //"--reads", "~/Genomics/MCG/10120_chr2_47641558_GTA_G.RG.bam",
         //"--reads", "~/Genomics/MCG/D59597_Cov3.RG.bam",
         
-        "--caller", "cancer", // default "population"
+        //"--caller", "cancer", // default "population"
         "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
@@ -82,6 +82,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         /* input regions */
         
         //"--use-one-based-indexing",
+        
+        "--regions", "22",
         
         //"--regions", "2:120,098,309-120,098,368", // NA12878 LC - GQ is too high
         
@@ -140,7 +142,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:47,094,596-47,094,671", // PASSing FP SNV
         //"--regions", "22:47,996,352-47,996,392", // PASSing FP SNV
         
-        "--regions", "22:40,000,000-41,000,000",
+        //"--regions", "22:40,000,000-41,000,000",
         
 //        "--regions", "22:41,120,796-41,120,871", // FP SNP. Strand bias. Run through.
 //        "--regions", "22:43,960,301-43,960,376", // FP SNP. Strand bias. Run through.
@@ -227,7 +229,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--disable-raw-cigar-candidate-generator",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
-        //"--disable-assembly-candidate-generator",
+        "--disable-assembly-candidate-generator",
         //"--kmer-size", "75",
         //"--assembler-mask-base-quality=2",
         //"--max-variant-size", "25",

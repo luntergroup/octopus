@@ -21,14 +21,14 @@
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "downsampler.hpp"
+#include "read_pipe.hpp"
 #include "variant_call_filter.hpp"
 
 namespace fs = boost::filesystem;
 
 namespace octopus
 {
-class ReadTransform;
-class ReadPipe;
+class ReadTransformer;
 class CandidateGeneratorBuilder;
 class VariantCallerFactory;
 namespace Options
@@ -55,11 +55,11 @@ namespace Options
     
     ReadManager make_read_manager(const OptionMap& options);
     
-    ReadFilterer make_read_filter(const OptionMap& options);
+    ReadTransformer make_read_transformer(const OptionMap& options);
+    
+    ReadPipe::ReadFilterer make_read_filterer(const OptionMap& options);
     
     boost::optional<Downsampler> make_downsampler(const OptionMap& options);
-    
-    ReadTransform make_read_transform(const OptionMap& options);
     
     CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& options,
                                                                const ReferenceGenome& reference);

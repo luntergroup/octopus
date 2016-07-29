@@ -86,7 +86,7 @@ unsigned Assembler::kmer_size() const noexcept
 
 void Assembler::insert_reference(const NucleotideSequence& sequence)
 {
-    if (empty()) {
+    if (is_empty()) {
         insert_reference_into_empty_graph(sequence);
     } else {
         insert_reference_into_populated_graph(sequence);
@@ -154,7 +154,7 @@ std::size_t Assembler::num_kmers() const noexcept
     return vertex_cache_.size();
 }
 
-bool Assembler::empty() const noexcept
+bool Assembler::is_empty() const noexcept
 {
     return vertex_cache_.empty();
 }
@@ -304,7 +304,7 @@ void Assembler::clear()
 
 std::deque<Assembler::Variant> Assembler::extract_variants(const unsigned max)
 {
-    if (empty() || is_all_reference()) {
+    if (is_empty() || is_all_reference()) {
         return std::deque<Variant> {};
     }
     

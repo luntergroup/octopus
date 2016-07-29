@@ -162,7 +162,7 @@ std::vector<MappableType> CancerGenotype<MappableType>::copy_unique() const
 // non-member methods
 
 bool contains(const CancerGenotype<Haplotype>& genotype, const Allele& allele);
-bool contains_exact(const CancerGenotype<Haplotype>& genotype, const Allele& allele);
+bool includes(const CancerGenotype<Haplotype>& genotype, const Allele& allele);
 
 template <typename MappableType2, typename MappableType1>
 CancerGenotype<MappableType2> splice(const CancerGenotype<MappableType1>& genotype,

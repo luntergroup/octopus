@@ -21,16 +21,18 @@ namespace octopus
 
 // public members
 
-ReadPipe::ReadPipe(const ReadManager& read_manager, std::vector<SampleName> samples)
-    : ReadPipe {read_manager, {}, {}, boost::none, std::move(samples)} {}
+ReadPipe::ReadPipe(const ReadManager& manager, std::vector<SampleName> samples)
+:
+ReadPipe {manager, {}, {}, boost::none, std::move(samples)}
+{}
 
-ReadPipe::ReadPipe(const ReadManager& read_manager, ReadTransform read_transform, ReadFilterer read_filter,
+ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer transformer, ReadFilterer filterer,
                    boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
 :
-read_manager_ {read_manager},
-read_filter_ {std::move(read_filter)},
+manager_ {manager},
+transformer_ {std::move(transformer)},
+filterer_ {std::move(filterer)},
 downsampler_ {std::move(downsampler)},
-read_transform_ {std::move(read_transform)},
 samples_ {std::move(samples)},
 debug_log_ {}
 {
@@ -46,9 +48,9 @@ std::vector<std::vector<SampleName>> batch_samples(std::vector<SampleName> sampl
     return result;
 }
 
-void ReadPipe::set_read_manager(const ReadManager& read_manager) noexcept
+void ReadPipe::set_read_manager(const ReadManager& manager) noexcept
 {
-    read_manager_ = read_manager;
+    manager_ = manager;
 }
 
 unsigned ReadPipe::num_samples() const noexcept
@@ -66,8 +68,7 @@ namespace
     template <typename Container>
     void move_construct(Container&& src, ReadMap::mapped_type& dst)
     {
-        dst.insert(std::make_move_iterator(std::begin(src)),
-                   std::make_move_iterator(std::end(src)));
+        dst.insert(std::make_move_iterator(std::begin(src)), std::make_move_iterator(std::end(src)));
     }
     
     template <>
@@ -115,26 +116,26 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
     const auto batches = batch_samples(samples_);
     
     for (const auto& batch : batches) {
-        auto batch_reads = read_manager_.get().fetch_reads(batch, region);
+        auto batch_reads = manager_.get().fetch_reads(batch, region);
         
         if (debug_log_) {
             stream(*debug_log_) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
         }
         
         // transforms should be done first as they may affect which reads are filtered
-        transform_reads(batch_reads, read_transform_);
+        transform_reads(batch_reads, transformer_);
         
         if (debug_log_) {
-            SampleFilterCountMap<SampleName, decltype(read_filter_)> filter_counts {};
+            SampleFilterCountMap<SampleName, decltype(filterer_)> filter_counts {};
             filter_counts.reserve(samples_.size());
             
             for (const auto& sample : samples_) {
-                filter_counts[sample].reserve(read_filter_.num_filters());
+                filter_counts[sample].reserve(filterer_.num_filters());
             }
             
-            erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_, filter_counts));
+            erase_filtered_reads(batch_reads, filter(batch_reads, filterer_, filter_counts));
             
-            if (read_filter_.num_filters() > 0) {
+            if (filterer_.num_filters() > 0) {
                 for (const auto& p : filter_counts) {
                     stream(*debug_log_) << "In sample " << p.first;
                     if (!p.second.empty()) {
@@ -147,7 +148,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
                 }
             }
         } else {
-            erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_));
+            erase_filtered_reads(batch_reads, filter(batch_reads, filterer_));
         }
         
         if (debug_log_) {

@@ -40,9 +40,9 @@
 #include "mappable_map.hpp"
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
-#include "read_filter.hpp"
+#include "read_transformer.hpp"
+#include "read_filterer.hpp"
 #include "downsampler.hpp"
-#include "read_transform.hpp"
 #include "read_pipe.hpp"
 #include "read_utils.hpp"
 #include "candidate_generator_builder.hpp"
@@ -60,7 +60,7 @@
 #include "measure.hpp"
 #include "quality_by_depth.hpp"
 #include "threshold_filter.hpp"
-#include "read_transformations.hpp"
+#include "read_transform.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -254,8 +254,8 @@ ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> sampl
 {
     return ReadPipe {
         read_manager,
-        Options::make_read_transform(options),
-        Options::make_read_filter(options),
+        Options::make_read_transformer(options),
+        Options::make_read_filterer(options),
         Options::make_downsampler(options),
         std::move(samples)
     };
@@ -280,9 +280,9 @@ auto estimate_read_size(const AlignedRead& read)
         // Now the dynamically allocated bits
         + sequence_size(read) * sizeof(char)
         + sequence_size(read) * sizeof(AlignedRead::BaseQuality)
-        + read.cigar_string().size() * sizeof(CigarOperation)
+        + read.cigar().size() * sizeof(CigarOperation)
         + contig_name(read).size()
-        + (read.has_other_segment() ? sizeof(AlignedRead::NextSegment) : 0);
+        + (read.has_other_segment() ? sizeof(AlignedRead::Segment) : 0);
 }
 
 auto estimate_mean_read_size(const std::vector<SampleName>& samples,
@@ -1559,21 +1559,26 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
 {
     using std::make_unique;
     
-    ReadTransform transform {};
-    transform.register_transform(ReadTransforms::MaskSoftClipped {});
+    using namespace read_transform;
+    using namespace read_filter;
     
-    ReadFilterer filter {};
-    filter.register_filter(make_unique<ReadFilters::HasValidQualities>());
-    filter.register_filter(make_unique<ReadFilters::HasWellFormedCigar>());
-    filter.register_filter(make_unique<ReadFilters::IsMapped>());
-    filter.register_filter(make_unique<ReadFilters::IsNotMarkedQcFail>());
-    filter.register_filter(make_unique<ReadFilters::IsNotMarkedDuplicate>());
-    filter.register_filter(make_unique<ReadFilters::IsNotDuplicate<ReadFilterer::BidirIt>>());
-    filter.register_filter(make_unique<ReadFilters::IsProperTemplate>());
+    ReadTransformer transformer {};
+    transformer.register_transform(MaskSoftClipped {});
+    
+    using ReadFilterer = ReadPipe::ReadFilterer;
+    
+    ReadFilterer filterer {};
+    filterer.register_filter(make_unique<HasValidQualities>());
+    filterer.register_filter(make_unique<HasWellFormedCigar>());
+    filterer.register_filter(make_unique<IsMapped>());
+    filterer.register_filter(make_unique<IsNotMarkedQcFail>());
+    filterer.register_filter(make_unique<IsNotMarkedDuplicate>());
+    filterer.register_filter(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
+    filterer.register_filter(make_unique<IsProperTemplate>());
     
     return ReadPipe {
-        components.read_manager(), std::move(transform), std::move(filter), boost::none,
-        components.samples()
+        components.read_manager(), std::move(transformer), std::move(filterer),
+        boost::none, components.samples()
     };
 }
 

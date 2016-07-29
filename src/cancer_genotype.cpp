@@ -15,14 +15,12 @@ namespace octopus
 {
 bool contains(const CancerGenotype<Haplotype>& genotype, const Allele& allele)
 {
-    return contains(genotype.germline_genotype(), allele)
-            || genotype.somatic_element().contains(allele);
+    return contains(genotype.germline_genotype(), allele) || genotype.somatic_element().contains(allele);
 }
 
-bool contains_exact(const CancerGenotype<Haplotype>& genotype, const Allele& allele)
+bool includes(const CancerGenotype<Haplotype>& genotype, const Allele& allele)
 {
-    return contains_exact(genotype.germline_genotype(), allele)
-            || genotype.somatic_element().contains_exact(allele);
+    return includes(genotype.germline_genotype(), allele) || genotype.somatic_element().includes(allele);
 }
     
 std::size_t estimate_num_cancer_genotypes(const std::size_t num_haplotypes, const unsigned ploidy)

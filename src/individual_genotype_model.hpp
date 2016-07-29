@@ -21,56 +21,53 @@
 #include "genotype.hpp"
 #include "logging.hpp"
 
-namespace octopus
+namespace octopus { namespace model
 {
-    namespace model
+    class Individual
     {
-        class Individual
+    public:
+        struct Latents
         {
-        public:
-            struct Latents
-            {
-                using GenotypeProbabilityVector = std::vector<double>;
-                
-                Latents() = default;
-                
-                Latents(GenotypeProbabilityVector&& genotype_probabilities);
-                
-                GenotypeProbabilityVector genotype_probabilities;
-            };
+            using GenotypeProbabilityVector = std::vector<double>;
             
-            struct InferredLatents
-            {
-                InferredLatents() = default;
-                
-                InferredLatents(Latents&& posteriors, double log_evidence);
-                
-                Latents posteriors;
-                double log_evidence;
-            };
+            Latents() = default;
             
-            Individual() = delete;
+            Latents(GenotypeProbabilityVector&& genotype_probabilities);
             
-            Individual(const CoalescentModel& genotype_prior_model,
-                       boost::optional<Logging::DebugLogger> debug_log = boost::none);
-            
-            Individual(const Individual&)            = delete;
-            Individual& operator=(const Individual&) = delete;
-            Individual(Individual&&)                 = delete;
-            Individual& operator=(Individual&&)      = delete;
-            
-            ~Individual() = default;
-            
-            InferredLatents infer_latents(const SampleName& sample,
-                                          const std::vector<Genotype<Haplotype>>& genotypes,
-                                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-            
-        private:
-            const CoalescentModel& genotype_prior_model_;
-            
-            mutable boost::optional<Logging::DebugLogger> debug_log_;
+            GenotypeProbabilityVector genotype_probabilities;
         };
-    } // namesapce GenotypeModel
+        
+        struct InferredLatents
+        {
+            InferredLatents() = default;
+            
+            InferredLatents(Latents&& posteriors, double log_evidence);
+            
+            Latents posteriors;
+            double log_evidence;
+        };
+        
+        Individual() = delete;
+        
+        Individual(const CoalescentModel& genotype_prior_model,
+                   boost::optional<Logging::DebugLogger> debug_log = boost::none);
+        
+        Individual(const Individual&)            = delete;
+        Individual& operator=(const Individual&) = delete;
+        Individual(Individual&&)                 = delete;
+        Individual& operator=(Individual&&)      = delete;
+        
+        ~Individual() = default;
+        
+        InferredLatents infer_latents(const std::vector<Genotype<Haplotype>>& genotypes,
+                                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+        
+    private:
+        const CoalescentModel& genotype_prior_model_;
+        
+        mutable boost::optional<Logging::DebugLogger> debug_log_;
+    };
+} // namesapce GenotypeModel
 } // namespace octopus
 
 #endif /* individual_genotype_model_hpp */

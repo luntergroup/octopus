@@ -792,8 +792,9 @@ namespace
         model::Individual germline_model {priors.genotype_prior_model};
         
         for (const auto& sample : samples) {
-            const auto latents = germline_model.infer_latents(sample, genotypes,
-                                                              haplotype_log_likelihoods);
+            haplotype_log_likelihoods.prime(sample);
+            
+            const auto latents = germline_model.infer_latents(genotypes, haplotype_log_likelihoods);
             
             result.emplace_back(latents.posteriors.genotype_probabilities);
             Maths::log_each(result.back());

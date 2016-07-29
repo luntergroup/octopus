@@ -18,8 +18,8 @@
 #include "test_common.hpp"
 #include "genomic_region.hpp"
 #include "read_manager.hpp"
+#include "read_transformer.hpp"
 #include "read_transform.hpp"
-#include "read_transformations.hpp"
 
 using std::cout;
 using std::endl;

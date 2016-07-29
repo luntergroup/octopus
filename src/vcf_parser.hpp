@@ -88,7 +88,7 @@ public:
     
     RecordIterator(const VcfParser& vcf, UnpackPolicy unpack);
     
-    ~RecordIterator() noexcept = default;
+    ~RecordIterator() = default;
     
     RecordIterator(const RecordIterator&)            = default;
     RecordIterator& operator=(const RecordIterator&) = default;

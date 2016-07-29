@@ -274,20 +274,17 @@ inline GenomicRegion expand(const GenomicRegion& region, const GenomicRegion::Di
 inline GenomicRegion encompassing_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
-    return GenomicRegion {lhs.contig_name(), encompassing_region(lhs.contig_region(),
-                                                                     rhs.contig_region())};
+    return GenomicRegion {lhs.contig_name(), encompassing_region(lhs.contig_region(), rhs.contig_region())};
 }
 
 inline GenomicRegion intervening_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    return GenomicRegion {lhs.contig_name(), intervening_region(lhs.contig_region(),
-                                                                    rhs.contig_region())};
+    return GenomicRegion {lhs.contig_name(), intervening_region(lhs.contig_region(),  rhs.contig_region())};
 }
 
 inline GenomicRegion overlapped_region(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
-    return GenomicRegion {lhs.contig_name(), overlapped_region(lhs.contig_region(),
-                                                                   rhs.contig_region())};
+    return GenomicRegion {lhs.contig_name(), overlapped_region(lhs.contig_region(), rhs.contig_region())};
 }
 
 inline GenomicRegion::Size left_overhang_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
@@ -303,22 +300,19 @@ inline GenomicRegion::Size right_overhang_size(const GenomicRegion& lhs, const G
 inline GenomicRegion left_overhang_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
-    return GenomicRegion {lhs.contig_name(), left_overhang_region(lhs.contig_region(),
-                                                                      rhs.contig_region())};
+    return GenomicRegion {lhs.contig_name(), left_overhang_region(lhs.contig_region(), rhs.contig_region())};
 }
 
 inline GenomicRegion right_overhang_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
-    return GenomicRegion {lhs.contig_name(), right_overhang_region(lhs.contig_region(),
-                                                                       rhs.contig_region())};
+    return GenomicRegion {lhs.contig_name(), right_overhang_region(lhs.contig_region(), rhs.contig_region())};
 }
 
 inline GenomicRegion closed_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
-    return GenomicRegion {lhs.contig_name(), closed_region(lhs.contig_region(),
-                                                               rhs.contig_region())};
+    return GenomicRegion {lhs.contig_name(), closed_region(lhs.contig_region(), rhs.contig_region())};
 }
 
 inline GenomicRegion head_region(const GenomicRegion& region, const GenomicRegion::Size n = 0)

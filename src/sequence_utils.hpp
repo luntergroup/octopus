@@ -112,20 +112,29 @@ bool has_mixed_case(SequenceType& sequence)
     return false;
 }
 
+namespace detail
+{
+    struct CapitaliseBase
+    {
+        auto operator()(const char base) const noexcept
+        {
+            switch (base) {
+                case 'a': return 'A';
+                case 'c': return 'C';
+                case 'g': return 'G';
+                case 't': return 'T';
+                case 'u': return 'U';
+                default : return base;
+            }
+        }
+    };
+}
+
 template <typename SequenceType>
 static void capitalise(SequenceType& sequence)
 {
     std::transform(std::begin(sequence), std::end(sequence), std::begin(sequence),
-                   [] (char base) {
-                       switch (base) {
-                           case 'a': return 'A';
-                           case 'c': return 'C';
-                           case 'g': return 'G';
-                           case 't': return 'T';
-                           case 'u': return 'U';
-                           default : return base;
-                       }
-                   });
+                   detail::CapitaliseBase {});
 }
 
 namespace detail

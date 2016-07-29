@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(clear_leaves_the_tree_empty)
     
     haplotype_tree.clear();
     
-    BOOST_CHECK(haplotype_tree.empty());
+    BOOST_CHECK(haplotype_tree.is_empty());
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 0);
 }
 
@@ -621,7 +621,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     
     haplotype_tree.prune_all(last_haplotype);
     
-    BOOST_CHECK(haplotype_tree.empty());
+    BOOST_CHECK(haplotype_tree.is_empty());
 }
 
 BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree_in_any_form)

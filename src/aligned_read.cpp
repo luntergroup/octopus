@@ -12,33 +12,31 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "compression.hpp"
-
 //
-// NextSegment public methods
+// Segment public methods
 //
 
-const std::string& AlignedRead::NextSegment::contig_name() const
+const std::string& AlignedRead::Segment::contig_name() const
 {
     return contig_name_;
 }
 
-GenomicRegion::Position AlignedRead::NextSegment::begin() const noexcept
+GenomicRegion::Position AlignedRead::Segment::begin() const noexcept
 {
     return begin_;
 }
 
-GenomicRegion::Size AlignedRead::NextSegment::inferred_template_length() const noexcept
+GenomicRegion::Size AlignedRead::Segment::inferred_template_length() const noexcept
 {
     return inferred_template_length_;
 }
 
-bool AlignedRead::NextSegment::is_marked_unmapped() const
+bool AlignedRead::Segment::is_marked_unmapped() const
 {
     return flags_[0];
 }
 
-bool AlignedRead::NextSegment::is_marked_reverse_mapped() const
+bool AlignedRead::Segment::is_marked_reverse_mapped() const
 {
     return flags_[1];
 }
@@ -46,6 +44,17 @@ bool AlignedRead::NextSegment::is_marked_reverse_mapped() const
 //
 // AlignedRead public methods
 //
+
+const std::string& AlignedRead::name() const noexcept
+{
+    static const std::string todo {};
+    return todo;
+}
+
+const std::string& AlignedRead::read_group() const noexcept
+{
+    return read_group_;
+}
 
 const GenomicRegion& AlignedRead::mapped_region() const noexcept
 {
@@ -67,7 +76,7 @@ AlignedRead::MappingQuality AlignedRead::mapping_quality() const noexcept
     return mapping_quality_;
 }
 
-const CigarString& AlignedRead::cigar_string() const noexcept
+const CigarString& AlignedRead::cigar() const noexcept
 {
     return cigar_string_;
 }
@@ -77,7 +86,7 @@ bool AlignedRead::has_other_segment() const noexcept
     return static_cast<bool>(next_segment_);
 }
 
-const AlignedRead::NextSegment& AlignedRead::next_segment() const
+const AlignedRead::Segment& AlignedRead::next_segment() const
 {
     if (has_other_segment()) {
         return *next_segment_;
@@ -86,20 +95,9 @@ const AlignedRead::NextSegment& AlignedRead::next_segment() const
     }
 }
 
-AlignedRead::Flags AlignedRead::flags() const
+AlignedRead::Flags AlignedRead::flags() const noexcept
 {
-    Flags flags {};
-    
-    flags.multiple_segment_template    = is_marked_multiple_segment_template();
-    flags.all_segments_in_read_aligned = is_marked_all_segments_in_read_aligned();
-    flags.unmapped                     = is_marked_unmapped();
-    flags.reverse_mapped               = is_marked_reverse_mapped();
-    flags.secondary_alignment          = is_marked_secondary_alignment();
-    flags.qc_fail                      = is_marked_qc_fail();
-    flags.duplicate                    = is_marked_duplicate();
-    flags.supplementary_alignment      = is_marked_supplementary_alignment();
-    
-    return flags;
+    return decompress(flags_);
 }
 
 bool AlignedRead::is_marked_all_segments_in_read_aligned() const noexcept
@@ -156,49 +154,21 @@ void AlignedRead::cap_qualities(const BaseQuality max) noexcept
                    [max] (const auto q) { return std::min(q, max); });
 }
 
-void AlignedRead::zero_front_qualities(const std::size_t num_bases) noexcept
+void AlignedRead::cap_front_qualities(const std::size_t num_bases, const BaseQuality max) noexcept
 {
-    std::fill_n(std::begin(qualities_), std::min(num_bases, sequence_.size()), 0);
+    std::fill_n(std::begin(qualities_), std::min(num_bases, sequence_.size()), max);
 }
 
-void AlignedRead::zero_back_qualities(const std::size_t num_bases) noexcept
+void AlignedRead::cap_back_qualities(const std::size_t num_bases, const BaseQuality max) noexcept
 {
-    std::fill_n(std::rbegin(qualities_), std::min(num_bases, sequence_.size()), 0);
-}
-
-void AlignedRead::compress()
-{
-    sequence_ = octopus::compress(sequence_);
-    // TODO: can we also compress qualities and cigar string?
-    set_compressed();
-}
-
-void AlignedRead::decompress()
-{
-    sequence_ = octopus::decompress(sequence_);
-    set_uncompressed();
+    std::fill_n(std::rbegin(qualities_), std::min(num_bases, sequence_.size()), max);
 }
 
 //
 // Private methods
 //
 
-bool AlignedRead::is_compressed() const noexcept
-{
-    return flags_[compression_flag_];
-}
-
-void AlignedRead::set_compressed() noexcept
-{
-    flags_[compression_flag_] = true;
-}
-
-void AlignedRead::set_uncompressed() noexcept
-{
-    flags_[compression_flag_] = false;
-}
-
-AlignedRead::FlagBits AlignedRead::compress(const Flags& flags)
+AlignedRead::FlagBits AlignedRead::compress(const Flags& flags) const noexcept
 {
     FlagBits result {};
     
@@ -211,12 +181,15 @@ AlignedRead::FlagBits AlignedRead::compress(const Flags& flags)
     result[6] = flags.duplicate;
     result[7] = flags.supplementary_alignment;
     
-    result[compression_flag_] = false;
-    
     return result;
 }
 
-AlignedRead::NextSegment::FlagBits AlignedRead::NextSegment::compress(const Flags& flags)
+AlignedRead::Flags AlignedRead::decompress(const FlagBits& flags) const noexcept
+{
+    return { flags[0], flags[1], flags[2], flags[3], flags[4], flags[5], flags[6], flags[7] };
+}
+
+AlignedRead::Segment::FlagBits AlignedRead::Segment::compress(const Flags& flags)
 {
     FlagBits result {};
     result[0] = flags.unmapped;
@@ -244,23 +217,39 @@ std::size_t AlignedRead::make_hash() const
 
 // Non-member methods
 
+bool is_sequence_empty(const AlignedRead& read) noexcept
+{
+    return read.sequence().empty();
+}
+
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read) noexcept
 {
     return read.sequence().size();
 }
 
-bool is_empty_sequence(const AlignedRead& read) noexcept
+bool is_soft_clipped(const AlignedRead& read)
 {
-    return read.sequence().empty();
+    return is_soft_clipped(read.cigar());
+}
+
+std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const AlignedRead& read)
+{
+    return get_soft_clipped_sizes(read.cigar());
+}
+
+GenomicRegion clipped_mapped_region(const AlignedRead& read)
+{
+    const auto p = get_soft_clipped_sizes(read);
+    return expand(mapped_region(read), -p.first, -p.second);
 }
 
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
 {
-    if (contains(region, read)) return read.cigar_string();
+    if (contains(region, read)) return read.cigar();
     
     const auto splice_region = overlapped_region(read, region);
     
-    return splice(read.cigar_string(), static_cast<CigarOperation::Size>(begin_distance(read, splice_region)));
+    return splice(read.cigar(), static_cast<CigarOperation::Size>(begin_distance(read, splice_region)));
 }
 
 ContigRegion::Size count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region)
@@ -271,16 +260,6 @@ ContigRegion::Size count_overlapped_bases(const AlignedRead& read, const Genomic
     
     // TODO: not quite right as doesn't account for indels
     return static_cast<ContigRegion::Size>(std::max(GenomicRegion::Distance {0}, overlap_size(read, region)));
-}
-
-bool is_soft_clipped(const AlignedRead& read)
-{
-    return is_soft_clipped(read.cigar_string());
-}
-
-std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const AlignedRead& read)
-{
-    return get_soft_clipped_sizes(read.cigar_string());
 }
 
 AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
@@ -297,9 +276,9 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     
     const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
     
-    const auto uncontained_cigar_splice = splice_reference(read.cigar_string(), reference_offset);
+    const auto uncontained_cigar_splice = splice_reference(read.cigar(), reference_offset);
     
-    auto contained_cigar_splice   = splice_reference(read.cigar_string(), reference_offset,
+    auto contained_cigar_splice   = splice_reference(read.cigar(), reference_offset,
                                                      region_size(splice_region));
     
     const auto sequence_offset = sequence_size(uncontained_cigar_splice);
@@ -327,7 +306,7 @@ bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
 {
     return lhs.mapping_quality() == rhs.mapping_quality()
         && lhs.mapped_region()   == rhs.mapped_region()
-        && lhs.cigar_string()    == rhs.cigar_string()
+        && lhs.cigar()           == rhs.cigar()
         && lhs.sequence()        == rhs.sequence()
         && lhs.qualities()       == rhs.qualities();
 }
@@ -336,14 +315,14 @@ bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
 {
     if (lhs.mapped_region() == rhs.mapped_region()) {
         if (lhs.mapping_quality() == rhs.mapping_quality()) {
-            if (lhs.cigar_string() == rhs.cigar_string()) {
+            if (lhs.cigar() == rhs.cigar()) {
                 if (lhs.sequence() == rhs.sequence()) {
                     return lhs.qualities() < rhs.qualities();
                 } else {
                     return lhs.sequence() < rhs.sequence();
                 }
             } else {
-                return lhs.cigar_string() < rhs.cigar_string();
+                return lhs.cigar() < rhs.cigar();
             }
         } else {
             return lhs.mapping_quality() < rhs.mapping_quality();
@@ -364,12 +343,12 @@ bool are_other_segments_duplicates(const AlignedRead &lhs, const AlignedRead &rh
 bool IsDuplicate::operator()(const AlignedRead &lhs, const AlignedRead &rhs) const
 {
     return lhs.mapped_region() == rhs.mapped_region()
-        && lhs.cigar_string() == rhs.cigar_string()
+        && lhs.cigar() == rhs.cigar()
         && lhs.flags().reverse_mapped == rhs.flags().reverse_mapped
         && are_other_segments_duplicates(lhs, rhs);
 }
 
-bool operator==(const AlignedRead::NextSegment& lhs, const AlignedRead::NextSegment& rhs)
+bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs)
 {
     return lhs.contig_name() == rhs.contig_name()
         && lhs.begin() == rhs.begin()
@@ -390,7 +369,7 @@ std::ostream& operator<<(std::ostream& os, const AlignedRead& read)
     os << read.mapped_region() << ' ';
     os << read.sequence() << ' ';
     os << read.qualities() << ' ';
-    os << read.cigar_string() << ' ';
+    os << read.cigar() << ' ';
     os << static_cast<unsigned>(read.mapping_quality()) << ' ';
     if (read.has_other_segment()) {
         os << read.next_segment().contig_name() << ' ';

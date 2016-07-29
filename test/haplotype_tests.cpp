@@ -442,7 +442,7 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     
     BOOST_CHECK(std::all_of(std::cbegin(alleles), std::cend(alleles),
                             [&] (const auto& allele) {
-                                return allele_region_splice.contains_exact(allele); })
+                                return allele_region_splice.includes(allele); })
                 );
     
     const auto partial_allele_region = parse_region("16:9299947-9300074", human);
@@ -450,11 +450,11 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     const auto partial_allele_region_splice = splice<Haplotype>(haplotype, partial_allele_region);
     
     BOOST_CHECK(!partial_allele_region_splice.contains(allele1));
-    BOOST_CHECK(!partial_allele_region_splice.contains_exact(allele2));
+    BOOST_CHECK(!partial_allele_region_splice.includes(allele2));
     BOOST_CHECK(!partial_allele_region_splice.contains(allele13));
     BOOST_CHECK(std::all_of(std::next(std::cbegin(alleles), 2), std::prev(std::cend(alleles)),
                             [&] (const auto& allele) {
-                                return allele_region_splice.contains_exact(allele); })
+                                return allele_region_splice.includes(allele); })
                 );
     
     const auto insertion_region = mapped_region(allele5);
@@ -463,7 +463,7 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     
     BOOST_CHECK(is_same_region(insertion_region_haplotype_splice, insertion_region));
     BOOST_CHECK(insertion_region_haplotype_splice.sequence() == "");
-    BOOST_CHECK(insertion_region_haplotype_splice.contains_exact(allele5));
+    BOOST_CHECK(insertion_region_haplotype_splice.includes(allele5));
     
     const auto insertion_region_allele_splice = splice<Allele>(haplotype, insertion_region);
     

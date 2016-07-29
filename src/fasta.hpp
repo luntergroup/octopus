@@ -42,8 +42,6 @@ public:
     Fasta& operator=(const Fasta&) = default;
     Fasta(Fasta&&)                 = default;
     Fasta& operator=(Fasta&&)      = default;
-    
-    ~Fasta() noexcept override = default;
 
 private:
     Path fasta_path_;

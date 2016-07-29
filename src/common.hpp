@@ -20,7 +20,6 @@
 #include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
-#include "read_filter.hpp"
 #include "logging.hpp"
 
 namespace octopus
@@ -40,8 +39,6 @@ namespace octopus
     
     using ReadContainer = MappableFlatMultiSet<AlignedRead>;
     using ReadMap       = MappableMap<SampleName, AlignedRead>;
-    
-    using ReadFilterer = ReadFilter<ReadManager::ReadContainer::iterator>;
     
     boost::optional<Logging::DebugLogger> get_debug_log();
     boost::optional<Logging::TraceLogger> get_trace_log();

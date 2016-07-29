@@ -153,7 +153,7 @@ CachingFasta::CacheIterator CachingFasta::find_cache_iterator(const GenomicRegio
     
     const auto it = contig_cache.lower_bound(contig_region);
     
-    // it now points to the first region that is not before "region"
+    // it now points to the first region that is not before region
     
     if (it == std::cbegin(contig_cache) || (it != std::cend(contig_cache) && contig_region == it->first)) {
         return contains(it->first, contig_region) ? it : std::cend(contig_cache);
@@ -164,7 +164,7 @@ CachingFasta::CacheIterator CachingFasta::find_cache_iterator(const GenomicRegio
 
 GenomicRegion CachingFasta::get_region_to_fetch(const GenomicRegion& requested_region) const
 {
-    // We know the entire region is not in cache, but parts of it may be
+    // we know the entire region is not in cache, but parts of it may be
     if (sequence_cache_.count(requested_region.contig_name()) == 0) {
         return get_new_contig_chunk(requested_region);
     } else {

@@ -105,7 +105,7 @@ bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuali
 {
     if (good_quality == 0) return false;
     auto quality_itr = std::cbegin(read.qualities());
-    return std::any_of(std::cbegin(read.cigar_string()), std::cend(read.cigar_string()),
+    return std::any_of(std::cbegin(read.cigar()), std::cend(read.cigar()),
                        [&] (const auto& op) {
                            if (is_match(op)) {
                                auto result = std::any_of(quality_itr, std::next(quality_itr, op.size()),
@@ -126,7 +126,7 @@ namespace
         std::string result {};
         result.reserve(sequence_size(read));
         
-        for (const auto& op : read.cigar_string()) {
+        for (const auto& op : read.cigar()) {
             result.append(op.size(), op.flag());
         }
         

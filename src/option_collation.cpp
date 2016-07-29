@@ -26,11 +26,11 @@
 
 #include "genomic_region.hpp"
 #include "aligned_read.hpp"
-#include "read_filters.hpp"
+#include "read_filter.hpp"
+#include "read_filterer.hpp"
+#include "read_transformer.hpp"
 #include "read_transform.hpp"
-#include "read_transformations.hpp"
 #include "read_utils.hpp"
-#include "read_pipe.hpp"
 #include "candidate_generator_builder.hpp"
 #include "haplotype_generator.hpp"
 #include "variant_caller_builder.hpp"
@@ -805,11 +805,56 @@ ReadManager make_read_manager(const OptionMap& options)
     throw std::runtime_error {"Unable to load read paths"};
 }
 
-ReadFilterer make_read_filter(const OptionMap& options)
+ReadTransformer make_read_transformer(const OptionMap& options)
+{
+    using namespace read_transform;
+    
+    ReadTransformer result {};
+    
+    result.register_transform(CapBaseQualities {125});
+    
+    if (options.at("disable-read-transforms").as<bool>()) {
+        return result;
+    }
+    
+    if (options.count("mask-tails")) {
+        const auto tail_mask_size = options.at("mask-tails").as<unsigned>();
+        
+        if (tail_mask_size > 0) {
+            result.register_transform(MaskTail {tail_mask_size});
+        }
+    }
+    
+    if (!options.at("disable-soft-clip-masking").as<bool>()) {
+        const auto soft_clipped_mask_size = options.at("mask-soft-clipped-boundries").as<unsigned>();
+        
+        if (soft_clipped_mask_size > 0) {
+            result.register_transform(MaskSoftClippedBoundries {soft_clipped_mask_size});
+        } else {
+            result.register_transform(MaskSoftClipped {});
+        }
+    }
+    
+    if (!options.at("disable-adapter-masking").as<bool>()) {
+        result.register_transform(MaskAdapters {});
+    }
+    
+    if (!options.at("disable-overlap-masking").as<bool>()) {
+        result.register_transform(MaskOverlappedSegment {});
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
+ReadPipe::ReadFilterer make_read_filterer(const OptionMap& options)
 {
     using std::make_unique;
     
-    using namespace ReadFilters;
+    using namespace read_filter;
+    
+    using ReadFilterer = ReadPipe::ReadFilterer;
     
     ReadFilterer result {};
     
@@ -858,7 +903,7 @@ ReadFilterer make_read_filter(const OptionMap& options)
     }
     
     if (!options.at("allow-octopus-duplicates").as<bool>()) {
-        result.register_filter(make_unique<IsNotDuplicate<ReadFilterer::BidirIt>>());
+        result.register_filter(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
     }
     
     if (!options.at("allow-qc-fails").as<bool>()) {
@@ -901,47 +946,6 @@ boost::optional<Downsampler> make_downsampler(const OptionMap& options)
     auto target_coverage = options.at("downsample-target").as<unsigned>();
     
     return Downsampler(max_coverage, target_coverage);
-}
-
-ReadTransform make_read_transform(const OptionMap& options)
-{
-    ReadTransform result {};
-    
-    result.register_transform(ReadTransforms::CapBaseQualities {125});
-    
-    if (options.at("disable-read-transforms").as<bool>()) {
-        return result;
-    }
-    
-    if (options.count("mask-tails")) {
-        const auto tail_mask_size = options.at("mask-tails").as<unsigned>();
-        
-        if (tail_mask_size > 0) {
-            result.register_transform(ReadTransforms::MaskTail {tail_mask_size});
-        }
-    }
-    
-    if (!options.at("disable-soft-clip-masking").as<bool>()) {
-        const auto soft_clipped_mask_size = options.at("mask-soft-clipped-boundries").as<unsigned>();
-        
-        if (soft_clipped_mask_size > 0) {
-            result.register_transform(ReadTransforms::MaskSoftClippedBoundries {soft_clipped_mask_size});
-        } else {
-            result.register_transform(ReadTransforms::MaskSoftClipped {});
-        }
-    }
-    
-    if (!options.at("disable-adapter-masking").as<bool>()) {
-        result.register_transform(ReadTransforms::MaskAdapters {});
-    }
-    
-    if (!options.at("disable-overlap-masking").as<bool>()) {
-        result.register_transform(ReadTransforms::MaskOverlappedSegment {});
-    }
-    
-    result.shrink_to_fit();
-    
-    return result;
 }
 
 CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& options,

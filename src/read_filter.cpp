@@ -1,18 +1,18 @@
 //
-//  read_filters.cpp
+//  read_filter.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 26/04/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#include "read_filters.hpp"
+#include "read_filter.hpp"
 
 #include "cigar_string.hpp"
 
 #include <iostream> // DEBUG
 
-namespace octopus { namespace ReadFilters
+namespace octopus { namespace read_filter
 {
     HasWellFormedCigar::HasWellFormedCigar()
     : BasicReadFilter {"HasWellFormedCigar"} {}
@@ -22,7 +22,7 @@ namespace octopus { namespace ReadFilters
     
     bool HasWellFormedCigar::passes(const AlignedRead& read) const noexcept
     {
-        return is_valid_cigar(read.cigar_string()) && is_minimal_cigar(read.cigar_string());
+        return is_valid_cigar(read.cigar()) && is_minimal_cigar(read.cigar());
     }
     
     HasValidQualities::HasValidQualities()

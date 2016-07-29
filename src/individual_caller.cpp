@@ -125,7 +125,9 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     const model::Individual model {prior_model, debug_log_};
     
-    auto inferences = model.infer_latents(sample(), genotypes, haplotype_likelihoods);
+    haplotype_likelihoods.prime(sample());
+    
+    auto inferences = model.infer_latents(genotypes, haplotype_likelihoods);
     
     return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
 }
@@ -164,7 +166,9 @@ IndividualVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplo
     
     const model::Individual model {prior_model, debug_log_};
     
-    const auto inferences = model.infer_latents(sample(), genotypes, haplotype_likelihoods);
+    haplotype_likelihoods.prime(sample());
+    
+    const auto inferences = model.infer_latents(genotypes, haplotype_likelihoods);
     
     return ::octopus::calculate_dummy_model_posterior(latents.model_log_evidence_,
                                                       inferences.log_evidence);
@@ -238,7 +242,7 @@ VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candi
 
 bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReference& candidate)
 {
-    return contains_exact(genotype_call, candidate.get().alt_allele());
+    return includes(genotype_call, candidate.get().alt_allele());
 }
 
 VariantCalls call_candidates(const VariantPosteriors& candidate_posteriors,

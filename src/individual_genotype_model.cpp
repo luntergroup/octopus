@@ -14,7 +14,7 @@
 #include <cassert>
 #include <iostream>
 
-#include "fixed_ploidy_genotype_likelihood_model.hpp"
+#include "known_ploidy_genotype_likelihood_model.hpp"
 #include "maths.hpp"
 
 #include "timers.hpp"
@@ -56,23 +56,23 @@ namespace debug
 }
 
 Individual::InferredLatents
-Individual::infer_latents(const SampleName& sample,
-                          const std::vector<Genotype<Haplotype>>& genotypes,
+Individual::infer_latents(const std::vector<Genotype<Haplotype>>& genotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     using std::cbegin; using std::cend; using std::begin;
     
     assert(!genotypes.empty());
+    assert(haplotype_likelihoods.is_primed());
     
     const auto ploidy = genotypes.front().ploidy();
     
-    const FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_likelihoods};
+    const KnownPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_likelihoods};
     
     std::vector<double> result(genotypes.size());
     
     std::transform(cbegin(genotypes), cend(genotypes), begin(result),
-                   [&sample, &likelihood_model] (const auto& genotype) {
-                       return likelihood_model.log_likelihood(sample, genotype);
+                   [&likelihood_model] (const auto& genotype) {
+                       return likelihood_model.ln_likelihood(genotype);
                    });
     
     if (debug_log_) debug::print_genotype_likelihoods(stream(*debug_log_), genotypes, result);

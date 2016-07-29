@@ -906,7 +906,7 @@ auto template_length(const bam1_core_t& c) noexcept
     
 auto extract_next_segment_flags(const bam1_core_t& c) noexcept
 {
-    AlignedRead::NextSegment::Flags result {};
+    AlignedRead::Segment::Flags result {};
     
     result.unmapped       = (c.flag & BAM_FMUNMAP)   != 0;
     result.reverse_mapped = (c.flag & BAM_FMREVERSE) != 0;

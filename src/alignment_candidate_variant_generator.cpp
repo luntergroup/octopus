@@ -102,7 +102,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
     std::size_t read_index {0};
     GenomicRegion region;
     
-    for (const auto& cigar_operation : read.cigar_string()) {
+    for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
         
         switch (cigar_operation.flag()) {

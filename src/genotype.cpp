@@ -197,17 +197,13 @@ typename Genotype<Haplotype>::Iterator Genotype<Haplotype>::cend() const noexcep
 bool contains(const Genotype<Haplotype>& genotype, const Allele& allele)
 {
     return std::any_of(std::cbegin(genotype), std::cend(genotype),
-                       [&allele] (const auto& haplotype) {
-                           return haplotype.contains(allele);
-                       });
+                       [&allele] (const auto& haplotype) { return haplotype.contains(allele); });
 }
 
-bool contains_exact(const Genotype<Haplotype>& genotype, const Allele& allele)
+bool includes(const Genotype<Haplotype>& genotype, const Allele& allele)
 {
     return std::any_of(std::cbegin(genotype), std::cend(genotype),
-                       [&allele] (const auto& haplotype) {
-                           return haplotype.contains_exact(allele);
-                       });
+                       [&allele] (const auto& haplotype) { return haplotype.includes(allele); });
 }
 
 bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)

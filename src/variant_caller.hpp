@@ -66,11 +66,9 @@ public:
     
     CallTypeSet get_call_types() const;
     
-    std::deque<VcfRecord>
-    call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const;
+    std::deque<VcfRecord> call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const;
     
-//    std::vector<VcfRecord>
-//    regenotype(const std::vector<Variant>& variants, ProgressMeter& progress_meter) const;
+    std::vector<VcfRecord> regenotype(const std::vector<Variant>& variants, ProgressMeter& progress_meter) const;
     
 protected:
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;
@@ -160,7 +158,7 @@ private:
     call_reference(const std::vector<Allele>& alleles, const CallerLatents& latents,
                    const ReadMap& reads) const = 0;
     
-    // other private methods
+    // helpers
     
     bool refcalls_requested() const noexcept;
     

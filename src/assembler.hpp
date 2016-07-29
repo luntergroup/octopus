@@ -82,7 +82,7 @@ public:
     void insert_read(const NucleotideSequence& sequence);
     
     std::size_t num_kmers() const noexcept;
-    bool empty() const noexcept;
+    bool is_empty() const noexcept;
     bool is_acyclic() const;
     bool is_all_reference() const;
     

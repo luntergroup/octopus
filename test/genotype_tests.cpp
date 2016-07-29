@@ -522,7 +522,7 @@ BOOST_AUTO_TEST_CASE(non_member_contains_works_correctly)
     // TODO
 }
 
-BOOST_AUTO_TEST_CASE(non_member_contains_exact_works_correctly)
+BOOST_AUTO_TEST_CASE(non_member_includes_works_correctly)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
@@ -546,11 +546,11 @@ BOOST_AUTO_TEST_CASE(non_member_contains_exact_works_correctly)
     
     Genotype<Haplotype> genotype {ref_haplotype, alt_haplotype};
     
-    BOOST_CHECK(contains_exact(genotype, variant1.alt_allele()));
-    BOOST_CHECK(contains_exact(genotype, variant2.alt_allele()));
-    BOOST_CHECK(contains_exact(genotype, variant3.alt_allele()));
-    BOOST_CHECK(contains_exact(genotype, variant4.alt_allele()));
-    BOOST_CHECK(contains_exact(genotype, variant5.alt_allele()));
+    BOOST_CHECK(includes(genotype, variant1.alt_allele()));
+    BOOST_CHECK(includes(genotype, variant2.alt_allele()));
+    BOOST_CHECK(includes(genotype, variant3.alt_allele()));
+    BOOST_CHECK(includes(genotype, variant4.alt_allele()));
+    BOOST_CHECK(includes(genotype, variant5.alt_allele()));
 }
 
 BOOST_AUTO_TEST_CASE(are_equal_in_region_works_correctly)

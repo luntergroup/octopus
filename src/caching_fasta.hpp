@@ -61,8 +61,6 @@ public:
     CachingFasta(CachingFasta&&)                 = default;
     CachingFasta& operator=(CachingFasta&&)      = default;
     
-    ~CachingFasta() noexcept override = default;
-    
 private:
     std::unique_ptr<ReferenceGenomeImpl> fasta_;
     

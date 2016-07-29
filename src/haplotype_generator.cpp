@@ -158,7 +158,7 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
         
         auto novel_active_region = *next_active_region_;
         
-        if (!tree_.empty()) {
+        if (!tree_.is_empty()) {
             novel_active_region = right_overhang_region(*next_active_region_, active_region_);
         }
         
@@ -409,7 +409,7 @@ void HaplotypeGenerator::update_next_active_region() const
                     }
                 }
                 
-                if (!test_tree.empty()) {
+                if (!test_tree.is_empty()) {
                     next_active_region_ = test_tree.encompassing_region();
                 } else {
                     next_active_region_ = novel_region; // revert to non-lagged behaviour

@@ -33,8 +33,6 @@ public:
     
     ThreadsafeFasta(std::unique_ptr<Fasta> fasta);
     
-    ~ThreadsafeFasta() noexcept override = default;
-    
     ThreadsafeFasta(const ThreadsafeFasta&)            = default;
     ThreadsafeFasta& operator=(const ThreadsafeFasta&) = default;
     ThreadsafeFasta(ThreadsafeFasta&&)                 = default;

@@ -25,7 +25,11 @@
 namespace octopus
 {
 /*
-    
+    HaplotypeLikelihoodCache is essentially a matrix of haplotype likelihoods, i.e.
+    p(read | haplotype) for a given set of AlignedReads and Haplotypes.
+ 
+    The matrix can be efficiently populated as the read mapping and alignment are
+    done internally which allows minimal memory allocation.
  */
 class HaplotypeLikelihoodCache
 {
@@ -42,7 +46,8 @@ public:
     HaplotypeLikelihoodCache(unsigned max_haplotypes, const std::vector<SampleName>& samples);
     
     HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
-                             unsigned max_haplotypes, const std::vector<SampleName>& samples);
+                             unsigned max_haplotypes,
+                             const std::vector<SampleName>& samples);
     
     HaplotypeLikelihoodCache(const HaplotypeLikelihoodCache&)            = default;
     HaplotypeLikelihoodCache& operator=(const HaplotypeLikelihoodCache&) = default;
@@ -57,8 +62,7 @@ public:
     std::size_t num_likelihoods(const SampleName& sample) const;
     
     const LikelihoodVector& operator()(const SampleName& sample, const Haplotype& haplotype) const;
-    
-    const LikelihoodVector& operator()(const Haplotype& haplotype) const; // when primed with a sample
+    const LikelihoodVector& operator[](const Haplotype& haplotype) const; // when primed with a sample
     
     SampleLikelihoodMap extract_sample(const SampleName& sample) const;
     
@@ -69,10 +73,11 @@ public:
     
     template <typename Container> void erase(const Container& haplotypes);
     
-    bool empty() const noexcept;
+    bool is_empty() const noexcept;
     
     void clear() noexcept;
     
+    bool is_primed() const noexcept;
     void prime(const SampleName& sample) const;
     void unprime() const noexcept;
     
@@ -198,7 +203,7 @@ namespace debug
                                       stream << "\t\t";
                                   }
                                   stream << p.first.get().mapped_region()
-                                  << " " << p.first.get().cigar_string() << ": ";
+                                  << " " << p.first.get().cigar() << ": ";
                                   stream << p.second << '\n';
                               });
             }

@@ -348,7 +348,7 @@ Genotype<MappableType2> splice(const std::reference_wrapper<const Genotype<Mappa
 }
 
 bool contains(const Genotype<Haplotype>& genotype, const Allele& allele);
-bool contains_exact(const Genotype<Haplotype>& genotype, const Allele& allele);
+bool includes(const Genotype<Haplotype>& genotype, const Allele& allele);
 
 template <typename MappableType>
 bool contains(const Genotype<MappableType>& genotype, const MappableType& element)

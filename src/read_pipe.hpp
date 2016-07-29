@@ -19,56 +19,58 @@
 #include "common.hpp"
 #include "genomic_region.hpp"
 #include "read_manager.hpp"
-#include "read_filter.hpp"
-#include "read_transform.hpp"
+#include "read_filterer.hpp"
+#include "read_transformer.hpp"
 #include "downsampler.hpp"
 #include "logging.hpp"
 
-/*
- ReadPipe provides a wrapper for the basic manipulation of AlignedRead's. It is responsable for
- actually fetching the reads from file, and applying any filters, transforms etc. The result is 
- then a set of reads that can be used for calling.
- 
- Rather than just fetching all reads for all samples in one go and processing, we can be a bit more 
- clever and fetch reads in batches (e.g. each sample, or regions in samples). This could potentially 
- decrease average memory consumption (and also increase runtime performance) by minimising the
- number of 'bad' reads in memory. If we are really short on memory we could even compress filtered 
- read batches while we process other batches.
- */
-
 namespace octopus
 {
+/*
+ ReadPipe provides a wrapper for the basic manipulation of AlignedRead's. It is responsable for
+ actually fetching the reads from file, and applying any filters, transforms etc. The result is
+ then a set of reads that can be used for calling.
+ 
+ Rather than just fetching all reads for all samples in one go and processing, we can be a bit more
+ clever and fetch reads in batches (e.g. each sample, or regions in samples). This could potentially
+ decrease average memory consumption (and also increase runtime performance) by minimising the
+ number of 'bad' reads in memory. If we are really short on memory we could even compress filtered
+ read batches while we process other batches.
+ */
 class ReadPipe
 {
 public:
+    using ReadFilterer = ReadFiltererTp<ReadManager::ReadContainer>;
+    
     ReadPipe() = delete;
     
-    ReadPipe(const ReadManager& read_manager, std::vector<SampleName> samples);
+    ReadPipe(const ReadManager& manager, std::vector<SampleName> samples);
     
-    ReadPipe(const ReadManager& read_manager, ReadTransform read_transform,
-             ReadFilterer read_filter, boost::optional<Downsampler> downsampler,
+    ReadPipe(const ReadManager& manager, ReadTransformer transformer,
+             ReadFilterer filterer, boost::optional<Downsampler> downsampler,
              std::vector<SampleName> samples);
-    
-    ~ReadPipe() = default;
     
     ReadPipe(const ReadPipe&)            = delete;
     ReadPipe& operator=(const ReadPipe&) = delete;
     ReadPipe(ReadPipe&&)                 = default;
     ReadPipe& operator=(ReadPipe&&)      = default;
     
-    void set_read_manager(const ReadManager& read_manager) noexcept;
+    ~ReadPipe() = default;
+    
+    void set_read_manager(const ReadManager& manager) noexcept;
     
     unsigned num_samples() const noexcept;
     const std::vector<SampleName>& samples() const noexcept;
     
     ReadMap fetch_reads(const GenomicRegion& region) const;
+    
     ReadMap fetch_reads(const std::vector<GenomicRegion>& regions) const;
     
 private:
-    std::reference_wrapper<const ReadManager> read_manager_;
-    ReadFilterer read_filter_;
+    std::reference_wrapper<const ReadManager> manager_;
+    ReadTransformer transformer_;
+    ReadFilterer filterer_;
     boost::optional<Downsampler> downsampler_;
-    ReadTransform read_transform_;
     
     std::vector<SampleName> samples_;
     

@@ -129,14 +129,14 @@ HaplotypeTree& HaplotypeTree::operator=(HaplotypeTree other)
     return *this;
 }
 
-bool HaplotypeTree::empty() const noexcept
+bool HaplotypeTree::is_empty() const noexcept
 {
     return haplotype_leafs_.front() == root_;
 }
 
 unsigned HaplotypeTree::num_haplotypes() const noexcept
 {
-    return (empty()) ? 0 : static_cast<unsigned>(haplotype_leafs_.size());
+    return (is_empty()) ? 0 : static_cast<unsigned>(haplotype_leafs_.size());
 }
 
 bool HaplotypeTree::contains(const Haplotype& haplotype) const
@@ -226,7 +226,7 @@ auto make_splicer(const ContigAllele& allele, std::stack<V>& candidate_splice_si
 
 void HaplotypeTree::splice(const ContigAllele& allele)
 {
-    if (empty()) {
+    if (is_empty()) {
         extend(allele);
         return;
     }
@@ -270,7 +270,7 @@ void HaplotypeTree::splice(const Allele& allele)
 
 GenomicRegion HaplotypeTree::encompassing_region() const
 {
-    if (empty()) {
+    if (is_empty()) {
         throw std::runtime_error {"HaplotypeTree::encompassing_region called on empty tree"};
     }
     
@@ -291,7 +291,7 @@ GenomicRegion HaplotypeTree::encompassing_region() const
 
 std::vector<Haplotype> HaplotypeTree::extract_haplotypes() const
 {
-    if (empty()) return std::vector<Haplotype> {};
+    if (is_empty()) return std::vector<Haplotype> {};
     return extract_haplotypes(encompassing_region());
 }
 
@@ -302,7 +302,7 @@ std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& re
     
     std::vector<Haplotype> result {};
     
-    if (empty() || !overlaps(region, encompassing_region())) return result;
+    if (is_empty() || !overlaps(region, encompassing_region())) return result;
     
     result.reserve(num_haplotypes());
     
@@ -323,7 +323,7 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
 {
     using std::cbegin; using std::cend; using std::for_each; using std::find;
     
-    if (empty() || contig_name(haplotype) != contig_) return;
+    if (is_empty() || contig_name(haplotype) != contig_) return;
     
     // If any of the haplotypes in cache match the query haplotype then the cache must contain
     // all possible leaves corrosponding to that haplotype. So we don't need to look through
@@ -369,7 +369,7 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
 {
     using std::cbegin; using std::cend; using std::for_each;
     
-    if (empty()) return;
+    if (is_empty()) return;
     
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
         const auto possible_leafs = haplotype_leaf_cache_.equal_range(haplotype);
@@ -432,7 +432,7 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
 
 void HaplotypeTree::remove_overlapped(const GenomicRegion& region)
 {
-    if (empty()) return;
+    if (is_empty()) return;
     
     const auto tree_region = encompassing_region();
     
@@ -592,7 +592,7 @@ bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& hapl
     }
     
     while (leaf != root_) {
-        if (!haplotype.contains_exact(tree_[leaf]))
+        if (!haplotype.includes(tree_[leaf]))
             return false;
         leaf = get_previous_allele(leaf);
     }

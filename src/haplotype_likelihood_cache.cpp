@@ -136,7 +136,7 @@ HaplotypeLikelihoodCache::operator()(const SampleName& sample, const Haplotype& 
 }
 
 const HaplotypeLikelihoodCache::LikelihoodVector&
-HaplotypeLikelihoodCache::operator()(const Haplotype& haplotype) const
+HaplotypeLikelihoodCache::operator[](const Haplotype& haplotype) const
 {
     return cache_.at(haplotype)[*primed_sample_];
 }
@@ -160,7 +160,7 @@ bool HaplotypeLikelihoodCache::contains(const Haplotype& haplotype) const noexce
     return cache_.count(haplotype) == 1;
 }
 
-bool HaplotypeLikelihoodCache::empty() const noexcept
+bool HaplotypeLikelihoodCache::is_empty() const noexcept
 {
     return cache_.empty();
 }
@@ -170,6 +170,11 @@ void HaplotypeLikelihoodCache::clear() noexcept
     cache_.clear();
     sample_indices_.clear();
     unprime();
+}
+
+bool HaplotypeLikelihoodCache::is_primed() const noexcept
+{
+    return static_cast<bool>(primed_sample_);
 }
 
 void HaplotypeLikelihoodCache::prime(const SampleName& sample) const

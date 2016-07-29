@@ -44,7 +44,7 @@ public:
     
     ~HaplotypeTree() = default;
     
-    bool empty() const noexcept;
+    bool is_empty() const noexcept;
     unsigned num_haplotypes() const noexcept;
     
     bool contains(const Haplotype& haplotype) const;

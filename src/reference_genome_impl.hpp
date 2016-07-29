@@ -29,7 +29,7 @@ public:
     GenomicSize fetch_contig_size(const ContigName& contig) const;
     GeneticSequence fetch_sequence(const GenomicRegion& region) const;
     
-    virtual ~ReferenceGenomeImpl() noexcept = default;
+    virtual ~ReferenceGenomeImpl() = default;
     
 private:
     virtual bool do_is_open() const noexcept = 0;

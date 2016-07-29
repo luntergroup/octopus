@@ -14,7 +14,7 @@
 #include <cassert>
 #include <iostream>
 
-#include "fixed_ploidy_genotype_likelihood_model.hpp"
+#include "known_ploidy_genotype_likelihood_model.hpp"
 #include "maths.hpp"
 
 namespace octopus
@@ -271,7 +271,7 @@ log_evidence {log_evidence}
         {
             assert(!genotypes.empty());
             
-            FixedPloidyGenotypeLikelihoodModel likelihood_model {genotypes.front().ploidy(), haplotype_likelihoods};
+            KnownPloidyGenotypeLikelihoodModel likelihood_model {genotypes.front().ploidy(), haplotype_likelihoods};
             
             SampleGenotypeLogLikelihoods result {};
             result.reserve(samples.size());
@@ -280,10 +280,12 @@ log_evidence {log_evidence}
                            [&genotypes, &haplotype_likelihoods, &likelihood_model] (const auto& sample) {
                                GenotypeLogLikelihoodVector likelihoods(genotypes.size());
                                
+                               haplotype_likelihoods.prime(sample);
+                               
                                std::transform(std::cbegin(genotypes), std::cend(genotypes),
                                               std::begin(likelihoods),
                                               [&sample, &likelihood_model] (const auto& genotype) {
-                                                  return likelihood_model.log_likelihood(sample, genotype);
+                                                  return likelihood_model.ln_likelihood(genotype);
                                               });
                                
                                return likelihoods;

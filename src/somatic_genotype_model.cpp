@@ -24,7 +24,7 @@
 #include "maths.hpp"
 #include "logging.hpp"
 
-#include "fixed_ploidy_genotype_likelihood_model.hpp"
+#include "known_ploidy_genotype_likelihood_model.hpp"
 
 namespace octopus
 {
@@ -806,15 +806,17 @@ namespace octopus
     {
         assert(!genotypes.empty());
         
+        haplotype_log_likelihoods.prime(sample);
+        
         const auto ploidy = genotypes.front().ploidy();
         
-        const FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_log_likelihoods};
+        const KnownPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_log_likelihoods};
         
         std::vector<double> result(genotypes.size());
         
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                        [&] (const auto& genotype) {
-                           return likelihood_model.log_likelihood(sample, genotype.germline_genotype());
+                           return likelihood_model.ln_likelihood(genotype.germline_genotype());
                        });
         
         Maths::normalise_logs(result);
@@ -829,16 +831,18 @@ namespace octopus
     {
         assert(!genotypes.empty());
         
+        haplotype_log_likelihoods.prime(sample);
+        
         const auto ploidy = genotypes.front().ploidy();
         
-        const FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_log_likelihoods};
+        const KnownPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_log_likelihoods};
         
         std::vector<double> result(genotypes.size());
         
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                        [&] (const auto& genotype) {
                            return genotype_prior_model.evaluate(genotype)
-                                + likelihood_model.log_likelihood(sample, genotype.germline_genotype());
+                                + likelihood_model.ln_likelihood(genotype.germline_genotype());
                        });
         
         Maths::normalise_logs(result);

@@ -119,7 +119,7 @@ public:
         RecordIterator(const HtslibBcfFacade& facade);
         RecordIterator(const HtslibBcfFacade& facade, HtsBcfSrPtr hts_iterator, UnpackPolicy level);
         
-        ~RecordIterator() noexcept = default;
+        ~RecordIterator() = default;
         
         RecordIterator(const RecordIterator&)            = default;
         RecordIterator& operator=(const RecordIterator&) = default;
