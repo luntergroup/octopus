@@ -9,28 +9,30 @@
 #ifndef Octopus_hash_functions_hpp
 #define Octopus_hash_functions_hpp
 
+#include <string>
+
 #include <boost/utility/string_ref.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/filesystem/path.hpp>
 
-namespace std
+namespace octopus { namespace utils
 {
-    template<>
-    struct hash<boost::string_ref> {
-        size_t operator()(const boost::string_ref& sr) const {
-            return boost::hash_range(sr.begin(), sr.end());
-        }
-    };
-}
-
-namespace std {
-    template <> struct hash<boost::filesystem::path>
+    struct StringRefHash
     {
-        size_t operator()(const boost::filesystem::path& path) const
+        std::size_t operator()(const boost::string_ref& str) const
         {
-            return hash<string>()(path.string());
+            return boost::hash_range(str.begin(), str.end());
         }
     };
-}
+    
+    struct FilepathHash
+    {
+        std::size_t operator()(const boost::filesystem::path& path) const
+        {
+            return std::hash<std::string>()(path.string());
+        }
+    };
+} // namespace utils
+} // namespace octopus
 
 #endif

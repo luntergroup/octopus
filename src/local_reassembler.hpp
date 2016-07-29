@@ -1,31 +1,31 @@
 //
-//  assembler_candidate_variant_generator.hpp
+//  local_reassembler.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 01/03/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__assembler_candidate_variant_generator__
-#define __Octopus__assembler_candidate_variant_generator__
+#ifndef __Octopus__local_reassembler__
+#define __Octopus__local_reassembler__
 
 #include <vector>
 #include <cstddef>
 #include <functional>
 
-#include "i_candidate_variant_generator.hpp"
+#include "candidate_variant_generator.hpp"
 #include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "assembler.hpp"
+#include "variant.hpp"
 
 class ReferenceGenome;
 class AlignedRead;
 class GenomicRegion;
-class Variant;
 
-namespace octopus
+namespace octopus { namespace core { namespace generators
 {
-class AssemblerCandidateVariantGenerator : public ICandidateVariantGenerator
+class LocalReassembler : public CandidateVariantGenerator
 {
 public:
     struct Options
@@ -36,16 +36,16 @@ public:
         Variant::RegionType::Size max_variant_size = 500;
     };
     
-    AssemblerCandidateVariantGenerator() = delete;
+    LocalReassembler() = delete;
     
-    AssemblerCandidateVariantGenerator(const ReferenceGenome& reference, Options options);
+    LocalReassembler(const ReferenceGenome& reference, Options options);
     
-    AssemblerCandidateVariantGenerator(const AssemblerCandidateVariantGenerator&)            = default;
-    AssemblerCandidateVariantGenerator& operator=(const AssemblerCandidateVariantGenerator&) = default;
-    AssemblerCandidateVariantGenerator(AssemblerCandidateVariantGenerator&&)                 = default;
-    AssemblerCandidateVariantGenerator& operator=(AssemblerCandidateVariantGenerator&&)      = default;
+    LocalReassembler(const LocalReassembler&)            = default;
+    LocalReassembler& operator=(const LocalReassembler&) = default;
+    LocalReassembler(LocalReassembler&&)                 = default;
+    LocalReassembler& operator=(LocalReassembler&&)      = default;
     
-    ~AssemblerCandidateVariantGenerator() override = default;
+    ~LocalReassembler() override = default;
     
     bool requires_reads() const noexcept override;
     
@@ -100,7 +100,8 @@ private:
                              const GenomicRegion& reference_region,
                              std::deque<Variant>& result) const;
 };
-
+} // namespace generators
+} // namespace core
 } // namespace octopus
 
-#endif /* defined(__Octopus__assembler_candidate_variant_generator__) */
+#endif /* defined(__Octopus__local_reassembler__) */

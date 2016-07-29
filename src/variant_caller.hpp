@@ -27,7 +27,7 @@
 #include "haplotype.hpp"
 #include "haplotype_generator.hpp"
 #include "phaser.hpp"
-#include "candidate_variant_generator.hpp"
+#include "composer.hpp"
 #include "haplotype_likelihood_cache.hpp"
 #include "mappable_flat_set.hpp"
 #include "probability_matrix.hpp"
@@ -77,8 +77,8 @@ protected:
     
     std::vector<SampleName> samples_;
     
-    mutable boost::optional<Logging::DebugLogger> debug_log_;
-    mutable boost::optional<Logging::TraceLogger> trace_log_;
+    mutable boost::optional<logging::DebugLogger> debug_log_;
+    mutable boost::optional<logging::TraceLogger> trace_log_;
     
     struct CallerLatents
     {
@@ -95,6 +95,8 @@ protected:
     };
     
 public:
+    using CandidateVariantGenerator = core::generators::Composer;
+    
     struct CallerComponents
     {
         CallerComponents() = delete;

@@ -304,7 +304,7 @@ namespace
     template <typename Container>
     void merge_insert(Container&& src, Container& dst)
     {
-        auto it = append(std::move(src), dst);
+        auto it = octopus::utils::append(std::move(src), dst);
         std::inplace_merge(std::begin(dst), it, std::end(dst));
     }
 } // namespace
@@ -534,7 +534,7 @@ void ReadManager::add_reader_to_sample_map(const Path& reader_path,
 std::vector<ReadManager::Path>
 ReadManager::get_reader_paths_containing_samples(const std::vector<SampleName>& samples) const
 {
-    std::unordered_set<Path> unique_reader_paths {};
+    std::unordered_set<Path, PathHash> unique_reader_paths {};
     unique_reader_paths.reserve(num_files_);
     
     for (const auto& sample : samples) {

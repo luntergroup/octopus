@@ -15,7 +15,7 @@
 #include <boost/range/algorithm.hpp>
 
 #include "reference_genome.hpp"
-#include "candidate_variant_generator.hpp"
+#include "composer.hpp"
 #include "mappable_algorithms.hpp"
 
 // public methods

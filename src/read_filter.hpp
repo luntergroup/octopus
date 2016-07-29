@@ -13,12 +13,13 @@
 #include <utility>
 #include <algorithm>
 #include <iterator>
+#include <memory>
 
 #include "aligned_read.hpp"
 #include "cigar_string.hpp"
 
-namespace octopus { namespace read_filter {
-
+namespace octopus { namespace preprocess { namespace filter
+{
 // All filters are nameable
 
 class Nameable
@@ -27,6 +28,7 @@ class Nameable
     
 public:
     Nameable() = delete;
+    
     Nameable(std::string name) : name_ {std::move(name)} {}
     
     const std::string& name() const noexcept
@@ -278,8 +280,8 @@ struct IsNotDuplicate : ContextReadFilter<ForwardIt>
         return last;
     }
 };
-
-} // namespace read_filter
+} // namespace filter
+} // namespace preprocess
 } // namespace octopus
 
 #endif /* defined(__Octopus__read_filter__) */

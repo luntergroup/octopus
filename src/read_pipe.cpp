@@ -36,7 +36,7 @@ downsampler_ {std::move(downsampler)},
 samples_ {std::move(samples)},
 debug_log_ {}
 {
-    if (DEBUG_MODE) debug_log_ = Logging::DebugLogger {};
+    if (DEBUG_MODE) debug_log_ = logging::DebugLogger {};
 }
 
 std::vector<std::vector<SampleName>> batch_samples(std::vector<SampleName> samples)
@@ -107,6 +107,8 @@ namespace
 
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
 {
+    using namespace preprocess::filter;
+    
     ReadMap result {samples_.size()};
     
     for (const auto& sample : samples_) {

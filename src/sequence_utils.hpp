@@ -19,12 +19,10 @@
 #include <functional>
 #include <random>
 
-#include <iostream> // TEST
-
 #include "contig_region.hpp"
 #include "tandem.hpp"
 
-namespace octopus
+namespace octopus { namespace utils
 {
 namespace detail
 {
@@ -367,7 +365,7 @@ double gc_bias(const SequenceType& sequence)
                                         [] (const char base) { return base == 'G' || base == 'C'; });
     return static_cast<double>(gc_count) / sequence.size();
 }
-
+} // namespace utils
 } // namespace octopus
 
 #endif /* defined(__Octopus__sequence_utils__) */

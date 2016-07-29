@@ -13,6 +13,8 @@
 #include <ctime>
 #include <iomanip>
 
+namespace octopus { namespace utils
+{
 inline std::ostream& operator<<(std::ostream& os, const std::chrono::system_clock::time_point& t)
 {
     const std::time_t t_c {std::chrono::system_clock::to_time_t(t)};
@@ -59,5 +61,7 @@ inline std::ostream& operator<<(std::ostream& os, const TimeInterval& interval)
     
     return os;
 }
+} // namespace utils
+} // namespace octopus
 
 #endif /* timing_hpp */

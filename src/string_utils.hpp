@@ -19,7 +19,7 @@
 #include <type_traits>
 #include <iomanip>
 
-namespace octopus
+namespace octopus { namespace utils
 {
 template <typename T>
 std::vector<std::string> split(const T& str, const char delim) {
@@ -45,14 +45,14 @@ bool is_suffix(const T& lhs, const T& rhs)
     return std::equal(std::cbegin(lhs), std::cend(lhs), std::next(std::cbegin(rhs)));
 }
 
-inline std::size_t stringlen(const char* str)
+inline std::size_t length(const char* str)
 {
     return std::strlen(str);
 }
 
-inline std::size_t stringlen(const std::string& str)
+inline std::size_t length(const std::string& str)
 {
-    return str.size();
+    return str.length();
 }
 
 inline bool find(const std::string& lhs, const std::string& rhs)
@@ -87,7 +87,7 @@ std::vector<std::string> to_strings(const std::vector<T>& values, const unsigned
                    [precision] (auto value) { return to_string(value, precision); });
     return result;
 }
-
+} // namespace utils
 } // namespace octopus
 
 #endif /* defined(__Octopus__string_utils__) */

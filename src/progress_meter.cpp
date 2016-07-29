@@ -24,6 +24,8 @@
 
 namespace octopus
 {
+    using utils::TimeInterval;
+    
     namespace
     {
         template <typename T>
@@ -119,7 +121,7 @@ namespace octopus
     
     auto percent_completed_str(const std::size_t num_bp_completed, const std::size_t num_bp_to_search)
     {
-        return octopus::to_string(percent_completed(num_bp_completed, num_bp_to_search), 1) + '%';
+        return utils::to_string(percent_completed(num_bp_completed, num_bp_to_search), 1) + '%';
     }
     
     std::string to_string(const TimeInterval& duration)
@@ -132,7 +134,7 @@ namespace octopus
     template <typename ForwardIt>
     auto mean_duration(ForwardIt first, ForwardIt last)
     {
-        return Maths::mean(first, last, [] (const auto& d) { return d.count(); });
+        return maths::mean(first, last, [] (const auto& d) { return d.count(); });
     }
     
     template <typename Container>
@@ -144,7 +146,7 @@ namespace octopus
     template <typename ForwardIt>
     auto stdev_duration(ForwardIt first, ForwardIt last)
     {
-        return Maths::stdev(first, last, [] (const auto& d) { return d.count(); });
+        return maths::stdev(first, last, [] (const auto& d) { return d.count(); });
     }
     
     template <typename Container>

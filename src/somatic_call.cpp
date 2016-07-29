@@ -22,9 +22,10 @@ namespace octopus
         
         for (const auto& p : credible_regions_) {
             if (p.second.somatic) {
+                using utils::to_string;
                 record.set_format(p.first, "SCR", {
-                    octopus::to_string(p.second.somatic->first, 2),
-                    octopus::to_string(p.second.somatic->second, 2)
+                    to_string(p.second.somatic->first, 2),
+                    to_string(p.second.somatic->second, 2)
                 });
             } else {
                 record.set_format(p.first, "SCR", {"0", "0"});

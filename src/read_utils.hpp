@@ -28,7 +28,6 @@
 
 namespace octopus
 {
-
 namespace detail
 {
     namespace
@@ -104,14 +103,14 @@ namespace detail
     double mean_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
         if (reads.empty() || is_empty(region)) return 0;
-        return Maths::mean(positional_coverage(reads, region));
+        return maths::mean(positional_coverage(reads, region));
     }
     
     template <typename T>
     double stdev_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
         if (reads.empty() || is_empty(region)) return 0;
-        return Maths::stdev(positional_coverage(reads, region));
+        return maths::stdev(positional_coverage(reads, region));
     }
     
     template <typename T>
@@ -244,7 +243,7 @@ namespace detail
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(qualities),
                        [] (const auto& read) { return static_cast<double>(read.mapping_quality()); });
         
-        return Maths::rmq<double>(qualities);
+        return maths::rmq<double>(qualities);
     }
     
     template <typename T>
@@ -259,7 +258,7 @@ namespace detail
         std::transform(std::cbegin(overlapped), std::cend(overlapped), std::begin(qualities),
                        [] (const auto& read) { return static_cast<double>(read.mapping_quality()); });
         
-        return Maths::rmq<double>(qualities);
+        return maths::rmq<double>(qualities);
     }
     
     template <typename T>
@@ -276,7 +275,7 @@ namespace detail
             }
         }
         
-        return Maths::rmq<double>(qualities);
+        return maths::rmq<double>(qualities);
     }
     
     template <typename T>
@@ -295,7 +294,7 @@ namespace detail
             }
         });
         
-        return Maths::rmq<double>(qualities);
+        return maths::rmq<double>(qualities);
     }
     
     template <typename ReadMap>
@@ -388,7 +387,7 @@ namespace detail
                            return mean_coverage(sample_reads.second, NonMapTag {});
                        });
         
-        return Maths::mean(sample_mean_coverages);
+        return maths::mean(sample_mean_coverages);
     }
     
     template <typename T>
@@ -403,7 +402,7 @@ namespace detail
                            return mean_coverage(sample_reads.second, region, NonMapTag {});
                        });
         
-        return Maths::mean(sample_mean_coverages);
+        return maths::mean(sample_mean_coverages);
     }
     
     template <typename T>
@@ -418,7 +417,7 @@ namespace detail
                            return stdev_coverage(sample_reads.second, NonMapTag {});
                        });
         
-        return Maths::stdev(sample_stdev_coverages);
+        return maths::stdev(sample_stdev_coverages);
     }
     
     template <typename T>
@@ -433,13 +432,13 @@ namespace detail
                            return stdev_coverage(sample_reads.second, region, NonMapTag {});
                        });
         
-        return Maths::stdev(sample_stdev_coverages);
+        return maths::stdev(sample_stdev_coverages);
     }
     
     template <typename T>
     size_t count_reads(const T& reads, MapTag)
     {
-        return Maths::sum_sizes(reads);
+        return maths::sum_sizes(reads);
     }
     
     template <typename T>
@@ -563,7 +562,7 @@ namespace detail
     double rmq_mapping_quality(const T& reads, MapTag)
     {
         std::vector<double> qualities {};
-        qualities.reserve(Maths::sum_sizes(reads));
+        qualities.reserve(maths::sum_sizes(reads));
         
         for (const auto& sample_reads : reads) {
             std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
@@ -572,14 +571,14 @@ namespace detail
                            });
         }
         
-        return Maths::rmq<double>(qualities);
+        return maths::rmq<double>(qualities);
     }
     
     template <typename T>
     double rmq_mapping_quality(const T& reads, const GenomicRegion& region, MapTag)
     {
         std::vector<double> qualities {};
-        qualities.reserve(Maths::sum_sizes(reads));
+        qualities.reserve(maths::sum_sizes(reads));
         
         for (const auto& sample_reads : reads) {
             const auto overlapped = overlap_range(sample_reads.second, region);
@@ -590,7 +589,7 @@ namespace detail
                            });
         }
         
-        return Maths::rmq<double>(qualities);
+        return maths::rmq<double>(qualities);
     }
     
     template <typename T>
@@ -607,7 +606,7 @@ namespace detail
             }
         }
         
-        return Maths::rmq<double>(qualities);
+        return maths::rmq<double>(qualities);
     }
     
     template <typename T>
@@ -627,7 +626,7 @@ namespace detail
                           });
         }
         
-        return Maths::rmq<double>(qualities);
+        return maths::rmq<double>(qualities);
     }
 } // namespace detail
 
@@ -1056,35 +1055,12 @@ namespace detail {
         return result;
     }
 } // namespace detail
-    
+
 template <typename T>
 T splice_all(const T& reads, const GenomicRegion& region)
 {
     return detail::splice_all(reads, region, MapTagType<T> {});
 }
-
-template <typename Reads>
-void compress_reads(Reads& reads)
-{
-    for (auto& read : reads) {
-        read.compress();
-    }
-}
-
-template <typename Reads>
-void decompress_reads(Reads& reads)
-{
-    for (auto& read : reads) {
-        read.decompress();
-    }
-}
-
-// TODO
-AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::ContigName, AlignedRead>& reads);
-
-// TODO
-MappableFlatMultiSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableFlatMultiSet<AlignedRead>& reads);
-
 } // namespace octopus
 
 #endif /* defined(__Octopus__read_utils__) */

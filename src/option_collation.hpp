@@ -20,19 +20,24 @@
 #include "option_parser.hpp"
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
+#include "read_transformer.hpp"
+#include "read_filterer.hpp"
 #include "downsampler.hpp"
 #include "read_pipe.hpp"
+#include "composer.hpp"
+#include "variant_caller_factory.hpp"
 #include "variant_call_filter.hpp"
 
 namespace fs = boost::filesystem;
 
 namespace octopus
 {
-class ReadTransformer;
-class CandidateGeneratorBuilder;
-class VariantCallerFactory;
-namespace Options
+namespace options
 {
+    using namespace preprocess::filter;
+    using namespace preprocess::transform;
+    using namespace core::generators;
+    
     bool is_run_command(const OptionMap& options);
     
     bool is_debug_mode(const OptionMap& options);
@@ -59,23 +64,23 @@ namespace Options
     
     ReadPipe::ReadFilterer make_read_filterer(const OptionMap& options);
     
-    boost::optional<Downsampler> make_downsampler(const OptionMap& options);
+    boost::optional<preprocess::Downsampler> make_downsampler(const OptionMap& options);
     
-    CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& options,
+    Composer::Builder make_candidate_variant_generator_builder(const OptionMap& options,
                                                                const ReferenceGenome& reference);
     
     bool call_sites_only(const OptionMap& options);
     
     VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
                                                      ReadPipe& read_pipe,
-                                                     const CandidateGeneratorBuilder& candidate_generator_builder,
+                                                     const Composer::Builder& candidate_variant_generator_builder,
                                                      const InputRegionMap& regions,
                                                      const OptionMap& options);
     
     VcfWriter make_output_vcf_writer(const OptionMap& options);
     
     boost::optional<fs::path> create_temp_file_directory(const OptionMap& options);
-} // namespace Options
+} // namespace options
 } // namespace octopus
 
 #endif /* option_collation_hpp */

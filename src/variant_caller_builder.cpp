@@ -20,21 +20,21 @@ namespace octopus
 
 VariantCallerBuilder::Parameters::Parameters(const ReferenceGenome& reference,
                                              const ReadPipe& read_pipe,
-                                             const CandidateGeneratorBuilder& candidate_generator_builder,
+                                             const Composer::Builder& candidate_variant_generator_builder,
                                              HaplotypeGenerator::Builder haplotype_generator_builder)
 :
 reference {reference},
 read_pipe {read_pipe},
-candidate_generator_builder {candidate_generator_builder},
+candidate_variant_generator_builder {candidate_variant_generator_builder},
 haplotype_generator_builder {std::move(haplotype_generator_builder)}
 {}
 
 VariantCallerBuilder::VariantCallerBuilder(const ReferenceGenome& reference,
                                            const ReadPipe& read_pipe,
-                                           const CandidateGeneratorBuilder& candidate_generator_builder,
+                                           const Composer::Builder& candidate_variant_generator_builder,
                                            HaplotypeGenerator::Builder haplotype_generator_builder)
 :
-parameters_ {reference, read_pipe, candidate_generator_builder, std::move(haplotype_generator_builder)},
+parameters_ {reference, read_pipe, candidate_variant_generator_builder, std::move(haplotype_generator_builder)},
 factory_ {generate_factory()}
 {}
 
@@ -77,9 +77,9 @@ VariantCallerBuilder& VariantCallerBuilder::set_read_pipe(const ReadPipe& read_p
 }
 
 VariantCallerBuilder&
-VariantCallerBuilder::set_candidate_generator_builder(const CandidateGeneratorBuilder& generator) noexcept
+VariantCallerBuilder::set_candidate_variant_generator_builder(const Composer::Builder& generator) noexcept
 {
-    parameters_.candidate_generator_builder = generator;
+    parameters_.candidate_variant_generator_builder = generator;
     return *this;
 }
 
@@ -242,7 +242,7 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
             return std::make_unique<IndividualVariantCaller>(VariantCaller::CallerComponents {
                                                                  parameters_.reference,
                                                                  parameters_.read_pipe,
-                                                                 parameters_.candidate_generator_builder.get().build(),
+                                                                 parameters_.candidate_variant_generator_builder.get().build(),
                                                                  parameters_.haplotype_generator_builder,
                                                                  Phaser {parameters_.min_phase_score}
                                                              },
@@ -259,7 +259,7 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
             return std::make_unique<PopulationVariantCaller>(VariantCaller::CallerComponents {
                                                                  parameters_.reference,
                                                                  parameters_.read_pipe,
-                                                                 parameters_.candidate_generator_builder.get().build(),
+                                                                 parameters_.candidate_variant_generator_builder.get().build(),
                                                                  parameters_.haplotype_generator_builder,
                                                                  Phaser {parameters_.min_phase_score}
                                                              },
@@ -274,7 +274,7 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
             return std::make_unique<CancerVariantCaller>(VariantCaller::CallerComponents {
                                                              parameters_.reference,
                                                              parameters_.read_pipe,
-                                                             parameters_.candidate_generator_builder.get().build(),
+                                                             parameters_.candidate_variant_generator_builder.get().build(),
                                                              parameters_.haplotype_generator_builder,
                                                              Phaser {parameters_.min_phase_score}
                                                          },

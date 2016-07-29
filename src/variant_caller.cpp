@@ -64,10 +64,10 @@ parameters_ {std::move(parameters)}
     }
     
     if (DEBUG_MODE) {
-        debug_log_ = Logging::DebugLogger {};
+        debug_log_ = logging::DebugLogger {};
     }
     if (TRACE_MODE) {
-        trace_log_ = Logging::TraceLogger {};
+        trace_log_ = logging::TraceLogger {};
     }
 }
 
@@ -179,7 +179,7 @@ void remove_duplicates(Container& haplotypes, const ReferenceGenome& reference)
 {
     const auto n = unique_least_complex(haplotypes, Haplotype {haplotype_region(haplotypes), reference});
     if (DEBUG_MODE) {
-        Logging::DebugLogger log {};
+        logging::DebugLogger log {};
         stream(log) << n << " duplicate haplotypes were removed";
     }
 }
@@ -191,7 +191,7 @@ bool all_empty(const ReadMap& reads)
 }
 
 auto calculate_candidate_region(const GenomicRegion& call_region, const ReadMap& reads,
-                                const CandidateVariantGenerator& candidate_generator)
+                                const core::generators::Composer& candidate_generator)
 {
     if (!candidate_generator.requires_reads()) return call_region;
     
@@ -400,7 +400,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             std::tie(haplotypes, active_region) = haplotype_generator.generate();
         } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
             // TODO: we could try to eliminate some more haplotypes and recall the region
-            Logging::WarningLogger wlog {};
+            logging::WarningLogger wlog {};
             stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
             haplotype_generator.stop();
             haplotype_likelihoods.clear();

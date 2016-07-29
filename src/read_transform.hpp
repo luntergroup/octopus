@@ -11,7 +11,7 @@
 
 #include "aligned_read.hpp"
 
-namespace octopus { namespace read_transform
+namespace octopus { namespace preprocess { namespace transform
 {
     struct CapBaseQualities
     {
@@ -74,7 +74,8 @@ namespace octopus { namespace read_transform
     {
         void operator()(AlignedRead& read) const noexcept;
     };
-} // namespace read_transform
+} // namespace preprocess
+} // namespace transform
 } // namespace octopus
 
 #endif

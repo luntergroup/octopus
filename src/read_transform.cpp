@@ -12,7 +12,7 @@
 #include <numeric>
 #include <tuple>
 
-namespace octopus { namespace read_transform
+namespace octopus { namespace preprocess { namespace transform
 {
     CapBaseQualities::CapBaseQualities(BaseQuality max) : max_ {max} {}
     
@@ -132,5 +132,6 @@ namespace octopus { namespace read_transform
             }
         }
     }
-} // namespace read_transform
+} // namespace transform
+} // namespace preprocess
 } // namespace octopus

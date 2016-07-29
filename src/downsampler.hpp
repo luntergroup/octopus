@@ -16,11 +16,8 @@
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
 
-namespace octopus
+namespace octopus { namespace preprocess
 {
-std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
-                       unsigned max_coverage, unsigned min_coverage);
-
 class Downsampler
 {
 public:
@@ -28,20 +25,22 @@ public:
     
     Downsampler(unsigned max_coverage, unsigned min_coverage);
     
-    ~Downsampler() = default;
-    
     Downsampler(const Downsampler&)            = default;
     Downsampler& operator=(const Downsampler&) = default;
     Downsampler(Downsampler&&)                 = default;
     Downsampler& operator=(Downsampler&&)      = default;
     
-    std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads) const;
+    ~Downsampler() = default;
+    
+    // returns the number of reads downsampled
+    std::size_t downsample(ReadContainer& reads) const;
     std::size_t downsample(ReadMap& reads) const;
     
 private:
     unsigned max_coverage_ = 100'000;
     unsigned min_coverage_ = 100'000;
 };
+} // namespace preprocess
 } // namespace octopus
 
 #endif /* downsampler_hpp */

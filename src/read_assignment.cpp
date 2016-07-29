@@ -36,7 +36,7 @@ namespace octopus
         for (unsigned k {0}; k < genotype.ploidy(); ++k) {
             const auto curr = likelihoods[k][read];
             
-            if (Maths::almost_equal(curr, max_likelihood)) {
+            if (maths::almost_equal(curr, max_likelihood)) {
                 result.push_back(k);
             } else if (curr > max_likelihood) {
                 result.assign({k});
@@ -164,7 +164,7 @@ namespace octopus
         for (const auto& allele : alleles) {
             for (const auto& p : haplotype_support) {
                 if (p.first.contains(allele)) {
-                    append(p.second, result[allele]);
+                    utils::append(p.second, result[allele]);
                 }
             }
         }

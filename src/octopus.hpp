@@ -15,7 +15,7 @@
 
 namespace octopus
 {
-    void run_octopus(Options::OptionMap& options);
+    void run_octopus(options::OptionMap& options);
 }
 
 #endif /* defined(__Octopus__octopus__) */

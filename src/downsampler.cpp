@@ -23,7 +23,7 @@
 
 #include "timers.hpp"
 
-namespace octopus
+namespace octopus { namespace preprocess
 {
 namespace
 {
@@ -204,7 +204,7 @@ auto sample(const InputIt first_read, const InputIt last_read, const GenomicRegi
 namespace
 {
     std::vector<GenomicRegion>
-    find_target_coverage_regions(const MappableFlatMultiSet<AlignedRead>& reads,
+    find_target_coverage_regions(const ReadContainer& reads,
                                  const unsigned max_coverage, const unsigned min_coverage)
     {
         const auto above_max_coverage_regions = find_high_coverage_regions(reads, max_coverage);
@@ -237,8 +237,7 @@ namespace
     }
 } // namespace
 
-std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
-                       const unsigned max_coverage, const unsigned min_coverage)
+std::size_t sample(ReadContainer& reads, const unsigned max_coverage, const unsigned min_coverage)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     
@@ -276,9 +275,9 @@ max_coverage_ {max_coverage},
 min_coverage_ {min_coverage}
 {}
 
-std::size_t Downsampler::downsample(MappableFlatMultiSet<AlignedRead>& reads) const
+std::size_t Downsampler::downsample(ReadContainer& reads) const
 {
-    return octopus::downsample(reads, max_coverage_, min_coverage_);
+    return sample(reads, max_coverage_, min_coverage_);
 }
 
 std::size_t Downsampler::downsample(ReadMap& reads) const
@@ -291,5 +290,5 @@ std::size_t Downsampler::downsample(ReadMap& reads) const
     
     return result;
 }
-
+} // namespace preprocess
 } // namespace octopus

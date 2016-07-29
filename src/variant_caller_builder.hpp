@@ -18,13 +18,15 @@
 
 #include "common.hpp"
 #include "read_pipe.hpp"
-#include "candidate_generator_builder.hpp"
+#include "composer.hpp"
 #include "haplotype_generator.hpp"
 #include "variant_caller.hpp"
 #include "trio.hpp"
 #include "pedigree.hpp"
 
-namespace octopus {
+namespace octopus
+{
+    using core::generators::Composer;
     
     class VariantCallerBuilder
     {
@@ -34,7 +36,7 @@ namespace octopus {
         VariantCallerBuilder()  = delete;
         
         VariantCallerBuilder(const ReferenceGenome& reference, const ReadPipe& read_pipe,
-                             const CandidateGeneratorBuilder& candidate_generator_builder,
+                             const Composer::Builder& candidate_variant_generator_builder,
                              HaplotypeGenerator::Builder haplotype_generator_builder);
         
         ~VariantCallerBuilder() = default;
@@ -47,7 +49,7 @@ namespace octopus {
         // common
         VariantCallerBuilder& set_reference(const ReferenceGenome& reference) noexcept;
         VariantCallerBuilder& set_read_pipe(const ReadPipe& read_pipe) noexcept;
-        VariantCallerBuilder& set_candidate_generator_builder(const CandidateGeneratorBuilder& generator) noexcept;        
+        VariantCallerBuilder& set_candidate_variant_generator_builder(const Composer::Builder& generator) noexcept;
         VariantCallerBuilder& set_ploidy(unsigned ploidy) noexcept;
         VariantCallerBuilder& set_caller(std::string caller);
         VariantCallerBuilder& set_refcall_type(VariantCaller::RefCallType type) noexcept;
@@ -89,7 +91,7 @@ namespace octopus {
             Parameters()  = delete;
             
             Parameters(const ReferenceGenome& reference, const ReadPipe& read_pipe,
-                       const CandidateGeneratorBuilder& candidate_generator_builder,
+                       const Composer::Builder& candidate_variant_generator_builder,
                        HaplotypeGenerator::Builder haplotype_generator_builder);
             
             ~Parameters() = default;
@@ -105,7 +107,7 @@ namespace octopus {
             
             unsigned ploidy;
             std::string caller;
-            std::reference_wrapper<const CandidateGeneratorBuilder> candidate_generator_builder;
+            std::reference_wrapper<const Composer::Builder> candidate_variant_generator_builder;
             HaplotypeGenerator::Builder haplotype_generator_builder;
             VariantCaller::RefCallType refcall_type = VariantCaller::RefCallType::None;
             bool call_sites_only = false;

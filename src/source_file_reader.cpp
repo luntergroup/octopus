@@ -1,33 +1,32 @@
 //
-//  external_variant_candidates.cpp
+//  source_file_reader.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 28/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "external_variant_candidates.hpp"
+#include "source_file_reader.hpp"
 
 #include <cstddef>
 #include <algorithm>
 #include <utility>
 
 #include "vcf_record.hpp"
-#include "variant.hpp"
 
-namespace octopus {
-
-ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(boost::filesystem::path path)
+namespace octopus { namespace core { namespace generators
+{
+SourceFileReader::SourceFileReader(boost::filesystem::path path)
 :
 reader_ {std::make_shared<VcfReader>(std::move(path))}
 {}
 
-ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(std::unique_ptr<const VcfReader> reader)
+SourceFileReader::SourceFileReader(std::unique_ptr<const VcfReader> reader)
 :
 reader_ {std::move(reader)}
 {}
 
-ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(const std::shared_ptr<const VcfReader>& reader)
+SourceFileReader::SourceFileReader(const std::shared_ptr<const VcfReader>& reader)
 :
 reader_ {reader}
 {}
@@ -100,9 +99,10 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, const VcfReader
     return result;
 }
 
-std::vector<Variant> ExternalCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
+std::vector<Variant> SourceFileReader::generate_candidates(const GenomicRegion& region)
 {
     return fetch_variants(region, *reader_);
 }
-
+} // namespace generators
+} // namespace core
 } // namespace octopus

@@ -150,7 +150,7 @@ static auto calculate_dummy_model_posterior(const double normal_model_log_eviden
     const auto normal_model_ljp = std::log(normal_model_prior) + normal_model_log_evidence;
     const auto dummy_model_ljp  = std::log(dummy_model_prior) + dummy_model_log_evidence;
     
-    const auto norm = Maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
+    const auto norm = maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
     
     return std::exp(dummy_model_ljp - norm);
 }
@@ -348,13 +348,13 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
 namespace debug
 {
     void log(const GenotypeProbabilityMap& genotype_posteriors,
-             boost::optional<Logging::DebugLogger>& debug_log,
-             boost::optional<Logging::TraceLogger>& trace_log);
+             boost::optional<logging::DebugLogger>& debug_log,
+             boost::optional<logging::TraceLogger>& trace_log);
     void log(const VariantPosteriors& candidate_posteriors,
-             boost::optional<Logging::DebugLogger>& debug_log,
-             boost::optional<Logging::TraceLogger>& trace_log);
+             boost::optional<logging::DebugLogger>& debug_log,
+             boost::optional<logging::TraceLogger>& trace_log);
     void log(const Genotype<Haplotype>& called_genotype,
-             boost::optional<Logging::DebugLogger>& debug_log);
+             boost::optional<logging::DebugLogger>& debug_log);
 } // namespace debug
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
@@ -557,8 +557,8 @@ namespace debug
     }
     
     void log(const GenotypeProbabilityMap& genotype_posteriors,
-             boost::optional<Logging::DebugLogger>& debug_log,
-             boost::optional<Logging::TraceLogger>& trace_log)
+             boost::optional<logging::DebugLogger>& debug_log,
+             boost::optional<logging::TraceLogger>& trace_log)
     {
         if (trace_log) {
             print_genotype_posteriors(stream(*trace_log), genotype_posteriors, -1);
@@ -569,8 +569,8 @@ namespace debug
     }
     
     void log(const VariantPosteriors& candidate_posteriors,
-             boost::optional<Logging::DebugLogger>& debug_log,
-             boost::optional<Logging::TraceLogger>& trace_log)
+             boost::optional<logging::DebugLogger>& debug_log,
+             boost::optional<logging::TraceLogger>& trace_log)
     {
         if (trace_log) {
             print_candidate_posteriors(stream(*trace_log), candidate_posteriors, -1);

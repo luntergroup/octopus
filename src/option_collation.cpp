@@ -27,14 +27,10 @@
 #include "genomic_region.hpp"
 #include "aligned_read.hpp"
 #include "read_filter.hpp"
-#include "read_filterer.hpp"
-#include "read_transformer.hpp"
 #include "read_transform.hpp"
 #include "read_utils.hpp"
-#include "candidate_generator_builder.hpp"
 #include "haplotype_generator.hpp"
 #include "variant_caller_builder.hpp"
-#include "variant_caller_factory.hpp"
 #include "vcf_reader.hpp"
 #include "vcf_writer.hpp"
 #include "mappable_algorithms.hpp"
@@ -44,7 +40,7 @@
 #include "maths.hpp"
 #include "logging.hpp"
 
-namespace octopus { namespace Options
+namespace octopus { namespace options
 {
 bool is_run_command(const OptionMap& options)
 {
@@ -284,7 +280,7 @@ boost::optional<fs::path> get_trace_log_file_name(const OptionMap& options)
 
 ReferenceGenome make_reference(const OptionMap& options)
 {
-    Logging::ErrorLogger log {};
+    logging::ErrorLogger log {};
     
     const fs::path input_path {options.at("reference").as<std::string>()};
     
@@ -323,7 +319,7 @@ std::string convert_bed_line_to_region_str(const std::string& bed_line)
 {
     constexpr static char bed_delim {'\t'};
     
-    const auto tokens = split(bed_line, bed_delim);
+    const auto tokens = utils::split(bed_line, bed_delim);
     
     switch (tokens.size()) {
         case 0:
@@ -479,7 +475,7 @@ std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparse
     bool all_region_parsed {true};
     
     for (const auto& unparsed_region : unparsed_regions) {
-        Logging::WarningLogger log {};
+        logging::WarningLogger log {};
         try {
             result.push_back(parse_region(unparsed_region, reference));
         } catch (std::exception& e) {
@@ -538,7 +534,9 @@ auto transform_to_zero_based(InputRegionMap&& one_based_search_regions)
 
 InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenome& reference)
 {
-    Logging::ErrorLogger log {};
+    using namespace utils;
+    
+    logging::ErrorLogger log {};
     
     std::vector<GenomicRegion> skip_regions {};
     
@@ -610,7 +608,7 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
     }
     
     if (!all_parsed) {
-        Logging::WarningLogger log {};
+        logging::WarningLogger log {};
         if (!input_regions.empty()) {
             stream(log) << "Detected unparsed input regions so dumping "
             << input_regions.size() << " parsed regions";
@@ -646,7 +644,7 @@ namespace
     void log_unresolved_read_paths(const std::vector<fs::path>& paths,
                                    const std::string& option)
     {
-        Logging::WarningLogger log {};
+        logging::WarningLogger log {};
         for (const auto& path : paths) {
             stream(log) << "Could not resolve the path " << path
             << " given in the input option (--" + option +")";
@@ -662,7 +660,7 @@ namespace
     template <typename InputIt>
     void log_nonexistent_read_paths(InputIt first, InputIt last, const std::string& option)
     {
-        Logging::WarningLogger log {};
+        logging::WarningLogger log {};
         std::for_each(first, last, [&option, &log] (const auto& path) {
             stream(log) << "The path " << path
             << " given in the input option (--" + option + ") does not exist";
@@ -678,7 +676,7 @@ namespace
     template <typename InputIt>
     void log_unreadable_read_paths(InputIt first, InputIt last, const std::string& option)
     {
-        Logging::WarningLogger log {};
+        logging::WarningLogger log {};
         std::for_each(first, last, [&option, &log] (const auto& path) {
             stream(log) << "The path " << path
             << " given in the input option (--" + option + ") is not readable";
@@ -688,7 +686,9 @@ namespace
 
 boost::optional<std::vector<fs::path>> get_read_paths(const OptionMap& options)
 {
-    Logging::ErrorLogger log {};
+    using namespace utils;
+    
+    logging::ErrorLogger log {};
     
     std::vector<fs::path> result {};
     
@@ -774,7 +774,7 @@ boost::optional<std::vector<fs::path>> get_read_paths(const OptionMap& options)
     const auto num_duplicates = std::distance(it, std::end(result));
     
     if (num_duplicates > 0) {
-        Logging::WarningLogger log {};
+        logging::WarningLogger log {};
         stream(log) << "There are " << num_duplicates
         << " duplicate read paths but only unique paths will be considered";
     }
@@ -782,7 +782,7 @@ boost::optional<std::vector<fs::path>> get_read_paths(const OptionMap& options)
     result.erase(it, std::end(result));
     
     if (!all_paths_good && result.size() > 0) {
-        Logging::WarningLogger log {};
+        logging::WarningLogger log {};
         auto slog = stream(log);
         slog << "There are bad read paths so dumping " << result.size() << " good path";
         if (result.size() > 1) slog << "s";
@@ -807,7 +807,7 @@ ReadManager make_read_manager(const OptionMap& options)
 
 ReadTransformer make_read_transformer(const OptionMap& options)
 {
-    using namespace read_transform;
+    using namespace preprocess::transform;
     
     ReadTransformer result {};
     
@@ -852,7 +852,7 @@ ReadPipe::ReadFilterer make_read_filterer(const OptionMap& options)
 {
     using std::make_unique;
     
-    using namespace read_filter;
+    using namespace preprocess::filter;
     
     using ReadFilterer = ReadPipe::ReadFilterer;
     
@@ -936,30 +936,30 @@ ReadPipe::ReadFilterer make_read_filterer(const OptionMap& options)
     return result;
 }
 
-boost::optional<Downsampler> make_downsampler(const OptionMap& options)
+boost::optional<preprocess::Downsampler> make_downsampler(const OptionMap& options)
 {
-    if (options.at("disable-downsampling").as<bool>()) {
-        return boost::none;
-    }
+    using namespace preprocess;
+    
+    if (options.at("disable-downsampling").as<bool>()) return boost::none;
     
     auto max_coverage    = options.at("downsample-above").as<unsigned>();
     auto target_coverage = options.at("downsample-target").as<unsigned>();
     
-    return Downsampler(max_coverage, target_coverage);
+    return Downsampler {max_coverage, target_coverage};
 }
 
-CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& options,
+Composer::Builder make_candidate_variant_generator_builder(const OptionMap& options,
                                                            const ReferenceGenome& reference)
 {
-    Logging::WarningLogger warning_log {};
-    Logging::ErrorLogger log {};
+    logging::WarningLogger warning_log {};
+    logging::ErrorLogger log {};
     
-    CandidateGeneratorBuilder result {};
+    Composer::Builder result {};
     
     result.set_reference(reference);
     
     if (options.count("generate-candidates-from-source") == 1) {
-        result.add_generator(CandidateGeneratorBuilder::Generator::External);
+        result.add_generator(Composer::Builder::Generator::External);
         
         const fs::path input_path {options.at("generate-candidates-from-source").as<std::string>()};
         
@@ -985,7 +985,7 @@ CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& opti
                 return result;
             }
         } else {
-            result.add_generator(CandidateGeneratorBuilder::Generator::External);
+            result.add_generator(Composer::Builder::Generator::External);
         }
         
         auto resolved_path = resolve_path(regenotype_path, options);
@@ -1015,11 +1015,11 @@ CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& opti
     }
     
     if (!options.at("disable-raw-cigar-candidate-generator").as<bool>()) {
-        result.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
+        result.add_generator(Composer::Builder::Generator::Alignment);
     }
     
     if (!options.at("disable-assembly-candidate-generator").as<bool>()) {
-        result.add_generator(CandidateGeneratorBuilder::Generator::Assembler);
+        result.add_generator(Composer::Builder::Generator::Assembler);
         const auto kmer_sizes = options.at("kmer-size").as<std::vector<unsigned>>();
         
         for (const auto k : kmer_sizes) {
@@ -1037,7 +1037,7 @@ CandidateGeneratorBuilder make_candidate_generator_builder(const OptionMap& opti
 void print_ambiguous_contig_ploidies(const std::vector<ContigPloidy>& contig_ploidies,
                                      const OptionMap& options)
 {
-    Logging::WarningLogger log {};
+    logging::WarningLogger log {};
     
     log << "Ambiguous ploidies found";
     
@@ -1097,7 +1097,7 @@ boost::optional<std::vector<ContigPloidy>> extract_contig_ploidies(const OptionM
         
         const auto resolved_path = resolve_path(input_path, options);
         
-        Logging::ErrorLogger log {};
+        logging::ErrorLogger log {};
         
         if (!fs::exists(resolved_path)) {
             stream(log) << "The path " << input_path
@@ -1117,7 +1117,7 @@ boost::optional<std::vector<ContigPloidy>> extract_contig_ploidies(const OptionM
     }
     
     if (options.count("contig-ploidies") == 1) {
-        append(options.at("contig-ploidies").as<std::vector<ContigPloidy>>(), result);
+        utils::append(options.at("contig-ploidies").as<std::vector<ContigPloidy>>(), result);
     }
     
     remove_duplicate_ploidies(result);
@@ -1162,12 +1162,12 @@ auto make_haplotype_generator_builder(const OptionMap& options)
 VariantCallerFactory
 make_variant_caller_factory(const ReferenceGenome& reference,
                             ReadPipe& read_pipe,
-                            const CandidateGeneratorBuilder& candidate_generator_builder,
+                            const Composer::Builder& candidate_variant_generator_builder,
                             const InputRegionMap& regions,
                             const OptionMap& options)
 {
     VariantCallerBuilder vc_builder {
-        reference, read_pipe, candidate_generator_builder,
+        reference, read_pipe, candidate_variant_generator_builder,
         make_haplotype_generator_builder(options)
     };
     
@@ -1262,7 +1262,7 @@ make_variant_caller_factory(const ReferenceGenome& reference,
 
 boost::optional<fs::path> get_final_output_path(const OptionMap& options)
 {
-    Logging::ErrorLogger log {};
+    logging::ErrorLogger log {};
     
     const auto input_path = options.at("output").as<std::string>();
     
@@ -1305,7 +1305,7 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
     
     unsigned temp_dir_counter {2};
     
-    Logging::WarningLogger log {};
+    logging::WarningLogger log {};
     
     while (fs::exists(result) && temp_dir_counter <= temp_dir_name_count_limit) {
         if (fs::is_empty(result)) {
@@ -1330,5 +1330,5 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
     
     return result;
 }
-} // namespace Options
+} // namespace options
 } // namespace octopus

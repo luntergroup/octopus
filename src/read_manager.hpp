@@ -86,16 +86,18 @@ public:
     SampleReadMap fetch_reads(const GenomicRegion& region) const;
     
 private:
+    using PathHash = octopus::utils::FilepathHash;
+    
     struct FileSizeCompare
     {
         bool operator()(const Path& lhs, const Path& rhs) const;
     };
     
     using OpenReaderMap           = std::map<Path, ReadReader, FileSizeCompare>;
-    using ClosedReaders           = std::unordered_set<Path>;
+    using ClosedReaders           = std::unordered_set<Path, PathHash>;
     using SampleIdToReaderPathMap = std::unordered_map<SampleName, std::vector<Path>>;
     using ContigMap               = MappableMap<GenomicRegion::ContigName, ContigRegion>;
-    using ReaderRegionsMap        = std::unordered_map<Path, ContigMap>;
+    using ReaderRegionsMap        = std::unordered_map<Path, ContigMap, PathHash>;
     
     unsigned max_open_files_ = 200;
     unsigned num_files_;

@@ -140,7 +140,7 @@ PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
     
     if (DEBUG_MODE) {
-        Logging::DebugLogger log {};
+        logging::DebugLogger log {};
         stream(log) << "There are " << genotypes.size() << " candidate genotypes";
     }
     
@@ -354,7 +354,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 //    const auto normal_model_ljp = std::log(normal_model_prior) + normal_model_log_evidence;
 //    const auto dummy_model_ljp  = std::log(dummy_model_prior) + dummy_model_log_evidence;
 //    
-//    const auto norm = Maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
+//    const auto norm = maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
 //    
 //    return std::exp(dummy_model_ljp - norm);
 //}
@@ -382,7 +382,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 //    }
 //    
 //    if (TRACE_MODE) {
-//        Logging::TraceLogger log {};
+//        logging::TraceLogger log {};
 //        debug::print_genotype_posteriors(stream(log), genotype_posteriors, -1);
 //    } else if (debug_log_) {
 //        debug::print_genotype_posteriors(stream(*debug_log_), genotype_posteriors);
@@ -391,7 +391,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 //    const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
 //    
 //    if (TRACE_MODE) {
-//        Logging::TraceLogger log {};
+//        logging::TraceLogger log {};
 //        debug::print_candidate_posteriors(stream(log), candidate_posteriors, -1);
 //    } else if (debug_log_) {
 //        debug::print_candidate_posteriors(stream(*debug_log_), candidate_posteriors);

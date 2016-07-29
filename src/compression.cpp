@@ -14,7 +14,7 @@
 #include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/copy.hpp>
 
-namespace octopus
+namespace octopus { namespace utils
 {
     std::string compress(const std::string& data)
     {
@@ -47,4 +47,5 @@ namespace octopus
     {
         return decompress(str);
     }
+} // namespace utils
 } // namespace octopus

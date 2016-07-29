@@ -1,12 +1,12 @@
 //
-//  alignment_candidate_variant_generator.cpp
+//  cigar_scanner.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 28/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "alignment_candidate_variant_generator.hpp"
+#include "cigar_scanner.hpp"
 
 #include <iterator>
 #include <algorithm>
@@ -17,7 +17,6 @@
 #include "common.hpp"
 #include "reference_genome.hpp"
 #include "aligned_read.hpp"
-#include "variant.hpp"
 #include "cigar_string.hpp"
 #include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
@@ -25,12 +24,11 @@
 
 #include <iostream> // DEBUG
 
-namespace octopus
+namespace octopus { namespace core { namespace generators
 {
 // public methods
 
-AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,
-                                                                       Options options)
+CigarScanner::CigarScanner(const ReferenceGenome& reference, Options options)
 :
 reference_ {reference},
 options_ {options},
@@ -44,7 +42,7 @@ candidates_ {},
 max_seen_candidate_size_ {}
 {}
 
-bool AlignmentCandidateVariantGenerator::requires_reads() const noexcept
+bool CigarScanner::requires_reads() const noexcept
 {
     return true;
 }
@@ -88,7 +86,7 @@ namespace
     }
 } // namespace
 
-void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
+void CigarScanner::add_read(const AlignedRead& read)
 {
     using std::cbegin; using std::next; using std::move;
     
@@ -184,14 +182,14 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
     }
 }
 
-void AlignmentCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first,
-                                                   std::vector<AlignedRead>::const_iterator last)
+void CigarScanner::add_reads(std::vector<AlignedRead>::const_iterator first,
+                            std::vector<AlignedRead>::const_iterator last)
 {
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }
 
-void AlignmentCandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
-                                                   MappableFlatMultiSet<AlignedRead>::const_iterator last)
+void CigarScanner::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
+                            MappableFlatMultiSet<AlignedRead>::const_iterator last)
 {
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }
@@ -239,7 +237,7 @@ auto copy_overlapped_indels(const Container1& all_candidates, const Container2& 
     return copy_overlapped_indels(cbegin(indels), cend(indels), selected_candidates);
 }
 
-std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
+std::vector<Variant> CigarScanner::generate_candidates(const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::distance;
     
@@ -303,14 +301,14 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(con
     }
     
     if (DEBUG_MODE) {
-        Logging::DebugLogger log {};
+        logging::DebugLogger log {};
         debug::print_generated_candidates(stream(log), result, "raw CIGAR strings");
     }
     
     return result;
 }
 
-void AlignmentCandidateVariantGenerator::clear()
+void CigarScanner::clear()
 {
     candidates_.clear();
     candidates_.shrink_to_fit();
@@ -318,9 +316,8 @@ void AlignmentCandidateVariantGenerator::clear()
 
 // private methods
 
-void AlignmentCandidateVariantGenerator::
-add_snvs_in_match_range(const GenomicRegion& region, const SequenceIterator first_base,
-                        const SequenceIterator last_base, const QualitiesIterator first_quality)
+void CigarScanner::add_snvs_in_match_range(const GenomicRegion& region, const SequenceIterator first_base,
+                                          const SequenceIterator last_base, const QualitiesIterator first_quality)
 {
     using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
     
@@ -347,4 +344,6 @@ add_snvs_in_match_range(const GenomicRegion& region, const SequenceIterator firs
                  ++ref_index;
              });
 }
+} // namespace generators
+} // namespace core
 } // namespace octopus

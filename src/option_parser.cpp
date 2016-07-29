@@ -16,7 +16,7 @@
 
 namespace po = boost::program_options;
 
-namespace octopus { namespace Options
+namespace octopus { namespace options
 {
 void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2);
 void option_dependency(const OptionMap& vm, const std::string& for_what, const std::string& required_option);
@@ -456,7 +456,7 @@ boost::optional<OptionMap> parse_options(const int argc, const char** argv)
         }
         
         if (vm_init.count("version") == 1) {
-            std::cout << "Octopus version " << Octopus_version << std::endl;
+            std::cout << "Octopus version " << info::VERSION << std::endl;
             return vm_init;
         }
         
@@ -696,5 +696,5 @@ std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
     }
     return out;
 }
-} // namespace Options
+} // namespace options
 } // namespace octopus

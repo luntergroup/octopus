@@ -55,7 +55,7 @@ namespace octopus
                            return model.evaluate(genotype);
                        });
         
-        Maths::normalise_logs(result);
+        maths::normalise_logs(result);
         
         return result;
     }

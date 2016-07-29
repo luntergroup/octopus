@@ -150,7 +150,7 @@ struct MaxLikelihood
         for (const auto& sample : samples) {
             for (const auto likelihood : haplotype_likelihoods(sample, haplotype)) {
                 if (likelihood > result) result = likelihood;
-                if (Maths::almost_zero(likelihood)) break;
+                if (maths::almost_zero(likelihood)) break;
             }
         }
         
@@ -205,7 +205,7 @@ public:
                 std::for_each(first, last, [&] (const auto& haplotype) {
                     const auto p = haplotype_likelihoods(sample, haplotype)[i];
                     
-                    if (Maths::almost_equal(p, cur_max)) {
+                    if (maths::almost_equal(p, cur_max)) {
                         top.emplace_back(haplotype);
                     } else if (p > cur_max) {
                         top.assign({haplotype});
@@ -276,8 +276,8 @@ filter_to_n(std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& s
     
     result.reserve(haplotypes.size() - n);
     
-    Logging::DebugLogger debug_log {};
-    Logging::TraceLogger trace_log {};
+    logging::DebugLogger debug_log {};
+    logging::TraceLogger trace_log {};
     
     if (DEBUG_MODE) {
         stream(debug_log) << "Filtering " << num_to_filter << " of "
@@ -378,7 +378,7 @@ extract_removable(const std::vector<Haplotype>& haplotypes,
         
         first_unsafe = std::partition(first_unsafe, first_safe,
                                       [min_safe_posterior] (const auto& p) {
-                                          return Maths::almost_equal(p.second, min_safe_posterior);
+                                          return maths::almost_equal(p.second, min_safe_posterior);
                                       });
         
         std::reverse(begin(sorted), first_unsafe);

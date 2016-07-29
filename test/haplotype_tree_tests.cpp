@@ -22,8 +22,7 @@
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "variant.hpp"
-#include "candidate_variant_generator.hpp"
-#include "candidate_generator_builder.hpp"
+#include "composer.hpp"
 #include "haplotype.hpp"
 #include "haplotype_tree.hpp"
 #include "mappable_algorithms.hpp"
@@ -34,7 +33,7 @@ using std::endl;
 using test::make_haplotype;
 
 using octopus::HaplotypeTree;
-using octopus::CandidateGeneratorBuilder;
+using octopus::core::generators::Composer;
 
 BOOST_AUTO_TEST_SUITE(Components)
 BOOST_AUTO_TEST_SUITE(HaplotypeTreeTests)
@@ -518,8 +517,8 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     auto reads = read_manager.fetch_reads(sample, region);
     
-    auto candidate_generator = CandidateGeneratorBuilder().set_reference(human)
-    .add_generator(CandidateGeneratorBuilder::Generator::Alignment)
+    auto candidate_generator = Composer::Builder().set_reference(human)
+    .add_generator(Composer::Builder::Generator::Alignment)
     .build();
     
     add_reads(reads, candidate_generator);
@@ -564,10 +563,10 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     
     ReadManager read_manager {NA12878_low_coverage};
     
-    CandidateGeneratorBuilder builder {};
+    Composer::Builder builder {};
     builder.set_reference(human);
     builder.set_max_variant_size(10);
-    builder.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
+    builder.add_generator(Composer::Builder::Generator::Alignment);
     auto candidate_generator = builder.build();
     
     const auto sample = read_manager.samples().front();

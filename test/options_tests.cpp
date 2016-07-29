@@ -36,9 +36,9 @@ BOOST_AUTO_TEST_CASE(make_reference_maybe_returns_a_ReferenceGenome)
     const char *argv[] = {"octopus", "--reference", human_reference_fasta.c_str(), "--reads", "test", nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    auto options = octopus::Options::parse_options(argc, argv);
+    auto options = octopus::options::parse_options(argc, argv);
     
-    auto reference = octopus::Options::make_reference(*options);
+    auto reference = octopus::options::make_reference(*options);
     
     BOOST_CHECK(reference.name() == "human_g1k_v37");
 }
@@ -50,11 +50,11 @@ BOOST_AUTO_TEST_CASE(get_search_regions_returns_all_chromosome_regions_when_no_r
     const char *argv[] = {"octopus", "--reference", human_reference_fasta.c_str(), "--reads", "test", nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    auto options = octopus::Options::parse_options(argc, argv);
+    auto options = octopus::options::parse_options(argc, argv);
     
-    auto reference = octopus::Options::make_reference(*options);
+    auto reference = octopus::options::make_reference(*options);
     
-    auto regions = octopus::Options::get_search_regions(*options, reference);
+    auto regions = octopus::options::get_search_regions(*options, reference);
     
     auto all_contig_names = reference.contig_names();
     
@@ -79,11 +79,11 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_parses_manually_entered_regions)
         nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    auto options = octopus::Options::parse_options(argc, argv);
+    auto options = octopus::options::parse_options(argc, argv);
     
-    auto reference = octopus::Options::make_reference(*options);
+    auto reference = octopus::options::make_reference(*options);
     
-    auto regions = octopus::Options::get_search_regions(*options, reference);
+    auto regions = octopus::options::get_search_regions(*options, reference);
     
     BOOST_CHECK(*regions["1"].cbegin() == parse_region("1:32000092-33000000", reference));
     BOOST_CHECK(*regions["5"].cbegin() == parse_region("5:1104209-2104209", reference));
@@ -103,11 +103,11 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_text_files
         nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    const auto options = octopus::Options::parse_options(argc, argv);
+    const auto options = octopus::options::parse_options(argc, argv);
     
-    const auto reference = octopus::Options::make_reference(*options);
+    const auto reference = octopus::options::make_reference(*options);
     
-    const auto regions = octopus::Options::get_search_regions(*options, reference);
+    const auto regions = octopus::options::get_search_regions(*options, reference);
     
     BOOST_CHECK(regions.size() == 8); // 8 contigs
 }
@@ -125,11 +125,11 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_bed_files)
         nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    const auto options = octopus::Options::parse_options(argc, argv);
+    const auto options = octopus::options::parse_options(argc, argv);
     
-    const auto reference = octopus::Options::make_reference(*options);
+    const auto reference = octopus::options::make_reference(*options);
     
-    const auto regions = octopus::Options::get_search_regions(*options, reference);
+    const auto regions = octopus::options::get_search_regions(*options, reference);
     
     BOOST_CHECK(regions.size() == 8); // 8 contigs
 }

@@ -21,7 +21,7 @@
 
 #include "read_filter.hpp"
 
-namespace octopus
+namespace octopus { namespace preprocess { namespace filter
 {
 /*
  ReadFilterer stores a collection of filter functions, which can either be non-context-based (
@@ -36,8 +36,8 @@ class ReadFilterer
 public:
     using ReadIterator = BidirIt;
     
-    using BasicFilterPtr   = std::unique_ptr<read_filter::BasicReadFilter>;
-    using ContextFilterPtr = std::unique_ptr<read_filter::ContextReadFilter<ReadIterator>>;
+    using BasicFilterPtr   = std::unique_ptr<BasicReadFilter>;
+    using ContextFilterPtr = std::unique_ptr<ContextReadFilter<ReadIterator>>;
     
     using FilterCountMap = std::unordered_map<std::string, std::size_t>;
     
@@ -325,7 +325,8 @@ std::size_t erase_filtered_reads(Map& reads, const FilterPointMap<Map>& filter_p
     
     return result;
 }
-
+} // namespace filter
+} // namespace preprocess
 } // namespace octopus
 
 #endif /* defined(__Octopus__read_filterer__) */

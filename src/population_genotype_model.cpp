@@ -228,7 +228,7 @@ log_evidence {log_evidence}
                     r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
                 }
                 
-                return Maths::log_multinomial_coefficient<double>(occurences) + r;
+                return maths::log_multinomial_coefficient<double>(occurences) + r;
             }
             
             template <typename Genotype, typename Map>
@@ -248,7 +248,7 @@ log_evidence {log_evidence}
                     r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
                 }
                 
-                return Maths::log_multinomial_coefficient<double>(occurences) + r;
+                return maths::log_multinomial_coefficient<double>(occurences) + r;
             }
         }
         
@@ -334,7 +334,7 @@ log_evidence {log_evidence}
                                    return genotype_log_marginal.log_probability + genotype_log_likilhood;
                                });
                 
-                Maths::normalise_exp(posteriors);
+                maths::normalise_exp(posteriors);
                 
                 result.emplace_back(std::move(posteriors));
             }
@@ -354,7 +354,7 @@ log_evidence {log_evidence}
                                [] (const auto& log_marginal, const auto& log_likilhood) {
                                    return log_marginal.log_probability + log_likilhood;
                                });
-                Maths::normalise_exp(sample_genotype_posteriors);
+                maths::normalise_exp(sample_genotype_posteriors);
             }
         }
         
@@ -435,7 +435,7 @@ log_evidence {log_evidence}
                     const unsigned max_iterations, const double epsilon)
         {
 //            if (TRACE_MODE) {
-//                Logging::TraceLogger log {};
+//                logging::TraceLogger log {};
 //                stream(log) << "Running EM";
 //                debug::print_haplotype_frequencies(stream(log), haplotype_frequencies, -1);
 //                debug::print_genotype_log_marginals(stream(log), constants.genotypes, genotype_log_marginals, -1);
@@ -447,7 +447,7 @@ log_evidence {log_evidence}
                                                         genotype_log_marginals,constants);
                 
 //                if (TRACE_MODE) {
-//                    Logging::TraceLogger log {};
+//                    logging::TraceLogger log {};
 //                    stream(log) << "EM iteration " << n << " : max change = " << max_change;
 //                    debug::print_haplotype_frequencies(stream(log), haplotype_frequencies, -1);
 //                    //            debug::print_genotype_log_marginals(stream(log), constants.genotypes, genotype_log_marginals, -1);
@@ -581,11 +581,11 @@ Population::infer_latents(const std::vector<SampleName>& samples, const Genotype
                                                                           haplotype_likelihoods);
     
 //    if (TRACE_MODE) {
-//        Logging::TraceLogger trace_log {};
+//        logging::TraceLogger trace_log {};
 //        debug::print_genotype_log_likelihoods(stream(trace_log), genotypes,
 //                                              genotype_log_likilhoods, -1);
 //    } else if (DEBUG_MODE) {
-//        Logging::DebugLogger log {};
+//        logging::DebugLogger log {};
 //        debug::print_genotype_log_likelihoods(stream(log), genotypes,
 //                                              genotype_log_likilhoods);
 //    }

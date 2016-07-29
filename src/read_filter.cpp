@@ -12,7 +12,7 @@
 
 #include <iostream> // DEBUG
 
-namespace octopus { namespace read_filter
+namespace octopus { namespace preprocess { namespace filter
 {
     HasWellFormedCigar::HasWellFormedCigar()
     : BasicReadFilter {"HasWellFormedCigar"} {}
@@ -221,5 +221,6 @@ namespace octopus { namespace read_filter
     {
         return !read.has_other_segment() || read.next_segment().contig_name() == contig_name(read);
     }
-} // namespace ReadFilters
+} // namespace filter
+} // namespace preprocess
 } // namespace octopus

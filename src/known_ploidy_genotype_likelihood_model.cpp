@@ -90,7 +90,7 @@ double KnownPloidyGenotypeLikelihoodModel::ln_likelihood_diploid(const Genotype<
     return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                               std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
                               [this] (const auto a, const auto b) -> double {
-                                  return Maths::log_sum_exp(a, b) - ln(2);
+                                  return maths::log_sum_exp(a, b) - ln(2);
                               });
 }
 
@@ -107,11 +107,11 @@ double KnownPloidyGenotypeLikelihoodModel::ln_likelihood_triploid(const Genotype
     if (genotype.zygosity() == 3) {
         const auto& log_likelihoods2 = likelihoods_[genotype[1]];
         const auto& log_likelihoods3 = likelihoods_[genotype[2]];
-        return Maths::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
+        return maths::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
                                     cbegin(log_likelihoods2), cbegin(log_likelihoods3),
                                     0.0, std::plus<> {},
                                     [this] (const auto a, const auto b, const auto c) -> double {
-                                        return Maths::log_sum_exp(a, b, c) - ln(3);
+                                        return maths::log_sum_exp(a, b, c) - ln(3);
                                     });
     }
     
@@ -122,7 +122,7 @@ double KnownPloidyGenotypeLikelihoodModel::ln_likelihood_triploid(const Genotype
         return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
                                   cbegin(log_likelihoods2), 0.0, std::plus<> {},
                                   [this] (const auto a, const auto b) -> double {
-                                      return Maths::log_sum_exp(a, ln2 + b) - ln(3);
+                                      return maths::log_sum_exp(a, ln2 + b) - ln(3);
                                   });
     }
     
@@ -131,7 +131,7 @@ double KnownPloidyGenotypeLikelihoodModel::ln_likelihood_triploid(const Genotype
     return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
                               cbegin(log_likelihoods3), 0.0, std::plus<> {},
                               [this] (const auto a, const auto b) -> double {
-                                  return Maths::log_sum_exp(ln2 + a, b) - ln(3);
+                                  return maths::log_sum_exp(ln2 + a, b) - ln(3);
                               });
 }
 
@@ -149,11 +149,11 @@ double KnownPloidyGenotypeLikelihoodModel::ln_likelihood_tetraploid(const Genoty
         const auto& log_likelihoods2 = likelihoods_[genotype[1]];
         const auto& log_likelihoods3 = likelihoods_[genotype[2]];
         const auto& log_likelihoods4 = likelihoods_[genotype[3]];
-        return Maths::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
+        return maths::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                     std::cbegin(log_likelihoods2), std::cbegin(log_likelihoods3),
                                     std::cbegin(log_likelihoods4), 0.0, std::plus<> {},
                                     [this] (const auto a, const auto b, const auto c, const auto d) -> double {
-                                        return Maths::log_sum_exp({a, b, c, d}) - ln(4);
+                                        return maths::log_sum_exp({a, b, c, d}) - ln(4);
                                     });
     }
     
@@ -183,14 +183,14 @@ double KnownPloidyGenotypeLikelihoodModel::ln_likelihood_polyploid(const Genotyp
             return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                       std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
                                       [this] (const auto a, const auto b) -> double {
-                                          return Maths::log_sum_exp(a, lnpm1 + b) - ln(ploidy_);
+                                          return maths::log_sum_exp(a, lnpm1 + b) - ln(ploidy_);
                                       });
         }
         
         return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                   std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
                                   [this] (const auto a, const auto b) -> double {
-                                      return Maths::log_sum_exp(lnpm1 + a, b) - ln(ploidy_);
+                                      return maths::log_sum_exp(lnpm1 + a, b) - ln(ploidy_);
                                   });
     }
     
@@ -215,7 +215,7 @@ double KnownPloidyGenotypeLikelihoodModel::ln_likelihood_polyploid(const Genotyp
                            return likelihoods.get()[i];
                        });
         
-        result += Maths::log_sum_exp(tmp) - ln(ploidy_);
+        result += maths::log_sum_exp(tmp) - ln(ploidy_);
     }
     
     return result;

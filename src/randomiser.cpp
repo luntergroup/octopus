@@ -1,43 +1,42 @@
 //
-//  random_candidate_variant_generator.cpp
+//  randomiser.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 03/10/2015.
 //  Copyright © 2015 Oxford University. All rights reserved.
 //
 
-#include "random_candidate_variant_generator.hpp"
+#include "randomiser.hpp"
 
 #include <random>
 #include <chrono>
 
 #include "reference_genome.hpp"
 #include "genomic_region.hpp"
-#include "variant.hpp"
 #include "allele.hpp"
 #include "mappable_algorithms.hpp"
 #include "sequence_utils.hpp"
 
-namespace octopus {
-    
-    RandomCandidateVariantGenerator::RandomCandidateVariantGenerator(const ReferenceGenome& reference)
+namespace octopus { namespace core { namespace generators
+{
+    Randomiser::Randomiser(const ReferenceGenome& reference)
     :
     reference_ {reference}
     {}
     
-    void RandomCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first,
+    void Randomiser::add_reads(std::vector<AlignedRead>::const_iterator first,
                                                     std::vector<AlignedRead>::const_iterator last)
     {
         max_read_size_ = region_size(*largest_mappable(first, last));
     }
     
-    void RandomCandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
+    void Randomiser::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
                                                     MappableFlatMultiSet<AlignedRead>::const_iterator last)
     {
         max_read_size_ = region_size(*largest_mappable(first, last));
     }
     
-    std::vector<Variant> RandomCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
+    std::vector<Variant> Randomiser::generate_candidates(const GenomicRegion& region)
     {
         auto num_positions = region_size(region);
         
@@ -60,12 +59,13 @@ namespace octopus {
             
             auto reference_allele = make_reference_allele(position, reference_);
             
-            Allele mutation {position, reverse_complement_copy(reference_allele.sequence())};
+            Allele mutation {position, utils::reverse_complement_copy(reference_allele.sequence())};
             
             result.emplace_back(reference_allele, mutation);
         }
         
         return result;
     }
-    
+} // namespace generators
+} // namespace core
 } // namespace octopus

@@ -1,13 +1,13 @@
 //
-//  alignment_candidate_variant_generator.hpp
+//  cigar_scanner.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 28/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__alignment_candidate_variant_generator__
-#define __Octopus__alignment_candidate_variant_generator__
+#ifndef __Octopus__cigar_scanner__
+#define __Octopus__cigar_scanner__
 
 #include <vector>
 #include <deque>
@@ -15,16 +15,16 @@
 #include <utility>
 #include <functional>
 
-#include "i_candidate_variant_generator.hpp"
+#include "candidate_variant_generator.hpp"
 #include "aligned_read.hpp"
+#include "variant.hpp"
 
 class ReferenceGenome;
 class GenomicRegion;
-class Variant;
 
-namespace octopus {
-    
-class AlignmentCandidateVariantGenerator : public ICandidateVariantGenerator
+namespace octopus { namespace core { namespace generators
+{
+class CigarScanner : public CandidateVariantGenerator
 {
 public:
     struct Options
@@ -36,16 +36,16 @@ public:
         unsigned max_poor_quality_insertion_bases = 1;
     };
     
-    AlignmentCandidateVariantGenerator() = delete;
+    CigarScanner() = delete;
     
-    AlignmentCandidateVariantGenerator(const ReferenceGenome& reference, Options options);
+    CigarScanner(const ReferenceGenome& reference, Options options);
     
-    AlignmentCandidateVariantGenerator(const AlignmentCandidateVariantGenerator&)            = default;
-    AlignmentCandidateVariantGenerator& operator=(const AlignmentCandidateVariantGenerator&) = default;
-    AlignmentCandidateVariantGenerator(AlignmentCandidateVariantGenerator&&)                 = default;
-    AlignmentCandidateVariantGenerator& operator=(AlignmentCandidateVariantGenerator&&)      = default;
+    CigarScanner(const CigarScanner&)            = default;
+    CigarScanner& operator=(const CigarScanner&) = default;
+    CigarScanner(CigarScanner&&)                 = default;
+    CigarScanner& operator=(CigarScanner&&)      = default;
     
-    ~AlignmentCandidateVariantGenerator() override = default;
+    ~CigarScanner() override = default;
     
     bool requires_reads() const noexcept override;
     
@@ -80,7 +80,7 @@ private:
 };
 
 template <typename T1, typename T2, typename T3>
-void AlignmentCandidateVariantGenerator::add_candidate(T1&& region, T2&& sequence_removed,
+void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed,
                                                        T3&& sequence_added)
 {
     const auto candidate_size = region_size(region);
@@ -92,7 +92,8 @@ void AlignmentCandidateVariantGenerator::add_candidate(T1&& region, T2&& sequenc
         max_seen_candidate_size_ = std::max(max_seen_candidate_size_, candidate_size);
     }
 }
-
+} // namespace generators
+} // namespace core
 } // namespace octopus
 
-#endif /* defined(__Octopus__alignment_candidate_variant_generator__) */
+#endif /* defined(__Octopus__cigar_scanner__) */

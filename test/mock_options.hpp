@@ -274,7 +274,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
     
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    return octopus::Options::parse_options(argc, argv);
+    return octopus::options::parse_options(argc, argv);
 }
 
 #endif

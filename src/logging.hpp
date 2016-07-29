@@ -35,9 +35,7 @@
 #include <boost/move/utility.hpp>
 #include <boost/log/sources/logger.hpp>
 
-namespace octopus
-{
-namespace Logging
+namespace octopus { namespace logging
 {
     namespace logging  = boost::log;
     namespace src      = boost::log::sources;
@@ -142,7 +140,7 @@ namespace Logging
         lg.write(msg);
         return lg;
     }
-} // namespace Logging
+} // namespace logging
 } // namespace octopus
 
 #endif /* logging_hpp */

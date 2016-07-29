@@ -6,16 +6,6 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-//#define RUN_UNIT_TESTS
-
-#ifdef RUN_UNIT_TESTS
-
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE Main
-#include <boost/test/unit_test.hpp>
-
-#else
-
 #include <iostream>
 #include <cstdlib>
 #include <stdexcept>
@@ -23,36 +13,31 @@
 #include "option_parser.hpp"
 #include "option_collation.hpp"
 #include "octopus.hpp"
-
 #include "logging.hpp"
-
-#include "mock_options.hpp"
 
 using namespace octopus;
 
-int main(int argc, const char **argv)
-{
-    auto options = get_basic_mock_options();
-    
-    try {
-        if (options) {
-            if (Options::is_run_command(*options)) {
-                Logging::init(Options::get_debug_log_file_name(*options),
-                              Options::get_trace_log_file_name(*options));
-                run_octopus(*options);
-            }
-        } else {
-            std::clog << "Could not parse input options. Did not run Octopus." << std::endl;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Error: '" << e.what() << "'" << std::endl;
-        return EXIT_FAILURE;
-    } catch (...) {
-        std::cerr << "Encountered unknown error. Quiting now" << std::endl;
-        return EXIT_FAILURE;
-    }
-    
-    return EXIT_SUCCESS;
-}
-
-#endif
+//int main(const int argc, const char **argv)
+//{
+//    auto options = options::parse_options(argc, argv);
+//    
+//    try {
+//        if (options) {
+//            if (options::is_run_command(*options)) {
+//                logging::init(options::get_debug_log_file_name(*options),
+//                              options::get_trace_log_file_name(*options));
+//                run_octopus(*options);
+//            }
+//        } else {
+//            std::clog << "Could not parse input options. Did not run Octopus." << std::endl;
+//        }
+//    } catch (const std::exception& e) {
+//        std::cerr << "Error: '" << e.what() << "'" << std::endl;
+//        return EXIT_FAILURE;
+//    } catch (...) {
+//        std::cerr << "Encountered unknown error. Quiting now" << std::endl;
+//        return EXIT_FAILURE;
+//    }
+//    
+//    return EXIT_SUCCESS;
+//}

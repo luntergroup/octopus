@@ -10,9 +10,7 @@
 
 #include <iostream>
 
-namespace octopus
-{
-namespace Logging
+namespace octopus { namespace logging
 {
     namespace sinks    = boost::log::sinks;
     namespace keywords = boost::log::keywords;
@@ -89,5 +87,5 @@ namespace Logging
         logging::add_common_attributes();
     }
 
-} // namespace Logging
+} // namespace logging
 } // namespace octopus

@@ -74,7 +74,7 @@ namespace octopus
         
         mutable std::mutex mutex_;
         
-        Logging::InfoLogger log_;
+        logging::InfoLogger log_;
         
         RegionSizeType merge(const GenomicRegion& region);
         

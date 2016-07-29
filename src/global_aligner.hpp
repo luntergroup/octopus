@@ -12,6 +12,8 @@
 #include <string>
 #include <tuple>
 
+namespace octopus
+{
 struct Model
 {
     short match      =  2;
@@ -20,7 +22,8 @@ struct Model
     short gap_extend = -1;
 };
 
-std::pair<std::string, int>
-align(const std::string& target, const std::string& query, Model model = Model {});
+std::pair<std::string, int> align(const std::string& target, const std::string& query, Model model = Model {});
+} // namespace octopus
+
 
 #endif /* global_aligner_hpp */

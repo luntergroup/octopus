@@ -14,11 +14,11 @@
 
 #include "genomic_region.hpp"
 #include "variant_caller.hpp"
+#include "composer.hpp"
 #include "variant_caller_builder.hpp"
 
 class ReferenceGenome;
 class ReadPipe;
-class CandidateGeneratorBuilder;
 
 namespace octopus
 {
@@ -40,7 +40,7 @@ namespace octopus
         
         VariantCallerFactory& set_reference(const ReferenceGenome& reference) noexcept;
         VariantCallerFactory& set_read_pipe(ReadPipe& read_pipe) noexcept;
-        VariantCallerFactory& set_candidate_generator_builder(const CandidateGeneratorBuilder& generator) noexcept;
+        VariantCallerFactory& set_candidate_variant_generator_builder(const Composer::Builder& generator) noexcept;
         
         VariantCallerFactory& set_contig_ploidy(const ContigName& contig, unsigned ploidy);
         

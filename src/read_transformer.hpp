@@ -17,7 +17,7 @@
 
 #include "aligned_read.hpp"
 
-namespace octopus
+namespace octopus { namespace preprocess { namespace transform
 {
 class ReadTransformer
 {
@@ -78,9 +78,10 @@ namespace detail
 template <typename Container>
 void transform_reads(Container& reads, const ReadTransformer& transformer)
 {
-    using ValueType = typename std::decay_t<typename Container::value_type>;
-    detail::transform_reads(reads, transformer, std::is_same<ValueType, AlignedRead> {});
+    detail::transform_reads(reads, transformer, std::is_same<typename Container::value_type, AlignedRead> {});
 }
+} // namespace transform
+} // namespace preprocess
 } // namespace octopus
 
 #endif

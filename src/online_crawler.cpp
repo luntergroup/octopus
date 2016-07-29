@@ -1,28 +1,26 @@
 //
-//  online_candidate_variant_generator.cpp
+//  online_crawler.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 12/06/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "online_candidate_variant_generator.hpp"
+#include "online_crawler.hpp"
 
 #include <boost/network/protocol/http/client.hpp>
 
 #include "aligned_read.hpp"
-#include "variant.hpp"
 
-namespace octopus
+namespace octopus { namespace core { namespace generators
 {
-OnlineCandidateVariantGenerator::OnlineCandidateVariantGenerator(const ReferenceGenome& reference,
-                                                                 Variant::RegionType::Size max_variant_size)
+OnlineCrawler::OnlineCrawler(const ReferenceGenome& reference, Variant::RegionType::Size max_variant_size)
 :
 reference_ {reference},
 max_variant_size_ {max_variant_size}
 {}
 
-std::vector<Variant> OnlineCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
+std::vector<Variant> OnlineCrawler::generate_candidates(const GenomicRegion& region)
 {
     namespace http = boost::network::http;
     
@@ -56,5 +54,6 @@ std::vector<Variant> OnlineCandidateVariantGenerator::generate_candidates(const 
         throw;
     }
 }
-
+} // namespace generators
+} // namespace core
 } // namespace octopus

@@ -83,7 +83,9 @@ public:
     
     std::size_t num_kmers() const noexcept;
     bool is_empty() const noexcept;
+    
     bool is_acyclic() const;
+    
     bool is_all_reference() const;
     
     bool prune(unsigned min_weight);

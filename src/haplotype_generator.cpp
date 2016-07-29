@@ -548,7 +548,7 @@ void HaplotypeGenerator::extract_holdouts(GenomicRegion region)
              && std::exp2(count_overlapped(active_alleles, region)) > policies_.haplotype_limits.overflow);
     
     if (DEBUG_MODE) {
-        Logging::DebugLogger log {};
+        logging::DebugLogger log {};
         debug::print_new_holdouts(stream(log), new_holdouts);
     }
     
@@ -584,7 +584,7 @@ void HaplotypeGenerator::reintroduce_holdouts()
     assert(!active_holdouts_.empty());
     
     if (DEBUG_MODE) {
-        Logging::DebugLogger log {};
+        logging::DebugLogger log {};
         debug::print_old_holdouts(stream(log), active_holdouts_.top().alleles);
     }
     

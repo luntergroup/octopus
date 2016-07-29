@@ -107,7 +107,7 @@ namespace octopus
         
         inline auto log_binom(const unsigned n, const unsigned k)
         {
-            using Maths::log_factorial;
+            using maths::log_factorial;
             return log_factorial<double>(n) - (log_factorial<double>(k) + log_factorial<double>(n - k));
         }
         
@@ -275,7 +275,7 @@ namespace octopus
                            return model.evaluate(genotype);
                        });
         
-        Maths::normalise_logs(result);
+        maths::normalise_logs(result);
         
         return result;
     }

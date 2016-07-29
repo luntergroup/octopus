@@ -40,7 +40,11 @@ namespace octopus
 class ReadPipe
 {
 public:
-    using ReadFilterer = ReadFiltererTp<ReadManager::ReadContainer>;
+    using ReadTransformer = preprocess::transform::ReadTransformer;
+    using ReadFilterer    = preprocess::filter::ReadFiltererTp<ReadManager::ReadContainer>;
+    using Downsampler     = preprocess::Downsampler;
+    
+    //struct Report;
     
     ReadPipe() = delete;
     
@@ -63,8 +67,9 @@ public:
     const std::vector<SampleName>& samples() const noexcept;
     
     ReadMap fetch_reads(const GenomicRegion& region) const;
-    
     ReadMap fetch_reads(const std::vector<GenomicRegion>& regions) const;
+    
+    //Report get_report() const;
     
 private:
     std::reference_wrapper<const ReadManager> manager_;
@@ -74,7 +79,7 @@ private:
     
     std::vector<SampleName> samples_;
     
-    mutable boost::optional<Logging::DebugLogger> debug_log_;
+    mutable boost::optional<logging::DebugLogger> debug_log_;
 };
 } // namespace octopus
 

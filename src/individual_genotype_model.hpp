@@ -50,7 +50,7 @@ namespace octopus { namespace model
         Individual() = delete;
         
         Individual(const CoalescentModel& genotype_prior_model,
-                   boost::optional<Logging::DebugLogger> debug_log = boost::none);
+                   boost::optional<logging::DebugLogger> debug_log = boost::none);
         
         Individual(const Individual&)            = delete;
         Individual& operator=(const Individual&) = delete;
@@ -65,7 +65,7 @@ namespace octopus { namespace model
     private:
         const CoalescentModel& genotype_prior_model_;
         
-        mutable boost::optional<Logging::DebugLogger> debug_log_;
+        mutable boost::optional<logging::DebugLogger> debug_log_;
     };
 } // namesapce GenotypeModel
 } // namespace octopus

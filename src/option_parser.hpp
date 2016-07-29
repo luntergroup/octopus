@@ -15,7 +15,7 @@
 #include <boost/program_options.hpp>
 #include <boost/optional.hpp>
 
-namespace octopus { namespace Options
+namespace octopus { namespace options
 {
     using OptionMap = boost::program_options::variables_map;
     

@@ -10,6 +10,7 @@
 #define Octopus_common_hpp
 
 #include <string>
+#include <vector>
 #include <cstdint>
 
 #include <boost/optional.hpp>
@@ -27,9 +28,13 @@ namespace octopus
     extern bool DEBUG_MODE;
     extern bool TRACE_MODE;
     
-    const static std::string Octopus_version {"1.0"};
-    
-    const static std::string Octopus_bug_email {"dcooke@well.ox.ac.uk"};
+    namespace info
+    {
+        const static std::string VERSION {"1.0"};
+        const static std::string BUG_EMAIL {"dcooke@well.ox.ac.uk"};
+        const static std::vector<std::string> AUTHORS {"Daniel Cooke"};
+        const static std::string COPYRIGHT_NOTICE {"Copyright (c) 2016 University of Oxford"};
+    }
     
     using SampleName = std::string;
     
@@ -40,8 +45,11 @@ namespace octopus
     using ReadContainer = MappableFlatMultiSet<AlignedRead>;
     using ReadMap       = MappableMap<SampleName, AlignedRead>;
     
-    boost::optional<Logging::DebugLogger> get_debug_log();
-    boost::optional<Logging::TraceLogger> get_trace_log();
+    namespace logging
+    {
+        boost::optional<DebugLogger> get_debug_log();
+        boost::optional<TraceLogger> get_trace_log();
+    }
 }
 
 #endif

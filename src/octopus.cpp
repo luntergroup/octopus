@@ -45,7 +45,6 @@
 #include "downsampler.hpp"
 #include "read_pipe.hpp"
 #include "read_utils.hpp"
-#include "candidate_generator_builder.hpp"
 #include "vcf_header_factory.hpp"
 #include "octopus_vcf.hpp"
 #include "variant_caller_factory.hpp"
@@ -68,20 +67,21 @@
 
 namespace octopus
 {
-using Options::OptionMap;
+using options::OptionMap;
+using logging::get_debug_log;
 
 void log_startup()
 {
-    Logging::InfoLogger log {};
+    logging::InfoLogger log {};
     log << "------------------------------------------------------------------------";
     if (TRACE_MODE) {
-        stream(log) << "Octopus v" << Octopus_version << " (trace mode)";
+        stream(log) << "Octopus v" << info::VERSION << " (trace mode)";
     } else if (DEBUG_MODE) {
-        stream(log) << "Octopus v" << Octopus_version << " (debug mode)";
+        stream(log) << "Octopus v" << info::VERSION << " (debug mode)";
     } else {
-        stream(log) << "Octopus v" << Octopus_version;
+        stream(log) << "Octopus v" << info::VERSION;
     }
-    log << "Copyright (c) 2016 University of Oxford";
+    log << info::COPYRIGHT_NOTICE;
     log << "------------------------------------------------------------------------";
 }
 
@@ -94,9 +94,9 @@ std::size_t index_of(const std::vector<T>& elements, const T& value)
 }
 
 auto get_contigs(const InputRegionMap& regions, const ReferenceGenome& reference,
-                 const Options::ContigOutputOrder order)
+                 const options::ContigOutputOrder order)
 {
-    using Options::ContigOutputOrder;
+    using options::ContigOutputOrder;
     
     using ContigName = GenomicRegion::ContigName;
     
@@ -178,7 +178,7 @@ bool is_in_file_samples(const SampleName& sample, const Container& file_samples)
 std::vector<SampleName> extract_samples(const OptionMap& options,
                                           const ReadManager& read_manager)
 {
-    auto user_samples = Options::get_user_samples(options);
+    auto user_samples = options::get_user_samples(options);
     auto file_samples = read_manager.samples();
     
     if (user_samples) {
@@ -202,7 +202,7 @@ std::vector<SampleName> extract_samples(const OptionMap& options,
                 ss << "are";
             }
             ss << " not present in any of the read files";
-            Logging::WarningLogger log {};
+            logging::WarningLogger log {};
             log << ss.str();
             user_samples->erase(it, std::end(*user_samples));
         }
@@ -254,9 +254,9 @@ ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> sampl
 {
     return ReadPipe {
         read_manager,
-        Options::make_read_transformer(options),
-        Options::make_read_filterer(options),
-        Options::make_downsampler(options),
+        options::make_read_transformer(options),
+        options::make_read_filterer(options),
+        options::make_downsampler(options),
         std::move(samples)
     };
 }
@@ -316,13 +316,13 @@ auto estimate_mean_read_size(const std::vector<SampleName>& samples,
     }
     
     if (read_sizes.empty()) {
-        Logging::WarningLogger log {};
+        logging::WarningLogger log {};
         log << "Could not estimate read size from data, resorting to default";
         
         return sizeof(AlignedRead) + 300;
     }
     
-    return static_cast<std::size_t>(Maths::mean(read_sizes) + Maths::stdev(read_sizes));
+    return static_cast<std::size_t>(maths::mean(read_sizes) + maths::stdev(read_sizes));
 }
 
 std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes,
@@ -429,9 +429,9 @@ public:
         return components_.num_threads;
     }
     
-    const CandidateGeneratorBuilder& candidate_generator_builder() const noexcept
+    const Composer::Builder& candidate_variant_generator_builder() const noexcept
     {
-        return components_.candidate_generator_builder;
+        return components_.candidate_variant_generator_builder;
     }
     
     const VariantCallerFactory& caller_factory() const noexcept
@@ -455,20 +455,20 @@ private:
         reference {std::move(reference)},
         read_manager {std::move(read_manager)},
         samples {extract_samples(options, this->read_manager)},
-        regions {Options::get_search_regions(options, this->reference)},
+        regions {options::get_search_regions(options, this->reference)},
         contigs_in_output_order {get_contigs(this->regions, this->reference,
-                                             Options::get_contig_output_order(options))},
+                                             options::get_contig_output_order(options))},
         read_pipe {make_read_pipe(this->read_manager, this->samples, options)},
-        candidate_generator_builder {Options::make_candidate_generator_builder(options, this->reference)},
-        variant_caller_factory {Options::make_variant_caller_factory(this->reference,
+        candidate_variant_generator_builder {options::make_candidate_variant_generator_builder(options, this->reference)},
+        variant_caller_factory {options::make_variant_caller_factory(this->reference,
                                                                      this->read_pipe,
-                                                                     this->candidate_generator_builder,
+                                                                     this->candidate_variant_generator_builder,
                                                                      this->regions,
                                                                      options)},
         output {std::move(output)},
-        num_threads {Options::get_num_threads(options)},
+        num_threads {options::get_num_threads(options)},
         read_buffer_size {},
-        temp_directory {((!num_threads || *num_threads > 1) ? Options::create_temp_file_directory(options) : boost::none)},
+        temp_directory {((!num_threads || *num_threads > 1) ? options::create_temp_file_directory(options) : boost::none)},
         progress_meter {regions}
         {
             const auto num_bp_to_process = sum_region_sizes(regions);
@@ -482,7 +482,7 @@ private:
             }
             
             if (!samples.empty() && !regions.empty() && read_manager.good()) {
-                read_buffer_size = calculate_max_num_reads(Options::get_target_read_buffer_size(options),
+                read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options),
                                                            this->samples, this->regions,
                                                            this->read_manager);
             }
@@ -501,7 +501,7 @@ private:
         InputRegionMap regions;
         Contigs contigs_in_output_order;
         ReadPipe read_pipe;
-        CandidateGeneratorBuilder candidate_generator_builder;
+        Composer::Builder candidate_variant_generator_builder;
         VariantCallerFactory variant_caller_factory;
         VcfWriter output;
         boost::optional<unsigned> num_threads;
@@ -515,16 +515,16 @@ private:
     void update_dependents() noexcept
     {
         components_.read_pipe.set_read_manager(components_.read_manager);
-        components_.candidate_generator_builder.set_reference(components_.reference);
+        components_.candidate_variant_generator_builder.set_reference(components_.reference);
         components_.variant_caller_factory.set_reference(components_.reference);
         components_.variant_caller_factory.set_read_pipe(components_.read_pipe);
-        components_.variant_caller_factory.set_candidate_generator_builder(components_.candidate_generator_builder);
+        components_.variant_caller_factory.set_candidate_variant_generator_builder(components_.candidate_variant_generator_builder);
     }
 };
 
 bool are_components_valid(const GenomeCallingComponents& components)
 {
-    Logging::FatalLogger log {};
+    logging::FatalLogger log {};
     
     if (components.samples().empty()) {
         log << "No samples detected - at least one is required for calling";
@@ -536,7 +536,7 @@ bool are_components_valid(const GenomeCallingComponents& components)
         return false;
     }
     
-    if (components.candidate_generator_builder().num_generators() == 0) {
+    if (components.candidate_variant_generator_builder().num_generators() == 0) {
         log << "There are no candidate generators - at least one is required for calling";
         return false;
     }
@@ -546,7 +546,7 @@ bool are_components_valid(const GenomeCallingComponents& components)
 
 void cleanup(GenomeCallingComponents& components) noexcept
 {
-    Logging::InfoLogger log {};
+    logging::InfoLogger log {};
     if (components.temp_directory()) {
         try {
             const auto num_files_removed = fs::remove_all(*components.temp_directory());
@@ -561,11 +561,11 @@ boost::optional<GenomeCallingComponents>
 collate_genome_calling_components(const OptionMap& options)
 {
     try {
-        auto reference = Options::make_reference(options);
+        auto reference = options::make_reference(options);
         
-        auto read_manager = Options::make_read_manager(options);
+        auto read_manager = options::make_read_manager(options);
         
-        auto output = Options::make_output_vcf_writer(options);
+        auto output = options::make_output_vcf_writer(options);
         
         if (!output.is_open()) {
             return boost::none;
@@ -587,7 +587,7 @@ collate_genome_calling_components(const OptionMap& options)
     } catch (const fs::filesystem_error& e) {
         return boost::none; // should already have logged this
     } catch (const std::exception& e) {
-        Logging::FatalLogger log {};
+        logging::FatalLogger log {};
         stream(log) << "Error in user input: '" << e.what() << "'";
         return boost::none;
     }
@@ -694,7 +694,7 @@ void log_startup_info(const GenomeCallingComponents& components)
     auto str = ss.str();
     str.pop_back(); // the extra whitespace
     
-    Logging::InfoLogger log {};
+    logging::InfoLogger log {};
     
     log << str;
     
@@ -1098,7 +1098,7 @@ unsigned calculate_num_task_threads(const GenomeCallingComponents& components)
     
     if (num_hardware_threads > 0) return num_hardware_threads;
     
-    Logging::WarningLogger log {};
+    logging::WarningLogger log {};
     log << "Unable to detect the number of system threads,"
         " it may be better to run with a user number if the number of cores is known";
     
@@ -1312,7 +1312,7 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
             }
         } else {
             // TODO: we could try to manually resolve the calls. Very difficult.
-            Logging::WarningLogger log {};
+            logging::WarningLogger log {};
             stream(log) << "Skipping region " << unresolved_region << " as there are too many reads"
                         " to analyse the whole region, and partitions give inconsistent calls";
         }
@@ -1559,8 +1559,8 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
 {
     using std::make_unique;
     
-    using namespace read_transform;
-    using namespace read_filter;
+    using namespace preprocess::transform;
+    using namespace preprocess::filter;
     
     ReadTransformer transformer {};
     transformer.register_transform(MaskSoftClipped {});
@@ -1644,20 +1644,22 @@ auto get_legacy_path(const fs::path& native)
 
 void run_octopus(OptionMap& options)
 {
-    DEBUG_MODE = Options::is_debug_mode(options);
-    TRACE_MODE = Options::is_trace_mode(options);
+    DEBUG_MODE = options::is_debug_mode(options);
+    TRACE_MODE = options::is_trace_mode(options);
     
     static auto debug_log = get_debug_log();
     
     log_startup();
     
-    Logging::InfoLogger info_log {};
+    logging::InfoLogger info_log {};
     
     const auto start = std::chrono::system_clock::now();
     
     auto end = start;
     
     std::size_t search_size {0};
+    
+    using utils::TimeInterval;
     
     // open scope to ensure calling components are destroyed before end message
     {
@@ -1675,14 +1677,14 @@ void run_octopus(OptionMap& options)
             print_input_regions(stream(*debug_log), components->search_regions());
         }
         
-        write_caller_output_header(*components, Options::call_sites_only(options));
+        write_caller_output_header(*components, options::call_sites_only(options));
         
         //options.clear();
         
         try {
             if (is_multithreaded(*components)) {
                 if (DEBUG_MODE) {
-                    Logging::WarningLogger warn_log {};
+                    logging::WarningLogger warn_log {};
                     warn_log << "Running in parallel mode can make debug log difficult to interpret";
                 }
                 
@@ -1693,7 +1695,7 @@ void run_octopus(OptionMap& options)
             
             components->output().close();
         } catch (const std::exception& e) {
-            Logging::FatalLogger fatal_log {};
+            logging::FatalLogger fatal_log {};
             stream(fatal_log) << "Encountered error '" << e.what() << "'. Attempting to cleanup...";
             
             cleanup(*components);
@@ -1702,7 +1704,7 @@ void run_octopus(OptionMap& options)
                 stream(info_log) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
             } else {
                 stream(info_log) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
-                                    " log file to " << Octopus_bug_email;
+                                    " log file to " << info::BUG_EMAIL;
             }
             
             return;

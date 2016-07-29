@@ -1,12 +1,12 @@
 //
-//  assembler_candidate_variant_generator.cpp
+//  local_reassembler.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 01/03/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "assembler_candidate_variant_generator.hpp"
+#include "local_reassembler.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -17,7 +17,6 @@
 #include "common.hpp"
 #include "reference_genome.hpp"
 #include "aligned_read.hpp"
-#include "variant.hpp"
 #include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
 #include "sequence_utils.hpp"
@@ -25,12 +24,11 @@
 #include "cigar_string.hpp"
 #include "logging.hpp"
 
-#include "timers.hpp"
+#include "timers.hpp" // BENCHMARK
 
-namespace octopus
+namespace octopus { namespace core { namespace generators
 {
-AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
-                                                                       Options options)
+LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options options)
 :
 reference_ {reference},
 default_kmer_sizes_ {std::move(options.kmer_sizes)},
@@ -65,38 +63,38 @@ max_variant_size_ {options.max_variant_size}
                     });
 }
 
-AssemblerCandidateVariantGenerator::Bin::Bin(GenomicRegion region)
+LocalReassembler::Bin::Bin(GenomicRegion region)
 :
 region {std::move(region)}
 {}
 
-const GenomicRegion& AssemblerCandidateVariantGenerator::Bin::mapped_region() const noexcept
+const GenomicRegion& LocalReassembler::Bin::mapped_region() const noexcept
 {
     return region;
 }
 
-void AssemblerCandidateVariantGenerator::Bin::insert(const AlignedRead& read)
+void LocalReassembler::Bin::insert(const AlignedRead& read)
 {
     read_sequences.emplace_back(read.sequence());
 }
 
-void AssemblerCandidateVariantGenerator::Bin::insert(const NucleotideSequence& sequence)
+void LocalReassembler::Bin::insert(const NucleotideSequence& sequence)
 {
     read_sequences.emplace_back(sequence);
 }
 
-void AssemblerCandidateVariantGenerator::Bin::clear() noexcept
+void LocalReassembler::Bin::clear() noexcept
 {
     read_sequences.clear();
     read_sequences.shrink_to_fit();
 }
 
-bool AssemblerCandidateVariantGenerator::Bin::empty() const noexcept
+bool LocalReassembler::Bin::empty() const noexcept
 {
     return read_sequences.empty();
 }
 
-bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
+bool LocalReassembler::requires_reads() const noexcept
 {
     return true;
 }
@@ -187,7 +185,7 @@ auto overlapped_bins(C& bins, const R& read)
     return bases(overlap_range(std::begin(bins), std::end(bins), read, BidirectionallySortedTag {}));
 }
 
-void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
+void LocalReassembler::add_read(const AlignedRead& read)
 {
     prepare_bins_to_insert(read);
     
@@ -211,13 +209,13 @@ void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
     }
 }
 
-void AssemblerCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first,
-                                                   std::vector<AlignedRead>::const_iterator last)
+void LocalReassembler::add_reads(std::vector<AlignedRead>::const_iterator first,
+                                 std::vector<AlignedRead>::const_iterator last)
 {
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }
 
-void AssemblerCandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
+void LocalReassembler::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
                                                    MappableFlatMultiSet<AlignedRead>::const_iterator last)
 {
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
@@ -246,9 +244,9 @@ void log_failure(L& log, const char* type, const unsigned k)
 }
 
 std::vector<Variant>
-AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
+LocalReassembler::generate_candidates(const GenomicRegion& region)
 {
-    static auto debug_log = get_debug_log();
+    static auto debug_log = logging::get_debug_log();
     
     if (bins_.empty()) return {};
     
@@ -319,7 +317,7 @@ AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& reg
     return result;
 }
 
-void AssemblerCandidateVariantGenerator::clear()
+void LocalReassembler::clear()
 {
     bins_.clear();
     bins_.shrink_to_fit();
@@ -329,7 +327,7 @@ void AssemblerCandidateVariantGenerator::clear()
 
 // private methods
 
-void AssemblerCandidateVariantGenerator::prepare_bins_to_insert(const AlignedRead& read)
+void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
 {
     const auto& read_region = mapped_region(read);
     
@@ -357,7 +355,7 @@ void AssemblerCandidateVariantGenerator::prepare_bins_to_insert(const AlignedRea
 }
 
 GenomicRegion
-AssemblerCandidateVariantGenerator::propose_assembler_region(const GenomicRegion& input_region,
+LocalReassembler::propose_assembler_region(const GenomicRegion& input_region,
                                                              unsigned kmer_size) const
 {
     return expand(input_region, kmer_size);
@@ -529,7 +527,7 @@ void add_to_mapped_variants(C1& result, C2&& variants, const GenomicRegion& regi
     }
 }
 
-bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size, const Bin& bin,
+bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin,
                                                       std::deque<Variant>& result) const
 {
     if (bin.empty()) return true;
@@ -538,7 +536,7 @@ bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size, 
     
     const auto reference_sequence = reference_.get().fetch_sequence(assembler_region);
     
-    if (has_ns(reference_sequence)) {
+    if (utils::has_ns(reference_sequence)) {
         throw std::runtime_error {"Bad reference"};
     }
     
@@ -551,10 +549,10 @@ bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size, 
     return try_assemble_region(assembler, reference_sequence, assembler_region, result);
 }
 
-bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assembler,
-                                                             const NucleotideSequence& reference_sequence,
-                                                             const GenomicRegion& reference_region,
-                                                             std::deque<Variant>& result) const
+bool LocalReassembler::try_assemble_region(Assembler& assembler,
+                                           const NucleotideSequence& reference_sequence,
+                                           const GenomicRegion& reference_region,
+                                           std::deque<Variant>& result) const
 {
     if (!assembler.prune(min_supporting_reads_)) {
         return false;
@@ -574,5 +572,6 @@ bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assemble
     
     return true;
 }
-
+} // namespace generators
+} // namespace core
 } // namespace octopus

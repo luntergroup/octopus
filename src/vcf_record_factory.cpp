@@ -628,7 +628,7 @@ namespace octopus
         result.set_ref(call->reference().sequence());
         set_alt_alleles(call.get(), result, samples_);
         
-        result.set_qual(std::min(5000.0, Maths::round(call->quality().score(), 2)));
+        result.set_qual(std::min(5000.0, maths::round(call->quality().score(), 2)));
         
         //result.add_info("AC",  to_strings(count_alt_alleles(*call)));
         //result.add_info("AN",  to_string(count_alleles(*call)));
@@ -637,7 +637,7 @@ namespace octopus
         
         result.set_info("NS",  count_samples_with_coverage(call_reads));
         result.set_info("DP",  sum_max_coverages(call_reads));
-        result.set_info("SB",  octopus::to_string(strand_bias(call_reads), 2));
+        result.set_info("SB",  utils::to_string(strand_bias(call_reads), 2));
         result.set_info("BQ",  static_cast<unsigned>(rmq_base_quality(call_reads)));
         result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
         result.set_info("MQ0", count_mapq_zero(call_reads));
@@ -764,14 +764,14 @@ namespace octopus
                                       return lhs->quality() < rhs->quality();
                                   });
         
-        result.set_qual(std::min(5000.0, Maths::round(q->get()->quality().score(), 2)));
+        result.set_qual(std::min(5000.0, maths::round(q->get()->quality().score(), 2)));
         
         //result.add_info("AC",  to_strings(count_alt_alleles(*call)));
         //result.add_info("AN",  to_string(count_alleles(*call)));
         
         result.set_info("NS",  count_samples_with_coverage(reads_, region));
         result.set_info("DP",  sum_max_coverages(reads_, region));
-        result.set_info("SB",  octopus::to_string(strand_bias(reads_, region), 2));
+        result.set_info("SB",  utils::to_string(strand_bias(reads_, region), 2));
         result.set_info("BQ",  static_cast<unsigned>(rmq_base_quality(reads_, region)));
         result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
         result.set_info("MQ0", count_mapq_zero(reads_, region));

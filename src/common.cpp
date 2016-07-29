@@ -12,19 +12,22 @@ namespace octopus
 {
     bool DEBUG_MODE {false}, TRACE_MODE {false};
     
-    boost::optional<Logging::DebugLogger> get_debug_log()
+    namespace logging
     {
-        if (DEBUG_MODE) {
-            return Logging::DebugLogger {};
+        boost::optional<DebugLogger> get_debug_log()
+        {
+            if (DEBUG_MODE) {
+                return DebugLogger {};
+            }
+            return boost::none;
         }
-        return boost::none;
-    }
-    
-    boost::optional<Logging::TraceLogger> get_trace_log()
-    {
-        if (TRACE_MODE) {
-            return Logging::TraceLogger {};
+        
+        boost::optional<TraceLogger> get_trace_log()
+        {
+            if (TRACE_MODE) {
+                return TraceLogger {};
+            }
+            return boost::none;
         }
-        return boost::none;
     }
 }

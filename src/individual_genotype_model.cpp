@@ -24,7 +24,7 @@ namespace octopus
 namespace model
 {
 Individual::Individual(const CoalescentModel& genotype_prior_model,
-                       boost::optional<Logging::DebugLogger> debug_log)
+                       boost::optional<logging::DebugLogger> debug_log)
 :
 genotype_prior_model_ {genotype_prior_model},
 debug_log_ {debug_log}
@@ -82,7 +82,7 @@ Individual::infer_latents(const std::vector<Genotype<Haplotype>>& genotypes,
                        return genotype_prior_model_.evaluate(genotype) + likelihood;
                    });
     
-    auto log_evidence = Maths::normalise_exp(result);
+    auto log_evidence = maths::normalise_exp(result);
     
     return InferredLatents {Latents {std::move(result)}, log_evidence};
 }

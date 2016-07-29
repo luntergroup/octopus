@@ -315,7 +315,7 @@ namespace octopus
                     ln_rho[k] = al[k] + expectation(genotype_pobabilities, read_likelihoods[s], k, n);
                 }
                 
-                const auto ln_rho_norm = Maths::log_sum_exp(ln_rho);
+                const auto ln_rho_norm = maths::log_sum_exp(ln_rho);
                 
                 for (unsigned k {0}; k < K; ++k) {
                     read_responsabilities[n][k] = std::exp(ln_rho[k] - ln_rho_norm);
@@ -355,7 +355,7 @@ namespace octopus
                     ln_rho[k] = al[k] + expectation(genotype_pobabilities, read_likelihoods[s], k, n);
                 }
                 
-                const auto ln_rho_norm = Maths::log_sum_exp(ln_rho);
+                const auto ln_rho_norm = maths::log_sum_exp(ln_rho);
                 
                 for (unsigned k {0}; k < K; ++k) {
                     result[s][n][k] = std::exp(ln_rho[k] - ln_rho_norm);
@@ -432,7 +432,7 @@ namespace octopus
             result[g] = genotype_log_priors[g] + marginalise(responsabilities, read_likelihoods, g);
         }
         
-        Maths::normalise_logs(result);
+        maths::normalise_logs(result);
     }
     
     auto max_change(const CompressedAlpha<2>& lhs, const CompressedAlpha<2>& rhs)
@@ -504,7 +504,7 @@ namespace octopus
                                   0.0, std::plus<void> {},
                                   [da0] (const auto& prior, const auto& post) {
                                       return (prior - 1) * (digamma(post) - da0);
-                                  }) - Maths::log_beta(priors);
+                                  }) - maths::log_beta(priors);
     }
     
     template <std::size_t K>
@@ -586,7 +586,7 @@ namespace octopus
         return std::accumulate(std::cbegin(posterior), std::cend(posterior), 0.0,
                                [da0] (const auto curr, const auto a) {
                                    return curr + ((a - 1) * (digamma(a) - da0));
-                               }) - Maths::log_beta(posterior);
+                               }) - maths::log_beta(posterior);
     }
     
     template <std::size_t K>
@@ -819,7 +819,7 @@ namespace octopus
                            return likelihood_model.ln_likelihood(genotype.germline_genotype());
                        });
         
-        Maths::normalise_logs(result);
+        maths::normalise_logs(result);
         
         return result;
     }
@@ -845,7 +845,7 @@ namespace octopus
                                 + likelihood_model.ln_likelihood(genotype.germline_genotype());
                        });
         
-        Maths::normalise_logs(result);
+        maths::normalise_logs(result);
         
         return result;
     }

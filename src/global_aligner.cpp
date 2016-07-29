@@ -16,6 +16,8 @@
 #include <functional>
 #include <cassert>
 
+namespace octopus
+{
 namespace detail
 {
 struct Cell
@@ -202,3 +204,4 @@ std::pair<std::string, int> align(const std::string& target, const std::string& 
     
     return make_pair(detail::extract_alignment(matrix), matrix.back().back().score);
 }
+} // namespace octopus

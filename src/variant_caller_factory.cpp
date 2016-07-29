@@ -12,7 +12,6 @@
 
 #include "reference_genome.hpp"
 #include "read_pipe.hpp"
-#include "candidate_generator_builder.hpp"
 
 namespace octopus
 {
@@ -37,9 +36,9 @@ namespace octopus
     }
     
     VariantCallerFactory&
-    VariantCallerFactory::set_candidate_generator_builder(const CandidateGeneratorBuilder& generator) noexcept
+    VariantCallerFactory::set_candidate_variant_generator_builder(const Composer::Builder& generator) noexcept
     {
-        template_builder_.set_candidate_generator_builder(generator);
+        template_builder_.set_candidate_variant_generator_builder(generator);
         return *this;
     }
     

@@ -65,7 +65,7 @@ parameters_ {std::move(specific_parameters)}
     }
     
     if (parameters_.min_variant_posterior == Phred<double> {0}) {
-        Logging::WarningLogger wlog {};
+        logging::WarningLogger wlog {};
         wlog << "Having no germline variant posterior threshold means no somatic variants will be called";
     }
     
@@ -314,7 +314,7 @@ static double calculate_dummy_model_posterior(const double normal_germline_model
     const auto normal_model_ljp = std::log(normal_model_prior) + normal_germline_model_log_evidence;
     const auto dummy_model_ljp  = std::log(dummy_model_prior) + normal_dummy_model_log_evidence;
     
-    const auto norm = Maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
+    const auto norm = maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
     
     return std::exp(dummy_model_ljp - norm);
 }
@@ -597,7 +597,7 @@ auto compute_marginal_credible_interval(const T& alphas, const double mass)
     result.reserve(alphas.size());
     
     for (const auto& alpha : alphas) {
-        result.push_back(Maths::beta_hdi(alpha, a0 - alpha, mass));
+        result.push_back(maths::beta_hdi(alpha, a0 - alpha, mass));
     }
     
     return result;
@@ -866,7 +866,7 @@ CancerVariantCaller::calculate_model_posteriors(const Latents& inferences) const
     const auto cnv_model_jlp      = std::log(model_priors.cnv) + cnv_inferences.approx_log_evidence;
     const auto somatic_model_jlp  = std::log(model_priors.somatic) + somatic_inferences.approx_log_evidence;
     
-    const auto norm = Maths::log_sum_exp(germline_model_jlp, cnv_model_jlp, somatic_model_jlp);
+    const auto norm = maths::log_sum_exp(germline_model_jlp, cnv_model_jlp, somatic_model_jlp);
     
     auto germline_model_posterior = std::exp(germline_model_jlp - norm);
     auto cnv_model_posterior      = std::exp(cnv_model_jlp - norm);
@@ -913,7 +913,7 @@ CancerVariantCaller::calculate_probability_samples_not_somatic(const Latents& in
                        const auto a0 = std::accumulate(std::cbegin(p.second),
                                                        std::prev(std::cend(p.second)),
                                                        0.0);
-                       return Maths::beta_cdf(p.second.back(), a0, parameters_.min_somatic_frequency);
+                       return maths::beta_cdf(p.second.back(), a0, parameters_.min_somatic_frequency);
                    });
     
     return result;
