@@ -10,7 +10,7 @@
 
 #include "vcf_record.hpp"
 
-namespace octopus { namespace CallFiltering
+namespace octopus { namespace csr
 {
     double QualityByDepth::operator()(const VcfRecord& call) const
     {
@@ -25,5 +25,5 @@ namespace octopus { namespace CallFiltering
     {
         return "QD";
     }
-} // namespace CallFiltering
+} // namespace csr
 } // namespace octopus

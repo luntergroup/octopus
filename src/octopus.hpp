@@ -9,8 +9,6 @@
 #ifndef __Octopus__octopus__
 #define __Octopus__octopus__
 
-#include <boost/program_options.hpp>
-
 #include "option_parser.hpp"
 
 namespace octopus {

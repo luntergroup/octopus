@@ -94,15 +94,15 @@ namespace octopus {
         
         virtual void decorate(VcfRecord::Builder& record) const = 0;
         
-        void set_dummy_model_posterior(double p) noexcept;
-        boost::optional<double> dummy_model_posterior() const noexcept;
+        void set_model_posterior(double p) noexcept;
+        boost::optional<double> model_posterior() const noexcept;
         
     protected:
         std::unordered_map<SampleName, GenotypeCall> genotype_calls_;
         
         Phred<double> quality_;
         
-        boost::optional<double> dummy_model_posterior_;
+        boost::optional<double> model_posterior_;
         
     private:
         virtual void replace_called_alleles(const char old_base, const char replacement_base) = 0;
@@ -114,7 +114,7 @@ namespace octopus {
     genotype_calls_ {std::begin(genotype_calls),
     std::end(genotype_calls)},
     quality_ {quality},
-    dummy_model_posterior_ {}
+    model_posterior_ {}
     {}
     
     template <typename R>

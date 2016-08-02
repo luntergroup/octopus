@@ -22,6 +22,8 @@
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
 
+namespace octopus {
+
 namespace fs = boost::filesystem;
 
 class GenomicRegion;
@@ -111,5 +113,7 @@ private:
 };
 
 bool operator!=(const VcfParser::RecordIterator& lhs, const VcfParser::RecordIterator& rhs);
+
+} // namespace octopus
 
 #endif /* defined(__Octopus__vcf_parser__) */

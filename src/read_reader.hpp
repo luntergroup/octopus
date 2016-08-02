@@ -14,14 +14,19 @@
 #include <memory>
 #include <mutex>
 #include <utility>
+#include <functional>
 
 #include <boost/filesystem/path.hpp>
 
 #include "read_reader_impl.hpp"
 #include "equitable.hpp"
 
+namespace octopus {
+
 class GenomicRegion;
 class AlignedRead;
+
+namespace io {
 
 /*
  ReadReader is a simple RAII threadsafe wrapper around a IReadReaderImpl
@@ -99,20 +104,23 @@ private:
 
 bool operator==(const ReadReader& lhs, const ReadReader& rhs);
 
+} // namespace io
+} // namespace octopus
+
 namespace std {
-    template <> struct hash<ReadReader>
+    template <> struct hash<octopus::io::ReadReader>
     {
-        size_t operator()(const ReadReader& reader) const
+        size_t operator()(const octopus::io::ReadReader& reader) const
         {
             return hash<string>()(reader.path().string());
         }
     };
     
-    template <> struct hash<reference_wrapper<const ReadReader>>
+    template <> struct hash<reference_wrapper<const octopus::io::ReadReader>>
     {
-        size_t operator()(reference_wrapper<const ReadReader> reader) const
+        size_t operator()(reference_wrapper<const octopus::io::ReadReader> reader) const
         {
-            return hash<ReadReader>()(reader);
+            return hash<octopus::io::ReadReader>()(reader);
         }
     };
 } // namespace std

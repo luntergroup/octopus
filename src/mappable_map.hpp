@@ -21,6 +21,8 @@
 #include "mappable_flat_set.hpp"
 #include "mappable_flat_multi_set.hpp"
 
+namespace octopus {
+
 template <typename KeyType,
           typename MappableType,
           typename Container = MappableFlatMultiSet<MappableType>>
@@ -367,5 +369,7 @@ std::size_t count_spanning(const MappableMap<KeyType, typename Container::value_
                                return curr + count_spanning(p.second, mappable);
                            });
 }
+
+} // namespace octopus
 
 #endif

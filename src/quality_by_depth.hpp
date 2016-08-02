@@ -15,16 +15,18 @@
 
 #include "measure.hpp"
 
+namespace octopus {
+
 class VcfRecord;
 
-namespace octopus { namespace CallFiltering
+namespace csr
 {
     class QualityByDepth : public Measure
     {
         virtual double operator()(const VcfRecord& call) const override;
         virtual std::string name() const override;
     };
-} // namespace CallFiltering
+} // namespace csr
 } // namespace octopus
 
 #endif /* quality_by_depth_hpp */

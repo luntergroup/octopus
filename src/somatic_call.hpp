@@ -21,6 +21,7 @@
 #include "cancer_genotype.hpp"
 
 namespace octopus {
+
 class SomaticCall : public VariantCall
 {
 public:
@@ -63,8 +64,9 @@ credible_regions_ {std::forward<C>(credible_regions)}
 {
     if (variant_.ref_allele() == variant_.alt_allele()) {
         Allele::NucleotideSequence missing_sequence(ref_sequence_size(variant_), 'N');
+        using octopus::mapped_region;
         variant_ = Variant {
-            Allele {::mapped_region(variant_), std::move(missing_sequence)},
+            Allele {mapped_region(variant_), std::move(missing_sequence)},
             variant_.alt_allele()
         };
     }
@@ -79,6 +81,7 @@ credible_regions_ {std::forward<C>(credible_regions)}
         }
     }
 }
+
 } // namespace octopus
 
 #endif /* somatic_call_hpp */

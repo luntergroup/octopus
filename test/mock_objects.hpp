@@ -20,6 +20,8 @@
 #include "aligned_read.hpp"
 #include "cigar_string.hpp"
 
+namespace octopus { namespace test {
+
 inline auto generate_random_regions(const GenomicRegion::Position contig_size,
                                     const GenomicRegion::Position mean_region_size,
                                     const std::size_t num_regions)
@@ -74,5 +76,8 @@ inline auto get_mock_aligned_read(std::string sequence)
 {
     return AlignedRead {};
 }
+
+} // namespace test
+} // namespace octopus
 
 #endif

@@ -20,11 +20,13 @@
 #include "assembler.hpp"
 #include "variant.hpp"
 
+namespace octopus {
+
 class ReferenceGenome;
 class AlignedRead;
 class GenomicRegion;
 
-namespace octopus { namespace coretools {
+namespace coretools {
 
 class LocalReassembler : public VariantGenerator
 {

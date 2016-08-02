@@ -18,6 +18,8 @@
 
 #include "mappable.hpp"
 
+namespace octopus {
+
 /*
  An ordered collection of MappableType elements, X, is:
  - ForwardSorted         iff i <= j -> mapped_region(X[i]) <= mapped_region(X[j])
@@ -316,5 +318,7 @@ make_shared_range(Iterator first, Iterator last, const MappableType1& mappable1,
                                                       last, last)
     );
 }
+
+} // namespace octopus
 
 #endif

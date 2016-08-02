@@ -1,5 +1,5 @@
 //
-//  variant_caller_tests.cpp
+//  caller_tests.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 17/02/2016.

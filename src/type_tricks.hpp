@@ -12,8 +12,9 @@
 #include <type_traits>
 #include <utility>
 
-namespace detail
-{
+namespace octopus {
+
+namespace detail {
     template <typename Container, typename = void>
     struct HasReserve : std::false_type {};
     
@@ -112,5 +113,10 @@ using MapTagType = MapTagImpl<is_map<T>>;
 
 template <typename T, typename V = void>
 using enable_if_map = std::enable_if_t<is_map<T>, V>;
+
+template <typename T, typename V = void>
+using enable_if_not_map = std::enable_if_t<!is_map<T>, V>;
+
+} // namespace octopus
 
 #endif /* type_tricks_hpp */

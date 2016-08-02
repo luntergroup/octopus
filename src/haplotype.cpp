@@ -44,7 +44,9 @@ const GenomicRegion& Haplotype::mapped_region() const
 
 bool Haplotype::contains(const ContigAllele& allele) const
 {
-    if (::contains(region_.contig_region(), allele)) {
+    using octopus::contains;
+    
+    if (contains(region_.contig_region(), allele)) {
         if (begins_before(allele, explicit_allele_region_)) {
             if (is_before(allele, explicit_allele_region_)) {
                 return allele.sequence() == fetch_reference_sequence(contig_region(allele));
@@ -77,8 +79,8 @@ bool Haplotype::contains(const ContigAllele& allele) const
                 // If the allele is not explcitly contained but the region is then it must be a different
                 // allele, unless it is an insertion, in which case we must check the sequence
                 if (is_insertion(allele)) {
-                    return ::contains(*std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
-                                                        allele.mapped_region()), allele);
+                    return contains(*std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
+                                                      allele.mapped_region()), allele);
                 }
                 
                 return false;
@@ -87,7 +89,7 @@ bool Haplotype::contains(const ContigAllele& allele) const
         
         const auto overlapped = haplotype_overlap_range(explicit_alleles_, allele);
         
-        if (overlapped.size() == 1 && ::contains(overlapped.front(), allele)) {
+        if (overlapped.size() == 1 && contains(overlapped.front(), allele)) {
             return allele == splice(overlapped.front(), contig_region(allele));
         }
         
@@ -105,9 +107,11 @@ bool Haplotype::contains(const Allele& allele) const
 
 bool Haplotype::includes(const ContigAllele& allele) const
 {
-    if (!::contains(region_.contig_region(), allele)) return false;
+    using octopus::contains;
     
-    if (::contains(explicit_allele_region_, allele)) {
+    if (!contains(region_.contig_region(), allele)) return false;
+    
+    if (contains(explicit_allele_region_, allele)) {
         return std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele);
     }
     
@@ -142,8 +146,9 @@ bool is_in_reference_flank(const ContigRegion& region, const ContigRegion& expli
 Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) const
 {
     using std::cbegin; using std::cend;
+    using octopus::contains;
     
-    if (!::contains(region_.contig_region(), region)) {
+    if (!contains(region_.contig_region(), region)) {
         throw std::out_of_range {"Haplotype: attempting to sequence from region not contained by Haplotype region"};
     }
     
@@ -167,7 +172,7 @@ Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) co
     
     // known that !overlapped_explicit_alleles.empty()
     
-    if (::contains(overlapped_explicit_alleles.front(), region)) {
+    if (contains(overlapped_explicit_alleles.front(), region)) {
         append(result, splice(overlapped_explicit_alleles.front(), region));
         
         overlapped_explicit_alleles.advance_begin(1);

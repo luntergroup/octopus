@@ -18,10 +18,12 @@
 
 #include "haplotype.hpp"
 
-class ReferenceGenome;
-class GenomicRegion;
+namespace octopus {
 
-namespace octopus { namespace test {
+class GenomicRegion;
+class ReferenceGenome;
+
+namespace test {
 
 template <typename RealType>
 bool is_close_to_one(RealType x)

@@ -17,23 +17,22 @@
 
 #include "common.hpp"
 #include "phred.hpp"
-#include "variant_caller.hpp"
-#include "individual.hpp"
+#include "caller.hpp"
+#include "individual_model.hpp"
 #include "variant_call.hpp"
-
-class GenomicRegion;
 
 namespace octopus {
 
+class GenomicRegion;
 class ReadPipe;
 class Variant;
 class HaplotypeLikelihoodCache;
 class CoalescentModel;
 
-class IndividualVariantCaller : public VariantCaller
+class IndividualCaller : public Caller
 {
 public:
-    using VariantCaller::CallTypeSet;
+    using Caller::CallTypeSet;
     
     struct Parameters
     {
@@ -44,18 +43,18 @@ public:
         double indel_heterozygosity;
     };
     
-    IndividualVariantCaller() = delete;
+    IndividualCaller() = delete;
     
-    IndividualVariantCaller(VariantCaller::Components&& components,
-                            VariantCaller::Parameters general_parameters,
-                            Parameters specific_parameters);
+    IndividualCaller(Caller::Components&& components,
+                     Caller::Parameters general_parameters,
+                     Parameters specific_parameters);
 
-    IndividualVariantCaller(const IndividualVariantCaller&)            = delete;
-    IndividualVariantCaller& operator=(const IndividualVariantCaller&) = delete;
-    IndividualVariantCaller(IndividualVariantCaller&&)                 = delete;
-    IndividualVariantCaller& operator=(IndividualVariantCaller&&)      = delete;
+    IndividualCaller(const IndividualCaller&)            = delete;
+    IndividualCaller& operator=(const IndividualCaller&) = delete;
+    IndividualCaller(IndividualCaller&&)                 = delete;
+    IndividualCaller& operator=(IndividualCaller&&)      = delete;
     
-    ~IndividualVariantCaller() = default;
+    ~IndividualCaller() = default;
     
 private:
     class Latents;
@@ -64,28 +63,28 @@ private:
     
     CallTypeSet do_get_call_types() const override;
     
-    std::unique_ptr<CallerLatents>
+    std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
     boost::optional<double>
-    calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                    const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                    const CallerLatents& latents) const override;
+    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const Caller::Latents& latents) const override;
     
     boost::optional<double>
-    calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                    const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                    const Latents& latents) const;
+    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const Latents& latents) const;
     
     std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, const CallerLatents& latents) const override;
+    call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, const Latents& latents) const;
     
     std::vector<std::unique_ptr<ReferenceCall>>
-    call_reference(const std::vector<Allele>& alleles, const CallerLatents& latents,
+    call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
                    const ReadMap& reads) const override;
     
     std::vector<std::unique_ptr<ReferenceCall>>
@@ -97,15 +96,15 @@ private:
     CoalescentModel make_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
 
-class IndividualVariantCaller::Latents : public CallerLatents
+class IndividualCaller::Latents : public Caller::Latents
 {
 public:
-    using ModelInferences = model::Individual::InferredLatents;
+    using ModelInferences = model::IndividualModel::InferredLatents;
     
-    using CallerLatents::HaplotypeProbabilityMap;
-    using CallerLatents::GenotypeProbabilityMap;
+    using Caller::Latents::HaplotypeProbabilityMap;
+    using Caller::Latents::GenotypeProbabilityMap;
     
-    friend IndividualVariantCaller;
+    friend IndividualCaller;
     
     Latents() = delete;
     

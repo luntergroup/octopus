@@ -1,12 +1,12 @@
 //
-//  variant_caller.cpp
+//  caller.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 15/09/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "variant_caller.hpp"
+#include "caller.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -29,7 +29,7 @@ namespace octopus
 {
 // public methods
 
-VariantCaller::VariantCaller(Components&& components, Parameters parameters)
+Caller::Caller(Components&& components, Parameters parameters)
 :
 reference_ {components.reference},
 samples_ {components.read_pipe.get().samples()},
@@ -47,7 +47,7 @@ parameters_ {std::move(parameters)}
     }
     
     if (parameters_.max_haplotypes == 0) {
-        throw std::logic_error {"VariantCaller: max haplotypes must be > 0"};
+        throw std::logic_error {"Caller: max haplotypes must be > 0"};
     }
     
     if (DEBUG_MODE) {
@@ -327,13 +327,12 @@ void merge(std::vector<CallWrapper>&& src, std::deque<VcfRecord>& dst,
     dst.erase(it2, end(dst));
 }
 
-VariantCaller::CallTypeSet VariantCaller::get_call_types() const
+Caller::CallTypeSet Caller::get_call_types() const
 {
     return this->do_get_call_types();
 }
 
-std::deque<VcfRecord>
-VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
+std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
 {
     resume_timer(init_timer);
     
@@ -501,17 +500,16 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             const auto active_candidates = copy_contained_to_vector(candidates, phase_set->region);
             
             if (!active_candidates.empty()) {
-                auto variant_calls = wrap(this->call_variants(active_candidates, *caller_latents));
+                auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
                 
                 if (!variant_calls.empty()) {
                     if (parameters_.allow_model_filtering) {
-                        const auto dummy_posterior = this->calculate_dummy_model_posterior(haplotypes,
-                                                                                           haplotype_likelihoods,
-                                                                                           *caller_latents);
+                        const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods,
+                                                                  *caller_latents);
                         
-                        if (dummy_posterior) {
+                        if (mp) {
                             for (auto& call : variant_calls) {
-                                call->set_dummy_model_posterior(*dummy_posterior);
+                                call->set_model_posterior(*mp);
                             }
                         }
                     }
@@ -570,17 +568,16 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             if (!active_candidates.empty()) {
                 if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
                 
-                auto variant_calls = wrap(this->call_variants(active_candidates, *caller_latents));
+                auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
                 
                 if (!variant_calls.empty()) {
                     if (parameters_.allow_model_filtering) {
-                        const auto dummy_posterior = this->calculate_dummy_model_posterior(haplotypes,
-                                                                                           haplotype_likelihoods,
-                                                                                           *caller_latents);
+                        const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods,
+                                                                  *caller_latents);
                         
-                        if (dummy_posterior) {
+                        if (mp) {
                             for (auto& call : variant_calls) {
-                                call->set_dummy_model_posterior(*dummy_posterior);
+                                call->set_model_posterior(*mp);
                             }
                         }
                     }
@@ -621,19 +618,19 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     return result;
 }
     
-std::vector<VcfRecord> VariantCaller::regenotype(const std::vector<Variant>& variants, ProgressMeter& progress_meter) const
+std::vector<VcfRecord> Caller::regenotype(const std::vector<Variant>& variants, ProgressMeter& progress_meter) const
 {
     return {}; // TODO
 }
 
 // private methods
 
-bool VariantCaller::refcalls_requested() const noexcept
+bool Caller::refcalls_requested() const noexcept
 {
     return parameters_.refcall_type != RefCallType::None;
 }
 
-MappableFlatSet<Variant> VariantCaller::generate_candidate_variants(const GenomicRegion& region) const
+MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion& region) const
 {
     if (debug_log_) stream(*debug_log_) << "Generating candidate variants in region " << region;
     
@@ -651,18 +648,18 @@ MappableFlatSet<Variant> VariantCaller::generate_candidate_variants(const Genomi
     };
 }
 
-HaplotypeGenerator VariantCaller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
-                                                           const ReadMap& reads) const
+HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
+                                                    const ReadMap& reads) const
 {
     return haplotype_generator_builder_.build(reference_, candidates, reads);
 }
 
-HaplotypeLikelihoodCache VariantCaller::make_haplotype_likelihood_cache() const
+HaplotypeLikelihoodCache Caller::make_haplotype_likelihood_cache() const
 {
     return HaplotypeLikelihoodCache {parameters_.max_haplotypes, samples_};
 }
 
-VcfRecordFactory VariantCaller::make_record_factory(const ReadMap& reads) const
+VcfRecordFactory Caller::make_record_factory(const ReadMap& reads) const
 {
     return VcfRecordFactory {reference_, reads, samples_, parameters_.call_sites_only};
 }
@@ -717,11 +714,11 @@ auto calculate_flank_state(const std::vector<Haplotype>& haplotypes,
     };
 }
 
-void VariantCaller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
-                             const GenomicRegion& active_region,
-                             const std::vector<Haplotype>& haplotypes,
-                             const MappableFlatSet<Variant>& candidates,
-                             const ReadMap& active_reads) const
+void Caller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
+                      const GenomicRegion& active_region,
+                      const std::vector<Haplotype>& haplotypes,
+                      const MappableFlatSet<Variant>& candidates,
+                      const ReadMap& active_reads) const
 {
     assert(haplotype_likelihoods.is_empty());
     
@@ -750,8 +747,7 @@ void VariantCaller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
 }
 
 std::vector<Haplotype>
-VariantCaller::filter(std::vector<Haplotype>& haplotypes,
-                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+Caller::filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     auto removed_haplotypes = filter_to_n(haplotypes, samples_, haplotype_likelihoods,
                                           parameters_.max_haplotypes);
@@ -773,23 +769,22 @@ VariantCaller::filter(std::vector<Haplotype>& haplotypes,
 }
 
 std::vector<std::reference_wrapper<const Haplotype>>
-VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
-                                        const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                        const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
-                                        const unsigned max_to_remove) const
+Caller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
+                                 const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                 const Caller::Latents::HaplotypeProbabilityMap& haplotype_posteriors,
+                                 const unsigned max_to_remove) const
 {
     return extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
                              max_to_remove, parameters_.min_haplotype_posterior);
 }
 
-bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept
+bool Caller::done_calling(const GenomicRegion& region) const noexcept
 {
     return is_empty(region);
 }
 
 std::vector<Allele>
-VariantCaller::generate_callable_alleles(const GenomicRegion& region,
-                                         const std::vector<Variant>& candidates) const
+Caller::generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates) const
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::back_inserter;
     
@@ -817,7 +812,7 @@ VariantCaller::generate_callable_alleles(const GenomicRegion& region,
     
     std::vector<Allele> result {};
     
-    if (parameters_.refcall_type == VariantCaller::RefCallType::Blocked) {
+    if (parameters_.refcall_type == Caller::RefCallType::Blocked) {
         auto reference_alleles = make_reference_alleles(uncovered_regions, reference_);
         result.reserve(reference_alleles.size() + variant_alleles.size());
         std::merge(make_move_iterator(begin(reference_alleles)),
@@ -863,9 +858,9 @@ ForwardIt find_next(ForwardIt first, ForwardIt last, const Variant& candidate)
 }
 
 void append_allele(std::vector<Allele>& alleles, const Allele& allele,
-                   const VariantCaller::RefCallType refcall_type)
+                   const Caller::RefCallType refcall_type)
 {
-    if (refcall_type == VariantCaller::RefCallType::Blocked && !alleles.empty()
+    if (refcall_type == Caller::RefCallType::Blocked && !alleles.empty()
         && are_adjacent(alleles.back(), allele)) {
         alleles.back() = Allele {encompassing_region(alleles.back(), allele),
             alleles.back().sequence() + allele.sequence()};
@@ -877,9 +872,9 @@ void append_allele(std::vector<Allele>& alleles, const Allele& allele,
 // TODO: we should catch the case where an insertion has been called and push the refcall
 // block up a position, otherwise the returned reference allele (block) will never be called.
 std::vector<Allele>
-VariantCaller::generate_candidate_reference_alleles(const GenomicRegion& region,
-                                                    const std::vector<Variant>& candidates,
-                                                    const std::vector<GenomicRegion>& called_regions) const
+Caller::generate_candidate_reference_alleles(const GenomicRegion& region,
+                                             const std::vector<Variant>& candidates,
+                                             const std::vector<GenomicRegion>& called_regions) const
 {
     using std::cbegin; using std::cend;
     

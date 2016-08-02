@@ -22,6 +22,8 @@
 #include "htslib_bcf_facade.hpp"
 #include "vcf_parser.hpp"
 
+namespace octopus {
+
 std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path)
 {
     if (!boost::filesystem::exists(file_path)) {
@@ -206,3 +208,5 @@ bool operator!=(const VcfReader::RecordIterator& lhs, const VcfReader::RecordIte
 {
     return !(lhs == rhs);
 }
+
+} // namespace octopus

@@ -17,10 +17,12 @@
 #include "aligned_read.hpp"
 #include "variant.hpp"
 
-class ReferenceGenome;
+namespace octopus {
+    
 class GenomicRegion;
+class ReferenceGenome;
 
-namespace octopus { namespace coretools {
+namespace coretools {
 
 class Randomiser : public VariantGenerator
 {

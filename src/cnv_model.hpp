@@ -1,13 +1,13 @@
 //
-//  tumour.hpp
+//  cnv_model.hpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 26/08/2015.
-//  Copyright (c) 2015 Oxford University. All rights reserved.
+//  Created by Daniel Cooke on 12/04/2016.
+//  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__tumour__
-#define __Octopus__tumour__
+#ifndef cnv_model_hpp
+#define cnv_model_hpp
 
 #include <vector>
 #include <unordered_map>
@@ -15,14 +15,13 @@
 
 #include "common.hpp"
 #include "haplotype.hpp"
-#include "somatic_mutation_model.hpp"
+#include "genotype.hpp"
+#include "coalescent_model.hpp"
 #include "haplotype_likelihood_cache.hpp"
-#include "cancer_genotype.hpp"
 
-namespace octopus { namespace model
-{
+namespace octopus { namespace model {
 
-class Somatic
+class CNVModel
 {
 public:
     struct AlgorithmParameters
@@ -37,7 +36,7 @@ public:
         using GenotypeMixturesDirichletAlphas   = std::vector<double>;
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
         
-        SomaticMutationModel genotype_prior_model;
+        CoalescentModel genotype_prior_model;
         GenotypeMixturesDirichletAlphaMap alphas;
     };
     
@@ -46,7 +45,7 @@ public:
         using GenotypeMixturesDirichletAlphas   = std::vector<double>;
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
         
-        using GenotypeProbabilityMap = std::unordered_map<CancerGenotype<Haplotype>, double>;
+        using GenotypeProbabilityMap = std::unordered_map<Genotype<Haplotype>, double>;
         
         GenotypeProbabilityMap genotype_probabilities;
         GenotypeMixturesDirichletAlphaMap alphas;
@@ -58,31 +57,34 @@ public:
         double approx_log_evidence;
     };
     
-    Somatic() = delete;
+    CNVModel() = delete;
     
-    Somatic(std::vector<SampleName> samples, unsigned ploidy, Priors priors);
+    CNVModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors);
     
-    Somatic(std::vector<SampleName> samples, unsigned ploidy, Priors priors,
-            AlgorithmParameters parameters);
+    CNVModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors,
+             AlgorithmParameters parameters);
     
-    ~Somatic() = default;
+    CNVModel(const CNVModel&)            = default;
+    CNVModel& operator=(const CNVModel&) = default;
+    CNVModel(CNVModel&&)                 = default;
+    CNVModel& operator=(CNVModel&&)      = default;
     
-    Somatic(const Somatic&)            = default;
-    Somatic& operator=(const Somatic&) = default;
-    Somatic(Somatic&&)                 = default;
-    Somatic& operator=(Somatic&&)      = default;
+    ~CNVModel() = default;
     
-    InferredLatents infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
+    InferredLatents infer_latents(std::vector<Genotype<Haplotype>> genotypes,
                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
     std::vector<SampleName> samples_;
+    
     unsigned ploidy_;
+    
     Priors priors_;
+    
     AlgorithmParameters parameters_;
 };
-
+    
 } // namespace model
 } // namespace octopus
 
-#endif /* defined(__Octopus__tumour__) */
+#endif

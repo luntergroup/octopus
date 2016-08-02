@@ -17,11 +17,14 @@
 #include <ostream>
 #include <utility>
 #include <initializer_list>
+#include <functional>
 
 #include <boost/optional.hpp>
 #include <boost/container/flat_map.hpp>
 
 #include "comparable.hpp"
+
+namespace octopus {
 
 // TODO: consider using #include <boost/container/small_vector.hpp> for INFO and genotype fields
 
@@ -34,7 +37,7 @@ public:
     using IdType             = std::string;
     using NucleotideSequence = std::string;
     using QualityType        = float;
-    using SampleName       = std::string;
+    using SampleName         = std::string;
     using KeyType            = std::string;
     using ValueType          = std::string;
     
@@ -174,16 +177,6 @@ bool is_validated(const VcfRecord& record) noexcept;
 bool operator==(const VcfRecord& lhs, const VcfRecord& rhs);
 bool operator<(const VcfRecord& lhs, const VcfRecord& rhs);
 
-namespace std {
-    template <> struct hash<VcfRecord>
-    {
-        size_t operator()(const VcfRecord& record) const
-        {
-            return hash<string>()(record.id());
-        }
-    };
-} // namespace std
-
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
 
 class VcfRecord::Builder
@@ -273,5 +266,17 @@ VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleName& sample, con
 {
     return set_format(sample, key, std::to_string(value));
 }
+
+} // namespace octopus
+
+namespace std {
+    template <> struct hash<octopus::VcfRecord>
+    {
+        size_t operator()(const octopus::VcfRecord& record) const
+        {
+            return hash<string>()(record.id());
+        }
+    };
+} // namespace std
 
 #endif /* defined(__Octopus__vcf_record__) */

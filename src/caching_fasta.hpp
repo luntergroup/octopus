@@ -14,14 +14,21 @@
 #include <list>
 #include <cstddef>
 #include <mutex>
+#include <memory>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/range/iterator_range_core.hpp>
 
-#include "reference_genome_impl.hpp"
+#include "reference_reader.hpp"
 #include "fasta.hpp"
 #include "contig_region.hpp"
 #include "genomic_region.hpp"
+
+namespace octopus {
+    
+class GenomicRegion;
+
+namespace io {
 
 /*
  CachingFasta attempts to reduce the number of file reads in two ways:
@@ -40,40 +47,34 @@
                        the current request region.
  */
 
-class CachingFasta : public ReferenceGenomeImpl
+class CachingFasta : public ReferenceReader
 {
 public:
     using Path = Fasta::Path;
     
-    using ContigName      = ReferenceGenomeImpl::ContigName;
-    using GenomicSize     = ReferenceGenomeImpl::GenomicSize;
-    using GeneticSequence = ReferenceGenomeImpl::GeneticSequence;
+    using ContigName      = ReferenceReader::ContigName;
+    using GenomicSize     = ReferenceReader::GenomicSize;
+    using GeneticSequence = ReferenceReader::GeneticSequence;
     
     CachingFasta() = delete;
     
-    CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta);
-    CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta, GenomicSize max_cache_size);
-    CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta, GenomicSize max_cache_size,
+    CachingFasta(std::unique_ptr<ReferenceReader> fasta);
+    CachingFasta(std::unique_ptr<ReferenceReader> fasta, GenomicSize max_cache_size);
+    CachingFasta(std::unique_ptr<ReferenceReader> fasta, GenomicSize max_cache_size,
                  double locality_bias, double forward_bias);
     
-    CachingFasta(const CachingFasta&)            = default;
-    CachingFasta& operator=(const CachingFasta&) = default;
-    CachingFasta(CachingFasta&&)                 = default;
+    CachingFasta(const CachingFasta&);
+    CachingFasta& operator=(CachingFasta);
+    CachingFasta(CachingFasta&&);
     CachingFasta& operator=(CachingFasta&&)      = default;
     
 private:
-    std::unique_ptr<ReferenceGenomeImpl> fasta_;
-    
     using ContigSequenceCache = std::map<ContigRegion, GeneticSequence>;
     using SequenceCache       = std::unordered_map<std::string, ContigSequenceCache>;
     using CacheIterator       = ContigSequenceCache::const_iterator;
     using OverlapRange        = boost::iterator_range<CacheIterator>;
     
-    bool do_is_open() const noexcept override;
-    std::string do_fetch_reference_name() const override;
-    std::vector<ContigName> do_fetch_contig_names() const override;
-    GenomicSize do_fetch_contig_size(const ContigName& contig) const override;
-    GeneticSequence do_fetch_sequence(const GenomicRegion& region) const override;
+    std::unique_ptr<ReferenceReader> fasta_;
     
     std::unordered_map<ContigName, GenomicSize> contig_sizes_;
     
@@ -89,6 +90,13 @@ private:
     double forward_bias_;
     
     mutable std::mutex mutex_;
+    
+    std::unique_ptr<ReferenceReader> do_clone() const override;
+    bool do_is_open() const noexcept override;
+    std::string do_fetch_reference_name() const override;
+    std::vector<ContigName> do_fetch_contig_names() const override;
+    GenomicSize do_fetch_contig_size(const ContigName& contig) const override;
+    GeneticSequence do_fetch_sequence(const GenomicRegion& region) const override;
     
     void setup_cache();
     GenomicSize get_remaining_cache_size() const;
@@ -110,5 +118,8 @@ private:
                                     const ContigRegion& sequence_region,
                                     const GeneticSequence& sequence) const;
 };
+
+} // namespace io
+} // namespace octopus
 
 #endif /* defined(__Octopus__caching_fasta__) */

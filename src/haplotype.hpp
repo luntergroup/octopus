@@ -25,11 +25,10 @@
 #include "mappable.hpp"
 #include "allele.hpp"
 
-class ReferenceGenome;
-class GenomicRegion;
-
 namespace octopus {
 
+class GenomicRegion;
+class ReferenceGenome;
 class Variant;
 
 /*

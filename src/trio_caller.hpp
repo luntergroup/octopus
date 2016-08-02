@@ -12,34 +12,26 @@
 #include <vector>
 #include <string>
 
-#include "variant_caller.hpp"
-
-class GenomicRegion;
-class VcfRecord;
+#include "caller.hpp"
 
 namespace octopus {
     
-    class ReadPipe;
+    class GenomicRegion;
     class Variant;
+    class VcfRecord;
+    class ReadPipe;
     
-    class TrioVariantCaller// : public VariantCaller
+    class TrioCaller// : public Caller
     {
     public:
-        TrioVariantCaller() = delete;
+        TrioCaller() = delete;
         
-//        explicit TrioVariantCaller(const ReferenceGenome& reference,
-//                                       ReadPipe& read_pipe,
-//                                       CandidateVariantGenerator&& candidate_generator,
-//                                       unsigned ploidy,
-//                                       SampleName mother, SampleName father,
-//                                       double min_variant_posterior);
+        ~TrioCaller() = default;
         
-        ~TrioVariantCaller() = default;
-        
-        TrioVariantCaller(const TrioVariantCaller&)            = delete;
-        TrioVariantCaller& operator=(const TrioVariantCaller&) = delete;
-        TrioVariantCaller(TrioVariantCaller&&)                 = delete;
-        TrioVariantCaller& operator=(TrioVariantCaller&&)      = delete;
+        TrioCaller(const TrioCaller&)            = delete;
+        TrioCaller& operator=(const TrioCaller&) = delete;
+        TrioCaller(TrioCaller&&)                 = delete;
+        TrioCaller& operator=(TrioCaller&&)      = delete;
         
     private:
         const unsigned ploidy_;

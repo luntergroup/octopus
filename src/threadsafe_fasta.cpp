@@ -10,10 +10,35 @@
 
 #include "genomic_region.hpp"
 
+namespace octopus { namespace io {
+
 ThreadsafeFasta::ThreadsafeFasta(std::unique_ptr<Fasta> fasta)
 :
 fasta_ {std::move(fasta)}
 {}
+
+ThreadsafeFasta::ThreadsafeFasta(const ThreadsafeFasta& other)
+{
+    std::lock_guard<std::mutex> lock {other.mutex_};
+    fasta_ = std::make_unique<Fasta>(*other.fasta_);
+}
+
+ThreadsafeFasta& ThreadsafeFasta::operator=(ThreadsafeFasta other)
+{
+    std::swap(fasta_, other.fasta_);
+    return *this;
+}
+
+ThreadsafeFasta::ThreadsafeFasta(ThreadsafeFasta&& other)
+{
+    std::lock_guard<std::mutex> lock {other.mutex_};
+    fasta_ = std::move(other.fasta_);
+}
+
+std::unique_ptr<ReferenceReader> ThreadsafeFasta::do_clone() const
+{
+    return std::make_unique<ThreadsafeFasta>(*this);
+}
 
 bool ThreadsafeFasta::do_is_open() const noexcept
 {
@@ -42,3 +67,6 @@ ThreadsafeFasta::GeneticSequence ThreadsafeFasta::do_fetch_sequence(const Genomi
     std::lock_guard<std::mutex> lock {mutex_};
     return fasta_->fetch_sequence(region);
 }
+
+} // namespace io
+} // namespace octopus

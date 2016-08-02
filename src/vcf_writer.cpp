@@ -20,6 +20,8 @@
 
 #include <iostream> // TEST
 
+namespace octopus {
+
 VcfWriter::VcfWriter(Path file_path)
 :
 file_path_ {std::move(file_path)},
@@ -163,3 +165,5 @@ bool operator==(const VcfWriter& lhs, const VcfWriter& rhs)
 {
     return lhs.path() == rhs.path();
 }
+
+} // namespace octopus

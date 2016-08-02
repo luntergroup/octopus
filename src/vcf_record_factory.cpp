@@ -642,8 +642,8 @@ namespace octopus
         result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
         result.set_info("MQ0", count_mapq_zero(call_reads));
         
-        if (call->dummy_model_posterior()) {
-            result.set_info("DMP", *call->dummy_model_posterior());
+        if (call->model_posterior()) {
+            result.set_info("DMP", *call->model_posterior());
         }
         
         if (!sites_only_) {
@@ -779,7 +779,7 @@ namespace octopus
         boost::optional<double> dmp {};
         
         for (const auto& call : calls) {
-            const auto call_dmp = call->dummy_model_posterior();
+            const auto call_dmp = call->model_posterior();
             if (call_dmp) {
                 if (dmp) {
                     if (*dmp < *call_dmp) dmp = *call_dmp;

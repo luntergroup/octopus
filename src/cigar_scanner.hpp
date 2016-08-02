@@ -20,10 +20,12 @@
 #include "aligned_read.hpp"
 #include "variant.hpp"
 
+namespace octopus {
+
 class ReferenceGenome;
 class GenomicRegion;
 
-namespace octopus { namespace coretools {
+namespace coretools {
 
 class CigarScanner : public VariantGenerator
 {

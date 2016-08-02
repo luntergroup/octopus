@@ -18,6 +18,8 @@
 
 #include <iostream> // TEST
 
+namespace octopus {
+
 VcfHeader parse_header(std::ifstream& vcf_file);
 bool overlaps(const std::string& line, const GenomicRegion& region);
 VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::SampleName>& samples = {});
@@ -535,3 +537,5 @@ bool operator!=(const VcfParser::RecordIterator& lhs, const VcfParser::RecordIte
 {
     return !(lhs == rhs);
 }
+
+} // namespace octopus

@@ -13,10 +13,13 @@
 #include <vector>
 #include <unordered_map>
 #include <ostream>
+#include <functional>
 
 #include "equitable.hpp"
 #include "comparable.hpp"
 #include "vcf_type.hpp"
+
+namespace octopus {
 
 /*
  There are two types of header lines in VCF.
@@ -208,16 +211,6 @@ bool contig_line_exists(const VcfHeader& header, const std::string& contig);
 
 bool operator==(const VcfHeader& lhs, const VcfHeader& rhs);
 
-namespace std {
-    template <> struct hash<VcfHeader>
-    {
-        size_t operator()(const VcfHeader& header) const
-        {
-            return hash<VcfHeader::ValueType>()(header.file_format());
-        }
-    };
-} // namespace std
-
 std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
 
 class VcfHeader::Builder
@@ -253,5 +246,17 @@ private:
 
 // A VcfHeader::Builder pre-filled with all reserved INFO and FORMAT fields
 VcfHeader::Builder get_default_header_builder();
+
+} // namespace octopus    
+
+namespace std {
+    template <> struct hash<octopus::VcfHeader>
+    {
+        size_t operator()(const octopus::VcfHeader& header) const
+        {
+            return hash<octopus::VcfHeader::ValueType>()(header.file_format());
+        }
+    };
+} // namespace std
 
 #endif /* defined(__Octopus__vcf_header__) */

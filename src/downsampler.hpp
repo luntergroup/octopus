@@ -16,8 +16,7 @@
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
 
-namespace octopus { namespace readpipe
-{
+namespace octopus { namespace readpipe {
 
 class Downsampler
 {

@@ -11,13 +11,13 @@
 
 - [] Improve variant filtering.
 - [] Improve IndelErrorModel/SnvErrorModel and make them polymorphic.
-- [] Allow VariantCallers to parrallise algorithms - will need to pass policies.
+- [] Allow Callers to parrallise algorithms - will need to pass policies.
 - [] ReadReader should be able to use iterators.
 
 # Refactoring
 
 - [] VcfRecordFactory is pretty horrible
-- [] VariantCaller::call needs refactoring into smaller methods
+- [] Caller::call needs refactoring into smaller methods
 
 ## Bottlenecks
 

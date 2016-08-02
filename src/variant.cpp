@@ -134,8 +134,7 @@ std::vector<Allele> decompose(const std::vector<Variant>& variants)
     return result;
 }
 
-std::vector<std::reference_wrapper<const Allele>>
-decompose_ref(const std::vector<Variant>& variants)
+std::vector<std::reference_wrapper<const Allele>> decompose_ref(const std::vector<Variant>& variants)
 {
     std::vector<std::reference_wrapper<const Allele>> result {};
     result.reserve(2 * variants.size());

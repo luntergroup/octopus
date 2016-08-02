@@ -26,14 +26,10 @@
 
 #include "genomic_region.hpp"
 #include "aligned_read.hpp"
-#include "read_transformer.hpp"
-#include "read_transform.hpp"
-#include "read_filterer.hpp"
-#include "read_filter.hpp"
-#include "downsampler.hpp"
+#include "read_pipe_fwd.hpp"
 #include "read_stats.hpp"
 #include "coretools.hpp"
-#include "variant_caller_builder.hpp"
+#include "caller_builder.hpp"
 #include "vcf_reader.hpp"
 #include "vcf_writer.hpp"
 #include "mappable_algorithms.hpp"
@@ -303,9 +299,9 @@ ReferenceGenome make_reference(const OptionMap& options)
     
     static constexpr unsigned Scale {1'000'000};
     
-    return ::make_reference(std::move(resolved_path),
-                            static_cast<std::size_t>(Scale * ref_cache_size),
-                            is_threading_allowed(options));
+    return octopus::make_reference(std::move(resolved_path),
+                                   static_cast<std::size_t>(Scale * ref_cache_size),
+                                   is_threading_allowed(options));
 }
 
 bool is_bed_file(const fs::path& path)
@@ -1172,13 +1168,13 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(3);
 }
 
-VariantCallerFactory
-make_variant_caller_factory(const ReferenceGenome& reference,
+CallerFactory
+make_caller_factory(const ReferenceGenome& reference,
                             ReadPipe& read_pipe,
                             const InputRegionMap& regions,
                             const OptionMap& options)
 {
-    VariantCallerBuilder vc_builder {
+    CallerBuilder vc_builder {
         reference,
         read_pipe,
         make_variant_generator_builder(options),
@@ -1197,12 +1193,12 @@ make_variant_caller_factory(const ReferenceGenome& reference,
         const auto refcall_type = options.at("report-refcalls").as<RefCallType>();
         
         if (refcall_type == RefCallType::Positional) {
-            vc_builder.set_refcall_type(VariantCallerBuilder::RefCallType::Positional);
+            vc_builder.set_refcall_type(CallerBuilder::RefCallType::Positional);
         } else {
-            vc_builder.set_refcall_type(VariantCallerBuilder::RefCallType::Blocked);
+            vc_builder.set_refcall_type(CallerBuilder::RefCallType::Blocked);
         }
     } else {
-        vc_builder.set_refcall_type(VariantCallerBuilder::RefCallType::None);
+        vc_builder.set_refcall_type(CallerBuilder::RefCallType::None);
     }
     
     auto min_variant_posterior = options.at("min-variant-posterior").as<Phred<double>>();
@@ -1261,7 +1257,7 @@ make_variant_caller_factory(const ReferenceGenome& reference,
     
     vc_builder.set_flank_scoring(!options.at("disable-inactive-flank-scoring").as<bool>());
     
-    VariantCallerFactory result {std::move(vc_builder), options.at("organism-ploidy").as<unsigned>()};
+    CallerFactory result {std::move(vc_builder), options.at("organism-ploidy").as<unsigned>()};
     
     for (const auto& p : regions) {
         const auto it = std::find_if(std::cbegin(*contig_ploidies), std::cend(*contig_ploidies),

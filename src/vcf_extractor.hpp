@@ -18,9 +18,11 @@
 #include "vcf_reader.hpp"
 #include "variant.hpp"
 
+namespace octopus {
+
 class GenomicRegion;
 
-namespace octopus { namespace coretools {
+namespace coretools {
 
 class VcfExtractor : public VariantGenerator
 {

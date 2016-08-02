@@ -24,6 +24,8 @@
 
 #include <iostream> // DEBUG
 
+namespace octopus {
+
 std::vector<std::string> get_contigs(const VcfHeader& header)
 {
     std::vector<std::string> result {};
@@ -379,3 +381,5 @@ void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
         dst << cb.build_once();
     });
 }
+
+} // namespace octopus

@@ -15,8 +15,11 @@
 #include <stdexcept>
 #include <string>
 #include <iostream>
+#include <functional>
 
 #include "comparable.hpp"
+
+namespace octopus {
 
 template <typename Q = double, typename = std::enable_if_t<std::is_arithmetic<Q>::value>>
 class Phred : public Comparable<Phred<Q>>
@@ -118,6 +121,18 @@ template <typename Q>
 std::string to_string(const Phred<Q>& phred)
 {
     return std::to_string(phred.score());
+}
+
+} // namespace octopus
+
+namespace std {
+    template <typename T> struct hash<octopus::Phred<T>>
+    {
+        size_t operator()(const octopus::Phred<T>& phred) const noexcept
+        {
+            return hash<T>(phred.score());
+        }
+    };
 }
 
 #endif /* phred_hpp */

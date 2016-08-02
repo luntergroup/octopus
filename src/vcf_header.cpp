@@ -12,6 +12,8 @@
 #include <utility>
 #include <iterator>
 
+namespace octopus {
+
 bool is_valid_line(const std::string& line);
 bool is_valid_field(const std::string& str);
 bool is_format_line(const std::string& line);
@@ -400,3 +402,5 @@ VcfHeader::Builder get_default_header_builder()
     
     return result;
 }
+
+} // namespace octopus

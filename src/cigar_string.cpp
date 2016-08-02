@@ -16,6 +16,8 @@
 
 #include <boost/lexical_cast.hpp>
 
+namespace octopus {
+
 constexpr char CigarOperation::ALIGNMENT_MATCH;
 constexpr char CigarOperation::SEQUENCE_MATCH;
 constexpr char CigarOperation::SUBSTITUTION;
@@ -267,3 +269,5 @@ std::size_t CigarHash::operator()(const CigarString& cigar) const noexcept
 {
     return boost::hash_range(std::cbegin(cigar), std::cend(cigar));
 }
+
+} // namespace octopus

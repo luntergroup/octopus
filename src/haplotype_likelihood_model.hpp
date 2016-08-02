@@ -28,9 +28,9 @@
 
 #include "timers.hpp"
 
-class AlignedRead;
-
 namespace octopus {
+
+class AlignedRead;    
 
 class HaplotypeLikelihoodModel
 {

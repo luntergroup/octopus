@@ -20,6 +20,8 @@
 #include "vcf_reader.hpp"
 #include "vcf_writer.hpp"
 
+namespace octopus {
+
 std::vector<std::string> get_contigs(const VcfHeader& header);
 
 unsigned get_field_cardinality(const VcfHeader::StructuredKey& key, const VcfRecord& record);
@@ -49,5 +51,7 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst, const std::vec
 void merge(const std::vector<VcfReader>& sources, VcfWriter& dst);
 
 void convert_to_legacy(const VcfReader& src, VcfWriter& dst);
+
+} // namespace octopus    
 
 #endif /* defined(__Octopus__vcf_utils__) */

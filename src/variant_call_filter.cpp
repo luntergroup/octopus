@@ -34,7 +34,7 @@
 
 #include <boost/math/distributions/hypergeometric.hpp>
 
-namespace octopus { namespace CallFiltering
+namespace octopus { namespace csr
 {
 VariantCallFilter::VariantCallFilter(const ReferenceGenome& reference,
                                      const ReadPipe& read_pipe,
@@ -135,5 +135,5 @@ void VariantCallFilter::fail(VcfRecord::Builder& call) const
 {
     call.set_passed();
 }
-} // namespace CallFiltering
+} // namespace csr
 } // namespace octopus

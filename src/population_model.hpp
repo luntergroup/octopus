@@ -1,13 +1,13 @@
 //
-//  population.hpp
+//  population_model.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 26/08/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__population__
-#define __Octopus__population__
+#ifndef __Octopus__population_model__
+#define __Octopus__population_model__
 
 #include <vector>
 #include <unordered_map>
@@ -23,7 +23,7 @@
 
 namespace octopus { namespace model {
 
-class Population
+class PopulationModel
 {
 public:
     struct Latents
@@ -46,16 +46,16 @@ public:
     
     using GenotypeVector = std::vector<Genotype<Haplotype>>;
     
-    Population() = delete;
+    PopulationModel() = delete;
     
-    Population(const CoalescentModel& genotype_prior_model);
+    PopulationModel(const CoalescentModel& genotype_prior_model);
     
-    ~Population() = default;
+    PopulationModel(const PopulationModel&)            = delete;
+    PopulationModel& operator=(const PopulationModel&) = delete;
+    PopulationModel(PopulationModel&&)                 = delete;
+    PopulationModel& operator=(PopulationModel&&)      = delete;
     
-    Population(const Population&)            = delete;
-    Population& operator=(const Population&) = delete;
-    Population(Population&&)                 = delete;
-    Population& operator=(Population&&)      = delete;
+    ~PopulationModel() = default;
     
     InferredLatents infer_latents(const std::vector<SampleName>& samples,
                                   const GenotypeVector& genotypes,
@@ -69,4 +69,4 @@ private:
 } // namesapce model
 } // namespace octopus
 
-#endif /* defined(__Octopus__population__) */
+#endif

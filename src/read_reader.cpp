@@ -10,6 +10,8 @@
 
 #include "htslib_sam_facade.hpp"
 
+namespace octopus { namespace io {
+
 ReadReader::ReadReader(const boost::filesystem::path& file_path)
 :
 file_path_ {file_path},
@@ -169,3 +171,6 @@ bool operator==(const ReadReader& lhs, const ReadReader& rhs)
 {
     return lhs.path() == rhs.path();
 }
+
+} // namespace io
+} // namespace octopus

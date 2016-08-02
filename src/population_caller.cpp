@@ -28,27 +28,27 @@
 #include "read_stats.hpp"
 #include "probability_matrix.hpp"
 #include "coalescent_model.hpp"
-#include "individual.hpp"
+#include "individual_model.hpp"
 #include "germline_variant_call.hpp"
 #include "reference_call.hpp"
 #include "logging.hpp"
 
 namespace octopus {
 
-PopulationVariantCaller::PopulationVariantCaller(VariantCaller::Components&& components,
-                                                 VariantCaller::Parameters general_parameters,
-                                                 Parameters specific_parameters)
+PopulationCaller::PopulationCaller(Caller::Components&& components,
+                                   Caller::Parameters general_parameters,
+                                   Parameters specific_parameters)
 :
-VariantCaller {std::move(components), std::move(general_parameters)},
+Caller {std::move(components), std::move(general_parameters)},
 parameters_ {specific_parameters}
 {}
 
-// IndividualVariantCaller::Latents public methods
+// IndividualCaller::Latents public methods
 
-PopulationVariantCaller::Latents::Latents(const std::vector<SampleName>& samples,
-                                          const std::vector<Haplotype>& haplotypes,
-                                          std::vector<Genotype<Haplotype>>&& genotypes,
-                                          ModelInferences&& inferences)
+PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
+                                   const std::vector<Haplotype>& haplotypes,
+                                   std::vector<Genotype<Haplotype>>&& genotypes,
+                                   ModelInferences&& inferences)
 :
 genotype_posteriors_ {},
 haplotype_posteriors_ {},
@@ -66,7 +66,7 @@ dummy_latents_ {}
 //    haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
 }
 
-PopulationVariantCaller::Latents::Latents(const std::vector<SampleName>& samples,
+PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                           const std::vector<Haplotype>& haplotypes,
                                           std::vector<Genotype<Haplotype>>&& genotypes,
                                           ModelInferences&& inferences,
@@ -88,27 +88,27 @@ dummy_latents_ {std::move(dummy_inferences)}
 //    haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
 }
 
-PopulationVariantCaller::CallTypeSet PopulationVariantCaller::do_get_call_types() const
+PopulationCaller::CallTypeSet PopulationCaller::do_get_call_types() const
 {
     return {std::type_index(typeid(GermlineVariantCall))};
 }
 
-std::shared_ptr<PopulationVariantCaller::Latents::HaplotypeProbabilityMap>
-PopulationVariantCaller::Latents::haplotype_posteriors() const noexcept
+std::shared_ptr<PopulationCaller::Latents::HaplotypeProbabilityMap>
+PopulationCaller::Latents::haplotype_posteriors() const noexcept
 {
     return haplotype_posteriors_;
 }
 
-std::shared_ptr<PopulationVariantCaller::Latents::GenotypeProbabilityMap>
-PopulationVariantCaller::Latents::genotype_posteriors() const noexcept
+std::shared_ptr<PopulationCaller::Latents::GenotypeProbabilityMap>
+PopulationCaller::Latents::genotype_posteriors() const noexcept
 {
     return genotype_posteriors_;
 }
 
-// PopulationVariantCaller::Latents private methods
+// PopulationCaller::Latents private methods
 
-PopulationVariantCaller::Latents::HaplotypeProbabilityMap
-PopulationVariantCaller::Latents::calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes)
+PopulationCaller::Latents::HaplotypeProbabilityMap
+PopulationCaller::Latents::calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes)
 {
     assert(genotype_posteriors_ != nullptr);
     
@@ -129,13 +129,13 @@ PopulationVariantCaller::Latents::calculate_haplotype_posteriors(const std::vect
     return result;
 }
 
-std::unique_ptr<PopulationVariantCaller::CallerLatents>
-PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
+std::unique_ptr<PopulationCaller::Caller::Latents>
+PopulationCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                        const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
     
-    model::Population model {prior_model};
+    model::PopulationModel model {prior_model};
     
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
     
@@ -160,9 +160,8 @@ PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
 }
 
-namespace
-{
-    using GM = model::Population;
+namespace {
+    using GM = model::PopulationModel;
     
     using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
     
@@ -177,7 +176,10 @@ namespace
         VariantCall(const Variant& variant, double posterior)
         : variant {variant}, posterior {posterior} {}
         
-        const GenomicRegion& mapped_region() const noexcept { return ::mapped_region(variant.get()); }
+        const GenomicRegion& mapped_region() const noexcept
+        {
+            return octopus::mapped_region(variant.get());
+        }
         
         VariantReference variant;
         double posterior;
@@ -339,13 +341,12 @@ namespace
 } // namespace
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
-PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
-                                       const CallerLatents& latents) const
+PopulationCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
 
-//auto calculate_dummy_model_posterior(const double normal_model_log_evidence,
+//auto calculate_model_posterior(const double normal_model_log_evidence,
 //                                     const double dummy_model_log_evidence)
 //{
 //    constexpr double normal_model_prior {0.9999999};
@@ -360,20 +361,19 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 //}
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
-PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
-                                       const Latents& latents) const
+PopulationCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
 //    const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample_];
 //    
 //    if (latents.dummy_latents_) {
-//        const auto dummy_model_posterior = calculate_dummy_model_posterior(latents.model_log_evidence_,
+//        const auto model_posterior = calculate_model_posterior(latents.model_log_evidence_,
 //                                                                           latents.dummy_latents_->log_evidence);
 //        
 //        if (debug_log_) {
-//            stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
+//            stream(*debug_log_) << "Dummy model posterior = " << model_posterior;
 //        }
 //        
-//        if (dummy_model_posterior > 0.5) {
+//        if (model_posterior > 0.5) {
 //            if (debug_log_) {
 //                *debug_log_ << "Skipping region due to model filter";
 //            }
@@ -476,8 +476,8 @@ namespace
 } // namespace
 
 std::vector<std::unique_ptr<ReferenceCall>>
-PopulationVariantCaller::call_reference(const std::vector<Allele>& alleles,
-                                        const CallerLatents& latents,
+PopulationCaller::call_reference(const std::vector<Allele>& alleles,
+                                        const Caller::Latents& latents,
                                         const ReadMap& reads) const
 {
     return {};

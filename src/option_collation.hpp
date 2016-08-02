@@ -21,7 +21,7 @@
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "read_pipe.hpp"
-#include "variant_caller_factory.hpp"
+#include "caller_factory.hpp"
 #include "variant_call_filter.hpp"
 
 namespace fs = boost::filesystem;
@@ -55,7 +55,7 @@ ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> sampl
 
 bool call_sites_only(const OptionMap& options);
 
-VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
+CallerFactory make_caller_factory(const ReferenceGenome& reference,
                                                  ReadPipe& read_pipe,
                                                  const InputRegionMap& regions,
                                                  const OptionMap& options);

@@ -19,6 +19,8 @@
 
 #include "comparable.hpp"
 
+namespace octopus {
+
 /*
     Represents a region of continuous sequence.
     begin and end positions are zero-indexed half open indices [begin,end).
@@ -335,15 +337,26 @@ inline std::ostream& operator<<(std::ostream& os, const ContigRegion& region)
     return os;
 }
 
-namespace std {
-    template <> struct hash<ContigRegion>
+struct ContigRegionHash
+{
+    std::size_t operator()(const ContigRegion& region) const noexcept
     {
-        size_t operator()(const ContigRegion& r) const
+        using boost::hash_combine;
+        std::size_t seed {};
+        hash_combine(seed, region.begin());
+        hash_combine(seed, region.end());
+        return seed;
+    }
+};
+
+} // namespace octopus
+
+namespace std {
+    template <> struct hash<octopus::ContigRegion>
+    {
+        size_t operator()(const octopus::ContigRegion& region) const
         {
-            size_t seed {};
-            boost::hash_combine(seed, r.begin());
-            boost::hash_combine(seed, r.end());
-            return seed;
+            return octopus::ContigRegionHash()(region);
         }
     };
 }

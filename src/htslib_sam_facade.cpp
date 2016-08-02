@@ -21,6 +21,8 @@
 
 #include <iostream> // TEST
 
+namespace octopus { namespace io {
+
 static const std::string Read_group_tag    {"RG"};
 static const std::string Read_group_id_tag {"ID"};
 static const std::string Sample_id_tag     {"SM"};
@@ -1028,3 +1030,6 @@ std::size_t HtslibSamFacade::HtslibIterator::begin() const noexcept
 {
     return hts_bam1_->core.pos;
 }
+    
+} // namespace io
+} // namespace octopus

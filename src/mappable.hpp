@@ -14,6 +14,8 @@
 #include "contig_region.hpp"
 #include "genomic_region.hpp"
 
+namespace octopus {
+
 /**
  Template black magic. Anything that inherits from Mappable and has a mapped_region() member method
  can use all of these methods.
@@ -32,7 +34,7 @@ template <typename T>
 constexpr bool is_region = is_contig_region<T> || is_genomic_region<T>;
 
 template <typename T>
-constexpr bool is_mappable = std::is_base_of<Mappable<T>, T>::value;
+constexpr bool is_mappable = std::is_base_of<Mappable<std::decay_t<T>>, std::decay_t<T>>::value;
 
 template <typename T>
 constexpr bool is_region_or_mappable = is_region<T> || is_mappable<T>;
@@ -46,15 +48,8 @@ using EnableIfMappable = std::enable_if_t<is_mappable<T>, R>;
 template <typename T, typename R = void>
 using EnableIfRegionOrMappable = std::enable_if_t<is_region_or_mappable<T>, R>;
 
-inline decltype(auto) mapped_region(const ContigRegion& region)
-{
-    return region;
-}
-
-inline decltype(auto) mapped_region(const GenomicRegion& region)
-{
-    return region;
-}
+inline decltype(auto) mapped_region(const ContigRegion& region) { return region; }
+inline decltype(auto) mapped_region(const GenomicRegion& region) { return region; }
 
 template <typename T>
 decltype(auto) mapped_region(const Mappable<T>& mappable)
@@ -981,5 +976,7 @@ auto end_distance(const Mappable<T1>& first, const Mappable<T2>& second)
     return end_distance(static_cast<const T1&>(first).mapped_region(),
                         static_cast<const T2&>(second).mapped_region());
 }
+
+} // namespace octopus
 
 #endif

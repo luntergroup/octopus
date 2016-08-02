@@ -22,7 +22,7 @@ namespace octopus
 {
     const GenomicRegion& VariantCall::mapped_region() const noexcept
     {
-        return ::mapped_region(variant_);
+        return octopus::mapped_region(variant_);
     }
     
     const Allele& VariantCall::reference() const noexcept
@@ -190,7 +190,7 @@ namespace octopus
                     if (has_variant_shifted) {
                         auto old_sequence = allele.sequence();
                         old_sequence.insert(std::begin(old_sequence), dummy_base);
-                        Allele new_allele {::mapped_region(variant_), std::move(old_sequence)};
+                        Allele new_allele {octopus::mapped_region(variant_), std::move(old_sequence)};
                         parsimonised_genotype.emplace(std::move(new_allele));
                     } else {
                         parsimonised_genotype.emplace(allele);
@@ -236,7 +236,7 @@ namespace octopus
                     if (has_variant_shifted) {
                         auto old_sequence = allele.sequence();
                         old_sequence.insert(std::begin(old_sequence), reference_base);
-                        Allele new_allele {::mapped_region(variant_), std::move(old_sequence)};
+                        Allele new_allele {octopus::mapped_region(variant_), std::move(old_sequence)};
                         parsimonised_genotype.emplace(std::move(new_allele));
                     } else {
                         parsimonised_genotype.emplace(allele);

@@ -16,8 +16,9 @@
 #include <boost/variant.hpp>
 #include <boost/type_index.hpp>
 
-namespace detail
-{
+namespace octopus {
+
+namespace detail {
     using VcfTypeBase = boost::variant<int, double, char, std::string, bool>;
     
     template <typename T>
@@ -336,5 +337,7 @@ bool operator<=(const VcfType& lhs, const VcfType& rhs);
 bool operator>=(const VcfType& lhs, const VcfType& rhs);
 
 VcfType make_vcf_type(const std::string& type, const std::string& value);
+
+} // namespace octopus
 
 #endif

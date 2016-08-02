@@ -19,7 +19,9 @@
 #include "threadsafe_fasta.hpp"
 #include "caching_fasta.hpp"
 
-ReferenceGenome::ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl)
+namespace octopus {
+
+ReferenceGenome::ReferenceGenome(std::unique_ptr<io::ReferenceReader> impl)
 :
 impl_ {std::move(impl)},
 name_{},
@@ -42,6 +44,24 @@ contig_sizes_ {}
     } else {
         impl_.reset(nullptr); // no point in keeping bad handle
     }
+}
+
+ReferenceGenome::ReferenceGenome(const ReferenceGenome& other)
+:
+impl_ {other.impl_->clone()},
+name_ {other.name_},
+contig_names_ {other.contig_names_},
+contig_sizes_ {other.contig_sizes_}
+{}
+
+ReferenceGenome& ReferenceGenome::operator=(ReferenceGenome other)
+{
+    using std::swap;
+    swap(impl_, other.impl_);
+    swap(name_, other.name_);
+    swap(contig_names_, other.contig_names_);
+    swap(contig_sizes_, other.contig_sizes_);
+    return *this;
 }
 
 bool ReferenceGenome::is_good() const noexcept
@@ -100,7 +120,9 @@ ReferenceGenome make_reference(boost::filesystem::path reference_path,
                                const std::size_t max_cached_bases,
                                const bool is_threaded)
 {
-    std::unique_ptr<ReferenceGenomeImpl> impl_ {};
+    using namespace io;
+    
+    std::unique_ptr<ReferenceReader> impl_ {};
     
     try {
         if (is_threaded) {
@@ -198,3 +220,5 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
     
     throw std::invalid_argument {"parse_region: given region (" + region + ") with invalid format"};
 }
+    
+} // namespace octopus

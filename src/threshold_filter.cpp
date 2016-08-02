@@ -10,7 +10,7 @@
 
 #include "vcf_header.hpp"
 
-namespace octopus { namespace CallFiltering
+namespace octopus { namespace csr
 {
     ThresholdVariantCallFilter::ThresholdVariantCallFilter(const ReferenceGenome& reference,
                                                            const ReadPipe& read_pipe,
@@ -29,5 +29,5 @@ namespace octopus { namespace CallFiltering
     {
         return VariantCallFilter::Classification {};
     }
-} // namespace CallFiltering
+} // namespace csr
 } // namespace octopus

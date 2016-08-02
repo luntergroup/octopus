@@ -18,19 +18,21 @@
 
 #include <iostream> // TEST
 
+namespace octopus { namespace io {
+
 // public methods
 
-CachingFasta::CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta)
+CachingFasta::CachingFasta(std::unique_ptr<ReferenceReader> fasta)
 :
 CachingFasta {std::move(fasta), 10'000'000}
 {}
-CachingFasta::CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta,
+CachingFasta::CachingFasta(std::unique_ptr<ReferenceReader> fasta,
                            GenomicSize max_cache_size)
 :
 CachingFasta {std::move(fasta), max_cache_size, 0.99, 0.5}
 {}
 
-CachingFasta::CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta,
+CachingFasta::CachingFasta(std::unique_ptr<ReferenceReader> fasta,
                            const GenomicSize max_cache_size,
                            const double locality_bias, const double forward_bias)
 :
@@ -57,7 +59,50 @@ forward_bias_ {forward_bias}
     setup_cache();
 }
 
+CachingFasta::CachingFasta(const CachingFasta& other)
+{
+    std::lock_guard<std::mutex> lock {other.mutex_};
+    fasta_              = other.fasta_->clone();
+    contig_sizes_       = other.contig_sizes_;
+    genome_size_        = other.genome_size_;
+    max_cache_size_     = other.max_cache_size_;
+    current_cache_size_ = other.current_cache_size_;
+    locality_bias_      = other.locality_bias_;
+    forward_bias_       = other.forward_bias_;
+}
+
+CachingFasta& CachingFasta::operator=(CachingFasta other)
+{
+    using std::swap;
+    swap(fasta_             , other.fasta_);
+    swap(contig_sizes_      , other.contig_sizes_);
+    swap(genome_size_       , other.genome_size_);
+    swap(max_cache_size_    , other.max_cache_size_);
+    swap(current_cache_size_, other.current_cache_size_);
+    swap(locality_bias_     , other.locality_bias_);
+    swap(forward_bias_      , other.forward_bias_);
+    return *this;
+}
+
+CachingFasta::CachingFasta(CachingFasta&& other)
+{
+    std::lock_guard<std::mutex> lock {other.mutex_};
+    using std::move;
+    fasta_              = move(other.fasta_);
+    contig_sizes_       = move(other.contig_sizes_);
+    genome_size_        = move(other.genome_size_);
+    max_cache_size_     = move(other.max_cache_size_);
+    current_cache_size_ = move(other.current_cache_size_);
+    locality_bias_      = move(other.locality_bias_);
+    forward_bias_       = move(other.forward_bias_);
+    }
+
 // virtual private methods
+
+std::unique_ptr<ReferenceReader> CachingFasta::do_clone() const
+{
+    return std::make_unique<CachingFasta>(*this);
+}
 
 bool CachingFasta::do_is_open() const noexcept
 {
@@ -340,3 +385,6 @@ CachingFasta::GeneticSequence CachingFasta::get_subsequence(const ContigRegion& 
     assert(contains(sequence_region, requested_region));
     return sequence.substr(begin_distance(sequence_region, requested_region), size(requested_region));
 }
+
+} // namespace io
+} // namespace octopus

@@ -15,6 +15,8 @@
 #include <memory>
 #include <utility>
 
+namespace octopus {
+
 class GenomicRegion;
 class VcfHeader;
 class VcfRecord;
@@ -62,5 +64,7 @@ public:
     
     virtual ~IVcfReaderImpl() noexcept = default;
 };
+
+} // namespace octopus    
 
 #endif

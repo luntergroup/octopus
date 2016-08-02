@@ -15,23 +15,22 @@
 #include <typeindex>
 
 #include "common.hpp"
-#include "variant_caller.hpp"
-#include "population.hpp"
+#include "caller.hpp"
+#include "population_model.hpp"
 #include "variant_call.hpp"
 #include "phred.hpp"
 
-class GenomicRegion;
-
 namespace octopus {
 
+class GenomicRegion;
 class ReadPipe;
 class Variant;
 class HaplotypeLikelihoodCache;
 
-class PopulationVariantCaller : public VariantCaller
+class PopulationCaller : public Caller
 {
 public:
-    using VariantCaller::CallTypeSet;
+    using Caller::CallTypeSet;
     
     struct Parameters
     {
@@ -40,38 +39,38 @@ public:
         unsigned ploidy;
     };
     
-    PopulationVariantCaller() = delete;
+    PopulationCaller() = delete;
     
-    PopulationVariantCaller(VariantCaller::Components&& components,
-                            VariantCaller::Parameters general_parameters,
-                            Parameters specific_parameters);
+    PopulationCaller(Caller::Components&& components,
+                     Caller::Parameters general_parameters,
+                     Parameters specific_parameters);
     
-    PopulationVariantCaller(const PopulationVariantCaller&)            = delete;
-    PopulationVariantCaller& operator=(const PopulationVariantCaller&) = delete;
-    PopulationVariantCaller(PopulationVariantCaller&&)                 = delete;
-    PopulationVariantCaller& operator=(PopulationVariantCaller&&)      = delete;
+    PopulationCaller(const PopulationCaller&)            = delete;
+    PopulationCaller& operator=(const PopulationCaller&) = delete;
+    PopulationCaller(PopulationCaller&&)                 = delete;
+    PopulationCaller& operator=(PopulationCaller&&)      = delete;
     
-    ~PopulationVariantCaller() = default;
+    ~PopulationCaller() = default;
     
 private:
-    class Latents : public CallerLatents
+    class Latents : public Caller::Latents
     {
     public:
-        using ModelInferences = model::Population::InferredLatents;
+        using ModelInferences = model::PopulationModel::InferredLatents;
         
-        using CallerLatents::HaplotypeProbabilityMap;
-        using CallerLatents::GenotypeProbabilityMap;
+        using Caller::Latents::HaplotypeProbabilityMap;
+        using Caller::Latents::GenotypeProbabilityMap;
         
-        friend PopulationVariantCaller;
+        friend PopulationCaller;
         
-        explicit Latents(const std::vector<SampleName>& samples,
-                         const std::vector<Haplotype>&,
-                         std::vector<Genotype<Haplotype>>&& genotypes,
-                         ModelInferences&&);
-        explicit Latents(const std::vector<SampleName>& samples,
-                         const std::vector<Haplotype>&,
-                         std::vector<Genotype<Haplotype>>&& genotypes,
-                         ModelInferences&&, ModelInferences&&);
+        Latents(const std::vector<SampleName>& samples,
+                const std::vector<Haplotype>&,
+                std::vector<Genotype<Haplotype>>&& genotypes,
+                ModelInferences&&);
+        Latents(const std::vector<SampleName>& samples,
+                const std::vector<Haplotype>&,
+                std::vector<Genotype<Haplotype>>&& genotypes,
+                ModelInferences&&, ModelInferences&&);
         
         std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
         std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
@@ -92,18 +91,18 @@ private:
     
     CallTypeSet do_get_call_types() const override;
     
-    std::unique_ptr<CallerLatents>
+    std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, const CallerLatents& latents) const override;
+    call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, const Latents& latents) const;
     
     std::vector<std::unique_ptr<ReferenceCall>>
-    call_reference(const std::vector<Allele>& alleles, const CallerLatents& latents,
+    call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
                    const ReadMap& reads) const override;
 };
 } // namespace octopus

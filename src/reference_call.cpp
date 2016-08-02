@@ -14,7 +14,7 @@ namespace octopus {
 
 const GenomicRegion& ReferenceCall::mapped_region() const noexcept
 {
-    return ::mapped_region(reference_);
+    return octopus::mapped_region(reference_);
 }
 
 const Allele& ReferenceCall::reference() const noexcept

@@ -12,9 +12,9 @@
 
 #include <boost/functional/hash.hpp>
 
-//
-// Segment public methods
-//
+namespace octopus {
+
+// AlignedRead::Segment public
 
 const std::string& AlignedRead::Segment::contig_name() const
 {
@@ -41,9 +41,7 @@ bool AlignedRead::Segment::is_marked_reverse_mapped() const
     return flags_[1];
 }
 
-//
-// AlignedRead public methods
-//
+// AlignedRead public
 
 const std::string& AlignedRead::name() const noexcept
 {
@@ -378,3 +376,5 @@ std::ostream& operator<<(std::ostream& os, const AlignedRead& read)
     }
     return os;
 }
+
+} // namespace octopus

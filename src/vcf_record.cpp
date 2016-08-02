@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <iterator>
 
+namespace octopus {
+
 // public methods
 
 const std::string& VcfRecord::chrom() const noexcept
@@ -659,3 +661,5 @@ VcfRecord VcfRecord::Builder::build_once() noexcept
             std::move(format_), std::move(genotypes_), std::move(samples_)};
     }
 }
+
+} // namespace octopus

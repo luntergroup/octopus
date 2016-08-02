@@ -107,7 +107,8 @@ somatic_element_ {std::make_shared<MappableType>(std::forward<C>(somatic_element
 template <typename MappableType>
 const GenomicRegion& CancerGenotype<MappableType>::mapped_region() const noexcept
 {
-    return ::mapped_region(*somatic_element_);
+    using octopus::mapped_region;
+    return mapped_region(*somatic_element_);
 }
 
 template <typename MappableType>

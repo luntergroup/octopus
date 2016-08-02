@@ -30,6 +30,7 @@
 #include <typeinfo>
 #include <cassert>
 
+#include <boost/program_options.hpp>
 #include <boost/optional.hpp>
 
 #include "common.hpp"
@@ -47,8 +48,8 @@
 #include "read_stats.hpp"
 #include "vcf_header_factory.hpp"
 #include "octopus_vcf.hpp"
-#include "variant_caller_factory.hpp"
-#include "variant_caller.hpp"
+#include "caller_factory.hpp"
+#include "caller.hpp"
 #include "vcf.hpp"
 #include "maths.hpp"
 #include "progress_meter.hpp"
@@ -417,9 +418,9 @@ public:
         return components_.num_threads;
     }
     
-    const VariantCallerFactory& caller_factory() const noexcept
+    const CallerFactory& caller_factory() const noexcept
     {
-        return components_.variant_caller_factory;
+        return components_.caller_factory;
     }
     
     ProgressMeter& progress_meter() noexcept
@@ -442,7 +443,7 @@ private:
         contigs_in_output_order {get_contigs(this->regions, this->reference,
                                              options::get_contig_output_order(options))},
         read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)},
-        variant_caller_factory {options::make_variant_caller_factory(this->reference,
+        caller_factory {options::make_caller_factory(this->reference,
                                                                      this->read_pipe,
                                                                      this->regions,
                                                                      options)},
@@ -482,7 +483,7 @@ private:
         InputRegionMap regions;
         Contigs contigs_in_output_order;
         ReadPipe read_pipe;
-        VariantCallerFactory variant_caller_factory;
+        CallerFactory caller_factory;
         VcfWriter output;
         boost::optional<unsigned> num_threads;
         std::size_t read_buffer_size;
@@ -495,8 +496,8 @@ private:
     void update_dependents() noexcept
     {
         components_.read_pipe.set_read_manager(components_.read_manager);
-        components_.variant_caller_factory.set_reference(components_.reference);
-        components_.variant_caller_factory.set_read_pipe(components_.read_pipe);
+        components_.caller_factory.set_reference(components_.reference);
+        components_.caller_factory.set_read_pipe(components_.read_pipe);
     }
 };
 
@@ -572,7 +573,7 @@ struct ContigCallingComponents
     std::reference_wrapper<ReadManager> read_manager;
     const InputRegionMap::mapped_type regions;
     std::reference_wrapper<const std::vector<SampleName>> samples;
-    std::unique_ptr<const VariantCaller> caller;
+    std::unique_ptr<const Caller> caller;
     std::size_t read_buffer_size;
     std::reference_wrapper<VcfWriter> output;
     std::reference_wrapper<ProgressMeter> progress_meter;
@@ -1593,13 +1594,13 @@ void filter_calls(const GenomeCallingComponents& components)
     
     const auto read_pipe = make_filter_read_pipe(components);
     
-    using CallFiltering::ThresholdVariantCallFilter;
-    using CallFiltering::Measure;
-    using CallFiltering::MeasureWrapper;
+    using csr::ThresholdVariantCallFilter;
+    using csr::Measure;
+    using csr::MeasureWrapper;
     
     std::vector<MeasureWrapper> measures {};
     
-    measures.push_back(CallFiltering::make_wrapped_measure<CallFiltering::QualityByDepth>());
+    measures.push_back(csr::make_wrapped_measure<csr::QualityByDepth>());
     
     auto call_filter = std::make_unique<ThresholdVariantCallFilter>(components.reference(),
                                                                     read_pipe,

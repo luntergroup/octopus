@@ -1,13 +1,13 @@
 //
-//  variant_caller.hpp
+//  caller.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 26/08/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef Octopus_variant_caller_hpp
-#define Octopus_variant_caller_hpp
+#ifndef Octopus_caller_hpp
+#define Octopus_caller_hpp
 
 #include <vector>
 #include <string>
@@ -39,7 +39,7 @@
 
 namespace octopus {
 
-class VariantCaller
+class Caller
 {
 public:
     using CallTypeSet = std::set<std::type_index>;
@@ -51,16 +51,16 @@ public:
     
     using ReadMap = octopus::ReadMap;
     
-    VariantCaller() = delete;
+    Caller() = delete;
     
-    VariantCaller(Components&& components, Parameters parameters);
+    Caller(Components&& components, Parameters parameters);
     
-    VariantCaller(const VariantCaller&)            = delete;
-    VariantCaller& operator=(const VariantCaller&) = delete;
-    VariantCaller(VariantCaller&&)                 = delete;
-    VariantCaller& operator=(VariantCaller&&)      = delete;
+    Caller(const Caller&)            = delete;
+    Caller& operator=(const Caller&) = delete;
+    Caller(Caller&&)                 = delete;
+    Caller& operator=(Caller&&)      = delete;
     
-    virtual ~VariantCaller() = default;
+    virtual ~Caller() = default;
     
     CallTypeSet get_call_types() const;
     
@@ -78,18 +78,18 @@ protected:
     mutable boost::optional<logging::DebugLogger> debug_log_;
     mutable boost::optional<logging::TraceLogger> trace_log_;
     
-    struct CallerLatents
+    struct Latents
     {
         using HaplotypeProbabilityMap = std::unordered_map<HaplotypeReference, double>;
         using GenotypeProbabilityMap  = ProbabilityMatrix<Genotype<Haplotype>>;
+        
+        virtual ~Latents() noexcept = default;
         
         // Return shared_ptr as the caller may not actually need to use these latents itself,
         // they just need to be constructable on demand. But if the caller does use them, then
         // we avoid copying.
         virtual std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const = 0;
         virtual std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const = 0;
-        
-        virtual ~CallerLatents() noexcept = default;
     };
     
 public:
@@ -127,23 +127,25 @@ private:
     
     virtual CallTypeSet do_get_call_types() const = 0;
     
-    virtual std::unique_ptr<CallerLatents>
+    virtual std::unique_ptr<Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
     
+    //virtual Genotype<Haplotype> call_genotype(const Latents& latents) const = 0;
+    
     virtual boost::optional<double>
-    calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                    const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                    const CallerLatents& latents) const { return boost::none; }
+    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const Latents& latents) const { return boost::none; }
     
     virtual std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, const CallerLatents& latents) const = 0;
+    call_variants(const std::vector<Variant>& candidates, const Latents& latents) const = 0;
     
     virtual std::vector<std::unique_ptr<ReferenceCall>>
-    call_reference(const std::vector<Allele>& alleles, const CallerLatents& latents,
+    call_reference(const std::vector<Allele>& alleles, const Latents& latents,
                    const ReadMap& reads) const = 0;
     
-    // helpers
+    // helper methods
     
     bool refcalls_requested() const noexcept;
     
@@ -165,7 +167,7 @@ private:
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                             const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
+                             const Latents::HaplotypeProbabilityMap& haplotype_posteriors,
                              unsigned max_to_remove) const;
     
     bool done_calling(const GenomicRegion& region) const noexcept;

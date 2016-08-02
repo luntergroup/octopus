@@ -18,20 +18,22 @@
 #include <boost/filesystem/path.hpp>
 
 #include "genomic_region.hpp"
-#include "reference_genome_impl.hpp"
+#include "reference_reader.hpp"
+
+namespace octopus {
 
 class ReferenceGenome
 {
 public:
-    using ContigName      = ReferenceGenomeImpl::ContigName;
-    using GeneticSequence = ReferenceGenomeImpl::GeneticSequence;
+    using ContigName      = io::ReferenceReader::ContigName;
+    using GeneticSequence = io::ReferenceReader::GeneticSequence;
     
     ReferenceGenome() = delete;
     
-    ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl);
+    ReferenceGenome(std::unique_ptr<io::ReferenceReader> impl);
     
-    ReferenceGenome(const ReferenceGenome&)            = delete;
-    ReferenceGenome& operator=(const ReferenceGenome&) = delete;
+    ReferenceGenome(const ReferenceGenome&);
+    ReferenceGenome& operator=(ReferenceGenome);
     ReferenceGenome(ReferenceGenome&&)                 = default;
     ReferenceGenome& operator=(ReferenceGenome&&)      = default;
     
@@ -58,7 +60,7 @@ public:
     GeneticSequence fetch_sequence(const GenomicRegion& region) const;
     
 private:
-    std::unique_ptr<ReferenceGenomeImpl> impl_;
+    std::unique_ptr<io::ReferenceReader> impl_;
     
     std::string name_;
     std::vector<ContigName> contig_names_;
@@ -77,5 +79,7 @@ GenomicRegion::Position calculate_genome_size(const ReferenceGenome& reference);
 
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
 GenomicRegion parse_region(std::string region, const ReferenceGenome& reference);
+
+} // namespace octopus
 
 #endif /* defined(__Octopus__reference_genome__) */

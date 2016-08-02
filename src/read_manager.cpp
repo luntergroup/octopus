@@ -21,6 +21,8 @@
 
 #include <iostream> // TEST
 
+namespace octopus {
+
 ReadManager::ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files)
 :
 max_open_files_ {max_open_files},
@@ -404,9 +406,9 @@ void ReadManager::open_initial_files()
     open_readers(begin(reader_paths), begin(reader_paths) + num_files_to_open);
 }
 
-ReadReader ReadManager::make_reader(const Path& reader_path) const
+io::ReadReader ReadManager::make_reader(const Path& reader_path) const
 {
-    return ReadReader {reader_path};
+    return io::ReadReader {reader_path};
 }
 
 bool ReadManager::is_open(const Path& reader_path) const noexcept
@@ -560,3 +562,5 @@ ReadManager::get_possible_reader_paths(const std::vector<SampleName>& samples, c
     
     return result;
 }
+
+} // namespace octopus

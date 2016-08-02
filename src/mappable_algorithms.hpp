@@ -25,6 +25,8 @@
 #include "mappable_ranges.hpp"
 #include "type_tricks.hpp"
 
+namespace octopus {
+
 // sum_region_sizes
 
 template <typename InputIt>
@@ -67,8 +69,7 @@ ForwardIt leftmost_mappable(ForwardIt first, ForwardIt last)
     return std::min_element(first, last);
 }
 
-namespace detail
-{
+namespace detail {
     template <typename C, typename = void>
     struct HasMemberLeftmostMappable : std::false_type {};
     
@@ -87,7 +88,7 @@ namespace detail
     template <typename Container>
     auto leftmost_mappable(const Container& mappables, std::false_type)
     {
-        return ::leftmost_mappable(std::cbegin(mappables), std::cend(mappables));
+        return leftmost_mappable(std::cbegin(mappables), std::cend(mappables));
     }
 } // namespace detail
 
@@ -137,7 +138,7 @@ namespace detail
     template <typename Container>
     auto rightmost_mappable(const Container& mappables, std::false_type)
     {
-        return ::rightmost_mappable(std::cbegin(mappables), std::cend(mappables));
+        return rightmost_mappable(std::cbegin(mappables), std::cend(mappables));
     }
 } // namespace detail
 
@@ -192,8 +193,7 @@ ForwardIt largest_mappable(ForwardIt first, ForwardIt last)
                             });
 }
 
-namespace detail
-{
+namespace detail {
     template <typename C, typename = void>
     struct HasMemberLargestMappable : std::false_type {};
     
@@ -212,7 +212,7 @@ namespace detail
     template <typename Container>
     auto largest_mappable(const Container& mappables, std::false_type)
     {
-        return ::largest_mappable(std::cbegin(mappables), std::cend(mappables));
+        return largest_mappable(std::cbegin(mappables), std::cend(mappables));
     }
 } // namespace detail
 
@@ -263,7 +263,7 @@ namespace detail
     template <typename Container>
     auto smallest_mappable(const Container& mappables, std::false_type)
     {
-        return ::smallest_mappable(std::cbegin(mappables), std::cend(mappables));
+        return smallest_mappable(std::cbegin(mappables), std::cend(mappables));
     }
 } // namespace detail
 
@@ -552,7 +552,7 @@ namespace detail
     template <typename Container, typename MappableTp>
     auto overlap_range(const Container& mappables, const MappableTp& mappable, std::false_type)
     {
-        return ::overlap_range(std::cbegin(mappables), std::cend(mappables), mappable);
+        return overlap_range(std::cbegin(mappables), std::cend(mappables), mappable);
     }
     
     template <typename Container, typename MappableTp>
@@ -568,7 +568,7 @@ namespace detail
                        const typename RegionType<MappableTp>::Position max_mappable_size,
                        std::false_type)
     {
-        return ::overlap_range(std::cbegin(mappables), std::cend(mappables), mappable,
+        return overlap_range(std::cbegin(mappables), std::cend(mappables), mappable,
                                max_mappable_size);
     }
 } // namespace detail
@@ -749,7 +749,7 @@ namespace detail
     template <typename Container, typename MappableTp>
     auto has_overlapped(const Container& mappables, const MappableTp& mappable, std::false_type)
     {
-        return ::has_overlapped(std::cbegin(mappables), std::cend(mappables), mappable);
+        return has_overlapped(std::cbegin(mappables), std::cend(mappables), mappable);
     }
     
     template <typename Container, typename MappableTp>
@@ -765,8 +765,8 @@ namespace detail
                         const typename RegionType<MappableTp>::Position max_mappable_size,
                         std::false_type)
     {
-        return ::has_overlapped(std::cbegin(mappables), std::cend(mappables), mappable,
-                                max_mappable_size);
+        return has_overlapped(std::cbegin(mappables), std::cend(mappables), mappable,
+                              max_mappable_size);
     }
 } // namespace detail
 
@@ -873,7 +873,7 @@ namespace detail
     template <typename Container, typename MappableTp>
     auto count_overlapped(const Container& mappables, const MappableTp& mappable, std::false_type)
     {
-        return ::count_overlapped(std::cbegin(mappables), std::cend(mappables), mappable);
+        return count_overlapped(std::cbegin(mappables), std::cend(mappables), mappable);
     }
     
     template <typename Container, typename MappableTp>
@@ -889,8 +889,8 @@ namespace detail
                         const typename RegionType<MappableTp>::Position max_mappable_size,
                         std::false_type)
     {
-        return ::count_overlapped(std::cbegin(mappables), std::cend(mappables), mappable,
-                                  max_mappable_size);
+        return count_overlapped(std::cbegin(mappables), std::cend(mappables), mappable,
+                                max_mappable_size);
     }
 } // namespace detail
 
@@ -1024,7 +1024,7 @@ namespace detail
     template <typename Container, typename MappableTp>
     auto contained_range(const Container& mappables, const MappableTp& mappable, std::false_type)
     {
-        return ::contained_range(std::cbegin(mappables), std::cend(mappables), mappable);
+        return contained_range(std::cbegin(mappables), std::cend(mappables), mappable);
     }
 } // namespace detail
 
@@ -1077,7 +1077,7 @@ namespace detail
     template <typename Container, typename MappableTp>
     auto has_contained(const Container& mappables, const MappableTp& mappable, std::false_type)
     {
-        return ::has_contained(std::cbegin(mappables), std::cend(mappables), mappable);
+        return has_contained(std::cbegin(mappables), std::cend(mappables), mappable);
     }
 } // namespace detail
 
@@ -1127,7 +1127,7 @@ namespace detail
     template <typename Container, typename MappableTp>
     auto count_contained(const Container& mappables, const MappableTp& mappable, std::false_type)
     {
-        return ::count_contained(std::cbegin(mappables), std::cend(mappables), mappable);
+        return count_contained(std::cbegin(mappables), std::cend(mappables), mappable);
     }
 } // namespace detail
 
@@ -1928,6 +1928,7 @@ auto calculate_positional_coverage(const Container& mappables, const RegionTp& r
 }
 
 template <typename Container, typename RegionTp,
+          typename = enable_if_not_map<Container>,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 bool has_coverage(const Container& mappables, const RegionTp& region)
 {
@@ -1947,6 +1948,7 @@ bool has_coverage(const Container& mappables, const RegionTp& region)
 }
 
 template <typename Container,
+          typename = enable_if_not_map<Container>,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 bool has_coverage(const Container& mappables)
 {
@@ -1957,6 +1959,7 @@ bool has_coverage(const Container& mappables)
 }
 
 template <typename Container, typename RegionTp,
+          typename = enable_if_not_map<Container>,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 unsigned min_coverage(const Container& mappables, const RegionTp& region)
 {
@@ -1973,6 +1976,7 @@ unsigned min_coverage(const Container& mappables, const RegionTp& region)
 }
 
 template <typename Container,
+          typename = enable_if_not_map<Container>,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 unsigned min_coverage(const Container& mappables)
 {
@@ -1984,6 +1988,7 @@ unsigned min_coverage(const Container& mappables)
 }
 
 template <typename Container, typename RegionTp,
+          typename = enable_if_not_map<Container>,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 unsigned max_coverage(const Container& mappables, const RegionTp& region)
 {
@@ -2000,6 +2005,7 @@ unsigned max_coverage(const Container& mappables, const RegionTp& region)
 }
 
 template <typename Container,
+          typename = enable_if_not_map<Container>,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 unsigned max_coverage(const Container& mappables)
 {
@@ -2009,5 +2015,7 @@ unsigned max_coverage(const Container& mappables)
     
     return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
 }
+
+} // namespace octopus
 
 #endif

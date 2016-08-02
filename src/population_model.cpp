@@ -1,12 +1,12 @@
 //
-//  population.cpp
+//  population_model.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 26/08/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "population.hpp"
+#include "population_model.hpp"
 
 #include <utility>
 #include <algorithm>
@@ -14,12 +14,12 @@
 #include <cassert>
 #include <iostream>
 
-#include "germline_genotype.hpp"
+#include "germline_likelihood_model.hpp"
 #include "maths.hpp"
 
 namespace octopus { namespace model {
 
-Population::Population(const CoalescentModel& genotype_prior_model)
+PopulationModel::PopulationModel(const CoalescentModel& genotype_prior_model)
 :
 genotype_prior_model_ {genotype_prior_model}
 {}
@@ -32,10 +32,6 @@ using SampleGenotypeLogLikelihoods = std::vector<GenotypeLogLikelihoodVector>;
 
 struct GenotypeLogProbability
 {
-    GenotypeLogProbability() = delete;
-    GenotypeLogProbability(const Genotype<Haplotype>& genotype, double log_probability)
-    : genotype {genotype}, log_probability {log_probability} {}
-    
     const Genotype<Haplotype>& genotype;
     double log_probability;
 };
@@ -236,7 +232,7 @@ compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
 {
     assert(!genotypes.empty());
     
-    GermlineGenotype likelihood_model {genotypes.front().ploidy(), haplotype_likelihoods};
+    GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
     
     SampleGenotypeLogLikelihoods result {};
     result.reserve(samples.size());
@@ -267,7 +263,7 @@ init_genotype_log_marginals(const std::vector<Genotype<Haplotype>>& genotypes,
     result.reserve(genotypes.size());
     
     for (const auto& genotype : genotypes) {
-        result.emplace_back(genotype, log_hardy_weinberg(genotype, haplotype_frequencies));
+        result.push_back({genotype, log_hardy_weinberg(genotype, haplotype_frequencies)});
     }
     
     return result;
@@ -513,7 +509,7 @@ auto calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
     return result;
 }
 
-Population::InferredLatents
+PopulationModel::InferredLatents
 make_latents(const std::vector<Haplotype>& haplotypes,
              const std::vector<Genotype<Haplotype>>& genotypes,
              SampleGenotypePosteriors&& genotype_posteriors,
@@ -523,7 +519,7 @@ make_latents(const std::vector<Haplotype>& haplotypes,
                                                                genotype_posteriors,
                                                                constants.genotypes_containing_haplotypes);
     
-    return Population::InferredLatents {
+    return PopulationModel::InferredLatents {
         std::move(genotype_posteriors),
         std::move(haplotype_posteriors),
         1.0 // TODO
@@ -532,10 +528,10 @@ make_latents(const std::vector<Haplotype>& haplotypes,
 
 } // namespace
 
-Population::InferredLatents
-Population::infer_latents(const std::vector<SampleName>& samples, const GenotypeVector& genotypes,
-                          const std::vector<Haplotype>& haplotypes,
-                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+PopulationModel::InferredLatents
+PopulationModel::infer_latents(const std::vector<SampleName>& samples, const GenotypeVector& genotypes,
+                               const std::vector<Haplotype>& haplotypes,
+                               const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     

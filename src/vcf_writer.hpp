@@ -12,10 +12,13 @@
 #include <memory>
 #include <mutex>
 #include <type_traits>
+#include <functional>
 
 #include <boost/filesystem/path.hpp>
 
 #include "htslib_bcf_facade.hpp"
+
+namespace octopus {
 
 class VcfHeader;
 class VcfRecord;
@@ -82,10 +85,12 @@ VcfWriter& operator<<(VcfWriter& dst, const Container& records)
 
 bool operator==(const VcfWriter& lhs, const VcfWriter& rhs);
 
+} // namespace octopus
+
 namespace std {
-    template <> struct hash<VcfWriter>
+    template <> struct hash<octopus::VcfWriter>
     {
-        size_t operator()(const VcfWriter& writer) const
+        size_t operator()(const octopus::VcfWriter& writer) const
         {
             return hash<string>()(writer.path().string());
         }

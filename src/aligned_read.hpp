@@ -28,6 +28,8 @@
 #include "mappable.hpp"
 #include "cigar_string.hpp"
 
+namespace octopus {
+
 class AlignedRead : public Comparable<AlignedRead>, public Mappable<AlignedRead>
 {
 public:
@@ -254,35 +256,37 @@ struct IsDuplicate
 
 bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs);
 
+std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector& qualities);
+std::ostream& operator<<(std::ostream& os, const AlignedRead& read);
+
+} // namespace octopus
+
 namespace std {
-    template <> struct hash<AlignedRead>
+    template <> struct hash<octopus::AlignedRead>
     {
-        size_t operator()(const AlignedRead& read) const
+        size_t operator()(const octopus::AlignedRead& read) const
         {
             return read.get_hash();
         }
     };
     
-    template <> struct hash<reference_wrapper<const AlignedRead>>
+    template <> struct hash<reference_wrapper<const octopus::AlignedRead>>
     {
-        size_t operator()(const reference_wrapper<const AlignedRead> read) const
+        size_t operator()(const reference_wrapper<const octopus::AlignedRead> read) const
         {
-            return hash<AlignedRead>()(read);
+            return hash<octopus::AlignedRead>()(read);
         }
     };
 } // namespace std
 
 namespace boost {
-    template <> struct hash<AlignedRead> : std::unary_function<AlignedRead, std::size_t>
+    template <> struct hash<octopus::AlignedRead> : std::unary_function<octopus::AlignedRead, std::size_t>
     {
-        std::size_t operator()(const AlignedRead& read) const
+        std::size_t operator()(const octopus::AlignedRead& read) const
         {
-            return std::hash<AlignedRead>()(read);
+            return std::hash<octopus::AlignedRead>()(read);
         }
     };
 } // namespace boost
-
-std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector& qualities);
-std::ostream& operator<<(std::ostream& os, const AlignedRead& read);
 
 #endif /* defined(__Octopus__aligned_read__) */

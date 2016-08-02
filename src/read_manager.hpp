@@ -26,6 +26,8 @@
 #include "read_reader_impl.hpp"
 #include "hash_functions.hpp"
 
+namespace octopus {
+
 class AlignedRead;
 
 class ReadManager
@@ -33,9 +35,9 @@ class ReadManager
 public:
     using Path = boost::filesystem::path;
     
-    using SampleName  = IReadReaderImpl::SampleName;
-    using ReadContainer = IReadReaderImpl::ReadContainer;
-    using SampleReadMap = IReadReaderImpl::SampleReadMap;
+    using SampleName    = io::IReadReaderImpl::SampleName;
+    using ReadContainer = io::IReadReaderImpl::ReadContainer;
+    using SampleReadMap = io::IReadReaderImpl::SampleReadMap;
     
     ReadManager() = default;
     
@@ -93,7 +95,7 @@ private:
         bool operator()(const Path& lhs, const Path& rhs) const;
     };
     
-    using OpenReaderMap           = std::map<Path, ReadReader, FileSizeCompare>;
+    using OpenReaderMap           = std::map<Path, io::ReadReader, FileSizeCompare>;
     using ClosedReaders           = std::unordered_set<Path, PathHash>;
     using SampleIdToReaderPathMap = std::unordered_map<SampleName, std::vector<Path>>;
     using ContigMap               = MappableMap<GenomicRegion::ContigName, ContigRegion>;
@@ -116,7 +118,7 @@ private:
     void setup_reader_samples_and_regions();
     void open_initial_files();
     
-    ReadReader make_reader(const Path& reader_path) const;
+    io::ReadReader make_reader(const Path& reader_path) const;
     bool is_open(const Path& reader_path) const noexcept;
     std::vector<Path>::iterator partition_open(std::vector<Path>& reader_paths) const;
     unsigned num_open_readers() const noexcept;
@@ -140,5 +142,7 @@ private:
     std::vector<Path> get_possible_reader_paths(const std::vector<SampleName>& samples,
                                                 const GenomicRegion& region) const;
 };
+
+} // namespace octopus
 
 #endif /* defined(__Octopus__read_manager__) */

@@ -11,9 +11,11 @@
 
 #include "variant_call_filter.hpp"
 
+namespace octopus {
+
 class VcfHeader;
 
-namespace octopus { namespace CallFiltering
+namespace csr
 {
     class ThresholdVariantCallFilter : public VariantCallFilter
     {
@@ -36,7 +38,7 @@ namespace octopus { namespace CallFiltering
         virtual void annotate(VcfHeader& dest) const override;
         virtual Classification classify(const MeasureVector& call_measures) const override;
     };
-} // namespace CallFiltering
+} // namespace csr
 } // namespace octopus
 
 #endif /* threshold_filter_hpp */

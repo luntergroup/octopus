@@ -18,12 +18,12 @@
 #include <boost/optional.hpp>
 
 #include "common.hpp"
-#include "variant_caller.hpp"
+#include "caller.hpp"
 #include "coalescent_model.hpp"
 #include "somatic_mutation_model.hpp"
-#include "individual.hpp"
-#include "cnv.hpp"
-#include "tumour.hpp"
+#include "individual_model.hpp"
+#include "cnv_model.hpp"
+#include "tumour_model.hpp"
 #include "variant_call.hpp"
 #include "phred.hpp"
 
@@ -34,10 +34,10 @@ namespace octopus {
 class ReadPipe;
 class Variant;
 
-class CancerVariantCaller : public VariantCaller
+class CancerCaller : public Caller
 {
 public:
-    using VariantCaller::CallTypeSet;
+    using Caller::CallTypeSet;
     
     struct Parameters
     {
@@ -52,23 +52,23 @@ public:
         unsigned max_genotypes;
     };
     
-    CancerVariantCaller() = delete;
+    CancerCaller() = delete;
     
-    CancerVariantCaller(VariantCaller::Components&& components,
-                        VariantCaller::Parameters general_parameters,
-                        Parameters specific_parameters);
+    CancerCaller(Caller::Components&& components,
+                 Caller::Parameters general_parameters,
+                 Parameters specific_parameters);
     
-    CancerVariantCaller(const CancerVariantCaller&)            = delete;
-    CancerVariantCaller& operator=(const CancerVariantCaller&) = delete;
-    CancerVariantCaller(CancerVariantCaller&&)                 = delete;
-    CancerVariantCaller& operator=(CancerVariantCaller&&)      = delete;
+    CancerCaller(const CancerCaller&)            = delete;
+    CancerCaller& operator=(const CancerCaller&) = delete;
+    CancerCaller(CancerCaller&&)                 = delete;
+    CancerCaller& operator=(CancerCaller&&)      = delete;
     
-    ~CancerVariantCaller() = default;
+    ~CancerCaller() = default;
     
 private:
-    using GermlineModel = model::Individual;
-    using CNVModel      = model::CNV;
-    using SomaticModel  = model::Somatic;
+    using GermlineModel = model::IndividualModel;
+    using CNVModel      = model::CNVModel;
+    using TumourModel   = model::TumourModel;
     
     class Latents;
     
@@ -88,28 +88,28 @@ private:
     
     CallTypeSet do_get_call_types() const override;
     
-    std::unique_ptr<CallerLatents>
+    std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
     boost::optional<double>
-    calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                    const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                    const CallerLatents& latents) const override;
+    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const Caller::Latents& latents) const override;
     
     boost::optional<double>
-    calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                    const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                    const Latents& latents) const;
+    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const Latents& latents) const;
     
     std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, const CallerLatents& latents) const override;
+    call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, const Latents& latents) const;
     
     std::vector<std::unique_ptr<ReferenceCall>>
-    call_reference(const std::vector<Allele>& alleles, const CallerLatents& latents,
+    call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
                    const ReadMap& reads) const override;
     
     // helpers
@@ -127,7 +127,7 @@ private:
     using ProbabilityVector = std::vector<double>;
     
     CNVModel::Priors get_cnv_model_priors(const CoalescentModel& prior_model) const;
-    SomaticModel::Priors get_somatic_model_priors(const SomaticMutationModel& prior_model) const;
+    TumourModel::Priors get_somatic_model_priors(const SomaticMutationModel& prior_model) const;
     
     ModelPriors get_model_priors() const;
     
@@ -142,20 +142,20 @@ private:
                                                 const ModelPosteriors& model_posteriors) const;
 };
 
-class CancerVariantCaller::Latents : public CallerLatents
+class CancerCaller::Latents : public Caller::Latents
 {
 public:
-    using CallerLatents::HaplotypeProbabilityMap;
-    using CallerLatents::GenotypeProbabilityMap;
+    using Caller::Latents::HaplotypeProbabilityMap;
+    using Caller::Latents::GenotypeProbabilityMap;
     
     Latents() = delete;
     
     Latents(const std::vector<Haplotype>& haplotypes,
-            CancerVariantCaller::ModelPriors model_priors,
+            CancerCaller::ModelPriors model_priors,
             std::vector<Genotype<Haplotype>>&& germline_genotypes,
             std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
             GermlineModel::InferredLatents&&, CNVModel::InferredLatents&&,
-            SomaticModel::InferredLatents&&,
+            TumourModel::InferredLatents&&,
             const std::vector<SampleName>& samples,
             boost::optional<std::reference_wrapper<const SampleName>> normal_sample);
     
@@ -166,18 +166,18 @@ private:
     std::vector<Genotype<Haplotype>> germline_genotypes_;
     std::vector<CancerGenotype<Haplotype>> somatic_genotypes_;
     
-    CancerVariantCaller::ModelPriors model_priors_;
+    CancerCaller::ModelPriors model_priors_;
     
     GermlineModel::InferredLatents germline_model_inferences_;
     CNVModel::InferredLatents cnv_model_inferences_;
-    SomaticModel::InferredLatents somatic_model_inferences_;
+    TumourModel::InferredLatents somatic_model_inferences_;
     
     std::reference_wrapper<const std::vector<Haplotype>> haplotypes_;
     
     std::reference_wrapper<const std::vector<SampleName>> samples_;
     boost::optional<std::reference_wrapper<const SampleName>> normal_sample_;
     
-    friend CancerVariantCaller;
+    friend CancerCaller;
 };
 
 } // namespace octopus

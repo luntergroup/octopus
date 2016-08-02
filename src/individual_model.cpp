@@ -1,12 +1,12 @@
 //
-//  individual.cpp
+//  individual_model.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 01/04/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#include "individual.hpp"
+#include "individual_model.hpp"
 
 #include <utility>
 #include <algorithm>
@@ -14,15 +14,15 @@
 #include <cassert>
 #include <iostream>
 
-#include "germline_genotype.hpp"
+#include "germline_likelihood_model.hpp"
 #include "maths.hpp"
 
 #include "timers.hpp"
 
 namespace octopus { namespace model {
 
-Individual::Individual(const CoalescentModel& genotype_prior_model,
-                       boost::optional<logging::DebugLogger> debug_log)
+IndividualModel::IndividualModel(const CoalescentModel& genotype_prior_model,
+                                 boost::optional<logging::DebugLogger> debug_log)
 :
 genotype_prior_model_ {genotype_prior_model},
 debug_log_ {debug_log}
@@ -41,18 +41,16 @@ namespace debug {
                                     const std::vector<double>& likelihoods, std::size_t n = 5);
 }
 
-Individual::InferredLatents
-Individual::infer_latents(const std::vector<Genotype<Haplotype>>& genotypes,
-                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+IndividualModel::InferredLatents
+IndividualModel::infer_latents(const std::vector<Genotype<Haplotype>>& genotypes,
+                               const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     using std::cbegin; using std::cend; using std::begin;
     
     assert(!genotypes.empty());
     assert(haplotype_likelihoods.is_primed());
     
-    const auto ploidy = genotypes.front().ploidy();
-    
-    const GermlineGenotype likelihood_model {ploidy, haplotype_likelihoods};
+    const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
     
     std::vector<double> result(genotypes.size());
     

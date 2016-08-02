@@ -10,11 +10,13 @@
 #define Octopus_comparable_hpp
 
 /**
-    A little bit of voodoo template magic. See the curiously recurring template pattern!
+    A bit of voodoo template magic. See the curiously recurring template pattern!
     The crux of this is if the class T provides the '==' and '<' operators, then it is
     fully comparable, and by deriving from this class, will automatically have the
     '!=', '>', '<=', & '>=' provided.
  */
+
+namespace octopus {
 
 template <typename T>
 class Comparable {};
@@ -42,5 +44,7 @@ inline bool operator>=(const Comparable<T>& lhs, const Comparable<T>& rhs)
 {
     return !operator<(static_cast<const T&>(lhs), static_cast<const T&>(rhs));
 }
+
+} // namespace octopus
 
 #endif

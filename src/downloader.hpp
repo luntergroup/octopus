@@ -16,11 +16,13 @@
 #include "variant_generator.hpp"
 #include "variant.hpp"
 
+namespace octopus {
+
 class GenomicRegion;
 class ReferenceGenome;
 class AlignedRead;
 
-namespace octopus { namespace coretools {
+namespace coretools {
 
 class Downloader : public VariantGenerator
 {

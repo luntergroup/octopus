@@ -52,12 +52,12 @@ public:
     explicit Genotype(unsigned ploidy, const MappableType& init);
     explicit Genotype(std::initializer_list<MappableType> alleles);
     
-    ~Genotype() = default;
-    
     Genotype(const Genotype&)            = default;
     Genotype& operator=(const Genotype&) = default;
     Genotype(Genotype&&)                 = default;
     Genotype& operator=(Genotype&&)      = default;
+    
+    ~Genotype() = default;
     
     template <typename T> void emplace(T&& element);
     

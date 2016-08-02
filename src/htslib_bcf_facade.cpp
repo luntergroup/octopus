@@ -28,8 +28,9 @@
 
 #include <iostream> // TEST
 
-namespace
-{
+namespace octopus {
+
+namespace {
     static const std::string VcfMissingValue {"."};
 }
 
@@ -1020,3 +1021,5 @@ HtslibBcfFacade::fetch_records(bcf_srs_t* sr, const UnpackPolicy level, const si
     
     return result;
 }
+
+} // namespace octopus

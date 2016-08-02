@@ -22,11 +22,11 @@
 #include "mappable_flat_set.hpp"
 #include "variant.hpp"
 
+namespace octopus {
+
 class VcfHeader;
 class ReferenceGenome;
 class GenomicRegion;
-
-namespace octopus {
 
 using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
 

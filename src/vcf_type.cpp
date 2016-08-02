@@ -12,6 +12,8 @@
 #include <functional>
 #include <stdexcept>
 
+namespace octopus {
+
 VcfType& VcfType::operator+=(const VcfType& rhs)
 {
     boost::apply_visitor(detail::inplace_add(), *this, rhs);
@@ -161,5 +163,6 @@ VcfType make_vcf_type(const std::string& type, const std::string& value)
     } catch (...) {
         throw;
     }
-    
 }
+    
+} // namespace octopus

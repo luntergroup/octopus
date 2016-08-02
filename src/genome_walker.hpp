@@ -16,10 +16,9 @@
 #include "allele.hpp"
 #include "mappable_flat_set.hpp"
 
-class GenomicRegion;
-
 namespace octopus {
 
+class GenomicRegion;
 class Variant;
     
 namespace coretools {

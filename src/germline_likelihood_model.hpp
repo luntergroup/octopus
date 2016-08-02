@@ -1,13 +1,13 @@
 //
-//  germline_genotype.hpp
+//  germline_likelihood_model.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 01/04/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__germline_genotype__
-#define __Octopus__germline_genotype__
+#ifndef __Octopus__germline_likelihood_model__
+#define __Octopus__germline_likelihood_model__
 
 #include "haplotype.hpp"
 #include "genotype.hpp"
@@ -15,26 +15,24 @@
 
 namespace octopus { namespace model {
 
-class GermlineGenotype
+class GermlineLikelihoodModel
 {
 public:
-    GermlineGenotype() = delete;
+    GermlineLikelihoodModel() = delete;
     
-    GermlineGenotype(unsigned ploidy, const HaplotypeLikelihoodCache& likelihoods);
+    GermlineLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods);
     
-    GermlineGenotype(const GermlineGenotype&)            = default;
-    GermlineGenotype& operator=(const GermlineGenotype&) = default;
-    GermlineGenotype(GermlineGenotype&&)                 = default;
-    GermlineGenotype& operator=(GermlineGenotype&&)      = default;
+    GermlineLikelihoodModel(const GermlineLikelihoodModel&)            = default;
+    GermlineLikelihoodModel& operator=(const GermlineLikelihoodModel&) = default;
+    GermlineLikelihoodModel(GermlineLikelihoodModel&&)                 = default;
+    GermlineLikelihoodModel& operator=(GermlineLikelihoodModel&&)      = default;
     
-    ~GermlineGenotype() = default;
+    ~GermlineLikelihoodModel() = default;
     
     double ln_likelihood(const Genotype<Haplotype>& genotype) const;
     
 private:
     const HaplotypeLikelihoodCache& likelihoods_;
-    
-    unsigned ploidy_;
     
     // These are just for optimisation
     double ln_likelihood_haploid(const Genotype<Haplotype>& genotype) const;
@@ -47,4 +45,4 @@ private:
 } // namespace model
 } // namespace octopus
 
-#endif /* defined(__Octopus__germline_genotype__) */
+#endif /* defined(__Octopus__germline_likelihood_model__) */

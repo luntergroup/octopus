@@ -30,8 +30,9 @@
 
 #include "timers.hpp"
 
-namespace
-{
+namespace octopus { namespace coretools {
+
+namespace {
     template <typename I>
     auto sequence_length(const I num_kmers, const unsigned kmer_size)
     {
@@ -1554,3 +1555,6 @@ namespace debug {
         }
     }
 }
+
+} // namespace coretools
+} // namespace octopus

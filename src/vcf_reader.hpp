@@ -17,10 +17,13 @@
 #include <iterator>
 #include <typeindex>
 #include <utility>
+#include <functional>
 
 #include <boost/filesystem.hpp>
 
 #include "vcf_reader_impl.hpp"
+
+namespace octopus {
 
 class VcfHeader;
 class VcfRecord;
@@ -101,20 +104,22 @@ bool operator==(const VcfReader& lhs, const VcfReader& rhs);
 
 bool operator!=(const VcfReader::RecordIterator& lhs, const VcfReader::RecordIterator& rhs);
 
+} // namespace octopus
+
 namespace std {
-    template <> struct hash<VcfReader>
+    template <> struct hash<octopus::VcfReader>
     {
-        size_t operator()(const VcfReader& reader) const
+        size_t operator()(const octopus::VcfReader& reader) const
         {
             return hash<string>()(reader.path().string());
         }
     };
     
-    template <> struct hash<reference_wrapper<const VcfReader>>
+    template <> struct hash<reference_wrapper<const octopus::VcfReader>>
     {
-        size_t operator()(reference_wrapper<const VcfReader> reader) const
+        size_t operator()(reference_wrapper<const octopus::VcfReader> reader) const
         {
-            return hash<VcfReader>()(reader);
+            return hash<octopus::VcfReader>()(reader);
         }
     };
 } // namespace std

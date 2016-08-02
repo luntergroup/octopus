@@ -13,9 +13,11 @@
 #include <memory>
 #include <utility>
 
+namespace octopus {
+
 class VcfRecord;
 
-namespace octopus { namespace CallFiltering
+namespace csr
 {
     class Measure
     {
@@ -49,7 +51,7 @@ namespace octopus { namespace CallFiltering
     {
         return MeasureWrapper {std::make_unique<M>(std::forward<Args>(args)...)};
     }
-} // namespace CallFiltering
+} // namespace csr
 } // namespace octopus
 
 #endif /* measure_hpp */

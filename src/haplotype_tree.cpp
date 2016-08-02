@@ -295,7 +295,7 @@ GenomicRegion HaplotypeTree::encompassing_region() const
                                                  return ends_before(tree_[lhs], tree_[rhs]);
                                              });
     
-    return GenomicRegion {contig_, ::encompassing_region(tree_[leftmost], tree_[rightmost])};
+    return GenomicRegion {contig_, octopus::encompassing_region(tree_[leftmost], tree_[rightmost])};
 }
 
 std::vector<Haplotype> HaplotypeTree::extract_haplotypes() const
@@ -445,7 +445,7 @@ void HaplotypeTree::clear(const GenomicRegion& region)
     
     const auto tree_region = encompassing_region();
     
-    if (::contains(region, tree_region)) {
+    if (octopus::contains(region, tree_region)) {
         clear();
     } else if (overlaps(region, tree_region)) {
         haplotype_leaf_cache_.clear();

@@ -20,6 +20,8 @@
 #include "contig_region.hpp"
 #include "comparable.hpp"
 
+namespace octopus {
+
 /**
     Represents a continuous region of a sequence in a genome. The sequence
     name is the reference sequence name (usually a chromosome), and the
@@ -352,17 +354,27 @@ inline std::ostream& operator<<(std::ostream& os, const GenomicRegion& region)
     os << to_string(region);
     return os;
 }
+    
+struct GenomicRegionHash
+{
+    std::size_t operator()(const GenomicRegion& region) const noexcept
+    {
+        using boost::hash_combine;
+        std::size_t result {};
+        hash_combine(result, std::hash<GenomicRegion::ContigName>()(region.contig_name()));
+        hash_combine(result, std::hash<ContigRegion>()(region.contig_region()));
+        return result;
+    }
+};
+    
+} // namespace octopus
 
 namespace std {
-    template <> struct hash<GenomicRegion>
+    template <> struct hash<octopus::GenomicRegion>
     {
-        size_t operator()(const GenomicRegion& r) const
+        size_t operator()(const octopus::GenomicRegion& region) const
         {
-            using boost::hash_combine;
-            size_t result {};
-            hash_combine(result, hash<GenomicRegion::ContigName>()(r.contig_name()));
-            hash_combine(result, hash<ContigRegion>()(r.contig_region()));
-            return result;
+            return octopus::GenomicRegionHash()(region);
         }
     };
 }

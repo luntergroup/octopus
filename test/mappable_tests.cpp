@@ -21,6 +21,8 @@
 using std::cout;
 using std::endl;
 
+namespace octopus {
+
 BOOST_AUTO_TEST_SUITE(Components)
 BOOST_AUTO_TEST_SUITE(MappableTests)
 
@@ -70,3 +72,5 @@ BOOST_AUTO_TEST_CASE(is_after_and_is_before_are_consistent)
 
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace octopus

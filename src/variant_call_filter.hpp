@@ -23,13 +23,15 @@
 #include "phred.hpp"
 #include "vcf_record.hpp"
 
+namespace octopus {
+
 class GenomicRegion;
 class VcfReader;
 class VcfWriter;
 class VcfHeader;
 
-namespace octopus { namespace CallFiltering
-{
+namespace csr {
+
 class VariantCallFilter
 {
 public:
@@ -101,7 +103,8 @@ public:
 private:
     std::unique_ptr<VariantCallFilter> filter_;
 };
-} // namespace CallFiltering
+
+} // namespace csr
 } // namespace octopus
 
 #endif /* variant_call_filter_hpp */

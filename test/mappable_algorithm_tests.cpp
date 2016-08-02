@@ -24,6 +24,8 @@
 using std::cout;
 using std::endl;
 
+namespace octopus { namespace test {
+
 BOOST_AUTO_TEST_SUITE(Components)
 BOOST_AUTO_TEST_SUITE(MappableAlgorithms)
 
@@ -152,3 +154,6 @@ BOOST_AUTO_TEST_CASE(extract_covered_regions_returns_regions_which_contain_all_e
 
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace test
+} // namespace octopus

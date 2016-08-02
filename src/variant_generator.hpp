@@ -29,10 +29,12 @@
 #include "reference_genome.hpp"
 #include "vcf_reader.hpp"
 
+namespace octopus {
+
 class AlignedRead;
 class GenomicRegion;
 
-namespace octopus { namespace coretools {
+namespace coretools {
 
 class VariantGenerator
 {

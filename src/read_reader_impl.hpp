@@ -18,6 +18,8 @@
 #include "genomic_region.hpp"
 #include "aligned_read.hpp"
 
+namespace octopus { namespace io {
+
 class IReadReaderImpl
 {
 public:
@@ -67,5 +69,8 @@ public:
     virtual ContigRegion::Size get_reference_contig_size(const std::string& contig_name) const = 0;
     virtual std::vector<GenomicRegion> extract_possible_regions_in_file() const = 0;
 };
+
+} // namespace io
+} // namespace octopus
 
 #endif

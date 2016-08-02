@@ -26,9 +26,11 @@
 #include "haplotype.hpp"
 #include "variant.hpp"
 
+namespace octopus {
+
 class ReferenceGenome;
 
-namespace octopus { namespace coretools {
+namespace coretools {
 
 class HaplotypeTree
 {

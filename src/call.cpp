@@ -87,13 +87,13 @@ void Call::replace(const char old_base, const char replacement_base)
     }
 }
 
-void Call::set_dummy_model_posterior(double p) noexcept
+void Call::set_model_posterior(double p) noexcept
 {
-    dummy_model_posterior_ = p;
+    model_posterior_ = p;
 }
 
-boost::optional<double> Call::dummy_model_posterior() const noexcept
+boost::optional<double> Call::model_posterior() const noexcept
 {
-    return dummy_model_posterior_;
+    return model_posterior_;
 }
 } // namespace octopus

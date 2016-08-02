@@ -25,7 +25,7 @@
 
 #include "comparable.hpp"
 
-class Assembler;
+namespace octopus { namespace coretools { class Assembler; }}
 
 namespace boost {
     template <typename G>
@@ -33,6 +33,8 @@ namespace boost {
     template <typename G>
     static decltype(auto) get(vertex_index_t, const G& g);
 }
+
+namespace octopus { namespace coretools {
 
 namespace debug {
     void print(const Assembler& assembler);
@@ -305,9 +307,13 @@ alt {std::forward<S2>(alt)}
 bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs);
 bool operator!=(const Assembler::Variant& lhs, const Assembler::Variant& rhs);
 
+} // namespace coretools
+} // namespace octopus
+
 // Hack to make some older boost algorithms work with bundled properties
-namespace boost
-{
+namespace boost {
+    using Assembler = octopus::coretools::Assembler;
+    
     template <>
     struct property_map<Assembler::KmerGraph, vertex_index_t>
     {

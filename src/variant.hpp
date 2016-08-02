@@ -24,9 +24,9 @@
 #include "comparable.hpp"
 #include "mappable.hpp"
 
-class ReferenceGenome;
-
 namespace octopus {
+
+class ReferenceGenome;
 
 /*
  A variant is a combination of a reference allele and an alternative allele.

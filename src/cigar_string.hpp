@@ -21,6 +21,8 @@
 
 #include "comparable.hpp"
 
+namespace octopus {
+
 class CigarOperation : public Comparable<CigarOperation> // Comparable so can compare reads
 {
 public:
@@ -168,38 +170,42 @@ struct CigarHash
     std::size_t operator()(const CigarString& cigar) const noexcept;
 };
 
+} // namespace octopus
+
 namespace std {
-    template <> struct hash<CigarOperation>
+    template <> struct hash<octopus::CigarOperation>
     {
-        size_t operator()(const CigarOperation& op) const noexcept
+        size_t operator()(const octopus::CigarOperation& op) const noexcept
         {
-            return CigarHash()(op);
+            return octopus::CigarHash()(op);
         }
     };
     
-    template <> struct hash<CigarString>
+    template <> struct hash<octopus::CigarString>
     {
-        size_t operator()(const CigarString& cigar) const noexcept
+        size_t operator()(const octopus::CigarString& cigar) const noexcept
         {
-            return CigarHash()(cigar);
+            return octopus::CigarHash()(cigar);
         }
     };
 } // namespace std
 
 namespace boost {
-    template <> struct hash<CigarOperation> : std::unary_function<CigarOperation, std::size_t>
+    template <>
+    struct hash<octopus::CigarOperation> : std::unary_function<octopus::CigarOperation, std::size_t>
     {
-        std::size_t operator()(const CigarOperation& op) const noexcept
+        std::size_t operator()(const octopus::CigarOperation& op) const noexcept
         {
-            return std::hash<CigarOperation>()(op);
+            return std::hash<octopus::CigarOperation>()(op);
         }
     };
     
-    template <> struct hash<CigarString> : std::unary_function<CigarString, std::size_t>
+    template <>
+    struct hash<octopus::CigarString> : std::unary_function<octopus::CigarString, std::size_t>
     {
-        std::size_t operator()(const CigarString& cigar) const noexcept
+        std::size_t operator()(const octopus::CigarString& cigar) const noexcept
         {
-            return std::hash<CigarString>()(cigar);
+            return std::hash<octopus::CigarString>()(cigar);
         }
     };
 } // namespace boost

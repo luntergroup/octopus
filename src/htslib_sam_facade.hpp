@@ -25,8 +25,12 @@
 #include "read_reader_impl.hpp"
 #include "aligned_read.hpp"
 
+namespace octopus {
+
 class GenomicRegion;
 class ContigRegion;
+
+namespace io {
 
 class HtslibSamFacade : public IReadReaderImpl
 {
@@ -163,5 +167,8 @@ private:
     const std::string& contig_name(HtsTidType hts_tid) const;
     uint64_t get_num_mapped_reads(const std::string& contig_name) const;
 };
+
+} // namespace io
+} // namespace octopus
 
 #endif /* defined(__Octopus__htslib_sam_facade__) */

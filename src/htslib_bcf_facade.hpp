@@ -24,6 +24,8 @@
 #include "htslib/vcf.h"
 #include "htslib/synced_bcf_reader.h"
 
+namespace octopus {
+
 class GenomicRegion;
 class VcfHeader;
 
@@ -146,5 +148,7 @@ public:
 };
 
 bool operator!=(const HtslibBcfFacade::RecordIterator& lhs, const HtslibBcfFacade::RecordIterator& rhs);
+
+} // namespace octopus
 
 #endif /* defined(__Octopus__htslib_bcf_facade__) */
