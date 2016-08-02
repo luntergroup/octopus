@@ -10,10 +10,11 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include "option_parser.hpp"
-#include "option_collation.hpp"
-#include "octopus.hpp"
+#include <config/option_parser.hpp>
+#include <config/option_collation.hpp>
+#include <core/octopus.hpp>
 #include <logging/logging.hpp>
+
 #include "mock_options.hpp"
 
 using namespace octopus;
