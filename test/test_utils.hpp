@@ -16,7 +16,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include "haplotype.hpp"
+#include <core/types/haplotype.hpp>
 
 namespace octopus {
 

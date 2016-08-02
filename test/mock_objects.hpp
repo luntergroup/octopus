@@ -16,9 +16,9 @@
 #include <iterator>
 #include <cstddef>
 
-#include "genomic_region.hpp"
-#include "aligned_read.hpp"
-#include "cigar_string.hpp"
+#include <basics/genomic_region.hpp>
+#include <basics/aligned_read.hpp>
+#include <basics/cigar_string.hpp>
 
 namespace octopus { namespace test {
 
