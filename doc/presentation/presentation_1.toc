@@ -1,5 +1,0 @@
-\beamer@endinputifotherversion {3.36pt}
-\beamer@sectionintoc {1}{Background}{2}{0}{1}
-\beamer@sectionintoc {2}{Our algorithm}{8}{0}{2}
-\beamer@sectionintoc {3}{Results}{23}{0}{3}
-\beamer@sectionintoc {4}{Conclusion}{25}{0}{4}
