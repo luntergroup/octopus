@@ -18,12 +18,16 @@
 
 namespace octopus { namespace readpipe {
 
+/**
+ Downsampler removes reads from a collection in order to reduce the coverage at positions
+ which exceed a maximum bound.
+ */
 class Downsampler
 {
 public:
     Downsampler() = default;
     
-    Downsampler(unsigned max_coverage, unsigned min_coverage);
+    Downsampler(unsigned trigger_coverage, unsigned target_coverage);
     
     Downsampler(const Downsampler&)            = default;
     Downsampler& operator=(const Downsampler&) = default;
@@ -32,14 +36,25 @@ public:
     
     ~Downsampler() = default;
     
-    // returns the number of reads downsampled
+    // Returns the number of reads removed
     std::size_t downsample(ReadContainer& reads) const;
-    std::size_t downsample(ReadMap& reads) const;
     
 private:
-    unsigned max_coverage_ = 100'000;
-    unsigned min_coverage_ = 100'000;
+    unsigned trigger_coverage_ = 10'000;
+    unsigned target_coverage_  = 10'000;
 };
+
+template <typename Map>
+auto downsample(Map& reads, const Downsampler& downsampler)
+{
+    std::size_t result {0};
+    
+    for (auto& p : reads) {
+        result += downsampler.downsample(p.second);
+    }
+    
+    return result;
+}
 
 } // namespace readpipe
 } // namespace octopus

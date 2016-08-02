@@ -425,7 +425,7 @@ Haplotype::NucleotideSequence::size_type sequence_size(const Haplotype& haplotyp
     return haplotype.sequence().size();
 }
 
-bool is_empty_sequence(const Haplotype& haplotype) noexcept
+bool is_sequence_empty(const Haplotype& haplotype) noexcept
 {
     return haplotype.sequence().empty();
 }

@@ -134,8 +134,6 @@ public:
     bool is_marked_duplicate() const noexcept;
     bool is_marked_supplementary_alignment() const noexcept;
     
-    std::size_t get_hash() const;
-    
     void cap_qualities(BaseQuality max = 0) noexcept;
     void cap_front_qualities(std::size_t num_bases, BaseQuality max = 0) noexcept;
     void cap_back_qualities(std::size_t num_bases, BaseQuality max = 0) noexcept;
@@ -152,14 +150,11 @@ private:
     CigarString cigar_string_;
     std::string read_group_;
     boost::optional<Segment> next_segment_;
-    mutable std::size_t hash_ = 0; // 0 is reserved so can be lazy evaluated
     FlagBits flags_;
     MappingQuality mapping_quality_;
     
     FlagBits compress(const Flags& flags) const noexcept;
     Flags decompress(const FlagBits& flags) const noexcept;
-    
-    std::size_t make_hash() const;
 };
 
 struct AlignedRead::Segment::Flags
@@ -240,10 +235,12 @@ std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(con
 
 GenomicRegion clipped_mapped_region(const AlignedRead& read);
 
+// Returns the part of the read cigar string contained by the region
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region);
 
 ContigRegion::Size count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region);
-
+    
+// Returns the part of the read (cigar, sequence, qualities) contained by the region
 AlignedRead splice(const AlignedRead& read, const GenomicRegion& region);
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs);
@@ -259,6 +256,11 @@ bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs
 std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector& qualities);
 std::ostream& operator<<(std::ostream& os, const AlignedRead& read);
 
+struct ReadHash
+{
+    std::size_t operator()(const AlignedRead& read) const;
+};
+
 } // namespace octopus
 
 namespace std {
@@ -266,7 +268,7 @@ namespace std {
     {
         size_t operator()(const octopus::AlignedRead& read) const
         {
-            return read.get_hash();
+            return octopus::ReadHash()(read);
         }
     };
     

@@ -41,7 +41,7 @@ public:
     
     using FilterCountMap = std::unordered_map<std::string, std::size_t>;
     
-    ReadFilterer()  = default;
+    ReadFilterer() = default;
     
     ReadFilterer(const ReadFilterer&)            = default;
     ReadFilterer& operator=(const ReadFilterer&) = default;
@@ -50,12 +50,12 @@ public:
     
     ~ReadFilterer() = default;
     
-    void register_filter(BasicFilterPtr filter);
-    void register_filter(ContextFilterPtr filter);
+    void add(BasicFilterPtr filter);
+    void add(ContextFilterPtr filter);
     
     unsigned num_filters() const noexcept;
     
-    void shrink_to_fit() noexcept;
+    void shrink_to_fit() noexcept; // Just removes extra capcity for filters
     
     // Like std::remove
     BidirIt remove(ReadIterator first, ReadIterator last) const;
@@ -74,13 +74,13 @@ private:
 };
 
 template <typename BidirIt>
-void ReadFilterer<BidirIt>::register_filter(BasicFilterPtr filter)
+void ReadFilterer<BidirIt>::add(BasicFilterPtr filter)
 {
     basic_filters_.emplace_back(std::move(filter));
 }
 
 template <typename BidirIt>
-void ReadFilterer<BidirIt>::register_filter(ContextFilterPtr filter)
+void ReadFilterer<BidirIt>::add(ContextFilterPtr filter)
 {
     context_filters_.emplace_back(std::move(filter));
 }

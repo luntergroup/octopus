@@ -11,6 +11,10 @@
 
 namespace octopus {
 
+/**
+ A class that is derived from Equitable must implement operator== and will then have
+ operator!= defined.
+ */
 template <typename T>
 class Equitable {};
 

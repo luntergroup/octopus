@@ -9,15 +9,12 @@
 #ifndef Octopus_comparable_hpp
 #define Octopus_comparable_hpp
 
-/**
-    A bit of voodoo template magic. See the curiously recurring template pattern!
-    The crux of this is if the class T provides the '==' and '<' operators, then it is
-    fully comparable, and by deriving from this class, will automatically have the
-    '!=', '>', '<=', & '>=' provided.
- */
-
 namespace octopus {
 
+/**
+ A class that is derived from Comparable must implement operator== and operator< and will 
+ then have all other comparison operators defined.
+ */
 template <typename T>
 class Comparable {};
 

@@ -252,7 +252,7 @@ private:
 
 Haplotype::NucleotideSequence::size_type sequence_size(const Haplotype& haplotype) noexcept;
 
-bool is_empty_sequence(const Haplotype& haplotype) noexcept;
+bool is_sequence_empty(const Haplotype& haplotype) noexcept;
 
 bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);

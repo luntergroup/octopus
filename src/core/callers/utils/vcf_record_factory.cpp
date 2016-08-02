@@ -123,7 +123,7 @@ namespace octopus
                     continue;
                 }
                 
-                auto it3 = find_first_not_overlapped(next(it2), end(wrapped_calls), *it);
+                auto it3 = find_first_after(next(it2), end(wrapped_calls), *it);
                 
                 // now everything between it and it2 is an insertion, anything between
                 // it2 and it3 is another call which will have inserted sequence we want to remove.
@@ -243,7 +243,7 @@ namespace octopus
         result.reserve(calls.size());
         
         for (auto it = begin(wrapped_calls); it != end(wrapped_calls);) {
-            const auto it2 = find_first_overlapped(it, end(wrapped_calls));
+            const auto it2 = adjacent_overlap_find(it, end(wrapped_calls));
             
             transform(std::make_move_iterator(it), std::make_move_iterator(it2),
                       std::back_inserter(result),
@@ -345,11 +345,11 @@ namespace octopus
             }
             
             if (it3 != end(wrapped_calls) && overlaps(*prev(it3), *it3)) {
-                it = find_first_not_overlapped(next(it3), end(wrapped_calls), *prev(it3));
+                it = find_first_after(next(it3), end(wrapped_calls), *prev(it3));
                 
                 while (it != end(wrapped_calls)) {
                     if (overlaps(*it, *prev(it))) {
-                        it = find_first_not_overlapped(next(it), end(wrapped_calls), *it);
+                        it = find_first_after(next(it), end(wrapped_calls), *it);
                     } else {
                         break;
                     }

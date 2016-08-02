@@ -930,7 +930,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
     
     const auto& info = hts_bam1_->core;
     
-    auto read_begin_tmp = soft_clipped_read_begin(cigar, info.pos);
+    auto read_begin_tmp = clipped_begin(cigar, info.pos);
     
     auto sequence = extract_sequence(hts_bam1_.get());
     

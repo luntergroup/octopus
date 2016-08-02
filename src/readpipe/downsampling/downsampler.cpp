@@ -56,6 +56,7 @@ auto sample(const PositionCoverages& required_coverage)
 {
     static std::default_random_engine generator {};
     
+    // TODO: Do we really need to keep regenerating this distribution?
     std::discrete_distribution<std::size_t> dist {
         std::cbegin(required_coverage), std::cend(required_coverage)
     };
@@ -96,17 +97,17 @@ auto pick_sample(BidirIt first_unsampled, BidirIt last_unsampled,
     return random_sample(candidates);
 }
 
-void reduce(PositionCoverages& required_coverage, const ReadWrapper& read, const GenomicRegion& region)
+void reduce(PositionCoverages& coverages, const ReadWrapper& read, const GenomicRegion& region)
 {
     assert(!begins_before(read, region));
     
     const auto read_offset = begin_distance(region, read);
     
-    const auto first = std::next(std::begin(required_coverage), read_offset);
+    const auto first = std::next(std::begin(coverages), read_offset);
     
     auto last = std::next(first, region_size(read));
     
-    if (last > std::end(required_coverage)) last = std::end(required_coverage);
+    if (last > std::end(coverages)) last = std::end(coverages);
     
     std::transform(first, last, first, [] (const auto x) { return (x > 0) ? x - 1 : 0; });
 }
@@ -199,9 +200,10 @@ auto sample(const InputIt first_read, const InputIt last_read, const GenomicRegi
 
 namespace {
 
-std::vector<GenomicRegion>
-find_target_coverage_regions(const ReadContainer& reads,
-                             const unsigned max_coverage, const unsigned min_coverage)
+// Look for regions with coverage above max_coverage interconnected by positions
+// with coverage abouve min_coverage. The idea being samples are better taken from the
+// larger joined regions.
+auto find_target_regions(const ReadContainer& reads, const unsigned max_coverage, const unsigned min_coverage)
 {
     const auto above_max_coverage_regions = find_high_coverage_regions(reads, max_coverage);
     
@@ -225,16 +227,16 @@ find_target_coverage_regions(const ReadContainer& reads,
     return result;
 }
 
-void prepend(std::deque<AlignedRead>& cur_samples, std::vector<AlignedRead>&& new_samples)
+void prepend(std::vector<AlignedRead>&& src, std::deque<AlignedRead>& dest)
 {
-    cur_samples.insert(std::begin(cur_samples),
-                       std::make_move_iterator(std::begin(new_samples)),
-                       std::make_move_iterator(std::end(new_samples)));
+    dest.insert(std::begin(dest),
+                std::make_move_iterator(std::begin(src)),
+                std::make_move_iterator(std::end(src)));
 }
 
 } // namespace
 
-std::size_t sample(ReadContainer& reads, const unsigned max_coverage, const unsigned min_coverage)
+std::size_t sample(ReadContainer& reads, const unsigned trigger_coverage, const unsigned target_coverage)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     
@@ -242,19 +244,19 @@ std::size_t sample(ReadContainer& reads, const unsigned max_coverage, const unsi
     
     if (prior_num_reads == 0) return 0;
     
-    const auto regions_to_sample = find_target_coverage_regions(reads, max_coverage, min_coverage);
+    const auto targets = find_target_regions(reads, trigger_coverage, target_coverage);
     
-    if (regions_to_sample.empty()) return 0;
+    if (targets.empty()) return 0;
     
     std::deque<AlignedRead> sampled {};
     
-    // downsample in reverse order because erasing near back of MappableFlatMultiSet is much
+    // Downsample in reverse order because erasing near back of MappableFlatMultiSet is much
     // cheaper than erasing near front.
-    std::for_each(std::crbegin(regions_to_sample), std::crend(regions_to_sample),
+    std::for_each(std::crbegin(targets), std::crend(targets),
                   [&] (const auto& region) {
                       const auto contained = bases(contained_range(begin(reads), end(reads), region));
                       
-                      prepend(sampled, sample(begin(contained), end(contained), region, min_coverage));
+                      prepend(sample(begin(contained), end(contained), region, target_coverage), sampled);
                       
                       reads.erase(begin(contained), end(contained));
                   });
@@ -266,26 +268,19 @@ std::size_t sample(ReadContainer& reads, const unsigned max_coverage, const unsi
 
 // Downsampler
 
-Downsampler::Downsampler(unsigned max_coverage, unsigned min_coverage)
+Downsampler::Downsampler(unsigned trigger_coverage, unsigned target_coverage)
 :
-max_coverage_ {max_coverage},
-min_coverage_ {min_coverage}
-{}
+trigger_coverage_ {trigger_coverage},
+target_coverage_ {target_coverage}
+{
+    if (target_coverage > trigger_coverage) {
+        target_coverage_ = trigger_coverage;
+    }
+}
 
 std::size_t Downsampler::downsample(ReadContainer& reads) const
 {
-    return sample(reads, max_coverage_, min_coverage_);
-}
-
-std::size_t Downsampler::downsample(ReadMap& reads) const
-{
-    std::size_t result {0};
-    
-    for (auto& p : reads) {
-        result += downsample(p.second);
-    }
-    
-    return result;
+    return sample(reads, trigger_coverage_, target_coverage_);
 }
 
 } // namespace readpipe

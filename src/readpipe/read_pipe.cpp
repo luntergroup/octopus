@@ -160,7 +160,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
         if (downsampler_) {
             auto reads = make_mappable_map(std::move(batch_reads));
             
-            const auto n = downsampler_->downsample(reads);
+            const auto n = downsample(reads, *downsampler_);
             
             if (debug_log_) stream(*debug_log_) << "Downsampling removed " << n << " reads from " << region;
             

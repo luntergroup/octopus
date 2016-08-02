@@ -16,6 +16,10 @@
 
 namespace octopus {
 
+/**
+ MappableReferenceWrapper is a wrapper for Mappable types that is also Mappable. They
+ can therefore be used in containers and mappable algorithms.
+ */
 template <typename T>
 class MappableReferenceWrapper : public Mappable<MappableReferenceWrapper<T>>
 {

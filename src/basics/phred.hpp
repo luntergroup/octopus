@@ -33,14 +33,14 @@ public:
     
     Phred() = default;
     
-    explicit Phred(Q score) : score_ {score} // to convert -0.0 to +0.0
+    explicit Phred(const Q score) : score_ {score} // to convert -0.0 to +0.0
     {
         if (score_ < Q {0}) {
             throw std::domain_error {"Phred: negative score " + std::to_string(score)};
         }
     }
     
-    explicit Phred(Probability error)
+    explicit Phred(const Probability error)
     {
         if (error < Q {0}) {
             throw std::domain_error {"Phred: negative error probability " + std::to_string(error)};

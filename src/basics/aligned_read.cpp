@@ -16,7 +16,7 @@ namespace octopus {
 
 // AlignedRead::Segment public
 
-const std::string& AlignedRead::Segment::contig_name() const
+const GenomicRegion::ContigName& AlignedRead::Segment::contig_name() const
 {
     return contig_name_;
 }
@@ -138,14 +138,6 @@ bool AlignedRead::is_marked_supplementary_alignment() const noexcept
     return flags_[7];
 }
 
-std::size_t AlignedRead::get_hash() const
-{
-    if (hash_ == 0) { // 0 is reserved
-        hash_ = make_hash(); // lazy evaluation
-    }
-    return hash_;
-}
-
 void AlignedRead::cap_qualities(const BaseQuality max) noexcept
 {
     std::transform(std::cbegin(qualities_), std::cend(qualities_), std::begin(qualities_),
@@ -162,9 +154,7 @@ void AlignedRead::cap_back_qualities(const std::size_t num_bases, const BaseQual
     std::fill_n(std::rbegin(qualities_), std::min(num_bases, sequence_.size()), max);
 }
 
-//
-// Private methods
-//
+// private methods
 
 AlignedRead::FlagBits AlignedRead::compress(const Flags& flags) const noexcept
 {
@@ -195,22 +185,17 @@ AlignedRead::Segment::FlagBits AlignedRead::Segment::compress(const Flags& flags
     return result;
 }
 
-std::size_t AlignedRead::make_hash() const
+std::size_t ReadHash::operator()(const octopus::AlignedRead &read) const
 {
-    using boost::hash_combine;
-    
     std::size_t result {};
     
-    hash_combine(result, std::hash<GenomicRegion>()(region_));
-    hash_combine(result, std::hash<CigarString>()(cigar_string_));
-    hash_combine(result, boost::hash_range(std::cbegin(qualities_), std::cend(qualities_)));
-    hash_combine(result, mapping_quality_);
+    using boost::hash_combine;
+    hash_combine(result, std::hash<GenomicRegion>()(read.mapped_region()));
+    hash_combine(result, std::hash<CigarString>()(read.cigar()));
+    hash_combine(result, boost::hash_range(std::cbegin(read.qualities()), std::cend(read.qualities())));
+    hash_combine(result, read.mapping_quality());
     
-    if (result != 0) return result;
-    
-    hash_combine(result, std::hash<CigarString>()(cigar_string_));
-    
-    return (result == 0) ? 1 : result; // 0 is reserved
+    return result;
 }
 
 // Non-member methods
@@ -247,7 +232,9 @@ CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
     
     const auto splice_region = overlapped_region(read, region);
     
-    return splice(read.cigar(), static_cast<CigarOperation::Size>(begin_distance(read, splice_region)));
+    const auto offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
+    
+    return splice(read.cigar(), offset, size(region));
 }
 
 ContigRegion::Size count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region)
@@ -265,7 +252,7 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     using std::cbegin; using std::next;
     
     if (!overlaps(read, region)) {
-        throw std::logic_error {"AlignedRead: trying to splice non-overlapped region"};
+        throw std::logic_error {"AlignedRead: trying to splice non-overlapping region"};
     }
     
     if (contains(region, read)) return read;
@@ -274,10 +261,10 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     
     const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
     
-    const auto uncontained_cigar_splice = splice_reference(read.cigar(), reference_offset);
+    const auto uncontained_cigar_splice = splice_reference(read.cigar(), 0, reference_offset);
     
-    auto contained_cigar_splice   = splice_reference(read.cigar(), reference_offset,
-                                                     region_size(splice_region));
+    auto contained_cigar_splice = splice_reference(read.cigar(), reference_offset,
+                                                   region_size(splice_region));
     
     const auto sequence_offset = sequence_size(uncontained_cigar_splice);
     const auto sequence_length = sequence_size(contained_cigar_splice);

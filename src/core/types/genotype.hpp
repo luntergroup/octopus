@@ -24,10 +24,10 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <core/types/allele.hpp>
 #include <interfaces/equitable.hpp>
 #include <interfaces/mappable.hpp>
 
+#include "allele.hpp"
 #include "haplotype.hpp"
 
 namespace octopus {

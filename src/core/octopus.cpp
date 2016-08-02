@@ -1541,13 +1541,13 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
     using ReadFilterer = ReadPipe::ReadFilterer;
     
     ReadFilterer filterer {};
-    filterer.register_filter(make_unique<HasValidQualities>());
-    filterer.register_filter(make_unique<HasWellFormedCigar>());
-    filterer.register_filter(make_unique<IsMapped>());
-    filterer.register_filter(make_unique<IsNotMarkedQcFail>());
-    filterer.register_filter(make_unique<IsNotMarkedDuplicate>());
-    filterer.register_filter(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
-    filterer.register_filter(make_unique<IsProperTemplate>());
+    filterer.add(make_unique<HasValidQualities>());
+    filterer.add(make_unique<HasWellFormedCigar>());
+    filterer.add(make_unique<IsMapped>());
+    filterer.add(make_unique<IsNotMarkedQcFail>());
+    filterer.add(make_unique<IsNotMarkedDuplicate>());
+    filterer.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
+    filterer.add(make_unique<IsProperTemplate>());
     
     return ReadPipe {
         components.read_manager(), std::move(transformer), std::move(filterer),

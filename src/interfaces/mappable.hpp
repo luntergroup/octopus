@@ -17,10 +17,9 @@
 namespace octopus {
 
 /**
- Template black magic. Anything that inherits from Mappable and has a mapped_region() member method
- can use all of these methods.
+ A class that is derived from Mappable must implement the mapped_region() member method
+ and will then be able to use all of the following methods.
 */
-
 template <typename T>
 class Mappable {};
 
@@ -612,35 +611,20 @@ auto outer_distance(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
                           static_cast<const T2&>(rhs).mapped_region());
 }
 
+inline auto next_mapped_position(const ContigRegion& region) noexcept
+{
+    return next_position(region);
+}
+
+inline auto next_mapped_position(const GenomicRegion& region)
+{
+    return next_position(region);
+}
+
 template <typename T>
-auto next_position(const Mappable<T>& mappable)
+auto next_mapped_position(const Mappable<T>& mappable)
 {
     return next_position(static_cast<const T&>(mappable).mapped_region());
-}
-
-template <typename T>
-auto expand_lhs(const Mappable<T>& mappable, const typename RegionType<T>::DifferenceType n)
-{
-    return expand_lhs(static_cast<const T&>(mappable).mapped_region(), n);
-}
-
-template <typename T>
-auto expand_rhs(const Mappable<T>& mappable, const typename RegionType<T>::DifferenceType n)
-{
-    return expand_rhs(static_cast<const T&>(mappable).mapped_region(), n);
-}
-
-template <typename T>
-auto expand(const Mappable<T>& mappable, const typename RegionType<T>::DifferenceType n)
-{
-    return expand(static_cast<const T&>(mappable).mapped_region(), n);
-}
-
-template <typename T>
-auto expand(const Mappable<T>& mappable, const typename RegionType<T>::DifferenceType lhs,
-            const typename RegionType<T>::DifferenceType rhs)
-{
-    return expand(static_cast<const T&>(mappable).mapped_region(), lhs, rhs);
 }
 
 template <typename T>

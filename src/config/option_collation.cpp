@@ -857,76 +857,76 @@ auto make_read_filterer(const OptionMap& options)
     ReadFilterer result {};
     
     // these filters are mandatory
-    result.register_filter(make_unique<HasValidQualities>());
-    result.register_filter(make_unique<HasWellFormedCigar>());
+    result.add(make_unique<HasValidQualities>());
+    result.add(make_unique<HasWellFormedCigar>());
     
     if (options.at("disable-read-filtering").as<bool>()) {
         return result;
     }
     
     if (!options.at("consider-unmapped-reads").as<bool>()) {
-        result.register_filter(make_unique<IsMapped>());
+        result.add(make_unique<IsMapped>());
     }
     
     const auto min_mapping_quality = options.at("min-mapping-quality").as<unsigned>();
     
     if (min_mapping_quality > 0) {
-        result.register_filter(make_unique<IsGoodMappingQuality>(min_mapping_quality));
+        result.add(make_unique<IsGoodMappingQuality>(min_mapping_quality));
     }
     
     const auto min_base_quality = options.at("good-base-quality").as<unsigned>();
     const auto min_good_bases   = options.at("min-good-bases").as<unsigned>();
     
     if (min_base_quality > 0 && min_good_bases > 0) {
-        result.register_filter(make_unique<HasSufficientGoodQualityBases>(min_base_quality,
+        result.add(make_unique<HasSufficientGoodQualityBases>(min_base_quality,
                                                                           min_good_bases));
     }
     
     if (min_base_quality > 0 && options.count("min-good-base-fraction") == 1) {
         auto min_good_base_fraction = options.at("min-good-base-fraction").as<double>();
-        result.register_filter(make_unique<HasSufficientGoodBaseFraction>(min_base_quality,
+        result.add(make_unique<HasSufficientGoodBaseFraction>(min_base_quality,
                                                                           min_good_base_fraction));
     }
     
     if (options.count("min-read-length") == 1) {
-        result.register_filter(make_unique<IsShort>(options.at("min-read-length").as<unsigned>()));
+        result.add(make_unique<IsShort>(options.at("min-read-length").as<unsigned>()));
     }
     
     if (options.count("max-read-length") == 1) {
-        result.register_filter(make_unique<IsLong>(options.at("max-read-length").as<unsigned>()));
+        result.add(make_unique<IsLong>(options.at("max-read-length").as<unsigned>()));
     }
     
     if (!options.at("allow-marked-duplicates").as<bool>()) {
-        result.register_filter(make_unique<IsNotMarkedDuplicate>());
+        result.add(make_unique<IsNotMarkedDuplicate>());
     }
     
     if (!options.at("allow-octopus-duplicates").as<bool>()) {
-        result.register_filter(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
+        result.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
     }
     
     if (!options.at("allow-qc-fails").as<bool>()) {
-        result.register_filter(make_unique<IsNotMarkedQcFail>());
+        result.add(make_unique<IsNotMarkedQcFail>());
     }
     
     if (options.at("no-secondary-alignments").as<bool>()) {
-        result.register_filter(make_unique<IsNotSecondaryAlignment>());
+        result.add(make_unique<IsNotSecondaryAlignment>());
     }
     
     if (options.at("no-supplementary-alignmenets").as<bool>()) {
-        result.register_filter(make_unique<IsNotSupplementaryAlignment>());
+        result.add(make_unique<IsNotSupplementaryAlignment>());
     }
     
     if (!options.at("consider-reads-with-unmapped-segments").as<bool>()) {
-        result.register_filter(make_unique<IsNextSegmentMapped>());
-        result.register_filter(make_unique<IsProperTemplate>());
+        result.add(make_unique<IsNextSegmentMapped>());
+        result.add(make_unique<IsProperTemplate>());
     }
     
     if (!options.at("consider-reads-with-distant-segments").as<bool>()) {
-        result.register_filter(make_unique<IsLocalTemplate>());
+        result.add(make_unique<IsLocalTemplate>());
     }
     
     if (!options.at("allow-adapter-contaminated-reads").as<bool>()) {
-        result.register_filter(make_unique<IsNotContaminated>());
+        result.add(make_unique<IsNotContaminated>());
     }
     
     result.shrink_to_fit();

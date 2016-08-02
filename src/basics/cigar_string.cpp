@@ -88,17 +88,13 @@ CigarString parse_cigar(const std::string& cigar)
         if (std::isdigit(c)) {
             digits += c;
         } else {
-            try {
-                result.emplace_back(boost::lexical_cast<CigarOperation::Size>(digits), c);
-                digits.clear();
-            } catch (const boost::bad_lexical_cast&) {
-                throw;
-            }
+            result.emplace_back(boost::lexical_cast<CigarOperation::Size>(digits), c);
+            digits.clear();
         }
     }
     
     if (!digits.empty()) {
-        throw std::invalid_argument {"parse_cigar: could not parse all characters of " + cigar};
+        throw std::invalid_argument {"parse_cigar: unparsed characters in " + cigar};
     }
     
     result.shrink_to_fit();
@@ -106,7 +102,7 @@ CigarString parse_cigar(const std::string& cigar)
     return result;
 }
 
-bool is_valid_flag(const CigarOperation& op)
+bool is_valid_flag(const CigarOperation& op) noexcept
 {
     static constexpr std::array<char, 9> valid_flags {
         CigarOperation::ALIGNMENT_MATCH,
@@ -120,10 +116,7 @@ bool is_valid_flag(const CigarOperation& op)
         CigarOperation::PADDING
     };
     
-    static const auto first_valid = std::cbegin(valid_flags);
-    static const auto last_valid  = std::cend(valid_flags);
-    
-    return std::find(first_valid, last_valid, op.flag()) != last_valid;
+    return std::find(std::cbegin(valid_flags), std::cend(valid_flags), op.flag()) != std::cend(valid_flags);
 }
 
 bool is_valid(const CigarString& cigar) noexcept
@@ -142,47 +135,47 @@ bool is_minimal(const CigarString& cigar) noexcept
                               }) == std::cend(cigar);
 }
 
-bool is_front_soft_clipped(const CigarString& cigar_string) noexcept
+bool is_front_soft_clipped(const CigarString& cigar) noexcept
 {
-    return !cigar_string.empty() && cigar_string.front().flag() == CigarOperation::SOFT_CLIPPED;
+    return !cigar.empty() && cigar.front().flag() == CigarOperation::SOFT_CLIPPED;
 }
 
-bool is_back_soft_clipped(const CigarString& cigar_string) noexcept
+bool is_back_soft_clipped(const CigarString& cigar) noexcept
 {
-    return !cigar_string.empty() && cigar_string.back().flag() == CigarOperation::SOFT_CLIPPED;
+    return !cigar.empty() && cigar.back().flag() == CigarOperation::SOFT_CLIPPED;
 }
 
-bool is_soft_clipped(const CigarString& cigar_string) noexcept
+bool is_soft_clipped(const CigarString& cigar) noexcept
 {
-    return is_front_soft_clipped(cigar_string) || is_back_soft_clipped(cigar_string);
+    return is_front_soft_clipped(cigar) || is_back_soft_clipped(cigar);
 }
 
 std::pair<CigarOperation::Size, CigarOperation::Size>
-get_soft_clipped_sizes(const CigarString& cigar_string) noexcept
+get_soft_clipped_sizes(const CigarString& cigar) noexcept
 {
-    return std::make_pair((is_front_soft_clipped(cigar_string)) ? cigar_string.front().size() : 0,
-                          (is_back_soft_clipped(cigar_string)) ? cigar_string.back().size() : 0);
+    return std::make_pair((is_front_soft_clipped(cigar)) ? cigar.front().size() : 0,
+                          (is_back_soft_clipped(cigar)) ? cigar.back().size() : 0);
 }
 
 // non-member functions
 
 template <typename Predicate>
-CigarString splice(const CigarString& cigar_string, CigarOperation::Size offset,
+CigarString splice(const CigarString& cigar, CigarOperation::Size offset,
                    CigarOperation::Size size, Predicate pred)
 {
     CigarString result {};
-    result.reserve(cigar_string.size());
+    result.reserve(cigar.size());
     
-    auto op_it = std::cbegin(cigar_string);
+    auto op_it = std::cbegin(cigar);
     
-    const auto last = std::cend(cigar_string);
+    const auto last_op = std::cend(cigar);
     
-    while (op_it != last && (offset >= op_it->size() || !pred(*op_it))) {
+    while (op_it != last_op && (offset >= op_it->size() || !pred(*op_it))) {
         if (pred(*op_it)) offset -= op_it->size();
         ++op_it;
     }
     
-    if (op_it != last) {
+    if (op_it != last_op) {
         const auto remainder = op_it->size() - offset;
         
         if (remainder >= size) {
@@ -196,13 +189,13 @@ CigarString splice(const CigarString& cigar_string, CigarOperation::Size offset,
         ++op_it;
     }
     
-    while (op_it != last && size > 0 && (size >= op_it->size() || !pred(*op_it))) {
+    while (op_it != last_op && size > 0 && (size >= op_it->size() || !pred(*op_it))) {
         result.emplace_back(*op_it);
         if (pred(*op_it)) size -= op_it->size();
         ++op_it;
     }
     
-    if (op_it != last && size > 0) {
+    if (op_it != last_op && size > 0) {
         result.emplace_back(size, op_it->flag());
     }
     
@@ -211,37 +204,22 @@ CigarString splice(const CigarString& cigar_string, CigarOperation::Size offset,
     return result;
 }
 
-CigarString splice(const CigarString& cigar_string, const CigarOperation::Size offset,
+CigarString splice(const CigarString& cigar, const CigarOperation::Size offset,
                    const CigarOperation::Size size)
 {
-    return splice(cigar_string, offset, size, [] (const auto& op) { return true; });
+    return splice(cigar, offset, size, [] (const auto& op) { return true; });
 }
 
-CigarString splice(const CigarString& cigar_string, const CigarOperation::Size size)
-{
-    return splice(cigar_string, 0, size);
-}
-
-CigarString splice_reference(const CigarString& cigar_string, const CigarOperation::Size offset,
+CigarString splice_reference(const CigarString& cigar, const CigarOperation::Size offset,
                              const CigarOperation::Size size)
 {
-    return splice(cigar_string, offset, size, [] (const auto& op) { return op.advances_reference(); });
+    return splice(cigar, offset, size, [] (const auto& op) { return op.advances_reference(); });
 }
 
-CigarString splice_reference(const CigarString& cigar_string, const CigarOperation::Size size)
-{
-    return splice(cigar_string, 0, size);
-}
-
-CigarString splice_sequence(const CigarString& cigar_string, const CigarOperation::Size offset,
+CigarString splice_sequence(const CigarString& cigar, const CigarOperation::Size offset,
                             const CigarOperation::Size size)
 {
-    return splice(cigar_string, offset, size, [] (const auto& op) { return op.advances_sequence(); });
-}
-
-CigarString splice_sequence(const CigarString& cigar_string, const CigarOperation::Size size)
-{
-    return splice(cigar_string, 0, size);
+    return splice(cigar, offset, size, [] (const auto& op) { return op.advances_sequence(); });
 }
 
 std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation)
@@ -250,9 +228,9 @@ std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const CigarString& cigar_string)
+std::ostream& operator<<(std::ostream& os, const CigarString& cigar)
 {
-    std::copy(std::cbegin(cigar_string), std::cend(cigar_string), std::ostream_iterator<CigarOperation>(os));
+    std::copy(std::cbegin(cigar), std::cend(cigar), std::ostream_iterator<CigarOperation>(os));
     return os;
 }
 
