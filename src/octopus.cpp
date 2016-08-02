@@ -44,7 +44,7 @@
 #include "read_filterer.hpp"
 #include "downsampler.hpp"
 #include "read_pipe.hpp"
-#include "read_utils.hpp"
+#include "read_stats.hpp"
 #include "vcf_header_factory.hpp"
 #include "octopus_vcf.hpp"
 #include "variant_caller_factory.hpp"
@@ -65,8 +65,8 @@
 
 #include "genotype_reader.hpp"
 
-namespace octopus
-{
+namespace octopus {
+
 using options::OptionMap;
 using logging::get_debug_log;
 
@@ -249,18 +249,6 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                            reference, call_types);
 }
 
-ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
-                        const OptionMap& options)
-{
-    return ReadPipe {
-        read_manager,
-        options::make_read_transformer(options),
-        options::make_read_filterer(options),
-        options::make_downsampler(options),
-        std::move(samples)
-    };
-}
-
 template <typename ForwardIt, typename RandomGenerator>
 ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g) {
     std::uniform_int_distribution<std::size_t> dis(0, std::distance(first, last) - 1);
@@ -429,11 +417,6 @@ public:
         return components_.num_threads;
     }
     
-    const Composer::Builder& candidate_variant_generator_builder() const noexcept
-    {
-        return components_.candidate_variant_generator_builder;
-    }
-    
     const VariantCallerFactory& caller_factory() const noexcept
     {
         return components_.variant_caller_factory;
@@ -458,11 +441,9 @@ private:
         regions {options::get_search_regions(options, this->reference)},
         contigs_in_output_order {get_contigs(this->regions, this->reference,
                                              options::get_contig_output_order(options))},
-        read_pipe {make_read_pipe(this->read_manager, this->samples, options)},
-        candidate_variant_generator_builder {options::make_candidate_variant_generator_builder(options, this->reference)},
+        read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)},
         variant_caller_factory {options::make_variant_caller_factory(this->reference,
                                                                      this->read_pipe,
-                                                                     this->candidate_variant_generator_builder,
                                                                      this->regions,
                                                                      options)},
         output {std::move(output)},
@@ -501,7 +482,6 @@ private:
         InputRegionMap regions;
         Contigs contigs_in_output_order;
         ReadPipe read_pipe;
-        Composer::Builder candidate_variant_generator_builder;
         VariantCallerFactory variant_caller_factory;
         VcfWriter output;
         boost::optional<unsigned> num_threads;
@@ -515,10 +495,8 @@ private:
     void update_dependents() noexcept
     {
         components_.read_pipe.set_read_manager(components_.read_manager);
-        components_.candidate_variant_generator_builder.set_reference(components_.reference);
         components_.variant_caller_factory.set_reference(components_.reference);
         components_.variant_caller_factory.set_read_pipe(components_.read_pipe);
-        components_.variant_caller_factory.set_candidate_variant_generator_builder(components_.candidate_variant_generator_builder);
     }
 };
 
@@ -533,11 +511,6 @@ bool are_components_valid(const GenomeCallingComponents& components)
     
     if (components.search_regions().empty()) {
         log << "There are no input regions - at least one is required for calling";
-        return false;
-    }
-    
-    if (components.candidate_variant_generator_builder().num_generators() == 0) {
-        log << "There are no candidate generators - at least one is required for calling";
         return false;
     }
     
@@ -1559,8 +1532,7 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
 {
     using std::make_unique;
     
-    using namespace preprocess::transform;
-    using namespace preprocess::filter;
+    using namespace readpipe;
     
     ReadTransformer transformer {};
     transformer.register_transform(MaskSoftClipped {});

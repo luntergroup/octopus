@@ -48,14 +48,19 @@ public:
         score_ = Q {-10} * std::log10(std::max(std::min(error.value, Q {1}), Min_probability));
     }
     
-    ~Phred() noexcept = default;
-    
     Phred(const Phred&)            = default;
     Phred& operator=(const Phred&) = default;
     Phred(Phred&&)                 = default;
     Phred& operator=(Phred&&)      = default;
     
+    ~Phred() = default;
+    
     Q score() const noexcept
+    {
+        return score_;
+    }
+    
+    explicit operator Q() const noexcept
     {
         return score_;
     }

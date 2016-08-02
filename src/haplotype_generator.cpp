@@ -23,8 +23,8 @@
 #include <iostream> // DEBUG
 #include "timers.hpp"
 
-namespace octopus
-{
+namespace octopus { namespace coretools {
+
 // HaplotypeOverflow
 
 HaplotypeGenerator::HaplotypeOverflow::HaplotypeOverflow(GenomicRegion region, unsigned size)
@@ -77,8 +77,7 @@ namespace
     }
 }
 
-namespace debug
-{
+namespace debug {
     template <typename Range>
     void print_active_alleles(const Range& alleles, const GenomicRegion& active_region);
 } // namespace debug
@@ -172,7 +171,7 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
             
             if (can_extract_holdouts(novel_active_region)) {
                 extract_holdouts(novel_active_region);
-                tree_.remove_overlapped(novel_active_region);
+                tree_.clear(novel_active_region);
                 update_next_active_region();
                 active_region_ = *std::move(next_active_region_);
                 reset_next_active_region();
@@ -337,7 +336,7 @@ void HaplotypeGenerator::update_next_active_region() const
                     const auto it = extend_tree_until(novel_alleles, test_tree,
                                                       policies_.haplotype_limits.target);
                     
-                    test_tree.remove_overlapped(novel_region); // undo previous extension
+                    test_tree.clear(novel_region); // undo previous extension
                     
                     if (it == std::cend(novel_alleles)) {
                         max_lagged_region = encompassing_region(active_region_, max_lagged_region);
@@ -348,13 +347,13 @@ void HaplotypeGenerator::update_next_active_region() const
                         
                         if (can_remove_entire_passed_region(active_region_,
                                                             max_lagged_region, passed_alleles)) {
-                            test_tree.remove_overlapped(passed_region);
+                            test_tree.clear(passed_region);
                         } else if (requires_staged_removal(passed_alleles)) {
                             const auto first_removal_region = expand_rhs(passed_region, -1);
-                            test_tree.remove_overlapped(first_removal_region);
-                            test_tree.remove_overlapped(tail_region(first_removal_region));
+                            test_tree.clear(first_removal_region);
+                            test_tree.clear(tail_region(first_removal_region));
                         } else {
-                            test_tree.remove_overlapped(expand_rhs(passed_region, -1));
+                            test_tree.clear(expand_rhs(passed_region, -1));
                         }
                     }
                 }
@@ -378,7 +377,7 @@ void HaplotypeGenerator::update_next_active_region() const
                         if (test_tree.num_haplotypes() < policies_.haplotype_limits.target) {
                             break;
                         }
-                        test_tree.remove_overlapped(region);
+                        test_tree.clear(region);
                     }
                 }
                 
@@ -403,7 +402,7 @@ void HaplotypeGenerator::update_next_active_region() const
                     
                     if (test_tree.num_haplotypes() >= policies_.haplotype_limits.target) {
                         if (region != mutually_exclusive_novel_regions.front()) {
-                            test_tree.remove_overlapped(region); // always add one novel region
+                            test_tree.clear(region); // always add one novel region
                         }
                         break;
                     }
@@ -442,7 +441,7 @@ void HaplotypeGenerator::progress(GenomicRegion to)
             if (can_remove_entire_passed_region(active_region_, *next_active_region_,
                                                 passed_alleles)) {
                 alleles_.erase_overlapped(passed_region);
-                tree_.remove_overlapped(passed_region);
+                tree_.clear(passed_region);
             } else if (requires_staged_removal(passed_alleles)) {
                 // We need to be careful here as insertions adjacent to passed_region are
                 // considered overlapped and would be wrongly erased if we erased the whole
@@ -454,19 +453,19 @@ void HaplotypeGenerator::progress(GenomicRegion to)
                 const auto first_removal_region = expand_rhs(passed_region, -1);
                 
                 alleles_.erase_overlapped(first_removal_region);
-                tree_.remove_overlapped(first_removal_region);
+                tree_.clear(first_removal_region);
                 
                 // This will erase the remaining single base alleles in passed_region, but not the
                 // insertions in next_active_region_.
                 const auto second_removal_region = tail_region(first_removal_region);
                 
                 alleles_.erase_overlapped(second_removal_region);
-                tree_.remove_overlapped(second_removal_region);
+                tree_.clear(second_removal_region);
             } else {
                 const auto removal_region = expand_rhs(passed_region, -1);
                 
                 alleles_.erase_overlapped(removal_region);
-                tree_.remove_overlapped(removal_region);
+                tree_.clear(removal_region);
             }
         } else if (is_after(*next_active_region_, active_region_)) {
             tree_.clear();
@@ -701,4 +700,6 @@ HaplotypeGenerator HaplotypeGenerator::Builder::build(const ReferenceGenome& ref
 {
     return HaplotypeGenerator {reference, candidates, reads, policies_, min_flank_pad_};
 }
+
+} // namespace coretools
 } // namespace octopus

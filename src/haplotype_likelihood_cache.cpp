@@ -14,8 +14,8 @@
 #include <iostream> // DEBUG
 #include <iomanip>  // DEBUG
 
-namespace octopus
-{
+namespace octopus {
+
 // public methods
 
 HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(const unsigned max_haplotypes,
@@ -234,8 +234,7 @@ HaplotypeLikelihoodCache merge_samples(const std::vector<SampleName>& samples,
     return result;
 }
 
-namespace debug
-{
+namespace debug {
     std::vector<std::reference_wrapper<const Haplotype>>
     rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods)

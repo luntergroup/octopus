@@ -8,10 +8,11 @@
 
 #include "germline_variant_call.hpp"
 
-namespace octopus
+namespace octopus {
+
+void GermlineVariantCall::decorate(VcfRecord::Builder& record) const
 {
-    void GermlineVariantCall::decorate(VcfRecord::Builder& record) const
-    {
-        
-    }
+    
+}
+
 } // namespace octopus

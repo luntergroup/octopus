@@ -18,7 +18,7 @@
 #include "aligned_read.hpp"
 #include "cigar_string.hpp"
 
-namespace octopus { namespace preprocess { namespace filter
+namespace octopus { namespace readpipe
 {
 // All filters are nameable
 
@@ -280,8 +280,8 @@ struct IsNotDuplicate : ContextReadFilter<ForwardIt>
         return last;
     }
 };
-} // namespace filter
-} // namespace preprocess
+
+} // namespace readpipe
 } // namespace octopus
 
 #endif /* defined(__Octopus__read_filter__) */

@@ -25,7 +25,7 @@
 #include "mappable_algorithms.hpp"
 #include "allele.hpp"
 #include "variant_call.hpp"
-#include "read_utils.hpp"
+#include "read_stats.hpp"
 #include "string_utils.hpp"
 #include "maths.hpp"
 

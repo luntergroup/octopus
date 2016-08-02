@@ -11,8 +11,8 @@
 #include <cassert>
 #include <iostream>
 
-namespace octopus
-{
+namespace octopus {
+
 bool contains(const CancerGenotype<Haplotype>& genotype, const Allele& allele)
 {
     return contains(genotype.germline_genotype(), allele) || genotype.somatic_element().contains(allele);
@@ -64,8 +64,7 @@ generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const un
     return std::make_pair(std::move(cancer_genotypes), std::move(germline_genotypes));
 }
 
-namespace debug
-{
+namespace debug {
     void print_alleles(const CancerGenotype<Haplotype>& genotype)
     {
         print_alleles(std::cout, genotype);

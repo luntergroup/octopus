@@ -20,13 +20,12 @@
 #include <boost/iterator/transform_iterator.hpp>
 
 #include "common.hpp"
-#include "haplotype.hpp"
 #include "haplotype_likelihood_cache.hpp"
 #include "maths.hpp"
 #include "logging.hpp"
 
-namespace octopus
-{
+namespace octopus {
+
 namespace
 {
 template <typename T>
@@ -408,4 +407,5 @@ extract_removable(const std::vector<Haplotype>& haplotypes,
     
     return result;
 }
+
 } // namespace octopus

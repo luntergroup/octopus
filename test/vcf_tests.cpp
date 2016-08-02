@@ -21,6 +21,8 @@
 using std::cout;
 using std::endl;
 
+namespace octopus { namespace test {
+
 BOOST_AUTO_TEST_SUITE(Components)
 BOOST_AUTO_TEST_SUITE(IO)
 
@@ -145,3 +147,6 @@ BOOST_AUTO_TEST_CASE(bcf_files_can_be_indexed)
 
 BOOST_AUTO_TEST_SUITE_END() // IO
 BOOST_AUTO_TEST_SUITE_END() // Components
+
+} // namespace octopus
+} // namespace test

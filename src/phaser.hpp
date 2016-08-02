@@ -20,145 +20,131 @@
 #include "common.hpp"
 #include "genomic_region.hpp"
 #include "probability_matrix.hpp"
-#include "haplotype.hpp"
-#include "genotype.hpp"
-#include "variant.hpp"
 #include "mappable.hpp"
 #include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
+#include "variant.hpp"
+#include "haplotype.hpp"
+#include "genotype.hpp"
 #include "phred.hpp"
 
-namespace octopus
+namespace octopus {
+
+class Phaser
 {
-    class Phaser
-    {
-    public:
-        using GenotypePosteriorMap       = ProbabilityMatrix<Genotype<Haplotype>>;
-        using SampleGenotypePosteriorMap = GenotypePosteriorMap::InnerMap;
-        
-        struct PhaseSet;
-        
-        Phaser() = default;
-        
-        explicit Phaser(Phred<double> min_phase_score);
-        
-        Phaser(const Phaser&)            = default;
-        Phaser& operator=(const Phaser&) = default;
-        Phaser(Phaser&&)                 = default;
-        Phaser& operator=(Phaser&&)      = default;
-        
-        ~Phaser() = default;
-        
-        boost::optional<PhaseSet> try_phase(const std::vector<Haplotype>& haplotypes,
-                                            const GenotypePosteriorMap& genotype_posteriors,
-                                            const std::vector<Variant>& candidates) const;
-        
-        PhaseSet force_phase(const std::vector<Haplotype>& haplotypes,
-                             const GenotypePosteriorMap& genotype_posteriors,
-                             const std::vector<Variant>& candidates) const;
-        
-    private:
-        Phred<double> min_phase_score_;
-    };
+public:
+    using GenotypePosteriorMap       = ProbabilityMatrix<Genotype<Haplotype>>;
+    using SampleGenotypePosteriorMap = GenotypePosteriorMap::InnerMap;
     
-    struct Phaser::PhaseSet
+    struct PhaseSet;
+    
+    Phaser() = default;
+    
+    explicit Phaser(Phred<double> min_phase_score);
+    
+    Phaser(const Phaser&)            = default;
+    Phaser& operator=(const Phaser&) = default;
+    Phaser(Phaser&&)                 = default;
+    Phaser& operator=(Phaser&&)      = default;
+    
+    ~Phaser() = default;
+    
+    boost::optional<PhaseSet> try_phase(const std::vector<Haplotype>& haplotypes,
+                                        const GenotypePosteriorMap& genotype_posteriors,
+                                        const std::vector<Variant>& candidates) const;
+    
+    PhaseSet force_phase(const std::vector<Haplotype>& haplotypes,
+                         const GenotypePosteriorMap& genotype_posteriors,
+                         const std::vector<Variant>& candidates) const;
+    
+private:
+    Phred<double> min_phase_score_;
+};
+
+struct Phaser::PhaseSet
+{
+    struct PhaseRegion : public Mappable<PhaseRegion>
     {
-        struct PhaseRegion : public Mappable<PhaseRegion>
-        {
-            PhaseRegion() = default;
-            
-            template <typename Region> PhaseRegion(Region&& region, Phred<double> score);
-            
-            ~PhaseRegion() = default;
-            
-            PhaseRegion(const PhaseRegion&)            = default;
-            PhaseRegion& operator=(const PhaseRegion&) = default;
-            PhaseRegion(PhaseRegion&&)                 = default;
-            PhaseRegion& operator=(PhaseRegion&&)      = default;
-            
-            GenomicRegion region;
-            Phred<double> score;
-            
-            const GenomicRegion& mapped_region() const noexcept { return region; }
-        };
+        PhaseRegion() = default;
         
-        using SamplePhaseRegions = std::vector<PhaseRegion>;
-        using PhaseRegions       = std::unordered_map<SampleName, SamplePhaseRegions>;
-        
-        PhaseSet() = delete;
-        
-        template <typename R> PhaseSet(R&& region);
-        template <typename R, typename T> PhaseSet(R&& region, T&& phase_regions);
-        
-        PhaseSet(const PhaseSet&)            = default;
-        PhaseSet& operator=(const PhaseSet&) = default;
-        PhaseSet(PhaseSet&&)                 = default;
-        PhaseSet& operator=(PhaseSet&&)      = default;
-        
-        ~PhaseSet() = default;
+        template <typename Region> PhaseRegion(Region&& region, Phred<double> score);
         
         GenomicRegion region;
-        PhaseRegions phase_regions;
+        Phred<double> score;
+        
+        const GenomicRegion& mapped_region() const noexcept { return region; }
     };
     
-    template <typename Region>
-    Phaser::PhaseSet::PhaseRegion::PhaseRegion(Region&& region, const Phred<double> score)
-    :
-    region {std::forward<Region>(region)},
-    score {score}
-    {}
+    using SamplePhaseRegions = std::vector<PhaseRegion>;
+    using PhaseRegions       = std::unordered_map<SampleName, SamplePhaseRegions>;
     
-    template <typename R>
-    Phaser::PhaseSet::PhaseSet(R&& region)
-    :
-    region {std::forward<R>(region)},
-    phase_regions {}
-    {}
+    PhaseSet() = delete;
     
-    template <typename R, typename T>
-    Phaser::PhaseSet::PhaseSet(R&& region, T&& phase_regions)
-    :
-    region {std::forward<R>(region)},
-    phase_regions {std::forward<T>(phase_regions)}
-    {}
+    template <typename R> PhaseSet(R&& region);
+    template <typename R, typename T> PhaseSet(R&& region, T&& phase_regions);
     
-    // non-member methods
+    GenomicRegion region;
+    PhaseRegions phase_regions;
+};
+
+template <typename Region>
+Phaser::PhaseSet::PhaseRegion::PhaseRegion(Region&& region, const Phred<double> score)
+:
+region {std::forward<Region>(region)},
+score {score}
+{}
+
+template <typename R>
+Phaser::PhaseSet::PhaseSet(R&& region)
+:
+region {std::forward<R>(region)},
+phase_regions {}
+{}
+
+template <typename R, typename T>
+Phaser::PhaseSet::PhaseSet(R&& region, T&& phase_regions)
+:
+region {std::forward<R>(region)},
+phase_regions {std::forward<T>(phase_regions)}
+{}
+
+// non-member methods
+
+template <typename T>
+boost::optional<std::reference_wrapper<const Phaser::PhaseSet::PhaseRegion>>
+find_phase_region(const Phaser::PhaseSet::SamplePhaseRegions& phasings, const T& mappable)
+{
+    const auto overlapped = overlap_range(phasings, mappable, BidirectionallySortedTag {});
     
-    template <typename T>
-    boost::optional<std::reference_wrapper<const Phaser::PhaseSet::PhaseRegion>>
-    find_phase_region(const Phaser::PhaseSet::SamplePhaseRegions& phasings, const T& mappable)
-    {
-        const auto overlapped = overlap_range(phasings, mappable, BidirectionallySortedTag {});
-        
-        if (!overlapped.empty()) {
-            assert(size(overlapped, BidirectionallySortedTag {}) == 1);
-            return std::cref(overlapped.front());
-        }
-        
-        return boost::none;
+    if (!overlapped.empty()) {
+        assert(size(overlapped, BidirectionallySortedTag {}) == 1);
+        return std::cref(overlapped.front());
     }
     
-    bool is_split_phasing(const Phaser::PhaseSet& phase);
-    
-    namespace debug
+    return boost::none;
+}
+
+bool is_split_phasing(const Phaser::PhaseSet& phase);
+
+namespace debug {
+    template <typename S>
+    void print_phase_sets(S&& stream, const Phaser::PhaseSet& phasings)
     {
-        template <typename S>
-        void print_phase_sets(S&& stream, const Phaser::PhaseSet& phasings)
-        {
-            stream << "Phased region is " << phasings.region << '\n';
-            
-            for (const auto& p : phasings.phase_regions) {
-                if (p.second.size() > 1) {
-                    stream << "Phase regions for sample " << p.first << '\n';
-                    for (const auto& r : p.second) {
-                        stream << "\t* " << r.region << " " << r.score << '\n';
-                    }
+        stream << "Phased region is " << phasings.region << '\n';
+        
+        for (const auto& p : phasings.phase_regions) {
+            if (p.second.size() > 1) {
+                stream << "Phase regions for sample " << p.first << '\n';
+                for (const auto& r : p.second) {
+                    stream << "\t* " << r.region << " " << r.score << '\n';
                 }
             }
         }
-        
-        void print_phase_sets(const Phaser::PhaseSet& phasings);
     }
+    
+    void print_phase_sets(const Phaser::PhaseSet& phasings);
+} // namespace debug
+
 } // namespace octopus
 
 #endif /* phaser_hpp */

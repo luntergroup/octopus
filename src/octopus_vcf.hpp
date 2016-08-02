@@ -13,10 +13,8 @@
 
 #include "vcf_header.hpp"
 
-namespace octopus
-{
-    namespace Vcf
-    {
+namespace octopus {
+    namespace Vcf {
         namespace Info
         {
             

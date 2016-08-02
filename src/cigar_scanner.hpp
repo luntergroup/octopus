@@ -14,26 +14,27 @@
 #include <cstddef>
 #include <utility>
 #include <functional>
+#include <memory>
 
-#include "candidate_variant_generator.hpp"
+#include "variant_generator.hpp"
 #include "aligned_read.hpp"
 #include "variant.hpp"
 
 class ReferenceGenome;
 class GenomicRegion;
 
-namespace octopus { namespace core { namespace generators
-{
-class CigarScanner : public CandidateVariantGenerator
+namespace octopus { namespace coretools {
+
+class CigarScanner : public VariantGenerator
 {
 public:
     struct Options
     {
-        AlignedRead::BaseQuality min_base_quality;
-        unsigned min_support = 1;
+        AlignedRead::BaseQuality min_base_quality  = 20;
+        unsigned min_support                       = 1;
         Variant::RegionType::Size max_variant_size = 100;
-        bool always_include_overlapping_indels = true;
-        unsigned max_poor_quality_insertion_bases = 1;
+        bool always_include_overlapping_indels     = true;
+        unsigned max_poor_quality_insertion_bases  = 1;
     };
     
     CigarScanner() = delete;
@@ -47,19 +48,24 @@ public:
     
     ~CigarScanner() override = default;
     
-    bool requires_reads() const noexcept override;
-    
-    void add_read(const AlignedRead& read) override;
-    void add_reads(std::vector<AlignedRead>::const_iterator first,
-                   std::vector<AlignedRead>::const_iterator last) override;
-    void add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
-                   MappableFlatMultiSet<AlignedRead>::const_iterator last) override;
-    
-    std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
-    
-    void clear() override;
-    
 private:
+    using VariantGenerator::VectorIterator;
+    using VariantGenerator::FlatSetIterator;
+    
+    std::unique_ptr<VariantGenerator> do_clone() const override;
+    
+    bool do_requires_reads() const noexcept override;
+    
+    void do_add_read(const AlignedRead& read) override;
+    void do_add_reads(VectorIterator first, VectorIterator last) override;
+    void do_add_reads(FlatSetIterator first, FlatSetIterator last) override;
+    
+    std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
+    
+    void do_clear() noexcept override;
+    
+    std::string name() const override;
+    
     using NucleotideSequence = AlignedRead::NucleotideSequence;
     using SequenceIterator   = NucleotideSequence::const_iterator;
     using QualitiesIterator  = AlignedRead::BaseQualityVector::const_iterator;
@@ -92,8 +98,7 @@ void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed,
         max_seen_candidate_size_ = std::max(max_seen_candidate_size_, candidate_size);
     }
 }
-} // namespace generators
-} // namespace core
+} // coretools
 } // namespace octopus
 
 #endif /* defined(__Octopus__cigar_scanner__) */

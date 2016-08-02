@@ -25,19 +25,19 @@
 #include "genotype.hpp"
 #include "maths.hpp"
 #include "mappable_algorithms.hpp"
-#include "read_utils.hpp"
+#include "read_stats.hpp"
 #include "probability_matrix.hpp"
 #include "coalescent_model.hpp"
-#include "individual_genotype_model.hpp"
+#include "individual.hpp"
 #include "germline_variant_call.hpp"
 #include "reference_call.hpp"
 #include "logging.hpp"
 
-namespace octopus
-{
-PopulationVariantCaller::PopulationVariantCaller(CallerComponents&& components,
-                                                 VariantCaller::CallerParameters general_parameters,
-                                                 CallerParameters specific_parameters)
+namespace octopus {
+
+PopulationVariantCaller::PopulationVariantCaller(VariantCaller::Components&& components,
+                                                 VariantCaller::Parameters general_parameters,
+                                                 Parameters specific_parameters)
 :
 VariantCaller {std::move(components), std::move(general_parameters)},
 parameters_ {specific_parameters}

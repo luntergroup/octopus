@@ -12,6 +12,8 @@
 
 #include <boost/math/special_functions/binomial.hpp>
 
+namespace octopus {
+
 Genotype<Haplotype>::Genotype(const unsigned ploidy)
 :
 haplotypes_ {}
@@ -228,8 +230,7 @@ generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes
     return detail::generate_all_genotypes(haplotypes, ploidy, std::false_type {});
 }
 
-namespace debug
-{
+namespace debug {
     void print_alleles(const Genotype<Haplotype>& genotype)
     {
         print_alleles(std::cout, genotype);
@@ -260,3 +261,4 @@ namespace debug
         return make_genotype(str, parse_region(region, reference), reference);
     }
 } // namespace debug
+} // namespace octopus

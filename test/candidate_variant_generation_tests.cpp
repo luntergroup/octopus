@@ -17,30 +17,33 @@
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "variant.hpp"
-#include "candidate_variant_generators.hpp"
+#include "variant_generator.hpp"
 #include "vcf_reader.hpp"
 
 using std::cout;
 using std::endl;
 
-using octopus::core::generators::Composer;
+namespace octopus { namespace test {
+
+using octopus::coretools::VariantGenerator;
+
+using VGB = VariantGenerator::Builder;
 
 BOOST_AUTO_TEST_SUITE(Components)
 BOOST_AUTO_TEST_SUITE(CandidateGenerators)
 
-BOOST_AUTO_TEST_CASE(Composer_Builder_can_construct_candidate_generators)
+BOOST_AUTO_TEST_CASE(AggregateVariantGenerator_Builder_can_construct_candidate_generators)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
     const auto human = make_reference(human_reference_fasta);
     
-    Composer::Builder builder {};
-    builder.set_reference(human);
+    VGB builder {};
     builder.set_min_base_quality(0);
-    builder.add_generator(Composer::Builder::Generator::Alignment);
-    //builder.add_generator(Composer::Builder::Generator::Assembler);
+    builder.add_generator(VGB::Generator::Alignment);
+    //builder.add_generator(AggregateVariantGenerator::Builder::Generator::Assembler);
     
-    auto generator = builder.build();
+    auto generator = builder.build(human);
     
     BOOST_CHECK(generator.requires_reads());
     
@@ -60,18 +63,17 @@ BOOST_AUTO_TEST_CASE(generate_candidates_returns_sorted_and_unique_candidates)
     
     const auto region = parse_region("1:0-2000000", human);
     
-    Composer::Builder builder;
-    builder.set_reference(human);
+    VGB builder;
     builder.set_min_base_quality(0);
-    builder.add_generator(Composer::Builder::Generator::Alignment);
+    builder.add_generator(VGB::Generator::Alignment);
     
-    auto candidate_generator = builder.build();
+    auto candidate_generator = builder.build(human);
     
     const auto reads = read_manager.fetch_reads(sample, region);
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.generate_candidates(region);
+    auto candidates = candidate_generator.generate(region);
     
     BOOST_REQUIRE(std::is_sorted(std::cbegin(candidates), std::cend(candidates)));
     BOOST_CHECK(std::unique(std::begin(candidates), std::end(candidates)) == std::end(candidates));
@@ -92,14 +94,15 @@ BOOST_AUTO_TEST_CASE(CigarScanner_ignores_snps_with_low_base_qualities)
     
     auto reads = read_manager.fetch_reads(sample, region);
     
-    octopus::core::generators::CigarScanner candidate_generator {
-        human,
-        octopus::core::generators::CigarScanner::Options {14}
-    };
+    VGB builder {};
+    builder.set_min_base_quality(0);
+    builder.add_generator(VGB::Generator::Alignment);
+    builder.set_min_supporting_reads(14);
+    auto candidate_generator = builder.build(human);
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.generate_candidates(region);
+    auto candidates = candidate_generator.generate(region);
     
     BOOST_CHECK(candidates.empty());
 }
@@ -123,8 +126,7 @@ BOOST_AUTO_TEST_CASE(can_specify_the_maximum_size_of_candidates)
     
     constexpr unsigned max_variant_size {5};
     
-    auto candidate_generator = Composer::Builder().set_reference(human)
-    .add_generator(Composer::Builder::Generator::Alignment).set_max_variant_size(max_variant_size).build();
+    auto candidate_generator = VGB().add_generator(VGB::Generator::Alignment).set_max_variant_size(max_variant_size).build(human);
     
     ReadManager read_manager {NA12878_low_coverage};
     
@@ -136,7 +138,7 @@ BOOST_AUTO_TEST_CASE(can_specify_the_maximum_size_of_candidates)
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.generate_candidates(region);
+    auto candidates = candidate_generator.generate(region);
     
     BOOST_CHECK(std::all_of(std::cbegin(candidates), std::cend(candidates),
                             [=] (const auto& candidate) { return region_size(candidate) <= max_variant_size; }));
@@ -149,8 +151,8 @@ BOOST_AUTO_TEST_CASE(only_insertions_are_included_when_the_max_variant_size_is_z
     
     const auto human = make_reference(human_reference_fasta);
     
-    auto candidate_generator = Composer::Builder().set_reference(human)
-    .add_generator(Composer::Builder::Generator::Alignment).set_max_variant_size(0).build();
+    auto candidate_generator = VGB()
+    .add_generator(VGB::Generator::Alignment).set_max_variant_size(0).build(human);
     
     ReadManager read_manager {NA12878_low_coverage};
     
@@ -162,7 +164,7 @@ BOOST_AUTO_TEST_CASE(only_insertions_are_included_when_the_max_variant_size_is_z
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.generate_candidates(region);
+    auto candidates = candidate_generator.generate(region);
     
     BOOST_CHECK(std::all_of(std::cbegin(candidates), std::cend(candidates),
                             [] (const auto& candidate) { return is_insertion(candidate); }));
@@ -183,14 +185,14 @@ BOOST_AUTO_TEST_CASE(CigarScanner_includes_all_alleles_in_the_same_region)
     
     auto reads = read_manager.fetch_reads(sample, region);
     
-    octopus::core::generators::CigarScanner candidate_generator {
-        human,
-        octopus::core::generators::CigarScanner::Options {10}
-    };
+    VGB builder {};
+    builder.add_generator(VGB::Generator::Alignment);
+    builder.set_min_supporting_reads(10);
+    auto candidate_generator = builder.build(human);
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.generate_candidates(region);
+    auto candidates = candidate_generator.generate(region);
 }
 
 //BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_online_web_service)
@@ -230,3 +232,6 @@ BOOST_AUTO_TEST_CASE(CigarScanner_includes_all_alleles_in_the_same_region)
 
 BOOST_AUTO_TEST_SUITE_END() // CandidateGenerators
 BOOST_AUTO_TEST_SUITE_END() // Components
+
+} // namespace test
+} // namespace octopus

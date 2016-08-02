@@ -15,6 +15,8 @@
 #include "option_parser.hpp"
 #include "test_common.hpp"
 
+namespace octopus { namespace test {
+
 namespace po = boost::program_options;
 
 inline boost::optional<po::variables_map> get_basic_mock_options()
@@ -276,5 +278,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
     
     return octopus::options::parse_options(argc, argv);
 }
+
+} // namespace test
+} // namespace octopus
 
 #endif

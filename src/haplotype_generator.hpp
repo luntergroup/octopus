@@ -26,11 +26,13 @@
 #include "genomic_region.hpp"
 #include "allele.hpp"
 
+namespace octopus {
+
 class Variant;
 class Haplotype;
 
-namespace octopus
-{
+namespace coretools {
+
 class HaplotypeGenerator
 {
 public:
@@ -207,6 +209,11 @@ private:
     Policies policies_;
     Haplotype::RegionType::Size min_flank_pad_ = 30;
 };
+
+} // namespace coretools
+
+using coretools::HaplotypeGenerator;
+
 } // namespace octopus
 
 #endif /* haplotype_generator_hpp */

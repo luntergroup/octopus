@@ -25,7 +25,7 @@
 #include "mappable_flat_set.hpp"
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
-#include "read_utils.hpp"
+#include "read_stats.hpp"
 
 #include "genotype_reader.hpp"
 #include "haplotype_likelihood_cache.hpp"

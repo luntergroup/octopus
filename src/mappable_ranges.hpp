@@ -1,20 +1,22 @@
 //
-//  mappable_ranges.h
+//  mappable_ranges.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 20/07/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef Octopus_mappable_ranges_h
-#define Octopus_mappable_ranges_h
+#ifndef Octopus_mappable_ranges_hpp
+#define Octopus_mappable_ranges_hpp
 
 #include <iterator>
-#include <cstddef>
 #include <type_traits>
+#include <cstddef>
 
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
+
+#include "mappable.hpp"
 
 /*
  An ordered collection of MappableType elements, X, is:
@@ -26,17 +28,20 @@
 struct ForwardSortedTag {};
 struct BidirectionallySortedTag {};
 
-namespace detail
-{
+namespace detail {
     template <typename MappableType>
     class IsOverlapped
     {
     public:
         IsOverlapped() = delete;
+        
         template <typename MappableType2>
         IsOverlapped(const MappableType2& mappable) : region_ {mapped_region(mappable)} {}
         
-        bool operator()(const MappableType& mappable) { return overlaps(mappable, region_); }
+        bool operator()(const MappableType& mappable) const
+        {
+            return overlaps(mappable, region_);
+        }
         
     private:
         RegionType<MappableType> region_;
@@ -44,27 +49,28 @@ namespace detail
 } // namespace detail
 
 template <typename Iterator>
-using OverlapIterator = boost::filter_iterator<detail::IsOverlapped<
-    typename std::iterator_traits<Iterator>::value_type>,
-    Iterator>;
+using OverlapIterator = boost::filter_iterator<
+    detail::IsOverlapped<typename std::iterator_traits<Iterator>::value_type>,
+    Iterator
+>;
 
 template <typename Iterator>
-bool operator==(Iterator lhs, OverlapIterator<Iterator> rhs) noexcept
+bool operator==(const Iterator& lhs, const OverlapIterator<Iterator>& rhs) noexcept
 {
     return lhs == rhs.base();
 }
 template <typename Iterator>
-bool operator!=(Iterator lhs, OverlapIterator<Iterator> rhs) noexcept
+bool operator!=(const Iterator& lhs, const OverlapIterator<Iterator>& rhs) noexcept
 {
     return !operator==(lhs, rhs);
 }
 template <typename Iterator>
-bool operator==(OverlapIterator<Iterator> lhs, Iterator rhs) noexcept
+bool operator==(const OverlapIterator<Iterator>& lhs, const Iterator& rhs) noexcept
 {
     return operator==(rhs, lhs);
 }
 template <typename Iterator>
-bool operator!=(OverlapIterator<Iterator> lhs, Iterator rhs) noexcept
+bool operator!=(const OverlapIterator<Iterator>& lhs, const Iterator& rhs) noexcept
 {
     return !operator==(lhs, rhs);
 }
@@ -118,17 +124,20 @@ make_overlap_range(Iterator first, Iterator last, const MappableType& mappable)
     );
 }
 
-namespace detail
-{
+namespace detail {
     template <typename MappableType>
     class IsContained
     {
     public:
         IsContained() = delete;
+        
         template <typename MappableType_>
         IsContained(const MappableType_& mappable) : region_ {mapped_region(mappable)} {}
         
-        bool operator()(const MappableType& mappable) { return contains(region_, mappable); }
+        bool operator()(const MappableType& mappable) const
+        {
+            return contains(region_, mappable);
+        }
         
     private:
         RegionType<MappableType> region_;
@@ -138,25 +147,26 @@ namespace detail
 template <typename Iterator>
 using ContainedIterator = boost::filter_iterator<detail::IsContained<
     typename std::iterator_traits<Iterator>::value_type>,
-    Iterator>;
+    Iterator
+>;
 
 template <typename Iterator>
-bool operator==(Iterator lhs, ContainedIterator<Iterator> rhs) noexcept
+bool operator==(const Iterator& lhs, const ContainedIterator<Iterator>& rhs) noexcept
 {
     return lhs == rhs.base();
 }
 template <typename Iterator>
-bool operator!=(Iterator lhs, ContainedIterator<Iterator> rhs) noexcept
+bool operator!=(const Iterator& lhs, const ContainedIterator<Iterator>& rhs) noexcept
 {
     return !operator==(lhs, rhs);
 }
 template <typename Iterator>
-bool operator==(ContainedIterator<Iterator> lhs, Iterator rhs) noexcept
+bool operator==(const ContainedIterator<Iterator>& lhs, const Iterator& rhs) noexcept
 {
     return operator==(rhs, lhs);
 }
 template <typename Iterator>
-bool operator!=(ContainedIterator<Iterator> lhs, Iterator rhs) noexcept
+bool operator!=(const ContainedIterator<Iterator>& lhs, const Iterator& rhs) noexcept
 {
     return !operator==(lhs, rhs);
 }
@@ -210,18 +220,18 @@ make_contained_range(Iterator first, Iterator last, const MappableType& mappable
     );
 }
 
-namespace detail
-{
+namespace detail {
     template <typename MappableType>
     class IsShared
     {
     public:
         IsShared() = delete;
+        
         template <typename MappableType1_, typename MappableType2_>
         IsShared(const MappableType1_& lhs, MappableType2_ rhs)
         : lhs_ {mapped_region(lhs)}, rhs_ {mapped_region(rhs)} {}
         
-        bool operator()(const MappableType& mappable)
+        bool operator()(const MappableType& mappable) const
         {
             return overlaps(lhs_, mappable) && overlaps(mappable, rhs_);
         }
@@ -234,25 +244,26 @@ namespace detail
 template <typename Iterator>
 using SharedIterator = boost::filter_iterator<detail::IsShared<
     typename std::iterator_traits<Iterator>::value_type>,
-    Iterator>;
+    Iterator
+>;
 
 template <typename Iterator>
-bool operator==(Iterator lhs, SharedIterator<Iterator> rhs) noexcept
+bool operator==(const Iterator& lhs, const SharedIterator<Iterator>& rhs) noexcept
 {
     return lhs == rhs.base();
 }
 template <typename Iterator>
-bool operator!=(Iterator lhs, SharedIterator<Iterator> rhs) noexcept
+bool operator!=(const Iterator& lhs, const SharedIterator<Iterator>& rhs) noexcept
 {
     return !operator==(lhs, rhs);
 }
 template <typename Iterator>
-bool operator==(SharedIterator<Iterator> lhs, Iterator rhs) noexcept
+bool operator==(const SharedIterator<Iterator>& lhs, const Iterator& rhs) noexcept
 {
     return operator==(rhs, lhs);
 }
 template <typename Iterator>
-bool operator!=(SharedIterator<Iterator> lhs, Iterator rhs) noexcept
+bool operator!=(const SharedIterator<Iterator>& lhs, const Iterator& rhs) noexcept
 {
     return !operator==(lhs, rhs);
 }

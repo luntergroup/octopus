@@ -25,6 +25,8 @@
 using std::cout;
 using std::endl;
 
+namespace octopus { namespace test {
+
 using test::make_haplotype;
 
 BOOST_AUTO_TEST_SUITE(Components)
@@ -569,3 +571,6 @@ BOOST_AUTO_TEST_CASE(splicing_around_insertions_works)
 
 BOOST_AUTO_TEST_SUITE_END() // Haplotypes
 BOOST_AUTO_TEST_SUITE_END() // Components
+
+} // namespace test
+} // namespace octopus

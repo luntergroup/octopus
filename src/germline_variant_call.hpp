@@ -16,33 +16,34 @@
 
 #include "allele.hpp"
 
-namespace octopus
+namespace octopus {
+
+class GermlineVariantCall : public VariantCall
 {
-    class GermlineVariantCall : public VariantCall
-    {
-    public:
-        using VariantCall::GenotypeCall;
-        using VariantCall::PhaseCall;
-        
-        GermlineVariantCall() = delete;
-        
-        template <typename V, typename T>
-        GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality);
-        
-        virtual ~GermlineVariantCall() = default;
-        
-        GermlineVariantCall(const GermlineVariantCall&)            = default;
-        GermlineVariantCall& operator=(const GermlineVariantCall&) = default;
-        GermlineVariantCall(GermlineVariantCall&&)                 = default;
-        GermlineVariantCall& operator=(GermlineVariantCall&&)      = default;
-        
-        void decorate(VcfRecord::Builder& record) const override;
-    };
+public:
+    using VariantCall::GenotypeCall;
+    using VariantCall::PhaseCall;
+    
+    GermlineVariantCall() = delete;
     
     template <typename V, typename T>
-    GermlineVariantCall::GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality)
-    : VariantCall {std::forward<V>(variant), std::forward<T>(genotype_calls), quality}
-    {}
+    GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality);
+    
+    virtual ~GermlineVariantCall() = default;
+    
+    GermlineVariantCall(const GermlineVariantCall&)            = default;
+    GermlineVariantCall& operator=(const GermlineVariantCall&) = default;
+    GermlineVariantCall(GermlineVariantCall&&)                 = default;
+    GermlineVariantCall& operator=(GermlineVariantCall&&)      = default;
+    
+    void decorate(VcfRecord::Builder& record) const override;
+};
+
+template <typename V, typename T>
+GermlineVariantCall::GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality)
+: VariantCall {std::forward<V>(variant), std::forward<T>(genotype_calls), quality}
+{}
+
 } // namespace octopus
 
 #endif /* germline_variant_call_hpp */

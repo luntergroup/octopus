@@ -18,16 +18,15 @@
 #include <limits>
 #include <array>
 #include <cassert>
+#include <iostream>
 
 #include "simd_pair_hmm.hpp"
-
+#include "maths.hpp"
 #include "cigar_string.hpp"
 
-#include <iostream> // DEBUG
+namespace octopus { namespace hmm {
 
-namespace PairHMM
-{
-static constexpr double ln_10_div_10 {0.230258509299404568401799145468436420760110148862877297603};
+using octopus::maths::constants::ln_10_div_10;
 
 template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
 constexpr auto num_values() noexcept
@@ -119,8 +118,7 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
     return result;
 }
 
-namespace debug
-{
+namespace debug {
     void print_alignment(const std::vector<char>& align1, const std::vector<char>& align2)
     {
         const auto isnt_null = [] (const char c) { return c != '\0'; };
@@ -138,7 +136,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                 const std::size_t target_offset,
                 const Model& model)
 {
-    constexpr auto Pad = static_cast<int>(SimdPairHmm::min_flank_pad());
+    constexpr auto Pad = static_cast<int>(simd::min_flank_pad());
     
     const auto truth_alignment_size = static_cast<int>(target.size() + 2 * Pad - 1);
     
@@ -151,14 +149,14 @@ auto simd_align(const std::string& truth, const std::string& target,
     const auto qualities = reinterpret_cast<const std::int8_t*>(target_qualities.data());
     
     if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
-        const auto score = SimdPairHmm::align(truth.data() + alignment_offset,
-                                              target.data(),
-                                              qualities,
-                                              truth_alignment_size, static_cast<int>(target.size()),
-                                              model.snv_mask.data() + alignment_offset,
-                                              model.snv_priors.data() + alignment_offset,
-                                              model.gap_open_penalties.data() + alignment_offset,
-                                              model.gap_extend, model.nuc_prior);
+        const auto score = simd::align(truth.data() + alignment_offset,
+                                       target.data(),
+                                       qualities,
+                                       truth_alignment_size, static_cast<int>(target.size()),
+                                       model.snv_mask.data() + alignment_offset,
+                                       model.snv_priors.data() + alignment_offset,
+                                       model.gap_open_penalties.data() + alignment_offset,
+                                       model.gap_extend, model.nuc_prior);
         
         return -ln_10_div_10 * static_cast<double>(score);
     }
@@ -172,16 +170,16 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     int first_pos;
     
-    const auto score = SimdPairHmm::align(truth.data() + alignment_offset,
-                                          target.data(),
-                                          qualities,
-                                          truth_alignment_size,
-                                          static_cast<int>(target.size()),
-                                          model.snv_mask.data() + alignment_offset,
-                                          model.snv_priors.data() + alignment_offset,
-                                          model.gap_open_penalties.data() + alignment_offset,
-                                          model.gap_extend, model.nuc_prior,
-                                          align1.data(), align2.data(), first_pos);
+    const auto score = simd::align(truth.data() + alignment_offset,
+                                   target.data(),
+                                   qualities,
+                                   truth_alignment_size,
+                                   static_cast<int>(target.size()),
+                                   model.snv_mask.data() + alignment_offset,
+                                   model.snv_priors.data() + alignment_offset,
+                                   model.gap_open_penalties.data() + alignment_offset,
+                                   model.gap_extend, model.nuc_prior,
+                                   align1.data(), align2.data(), first_pos);
     
 //    debug::print_alignment(align1, align2);
 //    std::cout << make_cigar(align1, align2) << std::endl;
@@ -206,15 +204,15 @@ auto simd_align(const std::string& truth, const std::string& target,
     assert(lhs_flank_size >= 0 && rhs_flank_size >= 0);
     assert(align1.back() == 0); // required by calculate_flank_score
     
-    const auto flank_score = SimdPairHmm::calculate_flank_score(truth_alignment_size,
-                                                                lhs_flank_size, rhs_flank_size,
-                                                                target.data(), qualities,
-                                                                model.snv_mask.data() + alignment_offset,
-                                                                model.snv_priors.data() + alignment_offset,
-                                                                model.gap_open_penalties.data() + alignment_offset,
-                                                                model.gap_extend, model.nuc_prior,
-                                                                first_pos,
-                                                                align1.data(), align2.data());
+    const auto flank_score = simd::calculate_flank_score(truth_alignment_size,
+                                                         lhs_flank_size, rhs_flank_size,
+                                                         target.data(), qualities,
+                                                         model.snv_mask.data() + alignment_offset,
+                                                         model.snv_priors.data() + alignment_offset,
+                                                         model.gap_open_penalties.data() + alignment_offset,
+                                                         model.gap_extend, model.nuc_prior,
+                                                         first_pos,
+                                                         align1.data(), align2.data());
     
     assert(flank_score <= score);
     
@@ -223,7 +221,7 @@ auto simd_align(const std::string& truth, const std::string& target,
 
 unsigned min_flank_pad() noexcept
 {
-    return SimdPairHmm::min_flank_pad();
+    return simd::min_flank_pad();
 }
 
 void validate(const std::string& truth, const std::string& target,
@@ -245,7 +243,7 @@ void validate(const std::string& truth, const std::string& target,
     }
 }
 
-double align(const std::string& truth, const std::string& target,
+double score(const std::string& truth, const std::string& target,
              const std::vector<std::uint8_t>& target_qualities,
              const std::size_t target_offset,
              const Model& model)
@@ -295,4 +293,6 @@ double align(const std::string& truth, const std::string& target,
     
     return simd_align(truth, target, target_qualities, target_offset, model);
 }
-} // namespace PairHMM
+
+} // namespace hmm
+} // namespace octopus

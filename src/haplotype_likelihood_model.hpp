@@ -30,12 +30,12 @@
 
 class AlignedRead;
 
-namespace octopus
-{
+namespace octopus {
+
 class HaplotypeLikelihoodModel
 {
 public:
-    using PenaltyType = PairHMM::Model::PenaltyType;
+    using Penalty = hmm::Model::Penalty;
     
     struct FlankState
     {
@@ -63,7 +63,10 @@ public:
     
     ~HaplotypeLikelihoodModel() = default;
     
+    static unsigned pad_requirement() noexcept;
+    
     void reset(const Haplotype& haplotype, boost::optional<FlankState> flank_state = boost::none);
+    
     void clear() noexcept;
     
     // ln p(read | haplotype, model)
@@ -86,10 +89,10 @@ private:
     boost::optional<FlankState> haplotype_flank_state_;
     
     std::vector<char> haplotype_snv_forward_mask_, haplotype_snv_reverse_mask_;
-    std::vector<PenaltyType> haplotype_snv_forward_priors_, haplotype_snv_reverse_priors_;
+    std::vector<Penalty> haplotype_snv_forward_priors_, haplotype_snv_reverse_priors_;
     
-    std::vector<PenaltyType> haplotype_gap_open_penalities_;
-    PenaltyType haplotype_gap_extension_penalty_;
+    std::vector<Penalty> haplotype_gap_open_penalities_;
+    Penalty haplotype_gap_extension_penalty_;
 };
 
 class HaplotypeLikelihoodModel::ShortHaplotypeError : public std::runtime_error
@@ -110,6 +113,7 @@ private:
     
     Length required_extension_;
 };
+
 } // namespace octopus
 
 #endif /* haplotype_likelihood_model_hpp */

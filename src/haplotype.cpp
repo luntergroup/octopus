@@ -11,16 +11,16 @@
 #include <algorithm>
 #include <iterator>
 #include <stdexcept>
-#include <ostream>
+#include <iostream>
 #include <cassert>
 
 #include "reference_genome.hpp"
 #include "genomic_region.hpp"
 #include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
-#include "mappable_ranges.hpp"
 #include "variant.hpp"
 
+namespace octopus {
 // helper
 
 template <typename T, typename M>
@@ -657,8 +657,7 @@ std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype)
     return os;
 }
 
-namespace debug
-{
+namespace debug {
     void print_alleles(const Haplotype& haplotype)
     {
         print_alleles(std::cout, haplotype);
@@ -673,7 +672,7 @@ namespace debug
                              const ReferenceGenome& reference)
     {
         if (str.size() < 3 || str.front() != '<' || str.back() != '>') {
-            throw std::runtime_error {"make_haplotype: given bad input str"};
+            throw std::runtime_error {"make_haplotype: bad input"};
         }
         
         Haplotype::Builder hb {region, reference};
@@ -700,3 +699,4 @@ namespace debug
         return make_haplotype(str, parse_region(region, reference), reference);
     }
 } // namespace debug
+} // namespace octopus

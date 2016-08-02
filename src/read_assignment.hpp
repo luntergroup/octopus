@@ -18,25 +18,26 @@
 #include "genotype.hpp"
 #include "allele.hpp"
 
-namespace octopus
-{
-    class HaplotypeLikelihoodModel;
-    
-    using SupportSet = std::vector<AlignedRead>;
-    
-    using HaplotypeSupportMap = std::unordered_map<Haplotype, SupportSet>;
-    
-    using AlleleSupportMap = std::unordered_map<Allele, SupportSet>;
-    
-    HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                                  const std::vector<AlignedRead>& reads);
-    
-    HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                                  const std::vector<AlignedRead>& reads,
-                                                  HaplotypeLikelihoodModel model);
-    
-    AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
-                                            const HaplotypeSupportMap& haplotype_support);
+namespace octopus {
+
+class HaplotypeLikelihoodModel;
+
+using SupportSet = std::vector<AlignedRead>;
+
+using HaplotypeSupportMap = std::unordered_map<Haplotype, SupportSet>;
+
+using AlleleSupportMap = std::unordered_map<Allele, SupportSet>;
+
+HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                                              const std::vector<AlignedRead>& reads);
+
+HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                                              const std::vector<AlignedRead>& reads,
+                                              HaplotypeLikelihoodModel model);
+
+AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
+                                        const HaplotypeSupportMap& haplotype_support);
+
 } // namespace octopus
 
 #endif /* read_assignment_hpp */

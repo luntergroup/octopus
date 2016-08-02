@@ -13,9 +13,10 @@
 
 #include "option_parser.hpp"
 
-namespace octopus
-{
+namespace octopus {
+    
     void run_octopus(options::OptionMap& options);
+
 }
 
 #endif /* defined(__Octopus__octopus__) */

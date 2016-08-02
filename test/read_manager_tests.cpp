@@ -26,6 +26,8 @@
 using std::cout;
 using std::endl;
 
+namespace octopus { namespace test {
+
 namespace fs = boost::filesystem;
 
 BOOST_AUTO_TEST_SUITE(Components)
@@ -160,3 +162,6 @@ BOOST_AUTO_TEST_CASE(read_manager_multiple_files_above_max_file_limit_test)
 
 BOOST_AUTO_TEST_SUITE_END() // IO
 BOOST_AUTO_TEST_SUITE_END() // Components
+
+} // namespace test
+} // namespace octopus

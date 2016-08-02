@@ -16,8 +16,8 @@
 
 namespace po = boost::program_options;
 
-namespace octopus { namespace options
-{
+namespace octopus { namespace options {
+
 void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2);
 void option_dependency(const OptionMap& vm, const std::string& for_what, const std::string& required_option);
 void check_reads_present(const OptionMap& vm);

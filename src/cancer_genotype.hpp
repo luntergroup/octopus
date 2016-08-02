@@ -12,17 +12,18 @@
 #include <initializer_list>
 #include <utility>
 #include <memory>
+#include <functional>
 
 #include <boost/functional/hash.hpp>
 
 #include "equitable.hpp"
 #include "genotype.hpp"
 
-namespace octopus
-{
+namespace octopus {
+
 template <typename MappableType>
-class CancerGenotype : public Equitable<CancerGenotype<MappableType>>,
-        public Mappable<CancerGenotype<MappableType>>
+class CancerGenotype
+    : public Equitable<CancerGenotype<MappableType>>, public Mappable<CancerGenotype<MappableType>>
 {
 public:
     CancerGenotype() = default;
@@ -50,13 +51,19 @@ public:
     const MappableType& operator[](unsigned n) const;
     
     const Genotype<MappableType>& germline_genotype() const;
+    
     const MappableType& somatic_element() const;
     
     unsigned ploidy() const noexcept;
+    
     bool contains(const MappableType& element) const;
+    
     unsigned count(const MappableType& element) const;
+    
     bool is_homozygous() const;
+    
     unsigned zygosity() const;
+    
     std::vector<MappableType> copy_unique() const;
     
 private:
@@ -203,19 +210,56 @@ bool operator==(const CancerGenotype<MappableType>& lhs, const CancerGenotype<Ma
     return lhs.somatic_element() == rhs.somatic_element()
                 && lhs.germline_genotype() == rhs.germline_genotype();
 }
+
+template <typename MappableType>
+std::ostream& operator<<(std::ostream& os, const CancerGenotype<MappableType>& genotype)
+{
+    os << genotype.germline_genotype() << "," << genotype.somatic_element() << "(cancer)";
+    return os;
+}
+
+struct CancerGenotypeHash
+{
+    template <typename T>
+    std::size_t operator()(const CancerGenotype<T>& genotype) const
+    {
+        using boost::hash_combine;
+        size_t result {};
+        hash_combine(result, std::hash<Genotype<T>>()(genotype.germline_genotype()));
+        hash_combine(result, std::hash<T>()(genotype.somatic_element()));
+        return result;
+    }
+};
+
+namespace debug {
+    template <typename S>
+    void print_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
+    {
+        print_alleles(stream, genotype.germline_genotype());
+        stream << " + ";
+        print_alleles(stream, genotype.somatic_element());
+    }
+    
+    void print_alleles(const CancerGenotype<Haplotype>& genotype);
+    
+    template <typename S>
+    void print_variant_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
+    {
+        print_variant_alleles(stream, genotype.germline_genotype());
+        stream << " + ";
+        print_variant_alleles(stream, genotype.somatic_element());
+    }
+    
+    void print_variant_alleles(const CancerGenotype<Haplotype>& genotype);
+} // namespace debug
 } // namespace octopus
 
-namespace std
-{
+namespace std {
     template <typename MappableType> struct hash<octopus::CancerGenotype<MappableType>>
     {
         size_t operator()(const octopus::CancerGenotype<MappableType>& genotype) const
         {
-            using boost::hash_combine;
-            size_t result {0};
-            hash_combine(result, hash<Genotype<MappableType>>()(genotype.germline_genotype()));
-            hash_combine(result, hash<MappableType>()(genotype.somatic_element()));
-            return result;
+            return octopus::CancerGenotypeHash()(genotype);
         }
     };
     
@@ -228,38 +272,5 @@ namespace std
         }
     };
 } // namespace std
-
-namespace octopus
-{
-template <typename MappableType>
-std::ostream& operator<<(std::ostream& os, const CancerGenotype<MappableType>& genotype)
-{
-    os << genotype.germline_genotype() << "," << genotype.somatic_element() << "(cancer)";
-    return os;
-}
-
-namespace debug
-{
-    template <typename S>
-    void print_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
-    {
-        ::debug::print_alleles(stream, genotype.germline_genotype());
-        stream << " + ";
-        ::debug::print_alleles(stream, genotype.somatic_element());
-    }
-    
-    void print_alleles(const CancerGenotype<Haplotype>& genotype);
-    
-    template <typename S>
-    void print_variant_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
-    {
-        ::debug::print_variant_alleles(stream, genotype.germline_genotype());
-        stream << " + ";
-        ::debug::print_variant_alleles(stream, genotype.somatic_element());
-    }
-    
-    void print_variant_alleles(const CancerGenotype<Haplotype>& genotype);
-} // namespace debug
-} // namespace octopus
 
 #endif /* cancer_genotype_h */

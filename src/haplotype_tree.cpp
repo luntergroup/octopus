@@ -19,12 +19,12 @@
 #include <boost/graph/visitors.hpp>
 #include <boost/graph/copy.hpp>
 
+#include "reference_genome.hpp"
 #include "mappable_algorithms.hpp"
 
-namespace octopus
-{
+namespace octopus { namespace coretools {
 
-HaplotypeTree::HaplotypeTree(const ContigName& contig, const ReferenceGenome& reference)
+HaplotypeTree::HaplotypeTree(const GenomicRegion::ContigName& contig, const ReferenceGenome& reference)
 :
 reference_ {reference},
 tree_ {},
@@ -39,8 +39,7 @@ haplotype_leaf_cache_ {}
     }
 }
 
-namespace debug
-{
+namespace debug {
 template <typename G, typename V, typename Container>
 bool is_tree(const G& graph, const V& root, const Container& leafs)
 {
@@ -146,6 +145,16 @@ bool HaplotypeTree::contains(const Haplotype& haplotype) const
     return std::any_of(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
                        [this, &haplotype] (const Vertex leaf) {
                            return is_branch_equal_haplotype(leaf, haplotype);
+                       });
+}
+    
+bool HaplotypeTree::includes(const Haplotype& haplotype) const
+{
+    if (haplotype_leaf_cache_.count(haplotype) > 0) return true;
+    
+    return std::any_of(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
+                       [this, &haplotype] (const Vertex leaf) {
+                           return is_branch_exact_haplotype(leaf, haplotype);
                        });
 }
 
@@ -333,7 +342,7 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
         
         for_each(possible_leafs.first, possible_leafs.second,
                  [this, &haplotype] (const auto& leaf_pair) {
-                     const auto p = remove(leaf_pair.second, contig_region(haplotype));
+                     const auto p = clear(leaf_pair.second, contig_region(haplotype));
                      
                      auto leaf_itr = find(cbegin(haplotype_leafs_), cend(haplotype_leafs_),
                                           leaf_pair.second);
@@ -354,7 +363,7 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
             
             if (leaf_itr == cend(haplotype_leafs_)) return;
             
-            const auto p = remove(*leaf_itr, contig_region(haplotype));
+            const auto p = clear(*leaf_itr, contig_region(haplotype));
             
             leaf_itr = haplotype_leafs_.erase(leaf_itr);
             
@@ -388,7 +397,7 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
         std::for_each(possible_leafs.first, possible_leafs.second,
                       [this, &haplotype, leaf_to_keep_itr] (auto& leaf_pair) {
                           if (leaf_pair.second != leaf_to_keep_itr) {
-                              const auto p = remove(leaf_pair.second, contig_region(haplotype));
+                              const auto p = clear(leaf_pair.second, contig_region(haplotype));
                               
                               auto leaf_itr = std::find(cbegin(haplotype_leafs_), cend(haplotype_leafs_),
                                                         leaf_pair.second);
@@ -419,7 +428,7 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
                 continue;
             }
             
-            const auto p = remove(*leaf_itr, contig_region(haplotype));
+            const auto p = clear(*leaf_itr, contig_region(haplotype));
             
             leaf_itr = haplotype_leafs_.erase(leaf_itr);
             
@@ -430,7 +439,7 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
     }
 }
 
-void HaplotypeTree::remove_overlapped(const GenomicRegion& region)
+void HaplotypeTree::clear(const GenomicRegion& region)
 {
     if (is_empty()) return;
     
@@ -445,7 +454,7 @@ void HaplotypeTree::remove_overlapped(const GenomicRegion& region)
         
         std::for_each(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
                       [this, &region, &new_leafs] (const Vertex leaf) {
-                          const auto p = remove(leaf, contig_region(region));
+                          const auto p = clear(leaf, contig_region(region));
                           if (p.second) new_leafs.push_back(p.first);
                       });
         
@@ -628,17 +637,17 @@ HaplotypeTree::find_equal_haplotype_leaf(const LeafIterator first, const LeafIte
 }
 
 std::pair<HaplotypeTree::Vertex, bool>
-HaplotypeTree::remove(Vertex leaf, const ContigRegion& region)
+HaplotypeTree::clear(Vertex leaf, const ContigRegion& region)
 {
     if (ends_before(region, tree_[leaf])) {
-        return remove_internal(leaf, region);
+        return clear_internal(leaf, region);
     } else {
-        return remove_external(leaf, region);
+        return clear_external(leaf, region);
     }
 }
 
 std::pair<HaplotypeTree::Vertex, bool>
-HaplotypeTree::remove_external(Vertex leaf, const ContigRegion& region)
+HaplotypeTree::clear_external(Vertex leaf, const ContigRegion& region)
 {
     assert(boost::out_degree(leaf, tree_) == 0);
     
@@ -657,8 +666,10 @@ HaplotypeTree::remove_external(Vertex leaf, const ContigRegion& region)
 }
 
 std::pair<HaplotypeTree::Vertex, bool>
-HaplotypeTree::remove_internal(const Vertex leaf, const ContigRegion& region)
+HaplotypeTree::clear_internal(const Vertex leaf, const ContigRegion& region)
 {
+    // TODO: we can optimise this for cases where region overlaps the leftmost alleles in the tree
+    
     if (leaf == root_ || is_after(region, tree_[leaf])) {
         return std::make_pair(leaf, true);
     }
@@ -744,4 +755,5 @@ HaplotypeTree::remove_internal(const Vertex leaf, const ContigRegion& region)
     }
 }
 
+} // namespace coretools
 } // namespace octopus

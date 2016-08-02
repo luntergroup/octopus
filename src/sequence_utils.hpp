@@ -334,12 +334,12 @@ find_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
         sequence.push_back('N');
     }
     
-    auto n_shift_map = Tandem::collapse(sequence, 'N');
+    auto n_shift_map = tandem::collapse(sequence, 'N');
     
-    auto maximal_repetitions = Tandem::find_maximal_repetitions(sequence , min_repeat_size,
+    auto maximal_repetitions = tandem::find_maximal_repetitions(sequence , min_repeat_size,
                                                                 max_repeat_size);
     
-    Tandem::rebase(maximal_repetitions, n_shift_map);
+    tandem::rebase(maximal_repetitions, n_shift_map);
     
     n_shift_map.clear();
     

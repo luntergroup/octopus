@@ -29,6 +29,8 @@
 #include "equitable.hpp"
 #include "mappable.hpp"
 
+namespace octopus {
+
 template <typename T>
 using EnableIfGenotypable = std::enable_if_t<
                                 std::is_same<T, Haplotype>::value
@@ -446,31 +448,22 @@ struct GenotypeLess
     }
 };
 
-namespace std
+struct GenotypeHash
 {
-    template <typename MappableType> struct hash<Genotype<MappableType>>
+    template <typename T>
+    std::size_t operator()(const Genotype<T>& genotype) const
     {
-        size_t operator()(const Genotype<MappableType>& genotype) const
-        {
-            return boost::hash_range(cbegin(genotype), cend(genotype));
-        }
-    };
-    
-    template <typename MappableType> struct hash<reference_wrapper<const Genotype<MappableType>>>
-    {
-        size_t operator()(const reference_wrapper<const Genotype<MappableType>> genotype) const
-        {
-            return hash<Genotype<MappableType>>()(genotype);
-        }
-    };
-} // namespace std
+        return boost::hash_range(std::cbegin(genotype), std::cend(genotype));
+    }
+};
 
 std::size_t num_genotypes(unsigned num_elements, unsigned ploidy);
 std::size_t element_cardinality_in_genotypes(unsigned num_elements, unsigned ploidy);
 
 namespace detail
 {
-    namespace {
+    namespace
+    {
         template <typename T>
         struct ValueType
         {
@@ -701,7 +694,7 @@ namespace detail
     {
         return num_genotypes;
     }
-} // namespace detail
+}
 
 template <typename MappableType>
 auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes)
@@ -815,8 +808,7 @@ std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotyp
     return os;
 }
 
-namespace debug
-{
+namespace debug {
     template <typename S>
     void print_alleles(S&& stream, const Genotype<Haplotype>& genotype)
     {
@@ -861,5 +853,24 @@ namespace debug
     Genotype<Haplotype> make_genotype(const std::string& str, const std::string& region,
                                       const ReferenceGenome& reference);
 } // namespace debug
+} // namespace octopus
+
+namespace std {
+    template <typename MappableType> struct hash<octopus::Genotype<MappableType>>
+    {
+        size_t operator()(const octopus::Genotype<MappableType>& genotype) const
+        {
+            return octopus::GenotypeHash()(genotype);
+        }
+    };
+    
+    template <typename MappableType> struct hash<reference_wrapper<const octopus::Genotype<MappableType>>>
+    {
+        size_t operator()(const reference_wrapper<const octopus::Genotype<MappableType>> genotype) const
+        {
+            return hash<octopus::Genotype<MappableType>>()(genotype);
+        }
+    };
+} // namespace std
 
 #endif /* defined(__Octopus__genotype__) */

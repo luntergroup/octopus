@@ -11,20 +11,21 @@
 
 #include <string>
 
-namespace octopus { namespace utils
+namespace octopus { namespace utils {
+
+std::string compress(const std::string& data);
+std::string decompress(const std::string& data);
+
+struct Compress
 {
-    std::string compress(const std::string& data);
-    std::string decompress(const std::string& data);
-    
-    struct Compress
-    {
-        std::string operator()(const std::string str) const;
-    };
-    
-    struct Decompress
-    {
-        std::string operator()(const std::string str) const;
-    };
+    std::string operator()(const std::string str) const;
+};
+
+struct Decompress
+{
+    std::string operator()(const std::string str) const;
+};
+
 } // namespace utils
 } // namespace octopus
 

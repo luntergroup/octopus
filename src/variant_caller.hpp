@@ -20,14 +20,12 @@
 #include <boost/optional.hpp>
 
 #include "common.hpp"
+#include "genomic_region.hpp"
 #include "reference_genome.hpp"
 #include "read_pipe.hpp"
-#include "genomic_region.hpp"
 #include "variant.hpp"
 #include "haplotype.hpp"
-#include "haplotype_generator.hpp"
-#include "phaser.hpp"
-#include "composer.hpp"
+#include "coretools.hpp"
 #include "haplotype_likelihood_cache.hpp"
 #include "mappable_flat_set.hpp"
 #include "probability_matrix.hpp"
@@ -39,8 +37,8 @@
 #include "progress_meter.hpp"
 #include "logging.hpp"
 
-namespace octopus
-{
+namespace octopus {
+
 class VariantCaller
 {
 public:
@@ -48,14 +46,14 @@ public:
     
     enum class RefCallType { None, Blocked, Positional };
     
-    struct CallerComponents;
-    struct CallerParameters;
+    struct Components;
+    struct Parameters;
     
     using ReadMap = octopus::ReadMap;
     
     VariantCaller() = delete;
     
-    VariantCaller(CallerComponents&& components, CallerParameters parameters);
+    VariantCaller(Components&& components, Parameters parameters);
     
     VariantCaller(const VariantCaller&)            = delete;
     VariantCaller& operator=(const VariantCaller&) = delete;
@@ -95,31 +93,16 @@ protected:
     };
     
 public:
-    using CandidateVariantGenerator = core::generators::Composer;
-    
-    struct CallerComponents
+    struct Components
     {
-        CallerComponents() = delete;
-        
-        CallerComponents(const ReferenceGenome& reference,
-                         const ReadPipe& read_pipe,
-                         CandidateVariantGenerator&& candidate_generator,
-                         HaplotypeGenerator::Builder haplotype_generator_builder,
-                         Phaser phase);
-        
-        CallerComponents(const CallerComponents&)            = delete;
-        CallerComponents& operator=(const CallerComponents&) = delete;
-        CallerComponents(CallerComponents&&)                 = default;
-        CallerComponents& operator=(CallerComponents&&)      = default;
-        
         std::reference_wrapper<const ReferenceGenome> reference;
         std::reference_wrapper<const ReadPipe> read_pipe;
-        CandidateVariantGenerator candidate_generator;
+        VariantGenerator candidate_generator;
         HaplotypeGenerator::Builder haplotype_generator_builder;
         Phaser phaser;
     };
     
-    struct CallerParameters
+    struct Parameters
     {
         RefCallType refcall_type;
         bool call_sites_only;
@@ -132,13 +115,13 @@ public:
 private:
     std::reference_wrapper<const ReadPipe> read_pipe_;
     
-    mutable CandidateVariantGenerator candidate_generator_;
+    mutable VariantGenerator candidate_generator_;
     
     HaplotypeGenerator::Builder haplotype_generator_builder_;
     
     Phaser phaser_;
     
-    CallerParameters parameters_;
+    Parameters parameters_;
     
     // virtual methods
     

@@ -21,25 +21,25 @@
 #include "variant_caller.hpp"
 #include "coalescent_model.hpp"
 #include "somatic_mutation_model.hpp"
-#include "individual_genotype_model.hpp"
-#include "cnv_genotype_model.hpp"
-#include "somatic_genotype_model.hpp"
+#include "individual.hpp"
+#include "cnv.hpp"
+#include "tumour.hpp"
 #include "variant_call.hpp"
 #include "phred.hpp"
 
 class GenomicRegion;
+
+namespace octopus {
+
 class ReadPipe;
 class Variant;
 
-namespace octopus
-{
 class CancerVariantCaller : public VariantCaller
 {
 public:
     using VariantCaller::CallTypeSet;
-    using VariantCaller::CallerComponents;
     
-    struct CallerParameters
+    struct Parameters
     {
         Phred<double> min_variant_posterior;
         Phred<double> min_somatic_posterior;
@@ -54,9 +54,9 @@ public:
     
     CancerVariantCaller() = delete;
     
-    CancerVariantCaller(CallerComponents&& components,
-                        VariantCaller::CallerParameters general_parameters,
-                        CallerParameters specific_parameters);
+    CancerVariantCaller(VariantCaller::Components&& components,
+                        VariantCaller::Parameters general_parameters,
+                        Parameters specific_parameters);
     
     CancerVariantCaller(const CancerVariantCaller&)            = delete;
     CancerVariantCaller& operator=(const CancerVariantCaller&) = delete;
@@ -82,7 +82,7 @@ private:
     using ModelPriors     = ModelProbabilities;
     using ModelPosteriors = ModelProbabilities;
     
-    CallerParameters parameters_;
+    Parameters parameters_;
     
     // overrides
     

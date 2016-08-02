@@ -11,6 +11,8 @@
 #include <utility>
 #include <stdexcept>
 
+namespace octopus {
+
 // public member methods
 
 Trio::Trio(Mother mother, Father father, Child child)
@@ -34,17 +36,19 @@ bool Trio::is_parent(const SampleName& member) const noexcept
     return member == mother_ || member == father_;
 }
 
-const Trio::SampleName& Trio::mother() const noexcept
+const SampleName& Trio::mother() const noexcept
 {
     return mother_;
 }
 
-const Trio::SampleName& Trio::father() const noexcept
+const SampleName& Trio::father() const noexcept
 {
     return father_;
 }
 
-const Trio::SampleName& Trio::child() const noexcept
+const SampleName& Trio::child() const noexcept
 {
     return child_;
 }
+
+} // namespace octopus

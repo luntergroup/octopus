@@ -17,8 +17,8 @@
 #include "common.hpp"
 #include "matrix_map.hpp"
 
-namespace octopus
-{
+namespace octopus {
+
 template <typename T>
 using ProbabilityMatrix = MatrixMap<SampleName, T, double>;
 
@@ -87,6 +87,7 @@ void insert_samples(const Map& probabilities, ProbabilityMatrix<T>& matrix)
         insert_sample(s.first, s.second, matrix);
     }
 }
+
 } // namespace octopus
 
 #endif /* probability_matrix_hpp */

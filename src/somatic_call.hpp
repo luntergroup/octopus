@@ -20,8 +20,7 @@
 #include "allele.hpp"
 #include "cancer_genotype.hpp"
 
-namespace octopus
-{
+namespace octopus {
 class SomaticCall : public VariantCall
 {
 public:

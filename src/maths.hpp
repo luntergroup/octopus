@@ -28,7 +28,12 @@
 #include <boost/math/special_functions/beta.hpp>
 #include <boost/math/distributions/beta.hpp>
 
-namespace octopus { namespace maths {
+namespace octopus { namespace maths
+{
+namespace constants
+{
+    static constexpr double ln_10_div_10 {0.230258509299404568401799145468436420760110148862877297603};
+}
 
 template <typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>

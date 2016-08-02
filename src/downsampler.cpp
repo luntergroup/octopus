@@ -19,11 +19,11 @@
 #include "mappable.hpp"
 #include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
-#include "read_utils.hpp"
+#include "read_algorithms.hpp"
 
 #include "timers.hpp"
 
-namespace octopus { namespace preprocess
+namespace octopus { namespace readpipe
 {
 namespace
 {
@@ -290,5 +290,6 @@ std::size_t Downsampler::downsample(ReadMap& reads) const
     
     return result;
 }
-} // namespace preprocess
+
+} // namespace readpipe
 } // namespace octopus

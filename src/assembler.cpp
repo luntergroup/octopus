@@ -1526,8 +1526,7 @@ bool operator!=(const Assembler::Variant& lhs, const Assembler::Variant& rhs)
     return !operator==(lhs, rhs);
 }
 
-namespace debug
-{
+namespace debug {
     void print(const Assembler& assembler)
     {
         for (auto ep = boost::edges(assembler.graph_); ep.first != ep.second; ++ep.first) {

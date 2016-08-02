@@ -15,6 +15,7 @@
 #include <vector>
 #include <numeric>
 #include <iosfwd>
+#include <functional>
 
 #include <boost/functional/hash.hpp>
 
@@ -62,13 +63,15 @@ bool is_match(const CigarOperation& op) noexcept;
 bool is_indel(const CigarOperation& op) noexcept;
 bool is_clipping(const CigarOperation& op) noexcept;
 
+// CigarString
+
 using CigarString = std::vector<CigarOperation>;
 
-CigarString parse_cigar_string(const std::string& cigar_string);
+CigarString parse_cigar(const std::string& cigar);
 
-bool is_valid_cigar(const CigarString& cigar) noexcept;
+bool is_valid(const CigarString& cigar) noexcept;
 
-bool is_minimal_cigar(const CigarString& cigar) noexcept;
+bool is_minimal(const CigarString& cigar) noexcept;
 
 bool is_front_soft_clipped(const CigarString& cigar_string) noexcept;
 
@@ -159,24 +162,26 @@ std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation
 
 std::ostream& operator<<(std::ostream& os, const CigarString& cigar_string);
 
+struct CigarHash
+{
+    std::size_t operator()(const CigarOperation& op) const noexcept;
+    std::size_t operator()(const CigarString& cigar) const noexcept;
+};
+
 namespace std {
     template <> struct hash<CigarOperation>
     {
-        size_t operator()(const CigarOperation& op) const
+        size_t operator()(const CigarOperation& op) const noexcept
         {
-            using boost::hash_combine;
-            size_t result {};
-            hash_combine(result, op.flag());
-            hash_combine(result, op.size());
-            return result;
+            return CigarHash()(op);
         }
     };
     
     template <> struct hash<CigarString>
     {
-        size_t operator()(const CigarString& cigar) const
+        size_t operator()(const CigarString& cigar) const noexcept
         {
-            return boost::hash_range(std::cbegin(cigar), std::cend(cigar));
+            return CigarHash()(cigar);
         }
     };
 } // namespace std
@@ -184,9 +189,17 @@ namespace std {
 namespace boost {
     template <> struct hash<CigarOperation> : std::unary_function<CigarOperation, std::size_t>
     {
-        std::size_t operator()(const CigarOperation& op) const
+        std::size_t operator()(const CigarOperation& op) const noexcept
         {
             return std::hash<CigarOperation>()(op);
+        }
+    };
+    
+    template <> struct hash<CigarString> : std::unary_function<CigarString, std::size_t>
+    {
+        std::size_t operator()(const CigarString& cigar) const noexcept
+        {
+            return std::hash<CigarString>()(cigar);
         }
     };
 } // namespace boost

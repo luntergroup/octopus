@@ -31,7 +31,7 @@
 #include "mappable_algorithms.hpp"
 #include "maths.hpp"
 #include "cancer_genotype.hpp"
-#include "read_utils.hpp"
+#include "read_stats.hpp"
 #include "probability_matrix.hpp"
 #include "sequence_utils.hpp"
 #include "germline_variant_call.hpp"
@@ -41,13 +41,12 @@
 
 #include "timers.hpp"
 
-namespace octopus
-{
+namespace octopus {
 // public methods
 
-CancerVariantCaller::CancerVariantCaller(CallerComponents&& components,
-                                         VariantCaller::CallerParameters general_parameters,
-                                         CallerParameters specific_parameters)
+CancerVariantCaller::CancerVariantCaller(VariantCaller::Components&& components,
+                                         VariantCaller::Parameters general_parameters,
+                                         Parameters specific_parameters)
 :
 VariantCaller {std::move(components), std::move(general_parameters)},
 parameters_ {std::move(specific_parameters)}
@@ -724,7 +723,7 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
         auto map_cnv = find_map_genotype(latents.cnv_model_inferences_.posteriors.genotype_probabilities);
         auto cnv_log = stream(*debug_log_);
         cnv_log << "MAP CNV genotype is: ";
-        ::debug::print_variant_alleles(cnv_log, map_cnv->first);
+        debug::print_variant_alleles(cnv_log, map_cnv->first);
         auto somatic_log = stream(*debug_log_);
         auto map_somatic = find_map_genotype(latents.somatic_model_inferences_.posteriors.genotype_probabilities);
         somatic_log << "MAP cancer genotype is: ";

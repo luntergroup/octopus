@@ -26,21 +26,21 @@
 #include "genotype.hpp"
 #include "maths.hpp"
 #include "mappable_algorithms.hpp"
-#include "read_utils.hpp"
+#include "read_stats.hpp"
 #include "probability_matrix.hpp"
 #include "coalescent_model.hpp"
-#include "individual_genotype_model.hpp"
+#include "individual.hpp"
 #include "germline_variant_call.hpp"
 #include "reference_call.hpp"
 #include "logging.hpp"
 
 #include "timers.hpp"
 
-namespace octopus
-{
-IndividualVariantCaller::IndividualVariantCaller(CallerComponents&& components,
-                                                 VariantCaller::CallerParameters general_parameters,
-                                                 CallerParameters specific_parameters)
+namespace octopus {
+
+IndividualVariantCaller::IndividualVariantCaller(VariantCaller::Components&& components,
+                                                 VariantCaller::Parameters general_parameters,
+                                                 Parameters specific_parameters)
 :
 VariantCaller {std::move(components), std::move(general_parameters)},
 parameters_ {std::move(specific_parameters)}
@@ -345,8 +345,7 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
     
-namespace debug
-{
+namespace debug {
     void log(const GenotypeProbabilityMap& genotype_posteriors,
              boost::optional<logging::DebugLogger>& debug_log,
              boost::optional<logging::TraceLogger>& trace_log);
@@ -476,8 +475,7 @@ CoalescentModel IndividualVariantCaller::make_prior_model(const std::vector<Hapl
     };
 }
 
-namespace debug
-{
+namespace debug {
     template <typename S>
     void print_genotype_posteriors(S&& stream,
                                    const GenotypeProbabilityMap& genotype_posteriors,
@@ -508,7 +506,7 @@ namespace debug
         
         std::for_each(std::begin(v), mth,
                       [&] (const auto& p) {
-                          ::debug::print_variant_alleles(stream, p.first);
+                          print_variant_alleles(stream, p.first);
                           stream << " " << p.second << '\n';
                       });
     }

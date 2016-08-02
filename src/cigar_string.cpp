@@ -74,15 +74,15 @@ bool is_clipping(const CigarOperation& op) noexcept
 
 // CigarString
 
-CigarString parse_cigar_string(const std::string& cigar_string)
+CigarString parse_cigar(const std::string& cigar)
 {
     CigarString result {};
-    result.reserve(cigar_string.size() / 2); // max possible CigarOperation
+    result.reserve(cigar.size() / 2); // max possible CigarOperation
     
     std::string digits {};
     digits.reserve(3); // 100+ matches are common
     
-    for (const char c : cigar_string) {
+    for (const char c : cigar) {
         if (std::isdigit(c)) {
             digits += c;
         } else {
@@ -96,7 +96,7 @@ CigarString parse_cigar_string(const std::string& cigar_string)
     }
     
     if (!digits.empty()) {
-        throw std::invalid_argument {"parse_cigar_string: could not parse all characters of " + cigar_string};
+        throw std::invalid_argument {"parse_cigar: could not parse all characters of " + cigar};
     }
     
     result.shrink_to_fit();
@@ -124,7 +124,7 @@ bool is_valid_flag(const CigarOperation& op)
     return std::find(first_valid, last_valid, op.flag()) != last_valid;
 }
 
-bool is_valid_cigar(const CigarString& cigar) noexcept
+bool is_valid(const CigarString& cigar) noexcept
 {
     return !cigar.empty() && std::all_of(std::cbegin(cigar), std::cend(cigar),
                                          [] (const auto& op) {
@@ -132,7 +132,7 @@ bool is_valid_cigar(const CigarString& cigar) noexcept
                                          });
 }
 
-bool is_minimal_cigar(const CigarString& cigar) noexcept
+bool is_minimal(const CigarString& cigar) noexcept
 {
     return std::adjacent_find(std::cbegin(cigar), std::cend(cigar),
                               [] (const auto& lhs, const auto& rhs) {
@@ -252,4 +252,18 @@ std::ostream& operator<<(std::ostream& os, const CigarString& cigar_string)
 {
     std::copy(std::cbegin(cigar_string), std::cend(cigar_string), std::ostream_iterator<CigarOperation>(os));
     return os;
+}
+
+std::size_t CigarHash::operator()(const CigarOperation& op) const noexcept
+{
+    using boost::hash_combine;
+    size_t result {};
+    hash_combine(result, op.flag());
+    hash_combine(result, op.size());
+    return result;
+}
+
+std::size_t CigarHash::operator()(const CigarString& cigar) const noexcept
+{
+    return boost::hash_range(std::cbegin(cigar), std::cend(cigar));
 }

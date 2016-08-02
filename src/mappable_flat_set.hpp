@@ -23,8 +23,6 @@
 #include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
 
-#include <iostream> // TEST
-
 /*
  MappableFlatSet is a container designed to allow fast retrival of MappableType elements with minimal
  memory overhead.
@@ -55,12 +53,12 @@ public:
     
     MappableFlatSet(std::initializer_list<MappableType> mappables);
     
-    ~MappableFlatSet() = default;
-    
     MappableFlatSet(const MappableFlatSet&)            = default;
     MappableFlatSet& operator=(const MappableFlatSet&) = default;
     MappableFlatSet(MappableFlatSet&&)                 = default;
     MappableFlatSet& operator=(MappableFlatSet&&)      = default;
+    
+    ~MappableFlatSet() = default;
     
     iterator begin() noexcept;
     const_iterator begin() const noexcept;

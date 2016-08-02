@@ -28,10 +28,9 @@
 
 #include <iostream> // DEBUG
 
-namespace octopus
-{
-namespace
-{
+namespace octopus {
+
+namespace {
     auto mapped_contig_region(const VcfRecord& call)
     {
         const auto begin = static_cast<ContigRegion::Position>(call.pos()) - 1;

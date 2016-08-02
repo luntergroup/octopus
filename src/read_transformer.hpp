@@ -17,8 +17,9 @@
 
 #include "aligned_read.hpp"
 
-namespace octopus { namespace preprocess { namespace transform
+namespace octopus { namespace readpipe
 {
+
 class ReadTransformer
 {
 public:
@@ -80,8 +81,8 @@ void transform_reads(Container& reads, const ReadTransformer& transformer)
 {
     detail::transform_reads(reads, transformer, std::is_same<typename Container::value_type, AlignedRead> {});
 }
-} // namespace transform
-} // namespace preprocess
+
+} // namespace readpipe
 } // namespace octopus
 
 #endif

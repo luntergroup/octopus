@@ -24,8 +24,6 @@
 #include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
 
-#include <iostream> // TEST
-
 /*
  MappableFlatMultiSet is a container designed to allow fast retrival of MappableType elements with minimal
  memory overhead.
@@ -56,12 +54,12 @@ public:
     
     MappableFlatMultiSet(std::initializer_list<MappableType> mappables);
     
-    ~MappableFlatMultiSet() = default;
-    
     MappableFlatMultiSet(const MappableFlatMultiSet&)            = default;
     MappableFlatMultiSet& operator=(const MappableFlatMultiSet&) = default;
     MappableFlatMultiSet(MappableFlatMultiSet&&)                 = default;
     MappableFlatMultiSet& operator=(MappableFlatMultiSet&&)      = default;
+    
+    ~MappableFlatMultiSet() = default;
     
     iterator begin() noexcept;
     const_iterator begin() const noexcept;

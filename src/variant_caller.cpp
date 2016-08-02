@@ -18,7 +18,7 @@
 
 #include "mappable.hpp"
 #include "mappable_algorithms.hpp"
-#include "read_utils.hpp"
+#include "read_stats.hpp"
 #include "haplotype_likelihood_model.hpp"
 #include "haplotype_filter.hpp"
 #include "maths.hpp"
@@ -29,20 +29,7 @@ namespace octopus
 {
 // public methods
 
-VariantCaller::CallerComponents::CallerComponents(const ReferenceGenome& reference,
-                                                  const ReadPipe& read_pipe,
-                                                  CandidateVariantGenerator&& candidate_generator,
-                                                  HaplotypeGenerator::Builder haplotype_generator_builder,
-                                                  Phaser phaser)
-:
-reference {reference},
-read_pipe {read_pipe},
-candidate_generator {std::move(candidate_generator)},
-haplotype_generator_builder {std::move(haplotype_generator_builder)},
-phaser {std::move(phaser)}
-{}
-
-VariantCaller::VariantCaller(CallerComponents&& components, CallerParameters parameters)
+VariantCaller::VariantCaller(Components&& components, Parameters parameters)
 :
 reference_ {components.reference},
 samples_ {components.read_pipe.get().samples()},
@@ -71,8 +58,7 @@ parameters_ {std::move(parameters)}
     }
 }
 
-namespace debug
-{
+namespace debug {
     template <typename S>
     void print_left_aligned_candidates(S&& stream, const std::vector<Variant>& raw_candidates,
                                        const ReferenceGenome& reference);
@@ -191,7 +177,7 @@ bool all_empty(const ReadMap& reads)
 }
 
 auto calculate_candidate_region(const GenomicRegion& call_region, const ReadMap& reads,
-                                const core::generators::Composer& candidate_generator)
+                                const VariantGenerator& candidate_generator)
 {
     if (!candidate_generator.requires_reads()) return call_region;
     
@@ -651,7 +637,7 @@ MappableFlatSet<Variant> VariantCaller::generate_candidate_variants(const Genomi
 {
     if (debug_log_) stream(*debug_log_) << "Generating candidate variants in region " << region;
     
-    auto raw_candidates = candidate_generator_.generate_candidates(region);
+    auto raw_candidates = candidate_generator_.generate(region);
     
     if (debug_log_) debug::print_left_aligned_candidates(stream(*debug_log_), raw_candidates, reference_);
     
@@ -971,11 +957,7 @@ VariantCaller::generate_candidate_reference_alleles(const GenomicRegion& region,
     return result;
 }
 
-//
-// debug
-//
-namespace debug
-{
+namespace debug {
     template <typename S>
     void print_left_aligned_candidates(S&& stream, const std::vector<Variant>& raw_candidates,
                                        const ReferenceGenome& reference)
@@ -1145,9 +1127,9 @@ namespace debug
                 stream << haplotype << '\n';
             }
             if (resolution == Resolution::Alleles || resolution == Resolution::SequenceAndAlleles) {
-                ::debug::print_alleles(stream, haplotype); stream << '\n';
+                debug::print_alleles(stream, haplotype); stream << '\n';
             } else if (resolution != Resolution::Sequence) {
-                ::debug::print_variant_alleles(stream, haplotype);
+                debug::print_variant_alleles(stream, haplotype);
                 stream << '\n';
             }
         }
@@ -1184,7 +1166,7 @@ namespace debug
         
         std::for_each(std::begin(v), mth,
                       [&] (const auto& p) {
-                          ::debug::print_variant_alleles(stream, p.first);
+                          debug::print_variant_alleles(stream, p.first);
                           stream << " " << p.second << '\n';
                       });
     }
@@ -1198,7 +1180,7 @@ namespace debug
     auto find_read(const std::string& region, const std::string& cigar_str,
                    const ReadContainer& reads)
     {
-        const auto cigar = parse_cigar_string(cigar_str);
+        const auto cigar = parse_cigar(cigar_str);
         return std::find_if(std::cbegin(reads), std::cend(reads),
                             [&] (const AlignedRead& read) {
                                 return read.cigar() == cigar
@@ -1244,10 +1226,10 @@ namespace debug
                                     const MappableFlatSet<Variant>& candidates,
                                     const ReferenceGenome& reference)
     {
-        auto haplotype = ::debug::make_haplotype(haplotype_str, haplotype_region_str, reference);
+        auto haplotype = debug::make_haplotype(haplotype_str, haplotype_region_str, reference);
         
         std::cout << "Haplotype: " << haplotype << std::endl;
-        ::debug::print_variant_alleles(haplotype);
+        debug::print_variant_alleles(haplotype);
         std::cout << std::endl;
         
         const auto active_region = parse_region(active_region_str, reference);

@@ -21,34 +21,36 @@
 class ReferenceGenome;
 class GenomicRegion;
 
-namespace test
+namespace octopus { namespace test {
+
+template <typename RealType>
+bool is_close_to_one(RealType x)
 {
-    template <typename RealType>
-    bool is_close_to_one(RealType x)
-    {
-        return std::abs(x - 1) < 0.0000000000001;
-    }
+    return std::abs(x - 1) < 0.0000000000001;
+}
+
+inline std::string get_label(const std::unordered_map<Haplotype, std::string>& labels, const Haplotype& haplotype)
+{
+    return (labels.count(haplotype) > 0) ? labels.at(haplotype) : "other";
+}
+
+inline void sort(std::vector<Haplotype>& haplotypes)
+{
+    std::sort(std::begin(haplotypes), std::end(haplotypes));
+}
+
+template <typename A>
+Haplotype make_haplotype(const ReferenceGenome& reference, const GenomicRegion& region,
+                         std::initializer_list<A> alleles)
+{
+    Haplotype::Builder hb {region, reference};
     
-    inline std::string get_label(const std::unordered_map<Haplotype, std::string>& labels, const Haplotype& haplotype)
-    {
-        return (labels.count(haplotype) > 0) ? labels.at(haplotype) : "other";
-    }
+    for (const auto& allele : alleles) hb.push_back(allele);
     
-    inline void sort(std::vector<Haplotype>& haplotypes)
-    {
-        std::sort(std::begin(haplotypes), std::end(haplotypes));
-    }
-    
-    template <typename A>
-    Haplotype make_haplotype(const ReferenceGenome& reference, const GenomicRegion& region,
-                             std::initializer_list<A> alleles)
-    {
-        Haplotype::Builder hb {region, reference};
-        
-        for (const auto& allele : alleles) hb.push_back(allele);
-        
-        return hb.build();
-    }
+    return hb.build();
+}
+
 } // namespace test
+} // namespace octopus
 
 #endif

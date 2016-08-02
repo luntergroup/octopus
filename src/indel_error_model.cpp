@@ -16,8 +16,7 @@
 
 #include <iostream> // DEBUG
 
-namespace octopus
-{
+namespace octopus {
 
 constexpr decltype(IndelErrorModel::Homopolymer_errors_) IndelErrorModel::Homopolymer_errors_;
 constexpr decltype(IndelErrorModel::Homopolymer_errors_) IndelErrorModel::Di_nucleotide_tandem_repeat_errors_;
@@ -25,11 +24,10 @@ constexpr decltype(IndelErrorModel::Homopolymer_errors_) IndelErrorModel::Tri_nu
 constexpr decltype(IndelErrorModel::Homopolymer_errors_) IndelErrorModel::Poly_nucleotide_tandem_repeat_errors_;
 constexpr decltype(IndelErrorModel::default_gap_extension_) IndelErrorModel::default_gap_extension_;
 
-namespace
-{
+namespace {
     auto extract_repeats(const Haplotype& haplotype)
     {
-        return Tandem::find_maximal_repetitions(haplotype.sequence(), 1, 3);
+        return tandem::find_maximal_repetitions(haplotype.sequence(), 1, 3);
     }
 }
 
@@ -48,7 +46,7 @@ IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_pe
     
     gap_open_penalities.assign(sequence_size(haplotype), Homopolymer_errors_.front());
     
-    Tandem::StringRun max_repeat {};
+    tandem::StringRun max_repeat {};
     
     for (const auto& repeat : repeats) {
         std::int8_t e;
@@ -106,4 +104,5 @@ IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_pe
         default: return default_gap_extension_;
     }
 }
+
 } // namespace octopus

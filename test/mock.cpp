@@ -20,7 +20,7 @@ using namespace octopus;
 
 int main(const int argc, const char **argv)
 {
-    auto options = get_basic_mock_options();
+    auto options = test::get_basic_mock_options();
     
     if (options) {
         if (options::is_run_command(*options)) {

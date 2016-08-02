@@ -25,8 +25,6 @@
 #include "mappable_ranges.hpp"
 #include "type_tricks.hpp"
 
-#include <iostream> // DEBUG
-
 // sum_region_sizes
 
 template <typename InputIt>

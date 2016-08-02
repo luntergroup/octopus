@@ -12,8 +12,9 @@
 #include <vector>
 #include <cstddef>
 #include <functional>
+#include <memory>
 
-#include "candidate_variant_generator.hpp"
+#include "variant_generator.hpp"
 #include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "assembler.hpp"
@@ -23,16 +24,16 @@ class ReferenceGenome;
 class AlignedRead;
 class GenomicRegion;
 
-namespace octopus { namespace core { namespace generators
-{
-class LocalReassembler : public CandidateVariantGenerator
+namespace octopus { namespace coretools {
+
+class LocalReassembler : public VariantGenerator
 {
 public:
     struct Options
     {
-        std::vector<unsigned> kmer_sizes;
-        AlignedRead::BaseQuality mask_threshold = 0;
-        unsigned min_supporting_reads = 2;
+        std::vector<unsigned> kmer_sizes           = {10, 25, 35};
+        AlignedRead::BaseQuality mask_threshold    = 0;
+        unsigned min_supporting_reads              = 2;
         Variant::RegionType::Size max_variant_size = 500;
     };
     
@@ -47,19 +48,24 @@ public:
     
     ~LocalReassembler() override = default;
     
-    bool requires_reads() const noexcept override;
-    
-    void add_read(const AlignedRead& read) override;
-    void add_reads(std::vector<AlignedRead>::const_iterator first,
-                   std::vector<AlignedRead>::const_iterator last) override;
-    void add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
-                   MappableFlatMultiSet<AlignedRead>::const_iterator last) override;
-    
-    std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
-    
-    void clear() override;
-    
 private:
+    using VariantGenerator::VectorIterator;
+    using VariantGenerator::FlatSetIterator;
+    
+    std::unique_ptr<VariantGenerator> do_clone() const override;
+    
+    bool do_requires_reads() const noexcept override;
+    
+    void do_add_read(const AlignedRead& read) override;
+    void do_add_reads(VectorIterator first, VectorIterator last) override;
+    void do_add_reads(FlatSetIterator first, FlatSetIterator last) override;
+    
+    std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
+    
+    void do_clear() noexcept override;
+    
+    std::string name() const override;
+    
     using NucleotideSequence = AlignedRead::NucleotideSequence;
     
     struct Bin : public Mappable<Bin>
@@ -100,8 +106,8 @@ private:
                              const GenomicRegion& reference_region,
                              std::deque<Variant>& result) const;
 };
-} // namespace generators
-} // namespace core
+
+} // namespace coretools
 } // namespace octopus
 
 #endif /* defined(__Octopus__local_reassembler__) */

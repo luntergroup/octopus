@@ -21,8 +21,8 @@
 
 #include <iostream> // DEBUG
 
-namespace octopus
-{
+namespace octopus { namespace coretools {
+
 GenomeWalker::GenomeWalker(unsigned max_included,
                            IndicatorPolicy indicator_policy,
                            ExtensionPolicy extension_policy)
@@ -169,4 +169,5 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     return encompassing_region(first_included_itr, included_itr);
 }
 
+} // namespace coretools
 } // namespace octopus

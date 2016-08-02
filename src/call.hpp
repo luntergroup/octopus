@@ -25,8 +25,8 @@
 #include "vcf_record.hpp"
 #include "reference_genome.hpp"
 
-namespace octopus
-{
+namespace octopus {
+    
     class Call : public Mappable<Call>
     {
     public:

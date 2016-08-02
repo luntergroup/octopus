@@ -22,6 +22,8 @@
 #include "option_parser.hpp"
 #include "option_collation.hpp"
 
+namespace octopus { namespace test {
+
 namespace po = boost::program_options;
 
 using std::cout;
@@ -168,3 +170,6 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_bed_files)
 //}
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace test
+} // namespace octopus

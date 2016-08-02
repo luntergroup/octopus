@@ -8,6 +8,8 @@
 
 #include "pedigree.hpp"
 
+namespace octopus {
+
 // public methods
 
 void Pedigree::clear()
@@ -19,3 +21,5 @@ std::size_t Pedigree::size() const
 {
     return boost::num_vertices(tree_);
 }
+    
+} // namespace octopus

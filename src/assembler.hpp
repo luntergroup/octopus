@@ -27,16 +27,14 @@
 
 class Assembler;
 
-namespace boost
-{
+namespace boost {
     template <typename G>
     static decltype(auto) get(vertex_index_t, G& g);
     template <typename G>
     static decltype(auto) get(vertex_index_t, const G& g);
 }
 
-namespace debug
-{
+namespace debug {
     void print(const Assembler& assembler);
 }
 

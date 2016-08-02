@@ -26,8 +26,8 @@
 
 #include "timers.hpp" // BENCHMARK
 
-namespace octopus { namespace core { namespace generators
-{
+namespace octopus { namespace coretools {
+
 LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options options)
 :
 reference_ {reference},
@@ -63,6 +63,11 @@ max_variant_size_ {options.max_variant_size}
                     });
 }
 
+std::unique_ptr<VariantGenerator> LocalReassembler::do_clone() const
+{
+    return std::make_unique<LocalReassembler>(*this);
+}
+
 LocalReassembler::Bin::Bin(GenomicRegion region)
 :
 region {std::move(region)}
@@ -94,7 +99,7 @@ bool LocalReassembler::Bin::empty() const noexcept
     return read_sequences.empty();
 }
 
-bool LocalReassembler::requires_reads() const noexcept
+bool LocalReassembler::do_requires_reads() const noexcept
 {
     return true;
 }
@@ -185,7 +190,7 @@ auto overlapped_bins(C& bins, const R& read)
     return bases(overlap_range(std::begin(bins), std::end(bins), read, BidirectionallySortedTag {}));
 }
 
-void LocalReassembler::add_read(const AlignedRead& read)
+void LocalReassembler::do_add_read(const AlignedRead& read)
 {
     prepare_bins_to_insert(read);
     
@@ -209,16 +214,14 @@ void LocalReassembler::add_read(const AlignedRead& read)
     }
 }
 
-void LocalReassembler::add_reads(std::vector<AlignedRead>::const_iterator first,
-                                 std::vector<AlignedRead>::const_iterator last)
+void LocalReassembler::do_add_reads(VectorIterator first, VectorIterator last)
 {
-    std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
+    std::for_each(first, last, [this] (const auto& read ) { do_add_read(read); });
 }
 
-void LocalReassembler::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
-                                                   MappableFlatMultiSet<AlignedRead>::const_iterator last)
+void LocalReassembler::do_add_reads(FlatSetIterator first, FlatSetIterator last)
 {
-    std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
+    std::for_each(first, last, [this] (const auto& read ) { do_add_read(read); });
 }
 
 template <typename Container>
@@ -244,10 +247,8 @@ void log_failure(L& log, const char* type, const unsigned k)
 }
 
 std::vector<Variant>
-LocalReassembler::generate_candidates(const GenomicRegion& region)
+LocalReassembler::do_generate_variants(const GenomicRegion& region)
 {
-    static auto debug_log = logging::get_debug_log();
-    
     if (bins_.empty()) return {};
     
     auto active_bins = overlapped_bins(bins_, region);
@@ -257,8 +258,8 @@ LocalReassembler::generate_candidates(const GenomicRegion& region)
     for (Bin& bin : active_bins) {
         if (bin.read_sequences.empty()) continue;
         
-        if (debug_log) {
-            stream(*debug_log) << "Assembling " << bin.read_sequences.size() << " reads in bin " << mapped_region(bin);
+        if (debug_log_) {
+            stream(*debug_log_) << "Assembling " << bin.read_sequences.size() << " reads in bin " << mapped_region(bin);
         }
         
         unsigned num_defaults_unsuccessful {0};
@@ -268,9 +269,9 @@ LocalReassembler::generate_candidates(const GenomicRegion& region)
                 const auto success = assemble_bin(k, bin, candidates);
                 
                 if (success) {
-                    log_success(debug_log, "Default", k);
+                    log_success(debug_log_, "Default", k);
                 } else {
-                    log_failure(debug_log, "Default", k);
+                    log_failure(debug_log_, "Default", k);
                     ++num_defaults_unsuccessful;
                 }
             } catch (std::exception& e) {
@@ -284,10 +285,10 @@ LocalReassembler::generate_candidates(const GenomicRegion& region)
                     const auto success = assemble_bin(k, bin, candidates);
                     
                     if (success) {
-                        log_success(debug_log, "Fallback", k);
+                        log_success(debug_log_, "Fallback", k);
                         break;
                     } else {
-                        log_failure(debug_log, "Fallback", k);
+                        log_failure(debug_log_, "Fallback", k);
                     }
                 } catch (std::exception& e) {
                     break;
@@ -312,12 +313,10 @@ LocalReassembler::generate_candidates(const GenomicRegion& region)
     
     remove_nonoverlapping(result, region); // as we expanded original region
     
-    if (debug_log) debug::print_generated_candidates(stream(*debug_log), result, "local re-assembly");
-    
     return result;
 }
 
-void LocalReassembler::clear()
+void LocalReassembler::do_clear() noexcept
 {
     bins_.clear();
     bins_.shrink_to_fit();
@@ -325,7 +324,10 @@ void LocalReassembler::clear()
     masked_sequence_buffer_.shrink_to_fit();
 }
 
-// private methods
+std::string LocalReassembler::name() const
+{
+    return "Local reassembly";
+}
 
 void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
 {
@@ -422,7 +424,7 @@ std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
         return result;
     }
     
-    auto cigar = parse_cigar_string(align(v.ref, v.alt).first);
+    auto cigar = parse_cigar(align(v.ref, v.alt).cigar);
     
     auto ref_it = std::cbegin(v.ref);
     auto alt_it = std::cbegin(v.alt);
@@ -572,6 +574,6 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
     
     return true;
 }
-} // namespace generators
-} // namespace core
+
+} // namespace coretools
 } // namespace octopus

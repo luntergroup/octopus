@@ -20,8 +20,7 @@
 #include "maths.hpp"
 #include "append.hpp"
 
-namespace octopus
-{
+namespace octopus {
     using HaplotypeLikelihoods = std::vector<std::vector<double>>;
     
     auto max_posterior_haplotypes(const Genotype<Haplotype>& genotype,

@@ -22,8 +22,8 @@
 
 #include "timers.hpp"
 
-namespace octopus
-{
+namespace octopus {
+
 Phaser::Phaser(Phred<double> min_phase_score) : min_phase_score_ {min_phase_score} {}
 
 namespace
@@ -300,8 +300,7 @@ bool is_split_phasing(const Phaser::PhaseSet& phase)
                        [] (const auto& p) { return p.second.size() > 1; });
 }
     
-namespace debug
-{
+namespace debug {
     void print_phase_sets(const Phaser::PhaseSet& phasings)
     {
         print_phase_sets(std::cout, phasings);

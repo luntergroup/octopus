@@ -109,10 +109,7 @@ namespace std {
             return hash<string>()(reader.path().string());
         }
     };
-} // namespace std
-
-namespace std
-{
+    
     template <> struct hash<reference_wrapper<const VcfReader>>
     {
         size_t operator()(reference_wrapper<const VcfReader> reader) const

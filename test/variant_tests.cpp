@@ -26,6 +26,8 @@
 using std::cout;
 using std::endl;
 
+namespace octopus { namespace test {
+
 BOOST_AUTO_TEST_SUITE(Components)
 
 static void sort(std::vector<Variant>& variants)
@@ -189,8 +191,6 @@ BOOST_AUTO_TEST_CASE(insertions_overlap_other_insertions_with_same_region)
     BOOST_CHECK(!overlaps(insert1, insert3));
 }
 
-
-
 BOOST_AUTO_TEST_CASE(insertions_overlap_with_other_variants_when_contained_by_their_region)
 {
     const Variant ins {"test", 1, "",    "TAG"};
@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     Variant left_aligned_deletion = left_align(a_deletion, human);
     
     BOOST_CHECK(left_aligned_deletion.mapped_region() ==
-            parse_region("4:3076603-3076606", human));
+                parse_region("4:3076603-3076606", human));
     BOOST_CHECK(ref_sequence(left_aligned_deletion) == "CAG");
     BOOST_CHECK(alt_sequence(left_aligned_deletion) == "");
     
@@ -353,7 +353,7 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     left_aligned_insertion = left_align(an_insertion, human);
     
     BOOST_CHECK(left_aligned_insertion.mapped_region() ==
-            parse_region("5:94594949-94594949", human));
+                parse_region("5:94594949-94594949", human));
     BOOST_CHECK(ref_sequence(left_aligned_insertion) == "");
     BOOST_CHECK(alt_sequence(left_aligned_insertion) == "ACA");
 }
@@ -398,7 +398,7 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
     auto parsimonious_deletion = make_parsimonious(a_deletion, human);
     
     BOOST_CHECK(parsimonious_deletion.mapped_region() ==
-            parse_region("12:10001329-10001335", human));
+                parse_region("12:10001329-10001335", human));
     BOOST_CHECK(ref_sequence(parsimonious_deletion) == "CGTGGA");
     BOOST_CHECK(alt_sequence(parsimonious_deletion) == "C");
     
@@ -523,7 +523,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     BOOST_CHECK(alt_sequence(a_normalised_deletion) == "C");
     
     Variant an_unnormilised_insertion {parse_region("4:3076655-3076657", human),
-                                    std::string {"AG"}, std::string {"AGCAG"}};
+        std::string {"AG"}, std::string {"AGCAG"}};
     
     BOOST_CHECK(!is_parsimonious(an_unnormilised_insertion));
     
@@ -536,3 +536,6 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace test
+} // namespace octopus

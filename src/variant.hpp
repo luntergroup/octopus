@@ -26,6 +26,8 @@
 
 class ReferenceGenome;
 
+namespace octopus {
+
 /*
  A variant is a combination of a reference allele and an alternative allele.
  */
@@ -273,21 +275,31 @@ bool is_transversion(const Variant& variant) noexcept;
 
 std::vector<Allele::NucleotideSequence> extract_alt_allele_sequences(const std::vector<Variant>& variants);
 
-namespace std {
-    template <> struct hash<Variant>
+std::ostream& operator<<(std::ostream& os, const Variant& variant);
+
+struct VariantHash
+{
+    std::size_t operator()(const Variant& variant) const
     {
-        size_t operator()(const Variant& variant) const
+        using boost::hash_combine;
+        size_t result {};
+        hash_combine(result, std::hash<GenomicRegion>()(variant.mapped_region()));
+        hash_combine(result, std::hash<Allele::NucleotideSequence>()(ref_sequence(variant)));
+        hash_combine(result, std::hash<Allele::NucleotideSequence>()(alt_sequence(variant)));
+        return result;
+    }
+};
+
+} // namespace octopus
+
+namespace std {
+    template <> struct hash<octopus::Variant>
+    {
+        size_t operator()(const octopus::Variant& variant) const
         {
-            using boost::hash_combine;
-            size_t result {};
-            hash_combine(result, hash<GenomicRegion>()(variant.mapped_region()));
-            hash_combine(result, hash<Allele::NucleotideSequence>()(ref_sequence(variant)));
-            hash_combine(result, hash<Allele::NucleotideSequence>()(alt_sequence(variant)));
-            return result;
+            return octopus::VariantHash()(variant);
         }
     };
-} // end namespace std
-
-std::ostream& operator<<(std::ostream& os, const Variant& variant);
+} // namespace std
 
 #endif

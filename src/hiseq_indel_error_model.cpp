@@ -16,8 +16,7 @@
 
 #include <iostream> // DEBUG
 
-namespace octopus
-{
+namespace octopus {
     
     constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Homopolymer_errors_;
     constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Di_nucleotide_tandem_repeat_errors_;
@@ -29,7 +28,7 @@ namespace octopus
     {
         auto extract_repeats(const Haplotype& haplotype)
         {
-            return Tandem::find_maximal_repetitions(haplotype.sequence(), 1, 3);
+            return tandem::find_maximal_repetitions(haplotype.sequence(), 1, 3);
         }
     }
     
@@ -48,7 +47,7 @@ namespace octopus
         
         gap_open_penalities.assign(sequence_size(haplotype), 50);
         
-        Tandem::StringRun max_repeat {};
+        tandem::StringRun max_repeat {};
         
         for (const auto& repeat : repeats) {
             std::int8_t e;

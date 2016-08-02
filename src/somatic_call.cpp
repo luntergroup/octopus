@@ -10,8 +10,7 @@
 
 #include "string_utils.hpp"
 
-namespace octopus
-{
+namespace octopus {
     void SomaticCall::decorate(VcfRecord::Builder& record) const
     {
         record.set_somatic();

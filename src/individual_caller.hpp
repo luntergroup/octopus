@@ -18,25 +18,24 @@
 #include "common.hpp"
 #include "phred.hpp"
 #include "variant_caller.hpp"
-#include "individual_genotype_model.hpp"
+#include "individual.hpp"
 #include "variant_call.hpp"
 
 class GenomicRegion;
+
+namespace octopus {
+
 class ReadPipe;
 class Variant;
 class HaplotypeLikelihoodCache;
-
-namespace octopus
-{
 class CoalescentModel;
 
 class IndividualVariantCaller : public VariantCaller
 {
 public:
     using VariantCaller::CallTypeSet;
-    using VariantCaller::CallerComponents;
     
-    struct CallerParameters
+    struct Parameters
     {
         Phred<double> min_variant_posterior;
         Phred<double> min_refcall_posterior;
@@ -47,9 +46,9 @@ public:
     
     IndividualVariantCaller() = delete;
     
-    IndividualVariantCaller(CallerComponents&& components,
-                            VariantCaller::CallerParameters general_parameters,
-                            CallerParameters specific_parameters);
+    IndividualVariantCaller(VariantCaller::Components&& components,
+                            VariantCaller::Parameters general_parameters,
+                            Parameters specific_parameters);
 
     IndividualVariantCaller(const IndividualVariantCaller&)            = delete;
     IndividualVariantCaller& operator=(const IndividualVariantCaller&) = delete;
@@ -61,7 +60,7 @@ public:
 private:
     class Latents;
     
-    CallerParameters parameters_;
+    Parameters parameters_;
     
     CallTypeSet do_get_call_types() const override;
     

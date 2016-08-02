@@ -10,8 +10,8 @@
 
 #include <algorithm>
 
-namespace octopus
-{
+namespace octopus {
+
 Phred<double> Call::quality() const noexcept
 {
     return quality_;

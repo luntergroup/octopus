@@ -20,13 +20,16 @@
 #include <boost/functional/hash.hpp>
 #include <boost/optional.hpp>
 
+#include "comparable.hpp"
 #include "contig_region.hpp"
 #include "mappable.hpp"
 #include "allele.hpp"
-#include "comparable.hpp"
 
 class ReferenceGenome;
 class GenomicRegion;
+
+namespace octopus {
+
 class Variant;
 
 /*
@@ -35,14 +38,12 @@ class Variant;
  */
 class Haplotype;
 
-namespace debug
-{
+namespace debug {
     template <typename S> void print_alleles(S&& stream, const Haplotype& haplotype);
     template <typename S> void print_variant_alleles(S&& stream, const Haplotype& haplotype);
 }
 
-namespace detail
-{
+namespace detail {
     Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::false_type);
 }
@@ -150,11 +151,11 @@ reference_ {reference}
     explicit_alleles_.emplace_back(explicit_allele_region_, sequence_);
 }
 
-namespace detail
-{
+namespace detail {
     template <typename T>
     void append(T& result, const ReferenceGenome& reference,
-                const GenomicRegion::ContigName& contig, const ContigRegion& region)
+                const GenomicRegion::ContigName& contig,
+                const ContigRegion& region)
     {
         result.append(reference.fetch_sequence(GenomicRegion {contig, region}));
     }
@@ -174,10 +175,9 @@ reference_ {reference}
     if (!explicit_alleles_.empty()) {
         explicit_allele_region_ = encompassing_region(explicit_alleles_.front(), explicit_alleles_.back());
         
-        auto num_bases = std::accumulate(std::cbegin(explicit_alleles_),
-                                         std::cend(explicit_alleles_), 0,
-                                         [] (const auto curr, const auto& allele) {
-                                             return curr + ::sequence_size(allele);
+        auto num_bases = std::accumulate(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_),
+                                         0, [] (const auto curr, const auto& allele) {
+                                             return curr + ::octopus::sequence_size(allele);
                                          });
         
         const auto lhs_reference_region = left_overhang_region(region_.contig_region(),
@@ -302,7 +302,7 @@ std::vector<ContigAllele> splice_all(const Container& haplotypes, const ContigRe
 
 bool is_reference(const Haplotype& haplotype);
 
-Haplotype expand(const Haplotype& haplotype, Haplotype::RegionType::Position n);
+Haplotype expand(const Haplotype& haplotype, Haplotype::RegionType::Size n);
 
 std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs);
 
@@ -329,37 +329,15 @@ bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
 
 bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region);
 
-namespace std
-{
-    template <> struct hash<Haplotype>
-    {
-        size_t operator()(const Haplotype& haplotype) const
-        {
-            return haplotype.get_hash();
-        }
-    };
-    
-    template <> struct hash<reference_wrapper<const Haplotype>>
-    {
-        size_t operator()(const reference_wrapper<const Haplotype> haplotype) const
-        {
-            return hash<Haplotype>()(haplotype);
-        }
-    };
-} // namespace std
-
-namespace boost
-{
-    template <> struct hash<Haplotype> : std::unary_function<Haplotype, std::size_t>
-    {
-        std::size_t operator()(const Haplotype& h) const
-        {
-            return std::hash<Haplotype>()(h);
-        }
-    };
-} // namespace boost
-
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
+
+struct HaplotypeHash
+{
+    std::size_t operator()(const Haplotype& haplotype) const noexcept
+    {
+        return haplotype.get_hash();
+    }
+};
 
 namespace debug
 {
@@ -397,5 +375,34 @@ namespace debug
     Haplotype make_haplotype(const std::string& str, const std::string& region,
                              const ReferenceGenome& reference);
 } // namespace debug
+} // namespace octopus
+
+namespace std {
+    template <> struct hash<octopus::Haplotype>
+    {
+        size_t operator()(const octopus::Haplotype& haplotype) const
+        {
+            return octopus::HaplotypeHash()(haplotype);
+        }
+    };
+    
+    template <> struct hash<reference_wrapper<const octopus::Haplotype>>
+    {
+        size_t operator()(const reference_wrapper<const octopus::Haplotype> haplotype) const
+        {
+            return hash<octopus::Haplotype>()(haplotype);
+        }
+    };
+} // namespace std
+
+namespace boost {
+    template <> struct hash<octopus::Haplotype> : std::unary_function<octopus::Haplotype, std::size_t>
+    {
+        std::size_t operator()(const octopus::Haplotype& h) const
+        {
+            return std::hash<octopus::Haplotype>()(h);
+        }
+    };
+} // namespace boost
 
 #endif /* defined(__Octopus__haplotype__) */

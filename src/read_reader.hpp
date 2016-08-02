@@ -107,10 +107,7 @@ namespace std {
             return hash<string>()(reader.path().string());
         }
     };
-}
-
-namespace std
-{
+    
     template <> struct hash<reference_wrapper<const ReadReader>>
     {
         size_t operator()(reference_wrapper<const ReadReader> reader) const

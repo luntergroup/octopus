@@ -8,6 +8,8 @@
 
 #include "kmer_mapper.hpp"
 
+namespace octopus {
+
 void map_query_to_target(const KmerPerfectHashes& query, const KmerHashTable& target,
                          MappedIndexCounts& mapping_counts, std::vector<std::size_t>& result)
 {
@@ -30,3 +32,5 @@ map_query_to_target(const KmerPerfectHashes& query, const KmerHashTable& target)
     MappedIndexCounts mapping_counts(target.second, 0);
     return  map_query_to_target(query, target, mapping_counts);
 }
+
+} // namespace octopus

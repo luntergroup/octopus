@@ -8,10 +8,8 @@
 
 #include "octopus_vcf.hpp"
 
-namespace octopus
-{
-    namespace Vcf
-    {
+namespace octopus {
+    namespace Vcf {
         VcfHeader::Builder make_octopus_header_template()
         {
             VcfHeader::Builder result {};

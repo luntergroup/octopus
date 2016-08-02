@@ -38,12 +38,11 @@
 //    return os;
 //}
 
-namespace SimdPairHmm
-{
+namespace octopus { namespace hmm { namespace simd {
+
 constexpr short N_SCORE {0 << 2};
 constexpr int BAND_SIZE {8};
 constexpr short INF {0x7800};
-
 constexpr char Gap {'-'};
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,
@@ -934,4 +933,7 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
     
     return result;
 }
-} // namespace SimdPairHmm
+
+} // namespace simd
+} // namespace hmm
+} // namespace octopus

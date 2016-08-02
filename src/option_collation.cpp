@@ -26,10 +26,13 @@
 
 #include "genomic_region.hpp"
 #include "aligned_read.hpp"
-#include "read_filter.hpp"
+#include "read_transformer.hpp"
 #include "read_transform.hpp"
-#include "read_utils.hpp"
-#include "haplotype_generator.hpp"
+#include "read_filterer.hpp"
+#include "read_filter.hpp"
+#include "downsampler.hpp"
+#include "read_stats.hpp"
+#include "coretools.hpp"
 #include "variant_caller_builder.hpp"
 #include "vcf_reader.hpp"
 #include "vcf_writer.hpp"
@@ -798,16 +801,15 @@ ReadManager make_read_manager(const OptionMap& options)
     
     if (read_paths) {
         const auto max_open_files = options.at("max-open-read-files").as<unsigned>();
-        
         return ReadManager {*std::move(read_paths), max_open_files};
     }
     
     throw std::runtime_error {"Unable to load read paths"};
 }
 
-ReadTransformer make_read_transformer(const OptionMap& options)
+auto make_read_transformer(const OptionMap& options)
 {
-    using namespace preprocess::transform;
+    using namespace octopus::readpipe;
     
     ReadTransformer result {};
     
@@ -848,11 +850,11 @@ ReadTransformer make_read_transformer(const OptionMap& options)
     return result;
 }
 
-ReadPipe::ReadFilterer make_read_filterer(const OptionMap& options)
+auto make_read_filterer(const OptionMap& options)
 {
     using std::make_unique;
     
-    using namespace preprocess::filter;
+    using namespace octopus::readpipe;
     
     using ReadFilterer = ReadPipe::ReadFilterer;
     
@@ -936,9 +938,9 @@ ReadPipe::ReadFilterer make_read_filterer(const OptionMap& options)
     return result;
 }
 
-boost::optional<preprocess::Downsampler> make_downsampler(const OptionMap& options)
+boost::optional<readpipe::Downsampler> make_downsampler(const OptionMap& options)
 {
-    using namespace preprocess;
+    using namespace octopus::readpipe;
     
     if (options.at("disable-downsampling").as<bool>()) return boost::none;
     
@@ -948,18 +950,29 @@ boost::optional<preprocess::Downsampler> make_downsampler(const OptionMap& optio
     return Downsampler {max_coverage, target_coverage};
 }
 
-Composer::Builder make_candidate_variant_generator_builder(const OptionMap& options,
-                                                           const ReferenceGenome& reference)
+ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
+                        const OptionMap& options)
+{
+    return ReadPipe {
+        read_manager,
+        make_read_transformer(options),
+        make_read_filterer(options),
+        make_downsampler(options),
+        std::move(samples)
+    };
+}
+
+auto make_variant_generator_builder(const OptionMap& options)
 {
     logging::WarningLogger warning_log {};
     logging::ErrorLogger log {};
     
-    Composer::Builder result {};
+    using VGB = coretools::VariantGenerator::Builder;
     
-    result.set_reference(reference);
+    VGB result {};
     
     if (options.count("generate-candidates-from-source") == 1) {
-        result.add_generator(Composer::Builder::Generator::External);
+        result.add_generator(VGB::Generator::External);
         
         const fs::path input_path {options.at("generate-candidates-from-source").as<std::string>()};
         
@@ -985,7 +998,7 @@ Composer::Builder make_candidate_variant_generator_builder(const OptionMap& opti
                 return result;
             }
         } else {
-            result.add_generator(Composer::Builder::Generator::External);
+            result.add_generator(VGB::Generator::External);
         }
         
         auto resolved_path = resolve_path(regenotype_path, options);
@@ -1015,11 +1028,11 @@ Composer::Builder make_candidate_variant_generator_builder(const OptionMap& opti
     }
     
     if (!options.at("disable-raw-cigar-candidate-generator").as<bool>()) {
-        result.add_generator(Composer::Builder::Generator::Alignment);
+        result.add_generator(VGB::Generator::Alignment);
     }
     
     if (!options.at("disable-assembly-candidate-generator").as<bool>()) {
-        result.add_generator(Composer::Builder::Generator::Assembler);
+        result.add_generator(VGB::Generator::Assembler);
         const auto kmer_sizes = options.at("kmer-size").as<std::vector<unsigned>>();
         
         for (const auto k : kmer_sizes) {
@@ -1162,12 +1175,13 @@ auto make_haplotype_generator_builder(const OptionMap& options)
 VariantCallerFactory
 make_variant_caller_factory(const ReferenceGenome& reference,
                             ReadPipe& read_pipe,
-                            const Composer::Builder& candidate_variant_generator_builder,
                             const InputRegionMap& regions,
                             const OptionMap& options)
 {
     VariantCallerBuilder vc_builder {
-        reference, read_pipe, candidate_variant_generator_builder,
+        reference,
+        read_pipe,
+        make_variant_generator_builder(options),
         make_haplotype_generator_builder(options)
     };
     

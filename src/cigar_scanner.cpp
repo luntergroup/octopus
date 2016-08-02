@@ -24,9 +24,12 @@
 
 #include <iostream> // DEBUG
 
-namespace octopus { namespace core { namespace generators
+namespace octopus { namespace coretools {
+
+std::unique_ptr<VariantGenerator> CigarScanner::do_clone() const
 {
-// public methods
+    return std::make_unique<CigarScanner>(*this);
+}
 
 CigarScanner::CigarScanner(const ReferenceGenome& reference, Options options)
 :
@@ -42,7 +45,7 @@ candidates_ {},
 max_seen_candidate_size_ {}
 {}
 
-bool CigarScanner::requires_reads() const noexcept
+bool CigarScanner::do_requires_reads() const noexcept
 {
     return true;
 }
@@ -86,7 +89,7 @@ namespace
     }
 } // namespace
 
-void CigarScanner::add_read(const AlignedRead& read)
+void CigarScanner::do_add_read(const AlignedRead& read)
 {
     using std::cbegin; using std::next; using std::move;
     
@@ -182,16 +185,14 @@ void CigarScanner::add_read(const AlignedRead& read)
     }
 }
 
-void CigarScanner::add_reads(std::vector<AlignedRead>::const_iterator first,
-                            std::vector<AlignedRead>::const_iterator last)
+void CigarScanner::do_add_reads(VectorIterator first, VectorIterator last)
 {
-    std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
+    std::for_each(first, last, [this] (const auto& read ) { do_add_read(read); });
 }
 
-void CigarScanner::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
-                            MappableFlatMultiSet<AlignedRead>::const_iterator last)
+void CigarScanner::do_add_reads(FlatSetIterator first, FlatSetIterator last)
 {
-    std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
+    std::for_each(first, last, [this] (const auto& read ) { do_add_read(read); });
 }
 
 template <typename ForwardIt, typename Container>
@@ -226,7 +227,7 @@ auto copy_overlapped_indels(const Container1& all_candidates, const Container2& 
     
     std::vector<Variant> indels {};
     
-    static const auto is_indel = [] (const auto& v) { return ::is_indel(v); };
+    static const auto is_indel = [] (const auto& v) { return octopus::is_indel(v); };
     
     indels.reserve(std::count_if(cbegin(all_candidates), cend(all_candidates), is_indel));
     
@@ -237,7 +238,7 @@ auto copy_overlapped_indels(const Container1& all_candidates, const Container2& 
     return copy_overlapped_indels(cbegin(indels), cend(indels), selected_candidates);
 }
 
-std::vector<Variant> CigarScanner::generate_candidates(const GenomicRegion& region)
+std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::distance;
     
@@ -300,18 +301,18 @@ std::vector<Variant> CigarScanner::generate_candidates(const GenomicRegion& regi
         result.shrink_to_fit();
     }
     
-    if (DEBUG_MODE) {
-        logging::DebugLogger log {};
-        debug::print_generated_candidates(stream(log), result, "raw CIGAR strings");
-    }
-    
     return result;
 }
 
-void CigarScanner::clear()
+void CigarScanner::do_clear() noexcept
 {
     candidates_.clear();
     candidates_.shrink_to_fit();
+}
+
+std::string CigarScanner::name() const
+{
+    return "raw CIGAR";
 }
 
 // private methods
@@ -344,6 +345,6 @@ void CigarScanner::add_snvs_in_match_range(const GenomicRegion& region, const Se
                  ++ref_index;
              });
 }
-} // namespace generators
-} // namespace core
+
+} // namespace coretools
 } // namespace octopus

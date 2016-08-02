@@ -17,55 +17,63 @@
 #include "mappable_algorithms.hpp"
 #include "sequence_utils.hpp"
 
-namespace octopus { namespace core { namespace generators
+namespace octopus { namespace coretools {
+
+Randomiser::Randomiser(const ReferenceGenome& reference)
+:
+reference_ {reference}
+{}
+
+std::unique_ptr<VariantGenerator> Randomiser::do_clone() const
 {
-    Randomiser::Randomiser(const ReferenceGenome& reference)
-    :
-    reference_ {reference}
-    {}
+    return std::make_unique<Randomiser>(*this);
+}
+
+void Randomiser::do_add_reads(VectorIterator first, VectorIterator last)
+{
+    max_read_size_ = region_size(*largest_mappable(first, last));
+}
+
+void Randomiser::do_add_reads(FlatSetIterator first, FlatSetIterator last)
+{
+    max_read_size_ = region_size(*largest_mappable(first, last));
+}
+
+std::vector<Variant> Randomiser::do_generate_variants(const GenomicRegion& region)
+{
+    auto num_positions = region_size(region);
     
-    void Randomiser::add_reads(std::vector<AlignedRead>::const_iterator first,
-                                                    std::vector<AlignedRead>::const_iterator last)
-    {
-        max_read_size_ = region_size(*largest_mappable(first, last));
+    std::vector<Variant> result {};
+    
+    if (num_positions == 0) return result;
+    
+    static const auto seed = std::chrono::system_clock::now().time_since_epoch().count();
+    
+    static std::default_random_engine generator {static_cast<unsigned>(seed)};
+    
+    using T = Variant::RegionType::Size;
+    
+    std::uniform_int_distribution<T> uniform {0, std::min(num_positions, max_read_size_)};
+    
+    auto positions = decompose(region);
+    
+    for (auto p = uniform(generator); p < num_positions; p += max_read_size_) {
+        auto position = positions[p];
+        
+        auto reference_allele = make_reference_allele(position, reference_);
+        
+        Allele mutation {position, utils::reverse_complement_copy(reference_allele.sequence())};
+        
+        result.emplace_back(reference_allele, mutation);
     }
     
-    void Randomiser::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
-                                                    MappableFlatMultiSet<AlignedRead>::const_iterator last)
-    {
-        max_read_size_ = region_size(*largest_mappable(first, last));
-    }
-    
-    std::vector<Variant> Randomiser::generate_candidates(const GenomicRegion& region)
-    {
-        auto num_positions = region_size(region);
-        
-        std::vector<Variant> result {};
-        
-        if (num_positions == 0) return result;
-        
-        static const auto seed = std::chrono::system_clock::now().time_since_epoch().count();
-        
-        static std::default_random_engine generator {static_cast<unsigned>(seed)};
-        
-        using T = Variant::RegionType::Size;
-        
-        std::uniform_int_distribution<T> uniform {0, std::min(num_positions, max_read_size_)};
-        
-        auto positions = decompose(region);
-        
-        for (auto p = uniform(generator); p < num_positions; p += max_read_size_) {
-            auto position = positions[p];
-            
-            auto reference_allele = make_reference_allele(position, reference_);
-            
-            Allele mutation {position, utils::reverse_complement_copy(reference_allele.sequence())};
-            
-            result.emplace_back(reference_allele, mutation);
-        }
-        
-        return result;
-    }
-} // namespace generators
-} // namespace core
+    return result;
+}
+
+std::string Randomiser::name() const
+{
+    return "Random";
+}
+
+} // namespace coretools
 } // namespace octopus

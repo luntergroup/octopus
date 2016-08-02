@@ -13,11 +13,10 @@
 #include <algorithm>
 #include <cassert>
 
-#include "read_utils.hpp"
+#include "read_stats.hpp"
 #include "mappable_algorithms.hpp"
 
-namespace octopus
-{
+namespace octopus {
 
 // public members
 
@@ -107,7 +106,7 @@ namespace
 
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
 {
-    using namespace preprocess::filter;
+    using namespace readpipe;
     
     ReadMap result {samples_.size()};
     

@@ -21,21 +21,21 @@
 
 #include <boost/graph/adjacency_list.hpp>
 
-#include "variant.hpp"
-#include "haplotype.hpp"
 #include "genomic_region.hpp"
-#include "reference_genome.hpp"
+#include "allele.hpp"
+#include "haplotype.hpp"
+#include "variant.hpp"
 
-namespace octopus
-{
+class ReferenceGenome;
+
+namespace octopus { namespace coretools {
+
 class HaplotypeTree
 {
 public:
-    using ContigName = GenomicRegion::ContigName;
-    
     HaplotypeTree() = delete;
     
-    HaplotypeTree(const ContigName& contig, const ReferenceGenome& reference);
+    HaplotypeTree(const GenomicRegion::ContigName& contig, const ReferenceGenome& reference);
     
     HaplotypeTree(const HaplotypeTree&);
     HaplotypeTree& operator=(HaplotypeTree);
@@ -45,10 +45,16 @@ public:
     ~HaplotypeTree() = default;
     
     bool is_empty() const noexcept;
+    
     unsigned num_haplotypes() const noexcept;
     
+    // uses Haplotype::operator== logic
     bool contains(const Haplotype& haplotype) const;
     
+    // uses Haplotype::HaveSameAlleles logic
+    bool includes(const Haplotype& haplotype) const;
+    
+    // using Haplotype::HaveSameAlleles logic
     bool is_unique(const Haplotype& haplotype) const;
     
     // Only extends existing leafs
@@ -64,27 +70,33 @@ public:
     std::vector<Haplotype> extract_haplotypes() const;
     std::vector<Haplotype> extract_haplotypes(const GenomicRegion& region) const;
     
+    // Using Haplotype::operator== logic
     void prune_all(const Haplotype& haplotype);
+    
+    // Using Haplotype::HaveSameAlleles logic
     void prune_unique(const Haplotype& haplotype);
     
-    void remove_overlapped(const GenomicRegion& region);
+    void clear(const GenomicRegion& region);
     
     void clear() noexcept;
     
 private:
-    using Tree = boost::adjacency_list<boost::listS, boost::listS, boost::bidirectionalS,
-                                        ContigAllele, boost::no_property>;
+    using Tree = boost::adjacency_list<
+        boost::listS, boost::listS, boost::bidirectionalS, ContigAllele, boost::no_property
+    >;
     
-    using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
-    using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;
+    using Vertex = boost::graph_traits<Tree>::vertex_descriptor;
+    using Edge   = boost::graph_traits<Tree>::edge_descriptor;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     
     Tree tree_;
+    
     Vertex root_;
+    
     std::list<Vertex> haplotype_leafs_;
     
-    ContigName contig_;
+    GenomicRegion::ContigName contig_;
     
     mutable std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
     
@@ -106,15 +118,14 @@ private:
                                            const Haplotype& haplotype) const;
     LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last,
                                            const Haplotype& haplotype) const;
-    std::pair<Vertex, bool> remove(Vertex leaf, const ContigRegion& region);
-    std::pair<Vertex, bool> remove_external(Vertex leaf, const ContigRegion& region);
-    std::pair<Vertex, bool> remove_internal(Vertex leaf, const ContigRegion& region);
+    std::pair<Vertex, bool> clear(Vertex leaf, const ContigRegion& region);
+    std::pair<Vertex, bool> clear_external(Vertex leaf, const ContigRegion& region);
+    std::pair<Vertex, bool> clear_internal(Vertex leaf, const ContigRegion& region);
 };
 
 // non-member methods
 
-namespace detail
-{
+namespace detail {
     template <typename InputIt, typename A>
     void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, A)
     {
@@ -178,8 +189,7 @@ void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree)
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
     
-    static_assert(detail::is_variant_or_allele<MappableType>,
-                  "extend_tree only works for containers of Alleles or Variants");
+    static_assert(detail::is_variant_or_allele<MappableType>, "not Allele or Variant");
     
     detail::extend_tree(first, last, tree, MappableType {});
 }
@@ -196,8 +206,7 @@ InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
     
-    static_assert(detail::is_variant_or_allele<MappableType>,
-                  "extend_tree_until only works for containers of Alleles or Variants");
+    static_assert(detail::is_variant_or_allele<MappableType>, "not Allele or Variant");
     
     return detail::extend_tree_until(first, last, tree, max_haplotypes, MappableType {});
 }
@@ -225,23 +234,21 @@ void prune_unique(const Container& haplotypes, HaplotypeTree& tree)
 }
 
 template <typename Container>
-void splice(const Container& haplotypes, HaplotypeTree& tree)
+void splice(const Container& alleles, HaplotypeTree& tree)
 {
-    for (const auto& haplotype : haplotypes) {
-        tree.splice(haplotype);
+    for (const auto& allele : alleles) {
+        tree.splice(allele);
     }
 }
 
 template <typename InputIt>
-std::vector<Haplotype>
-generate_all_haplotypes(InputIt first, InputIt last, const ReferenceGenome& reference)
+auto generate_all_haplotypes(InputIt first, InputIt last, const ReferenceGenome& reference)
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
     
-    static_assert(detail::is_variant_or_allele<MappableType>,
-                  "generate_all_haplotypes only works for containers of Alleles or Variants");
+    static_assert(detail::is_variant_or_allele<MappableType>, "not Allele or Variant");
     
-    if (first == last) return {};
+    if (first == last) return std::vector<Haplotype> {};
     
     HaplotypeTree tree {contig_name(*first), reference};
     
@@ -255,7 +262,8 @@ auto generate_all_haplotypes(const Container& elements, const ReferenceGenome& r
 {
     return generate_all_haplotypes(std::cbegin(elements), std::cend(elements), reference);
 }
-    
+
+} // namespace coretools
 } // namespace octopus
 
 #endif /* defined(__Octopus__haplotype_tree__) */

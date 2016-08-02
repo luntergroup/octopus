@@ -18,6 +18,8 @@
 #include <algorithm>
 #include <numeric>
 
+namespace octopus {
+
 constexpr auto num_kmers(const unsigned char k) noexcept
 {
     return 2 << (2 * static_cast<std::size_t>(k) - 1);
@@ -192,5 +194,7 @@ std::vector<std::size_t> map_query_to_target(const std::string& query, const std
 {
     return map_query_to_target(compute_kmer_hashes<K>(query), make_kmer_hash_table<K>(target));
 }
+
+} // namespace octopus
 
 #endif /* kmer_mapping_hpp */

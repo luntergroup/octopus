@@ -8,26 +8,27 @@
 
 #include "common.hpp"
 
-namespace octopus
+namespace octopus {
+
+bool DEBUG_MODE {false}, TRACE_MODE {false};
+
+namespace logging
 {
-    bool DEBUG_MODE {false}, TRACE_MODE {false};
-    
-    namespace logging
+    boost::optional<DebugLogger> get_debug_log()
     {
-        boost::optional<DebugLogger> get_debug_log()
-        {
-            if (DEBUG_MODE) {
-                return DebugLogger {};
-            }
-            return boost::none;
+        if (DEBUG_MODE) {
+            return DebugLogger {};
         }
-        
-        boost::optional<TraceLogger> get_trace_log()
-        {
-            if (TRACE_MODE) {
-                return TraceLogger {};
-            }
-            return boost::none;
+        return boost::none;
+    }
+    
+    boost::optional<TraceLogger> get_trace_log()
+    {
+        if (TRACE_MODE) {
+            return TraceLogger {};
         }
+        return boost::none;
     }
 }
+    
+} // namespace octopus

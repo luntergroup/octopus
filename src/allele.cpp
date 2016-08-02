@@ -10,6 +10,8 @@
 
 #include "mappable_algorithms.hpp"
 
+namespace octopus {
+
 ContigAllele demote(const Allele& allele)
 {
     return ContigAllele {contig_region(allele), allele.sequence()};
@@ -68,3 +70,5 @@ std::vector<Allele> make_positional_reference_alleles(const GenomicRegion& regio
     
     return result;
 }
+
+} // namespace octopus

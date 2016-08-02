@@ -10,10 +10,9 @@
 #define global_aligner_hpp
 
 #include <string>
-#include <tuple>
 
-namespace octopus
-{
+namespace octopus { namespace coretools {
+
 struct Model
 {
     short match      =  2;
@@ -22,7 +21,15 @@ struct Model
     short gap_extend = -1;
 };
 
-std::pair<std::string, int> align(const std::string& target, const std::string& query, Model model = Model {});
+struct Alignment
+{
+    std::string cigar;
+    int score;
+};
+
+Alignment align(const std::string& target, const std::string& query, Model model = Model {});
+
+} // namespace coretools
 } // namespace octopus
 
 

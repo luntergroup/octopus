@@ -23,12 +23,12 @@ namespace octopus
     public:
         VcfHeaderFactory() = default;
         
-        ~VcfHeaderFactory() = default;
-        
         VcfHeaderFactory(const VcfHeaderFactory&)            = default;
         VcfHeaderFactory& operator=(const VcfHeaderFactory&) = default;
         VcfHeaderFactory(VcfHeaderFactory&&)                 = default;
         VcfHeaderFactory& operator=(VcfHeaderFactory&&)      = default;
+        
+        ~VcfHeaderFactory() = default;
         
         void register_call_type(std::type_index type);
         

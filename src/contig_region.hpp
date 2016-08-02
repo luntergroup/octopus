@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <stdexcept>
+#include <functional>
 
 #include <boost/functional/hash.hpp>
 
@@ -323,6 +324,17 @@ inline ContigRegion::Distance end_distance(const ContigRegion& first, const Cont
     return static_cast<ContigRegion::Distance>(second.end()) - first.end();
 }
 
+inline std::string to_string(const ContigRegion& region)
+{
+    return std::to_string(region.begin()) + '-' + std::to_string(region.end());
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ContigRegion& region)
+{
+    os << to_string(region);
+    return os;
+}
+
 namespace std {
     template <> struct hash<ContigRegion>
     {
@@ -336,15 +348,4 @@ namespace std {
     };
 }
 
-inline std::string to_string(const ContigRegion& region)
-{
-    return std::to_string(region.begin()) + '-' + std::to_string(region.end());
-}
-
-inline std::ostream& operator<<(std::ostream& os, const ContigRegion& region)
-{
-    os << to_string(region);
-    return os;
-}
-
-#endif /* defined(__Octopus__contig_region__) */
+#endif

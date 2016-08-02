@@ -13,15 +13,15 @@
 #include <string>
 
 #include "variant_caller.hpp"
-#include "trio_genotype_model.hpp"
 
 class GenomicRegion;
-class ReadPipe;
-class Variant;
 class VcfRecord;
 
-namespace octopus
-{
+namespace octopus {
+    
+    class ReadPipe;
+    class Variant;
+    
     class TrioVariantCaller// : public VariantCaller
     {
     public:

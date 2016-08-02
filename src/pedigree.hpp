@@ -16,6 +16,8 @@
 
 #include "common.hpp"
 
+namespace octopus {
+
 class Pedigree
 {
 public:
@@ -53,5 +55,7 @@ private:
     std::vector<Member> roots_;
     std::vector<Member> leafs_;
 };
+    
+} // namespace octopus
 
 #endif /* pedigree_hpp */

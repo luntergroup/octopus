@@ -15,8 +15,9 @@
 #include <boost/range/algorithm.hpp>
 
 #include "reference_genome.hpp"
-#include "composer.hpp"
 #include "mappable_algorithms.hpp"
+
+namespace octopus {
 
 // public methods
 
@@ -583,3 +584,5 @@ std::ostream& operator<<(std::ostream& os, const Variant& variant)
     os << mapped_region(variant) << " " << ref_sequence(variant) << " -> " << alt_sequence(variant);
     return os;
 }
+
+} // namespace octopus

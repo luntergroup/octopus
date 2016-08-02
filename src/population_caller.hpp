@@ -16,24 +16,24 @@
 
 #include "common.hpp"
 #include "variant_caller.hpp"
-#include "population_genotype_model.hpp"
+#include "population.hpp"
 #include "variant_call.hpp"
 #include "phred.hpp"
 
 class GenomicRegion;
+
+namespace octopus {
+
 class ReadPipe;
 class Variant;
 class HaplotypeLikelihoodCache;
 
-namespace octopus
-{
 class PopulationVariantCaller : public VariantCaller
 {
 public:
     using VariantCaller::CallTypeSet;
-    using VariantCaller::CallerComponents;
     
-    struct CallerParameters
+    struct Parameters
     {
         Phred<double> min_variant_posterior;
         Phred<double> min_refcall_posterior;
@@ -42,8 +42,9 @@ public:
     
     PopulationVariantCaller() = delete;
     
-    PopulationVariantCaller(CallerComponents&& components, VariantCaller::CallerParameters general_parameters,
-                            CallerParameters specific_parameters);
+    PopulationVariantCaller(VariantCaller::Components&& components,
+                            VariantCaller::Parameters general_parameters,
+                            Parameters specific_parameters);
     
     PopulationVariantCaller(const PopulationVariantCaller&)            = delete;
     PopulationVariantCaller& operator=(const PopulationVariantCaller&) = delete;
@@ -87,7 +88,7 @@ private:
         calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
     };
     
-    CallerParameters parameters_;
+    Parameters parameters_;
     
     CallTypeSet do_get_call_types() const override;
     

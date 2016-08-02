@@ -11,184 +11,181 @@
 #include "individual_caller.hpp"
 #include "population_caller.hpp"
 #include "cancer_caller.hpp"
-#include "pedigree_caller.hpp"
 #include "phaser.hpp"
 
-namespace octopus
-{
-// public methods
+namespace octopus {
 
-VariantCallerBuilder::Parameters::Parameters(const ReferenceGenome& reference,
-                                             const ReadPipe& read_pipe,
-                                             const Composer::Builder& candidate_variant_generator_builder,
-                                             HaplotypeGenerator::Builder haplotype_generator_builder)
-:
-reference {reference},
-read_pipe {read_pipe},
-candidate_variant_generator_builder {candidate_variant_generator_builder},
-haplotype_generator_builder {std::move(haplotype_generator_builder)}
-{}
+// public methods
 
 VariantCallerBuilder::VariantCallerBuilder(const ReferenceGenome& reference,
                                            const ReadPipe& read_pipe,
-                                           const Composer::Builder& candidate_variant_generator_builder,
-                                           HaplotypeGenerator::Builder haplotype_generator_builder)
+                                           VariantGenerator::Builder vgb,
+                                           HaplotypeGenerator::Builder hgb)
 :
-parameters_ {reference, read_pipe, candidate_variant_generator_builder, std::move(haplotype_generator_builder)},
+components_ {reference, read_pipe, std::move(vgb), std::move(hgb)},
 factory_ {generate_factory()}
 {}
 
 VariantCallerBuilder::VariantCallerBuilder(const VariantCallerBuilder& other)
 :
-parameters_ {other.parameters_},
+caller_ {other.caller_},
+components_ {other.components_},
+params_ {other.params_},
 factory_    {generate_factory()}
 {}
 
 VariantCallerBuilder& VariantCallerBuilder::operator=(const VariantCallerBuilder& other)
 {
-    parameters_ = other.parameters_;
+    caller_     = other.caller_;
+    components_ = other.components_;
+    params_     = other.params_;
     factory_    = generate_factory();
     return *this;
 }
 
 VariantCallerBuilder::VariantCallerBuilder(VariantCallerBuilder&& other)
 :
-parameters_ {std::move(other.parameters_)},
+caller_ {std::move(other.caller_)},
+components_ {std::move(other.components_)},
+params_ {std::move(other.params_)},
 factory_    {generate_factory()}
 {}
 
 VariantCallerBuilder& VariantCallerBuilder::operator=(VariantCallerBuilder&& other)
 {
-    std::swap(parameters_, other.parameters_);
+    using std::swap;
+    swap(caller_, other.caller_);
+    swap(components_, other.components_);
+    swap(params_, other.params_);
     factory_ = generate_factory();
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_reference(const ReferenceGenome& reference) noexcept
 {
-    parameters_.reference = reference;
+    components_.reference = reference;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_read_pipe(const ReadPipe& read_pipe) noexcept
 {
-    parameters_.read_pipe = read_pipe;
+    components_.read_pipe = read_pipe;
     return *this;
 }
 
 VariantCallerBuilder&
-VariantCallerBuilder::set_candidate_variant_generator_builder(const Composer::Builder& generator) noexcept
+VariantCallerBuilder::set_variant_generator(const VariantGenerator::Builder& vgb) noexcept
 {
-    parameters_.candidate_variant_generator_builder = generator;
+    components_.variant_generator_builder = vgb;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_ploidy(unsigned ploidy) noexcept
 {
-    parameters_.ploidy = ploidy;
+    params_.ploidy = ploidy;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_caller(std::string caller)
 {
-    parameters_.caller = std::move(caller);
+    caller_ = std::move(caller);
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_refcall_type(VariantCaller::RefCallType type) noexcept
 {
-    parameters_.refcall_type = type;
+    params_.refcall_type = type;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_sites_only() noexcept
 {
-    parameters_.call_sites_only = true;
+    params_.call_sites_only = true;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_min_variant_posterior(Phred<double> posterior) noexcept
 {
-    parameters_.min_variant_posterior = posterior;
+    params_.min_variant_posterior = posterior;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_min_refcall_posterior(Phred<double> posterior) noexcept
 {
-    parameters_.min_refcall_posterior = posterior;
+    params_.min_refcall_posterior = posterior;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_max_haplotypes(unsigned n) noexcept
 {
-    parameters_.max_haplotypes = n;
+    params_.max_haplotypes = n;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_min_haplotype_posterior(double p) noexcept
 {
-    parameters_.min_haplotype_posterior = p;
+    params_.min_haplotype_posterior = p;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_flank_scoring(bool b) noexcept
 {
-    parameters_.allow_flank_scoring = b;
+    params_.allow_flank_scoring = b;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_model_filtering(bool b) noexcept
 {
-    parameters_.allow_model_filtering = b;
+    params_.allow_model_filtering = b;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_min_phase_score(Phred<double> score) noexcept
 {
-    parameters_.min_phase_score = score;
+    params_.min_phase_score = score;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_snp_heterozygosity(double heterozygosity) noexcept
 {
-    parameters_.snp_heterozygosity = heterozygosity;
+    params_.snp_heterozygosity = heterozygosity;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_indel_heterozygosity(double heterozygosity) noexcept
 {
-    parameters_.indel_heterozygosity = heterozygosity;
+    params_.indel_heterozygosity = heterozygosity;
     return *this;
 }
 
 // cancer
 VariantCallerBuilder& VariantCallerBuilder::set_normal_sample(SampleName normal_sample)
 {
-    parameters_.normal_sample = std::move(normal_sample);
+    params_.normal_sample = std::move(normal_sample);
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_somatic_mutation_rate(double rate) noexcept
 {
-    parameters_.somatic_mutation_rate = rate;
+    params_.somatic_mutation_rate = rate;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_frequency(double frequency) noexcept
 {
-    parameters_.min_somatic_frequency = frequency;
+    params_.min_somatic_frequency = frequency;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_credible_mass(double mass) noexcept
 {
-    parameters_.credible_mass = mass;
+    params_.credible_mass = mass;
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_posterior(Phred<double> posterior) noexcept
 {
-    parameters_.min_somatic_posterior = posterior;
+    params_.min_somatic_posterior = posterior;
     return *this;
 }
 
@@ -196,13 +193,13 @@ VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_posterior(Phred<doub
 
 VariantCallerBuilder& VariantCallerBuilder::set_maternal_sample(SampleName mother)
 {
-    parameters_.maternal_sample = std::move(mother);
+    params_.maternal_sample = std::move(mother);
     return *this;
 }
 
 VariantCallerBuilder& VariantCallerBuilder::set_paternal_sample(SampleName father)
 {
-    parameters_.paternal_sample = std::move(father);
+    params_.paternal_sample = std::move(father);
     return *this;
 }
 
@@ -210,7 +207,7 @@ VariantCallerBuilder& VariantCallerBuilder::set_paternal_sample(SampleName fathe
 
 VariantCallerBuilder& VariantCallerBuilder::set_pedigree(Pedigree pedigree)
 {
-    parameters_.pedigree = std::move(pedigree);
+    params_.pedigree = std::move(pedigree);
     return *this;
 }
 
@@ -218,79 +215,74 @@ VariantCallerBuilder& VariantCallerBuilder::set_pedigree(Pedigree pedigree)
 
 std::unique_ptr<VariantCaller> VariantCallerBuilder::build() const
 {
-    if (factory_.count(parameters_.caller) == 0) {
-        throw std::runtime_error {"VariantCallerBuilder: unknown caller " + parameters_.caller};
+    if (factory_.count(caller_) == 0) {
+        throw std::runtime_error {"VariantCallerBuilder: unknown caller " + caller_};
     }
-    return factory_.at(parameters_.caller)();
+    return factory_.at(caller_)();
 }
 
 // private methods
 
+VariantCaller::Components VariantCallerBuilder::make_components() const
+{
+    return {
+        components_.reference,
+        components_.read_pipe,
+        components_.variant_generator_builder.build(components_.reference),
+        components_.haplotype_generator_builder,
+        Phaser {params_.min_phase_score}
+
+    };
+}
+
 VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() const
 {
-    VariantCaller::CallerParameters general_parameters {
-        parameters_.refcall_type,
-        parameters_.call_sites_only,
-        parameters_.max_haplotypes,
-        parameters_.min_haplotype_posterior,
-        parameters_.allow_flank_scoring,
-        parameters_.allow_model_filtering
+    VariantCaller::Parameters general_parameters {
+        params_.refcall_type,
+        params_.call_sites_only,
+        params_.max_haplotypes,
+        params_.min_haplotype_posterior,
+        params_.allow_flank_scoring,
+        params_.allow_model_filtering
     };
     
     return CallerFactoryMap {
         {"individual", [this, general_parameters = std::move(general_parameters)] () {
-            return std::make_unique<IndividualVariantCaller>(VariantCaller::CallerComponents {
-                                                                 parameters_.reference,
-                                                                 parameters_.read_pipe,
-                                                                 parameters_.candidate_variant_generator_builder.get().build(),
-                                                                 parameters_.haplotype_generator_builder,
-                                                                 Phaser {parameters_.min_phase_score}
-                                                             },
+            return std::make_unique<IndividualVariantCaller>(make_components(),
                                                              std::move(general_parameters),
-                                                             IndividualVariantCaller::CallerParameters {
-                                                                 parameters_.min_variant_posterior,
-                                                                 parameters_.min_refcall_posterior,
-                                                                 parameters_.ploidy,
-                                                                 parameters_.snp_heterozygosity,
-                                                                 parameters_.indel_heterozygosity
+                                                             IndividualVariantCaller::Parameters {
+                                                                 params_.min_variant_posterior,
+                                                                 params_.min_refcall_posterior,
+                                                                 params_.ploidy,
+                                                                 params_.snp_heterozygosity,
+                                                                 params_.indel_heterozygosity
                                                              });
         }},
         {"population", [this, general_parameters = std::move(general_parameters)] () {
-            return std::make_unique<PopulationVariantCaller>(VariantCaller::CallerComponents {
-                                                                 parameters_.reference,
-                                                                 parameters_.read_pipe,
-                                                                 parameters_.candidate_variant_generator_builder.get().build(),
-                                                                 parameters_.haplotype_generator_builder,
-                                                                 Phaser {parameters_.min_phase_score}
-                                                             },
+            return std::make_unique<PopulationVariantCaller>(make_components(),
                                                              std::move(general_parameters),
-                                                             PopulationVariantCaller::CallerParameters {
-                                                                 parameters_.min_variant_posterior,
-                                                                 parameters_.min_refcall_posterior,
-                                                                 parameters_.ploidy
+                                                             PopulationVariantCaller::Parameters {
+                                                                 params_.min_variant_posterior,
+                                                                 params_.min_refcall_posterior,
+                                                                 params_.ploidy
                                                              });
         }},
         {"cancer", [this, general_parameters = std::move(general_parameters)] () {
-            return std::make_unique<CancerVariantCaller>(VariantCaller::CallerComponents {
-                                                             parameters_.reference,
-                                                             parameters_.read_pipe,
-                                                             parameters_.candidate_variant_generator_builder.get().build(),
-                                                             parameters_.haplotype_generator_builder,
-                                                             Phaser {parameters_.min_phase_score}
-                                                         },
+            return std::make_unique<CancerVariantCaller>(make_components(),
                                                          std::move(general_parameters),
-                                                         CancerVariantCaller::CallerParameters {
-                                                             parameters_.min_variant_posterior,
-                                                             parameters_.min_somatic_posterior,
-                                                             parameters_.min_refcall_posterior,
-                                                             parameters_.ploidy,
-                                                             parameters_.normal_sample,
-                                                             parameters_.somatic_mutation_rate,
-                                                             parameters_.min_somatic_frequency,
-                                                             parameters_.credible_mass,
+                                                         CancerVariantCaller::Parameters {
+                                                             params_.min_variant_posterior,
+                                                             params_.min_somatic_posterior,
+                                                             params_.min_refcall_posterior,
+                                                             params_.ploidy,
+                                                             params_.normal_sample,
+                                                             params_.somatic_mutation_rate,
+                                                             params_.min_somatic_frequency,
+                                                             params_.credible_mass,
                                                              50'000
                                                          });
         }}
     };
 }
+
 } // namespace octopus

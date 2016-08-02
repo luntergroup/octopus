@@ -22,8 +22,8 @@
 #include "kmer_mapper.hpp"
 #include "haplotype_likelihood_model.hpp"
 
-namespace octopus
-{
+namespace octopus {
+
 /*
     HaplotypeLikelihoodCache is essentially a matrix of haplotype likelihoods, i.e.
     p(read | haplotype) for a given set of AlignedReads and Haplotypes.
@@ -95,7 +95,7 @@ private:
         std::size_t num_reads;
     };
     
-    std::unordered_map<Haplotype, std::vector<LikelihoodVector>> cache_;
+    std::unordered_map<Haplotype, std::vector<LikelihoodVector>, HaplotypeHash> cache_;
     std::unordered_map<SampleName, std::size_t> sample_indices_;
     
     mutable boost::optional<std::size_t> primed_sample_;
@@ -130,8 +130,7 @@ HaplotypeLikelihoodCache merge_samples(const std::vector<SampleName>& samples,
                                        const std::vector<Haplotype>& haplotypes,
                                        const HaplotypeLikelihoodCache& haplotype_likelihoods);
 
-namespace debug
-{
+namespace debug {
     std::vector<std::reference_wrapper<const Haplotype>>
     rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods);
@@ -175,7 +174,7 @@ namespace debug
                 if (!is_single_sample) {
                     stream << "\t";
                 }
-                ::debug::print_variant_alleles(stream, haplotype);
+                debug::print_variant_alleles(stream, haplotype);
                 stream << '\n';
                 
                 std::vector<std::pair<ReadReference, double>> likelihoods {};

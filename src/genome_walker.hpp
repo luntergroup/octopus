@@ -13,21 +13,22 @@
 
 #include "common.hpp"
 #include "mappable.hpp"
-#include "mappable_flat_multi_set.hpp"
 #include "allele.hpp"
-
 #include "mappable_flat_set.hpp"
 
 class GenomicRegion;
-class Variant;
 
-namespace octopus
-{
+namespace octopus {
+
+class Variant;
+    
+namespace coretools {
+
 class GenomeWalker
 {
 public:
     using ContigName = GenomicRegion::ContigName;
-    using Candidates     = MappableFlatSet<Allele>;
+    using Candidates = MappableFlatSet<Allele>;
     
     enum class IndicatorPolicy
     {
@@ -71,6 +72,8 @@ private:
     
     using CandidateIterator = Candidates::const_iterator;
 };
+
+} // namespace coretools
 } // namespace octopus
 
 #endif /* genome_walker_hpp */

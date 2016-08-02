@@ -35,13 +35,6 @@ namespace octopus
         return *this;
     }
     
-    VariantCallerFactory&
-    VariantCallerFactory::set_candidate_variant_generator_builder(const Composer::Builder& generator) noexcept
-    {
-        template_builder_.set_candidate_variant_generator_builder(generator);
-        return *this;
-    }
-    
     VariantCallerFactory& VariantCallerFactory::set_contig_ploidy(const ContigName& contig, const unsigned ploidy)
     {
         contig_ploidies_[contig] = ploidy;

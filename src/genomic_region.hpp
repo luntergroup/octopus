@@ -10,9 +10,9 @@
 #define __Octopus__genomic_region__
 
 #include <string>
-#include <ostream>
+#include <functional>
 #include <stdexcept>
-#include <vector>
+#include <ostream>
 #include <cassert>
 
 #include <boost/functional/hash.hpp>
@@ -347,23 +347,24 @@ inline GenomicRegion::Distance end_distance(const GenomicRegion& first, const Ge
     return end_distance(first.contig_region(), second.contig_region());
 }
 
-namespace std {
-    template <> struct hash<GenomicRegion>
-    {
-        size_t operator()(const GenomicRegion& r) const
-        {
-            size_t result {};
-            boost::hash_combine(result, hash<GenomicRegion::ContigName>()(r.contig_name()));
-            boost::hash_combine(result, hash<ContigRegion>()(r.contig_region()));
-            return result;
-        }
-    };
-}
-
 inline std::ostream& operator<<(std::ostream& os, const GenomicRegion& region)
 {
     os << to_string(region);
     return os;
 }
 
-#endif /* defined(__Octopus__genomic_region__) */
+namespace std {
+    template <> struct hash<GenomicRegion>
+    {
+        size_t operator()(const GenomicRegion& r) const
+        {
+            using boost::hash_combine;
+            size_t result {};
+            hash_combine(result, hash<GenomicRegion::ContigName>()(r.contig_name()));
+            hash_combine(result, hash<ContigRegion>()(r.contig_region()));
+            return result;
+        }
+    };
+}
+
+#endif

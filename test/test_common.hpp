@@ -14,8 +14,7 @@
 
 namespace fs = boost::filesystem;
 
-namespace detail
-{
+namespace octopus { namespace test { namespace detail {
     // common directories
     
     static std::string home_dir {getenv("HOME")};
@@ -184,5 +183,8 @@ inline void cleanup_test_files()
     remove_test_file(test_out_vcfgz);
     remove_test_file(test_out_bcf);
 }
+
+} // namespace test
+} // namespace octopus
 
 #endif

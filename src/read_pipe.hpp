@@ -24,8 +24,7 @@
 #include "downsampler.hpp"
 #include "logging.hpp"
 
-namespace octopus
-{
+namespace octopus {
 /*
  ReadPipe provides a wrapper for the basic manipulation of AlignedRead's. It is responsable for
  actually fetching the reads from file, and applying any filters, transforms etc. The result is
@@ -40,9 +39,9 @@ namespace octopus
 class ReadPipe
 {
 public:
-    using ReadTransformer = preprocess::transform::ReadTransformer;
-    using ReadFilterer    = preprocess::filter::ReadFiltererTp<ReadManager::ReadContainer>;
-    using Downsampler     = preprocess::Downsampler;
+    using ReadTransformer = readpipe::ReadTransformer;
+    using ReadFilterer    = readpipe::ReadFiltererTp<ReadManager::ReadContainer>;
+    using Downsampler     = readpipe::Downsampler;
     
     //struct Report;
     
@@ -73,6 +72,7 @@ public:
     
 private:
     std::reference_wrapper<const ReadManager> manager_;
+    
     ReadTransformer transformer_;
     ReadFilterer filterer_;
     boost::optional<Downsampler> downsampler_;
@@ -81,6 +81,7 @@ private:
     
     mutable boost::optional<logging::DebugLogger> debug_log_;
 };
+
 } // namespace octopus
 
 #endif /* read_pipe_hpp */

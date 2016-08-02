@@ -21,7 +21,7 @@
 
 #include "read_filter.hpp"
 
-namespace octopus { namespace preprocess { namespace filter
+namespace octopus { namespace readpipe
 {
 /*
  ReadFilterer stores a collection of filter functions, which can either be non-context-based (
@@ -325,8 +325,7 @@ std::size_t erase_filtered_reads(Map& reads, const FilterPointMap<Map>& filter_p
     
     return result;
 }
-} // namespace filter
-} // namespace preprocess
+} // namespace readpipe
 } // namespace octopus
 
 #endif /* defined(__Octopus__read_filterer__) */

@@ -16,9 +16,9 @@
 #include <functional>
 #include <cassert>
 
-namespace octopus
-{
-namespace detail
+namespace octopus { namespace coretools {
+
+namespace
 {
 struct Cell
 {
@@ -113,9 +113,9 @@ void fill(DPMatrix& matrix, const std::string& target, const std::string& query,
     }
 }
 
-using Alignment = std::deque<char>;
+using AlignmentString = std::deque<char>;
 
-auto make_cigar(const Alignment& alignment)
+auto make_cigar(const AlignmentString& alignment)
 {
     std::string result {};
     result.reserve(alignment.size());
@@ -141,7 +141,7 @@ auto make_cigar(const Alignment& alignment)
 
 auto extract_alignment(const DPMatrix& matrix)
 {
-    Alignment alignment {};
+    AlignmentString alignment {};
     
     auto i = ncols(matrix) - 1;
     auto j = nrows(matrix) - 1;
@@ -179,29 +179,31 @@ auto extract_alignment(const DPMatrix& matrix)
     
     return make_cigar(alignment);
 }
-} // namespace detail
+} // namespace
 
-std::pair<std::string, int> align(const std::string& target, const std::string& query, Model model)
+Alignment align(const std::string& target, const std::string& query, Model model)
 {
     using std::make_pair;
     
     if (target.empty()) {
         if (query.empty()) {
-            return make_pair(std::string {}, 0);
+            return {"", 0};
         }
-        return make_pair(std::to_string(query.size()) + std::string {"I"},
-                         model.gap_open + static_cast<int>(query.size() - 1) * model.gap_extend);
+        return {std::to_string(query.size()) + std::string {"I"},
+            model.gap_open + static_cast<int>(query.size() - 1) * model.gap_extend};
     }
     
     if (query.empty()) {
-        return make_pair(std::to_string(target.size()) + std::string {"D"},
-                         model.gap_open + static_cast<int>(target.size() - 1) * model.gap_extend);
+        return {std::to_string(target.size()) + std::string {"D"},
+            model.gap_open + static_cast<int>(target.size() - 1) * model.gap_extend};
     }
     
-    auto matrix = detail::init_dp_matrix(target, query, model);
+    auto matrix = init_dp_matrix(target, query, model);
     
     fill(matrix, target, query, model);
     
-    return make_pair(detail::extract_alignment(matrix), matrix.back().back().score);
+    return {extract_alignment(matrix), matrix.back().back().score};
 }
+
+} // namespace coretools
 } // namespace octopus

@@ -11,11 +11,11 @@
 
 #include "common.hpp"
 
+namespace octopus {
+
 class Trio
 {
 public:
-    using SampleName = octopus::SampleName;
-    
     // Use these to make construction order explicit
     struct Mother { SampleName name; };
     struct Father { SampleName name; };
@@ -42,5 +42,7 @@ public:
 private:
     SampleName mother_, father_, child_;
 };
+
+} // namespace octopus
 
 #endif /* trio_hpp */

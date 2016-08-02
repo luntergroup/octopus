@@ -16,8 +16,9 @@
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
 
-namespace octopus { namespace preprocess
+namespace octopus { namespace readpipe
 {
+
 class Downsampler
 {
 public:
@@ -40,7 +41,8 @@ private:
     unsigned max_coverage_ = 100'000;
     unsigned min_coverage_ = 100'000;
 };
-} // namespace preprocess
+
+} // namespace readpipe
 } // namespace octopus
 
 #endif /* downsampler_hpp */
