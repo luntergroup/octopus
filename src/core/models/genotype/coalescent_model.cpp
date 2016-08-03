@@ -35,7 +35,7 @@ auto percent_of_bases_in_repeat(const Haplotype& haplotype)
 }
 
 auto calculate_base_indel_heterozygosities(const Haplotype& haplotype,
-                                                 const double base_indel_heterozygosity)
+                                           const double base_indel_heterozygosity)
 {
     std::vector<double> result(sequence_size(haplotype), base_indel_heterozygosity);
     
@@ -83,7 +83,7 @@ indel_heterozygosity_ {indel_heterozygosity}
 
 void CoalescentModel::set_reference(Haplotype reference)
 {
-    reference_ = std::move(reference_);
+    reference_ = std::move(reference);
     difference_cache_.clear();
     difference_cache_.emplace(std::piecewise_construct,
                               std::forward_as_tuple(reference_),

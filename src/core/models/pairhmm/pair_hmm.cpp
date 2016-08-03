@@ -137,11 +137,11 @@ auto simd_align(const std::string& truth, const std::string& target,
                 const std::size_t target_offset,
                 const Model& model)
 {
-    constexpr auto Pad = static_cast<int>(simd::min_flank_pad());
+    constexpr auto pad = simd::min_flank_pad();
     
-    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * Pad - 1);
+    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * pad - 1);
     
-    const auto alignment_offset = static_cast<std::size_t>(std::max(0, static_cast<int>(target_offset) - Pad));
+    const auto alignment_offset = std::max(0, static_cast<int>(target_offset) - pad);
     
     if (alignment_offset + truth_alignment_size > truth.size()) {
         return std::numeric_limits<double>::lowest();
@@ -153,7 +153,8 @@ auto simd_align(const std::string& truth, const std::string& target,
         const auto score = simd::align(truth.data() + alignment_offset,
                                        target.data(),
                                        qualities,
-                                       truth_alignment_size, static_cast<int>(target.size()),
+                                       truth_alignment_size,
+                                       static_cast<int>(target.size()),
                                        model.snv_mask.data() + alignment_offset,
                                        model.snv_priors.data() + alignment_offset,
                                        model.gap_open_penalties.data() + alignment_offset,
@@ -164,7 +165,7 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     thread_local std::vector<char> align1 {}, align2 {};
     
-    const auto max_alignment_size = 2 * (target.size() + Pad);
+    const auto max_alignment_size = 2 * (target.size() + pad);
     
     align1.assign(max_alignment_size + 1, 0);
     align2.assign(max_alignment_size + 1, 0);

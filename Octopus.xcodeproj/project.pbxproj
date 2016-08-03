@@ -477,8 +477,8 @@
 			isa = PBXGroup;
 			children = (
 				CA03C2291A8C1C8C000D3494 /* benchmark_utils.hpp */,
-				D4CC78971C7E370400F9CCB3 /* timers.cpp */,
 				D4CC78961C7E323200F9CCB3 /* timers.hpp */,
+				D4CC78971C7E370400F9CCB3 /* timers.cpp */,
 			);
 			path = benchmarks;
 			sourceTree = "<group>";
@@ -1236,8 +1236,8 @@
 			children = (
 				D424E0C61D510A3B00654AA3 /* CMakeLists.txt */,
 				CA16B0F41D4D0FF2006722C1 /* libdivsufsort */,
-				CA16B1201D4F6AEF006722C1 /* tandem.cpp */,
 				CA16B1211D4F6AEF006722C1 /* tandem.hpp */,
+				CA16B1201D4F6AEF006722C1 /* tandem.cpp */,
 			);
 			path = tandem;
 			sourceTree = "<group>";

@@ -143,7 +143,7 @@ namespace debug {
                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                          const std::size_t n = 5)
     {
-        if (n == -1) {
+        if (n == static_cast<std::size_t>(-1)) {
             stream << "Printing all read likelihoods for each haplotype in ";
         } else {
             stream << "Printing top " << n << " read likelihoods for each haplotype in ";

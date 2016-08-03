@@ -355,8 +355,11 @@ namespace tandem
             for (uint32_t k {0}; k < lz_blocks.size(); ++k) {
                 const auto& block = lz_blocks[k];
                 
+                static constexpr auto sentinal = static_cast<std::uint32_t>(-1);
+                
                 const auto block_end = block.pos + block.length;
-                const auto delta     = block.pos - ((prev_lz_block_occurrence[k] == -1) ? 0 : prev_lz_block_occurrence[k]);
+                const auto delta     = block.pos - ((prev_lz_block_occurrence[k] == sentinal)
+                                                        ? 0 : prev_lz_block_occurrence[k]);
                 const auto v         = block_end - delta;
                 
                 for (auto j = block.pos; j < block_end; ++j) {
@@ -427,13 +430,15 @@ namespace tandem
         {
             std::vector<StringRun> result {};
             
-            if (std::distance(first, last) < 2 * N) return result;
+            const auto length = static_cast<std::size_t>(std::distance(first, last));
+            
+            if (length < 2 * N) return result;
             
             auto it1 = std::adjacent_find(first, last, std::not_equal_to<void> {});
             
             if (it1 == last) return result;
             
-            result.reserve(std::min(std::distance(first, last) / N, std::size_t {1024}));
+            result.reserve(std::min(length / N, std::size_t {1024}));
             
             for (auto it2 = std::next(it1, N); it2 < last; ) {
                 const auto p = std::mismatch(it2, last, it1);

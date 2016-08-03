@@ -427,7 +427,7 @@ namespace {
     
     auto max_change(const CompressedAlpha<2>& lhs, const CompressedAlpha<2>& rhs)
     {
-        return std::max(std::abs(lhs.front() - lhs.front()), std::abs(lhs.back() - lhs.back()));
+        return std::max(std::abs(lhs.front() - rhs.front()), std::abs(lhs.back() - rhs.back()));
     }
     
     template <std::size_t K>

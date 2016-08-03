@@ -91,13 +91,13 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
         dest << header;
     }
     
-    if (this->is_supervised()) {
-        for (const auto& p : training_sets_) {
-            
-        }
-        
-        this->train();
-    }
+//    if (this->is_supervised()) {
+//        for (const auto& p : training_sets_) {
+//            
+//        }
+//        
+//        this->train();
+//    }
     
     auto p = source.iterate();
     std::for_each(std::move(p.first), std::move(p.second), [this, &dest] (const VcfRecord& call) {

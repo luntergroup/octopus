@@ -305,7 +305,7 @@ if (Boost_FOUND)
     target_link_libraries (octopus ${Boost_LIBRARIES})
 endif (Boost_FOUND)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
 
 find_package (HTSlib 1.3.1 REQUIRED)
 if (HTSlib_FOUND)

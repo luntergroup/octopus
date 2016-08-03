@@ -431,7 +431,7 @@ namespace octopus
     
     auto max_change(const CompressedAlpha<2>& lhs, const CompressedAlpha<2>& rhs)
     {
-        return std::max(std::abs(lhs.front() - lhs.front()), std::abs(lhs.back() - lhs.back()));
+        return std::max(std::abs(lhs.front() - rhs.front()), std::abs(lhs.back() - rhs.back()));
     }
     
     auto max_change(const CompressedAlpha<3>& lhs, const CompressedAlpha<3>& rhs)
@@ -802,8 +802,6 @@ namespace octopus
         
         haplotype_log_likelihoods.prime(sample);
         
-        const auto ploidy = genotypes.front().ploidy();
-        
         const GermlineLikelihoodModel likelihood_model {haplotype_log_likelihoods};
         
         std::vector<double> result(genotypes.size());
@@ -826,8 +824,6 @@ namespace octopus
         assert(!genotypes.empty());
         
         haplotype_log_likelihoods.prime(sample);
-        
-        const auto ploidy = genotypes.front().ploidy();
         
         const GermlineLikelihoodModel likelihood_model {haplotype_log_likelihoods};
         

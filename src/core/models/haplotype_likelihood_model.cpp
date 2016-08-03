@@ -103,8 +103,7 @@ double HaplotypeLikelihoodModel::ln_probability(const AlignedRead& read,
     return this->ln_probability(read, std::cbegin(mapping_positions), std::cend(mapping_positions));
 }
 
-namespace
-{
+namespace {
     std::size_t num_out_of_range_bases(const std::size_t mapping_position, const AlignedRead& read,
                                        const Haplotype& haplotype)
     {
@@ -131,29 +130,29 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
 {
     assert(contains(haplotype, read));
     
-    const auto original_mapping_position = begin_distance(haplotype, read);
+    using PositionType = typename std::iterator_traits<InputIt>::value_type;
+    
+    const auto original_mapping_position = static_cast<PositionType>(begin_distance(haplotype, read));
     
     auto max_log_probability = std::numeric_limits<double>::lowest();
     
     bool is_original_position_mapped {false}, has_in_range_mapping_position {false};
     
-    std::for_each(first_mapping_position, last_mapping_position,
-                  [&] (const auto position) {
-                      if (position == original_mapping_position) {
-                          is_original_position_mapped = true;
-                      }
-                      
-                      if (is_in_range(position, read, haplotype)) {
-                          has_in_range_mapping_position = true;
-                          
-                          auto cur = hmm::score(haplotype.sequence(), read.sequence(),
-                                                read.qualities(), position, model);
-                          
-                          if (cur > max_log_probability) {
-                              max_log_probability = cur;
-                          }
-                      }
-                  });
+    std::for_each(first_mapping_position, last_mapping_position, [&] (const auto position) {
+        if (position == original_mapping_position) {
+            is_original_position_mapped = true;
+        }
+        
+        if (is_in_range(position, read, haplotype)) {
+            has_in_range_mapping_position = true;
+            
+            auto cur = hmm::score(haplotype.sequence(), read.sequence(), read.qualities(), position, model);
+          
+            if (cur > max_log_probability) {
+                max_log_probability = cur;
+            }
+        }
+    });
     
     if (!is_original_position_mapped && is_in_range(original_mapping_position, read, haplotype)) {
         has_in_range_mapping_position = true;
