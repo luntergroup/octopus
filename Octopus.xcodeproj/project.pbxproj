@@ -627,14 +627,14 @@
 		CA3B6CEE1D3646F6005298BE /* config */ = {
 			isa = PBXGroup;
 			children = (
-				D45D30891C983D84007634E3 /* common.cpp */,
 				D463C1951B0229A000739A66 /* common.hpp */,
+				D45D30891C983D84007634E3 /* common.cpp */,
+				CAE3E29C1AA139A000C01B2C /* option_parser.hpp */,
+				CAE3E29B1AA139A000C01B2C /* option_parser.cpp */,
+				CA3B6CE91D363D83005298BE /* option_collation.hpp */,
+				CA3B6CE81D363D83005298BE /* option_collation.cpp */,
 				CA566E351D0488C7007C5180 /* octopus_vcf.cpp */,
 				CA566E361D0488C7007C5180 /* octopus_vcf.hpp */,
-				CA3B6CE81D363D83005298BE /* option_collation.cpp */,
-				CA3B6CE91D363D83005298BE /* option_collation.hpp */,
-				CAE3E29B1AA139A000C01B2C /* option_parser.cpp */,
-				CAE3E29C1AA139A000C01B2C /* option_parser.hpp */,
 			);
 			path = config;
 			sourceTree = "<group>";

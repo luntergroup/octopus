@@ -8,7 +8,7 @@
 
 #include "downloader.hpp"
 
-#include <boost/network/protocol/http/client.hpp>
+#include <boost/network/protocol/http.hpp>
 
 #include <basics/aligned_read.hpp>
 

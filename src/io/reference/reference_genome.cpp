@@ -182,7 +182,6 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
     static const std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
     
     std::smatch match;
-    
     if (std::regex_match(region, match, re) && match.size() == 5) {
         GenomicRegion::ContigName contig {match.str(1)};
         
@@ -190,12 +189,12 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
         
         Position begin {0}, end {0};
         
-        if (match.str(2).empty()) {
+        if (match.length(2) == 0) {
             end = contig_size;
         } else {
             begin = static_cast<Position>(std::stoul(match.str(2)));
             
-            if (match.str(3).empty()) {
+            if (match.length(3) == 0) {
                 end = begin + 1;
             } else if (match.str(4).empty()) {
                 end = contig_size;

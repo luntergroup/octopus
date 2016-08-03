@@ -31,6 +31,7 @@ enum class ContigOutputOrder
 
 struct ContigPloidy
 {
+    boost::optional<std::string> sample;
     std::string contig;
     unsigned ploidy;
 };

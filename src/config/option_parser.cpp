@@ -8,6 +8,7 @@
 
 #include "option_parser.hpp"
 
+#include <regex>
 #include <iostream>
 #include <stdexcept>
 
@@ -299,11 +300,13 @@ boost::optional<OptionMap> parse_options(const int argc, const char** argv)
         
         ("contig-ploidies",
          po::value<std::vector<ContigPloidy>>()->multitoken(),
-         "Space-seperated list of contig=ploidy pairs")
+         "Space-seperated list of contig (contig=ploidy) or sample contig"
+         " (sample:contig=ploidy) ploidies")
         
         ("contig-ploidies-file",
          po::value<std::string>(),
-         "File containing a list of contig=ploidy pairs, one per line")
+         "File containing a list of contig (contig=ploidy) or sample contig"
+         " (sample:contig=ploidy) ploidies, one per line")
         
         ("min-variant-posterior,min-post",
          po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
@@ -555,38 +558,34 @@ void validate_options(const OptionMap& vm)
     check_trio_consistent(vm);
     validate_caller(vm);
 }
-
+    
 std::istream& operator>>(std::istream& in, ContigPloidy& result)
 {
+    static const std::regex re {"(?:([^:]*):)?([^=]+)=(\\d+)"};
+    
     std::string token;
     in >> token;
     
-    if (std::count(std::cbegin(token), std::cend(token), '=') != 1) {
-        throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-            "contig-ploidies"};
+    std::smatch match;
+    if (std::regex_match(token, match, re) && match.size() == 4) {
+        if (match.length(1) > 0) {
+            result.sample = match.str(1);
+        }
+        
+        result.contig = match.str(2);
+        result.ploidy = boost::lexical_cast<decltype(result.ploidy)>(match.str(3));
+    } else {
+        using Error = po::validation_error;
+        throw Error {Error::kind_t::invalid_option_value, token, "contig-ploidies"};
     }
-    
-    const auto pos = token.find('=');
-    const auto rhs = token.substr(pos + 1);
-    
-    try {
-        using PloidyType = decltype(result.ploidy);
-        result.ploidy = boost::lexical_cast<PloidyType>(rhs);
-    } catch (const boost::bad_lexical_cast&) {
-        throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-            "contig-ploidies"};
-    }
-    
-    token.erase(pos);
-    
-    result.contig = std::move(token);
     
     return in;
 }
 
-std::ostream& operator<<(std::ostream& out, const ContigPloidy& contig_ploidy)
+std::ostream& operator<<(std::ostream& out, const ContigPloidy& cp)
 {
-    out << contig_ploidy.contig << "=" << contig_ploidy.ploidy;
+    if (cp.sample) out << *cp.sample << ':';
+    out << cp.contig << "=" << cp.ploidy;
     return out;
 }
 
