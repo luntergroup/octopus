@@ -24,7 +24,7 @@
 #include <basics/genomic_region.hpp>
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
-#include "string_utils.hpp"
+#include <utils/string_utils.hpp>
 
 #include <iostream> // TEST
 

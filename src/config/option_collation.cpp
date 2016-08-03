@@ -24,20 +24,21 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <basics/phred.hpp>
 #include <basics/genomic_region.hpp>
 #include <basics/aligned_read.hpp>
 #include <readpipe/read_pipe_fwd.hpp>
-#include <utils/read_stats.hpp>
 #include <core/tools/coretools.hpp>
-#include "caller_builder.hpp"
-#include "vcf_reader.hpp"
-#include "vcf_writer.hpp"
+#include <core/callers/caller_builder.hpp>
+#include <utils/read_stats.hpp>
 #include <utils/mappable_algorithms.hpp>
-#include "string_utils.hpp"
+#include <utils/string_utils.hpp>
 #include <utils/append.hpp>
-#include <basics/phred.hpp>
 #include <utils/maths.hpp>
 #include <logging/logging.hpp>
+
+#include "vcf_reader.hpp"
+#include "vcf_writer.hpp"
 
 namespace octopus { namespace options
 {

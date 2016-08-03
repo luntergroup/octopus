@@ -26,7 +26,7 @@
 #include <core/types/allele.hpp>
 #include "variant_call.hpp"
 #include <utils/read_stats.hpp>
-#include "string_utils.hpp"
+#include <utils/string_utils.hpp>
 #include <utils/maths.hpp>
 
 #include "timers.hpp"

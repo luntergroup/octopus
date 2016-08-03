@@ -12,8 +12,8 @@
 
 #include <config/option_parser.hpp>
 #include <config/option_collation.hpp>
-#include <core/octopus.hpp>
 #include <logging/logging.hpp>
+#include <core/octopus.hpp>
 
 using namespace octopus;
 

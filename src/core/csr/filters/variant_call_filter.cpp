@@ -30,7 +30,7 @@
 #include "genotype_reader.hpp"
 #include <core/models/haplotype_likelihood_cache.hpp>
 #include <utils/maths.hpp>
-#include "string_utils.hpp"
+#include <utils/string_utils.hpp>
 
 #include <boost/math/distributions/hypergeometric.hpp>
 

@@ -8,7 +8,7 @@
 
 #include "somatic_call.hpp"
 
-#include "string_utils.hpp"
+#include <utils/string_utils.hpp>
 
 namespace octopus {
     void SomaticCall::decorate(VcfRecord::Builder& record) const

@@ -19,7 +19,7 @@
 #include <utils/mappable_algorithms.hpp>
 #include <containers/mappable_map.hpp>
 #include "timing.hpp"
-#include "string_utils.hpp"
+#include <utils/string_utils.hpp>
 #include <utils/maths.hpp>
 
 namespace octopus {
