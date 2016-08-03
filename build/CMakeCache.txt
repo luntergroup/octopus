@@ -299,9 +299,6 @@ CMAKE_STRIP:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/Xcode
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
-//The directory containing a CMake configuration file for HTSlib.
-HTSlib_DIR:PATH=HTSlib_DIR-NOTFOUND
-
 //Path to a file.
 HTSlib_INCLUDE_DIR:PATH=/usr/local/include/htslib
 

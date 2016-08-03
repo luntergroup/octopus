@@ -302,6 +302,7 @@
 		CAE3E2CC1AAB46BC00C01B2C /* read_filter.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = read_filter.hpp; sourceTree = "<group>"; };
 		CAE7DC2B1C510905009411B6 /* caller_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = caller_factory.cpp; sourceTree = "<group>"; };
 		CAE7DC2C1C510905009411B6 /* caller_factory.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = caller_factory.hpp; sourceTree = "<group>"; };
+		CAE8F2801D52B7FF002D1B14 /* make.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = make.py; sourceTree = "<group>"; };
 		CAEC8E181B73A9E5008FC858 /* vcf_type.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = vcf_type.hpp; sourceTree = "<group>"; };
 		CAEC8E191B73ACB9008FC858 /* vcf_type.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_type.cpp; sourceTree = "<group>"; };
 		CAF23F6C1BA16E94006B673F /* vcf.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = vcf.hpp; sourceTree = "<group>"; };
@@ -711,6 +712,7 @@
 				CA16B10D1D4E556B006722C1 /* LICENSE */,
 				CAA4DC311A82B36300DD3E9A /* README.md */,
 				CA56D3851D50A8D10083501A /* TODO.md */,
+				CAE8F2801D52B7FF002D1B14 /* make.py */,
 			);
 			sourceTree = "<group>";
 		};
@@ -940,13 +942,13 @@
 		CABA377A1A8F66A300BBE598 /* read */ = {
 			isa = PBXGroup;
 			children = (
-				CA03C14F1A8C0D3D000D3494 /* htslib_sam_facade.cpp */,
-				CA03C1501A8C0D3D000D3494 /* htslib_sam_facade.hpp */,
-				CABA37801A8FA49800BBE598 /* read_manager.cpp */,
 				CABA37811A8FA49800BBE598 /* read_manager.hpp */,
-				D47686621BD672940067E03D /* read_reader.cpp */,
+				CABA37801A8FA49800BBE598 /* read_manager.cpp */,
 				CA03C14D1A8C0519000D3494 /* read_reader.hpp */,
+				D47686621BD672940067E03D /* read_reader.cpp */,
 				CA03C22A1A8CEF25000D3494 /* read_reader_impl.hpp */,
+				CA03C1501A8C0D3D000D3494 /* htslib_sam_facade.hpp */,
+				CA03C14F1A8C0D3D000D3494 /* htslib_sam_facade.cpp */,
 			);
 			path = read;
 			sourceTree = "<group>";

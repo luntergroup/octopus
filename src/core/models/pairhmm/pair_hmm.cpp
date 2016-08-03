@@ -139,11 +139,14 @@ auto simd_align(const std::string& truth, const std::string& target,
 {
     constexpr auto pad = simd::min_flank_pad();
     
-    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * pad - 1);
+    const auto truth_size  = static_cast<int>(truth.size());
+    const auto target_size = static_cast<int>(target.size());
+    
+    const auto truth_alignment_size = static_cast<int>(target_size + 2 * pad - 1);
     
     const auto alignment_offset = std::max(0, static_cast<int>(target_offset) - pad);
     
-    if (alignment_offset + truth_alignment_size > truth.size()) {
+    if (alignment_offset + truth_alignment_size > truth_size) {
         return std::numeric_limits<double>::lowest();
     }
     
@@ -154,7 +157,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                                        target.data(),
                                        qualities,
                                        truth_alignment_size,
-                                       static_cast<int>(target.size()),
+                                       target_size,
                                        model.snv_mask.data() + alignment_offset,
                                        model.snv_priors.data() + alignment_offset,
                                        model.gap_open_penalties.data() + alignment_offset,
@@ -176,7 +179,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                                    target.data(),
                                    qualities,
                                    truth_alignment_size,
-                                   static_cast<int>(target.size()),
+                                   target_size,
                                    model.snv_mask.data() + alignment_offset,
                                    model.snv_priors.data() + alignment_offset,
                                    model.gap_open_penalties.data() + alignment_offset,
@@ -193,11 +196,11 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     auto rhs_flank_size = static_cast<int>(model.rhs_flank_size);
     
-    if (alignment_offset + truth_alignment_size < (truth.size() - model.rhs_flank_size)) {
+    if (alignment_offset + truth_alignment_size < (truth_size - model.rhs_flank_size)) {
         rhs_flank_size = 0;
     } else {
         rhs_flank_size += alignment_offset + truth_alignment_size;
-        rhs_flank_size -= truth.size();
+        rhs_flank_size -= truth_size;
     }
     
     assert(lhs_flank_size >= 0 && rhs_flank_size >= 0);

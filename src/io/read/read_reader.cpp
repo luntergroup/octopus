@@ -8,14 +8,54 @@
 
 #include "read_reader.hpp"
 
+#include <stdexcept>
+#include <sstream>
+
 #include "htslib_sam_facade.hpp"
 
 namespace octopus { namespace io {
 
+class UnknownReadFileFormat : public std::runtime_error
+{
+public:
+    UnknownReadFileFormat(boost::filesystem::path file_path)
+    :
+    runtime_error {"Unknown read file format"},
+    file_path_ {std::move(file_path)},
+    msg_ {}
+    {}
+    
+    virtual ~UnknownReadFileFormat() = default;
+    
+    virtual const char* what() const noexcept override
+    {
+        std::ostringstream ss {};
+        ss << runtime_error::what() << ": the file " << file_path_ << " is not a BAM or CRAM file";
+        msg_ = ss.str();
+        return msg_.c_str();
+    }
+private:
+    boost::filesystem::path file_path_;
+    mutable std::string msg_;
+};
+
+namespace {
+    auto make_reader(const boost::filesystem::path& file_path)
+    {
+        const auto file_type = file_path.extension().string();
+        
+        if (file_type != ".bam" && file_path != ".cram") {
+            throw UnknownReadFileFormat {file_path};
+        }
+        
+        return std::make_unique<HtslibSamFacade>(file_path);
+    }
+}
+
 ReadReader::ReadReader(const boost::filesystem::path& file_path)
 :
 file_path_ {file_path},
-impl_ {std::make_unique<HtslibSamFacade>(file_path_)}
+impl_ {make_reader(file_path_)}
 {}
 
 ReadReader::ReadReader(ReadReader&& other)

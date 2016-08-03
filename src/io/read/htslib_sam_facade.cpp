@@ -37,7 +37,7 @@ public:
     msg_ {}
     {}
     
-    virtual ~MissingBamIndex() noexcept = default;
+    virtual ~MissingBamIndex() = default;
     
     virtual const char* what() const noexcept override
     {
@@ -62,7 +62,7 @@ public:
     msg_ {}
     {}
     
-    virtual ~MissingCramIndex() noexcept = default;
+    virtual ~MissingCramIndex() = default;
     
     virtual const char* what() const noexcept override
     {
@@ -87,7 +87,7 @@ public:
     msg_ {}
     {}
     
-    virtual ~InvalidBamHeader() noexcept = default;
+    virtual ~InvalidBamHeader() = default;
     
     virtual const char* what() const noexcept override
     {
@@ -113,7 +113,7 @@ public:
     msg_ {}
     {}
     
-    virtual ~InvalidBamRecord() noexcept = default;
+    virtual ~InvalidBamRecord() = default;
     
     virtual const char* what() const noexcept override
     {

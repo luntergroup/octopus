@@ -76,7 +76,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Limits the number of read files that can be open simultaneously")
     ;
     
-    po::options_description input("Input/output");
+    po::options_description input("I/O");
     input.add_options()
     ("reference,R",
      po::value<std::string>()->required(),
@@ -459,7 +459,7 @@ OptionMap parse_options(const int argc, const char** argv)
     }
     
     if (vm_init.count("version") == 1) {
-        std::cout << "Octopus version " << info::VERSION << std::endl;
+        std::cout << "Octopus " << info::VERSION << std::endl;
         return vm_init;
     }
     

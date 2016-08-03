@@ -34,15 +34,9 @@ reader_paths_containing_sample_ {},
 possible_regions_in_readers_ {},
 samples_ {}
 {
-    try {
-        setup_reader_samples_and_regions();
-        open_initial_files();
-    } catch(...) {
-        num_files_ = 0;
-        closed_readers_.clear();
-        open_readers_.clear();
-        throw;
-    }
+    setup_reader_samples_and_regions();
+    
+    open_initial_files();
     
     samples_.reserve(reader_paths_containing_sample_.size());
     
