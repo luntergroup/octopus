@@ -15,8 +15,8 @@
 #include <ostream>
 #include <functional>
 
-#include <interfaces/equitable.hpp>
-#include <interfaces/comparable.hpp>
+#include <concepts/equitable.hpp>
+#include <concepts/comparable.hpp>
 #include "vcf_type.hpp"
 
 namespace octopus {

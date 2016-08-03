@@ -13,7 +13,7 @@
 #include <cmath>
 
 #include <basics/genomic_region.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <basics/aligned_read.hpp>
 #include <core/types/variant.hpp>
 #include <utils/mappable_algorithms.hpp>

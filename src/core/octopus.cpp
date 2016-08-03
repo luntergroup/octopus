@@ -36,7 +36,7 @@
 #include <config/common.hpp>
 #include <config/option_collation.hpp>
 #include <basics/genomic_region.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <containers/mappable_flat_multi_set.hpp>
 #include <containers/mappable_map.hpp>
 #include <io/reference/reference_genome.hpp>

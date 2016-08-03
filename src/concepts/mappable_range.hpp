@@ -1,5 +1,5 @@
 //
-//  mappable_ranges.hpp
+//  mappable_range.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 20/07/2015.
@@ -16,7 +16,7 @@
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
 
-#include <interfaces/mappable.hpp>
+#include "mappable.hpp"
 
 namespace octopus {
 

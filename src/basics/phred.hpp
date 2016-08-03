@@ -17,7 +17,7 @@
 #include <iostream>
 #include <functional>
 
-#include <interfaces/comparable.hpp>
+#include <concepts/comparable.hpp>
 
 namespace octopus {
 

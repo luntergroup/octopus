@@ -19,9 +19,9 @@
 
 #include <boost/optional.hpp>
 
-#include <interfaces/equitable.hpp>
+#include <concepts/equitable.hpp>
 #include <basics/genomic_region.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include <core/types/allele.hpp>
 #include "variant_call.hpp"

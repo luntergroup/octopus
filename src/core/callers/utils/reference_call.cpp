@@ -8,7 +8,7 @@
 
 #include "reference_call.hpp"
 
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 
 namespace octopus {
 

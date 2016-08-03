@@ -26,7 +26,7 @@
 #include <utils/maths.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include <utils/read_stats.hpp>
-#include <utils/probability_matrix.hpp>
+#include <containers/probability_matrix.hpp>
 #include <core/models/genotype/coalescent_model.hpp>
 #include <core/models/genotype/individual_model.hpp>
 #include <logging/logging.hpp>

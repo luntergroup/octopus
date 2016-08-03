@@ -18,7 +18,7 @@
 #include "mock_objects.hpp"
 #include <basics/contig_region.hpp>
 #include <basics/genomic_region.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <utils/mappable_algorithms.hpp>
 
 using std::cout;

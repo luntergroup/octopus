@@ -20,8 +20,8 @@
 #include <boost/functional/hash.hpp>
 
 #include <basics/genomic_region.hpp>
-#include <interfaces/comparable.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/comparable.hpp>
+#include <concepts/mappable.hpp>
 
 #include "allele.hpp"
 

@@ -16,7 +16,7 @@
 
 #include <core/types/variant.hpp>
 #include <core/types/haplotype.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include <logging/logging.hpp>
 

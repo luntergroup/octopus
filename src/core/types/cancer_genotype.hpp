@@ -16,7 +16,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <interfaces/equitable.hpp>
+#include <concepts/equitable.hpp>
 
 #include "genotype.hpp"
 

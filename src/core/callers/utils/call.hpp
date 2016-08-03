@@ -19,7 +19,7 @@
 #include <config/common.hpp>
 #include <basics/phred.hpp>
 #include <basics/genomic_region.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <core/types/allele.hpp>
 #include <core/types/genotype.hpp>
 #include "vcf_record.hpp"

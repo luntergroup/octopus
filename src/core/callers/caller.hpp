@@ -28,7 +28,7 @@
 #include <core/tools/coretools.hpp>
 #include <core/models/haplotype_likelihood_cache.hpp>
 #include <containers/mappable_flat_set.hpp>
-#include <utils/probability_matrix.hpp>
+#include <containers/probability_matrix.hpp>
 #include <logging/progress_meter.hpp>
 #include <logging/logging.hpp>
 

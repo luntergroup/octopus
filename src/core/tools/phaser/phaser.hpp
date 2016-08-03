@@ -19,9 +19,9 @@
 
 #include <config/common.hpp>
 #include <basics/genomic_region.hpp>
-#include <utils/probability_matrix.hpp>
-#include <interfaces/mappable.hpp>
-#include <utils/mappable_ranges.hpp>
+#include <containers/probability_matrix.hpp>
+#include <concepts/mappable.hpp>
+#include <concepts/mappable_range.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include <core/types/variant.hpp>
 #include <core/types/haplotype.hpp>

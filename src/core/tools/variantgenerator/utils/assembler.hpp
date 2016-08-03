@@ -23,7 +23,7 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional.hpp>
 
-#include <interfaces/comparable.hpp>
+#include <concepts/comparable.hpp>
 
 namespace octopus { namespace coretools { class Assembler; }}
 

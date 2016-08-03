@@ -12,7 +12,7 @@
 #include <functional>
 #include <type_traits>
 
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 
 namespace octopus {
 

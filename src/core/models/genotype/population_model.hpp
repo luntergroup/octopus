@@ -18,7 +18,7 @@
 #include <core/models/genotype/coalescent_model.hpp>
 #include <core/models/haplotype_likelihood_cache.hpp>
 #include <core/types/genotype.hpp>
-#include <utils/probability_matrix.hpp>
+#include <containers/probability_matrix.hpp>
 #include <logging/logging.hpp>
 
 namespace octopus { namespace model {

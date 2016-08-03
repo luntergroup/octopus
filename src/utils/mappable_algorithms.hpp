@@ -21,9 +21,9 @@
 
 #include <basics/contig_region.hpp>
 #include <basics/genomic_region.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 
-#include <utils/mappable_ranges.hpp>
+#include <concepts/mappable_range.hpp>
 #include "type_tricks.hpp"
 
 /**

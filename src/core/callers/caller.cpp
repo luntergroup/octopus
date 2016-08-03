@@ -16,7 +16,7 @@
 #include <cassert>
 #include <iostream>
 
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include <utils/read_stats.hpp>
 #include "haplotype_likelihood_model.hpp"

@@ -12,7 +12,7 @@
 #include <functional>
 
 #include <config/common.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <core/types/allele.hpp>
 #include <containers/mappable_flat_set.hpp>
 

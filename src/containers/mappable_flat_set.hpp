@@ -18,9 +18,9 @@
 #include <stdexcept>
 #include <vector>
 
-#include <interfaces/comparable.hpp>
-#include <interfaces/mappable.hpp>
-#include <utils/mappable_ranges.hpp>
+#include <concepts/comparable.hpp>
+#include <concepts/mappable.hpp>
+#include <concepts/mappable_range.hpp>
 #include <utils/mappable_algorithms.hpp>
 
 namespace octopus {

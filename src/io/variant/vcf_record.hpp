@@ -22,7 +22,7 @@
 #include <boost/optional.hpp>
 #include <boost/container/flat_map.hpp>
 
-#include <interfaces/comparable.hpp>
+#include <concepts/comparable.hpp>
 
 namespace octopus {
 

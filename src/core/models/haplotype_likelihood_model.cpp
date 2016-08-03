@@ -14,7 +14,7 @@
 #include <limits>
 #include <cassert>
 
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <basics/aligned_read.hpp>
 #include <utils/maths.hpp>
 

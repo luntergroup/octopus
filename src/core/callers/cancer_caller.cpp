@@ -33,7 +33,7 @@
 #include <utils/maths.hpp>
 #include <core/types/cancer_genotype.hpp>
 #include <utils/read_stats.hpp>
-#include <utils/probability_matrix.hpp>
+#include <containers/probability_matrix.hpp>
 
 #include "sequence_utils.hpp"
 #include "germline_variant_call.hpp"

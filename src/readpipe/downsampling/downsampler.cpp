@@ -16,9 +16,9 @@
 #include <random>
 #include <cassert>
 
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <basics/mappable_reference_wrapper.hpp>
-#include <utils/mappable_ranges.hpp>
+#include <concepts/mappable_range.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include <utils/read_algorithms.hpp>
 

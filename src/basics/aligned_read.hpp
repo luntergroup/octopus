@@ -22,10 +22,10 @@
 
 #include <boost/optional.hpp>
 
-#include <interfaces/comparable.hpp>
-#include <interfaces/equitable.hpp>
+#include <concepts/comparable.hpp>
+#include <concepts/equitable.hpp>
 #include <basics/genomic_region.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include "cigar_string.hpp"
 
 namespace octopus {

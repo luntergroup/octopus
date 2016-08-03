@@ -17,7 +17,7 @@
 #include <config/common.hpp>
 #include <io/reference/reference_genome.hpp>
 #include <basics/aligned_read.hpp>
-#include <utils/mappable_ranges.hpp>
+#include <concepts/mappable_range.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include "sequence_utils.hpp"
 #include "global_aligner.hpp"

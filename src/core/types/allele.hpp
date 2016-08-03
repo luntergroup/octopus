@@ -21,9 +21,9 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <interfaces/comparable.hpp>
+#include <concepts/comparable.hpp>
 #include <basics/genomic_region.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <io/reference/reference_genome.hpp>
 
 namespace octopus {

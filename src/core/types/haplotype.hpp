@@ -20,9 +20,9 @@
 #include <boost/functional/hash.hpp>
 #include <boost/optional.hpp>
 
-#include <interfaces/comparable.hpp>
+#include <concepts/comparable.hpp>
 #include <basics/contig_region.hpp>
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 
 #include "allele.hpp"
 

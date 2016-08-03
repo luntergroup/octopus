@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <numeric>
 
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <basics/contig_region.hpp>
 
 using std::cout;

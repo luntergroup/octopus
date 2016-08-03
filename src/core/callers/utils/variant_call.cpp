@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include <interfaces/mappable.hpp>
+#include <concepts/mappable.hpp>
 #include <io/reference/reference_genome.hpp>
 #include <core/types/genotype.hpp>
 #include <core/types/variant.hpp>
