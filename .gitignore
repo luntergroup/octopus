@@ -1,2 +1,39 @@
-# Ignore any executables
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
 bin/*
+
+# CMake stuff
+build/CMakeCache.txt
+build/CMakeFiles
+build/CMakeScripts
+build/Makefile
+build/cmake_install.cmake
+build/install_manifest.txt
+build/CTestTestfile.cmake
