@@ -32,8 +32,8 @@
 #include <core/models/genotype/individual_model.hpp>
 #include <logging/logging.hpp>
 
-#include "germline_variant_call.hpp"
-#include "reference_call.hpp"
+#include "utils/germline_variant_call.hpp"
+#include "utils/reference_call.hpp"
 
 #include "timers.hpp"
 

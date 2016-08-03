@@ -43,51 +43,25 @@
 #include <io/read/read_manager.hpp>
 #include <readpipe/read_pipe_fwd.hpp>
 #include <utils/read_stats.hpp>
-#include "vcf_header_factory.hpp"
 #include <config/octopus_vcf.hpp>
 #include <core/callers/caller_factory.hpp>
 #include <core/callers/caller.hpp>
-#include "vcf.hpp"
 #include <utils/maths.hpp>
 #include <logging/progress_meter.hpp>
 #include <logging/logging.hpp>
-
-
-
-#include "timing.hpp"
-
-#include "variant_call_filter.hpp"
-#include "measure.hpp"
-#include "quality_by_depth.hpp"
-#include "threshold_filter.hpp"
-#include "read_transform.hpp"
+#include <core/callers/utils/vcf_header_factory.hpp>
+#include <io/variant/vcf.hpp>
+#include <utils/timing.hpp>
 
 #include "timers.hpp" // BENCHMARK
-
-#include "genotype_reader.hpp"
 
 namespace octopus {
 
 using options::OptionMap;
 using logging::get_debug_log;
 
-void log_startup()
-{
-    logging::InfoLogger log {};
-    log << "------------------------------------------------------------------------";
-    if (TRACE_MODE) {
-        stream(log) << "Octopus v" << info::VERSION << " (trace mode)";
-    } else if (DEBUG_MODE) {
-        stream(log) << "Octopus v" << info::VERSION << " (debug mode)";
-    } else {
-        stream(log) << "Octopus v" << info::VERSION;
-    }
-    log << info::COPYRIGHT_NOTICE;
-    log << "------------------------------------------------------------------------";
-}
+namespace {
 
-namespace
-{
 template <typename T>
 std::size_t index_of(const std::vector<T>& elements, const T& value)
 {
@@ -1584,36 +1558,41 @@ auto get_filtered_path(const GenomeCallingComponents& components)
 
 void filter_calls(const GenomeCallingComponents& components)
 {
-    assert(!components.output().is_open());
-    
-    const VcfReader calls {components.output().path()};
-    
-    const auto filtered_path = get_filtered_path(components);
-    
-    VcfWriter filtered_calls {filtered_path};
-    
-    const auto read_pipe = make_filter_read_pipe(components);
-    
-    using csr::ThresholdVariantCallFilter;
-    using csr::Measure;
-    using csr::MeasureWrapper;
-    
-    std::vector<MeasureWrapper> measures {};
-    
-    measures.push_back(csr::make_wrapped_measure<csr::QualityByDepth>());
-    
-    auto call_filter = std::make_unique<ThresholdVariantCallFilter>(components.reference(),
-                                                                    read_pipe,
-                                                                    std::move(measures),
-                                                                    components.read_buffer_size());
-    
-    call_filter->filter(calls, filtered_calls);
+//    assert(!components.output().is_open());
+//    
+//    const VcfReader calls {components.output().path()};
+//    
+//    const auto filtered_path = get_filtered_path(components);
+//    
+//    VcfWriter filtered_calls {filtered_path};
+//    
+//    const auto read_pipe = make_filter_read_pipe(components);
+//    
+//    using csr::ThresholdVariantCallFilter;
+//    using csr::Measure;
+//    using csr::MeasureWrapper;
+//    
+//    std::vector<MeasureWrapper> measures {};
+//    
+//    measures.push_back(csr::make_wrapped_measure<csr::QualityByDepth>());
+//    
+//    auto call_filter = std::make_unique<ThresholdVariantCallFilter>(components.reference(),
+//                                                                    read_pipe,
+//                                                                    std::move(measures),
+//                                                                    components.read_buffer_size());
+//    
+//    call_filter->filter(calls, filtered_calls);
 }
 
 auto get_legacy_path(const fs::path& native)
 {
     return get_identified_path(native, "legacy");
 }
+        
+            void print_foo(std::ostream& os)
+            {
+                os << "foo" << "\n";
+            }
 
 void run_octopus(OptionMap& options)
 {
@@ -1621,8 +1600,6 @@ void run_octopus(OptionMap& options)
     TRACE_MODE = options::is_trace_mode(options);
     
     static auto debug_log = get_debug_log();
-    
-    log_startup();
     
     logging::InfoLogger info_log {};
     
@@ -1669,6 +1646,7 @@ void run_octopus(OptionMap& options)
             components->output().close();
         } catch (const std::exception& e) {
             logging::FatalLogger fatal_log {};
+            
             stream(fatal_log) << "Encountered error '" << e.what() << "'. Attempting to cleanup...";
             
             cleanup(*components);

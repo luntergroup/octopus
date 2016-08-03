@@ -20,7 +20,6 @@
 #include <core/models/genotype/individual_model.hpp>
 
 #include "caller.hpp"
-#include "variant_call.hpp"
 
 namespace octopus {
 
@@ -29,6 +28,7 @@ class ReadPipe;
 class Variant;
 class HaplotypeLikelihoodCache;
 class CoalescentModel;
+class VariantCall;
 
 class IndividualCaller : public Caller
 {

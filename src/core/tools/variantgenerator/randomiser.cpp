@@ -15,7 +15,7 @@
 #include <basics/genomic_region.hpp>
 #include <core/types/allele.hpp>
 #include <utils/mappable_algorithms.hpp>
-#include "sequence_utils.hpp"
+#include <utils/sequence_utils.hpp>
 
 namespace octopus { namespace coretools {
 

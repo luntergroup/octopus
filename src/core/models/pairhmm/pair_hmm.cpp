@@ -182,9 +182,6 @@ auto simd_align(const std::string& truth, const std::string& target,
                                    model.gap_extend, model.nuc_prior,
                                    align1.data(), align2.data(), first_pos);
     
-//    debug::print_alignment(align1, align2);
-//    std::cout << make_cigar(align1, align2) << std::endl;
-    
     auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
     
     if (lhs_flank_size < alignment_offset) {

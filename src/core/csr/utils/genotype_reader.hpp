@@ -16,11 +16,11 @@
 #include <boost/optional.hpp>
 
 #include <config/common.hpp>
-#include "vcf_record.hpp"
 #include <core/types/haplotype.hpp>
 #include <core/types/genotype.hpp>
 #include <containers/mappable_flat_set.hpp>
 #include <core/types/variant.hpp>
+#include <io/variant/vcf_record.hpp>
 
 namespace octopus {
 

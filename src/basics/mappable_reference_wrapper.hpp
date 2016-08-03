@@ -39,7 +39,7 @@ public:
     MappableReferenceWrapper(MappableReferenceWrapper&&)                 = default;
     MappableReferenceWrapper& operator=(MappableReferenceWrapper&&)      = default;
     
-    operator T& () const noexcept { return mappable_.get(); }
+    operator T&() const noexcept { return mappable_.get(); }
     
     T& get() const noexcept { return mappable_.get(); }
     

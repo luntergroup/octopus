@@ -8,11 +8,6 @@
 
 #include "trio_caller.hpp"
 
-#include <utility>
-
-#include <readpipe/read_pipe.hpp>
-#include "vcf_record.hpp"
-
 namespace octopus {
     
 } // namespace octopus

@@ -1,5 +1,5 @@
 //
-//  vcf_reader.hpp
+//  vcf_extractor.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 28/02/2015.
@@ -14,9 +14,10 @@
 
 #include <boost/filesystem.hpp>
 
-#include "variant_generator.hpp"
-#include "vcf_reader.hpp"
+#include <io/variant/vcf_reader.hpp>
 #include <core/types/variant.hpp>
+
+#include "variant_generator.hpp"
 
 namespace octopus {
 

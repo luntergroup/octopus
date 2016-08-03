@@ -19,7 +19,6 @@
 #include <basics/phred.hpp>
 
 #include "caller.hpp"
-#include "variant_call.hpp"
 
 namespace octopus {
 
@@ -27,6 +26,7 @@ class GenomicRegion;
 class ReadPipe;
 class Variant;
 class HaplotypeLikelihoodCache;
+class VariantCall;
 
 class PopulationCaller : public Caller
 {

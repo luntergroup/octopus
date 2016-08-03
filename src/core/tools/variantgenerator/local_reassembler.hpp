@@ -17,8 +17,9 @@
 #include "variant_generator.hpp"
 #include <basics/genomic_region.hpp>
 #include <concepts/mappable.hpp>
-#include "assembler.hpp"
 #include <core/types/variant.hpp>
+
+#include "utils/assembler.hpp"
 
 namespace octopus {
 

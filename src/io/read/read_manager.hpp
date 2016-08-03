@@ -22,9 +22,10 @@
 #include <basics/contig_region.hpp>
 #include <basics/genomic_region.hpp>
 #include <containers/mappable_map.hpp>
+#include <utils/hash_functions.hpp>
+
 #include "read_reader.hpp"
 #include "read_reader_impl.hpp"
-#include "hash_functions.hpp"
 
 namespace octopus {
 

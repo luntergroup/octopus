@@ -18,7 +18,7 @@
 #include <io/read/read_manager.hpp>
 #include <core/types/variant.hpp>
 #include "variant_generator.hpp"
-#include "vcf_reader.hpp"
+#include <io/variant/vcf_reader.hpp>
 
 using std::cout;
 using std::endl;

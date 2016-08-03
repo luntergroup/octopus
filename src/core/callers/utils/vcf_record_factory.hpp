@@ -14,7 +14,8 @@
 
 #include <config/common.hpp>
 #include <io/reference/reference_genome.hpp>
-#include "vcf_record.hpp"
+#include <io/variant/vcf_record.hpp>
+
 #include "call.hpp"
 
 namespace octopus

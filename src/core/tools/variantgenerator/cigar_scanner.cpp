@@ -50,43 +50,44 @@ bool CigarScanner::do_requires_reads() const noexcept
     return true;
 }
 
-namespace
+namespace {
+
+template <typename Sequence>
+bool is_good_sequence(const Sequence& sequence) noexcept
 {
-    template <typename Sequence>
-    bool is_good_sequence(const Sequence& sequence) noexcept
-    {
-        return std::none_of(std::cbegin(sequence), std::cend(sequence),
-                            [] (auto base) { return base == 'N'; });
-    }
-    
-    template <typename Sequence, typename P, typename S>
-    Sequence splice(const Sequence& sequence, const P pos, const S size)
-    {
-        const auto it = std::next(std::cbegin(sequence), pos);
-        return Sequence {it, std::next(it, size)};
-    }
-    
-    template <typename Q, typename P, typename S>
-    bool is_all_good_quality(const Q& qualities, const P pos, const S size,
-                             const typename Q::value_type min_quality)
-    {
-        const auto it = std::next(std::cbegin(qualities), pos);
-        return std::all_of(it, std::next(it, size),
-                           [min_quality] (const auto quality) {
-                               return quality >= min_quality;
-                           });
-    }
-    
-    template <typename Q, typename P, typename S>
-    auto count_bad_qualities(const Q& qualities, const P pos, const S size,
-                             const typename Q::value_type min_quality)
-    {
-        const auto it = std::next(std::cbegin(qualities), pos);
-        return std::count_if(it, std::next(it, size),
-                             [min_quality] (const auto quality) {
-                                 return quality < min_quality;
-                           });
-    }
+    return std::none_of(std::cbegin(sequence), std::cend(sequence),
+                        [] (auto base) { return base == 'N'; });
+}
+
+template <typename Sequence, typename P, typename S>
+Sequence splice(const Sequence& sequence, const P pos, const S size)
+{
+    const auto it = std::next(std::cbegin(sequence), pos);
+    return Sequence {it, std::next(it, size)};
+}
+
+template <typename Q, typename P, typename S>
+bool is_all_good_quality(const Q& qualities, const P pos, const S size,
+                         const typename Q::value_type min_quality)
+{
+    const auto it = std::next(std::cbegin(qualities), pos);
+    return std::all_of(it, std::next(it, size),
+                       [min_quality] (const auto quality) {
+                           return quality >= min_quality;
+                       });
+}
+
+template <typename Q, typename P, typename S>
+auto count_bad_qualities(const Q& qualities, const P pos, const S size,
+                         const typename Q::value_type min_quality)
+{
+    const auto it = std::next(std::cbegin(qualities), pos);
+    return std::count_if(it, std::next(it, size),
+                         [min_quality] (const auto quality) {
+                             return quality < min_quality;
+                         });
+}
+
 } // namespace
 
 void CigarScanner::do_add_read(const AlignedRead& read)

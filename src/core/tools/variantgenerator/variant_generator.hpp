@@ -27,7 +27,7 @@
 #include <core/types/variant.hpp>
 #include <containers/mappable_flat_multi_set.hpp>
 #include <io/reference/reference_genome.hpp>
-#include "vcf_reader.hpp"
+#include <io/variant/vcf_reader.hpp>
 
 namespace octopus {
 
@@ -163,7 +163,7 @@ private:
 template <typename InputIt>
 void VariantGenerator::add_reads(InputIt first, InputIt last)
 {
-    for (auto& generator : generators_) generator->add_reads(first, last);
+    for (auto& generator : generators_) generator->do_add_reads(first, last);
 }
 
 // non-member methods

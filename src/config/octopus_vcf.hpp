@@ -11,7 +11,7 @@
 
 #include <string>
 
-#include "vcf_header.hpp"
+#include <io/variant/vcf_header.hpp>
 
 namespace octopus {
     namespace Vcf {

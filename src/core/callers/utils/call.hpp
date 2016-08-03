@@ -22,8 +22,8 @@
 #include <concepts/mappable.hpp>
 #include <core/types/allele.hpp>
 #include <core/types/genotype.hpp>
-#include "vcf_record.hpp"
 #include <io/reference/reference_genome.hpp>
+#include <io/variant/vcf_record.hpp>
 
 namespace octopus {
     

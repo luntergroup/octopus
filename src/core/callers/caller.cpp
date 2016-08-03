@@ -19,9 +19,13 @@
 #include <concepts/mappable.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include <utils/read_stats.hpp>
-#include "haplotype_likelihood_model.hpp"
-#include "haplotype_filter.hpp"
 #include <utils/maths.hpp>
+#include <core/models/haplotype_likelihood_model.hpp>
+
+#include "utils/haplotype_filter.hpp"
+#include "utils/call.hpp"
+#include "utils/variant_call.hpp"
+#include "utils/reference_call.hpp"
 
 #include "timers.hpp"
 

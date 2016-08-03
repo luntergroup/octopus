@@ -19,7 +19,8 @@
 #include <config/common.hpp>
 #include <core/types/haplotype.hpp>
 #include <basics/aligned_read.hpp>
-#include "kmer_mapper.hpp"
+
+#include "utils/kmer_mapper.hpp"
 #include "haplotype_likelihood_model.hpp"
 
 namespace octopus {

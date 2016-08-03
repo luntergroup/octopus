@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <utility>
 
-#include "vcf_record.hpp"
+#include <io/variant/vcf_record.hpp>
 
 namespace octopus { namespace coretools {
 

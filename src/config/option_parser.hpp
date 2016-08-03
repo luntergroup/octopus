@@ -19,7 +19,7 @@ namespace octopus { namespace options {
 
 using OptionMap = boost::program_options::variables_map;
 
-boost::optional<OptionMap> parse_options(int argc, const char** argv);
+OptionMap parse_options(int argc, const char** argv);
 
 enum class ContigOutputOrder
 {

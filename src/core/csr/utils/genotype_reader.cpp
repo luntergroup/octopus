@@ -17,14 +17,14 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "vcf_header.hpp"
-#include <io/reference/reference_genome.hpp>
 #include <basics/contig_region.hpp>
 #include <basics/genomic_region.hpp>
 #include <concepts/mappable.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include <core/types/allele.hpp>
 #include <core/types/variant.hpp>
+#include <io/variant/vcf_header.hpp>
+#include <io/reference/reference_genome.hpp>
 
 #include <iostream> // DEBUG
 

@@ -358,11 +358,11 @@
 		D424E0AE1D51046600654AA3 /* variant_caller_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = variant_caller_tests.cpp; path = test/unit/variant_caller_tests.cpp; sourceTree = SOURCE_ROOT; };
 		D424E0AF1D51046600654AA3 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = variant_tests.cpp; path = test/unit/variant_tests.cpp; sourceTree = SOURCE_ROOT; };
 		D424E0B01D51046600654AA3 /* vcf_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vcf_tests.cpp; path = test/unit/vcf_tests.cpp; sourceTree = SOURCE_ROOT; };
-		D424E0C51D510A3200654AA3 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		D424E0C61D510A3B00654AA3 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		D424E0C71D510A4300654AA3 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		D424E0C81D510A7C00654AA3 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		D424E0C91D5110EE00654AA3 /* phred.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = phred.hpp; sourceTree = "<group>"; };
+		D424E0CA1D522B5900654AA3 /* bioio.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = bioio.hpp; sourceTree = "<group>"; };
 		D42F72EC1C563D2E00995F54 /* contig_ploidies.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = contig_ploidies.txt; sourceTree = "<group>"; };
 		D42F72ED1C5B8A4D00995F54 /* trio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = trio.cpp; sourceTree = "<group>"; };
 		D42F72EE1C5B8A4D00995F54 /* trio.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = trio.hpp; sourceTree = "<group>"; };
@@ -373,7 +373,6 @@
 		D44ADE711C43C22700A854C6 /* caller_builder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = caller_builder.cpp; sourceTree = "<group>"; };
 		D44ADE721C43C22700A854C6 /* caller_builder.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = caller_builder.hpp; sourceTree = "<group>"; };
 		D44ADE771C452B9B00A854C6 /* compression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = compression.cpp; sourceTree = "<group>"; };
-		D454B9501D50B25D00F083F9 /* bioio.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = bioio.hpp; sourceTree = "<group>"; };
 		D454B9511D50B2BB00F083F9 /* CONTRIBUTING.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = CONTRIBUTING.md; sourceTree = "<group>"; };
 		D454B9561D50DF2500F083F9 /* read_pipe_fwd.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = read_pipe_fwd.hpp; sourceTree = "<group>"; };
 		D45D2E5F1B2AD88A00F6A89D /* libhts.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libhts.a; path = ../../../../../usr/local/Cellar/htslib/1.2.1/lib/libhts.a; sourceTree = "<absolute>"; };
@@ -678,20 +677,20 @@
 			isa = PBXGroup;
 			children = (
 				CAB7B6EE1D2DE7B20046C3E5 /* utils */,
-				D4807FB11BA843B900657D4F /* caller.cpp */,
 				CA91C2D11B8DF76300609FFA /* caller.hpp */,
-				D44ADE711C43C22700A854C6 /* caller_builder.cpp */,
-				D44ADE721C43C22700A854C6 /* caller_builder.hpp */,
-				CAE7DC2B1C510905009411B6 /* caller_factory.cpp */,
-				CAE7DC2C1C510905009411B6 /* caller_factory.hpp */,
-				D4807FB31BA9716700657D4F /* cancer_caller.cpp */,
-				D4807FB41BA9716700657D4F /* cancer_caller.hpp */,
-				D40B11A11CAEBC270050145D /* individual_caller.cpp */,
+				D4807FB11BA843B900657D4F /* caller.cpp */,
 				D40B11A21CAEBC270050145D /* individual_caller.hpp */,
-				D4807FAE1BA826DB00657D4F /* population_caller.cpp */,
+				D40B11A11CAEBC270050145D /* individual_caller.cpp */,
 				D4807FAF1BA826DB00657D4F /* population_caller.hpp */,
-				D42F72FE1C621C4C00995F54 /* trio_caller.cpp */,
+				D4807FAE1BA826DB00657D4F /* population_caller.cpp */,
+				D4807FB41BA9716700657D4F /* cancer_caller.hpp */,
+				D4807FB31BA9716700657D4F /* cancer_caller.cpp */,
 				D42F72FF1C621C4C00995F54 /* trio_caller.hpp */,
+				D42F72FE1C621C4C00995F54 /* trio_caller.cpp */,
+				D44ADE721C43C22700A854C6 /* caller_builder.hpp */,
+				D44ADE711C43C22700A854C6 /* caller_builder.cpp */,
+				CAE7DC2C1C510905009411B6 /* caller_factory.hpp */,
+				CAE7DC2B1C510905009411B6 /* caller_factory.cpp */,
 			);
 			path = callers;
 			sourceTree = "<group>";
@@ -744,8 +743,8 @@
 		CAA4DC2B1A8219C700DD3E9A /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				D424E0CA1D522B5900654AA3 /* bioio.hpp */,
 				D424E0C71D510A4300654AA3 /* CMakeLists.txt */,
-				D454B94F1D50B24900F083F9 /* bioio */,
 				D4BEA9F61B861BAF00E53CFD /* tandem */,
 				D45D307D1C907F81007634E3 /* libboost_date_time-mt.dylib */,
 				D45D307E1C907F81007634E3 /* libboost_filesystem-mt.dylib */,
@@ -1020,8 +1019,8 @@
 				D413B0421B5D4E84007EFDE0 /* models */,
 				CA91C2CC1B8DE63A00609FFA /* callers */,
 				CAFA2CE41CF37FF200C109D5 /* csr */,
-				CA1472781AACECF1005FDCD1 /* octopus.cpp */,
 				CA1472791AACECF1005FDCD1 /* octopus.hpp */,
+				CA1472781AACECF1005FDCD1 /* octopus.cpp */,
 			);
 			path = core;
 			sourceTree = "<group>";
@@ -1189,15 +1188,6 @@
 				D424E0B01D51046600654AA3 /* vcf_tests.cpp */,
 			);
 			path = io;
-			sourceTree = "<group>";
-		};
-		D454B94F1D50B24900F083F9 /* bioio */ = {
-			isa = PBXGroup;
-			children = (
-				D424E0C51D510A3200654AA3 /* CMakeLists.txt */,
-				D454B9501D50B25D00F083F9 /* bioio.hpp */,
-			);
-			path = bioio;
 			sourceTree = "<group>";
 		};
 		D454B9531D50B42C00F083F9 /* containers */ = {
@@ -1554,7 +1544,7 @@
 				GCC_UNROLL_LOOPS = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					/usr/local/Cellar/boost/1.60.0_2/include,
+					/usr/local/Cellar/boost/1.61/include,
 					/usr/local/include,
 					"$(SRCROOT)/lib",
 					"$(SRCROOT)/src",
@@ -1564,7 +1554,7 @@
 					"$(PROJECT_DIR)/lib",
 					/usr/local/lib,
 					/usr/local/Cellar/htslib/1.3.1/lib,
-					/usr/local/Cellar/boost/1.60.0_2/lib,
+					/usr/local/Cellar/boost/1.61/lib,
 				);
 				LLVM_LTO = NO;
 				OTHER_CPLUSPLUSFLAGS = (
@@ -1586,7 +1576,7 @@
 				GCC_UNROLL_LOOPS = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					/usr/local/Cellar/boost/1.60.0_2/include,
+					/usr/local/Cellar/boost/1.61/include,
 					/usr/local/include,
 					"$(SRCROOT)/lib",
 					"$(SRCROOT)/src",
@@ -1596,7 +1586,7 @@
 					"$(PROJECT_DIR)/lib",
 					/usr/local/lib,
 					/usr/local/Cellar/htslib/1.3.1/lib,
-					/usr/local/Cellar/boost/1.60.0_2/lib,
+					/usr/local/Cellar/boost/1.61/lib,
 				);
 				LLVM_LTO = YES;
 				OTHER_CPLUSPLUSFLAGS = (

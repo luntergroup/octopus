@@ -8,7 +8,7 @@
 
 #include "quality_by_depth.hpp"
 
-#include "vcf_record.hpp"
+#include <io/variant/vcf_record.hpp>
 
 namespace octopus { namespace csr
 {

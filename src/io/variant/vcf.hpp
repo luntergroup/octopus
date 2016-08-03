@@ -9,11 +9,11 @@
 #ifndef Octopus_vcf_hpp
 #define Octopus_vcf_hpp
 
-#include "vcf_type.hpp"
-#include "vcf_header.hpp"
-#include "vcf_record.hpp"
-#include "vcf_reader.hpp"
-#include "vcf_writer.hpp"
-#include "vcf_utils.hpp"
+#include <io/variant/vcf_type.hpp>
+#include <io/variant/vcf_header.hpp>
+#include <io/variant/vcf_record.hpp>
+#include <io/variant/vcf_reader.hpp>
+#include <io/variant/vcf_writer.hpp>
+#include <io/variant/vcf_utils.hpp>
 
 #endif

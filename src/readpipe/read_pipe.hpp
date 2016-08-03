@@ -21,9 +21,9 @@
 #include <io/read/read_manager.hpp>
 #include <logging/logging.hpp>
 
-#include "read_filterer.hpp"
-#include "read_transformer.hpp"
-#include "downsampler.hpp"
+#include "filtering/read_filterer.hpp"
+#include "transformers/read_transformer.hpp"
+#include "downsampling/downsampler.hpp"
 
 namespace octopus {
 /*

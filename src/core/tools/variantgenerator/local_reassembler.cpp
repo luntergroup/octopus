@@ -19,10 +19,11 @@
 #include <basics/aligned_read.hpp>
 #include <concepts/mappable_range.hpp>
 #include <utils/mappable_algorithms.hpp>
-#include "sequence_utils.hpp"
-#include "global_aligner.hpp"
+#include <utils/sequence_utils.hpp>
 #include <basics/cigar_string.hpp>
 #include <logging/logging.hpp>
+
+#include "utils/global_aligner.hpp"
 
 #include "timers.hpp" // BENCHMARK
 

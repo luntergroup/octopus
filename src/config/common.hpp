@@ -46,8 +46,21 @@ using InputRegionMap = MappableSetMap<ContigName, GenomicRegion>;
 using ReadContainer = MappableFlatMultiSet<AlignedRead>;
 using ReadMap       = MappableMap<SampleName, AlignedRead>;
 
-namespace logging
+void log_program_startup(); // Always uses InfoLogger
+
+template <typename Log>
+void log_program_end(Log& log)
 {
+    log << "------------------------------------------------------------------------";
+}
+
+inline void log_program_end()
+{
+    logging::InfoLogger log {};
+    log_program_end(log);
+}
+
+namespace logging {
     boost::optional<DebugLogger> get_debug_log();
     boost::optional<TraceLogger> get_trace_log();
 }

@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <functional>
 
-#include "vcf_header.hpp"
+#include <io/variant/vcf_header.hpp>
 
 namespace octopus {
 

@@ -31,14 +31,15 @@
 #include <containers/probability_matrix.hpp>
 #include <logging/progress_meter.hpp>
 #include <logging/logging.hpp>
+#include <io/variant/vcf_record.hpp>
 
-#include "vcf_record.hpp"
-#include "vcf_record_factory.hpp"
-#include "call.hpp"
-#include "variant_call.hpp"
-#include "reference_call.hpp"
+#include "utils/vcf_record_factory.hpp"
 
 namespace octopus {
+
+class Call;
+class VariantCall;
+class ReferenceCall;
 
 class Caller
 {

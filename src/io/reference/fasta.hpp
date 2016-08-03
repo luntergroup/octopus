@@ -18,7 +18,7 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include <bioio/bioio.hpp>
+#include <bioio.hpp>
 
 #include "reference_reader.hpp"
 

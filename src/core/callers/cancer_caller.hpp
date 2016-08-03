@@ -26,14 +26,13 @@
 #include <basics/phred.hpp>
 
 #include "caller.hpp"
-#include "variant_call.hpp"
-
-class GenomicRegion;
 
 namespace octopus {
 
+class GenomicRegion;
 class ReadPipe;
 class Variant;
+class VariantCall;
 
 class CancerCaller : public Caller
 {

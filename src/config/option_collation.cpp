@@ -36,9 +36,8 @@
 #include <utils/append.hpp>
 #include <utils/maths.hpp>
 #include <logging/logging.hpp>
-
-#include "vcf_reader.hpp"
-#include "vcf_writer.hpp"
+#include <io/variant/vcf_reader.hpp>
+#include <io/variant/vcf_writer.hpp>
 
 namespace octopus { namespace options
 {

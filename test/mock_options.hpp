@@ -19,7 +19,7 @@ namespace octopus { namespace test {
 
 namespace po = boost::program_options;
 
-inline boost::optional<po::variables_map> get_basic_mock_options()
+inline auto get_basic_mock_options()
 {
     const char *argv[] = {
         "octopus",
@@ -72,7 +72,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", "~/Genomics/MCG/D59597_Cov3.RG.bam",
         
         //"--caller", "cancer", // default "population"
-        "--normal-sample", "HCC1143 BL",
+        //"--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
         "--contig-ploidies", "MT=1", "Y=1",
@@ -85,7 +85,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22",
+        //"--regions", "22",
         
         //"--regions", "2:120,098,309-120,098,368", // NA12878 LC - GQ is too high
         
@@ -231,7 +231,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--disable-raw-cigar-candidate-generator",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
-        "--disable-assembly-candidate-generator",
+        //"--disable-assembly-candidate-generator",
         //"--kmer-size", "75",
         //"--assembler-mask-base-quality=2",
         //"--max-variant-size", "25",

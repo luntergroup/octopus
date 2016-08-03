@@ -22,9 +22,10 @@
 #include <config/common.hpp>
 #include <basics/contig_region.hpp>
 #include <core/types/haplotype.hpp>
-#include "snv_error_model.hpp"
-#include "indel_error_model.hpp"
-#include "pair_hmm.hpp"
+
+#include "readerror/snv_error_model.hpp"
+#include "readerror/indel_error_model.hpp"
+#include "pairhmm/pair_hmm.hpp"
 
 #include "timers.hpp"
 

@@ -21,25 +21,24 @@
 #include <boost/iterator/zip_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#include <merge_transform.hpp>
-
 #include <basics/genomic_region.hpp>
+#include <containers/probability_matrix.hpp>
 #include <readpipe/read_pipe.hpp>
 #include <core/types/allele.hpp>
 #include <core/types/variant.hpp>
 #include <core/types/haplotype.hpp>
-#include "genotype.hpp"
-#include <utils/mappable_algorithms.hpp>
-#include <utils/maths.hpp>
+#include <core/types/genotype.hpp>
 #include <core/types/cancer_genotype.hpp>
 #include <utils/read_stats.hpp>
-#include <containers/probability_matrix.hpp>
-
-#include "sequence_utils.hpp"
-#include "germline_variant_call.hpp"
-#include "reference_call.hpp"
-#include "somatic_call.hpp"
+#include <utils/sequence_utils.hpp>
+#include <utils/merge_transform.hpp>
+#include <utils/mappable_algorithms.hpp>
+#include <utils/maths.hpp>
 #include <logging/logging.hpp>
+
+#include "utils/germline_variant_call.hpp"
+#include "utils/reference_call.hpp"
+#include "utils/somatic_call.hpp"
 
 #include "timers.hpp"
 
