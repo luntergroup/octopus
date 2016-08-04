@@ -1,6 +1,6 @@
 //
 //  option_collation.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 13/07/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
@@ -1020,7 +1020,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         
         result.set_min_supporting_reads(min_supporting_reads);
     } else {
-        result.set_min_supporting_reads(2); // TODO: Octopus should automatically calculate this
+        result.set_min_supporting_reads(2); // TODO: octopus should automatically calculate this
     }
     
     if (!options.at("disable-raw-cigar-candidate-generator").as<bool>()) {

@@ -1,6 +1,6 @@
 //
 //  quality_by_depth.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 26/07/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

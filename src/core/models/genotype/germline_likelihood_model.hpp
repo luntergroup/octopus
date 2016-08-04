@@ -1,6 +1,6 @@
 //
 //  germline_likelihood_model.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 01/04/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.

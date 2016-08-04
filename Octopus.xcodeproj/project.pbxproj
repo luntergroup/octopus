@@ -230,7 +230,6 @@
 		CA566E341D0486F8007C5180 /* call_types.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = call_types.hpp; sourceTree = "<group>"; };
 		CA566E351D0488C7007C5180 /* octopus_vcf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus_vcf.cpp; sourceTree = "<group>"; };
 		CA566E361D0488C7007C5180 /* octopus_vcf.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = octopus_vcf.hpp; sourceTree = "<group>"; };
-		CA56D3831D50A7610083501A /* dummy.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dummy.txt; sourceTree = "<group>"; };
 		CA56D3841D50A8360083501A /* octopus-supplementary.tex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "octopus-supplementary.tex"; sourceTree = "<group>"; };
 		CA56D3851D50A8D10083501A /* TODO.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = TODO.md; sourceTree = "<group>"; };
 		CA56D3871D516BD70083501A /* comparable.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = comparable.hpp; sourceTree = "<group>"; };
@@ -794,7 +793,6 @@
 		CAA4DC361A83A3BA00DD3E9A /* bin */ = {
 			isa = PBXGroup;
 			children = (
-				CA56D3831D50A7610083501A /* dummy.txt */,
 			);
 			path = bin;
 			sourceTree = "<group>";
@@ -1302,7 +1300,7 @@
 					};
 				};
 			};
-			buildConfigurationList = CAA4DC1C1A81981400DD3E9A /* Build configuration list for PBXProject "Octopus" */;
+			buildConfigurationList = CAA4DC1C1A81981400DD3E9A /* Build configuration list for PBXProject "octopus" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -1602,7 +1600,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		CAA4DC1C1A81981400DD3E9A /* Build configuration list for PBXProject "Octopus" */ = {
+		CAA4DC1C1A81981400DD3E9A /* Build configuration list for PBXProject "octopus" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				CAA4DC261A81981400DD3E9A /* Debug */,

@@ -1,6 +1,6 @@
 //
 //  randomiser.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 03/10/2015.
 //  Copyright © 2015 Oxford University. All rights reserved.

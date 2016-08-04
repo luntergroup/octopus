@@ -1,6 +1,6 @@
 //
 //  read_filter_tests.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 07/03/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.

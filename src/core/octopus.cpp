@@ -1,6 +1,6 @@
 //
 //  octopus.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 08/03/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
@@ -202,7 +202,7 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
     }
     
     builder.add_basic_field("reference", reference.name());
-    builder.add_structured_field("Octopus", {{"some", "option"}});
+    builder.add_structured_field("octopus", {{"some", "option"}});
     
     VcfHeaderFactory factory {};
     

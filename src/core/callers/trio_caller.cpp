@@ -1,6 +1,6 @@
 //
 //  trio_caller.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 03/02/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

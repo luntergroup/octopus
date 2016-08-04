@@ -1,6 +1,6 @@
 //
 //  logging.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 09/03/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

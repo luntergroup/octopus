@@ -1,6 +1,6 @@
 //
 //  downsampler.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 19/10/2015.
 //  Copyright © 2015 Oxford University. All rights reserved.

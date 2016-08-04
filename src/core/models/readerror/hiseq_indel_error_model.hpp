@@ -1,6 +1,6 @@
 //
 //  read_indel_error_model.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 13/06/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

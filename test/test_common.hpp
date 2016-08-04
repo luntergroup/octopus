@@ -1,6 +1,6 @@
 //
 //  test_common.h
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 14/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
@@ -21,7 +21,7 @@ namespace octopus { namespace test { namespace detail {
     static std::string genomics_dir {"/Genomics/"};
     static std::string reference_dir {"References/"};
     static std::string bam_dir {"Illumina/"};
-    static std::string octopus_test_dir {"/Development/Octopus/test/"};
+    static std::string octopus_test_dir {"/Development/octopus/test/"};
     static std::string sample_vcf_dir {"sample_vcf/"};
     static std::string cancer_test_dir {"cancer/simulated/"};
     

@@ -1,6 +1,6 @@
 //
 //  genotype.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 24/03/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.

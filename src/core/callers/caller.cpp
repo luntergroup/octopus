@@ -1,6 +1,6 @@
 //
 //  caller.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 15/09/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.

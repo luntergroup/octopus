@@ -1,6 +1,6 @@
 //
 //  haplotype_generator.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 20/02/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

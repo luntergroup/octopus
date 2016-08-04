@@ -1,6 +1,6 @@
 //
 //  option_parser.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 27/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
@@ -213,7 +213,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("allow-octopus-duplicates,allow-dups",
      po::bool_switch()->default_value(false),
-     "Allows reads considered duplicates by Octopus")
+     "Allows reads considered duplicates by octopus")
     
     ("no-secondary-alignments",
      po::bool_switch()->default_value(false),
@@ -270,7 +270,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-supporting-reads,min-support",
      po::value<unsigned>()->implicit_value(2),
      "Minimum number of reads that must support a variant if it is to be considered a candidate."
-     " By default Octopus will automatically determine this value")
+     " By default octopus will automatically determine this value")
     
     ("max-variant-size,max-var-size",
      po::value<unsigned>()->default_value(2000),
@@ -291,7 +291,7 @@ OptionMap parse_options(const int argc, const char** argv)
     caller.add_options()
     ("caller,C",
      po::value<std::string>()->default_value("population"),
-     "Which of the Octopus callers to use")
+     "Which of the octopus callers to use")
     
     ("organism-ploidy,ploidy",
      po::value<unsigned>()->default_value(2),
@@ -423,7 +423,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Disables model based filtering of variant calls")
     ;
     
-    po::options_description all("Octopus options");
+    po::options_description all("octopus options");
     all.add(general).add(backend).add(input).add(transforms).add(filters)
     .add(candidates).add(caller).add(advanced).add(cancer).add(trio).add(phaser)
     .add(call_filtering);
@@ -459,7 +459,7 @@ OptionMap parse_options(const int argc, const char** argv)
     }
     
     if (vm_init.count("version") == 1) {
-        std::cout << "Octopus " << info::VERSION << std::endl;
+        std::cout << "octopus " << info::VERSION << std::endl;
         return vm_init;
     }
     

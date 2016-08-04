@@ -1,6 +1,6 @@
 //
 //  common.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 15/03/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
@@ -17,11 +17,11 @@ void log_program_startup()
     logging::InfoLogger log {};
     log << "------------------------------------------------------------------------";
     if (TRACE_MODE) {
-        stream(log) << "Octopus v" << info::VERSION << " (trace mode)";
+        stream(log) << "octopus v" << info::VERSION << " (trace mode)";
     } else if (DEBUG_MODE) {
-        stream(log) << "Octopus v" << info::VERSION << " (debug mode)";
+        stream(log) << "octopus v" << info::VERSION << " (debug mode)";
     } else {
-        stream(log) << "Octopus v" << info::VERSION;
+        stream(log) << "octopus v" << info::VERSION;
     }
     log << info::COPYRIGHT_NOTICE;
     log << "------------------------------------------------------------------------";

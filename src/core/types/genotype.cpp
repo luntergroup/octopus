@@ -1,6 +1,6 @@
 //
 //  genotype.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 02/10/2015.
 //  Copyright © 2015 Oxford University. All rights reserved.

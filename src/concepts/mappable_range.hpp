@@ -1,6 +1,6 @@
 //
 //  mappable_range.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 20/07/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.

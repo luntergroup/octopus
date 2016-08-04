@@ -1,6 +1,6 @@
 //
 //  mappable_reference_wrapper.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 02/08/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

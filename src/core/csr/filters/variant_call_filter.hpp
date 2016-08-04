@@ -1,6 +1,6 @@
 //
 //  variant_call_filter.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 31/05/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

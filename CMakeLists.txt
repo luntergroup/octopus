@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_BUILD_TYPE Release)
 
-# for the main Octopus executable
+# for the main octopus executable
 add_subdirectory(lib)
 add_subdirectory(src)
 

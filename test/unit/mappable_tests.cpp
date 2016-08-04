@@ -1,6 +1,6 @@
 //
 //  mappable_tests.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 02/02/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

@@ -1,6 +1,6 @@
 //
 //  read_transform.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 01/04/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

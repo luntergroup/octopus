@@ -1,6 +1,6 @@
 //
 //  variational_bayes_mixture_model.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 12/04/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

@@ -1,6 +1,6 @@
 //
 //  test_utils.h
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 23/04/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.

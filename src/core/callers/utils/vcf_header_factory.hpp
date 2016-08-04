@@ -1,6 +1,6 @@
 //
 //  vcf_header_factory.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 05/06/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

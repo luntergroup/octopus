@@ -1,6 +1,6 @@
 //
 //  read_manager.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 14/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.

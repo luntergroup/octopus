@@ -1,6 +1,6 @@
 //
 //  type_tricks.hpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 10/01/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

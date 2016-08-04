@@ -1,6 +1,6 @@
 //
 //  snv_error_model.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 15/06/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.

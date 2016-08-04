@@ -1,6 +1,6 @@
 //
 //  assembler_tests.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 19/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.

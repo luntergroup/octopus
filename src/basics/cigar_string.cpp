@@ -1,6 +1,6 @@
 //
 //  cigar_string.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 18/07/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.

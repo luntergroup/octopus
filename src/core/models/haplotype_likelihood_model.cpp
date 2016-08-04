@@ -1,6 +1,6 @@
 //
 //  haplotype_likelihood_model.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 25/09/2015.
 //  Copyright © 2015 Oxford University. All rights reserved.

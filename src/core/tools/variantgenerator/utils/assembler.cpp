@@ -1,6 +1,6 @@
 //
 //  assembler.cpp
-//  Octopus
+//  octopus
 //
 //  Created by Daniel Cooke on 08/03/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
