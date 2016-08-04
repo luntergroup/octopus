@@ -75,7 +75,7 @@ inline auto get_basic_mock_options()
         //"--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
-        "--contig-ploidies", "MT=1", "Y=1",
+        //"--contig-ploidies", "MT=1", "Y=1",
         //"--contig-ploidies-file", contig_ploidies_txt_file.c_str(),
         
         //"--make-blocked-refcalls",
