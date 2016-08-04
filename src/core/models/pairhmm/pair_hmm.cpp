@@ -196,7 +196,7 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     auto rhs_flank_size = static_cast<int>(model.rhs_flank_size);
     
-    if (alignment_offset + truth_alignment_size < (truth_size - model.rhs_flank_size)) {
+    if (alignment_offset + truth_alignment_size < truth_size - rhs_flank_size) {
         rhs_flank_size = 0;
     } else {
         rhs_flank_size += alignment_offset + truth_alignment_size;
