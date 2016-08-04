@@ -30,13 +30,13 @@
 bin/*
 
 # CMake
-build/CMakeCache.txt
-build/CMakeFiles
-build/CMakeScripts
-build/Makefile
-build/cmake_install.cmake
-build/install_manifest.txt
-build/CTestTestfile.cmake
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Makefile
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
