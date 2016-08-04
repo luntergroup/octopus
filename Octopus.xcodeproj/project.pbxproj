@@ -892,8 +892,8 @@
 				CA0DF5881CCADA36000193CF /* call.cpp */,
 				D402C53C1CC9264E00C8B8A7 /* call.hpp */,
 				CA566E341D0486F8007C5180 /* call_types.hpp */,
-				D402C5421CC934CF00C8B8A7 /* germline_variant_call.cpp */,
 				D402C5431CC934CF00C8B8A7 /* germline_variant_call.hpp */,
+				D402C5421CC934CF00C8B8A7 /* germline_variant_call.cpp */,
 				CACF81351C870E8300E9E6BD /* haplotype_filter.cpp */,
 				CACF81361C870E8300E9E6BD /* haplotype_filter.hpp */,
 				D402C5481CC935C100C8B8A7 /* reference_call.cpp */,
@@ -1024,8 +1024,8 @@
 				CAE3E2A01AA1D39100C01B2C /* compression.hpp */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.hpp */,
 				CA53D3051C0A7881009A216D /* merge_transform.hpp */,
-				CAD5EC081AD6FD1E00892816 /* read_stats.cpp */,
 				CAD5EC091AD6FD1E00892816 /* read_stats.hpp */,
+				CAD5EC081AD6FD1E00892816 /* read_stats.cpp */,
 				D4BB95001CA0590B00886B57 /* sequence_complexity.hpp */,
 				CA8A66451B7E5E0C008CE1D8 /* sequence_utils.hpp */,
 				D4907F5E1A8A3ADD00639203 /* string_utils.hpp */,
@@ -1049,8 +1049,6 @@
 		CAE3E2A51AA24D6000C01B2C /* variant */ = {
 			isa = PBXGroup;
 			children = (
-				CAE3E2B41AA36EA600C01B2C /* htslib_bcf_facade.cpp */,
-				CAE3E2B51AA36EA600C01B2C /* htslib_bcf_facade.hpp */,
 				CAF23F6C1BA16E94006B673F /* vcf.hpp */,
 				D4636C651B678B8000FEA7D2 /* vcf_header.cpp */,
 				D4636C661B678B8000FEA7D2 /* vcf_header.hpp */,
@@ -1067,6 +1065,8 @@
 				CAF23F6F1BA2C308006B673F /* vcf_utils.hpp */,
 				D4636C681B6919B500FEA7D2 /* vcf_writer.cpp */,
 				D4636C691B6919B500FEA7D2 /* vcf_writer.hpp */,
+				CAE3E2B51AA36EA600C01B2C /* htslib_bcf_facade.hpp */,
+				CAE3E2B41AA36EA600C01B2C /* htslib_bcf_facade.cpp */,
 			);
 			path = variant;
 			sourceTree = "<group>";

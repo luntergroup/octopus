@@ -1,10 +1,5 @@
-//
-//  read_pipe.cpp
-//  octopus
-//
-//  Created by Daniel Cooke on 19/10/2015.
-//  Copyright © 2015 Oxford University. All rights reserved.
-//
+// Copyright (c) 2016 Daniel Cooke
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_pipe.hpp"
 

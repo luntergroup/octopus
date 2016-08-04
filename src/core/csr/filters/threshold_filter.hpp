@@ -1,10 +1,5 @@
-//
-//  threshold_filter.hpp
-//  octopus
-//
-//  Created by Daniel Cooke on 19/07/2016.
-//  Copyright © 2016 Oxford University. All rights reserved.
-//
+// Copyright (c) 2016 Daniel Cooke
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef threshold_filter_hpp
 #define threshold_filter_hpp

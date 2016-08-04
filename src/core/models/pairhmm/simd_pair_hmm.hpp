@@ -3,6 +3,9 @@
  It may not be distributed, made public, or used in other software without the permission of the copyright holder
  ******************************************************************************************************************/
 
+// Copyright (c) 2016 Daniel Cooke
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
+
 #ifndef simd_pair_hmm_hpp
 #define simd_pair_hmm_hpp
 

@@ -1,10 +1,5 @@
-//
-//  coalescent_model.hpp
-//  octopus
-//
-//  Created by Daniel Cooke on 01/04/2016.
-//  Copyright © 2016 Oxford University. All rights reserved.
-//
+// Copyright (c) 2016 Daniel Cooke
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef coalescent_model_hpp
 #define coalescent_model_hpp

@@ -1,10 +1,5 @@
-//
-//  snv_error_model.hpp
-//  octopus
-//
-//  Created by Daniel Cooke on 15/06/2016.
-//  Copyright © 2016 Oxford University. All rights reserved.
-//
+// Copyright (c) 2016 Daniel Cooke
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef snv_error_model_hpp
 #define snv_error_model_hpp

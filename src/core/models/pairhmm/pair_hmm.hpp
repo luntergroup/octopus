@@ -1,10 +1,5 @@
-//
-//  pair_hmm.hpp
-//  pair_hmm
-//
-//  Created by Daniel Cooke on 14/12/2015.
-//  Copyright © 2015 Oxford University. All rights reserved.
-//
+// Copyright (c) 2016 Daniel Cooke
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef pair_hmm_hpp
 #define pair_hmm_hpp

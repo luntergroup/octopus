@@ -1,10 +1,5 @@
-//
-//  trio_caller.hpp
-//  octopus
-//
-//  Created by Daniel Cooke on 03/02/2016.
-//  Copyright © 2016 Oxford University. All rights reserved.
-//
+// Copyright (c) 2016 Daniel Cooke
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef trio_caller_hpp
 #define trio_caller_hpp

@@ -1,10 +1,5 @@
-//
-//  compression.hpp
-//  octopus
-//
-//  Created by Daniel Cooke on 28/02/2015.
-//  Copyright (c) 2015 Oxford University. All rights reserved.
-//
+// Copyright (c) 2016 Daniel Cooke
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef Octopus_compression_hpp
 #define Octopus_compression_hpp
