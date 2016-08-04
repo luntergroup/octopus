@@ -298,7 +298,10 @@ OptionMap parse_options(const int argc, const char** argv)
      "All contigs with unspecified ploidies are assumed the organism ploidy")
     
     ("contig-ploidies",
-     po::value<std::vector<ContigPloidy>>()->multitoken(),
+     po::value<std::vector<ContigPloidy>>()->multitoken()
+     ->default_value(std::vector<ContigPloidy> {
+        {boost::none, "Y", 1}, {boost::none, "MT", 1}}, "Y=1 MT=1")
+     ->composing(),
      "Space-seperated list of contig (contig=ploidy) or sample contig"
      " (sample:contig=ploidy) ploidies")
     
