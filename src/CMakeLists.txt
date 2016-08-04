@@ -315,4 +315,10 @@ endif (HTSlib_FOUND)
 
 set_target_properties(octopus PROPERTIES INTERPROCEDURAL_OPTIMIZATION True)
 
-install(TARGETS octopus DESTINATION ${octopus_SOURCE_DIR}/bin)
+option(MyOption "INSTALL_GLOBAL" OFF)
+
+if(GLOBAL)
+    install(TARGETS octopus DESTINATION usr/local/bin)
+else()
+    install(TARGETS octopus DESTINATION ${octopus_SOURCE_DIR}/bin)
+endif()
