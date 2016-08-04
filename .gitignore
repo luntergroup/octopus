@@ -29,7 +29,7 @@
 # Executables
 bin/*
 
-# CMake stuff
+# CMake
 build/CMakeCache.txt
 build/CMakeFiles
 build/CMakeScripts
