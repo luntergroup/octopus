@@ -44,29 +44,24 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description backend("Backend");
     backend.add_options()
-    ("working-directory,wd",
+    ("working-directory,w",
      po::value<std::string>(),
      "Sets the working directory")
     
-    ("threads,t",
+    ("threads",
      po::value<unsigned>()->implicit_value(0),
      "Maximum number of threads to be used, enabling this option with no argument lets the application"
      " decide the number of threads ands enables specific algorithm parallelisation")
     
-    ("max-reference-cache-footprint,mrcf",
+    ("max-reference-cache-footprint",
      po::value<float>()->default_value(50),
      "Maximum memory footprint for cached reference sequence (in megabytes)")
     
-    ("target-read-buffer-footprint,trbf",
+    ("target-read-buffer-footprint",
      po::value<float>()->default_value(0.5),
      "None binding request to limit the memory footprint of buffered read data (in gigabytes)")
     
-    ("compress-reads,cr",
-     po::bool_switch()->default_value(false),
-     "Compresses all read data when not being used resulting in a smaller memory footprint"
-     " but slower processing")
-    
-    ("max-open-read-files,morf",
+    ("max-open-read-files",
      po::value<unsigned>()->default_value(250),
      "Limits the number of read files that can be open simultaneously")
     ;
@@ -78,16 +73,16 @@ OptionMap parse_options(const int argc, const char** argv)
      "FASTA format reference genome file to be analysed. Target regions"
      " will be extracted from the reference index if not provded explicitly")
     
-    ("reads,r",
+    ("reads,I",
      po::value<std::vector<std::string>>()->multitoken(),
      "Space-seperated list of BAM/CRAM files to be analysed."
      " May be specified multiple times")
     
-    ("reads-file,rf",
+    ("reads-file",
      po::value<std::string>(),
      "File containing a list of BAM/CRAM files, one per line, to be analysed")
     
-    ("one-based-indexing,1bi",
+    ("one-based-indexing",
      po::bool_switch()->default_value(false),
      "Notifies that input regions are given using one based indexing rather than zero based")
     
@@ -96,16 +91,16 @@ OptionMap parse_options(const int argc, const char** argv)
      "Space-seperated list of regions (chrom:begin-end) to be analysed."
      " May be specified multiple times")
     
-    ("regions-file,TF",
+    ("regions-file",
      po::value<std::string>(),
      "File containing a list of regions (chrom:begin-end), one per line, to be analysed")
     
-    ("skip-regions,sr",
+    ("skip-regions,t",
      po::value<std::vector<std::string>>()->multitoken(),
      "Space-seperated list of regions (chrom:begin-end) to skip"
      " May be specified multiple times")
     
-    ("skip-regions-file,srf",
+    ("skip-regions-file",
      po::value<std::string>(),
      "File of regions (chrom:begin-end), one per line, to skip")
     
@@ -113,7 +108,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<std::string>>()->multitoken(),
      "Space-seperated list of sample names to analyse")
     
-    ("samples-file,SF",
+    ("samples-file",
      po::value<std::string>(),
      "File of sample names to analyse, one per line, which must be a subset of the samples"
      " that appear in the read files")
@@ -122,7 +117,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>()->default_value("octopus_calls.vcf"),
      "File to where output is written")
     
-    ("contig-output-order,coo",
+    ("contig-output-order",
      po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::AsInReferenceIndex),
      "The order contigs should be written to the output")
     
@@ -245,33 +240,33 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description candidates("Candidate variant generation");
     candidates.add_options()
-    ("disable-raw-cigar-candidate-generator,no-cigar-candidates",
+    ("disable-raw-cigar-candidate-generator",
      po::bool_switch()->default_value(false),
      "Disables candidate generation from raw read alignments (CIGAR strings)")
     
-    ("disable-assembly-candidate-generator,no-assembly-candidates",
+    ("disable-assembly-candidate-generator",
      po::bool_switch()->default_value(false),
      "Disables candidate generation using local re-assembly")
     
-    ("generate-candidates-from-source,source",
+    ("generate-candidates-from-source",
      po::value<std::string>(),
      "Variant file path containing known variants. These variants will automatically become"
      " candidates")
     
-    ("min-base-quality,min-bq",
+    ("min-base-quality",
      po::value<unsigned>()->default_value(20),
      "Only bases with quality above this value are considered for candidate generation")
     
-    ("min-supporting-reads,min-support",
+    ("min-supporting-reads",
      po::value<unsigned>()->implicit_value(2),
      "Minimum number of reads that must support a variant if it is to be considered a candidate."
      " By default octopus will automatically determine this value")
     
-    ("max-variant-size,max-var-size",
+    ("max-variant-size",
      po::value<unsigned>()->default_value(2000),
      "Maximum candidate varaint size to consider (in region space)")
     
-    ("kmer-size,kmer",
+    ("kmer-size",
      po::value<std::vector<unsigned>>()->multitoken()
      ->default_value(std::vector<unsigned> {10, 25}, "10 25")->composing(),
      "K-mer sizes to use for local re-assembly")
@@ -288,11 +283,11 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>()->default_value("population"),
      "Which of the octopus callers to use")
     
-    ("organism-ploidy,ploidy",
+    ("organism-ploidy,P",
      po::value<unsigned>()->default_value(2),
      "All contigs with unspecified ploidies are assumed the organism ploidy")
     
-    ("contig-ploidies",
+    ("contig-ploidies,p",
      po::value<std::vector<ContigPloidy>>()->multitoken()
      ->default_value(std::vector<ContigPloidy> {
         {boost::none, "Y", 1}, {boost::none, "MT", 1}}, "Y=1 MT=1")
@@ -305,15 +300,15 @@ OptionMap parse_options(const int argc, const char** argv)
      "File containing a list of contig (contig=ploidy) or sample contig"
      " (sample:contig=ploidy) ploidies, one per line")
     
-    ("min-variant-posterior,min-post",
+    ("min-variant-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
      "Report variant alleles with posterior probability (phred scale) greater than this")
     
-    ("min-refcall-posterior,min-ref-post",
+    ("min-refcall-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
      "Report reference alleles with posterior probability (phred scale) greater than this")
     
-    ("report-refcalls,gvcf",
+    ("report-refcalls,g",
      po::value<RefCallType>()->implicit_value(RefCallType::Blocked),
      "Caller will report reference confidence calls for each position (Positional),"
      " or in automatically sized blocks (Blocked)")
@@ -322,60 +317,60 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Only reports call sites (i.e. without sample genotype information)")
     
-    ("snp-heterozygosity,snp-hets",
+    ("snp-heterozygosity",
      po::value<float>()->default_value(0.001, "0.001"),
      "The germline SNP heterozygosity used to calculate genotype priors")
     
-    ("indel-heterozygosity,indel-hets",
+    ("indel-heterozygosity",
      po::value<float>()->default_value(0.0001, "0.0001"),
      "The germline indel heterozygosity used to calculate genotype priors")
     ;
     
     po::options_description cancer("Cancer caller");
     cancer.add_options()
-    ("normal-sample,normal",
+    ("normal-sample,N",
      po::value<std::string>(),
      "Normal sample - all other samples are considered tumour")
     
-    ("somatic-mutation-rate,somatic-rate",
+    ("somatic-mutation-rate",
      po::value<float>()->default_value(0.00001, "0.00001"),
      "Expected somatic mutation rate, per megabase pair, for this sample")
     
-    ("min-somatic-frequency,min-somatic-freq",
+    ("min-somatic-frequency",
      po::value<float>()->default_value(0.01, "0.01"),
      "minimum allele frequency that can be considered as a viable somatic mutation")
     
-    ("credible-mass,cm",
+    ("credible-mass",
      po::value<float>()->default_value(0.99, "0.99"),
      "Mass of the posterior density to use for evaluating allele frequencies")
     
-    ("min-somatic-posterior,min-somatic-post",
+    ("min-somatic-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
      "Minimum somatic mutation call posterior probability (phred scale)")
     
-    ("somatics-only",
+    ("somatics-only,y",
      po::bool_switch()->default_value(false),
      "Only report somatic variant calls")
     ;
     
     po::options_description trio("Trio caller");
     trio.add_options()
-    ("maternal-sample,mother",
+    ("maternal-sample,M",
      po::value<std::string>(),
      "Maternal sample")
     
-    ("paternal-sample,father",
+    ("paternal-sample,F",
      po::value<std::string>(),
      "Paternal sample")
     
-    ("denovos-only",
+    ("denovos-only,d",
      po::bool_switch()->default_value(false),
      "Only report de novo variant calls (i.e. alleles unique to the child)")
     ;
     
     po::options_description phaser("Phasing options");
     phaser.add_options()
-    ("phasing-level,phase",
+    ("phasing-level,l",
      po::value<PhasingLevel>()->default_value(PhasingLevel::Conservative),
      "Level of phasing - longer range phasing can improve calling accuracy at the cost"
      " of runtime speed. Possible values are: Minimal, Conservative, Aggressive")
@@ -395,16 +390,16 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description advanced("Advanced calling algorithm");
     advanced.add_options()
-    ("max-haplotypes,max-haps",
+    ("max-haplotypes",
      po::value<unsigned>()->default_value(128),
      "Maximum number of candidate haplotypes the caller may consider")
     
-    ("min-haplotype-filter-posterior,min-hap-post",
+    ("min-haplotype-filter-posterior",
      po::value<float>()->default_value(1e-10, "1e-10"),
      "Haplotypes with posterior less than this can be filtered, allowing greater"
      " longer haplotype extesion in complex regions")
     
-    ("disable-inactive-flank-scoring,noIFS",
+    ("disable-inactive-flank-scoring",
      po::bool_switch()->default_value(false),
      "Disables additional calculation to adjust alignment score when there are inactive"
      " candidates in haplotype flanking regions")
@@ -412,11 +407,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description call_filtering("Callset filtering");
     call_filtering.add_options()
-    ("disable-call-filtering,no-filtering",
+    ("disable-call-filtering,K",
      po::bool_switch()->default_value(false),
      "Disables all callset filtering")
     
-    ("disable-model-filtering,noMF",
+    ("disable-model-filtering,k",
      po::bool_switch()->default_value(false),
      "Disables model based filtering of variant calls")
     ;
