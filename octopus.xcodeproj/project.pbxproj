@@ -422,6 +422,8 @@
 		D424E0CC1D54BC1100654AA3 /* timers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timers.cpp; sourceTree = "<group>"; };
 		D424E0CD1D54BC1100654AA3 /* timers.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = timers.hpp; sourceTree = "<group>"; };
 		D424E0CF1D54BC1600654AA3 /* benchmark_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = benchmark_utils.hpp; sourceTree = "<group>"; };
+		D424E0D21D54CB7000654AA3 /* octopus-manual.tex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "octopus-manual.tex"; sourceTree = "<group>"; };
+		D424E0D31D54CB7500654AA3 /* octopus-dev-manual.tex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "octopus-dev-manual.tex"; sourceTree = "<group>"; };
 		D42F72ED1C5B8A4D00995F54 /* trio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = trio.cpp; sourceTree = "<group>"; };
 		D42F72EE1C5B8A4D00995F54 /* trio.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = trio.hpp; sourceTree = "<group>"; };
 		D42F72FE1C621C4C00995F54 /* trio_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = trio_caller.cpp; sourceTree = "<group>"; };
@@ -1220,6 +1222,22 @@
 			path = benchmark;
 			sourceTree = "<group>";
 		};
+		D424E0D01D54CB5400654AA3 /* dev */ = {
+			isa = PBXGroup;
+			children = (
+				D424E0D31D54CB7500654AA3 /* octopus-dev-manual.tex */,
+			);
+			path = dev;
+			sourceTree = "<group>";
+		};
+		D424E0D11D54CB6500654AA3 /* user */ = {
+			isa = PBXGroup;
+			children = (
+				D424E0D21D54CB7000654AA3 /* octopus-manual.tex */,
+			);
+			path = user;
+			sourceTree = "<group>";
+		};
 		D42F72F31C5BA3C000995F54 /* genotype */ = {
 			isa = PBXGroup;
 			children = (
@@ -1331,6 +1349,8 @@
 		D4C8FF9F1D4A50D000BEFC8E /* manuals */ = {
 			isa = PBXGroup;
 			children = (
+				D424E0D11D54CB6500654AA3 /* user */,
+				D424E0D01D54CB5400654AA3 /* dev */,
 			);
 			path = manuals;
 			sourceTree = "<group>";

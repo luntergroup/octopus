@@ -301,7 +301,7 @@ if (BUILD_TESTING)
     target_link_libraries(Octopus tandem)
     
     add_definitions(-DBOOST_LOG_DYN_LINK) # Required for log
-    find_package (Boost 1.61 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
+    find_package (Boost 1.58 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (Octopus PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (Octopus ${Boost_LIBRARIES})
