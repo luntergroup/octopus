@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.com/dancooke/octopus.svg?token=U9L3a7MWio2P3XpPT3JV&branch=master)](https://travis-ci.com/dancooke/octopus)
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
+[![Gitter](https://badges.gitter.im/octopus-caller/Lobby.svg)](https://gitter.im/octopus-caller/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 ---
 
