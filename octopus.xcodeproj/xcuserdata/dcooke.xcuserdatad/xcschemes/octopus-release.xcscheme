@@ -17,7 +17,7 @@
                BlueprintIdentifier = "CAA4DC201A81981400DD3E9A"
                BuildableName = "Octopus"
                BlueprintName = "Octopus"
-               ReferencedContainer = "container:Octopus.xcodeproj">
+               ReferencedContainer = "container:octopus.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,7 +35,7 @@
             BlueprintIdentifier = "CAA4DC201A81981400DD3E9A"
             BuildableName = "Octopus"
             BlueprintName = "Octopus"
-            ReferencedContainer = "container:Octopus.xcodeproj">
+            ReferencedContainer = "container:octopus.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -58,7 +58,7 @@
             BlueprintIdentifier = "CAA4DC201A81981400DD3E9A"
             BuildableName = "Octopus"
             BlueprintName = "Octopus"
-            ReferencedContainer = "container:Octopus.xcodeproj">
+            ReferencedContainer = "container:octopus.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <AdditionalOptions>
@@ -77,7 +77,7 @@
             BlueprintIdentifier = "CAA4DC201A81981400DD3E9A"
             BuildableName = "Octopus"
             BlueprintName = "Octopus"
-            ReferencedContainer = "container:Octopus.xcodeproj">
+            ReferencedContainer = "container:octopus.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
