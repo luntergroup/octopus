@@ -274,15 +274,8 @@ set(INCLUDE_SOURCES
     ${octopus_SOURCE_DIR}/lib/tandem/tandem.hpp
 )
 
-add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
 
-target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test/benchmarks)
-
-target_link_libraries(octopus tandem)
-
-# Required for log
 set(REQUIRED_BOOST_LIBRARIES
     system
     system-mt
@@ -298,27 +291,58 @@ set(REQUIRED_BOOST_LIBRARIES
     timer
     thread-mt
 )
-add_definitions(-DBOOST_LOG_DYN_LINK)
-find_package (Boost 1.61 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
-if (Boost_FOUND)
-    target_include_directories (octopus PUBLIC ${Boost_INCLUDE_DIR})
-    target_link_libraries (octopus ${Boost_LIBRARIES})
-endif (Boost_FOUND)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
+if (BUILD_TESTING)
+    # Make a library of all octopus non-main.cpp sources so can be used with tests
+    add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
+    
+    target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test/benchmarks)
+    
+    target_link_libraries(Octopus tandem)
+    
+    add_definitions(-DBOOST_LOG_DYN_LINK) # Required for log
+    find_package (Boost 1.61 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
+    if (Boost_FOUND)
+        target_include_directories (Octopus PUBLIC ${Boost_INCLUDE_DIR})
+        target_link_libraries (Octopus ${Boost_LIBRARIES})
+    endif (Boost_FOUND)
+    
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
 
-find_package (HTSlib 1.3.1 REQUIRED)
-if (HTSlib_FOUND)
-    target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
-    target_link_libraries (octopus ${HTSlib_LIBRARIES})
-endif (HTSlib_FOUND)
-
-set_target_properties(octopus PROPERTIES INTERPROCEDURAL_OPTIMIZATION True)
-
-option(MyOption "INSTALL_GLOBAL" OFF)
-
-if(GLOBAL)
-    install(TARGETS octopus DESTINATION usr/local/bin)
+    find_package (HTSlib 1.3.1 REQUIRED)
+    if (HTSlib_FOUND)
+        target_include_directories (Octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
+        target_link_libraries (Octopus ${HTSlib_LIBRARIES})
+    endif (HTSlib_FOUND)
 else()
-    install(TARGETS octopus DESTINATION ${octopus_SOURCE_DIR}/bin)
+    add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
+    
+    target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test/benchmarks)
+    
+    target_link_libraries(octopus tandem)
+    
+    add_definitions(-DBOOST_LOG_DYN_LINK) # Required for log
+    find_package (Boost 1.61 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
+    if (Boost_FOUND)
+        target_include_directories (octopus PUBLIC ${Boost_INCLUDE_DIR})
+        target_link_libraries (octopus ${Boost_LIBRARIES})
+    endif (Boost_FOUND)
+    
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
+    
+    find_package (HTSlib 1.3.1 REQUIRED)
+    if (HTSlib_FOUND)
+        target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
+        target_link_libraries (octopus ${HTSlib_LIBRARIES})
+    endif (HTSlib_FOUND)
+    
+    set_target_properties(octopus PROPERTIES INTERPROCEDURAL_OPTIMIZATION True)
+    
+    option(INSTALL_GLOBAL "INSTALL_GLOBAL" OFF)
+    
+    if(INSTALL_GLOBAL)
+        install(TARGETS octopus DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+    else()
+        install(TARGETS octopus DESTINATION ${octopus_SOURCE_DIR}/bin)
+    endif()
 endif()
