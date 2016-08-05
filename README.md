@@ -25,6 +25,7 @@ Octopus is a mapping-based variant caller that implements several calling models
 Octopus can be built and installed on a wide range of operating systems including most Unix based systems (Linux, OS X) and Windows.
 
 ####*Installing with Homebrew (for OS X)*
+
 The recommended method of installation for Max OS X is with the package manager [Homebrew](http://brew.sh)
 
 ```shell
@@ -40,7 +41,8 @@ $ brew uninstall octopus
 ```
 
 ####*Quick installation with Python3*
-Manually installing octopus first requires obtaining the binaries. First `cd` to a directory where you wish to install octopus and execute
+
+Manually installing octopus requires obtaining a copy the binaries. In the command line, direct to an appropriate install directory and execute
 
 ```shell
 $ git clone https://github.com/dancooke/octopus.git
@@ -52,7 +54,7 @@ then use the Python3 install helper
 $ ./octopus/make.py
 ```
 
-by default this installs to `/bin` relative to where you installed octopus. To intall into `/usr/local/bin` use
+by default this installs to `/bin` relative to where you installed octopus. To intall to a root directory (e.g. `/usr/local/bin`) use
 
 ```shell
 $ ./octopus/make.py --root
@@ -61,6 +63,7 @@ $ ./octopus/make.py --root
 this may prompt you to enter a `sudo` password.
 
 ####*Installing with CMake*
+
 If Python3 isn't available, the binaries can be installed manually with [CMake](https://cmake.org)
 
 ```shell
@@ -83,11 +86,13 @@ $ octopus --help
 Octopus comes packaged with unit, regression, and benchmark testing. The unit tests are self-contained whilst the regression amd benchmark tests require external data sources.
 
 ####*Running the tests with Python3*
+
 ```shell
 $ ./test.py
 ```
 
 ####*Running tests with CMake*
+
 ```shell
 $ cd build
 $ cmake -DBUILD_TESTING=ON .. && make test
