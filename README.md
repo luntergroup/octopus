@@ -84,7 +84,7 @@ $ octopus --help
 
 ##Running Tests
 
-Octopus comes packaged with unit, regression, and benchmark testing. The unit tests are self-contained whilst the regression amd benchmark tests require external data sources.
+Octopus comes packaged with unit, regression, and benchmark testing. The unit tests are self-contained whilst the regression and benchmark tests require external data sources.
 
 ####*Running the tests with Python3*
 
@@ -101,7 +101,7 @@ $ cmake -DBUILD_TESTING=ON .. && make test
 
 ##Examples
 
-Here are some basic examples to get started.
+Here are some basic examples to get started. These examples are by no means exhaustive, and users are directed to the documentation for further details.
 
 ####*Calling germline variants in an individual*
 
@@ -125,7 +125,7 @@ $ octopus -R hs37d5.fa -I multi-sample.bam -S NA12878
 
 ####*Joint variant calling*
 
-Octopus uses different calling models for populations and individuals. Briefly, the indiviual model is exact whilst the population model uses approximations. However, it is recommended to use the population model to call *germline variants* in multiple samples from the same population as the model can leverage information between indiviuals.
+Octopus uses different calling models for populations and individuals. Briefly, the individual model is exact whilst the population model uses approximations. However, it is recommended to use the population model to call *germline variants* in multiple samples from the same population as the model can leverage information between individuals.
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
@@ -139,7 +139,7 @@ By default octopus will call all possible regions (as specified in the reference
 $ octopus -R hs37d5.fa -I NA12878.bam -T 1 2:30,000,000- 3:10,000,000-20,000,000
 ```
 
-Or conversly a set of regions to *exclude* can be given with `--skip-regions` (`-t`)
+Or conversely a set of regions to *exclude* can be given with `--skip-regions` (`-t`)
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam -t 1 2:30,000,000- 3:10,000,000-20,000,000
@@ -147,7 +147,7 @@ $ octopus -R hs37d5.fa -I NA12878.bam -t 1 2:30,000,000- 3:10,000,000-20,000,000
 
 ####*Calling somatic variants*
 
-By default octopus will use either the indiviual or population models. To use a different calling model, use the `--caller` (`-C`) option.
+By default octopus will use either the individual or population models. To use a different calling model, use the `--caller` (`-C`) option.
 
 To call somatic mutations in an *individual* with a normal sample (`--normal-sample`; `-N`) use
 
@@ -163,7 +163,7 @@ It is also possible to call multiple tumours from the same individual jointly
 $ octopus -C somatic -R hs37d5.fa -I normal.bam tumourA.bam tumourB -N NORMAL
 ```
 
-Octopus will then emit seperate genotype calls for each sample.
+Octopus will then emit separate genotype calls for each sample.
 
 ####*Calling denovo mutations*
 
