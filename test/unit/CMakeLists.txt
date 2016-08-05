@@ -48,7 +48,7 @@ set(OCTOPUS_TEST_SOURCES
 )
 
 add_definitions(-DBOOST_TEST_DYN_LINK)
-find_package(Boost 1.58 REQUIRED COMPONENTS unit_test_framework REQUIRED)
+find_package(Boost 1.61 REQUIRED COMPONENTS unit_test_framework REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS} ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
 
