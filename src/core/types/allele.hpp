@@ -32,7 +32,7 @@ template <typename RegionTp>
 class BasicAllele : public Comparable<BasicAllele<RegionTp>>, public Mappable<BasicAllele<RegionTp>>
 {
 public:
-    using RegionType         = RegionTp;
+    using MappingDomain      = RegionTp;
     using NucleotideSequence = ReferenceGenome::GeneticSequence;
     
     //static_assert(is_region<RegionType>, "Not a region");

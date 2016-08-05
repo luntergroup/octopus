@@ -893,12 +893,12 @@ bool has_multiple_segments(const bam1_core_t& c) noexcept
     
 auto next_segment_position(const bam1_core_t& c) noexcept
 {
-    return static_cast<AlignedRead::RegionType::Position>(c.mpos);
+    return static_cast<AlignedRead::MappingDomain::Position>(c.mpos);
 }
 
 auto template_length(const bam1_core_t& c) noexcept
 {
-    return static_cast<AlignedRead::RegionType::Size>(std::abs(c.isize));
+    return static_cast<AlignedRead::MappingDomain::Size>(std::abs(c.isize));
 }
     
 auto extract_next_segment_flags(const bam1_core_t& c) noexcept
@@ -949,7 +949,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         read_begin_tmp = 0;
     }
     
-    const auto read_begin = static_cast<AlignedRead::RegionType::Position>(read_begin_tmp);
+    const auto read_begin = static_cast<AlignedRead::MappingDomain::Position>(read_begin_tmp);
     
     const auto& contig_name = hts_facade_.contig_name(info.tid);
     
@@ -958,7 +958,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
             GenomicRegion {
                 contig_name,
                 read_begin,
-                read_begin + reference_size<AlignedRead::RegionType::Position>(cigar)
+                read_begin + reference_size<AlignedRead::MappingDomain::Position>(cigar)
             },
             move(sequence),
             move(qualities),
@@ -975,7 +975,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
             GenomicRegion {
                 contig_name,
                 read_begin,
-                read_begin + reference_size<AlignedRead::RegionType::Size>(cigar)
+                read_begin + reference_size<AlignedRead::MappingDomain::Size>(cigar)
             },
             move(sequence),
             move(qualities),

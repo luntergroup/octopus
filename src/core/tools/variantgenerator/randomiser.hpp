@@ -47,7 +47,7 @@ private:
     std::string name() const override;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
-    AlignedRead::RegionType::Size max_read_size_ = 100;
+    AlignedRead::MappingDomain::Size max_read_size_ = 100;
 };
 
 } // namespace coretools

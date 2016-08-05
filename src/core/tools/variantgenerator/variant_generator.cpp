@@ -135,7 +135,7 @@ VariantGenerator::Builder& VariantGenerator::Builder::set_min_supporting_reads(c
     return *this;
 }
 
-VariantGenerator::Builder& VariantGenerator::Builder::set_max_variant_size(const Variant::RegionType::Size max)
+VariantGenerator::Builder& VariantGenerator::Builder::set_max_variant_size(const Variant::MappingDomain::Size max)
 {
     parameters_.max_variant_size = max;
     return *this;

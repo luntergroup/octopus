@@ -46,7 +46,7 @@ std::vector<Variant> Randomiser::do_generate_variants(const GenomicRegion& regio
     
     static std::default_random_engine generator {static_cast<unsigned>(seed)};
     
-    using T = Variant::RegionType::Size;
+    using T = Variant::MappingDomain::Size;
     
     std::uniform_int_distribution<T> uniform {0, std::min(num_positions, max_read_size_)};
     

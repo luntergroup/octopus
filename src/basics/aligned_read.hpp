@@ -28,7 +28,7 @@ namespace octopus {
 class AlignedRead : public Comparable<AlignedRead>, public Mappable<AlignedRead>
 {
 public:
-    using RegionType          = GenomicRegion;
+    using MappingDomain       = GenomicRegion;
     using NucleotideSequence  = std::string;
     using MappingQuality      = std::uint_fast8_t;
     using BaseQuality         = std::uint_fast8_t;
@@ -89,8 +89,8 @@ public:
     AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                 Qualities_&& qualities, CigarString_&& cigar_string,
                 MappingQuality mapping_quality, Flags flags,
-                String2_&& next_segment_contig_name, RegionType::Position next_segment_begin,
-                RegionType::Size inferred_template_length,
+                String2_&& next_segment_contig_name, MappingDomain::Position next_segment_begin,
+                MappingDomain::Size inferred_template_length,
                 const Segment::Flags& next_segment_flags);
     
     AlignedRead(const AlignedRead& other)            = default;
@@ -193,8 +193,8 @@ AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          Qualities_&& qualities, CigarString_&& cigar_string,
                          MappingQuality mapping_quality, Flags flags,
                          String2_&& next_segment_contig_name,
-                         RegionType::Position next_segment_begin,
-                         RegionType::Size inferred_template_length,
+                         MappingDomain::Position next_segment_begin,
+                         MappingDomain::Size inferred_template_length,
                          const Segment::Flags& next_segment_flags)
 :
 region_ {std::forward<GenomicRegion_>(reference_region)},

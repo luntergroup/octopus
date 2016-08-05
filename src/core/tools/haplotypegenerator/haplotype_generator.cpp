@@ -83,7 +83,7 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                        const MappableFlatSet<Variant>& candidates,
                                        const ReadMap& reads,
                                        Policies policies,
-                                       Haplotype::RegionType::Size min_flank_pad)
+                                       Haplotype::MappingDomain::Size min_flank_pad)
 try :
 policies_ {std::move(policies)},
 min_flank_pad_ {min_flank_pad},
@@ -683,7 +683,7 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_holdout_depth(
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_min_flank_pad(Haplotype::RegionType::Size n) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_min_flank_pad(Haplotype::MappingDomain::Size n) noexcept
 {
     min_flank_pad_ = n;
     return *this;

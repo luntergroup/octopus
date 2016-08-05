@@ -40,7 +40,7 @@ template <typename MappableType>
 class Genotype<MappableType> : public Equitable<Genotype<MappableType>>, public Mappable<Genotype<MappableType>>
 {
 public:
-    using RegionType = RegionType<MappableType>;
+    using MappingDomain = RegionType<MappableType>;
     
     Genotype() = default;
     
@@ -57,7 +57,7 @@ public:
     
     template <typename T> void emplace(T&& element);
     
-    const RegionType& mapped_region() const noexcept;
+    const MappingDomain& mapped_region() const noexcept;
     
     const MappableType& operator[](unsigned n) const;
     
@@ -87,6 +87,8 @@ template <>
 class Genotype<Haplotype> : public Equitable<Genotype<Haplotype>>, public Mappable<Genotype<Haplotype>>
 {
 public:
+    using MappingDomain = Haplotype::MappingDomain;
+    
     Genotype() = default;
     
     explicit Genotype(unsigned ploidy);
@@ -189,7 +191,7 @@ elements_ {elements}
 {}
 
 template <typename MappableType>
-const typename Genotype<MappableType>::RegionType& Genotype<MappableType>::mapped_region() const noexcept
+const typename Genotype<MappableType>::MappingDomain& Genotype<MappableType>::mapped_region() const noexcept
 {
     return elements_.front().mapped_region();
 }

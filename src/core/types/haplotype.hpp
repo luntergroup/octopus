@@ -46,7 +46,7 @@ namespace detail {
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
 {
 public:
-    using RegionType         = Allele::RegionType;
+    using MappingDomain      = Allele::MappingDomain;
     using NucleotideSequence = Allele::NucleotideSequence;
     
     class Builder;
@@ -95,7 +95,7 @@ public:
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     friend bool is_reference(const Haplotype& haplotype);
-    friend Haplotype expand(const Haplotype& haplotype, RegionType::Position n);
+    friend Haplotype expand(const Haplotype& haplotype, MappingDomain::Position n);
     
     template <typename S> friend void debug::print_alleles(S&&, const Haplotype&);
     template <typename S> friend void debug::print_variant_alleles(S&&, const Haplotype&);
@@ -297,7 +297,7 @@ std::vector<ContigAllele> splice_all(const Container& haplotypes, const ContigRe
 
 bool is_reference(const Haplotype& haplotype);
 
-Haplotype expand(const Haplotype& haplotype, Haplotype::RegionType::Size n);
+Haplotype expand(const Haplotype& haplotype, Haplotype::MappingDomain::Size n);
 
 std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs);
 

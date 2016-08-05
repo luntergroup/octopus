@@ -520,7 +520,7 @@ bool is_reference(const Haplotype& haplotype)
     return haplotype.sequence() == haplotype.reference_.get().fetch_sequence(haplotype.mapped_region());
 }
 
-Haplotype expand(const Haplotype& haplotype, Haplotype::RegionType::Size n)
+Haplotype expand(const Haplotype& haplotype, Haplotype::MappingDomain::Size n)
 {
     if (n == 0) return haplotype;
     return Haplotype {

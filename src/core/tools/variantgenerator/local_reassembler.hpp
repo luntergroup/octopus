@@ -32,7 +32,7 @@ public:
         std::vector<unsigned> kmer_sizes           = {10, 25, 35};
         AlignedRead::BaseQuality mask_threshold    = 0;
         unsigned min_supporting_reads              = 2;
-        Variant::RegionType::Size max_variant_size = 500;
+        Variant::MappingDomain::Size max_variant_size = 500;
     };
     
     LocalReassembler() = delete;
@@ -93,7 +93,7 @@ private:
     
     AlignedRead::BaseQuality mask_threshold_;
     unsigned min_supporting_reads_;
-    Variant::RegionType::Size max_variant_size_;
+    Variant::MappingDomain::Size max_variant_size_;
     
     void prepare_bins_to_insert(const AlignedRead& read);
     

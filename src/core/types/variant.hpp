@@ -30,7 +30,7 @@ class ReferenceGenome;
 class Variant : public Comparable<Variant>, public Mappable<Variant>
 {
 public:
-    using RegionType         = Allele::RegionType;
+    using MappingDomain      = Allele::MappingDomain;
     using NucleotideSequence = Allele::NucleotideSequence;
     
     Variant() = default;
@@ -43,7 +43,7 @@ public:
             Sequence1&& reference_allele, Sequence2&& alternative_allele);
     
     template <typename String, typename Sequence1, typename Sequence2>
-    Variant(String&& reference_contig_name, RegionType::Position reference_begin,
+    Variant(String&& reference_contig_name, MappingDomain::Position reference_begin,
             Sequence1&& reference_allele, Sequence2&& alternative_allele);
     
     Variant(const Variant&)            = default;
@@ -81,7 +81,7 @@ alternative_ {std::forward<GenomicRegion_>(ref_region), std::forward<Sequence2>(
 {}
 
 template <typename String, typename Sequence1, typename Sequence2>
-Variant::Variant(String&& ref_contig_name, const RegionType::Position ref_begin,
+Variant::Variant(String&& ref_contig_name, const MappingDomain::Position ref_begin,
                  Sequence1&& ref_sequence, Sequence2&& alt_sequence)
 :
 reference_ {std::forward<String>(ref_contig_name), ref_begin, std::forward<Sequence1>(ref_sequence)},

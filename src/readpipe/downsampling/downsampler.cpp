@@ -79,7 +79,7 @@ template <typename BidirIt>
 auto pick_sample(BidirIt first_unsampled, BidirIt last_unsampled,
                  const std::vector<GenomicRegion>& positions,
                  const PositionCoverages& required_coverage,
-                 const AlignedRead::RegionType::Size max_read_size)
+                 const AlignedRead::MappingDomain::Size max_read_size)
 {
     assert(first_unsampled < last_unsampled);
     

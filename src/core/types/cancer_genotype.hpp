@@ -22,6 +22,8 @@ class CancerGenotype
     : public Equitable<CancerGenotype<MappableType>>, public Mappable<CancerGenotype<MappableType>>
 {
 public:
+    using MappingDomain = typename Genotype<MappableType>::MappingDomain;
+    
     CancerGenotype() = default;
     
     CancerGenotype(std::initializer_list<MappableType> normal_elements,

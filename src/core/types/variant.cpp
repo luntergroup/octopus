@@ -305,7 +305,7 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     
     if (!is_left_alignable(variant)) return variant;
     
-    using SizeType = Variant::RegionType::Size;
+    using SizeType = Variant::MappingDomain::Size;
     
     const auto& ref_allele_sequence = ref_sequence(variant);
     const auto& alt_allele_sequence = alt_sequence(variant);

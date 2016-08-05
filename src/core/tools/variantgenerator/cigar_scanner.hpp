@@ -30,7 +30,7 @@ public:
     {
         AlignedRead::BaseQuality min_base_quality  = 20;
         unsigned min_support                       = 1;
-        Variant::RegionType::Size max_variant_size = 100;
+        Variant::MappingDomain::Size max_variant_size = 100;
         bool always_include_overlapping_indels     = true;
         unsigned max_poor_quality_insertion_bases  = 1;
     };
@@ -75,7 +75,7 @@ private:
     std::function<bool(const Variant&, const Variant&)> match_;
     
     std::deque<Variant> candidates_;
-    Variant::RegionType::Size max_seen_candidate_size_;
+    Variant::MappingDomain::Size max_seen_candidate_size_;
     
     template <typename T1, typename T2, typename T3>
     void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added);

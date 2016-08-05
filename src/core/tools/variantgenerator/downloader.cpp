@@ -9,7 +9,7 @@
 
 namespace octopus { namespace coretools {
 
-Downloader::Downloader(const ReferenceGenome& reference, Variant::RegionType::Size max_variant_size)
+Downloader::Downloader(const ReferenceGenome& reference, Variant::MappingDomain::Size max_variant_size)
 :
 reference_ {reference},
 max_variant_size_ {max_variant_size}
