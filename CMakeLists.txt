@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.5)
 
 project(octopus)
 
@@ -15,6 +15,5 @@ add_subdirectory(src)
 
 # for generating tests
 if (BUILD_TESTING)
-    enable_testing()
     add_subdirectory(test)
 endif(BUILD_TESTING)

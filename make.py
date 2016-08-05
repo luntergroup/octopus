@@ -37,7 +37,7 @@ args = vars(parser.parse_args())
 
 ret = 0
 if args["root"]:
-    ret = call(["cmake", "-DINSTALL_GLOBAL=ON", octopus_dir])
+    ret = call(["cmake", "-DINSTALL_ROOT=ON", octopus_dir])
 else:
     ret = call(["cmake", octopus_dir])
 
