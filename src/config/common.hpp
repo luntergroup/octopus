@@ -26,7 +26,9 @@ extern bool TRACE_MODE;
 
 namespace info
 {
-    const static std::string VERSION {"1.0"};
+    const static unsigned short VersionMajor {1};
+    const static unsigned short VersionMinor {0};
+    const static std::string VERSION {std::to_string(VersionMajor) + "." + std::to_string(VersionMinor)};
     const static std::string BUG_EMAIL {"dcooke@well.ox.ac.uk"};
     const static std::vector<std::string> AUTHORS {"Daniel Cooke"};
     const static std::string COPYRIGHT_NOTICE {"Copyright (c) 2016 University of Oxford"};
