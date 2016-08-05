@@ -531,7 +531,7 @@ collate_genome_calling_components(const OptionMap& options)
         return boost::none; // should already have logged this
     } catch (const std::exception& e) {
         logging::FatalLogger log {};
-        stream(log) << "Error in user input: '" << e.what() << "'";
+        stream(log) << "Error in user input: " << e.what();
         return boost::none;
     }
 }

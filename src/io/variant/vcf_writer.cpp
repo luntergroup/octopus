@@ -25,27 +25,28 @@ is_header_written_ {false}
 {
     using namespace boost::filesystem;
     
-    if (exists(file_path_)) {
-        remove(file_path_);
-    } else {
-        const auto dir = file_path_.parent_path();
-        
-        if (!(is_directory(dir) && exists(dir))) {
-            std::ostringstream ss {};
-            ss << "VcfWriter: the path ";
-            ss << file_path_;
-            ss << " is not writable";
+    if (file_path_.string() != "-") { // - is for stdout
+        if (exists(file_path_)) {
+            remove(file_path_);
+        } else {
+            const auto dir = file_path_.parent_path();
             
-            throw std::runtime_error {ss.str()};
+            if (!(is_directory(dir) && exists(dir))) {
+                std::ostringstream ss {};
+                ss << "VcfWriter: the path ";
+                ss << file_path_;
+                ss << " is not writable";
+                throw std::runtime_error {ss.str()};
+            }
         }
-    }
-    
-    Path index_path1 {file_path_.string() + ".csi"}, index_path2 {file_path_.string() + ".tbi"};
-    
-    if (exists(index_path1)) {
-        remove(index_path1);
-    } else if (exists(index_path2)) {
-        remove(index_path2);
+        
+        Path index_path1 {file_path_.string() + ".csi"}, index_path2 {file_path_.string() + ".tbi"};
+        
+        if (exists(index_path1)) {
+            remove(index_path1);
+        } else if (exists(index_path2)) {
+            remove(index_path2);
+        }
     }
     
     writer_ = std::make_unique<HtslibBcfFacade>(file_path_, "w");

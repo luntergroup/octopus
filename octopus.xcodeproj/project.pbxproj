@@ -1028,8 +1028,8 @@
 				CAEC8E181B73A9E5008FC858 /* vcf_type.hpp */,
 				CAF23F6E1BA2C308006B673F /* vcf_utils.cpp */,
 				CAF23F6F1BA2C308006B673F /* vcf_utils.hpp */,
-				D4636C681B6919B500FEA7D2 /* vcf_writer.cpp */,
 				D4636C691B6919B500FEA7D2 /* vcf_writer.hpp */,
+				D4636C681B6919B500FEA7D2 /* vcf_writer.cpp */,
 				CAE3E2B51AA36EA600C01B2C /* htslib_bcf_facade.hpp */,
 				CAE3E2B41AA36EA600C01B2C /* htslib_bcf_facade.cpp */,
 			);
