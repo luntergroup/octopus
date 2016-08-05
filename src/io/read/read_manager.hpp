@@ -100,8 +100,8 @@ private:
     unsigned max_open_files_ = 200;
     unsigned num_files_;
     
-    mutable OpenReaderMap open_readers_;
     mutable ClosedReaders closed_readers_;
+    mutable OpenReaderMap open_readers_;
     
     SampleIdToReaderPathMap reader_paths_containing_sample_;
     

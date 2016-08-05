@@ -290,8 +290,7 @@ GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, c
     return find_covered_subregion(samples(), region, max_reads);
 }
 
-namespace
-{
+namespace {
     template <typename Container>
     void merge_insert(Container&& src, Container& dst)
     {
@@ -408,7 +407,7 @@ bool ReadManager::is_open(const Path& reader_path) const noexcept
 std::vector<ReadManager::Path>::iterator ReadManager::partition_open(std::vector<Path>& reader_paths) const
 {
     return std::partition(std::begin(reader_paths), std::end(reader_paths),
-                          [this] (auto& reader_path) { return !is_open(reader_path); });
+                          [this] (const auto& path) { return !is_open(path); });
 }
 
 unsigned ReadManager::num_open_readers() const noexcept
@@ -514,8 +513,7 @@ ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& re
     return result;
 }
 
-void ReadManager::add_reader_to_sample_map(const Path& reader_path,
-                                           const std::vector<SampleName>& samples_in_reader)
+void ReadManager::add_reader_to_sample_map(const Path& reader_path, const std::vector<SampleName>& samples_in_reader)
 {
     for (const auto& sample : samples_in_reader) {
         reader_paths_containing_sample_[sample].emplace_back(reader_path);
