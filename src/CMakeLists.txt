@@ -295,7 +295,9 @@ set(REQUIRED_BOOST_LIBRARIES
 if (BUILD_TESTING)
     # Make a library of all octopus non-main.cpp sources so can be used with tests
     add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
-    
+
+    target_compile_features(Octopus PRIVATE cxx_thread_local)
+
     target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test)
     
     target_link_libraries(Octopus tandem)
@@ -316,7 +318,9 @@ if (BUILD_TESTING)
     endif (HTSlib_FOUND)
 else()
     add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
-    
+
+    target_compile_features(octopus PRIVATE cxx_thread_local)
+
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test)
     
     target_link_libraries(octopus tandem)
