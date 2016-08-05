@@ -22,50 +22,15 @@
 		CA16B11F1D4F6ADE006722C1 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = CA16B11B1D4F6ADE006722C1 /* utils.c */; };
 		CA16B1221D4F6AEF006722C1 /* tandem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA16B1201D4F6AEF006722C1 /* tandem.cpp */; };
 		CA16B1251D4FEE37006722C1 /* variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA16B1241D4FEE37006722C1 /* variant_generator.cpp */; };
-		CA17CDD61D53C3A20089435A /* read_manager_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDD31D53C3A20089435A /* read_manager_tests.cpp */; };
 		CA17CDD71D53C3A20089435A /* reference_genome_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDD41D53C3A20089435A /* reference_genome_tests.cpp */; };
-		CA17CDD81D53C3A20089435A /* vcf_reader_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDD51D53C3A20089435A /* vcf_reader_tests.cpp */; };
-		CA17CDDC1D53C3AD0089435A /* read_filterer_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDD91D53C3AD0089435A /* read_filterer_tests.cpp */; };
-		CA17CDDD1D53C3AD0089435A /* read_pipe_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDDA1D53C3AD0089435A /* read_pipe_tests.cpp */; };
-		CA17CDDE1D53C3AD0089435A /* read_transformer_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDDB1D53C3AD0089435A /* read_transformer_tests.cpp */; };
-		CA17CDE01D53C4270089435A /* progress_meter_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDDF1D53C4270089435A /* progress_meter_tests.cpp */; };
 		CA17CDE21D53C4520089435A /* mappable_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE11D53C4520089435A /* mappable_tests.cpp */; };
-		CA17CDE41D53C4570089435A /* mappable_algorithm_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE31D53C4570089435A /* mappable_algorithm_tests.cpp */; };
-		CA17CDE61D53C45B0089435A /* aligned_read_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE51D53C45B0089435A /* aligned_read_tests.cpp */; };
-		CA17CDE81D53C4770089435A /* mappable_flat_set_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE71D53C4770089435A /* mappable_flat_set_tests.cpp */; };
-		CA17CDEC1D53C4810089435A /* genotype_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE91D53C4810089435A /* genotype_tests.cpp */; };
 		CA17CDED1D53C4810089435A /* haplotype_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDEA1D53C4810089435A /* haplotype_tests.cpp */; };
-		CA17CDEE1D53C4810089435A /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDEB1D53C4810089435A /* variant_tests.cpp */; };
-		CA17CDF01D53C4920089435A /* allele_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDEF1D53C4920089435A /* allele_tests.cpp */; };
-		CA17CDF21D53C4A70089435A /* cigar_string_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF11D53C4A70089435A /* cigar_string_tests.cpp */; };
 		CA17CDF41D53C4B50089435A /* phred_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF31D53C4B50089435A /* phred_tests.cpp */; };
-		CA17CDFA1D53C4BE0089435A /* assembler_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF51D53C4BE0089435A /* assembler_tests.cpp */; };
-		CA17CDFB1D53C4BE0089435A /* genome_walker_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF61D53C4BE0089435A /* genome_walker_tests.cpp */; };
-		CA17CDFC1D53C4BE0089435A /* haplotype_tree_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF71D53C4BE0089435A /* haplotype_tree_tests.cpp */; };
-		CA17CDFD1D53C4BE0089435A /* phaser_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF81D53C4BE0089435A /* phaser_tests.cpp */; };
-		CA17CDFE1D53C4BE0089435A /* variant_generator_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF91D53C4BE0089435A /* variant_generator_tests.cpp */; };
-		CA17CE001D53C4C40089435A /* caller_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDFF1D53C4C40089435A /* caller_tests.cpp */; };
-		CA17CE021D53C4EB0089435A /* contig_region_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE011D53C4EB0089435A /* contig_region_tests.cpp */; };
-		CA17CE041D53C4FA0089435A /* genomic_region_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE031D53C4FA0089435A /* genomic_region_tests.cpp */; };
-		CA17CE061D53C51C0089435A /* comparable_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE051D53C51C0089435A /* comparable_tests.cpp */; };
-		CA17CE081D53C54D0089435A /* haplotype_generator_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE071D53C54D0089435A /* haplotype_generator_tests.cpp */; };
 		CA17CE0A1D53C55B0089435A /* cigar_scanner_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE091D53C55B0089435A /* cigar_scanner_tests.cpp */; };
 		CA17CE0C1D53C56B0089435A /* global_aligner_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE0B1D53C56B0089435A /* global_aligner_tests.cpp */; };
 		CA17CE0E1D53C57E0089435A /* local_reassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE0D1D53C57E0089435A /* local_reassembler.cpp */; };
-		CA17CE101D53C58D0089435A /* vcf_extractor_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE0F1D53C58D0089435A /* vcf_extractor_tests.cpp */; };
-		CA17CE131D53C5C20089435A /* pair_hmm_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE121D53C5C20089435A /* pair_hmm_tests.cpp */; };
-		CA17CE151D53C5D20089435A /* snv_error_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE141D53C5D20089435A /* snv_error_model_tests.cpp */; };
-		CA17CE171D53C5E60089435A /* indel_error_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE161D53C5E60089435A /* indel_error_model_tests.cpp */; };
-		CA17CE191D53C5F90089435A /* haplotype_likelihood_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE181D53C5F90089435A /* haplotype_likelihood_model_tests.cpp */; };
-		CA17CE1B1D53C6080089435A /* haplotype_likelihood_cache_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE1A1D53C6080089435A /* haplotype_likelihood_cache_tests.cpp */; };
-		CA17CE1D1D53C6160089435A /* kmer_mapper_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE1C1D53C6160089435A /* kmer_mapper_tests.cpp */; };
-		CA17CE1F1D53C6350089435A /* coalescent_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE1E1D53C6350089435A /* coalescent_model_tests.cpp */; };
-		CA17CE211D53C6440089435A /* germline_likelihood_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE201D53C6440089435A /* germline_likelihood_model_tests.cpp */; };
 		CA17CE231D53C6570089435A /* individual_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE221D53C6570089435A /* individual_model_tests.cpp */; };
 		CA17CE251D53C67E0089435A /* downsampler_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE241D53C67E0089435A /* downsampler_tests.cpp */; };
-		CA17CE271D53C6910089435A /* maths_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE261D53C6910089435A /* maths_tests.cpp */; };
-		CA17CE291D53C6B10089435A /* read_stats_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE281D53C6B10089435A /* read_stats_tests.cpp */; };
-		CA17CE371D53EA0F0089435A /* unit_test_main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE361D53EA0E0089435A /* unit_test_main.cpp */; };
 		CA2827C11B2A4CD0007712D4 /* downloader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2827BF1B2A4CD0007712D4 /* downloader.cpp */; };
 		CA2D59F91CAEFB4B005EA347 /* read_transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2D59F81CAEFB4B005EA347 /* read_transform.cpp */; };
 		CA2D59FE1CB972FE005EA347 /* cancer_genotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2D59FD1CB972FE005EA347 /* cancer_genotype.cpp */; };
@@ -90,9 +55,8 @@
 		CA91C2CB1B8DE02300609FFA /* tumour_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C91B8DE02300609FFA /* tumour_model.cpp */; };
 		CA98BBA71C8EEA20000CE9C4 /* assembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA98BBA51C8EEA20000CE9C4 /* assembler.cpp */; };
 		CA98BBAA1C918B07000CE9C4 /* progress_meter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA98BBA81C918B07000CE9C4 /* progress_meter.cpp */; };
-		CAA4DC251A81981400DD3E9A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC241A81981400DD3E9A /* main.cpp */; };
 		CAA4DC321A82B36300DD3E9A /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC311A82B36300DD3E9A /* README.md */; };
-		CAA4DC351A83A39D00DD3E9A /* Octopus in CopyFiles */ = {isa = PBXBuildFile; fileRef = CAA4DC211A81981400DD3E9A /* Octopus */; };
+		CAA4DC351A83A39D00DD3E9A /* octopus-mock in CopyFiles */ = {isa = PBXBuildFile; fileRef = CAA4DC211A81981400DD3E9A /* octopus-mock */; };
 		CAB0DFDA1BBF035D001D2F99 /* genotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB0DFD91BBF035D001D2F99 /* genotype.cpp */; };
 		CAB0DFE01BC01E2A001D2F99 /* randomiser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB0DFDE1BC01E2A001D2F99 /* randomiser.cpp */; };
 		CAB7B6EC1D29920F0046C3E5 /* global_aligner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB7B6EA1D29920F0046C3E5 /* global_aligner.cpp */; };
@@ -175,7 +139,7 @@
 			dstPath = /Users/danielcooke/Development/Octopus/bin;
 			dstSubfolderSpec = 0;
 			files = (
-				CAA4DC351A83A39D00DD3E9A /* Octopus in CopyFiles */,
+				CAA4DC351A83A39D00DD3E9A /* octopus-mock in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
@@ -335,7 +299,7 @@
 		CA98BBA61C8EEA20000CE9C4 /* assembler.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = assembler.hpp; sourceTree = "<group>"; };
 		CA98BBA81C918B07000CE9C4 /* progress_meter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = progress_meter.cpp; sourceTree = "<group>"; };
 		CA98BBA91C918B07000CE9C4 /* progress_meter.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = progress_meter.hpp; sourceTree = "<group>"; };
-		CAA4DC211A81981400DD3E9A /* Octopus */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Octopus; sourceTree = BUILT_PRODUCTS_DIR; };
+		CAA4DC211A81981400DD3E9A /* octopus-mock */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "octopus-mock"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAA4DC241A81981400DD3E9A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		CAA4DC301A82B28800DD3E9A /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		CAA4DC311A82B36300DD3E9A /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -777,7 +741,7 @@
 		CAA4DC221A81981400DD3E9A /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				CAA4DC211A81981400DD3E9A /* Octopus */,
+				CAA4DC211A81981400DD3E9A /* octopus-mock */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -922,8 +886,8 @@
 				CAFA19621ABF75D400F953D9 /* haplotype.cpp */,
 				CAFA196D1AC1B4AF00F953D9 /* genotype.hpp */,
 				CAB0DFD91BBF035D001D2F99 /* genotype.cpp */,
-				CA2D59FD1CB972FE005EA347 /* cancer_genotype.cpp */,
 				CAB0DFD61BBD5CA9001D2F99 /* cancer_genotype.hpp */,
+				CA2D59FD1CB972FE005EA347 /* cancer_genotype.cpp */,
 				D42F72EE1C5B8A4D00995F54 /* trio.hpp */,
 				D42F72ED1C5B8A4D00995F54 /* trio.cpp */,
 				CA53D3031C03B746009A216D /* pedigree.hpp */,
@@ -1366,9 +1330,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		CAA4DC201A81981400DD3E9A /* Octopus */ = {
+		CAA4DC201A81981400DD3E9A /* octopus-mock */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = CAA4DC281A81981400DD3E9A /* Build configuration list for PBXNativeTarget "Octopus" */;
+			buildConfigurationList = CAA4DC281A81981400DD3E9A /* Build configuration list for PBXNativeTarget "octopus-mock" */;
 			buildPhases = (
 				CAA4DC1D1A81981400DD3E9A /* Sources */,
 				CAA4DC1E1A81981400DD3E9A /* Frameworks */,
@@ -1378,9 +1342,9 @@
 			);
 			dependencies = (
 			);
-			name = Octopus;
+			name = "octopus-mock";
 			productName = Octopus;
-			productReference = CAA4DC211A81981400DD3E9A /* Octopus */;
+			productReference = CAA4DC211A81981400DD3E9A /* octopus-mock */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -1409,7 +1373,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				CAA4DC201A81981400DD3E9A /* Octopus */,
+				CAA4DC201A81981400DD3E9A /* octopus-mock */,
 			);
 		};
 /* End PBXProject section */
@@ -1419,16 +1383,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CA17CDD81D53C3A20089435A /* vcf_reader_tests.cpp in Sources */,
 				CA16B0F01D4D0393006722C1 /* read_algorithms.cpp in Sources */,
 				CA17CDED1D53C4810089435A /* haplotype_tests.cpp in Sources */,
-				CA17CDFE1D53C4BE0089435A /* variant_generator_tests.cpp in Sources */,
 				CA704FC41D11F4B2004218BB /* snv_error_model.cpp in Sources */,
 				CA3B6CFA1D3EBC87005298BE /* threshold_filter.cpp in Sources */,
 				CA14727A1AACECF1005FDCD1 /* octopus.cpp in Sources */,
 				CA53D3041C03B746009A216D /* pedigree.cpp in Sources */,
 				D4C8FFA51D4B872600BEFC8E /* test_main.cpp in Sources */,
-				CA17CDDE1D53C3AD0089435A /* read_transformer_tests.cpp in Sources */,
 				CA91C2C81B8DE00E00609FFA /* population_model.cpp in Sources */,
 				D463C1A21B0A160000739A66 /* allele.cpp in Sources */,
 				CACF81371C870E8300E9E6BD /* haplotype_filter.cpp in Sources */,
@@ -1440,55 +1401,37 @@
 				CA17CDE21D53C4520089435A /* mappable_tests.cpp in Sources */,
 				CA91C2CB1B8DE02300609FFA /* tumour_model.cpp in Sources */,
 				CAE3E29D1AA139A000C01B2C /* option_parser.cpp in Sources */,
-				CA17CE061D53C51C0089435A /* comparable_tests.cpp in Sources */,
 				CA566E371D0488C7007C5180 /* octopus_vcf.cpp in Sources */,
 				D402C5471CC9359300C8B8A7 /* somatic_call.cpp in Sources */,
 				D45D30641C907491007634E3 /* logging.cpp in Sources */,
 				D42F72EF1C5B8A4D00995F54 /* trio.cpp in Sources */,
 				CAFA2CED1CF3ACA700C109D5 /* genotype_reader.cpp in Sources */,
-				CA17CE1F1D53C6350089435A /* coalescent_model_tests.cpp in Sources */,
 				CA2D59F91CAEFB4B005EA347 /* read_transform.cpp in Sources */,
-				CA17CE081D53C54D0089435A /* haplotype_generator_tests.cpp in Sources */,
 				CAB0DFDA1BBF035D001D2F99 /* genotype.cpp in Sources */,
 				CA386D9D1B5AA3C80057A5A8 /* reference_genome.cpp in Sources */,
 				D42061161ACC3DA500D11553 /* germline_likelihood_model.cpp in Sources */,
-				CA17CDE01D53C4270089435A /* progress_meter_tests.cpp in Sources */,
-				CA17CDF01D53C4920089435A /* allele_tests.cpp in Sources */,
-				CA17CDE41D53C4570089435A /* mappable_algorithm_tests.cpp in Sources */,
 				D4A04BD41CBD205100193D63 /* somatic_mutation_model.cpp in Sources */,
 				CAFA195B1ABF3DF400F953D9 /* haplotype_tree.cpp in Sources */,
-				CA17CDDC1D53C3AD0089435A /* read_filterer_tests.cpp in Sources */,
 				D48D2AE41BB5753F00C5596E /* haplotype_likelihood_model.cpp in Sources */,
 				CA17CE251D53C67E0089435A /* downsampler_tests.cpp in Sources */,
-				CA17CE211D53C6440089435A /* germline_likelihood_model_tests.cpp in Sources */,
-				CA17CE271D53C6910089435A /* maths_tests.cpp in Sources */,
 				CA3B6CF71D391487005298BE /* read_assignment.cpp in Sources */,
 				CAE3B59E1CFE3E3E005EEDE6 /* variant_call_filter.cpp in Sources */,
 				D490E4241C74CE1200883184 /* kmer_mapper.cpp in Sources */,
 				CAE3E2AB1AA2736D00C01B2C /* vcf_extractor.cpp in Sources */,
-				CA17CDFC1D53C4BE0089435A /* haplotype_tree_tests.cpp in Sources */,
 				D402C54A1CC935C100C8B8A7 /* reference_call.cpp in Sources */,
 				CA2D59FE1CB972FE005EA347 /* cancer_genotype.cpp in Sources */,
-				CA17CE151D53C5D20089435A /* snv_error_model_tests.cpp in Sources */,
-				CA17CE1B1D53C6080089435A /* haplotype_likelihood_cache_tests.cpp in Sources */,
-				CA17CDFB1D53C4BE0089435A /* genome_walker_tests.cpp in Sources */,
-				CA17CE191D53C5F90089435A /* haplotype_likelihood_model_tests.cpp in Sources */,
 				D47686631BD672940067E03D /* read_reader.cpp in Sources */,
 				D482E00E1D0EB9440096A269 /* hiseq_indel_error_model.cpp in Sources */,
 				CA16B0E91D481011006722C1 /* quality_by_depth.cpp in Sources */,
 				D463C1A41B0A174B00739A66 /* variant.cpp in Sources */,
-				CA17CDF21D53C4A70089435A /* cigar_string_tests.cpp in Sources */,
-				CA17CDD61D53C3A20089435A /* read_manager_tests.cpp in Sources */,
 				D44ADE781C452B9B00A854C6 /* compression.cpp in Sources */,
 				CA3B6CFD1D3EBFBA005298BE /* variant_call_filter_factory.cpp in Sources */,
 				D490E4211C74CE1200883184 /* pair_hmm.cpp in Sources */,
 				CA0D83EB1BD466F40020366B /* read_pipe.cpp in Sources */,
 				CA16B1251D4FEE37006722C1 /* variant_generator.cpp in Sources */,
 				CA0DF5891CCADA36000193CF /* call.cpp in Sources */,
-				CA17CDFD1D53C4BE0089435A /* phaser_tests.cpp in Sources */,
 				D44ADE731C43C22700A854C6 /* caller_builder.cpp in Sources */,
 				D424E0CE1D54BC1100654AA3 /* timers.cpp in Sources */,
-				CA17CE021D53C4EB0089435A /* contig_region_tests.cpp in Sources */,
 				D40B11A01CAEA75C0050145D /* coalescent_model.cpp in Sources */,
 				D4636C6D1B7A24F400FEA7D2 /* vcf_parser.cpp in Sources */,
 				CA98BBAA1C918B07000CE9C4 /* progress_meter.cpp in Sources */,
@@ -1500,50 +1443,38 @@
 				CAB89DF91C78F5AF002D6F8E /* phaser.cpp in Sources */,
 				CA16B11F1D4F6ADE006722C1 /* utils.c in Sources */,
 				D4636C671B678B8000FEA7D2 /* vcf_header.cpp in Sources */,
-				CA17CE291D53C6B10089435A /* read_stats_tests.cpp in Sources */,
-				CA17CDDD1D53C3AD0089435A /* read_pipe_tests.cpp in Sources */,
 				D402C5401CC9308800C8B8A7 /* vcf_record_factory.cpp in Sources */,
 				CA16B10B1D4E54F9006722C1 /* parallel_transform.cpp in Sources */,
 				CA17CE0E1D53C57E0089435A /* local_reassembler.cpp in Sources */,
 				D4636C6A1B6919B500FEA7D2 /* vcf_writer.cpp in Sources */,
 				CAEC8E1A1B73ACB9008FC858 /* vcf_type.cpp in Sources */,
 				D4807FB01BA826DB00657D4F /* population_caller.cpp in Sources */,
-				CA17CE041D53C4FA0089435A /* genomic_region_tests.cpp in Sources */,
 				CABEBD281D436EEA0017A7E7 /* supervised_variant_call_filter.cpp in Sources */,
 				CAE3E2A81AA25F7D00C01B2C /* cigar_scanner.cpp in Sources */,
 				D402C54D1CCA588600C8B8A7 /* variant_call.cpp in Sources */,
 				CAE3E2B31AA3342B00C01B2C /* local_reassembler.cpp in Sources */,
 				CAA4DC321A82B36300DD3E9A /* README.md in Sources */,
-				CA17CDEC1D53C4810089435A /* genotype_tests.cpp in Sources */,
 				D42F73001C621C4C00995F54 /* trio_caller.cpp in Sources */,
 				CAF23F701BA2C308006B673F /* vcf_utils.cpp in Sources */,
 				D4807FB51BA9716700657D4F /* cancer_caller.cpp in Sources */,
 				CA16B1221D4F6AEF006722C1 /* tandem.cpp in Sources */,
 				CA56D3861D50A8D10083501A /* TODO.md in Sources */,
-				CA17CDEE1D53C4810089435A /* variant_tests.cpp in Sources */,
 				D45D308A1C983D84007634E3 /* common.cpp in Sources */,
-				CA17CDE81D53C4770089435A /* mappable_flat_set_tests.cpp in Sources */,
-				CA17CE101D53C58D0089435A /* vcf_extractor_tests.cpp in Sources */,
 				CAFA19641ABF75D400F953D9 /* haplotype.cpp in Sources */,
 				D40B11A31CAEBC270050145D /* individual_caller.cpp in Sources */,
 				CA17CDF41D53C4B50089435A /* phred_tests.cpp in Sources */,
 				D4A04BD01CBD1D5400193D63 /* cnv_model.cpp in Sources */,
 				D490E4231C74CE1200883184 /* simd_pair_hmm.cpp in Sources */,
-				CA17CDFA1D53C4BE0089435A /* assembler_tests.cpp in Sources */,
 				D402C5441CC934CF00C8B8A7 /* germline_variant_call.cpp in Sources */,
 				CA2827C11B2A4CD0007712D4 /* downloader.cpp in Sources */,
 				CA0D83EE1BD467BE0020366B /* downsampler.cpp in Sources */,
 				CA17CE0A1D53C55B0089435A /* cigar_scanner_tests.cpp in Sources */,
 				CA16B11E1D4F6ADE006722C1 /* trsort.c in Sources */,
 				CA17CE231D53C6570089435A /* individual_model_tests.cpp in Sources */,
-				CA17CDE61D53C45B0089435A /* aligned_read_tests.cpp in Sources */,
-				CA17CE001D53C4C40089435A /* caller_tests.cpp in Sources */,
 				CAE3E2B61AA36EA600C01B2C /* htslib_bcf_facade.cpp in Sources */,
 				D46F9EDD1C05D4E700DCC18D /* haplotype_likelihood_cache.cpp in Sources */,
-				CA17CE1D1D53C6160089435A /* kmer_mapper_tests.cpp in Sources */,
 				CAD5EC0A1AD6FD1E00892816 /* read_stats.cpp in Sources */,
 				CA98BBA71C8EEA20000CE9C4 /* assembler.cpp in Sources */,
-				CA17CE131D53C5C20089435A /* pair_hmm_tests.cpp in Sources */,
 				CAB89DF31C753551002D6F8E /* indel_error_model.cpp in Sources */,
 				CA3B6CEA1D363D83005298BE /* option_collation.cpp in Sources */,
 				CAE7DC2D1C510905009411B6 /* caller_factory.cpp in Sources */,
@@ -1554,14 +1485,11 @@
 				CAB0DFE01BC01E2A001D2F99 /* randomiser.cpp in Sources */,
 				CA16B11D1D4F6ADE006722C1 /* sssort.c in Sources */,
 				CA7148B61CD00ABA0017820B /* read_filter.cpp in Sources */,
-				CA17CE171D53C5E60089435A /* indel_error_model_tests.cpp in Sources */,
-				CA17CE371D53EA0F0089435A /* unit_test_main.cpp in Sources */,
 				D4636C641B6788C500FEA7D2 /* vcf_record.cpp in Sources */,
 				CA17CE0C1D53C56B0089435A /* global_aligner_tests.cpp in Sources */,
 				D454B9521D50B2BB00F083F9 /* CONTRIBUTING.md in Sources */,
 				CA0D83E81BD2B0210020366B /* genome_walker.cpp in Sources */,
 				CAB7B6EC1D29920F0046C3E5 /* global_aligner.cpp in Sources */,
-				CAA4DC251A81981400DD3E9A /* main.cpp in Sources */,
 				CA17CDD71D53C3A20089435A /* reference_genome_tests.cpp in Sources */,
 				CA386DA51B5AC3850057A5A8 /* aligned_read.cpp in Sources */,
 			);
@@ -1730,7 +1658,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		CAA4DC281A81981400DD3E9A /* Build configuration list for PBXNativeTarget "Octopus" */ = {
+		CAA4DC281A81981400DD3E9A /* Build configuration list for PBXNativeTarget "octopus-mock" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				CAA4DC291A81981400DD3E9A /* Debug */,
