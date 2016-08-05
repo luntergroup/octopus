@@ -1265,35 +1265,14 @@ make_caller_factory(const ReferenceGenome& reference,
     return result;
 }
 
-boost::optional<fs::path> get_final_output_path(const OptionMap& options)
+fs::path get_final_output_path(const OptionMap& options)
 {
-    logging::ErrorLogger log {};
-    
-    const auto input_path = options.at("output").as<std::string>();
-    
-    if (input_path == "-") {
-        return fs::path {input_path}; // Output goes to stdout
-    }
-    
-    const auto resolved_path = resolve_path(input_path, options);
-    
-    if (!is_file_writable(resolved_path)) {
-        stream(log) << "The path " << input_path << " given in the input option output is not writable";
-        return boost::none;
-    }
-    
-    return resolved_path;
+    return resolve_path(options.at("output").as<std::string>(), options);
 }
 
 VcfWriter make_output_vcf_writer(const OptionMap& options)
 {
-    auto out_path = get_final_output_path(options);
-    
-    if (out_path) {
-        return VcfWriter {*std::move(out_path)};
-    }
-    
-    return VcfWriter {};
+    return VcfWriter {get_final_output_path(options)};
 }
 
 boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
