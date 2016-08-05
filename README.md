@@ -27,7 +27,7 @@ Octopus can be built and installed on a wide range of operating systems includin
 
 ####*Installing with Homebrew (for OS X)*
 
-The recommended method of installation for Max OS X is with the package manager [Homebrew](http://brew.sh):
+The recommended method of installation for Mac OS X is with the package manager [Homebrew](http://brew.sh):
 
 ```shell
 $ brew tap science
