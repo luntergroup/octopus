@@ -27,14 +27,14 @@ Octopus can be built and installed on a wide range of operating systems includin
 
 ####*Installing with Homebrew (for OS X)*
 
-The recommended method of installation for Max OS X is with the package manager [Homebrew](http://brew.sh)
+The recommended method of installation for Max OS X is with the package manager [Homebrew](http://brew.sh):
 
 ```shell
 $ brew tap science
 $ brew install octopus
 ```
 
-This will download the relevant files (including any dependancies) and install to `usr/local/bin`. Octopus can then be easily updated or removed
+This will download the relevant files (including any dependancies) and install to `usr/local/bin`. Octopus can then be easily updated or removed:
 
 ```shell
 $ brew upgrade octopus
@@ -43,19 +43,19 @@ $ brew uninstall octopus
 
 ####*Quick installation with Python3*
 
-Manually installing octopus requires obtaining a copy the binaries. In the command line, direct to an appropriate install directory and execute
+Manually installing octopus requires obtaining a copy the binaries. In the command line, direct to an appropriate install directory and execute:
 
 ```shell
 $ git clone https://github.com/dancooke/octopus.git
 ```
 
-then use the Python3 install helper
+then use the Python3 install helper:
 
 ```shell
 $ ./octopus/make.py
 ```
 
-by default this installs to `/bin` relative to where you installed octopus. To intall to a root directory (e.g. `/usr/local/bin`) use
+by default this installs to `/bin` relative to where you installed octopus. To intall to a root directory (e.g. `/usr/local/bin`) use:
 
 ```shell
 $ ./octopus/make.py --root
@@ -65,7 +65,7 @@ this may prompt you to enter a `sudo` password.
 
 ####*Installing with CMake*
 
-If Python3 isn't available, the binaries can be installed manually with [CMake](https://cmake.org)
+If Python3 isn't available, the binaries can be installed manually with [CMake](https://cmake.org):
 
 ```shell
 $ git clone https://github.com/dancooke/octopus.git
@@ -74,9 +74,19 @@ $ cmake ..
 $ make install
 ```
 
-By default this installs to the `/bin` directory where octopus was installed. To install to `/usr/local/bin` pass the option `-DINSTALL_ROOT=ON` to `cmake`.
+By default this installs to the `/bin` directory where octopus was installed. To install to root (e.g. `/usr/local/bin`) use the `-D` option:
 
-You can check installation was successful by executing the command 
+```shell
+$ cmake -DINSTALL_ROOT=ON ..
+```
+
+CMake will try to find a suitable compiler on your system, if you'd like you use a specific compiler use the `-D` option, for example:
+
+```shell
+$ cmake -D CMAKE_C_COMPILER=gcc-4.2 -D CMAKE_CXX_COMPILER=g++-4.2 ..
+```
+
+You can check installation was successful by executing the command:
 
 ```shell
 $ octopus --help
@@ -105,19 +115,19 @@ Here are some basic examples to get started. These examples are by no means exha
 
 ####*Calling germline variants in an individual*
 
-This is the simplest case, if the file `NA12878.bam` contains a single sample, octopus will default to its individual calling model. 
+This is the simplest case, if the file `NA12878.bam` contains a single sample, octopus will default to its individual calling model:
 
 ```shell
 $ octopus --reference hs37d5.fa --reads NA12878.bam
 ```
 
-or less verbosly
+or less verbosly:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam
 ```
 
-Note octopus automatically detects the samples contained in the input read file and will jointly call all samples present by default, to restrict calling to a single sample in this case it is required to explictly specify which sample to use
+Note octopus automatically detects the samples contained in the input read file and will jointly call all samples present by default, to restrict calling to a single sample in this case it is required to explictly specify which sample to use:
 
 ```shell
 $ octopus -R hs37d5.fa -I multi-sample.bam -S NA12878
@@ -125,7 +135,7 @@ $ octopus -R hs37d5.fa -I multi-sample.bam -S NA12878
 
 ####*Joint variant calling*
 
-Octopus uses different calling models for populations and individuals. Briefly, the individual model is exact whilst the population model uses approximations. However, it is recommended to use the population model to call *germline variants* in multiple samples from the same population as the model can leverage information between individuals.
+Octopus uses different calling models for populations and individuals. Briefly, the individual model is exact whilst the population model uses approximations. However, it is recommended to use the population model to call *germline variants* in multiple samples from the same population as the model can leverage information between individuals:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
@@ -133,13 +143,13 @@ $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
 
 ####*Targeted calling*
 
-By default octopus will call all possible regions (as specified in the reference FASTA). In order to select a set of target regions, use the `--regions` (`-T`) option
+By default octopus will call all possible regions (as specified in the reference FASTA). In order to select a set of target regions, use the `--regions` (`-T`) option:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam -T 1 2:30,000,000- 3:10,000,000-20,000,000
 ```
 
-Or conversely a set of regions to *exclude* can be given with `--skip-regions` (`-t`)
+Or conversely a set of regions to *exclude* can be given with `--skip-regions` (`-t`):
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam -t 1 2:30,000,000- 3:10,000,000-20,000,000
@@ -149,7 +159,7 @@ $ octopus -R hs37d5.fa -I NA12878.bam -t 1 2:30,000,000- 3:10,000,000-20,000,000
 
 By default octopus will use either the individual or population models. To use a different calling model, use the `--caller` (`-C`) option.
 
-To call somatic mutations in an *individual* with a normal sample (`--normal-sample`; `-N`) use
+To call somatic mutations in an *individual* with a normal sample (`--normal-sample`; `-N`) use:
 
 ```shell
 $ octopus -C somatic -R hs37d5.fa -I normal.bam tumour.bam -N NORMAL
@@ -157,7 +167,7 @@ $ octopus -C somatic -R hs37d5.fa -I normal.bam tumour.bam -N NORMAL
 
 The normal sample is optional, but without it octopus will assume all samples are tumour, and classification power is significantly reduced.
 
-It is also possible to call multiple tumours from the same individual jointly
+It is also possible to call multiple tumours from the same individual jointly:
 
 ```shell
 $ octopus -C somatic -R hs37d5.fa -I normal.bam tumourA.bam tumourB -N NORMAL
@@ -167,7 +177,7 @@ Octopus will then emit separate genotype calls for each sample.
 
 ####*Calling denovo mutations*
 
-Octopus has a bespoke model for trios which will also classify Denovo mutations in the child, this model requires specifying which sample is maternal (`--maternal-sample`; `-M`) option and which is paternal (`--paternal-sample`; `-P`)
+Octopus has a bespoke model for trios which will also classify Denovo mutations in the child, this model requires specifying which sample is maternal (`--maternal-sample`; `-M`) option and which is paternal (`--paternal-sample`; `-P`):
 
 ```shell
 $ octopus -C denovo -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -P NA12891
