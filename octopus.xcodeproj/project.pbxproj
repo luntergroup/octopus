@@ -126,6 +126,7 @@
 		D40B11A31CAEBC270050145D /* individual_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D40B11A11CAEBC270050145D /* individual_caller.cpp */; };
 		D413B0451B5E54F7007EFDE0 /* libboost_iostreams.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D413B0441B5E54F7007EFDE0 /* libboost_iostreams.a */; };
 		D42061161ACC3DA500D11553 /* germline_likelihood_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42061141ACC3DA500D11553 /* germline_likelihood_model.cpp */; };
+		D424E0CE1D54BC1100654AA3 /* timers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D424E0CC1D54BC1100654AA3 /* timers.cpp */; };
 		D42F72EF1C5B8A4D00995F54 /* trio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72ED1C5B8A4D00995F54 /* trio.cpp */; };
 		D42F73001C621C4C00995F54 /* trio_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72FE1C621C4C00995F54 /* trio_caller.cpp */; };
 		D44ADE731C43C22700A854C6 /* caller_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE711C43C22700A854C6 /* caller_builder.cpp */; };
@@ -165,7 +166,6 @@
 		D4A04BD41CBD205100193D63 /* somatic_mutation_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4A04BD21CBD205100193D63 /* somatic_mutation_model.cpp */; };
 		D4C8FFA51D4B872600BEFC8E /* test_main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4C8FFA41D4B872600BEFC8E /* test_main.cpp */; };
 		D4CC78951C7E1EF700F9CCB3 /* libboost_timer.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D4CC78941C7E1EF700F9CCB3 /* libboost_timer.a */; };
-		D4CC78981C7E370400F9CCB3 /* timers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4CC78971C7E370400F9CCB3 /* timers.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -185,7 +185,6 @@
 		CA03C14D1A8C0519000D3494 /* read_reader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = read_reader.hpp; sourceTree = "<group>"; };
 		CA03C14F1A8C0D3D000D3494 /* htslib_sam_facade.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = htslib_sam_facade.cpp; sourceTree = "<group>"; };
 		CA03C1501A8C0D3D000D3494 /* htslib_sam_facade.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = htslib_sam_facade.hpp; sourceTree = "<group>"; };
-		CA03C2291A8C1C8C000D3494 /* benchmark_utils.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = benchmark_utils.hpp; sourceTree = "<group>"; };
 		CA03C22A1A8CEF25000D3494 /* read_reader_impl.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = read_reader_impl.hpp; sourceTree = "<group>"; };
 		CA03C22B1A8D2C5D000D3494 /* cigar_string.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = cigar_string.hpp; sourceTree = "<group>"; };
 		CA0D83E61BD2B0210020366B /* genome_walker.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genome_walker.cpp; sourceTree = "<group>"; };
@@ -420,6 +419,9 @@
 		D424E0C81D510A7C00654AA3 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		D424E0C91D5110EE00654AA3 /* phred.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = phred.hpp; sourceTree = "<group>"; };
 		D424E0CA1D522B5900654AA3 /* bioio.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = bioio.hpp; sourceTree = "<group>"; };
+		D424E0CC1D54BC1100654AA3 /* timers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timers.cpp; sourceTree = "<group>"; };
+		D424E0CD1D54BC1100654AA3 /* timers.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = timers.hpp; sourceTree = "<group>"; };
+		D424E0CF1D54BC1600654AA3 /* benchmark_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = benchmark_utils.hpp; sourceTree = "<group>"; };
 		D42F72ED1C5B8A4D00995F54 /* trio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = trio.cpp; sourceTree = "<group>"; };
 		D42F72EE1C5B8A4D00995F54 /* trio.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = trio.hpp; sourceTree = "<group>"; };
 		D42F72FE1C621C4C00995F54 /* trio_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = trio_caller.cpp; sourceTree = "<group>"; };
@@ -493,8 +495,6 @@
 		D4BB95001CA0590B00886B57 /* sequence_complexity.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = sequence_complexity.hpp; sourceTree = "<group>"; };
 		D4C8FFA41D4B872600BEFC8E /* test_main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test_main.cpp; sourceTree = "<group>"; };
 		D4CC78941C7E1EF700F9CCB3 /* libboost_timer.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_timer.a; path = ../../../../../usr/local/Cellar/boost/1.60.0_1/lib/libboost_timer.a; sourceTree = "<absolute>"; };
-		D4CC78961C7E323200F9CCB3 /* timers.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = timers.hpp; sourceTree = "<group>"; };
-		D4CC78971C7E370400F9CCB3 /* timers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timers.cpp; sourceTree = "<group>"; };
 		D4E41DA21AD80C1B0010D25D /* mappable_algorithms.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mappable_algorithms.hpp; sourceTree = "<group>"; };
 		D4E41DA31AD81C390010D25D /* allele.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = allele.hpp; sourceTree = "<group>"; };
 		D4F886511CE6046A005F9772 /* append.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = append.hpp; sourceTree = "<group>"; };
@@ -524,16 +524,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		CA03C2281A8C1C2D000D3494 /* benchmarks */ = {
-			isa = PBXGroup;
-			children = (
-				CA03C2291A8C1C8C000D3494 /* benchmark_utils.hpp */,
-				D4CC78961C7E323200F9CCB3 /* timers.hpp */,
-				D4CC78971C7E370400F9CCB3 /* timers.cpp */,
-			);
-			path = benchmarks;
-			sourceTree = "<group>";
-		};
 		CA0B46661AE8609A00158BBA /* unit */ = {
 			isa = PBXGroup;
 			children = (
@@ -836,8 +826,10 @@
 		CAA4DC2D1A8219D900DD3E9A /* test */ = {
 			isa = PBXGroup;
 			children = (
+				D424E0CC1D54BC1100654AA3 /* timers.cpp */,
+				D424E0CD1D54BC1100654AA3 /* timers.hpp */,
+				D424E0CB1D54BBEC00654AA3 /* benchmark */,
 				D424E06C1D51014A00654AA3 /* resources */,
-				CA03C2281A8C1C2D000D3494 /* benchmarks */,
 				CA0B46671AE860B600158BBA /* regression */,
 				CA0B46661AE8609A00158BBA /* unit */,
 				D42F90131AE7A8000003F791 /* README.md */,
@@ -1220,6 +1212,14 @@
 			path = concepts;
 			sourceTree = "<group>";
 		};
+		D424E0CB1D54BBEC00654AA3 /* benchmark */ = {
+			isa = PBXGroup;
+			children = (
+				D424E0CF1D54BC1600654AA3 /* benchmark_utils.hpp */,
+			);
+			path = benchmark;
+			sourceTree = "<group>";
+		};
 		D42F72F31C5BA3C000995F54 /* genotype */ = {
 			isa = PBXGroup;
 			children = (
@@ -1467,6 +1467,7 @@
 				CA0DF5891CCADA36000193CF /* call.cpp in Sources */,
 				CA17CDFD1D53C4BE0089435A /* phaser_tests.cpp in Sources */,
 				D44ADE731C43C22700A854C6 /* caller_builder.cpp in Sources */,
+				D424E0CE1D54BC1100654AA3 /* timers.cpp in Sources */,
 				CA17CE021D53C4EB0089435A /* contig_region_tests.cpp in Sources */,
 				D40B11A01CAEA75C0050145D /* coalescent_model.cpp in Sources */,
 				D4636C6D1B7A24F400FEA7D2 /* vcf_parser.cpp in Sources */,
@@ -1475,7 +1476,6 @@
 				CA386DA31B5AC2870057A5A8 /* cigar_string.cpp in Sources */,
 				D4636C611B6788AC00FEA7D2 /* vcf_reader.cpp in Sources */,
 				CA03C1511A8C0D3D000D3494 /* htslib_sam_facade.cpp in Sources */,
-				D4CC78981C7E370400F9CCB3 /* timers.cpp in Sources */,
 				CA8A664A1B81CA7E008CE1D8 /* threadsafe_fasta.cpp in Sources */,
 				CAB89DF91C78F5AF002D6F8E /* phaser.cpp in Sources */,
 				CA16B11F1D4F6ADE006722C1 /* utils.c in Sources */,
