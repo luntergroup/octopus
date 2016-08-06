@@ -28,7 +28,7 @@ struct ContigPloidy
 {
     boost::optional<std::string> sample;
     std::string contig;
-    unsigned ploidy;
+    int ploidy;
 };
 
 enum class RefCallType { Positional, Blocked };

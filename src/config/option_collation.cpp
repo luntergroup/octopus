@@ -34,8 +34,15 @@
 #include <io/variant/vcf_reader.hpp>
 #include <io/variant/vcf_writer.hpp>
 
-namespace octopus { namespace options
+namespace octopus { namespace options {
+
+// unsigned are banned from the option map to prevent user input errors, but once the option
+// map is passed they are all safe
+unsigned as_unsigned(const std::string& option, const OptionMap& options)
 {
+    return static_cast<unsigned>(options.at(option).as<int>());
+}
+
 bool is_run_command(const OptionMap& options)
 {
     return options.count("help") == 0 && options.count("version") == 0;
@@ -133,8 +140,7 @@ fs::path resolve_path(const fs::path& path, const OptionMap& options)
     return result;
 }
 
-namespace
-{
+namespace {
     struct Line
     {
         std::string line_data;
@@ -157,8 +163,7 @@ namespace
     }
 } // namespace
 
-std::vector<fs::path>
-extract_paths_from_file(const fs::path& file_path, const OptionMap& options)
+std::vector<fs::path> extract_paths_from_file(const fs::path& file_path, const OptionMap& options)
 {
     const auto resolved_path = resolve_path(file_path, options);
     
@@ -198,8 +203,7 @@ auto resolve_paths(const std::vector<fs::path>& paths, const OptionMap& options)
     return std::make_pair(std::move(good_paths), std::move(bad_paths));
 }
 
-auto resolve_paths(const std::vector<std::string>& path_strings,
-                   const OptionMap& options)
+auto resolve_paths(const std::vector<std::string>& path_strings, const OptionMap& options)
 {
     std::vector<fs::path> paths {std::cbegin(path_strings), std::cend(path_strings)};
     return resolve_paths(paths, options);
@@ -231,7 +235,7 @@ bool is_threading_allowed(const OptionMap& options)
     unsigned num_threads {1};
     
     if (options.count("threads") == 1) {
-        num_threads = options.at("threads").as<unsigned>();
+        num_threads = as_unsigned("threads", options);
     }
     
     return num_threads != 1;
@@ -242,7 +246,7 @@ boost::optional<unsigned> get_num_threads(const OptionMap& options)
     unsigned num_threads {1};
     
     if (options.count("threads") == 1) {
-        num_threads = options.at("threads").as<unsigned>();
+        num_threads = as_unsigned("threads", options);
     }
     
     if (num_threads > 0) return num_threads;
@@ -791,7 +795,7 @@ ReadManager make_read_manager(const OptionMap& options)
     auto read_paths = get_read_paths(options);
     
     if (read_paths) {
-        const auto max_open_files = options.at("max-open-read-files").as<unsigned>();
+        const auto max_open_files = as_unsigned("max-open-read-files", options);
         return ReadManager {*std::move(read_paths), max_open_files};
     }
     
@@ -811,7 +815,7 @@ auto make_read_transformer(const OptionMap& options)
     }
     
     if (options.count("mask-tails")) {
-        const auto tail_mask_size = options.at("mask-tails").as<unsigned>();
+        const auto tail_mask_size = as_unsigned("mask-tails", options);
         
         if (tail_mask_size > 0) {
             result.register_transform(MaskTail {tail_mask_size});
@@ -819,7 +823,7 @@ auto make_read_transformer(const OptionMap& options)
     }
     
     if (!options.at("disable-soft-clip-masking").as<bool>()) {
-        const auto soft_clipped_mask_size = options.at("mask-soft-clipped-boundries").as<unsigned>();
+        const auto soft_clipped_mask_size = as_unsigned("mask-soft-clipped-boundries", options);
         
         if (soft_clipped_mask_size > 0) {
             result.register_transform(MaskSoftClippedBoundries {soft_clipped_mask_size});
@@ -863,14 +867,14 @@ auto make_read_filterer(const OptionMap& options)
         result.add(make_unique<IsMapped>());
     }
     
-    const auto min_mapping_quality = options.at("min-mapping-quality").as<unsigned>();
+    const auto min_mapping_quality = as_unsigned("min-mapping-quality", options);
     
     if (min_mapping_quality > 0) {
         result.add(make_unique<IsGoodMappingQuality>(min_mapping_quality));
     }
     
-    const auto min_base_quality = options.at("good-base-quality").as<unsigned>();
-    const auto min_good_bases   = options.at("min-good-bases").as<unsigned>();
+    const auto min_base_quality = as_unsigned("good-base-quality", options);
+    const auto min_good_bases   = as_unsigned("min-good-bases", options);
     
     if (min_base_quality > 0 && min_good_bases > 0) {
         result.add(make_unique<HasSufficientGoodQualityBases>(min_base_quality,
@@ -884,11 +888,11 @@ auto make_read_filterer(const OptionMap& options)
     }
     
     if (options.count("min-read-length") == 1) {
-        result.add(make_unique<IsShort>(options.at("min-read-length").as<unsigned>()));
+        result.add(make_unique<IsShort>(as_unsigned("min-read-length", options)));
     }
     
     if (options.count("max-read-length") == 1) {
-        result.add(make_unique<IsLong>(options.at("max-read-length").as<unsigned>()));
+        result.add(make_unique<IsLong>(as_unsigned("max-read-length", options)));
     }
     
     if (!options.at("allow-marked-duplicates").as<bool>()) {
@@ -935,8 +939,8 @@ boost::optional<readpipe::Downsampler> make_downsampler(const OptionMap& options
     
     if (options.at("disable-downsampling").as<bool>()) return boost::none;
     
-    auto max_coverage    = options.at("downsample-above").as<unsigned>();
-    auto target_coverage = options.at("downsample-target").as<unsigned>();
+    auto max_coverage    = as_unsigned("downsample-above", options);
+    auto target_coverage = as_unsigned("downsample-target", options);
     
     return Downsampler {max_coverage, target_coverage};
 }
@@ -1002,11 +1006,11 @@ auto make_variant_generator_builder(const OptionMap& options)
         result.set_variant_source(std::move(resolved_path));
     }
     
-    result.set_min_base_quality(options.at("min-base-quality").as<unsigned>());
-    result.set_max_variant_size(options.at("max-variant-size").as<unsigned>());
+    result.set_min_base_quality(as_unsigned("min-base-quality", options));
+    result.set_max_variant_size(as_unsigned("max-variant-size", options));
     
     if (options.count("min-supporting-reads")) {
-        auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
+        auto min_supporting_reads = as_unsigned("min-supporting-reads", options);
         
         if (min_supporting_reads == 0) {
             warning_log << "The option --min_supporting_reads was set to 0 - assuming this is a typo and setting to 1";
@@ -1031,7 +1035,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         
         if (options.count("assembler-mask-base-quality") == 1) {
-            result.set_assembler_min_base_quality(options.at("assembler-mask-base-quality").as<unsigned>());
+            result.set_assembler_min_base_quality(as_unsigned("assembler-mask-base-quality", options));
         }
     }
     
@@ -1156,7 +1160,7 @@ auto make_haplotype_generator_builder(const OptionMap& options)
             break;
     }
     
-    const auto max_haplotypes = options.at("max-haplotypes").as<unsigned>();
+    const auto max_haplotypes = as_unsigned("max-haplotypes", options);
     
     return HaplotypeGenerator::Builder()
     .set_target_limit(max_haplotypes).set_holdout_limit(2048).set_overflow_limit(16384)
@@ -1211,7 +1215,7 @@ make_caller_factory(const ReferenceGenome& reference,
     auto min_refcall_posterior = options.at("min-refcall-posterior").as<Phred<double>>();
     
     vc_builder.set_min_refcall_posterior(min_refcall_posterior);
-    vc_builder.set_max_haplotypes(options.at("max-haplotypes").as<unsigned>());
+    vc_builder.set_max_haplotypes(as_unsigned("max-haplotypes", options));
     vc_builder.set_min_haplotype_posterior(options.at("min-haplotype-filter-posterior").as<float>());
     
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
@@ -1252,7 +1256,7 @@ make_caller_factory(const ReferenceGenome& reference,
     
     vc_builder.set_flank_scoring(!options.at("disable-inactive-flank-scoring").as<bool>());
     
-    CallerFactory result {std::move(vc_builder), options.at("organism-ploidy").as<unsigned>()};
+    CallerFactory result {std::move(vc_builder), as_unsigned("organism-ploidy", options)};
     
     for (const auto& p : regions) {
         const auto it = std::find_if(std::cbegin(*contig_ploidies), std::cend(*contig_ploidies),

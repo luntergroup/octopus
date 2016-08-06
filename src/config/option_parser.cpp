@@ -3,9 +3,11 @@
 
 #include "option_parser.hpp"
 
+#include <vector>
 #include <regex>
 #include <iostream>
 #include <stdexcept>
+#include <sstream>
 
 #include <basics/phred.hpp>
 
@@ -17,6 +19,7 @@ namespace octopus { namespace options {
 
 void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2);
 void option_dependency(const OptionMap& vm, const std::string& for_what, const std::string& required_option);
+void check_positive(const std::string& option, const OptionMap& vm);
 void check_reads_present(const OptionMap& vm);
 void check_region_files_consistent(const OptionMap& vm);
 void check_trio_consistent(const OptionMap& vm);
@@ -49,7 +52,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Sets the working directory")
     
     ("threads",
-     po::value<unsigned>()->implicit_value(0),
+     po::value<int>()->implicit_value(0),
      "Maximum number of threads to be used, enabling this option with no argument lets the application"
      " decide the number of threads ands enables specific algorithm parallelisation")
     
@@ -62,7 +65,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "None binding request to limit the memory footprint of buffered read data (in gigabytes)")
     
     ("max-open-read-files",
-     po::value<unsigned>()->default_value(250),
+     po::value<int>()->default_value(250),
      "Limits the number of read files that can be open simultaneously")
     ;
     
@@ -143,11 +146,11 @@ OptionMap parse_options(const int argc, const char** argv)
      " for candidate generation")
     
     ("mask-tails",
-     po::value<unsigned>()->implicit_value(3),
+     po::value<int>()->implicit_value(3),
      "Masks this number of bases of the tail of all reads")
     
     ("mask-soft-clipped-boundries",
-     po::value<unsigned>()->default_value(2),
+     po::value<int>()->default_value(2),
      "Masks this number of adjacent non soft clipped bases when soft clipped bases are present")
     
     ("disable-adapter-masking",
@@ -169,32 +172,32 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Allows reads marked as unmapped to be used for calling")
     
-    ("min-mapping-quality,min-mq",
-     po::value<unsigned>()->default_value(20),
+    ("min-mapping-quality",
+     po::value<int>()->default_value(20),
      "Minimum read mapping quality required to consider a read for calling")
     
-    ("good-base-quality,good-bq",
-     po::value<unsigned>()->default_value(20),
+    ("good-base-quality",
+     po::value<int>()->default_value(20),
      "Base quality threshold used by min-good-bases and min-good-base-fraction filters")
     
-    ("min-good-base-fraction,min-good-bp-frac",
+    ("min-good-base-fraction",
      po::value<double>()->implicit_value(0.5),
      "Base quality threshold used by min-good-bases filter")
     
-    ("min-good-bases,min-good-bps",
-     po::value<unsigned>()->default_value(20),
+    ("min-good-bases",
+     po::value<int>()->default_value(20),
      "Minimum number of bases with quality min-base-quality before read is considered")
     
     ("allow-qc-fails",
      po::bool_switch()->default_value(false),
      "Filters reads marked as QC failed")
     
-    ("min-read-length,min-read-len",
-     po::value<unsigned>(),
+    ("min-read-length",
+     po::value<int>(),
      "Filters reads shorter than this")
     
-    ("max-read-length,max-read-len",
-     po::value<unsigned>(),
+    ("max-read-length",
+     po::value<int>(),
      "Filter reads longer than this")
     
     ("allow-marked-duplicates,allow-marked-dups",
@@ -230,11 +233,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "Diables all downsampling")
     
     ("downsample-above",
-     po::value<unsigned>()->default_value(500),
+     po::value<int>()->default_value(500),
      "Downsample reads in regions where coverage is over this")
     
     ("downsample-target",
-     po::value<unsigned>()->default_value(400),
+     po::value<int>()->default_value(400),
      "The target coverage for the downsampler")
     ;
     
@@ -254,16 +257,16 @@ OptionMap parse_options(const int argc, const char** argv)
      " candidates")
     
     ("min-base-quality",
-     po::value<unsigned>()->default_value(20),
+     po::value<int>()->default_value(20),
      "Only bases with quality above this value are considered for candidate generation")
     
     ("min-supporting-reads",
-     po::value<unsigned>()->implicit_value(2),
+     po::value<int>()->implicit_value(2),
      "Minimum number of reads that must support a variant if it is to be considered a candidate."
      " By default octopus will automatically determine this value")
     
     ("max-variant-size",
-     po::value<unsigned>()->default_value(2000),
+     po::value<int>()->default_value(2000),
      "Maximum candidate varaint size to consider (in region space)")
     
     ("kmer-size",
@@ -272,7 +275,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "K-mer sizes to use for local re-assembly")
     
     ("assembler-mask-base-quality",
-     po::value<unsigned>()->implicit_value(10),
+     po::value<int>()->implicit_value(10),
      "Matching alignment bases with quality less than this will be reference masked before."
      " Ff no value is specified then min-base-quality is used")
     ;
@@ -284,7 +287,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Which of the octopus callers to use")
     
     ("organism-ploidy,P",
-     po::value<unsigned>()->default_value(2),
+     po::value<int>()->default_value(2),
      "All contigs with unspecified ploidies are assumed the organism ploidy")
     
     ("contig-ploidies,p",
@@ -452,7 +455,7 @@ OptionMap parse_options(const int argc, const char** argv)
     }
     
     if (vm_init.count("version") == 1) {
-        std::cout << "octopus " << info::VERSION << std::endl;
+        std::cout << "octopus " << info::Version << std::endl;
         return vm_init;
     }
     
@@ -469,6 +472,17 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::store(po::command_line_parser(argc, argv).options(all).run(), vm);
     
+    const std::vector<std::string> positive_int_options {
+        "threads", "max-open-read-files", "mask-tails", "mask-soft-clipped-boundries",
+        "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
+        "max-read-length", "downsample-above", "downsample-target", "min-base-quality"
+        "min-supporting-reads", "max-variant-size", "assembler-mask-base-quality", "organism-ploidy"
+    };
+    
+    for (const auto& option : positive_int_options) {
+        check_positive(option, vm);
+    }
+    
     // boost::option cannot handle option dependencies so we must do our own checks
     validate_options(vm);
     
@@ -477,10 +491,24 @@ OptionMap parse_options(const int argc, const char** argv)
     return vm;
 }
 
+void check_positive(const std::string& option, const OptionMap& vm)
+{
+    if (vm.count(option) == 1) {
+        const auto value = vm.at(option).as<int>();
+        if (value < 0) {
+            std::ostringstream ss {};
+            ss << "The option '" << option << "' was set to " << value << " but must be positive";
+            throw std::invalid_argument {ss.str()};
+        }
+    }
+}
+
 void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2)
 {
     if (vm.count(opt1) && !vm[opt1].defaulted() && vm.count(opt2) && !vm[opt2].defaulted()) {
-        throw std::logic_error(std::string("conflicting options '") + opt1 + "' and '" + opt2 + "'.");
+        std::ostringstream ss {};
+        ss << "The options " << opt1 << " and " << opt2 << " are mutually exclusive";
+        throw std::invalid_argument {ss.str()};
     }
 }
 
@@ -489,8 +517,9 @@ void option_dependency(const OptionMap& vm, const std::string& for_what,
 {
     if (vm.count(for_what) && !vm[for_what].defaulted())
         if (vm.count(required_option) == 0 || vm[required_option].defaulted()) {
-            throw std::logic_error(std::string("option '") + for_what
-                                   + "' requires option '" + required_option + "'.");
+            std::ostringstream ss {};
+            ss << "The option " << for_what << " requires option " << required_option;
+            throw std::logic_error {ss.str()};
         }
 }
 
