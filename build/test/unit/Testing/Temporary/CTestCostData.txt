@@ -1,0 +1,4 @@
+basics.contig_region.overlaps_is_consistent 1 0.00907302
+basics.contig_region.is_before_is_consistent 1 0.0120101
+basics.contig_region.is_after_is_consistent 1 0.01666
+---

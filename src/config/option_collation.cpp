@@ -136,7 +136,9 @@ fs::path resolve_path(const fs::path& path, const OptionMap& options)
     }
     
     auto result = wd;
+    
     result /= path;
+    
     return result;
 }
 
@@ -278,21 +280,9 @@ boost::optional<fs::path> get_trace_log_file_name(const OptionMap& options)
 
 ReferenceGenome make_reference(const OptionMap& options)
 {
-    logging::ErrorLogger log {};
-    
     const fs::path input_path {options.at("reference").as<std::string>()};
     
     auto resolved_path = resolve_path(input_path, options);
-    
-    if (!fs::exists(resolved_path)) {
-        stream(log) << "The path " << input_path
-        << " given in the input option (--reference) does not exist";
-    }
-    
-    if (!is_file_readable(resolved_path)) {
-        stream(log) << "The path " << input_path
-        << " given in the input option (--reference) is not readable";
-    }
     
     const auto ref_cache_size = options.at("max-reference-cache-footprint").as<float>();
     
@@ -637,8 +627,7 @@ boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& optio
     return boost::none;
 }
 
-namespace
-{
+namespace {
     void log_unresolved_read_paths(const std::vector<fs::path>& paths,
                                    const std::string& option)
     {

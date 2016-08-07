@@ -18,7 +18,7 @@ std::ostream& operator<<(std::ostream& os, severity_level level)
         case severity_level::debug: os <<   "DEBG"; break;
         case severity_level::info: os <<    "INFO"; break;
         case severity_level::warning: os << "WARN"; break;
-        case severity_level::error: os <<   "ERRR"; break;
+        case severity_level::error: os <<   "EROR"; break;
         case severity_level::fatal: os <<   "FATL"; break;
     }
     return os;

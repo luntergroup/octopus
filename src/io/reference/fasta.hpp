@@ -26,8 +26,6 @@ namespace io {
 class Fasta : public ReferenceReader
 {
 public:
-    class MissingFastaIndex;
-    
     using Path = boost::filesystem::path;
     
     using ContigName      = ReferenceReader::ContigName;
@@ -58,26 +56,8 @@ private:
     GenomicSize do_fetch_contig_size(const ContigName& contig) const override;
     GeneticSequence do_fetch_sequence(const GenomicRegion& region) const override;
     
-    bool is_valid() const noexcept;
-};
-
-class Fasta::MissingFastaIndex : public std::runtime_error
-{
-public:
-    using Path = Fasta::Path;
-    
-    MissingFastaIndex(Path fasta_path, Path expected_index_path);
-    
-    virtual ~MissingFastaIndex() noexcept = default;
-    
-    const Path& fasta_path() const noexcept;
-    const Path& expected_index_path() const noexcept;
-    
-    virtual const char* what() const noexcept;
-    
-private:
-    Path fasta_path_, expected_index_path_;
-    mutable std::string msg_;
+    bool is_valid_fasta() const noexcept;
+    bool is_valid_fasta_index() const noexcept;
 };
 
 } // namespace io

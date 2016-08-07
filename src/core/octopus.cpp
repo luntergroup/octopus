@@ -500,40 +500,31 @@ void cleanup(GenomeCallingComponents& components) noexcept
     }
 }
 
-boost::optional<GenomeCallingComponents>
-collate_genome_calling_components(const OptionMap& options)
+boost::optional<GenomeCallingComponents> collate_genome_calling_components(const OptionMap& options)
 {
-    try {
-        auto reference = options::make_reference(options);
-        
-        auto read_manager = options::make_read_manager(options);
-        
-        auto output = options::make_output_vcf_writer(options);
-        
-        if (!output.is_open()) {
-            return boost::none;
-        }
-        
-        GenomeCallingComponents result {
-            std::move(reference),
-            std::move(read_manager),
-            std::move(output),
-            options
-        };
-        
-        if (!are_components_valid(result)) {
-            cleanup(result);
-            return boost::none;
-        }
-        
-        return boost::optional<GenomeCallingComponents> {std::move(result)};
-    } catch (const fs::filesystem_error& e) {
-        return boost::none; // should already have logged this
-    } catch (const std::exception& e) {
-        logging::FatalLogger log {};
-        stream(log) << "Error in user input: " << e.what();
+    auto reference = options::make_reference(options);
+    
+    auto read_manager = options::make_read_manager(options);
+    
+    auto output = options::make_output_vcf_writer(options);
+    
+    if (!output.is_open()) {
         return boost::none;
     }
+    
+    GenomeCallingComponents result {
+        std::move(reference),
+        std::move(read_manager),
+        std::move(output),
+        options
+    };
+    
+    if (!are_components_valid(result)) {
+        cleanup(result);
+        return boost::none;
+    }
+    
+    return boost::optional<GenomeCallingComponents> {std::move(result)};
 }
 
 struct ContigCallingComponents
@@ -1632,7 +1623,6 @@ void run_octopus(OptionMap& options)
                     logging::WarningLogger warn_log {};
                     warn_log << "Running in parallel mode can make debug log difficult to interpret";
                 }
-                
                 run_octopus_multi_threaded(*components);
             } else {
                 run_octopus_single_threaded(*components);
@@ -1640,20 +1630,13 @@ void run_octopus(OptionMap& options)
             
             components->output().close();
         } catch (const std::exception& e) {
-            logging::FatalLogger fatal_log {};
-            
-            stream(fatal_log) << "Encountered error '" << e.what() << "'. Attempting to cleanup...";
-            
-            cleanup(*components);
-            
-            if (DEBUG_MODE) {
-                stream(info_log) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
-            } else {
-                stream(info_log) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
-                                    " log file to " << info::BUG_EMAIL;
-            }
-            
-            return;
+            try {
+                if (debug_log) {
+                    *debug_log << "Encounted an error, attempting to cleanuo";
+                }
+                cleanup(*components);
+            } catch (...) {}
+            throw;
         }
         
         if (!options.at("disable-call-filtering").as<bool>()) {

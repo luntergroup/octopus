@@ -10,9 +10,35 @@
 #include <config/option_collation.hpp>
 #include <logging/logging.hpp>
 #include <core/octopus.hpp>
+#include <utils/string_utils.hpp>
+
+#include <exceptions/error.hpp>
+#include <exceptions/error_handler.hpp>
 
 using namespace octopus;
 using namespace octopus::options;
+
+namespace {
+    template <typename E>
+    auto log_exception(const E& e)
+    {
+        log_error(e);
+        
+        log_program_end();
+        
+        return EXIT_FAILURE;
+    }
+    
+    template <typename E>
+    auto log_startup_exception(const E& e)
+    {
+        logging::init();
+        
+        log_program_startup();
+        
+        return log_exception(e);
+    }
+} // namespace
 
 int main(const int argc, const char** argv)
 {
@@ -20,24 +46,14 @@ int main(const int argc, const char** argv)
     
     try {
         options = parse_options(argc, argv);
+    } catch (const Error& e) {
+        return log_startup_exception(e);
     } catch (const std::exception& e) {
+        return log_startup_exception(e);
+    } catch (...) {
         logging::init();
         
-        log_program_startup();
-        
-        logging::ErrorLogger log {};
-        
-        log << "A user input error has occured:";
-        
-        log_empty_line(log);
-        
-        stream(log) << '\t' << e.what();
-        
-        log_empty_line(log);
-        
-        log << "Use the command --help for descriptions of required and allowable options.";
-        
-        log_program_end(log);
+        log_program_end();
         
         return EXIT_FAILURE;
     }
@@ -51,21 +67,15 @@ int main(const int argc, const char** argv)
             run_octopus(options);
             
             log_program_end();
+        } catch (const Error& e) {
+            return log_exception(e);
         } catch (const std::exception& e) {
-            logging::ErrorLogger log {};
-            
-            log << "A program error has occured:";
-            
-            log_empty_line(log);
-            
-            stream(log) << '\t' << e.what();
-            
-            log_program_end(log);
-            
-            return EXIT_FAILURE;
+            return log_exception(e);
         } catch (...) {
-            logging::FatalLogger log {};
-            log << "An unknown fatal error has occured!";
+            log_unknown_error();
+            
+            log_program_end();
+            
             return EXIT_FAILURE;
         }
     }

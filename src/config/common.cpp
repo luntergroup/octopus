@@ -12,13 +12,13 @@ void log_program_startup()
     logging::InfoLogger log {};
     log << "------------------------------------------------------------------------";
     if (TRACE_MODE) {
-        stream(log) << "octopus v" << info::VERSION << " (trace mode)";
+        stream(log) << "octopus v" << info::Version << " (trace mode)";
     } else if (DEBUG_MODE) {
-        stream(log) << "octopus v" << info::VERSION << " (debug mode)";
+        stream(log) << "octopus v" << info::Version << " (debug mode)";
     } else {
-        stream(log) << "octopus v" << info::VERSION;
+        stream(log) << "octopus v" << info::Version;
     }
-    log << info::COPYRIGHT_NOTICE;
+    log << info::CopyrightNotice;
     log << "------------------------------------------------------------------------";
 }
 

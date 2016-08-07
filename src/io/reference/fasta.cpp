@@ -4,14 +4,75 @@
 #include "fasta.hpp"
 
 #include <iostream>
-#include <sstream>
 #include <utility>
 
 #include <boost/filesystem/operations.hpp>
 
 #include <basics/genomic_region.hpp>
 
+#include <exceptions/missing_file_error.hpp>
+#include <exceptions/missing_index_error.hpp>
+#include <exceptions/malformed_file_error.hpp>
+
 namespace octopus { namespace io {
+
+class MissingFasta : public MissingFileError
+{
+    std::string where_;
+    
+    std::string do_where() const override
+    {
+        return where_;
+    }
+public:
+    MissingFasta(Fasta::Path file)
+    : MissingFileError {std::move(file), "fasta"} {}
+};
+
+class MalformedFasta : public MalformedFileError
+{
+    std::string where_;
+    
+    std::string do_where() const override
+    {
+        return where_;
+    }
+public:
+    MalformedFasta(Fasta::Path file)
+    : MalformedFileError {std::move(file), "fasta"} {}
+};
+
+class MissingFastaIndex : public MissingIndexError
+{
+    std::string where_;
+    
+    std::string do_where() const override
+    {
+        return where_;
+    }
+    
+    std::string do_help() const override
+    {
+        return "ensure that a valid fasta index (.fai) exists in the same directory as the given "
+        "fasta file. You can make one with the 'samtools index' command";
+    }
+public:
+    MissingFastaIndex(Fasta::Path file)
+    : MissingIndexError {std::move(file), "fasta"} {}
+};
+
+class MalformedFastaIndex : public MalformedFileError
+{
+    std::string where_;
+    
+    std::string do_where() const override
+    {
+        return where_;
+    }
+public:
+    MalformedFastaIndex(Fasta::Path file)
+    : MalformedFileError {std::move(file), "fasta"} {}
+};
 
 Fasta::Fasta(Path fasta_path)
 :
@@ -26,11 +87,7 @@ index_path_ {std::move(fasta_index_path)}
     using boost::filesystem::exists;
     
     if (!exists(path_)) {
-        std::ostringstream ss {};
-        ss << "Fasta: given fasta path ";
-        ss << fasta_path;
-        ss << " does not exist";
-        throw std::runtime_error {ss.str()};
+        throw MissingFasta {path_};
     }
     
     if (!exists(index_path_)) {
@@ -38,14 +95,20 @@ index_path_ {std::move(fasta_index_path)}
         index_path_.replace_extension("fai");
         
         if (!exists(index_path_)) {
-            throw MissingFastaIndex {path_, index_path_};
+            throw MissingFastaIndex {path_};
         }
     }
     
-    if (is_valid()) {
-        fasta_       = std::ifstream(path_.string());
-        fasta_index_ = bioio::read_fasta_index(index_path_.string());
+    if (!is_valid_fasta()) {
+        throw MalformedFasta {path_};
     }
+    
+    if (!is_valid_fasta_index()) {
+        throw MalformedFastaIndex {index_path_};
+    }
+    
+    fasta_       = std::ifstream(path_.string());
+    fasta_index_ = bioio::read_fasta_index(index_path_.string());
 }
 
 Fasta::Fasta(const Fasta& other)
@@ -106,7 +169,7 @@ Fasta::GeneticSequence Fasta::do_fetch_sequence(const GenomicRegion& region) con
                                     mapped_begin(region), size(region));
 }
 
-bool Fasta::is_valid() const noexcept
+bool Fasta::is_valid_fasta() const noexcept
 {
     const auto extension = path_.extension().string();
     
@@ -117,33 +180,15 @@ bool Fasta::is_valid() const noexcept
     return true; // TODO: could actually check valid fasta format
 }
 
-// MissingFastaIndex
-
-Fasta::MissingFastaIndex::MissingFastaIndex(Path fasta_path, Path expected_index_path)
-:
-std::runtime_error {"MissingFastaIndex"},
-fasta_path_ {std::move(fasta_path)},
-expected_index_path_ {expected_index_path},
-msg_ {}
-{}
-
-const Fasta::MissingFastaIndex::Path& Fasta::MissingFastaIndex::fasta_path() const noexcept
+bool Fasta::is_valid_fasta_index() const noexcept
 {
-    return fasta_path_;
-}
-
-const Fasta::MissingFastaIndex::Path& Fasta::MissingFastaIndex::expected_index_path() const noexcept
-{
-    return expected_index_path_;
-}
-
-const char* Fasta::MissingFastaIndex::what() const noexcept
-{
-    std::ostringstream ss {};
-    ss << runtime_error::what() << ": expected index " << expected_index_path_ << " for FASTA file "
-        << fasta_path_ << " but it is missing";
-    msg_ = ss.str();
-    return msg_.c_str();
+    const auto extension = index_path_.extension().string();
+    
+    if (extension != ".fai") {
+        return false;
+    }
+    
+    return true; // TODO: could actually check valid fasta format
 }
 
 } // namespace io

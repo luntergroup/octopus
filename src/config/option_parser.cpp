@@ -10,6 +10,8 @@
 #include <sstream>
 
 #include <basics/phred.hpp>
+#include <utils/string_utils.hpp>
+#include <exceptions/user_error.hpp>
 
 #include "common.hpp"
 
@@ -25,6 +27,8 @@ void check_region_files_consistent(const OptionMap& vm);
 void check_trio_consistent(const OptionMap& vm);
 void validate_caller(const OptionMap& vm);
 void validate_options(const OptionMap& vm);
+
+void try_notify(OptionMap& vm);
 
 OptionMap parse_options(const int argc, const char** argv)
 {
@@ -426,12 +430,12 @@ OptionMap parse_options(const int argc, const char** argv)
     
     OptionMap vm_init;
     
-    po::store(po::command_line_parser(argc, argv).options(general)
-              .allow_unregistered().run(), vm_init);
+    po::store(po::command_line_parser(argc, argv).options(general).allow_unregistered().run(),
+              vm_init);
     
     if (vm_init.count("help") == 1) {
-        po::store(po::command_line_parser(argc, argv).options(caller)
-                  .allow_unregistered().run(), vm_init);
+        po::store(po::command_line_parser(argc, argv).options(caller).allow_unregistered().run(),
+                  vm_init);
         
         if (vm_init.count("caller") == 1) {
             const auto caller = vm_init.at("caller").as<std::string>();
@@ -486,47 +490,155 @@ OptionMap parse_options(const int argc, const char** argv)
     // boost::option cannot handle option dependencies so we must do our own checks
     validate_options(vm);
     
-    po::notify(vm);
+    try_notify(vm);
     
     return vm;
 }
+
+class CommandLineError : public UserError
+{
+public:
+    CommandLineError() = default;
+    
+    CommandLineError(std::string&& why) : why_ {std::move(why)} {}
+    
+protected:
+    std::string why_;
+    
+private:
+    virtual std::string do_where() const override
+    {
+        return "parse_options";
+    }
+    
+    virtual std::string do_why() const override
+    {
+        return why_;
+    }
+    
+    virtual std::string do_help() const override
+    {
+        return "use the --help command to view required and allowable options";
+    }
+};
+
+class UnknownCommandLineOption : public CommandLineError
+{
+public:
+    UnknownCommandLineOption(std::string option)
+    : CommandLineError {
+        "The option given option '" + option + "' is not recognised"
+    } {}
+};
+    
+namespace {
+    std::string prepend_dashes(std::string option)
+    {
+        option.insert(0, "--");
+        return option;
+    }
+    
+    std::string implode(std::vector<std::string> options)
+    {
+        std::transform(std::cbegin(options), std::cend(options), std::begin(options), prepend_dashes);
+        static const std::string delim {" | "};
+        return utils::join(options, delim);
+    }
+}
+
+class MissingRequiredCommandLineArguement : public CommandLineError
+{
+public:
+    MissingRequiredCommandLineArguement(std::string option)
+    : CommandLineError {
+        "The command line option '--" + option + "' is required but is missing"
+    } {}
+    
+    MissingRequiredCommandLineArguement(std::vector<std::string> options, bool strict = false)
+    {
+        std::ostringstream ss {};
+        
+        if (strict) {
+            ss << "One ";
+        } else {
+            ss << "At least one ";
+        }
+        
+        ss << "of the command line options '" + implode(options) + "' is required but none are present";
+        
+        why_ = ss.str();
+    }
+};
+
+class InvalidCommandLineOptionValue : public CommandLineError
+{
+public:
+    template <typename T>
+    InvalidCommandLineOptionValue(std::string option, T value, std::string reason)
+    : CommandLineError {
+        "The arguement '" + std::to_string(value) + "' given to option '--" + option
+        + "' was rejected as it " + reason
+    } {}
+};
+
+class ConflictingCommandLineOptions : public CommandLineError
+{
+public:
+    ConflictingCommandLineOptions(std::vector<std::string> conflicts)
+    {
+        std::ostringstream ss {};
+        
+        ss << "the options";
+        
+        for (const auto& option : conflicts) {
+            ss << " " << option;
+        }
+        ss << " are mutually exclusive";
+        
+        why_ = ss.str();
+    }
+};
+
+class MissingDependentCommandLineOption : public CommandLineError
+{
+public:
+    MissingDependentCommandLineOption(std::string given, std::string dependent)
+    {
+        std::ostringstream ss {};
+        ss << "The option " << given << " requires option " << dependent;
+        why_ = ss.str();
+    }
+};
 
 void check_positive(const std::string& option, const OptionMap& vm)
 {
     if (vm.count(option) == 1) {
         const auto value = vm.at(option).as<int>();
         if (value < 0) {
-            std::ostringstream ss {};
-            ss << "The option '" << option << "' was set to " << value << " but must be positive";
-            throw std::invalid_argument {ss.str()};
+            throw InvalidCommandLineOptionValue {option, value, "must be positive" };
         }
     }
 }
 
 void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2)
 {
-    if (vm.count(opt1) && !vm[opt1].defaulted() && vm.count(opt2) && !vm[opt2].defaulted()) {
-        std::ostringstream ss {};
-        ss << "The options " << opt1 << " and " << opt2 << " are mutually exclusive";
-        throw std::invalid_argument {ss.str()};
+    if (vm.count(opt1) == 1 && !vm[opt1].defaulted() && vm.count(opt2) == 1 && !vm[opt2].defaulted()) {
+        throw ConflictingCommandLineOptions {{opt1, opt2}};
     }
 }
 
-void option_dependency(const OptionMap& vm, const std::string& for_what,
-                       const std::string& required_option)
+void option_dependency(const OptionMap& vm, const std::string& given, const std::string& dependent)
 {
-    if (vm.count(for_what) && !vm[for_what].defaulted())
-        if (vm.count(required_option) == 0 || vm[required_option].defaulted()) {
-            std::ostringstream ss {};
-            ss << "The option " << for_what << " requires option " << required_option;
-            throw std::logic_error {ss.str()};
+    if (vm.count(given) == 1 && !vm[given].defaulted())
+        if (vm.count(dependent) == 0 || vm[dependent].defaulted()) {
+            throw MissingDependentCommandLineOption {given, dependent};
         }
 }
 
 void check_reads_present(const OptionMap& vm)
 {
     if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
-        throw po::required_option {"--reads | --reads-file"};
+        throw MissingRequiredCommandLineArguement {std::vector<std::string> {"reads", "reads-file"}};
     }
 }
 
@@ -568,6 +680,29 @@ void validate_caller(const OptionMap& vm)
     }
 }
 
+namespace {
+    std::string strip(std::string option)
+    {
+        option.erase(option.begin(), option.begin() + 2);
+        return option;
+    }
+}
+
+void try_notify(OptionMap& vm)
+{
+    try {
+        po::notify(vm);
+    } catch (const po::required_option& e) {
+        throw MissingRequiredCommandLineArguement {strip(e.get_option_name())};
+    } catch (const po::unknown_option& e) {
+        throw UnknownCommandLineOption {strip(e.get_option_name())};
+    } catch (const po::reading_file& e) {
+        throw CommandLineError {e.what()};
+    } catch (const po::error& e) {
+        throw CommandLineError {e.what()};
+    }
+}
+
 void validate_options(const OptionMap& vm)
 {
     check_reads_present(vm);
@@ -575,7 +710,7 @@ void validate_options(const OptionMap& vm)
     check_trio_consistent(vm);
     validate_caller(vm);
 }
-    
+
 std::istream& operator>>(std::istream& in, ContigPloidy& result)
 {
     static const std::regex re {"(?:([^:]*):)?([^=]+)=(\\d+)"};

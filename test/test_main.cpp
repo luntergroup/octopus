@@ -11,10 +11,35 @@
 #include <core/octopus.hpp>
 #include <logging/logging.hpp>
 
+#include <exceptions/error.hpp>
+#include <exceptions/error_handler.hpp>
+
 #include "mock_options.hpp"
 
 using namespace octopus;
 using namespace octopus::options;
+
+namespace {
+    template <typename E>
+    auto log_exception(const E& e)
+    {
+        log_error(e);
+        
+        log_program_end();
+        
+        return EXIT_FAILURE;
+    }
+    
+    template <typename E>
+    auto log_startup_exception(const E& e)
+    {
+        logging::init();
+        
+        log_program_startup();
+        
+        return log_exception(e);
+    }
+} // namespace
 
 int main(const int argc, const char** argv)
 {
@@ -22,36 +47,32 @@ int main(const int argc, const char** argv)
     
     try {
         options = test::get_basic_mock_options();
+    } catch (const Error& e) {
+        log_startup_exception(e);
+        return EXIT_FAILURE;
     } catch (const std::exception& e) {
+        log_startup_exception(e);
+        return EXIT_FAILURE;
+    } catch (...) {
         logging::init();
         
-        log_program_startup();
-        
-        logging::ErrorLogger error_log {};
-        
-        error_log << "A user input error has occured:";
-        
-        log_empty_line(error_log);
-        
-        stream(error_log) << '\t' << e.what();
-        
-        log_empty_line(error_log);
-        
-        error_log << "Use the command --help for descriptions of required and allowable options.";
-        
-        log_program_end(error_log);
+        log_program_end();
         
         return EXIT_FAILURE;
     }
     
     if (is_run_command(options)) {
-        logging::init(get_debug_log_file_name(options), get_trace_log_file_name(options));
-        
-        log_program_startup();
-        
-        run_octopus(options);
-        
-        log_program_end();
+        try {
+            logging::init(get_debug_log_file_name(options), get_trace_log_file_name(options));
+            
+            log_program_startup();
+            
+            run_octopus(options);
+            
+            log_program_end();
+        } catch (const Error& e) {
+            return log_exception(e);
+        }
     }
     
     return EXIT_SUCCESS;

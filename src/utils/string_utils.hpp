@@ -13,9 +13,12 @@
 #include <cstddef>
 #include <type_traits>
 #include <iomanip>
+#include <cctype>
 
-namespace octopus { namespace utils
-{
+#include <boost/algorithm/string/join.hpp>
+
+namespace octopus { namespace utils {
+
 template <typename T>
 std::vector<std::string> split(const T& str, const char delim) {
     std::vector<std::string> elems;
@@ -26,6 +29,11 @@ std::vector<std::string> split(const T& str, const char delim) {
         elems.emplace_back(item);
     }
     return elems;
+}
+
+inline std::string join(const std::vector<std::string>& strings, const std::string delim)
+{
+    return boost::algorithm::join(strings, delim);
 }
 
 template <typename T>
@@ -82,6 +90,19 @@ std::vector<std::string> to_strings(const std::vector<T>& values, const unsigned
                    [precision] (auto value) { return to_string(value, precision); });
     return result;
 }
+
+inline std::string& capitalise_front(std::string& str) noexcept
+{
+    if (!str.empty()) str.front() = std::toupper(str.front());
+    return str;
+}
+
+inline std::string capitalise_front(const std::string& str)
+{
+    auto result = str;
+    return capitalise_front(result);
+}
+
 } // namespace utils
 } // namespace octopus
 
