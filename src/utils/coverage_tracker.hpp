@@ -33,17 +33,23 @@ public:
     template <typename MappableType>
     void add(const MappableType& mappable);
     
+    unsigned max_coverage() const noexcept;
     unsigned max_coverage(const GenomicRegion& region) const noexcept;
     
+    unsigned min_coverage() const noexcept;
     unsigned min_coverage(const GenomicRegion& region) const noexcept;
     
+    double mean_coverage() const noexcept;
     double mean_coverage(const GenomicRegion& region) const noexcept;
     
+    double stdev_coverage() const noexcept;
     double stdev_coverage(const GenomicRegion& region) const noexcept;
     
     double median_coverage(const GenomicRegion& region) const;
     
     std::vector<unsigned> coverage(const GenomicRegion& region) const;
+    
+    GenomicRegion encompassing_region() const;
     
     void clear() noexcept;
     

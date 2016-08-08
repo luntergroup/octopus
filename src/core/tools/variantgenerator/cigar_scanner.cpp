@@ -306,7 +306,7 @@ void CigarScanner::do_clear() noexcept
 {
     candidates_.clear();
     candidates_.shrink_to_fit();
-    coverage_tracker_.clear();
+    read_coverage_tracker_.clear();
 }
 
 std::string CigarScanner::name() const
