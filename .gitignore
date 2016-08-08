@@ -38,6 +38,9 @@ cmake_install.cmake
 install_manifest.txt
 CTestTestfile.cmake
 
+build/src
+build/test
+
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
