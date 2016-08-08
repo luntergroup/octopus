@@ -35,23 +35,19 @@ public:
     
     ~ReferenceGenome() = default;
     
-    bool is_good() const noexcept;
-    
     const std::string& name() const;
     
     bool has_contig(const ContigName& contig) const noexcept;
     
-    bool contains_region(const GenomicRegion& region) const noexcept;
-    
     std::size_t num_contigs() const noexcept;
     
-    const std::vector<ContigName>& contig_names() const noexcept;
+    std::vector<ContigName> contig_names() const;
     
     ContigRegion::Size contig_size(const ContigName& contig) const;
     
-    ContigRegion::Size contig_size(const GenomicRegion& region) const;
-    
     GenomicRegion contig_region(const ContigName& contig) const;
+    
+    bool contains(const GenomicRegion& region) const noexcept;
     
     GeneticSequence fetch_sequence(const GenomicRegion& region) const;
     
@@ -59,7 +55,7 @@ private:
     std::unique_ptr<io::ReferenceReader> impl_;
     
     std::string name_;
-    std::vector<ContigName> contig_names_;
+    
     std::unordered_map<ContigName, ContigRegion::Size> contig_sizes_;
 };
 

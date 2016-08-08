@@ -20,17 +20,17 @@ ReferenceGenome::ReferenceGenome(std::unique_ptr<io::ReferenceReader> impl)
 :
 impl_ {std::move(impl)},
 name_{},
-contig_names_ {},
 contig_sizes_ {}
 {
     if (impl_->is_open()) {
         try {
-            name_         = impl_->fetch_reference_name();
-            contig_names_ = impl_->fetch_contig_names();
+            name_ = impl_->fetch_reference_name();
             
-            contig_sizes_.reserve(contig_names_.size());
+            auto contig_names = impl_->fetch_contig_names();
             
-            for (const auto& contig_name : contig_names_) {
+            contig_sizes_.reserve(contig_names.size());
+            
+            for (const auto& contig_name : contig_names) {
                 contig_sizes_.emplace(contig_name, impl_->fetch_contig_size(contig_name));
             }
         } catch (...) {
@@ -45,7 +45,6 @@ ReferenceGenome::ReferenceGenome(const ReferenceGenome& other)
 :
 impl_ {other.impl_->clone()},
 name_ {other.name_},
-contig_names_ {other.contig_names_},
 contig_sizes_ {other.contig_sizes_}
 {}
 
@@ -54,14 +53,8 @@ ReferenceGenome& ReferenceGenome::operator=(ReferenceGenome other)
     using std::swap;
     swap(impl_, other.impl_);
     swap(name_, other.name_);
-    swap(contig_names_, other.contig_names_);
     swap(contig_sizes_, other.contig_sizes_);
     return *this;
-}
-
-bool ReferenceGenome::is_good() const noexcept
-{
-    return impl_ != nullptr;
 }
 
 const std::string& ReferenceGenome::name() const
@@ -71,22 +64,23 @@ const std::string& ReferenceGenome::name() const
 
 bool ReferenceGenome::has_contig(const ContigName& contig) const noexcept
 {
-    return std::find(std::cbegin(contig_names_), std::cend(contig_names_), contig) != std::cend(contig_names_);
-}
-
-bool ReferenceGenome::contains_region(const GenomicRegion& region) const noexcept
-{
-    return this->has_contig(region.contig_name()) && region.end() <= this->contig_size(region.contig_name());
+    return contig_sizes_.count(contig) == 1;
 }
 
 std::size_t ReferenceGenome::num_contigs() const noexcept
 {
-    return contig_names_.size();
+    return contig_sizes_.size();
 }
 
-const std::vector<ReferenceGenome::ContigName>& ReferenceGenome::contig_names() const noexcept
+std::vector<ReferenceGenome::ContigName> ReferenceGenome::contig_names() const
 {
-    return contig_names_;
+    std::vector<ContigName> result {};
+    result.reserve(contig_sizes_.size());
+    
+    std::transform(std::cbegin(contig_sizes_), std::cend(contig_sizes_), std::back_inserter(result),
+                   [] (const auto& p) { return p.first; });
+    
+    return result;
 }
 
 ContigRegion::Size ReferenceGenome::contig_size(const ContigName& contig) const
@@ -94,14 +88,14 @@ ContigRegion::Size ReferenceGenome::contig_size(const ContigName& contig) const
     return contig_sizes_.at(contig);
 }
 
-ContigRegion::Size ReferenceGenome::contig_size(const GenomicRegion& region) const
-{
-    return this->contig_size(region.contig_name());
-}
-
 GenomicRegion ReferenceGenome::contig_region(const ContigName& contig) const
 {
     return GenomicRegion {contig, GenomicRegion::Position {0}, this->contig_size(contig)};
+}
+
+bool ReferenceGenome::contains(const GenomicRegion& region) const noexcept
+{
+    return this->has_contig(region.contig_name()) && region.end() <= this->contig_size(region.contig_name());
 }
 
 ReferenceGenome::GeneticSequence ReferenceGenome::fetch_sequence(const GenomicRegion& region) const
