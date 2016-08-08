@@ -274,8 +274,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "Maximum candidate varaint size to consider (in region space)")
     
     ("kmer-size",
-     po::value<std::vector<unsigned>>()->multitoken()
-     ->default_value(std::vector<unsigned> {10, 25}, "10 25")->composing(),
+     po::value<std::vector<int>>()->multitoken()
+     ->default_value(std::vector<int> {10, 25}, "10 25")->composing(),
      "K-mer sizes to use for local re-assembly")
     
     ("assembler-mask-base-quality",
@@ -398,7 +398,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description advanced("Advanced calling algorithm");
     advanced.add_options()
     ("max-haplotypes",
-     po::value<unsigned>()->default_value(128),
+     po::value<int>()->default_value(128),
      "Maximum number of candidate haplotypes the caller may consider")
     
     ("min-haplotype-filter-posterior",
@@ -480,7 +480,8 @@ OptionMap parse_options(const int argc, const char** argv)
         "threads", "max-open-read-files", "mask-tails", "mask-soft-clipped-boundries",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "downsample-above", "downsample-target", "min-base-quality"
-        "min-supporting-reads", "max-variant-size", "assembler-mask-base-quality", "organism-ploidy"
+        "min-supporting-reads", "max-variant-size", "assembler-mask-base-quality", "organism-ploidy",
+        "max-haplotypes"
     };
     
     for (const auto& option : positive_int_options) {
