@@ -9,6 +9,24 @@ set(CONFIG_SOURCES
     config/octopus_vcf.cpp
 )
 
+set(EXCEPTIONS_SOURCES
+    exceptions/error.hpp
+    exceptions/error.cpp
+    exceptions/user_error.hpp
+    exceptions/program_error.hpp
+    exceptions/system_error.hpp
+    exceptions/missing_file_error.hpp
+    exceptions/missing_file_error.cpp
+    exceptions/malformed_file_error.hpp
+    exceptions/malformed_file_error.cpp
+    exceptions/missing_index_error.hpp
+    exceptions/missing_index_error.cpp
+    exceptions/unwritable_file_error.hpp
+    exceptions/unwritable_file_error.cpp
+    exceptions/error_handler.hpp
+    exceptions/error_handler.cpp
+)
+
 set(CONCEPTS_SOURCES
     concepts/equitable.hpp
     concepts/comparable.hpp
@@ -259,6 +277,7 @@ set(CORE_SOURCES
 
 set(OCTOPUS_SOURCES
     ${CONFIG_SOURCES}
+    ${EXCEPTIONS_SOURCES}
     ${CONCEPTS_SOURCES}
     ${BASICS_SOURCES}
     ${CONTAINERS_SOURCES}
