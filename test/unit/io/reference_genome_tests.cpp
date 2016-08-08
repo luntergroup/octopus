@@ -11,6 +11,7 @@
 #include <random>
 
 #include "test_common.hpp"
+
 #include <io/reference/reference_genome.hpp>
 #include <utils/mappable_algorithms.hpp>
 
@@ -32,7 +33,7 @@ BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_basic_queries)
     const auto ecoli = make_reference(ecoli_reference_fasta);
     
     BOOST_CHECK(ecoli.name() == "R00000042");
-    BOOST_CHECK(ecoli.contains_region(GenomicRegion("R00000042", 10000, 2000000)));
+    BOOST_CHECK(ecoli.contains(GenomicRegion("R00000042", 10000, 2000000)));
     BOOST_CHECK(ecoli.contig_size("R00000042") == 5231428);
     BOOST_CHECK(!ecoli.has_contig("X"));
     BOOST_CHECK(ecoli.contig_region("R00000042") == GenomicRegion("R00000042", 0, 5231428));
@@ -44,8 +45,8 @@ BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_basic_queries)
     const auto human = make_reference(human_reference_fasta);
     
     BOOST_CHECK(human.name() == "human_g1k_v37");
-    BOOST_CHECK(human.contains_region(GenomicRegion("1", 100, 10000)));
-    BOOST_CHECK(!human.contains_region(GenomicRegion("1", 100, 3e8))); // too big
+    BOOST_CHECK(human.contains(GenomicRegion("1", 100, 10000)));
+    BOOST_CHECK(!human.contains(GenomicRegion("1", 100, 3e8))); // too big
     BOOST_CHECK(human.contig_size("20") == 63025520);
     BOOST_CHECK(human.has_contig("X"));
     BOOST_CHECK(!human.has_contig("y"));
@@ -245,7 +246,7 @@ BOOST_AUTO_TEST_CASE(CachingFasta_works_the_same_as_Fasta)
     const auto ecoli = make_reference(ecoli_reference_fasta, max_cache_size);
     
     BOOST_CHECK(ecoli.name() == "R00000042");
-    BOOST_CHECK(ecoli.contains_region(GenomicRegion("R00000042", 10000, 2000000)));
+    BOOST_CHECK(ecoli.contains(GenomicRegion("R00000042", 10000, 2000000)));
     BOOST_CHECK(ecoli.contig_size("R00000042") == 5231428);
     BOOST_CHECK(!ecoli.has_contig("X"));
     BOOST_CHECK(ecoli.contig_region("R00000042") == GenomicRegion("R00000042", 0, 5231428));
@@ -257,8 +258,8 @@ BOOST_AUTO_TEST_CASE(CachingFasta_works_the_same_as_Fasta)
     const auto human = make_reference(human_reference_fasta, max_cache_size);
     
     BOOST_CHECK(human.name() == "human_g1k_v37");
-    BOOST_CHECK(human.contains_region(GenomicRegion("1", 100, 10000)));
-    BOOST_CHECK(!human.contains_region(GenomicRegion("1", 100, 3e8))); // too big
+    BOOST_CHECK(human.contains(GenomicRegion("1", 100, 10000)));
+    BOOST_CHECK(!human.contains(GenomicRegion("1", 100, 3e8))); // too big
     BOOST_CHECK(human.contig_size("20") == 63025520);
     BOOST_CHECK(human.has_contig("X"));
     BOOST_CHECK(!human.has_contig("y"));

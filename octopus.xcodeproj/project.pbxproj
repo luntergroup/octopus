@@ -48,6 +48,7 @@
 		CA566E371D0488C7007C5180 /* octopus_vcf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA566E351D0488C7007C5180 /* octopus_vcf.cpp */; };
 		CA704FC41D11F4B2004218BB /* snv_error_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA704FC21D11F4B2004218BB /* snv_error_model.cpp */; };
 		CA7148B61CD00ABA0017820B /* read_filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA7148B51CD00ABA0017820B /* read_filter.cpp */; };
+		CA83B20B1D58D9BF00DC8035 /* mock_reference.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2091D58D9BF00DC8035 /* mock_reference.cpp */; };
 		CA8A664A1B81CA7E008CE1D8 /* threadsafe_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */; };
 		CA91C2C81B8DE00E00609FFA /* population_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C61B8DE00E00609FFA /* population_model.cpp */; };
 		CA91C2CB1B8DE02300609FFA /* tumour_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C91B8DE02300609FFA /* tumour_model.cpp */; };
@@ -288,6 +289,8 @@
 		CA704FC21D11F4B2004218BB /* snv_error_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = snv_error_model.cpp; sourceTree = "<group>"; };
 		CA704FC31D11F4B2004218BB /* snv_error_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = snv_error_model.hpp; sourceTree = "<group>"; };
 		CA7148B51CD00ABA0017820B /* read_filter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filter.cpp; sourceTree = "<group>"; };
+		CA83B2091D58D9BF00DC8035 /* mock_reference.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mock_reference.cpp; sourceTree = "<group>"; };
+		CA83B20A1D58D9BF00DC8035 /* mock_reference.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = mock_reference.hpp; sourceTree = "<group>"; };
 		CA8A66431B7E2CC7008CE1D8 /* vcf_reader_impl.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = vcf_reader_impl.hpp; sourceTree = "<group>"; };
 		CA8A66451B7E5E0C008CE1D8 /* sequence_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = sequence_utils.hpp; sourceTree = "<group>"; };
 		CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = threadsafe_fasta.cpp; sourceTree = "<group>"; };
@@ -713,6 +716,15 @@
 			path = filters;
 			sourceTree = "<group>";
 		};
+		CA83B2081D58D97D00DC8035 /* mock */ = {
+			isa = PBXGroup;
+			children = (
+				CA83B20A1D58D9BF00DC8035 /* mock_reference.hpp */,
+				CA83B2091D58D9BF00DC8035 /* mock_reference.cpp */,
+			);
+			path = mock;
+			sourceTree = "<group>";
+		};
 		CA91C2CC1B8DE63A00609FFA /* callers */ = {
 			isa = PBXGroup;
 			children = (
@@ -810,6 +822,7 @@
 		CAA4DC2D1A8219D900DD3E9A /* test */ = {
 			isa = PBXGroup;
 			children = (
+				CA83B2081D58D97D00DC8035 /* mock */,
 				D424E0CC1D54BC1100654AA3 /* timers.cpp */,
 				D424E0CD1D54BC1100654AA3 /* timers.hpp */,
 				D424E0CB1D54BBEC00654AA3 /* benchmark */,
@@ -1466,6 +1479,7 @@
 				D47686631BD672940067E03D /* read_reader.cpp in Sources */,
 				D482E00E1D0EB9440096A269 /* hiseq_indel_error_model.cpp in Sources */,
 				CA16B0E91D481011006722C1 /* quality_by_depth.cpp in Sources */,
+				CA83B20B1D58D9BF00DC8035 /* mock_reference.cpp in Sources */,
 				D463C1A41B0A174B00739A66 /* variant.cpp in Sources */,
 				D44ADE781C452B9B00A854C6 /* compression.cpp in Sources */,
 				CA3B6CFD1D3EBFBA005298BE /* variant_call_filter_factory.cpp in Sources */,
