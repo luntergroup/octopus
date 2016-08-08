@@ -135,6 +135,8 @@ set(UTILS_SOURCES
     utils/string_utils.hpp
     utils/timing.hpp
     utils/type_tricks.hpp
+    utils/coverage_tracker.hpp
+    utils/coverage_tracker.cpp
 )
 
 set(CORE_SOURCES
