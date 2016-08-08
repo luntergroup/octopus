@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cctype>
 #include <fstream>
+#include <exception>
 #include <stdexcept>
 #include <iterator>
 #include <algorithm>
@@ -429,8 +430,7 @@ InputRegionMap extract_search_regions(const ReferenceGenome& reference)
     return make_search_regions(get_all_contig_regions(reference));
 }
 
-MappableFlatSet<GenomicRegion>
-cut(const MappableFlatSet<GenomicRegion>& mappables, const MappableFlatSet<GenomicRegion>& regions)
+auto cut(const MappableFlatSet<GenomicRegion>& mappables, const MappableFlatSet<GenomicRegion>& regions)
 {
     if (mappables.empty()) return regions;
     
@@ -503,29 +503,62 @@ InputRegionMap extract_search_regions(const ReferenceGenome& reference,
     return extract_search_regions(get_all_contig_regions(reference), skip_regions);
 }
 
+class MalformedRegion : public UserError
+{
+    std::string do_where() const override { return "parse_regions"; }
+    
+    std::string do_why() const override
+    {
+        return "the region you specified '" + region_ + "' is not formatted correctly";
+    }
+    
+    std::string do_help() const override
+    {
+        return "ensure the region is in the format contig[:begin][-][end]";
+    }
+    
+    std::string region_;
+public:
+    MalformedRegion(std::string region) : region_ {std::move(region)} {}
+};
+
+class MissingReferenceRegion : public UserError
+{
+    std::string do_where() const override { return "parse_regions"; }
+    
+    std::string do_why() const override
+    {
+        return "the region you specified '" + region_ + "' refers to a contig not in the reference " + reference_;
+    }
+    
+    std::string do_help() const override
+    {
+        return "ensure the region is in the format contig[:begin][-][end], where contig refers to "
+        " a contig in the reference " + reference_;
+    }
+    
+    std::string region_, reference_;
+public:
+    MissingReferenceRegion(std::string region, std::string reference)
+    : region_ {std::move(region)}, reference_ {std::move(reference)} {}
+};
+        
 std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparsed_regions,
                                          const ReferenceGenome& reference)
 {
     std::vector<GenomicRegion> result {};
     result.reserve(unparsed_regions.size());
     
-    bool all_region_parsed {true};
-    
     for (const auto& unparsed_region : unparsed_regions) {
-        logging::WarningLogger log {};
         try {
             result.push_back(parse_region(unparsed_region, reference));
-        } catch (std::exception& e) {
-            all_region_parsed = false;
-            stream(log) << "Could not parse input region \"" << unparsed_region
-            << "\". Check the format is correct, the contig is in the reference genome \""
-            << reference.name() << "\", and the coordinate range is in bounds.";
+        } catch (const std::invalid_argument& e) {
+            throw MalformedRegion {unparsed_region};
+        } catch (const std::exception& e) {
+            throw MissingReferenceRegion {unparsed_region,  reference.name()};
+        } catch (...) {
+            throw;
         }
-    }
-    
-    if (!all_region_parsed) {
-        result.clear();
-        result.shrink_to_fit();
     }
     
     return result;
@@ -569,24 +602,25 @@ auto transform_to_zero_based(InputRegionMap&& one_based_search_regions)
     return result;
 }
 
+class MissingRegionPathFile : public MissingFileError
+{
+    std::string do_where() const override
+    {
+        return "get_search_regions";
+    }
+public:
+    MissingRegionPathFile(fs::path p) : MissingFileError {std::move(p), "region path"} {};
+};
+
 InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenome& reference)
 {
     using namespace utils;
     
-    logging::ErrorLogger log {};
-    
     std::vector<GenomicRegion> skip_regions {};
-    
-    bool all_parsed {true};
     
     if (options.count("skip-regions") == 1) {
         const auto& region_strings = options.at("skip-regions").as<std::vector<std::string>>();
-        auto parsed_regions = parse_regions(region_strings, reference);
-        if (region_strings.size() == parsed_regions.size()) {
-            append(std::move(parsed_regions), skip_regions);
-        } else {
-            all_parsed = false;
-        }
+        append(parse_regions(region_strings, reference), skip_regions);
     }
     
     if (options.count("skip-regions-file") == 1) {
@@ -595,14 +629,12 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
         auto resolved_path = resolve_path(input_path, options);
         
         if (!fs::exists(resolved_path)) {
-            stream(log) << "The path " << input_path
-            << " given in the input option (--skip-regions-file) does not exist";
-        } else if (!is_file_readable(resolved_path)) {
-            stream(log) << "The path " << input_path
-            << " given in the input option (--skip-regions-file) is not readable";
-        } else {
-            append(extract_regions_from_file(resolved_path, reference), skip_regions);
+            MissingRegionPathFile e {resolved_path};
+            e.set_location_specified("the command line option '--skip-regions-file'");
+            throw e;
         }
+        
+        append(extract_regions_from_file(resolved_path, reference), skip_regions);
     }
     
     if (options.at("one-based-indexing").as<bool>()) {
@@ -620,12 +652,7 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
     
     if (options.count("regions") == 1) {
         const auto& region_strings = options.at("regions").as<std::vector<std::string>>();
-        auto parsed_regions = parse_regions(region_strings, reference);
-        if (region_strings.size() == parsed_regions.size()) {
-            append(std::move(parsed_regions), input_regions);
-        } else {
-            all_parsed = false;
-        }
+        append(parse_regions(region_strings, reference), input_regions);
     }
     
     if (options.count("regions-file") == 1) {
@@ -634,24 +661,12 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
         auto resolved_path = resolve_path(input_path, options);
         
         if (!fs::exists(resolved_path)) {
-            stream(log) << "The path " << input_path
-            << " given in the input option (--skip-regions-file) does not exist";
-        } else if (!is_file_readable(resolved_path)) {
-            stream(log) << "The path " << input_path
-            << " given in the input option (--skip-regions-file) is not readable";
-        } else {
-            append(extract_regions_from_file(resolved_path, reference), input_regions);
+            MissingRegionPathFile e {resolved_path};
+            e.set_location_specified("the command line option '--regions-file'");
+            throw e;
         }
-    }
-    
-    if (!all_parsed) {
-        logging::WarningLogger log {};
-        if (!input_regions.empty()) {
-            stream(log) << "Detected unparsed input regions so dumping "
-            << input_regions.size() << " parsed regions";
-            input_regions.clear();
-        }
-        skip_regions.clear();
+        
+        append(extract_regions_from_file(resolved_path, reference), input_regions);
     }
     
     auto result = extract_search_regions(input_regions, skip_regions);
@@ -724,7 +739,7 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
     if (num_duplicates > 0) {
         logging::WarningLogger log {};
         stream(log) << "There are " << num_duplicates
-        << " duplicate read paths but only unique paths will be considered";
+                    << " duplicate read paths but only unique paths will be considered";
     }
     
     result.erase(it, std::end(result));
@@ -967,7 +982,7 @@ auto make_variant_generator_builder(const OptionMap& options)
     
     if (!options.at("disable-assembly-candidate-generator").as<bool>()) {
         result.add_generator(VGB::Generator::Assembler);
-        const auto kmer_sizes = options.at("kmer-size").as<std::vector<unsigned>>();
+        const auto kmer_sizes = options.at("kmer-size").as<std::vector<int>>();
         
         for (const auto k : kmer_sizes) {
             result.add_kmer_size(k);
