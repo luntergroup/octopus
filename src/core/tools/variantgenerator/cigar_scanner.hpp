@@ -12,9 +12,10 @@
 #include <memory>
 
 #include <basics/aligned_read.hpp>
+#include <core/types/variant.hpp>
+#include <utils/coverage_tracker.hpp>
 
 #include "variant_generator.hpp"
-#include <core/types/variant.hpp>
 
 namespace octopus {
 
@@ -76,6 +77,8 @@ private:
     
     std::deque<Variant> candidates_;
     Variant::MappingDomain::Size max_seen_candidate_size_;
+    
+    CoverageTracker coverage_tracker_;
     
     template <typename T1, typename T2, typename T3>
     void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added);
