@@ -5,11 +5,11 @@
 
 #include <iostream>
 #include <utility>
+#include <exception>
 
 #include <boost/filesystem/operations.hpp>
 
 #include <basics/genomic_region.hpp>
-
 #include <exceptions/missing_file_error.hpp>
 #include <exceptions/missing_index_error.hpp>
 #include <exceptions/malformed_file_error.hpp>
@@ -165,8 +165,16 @@ Fasta::GenomicSize Fasta::do_fetch_contig_size(const ContigName& contig) const
 
 Fasta::GeneticSequence Fasta::do_fetch_sequence(const GenomicRegion& region) const
 {
-    return bioio::read_fasta_contig(fasta_, fasta_index_.at(contig_name(region)),
-                                    mapped_begin(region), size(region));
+    try {
+        return bioio::read_fasta_contig(fasta_, fasta_index_.at(contig_name(region)),
+                                        mapped_begin(region), size(region));
+    } catch (const std::ios::failure& e) {
+        throw; // TODO: test to see if the file has disappeared, throw octopus error if so.
+    } catch (const std::exception& e) {
+        throw;
+    } catch (...) {
+        throw;
+    }
 }
 
 bool Fasta::is_valid_fasta() const noexcept
