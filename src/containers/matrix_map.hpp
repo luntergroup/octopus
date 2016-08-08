@@ -57,7 +57,6 @@ public:
     class InnerSlice;
     
     MatrixMap()  = default;
-    ~MatrixMap() = default;
     
     template <typename InputIt>
     MatrixMap(InputIt first, InputIt last) : key2s_ {first, last}
@@ -108,6 +107,8 @@ public:
         
         return *this;
     }
+    
+    ~MatrixMap() = default;
     
     T& operator()(const Key1& key1, const Key2& key2)
     {

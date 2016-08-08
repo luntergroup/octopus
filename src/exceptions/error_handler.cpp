@@ -55,7 +55,15 @@ void log_error(const Error& error)
 {
     logging::ErrorLogger log {};
     
-    stream(log) << "A " << error.type() << " error has occured:";
+    {
+        auto ss = stream(log);
+        if (utils::begins_with_vowel(error.type())) {
+            ss << "An ";
+        } else {
+            ss << "A ";
+        }
+        ss << error.type() << " error has occured:";
+    }
     
     log_empty_line(log);
     

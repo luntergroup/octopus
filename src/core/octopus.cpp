@@ -439,12 +439,12 @@ private:
             }
         }
         
-        ~Components() = default;
-        
         Components(const Components&)            = delete;
         Components& operator=(const Components&) = delete;
         Components(Components&&)                 = default;
         Components& operator=(Components&&)      = default;
+        
+        ~Components() = default;
         
         ReferenceGenome reference;
         ReadManager read_manager;
@@ -469,17 +469,17 @@ private:
         components_.caller_factory.set_read_pipe(components_.read_pipe);
     }
 };
-
-bool are_components_valid(const GenomeCallingComponents& components)
-{
-    logging::FatalLogger log {};
     
+bool check_components_valid(const GenomeCallingComponents& components)
+{
     if (components.samples().empty()) {
+        logging::WarningLogger log {};
         log << "No samples detected - at least one is required for calling";
         return false;
     }
     
     if (components.search_regions().empty()) {
+        logging::WarningLogger log {};
         log << "There are no input regions - at least one is required for calling";
         return false;
     }
@@ -519,10 +519,7 @@ boost::optional<GenomeCallingComponents> collate_genome_calling_components(const
         options
     };
     
-    if (!are_components_valid(result)) {
-        cleanup(result);
-        return boost::none;
-    }
+    check_components_valid(result);
     
     return boost::optional<GenomeCallingComponents> {std::move(result)};
 }
@@ -566,12 +563,12 @@ struct ContigCallingComponents
     progress_meter {genome_components.progress_meter()}
     {}
     
-    ~ContigCallingComponents() = default;
-    
     ContigCallingComponents(const ContigCallingComponents&)            = delete;
     ContigCallingComponents& operator=(const ContigCallingComponents&) = delete;
     ContigCallingComponents(ContigCallingComponents&&)                 = default;
     ContigCallingComponents& operator=(ContigCallingComponents&&)      = default;
+    
+    ~ContigCallingComponents() = default;
 };
 
 bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
@@ -613,10 +610,12 @@ void log_startup_info(const GenomeCallingComponents& components)
 {
     std::ostringstream ss {};
     
-    if (components.samples().size() == 1) {
-        ss << "Sample is: ";
-    } else {
-        ss << "Samples are: ";
+    if (!components.samples().empty()) {
+        if (components.samples().size() == 1) {
+            ss << "Sample is: ";
+        } else {
+            ss << "Samples are: ";
+        }
     }
     
     std::transform(std::cbegin(components.samples()), std::cend(components.samples()),
@@ -691,8 +690,7 @@ auto propose_call_subregion(const ContigCallingComponents& components,
     return propose_call_subregion(components, right_overhang_region(input_region, current_subregion));
 }
 
-namespace
-{
+namespace {
     auto mapped_begin(const VcfRecord& call)
     {
         return call.pos() - 1;
@@ -1602,6 +1600,10 @@ void run_octopus(OptionMap& options)
         auto components = collate_genome_calling_components(options);
         
         if (!components) return;
+        
+        if (components->samples().empty()) {
+            return;
+        }
         
         end = std::chrono::system_clock::now();
         

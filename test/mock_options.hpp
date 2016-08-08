@@ -80,7 +80,7 @@ inline auto get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22:cj-200",
+        "--regions", "22:30,000,000-30,010,000",
         
         //"--regions", "22",
         

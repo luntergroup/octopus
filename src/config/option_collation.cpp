@@ -372,16 +372,74 @@ std::string convert_bed_line_to_region_str(const std::string& bed_line)
     return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
 }
 
+namespace {
+
+class MalformedRegion : public UserError
+{
+    std::string do_where() const override { return "try_parse_region"; }
+    
+    std::string do_why() const override
+    {
+        return "the region you specified '" + region_ + "' is not formatted correctly";
+    }
+    
+    std::string do_help() const override
+    {
+        return "ensure the region is in the format contig[:begin][-][end]";
+    }
+    
+    std::string region_;
+public:
+    MalformedRegion(std::string region) : region_ {std::move(region)} {}
+};
+
+class MissingReferenceRegion : public UserError
+{
+    std::string do_where() const override { return "try_parse_region"; }
+    
+    std::string do_why() const override
+    {
+        return "the region you specified '" + region_ + "' refers to a contig not in the reference " + reference_;
+    }
+    
+    std::string do_help() const override
+    {
+        return "ensure the region is in the format contig[:begin][-][end], where contig refers to "
+        " a contig in the reference " + reference_;
+    }
+    
+    std::string region_, reference_;
+public:
+    MissingReferenceRegion(std::string region, std::string reference)
+    : region_ {std::move(region)}, reference_ {std::move(reference)} {}
+};
+
+// Converts exceptions thrown by ReferenceGenome::parse_region into UserError's
+auto try_parse_region(const std::string& str, const ReferenceGenome& reference)
+{
+    try {
+        return parse_region(str, reference);
+    } catch (const std::invalid_argument& e) {
+        throw MalformedRegion {str};
+    } catch (const std::exception& e) {
+        throw MissingReferenceRegion {str,  reference.name()};
+    } catch (...) {
+        throw;
+    }
+}
+
+} // namespace
+
 std::function<GenomicRegion(const std::string&)>
 make_region_line_parser(const fs::path& file, const ReferenceGenome& reference)
 {
     if (is_bed_file(file)) {
         return [&] (const std::string& line) -> GenomicRegion
         {
-            return parse_region(convert_bed_line_to_region_str(line), reference);
+            return try_parse_region(convert_bed_line_to_region_str(line), reference);
         };
     } else {
-        return [&] (const std::string& line) { return parse_region(line, reference); };
+        return [&] (const std::string& line) { return try_parse_region(line, reference); };
     }
 }
 
@@ -502,46 +560,6 @@ InputRegionMap extract_search_regions(const ReferenceGenome& reference,
 {
     return extract_search_regions(get_all_contig_regions(reference), skip_regions);
 }
-
-class MalformedRegion : public UserError
-{
-    std::string do_where() const override { return "parse_regions"; }
-    
-    std::string do_why() const override
-    {
-        return "the region you specified '" + region_ + "' is not formatted correctly";
-    }
-    
-    std::string do_help() const override
-    {
-        return "ensure the region is in the format contig[:begin][-][end]";
-    }
-    
-    std::string region_;
-public:
-    MalformedRegion(std::string region) : region_ {std::move(region)} {}
-};
-
-class MissingReferenceRegion : public UserError
-{
-    std::string do_where() const override { return "parse_regions"; }
-    
-    std::string do_why() const override
-    {
-        return "the region you specified '" + region_ + "' refers to a contig not in the reference " + reference_;
-    }
-    
-    std::string do_help() const override
-    {
-        return "ensure the region is in the format contig[:begin][-][end], where contig refers to "
-        " a contig in the reference " + reference_;
-    }
-    
-    std::string region_, reference_;
-public:
-    MissingReferenceRegion(std::string region, std::string reference)
-    : region_ {std::move(region)}, reference_ {std::move(reference)} {}
-};
         
 std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparsed_regions,
                                          const ReferenceGenome& reference)
@@ -550,15 +568,7 @@ std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparse
     result.reserve(unparsed_regions.size());
     
     for (const auto& unparsed_region : unparsed_regions) {
-        try {
-            result.push_back(parse_region(unparsed_region, reference));
-        } catch (const std::invalid_argument& e) {
-            throw MalformedRegion {unparsed_region};
-        } catch (const std::exception& e) {
-            throw MissingReferenceRegion {unparsed_region,  reference.name()};
-        } catch (...) {
-            throw;
-        }
+        result.push_back(try_parse_region(unparsed_region, reference));
     }
     
     return result;
@@ -634,7 +644,15 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
             throw e;
         }
         
-        append(extract_regions_from_file(resolved_path, reference), skip_regions);
+        auto regions = extract_regions_from_file(resolved_path, reference);
+        
+        if (regions.empty()) {
+            logging::WarningLogger log {};
+            stream(log) << "The regions path file you specified " << resolved_path
+                << " in the command line option '--skip-regions-file' is empty";
+        }
+        
+        append(std::move(regions), skip_regions);
     }
     
     if (options.at("one-based-indexing").as<bool>()) {
@@ -666,7 +684,15 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
             throw e;
         }
         
-        append(extract_regions_from_file(resolved_path, reference), input_regions);
+        auto regions = extract_regions_from_file(resolved_path, reference);
+        
+        if (regions.empty()) {
+            logging::WarningLogger log {};
+            stream(log) << "The regions path file you specified " << resolved_path
+                << " in the command line option '--skip-regions-file' is empty";
+        }
+        
+        append(std::move(regions), input_regions);
     }
     
     auto result = extract_search_regions(input_regions, skip_regions);
@@ -726,6 +752,12 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
         auto paths = extract_paths_from_file(resolved_path, options);
         
         auto resolved_paths = resolve_paths(paths, options);
+        
+        if (resolved_paths.empty()) {
+            logging::WarningLogger log {};
+            stream(log) << "The read path file you specified " << resolved_path
+                        << " in the command line option '--reads-file' is empty";
+        }
         
         append(std::move(resolved_paths), result);
     }

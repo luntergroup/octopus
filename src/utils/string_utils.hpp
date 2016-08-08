@@ -14,6 +14,7 @@
 #include <type_traits>
 #include <iomanip>
 #include <cctype>
+#include <array>
 
 #include <boost/algorithm/string/join.hpp>
 
@@ -101,6 +102,17 @@ inline std::string capitalise_front(const std::string& str)
 {
     auto result = str;
     return capitalise_front(result);
+}
+
+inline bool is_vowel(const char c)
+{
+    static constexpr std::array<char, 5> vowels {'a', 'e', 'i', 'o', 'u'};
+    return std::find(std::cbegin(vowels), std::cend(vowels), std::tolower(c)) != std::cend(vowels);
+}
+
+inline bool begins_with_vowel(const std::string& str)
+{
+    return !str.empty() && is_vowel(str.front());
 }
 
 } // namespace utils

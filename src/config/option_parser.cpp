@@ -699,6 +699,8 @@ void try_notify(OptionMap& vm)
         throw UnknownCommandLineOption {strip(e.get_option_name())};
     } catch (const po::reading_file& e) {
         throw CommandLineError {e.what()};
+    } catch (const po::invalid_command_line_syntax& e) {
+        throw CommandLineError {e.what()};
     } catch (const po::error& e) {
         throw CommandLineError {e.what()};
     }
