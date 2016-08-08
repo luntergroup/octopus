@@ -35,6 +35,7 @@
 #include <io/variant/vcf_writer.hpp>
 #include <exceptions/user_error.hpp>
 #include <exceptions/system_error.hpp>
+#include <exceptions/missing_file_error.hpp>
 
 namespace octopus { namespace options {
 
@@ -175,9 +176,11 @@ fs::path resolve_path(const fs::path& path, const OptionMap& options)
         auto tmp = wd;
         tmp /= path;
         auto wd_parent = tmp.parent_path();
+        
         if (fs::exists(wd_parent) && fs::is_directory(wd_parent)) {
             return tmp; // prefer working directory in case of name clash
         }
+        
         return path; // must be yet-to-be-created root path
     }
     
@@ -237,18 +240,11 @@ std::vector<fs::path> extract_paths_from_file(const fs::path& file_path, const O
 
 auto resolve_paths(const std::vector<fs::path>& paths, const OptionMap& options)
 {
-    std::vector<fs::path> good_paths {}, bad_paths {};
-    good_paths.reserve(paths.size());
-    
-    for (const auto& path : paths) {
-        try {
-            good_paths.push_back(resolve_path(path, options));
-        } catch (...) {
-            bad_paths.push_back(path);
-        }
-    }
-    
-    return std::make_pair(std::move(good_paths), std::move(bad_paths));
+    std::vector<fs::path> result {};
+    result.reserve(paths.size());
+    std::transform(std::cbegin(paths), std::cend(paths), std::back_inserter(result),
+                   [&] (const auto& path) { return resolve_path(path, options); });
+    return result;
 }
 
 auto resolve_paths(const std::vector<std::string>& path_strings, const OptionMap& options)
@@ -307,7 +303,7 @@ std::size_t get_target_read_buffer_size(const OptionMap& options)
     static constexpr std::size_t scale {1000000000};
     return static_cast<std::size_t>(scale * options.at("target-read-buffer-footprint").as<float>());
 }
-    
+
 boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options)
 {
     if (options.at("debug").as<bool>()) {
@@ -334,9 +330,16 @@ ReferenceGenome make_reference(const OptionMap& options)
     
     static constexpr unsigned Scale {1'000'000};
     
-    return octopus::make_reference(std::move(resolved_path),
-                                   static_cast<std::size_t>(Scale * ref_cache_size),
-                                   is_threading_allowed(options));
+    try {
+        return octopus::make_reference(std::move(resolved_path),
+                                       static_cast<std::size_t>(Scale * ref_cache_size),
+                                       is_threading_allowed(options));
+    } catch (MissingFileError& e) {
+        e.set_location_specified("the command line option --reference");
+        throw;
+    } catch (...) {
+        throw;
+    }
 }
 
 bool is_bed_file(const fs::path& path)
@@ -349,29 +352,29 @@ void seek_past_bed_header(std::ifstream& bed_file)
     // TODO
 }
 
+bool is_valid_bed_record(const std::string& line)
+{
+    constexpr static char bed_delim {'\t'};
+    return std::count(std::cbegin(line), std::cend(line), bed_delim) >= 3;
+}
+
 std::string convert_bed_line_to_region_str(const std::string& bed_line)
 {
+    if (!is_valid_bed_record(bed_line)) {
+        throw std::runtime_error {"BadBEDRecord: insufficient columns"};
+    }
+    
     constexpr static char bed_delim {'\t'};
     
     const auto tokens = utils::split(bed_line, bed_delim);
     
-    switch (tokens.size()) {
-        case 0:
-            throw std::runtime_error {"BadBED: found empty BED record"};
-        case 1:
-            return std::string {tokens[0]};
-        case 2:
-            // Assume this represents a half range rather than a position
-            return std::string {tokens[0] + ':' + tokens[1] + '-'};
-        default:
-            return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
-    }
+    return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
 }
 
 std::function<GenomicRegion(const std::string&)>
-make_region_line_parser(const fs::path& region_path, const ReferenceGenome& reference)
+make_region_line_parser(const fs::path& file, const ReferenceGenome& reference)
 {
-    if (is_bed_file(region_path)) {
+    if (is_bed_file(file)) {
         return [&] (const std::string& line) -> GenomicRegion
         {
             return parse_region(convert_bed_line_to_region_str(line), reference);
@@ -673,131 +676,43 @@ boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& optio
     return boost::none;
 }
 
-namespace {
-    void log_unresolved_read_paths(const std::vector<fs::path>& paths,
-                                   const std::string& option)
+class MissingReadPathFile : public MissingFileError
+{
+    std::string do_where() const override
     {
-        logging::WarningLogger log {};
-        for (const auto& path : paths) {
-            stream(log) << "Could not resolve the path " << path
-            << " given in the input option (--" + option +")";
-        }
+        return "get_read_paths";
     }
-    
-    auto parition_existent_paths(std::vector<fs::path>& paths)
-    {
-        return std::partition(std::begin(paths), std::end(paths),
-                              [] (const auto& path) { return fs::exists(path); });
-    }
-    
-    template <typename InputIt>
-    void log_nonexistent_read_paths(InputIt first, InputIt last, const std::string& option)
-    {
-        logging::WarningLogger log {};
-        std::for_each(first, last, [&option, &log] (const auto& path) {
-            stream(log) << "The path " << path
-            << " given in the input option (--" + option + ") does not exist";
-        });
-    }
-    
-    auto parition_readable_paths(std::vector<fs::path>& paths)
-    {
-        return std::partition(std::begin(paths), std::end(paths),
-                              [] (const auto& path) { return is_file_readable(path); });
-    }
-    
-    template <typename InputIt>
-    void log_unreadable_read_paths(InputIt first, InputIt last, const std::string& option)
-    {
-        logging::WarningLogger log {};
-        std::for_each(first, last, [&option, &log] (const auto& path) {
-            stream(log) << "The path " << path
-            << " given in the input option (--" + option + ") is not readable";
-        });
-    }
-} // namespace
+public:
+    MissingReadPathFile(fs::path p) : MissingFileError {std::move(p), "read path"} {};
+};
 
-boost::optional<std::vector<fs::path>> get_read_paths(const OptionMap& options)
+std::vector<fs::path> get_read_paths(const OptionMap& options)
 {
     using namespace utils;
     
-    logging::ErrorLogger log {};
-    
     std::vector<fs::path> result {};
     
-    bool all_paths_good {true};
-    
-    std::vector<fs::path> resolved_paths {}, unresolved_paths {};
-    
     if (options.count("reads") == 1) {
-        const auto& read_paths = options.at("reads").as<std::vector<std::string>>();
-        
-        std::tie(resolved_paths, unresolved_paths) = resolve_paths(read_paths, options);
-        
-        if (!unresolved_paths.empty()) {
-            log_unresolved_read_paths(unresolved_paths, "reads");
-            all_paths_good = false;
-        }
-        
-        auto it = parition_existent_paths(resolved_paths);
-        
-        if (it != std::end(resolved_paths)) {
-            log_nonexistent_read_paths(it, std::end(resolved_paths), "reads");
-            all_paths_good = false;
-            resolved_paths.erase(it, std::end(resolved_paths));
-        }
-        
-        it = parition_readable_paths(resolved_paths);
-        
-        if (it != std::end(resolved_paths)) {
-            log_unreadable_read_paths(it, std::end(resolved_paths), "reads");
-            all_paths_good = false;
-        }
-        
+        auto resolved_paths = resolve_paths(options.at("reads").as<std::vector<std::string>>(), options);
         append(std::move(resolved_paths), result);
     }
     
     if (options.count("reads-file") == 1) {
-        // first we need to make sure the path to the paths is okay
         const fs::path input_path {options.at("reads-file").as<std::string>()};
         
         auto resolved_path = resolve_path(input_path, options);
         
         if (!fs::exists(resolved_path)) {
-            stream(log) << "The path " << input_path
-            << " given in the input option (--reads-file) does not exist";
-            all_paths_good = false;
-        } else if (!is_file_readable(resolved_path)) {
-            stream(log) << "The path " << input_path
-            << " given in the input option (--reads-file) is not readable";
-            all_paths_good = false;
-        } else {
-            auto paths = extract_paths_from_file(resolved_path, options);
-            
-            std::tie(resolved_paths, unresolved_paths) = resolve_paths(paths, options);
-            
-            if (!unresolved_paths.empty()) {
-                log_unresolved_read_paths(unresolved_paths, "reads-file");
-                all_paths_good = false;
-            }
-            
-            auto it = parition_existent_paths(resolved_paths);
-            
-            if (it != std::end(resolved_paths)) {
-                log_nonexistent_read_paths(it, std::end(resolved_paths), "reads-file");
-                all_paths_good = false;
-                resolved_paths.erase(it, std::end(resolved_paths));
-            }
-            
-            it = parition_readable_paths(resolved_paths);
-            
-            if (it != std::end(resolved_paths)) {
-                log_unreadable_read_paths(it, std::end(resolved_paths), "reads-file");
-                all_paths_good = false;
-            }
-            
-            append(std::move(resolved_paths), result);
+            MissingReadPathFile e {resolved_path};
+            e.set_location_specified("the command line option '--reads-file'");
+            throw e;
         }
+        
+        auto paths = extract_paths_from_file(resolved_path, options);
+        
+        auto resolved_paths = resolve_paths(paths, options);
+        
+        append(std::move(resolved_paths), result);
     }
     
     std::sort(std::begin(result), std::end(result));
@@ -814,14 +729,6 @@ boost::optional<std::vector<fs::path>> get_read_paths(const OptionMap& options)
     
     result.erase(it, std::end(result));
     
-    if (!all_paths_good && result.size() > 0) {
-        logging::WarningLogger log {};
-        auto slog = stream(log);
-        slog << "There are bad read paths so dumping " << result.size() << " good path";
-        if (result.size() > 1) slog << "s";
-        result.clear();
-    }
-    
     return result;
 }
 
@@ -829,12 +736,9 @@ ReadManager make_read_manager(const OptionMap& options)
 {
     auto read_paths = get_read_paths(options);
     
-    if (read_paths) {
-        const auto max_open_files = as_unsigned("max-open-read-files", options);
-        return ReadManager {*std::move(read_paths), max_open_files};
-    }
+    const auto max_open_files = as_unsigned("max-open-read-files", options);
     
-    throw std::runtime_error {"Unable to load read paths"};
+    return ReadManager {std::move(read_paths), max_open_files};
 }
 
 auto make_read_transformer(const OptionMap& options)
@@ -1202,11 +1106,8 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(3);
 }
 
-CallerFactory
-make_caller_factory(const ReferenceGenome& reference,
-                            ReadPipe& read_pipe,
-                            const InputRegionMap& regions,
-                            const OptionMap& options)
+CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
+                                  const InputRegionMap& regions, const OptionMap& options)
 {
     CallerBuilder vc_builder {
         reference,
