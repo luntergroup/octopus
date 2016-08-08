@@ -16,7 +16,7 @@ namespace octopus {
  */
 class SystemError : public Error
 {
-    virtual std::string type() const override { return "system"; }
+    virtual std::string do_type() const override { return "system"; }
 public:
     virtual ~SystemError() = default;
 };

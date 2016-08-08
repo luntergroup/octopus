@@ -16,7 +16,7 @@ namespace octopus {
  */
 class ProgramError : public Error
 {
-    virtual std::string type() const override { return "program"; }
+    virtual std::string do_type() const override { return "program"; }
 public:
     virtual ~ProgramError() = default;
 };
