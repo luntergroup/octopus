@@ -33,6 +33,8 @@
 #include <logging/logging.hpp>
 #include <io/variant/vcf_reader.hpp>
 #include <io/variant/vcf_writer.hpp>
+#include <exceptions/user_error.hpp>
+#include <exceptions/system_error.hpp>
 
 namespace octopus { namespace options {
 
@@ -58,7 +60,7 @@ bool is_trace_mode(const OptionMap& options)
     return options.at("trace").as<bool>();
 }
 
-boost::optional<fs::path> get_home_dir()
+boost::optional<fs::path> get_home_directory()
 {
     static const auto result = fs::path(std::getenv("HOME"));
     
@@ -74,24 +76,72 @@ bool is_shorthand_user_path(const fs::path& path)
     return !path.empty() && path.string().front() == '~';
 }
 
+class UnknownHomeDirectory : public SystemError
+{
+    std::string do_where() const override
+    {
+        return "expand_user_path";
+    }
+    
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "Unable to expand shorthand path you specified ";
+        ss << path_;
+        ss << " as your home directory cannot be located";
+        return ss.str();
+    }
+    
+    std::string do_help() const override
+    {
+        return "ensure your HOME environment variable is set properly";
+    }
+    
+    fs::path path_;
+public:
+    UnknownHomeDirectory(fs::path p) : path_ {std::move(p)} {}
+};
+
 fs::path expand_user_path(const fs::path& path)
 {
     if (is_shorthand_user_path(path)) {
         if (path.string().size() > 1 && path.string()[1] == '/') {
-            const auto home_dir = get_home_dir();
+            const auto home_dir = get_home_directory();
             if (home_dir) {
                 return fs::path {home_dir->string() + path.string().substr(1)};
             }
-            std::ostringstream ss {};
-            ss << "Unable to expand user path";
-            ss << path;
-            ss << " as the user home directory cannot be located";
-            throw std::runtime_error {ss.str()};
+            throw UnknownHomeDirectory {path};
         }
         return path;
     }
     return path;
 }
+
+class InvalidWorkingDirectory : public UserError
+{
+    std::string do_where() const override
+    {
+        return "get_working_directory";
+    }
+    
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "The working directory you specified ";
+        ss << path_;
+        ss << " does not exist";
+        return ss.str();
+    }
+    
+    std::string do_help() const override
+    {
+        return "enter a valid working directory";
+    }
+    
+    fs::path path_;
+public:
+    InvalidWorkingDirectory(fs::path p) : path_ {std::move(p)} {}
+};
 
 fs::path get_working_directory(const OptionMap& options)
 {
@@ -99,11 +149,7 @@ fs::path get_working_directory(const OptionMap& options)
         auto result = expand_user_path(options.at("working-directory").as<std::string>());
         
         if (!fs::exists(result) && !fs::is_directory(result)) {
-            std::ostringstream ss {};
-            ss << "The working directory ";
-            ss << result;
-            ss << " given in the option (--working-directory) does not exist";
-            throw std::runtime_error {ss.str()};
+            throw InvalidWorkingDirectory {result};
         }
         
         return result;
