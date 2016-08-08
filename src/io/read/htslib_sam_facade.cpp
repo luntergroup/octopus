@@ -10,6 +10,8 @@
 #include <stdexcept>
 #include <sstream>
 
+#include <boost/filesystem/operations.hpp>
+
 #include <basics/cigar_string.hpp>
 #include <basics/genomic_region.hpp>
 #include <basics/contig_region.hpp>
@@ -23,82 +25,97 @@ static const std::string Read_group_tag    {"RG"};
 static const std::string Read_group_id_tag {"ID"};
 static const std::string Sample_id_tag     {"SM"};
 
-class MissingBamIndex : public std::runtime_error
+class MissingBAM : public MissingFileError
 {
+    std::string do_where() const override { return "HtslibSamFacade"; }
 public:
-    MissingBamIndex(boost::filesystem::path file_path)
-    :
-    runtime_error {"Missing BAM index"},
-    file_path_ {std::move(file_path)},
-    msg_ {}
-    {}
-    
-    virtual ~MissingBamIndex() = default;
-    
-    virtual const char* what() const noexcept override
-    {
-        std::ostringstream ss {};
-        ss << runtime_error::what() << ": a BAM index file (.bai) is required for the BAM file "
-                << file_path_ << " but is missing";
-        msg_ = ss.str();
-        return msg_.c_str();
-    }
-private:
-    boost::filesystem::path file_path_;
-    mutable std::string msg_;
+    MissingBAM(boost::filesystem::path file) : MissingFileError {std::move(file), "bam"} {}
 };
 
-class MissingCramIndex : public std::runtime_error
+
+class MissingCRAM : public MissingFileError
 {
+    std::string do_where() const override { return "HtslibSamFacade"; }
 public:
-    MissingCramIndex(boost::filesystem::path file_path)
-    :
-    runtime_error {"Missing CRAM index"},
-    file_path_ {std::move(file_path)},
-    msg_ {}
-    {}
-    
-    virtual ~MissingCramIndex() = default;
-    
-    virtual const char* what() const noexcept override
-    {
-        std::ostringstream ss {};
-        ss << runtime_error::what() << ": a CRAM index file (.crai) is required for the CRAM file "
-             << file_path_ << " but is missing";
-        msg_ = ss.str();
-        return msg_.c_str();
-    }
-private:
-    boost::filesystem::path file_path_;
-    mutable std::string msg_;
+    MissingCRAM(boost::filesystem::path file) : MissingFileError {std::move(file), "cram"} {}
 };
 
-class InvalidBamHeader : public std::runtime_error {
-public:
-    InvalidBamHeader(boost::filesystem::path file_path, std::string message)
-    :
-    runtime_error {"Invalid BAM header"},
-    file_path_ {std::move(file_path)},
-    message_ {std::move(message)},
-    msg_ {}
-    {}
+class MissingBAMIndex : public MissingIndexError
+{
+    std::string do_where() const override { return "HtslibSamFacade"; }
     
-    virtual ~InvalidBamHeader() = default;
-    
-    virtual const char* what() const noexcept override
+    std::string do_help() const override
     {
-        std::ostringstream ss {};
-        ss << runtime_error::what() << ": in file " << file_path_ << ": " << message_;
-        msg_ = ss.str();
-        return msg_.c_str();
+        return "ensure that a valid bam index (.bai) exists in the same directory as the given "
+        "bam file. You can make one with the 'samtools index' command";
     }
-private:
-    boost::filesystem::path file_path_;
-    std::string message_;
-    mutable std::string msg_;
+public:
+    MissingBAMIndex(boost::filesystem::path file) : MissingIndexError {std::move(file), "bam"} {}
 };
 
-class InvalidBamRecord : public std::runtime_error {
+class MissingCRAMIndex : public MissingIndexError
+{
+    std::string do_where() const override { return "HtslibSamFacade"; }
+    
+    std::string do_help() const override
+    {
+        return "ensure that a valid cram index (.crai) exists in the same directory as the given "
+        "cram file. You can make one with the 'samtools index' command";
+    }
+public:
+    MissingCRAMIndex(boost::filesystem::path file) : MissingIndexError {std::move(file), "cram"} {}
+};
+
+class MalformedBAM : public MalformedFileError
+{
+    std::string do_where() const override { return "HtslibSamFacade"; }
+    
+    std::string do_help() const override
+    {
+        return "refer to the latest SAM specification";
+    }
+public:
+    MalformedBAM(boost::filesystem::path file) : MalformedFileError {std::move(file)} {}
+};
+
+class MalformedCRAM : public MalformedFileError
+{
+    std::string do_where() const override { return "HtslibSamFacade"; }
+    
+    std::string do_help() const override
+    {
+        return "refer to the latest SAM specification";
+    }
+public:
+    MalformedCRAM(boost::filesystem::path file) : MalformedFileError {std::move(file)} {}
+};
+
+class MalformedBAMHeader : public MalformedFileError
+{
+    std::string do_where() const override { return "HtslibSamFacade"; }
+    
+    std::string do_help() const override
+    {
+        return "ensure the bam header contains @RG and @SM tags. Refer to the latest SAM specification for details";
+    }
+public:
+    MalformedBAMHeader(boost::filesystem::path file) : MalformedFileError {std::move(file)} {}
+};
+
+class MalformedCRAMHeader : public MalformedFileError
+{
+    std::string do_where() const override { return "HtslibSamFacade"; }
+    
+    std::string do_help() const override
+    {
+        return "ensure the cram header contains @RG and @SM tags. Refer to the latest SAM specification for details";
+    }
+public:
+    MalformedCRAMHeader(boost::filesystem::path file) : MalformedFileError {std::move(file)} {}
+};
+
+class InvalidBamRecord : public std::runtime_error
+{
 public:
     InvalidBamRecord(boost::filesystem::path file_path, std::string read_name, std::string message)
     :
@@ -127,10 +144,23 @@ private:
 
 // public methods
 
+namespace {
+    auto open_hts_file(const boost::filesystem::path& file)
+    {
+        hts_verbose = 0; // disable hts error reporting
+        return sam_open(file.c_str(), "r");
+    }
+    
+    bool is_cram(const boost::filesystem::path& file)
+    {
+        return file.extension().string() == ".cram";
+    }
+}
+
 HtslibSamFacade::HtslibSamFacade(Path file_path)
 :
 file_path_ {std::move(file_path)},
-hts_file_ {sam_open(file_path_.c_str(), "r"), HtsFileDeleter {}},
+hts_file_ {open_hts_file(file_path_), HtsFileDeleter {}},
 hts_header_ {(hts_file_) ? sam_hdr_read(hts_file_.get()) : nullptr, HtsHeaderDeleter {}},
 hts_index_ {(hts_file_) ? sam_index_load(hts_file_.get(), file_path_.c_str()) : nullptr, HtsIndexDeleter {}},
 hts_tids_ {},
@@ -138,34 +168,48 @@ contig_names_ {},
 sample_names_ {},
 samples_ {}
 {
-    if (hts_file_ && !hts_index_) {
-        if (hts_file_->is_cram) {
-            throw MissingCramIndex {file_path};
+    namespace fs = boost::filesystem;
+    
+    if (!hts_file_) {
+        if (!fs::exists(file_path_)) {
+            if (is_cram(file_path_)) {
+                throw MissingCRAM {file_path_};
+            } else {
+                throw MissingBAM {file_path_};
+            }
         } else {
-            throw MissingBamIndex {file_path_};
+            if (is_cram(file_path_)) {
+                throw MalformedCRAM {file_path_};
+            } else {
+                throw MalformedBAM {file_path_};
+            }
         }
     }
     
-    if (is_open()) {
-        try {
-            init_maps();
-        } catch(...) {
-            close();
-            throw;
+    if (hts_file_ && !hts_index_) {
+        if (hts_file_->is_cram) {
+            throw MissingCRAMIndex {file_path};
+        } else {
+            throw MissingBAMIndex {file_path_};
         }
-        
-        for (const auto& pair : sample_names_) {
-            if (std::find(std::cbegin(samples_), std::cend(samples_), pair.second) == std::cend(samples_)) {
-                samples_.emplace_back(pair.second);
-            }
-        }
-        
-        samples_.shrink_to_fit();
-        
-        std::sort(std::begin(samples_), std::end(samples_));
-    } else {
-        close();
     }
+    
+    try {
+        init_maps();
+    } catch(...) {
+        close();
+        throw;
+    }
+    
+    for (const auto& pair : sample_names_) {
+        if (std::find(std::cbegin(samples_), std::cend(samples_), pair.second) == std::cend(samples_)) {
+            samples_.emplace_back(pair.second);
+        }
+    }
+    
+    samples_.shrink_to_fit();
+    
+    std::sort(std::begin(samples_), std::end(samples_));
 }
 
 bool HtslibSamFacade::is_open() const noexcept
@@ -228,8 +272,7 @@ std::vector<std::string> HtslibSamFacade::extract_read_groups_in_sample(const Sa
     return result;
 }
 
-namespace
-{
+namespace {
     // is rhs a subset of lhs?
     bool is_subset(std::vector<HtslibSamFacade::SampleName> lhs,
                    std::vector<HtslibSamFacade::SampleName> rhs)
@@ -692,9 +735,7 @@ std::string extract_tag_value(const std::string& line, const std::string& tag)
 {
     const auto tag_position = line.find(tag); // format is TAG:VALUE\t
     
-    if (tag_position == std::string::npos) {
-        throw std::runtime_error {"no " + tag + " tag"};
-    }
+    assert(tag_position != std::string::npos);
     
     const auto value_position = line.find(':', tag_position) + 1;
     const auto tag_value_size = line.find('\t', value_position) - value_position;
@@ -722,13 +763,17 @@ void HtslibSamFacade::init_maps()
     while (std::getline(header_ss, line, '\n')) {
         if (is_tag_type(line, Read_group_tag)) {
             if (!has_tag(line, Read_group_id_tag)) {
-                throw InvalidBamHeader {file_path_, "The read group identifier tag (ID) in @RG lines is required but was not found"};
+                MalformedBAMHeader e {file_path_};
+                e.set_reason("a read group identifier tag (ID) in @RG lines is required but was not found");
+                throw e;
             }
             
             if (!has_tag(line, Sample_id_tag)) {
                 // The SAM specification does not specify the sample tag 'SM' as a required,
                 // however we can't do much without it.
-                throw InvalidBamHeader {file_path_, "The sample tag (SM) in @RG lines is required but was not found"};
+                MalformedBAMHeader e {file_path_};
+                e.set_reason("a sample tag (SM) in @RG lines is required but was not found");
+                throw e;
             }
             
             sample_names_.emplace(extract_tag_value(line, Read_group_id_tag),
@@ -739,7 +784,9 @@ void HtslibSamFacade::init_maps()
     }
     
     if (num_read_groups == 0) {
-        throw InvalidBamHeader {file_path_, "At least one read group (@RG) line is required but none were found"};
+        MalformedBAMHeader e {file_path_};
+        e.set_reason("at least one read group (@RG) line is required but none were found");
+        throw e;
     }
 }
 
