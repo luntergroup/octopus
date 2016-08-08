@@ -23,7 +23,7 @@ public:
     using GenomicSize     = ReferenceReader::GenomicSize;
     using GeneticSequence = ReferenceReader::GeneticSequence;
     
-    MockReference() = default;
+    MockReference();
     
     MockReference(const MockReference&)            = default;
     MockReference& operator=(const MockReference&) = default;
