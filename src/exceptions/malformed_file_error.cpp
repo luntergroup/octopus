@@ -13,15 +13,24 @@
 
 namespace octopus {
 
-MalformedFileError::MalformedFileError(Path name)
-: name_ {std::move(name)}
+MalformedFileError::MalformedFileError(Path file) : file_ {std::move(file)}
 {}
 
-MalformedFileError::MalformedFileError(Path name, std::string required_type)
-: name_ {std::move(name)}, valid_types_ {std::move(required_type)} {}
+MalformedFileError::MalformedFileError(Path file, std::string required_type)
+: file_ {std::move(file)}, valid_types_ {std::move(required_type)} {}
 
-MalformedFileError::MalformedFileError(Path name, std::vector<std::string> valid_types)
-: name_ {std::move(name)}, valid_types_ {std::move(valid_types)} {}
+MalformedFileError::MalformedFileError(Path file, std::vector<std::string> valid_types)
+: file_ {std::move(file)}, valid_types_ {std::move(valid_types)} {}
+
+void MalformedFileError::set_reason(std::string reason) noexcept
+{
+    reason_ = std::move(reason);
+}
+
+void MalformedFileError::set_location_specified(std::string location) noexcept
+{
+    location_ = std::move(location);
+}
 
 boost::optional<std::string> get_type(const boost::filesystem::path& file)
 {
@@ -58,7 +67,7 @@ std::string MalformedFileError::do_why() const
 {
     std::ostringstream ss {};
     
-    const auto type = get_type(name_);
+    const auto type = get_type(file_);
     
     ss << "the ";
     
@@ -66,10 +75,18 @@ std::string MalformedFileError::do_why() const
         ss << *type << ' ';
     }
     
-    ss << "you specified " << name_ << ' ';
+    ss << "file you specified " << file_ << ' ';
+    
+    if (location_) {
+        ss << "in " << *location_ << ' ';
+    }
     
     if (valid_types_.empty()) {
-        ss << "is malformed or currupted";
+        if (reason_) {
+            ss << "is malformed becsause " << *reason_;
+        } else {
+            ss << "is malformed or currupted";
+        }
     } else if (valid_types_.size() == 1) {
         ss << "is not a valid " << valid_types_.front() << " file";
     } else if (valid_types_.size() == 2) {

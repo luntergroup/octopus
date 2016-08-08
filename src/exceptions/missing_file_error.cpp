@@ -8,14 +8,33 @@
 
 namespace octopus {
 
+MissingFileError::MissingFileError(Path file) : file_ {std::move(file)} {}
+
 MissingFileError::MissingFileError(Path file, std::string type)
 : file_ {std::move(file)}, type_ {std::move(type)} {}
+
+void MissingFileError::set_location_specified(std::string location) noexcept
+{
+    location_ = std::move(location);
+}
 
 std::string MissingFileError::do_why() const
 {
     std::ostringstream ss {};
     
-    ss << "the " << type_ << " file you specified " << file_ << " does not exist";
+    ss << "the ";
+    
+    if (type_) {
+        ss << *type_ << ' ';
+    }
+    
+    ss << "file you specified " << file_ << ' ';
+    
+    if (location_) {
+        ss << "in " << *location_ << ' ';
+    }
+    
+    ss << "does not exist";
     
     return ss.str();
 }

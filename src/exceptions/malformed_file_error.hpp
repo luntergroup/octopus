@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/optional.hpp>
 
 #include "user_error.hpp"
 
@@ -24,20 +25,25 @@ public:
     
     MalformedFileError() = delete;
     
-    MalformedFileError(Path name);
+    MalformedFileError(Path file);
     
-    MalformedFileError(Path name, std::string required_type);
+    MalformedFileError(Path file, std::string required_type);
     
-    MalformedFileError(Path name, std::vector<std::string> valid_types);
+    MalformedFileError(Path file, std::vector<std::string> valid_types);
     
     virtual ~MalformedFileError() override = default;
+    
+    void set_reason(std::string reason) noexcept;
+    
+    void set_location_specified(std::string location) noexcept;
     
 private:
     virtual std::string do_why() const override;
     virtual std::string do_help() const override;
     
-    Path name_;
+    Path file_;
     std::vector<std::string> valid_types_;
+    boost::optional<std::string> reason_, location_;
 };
 
 } // namespace octopus

@@ -7,6 +7,7 @@
 #include <string>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/optional.hpp>
 
 #include "user_error.hpp"
 
@@ -22,16 +23,20 @@ public:
     
     MissingFileError() = delete;
     
+    MissingFileError(Path file);
+    
     MissingFileError(Path file, std::string type);
     
     virtual ~MissingFileError() override = default;
+    
+    void set_location_specified(std::string location) noexcept;
     
 private:
     virtual std::string do_why() const override;
     virtual std::string do_help() const override;
     
     Path file_;
-    std::string type_;
+    boost::optional<std::string> type_, location_;
 };
 
 } // namespace octopus
