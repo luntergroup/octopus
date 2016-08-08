@@ -35,10 +35,10 @@ public:
     const char* what() const noexcept override;
     
 private:
-    virtual std::string do_type() const   = 0;
-    virtual std::string do_where() const  = 0;
-    virtual std::string do_why() const    = 0;
-    virtual std::string do_help() const = 0;
+    virtual std::string do_type() const  = 0;
+    virtual std::string do_where() const = 0;
+    virtual std::string do_why() const   = 0;
+    virtual std::string do_help() const  = 0;
     
     mutable std::string what_; // for what()
 };
