@@ -18,37 +18,29 @@ namespace octopus { namespace io {
 
 class MissingFasta : public MissingFileError
 {
-    std::string where_;
-    
     std::string do_where() const override
     {
-        return where_;
+        return "Fasta";
     }
 public:
-    MissingFasta(Fasta::Path file)
-    : MissingFileError {std::move(file), "fasta"} {}
+    MissingFasta(Fasta::Path file) : MissingFileError {std::move(file), "fasta"} {}
 };
 
 class MalformedFasta : public MalformedFileError
 {
-    std::string where_;
-    
     std::string do_where() const override
     {
-        return where_;
+        return "Fasta";
     }
 public:
-    MalformedFasta(Fasta::Path file)
-    : MalformedFileError {std::move(file), "fasta"} {}
+    MalformedFasta(Fasta::Path file) : MalformedFileError {std::move(file), "fasta"} {}
 };
 
 class MissingFastaIndex : public MissingIndexError
 {
-    std::string where_;
-    
     std::string do_where() const override
     {
-        return where_;
+        return "Fasta";
     }
     
     std::string do_help() const override
@@ -57,21 +49,17 @@ class MissingFastaIndex : public MissingIndexError
         "fasta file. You can make one with the 'samtools index' command";
     }
 public:
-    MissingFastaIndex(Fasta::Path file)
-    : MissingIndexError {std::move(file), "fasta"} {}
+    MissingFastaIndex(Fasta::Path file) : MissingIndexError {std::move(file), "fasta"} {}
 };
 
 class MalformedFastaIndex : public MalformedFileError
 {
-    std::string where_;
-    
     std::string do_where() const override
     {
-        return where_;
+        return "Fasta";
     }
 public:
-    MalformedFastaIndex(Fasta::Path file)
-    : MalformedFileError {std::move(file), "fasta"} {}
+    MalformedFastaIndex(Fasta::Path file) : MalformedFileError {std::move(file), "fasta"} {}
 };
 
 Fasta::Fasta(Path fasta_path)
@@ -90,6 +78,10 @@ index_path_ {std::move(fasta_index_path)}
         throw MissingFasta {path_};
     }
     
+    if (!is_valid_fasta()) {
+        throw MalformedFasta {path_};
+    }
+    
     if (!exists(index_path_)) {
         index_path_ = path_;
         index_path_.replace_extension("fai");
@@ -97,10 +89,6 @@ index_path_ {std::move(fasta_index_path)}
         if (!exists(index_path_)) {
             throw MissingFastaIndex {path_};
         }
-    }
-    
-    if (!is_valid_fasta()) {
-        throw MalformedFasta {path_};
     }
     
     if (!is_valid_fasta_index()) {
