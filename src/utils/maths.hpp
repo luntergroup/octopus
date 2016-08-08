@@ -73,7 +73,7 @@ struct IdFunction
     const T& operator()(const T& x) const noexcept { return x; }
 };
 
-template <typename InputIt, typename UnaryOperation, typename RealType = double>
+template <typename RealType = double, typename InputIt, typename UnaryOperation>
 auto mean(InputIt first, InputIt last, UnaryOperation unary_op)
 {
     return std::accumulate(first, last, RealType {0},

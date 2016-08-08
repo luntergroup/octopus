@@ -180,7 +180,7 @@ void CigarScanner::do_add_read(const AlignedRead& read)
         }
     }
     
-    coverage_tracker_.add(read);
+    read_coverage_tracker_.add(read);
 }
 
 void CigarScanner::do_add_reads(VectorIterator first, VectorIterator last)
