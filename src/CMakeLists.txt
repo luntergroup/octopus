@@ -299,18 +299,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
 
 set(REQUIRED_BOOST_LIBRARIES
     system
-    system-mt
     filesystem
-    filesystem-mt
     program_options
     date_time
-    date_time-mt
-    log_setup-mt
+    log_setup
     log
-    log-mt
     iostreams
     timer
-    thread-mt
+    thread
 )
 
 if (BUILD_TESTING)
