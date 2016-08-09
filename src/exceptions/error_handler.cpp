@@ -57,11 +57,7 @@ void log_error(const Error& error)
     
     {
         auto ss = stream(log);
-        if (utils::begins_with_vowel(error.type())) {
-            ss << "An ";
-        } else {
-            ss << "A ";
-        }
+        ss << "A ";
         ss << error.type() << " error has occured:";
     }
     
