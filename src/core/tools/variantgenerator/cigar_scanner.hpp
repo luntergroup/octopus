@@ -29,11 +29,11 @@ class CigarScanner : public VariantGenerator
 public:
     struct Options
     {
-        AlignedRead::BaseQuality min_base_quality  = 20;
-        unsigned min_support                       = 1;
+        AlignedRead::BaseQuality min_base_quality     = 20;
+        unsigned min_support                          = 1;
         Variant::MappingDomain::Size max_variant_size = 100;
-        bool always_include_overlapping_indels     = true;
-        unsigned max_poor_quality_insertion_bases  = 1;
+        bool always_include_overlapping_indels        = true;
+        unsigned max_poor_quality_insertion_bases     = 1;
     };
     
     CigarScanner() = delete;

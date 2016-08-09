@@ -29,9 +29,9 @@ class LocalReassembler : public VariantGenerator
 public:
     struct Options
     {
-        std::vector<unsigned> kmer_sizes           = {10, 25, 35};
-        AlignedRead::BaseQuality mask_threshold    = 0;
-        unsigned min_supporting_reads              = 2;
+        std::vector<unsigned> kmer_sizes              = {10, 25, 35};
+        AlignedRead::BaseQuality mask_threshold       = 0;
+        unsigned min_supporting_reads                 = 2;
         Variant::MappingDomain::Size max_variant_size = 500;
     };
     
