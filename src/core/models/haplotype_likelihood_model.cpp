@@ -215,7 +215,7 @@ double HaplotypeLikelihoodModel::ln_probability(const AlignedRead& read,
     // and p(read | hap, mismapped) = p(read) = ???
     
     using octopus::maths::constants::ln_10_div_10;
-    return std::max(p, -ln_10_div_10 * read.mapping_quality() * 4);
+    return std::max(p, -ln_10_div_10<> * read.mapping_quality() * 4);
 }
 
 } // namespace octopus

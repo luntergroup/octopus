@@ -27,7 +27,8 @@ namespace octopus { namespace maths
 {
 namespace constants
 {
-    static constexpr double ln_10_div_10 {0.230258509299404568401799145468436420760110148862877297603};
+    template <typename T = double>
+    constexpr T ln_10_div_10 = T {0.230258509299404568401799145468436420760110148862877297603};
 }
 
 template <typename RealType,

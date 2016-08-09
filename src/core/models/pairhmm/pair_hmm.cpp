@@ -37,7 +37,7 @@ constexpr auto make_phred_to_ln_prob_lookup() noexcept
     
     for (std::size_t i {0}; i < N; ++i) {
         // This const_cast mess is because std::array::operator[] is not marked constexpr (until C++17)
-        const_cast<double&>(static_cast<std::array<double, N> const&>(result)[i]) = -ln_10_div_10 * i;
+        const_cast<double&>(static_cast<std::array<double, N> const&>(result)[i]) = -ln_10_div_10<> * i;
     }
     
     return result;
@@ -158,7 +158,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                                        model.gap_open_penalties.data() + alignment_offset,
                                        model.gap_extend, model.nuc_prior);
         
-        return -ln_10_div_10 * static_cast<double>(score);
+        return -ln_10_div_10<> * static_cast<double>(score);
     }
     
     thread_local std::vector<char> align1 {}, align2 {};
@@ -213,7 +213,7 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     assert(flank_score <= score);
     
-    return -ln_10_div_10 * static_cast<double>(score - flank_score);
+    return -ln_10_div_10<> * static_cast<double>(score - flank_score);
 }
 
 unsigned min_flank_pad() noexcept
