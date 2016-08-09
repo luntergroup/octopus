@@ -14,6 +14,8 @@
 #include "threadsafe_fasta.hpp"
 #include "caching_fasta.hpp"
 
+#include <utils/map_utils.hpp>
+
 namespace octopus {
 
 ReferenceGenome::ReferenceGenome(std::unique_ptr<io::ReferenceReader> impl)
@@ -74,13 +76,7 @@ std::size_t ReferenceGenome::num_contigs() const noexcept
 
 std::vector<ReferenceGenome::ContigName> ReferenceGenome::contig_names() const
 {
-    std::vector<ContigName> result {};
-    result.reserve(contig_sizes_.size());
-    
-    std::transform(std::cbegin(contig_sizes_), std::cend(contig_sizes_), std::back_inserter(result),
-                   [] (const auto& p) { return p.first; });
-    
-    return result;
+    return extract_keys(contig_sizes_);
 }
 
 ContigRegion::Size ReferenceGenome::contig_size(const ContigName& contig) const

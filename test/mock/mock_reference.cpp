@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include <utils/map_utils.hpp>
+
 namespace octopus { namespace test {
 
 MockReference::MockReference()
@@ -43,11 +45,7 @@ std::string MockReference::do_fetch_reference_name() const
 
 std::vector<MockReference::ContigName> MockReference::do_fetch_contig_names() const
 {
-    std::vector<ContigName> result {};
-    result.reserve(mock_contigs_.size());
-    std::transform(std::cbegin(mock_contigs_), std::cend(mock_contigs_), std::back_inserter(result),
-                   [] (const auto& p) { return p.first; });
-    return result;
+    return extract_keys(mock_contigs_);
 }
 
 MockReference::GenomicSize MockReference::do_fetch_contig_size(const ContigName& contig) const

@@ -10,6 +10,7 @@
 #include <cassert>
 
 #include <basics/genomic_region.hpp>
+#include <utils/map_utils.hpp>
 
 #include <iostream> // TEST
 
@@ -111,7 +112,7 @@ std::string CachingFasta::do_fetch_reference_name() const
 
 std::vector<CachingFasta::ContigName> CachingFasta::do_fetch_contig_names() const
 {
-    return fasta_->fetch_contig_names();
+    return extract_keys(contig_sizes_);
 }
 
 CachingFasta::GenomicSize CachingFasta::do_fetch_contig_size(const ContigName& contig) const
