@@ -54,11 +54,11 @@ public:
     void clear() noexcept;
     
 private:
-    std::deque<unsigned> coverage_;
+    std::deque<unsigned> coverage_ = {};
     
     GenomicRegion encompassing_region_;
     
-    std::size_t num_mappables_added_;
+    std::size_t num_mappables_added_ = 0;
     
     void do_add(const GenomicRegion& region);
     

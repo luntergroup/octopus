@@ -14,6 +14,7 @@
 - [] Allow Callers to parrallise algorithms - will need to pass policies.
 - [] ReadReader should be able to use iterators.
 - [] Make use of CoverageTracker in CigarScanner (to calculate required read support).
+- [] Phaser should allow conditional (on called genotype phasing), and also read supported phasing.
 
 # Refactoring
 
