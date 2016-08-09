@@ -16,7 +16,7 @@ namespace octopus {
 
 /**
  CoverageTracker provides an efficient method for tracking coverage statistics over a range
- of mappable objects without having to store the entire collection.
+ of Mappable objects without having to store the entire collection.
  */
 class CoverageTracker
 {
@@ -30,18 +30,26 @@ public:
     
     ~CoverageTracker() = default;
     
-    template <typename T>
-    void add(const T& mappable);
+    template <typename MappableType>
+    void add(const MappableType& mappable);
     
-    unsigned max_coverage(const GenomicRegion& region) const;
+    unsigned max_coverage() const noexcept;
+    unsigned max_coverage(const GenomicRegion& region) const noexcept;
     
-    unsigned min_coverage(const GenomicRegion& region) const;
+    unsigned min_coverage() const noexcept;
+    unsigned min_coverage(const GenomicRegion& region) const noexcept;
     
-    double mean_coverage(const GenomicRegion& region) const;
+    double mean_coverage() const noexcept;
+    double mean_coverage(const GenomicRegion& region) const noexcept;
     
-    double stdev_coverage(const GenomicRegion& region) const;
+    double stdev_coverage() const noexcept;
+    double stdev_coverage(const GenomicRegion& region) const noexcept;
+    
+    double median_coverage(const GenomicRegion& region) const;
     
     std::vector<unsigned> coverage(const GenomicRegion& region) const;
+    
+    GenomicRegion encompassing_region() const;
     
     void clear() noexcept;
     
@@ -59,10 +67,10 @@ private:
     std::pair<Iterator, Iterator> range(const GenomicRegion& region) const;
 };
 
-template <typename T>
-void CoverageTracker::add(const T& mappable)
+template <typename MappableType>
+void CoverageTracker::add(const MappableType& mappable)
 {
-    static_assert(is_region_or_mappable<T>, "T must be a region or mappable");
+    static_assert(is_region_or_mappable<MappableType>, "MappableType not Mappable");
     do_add(mapped_region(mappable));
 }
 
