@@ -411,7 +411,7 @@ template <typename SequenceType = std::string>
 SequenceType read_fasta_contig(const std::string& fasta_path, const FastaContigIndex& index,
                                const std::size_t begin, const std::size_t length)
 {
-    std::ifstream fasta {fasta_path, std::ios::binary | std::ios::beg};
+    std::ifstream fasta {fasta_path, std::ios::binary};
     return read_fasta_contig<SequenceType>(fasta, index, begin, length);
 }
 
@@ -424,7 +424,7 @@ SequenceType read_fasta_contig(std::istream& fasta, const FastaContigIndex& inde
 template <typename SequenceType = std::string>
 SequenceType read_fasta_contig(const std::string& fasta_path, const FastaContigIndex& index)
 {
-    std::ifstream fasta {fasta_path, std::ios::binary | std::ios::beg};
+    std::ifstream fasta {fasta_path, std::ios::binary};
     return read_fasta_contig<SequenceType>(fasta, index);
 }
 
