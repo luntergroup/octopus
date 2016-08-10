@@ -18,8 +18,8 @@
 namespace octopus {
 
 /**
-    Represents a continuous region of a sequence in a genome. The sequence
-    name is the reference sequence name (usually a chromosome), and the
+    Represents a continuous region of a sequence in a genome. The contig
+    name is the reference contig name (usually a chromosome), and the
     begin and end positions are zero-indexed half open - [begin,end) - indices.
  
     All comparison operations (<, ==, is_before, etc) throw exceptions if the arguements
@@ -28,10 +28,10 @@ namespace octopus {
 class GenomicRegion : public Comparable<GenomicRegion>
 {
 public:
-    using ContigName      = std::string;
-    using Position = ContigRegion::Position;
-    using Size     = ContigRegion::Size;
-    using Distance = ContigRegion::Distance;
+    using ContigName = std::string;
+    using Position   = ContigRegion::Position;
+    using Size       = ContigRegion::Size;
+    using Distance   = ContigRegion::Distance;
     
     GenomicRegion() = default;  // for use with containers
     
@@ -49,6 +49,7 @@ public:
     ~GenomicRegion() = default;
     
     const ContigName& contig_name() const noexcept;
+    
     const ContigRegion& contig_region() const noexcept;
     
     Position begin() const noexcept;
@@ -74,6 +75,10 @@ public:
         msg_ = std::string {logic_error::what()} + ": " + first_ + " & " + second_;
         return msg_.c_str();
     }
+    
+    auto first_contig() const { return first_; }
+    auto second_contig() const { return second_; }
+    
 private:
     GenomicRegion::ContigName first_, second_;
     mutable std::string msg_;
