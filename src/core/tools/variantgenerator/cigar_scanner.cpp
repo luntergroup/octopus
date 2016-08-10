@@ -31,10 +31,7 @@ CigarScanner::CigarScanner(const ReferenceGenome& reference, Options options)
 reference_ {reference},
 options_ {options},
 match_ {[] (const Variant& lhs, const Variant& rhs) -> bool {
-    if (is_insertion(lhs)) {
-        return is_same_region(lhs, rhs);
-    }
-    return lhs == rhs;
+    return (is_insertion(lhs) && is_same_region(lhs, rhs)) || lhs == rhs;
 }},
 candidates_ {},
 max_seen_candidate_size_ {}
@@ -253,7 +250,13 @@ std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& reg
         result.reserve(size(overlapped, BidirectionallySortedTag {})); // the maximum
         
         while (true) {
-            const auto it = std::adjacent_find(cbegin(overlapped), cend(overlapped), match_);
+            // TODO: Clang 3.8 has a bug which wont let me use the std::function match_ member
+            // here.
+            const auto TEMP_FIX = [] (const Variant& lhs, const Variant& rhs) -> bool {
+                return (is_insertion(lhs) && is_same_region(lhs, rhs)) || lhs == rhs;
+            };
+            
+            const auto it = std::adjacent_find(cbegin(overlapped), cend(overlapped), TEMP_FIX);
             
             if (it == cend(overlapped)) break;
             
