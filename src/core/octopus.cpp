@@ -1310,16 +1310,13 @@ using RemainingTaskMap = std::map<ContigName, std::deque<CompletedTask>>;
 
 auto extract_remaining_tasks(FutureCompletedTasks& futures, CompletedTaskMap& buffered_tasks)
 {
+    const auto it = std::remove_if(std::begin(futures), std::end(futures),
+                                   [] (const auto& f) { return !f.valid(); });
+    
     std::deque<CompletedTask> tasks {};
     
-    std::transform(std::begin(futures), std::end(futures), std::back_inserter(tasks),
-                   [] (auto& fut) {
-                       try {
-                           return fut.get();
-                       } catch (...) {
-                           throw; // TODO: which exceptions can we recover from?
-                       }
-                   });
+    std::transform(std::begin(futures), it, std::back_inserter(tasks),
+                   [] (auto& fut) { return fut.get(); });
     
     futures.clear();
     futures.shrink_to_fit();
