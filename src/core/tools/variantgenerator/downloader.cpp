@@ -3,7 +3,7 @@
 
 #include "downloader.hpp"
 
-#include <boost/network/protocol/http.hpp>
+//#include <boost/network/protocol/http.hpp>
 
 #include <basics/aligned_read.hpp>
 
@@ -22,7 +22,7 @@ std::unique_ptr<VariantGenerator> Downloader::do_clone() const
 
 std::vector<Variant> Downloader::do_generate_variants(const GenomicRegion& region)
 {
-    namespace http = boost::network::http;
+    //namespace http = boost::network::http;
     
 //    <?xml version="1.0" encoding="UTF-8"?>
 //    <!DOCTYPE Query>
