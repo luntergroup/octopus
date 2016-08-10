@@ -1421,8 +1421,8 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     // populate the all the maps first so we can make unchecked acceses
     for (const auto& contig : components.contigs_in_output_order()) {
-        running_tasks.insert({contig, {}});
-        buffered_tasks.insert({contig, {}});
+        running_tasks.emplace(contig, TaskMap::mapped_type {});
+        buffered_tasks.emplace(contig, CompletedTaskMap::mapped_type {});
         holdbacks.emplace(contig, boost::none);
     }
     
