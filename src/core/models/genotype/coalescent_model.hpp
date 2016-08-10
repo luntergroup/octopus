@@ -201,7 +201,9 @@ double CoalescentModel::evaluate(const Container& haplotypes) const
                 
                 auto it = std::next(std::cbegin(reference_base_indel_heterozygosities_), offset);
                 
-                it = std::max_element(it, std::next(it, std::max(1u, region_size(site.get()))));
+                using S = Variant::MappingDomain::Size;
+                
+                it = std::max_element(it, std::next(it, std::max(S {1}, region_size(site.get()))));
                 
                 indel_heterozygosity = std::max(*it, indel_heterozygosity);
             }
