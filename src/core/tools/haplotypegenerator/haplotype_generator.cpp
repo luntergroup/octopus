@@ -294,12 +294,14 @@ bool requires_staged_removal(const Range& passed_alleles)
         return false;
     }
     
-    auto it = std::find_if_not(std::next(crbegin(passed_alleles)), crend(passed_alleles),
-                               [&passed_alleles] (const auto& allele) {
-                                   return overlaps(allele, passed_alleles.back());
-                               });
+    const auto last = crend(passed_alleles);
     
-    return it == std::crend(passed_alleles) || is_position(*std::prev(it));
+    const auto it = std::find_if_not(std::next(crbegin(passed_alleles)), last,
+                                     [&passed_alleles] (const auto& allele) {
+                                         return overlaps(allele, passed_alleles.back());
+                                     });
+    
+    return it == last || is_position(*std::prev(it));
 }
 
 void HaplotypeGenerator::update_next_active_region() const
