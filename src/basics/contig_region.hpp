@@ -38,8 +38,8 @@ public:
     
     ~ContigRegion() = default;
     
-    Position begin() const noexcept;
-    Position end() const noexcept;
+    Position begin() const noexcept { return begin_; }
+    Position end() const noexcept { return end_; }
     
 private:
     Position begin_, end_;
@@ -53,16 +53,6 @@ begin_ {begin},
 end_ {end}
 {
     if (end < begin) throw std::runtime_error {"ContigRegion: constructed with end < begin"};
-}
-
-inline ContigRegion::Position ContigRegion::begin() const noexcept
-{
-    return begin_;
-}
-
-inline ContigRegion::Position ContigRegion::end() const noexcept
-{
-    return end_;
 }
 
 // non-member methods
