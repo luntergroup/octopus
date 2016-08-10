@@ -106,8 +106,7 @@ bool empty(const OverlapRange<Iterator>& range)
 }
 
 template <typename Iterator, typename MappableType>
-OverlapRange<Iterator>
-make_overlap_range(Iterator first, Iterator last, const MappableType& mappable)
+OverlapRange<Iterator> make_overlap_range(Iterator first, Iterator last, const MappableType& mappable)
 {
     using boost::make_iterator_range; using boost::make_filter_iterator; using detail::IsOverlapped;
     
@@ -202,8 +201,7 @@ bool empty(const ContainedRange<Iterator>& range)
 }
 
 template <typename Iterator, typename MappableType>
-ContainedRange<Iterator>
-make_contained_range(Iterator first, Iterator last, const MappableType& mappable)
+ContainedRange<Iterator> make_contained_range(Iterator first, Iterator last, const MappableType& mappable)
 {
     using boost::make_iterator_range; using boost::make_filter_iterator; using detail::IsContained;
     
@@ -299,8 +297,8 @@ bool empty(const SharedRange<Iterator>& range)
 }
 
 template <typename Iterator, typename MappableType1, typename MappableType2>
-SharedRange<Iterator>
-make_shared_range(Iterator first, Iterator last, const MappableType1& mappable1, const MappableType2& mappable2)
+SharedRange<Iterator> make_shared_range(Iterator first, Iterator last,
+                                        const MappableType1& mappable1, const MappableType2& mappable2)
 {
     using boost::make_iterator_range; using boost::make_filter_iterator; using detail::IsShared;
     
@@ -312,6 +310,18 @@ make_shared_range(Iterator first, Iterator last, const MappableType1& mappable1,
         make_filter_iterator<IsShared<MappableType_>>(IsShared<MappableType_>(mappable1, mappable2),
                                                       last, last)
     );
+}
+
+template <typename T>
+auto crbegin(const boost::iterator_range<T>& range) noexcept
+{
+    return boost::rbegin(range);
+}
+    
+template <typename T>
+auto crend(const boost::iterator_range<T>& range) noexcept
+{
+    return boost::rend(range);
 }
 
 } // namespace octopus
