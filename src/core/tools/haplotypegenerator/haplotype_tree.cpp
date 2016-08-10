@@ -671,7 +671,7 @@ HaplotypeTree::clear_internal(const Vertex leaf, const ContigRegion& region)
     
     auto current_allele = leaf;
     auto allele_to_move = leaf;
-    std::deque<const Vertex> alleles_to_copy {};
+    std::deque<Vertex> alleles_to_copy {};
     bool is_bifurcating_branch {false};
     
     while (true) {
