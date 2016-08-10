@@ -247,19 +247,19 @@ std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& reg
     std::vector<Variant> result {};
     
     if (options_.min_support < 2) {
-        result.insert(end(result), begin(overlapped), end(overlapped));
+        result.insert(end(result), cbegin(overlapped), cend(overlapped));
         result.erase(std::unique(begin(result), end(result)), end(result));
     } else {
         result.reserve(size(overlapped, BidirectionallySortedTag {})); // the maximum
         
         while (true) {
-            const auto it = std::adjacent_find(begin(overlapped), end(overlapped), match_);
+            const auto it = std::adjacent_find(cbegin(overlapped), cend(overlapped), match_);
             
-            if (it == end(overlapped)) break;
+            if (it == cend(overlapped)) break;
             
             const Variant& duplicate {*it};
             
-            const auto it2 = std::find_if_not(std::next(it), end(overlapped),
+            const auto it2 = std::find_if_not(std::next(it), cend(overlapped),
                                               [this, &duplicate] (const auto& variant) {
                                                   return match_(variant, duplicate);
                                               });
@@ -274,9 +274,9 @@ std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& reg
                 }
             }
             
-            if (it2 == end(overlapped)) break;
+            if (it2 == cend(overlapped)) break;
             
-            overlapped.advance_begin(distance(begin(overlapped), it) + duplicate_count);
+            overlapped.advance_begin(distance(cbegin(overlapped), it) + duplicate_count);
         }
         
         if (options_.always_include_overlapping_indels) {
