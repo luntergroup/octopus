@@ -23,4 +23,6 @@ ret = call(["cmake", "-DBUILD_TESTING=ON", octopus_dir])
 if ret == 0:
     ret = call(["make"])
     if ret == 0:
+        octopus_test_dir = octopus_build_dir + "/test"
+        os.chdir(octopus_test_dir)
         call("ctest")

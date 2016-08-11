@@ -31,7 +31,8 @@ set(UTILS_TEST_SOURCES
 )
 
 set(CORE_TEST_SOURCES
-    
+    core/types/allele_tests.cpp
+    core/types/variant_tests.cpp
 )
 
 set(OCTOPUS_TEST_SOURCES
@@ -50,7 +51,7 @@ set(OCTOPUS_TEST_SOURCES
 add_definitions(-DBOOST_TEST_DYN_LINK)
 find_package(Boost 1.61 REQUIRED COMPONENTS unit_test_framework REQUIRED)
 
-include_directories(${Boost_INCLUDE_DIRS} ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
+include_directories(${Boost_INCLUDE_DIRS} ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test)
 
 set(TEST_DEPENDENCY_LIBS
     Octopus
