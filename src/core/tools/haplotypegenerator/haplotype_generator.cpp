@@ -52,8 +52,7 @@ auto max_included(const unsigned max_haplotypes)
     return 2 * static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes))) - 1;
 }
 
-namespace
-{
+namespace {
     auto decompose(const MappableFlatSet<Variant>& variants)
     {
         std::deque<Allele> alleles {};
@@ -158,10 +157,9 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
         
         auto novel_active_alleles = overlap_range(alleles_, novel_active_region);
         
-        auto it = extend_tree_until(novel_active_alleles, tree_,
-                                    policies_.haplotype_limits.holdout);
+        auto last_added_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
         
-        if (it != std::cend(novel_active_alleles)) {
+        if (last_added_itr != std::cend(novel_active_alleles)) {
             reset_next_active_region();
             
             if (can_extract_holdouts(novel_active_region)) {
@@ -172,12 +170,12 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
                 reset_next_active_region();
                 extend_tree(overlap_range(alleles_, active_region_), tree_);
             } else {
-                it = extend_tree_until(it, std::cend(novel_active_alleles), tree_,
-                                       policies_.haplotype_limits.overflow);
+                last_added_itr = extend_tree_until(last_added_itr, std::cend(novel_active_alleles), tree_,
+                                                   policies_.haplotype_limits.overflow);
                 
                 active_region_ = tree_.encompassing_region();
                 
-                if (it != std::cend(novel_active_alleles)) {
+                if (last_added_itr != std::cend(novel_active_alleles)) {
                     throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
                 }
             }
@@ -492,11 +490,24 @@ namespace debug
     }
 } // namespace debug
 
-void HaplotypeGenerator::extract_holdouts(GenomicRegion region)
+template <typename Range>
+unsigned estimate_num_haplotype(const Range& alleles, const GenomicRegion& next_active_region)
 {
-    assert(can_extract_holdouts(region));
+    return std::exp2(count_overlapped(alleles, next_active_region));
+}
+
+template <typename Range>
+bool require_more_holdouts(const Range& alleles, const GenomicRegion& next_active_region,
+                           const unsigned haplotype_limit)
+{
+    return !alleles.empty() && estimate_num_haplotype(alleles, next_active_region) > haplotype_limit;
+}
+
+void HaplotypeGenerator::extract_holdouts(GenomicRegion next_active_region)
+{
+    assert(can_extract_holdouts(next_active_region));
     
-    auto active_alleles = copy_contained(alleles_, region);
+    auto active_alleles = copy_contained(alleles_, next_active_region);
     
     assert(!active_alleles.empty());
     
@@ -537,11 +548,10 @@ void HaplotypeGenerator::extract_holdouts(GenomicRegion region)
         new_holdouts.insert(std::end(new_holdouts), it1, it2);
         active_alleles.erase(it1, it2);
         
-        region = default_walker_.walk(head_region(region), reads_, active_alleles);
+        next_active_region = default_walker_.walk(head_region(next_active_region), reads_, active_alleles);
         
         interaction_counts.pop_back();
-    } while (!active_alleles.empty()
-             && std::exp2(count_overlapped(active_alleles, region)) > policies_.haplotype_limits.overflow);
+    } while (require_more_holdouts(active_alleles, next_active_region, policies_.haplotype_limits.holdout));
     
     if (DEBUG_MODE) {
         logging::DebugLogger log {};
