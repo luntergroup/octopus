@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__vcf_utils__
-#define __Octopus__vcf_utils__
+#ifndef vcf_utils_hpp
+#define vcf_utils_hpp
 
 #include <vector>
 #include <string>
@@ -49,4 +49,4 @@ void convert_to_legacy(const VcfReader& src, VcfWriter& dst);
 
 } // namespace octopus    
 
-#endif /* defined(__Octopus__vcf_utils__) */
+#endif

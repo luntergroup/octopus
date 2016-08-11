@@ -41,4 +41,4 @@ GermlineVariantCall::GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<
 
 } // namespace octopus
 
-#endif /* germline_variant_call_hpp */
+#endif

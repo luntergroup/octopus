@@ -211,4 +211,4 @@ using coretools::HaplotypeGenerator;
 
 } // namespace octopus
 
-#endif /* haplotype_generator_hpp */
+#endif

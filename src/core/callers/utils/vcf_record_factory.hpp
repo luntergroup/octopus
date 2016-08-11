@@ -45,4 +45,4 @@ namespace octopus
     };
 } // namespace octopus
 
-#endif /* vcf_record_factory_hpp */
+#endif

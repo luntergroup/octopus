@@ -86,4 +86,4 @@ void insert_samples(const Map& probabilities, ProbabilityMatrix<T>& matrix)
 
 } // namespace octopus
 
-#endif /* probability_matrix_hpp */
+#endif

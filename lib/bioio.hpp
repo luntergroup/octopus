@@ -20,8 +20,8 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.  */
 
-#ifndef __bioio__bioio__
-#define __bioio__bioio__
+#ifndef bioio_hpp
+#define bioio_hpp
 
 #include <string>
 #include <vector>

@@ -50,6 +50,9 @@
 		CA7148B61CD00ABA0017820B /* read_filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA7148B51CD00ABA0017820B /* read_filter.cpp */; };
 		CA83B20B1D58D9BF00DC8035 /* mock_reference.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2091D58D9BF00DC8035 /* mock_reference.cpp */; };
 		CA83B2101D58FB8A00DC8035 /* coverage_tracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B20E1D58FB8A00DC8035 /* coverage_tracker.cpp */; };
+		CA83B2141D5BDD5800DC8035 /* mock_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2121D5BDD5800DC8035 /* mock_variant_generator.cpp */; };
+		CA83B2171D5BDD6B00DC8035 /* mock_read_manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2151D5BDD6B00DC8035 /* mock_read_manager.cpp */; };
+		CA83B21B1D5BDFE300DC8035 /* dynamic_cigar_scanner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2191D5BDFE300DC8035 /* dynamic_cigar_scanner.cpp */; };
 		CA8A664A1B81CA7E008CE1D8 /* threadsafe_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */; };
 		CA91C2C81B8DE00E00609FFA /* population_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C61B8DE00E00609FFA /* population_model.cpp */; };
 		CA91C2CB1B8DE02300609FFA /* tumour_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C91B8DE02300609FFA /* tumour_model.cpp */; };
@@ -296,6 +299,14 @@
 		CA83B20D1D58E41B00DC8035 /* malformed_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = malformed_regions.txt; sourceTree = "<group>"; };
 		CA83B20E1D58FB8A00DC8035 /* coverage_tracker.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = coverage_tracker.cpp; sourceTree = "<group>"; };
 		CA83B20F1D58FB8A00DC8035 /* coverage_tracker.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = coverage_tracker.hpp; sourceTree = "<group>"; };
+		CA83B2111D5BD7E600DC8035 /* test.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = test.py; sourceTree = "<group>"; };
+		CA83B2121D5BDD5800DC8035 /* mock_variant_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mock_variant_generator.cpp; sourceTree = "<group>"; };
+		CA83B2131D5BDD5800DC8035 /* mock_variant_generator.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = mock_variant_generator.hpp; sourceTree = "<group>"; };
+		CA83B2151D5BDD6B00DC8035 /* mock_read_manager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mock_read_manager.cpp; sourceTree = "<group>"; };
+		CA83B2161D5BDD6B00DC8035 /* mock_read_manager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = mock_read_manager.hpp; sourceTree = "<group>"; };
+		CA83B2181D5BDE0400DC8035 /* regression.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = regression.py; sourceTree = "<group>"; };
+		CA83B2191D5BDFE300DC8035 /* dynamic_cigar_scanner.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = dynamic_cigar_scanner.cpp; sourceTree = "<group>"; };
+		CA83B21A1D5BDFE300DC8035 /* dynamic_cigar_scanner.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = dynamic_cigar_scanner.hpp; sourceTree = "<group>"; };
 		CA8A66431B7E2CC7008CE1D8 /* vcf_reader_impl.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = vcf_reader_impl.hpp; sourceTree = "<group>"; };
 		CA8A66451B7E5E0C008CE1D8 /* sequence_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = sequence_utils.hpp; sourceTree = "<group>"; };
 		CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = threadsafe_fasta.cpp; sourceTree = "<group>"; };
@@ -535,6 +546,7 @@
 		CA0B46671AE860B600158BBA /* regression */ = {
 			isa = PBXGroup;
 			children = (
+				CA83B2181D5BDE0400DC8035 /* regression.py */,
 			);
 			path = regression;
 			sourceTree = "<group>";
@@ -542,8 +554,8 @@
 		CA0C55B91C5FC638009F3704 /* core */ = {
 			isa = PBXGroup;
 			children = (
-				CA17CE111D53C5A50089435A /* models */,
 				D424E0731D51029900654AA3 /* types */,
+				CA17CE111D53C5A50089435A /* models */,
 				D424E0721D51027600654AA3 /* tools */,
 				D424E0701D51025D00654AA3 /* callers */,
 			);
@@ -726,6 +738,10 @@
 			children = (
 				CA83B20A1D58D9BF00DC8035 /* mock_reference.hpp */,
 				CA83B2091D58D9BF00DC8035 /* mock_reference.cpp */,
+				CA83B2161D5BDD6B00DC8035 /* mock_read_manager.hpp */,
+				CA83B2151D5BDD6B00DC8035 /* mock_read_manager.cpp */,
+				CA83B2131D5BDD5800DC8035 /* mock_variant_generator.hpp */,
+				CA83B2121D5BDD5800DC8035 /* mock_variant_generator.cpp */,
 			);
 			path = mock;
 			sourceTree = "<group>";
@@ -769,6 +785,7 @@
 				CAA4DC311A82B36300DD3E9A /* README.md */,
 				CA56D3851D50A8D10083501A /* TODO.md */,
 				CAE8F2801D52B7FF002D1B14 /* make.py */,
+				CA83B2111D5BD7E600DC8035 /* test.py */,
 			);
 			sourceTree = "<group>";
 		};
@@ -888,6 +905,8 @@
 				CA16B1241D4FEE37006722C1 /* variant_generator.cpp */,
 				CAE3E2A71AA25F7D00C01B2C /* cigar_scanner.hpp */,
 				CAE3E2A61AA25F7D00C01B2C /* cigar_scanner.cpp */,
+				CA83B21A1D5BDFE300DC8035 /* dynamic_cigar_scanner.hpp */,
+				CA83B2191D5BDFE300DC8035 /* dynamic_cigar_scanner.cpp */,
 				CAE3E2B21AA3342B00C01B2C /* local_reassembler.hpp */,
 				CAE3E2B11AA3342B00C01B2C /* local_reassembler.cpp */,
 				CAE3E2AA1AA2736D00C01B2C /* vcf_extractor.hpp */,
@@ -1040,6 +1059,8 @@
 				D4E41DA21AD80C1B0010D25D /* mappable_algorithms.hpp */,
 				CA16B0EF1D4D0393006722C1 /* read_algorithms.hpp */,
 				CA16B0EE1D4D0393006722C1 /* read_algorithms.cpp */,
+				CAD5EC091AD6FD1E00892816 /* read_stats.hpp */,
+				CAD5EC081AD6FD1E00892816 /* read_stats.cpp */,
 				CAFA196A1AC0D0D500F953D9 /* maths.hpp */,
 				D463C18B1AEF7D2200739A66 /* map_utils.hpp */,
 				D4F886511CE6046A005F9772 /* append.hpp */,
@@ -1047,8 +1068,6 @@
 				CAE3E2A01AA1D39100C01B2C /* compression.hpp */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.hpp */,
 				CA53D3051C0A7881009A216D /* merge_transform.hpp */,
-				CAD5EC091AD6FD1E00892816 /* read_stats.hpp */,
-				CAD5EC081AD6FD1E00892816 /* read_stats.cpp */,
 				D4BB95001CA0590B00886B57 /* sequence_complexity.hpp */,
 				CA8A66451B7E5E0C008CE1D8 /* sequence_utils.hpp */,
 				D4907F5E1A8A3ADD00639203 /* string_utils.hpp */,
@@ -1168,11 +1187,11 @@
 		D424E06D1D51021100654AA3 /* basics */ = {
 			isa = PBXGroup;
 			children = (
-				CA17CDE51D53C45B0089435A /* aligned_read_tests.cpp */,
-				CA17CDF11D53C4A70089435A /* cigar_string_tests.cpp */,
-				CA17CDF31D53C4B50089435A /* phred_tests.cpp */,
 				CA17CE011D53C4EB0089435A /* contig_region_tests.cpp */,
 				CA17CE031D53C4FA0089435A /* genomic_region_tests.cpp */,
+				CA17CDF11D53C4A70089435A /* cigar_string_tests.cpp */,
+				CA17CDE51D53C45B0089435A /* aligned_read_tests.cpp */,
+				CA17CDF31D53C4B50089435A /* phred_tests.cpp */,
 			);
 			path = basics;
 			sourceTree = "<group>";
@@ -1223,10 +1242,10 @@
 		D424E0731D51029900654AA3 /* types */ = {
 			isa = PBXGroup;
 			children = (
-				CA17CDE91D53C4810089435A /* genotype_tests.cpp */,
-				CA17CDEA1D53C4810089435A /* haplotype_tests.cpp */,
-				CA17CDEB1D53C4810089435A /* variant_tests.cpp */,
 				CA17CDEF1D53C4920089435A /* allele_tests.cpp */,
+				CA17CDEB1D53C4810089435A /* variant_tests.cpp */,
+				CA17CDEA1D53C4810089435A /* haplotype_tests.cpp */,
+				CA17CDE91D53C4810089435A /* genotype_tests.cpp */,
 			);
 			path = types;
 			sourceTree = "<group>";
@@ -1480,6 +1499,7 @@
 				CAFA195B1ABF3DF400F953D9 /* haplotype_tree.cpp in Sources */,
 				D48D2AE41BB5753F00C5596E /* haplotype_likelihood_model.cpp in Sources */,
 				CA17CE251D53C67E0089435A /* downsampler_tests.cpp in Sources */,
+				CA83B2141D5BDD5800DC8035 /* mock_variant_generator.cpp in Sources */,
 				CA3B6CF71D391487005298BE /* read_assignment.cpp in Sources */,
 				CAE3B59E1CFE3E3E005EEDE6 /* variant_call_filter.cpp in Sources */,
 				D490E4241C74CE1200883184 /* kmer_mapper.cpp in Sources */,
@@ -1497,6 +1517,7 @@
 				CA0D83EB1BD466F40020366B /* read_pipe.cpp in Sources */,
 				CA16B1251D4FEE37006722C1 /* variant_generator.cpp in Sources */,
 				CA0DF5891CCADA36000193CF /* call.cpp in Sources */,
+				CA83B21B1D5BDFE300DC8035 /* dynamic_cigar_scanner.cpp in Sources */,
 				D44ADE731C43C22700A854C6 /* caller_builder.cpp in Sources */,
 				D424E0CE1D54BC1100654AA3 /* timers.cpp in Sources */,
 				D40B11A01CAEA75C0050145D /* coalescent_model.cpp in Sources */,
@@ -1514,6 +1535,7 @@
 				CA16B10B1D4E54F9006722C1 /* parallel_transform.cpp in Sources */,
 				CA17CE0E1D53C57E0089435A /* local_reassembler.cpp in Sources */,
 				D4636C6A1B6919B500FEA7D2 /* vcf_writer.cpp in Sources */,
+				CA83B2171D5BDD6B00DC8035 /* mock_read_manager.cpp in Sources */,
 				CAEC8E1A1B73ACB9008FC858 /* vcf_type.cpp in Sources */,
 				D4807FB01BA826DB00657D4F /* population_caller.cpp in Sources */,
 				CABEBD281D436EEA0017A7E7 /* supervised_variant_call_filter.cpp in Sources */,

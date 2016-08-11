@@ -130,4 +130,4 @@ namespace std {
     };
 }
 
-#endif /* phred_hpp */
+#endif

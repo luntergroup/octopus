@@ -46,4 +46,4 @@ namespace octopus
     {}
 } // namespace octopus
 
-#endif /* reference_call_hpp */
+#endif

@@ -59,4 +59,4 @@ VariantCall::VariantCall(V&& variant, T&& genotype_calls, Phred<double> quality)
 
 } // namespace octopus
 
-#endif /* variant_call_hpp */
+#endif

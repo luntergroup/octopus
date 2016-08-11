@@ -58,4 +58,4 @@ private:
 } // namesapce model
 } // namespace octopus
 
-#endif /* individual_model */
+#endif

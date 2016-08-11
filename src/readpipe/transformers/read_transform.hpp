@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef Octopus_read_transform_hpp
-#define Octopus_read_transform_hpp
+#ifndef read_transform_hpp
+#define read_transform_hpp
 
 #include <basics/aligned_read.hpp>
 

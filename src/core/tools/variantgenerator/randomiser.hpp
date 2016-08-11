@@ -53,4 +53,4 @@ private:
 } // namespace coretools
 } // namespace octopus
 
-#endif /* randomiser_hpp */
+#endif

@@ -61,4 +61,4 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options);
 } // namespace options
 } // namespace octopus
 
-#endif /* option_collation_hpp */
+#endif

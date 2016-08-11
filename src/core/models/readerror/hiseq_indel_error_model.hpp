@@ -55,4 +55,4 @@ private:
 
 } // namespace octopus
 
-#endif /* hiseq_indel_error_model_hpp */
+#endif

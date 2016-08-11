@@ -79,4 +79,4 @@ credible_regions_ {std::forward<C>(credible_regions)}
 
 } // namespace octopus
 
-#endif /* somatic_call_hpp */
+#endif

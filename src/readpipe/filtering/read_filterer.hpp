@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__read_filterer__
-#define __Octopus__read_filterer__
+#ifndef read_filterer_hpp
+#define read_filterer_hpp
 
 #include <vector>
 #include <unordered_map>
@@ -323,4 +323,4 @@ std::size_t erase_filtered_reads(Map& reads, const FilterPointMap<Map>& filter_p
 } // namespace readpipe
 } // namespace octopus
 
-#endif /* defined(__Octopus__read_filterer__) */
+#endif

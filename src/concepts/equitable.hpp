@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef Octopus_equitable_h
-#define Octopus_equitable_h
+#ifndef equitable_h
+#define equitable_h
 
 namespace octopus {
 

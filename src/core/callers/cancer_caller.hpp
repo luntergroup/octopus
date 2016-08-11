@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__cancer_caller__
-#define __Octopus__cancer_caller__
+#ifndef cancer_caller_hpp
+#define cancer_caller_hpp
 
 #include <vector>
 #include <unordered_map>
@@ -177,4 +177,4 @@ private:
 
 } // namespace octopus
 
-#endif /* defined(__Octopus__cancer_caller__) */
+#endif

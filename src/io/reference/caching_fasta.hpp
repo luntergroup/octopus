@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__caching_fasta__
-#define __Octopus__caching_fasta__
+#ifndef caching_fasta_hpp
+#define caching_fasta_hpp
 
 #include <unordered_map>
 #include <map>
@@ -117,4 +117,4 @@ private:
 } // namespace io
 } // namespace octopus
 
-#endif /* defined(__Octopus__caching_fasta__) */
+#endif

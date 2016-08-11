@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef user_error_h
-#define user_error_h
+#ifndef user_error_hpp
+#define user_error_hpp
 
 #include <string>
 

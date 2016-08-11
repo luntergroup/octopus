@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__downloader__
-#define __Octopus__downloader__
+#ifndef downloader_hpp
+#define downloader_hpp
 
 #include <vector>
 #include <functional>
@@ -47,4 +47,4 @@ private:
 } // namespace coretools
 } // namespace octopus
 
-#endif /* defined(__Octopus__downloader__) */
+#endif

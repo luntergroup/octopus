@@ -33,4 +33,4 @@ double score(const std::string& truth, const std::string& target,
 } // namespace hmm
 } // namespace octopus
 
-#endif /* pair_hmm_hpp */
+#endif

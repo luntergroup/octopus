@@ -88,4 +88,4 @@ OutputIt merge_transform(const Container1& container1, const Container2& contain
 
 } // namespace octopus
 
-#endif /* merge_transform_hpp */
+#endif

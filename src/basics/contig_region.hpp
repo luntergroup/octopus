@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__contig_region__
-#define __Octopus__contig_region__
+#ifndef contig_region_hpp
+#define contig_region_hpp
 
 #include <ostream>
 #include <cstdint>

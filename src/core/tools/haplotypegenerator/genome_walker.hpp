@@ -70,4 +70,4 @@ private:
 } // namespace coretools
 } // namespace octopus
 
-#endif /* genome_walker_hpp */
+#endif

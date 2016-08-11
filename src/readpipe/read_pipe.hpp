@@ -80,4 +80,4 @@ private:
 
 } // namespace octopus
 
-#endif /* read_pipe_hpp */
+#endif

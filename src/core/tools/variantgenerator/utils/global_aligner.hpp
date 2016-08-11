@@ -28,4 +28,4 @@ Alignment align(const std::string& target, const std::string& query, Model model
 } // namespace octopus
 
 
-#endif /* global_aligner_hpp */
+#endif

@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__vcf_writer__
-#define __Octopus__vcf_writer__
+#ifndef vcf_writer_hpp
+#define vcf_writer_hpp
 
 #include <memory>
 #include <mutex>
@@ -92,4 +92,4 @@ namespace std {
     };
 } // namespace std
 
-#endif /* defined(__Octopus__vcf_writer__) */
+#endif

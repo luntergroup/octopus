@@ -32,4 +32,4 @@ extract_removable(const std::vector<Haplotype>& haplotypes,
 
 } // namespace octopus
 
-#endif /* haplotype_filter_hpp */
+#endif

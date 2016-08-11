@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__cigar_scanner__
-#define __Octopus__cigar_scanner__
+#ifndef cigar_scanner_hpp
+#define cigar_scanner_hpp
 
 #include <vector>
 #include <deque>
@@ -13,7 +13,6 @@
 
 #include <basics/aligned_read.hpp>
 #include <core/types/variant.hpp>
-#include <utils/coverage_tracker.hpp>
 
 #include "variant_generator.hpp"
 
@@ -76,9 +75,8 @@ private:
     std::function<bool(const Variant&, const Variant&)> match_;
     
     std::deque<Variant> candidates_;
-    Variant::MappingDomain::Size max_seen_candidate_size_;
     
-    CoverageTracker read_coverage_tracker_;
+    Variant::MappingDomain::Size max_seen_candidate_size_;
     
     template <typename T1, typename T2, typename T3>
     void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added);
@@ -87,8 +85,7 @@ private:
 };
 
 template <typename T1, typename T2, typename T3>
-void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed,
-                                                       T3&& sequence_added)
+void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added)
 {
     const auto candidate_size = region_size(region);
     
@@ -99,7 +96,8 @@ void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed,
         max_seen_candidate_size_ = std::max(max_seen_candidate_size_, candidate_size);
     }
 }
+
 } // coretools
 } // namespace octopus
 
-#endif /* defined(__Octopus__cigar_scanner__) */
+#endif

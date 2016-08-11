@@ -112,4 +112,4 @@ private:
 
 } // namespace octopus
 
-#endif /* haplotype_likelihood_model_hpp */
+#endif

@@ -272,4 +272,4 @@ namespace std {
     };
 } // namespace std
 
-#endif /* cancer_genotype_h */
+#endif

@@ -54,4 +54,4 @@ auto downsample(Map& reads, const Downsampler& downsampler)
 } // namespace readpipe
 } // namespace octopus
 
-#endif /* downsampler_hpp */
+#endif

@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef Octopus_allele_hpp
-#define Octopus_allele_hpp
+#ifndef allele_hpp
+#define allele_hpp
 
 #include <string>
 #include <utility>

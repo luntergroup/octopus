@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__read_reader__
-#define __Octopus__read_reader__
+#ifndef read_reader_hpp
+#define read_reader_hpp
 
 #include <vector>
 #include <cstddef>
@@ -120,4 +120,4 @@ namespace std {
     };
 } // namespace std
 
-#endif /* defined(__Octopus__read_reader__) */
+#endif

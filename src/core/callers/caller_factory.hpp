@@ -48,4 +48,4 @@ private:
 
 } // namespace octopus
 
-#endif /* caller_factory_hpp */
+#endif

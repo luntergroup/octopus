@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__maths__
-#define __Octopus__maths__
+#ifndef maths_hpp
+#define maths_hpp
 
 #include <vector>
 #include <cstddef>
@@ -650,4 +650,4 @@ auto normalise_exp(Container& logs)
 } // namespace maths
 } // namespace octopus
 
-#endif /* defined(__Octopus__maths__) */
+#endif

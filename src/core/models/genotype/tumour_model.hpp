@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__tumour_model__
-#define __Octopus__tumour_model__
+#ifndef tumour_model_hpp
+#define tumour_model_hpp
 
 #include <vector>
 #include <unordered_map>

@@ -5,8 +5,8 @@
 
 #include "error.hpp"
 
-#ifndef program_error_h
-#define program_error_h
+#ifndef program_error_hpp
+#define program_error_hpp
 
 namespace octopus {
 

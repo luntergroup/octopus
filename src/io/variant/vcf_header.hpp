@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__vcf_header__
-#define __Octopus__vcf_header__
+#ifndef vcf_header_hpp
+#define vcf_header_hpp
 
 #include <string>
 #include <vector>
@@ -254,4 +254,4 @@ namespace std {
     };
 } // namespace std
 
-#endif /* defined(__Octopus__vcf_header__) */
+#endif

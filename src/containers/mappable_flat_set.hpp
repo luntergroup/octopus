@@ -1008,4 +1008,4 @@ void swap(MappableFlatSet<MappableType, Allocator>& lhs,
 
 } // namespace octopus
 
-#endif /* mappable_flat_set_hpp */
+#endif

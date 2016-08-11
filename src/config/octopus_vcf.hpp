@@ -29,4 +29,4 @@ namespace octopus {
     } // namespace Vcf
 } // namespace octopus
 
-#endif /* octopus_vcf_hpp */
+#endif

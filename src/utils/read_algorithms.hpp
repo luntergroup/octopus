@@ -198,4 +198,4 @@ namespace octopus {
     }
 } // namespace octopus
 
-#endif /* read_algorithms_hpp */
+#endif

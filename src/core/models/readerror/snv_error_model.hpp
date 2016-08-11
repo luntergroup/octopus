@@ -47,4 +47,4 @@ private:
 
 } // namespace octopus
 
-#endif /* snv_error_model_hpp */
+#endif

@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__read_manager__
-#define __Octopus__read_manager__
+#ifndef read_manager_hpp
+#define read_manager_hpp
 
 #include <vector>
 #include <map>
@@ -141,4 +141,4 @@ private:
 
 } // namespace octopus
 
-#endif /* defined(__Octopus__read_manager__) */
+#endif

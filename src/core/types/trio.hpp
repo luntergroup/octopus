@@ -40,4 +40,4 @@ private:
 
 } // namespace octopus
 
-#endif /* trio_hpp */
+#endif

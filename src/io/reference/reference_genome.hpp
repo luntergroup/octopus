@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__reference_genome__
-#define __Octopus__reference_genome__
+#ifndef reference_genome_hpp
+#define reference_genome_hpp
 
 #include <string>
 #include <vector>
@@ -74,4 +74,4 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
 
 } // namespace octopus
 
-#endif /* defined(__Octopus__reference_genome__) */
+#endif

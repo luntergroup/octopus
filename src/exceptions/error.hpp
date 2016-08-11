@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef error_h
-#define error_h
+#ifndef error_hpp
+#define error_hpp
 
 #include <exception>
 #include <string>
@@ -45,4 +45,4 @@ private:
 
 } // namespace octopus
 
-#endif /* error_h */
+#endif

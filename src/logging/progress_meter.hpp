@@ -85,4 +85,4 @@ private:
 
 } // namespace octopus
 
-#endif /* progress_meter_hpp */
+#endif

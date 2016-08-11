@@ -36,4 +36,4 @@ namespace octopus {
     
 } // namespace octopus
 
-#endif /* trio_caller_hpp */
+#endif

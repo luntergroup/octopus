@@ -10,4 +10,4 @@
 #include "reference_call.hpp"
 #include "somatic_call.hpp"
 
-#endif /* call_types_hpp */
+#endif

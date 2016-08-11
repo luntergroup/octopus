@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__vcf_extractor__
-#define __Octopus__vcf_extractor__
+#ifndef vcf_extractor_hpp
+#define vcf_extractor_hpp
 
 #include <vector>
 #include <memory>
@@ -49,4 +49,4 @@ private:
 } // namespace coretools
 } // namespace octopus
 
-#endif /* defined(__Octopus__vcf_extractor__) */
+#endif

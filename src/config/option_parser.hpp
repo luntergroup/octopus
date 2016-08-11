@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__option_parser__
-#define __Octopus__option_parser__
+#ifndef option_parser_hpp
+#define option_parser_hpp
 
 #include <string>
 #include <iosfwd>
@@ -47,4 +47,4 @@ std::ostream& operator<<(std::ostream& os, const PhasingLevel& pl);
 } // namespace Options
 } // namespace octopus
 
-#endif /* defined(__Octopus__option_parser__) */
+#endif

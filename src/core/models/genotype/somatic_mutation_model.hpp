@@ -57,4 +57,4 @@ std::vector<double> calculate_log_priors(const Container& genotypes,
 
 } // namespace octopus
 
-#endif /* somatic_mutation_model_hpp */
+#endif

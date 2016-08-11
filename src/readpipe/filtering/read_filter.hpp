@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__read_filter__
-#define __Octopus__read_filter__
+#ifndef read_filter_hpp
+#define read_filter_hpp
 
 #include <string>
 #include <utility>
@@ -279,4 +279,4 @@ struct IsNotDuplicate : ContextReadFilter<ForwardIt>
 } // namespace readpipe
 } // namespace octopus
 
-#endif /* defined(__Octopus__read_filter__) */
+#endif

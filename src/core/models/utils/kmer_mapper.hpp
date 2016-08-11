@@ -192,4 +192,4 @@ std::vector<std::size_t> map_query_to_target(const std::string& query, const std
 
 } // namespace octopus
 
-#endif /* kmer_mapping_hpp */
+#endif

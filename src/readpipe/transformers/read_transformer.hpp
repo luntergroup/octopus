@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef Octopus_read_transformer_hpp
-#define Octopus_read_transformer_hpp
+#ifndef read_transformer_hpp
+#define read_transformer_hpp
 
 #include <vector>
 #include <functional>

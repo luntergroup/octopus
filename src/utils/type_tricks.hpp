@@ -114,4 +114,4 @@ using enable_if_not_map = std::enable_if_t<!is_map<T>, V>;
 
 } // namespace octopus
 
-#endif /* type_tricks_hpp */
+#endif

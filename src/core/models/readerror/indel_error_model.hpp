@@ -60,4 +60,4 @@ private:
 
 } // namespace octopus
 
-#endif /* indel_error_model_hpp */
+#endif

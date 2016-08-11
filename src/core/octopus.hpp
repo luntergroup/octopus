@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__octopus__
-#define __Octopus__octopus__
+#ifndef octopus_hpp
+#define octopus_hpp
 
 #include <config/option_parser.hpp>
 
@@ -12,4 +12,4 @@ namespace octopus {
 
 }
 
-#endif /* defined(__Octopus__octopus__) */
+#endif

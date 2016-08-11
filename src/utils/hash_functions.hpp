@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef Octopus_hash_functions_hpp
-#define Octopus_hash_functions_hpp
+#ifndef hash_functions_hpp
+#define hash_functions_hpp
 
 #include <string>
 

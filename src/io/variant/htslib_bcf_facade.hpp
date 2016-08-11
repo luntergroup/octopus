@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__htslib_bcf_facade__
-#define __Octopus__htslib_bcf_facade__
+#ifndef htslib_bcf_facade_hpp
+#define htslib_bcf_facade_hpp
 
 #include <string>
 #include <set>
@@ -146,4 +146,4 @@ bool operator!=(const HtslibBcfFacade::RecordIterator& lhs, const HtslibBcfFacad
 
 } // namespace octopus
 
-#endif /* defined(__Octopus__htslib_bcf_facade__) */
+#endif

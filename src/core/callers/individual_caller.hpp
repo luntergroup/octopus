@@ -120,4 +120,4 @@ private:
 };
 } // namespace octopus
 
-#endif /* individual_caller_hpp */
+#endif

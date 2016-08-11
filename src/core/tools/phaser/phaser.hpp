@@ -142,4 +142,4 @@ namespace debug {
 
 } // namespace octopus
 
-#endif /* phaser_hpp */
+#endif

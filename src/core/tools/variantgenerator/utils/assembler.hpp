@@ -329,4 +329,4 @@ namespace boost {
     }
 } // namespace boost
 
-#endif /* assembler_hpp */
+#endif

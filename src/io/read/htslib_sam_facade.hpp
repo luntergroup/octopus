@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__htslib_sam_facade__
-#define __Octopus__htslib_sam_facade__
+#ifndef htslib_sam_facade_hpp
+#define htslib_sam_facade_hpp
 
 #include <string>
 #include <vector>
@@ -167,4 +167,4 @@ private:
 } // namespace io
 } // namespace octopus
 
-#endif /* defined(__Octopus__htslib_sam_facade__) */
+#endif

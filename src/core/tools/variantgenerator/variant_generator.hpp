@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef Octopus_variant_generator__
-#define Octopus_variant_generator__
+#ifndef variant_generator_hpp
+#define variant_generator_hpp
 
 #include <vector>
 #include <string>

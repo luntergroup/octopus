@@ -53,4 +53,4 @@ private:
     
 } // namespace octopus
 
-#endif /* pedigree_hpp */
+#endif

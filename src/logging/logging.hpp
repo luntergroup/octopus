@@ -245,4 +245,4 @@ LogStream<T>& operator<<(LogStream<T>&& lg, const M& msg)
 } // namespace logging
 } // namespace octopus
 
-#endif /* logging_hpp */
+#endif

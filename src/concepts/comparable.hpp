@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef Octopus_comparable_hpp
-#define Octopus_comparable_hpp
+#ifndef comparable_hpp
+#define comparable_hpp
 
 namespace octopus {
 

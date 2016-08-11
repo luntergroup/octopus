@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__sequence_utils__
-#define __Octopus__sequence_utils__
+#ifndef sequence_utils_hpp
+#define sequence_utils_hpp
 
 #include <vector>
 #include <array>
@@ -364,4 +364,4 @@ double gc_bias(const SequenceType& sequence)
 } // namespace utils
 } // namespace octopus
 
-#endif /* defined(__Octopus__sequence_utils__) */
+#endif

@@ -141,4 +141,4 @@ private:
 
 } // namespace octopus
 
-#endif /* caller_builder_hpp */
+#endif

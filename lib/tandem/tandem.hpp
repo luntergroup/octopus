@@ -20,8 +20,8 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.  */
 
-#ifndef __tandem__tandem__
-#define __tandem__tandem__
+#ifndef tandem_hpp
+#define tandem_hpp
 
 #include <vector>
 #include <deque>
@@ -606,4 +606,4 @@ namespace tandem
     
 } // namespace tandem
 
-#endif /* defined(__tandem__tandem__) */
+#endif

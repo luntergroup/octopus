@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__fasta__
-#define __Octopus__fasta__
+#ifndef fasta_hpp
+#define fasta_hpp
 
 #include <string>
 #include <vector>
@@ -62,4 +62,4 @@ private:
 } // namespace io
 } // namespace octopus
 
-#endif /* defined(__Octopus__fasta__) */
+#endif

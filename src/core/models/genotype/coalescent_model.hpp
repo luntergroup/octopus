@@ -280,4 +280,4 @@ std::vector<double> calculate_log_priors(const Container& genotypes, const Coale
 
 } // namespace octopus
 
-#endif /* coalescent_model_hpp */
+#endif

@@ -607,4 +607,4 @@ public:
     Iterator cend() const { return end(); }
 };
 
-#endif /* matrix_map_hpp */
+#endif

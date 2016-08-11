@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__read_stats__
-#define __Octopus__read_stats__
+#ifndef read_stats_hpp
+#define read_stats_hpp
 
 #include <vector>
 #include <iterator>
@@ -878,4 +878,4 @@ std::size_t max_sample_read_count(const ReadMap& reads)
 
 } // namespace octopus
 
-#endif /* defined(__Octopus__read_stats__) */
+#endif

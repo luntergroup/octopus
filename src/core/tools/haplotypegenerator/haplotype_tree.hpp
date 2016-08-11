@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__haplotype_tree__
-#define __Octopus__haplotype_tree__
+#ifndef haplotype_tree_hpp
+#define haplotype_tree_hpp
 
 #include <vector>
 #include <list>
@@ -263,4 +263,4 @@ auto generate_all_haplotypes(const Container& elements, const ReferenceGenome& r
 } // namespace coretools
 } // namespace octopus
 
-#endif /* defined(__Octopus__haplotype_tree__) */
+#endif

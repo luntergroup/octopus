@@ -212,4 +212,4 @@ namespace debug {
 } // namespace debug
 } // namespace octopus
 
-#endif /* haplotype_likelihood_cache_hpp */
+#endif

@@ -59,4 +59,4 @@ inline std::ostream& operator<<(std::ostream& os, const TimeInterval& interval)
 } // namespace utils
 } // namespace octopus
 
-#endif /* timing_hpp */
+#endif

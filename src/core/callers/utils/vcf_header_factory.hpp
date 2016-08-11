@@ -40,4 +40,4 @@ private:
 
 } // namespace octopus
 
-#endif /* vcf_header_factory_hpp */
+#endif

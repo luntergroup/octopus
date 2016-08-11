@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef __Octopus__germline_likelihood_model__
-#define __Octopus__germline_likelihood_model__
+#ifndef germline_likelihood_model_hpp
+#define germline_likelihood_model_hpp
 
 #include <core/types/haplotype.hpp>
 #include <core/types/genotype.hpp>
@@ -40,4 +40,4 @@ private:
 } // namespace model
 } // namespace octopus
 
-#endif /* defined(__Octopus__germline_likelihood_model__) */
+#endif
