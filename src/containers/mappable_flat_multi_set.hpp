@@ -423,27 +423,27 @@ MappableFlatMultiSet<MappableType, Allocator>::insert(MappableType&& m)
 
 template <typename MappableType, typename Allocator>
 typename MappableFlatMultiSet<MappableType, Allocator>::iterator
-MappableFlatMultiSet<MappableType, Allocator>::insert(const_iterator it, const MappableType& m)
+MappableFlatMultiSet<MappableType, Allocator>::insert(const_iterator hint, const MappableType& m)
 {
-    const auto it2 = elements_.insert(it, m);
+    const auto it2 = elements_.insert(hint, m);
     if (is_bidirectionally_sorted_) {
         const auto overlapped = overlap_range(*it2);
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
     }
-    max_element_size_ = std::max(max_element_size_, region_size(*it));
+    max_element_size_ = std::max(max_element_size_, region_size(m));
     return it2;
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableFlatMultiSet<MappableType, Allocator>::iterator
-MappableFlatMultiSet<MappableType, Allocator>::insert(const_iterator it, MappableType&& m)
+MappableFlatMultiSet<MappableType, Allocator>::insert(const_iterator hint, MappableType&& m)
 {
-    const auto it2 = elements_.insert(it, std::move(m));
+    const auto it2 = elements_.insert(hint, std::move(m));
     if (is_bidirectionally_sorted_) {
         const auto overlapped = overlap_range(*it2);
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
     }
-    max_element_size_ = std::max(max_element_size_, region_size(*it));
+    max_element_size_ = std::max(max_element_size_, region_size(m));
     return it2;
 }
 
