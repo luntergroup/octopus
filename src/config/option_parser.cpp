@@ -64,7 +64,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<float>()->default_value(50),
      "Maximum memory footprint for cached reference sequence (in megabytes)")
     
-    ("target-read-buffer-footprint",
+    ("target-read-buffer-footprint,B",
      po::value<float>()->default_value(0.5),
      "None binding request to limit the memory footprint of buffered read data (in gigabytes)")
     
@@ -172,7 +172,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Disables all read filters")
     
-    ("consider-unmapped-reads,allow-unmapped",
+    ("consider-unmapped-reads",
      po::bool_switch()->default_value(false),
      "Allows reads marked as unmapped to be used for calling")
     
@@ -204,11 +204,11 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>(),
      "Filter reads longer than this")
     
-    ("allow-marked-duplicates,allow-marked-dups",
+    ("allow-marked-duplicates",
      po::bool_switch()->default_value(false),
      "Allows reads marked as duplicate in alignment record")
     
-    ("allow-octopus-duplicates,allow-dups",
+    ("allow-octopus-duplicates",
      po::bool_switch()->default_value(false),
      "Allows reads considered duplicates by octopus")
     
@@ -232,7 +232,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Allows reads with possible adapter contamination")
     
-    ("disable-downsampling,no-downsampling",
+    ("disable-downsampling",
      po::bool_switch()->default_value(false),
      "Diables all downsampling")
     
@@ -247,11 +247,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description candidates("Candidate variant generation");
     candidates.add_options()
-    ("disable-raw-cigar-candidate-generator",
+    ("disable-raw-cigar-candidate-generator,G",
      po::bool_switch()->default_value(false),
      "Disables candidate generation from raw read alignments (CIGAR strings)")
     
-    ("disable-assembly-candidate-generator",
+    ("disable-assembly-candidate-generator,A",
      po::bool_switch()->default_value(false),
      "Disables candidate generation using local re-assembly")
     
