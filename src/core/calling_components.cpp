@@ -130,7 +130,7 @@ auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& r
             };
             break;
         case ContigOutputOrder::ContigSizeDescending:
-            result = [&reference] (const auto& lhs, const auto& rhs) {
+            result = [&reference] (const auto& lhs, const auto& rhs) -> bool {
                 return reference.contig_size(lhs) > reference.contig_size(rhs);
             };
             break;
@@ -138,7 +138,7 @@ auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& r
         {
             auto reference_contigs = reference.contig_names();
             result = [&reference, reference_contigs = std::move(reference_contigs)]
-            (const auto& lhs, const auto& rhs) {
+            (const auto& lhs, const auto& rhs) -> bool {
                 return index_of(reference_contigs, lhs) < index_of(reference_contigs, rhs);
             };
             break;
@@ -147,7 +147,7 @@ auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& r
         {
             auto reference_contigs = reference.contig_names();
             result = [&reference, reference_contigs = std::move(reference_contigs)]
-            (const auto& lhs, const auto& rhs) {
+            (const auto& lhs, const auto& rhs) -> bool {
                 return index_of(reference_contigs, lhs) < index_of(reference_contigs, rhs);
             };
             break;
