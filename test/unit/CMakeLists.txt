@@ -11,7 +11,7 @@ set(BASICS_TEST_SOURCES
 )
 
 set(CONTAINERS_TEST_SOURCES
-    
+    containers/mappable_flat_set_tests.cpp
 )
 
 set(LOGGING_TEST_SOURCES

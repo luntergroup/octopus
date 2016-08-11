@@ -17,6 +17,7 @@
 #include <concepts/mappable.hpp>
 #include <concepts/mappable_range.hpp>
 #include <utils/mappable_algorithms.hpp>
+#include <utils/type_tricks.hpp>
 
 namespace octopus {
 
@@ -83,8 +84,8 @@ public:
     std::pair<iterator, bool> emplace(Args...);
     std::pair<iterator, bool> insert(const MappableType&);
     std::pair<iterator, bool> insert(MappableType&&);
-//    iterator insert(const_iterator, const MappableType& mappable);
-//    iterator insert(const_iterator, MappableType&& mappable);
+    iterator insert(const_iterator, const MappableType& mappable);
+    iterator insert(const_iterator, MappableType&& mappable);
     template <typename InputIterator>
     void insert(InputIterator, InputIterator);
 //    iterator insert(std::initializer_list<MappableType>);
@@ -398,7 +399,7 @@ std::pair<typename MappableFlatSet<MappableType, Allocator>::iterator, bool>
 MappableFlatSet<MappableType, Allocator>::insert(const MappableType& m)
 {
     auto it = std::lower_bound(std::begin(elements_), std::end(elements_), m);
-    if (it == std::end(elements_) || !(*it == m)) {
+    if (it == std::end(elements_) || *it != m) {
         it = elements_.insert(it, m);
     } else {
         return std::make_pair(it, false);
@@ -416,8 +417,8 @@ std::pair<typename MappableFlatSet<MappableType, Allocator>::iterator, bool>
 MappableFlatSet<MappableType, Allocator>::insert(MappableType&& m)
 {
     auto it = std::lower_bound(std::begin(elements_), std::end(elements_), m);
-    if (it == std::end(elements_) || !(*it == m)) {
-        it = elements_.insert(it, m);
+    if (it == std::end(elements_) || *it != m) {
+        it = elements_.insert(it, std::move(m));
     } else {
         return std::make_pair(it, false);
     }
@@ -429,31 +430,125 @@ MappableFlatSet<MappableType, Allocator>::insert(MappableType&& m)
     return std::make_pair(it, true);
 }
 
-//template <typename MappableType, typename Allocator>
-//typename MappableFlatSet<MappableType, Allocator>::iterator
-//MappableFlatSet<MappableType, Allocator>::insert(const_iterator it, const MappableType& m)
-//{
-//    const auto it2 = elements_.insert(it, m);
-//    if (is_bidirectionally_sorted_) {
-//        const auto overlapped = overlap_range(*it2);
-//        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
-//    }
-//    max_element_size_ = std::max(max_element_size_, region_size(*it));
-//    return it2;
-//}
-//
-//template <typename MappableType, typename Allocator>
-//typename MappableFlatSet<MappableType, Allocator>::iterator
-//MappableFlatSet<MappableType, Allocator>::insert(const_iterator it, MappableType&& m)
-//{
-//    const auto it2 = elements_.insert(it, std::move(m));
-//    if (is_bidirectionally_sorted_) {
-//        const auto overlapped = overlap_range(*it2);
-//        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
-//    }
-//    max_element_size_ = std::max(max_element_size_, region_size(*it));
-//    return it2;
-//}
+template <typename MappableType, typename Allocator>
+typename MappableFlatSet<MappableType, Allocator>::iterator
+MappableFlatSet<MappableType, Allocator>::insert(const_iterator hint, const MappableType& m)
+{
+    // hint is a hint pointing to where the insert should start to search.
+    
+    typename MappableFlatSet<MappableType, Allocator>::iterator result;
+    
+    if (hint != std::cend(elements_)) {
+        if (hint != std::cbegin(elements_)) {
+            const auto& prev_hint_element = *std::prev(hint);
+            
+            if (prev_hint_element < m) {
+                // hint is good
+                if (*hint > m) {
+                    result = elements_.insert(hint, m);
+                } else if (*hint == m) {
+                    return remove_constness(elements_, hint);
+                } else if (prev_hint_element == m) {
+                    return remove_constness(elements_, std::prev(hint));
+                } else {
+                    hint = std::lower_bound(hint, std::cend(elements_), m);
+                    
+                    if (hint == std::end(elements_) || *hint != m) {
+                        result = elements_.insert(hint, m);
+                    } else {
+                        return remove_constness(elements_, hint); // not found
+                    }
+                }
+            } else {
+                return insert(m).first; // hint is bad
+            }
+        } else if (*hint > m) {
+            elements_.push_front(m);
+            result = std::begin(elements_);
+        } else if (*hint == m) {
+            return remove_constness(elements_, hint);
+        } else {
+            return insert(m).first; // useless hint
+        }
+    } else {
+        if (empty() || elements_.back() < m) {
+            elements_.push_back(m);
+            result = std::begin(elements_);
+        } else {
+            return insert(m).first; // bad hint
+        }
+    }
+    
+    // the element was inserted
+    
+    if (is_bidirectionally_sorted_) {
+        const auto overlapped = overlap_range(m);
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
+    }
+    
+    max_element_size_ = std::max(max_element_size_, region_size(m));
+    
+    return result;
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableFlatSet<MappableType, Allocator>::iterator
+MappableFlatSet<MappableType, Allocator>::insert(const_iterator hint, MappableType&& m)
+{
+    typename MappableFlatSet<MappableType, Allocator>::iterator result;
+    
+    if (hint != std::cend(elements_)) {
+        if (hint != std::cbegin(elements_)) {
+            const auto& prev_hint_element = *std::prev(hint);
+            
+            if (prev_hint_element < m) {
+                // hint is good
+                if (*hint > m) {
+                    result = elements_.insert(hint, std::move(m));
+                } else if (*hint == m) {
+                    return remove_constness(elements_, hint);
+                } else if (prev_hint_element == m) {
+                    return remove_constness(elements_, std::prev(hint));
+                } else {
+                    hint = std::lower_bound(hint, std::cend(elements_), m);
+                    
+                    if (hint == std::end(elements_) || *hint != m) {
+                        result = elements_.insert(hint, std::move(m));
+                    } else {
+                        return remove_constness(elements_, hint); // not found
+                    }
+                }
+            } else {
+                return insert(std::move(m)).first; // hint is bad
+            }
+        } else if (*hint > m) {
+            elements_.push_front(std::move(m));
+            result = std::begin(elements_);
+        } else if (*hint == m) {
+            return remove_constness(elements_, hint);
+        } else {
+            return insert(std::move(m)).first; // useless hint
+        }
+    } else {
+        if (empty() || elements_.back() < m) {
+            elements_.push_back(std::move(m));
+            result = std::begin(elements_);
+        } else {
+            return insert(std::move(m)).first; // bad hint
+        }
+    }
+    
+    // the element was inserted and result now points to it
+    
+    if (is_bidirectionally_sorted_) {
+        const auto overlapped = overlap_range(*result);
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
+    }
+    
+    max_element_size_ = std::max(max_element_size_, region_size(*result));
+    
+    return result;
+}
 
 template <typename MappableType, typename Allocator>
 template <typename InputIterator>
