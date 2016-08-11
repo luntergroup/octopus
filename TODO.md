@@ -15,6 +15,8 @@
 - [] ReadReader should be able to use iterators.
 - [] Make use of CoverageTracker in CigarScanner (to calculate required read support).
 - [] Phaser should allow conditional (on called genotype phasing), and also read supported phasing.
+- [] Tasks should start running immediately rather than waiting for all to be generated.
+- [] In multithreaded mode, if we have too many variants buffered, we should write them to another temporary file.
 
 # Refactoring
 

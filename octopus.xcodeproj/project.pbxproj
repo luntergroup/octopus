@@ -845,12 +845,12 @@
 			isa = PBXGroup;
 			children = (
 				CA83B2081D58D97D00DC8035 /* mock */,
-				D424E0CC1D54BC1100654AA3 /* timers.cpp */,
-				D424E0CD1D54BC1100654AA3 /* timers.hpp */,
 				D424E0CB1D54BBEC00654AA3 /* benchmark */,
 				D424E06C1D51014A00654AA3 /* resources */,
 				CA0B46671AE860B600158BBA /* regression */,
 				CA0B46661AE8609A00158BBA /* unit */,
+				D424E0CD1D54BC1100654AA3 /* timers.hpp */,
+				D424E0CC1D54BC1100654AA3 /* timers.cpp */,
 				D42F90131AE7A8000003F791 /* README.md */,
 				D4807FAD1BA710A400657D4F /* mock_options.hpp */,
 				D4C8FFA41D4B872600BEFC8E /* test_main.cpp */,
