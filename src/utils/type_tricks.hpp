@@ -112,6 +112,12 @@ using enable_if_map = std::enable_if_t<is_map<T>, V>;
 template <typename T, typename V = void>
 using enable_if_not_map = std::enable_if_t<!is_map<T>, V>;
 
+template <typename Container, typename ConstIterator>
+typename Container::iterator remove_constness(Container& c, ConstIterator it)
+{
+    return c.erase(it, it);
+}
+
 } // namespace octopus
 
 #endif
