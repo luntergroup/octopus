@@ -137,6 +137,8 @@ set(UTILS_SOURCES
     utils/type_tricks.hpp
     utils/coverage_tracker.hpp
     utils/coverage_tracker.cpp
+    utils/read_size_estimator.hpp
+    utils/read_size_estimator.cpp
 )
 
 set(CORE_SOURCES
@@ -272,7 +274,10 @@ set(CORE_SOURCES
     core/types/trio.cpp
     core/types/variant.hpp
     core/types/variant.cpp
-    
+
+    core/calling_components.hpp
+    core/calling_components.cpp
+
     core/octopus.hpp
     core/octopus.cpp
 )

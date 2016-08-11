@@ -15,7 +15,6 @@
 #include <thread>
 #include <future>
 #include <functional>
-#include <random>
 #include <sstream>
 #include <chrono>
 #include <condition_variable>
@@ -48,77 +47,15 @@
 #include <io/variant/vcf.hpp>
 #include <utils/timing.hpp>
 
+#include "calling_components.hpp"
+
 #include "timers.hpp" // BENCHMARK
 
 namespace octopus {
 
-using options::OptionMap;
 using logging::get_debug_log;
 
 namespace {
-
-template <typename T>
-std::size_t index_of(const std::vector<T>& elements, const T& value)
-{
-    return std::distance(std::cbegin(elements), std::find(std::cbegin(elements), std::cend(elements), value));
-}
-
-auto get_contigs(const InputRegionMap& regions, const ReferenceGenome& reference,
-                 const options::ContigOutputOrder order)
-{
-    using options::ContigOutputOrder;
-    
-    using ContigName = GenomicRegion::ContigName;
-    
-    std::vector<ContigName> result {};
-    result.reserve(regions.size());
-    
-    std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(result),
-                   [] (const auto& p) { return p.first; });
-    
-    switch (order) {
-        case ContigOutputOrder::LexicographicalAscending:
-            std::sort(std::begin(result), std::end(result));
-            break;
-        case ContigOutputOrder::LexicographicalDescending:
-            std::sort(std::begin(result), std::end(result), std::greater<ContigName>());
-            break;
-        case ContigOutputOrder::ContigSizeAscending:
-            std::sort(std::begin(result), std::end(result),
-                      [&] (const auto& lhs, const auto& rhs) {
-                          return reference.contig_size(lhs) < reference.contig_size(rhs);
-                      });
-            break;
-        case ContigOutputOrder::ContigSizeDescending:
-            std::sort(std::begin(result), std::end(result),
-                      [&] (const auto& lhs, const auto& rhs) {
-                          return reference.contig_size(lhs) > reference.contig_size(rhs);
-                      });
-            break;
-        case ContigOutputOrder::AsInReferenceIndex:
-        {
-            const auto reference_contigs = reference.contig_names();
-            std::sort(std::begin(result), std::end(result),
-                      [&] (const auto& lhs, const auto& rhs) {
-                          return index_of(reference_contigs, lhs) < index_of(reference_contigs, rhs);
-                      });
-            break;
-        }
-        case ContigOutputOrder::AsInReferenceIndexReversed:
-        {
-            const auto reference_contigs = reference.contig_names();
-            std::sort(std::begin(result), std::end(result),
-                      [&] (const auto& lhs, const auto& rhs) {
-                          return index_of(reference_contigs, lhs) > index_of(reference_contigs, rhs);
-                      });
-            break;
-        }
-        case ContigOutputOrder::Unspecified:
-            break;
-    }
-    
-    return result;
-}
 
 template <typename S>
 void print_input_regions(S&& stream, const InputRegionMap& regions)
@@ -136,51 +73,6 @@ void print_input_regions(S&& stream, const InputRegionMap& regions)
 void print_input_regions(const InputRegionMap& regions)
 {
     print_input_regions(std::cout, regions);
-}
-
-template <typename Container>
-bool is_in_file_samples(const SampleName& sample, const Container& file_samples)
-{
-    return std::find(std::cbegin(file_samples), std::cend(file_samples), sample)
-                != std::cend(file_samples);
-}
-
-std::vector<SampleName> extract_samples(const OptionMap& options,
-                                          const ReadManager& read_manager)
-{
-    auto user_samples = options::get_user_samples(options);
-    auto file_samples = read_manager.samples();
-    
-    if (user_samples) {
-        const auto it = std::partition(std::begin(*user_samples), std::end(*user_samples),
-                                       [&file_samples] (const auto& sample) {
-                                           return is_in_file_samples(sample, file_samples);
-                                       });
-        
-        const auto num_not_found = std::distance(it, std::end(*user_samples));
-        
-        if (num_not_found > 0) {
-            std::ostringstream ss {};
-            ss << "The requested calling sample";
-            if (num_not_found > 1) ss << 's';
-            ss << " ";
-            std::transform(it, std::end(*user_samples), std::ostream_iterator<SampleName>(ss, ", "),
-                           [] (auto sample) { return "'" + sample + "'"; });
-            if (num_not_found == 1) {
-                ss << "is";
-            } else {
-                ss << "are";
-            }
-            ss << " not present in any of the read files";
-            logging::WarningLogger log {};
-            log << ss.str();
-            user_samples->erase(it, std::end(*user_samples));
-        }
-        
-        return *user_samples;
-    } else {
-        return file_samples;
-    }
 }
 
 using CallTypeSet = std::set<std::type_index>;
@@ -219,369 +111,16 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                            reference, call_types);
 }
 
-template <typename ForwardIt, typename RandomGenerator>
-ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g) {
-    std::uniform_int_distribution<std::size_t> dis(0, std::distance(first, last) - 1);
-    std::advance(first, dis(g));
-    return first;
-}
-
-template <typename ForwardIt>
-ForwardIt random_select(ForwardIt first, ForwardIt last) {
-    static std::default_random_engine gen {};
-    return random_select(first, last, gen);
-}
-
-auto estimate_read_size(const AlignedRead& read)
-{
-    return sizeof(AlignedRead)
-        // Now the dynamically allocated bits
-        + sequence_size(read) * sizeof(char)
-        + sequence_size(read) * sizeof(AlignedRead::BaseQuality)
-        + read.cigar().size() * sizeof(CigarOperation)
-        + contig_name(read).size()
-        + (read.has_other_segment() ? sizeof(AlignedRead::Segment) : 0);
-}
-
-auto estimate_mean_read_size(const std::vector<SampleName>& samples,
-                             const InputRegionMap& input_regions,
-                             ReadManager& read_manager,
-                             unsigned max_sample_size = 1000)
-{
-    assert(!input_regions.empty());
-    
-    const auto num_samples_per_sample = max_sample_size / samples.size();
-    
-    std::deque<std::size_t> read_sizes {};
-    
-    for (const auto& sample : samples) {
-        const auto it  = random_select(std::cbegin(input_regions), std::cend(input_regions));
-        
-        assert(!it->second.empty());
-        
-        const auto it2 = random_select(std::cbegin(it->second), std::cend(it->second));
-        
-        auto test_region = read_manager.find_covered_subregion(sample, *it2, num_samples_per_sample);
-        
-        if (is_empty(test_region)) {
-            test_region = expand_rhs(test_region, 1);
-        }
-        
-        const auto reads = read_manager.fetch_reads(sample, test_region);
-        
-        std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(read_sizes),
-                       estimate_read_size);
-    }
-    
-    if (read_sizes.empty()) {
-        logging::WarningLogger log {};
-        log << "Could not estimate read size from data, resorting to default";
-        
-        return sizeof(AlignedRead) + 300;
-    }
-    
-    return static_cast<std::size_t>(maths::mean(read_sizes) + maths::stdev(read_sizes));
-}
-
-std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes,
-                                    const std::vector<SampleName>& samples,
-                                    const InputRegionMap& input_regions,
-                                    ReadManager& read_manager)
-{
-    if (samples.empty()) return 0;
-    static constexpr std::size_t Min_buffer_bytes {1'000'000};
-    return std::max(max_buffer_bytes, Min_buffer_bytes)
-        / estimate_mean_read_size(samples, input_regions, read_manager);
-}
-
-class GenomeCallingComponents
-{
-public:
-    using Samples = std::vector<SampleName>;
-    using Contigs = std::vector<GenomicRegion::ContigName>;
-    
-    GenomeCallingComponents() = delete;
-    
-    GenomeCallingComponents(ReferenceGenome&& reference, ReadManager&& read_manager,
-                            VcfWriter&& output, const OptionMap& options)
-    :
-    components_ {std::move(reference), std::move(read_manager), std::move(output), options}
-    {}
-    
-    ~GenomeCallingComponents() = default;
-    
-    GenomeCallingComponents(const GenomeCallingComponents&)            = delete;
-    GenomeCallingComponents& operator=(const GenomeCallingComponents&) = delete;
-    
-    GenomeCallingComponents(GenomeCallingComponents&& other) noexcept
-    :
-    components_ {std::move(other.components_)}
-    {
-        update_dependents();
-    }
-    
-    GenomeCallingComponents& operator=(GenomeCallingComponents&& other) = delete;
-    
-    const ReferenceGenome& reference() const noexcept
-    {
-        return components_.reference;
-    }
-    
-    ReadManager& read_manager() noexcept
-    {
-        return components_.read_manager;
-    }
-    
-    const ReadManager& read_manager() const noexcept
-    {
-        return components_.read_manager;
-    }
-    
-    ReadPipe& read_pipe() noexcept
-    {
-        return components_.read_pipe;
-    }
-    
-    const ReadPipe& read_pipe() const noexcept
-    {
-        return components_.read_pipe;
-    }
-    
-    const Samples& samples() const noexcept
-    {
-        return components_.samples;
-    }
-    
-    const InputRegionMap& search_regions() const noexcept
-    {
-        return components_.regions;
-    }
-    
-    const Contigs& contigs_in_output_order() const noexcept
-    {
-        return components_.contigs_in_output_order;
-    }
-    
-    VcfWriter& output() noexcept
-    {
-        return components_.output;
-    }
-    
-    const VcfWriter& output() const noexcept
-    {
-        return components_.output;
-    }
-    
-    std::size_t read_buffer_size() const noexcept
-    {
-        return components_.read_buffer_size;
-    }
-    
-    const boost::optional<fs::path>& temp_directory() const noexcept
-    {
-        return components_.temp_directory;
-    }
-    
-    boost::optional<unsigned> num_threads() const noexcept
-    {
-        return components_.num_threads;
-    }
-    
-    const CallerFactory& caller_factory() const noexcept
-    {
-        return components_.caller_factory;
-    }
-    
-    ProgressMeter& progress_meter() noexcept
-    {
-        return components_.progress_meter;
-    }
-    
-private:
-    struct Components
-    {
-        Components() = delete;
-        
-        Components(ReferenceGenome&& reference, ReadManager&& read_manager,
-                   VcfWriter&& output, const OptionMap& options)
-        :
-        reference {std::move(reference)},
-        read_manager {std::move(read_manager)},
-        samples {extract_samples(options, this->read_manager)},
-        regions {options::get_search_regions(options, this->reference)},
-        contigs_in_output_order {get_contigs(this->regions, this->reference,
-                                             options::get_contig_output_order(options))},
-        read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)},
-        caller_factory {options::make_caller_factory(this->reference,
-                                                                     this->read_pipe,
-                                                                     this->regions,
-                                                                     options)},
-        output {std::move(output)},
-        num_threads {options::get_num_threads(options)},
-        read_buffer_size {},
-        temp_directory {((!num_threads || *num_threads > 1) ? options::create_temp_file_directory(options) : boost::none)},
-        progress_meter {regions}
-        {
-            const auto num_bp_to_process = sum_region_sizes(regions);
-            
-            if (num_bp_to_process < 100000000) {
-                progress_meter.set_percent_block_size(1.0);
-            } else if (num_bp_to_process < 1000000000) {
-                progress_meter.set_percent_block_size(0.5);
-            } else {
-                progress_meter.set_percent_block_size(0.1);
-            }
-            
-            if (!samples.empty() && !regions.empty() && read_manager.good()) {
-                read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options),
-                                                           this->samples, this->regions,
-                                                           this->read_manager);
-            }
-        }
-        
-        Components(const Components&)            = delete;
-        Components& operator=(const Components&) = delete;
-        Components(Components&&)                 = default;
-        Components& operator=(Components&&)      = default;
-        
-        ~Components() = default;
-        
-        ReferenceGenome reference;
-        ReadManager read_manager;
-        Samples samples;
-        InputRegionMap regions;
-        Contigs contigs_in_output_order;
-        ReadPipe read_pipe;
-        CallerFactory caller_factory;
-        VcfWriter output;
-        boost::optional<unsigned> num_threads;
-        std::size_t read_buffer_size;
-        boost::optional<fs::path> temp_directory;
-        ProgressMeter progress_meter;
-    };
-    
-    Components components_;
-    
-    void update_dependents() noexcept
-    {
-        components_.read_pipe.set_read_manager(components_.read_manager);
-        components_.caller_factory.set_reference(components_.reference);
-        components_.caller_factory.set_read_pipe(components_.read_pipe);
-    }
-};
-    
-bool check_components_valid(const GenomeCallingComponents& components)
-{
-    if (components.samples().empty()) {
-        logging::WarningLogger log {};
-        log << "No samples detected - at least one is required for calling";
-        return false;
-    }
-    
-    if (components.search_regions().empty()) {
-        logging::WarningLogger log {};
-        log << "There are no input regions - at least one is required for calling";
-        return false;
-    }
-    
-    return true;
-}
-
-void cleanup(GenomeCallingComponents& components) noexcept
-{
-    logging::InfoLogger log {};
-    if (components.temp_directory()) {
-        try {
-            const auto num_files_removed = fs::remove_all(*components.temp_directory());
-            stream(log) << "Removed " << num_files_removed << " temporary files";
-        } catch (const std::exception& e) {
-            stream(log) << "Cleanup failed with exception: " << e.what();
-        }
-    }
-}
-
-boost::optional<GenomeCallingComponents> collate_genome_calling_components(const OptionMap& options)
-{
-    auto reference = options::make_reference(options);
-    
-    auto read_manager = options::make_read_manager(options);
-    
-    auto output = options::make_output_vcf_writer(options);
-    
-    if (!output.is_open()) {
-        return boost::none;
-    }
-    
-    GenomeCallingComponents result {
-        std::move(reference),
-        std::move(read_manager),
-        std::move(output),
-        options
-    };
-    
-    check_components_valid(result);
-    
-    return boost::optional<GenomeCallingComponents> {std::move(result)};
-}
-
-struct ContigCallingComponents
-{
-    std::reference_wrapper<const ReferenceGenome> reference;
-    std::reference_wrapper<ReadManager> read_manager;
-    const InputRegionMap::mapped_type regions;
-    std::reference_wrapper<const std::vector<SampleName>> samples;
-    std::unique_ptr<const Caller> caller;
-    std::size_t read_buffer_size;
-    std::reference_wrapper<VcfWriter> output;
-    std::reference_wrapper<ProgressMeter> progress_meter;
-    
-    ContigCallingComponents() = delete;
-    
-    ContigCallingComponents(const GenomicRegion::ContigName& contig,
-                            GenomeCallingComponents& genome_components)
-    :
-    reference {genome_components.reference()},
-    read_manager {genome_components.read_manager()},
-    regions {genome_components.search_regions().at(contig)},
-    samples {genome_components.samples()},
-    caller {genome_components.caller_factory().make(contig)},
-    read_buffer_size {genome_components.read_buffer_size()},
-    output {genome_components.output()},
-    progress_meter {genome_components.progress_meter()}
-    {}
-    
-    ContigCallingComponents(const GenomicRegion::ContigName& contig, VcfWriter& output,
-                            GenomeCallingComponents& genome_components)
-    :
-    reference {genome_components.reference()},
-    read_manager {genome_components.read_manager()},
-    regions {genome_components.search_regions().at(contig)},
-    samples {genome_components.samples()},
-    caller {genome_components.caller_factory().make(contig)},
-    read_buffer_size {genome_components.read_buffer_size()},
-    output {output},
-    progress_meter {genome_components.progress_meter()}
-    {}
-    
-    ContigCallingComponents(const ContigCallingComponents&)            = delete;
-    ContigCallingComponents& operator=(const ContigCallingComponents&) = delete;
-    ContigCallingComponents(ContigCallingComponents&&)                 = default;
-    ContigCallingComponents& operator=(ContigCallingComponents&&)      = default;
-    
-    ~ContigCallingComponents() = default;
-};
-
 bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
 {
     return components.read_manager.get().has_reads(components.samples.get(), region);
 }
 
-auto get_call_types(const GenomeCallingComponents& components,
-                    const std::vector<ContigName>& contigs)
+auto get_call_types(const GenomeCallingComponents& components, const std::vector<ContigName>& contigs)
 {
     CallTypeSet result {};
     
-    for (const auto& contig : components.contigs_in_output_order()) {
+    for (const auto& contig : components.contigs()) {
         const auto tmp_caller = components.caller_factory().make(contig);
         
         auto caller_call_types = tmp_caller->get_call_types();
@@ -594,14 +133,14 @@ auto get_call_types(const GenomeCallingComponents& components,
 
 void write_caller_output_header(GenomeCallingComponents& components, const bool sites_only = false)
 {
-    const auto call_types = get_call_types(components, components.contigs_in_output_order());
+    const auto call_types = get_call_types(components, components.contigs());
     
     if (sites_only) {
-        components.output() << make_vcf_header({}, components.contigs_in_output_order(),
+        components.output() << make_vcf_header({}, components.contigs(),
                                                components.reference(), call_types);
     } else {
         components.output() << make_vcf_header(components.samples(),
-                                               components.contigs_in_output_order(),
+                                               components.contigs(),
                                                components.reference(), call_types);
     }
 }
@@ -625,12 +164,11 @@ void log_startup_info(const GenomeCallingComponents& components)
                    });
     
     auto str = ss.str();
+    
     str.pop_back(); // the extra whitespace
     
     logging::InfoLogger log {};
-    
     log << str;
-    
     stream(log) << "Writing calls to " << components.output().path();
 }
 
@@ -877,7 +415,7 @@ void run_octopus_single_threaded(GenomeCallingComponents& components)
 {
     components.progress_meter().start();
     
-    for (const auto& contig : components.contigs_in_output_order()) {
+    for (const auto& contig : components.contigs()) {
         run_octopus_on_contig(ContigCallingComponents {contig, components});
     }
     
@@ -920,9 +458,9 @@ TempVcfWriterMap make_temp_vcf_writers(const GenomeCallingComponents& components
     }
     
     TempVcfWriterMap result {};
-    result.reserve(components.contigs_in_output_order().size());
+    result.reserve(components.contigs().size());
     
-    for (const auto& contig : components.contigs_in_output_order()) {
+    for (const auto& contig : components.contigs()) {
         result.emplace(contig, create_unique_temp_output_file(contig, components));
     }
     
@@ -1007,9 +545,9 @@ TaskMap make_tasks(GenomeCallingComponents& components, const unsigned num_threa
 {
     const auto policy = make_execution_policy(components);
     
-    TaskMap result {ContigOrder {components.contigs_in_output_order()}};
+    TaskMap result {ContigOrder {components.contigs()}};
     
-    for (const auto& contig : components.contigs_in_output_order()) {
+    for (const auto& contig : components.contigs()) {
         ContigCallingComponents contig_components {contig, components};
         contig_components.read_buffer_size /= num_threads;
         result.emplace(contig, divide_work_into_tasks(contig_components, policy));
@@ -1147,7 +685,7 @@ auto make_contig_calling_component_factory_map(GenomeCallingComponents& componen
 {
     ContigCallingComponentFactoryMap result {};
     
-    for (const auto& contig : components.contigs_in_output_order()) {
+    for (const auto& contig : components.contigs()) {
         result.emplace(contig, [&components, contig] () -> ContigCallingComponents
                        { return ContigCallingComponents {contig, components}; });
     }
@@ -1394,7 +932,7 @@ template <typename K>
 void merge(std::unordered_map<K, VcfWriter>&& temp_vcf_writers, GenomeCallingComponents& components)
 {
     auto temp_readers = extract_as_readers(std::move(temp_vcf_writers));
-    merge(temp_readers, components.output(), components.contigs_in_output_order());
+    merge(temp_readers, components.output(), components.contigs());
 }
 
 void run_octopus_multi_threaded(GenomeCallingComponents& components)
@@ -1412,12 +950,12 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     FutureCompletedTasks futures(num_task_threads);
     
-    TaskMap running_tasks {ContigOrder {components.contigs_in_output_order()}};
+    TaskMap running_tasks {ContigOrder {components.contigs()}};
     CompletedTaskMap buffered_tasks {};
     std::map<ContigName, HoldbackTask> holdbacks {};
     
     // populate the all the maps first so we can make unchecked acceses
-    for (const auto& contig : components.contigs_in_output_order()) {
+    for (const auto& contig : components.contigs()) {
         running_tasks.emplace(contig, TaskMap::mapped_type {});
         buffered_tasks.emplace(contig, CompletedTaskMap::mapped_type {});
         holdbacks.emplace(contig, boost::none);
@@ -1539,30 +1077,7 @@ auto get_filtered_path(const GenomeCallingComponents& components)
 
 void filter_calls(const GenomeCallingComponents& components)
 {
-//    assert(!components.output().is_open());
-//    
-//    const VcfReader calls {components.output().path()};
-//    
-//    const auto filtered_path = get_filtered_path(components);
-//    
-//    VcfWriter filtered_calls {filtered_path};
-//    
-//    const auto read_pipe = make_filter_read_pipe(components);
-//    
-//    using csr::ThresholdVariantCallFilter;
-//    using csr::Measure;
-//    using csr::MeasureWrapper;
-//    
-//    std::vector<MeasureWrapper> measures {};
-//    
-//    measures.push_back(csr::make_wrapped_measure<csr::QualityByDepth>());
-//    
-//    auto call_filter = std::make_unique<ThresholdVariantCallFilter>(components.reference(),
-//                                                                    read_pipe,
-//                                                                    std::move(measures),
-//                                                                    components.read_buffer_size());
-//    
-//    call_filter->filter(calls, filtered_calls);
+    
 }
 
 auto get_legacy_path(const fs::path& native)
@@ -1570,12 +1085,39 @@ auto get_legacy_path(const fs::path& native)
     return get_identified_path(native, "legacy");
 }
         
-            void print_foo(std::ostream& os)
-            {
-                os << "foo" << "\n";
-            }
+void print_foo(std::ostream& os)
+{
+    os << "foo" << "\n";
+}
 
-void run_octopus(OptionMap& options)
+void run_octopus(GenomeCallingComponents& components)
+{
+    static auto debug_log = get_debug_log();
+    
+    try {
+        if (is_multithreaded(components)) {
+            if (DEBUG_MODE) {
+                logging::WarningLogger warn_log {};
+                warn_log << "Running in parallel mode can make debug log difficult to interpret";
+            }
+            run_octopus_multi_threaded(components);
+        } else {
+            run_octopus_single_threaded(components);
+        }
+        
+        components.output().close();
+    } catch (const std::exception& e) {
+        try {
+            if (debug_log) {
+                *debug_log << "Encounted an error, attempting to cleanuo";
+            }
+            cleanup(components);
+        } catch (...) {}
+        throw;
+    }
+}
+
+void run_octopus(options::OptionMap& options)
 {
     DEBUG_MODE = options::is_debug_mode(options);
     TRACE_MODE = options::is_trace_mode(options);
@@ -1616,27 +1158,7 @@ void run_octopus(OptionMap& options)
         
         //options.clear();
         
-        try {
-            if (is_multithreaded(*components)) {
-                if (DEBUG_MODE) {
-                    logging::WarningLogger warn_log {};
-                    warn_log << "Running in parallel mode can make debug log difficult to interpret";
-                }
-                run_octopus_multi_threaded(*components);
-            } else {
-                run_octopus_single_threaded(*components);
-            }
-            
-            components->output().close();
-        } catch (const std::exception& e) {
-            try {
-                if (debug_log) {
-                    *debug_log << "Encounted an error, attempting to cleanuo";
-                }
-                cleanup(*components);
-            } catch (...) {}
-            throw;
-        }
+        run_octopus(*components);
         
         if (!options.at("disable-call-filtering").as<bool>()) {
             filter_calls(*components);
