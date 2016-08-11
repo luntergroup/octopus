@@ -14,8 +14,6 @@
 #include "threadsafe_fasta.hpp"
 #include "caching_fasta.hpp"
 
-#include <utils/map_utils.hpp>
-
 namespace octopus {
 
 ReferenceGenome::ReferenceGenome(std::unique_ptr<io::ReferenceReader> impl)
@@ -28,11 +26,11 @@ contig_sizes_ {}
         try {
             name_ = impl_->fetch_reference_name();
             
-            auto contig_names = impl_->fetch_contig_names();
+            ordered_contigs_ = impl_->fetch_contig_names();
             
-            contig_sizes_.reserve(contig_names.size());
+            contig_sizes_.reserve(ordered_contigs_.size());
             
-            for (const auto& contig_name : contig_names) {
+            for (const auto& contig_name : ordered_contigs_) {
                 contig_sizes_.emplace(contig_name, impl_->fetch_contig_size(contig_name));
             }
         } catch (...) {
@@ -47,15 +45,17 @@ ReferenceGenome::ReferenceGenome(const ReferenceGenome& other)
 :
 impl_ {other.impl_->clone()},
 name_ {other.name_},
-contig_sizes_ {other.contig_sizes_}
+contig_sizes_ {other.contig_sizes_},
+ordered_contigs_ {other.ordered_contigs_}
 {}
 
 ReferenceGenome& ReferenceGenome::operator=(ReferenceGenome other)
 {
     using std::swap;
-    swap(impl_, other.impl_);
-    swap(name_, other.name_);
-    swap(contig_sizes_, other.contig_sizes_);
+    swap(impl_,            other.impl_);
+    swap(name_,            other.name_);
+    swap(contig_sizes_,    other.contig_sizes_);
+    swap(ordered_contigs_, other.ordered_contigs_);
     return *this;
 }
 
@@ -76,7 +76,7 @@ std::size_t ReferenceGenome::num_contigs() const noexcept
 
 std::vector<ReferenceGenome::ContigName> ReferenceGenome::contig_names() const
 {
-    return extract_keys(contig_sizes_);
+    return ordered_contigs_;
 }
 
 ContigRegion::Size ReferenceGenome::contig_size(const ContigName& contig) const

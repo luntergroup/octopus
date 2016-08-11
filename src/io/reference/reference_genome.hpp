@@ -30,8 +30,8 @@ public:
     
     ReferenceGenome(const ReferenceGenome&);
     ReferenceGenome& operator=(ReferenceGenome);
-    ReferenceGenome(ReferenceGenome&&)                 = default;
-    ReferenceGenome& operator=(ReferenceGenome&&)      = default;
+    ReferenceGenome(ReferenceGenome&&)            = default;
+    ReferenceGenome& operator=(ReferenceGenome&&) = default;
     
     ~ReferenceGenome() = default;
     
@@ -57,6 +57,8 @@ private:
     std::string name_;
     
     std::unordered_map<ContigName, ContigRegion::Size> contig_sizes_;
+    
+    std::vector<ContigName> ordered_contigs_;
 };
 
 // non-member functions
