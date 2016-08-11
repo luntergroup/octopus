@@ -80,7 +80,7 @@ inline auto get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22",
+        "--regions", "20:29,827,997-29,831,254", // causing memory explosion
         
         //"--regions", "2:120,098,309-120,098,368", // NA12878 LC - GQ is too high
         
