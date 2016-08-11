@@ -14,9 +14,9 @@ BOOST_AUTO_TEST_SUITE(contig_region)
 
 BOOST_AUTO_TEST_CASE(constructing_a_negative_region_is_an_error)
 {
-    BOOST_CHECK_NO_THROW(ContigRegion {0, 0});
-    BOOST_CHECK_NO_THROW(ContigRegion {0, 1});
-    BOOST_CHECK_THROW(ContigRegion {1, 0}, std::runtime_error {});
+    BOOST_CHECK_NO_THROW((ContigRegion {0, 0}));
+    BOOST_CHECK_NO_THROW((ContigRegion {0, 1}));
+    BOOST_CHECK_THROW((ContigRegion {1, 0}), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(ordering_is_by_begin_then_end)
@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE(overlap_size_returns_the_number_of_overlapped_positions)
     BOOST_CHECK_EQUAL(overlap_size(r4, r2), 1);
     
     BOOST_CHECK_EQUAL(overlap_size(r3, r4), 2);
-    BOOST_CHECK_EQUAL(overlap_size(r4, r2), 2);
+    BOOST_CHECK_EQUAL(overlap_size(r4, r3), 2);
 }
     
 BOOST_AUTO_TEST_CASE(overlaps_is_consistent)
