@@ -7,10 +7,12 @@
 #include <utility>
 #include <iterator>
 #include <algorithm>
+#include <functional>
 #include <exception>
 
 #include <config/option_collation.hpp>
 #include <utils/read_size_estimator.hpp>
+#include <utils/map_utils.hpp>
 #include <logging/logging.hpp>
 
 namespace octopus {
@@ -108,60 +110,62 @@ std::size_t index_of(const std::vector<T>& elements, const T& value)
 {
     return std::distance(std::cbegin(elements), std::find(std::cbegin(elements), std::cend(elements), value));
 }
-
-auto get_contigs(const InputRegionMap& regions, const ReferenceGenome& reference,
-                 const options::ContigOutputOrder order)
+    
+auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& reference)
 {
     using options::ContigOutputOrder;
     
-    using ContigName = GenomicRegion::ContigName;
-    
-    std::vector<ContigName> result {};
-    result.reserve(regions.size());
-    
-    std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(result),
-                   [] (const auto& p) { return p.first; });
+    std::function<bool(const ContigName&, const ContigName&)> result;
     
     switch (order) {
         case ContigOutputOrder::LexicographicalAscending:
-            std::sort(std::begin(result), std::end(result));
+            result = std::less<> {};
             break;
         case ContigOutputOrder::LexicographicalDescending:
-            std::sort(std::begin(result), std::end(result), std::greater<ContigName>());
+            result = std::greater<> {};
             break;
         case ContigOutputOrder::ContigSizeAscending:
-            std::sort(std::begin(result), std::end(result),
-                      [&] (const auto& lhs, const auto& rhs) {
-                          return reference.contig_size(lhs) < reference.contig_size(rhs);
-                      });
+            result = [&reference] (const auto& lhs, const auto& rhs) -> bool {
+                return reference.contig_size(lhs) < reference.contig_size(rhs);
+            };
             break;
         case ContigOutputOrder::ContigSizeDescending:
-            std::sort(std::begin(result), std::end(result),
-                      [&] (const auto& lhs, const auto& rhs) {
-                          return reference.contig_size(lhs) > reference.contig_size(rhs);
-                      });
+            result = [&reference] (const auto& lhs, const auto& rhs) {
+                return reference.contig_size(lhs) > reference.contig_size(rhs);
+            };
             break;
         case ContigOutputOrder::AsInReferenceIndex:
         {
-            const auto reference_contigs = reference.contig_names();
-            std::sort(std::begin(result), std::end(result),
-                      [&] (const auto& lhs, const auto& rhs) {
-                          return index_of(reference_contigs, lhs) < index_of(reference_contigs, rhs);
-                      });
+            auto reference_contigs = reference.contig_names();
+            result = [&reference, reference_contigs = std::move(reference_contigs)]
+            (const auto& lhs, const auto& rhs) {
+                return index_of(reference_contigs, lhs) < index_of(reference_contigs, rhs);
+            };
             break;
         }
         case ContigOutputOrder::AsInReferenceIndexReversed:
         {
-            const auto reference_contigs = reference.contig_names();
-            std::sort(std::begin(result), std::end(result),
-                      [&] (const auto& lhs, const auto& rhs) {
-                          return index_of(reference_contigs, lhs) > index_of(reference_contigs, rhs);
-                      });
+            auto reference_contigs = reference.contig_names();
+            result = [&reference, reference_contigs = std::move(reference_contigs)]
+            (const auto& lhs, const auto& rhs) {
+                return index_of(reference_contigs, lhs) < index_of(reference_contigs, rhs);
+            };
             break;
         }
         case ContigOutputOrder::Unspecified:
+            result = std::less<> {};
             break;
     }
+    
+    return result;
+}
+
+auto get_contigs(const InputRegionMap& regions, const ReferenceGenome& reference,
+                 const options::ContigOutputOrder order)
+{
+    auto result = extract_keys(regions);
+    
+    std::sort(std::begin(result), std::end(result), get_sorter(order, reference));
     
     return result;
 }
