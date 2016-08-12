@@ -14,12 +14,12 @@
 #include <boost/optional.hpp>
 
 #include <config/common.hpp>
+#include <basics/genomic_region.hpp>
+#include <containers/mappable_flat_set.hpp>
+#include <core/types/allele.hpp>
+
 #include "genome_walker.hpp"
 #include "haplotype_tree.hpp"
-#include <containers/mappable_flat_set.hpp>
-#include <containers/mappable_flat_multi_set.hpp>
-#include <basics/genomic_region.hpp>
-#include <core/types/allele.hpp>
 
 namespace octopus {
 
@@ -28,6 +28,10 @@ class Haplotype;
 
 namespace coretools {
 
+/**
+    HaplotypeGenerator takes a set of Variant's and turns them into Haplotype's in a controlled
+    manner. Haplotype generation always proceeds sequentially (left to right).
+ */
 class HaplotypeGenerator
 {
 public:
@@ -60,19 +64,40 @@ public:
     
     ~HaplotypeGenerator() = default;
     
+    // Generates the next HaplotypePacket, this will always move the generated
+    // active region forward. The next generated region is automatically calculated
+    // (i.e the region given by peek_next_active_region) unless jump has
+    // been called.
     HaplotypePacket generate();
     
+    // Returns the next active region assuming jump is not called,
+    // unless the generator is in holdout mode in which case boost::none is returned.
     boost::optional<GenomicRegion> peek_next_active_region() const;
     
-    void force_progress(GenomicRegion to);
+    // Clears the history from the current generator, this has the effect of ensuring
+    // the next haplotype set will not be lagged.
+    void clear_progress() noexcept;
     
-    void stop() noexcept;
+    // Unconditionally moves the next active region to within a specific interval.
+    // Note this does not mean the next active region will be equal to the given
+    // arguement, only that it will be contained by it.
+    void jump(GenomicRegion to);
     
+    // Discards the given set of haplotypes from generation, so that the 
+    // next returned haplotype set will not contain these haplotypes as
+    // sub-haplotypes.
+    template <typename Container> void remove(const Container& haplotypes);
+    
+    // Returns true if calling remove will change the next active region.
     bool removal_has_impact() const;
+    
+    // Returns the number of haplotypes that can be removed from the generator
+    // that will have a removal impact.
     unsigned max_removal_impact() const;
     
-    template <typename Container> void remove_duplicates(const Container& haplotypes);
-    template <typename Container> void remove(const Container& haplotypes);
+    // Discards any equivilant haplotypes that are not in the given set of
+    // haplotypes.
+    template <typename Container> void collapse(const Container& haplotypes);
     
 private:
     Policies policies_;
@@ -140,7 +165,7 @@ private:
 };
 
 template <typename Container>
-void HaplotypeGenerator::remove_duplicates(const Container& haplotypes)
+void HaplotypeGenerator::collapse(const Container& haplotypes)
 {
     reset_next_active_region();
     

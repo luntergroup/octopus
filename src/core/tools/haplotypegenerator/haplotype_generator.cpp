@@ -7,6 +7,7 @@
 #include <deque>
 #include <iterator>
 #include <numeric>
+#include  <cmath>
 #include <cassert>
 
 #include <core/types/variant.hpp>
@@ -169,6 +170,9 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
                 active_region_ = *std::move(next_active_region_);
                 reset_next_active_region();
                 extend_tree(overlap_range(alleles_, active_region_), tree_);
+                if (tree_.num_haplotypes() > policies_.haplotype_limits.overflow) {
+                    throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()}; 
+                }
             } else {
                 last_added_itr = extend_tree_until(last_added_itr, std::cend(novel_active_alleles), tree_,
                                                    policies_.haplotype_limits.overflow);
@@ -200,19 +204,19 @@ boost::optional<GenomicRegion> HaplotypeGenerator::peek_next_active_region() con
     return *next_active_region_;
 }
 
-void HaplotypeGenerator::force_progress(GenomicRegion region)
-{
-    stop();
-    progress(std::move(region));
-}
-
-void HaplotypeGenerator::stop() noexcept
+void HaplotypeGenerator::clear_progress() noexcept
 {
     tree_.clear();
     reset_next_active_region();
     if (in_holdout_mode()) {
         clear_holdouts();
     }
+}
+
+void HaplotypeGenerator::jump(GenomicRegion region)
+{
+    clear_progress();
+    progress(std::move(region));
 }
 
 bool HaplotypeGenerator::removal_has_impact() const

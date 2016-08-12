@@ -13,6 +13,7 @@
 #include <iterator>
 #include <algorithm>
 #include <type_traits>
+#include <cmath>
 
 #include <boost/graph/adjacency_list.hpp>
 
@@ -142,7 +143,7 @@ namespace detail {
     
     template <typename InputIt, typename A>
     InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
-                              const unsigned max_haplotypes, A)
+                              const unsigned max_haplotypes, A, std::input_iterator_tag)
     {
         if (first == last) return last;
         const auto it = std::find_if(first, last,
@@ -157,9 +158,34 @@ namespace detail {
         }
     }
     
+    inline unsigned max_haplotypes_after_extension(const HaplotypeTree& tree, unsigned num_new_alleles)
+    {
+        return tree.num_haplotypes() * static_cast<unsigned>(std::exp2(num_new_alleles));
+    }
+    
+    template <typename RandomIt, typename A>
+    RandomIt extend_tree_until(RandomIt first, RandomIt last, HaplotypeTree& tree,
+                               unsigned max_haplotypes, A, std::random_access_iterator_tag)
+    {
+        if (max_haplotypes_after_extension(tree, std::distance(first, last)) <= max_haplotypes) {
+            extend_tree(first, last, tree, A {});
+            return last;
+        } else {
+            return extend_tree_until(first, last, tree, max_haplotypes, A {}, std::input_iterator_tag {});
+        }
+    }
+    
+    template <typename InputIt, typename A>
+    InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
+                              unsigned max_haplotypes, A)
+    {
+        return extend_tree_until(first, last, tree, max_haplotypes, A {},
+                                 typename std::iterator_traits<InputIt>::iterator_category {});
+    }
+    
     template <typename InputIt>
     InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
-                              const unsigned max_haplotypes, Variant)
+                              unsigned max_haplotypes, Variant, std::input_iterator_tag)
     {
         if (first == last) return last;
         const auto it = std::find_if(first, last,
@@ -173,6 +199,26 @@ namespace detail {
         } else {
             return it;
         }
+    }
+    
+    template <typename RandomIt>
+    RandomIt extend_tree_until(RandomIt first, RandomIt last, HaplotypeTree& tree,
+                               unsigned max_haplotypes, Variant, std::random_access_iterator_tag)
+    {
+        if (max_haplotypes_after_extension(tree, 2 * std::distance(first, last)) <= max_haplotypes) {
+            extend_tree(first, last, tree, Variant {});
+            return last;
+        } else {
+            return extend_tree_until(first, last, tree, max_haplotypes, Variant {}, std::input_iterator_tag {});
+        }
+    }
+    
+    template <typename InputIt>
+    InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
+                              const unsigned max_haplotypes, Variant)
+    {
+        return extend_tree_until(first, last, tree, max_haplotypes, Variant {},
+                                 typename std::iterator_traits<InputIt>::iterator_category {});
     }
     
     template <typename T>

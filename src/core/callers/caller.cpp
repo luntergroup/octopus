@@ -386,7 +386,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             // TODO: we could try to eliminate some more haplotypes and recall the region
             logging::WarningLogger wlog {};
             stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
-            haplotype_generator.stop();
+            haplotype_generator.clear_progress();
             haplotype_likelihoods.clear();
             continue;
         }
@@ -430,7 +430,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             }
             // TODO: we could force HaplotypeGenerator to extend the current set of haplotypes
             // and retry
-            haplotype_generator.stop();
+            haplotype_generator.clear_progress();
             haplotype_likelihoods.clear();
             continue;
         }
@@ -439,7 +439,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         
         if (haplotypes.empty()) {
             // This can only happen if all haplotypes have equal likelihood
-            haplotype_generator.stop();
+            haplotype_generator.clear_progress();
             haplotype_likelihoods.clear();
             continue;
         }
@@ -456,9 +456,9 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         
         if (has_removal_impact) {
             haplotype_generator.remove(removed_haplotypes);
-            haplotype_generator.remove_duplicates(haplotypes);
+            haplotype_generator.collapse(haplotypes);
         } else {
-            haplotype_generator.stop();
+            haplotype_generator.clear_progress();
         }
         
         removed_haplotypes.clear();
@@ -521,7 +521,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             
             active_region = right_overhang_region(active_region, phase_set->region);
             
-            haplotype_generator.force_progress(active_region);
+            haplotype_generator.jump(active_region);
         } else {
             if (has_removal_impact) { // if there was no impact before then there can't be now either
                 has_removal_impact = haplotype_generator.removal_has_impact();
