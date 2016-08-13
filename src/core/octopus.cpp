@@ -7,21 +7,21 @@
 #include <deque>
 #include <queue>
 #include <map>
-#include <iostream>
-#include <memory>
+#include <set>
 #include <algorithm>
 #include <numeric>
+#include <memory>
+#include <functional>
 #include <cstddef>
+#include <typeinfo>
 #include <thread>
 #include <future>
-#include <functional>
-#include <sstream>
-#include <chrono>
 #include <condition_variable>
 #include <mutex>
 #include <atomic>
-#include <set>
-#include <typeinfo>
+#include <chrono>
+#include <sstream>
+#include <iostream>
 #include <cassert>
 
 #include <boost/program_options.hpp>
@@ -988,6 +988,8 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     auto maker_thread = make_tasks(pending_tasks, components, num_task_threads, task_maker_sync);
     
+    maker_thread.detach();
+    
     auto temp_vcfs = make_temp_vcf_writers(components);
     
     FutureCompletedTasks futures(num_task_threads);
@@ -1010,13 +1012,8 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     components.progress_meter().start();
     
     while (!pending_tasks.empty() || !task_maker_sync.done) {
-        if (task_maker_sync.done) {
-            if (maker_thread.joinable()) {
-                maker_thread.join();
-                maker_thread = std::thread {};
-            }
-        } else {
-            // taks still being generated
+        if (!task_maker_sync.done) {
+            // tasks are still being generated
             std::unique_lock<std::mutex> lk {task_maker_sync.mutex};
             while (pending_tasks.empty()) { // for spurious wakeup
                 task_sync.cv.wait(lk);
@@ -1059,11 +1056,6 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
                 task_sync.cv.wait(lk);
             }
         }
-    }
-    
-    if (maker_thread.joinable()) {
-        maker_thread.join();
-        maker_thread = std::thread {};
     }
     
     running_tasks.clear();
