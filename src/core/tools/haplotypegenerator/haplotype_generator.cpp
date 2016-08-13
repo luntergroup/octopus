@@ -169,8 +169,9 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
                 update_next_active_region();
                 active_region_ = *std::move(next_active_region_);
                 reset_next_active_region();
-                extend_tree(overlap_range(alleles_, active_region_), tree_);
-                if (tree_.num_haplotypes() > policies_.haplotype_limits.overflow) {
+                const auto new_novel_alleles = overlap_range(alleles_, active_region_);
+                auto it = extend_tree_until(new_novel_alleles, tree_, policies_.haplotype_limits.overflow);
+                if (it != std::cend(new_novel_alleles)) {
                     throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()}; 
                 }
             } else {
