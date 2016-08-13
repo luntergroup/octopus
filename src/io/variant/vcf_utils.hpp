@@ -34,7 +34,7 @@ void index_vcf(const boost::filesystem::path& vcf_path, int lidx_shift = 14);
 void index_vcf(const VcfReader& reader, int lidx_shift = 14);
 void index_vcfs(const std::vector<VcfReader>& readers, int lidx_shift = 14);
 
-std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers);
+std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>&& writers);
 
 void copy(const VcfReader& src, VcfWriter& dst);
 
