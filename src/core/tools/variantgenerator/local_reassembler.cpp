@@ -135,9 +135,9 @@ namespace
     bool is_match(const CigarOperation::Flag op)
     {
         switch (op) {
-            case CigarOperation::ALIGNMENT_MATCH:
-            case CigarOperation::SEQUENCE_MATCH:
-            case CigarOperation::SUBSTITUTION: return true;
+            case CigarOperation::AlignmentMatch:
+            case CigarOperation::SequenceMatch:
+            case CigarOperation::Substitution: return true;
             default: return false;
         }
     }
@@ -153,7 +153,7 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
     const auto cigar = expand_cigar(read);
     
     auto cigar_op_itr = std::find_if_not(std::cbegin(cigar), std::cend(cigar),
-                                         [] (auto op) { return op == CigarOperation::HARD_CLIPPED; });
+                                         [] (auto op) { return op == CigarOperation::HardClipped; });
     
     const auto ref_sequence = reference.fetch_sequence(mapped_region(read));
     
@@ -164,8 +164,8 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
                        const auto cigar_op = *cigar_op_itr++;
                        
                        if (!is_match(cigar_op)) {
-                           if (cigar_op != CigarOperation::INSERTION) ++ref_itr;
-                           while (*cigar_op_itr == CigarOperation::DELETION) {
+                           if (cigar_op != CigarOperation::Insertion) ++ref_itr;
+                           while (*cigar_op_itr == CigarOperation::Deletion) {
                                ++cigar_op_itr;
                                ++ref_itr;
                            }
@@ -431,14 +431,14 @@ std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
     
     for (const auto& op : cigar) {
         switch(op.flag()) {
-            case CigarOperation::SEQUENCE_MATCH:
+            case CigarOperation::SequenceMatch:
             {
                 pos += op.size();
                 ref_it += op.size();
                 alt_it += op.size();
                 break;
             }
-            case CigarOperation::SUBSTITUTION:
+            case CigarOperation::Substitution:
             {
                 std::transform(ref_it, std::next(ref_it, op.size()), alt_it,
                                std::back_inserter(result),
@@ -449,13 +449,13 @@ std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
                 alt_it += op.size();
                 break;
             }
-            case CigarOperation::INSERTION:
+            case CigarOperation::Insertion:
             {
                 result.emplace_back(pos, "", Assembler::NucleotideSequence {alt_it, std::next(alt_it, op.size())});
                 alt_it += op.size();
                 break;
             }
-            case CigarOperation::DELETION:
+            case CigarOperation::Deletion:
             {
                 result.emplace_back(pos, Assembler::NucleotideSequence {ref_it, std::next(ref_it, op.size())}, "");
                 pos += op.size();

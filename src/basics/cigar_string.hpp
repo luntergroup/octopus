@@ -24,15 +24,15 @@ public:
     using Size = std::uint_fast32_t;
     using Flag = char;
     
-    static constexpr char ALIGNMENT_MATCH {'M'};
-    static constexpr char SEQUENCE_MATCH  {'='};
-    static constexpr char SUBSTITUTION    {'X'};
-    static constexpr char INSERTION       {'I'};
-    static constexpr char DELETION        {'D'};
-    static constexpr char SOFT_CLIPPED    {'S'};
-    static constexpr char HARD_CLIPPED    {'H'};
-    static constexpr char PADDING         {'P'};
-    static constexpr char SKIPPED         {'N'};
+    static constexpr char AlignmentMatch {'M'};
+    static constexpr char SequenceMatch  {'='};
+    static constexpr char Substitution   {'X'};
+    static constexpr char Insertion      {'I'};
+    static constexpr char Deletion       {'D'};
+    static constexpr char SoftClipped    {'S'};
+    static constexpr char HardClipped    {'H'};
+    static constexpr char Padding        {'P'};
+    static constexpr char Skipped        {'N'};
     
     CigarOperation() = default;
     

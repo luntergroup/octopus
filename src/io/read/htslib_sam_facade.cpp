@@ -991,7 +991,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         if (overhang_size == soft_clip_size) {
             cigar.erase(begin(cigar));
         } else { // then soft_clip_size > overhang_size
-            cigar.front() = CigarOperation {soft_clip_size - overhang_size, CigarOperation::SOFT_CLIPPED};
+            cigar.front() = CigarOperation {soft_clip_size - overhang_size, CigarOperation::SoftClipped};
         }
         
         read_begin_tmp = 0;

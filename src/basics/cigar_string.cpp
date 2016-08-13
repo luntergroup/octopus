@@ -13,15 +13,15 @@
 
 namespace octopus {
 
-constexpr char CigarOperation::ALIGNMENT_MATCH;
-constexpr char CigarOperation::SEQUENCE_MATCH;
-constexpr char CigarOperation::SUBSTITUTION;
-constexpr char CigarOperation::INSERTION;
-constexpr char CigarOperation::DELETION;
-constexpr char CigarOperation::SOFT_CLIPPED;
-constexpr char CigarOperation::HARD_CLIPPED;
-constexpr char CigarOperation::PADDING;
-constexpr char CigarOperation::SKIPPED;
+constexpr char CigarOperation::AlignmentMatch;
+constexpr char CigarOperation::SequenceMatch;
+constexpr char CigarOperation::Substitution;
+constexpr char CigarOperation::Insertion;
+constexpr char CigarOperation::Deletion;
+constexpr char CigarOperation::SoftClipped;
+constexpr char CigarOperation::HardClipped;
+constexpr char CigarOperation::Padding;
+constexpr char CigarOperation::Skipped;
 
 CigarOperation::CigarOperation(const Size size, const Flag flag) noexcept
 :
@@ -41,32 +41,32 @@ CigarOperation::Flag CigarOperation::flag() const noexcept
 
 bool CigarOperation::advances_reference() const noexcept
 {
-    return !(flag_ == INSERTION || flag_ == HARD_CLIPPED || flag_ == PADDING);
+    return !(flag_ == Insertion || flag_ == HardClipped || flag_ == Padding);
 }
 
 bool CigarOperation::advances_sequence() const noexcept
 {
-    return !(flag_ == DELETION || flag_ == HARD_CLIPPED);
+    return !(flag_ == Deletion || flag_ == HardClipped);
 }
 
 bool is_match(const CigarOperation& op) noexcept
 {
     switch (op.flag()) {
-        case CigarOperation::ALIGNMENT_MATCH:
-        case CigarOperation::SEQUENCE_MATCH:
-        case CigarOperation::SUBSTITUTION: return true;
+        case CigarOperation::AlignmentMatch:
+        case CigarOperation::SequenceMatch:
+        case CigarOperation::Substitution: return true;
         default: return false;
     }
 }
 
 bool is_indel(const CigarOperation& op) noexcept
 {
-    return op.flag() == CigarOperation::INSERTION || op.flag() == CigarOperation::DELETION;
+    return op.flag() == CigarOperation::Insertion || op.flag() == CigarOperation::Deletion;
 }
 
 bool is_clipping(const CigarOperation& op) noexcept
 {
-    return op.flag() == CigarOperation::SOFT_CLIPPED || op.flag() == CigarOperation::HARD_CLIPPED;
+    return op.flag() == CigarOperation::SoftClipped || op.flag() == CigarOperation::HardClipped;
 }
 
 // CigarString
@@ -100,15 +100,15 @@ CigarString parse_cigar(const std::string& cigar)
 bool is_valid_flag(const CigarOperation& op) noexcept
 {
     static constexpr std::array<char, 9> valid_flags {
-        CigarOperation::ALIGNMENT_MATCH,
-        CigarOperation::INSERTION,
-        CigarOperation::DELETION,
-        CigarOperation::SOFT_CLIPPED,
-        CigarOperation::HARD_CLIPPED,
-        CigarOperation::SKIPPED,
-        CigarOperation::SEQUENCE_MATCH,
-        CigarOperation::SUBSTITUTION,
-        CigarOperation::PADDING
+        CigarOperation::AlignmentMatch,
+        CigarOperation::Insertion,
+        CigarOperation::Deletion,
+        CigarOperation::SoftClipped,
+        CigarOperation::HardClipped,
+        CigarOperation::Skipped,
+        CigarOperation::SequenceMatch,
+        CigarOperation::Substitution,
+        CigarOperation::Padding
     };
     
     return std::find(std::cbegin(valid_flags), std::cend(valid_flags), op.flag()) != std::cend(valid_flags);
@@ -132,12 +132,12 @@ bool is_minimal(const CigarString& cigar) noexcept
 
 bool is_front_soft_clipped(const CigarString& cigar) noexcept
 {
-    return !cigar.empty() && cigar.front().flag() == CigarOperation::SOFT_CLIPPED;
+    return !cigar.empty() && cigar.front().flag() == CigarOperation::SoftClipped;
 }
 
 bool is_back_soft_clipped(const CigarString& cigar) noexcept
 {
-    return !cigar.empty() && cigar.back().flag() == CigarOperation::SOFT_CLIPPED;
+    return !cigar.empty() && cigar.back().flag() == CigarOperation::SoftClipped;
 }
 
 bool is_soft_clipped(const CigarString& cigar) noexcept

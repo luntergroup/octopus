@@ -799,9 +799,9 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                           const short gap_extend, const short nuc_prior,
                           const int first_pos, const char* aln1, const char* aln2)
 {
-    static constexpr char MATCH {'M'}, INSERTION {'I'}, DELETION {'D'};
+    static constexpr char Match {'M'}, Insertion {'I'}, Deletion {'D'};
     
-    auto prev_state = MATCH;
+    auto prev_state = Match;
     
     int x {first_pos}; // index into haplotype
     int y {0};         // index into read
@@ -810,13 +810,13 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
     int result {0}; // alignment score (within flank)
     
     while (aln1[i]) {
-        auto new_state = MATCH;
+        auto new_state = Match;
         
-        if (aln1[i] == Gap) new_state = INSERTION;
-        if (aln2[i] == Gap) new_state = DELETION;  // can't be both '-'
+        if (aln1[i] == Gap) new_state = Insertion;
+        if (aln2[i] == Gap) new_state = Deletion;  // can't be both '-'
         
         switch (new_state) {
-            case MATCH:
+            case Match:
             {
                 if ((aln1[i] != aln2[i]) && (x < lhs_flank_len || x >= (truth_len - rhs_flank_len))) {
                     if (aln1[i] != 'N') {
@@ -829,10 +829,10 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                 ++y;
                 break;
             }
-            case INSERTION:
+            case Insertion:
             {
                 if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
-                    if (prev_state == INSERTION) {
+                    if (prev_state == Insertion) {
                         result += gap_extend + nuc_prior;
                     } else {
                         // gap open score is charged for insertions just after the corresponding base,
@@ -843,10 +843,10 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                 ++y;
                 break;
             }
-            case DELETION:
+            case Deletion:
             {
                 if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
-                    if (prev_state == DELETION) {
+                    if (prev_state == Deletion) {
                         result += gap_extend;
                     } else {
                         result += gap_open[x];
@@ -870,9 +870,9 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                           const std::int8_t* gap_open, const short gap_extend, const short nuc_prior,
                           const int first_pos, const char* aln1, const char* aln2)
 {
-    static constexpr char MATCH {'M'}, INSERTION {'I'}, DELETION {'D'};
+    static constexpr char Match {'M'}, Insertion {'I'}, Deletion {'D'};
     
-    auto prev_state = MATCH;
+    auto prev_state = Match;
     
     int x {first_pos}; // index into truth
     int y {0};         // index into target
@@ -883,13 +883,13 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
     const auto rhs_flank_begin = truth_len - rhs_flank_len;
     
     while (aln1[i]) {
-        auto new_state = MATCH;
+        auto new_state = Match;
         
-        if (aln1[i] == Gap) new_state = INSERTION;
-        if (aln2[i] == Gap) new_state = DELETION;  // can't be both '-'
+        if (aln1[i] == Gap) new_state = Insertion;
+        if (aln2[i] == Gap) new_state = Deletion;  // can't be both '-'
         
         switch (new_state) {
-            case MATCH:
+            case Match:
             {
                 if ((aln1[i] != aln2[i]) && (x < lhs_flank_len || x >= rhs_flank_begin)) {
                     if (aln1[i] != 'N') {
@@ -902,10 +902,10 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                 ++y;
                 break;
             }
-            case INSERTION:
+            case Insertion:
             {
                 if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                    if (prev_state == INSERTION) {
+                    if (prev_state == Insertion) {
                         result += gap_extend + nuc_prior;
                     } else {
                         // gap open score is charged for insertions just after the corresponding base,
@@ -916,10 +916,10 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                 ++y;
                 break;
             }
-            case DELETION:
+            case Deletion:
             {
                 if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                    if (prev_state == DELETION) {
+                    if (prev_state == Deletion) {
                         result += gap_extend;
                     } else {
                         result += gap_open[x];

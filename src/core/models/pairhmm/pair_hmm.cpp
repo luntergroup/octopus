@@ -74,7 +74,7 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
         const auto p = std::mismatch(it1, last1, it2);
         
         if (p.first != it1) {
-            result.emplace_back(std::distance(it1, p.first), CigarOperation::SEQUENCE_MATCH);
+            result.emplace_back(std::distance(it1, p.first), CigarOperation::SequenceMatch);
             
             if (p.first == last1) break;
         }
@@ -86,7 +86,7 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
             
             const auto n = std::distance(p.first, it3);
             
-            result.emplace_back(n, CigarOperation::INSERTION);
+            result.emplace_back(n, CigarOperation::Insertion);
             
             it1 = it3;
             it2 = std::next(p.second, n);
@@ -95,7 +95,7 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
             
             const auto n = std::distance(p.second, it3);
             
-            result.emplace_back(n, CigarOperation::DELETION);
+            result.emplace_back(n, CigarOperation::Deletion);
             
             it1 = std::next(p.first, n);
             it2 = it3;
@@ -103,7 +103,7 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
             const auto p2 = std::mismatch(std::next(p.first), last1, std::next(p.second),
                                           std::not_equal_to<> {});
             
-            result.emplace_back(std::distance(p.first, p2.first), CigarOperation::SUBSTITUTION);
+            result.emplace_back(std::distance(p.first, p2.first), CigarOperation::Substitution);
             
             std::tie(it1, it2) = p2;
         }
