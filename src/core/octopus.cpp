@@ -1162,7 +1162,7 @@ void run_octopus(GenomeCallingComponents& components)
     } catch (const std::exception& e) {
         try {
             if (debug_log) {
-                *debug_log << "Encounted an error, attempting to cleanuo";
+                *debug_log << "Encounted an error, attempting to cleanup";
             }
             cleanup(components);
         } catch (...) {}

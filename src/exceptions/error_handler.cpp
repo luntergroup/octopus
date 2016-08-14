@@ -58,7 +58,7 @@ void log_error(const Error& error)
     {
         auto ss = stream(log);
         ss << "A ";
-        ss << error.type() << " error has occured:";
+        ss << error.type() << " error has occurred:";
     }
     
     log_empty_line(log);
