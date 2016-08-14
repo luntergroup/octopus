@@ -660,7 +660,7 @@ auto run(Task task, ContigCallingComponents components, SyncPacket& sync)
 {
     static auto debug_log = get_debug_log();
     
-    if (debug_log) stream(*debug_log) << "Spawning task with region " << task.region;
+    if (debug_log) stream(*debug_log) << "Spawning task " << task;
     
     return std::async(std::launch::async,
                       [task = std::move(task), components = std::move(components),
@@ -988,7 +988,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     auto maker_thread = make_tasks(pending_tasks, components, num_task_threads, task_maker_sync);
     
-    maker_thread.detach();
+    if (maker_thread.joinable()) maker_thread.detach();
     
     auto temp_vcfs = make_temp_vcf_writers(components);
     
