@@ -20,25 +20,35 @@ using namespace octopus;
 using namespace octopus::options;
 
 namespace {
-    template <typename E>
-    auto log_exception(const E& e)
-    {
-        log_error(e);
-        
-        log_program_end();
-        
-        return EXIT_FAILURE;
-    }
+
+template <typename E>
+auto log_exception(const E& e)
+{
+    log_error(e);
     
-    template <typename E>
-    auto log_startup_exception(const E& e)
-    {
-        logging::init();
-        
-        log_program_startup();
-        
-        return log_exception(e);
-    }
+    log_program_end();
+    
+    return EXIT_FAILURE;
+}
+
+template <typename E>
+auto log_startup_exception(const E& e)
+{
+    logging::init();
+    
+    log_program_startup();
+    
+    return log_exception(e);
+}
+
+void init_common(const OptionMap& options)
+{
+    logging::init(get_debug_log_file_name(options), get_trace_log_file_name(options));
+    
+    DEBUG_MODE = options::is_debug_mode(options);
+    TRACE_MODE = options::is_trace_mode(options);
+}
+
 } // namespace
 
 int main(const int argc, const char** argv)
@@ -63,7 +73,7 @@ int main(const int argc, const char** argv)
     
     if (is_run_command(options)) {
         try {
-            logging::init(get_debug_log_file_name(options), get_trace_log_file_name(options));
+            init_common(options);
             
             log_program_startup();
             

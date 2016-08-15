@@ -1168,9 +1168,6 @@ void run_octopus(GenomeCallingComponents& components)
 
 void run_octopus(options::OptionMap& options)
 {
-    DEBUG_MODE = options::is_debug_mode(options);
-    TRACE_MODE = options::is_trace_mode(options);
-    
     static auto debug_log = get_debug_log();
     
     logging::InfoLogger info_log {};
