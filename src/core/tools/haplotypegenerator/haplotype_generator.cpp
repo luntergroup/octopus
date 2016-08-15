@@ -281,6 +281,22 @@ void HaplotypeGenerator::reset_next_active_region() const noexcept
     next_active_region_ = boost::none;
 }
 
+void HaplotypeGenerator::update_next_active_region() const
+{
+    if (!next_active_region_) {
+        if (is_lagging_enabled() || in_holdout_mode()) {
+            // If we are in holdout mode then lagging is required
+            update_lagged_next_active_region();
+        } else {
+            next_active_region_ = default_walker_.walk(active_region_, reads_, alleles_);
+        }
+    }
+    
+    assert(in_holdout_mode() || active_region_ <= *next_active_region_);
+}
+
+namespace {
+
 template <typename Range>
 bool can_remove_entire_passed_region(const GenomicRegion& current_active_region,
                                      const GenomicRegion& next_active_region,
@@ -298,34 +314,23 @@ bool requires_staged_removal(const Range& passed_alleles)
     
     const auto last = crend(passed_alleles);
     
+    const auto& last_passed_allele = passed_alleles.back();
+    
     const auto it = std::find_if_not(std::next(crbegin(passed_alleles)), last,
-                                     [&passed_alleles] (const auto& allele) {
-                                         return overlaps(allele, passed_alleles.back());
+                                     [&last_passed_allele] (const auto& allele) {
+                                         return is_same_region(allele, last_passed_allele);
                                      });
     
-    return it == last || is_position(*std::prev(it));
+    return it != last && is_position(*it);
 }
 
-void HaplotypeGenerator::update_next_active_region() const
-{
-    if (!next_active_region_) {
-        if (is_lagging_enabled() || in_holdout_mode()) {
-            // If we are in holdout mode then lagging is required
-            update_lagged_next_active_region();
-        } else {
-            next_active_region_ = default_walker_.walk(active_region_, reads_, alleles_);
-        }
-    }
-    assert(in_holdout_mode() || active_region_ <= *next_active_region_);
+template <typename T>
+void pop_front(std::vector<T>& v) {
+    assert(!v.empty());
+    v.erase(std::cbegin(v));
 }
-    
-namespace {
-    template <typename T>
-    void pop_front(std::vector<T>& v) {
-        assert(!v.empty());
-        v.erase(std::cbegin(v));
-    }
-}
+
+} // namespace
 
 void HaplotypeGenerator::update_lagged_next_active_region() const
 {
@@ -346,7 +351,7 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
     if (!overlaps(active_region_, max_lagged_region)) {
         next_active_region_ = std::move(max_lagged_region);
     } else {
-        auto test_tree = tree_; // use a temporary tree to see how much we can lag
+        HaplotypeTree test_tree {tree_}; // use a temporary tree to see how much we can lag
         
         if (begins_before(active_region_, max_lagged_region)) {
             const auto novel_region  = right_overhang_region(max_lagged_region, active_region_);
@@ -354,13 +359,17 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
             
             const auto it = extend_tree_until(novel_alleles, test_tree, policies_.haplotype_limits.target);
             
-            test_tree.clear(novel_region); // undo previous extension
-            
             if (it == std::cend(novel_alleles)) {
-                max_lagged_region = encompassing_region(active_region_, max_lagged_region);
+                // Ignore the walker as we have better information here
+                next_active_region_ = test_tree.encompassing_region();
+                return;
             } else {
+                test_tree.clear(novel_region); // undo previous extension
+                
                 const auto passed_region  = left_overhang_region(active_region_, max_lagged_region);
                 const auto passed_alleles = overlap_range(alleles_, passed_region);
+                
+                assert(!passed_alleles.empty());
                 
                 if (can_remove_entire_passed_region(active_region_, max_lagged_region, passed_alleles)) {
                     test_tree.clear(passed_region);
