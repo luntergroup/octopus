@@ -36,7 +36,7 @@ public:
     HaplotypeTree(const GenomicRegion::ContigName& contig, const ReferenceGenome& reference);
     
     HaplotypeTree(const HaplotypeTree&);
-    HaplotypeTree& operator=(HaplotypeTree);
+    HaplotypeTree& operator=(const HaplotypeTree&);
     HaplotypeTree(HaplotypeTree&&)            = default;
     HaplotypeTree& operator=(HaplotypeTree&&) = default;
     
