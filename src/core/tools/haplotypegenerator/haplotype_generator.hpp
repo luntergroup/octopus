@@ -132,6 +132,7 @@ private:
     
     void reset_next_active_region() const noexcept;
     void update_next_active_region() const;
+    void update_lagged_next_active_region() const;
     
     void progress(GenomicRegion to);
     

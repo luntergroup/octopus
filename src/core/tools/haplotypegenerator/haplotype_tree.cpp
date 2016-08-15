@@ -447,11 +447,10 @@ void HaplotypeTree::clear(const GenomicRegion& region)
         
         std::list<Vertex> new_leafs {};
         
-        std::for_each(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
-                      [this, &region, &new_leafs] (const Vertex leaf) {
-                          const auto p = clear(leaf, contig_region(region));
-                          if (p.second) new_leafs.push_back(p.first);
-                      });
+        for (const Vertex leaf : haplotype_leafs_) {
+            const auto p = clear(leaf, contig_region(region));
+            if (p.second) new_leafs.push_back(p.first);
+        }
         
         haplotype_leafs_ = new_leafs;
     }
@@ -632,7 +631,7 @@ HaplotypeTree::find_equal_haplotype_leaf(const LeafIterator first, const LeafIte
 }
 
 std::pair<HaplotypeTree::Vertex, bool>
-HaplotypeTree::clear(Vertex leaf, const ContigRegion& region)
+HaplotypeTree::clear(const Vertex leaf, const ContigRegion& region)
 {
     if (ends_before(region, tree_[leaf])) {
         return clear_internal(leaf, region);
