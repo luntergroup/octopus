@@ -1,8 +1,6 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#define BOOST_TEST_DYN_LINK
-
 #include <boost/test/unit_test.hpp>
 
 #include <iostream>
@@ -12,21 +10,19 @@
 
 #include <boost/filesystem.hpp>
 
-#include "test_common.hpp"
 #include <basics/genomic_region.hpp>
 #include <basics/aligned_read.hpp>
 #include <io/read/read_manager.hpp>
-#include "mock_objects.hpp"
 
-using std::cout;
-using std::endl;
+#include <resources/test_common.hpp>
+#include "mock_objects.hpp"
 
 namespace octopus { namespace test {
 
 namespace fs = boost::filesystem;
 
-BOOST_AUTO_TEST_SUITE(Components)
-BOOST_AUTO_TEST_SUITE(IO)
+BOOST_AUTO_TEST_SUITE(io)
+BOOST_AUTO_TEST_SUITE(read_manager)
 
 BOOST_AUTO_TEST_CASE(can_extract_reads_from_BAM_files)
 {
@@ -155,8 +151,8 @@ BOOST_AUTO_TEST_CASE(read_manager_multiple_files_above_max_file_limit_test)
     BOOST_CHECK(small_reads3.size() == 7);
 }
 
-BOOST_AUTO_TEST_SUITE_END() // IO
-BOOST_AUTO_TEST_SUITE_END() // Components
+BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END()
 
 } // namespace test
 } // namespace octopus

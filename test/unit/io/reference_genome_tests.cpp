@@ -1,32 +1,25 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#define BOOST_TEST_DYN_LINK
-
 #include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
 #include <future>
-#include <random>
+
+#include <io/reference/reference_genome.hpp>
+#include <io/reference/fasta.hpp>
+#include <io/reference/caching_fasta.hpp>
+#include <utils/mappable_algorithms.hpp>
 
 #include "test_common.hpp"
 
-#include <io/reference/reference_genome.hpp>
-#include <utils/mappable_algorithms.hpp>
-
-#include "fasta.hpp"
-#include "caching_fasta.hpp"
-
-using std::cout;
-using std::endl;
-
 namespace octopus { namespace test {
 
-BOOST_AUTO_TEST_SUITE(Components)
-BOOST_AUTO_TEST_SUITE(IO)
+BOOST_AUTO_TEST_SUITE(io)
+BOOST_AUTO_TEST_SUITE(reference)
 
-BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_basic_queries)
+BOOST_AUTO_TEST_CASE(ReferenceGenome_handles_basic_queries)
 {
     BOOST_REQUIRE(test_file_exists(ecoli_reference_fasta));
     
@@ -55,7 +48,7 @@ BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_basic_queries)
     BOOST_CHECK(human.fetch_sequence(GenomicRegion("5", 100000, 100010)) == "AGGAAGTTTC");
 }
 
-BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_edge_cases)
+BOOST_AUTO_TEST_CASE(ReferenceGenome_handles_edge_cases)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
@@ -154,89 +147,6 @@ BOOST_AUTO_TEST_CASE(parse_region_throws_when_given_bad_region)
     BOOST_CHECK(all_throwed);
 }
 
-//BOOST_AUTO_TEST_CASE(cached_and_uncached_reference_genome_give_same_sequence)
-//{
-//    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
-//    
-//    // First test simple walk along a single contig
-//    
-//    const auto human = make_reference(human_reference_fasta);
-//    
-//    std::string contig {"1"};
-//    
-//    std::random_device rd;
-//    std::mt19937 g(rd());
-//    
-//    std::uniform_int_distribution<GenomicRegion::SizeType> dis(1, 50000);
-//    
-//    Fasta uncached_reference {human_reference_fasta};
-//    CachingFasta cached_reference {human_reference_fasta, 10'000'000, 1.0, 1.0};
-//    
-//    std::string uncached_sequence {}, cached_sequence {};
-//    uncached_sequence.reserve(uncached_reference.contig_size(contig));
-//    cached_sequence.reserve(cached_reference.contig_size(contig));
-//    
-//    auto regions = decompose(parse_region(contig, human), 100);
-//    
-//    for (const auto& region : regions) {
-//        uncached_sequence += uncached_reference.fetch_sequence(region);
-//        cached_sequence += cached_reference.fetch_sequence(region);
-//    }
-//    
-//    BOOST_CHECK(uncached_sequence == cached_sequence);
-//    
-////    // Next test walks along multiple contigs
-////    
-////    regions.clear();
-////    
-////    for (const auto& c : std::vector<std::string> {"1", "2", "3"}) {
-////        auto more_regions = decompose(uncached_reference.contig_region(c), dis(g));
-////        regions.insert(regions.end(), more_regions.begin(), more_regions.end());
-////    }
-////    
-////    
-//    
-////    // Next test accesses to random points on a single contig
-////    
-////    uncached_sequence.clear();
-////    cached_sequence.clear();
-////    
-////    std::shuffle(regions.begin(), regions.end(), g);
-////    
-////    for (const auto& region : regions) {
-////        uncached_sequence += uncached_reference.fetch_sequence(region);
-////        cached_sequence += cached_reference.fetch_sequence(region);
-////    }
-////    
-////    BOOST_CHECK(uncached_sequence == cached_sequence);
-////    
-////    // Finally test random access to lots of contigs with different region sizes - may take a while
-////    
-////    //uncached_sequence.reserve(uncached_reference.g)
-////    regions.clear();
-////    regions.reserve(100'000'000); // ?
-////    
-////    for (const auto& region : get_all_contig_regions(reference)) {
-////        auto more_regions = decompose(region, dis(g));
-////        regions.insert(regions.end(), more_regions.begin(), more_regions.end());
-////    }
-////    
-////    std::shuffle(regions.begin(), regions.end(), g);
-////    
-////    uncached_sequence.clear();
-////    cached_sequence.clear();
-////    
-////    uncached_sequence.reserve(get_genome_size(reference));
-////    cached_sequence.reserve(get_genome_size(reference));
-////    
-////    for (const auto& region : regions) {
-////        uncached_sequence += uncached_reference.fetch_sequence(region);
-////        cached_sequence += cached_reference.fetch_sequence(region);
-////    }
-////    
-////    BOOST_CHECK(uncached_sequence == cached_sequence);
-//}
-
 BOOST_AUTO_TEST_CASE(CachingFasta_works_the_same_as_Fasta)
 {
     BOOST_REQUIRE(test_file_exists(ecoli_reference_fasta));
@@ -305,8 +215,8 @@ BOOST_AUTO_TEST_CASE(ReferenceGenome_can_be_made_threadsafe)
     BOOST_CHECK(!throwed);
 }
 
-BOOST_AUTO_TEST_SUITE_END() // IO
-BOOST_AUTO_TEST_SUITE_END() // Components
+BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END()
 
 } // namespace test
 } // namespace octopus

@@ -9,6 +9,7 @@ set(CONCEPTS_TEST_SOURCES
 set(BASICS_TEST_SOURCES
     basics/contig_region_tests.cpp
     basics/cigar_string_tests.cpp
+    basics/phred_tests.cpp
 )
 
 set(CONTAINERS_TEST_SOURCES
@@ -20,7 +21,7 @@ set(LOGGING_TEST_SOURCES
 )
 
 set(IO_TEST_SOURCES
-    
+    io/reference_genome_tests.cpp
 )
 
 set(READPIPE_TEST_SOURCES

@@ -16,7 +16,7 @@ namespace octopus { namespace test { namespace detail {
     static std::string genomics_dir {"/Genomics/"};
     static std::string reference_dir {"References/"};
     static std::string bam_dir {"Illumina/"};
-    static std::string octopus_test_dir {"/Development/octopus/test/"};
+    static std::string octopus_test_dir {"/Development/octopus/test/resources/"};
     static std::string sample_vcf_dir {"sample_vcf/"};
     static std::string cancer_test_dir {"cancer/simulated/"};
     
@@ -57,7 +57,7 @@ namespace octopus { namespace test { namespace detail {
 static const fs::path regions_txt_file {detail::home_dir + detail::octopus_test_dir + "test_regions.txt"};
 static const fs::path regions_bed_file {detail::home_dir + detail::octopus_test_dir + "test_regions.bed"};
 static const fs::path reads_file {detail::home_dir + detail::octopus_test_dir + "test_files.txt"};
-static const fs::path human_skip_regions {detail::home_dir + detail::octopus_test_dir + "human_skip_regions2.txt"};
+static const fs::path human_skip_regions {detail::home_dir + detail::octopus_test_dir + "human_skip_regions.txt"};
 static const fs::path hla_regions {detail::home_dir + detail::octopus_test_dir + "hla_regions.txt"};
 
 // references
