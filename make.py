@@ -9,6 +9,11 @@ def is_unix():
     system = platform.system()
     return system == "Darwin" or system == "Linux"
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--root', help='Install into /usr/local/bin', action='store_true')
+parser.add_argument('--compiler', help='C++ compiler path')
+args = vars(parser.parse_args())
+
 octopus_dir = os.path.dirname(os.path.realpath(__file__))
 
 root_cmake = octopus_dir + "/CMakeLists.txt"
@@ -31,15 +36,20 @@ if not os.path.exists(bin_dir):
 
 os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--root', help='Install into /usr/local/bin', action='store_true')
-args = vars(parser.parse_args())
-
 ret = 0
+
+cmake_options = []
+
 if args["root"]:
-    ret = call(["cmake", "-DINSTALL_ROOT=ON", octopus_dir])
-else:
-    ret = call(["cmake", octopus_dir])
+    cmake_options.append(["-DINSTALL_ROOT=ON", octopus_dir])
+
+if args["compiler"]:
+    if not os.path.exists(args["compiler"]):
+        print("Error: The C++ compiler path you specified (" + args["compiler"] + ") does not exist")
+        exit()
+    cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["compiler"])
+
+ret = call(["cmake"] + cmake_options + [".."])
 
 if ret == 0:
     if is_unix():

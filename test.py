@@ -2,6 +2,12 @@
 
 import os
 from subprocess import call
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--verbose', help='Output verbose test information', action='store_true')
+parser.add_argument('--compiler', help='C++ compiler path')
+args = vars(parser.parse_args())
 
 octopus_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -19,10 +25,21 @@ if not os.path.exists(octopus_build_dir):
 
 os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
 
-ret = call(["cmake", "-DBUILD_TESTING=ON", octopus_dir])
+cmake_options = ["-DBUILD_TESTING=ON", octopus_dir]
+
+if args["compiler"]:
+    if not os.path.exists(args["compiler"]):
+        print("Error: The C++ compiler path you specified (" + args["compiler"] + ") does not exist")
+        exit()
+    cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["compiler"])
+
+ret = call(["cmake"] + cmake_options + [".."])
 if ret == 0:
     ret = call(["make"])
     if ret == 0:
         octopus_test_dir = octopus_build_dir + "/test"
         os.chdir(octopus_test_dir)
-        call("ctest")
+        ctest_options = []
+        if (args["verbose"]):
+            ctest_options.append("--verbose")
+        call(["ctest"] + ctest_options)
