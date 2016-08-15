@@ -565,7 +565,7 @@ void make_remaining_tasks(TaskMap& tasks, GenomeCallingComponents& components, c
     std::unique_lock<std::mutex> lk {sync.mutex};
     sync.done = true;
     lk.unlock();
-    sync.cv.notify_all();
+    sync.cv.notify_one();
 }
 
 std::thread make_tasks(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
@@ -663,8 +663,8 @@ auto run(Task task, ContigCallingComponents components, SyncPacket& sync)
     if (debug_log) stream(*debug_log) << "Spawning task " << task;
     
     return std::async(std::launch::async,
-                      [task = std::move(task), components = std::move(components),
-                       &sync] () -> CompletedTask {
+                      [task = std::move(task), components = std::move(components), &sync]
+                      () -> CompletedTask {
                           CompletedTask result {
                               task,
                               components.caller->call(task.region, components.progress_meter)
@@ -1015,9 +1015,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
         if (!task_maker_sync.done) {
             // tasks are still being generated
             std::unique_lock<std::mutex> lk {task_maker_sync.mutex};
-            while (pending_tasks.empty()) { // for spurious wakeup
-                task_sync.cv.wait(lk);
-            }
+            task_sync.cv.wait(lk, [&] () { return !pending_tasks.empty(); });
         }
         
         for (auto& future : futures) {
@@ -1052,9 +1050,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
         
         if (task_sync.count_finished == 0) {
             std::unique_lock<std::mutex> lk {task_sync.mutex};
-            while (task_sync.count_finished == 0) { // for spurious wakeup
-                task_sync.cv.wait(lk);
-            }
+            task_sync.cv.wait(lk, [&] () { return task_sync.count_finished > 0; });
         }
     }
     
