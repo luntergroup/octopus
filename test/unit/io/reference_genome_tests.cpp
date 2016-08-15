@@ -3,8 +3,9 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <string>
+#include <vector>
+#include <iterator>
+#include <algorithm>
 #include <future>
 
 #include <io/reference/reference_genome.hpp>
@@ -12,12 +13,31 @@
 #include <io/reference/caching_fasta.hpp>
 #include <utils/mappable_algorithms.hpp>
 
+#include "mock/mock_reference.hpp"
+
 #include "test_common.hpp"
 
 namespace octopus { namespace test {
 
 BOOST_AUTO_TEST_SUITE(io)
 BOOST_AUTO_TEST_SUITE(reference)
+
+BOOST_AUTO_TEST_CASE(contigs_are_reported_in_apperance_order)
+{
+    const auto reference = make_mock_reference();
+    
+    const auto contigs = reference.contig_names();
+    
+    std::vector<int> contig_numbers(contigs.size());
+    
+    std::transform(std::cbegin(contigs), std::cend(contigs), std::begin(contig_numbers),
+                   [] (auto contig) -> int {
+                       contig.erase(std::cbegin(contig), std::next(std::cbegin(contig), 4));
+                       return std::stoi(contig);
+                   });
+    
+    BOOST_CHECK(std::is_sorted(std::cbegin(contig_numbers), std::cend(contig_numbers)));
+}
 
 BOOST_AUTO_TEST_CASE(ReferenceGenome_handles_basic_queries)
 {

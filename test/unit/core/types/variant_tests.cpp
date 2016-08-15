@@ -11,10 +11,8 @@
 #include <core/types/allele.hpp>
 #include <core/types/variant.hpp>
 #include <utils/mappable_algorithms.hpp>
-#include <io/reference/reference_genome.hpp>
 
-#include <resources/test_common.hpp>
-#include <resources/mock_objects.hpp>
+#include "mock/mock_reference.hpp"
 
 namespace octopus { namespace test {
 
@@ -296,231 +294,221 @@ BOOST_AUTO_TEST_CASE(inner_distance_respects_insertion_lhs_ordering_rule)
 
 BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
 {
-    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    const auto reference = make_mock_reference();
     
-    const auto human = make_reference(human_reference_fasta);
+    auto region = parse_region("mock4:657-660", reference); // sequence around region is CCAGCAGCAGCAGCAG...
     
-    // Huntingtin region CCAGCAGCAGCAGCAG...
-    auto region = parse_region("4:3076657-3076660", human);
+    auto sequence = reference.fetch_sequence(region);
     
-    auto the_sequence = human.fetch_sequence(region);
+    BOOST_REQUIRE_EQUAL(sequence, "CAG");
     
-    BOOST_REQUIRE_EQUAL(the_sequence, "CAG");
+    Variant raw_deletion {region, sequence, ""};
     
-    Variant a_deletion {region, the_sequence, ""};
+    Variant left_aligned_deletion = left_align(raw_deletion, reference);
     
-    Variant left_aligned_deletion = left_align(a_deletion, human);
-    
-    BOOST_CHECK_EQUAL(left_aligned_deletion.mapped_region(), parse_region("4:3076603-3076606", human));
+    BOOST_CHECK_EQUAL(left_aligned_deletion.mapped_region(), parse_region("mock4:603-606", reference));
     BOOST_CHECK_EQUAL(ref_sequence(left_aligned_deletion), "CAG");
     BOOST_CHECK_EQUAL(alt_sequence(left_aligned_deletion), "");
     
-    Variant an_insertion {parse_region("4:3076660-3076660", human), "", the_sequence};
+    Variant raw_insertion {parse_region("mock4:660-660", reference), "", sequence};
     
-    auto left_aligned_insertion = left_align(an_insertion, human);
+    auto left_aligned_insertion = left_align(raw_insertion, reference);
     
-    BOOST_CHECK_EQUAL(left_aligned_insertion.mapped_region(), parse_region("4:3076603-3076603", human));
+    BOOST_CHECK_EQUAL(left_aligned_insertion.mapped_region(), parse_region("mock4:603-603", reference));
     BOOST_CHECK_EQUAL(ref_sequence(left_aligned_insertion), "");
     BOOST_CHECK_EQUAL(alt_sequence(left_aligned_insertion), "CAG");
     
-    // Region is CCAACAACAACAACAC (94594947-94594962)
-    region = parse_region("5:94594956-94594959", human);
+    region = parse_region("mock5:956-959", reference); // sequence around region is CCAACAACAACAACAC
     
-    the_sequence = human.fetch_sequence(region);
+    sequence = reference.fetch_sequence(region);
     
-    BOOST_REQUIRE_EQUAL(the_sequence, "CAA");
+    BOOST_REQUIRE_EQUAL(sequence, "CAA");
     
-    a_deletion = Variant {region, the_sequence, ""};
+    raw_deletion = Variant {region, sequence, ""};
     
-    left_aligned_deletion = left_align(a_deletion, human);
+    left_aligned_deletion = left_align(raw_deletion, reference);
     
-    BOOST_CHECK_EQUAL(left_aligned_deletion.mapped_region(), parse_region("5:94594949-94594952", human));
+    BOOST_CHECK_EQUAL(left_aligned_deletion.mapped_region(), parse_region("mock5:949-952", reference));
     BOOST_CHECK_EQUAL(ref_sequence(left_aligned_deletion), "ACA");
     BOOST_CHECK_EQUAL(alt_sequence(left_aligned_deletion), "");
     
-    an_insertion = Variant {parse_region("5:94594959-94594959", human), "", the_sequence};
+    raw_insertion = Variant {parse_region("mock5:959-959", reference), "", sequence};
     
-    left_aligned_insertion = left_align(an_insertion, human);
+    left_aligned_insertion = left_align(raw_insertion, reference);
     
-    BOOST_CHECK_EQUAL(left_aligned_insertion.mapped_region(), parse_region("5:94594949-94594949", human));
+    BOOST_CHECK_EQUAL(left_aligned_insertion.mapped_region(), parse_region("mock5:949-949", reference));
     BOOST_CHECK_EQUAL(ref_sequence(left_aligned_insertion), "");
     BOOST_CHECK_EQUAL(alt_sequence(left_aligned_insertion), "ACA");
 }
 
 BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
 {
-    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    const auto reference = make_mock_reference();
     
-    const auto human = make_reference(human_reference_fasta);
+    Variant raw_snp {parse_region("mock6:330-331", reference), std::string {"G"}, std::string {"C"}};
     
-    Variant a_snp {parse_region("12:10001330-10001331", human), std::string {"G"}, std::string {"C"}};
+    BOOST_CHECK(is_parsimonious(raw_snp));
+    BOOST_CHECK_EQUAL(make_parsimonious(raw_snp, reference), raw_snp);
     
-    BOOST_CHECK(is_parsimonious(a_snp));
-    BOOST_CHECK_EQUAL(make_parsimonious(a_snp, human), a_snp);
+    Variant unparsimonious_snp {parse_region("mock6:330-332", reference), std::string {"GT"}, std::string {"CT"}};
     
-    Variant an_unparsimonious_snp {parse_region("12:10001330-10001332", human), std::string {"GT"}, std::string {"CT"}};
+    BOOST_REQUIRE(!is_parsimonious(unparsimonious_snp));
     
-    BOOST_REQUIRE(!is_parsimonious(an_unparsimonious_snp));
-    
-    auto parsimonised_snp = make_parsimonious(an_unparsimonious_snp, human);
+    auto parsimonised_snp = make_parsimonious(unparsimonious_snp, reference);
     
     BOOST_CHECK(is_parsimonious(parsimonised_snp));
-    BOOST_CHECK_EQUAL(parsimonised_snp, a_snp);
+    BOOST_CHECK_EQUAL(parsimonised_snp, raw_snp);
     
-    Variant another_unparsimonious_snp {parse_region("12:10001329-10001332", human), std::string {"TGT"}, std::string {"TCT"}};
+    Variant another_unparsimonious_snp {parse_region("mock6:329-332", reference), std::string {"TGT"}, std::string {"TCT"}};
     
     BOOST_REQUIRE(!is_parsimonious(another_unparsimonious_snp));
     
-    auto another_parsimonised_snp = make_parsimonious(another_unparsimonious_snp, human);
+    auto another_parsimonised_snp = make_parsimonious(another_unparsimonious_snp, reference);
     
     BOOST_CHECK(is_parsimonious(another_parsimonised_snp));
-    BOOST_CHECK_EQUAL(another_parsimonised_snp, a_snp);
+    BOOST_CHECK_EQUAL(another_parsimonised_snp, raw_snp);
     
-    auto a_region = parse_region("12:10001330-10001335", human);
+    auto region = parse_region("mock6:330-335", reference);
     
-    auto the_sequence = human.fetch_sequence(a_region);
+    auto sequence = reference.fetch_sequence(region);
     
-    BOOST_REQUIRE_EQUAL(the_sequence, "GTGGA");
+    BOOST_REQUIRE_EQUAL(sequence, "GTGGA");
     
-    Variant a_deletion {a_region, the_sequence, ""};
+    Variant raw_deletion {region, sequence, ""};
     
-    auto parsimonious_deletion = make_parsimonious(a_deletion, human);
+    auto parsimonious_deletion = make_parsimonious(raw_deletion, reference);
     
-    BOOST_CHECK_EQUAL(parsimonious_deletion.mapped_region(), parse_region("12:10001329-10001335", human));
+    BOOST_CHECK_EQUAL(parsimonious_deletion.mapped_region(), parse_region("mock6:329-335", reference));
     BOOST_CHECK_EQUAL(ref_sequence(parsimonious_deletion), "CGTGGA");
     BOOST_CHECK_EQUAL(alt_sequence(parsimonious_deletion), "C");
     
-    Variant an_insertion {parse_region("12:10001330-10001330", human), "", the_sequence};
+    Variant raw_insertion {parse_region("mock6:330-330", reference), "", sequence};
     
-    auto parsimonious_insertion = make_parsimonious(an_insertion, human);
+    auto parsimonious_insertion = make_parsimonious(raw_insertion, reference);
     
-    BOOST_CHECK_EQUAL(parsimonious_insertion.mapped_region(), parse_region("12:10001329-10001330", human));
+    BOOST_CHECK_EQUAL(parsimonious_insertion.mapped_region(), parse_region("mock6:329-330", reference));
     BOOST_CHECK_EQUAL(ref_sequence(parsimonious_insertion), "C");
     BOOST_CHECK_EQUAL(alt_sequence(parsimonious_insertion), "CGTGGA");
     
-    Variant an_unparsimonious_deletion {parse_region("12:10001328-10001335", human), "TCGTGGA", "TC"};
+    Variant unparsimonious_deletion {parse_region("mock6:328-335", reference), "TCGTGGA", "TC"};
     
-    BOOST_REQUIRE(!is_parsimonious(an_unparsimonious_deletion));
+    BOOST_REQUIRE(!is_parsimonious(unparsimonious_deletion));
     
-    auto parsimonised_deletion = make_parsimonious(an_unparsimonious_deletion, human);
+    auto parsimonised_deletion = make_parsimonious(unparsimonious_deletion, reference);
     
     BOOST_CHECK(is_parsimonious(parsimonised_deletion));
     
-    Variant an_unparsimonious_insertion {parse_region("12:10001329-10001331", human), "CG", "CGTGGA"};
+    Variant unparsimonious_insertion {parse_region("mock6:329-331", reference), "CG", "CGTGGA"};
     
-    BOOST_REQUIRE(!is_parsimonious(an_unparsimonious_insertion));
+    BOOST_REQUIRE(!is_parsimonious(unparsimonious_insertion));
     
-    auto parsimonised_insertion = make_parsimonious(an_unparsimonious_insertion, human);
+    auto parsimonised_insertion = make_parsimonious(unparsimonious_insertion, reference);
     
     BOOST_CHECK(is_parsimonious(parsimonised_insertion));
 }
 
 BOOST_AUTO_TEST_CASE(can_normalise_variants)
 {
-    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+   const auto reference = make_mock_reference();
     
-    auto human = make_reference(human_reference_fasta);
+    Variant raw_snp {parse_region("mock4:657-658", reference), std::string {"G"}, std::string {"C"}};
     
-    // Huntingtin region CCAGCAGCAGCAGCAG...
+    BOOST_REQUIRE(is_parsimonious(raw_snp));
     
-    Variant a_snp {parse_region("4:3076657-3076658", human), std::string {"G"}, std::string {"C"}};
+    auto normalised_snp = normalise(raw_snp, reference);
     
-    BOOST_REQUIRE(is_parsimonious(a_snp));
+    BOOST_CHECK_EQUAL(normalised_snp, raw_snp);
     
-    auto a_normalised_snp = normalise(a_snp, human);
+    auto region = parse_region("mock4:657-660", reference);
     
-    BOOST_CHECK_EQUAL(a_normalised_snp, a_snp);
+    auto sequence = reference.fetch_sequence(region);
     
-    auto a_region = parse_region("4:3076657-3076660", human);
+    BOOST_CHECK_EQUAL(sequence, "CAG");
     
-    auto the_sequence = human.fetch_sequence(a_region);
+    Variant raw_mnp {region, sequence, std::string {"GAC"}};
     
-    BOOST_CHECK_EQUAL(the_sequence, "CAG");
+    BOOST_REQUIRE(is_parsimonious(raw_mnp));
     
-    Variant a_mnp {a_region, the_sequence, std::string {"GAC"}};
+    auto normalised_mnp = normalise(raw_mnp, reference);
     
-    BOOST_REQUIRE(is_parsimonious(a_mnp));
+    BOOST_CHECK_EQUAL(normalised_mnp, raw_mnp);
     
-    auto a_normalised_mnp = normalise(a_mnp, human);
+    Variant raw_deletion {region, sequence, ""};
     
-    BOOST_CHECK_EQUAL(a_normalised_mnp, a_mnp);
+    BOOST_REQUIRE(!is_parsimonious(raw_deletion));
     
-    Variant a_deletion {a_region, the_sequence, ""};
-    
-    BOOST_REQUIRE(!is_parsimonious(a_deletion));
-    
-    auto left_aligned_unparsimonious_deletion = left_align(a_deletion, human);
+    auto left_aligned_unparsimonious_deletion = left_align(raw_deletion, reference);
     
     BOOST_REQUIRE(!is_parsimonious(left_aligned_unparsimonious_deletion));
     
-    auto normilised_deletion = normalise(a_deletion, human);
+    auto normilised_deletion = normalise(raw_deletion, reference);
     
     BOOST_CHECK(is_parsimonious(normilised_deletion));
-    BOOST_CHECK_EQUAL(normilised_deletion.mapped_region(), parse_region("4:3076602-3076606", human));
+    BOOST_CHECK_EQUAL(normilised_deletion.mapped_region(), parse_region("mock4:602-606", reference));
     BOOST_CHECK_EQUAL(ref_sequence(normilised_deletion), "CCAG");
     BOOST_CHECK_EQUAL(alt_sequence(normilised_deletion), "C");
     
-    Variant an_insertion {parse_region("4:3076660-3076660", human), "", the_sequence};
+    Variant raw_insertion {parse_region("mock4:660-660", reference), "", sequence};
     
-    BOOST_REQUIRE(!is_parsimonious(an_insertion));
+    BOOST_REQUIRE(!is_parsimonious(raw_insertion));
     
-    auto left_aligned_unparsimonious_insertion = left_align(an_insertion, human);
+    auto left_aligned_unparsimonious_insertion = left_align(raw_insertion, reference);
     
     BOOST_REQUIRE(!is_parsimonious(left_aligned_unparsimonious_insertion));
     
-    auto normilised_insertion = normalise(an_insertion, human);
+    auto normilised_insertion = normalise(raw_insertion, reference);
     
     BOOST_CHECK(is_parsimonious(normilised_insertion));
-    BOOST_CHECK_EQUAL(normilised_insertion.mapped_region(), parse_region("4:3076602-3076603", human));
+    BOOST_CHECK_EQUAL(normilised_insertion.mapped_region(), parse_region("mock4:602-603", reference));
     BOOST_CHECK_EQUAL(ref_sequence(normilised_insertion), "C");
     BOOST_CHECK_EQUAL(alt_sequence(normilised_insertion), "CCAG");
     
     // Some hard ones
     
-    Variant an_unormilised_snp {parse_region("4:3076656-3076659", human), std::string {"AGC"}, std::string {"ACC"}};
+    Variant unormilised_snp {parse_region("mock4:656-659", reference), std::string {"AGC"}, std::string {"ACC"}};
     
-    BOOST_REQUIRE(!is_parsimonious(an_unormilised_snp));
+    BOOST_REQUIRE(!is_parsimonious(unormilised_snp));
     
-    a_normalised_snp = normalise(an_unormilised_snp, human);
+    normalised_snp = normalise(unormilised_snp, reference);
     
-    BOOST_CHECK(is_parsimonious(a_normalised_mnp));
-    BOOST_CHECK_EQUAL(a_normalised_snp.mapped_region(), parse_region("4:3076657-3076658", human));
-    BOOST_CHECK_EQUAL(ref_sequence(a_normalised_snp), "G");
-    BOOST_CHECK_EQUAL(alt_sequence(a_normalised_snp), "C");
+    BOOST_CHECK(is_parsimonious(normalised_mnp));
+    BOOST_CHECK_EQUAL(normalised_snp.mapped_region(), parse_region("mock4:657-658", reference));
+    BOOST_CHECK_EQUAL(ref_sequence(normalised_snp), "G");
+    BOOST_CHECK_EQUAL(alt_sequence(normalised_snp), "C");
     
-    Variant an_unormilised_mnp {parse_region("4:3076656-3076661", human), std::string {"GCAGC"}, std::string {"GGACC"}};
+    Variant unormilised_mnp {parse_region("mock4:656-661", reference), std::string {"GCAGC"}, std::string {"GGACC"}};
     
-    BOOST_REQUIRE(!is_parsimonious(an_unormilised_mnp));
+    BOOST_REQUIRE(!is_parsimonious(unormilised_mnp));
     
-    a_normalised_mnp = normalise(an_unormilised_mnp, human);
+    normalised_mnp = normalise(unormilised_mnp, reference);
     
-    BOOST_CHECK(is_parsimonious(a_normalised_mnp));
-    BOOST_CHECK_EQUAL(a_normalised_mnp.mapped_region(), parse_region("4:3076657-3076660", human));
-    BOOST_CHECK_EQUAL(ref_sequence(a_normalised_mnp), "CAG");
-    BOOST_CHECK_EQUAL(alt_sequence(a_normalised_mnp), "GAC");
+    BOOST_CHECK(is_parsimonious(normalised_mnp));
+    BOOST_CHECK_EQUAL(normalised_mnp.mapped_region(), parse_region("mock4:657-660", reference));
+    BOOST_CHECK_EQUAL(ref_sequence(normalised_mnp), "CAG");
+    BOOST_CHECK_EQUAL(alt_sequence(normalised_mnp), "GAC");
     
-    Variant an_unnormilised_deletion {parse_region("4:3076655-3076660", human), std::string {"AGCAG"}, std::string {"AG"}};
+    Variant unnormilised_deletion {parse_region("mock4:655-660", reference), std::string {"AGCAG"}, std::string {"AG"}};
     
-    BOOST_REQUIRE(!is_parsimonious(an_unnormilised_deletion));
+    BOOST_REQUIRE(!is_parsimonious(unnormilised_deletion));
     
-    auto a_normalised_deletion = normalise(an_unnormilised_deletion, human);
+    auto normalised_deletion = normalise(unnormilised_deletion, reference);
     
-    BOOST_CHECK(is_parsimonious(a_normalised_deletion));
-    BOOST_CHECK_EQUAL(a_normalised_deletion.mapped_region(), parse_region("4:3076602-3076606", human));
-    BOOST_CHECK_EQUAL(ref_sequence(a_normalised_deletion), "CCAG");
-    BOOST_CHECK_EQUAL(alt_sequence(a_normalised_deletion), "C");
+    BOOST_CHECK(is_parsimonious(normalised_deletion));
+    BOOST_CHECK_EQUAL(normalised_deletion.mapped_region(), parse_region("mock4:602-606", reference));
+    BOOST_CHECK_EQUAL(ref_sequence(normalised_deletion), "CCAG");
+    BOOST_CHECK_EQUAL(alt_sequence(normalised_deletion), "C");
     
-    Variant an_unnormilised_insertion {parse_region("4:3076655-3076657", human),
+    Variant unnormilised_insertion {parse_region("mock4:655-657", reference),
         std::string {"AG"}, std::string {"AGCAG"}};
     
-    BOOST_REQUIRE(!is_parsimonious(an_unnormilised_insertion));
+    BOOST_REQUIRE(!is_parsimonious(unnormilised_insertion));
     
-    auto a_normalised_insertion = normalise(an_unnormilised_insertion, human);
+    auto normalised_insertion = normalise(unnormilised_insertion, reference);
     
-    BOOST_CHECK(is_parsimonious(a_normalised_insertion));
-    BOOST_CHECK_EQUAL(a_normalised_insertion.mapped_region(), parse_region("4:3076602-3076603", human));
-    BOOST_CHECK_EQUAL(ref_sequence(a_normalised_insertion), "C");
-    BOOST_CHECK_EQUAL(alt_sequence(a_normalised_insertion), "CCAG");
+    BOOST_CHECK(is_parsimonious(normalised_insertion));
+    BOOST_CHECK_EQUAL(normalised_insertion.mapped_region(), parse_region("mock4:602-603", reference));
+    BOOST_CHECK_EQUAL(ref_sequence(normalised_insertion), "C");
+    BOOST_CHECK_EQUAL(alt_sequence(normalised_insertion), "CCAG");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

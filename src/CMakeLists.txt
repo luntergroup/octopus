@@ -344,7 +344,7 @@ else()
     target_compile_features(octopus PRIVATE cxx_thread_local)
 
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test)
-    
+
     target_link_libraries(octopus tandem)
     
     add_definitions(-DBOOST_LOG_DYN_LINK) # Required for log

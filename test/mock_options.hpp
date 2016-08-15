@@ -35,15 +35,16 @@ inline auto get_basic_mock_options()
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
-        //"--threads",
+        
+        "--threads",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -80,7 +81,9 @@ inline auto get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "20:29,827,997-29,831,254", // causing memory explosion
+        "--regions", "1",
+        
+        //"--regions", "20:29,827,997-29,831,254", // causing memory explosion
         
         //"--regions", "2:120,098,309-120,098,368", // NA12878 LC - GQ is too high
         
@@ -190,7 +193,7 @@ inline auto get_basic_mock_options()
         //"--regions-file", hla_regions.c_str(),
         
         //"--skip-regions", "1:1,000,000-2,000,000", "1:1,500,000-10,000,000",
-        //"--skip-regions-file", human_skip_regions.c_str(),
+        "--skip-regions-file", human_skip_regions.c_str(),
         
         //"--regenotype", "~/Genomics/octopus_test/AllVariants.vcf",
         //"--regenotype", "~/Genomics/cancer/TCGA/benchmark/somatic_sniper_chr22_Q40.vcf",

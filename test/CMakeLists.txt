@@ -1,4 +1,5 @@
 enable_testing()
+add_subdirectory(mock)
 add_subdirectory(unit)
 # add_subdirectory(regression)
 # add_subdirectory(benchmark)

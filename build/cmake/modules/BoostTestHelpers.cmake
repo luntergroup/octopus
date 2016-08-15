@@ -16,7 +16,7 @@ function(add_boost_test SOURCE_FILE_NAME DEPENDENCY_LIB)
     add_definitions(-DBOOST_TEST_MAIN)
     
     add_executable(${test_id} ${SOURCE_FILE_NAME})
-    
+
     target_link_libraries(${test_id} ${DEPENDENCY_LIB} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
     
     # collect all the tests in the source file

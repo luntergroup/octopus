@@ -57,6 +57,7 @@ include_directories(${Boost_INCLUDE_DIRS} ${octopus_SOURCE_DIR}/lib ${octopus_SO
 
 set(TEST_DEPENDENCY_LIBS
     Octopus
+    Mock
 )
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
@@ -64,7 +65,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modu
 include(BoostTestHelpers)
 # Add each test
 foreach(SRC ${OCTOPUS_TEST_SOURCES})
-    add_boost_test(${SRC} ${TEST_DEPENDENCY_LIBS})
+    add_boost_test(${SRC} "${TEST_DEPENDENCY_LIBS}")
 endforeach()
 
 # add_executable(test_suite ${OCTOPUS_TEST_SOURCES})
