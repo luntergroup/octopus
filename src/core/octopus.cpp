@@ -548,13 +548,22 @@ struct TaskMakerSyncPacket
     std::atomic_bool done;
 };
 
-void make_remaining_tasks(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
+auto make_contig_components(const ContigName& contig, GenomeCallingComponents& components,
+                            const unsigned num_threads)
+{
+    ContigCallingComponents result {contig, components};
+    result.read_buffer_size /= num_threads;
+    return result;
+}
+
+void make_remaining_tasks(TaskMap& tasks, GenomeCallingComponents& components,
+                          const unsigned num_threads,
                           Task::ExecutionPolicy policy, TaskMakerSyncPacket& sync)
 {
     const auto& contigs = components.contigs();
     
     std::for_each(std::next(std::cbegin(contigs)), std::cend(contigs), [&] (const auto& contig) {
-        ContigCallingComponents contig_components {contig, components};
+        auto contig_components = make_contig_components(contig, components, num_threads);
         auto contig_tasks = divide_work_into_tasks(contig_components, policy);
         std::unique_lock<std::mutex> lk {sync.mutex};
         tasks.emplace(contig, std::move(contig_tasks));
@@ -580,8 +589,7 @@ std::thread make_tasks(TaskMap& tasks, GenomeCallingComponents& components, cons
     
     const auto policy = make_execution_policy(components);
     
-    ContigCallingComponents contig_components {contigs.front(), components};
-    contig_components.read_buffer_size /= num_threads;
+    auto contig_components = make_contig_components(contigs.front(), components, num_threads);
     
     tasks.emplace(contigs.front(), divide_work_into_tasks(contig_components, policy));
     
@@ -1012,11 +1020,13 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     components.progress_meter().start();
     
     while (!pending_tasks.empty() || !task_maker_sync.done) {
-        if (!task_maker_sync.done) {
+        if (pending_tasks.empty()) {
             // tasks are still being generated
             std::unique_lock<std::mutex> lk {task_maker_sync.mutex};
-            task_sync.cv.wait(lk, [&] () { return !pending_tasks.empty(); });
+            task_maker_sync.cv.wait(lk, [&] () { return !pending_tasks.empty(); });
         }
+        
+        unsigned num_unused_futures {0};
         
         for (auto& future : futures) {
             if (is_ready(future)) {
@@ -1045,12 +1055,18 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
                 future = run(task, calling_components.at(contig_name(task))(), task_sync);
                 
                 running_tasks.at(contig_name(task)).push(std::move(task));
+            } else {
+                ++num_unused_futures;
             }
         }
         
-        if (task_sync.count_finished == 0) {
+        // If there are unused filters then we must have run out of tasks, so we should
+        // wait on the task maker condition variable instead.
+        if (num_unused_futures == 0 && task_sync.count_finished == 0) {
             std::unique_lock<std::mutex> lk {task_sync.mutex};
             task_sync.cv.wait(lk, [&] () { return task_sync.count_finished > 0; });
+        } else {
+            if (debug_log) stream(*debug_log) << "There are " << num_unused_futures << " unused threads";
         }
     }
     
