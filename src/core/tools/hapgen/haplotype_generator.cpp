@@ -369,8 +369,6 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
                 const auto passed_region  = left_overhang_region(active_region_, max_lagged_region);
                 const auto passed_alleles = overlap_range(alleles_, passed_region);
                 
-                assert(!passed_alleles.empty());
-                
                 if (can_remove_entire_passed_region(active_region_, max_lagged_region, passed_alleles)) {
                     test_tree.clear(passed_region);
                 } else if (requires_staged_removal(passed_alleles)) {
