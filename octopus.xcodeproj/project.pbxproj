@@ -561,8 +561,8 @@
 			isa = PBXGroup;
 			children = (
 				D424E0731D51029900654AA3 /* types */,
-				CA17CE111D53C5A50089435A /* models */,
 				D424E0721D51027600654AA3 /* tools */,
+				CA17CE111D53C5A50089435A /* models */,
 				D424E0701D51025D00654AA3 /* callers */,
 			);
 			path = core;
@@ -591,8 +591,8 @@
 		CA16B0ED1D4D0270006722C1 /* tools */ = {
 			isa = PBXGroup;
 			children = (
-				CAB0DFDB1BBFF6D1001D2F99 /* variantgenerator */,
-				D42F72F61C5BAB6D00995F54 /* haplotypegenerator */,
+				CAB0DFDB1BBFF6D1001D2F99 /* vargen */,
+				D42F72F61C5BAB6D00995F54 /* hapgen */,
 				CAB7B6ED1D2DE78D0046C3E5 /* phaser */,
 				CA16B1231D4F8B00006722C1 /* coretools.hpp */,
 			);
@@ -903,7 +903,7 @@
 			path = exceptions;
 			sourceTree = "<group>";
 		};
-		CAB0DFDB1BBFF6D1001D2F99 /* variantgenerator */ = {
+		CAB0DFDB1BBFF6D1001D2F99 /* vargen */ = {
 			isa = PBXGroup;
 			children = (
 				CABA377C1A8F762200BBE598 /* utils */,
@@ -922,7 +922,7 @@
 				CAB0DFDF1BC01E2A001D2F99 /* randomiser.hpp */,
 				CAB0DFDE1BC01E2A001D2F99 /* randomiser.cpp */,
 			);
-			path = variantgenerator;
+			path = vargen;
 			sourceTree = "<group>";
 		};
 		CAB7B6ED1D2DE78D0046C3E5 /* phaser */ = {
@@ -1235,16 +1235,16 @@
 		D424E0721D51027600654AA3 /* tools */ = {
 			isa = PBXGroup;
 			children = (
-				CA17CDF51D53C4BE0089435A /* assembler_tests.cpp */,
-				CA17CDF61D53C4BE0089435A /* genome_walker_tests.cpp */,
-				CA17CDF71D53C4BE0089435A /* haplotype_tree_tests.cpp */,
-				CA17CDF81D53C4BE0089435A /* phaser_tests.cpp */,
-				CA17CDF91D53C4BE0089435A /* variant_generator_tests.cpp */,
-				CA17CE071D53C54D0089435A /* haplotype_generator_tests.cpp */,
 				CA17CE091D53C55B0089435A /* cigar_scanner_tests.cpp */,
 				CA17CE0B1D53C56B0089435A /* global_aligner_tests.cpp */,
+				CA17CDF51D53C4BE0089435A /* assembler_tests.cpp */,
 				CA17CE0D1D53C57E0089435A /* local_reassembler.cpp */,
 				CA17CE0F1D53C58D0089435A /* vcf_extractor_tests.cpp */,
+				CA17CDF91D53C4BE0089435A /* variant_generator_tests.cpp */,
+				CA17CDF71D53C4BE0089435A /* haplotype_tree_tests.cpp */,
+				CA17CDF61D53C4BE0089435A /* genome_walker_tests.cpp */,
+				CA17CE071D53C54D0089435A /* haplotype_generator_tests.cpp */,
+				CA17CDF81D53C4BE0089435A /* phaser_tests.cpp */,
 			);
 			path = tools;
 			sourceTree = "<group>";
@@ -1263,8 +1263,8 @@
 		D424E0891D51038000654AA3 /* concepts */ = {
 			isa = PBXGroup;
 			children = (
-				CA17CDE11D53C4520089435A /* mappable_tests.cpp */,
 				CA17CE051D53C51C0089435A /* comparable_tests.cpp */,
+				CA17CDE11D53C4520089435A /* mappable_tests.cpp */,
 			);
 			path = concepts;
 			sourceTree = "<group>";
@@ -1315,7 +1315,7 @@
 			path = genotype;
 			sourceTree = "<group>";
 		};
-		D42F72F61C5BAB6D00995F54 /* haplotypegenerator */ = {
+		D42F72F61C5BAB6D00995F54 /* hapgen */ = {
 			isa = PBXGroup;
 			children = (
 				CAFA195A1ABF3DF400F953D9 /* haplotype_tree.hpp */,
@@ -1325,14 +1325,14 @@
 				CAB89DF51C78D95F002D6F8E /* haplotype_generator.hpp */,
 				CAB89DF41C78D95F002D6F8E /* haplotype_generator.cpp */,
 			);
-			path = haplotypegenerator;
+			path = hapgen;
 			sourceTree = "<group>";
 		};
 		D42F72F81C5F7B1E00995F54 /* io */ = {
 			isa = PBXGroup;
 			children = (
-				CA17CDD31D53C3A20089435A /* read_manager_tests.cpp */,
 				CA17CDD41D53C3A20089435A /* reference_genome_tests.cpp */,
+				CA17CDD31D53C3A20089435A /* read_manager_tests.cpp */,
 				CA17CDD51D53C3A20089435A /* vcf_reader_tests.cpp */,
 			);
 			path = io;

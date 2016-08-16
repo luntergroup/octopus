@@ -4,7 +4,7 @@
 #ifndef mock_variant_generator_hpp
 #define mock_variant_generator_hpp
 
-#include <core/tools/variantgenerator/variant_generator.hpp>
+#include <core/tools/vargen/variant_generator.hpp>
 
 namespace octopus { namespace test {
 

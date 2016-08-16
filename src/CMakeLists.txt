@@ -232,33 +232,33 @@ set(CORE_SOURCES
     
     core/tools/coretools.hpp
     
-    core/tools/haplotypegenerator/genome_walker.hpp
-    core/tools/haplotypegenerator/genome_walker.cpp
-    core/tools/haplotypegenerator/haplotype_generator.hpp
-    core/tools/haplotypegenerator/haplotype_generator.cpp
-    core/tools/haplotypegenerator/haplotype_tree.hpp
-    core/tools/haplotypegenerator/haplotype_tree.cpp
+    core/tools/hapgen/genome_walker.hpp
+    core/tools/hapgen/genome_walker.cpp
+    core/tools/hapgen/haplotype_generator.hpp
+    core/tools/hapgen/haplotype_generator.cpp
+    core/tools/hapgen/haplotype_tree.hpp
+    core/tools/hapgen/haplotype_tree.cpp
     
     core/tools/phaser/phaser.hpp
     core/tools/phaser/phaser.cpp
     
-    core/tools/variantgenerator/cigar_scanner.hpp
-    core/tools/variantgenerator/cigar_scanner.cpp
-    core/tools/variantgenerator/downloader.hpp
-    core/tools/variantgenerator/downloader.cpp
-    core/tools/variantgenerator/local_reassembler.hpp
-    core/tools/variantgenerator/local_reassembler.cpp
-    core/tools/variantgenerator/randomiser.hpp
-    core/tools/variantgenerator/randomiser.cpp
-    core/tools/variantgenerator/variant_generator.hpp
-    core/tools/variantgenerator/variant_generator.cpp
-    core/tools/variantgenerator/vcf_extractor.hpp
-    core/tools/variantgenerator/vcf_extractor.cpp
+    core/tools/vargen/cigar_scanner.hpp
+    core/tools/vargen/cigar_scanner.cpp
+    core/tools/vargen/downloader.hpp
+    core/tools/vargen/downloader.cpp
+    core/tools/vargen/local_reassembler.hpp
+    core/tools/vargen/local_reassembler.cpp
+    core/tools/vargen/randomiser.hpp
+    core/tools/vargen/randomiser.cpp
+    core/tools/vargen/variant_generator.hpp
+    core/tools/vargen/variant_generator.cpp
+    core/tools/vargen/vcf_extractor.hpp
+    core/tools/vargen/vcf_extractor.cpp
     
-    core/tools/variantgenerator/utils/assembler.hpp
-    core/tools/variantgenerator/utils/assembler.cpp
-    core/tools/variantgenerator/utils/global_aligner.hpp
-    core/tools/variantgenerator/utils/global_aligner.cpp
+    core/tools/vargen/utils/assembler.hpp
+    core/tools/vargen/utils/assembler.cpp
+    core/tools/vargen/utils/global_aligner.hpp
+    core/tools/vargen/utils/global_aligner.cpp
     
     core/types/allele.hpp
     core/types/allele.cpp
