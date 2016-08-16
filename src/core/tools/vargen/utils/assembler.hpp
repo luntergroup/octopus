@@ -73,17 +73,26 @@ public:
     
     unsigned kmer_size() const noexcept;
     
+    // Threads the given reference sequence into the graph.
+    // Throws an exception if there is already reference sequence present.
     void insert_reference(const NucleotideSequence& sequence);
+    
+    // Threads the given read sequence into the graph
     void insert_read(const NucleotideSequence& sequence);
     
+    // Returns the current number of unique kmers in the graph
     std::size_t num_kmers() const noexcept;
+    
     bool is_empty() const noexcept;
     
     bool is_acyclic() const;
     
+    // Returns true if all the kmers in the graph are in the reference sequence
     bool is_all_reference() const;
     
+    // Removes edges between kmers with weight less than the given value
     bool prune(unsigned min_weight);
+    
     void clear();
     
     std::deque<Variant> extract_variants(unsigned max = 100);
