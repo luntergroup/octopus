@@ -44,9 +44,6 @@ if args["root"]:
     cmake_options.append(["-DINSTALL_ROOT=ON", octopus_dir])
 
 if args["compiler"]:
-    if not os.path.exists(args["compiler"]):
-        print("Error: The C++ compiler path you specified (" + args["compiler"] + ") does not exist")
-        exit()
     cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["compiler"])
 
 ret = call(["cmake"] + cmake_options + [".."])

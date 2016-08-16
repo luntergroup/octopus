@@ -28,9 +28,6 @@ os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
 cmake_options = ["-DBUILD_TESTING=ON", octopus_dir]
 
 if args["compiler"]:
-    if not os.path.exists(args["compiler"]):
-        print("Error: The C++ compiler path you specified (" + args["compiler"] + ") does not exist")
-        exit()
     cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["compiler"])
 
 ret = call(["cmake"] + cmake_options + [".."])
