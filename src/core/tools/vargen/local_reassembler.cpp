@@ -101,6 +101,8 @@ bool LocalReassembler::do_requires_reads() const noexcept
     return true;
 }
 
+namespace {
+
 bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuality good_quality)
 {
     if (good_quality == 0) return false;
@@ -119,27 +121,25 @@ bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuali
                        });
 }
 
-namespace {
-    auto expand_cigar(const AlignedRead& read)
-    {
-        std::vector<CigarOperation::Flag> result {};
-        result.reserve(sequence_size(read));
-        
-        for (const auto& op : read.cigar()) {
-            utils::append(result, op.size(), op.flag());
-        }
-        
-        return result;
+auto expand_cigar(const AlignedRead& read)
+{
+    std::vector<CigarOperation::Flag> result {};
+    result.reserve(sequence_size(read));
+    
+    for (const auto& op : read.cigar()) {
+        utils::append(result, op.size(), op.flag());
     }
     
-    bool is_match(const CigarOperation::Flag op)
-    {
-        switch (op) {
-            case CigarOperation::Flag::AlignmentMatch:
-            case CigarOperation::Flag::SequenceMatch:
-            case CigarOperation::Flag::Substitution: return true;
-            default: return false;
-        }
+    return result;
+}
+
+bool is_match(const CigarOperation::Flag op)
+{
+    switch (op) {
+        case CigarOperation::Flag::AlignmentMatch:
+        case CigarOperation::Flag::SequenceMatch:
+        case CigarOperation::Flag::Substitution: return true;
+        default: return false;
     }
 }
 
@@ -148,14 +148,16 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
                                            const AlignedRead::BaseQuality min_quality,
                                            const ReferenceGenome& reference)
 {
+    using Flag = CigarOperation::Flag;
+    
     auto result = read.sequence();
     
     const auto cigar = expand_cigar(read);
     
-    auto cigar_op_itr = std::find_if_not(std::cbegin(cigar), std::cend(cigar),
-                                         [] (auto op) {
-                                             return op == CigarOperation::Flag::HardClipped;
-                                         });
+    const auto last_cigar_itr = std::cend(cigar);
+    
+    auto cigar_itr = std::find_if_not(std::cbegin(cigar), last_cigar_itr,
+                                      [] (auto op) { return op == Flag::HardClipped; });
     
     const auto ref_sequence = reference.fetch_sequence(mapped_region(read));
     
@@ -163,14 +165,22 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
     
     std::transform(std::cbegin(result), std::cend(result), std::cbegin(read.qualities()),
                    std::begin(result), [&] (const char base, const auto quality) {
-                       const auto cigar_op = *cigar_op_itr++;
+                       const auto cigar_op = *cigar_itr++;
                        
                        if (!is_match(cigar_op)) {
-                           if (cigar_op != CigarOperation::Flag::Insertion) ++ref_itr;
-                           while (*cigar_op_itr == CigarOperation::Flag::Deletion) {
-                               ++cigar_op_itr;
+                           // Only matches get transformed
+                           
+                           if (cigar_op != Flag::Insertion) {
                                ++ref_itr;
                            }
+                           
+                           // Deletions are excess reference sequence so we need to move the
+                           // reference iterator to the next nondeleted read base
+                           while (cigar_itr != last_cigar_itr && *cigar_itr == Flag::Deletion) {
+                               ++cigar_itr;
+                               ++ref_itr;
+                           }
+                           
                            return base;
                        }
                        
@@ -181,6 +191,8 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
     
     return result;
 }
+
+} // namespace
 
 template <typename C, typename R>
 auto overlapped_bins(C& bins, const R& read)
