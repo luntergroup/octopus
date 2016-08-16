@@ -1697,6 +1697,7 @@
 					/usr/local/include,
 					"$(SRCROOT)/lib",
 					"$(SRCROOT)/src",
+					"$(SRCROOT)/test",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1729,6 +1730,7 @@
 					/usr/local/include,
 					"$(SRCROOT)/lib",
 					"$(SRCROOT)/src",
+					"$(SRCROOT)/test",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",

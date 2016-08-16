@@ -14,9 +14,10 @@ BOOST_AUTO_TEST_SUITE(cigar_string)
 
 BOOST_AUTO_TEST_CASE(cigars_with_the_same_ordered_ops_are_equal)
 {
-    using CO = CigarOperation;
+    using CO   = CigarOperation;
+    using Flag = CO::Flag;
     
-    CigarString cigar1 {}, cigar2 {CO {10, CO::AlignmentMatch}}, cigar3 {CO {10, CO::SequenceMatch}};
+    CigarString cigar1 {}, cigar2 {CO {10, Flag::AlignmentMatch}}, cigar3 {CO {10, Flag::SequenceMatch}};
     
     BOOST_CHECK_EQUAL(cigar1, cigar1);
     BOOST_CHECK_EQUAL(cigar2, cigar2);
@@ -29,9 +30,10 @@ BOOST_AUTO_TEST_CASE(cigars_with_the_same_ordered_ops_are_equal)
 
 BOOST_AUTO_TEST_CASE(parse_cigar_works)
 {
-    using CO = CigarOperation;
+    using CO   = CigarOperation;
+    using Flag = CO::Flag;
     
-    CigarString cigar1 {}, cigar2 {CO {10, CO::AlignmentMatch}}, cigar3 {CO {5, CO::Insertion}};
+    CigarString cigar1 {}, cigar2 {CO {10, Flag::AlignmentMatch}}, cigar3 {CO {5, Flag::Insertion}};
     
     BOOST_CHECK_NO_THROW(parse_cigar(""));
     

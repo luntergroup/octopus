@@ -99,8 +99,10 @@ void CigarScanner::do_add_read(const AlignedRead& read)
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
         
+        using Flag = CigarOperation::Flag;
+        
         switch (cigar_operation.flag()) {
-            case CigarOperation::AlignmentMatch:
+            case Flag::AlignmentMatch:
                 add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
                                         next(sequence_itr, read_index),
                                         next(sequence_itr, read_index + op_size),
@@ -110,12 +112,12 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                 ref_index  += op_size;
                 
                 break;
-            case CigarOperation::SequenceMatch:
+            case Flag::SequenceMatch:
                 read_index += op_size;
                 ref_index  += op_size;
                 
                 break;
-            case CigarOperation::Substitution:
+            case Flag::Substitution:
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
@@ -133,7 +135,7 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                 
                 break;
             }
-            case CigarOperation::Insertion:
+            case Flag::Insertion:
             {
                 if (count_bad_qualities(read.qualities(), read_index, op_size, options_.min_base_quality)
                         <= options_.max_poor_quality_insertion_bases) {
@@ -149,7 +151,7 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                 
                 break;
             }
-            case CigarOperation::Deletion:
+            case Flag::Deletion:
             {
                 if (*next(qualities_itr, read_index) > 0 && *next(qualities_itr, read_index + 1) > 0) {
                     region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
@@ -163,16 +165,17 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                 
                 break;
             }
-            case CigarOperation::Skipped:
-                ref_index += op_size;
-                
-                break;
-            case CigarOperation::SoftClipped:
+            case Flag::SoftClipped:
                 read_index += op_size;
                 ref_index  += op_size;
                 
                 break;
-            case CigarOperation::HardClipped:
+            case Flag::HardClipped:
+                break;
+            case Flag::Padding:
+            case Flag::Skipped:
+                ref_index += op_size;
+                
                 break;
         }
     }

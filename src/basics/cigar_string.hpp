@@ -21,18 +21,20 @@ namespace octopus {
 class CigarOperation : public Comparable<CigarOperation> // Comparable so can compare reads
 {
 public:
-    using Size = std::uint_fast32_t;
-    using Flag = char;
+    enum class Flag : char
+    {
+        AlignmentMatch = 'M',
+        SequenceMatch  = '=',
+        Substitution   = 'X',
+        Insertion      = 'I',
+        Deletion       = 'D',
+        SoftClipped    = 'S',
+        HardClipped    = 'H',
+        Padding        = 'P',
+        Skipped        = 'N'
+    };
     
-    static constexpr char AlignmentMatch {'M'};
-    static constexpr char SequenceMatch  {'='};
-    static constexpr char Substitution   {'X'};
-    static constexpr char Insertion      {'I'};
-    static constexpr char Deletion       {'D'};
-    static constexpr char SoftClipped    {'S'};
-    static constexpr char HardClipped    {'H'};
-    static constexpr char Padding        {'P'};
-    static constexpr char Skipped        {'N'};
+    using Size = std::uint_fast32_t;
     
     CigarOperation() = default;
     
@@ -45,10 +47,12 @@ public:
     
     ~CigarOperation() = default;
     
-    Size size() const noexcept;
     Flag flag() const noexcept;
     
+    Size size() const noexcept;
+    
     bool advances_reference() const noexcept;
+        
     bool advances_sequence() const noexcept;
     
 private:
@@ -139,19 +143,11 @@ CigarString splice_reference(const CigarString& cigar, CigarOperation::Size offs
 CigarString splice_sequence(const CigarString& cigar, CigarOperation::Size offset,
                             CigarOperation::Size size);
 
-inline bool operator==(const CigarOperation& lhs, const CigarOperation& rhs)
-{
-    return lhs.flag() == rhs.flag() && lhs.size() == rhs.size();
-}
+bool operator==(const CigarOperation& lhs, const CigarOperation& rhs) noexcept;
+bool operator<(const CigarOperation& lhs, const CigarOperation& rhs) noexcept;
 
-inline bool operator<(const CigarOperation& lhs, const CigarOperation& rhs)
-{
-    return (lhs.flag() == rhs.flag()) ? lhs.size() < rhs.size() :
-                                                lhs.flag() < rhs.flag();
-}
-
+std::ostream& operator<<(std::ostream& os, const CigarOperation::Flag& flag);
 std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation);
-
 std::ostream& operator<<(std::ostream& os, const CigarString& cigar);
 
 struct CigarHash

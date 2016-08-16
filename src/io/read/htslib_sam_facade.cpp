@@ -903,8 +903,11 @@ CigarString extract_cigar_string(const bam1_t* b)
     CigarString result(cigar_length);
     
     std::transform(cigar_operations, cigar_operations + cigar_length, std::begin(result),
-                   [] (auto op) {
-                       return CigarOperation {bam_cigar_oplen(op), bam_cigar_opchr(op)};
+                   [] (const auto op) -> CigarOperation {
+                       return CigarOperation {
+                           static_cast<CigarOperation::Size>(bam_cigar_oplen(op)),
+                           static_cast<CigarOperation::Flag>(bam_cigar_opchr(op))
+                       };
                    });
     
     return result;
@@ -991,7 +994,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         if (overhang_size == soft_clip_size) {
             cigar.erase(begin(cigar));
         } else { // then soft_clip_size > overhang_size
-            cigar.front() = CigarOperation {soft_clip_size - overhang_size, CigarOperation::SoftClipped};
+            cigar.front() = CigarOperation {soft_clip_size - overhang_size, CigarOperation::Flag::SoftClipped};
         }
         
         read_begin_tmp = 0;

@@ -17,6 +17,128 @@
             endingLineNumber = "567"
             landmarkName = "HaplotypeGenerator::extract_holdouts(GenomicRegion next_active_region)"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void std::__1::__sort&lt;octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*&gt;(std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;)"
+                  moduleName = "octopus-mock"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/danielcooke/Development/octopus/src/core/tools/haplotypegenerator/haplotype_generator.cpp"
+                  timestampString = "493005434.105395"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "571"
+                  endingLineNumber = "571"
+                  offsetFromSymbolStart = "283">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void std::__1::__sort&lt;octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*&gt;(std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;)"
+                  moduleName = "octopus-mock"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/danielcooke/Development/octopus/src/core/tools/haplotypegenerator/haplotype_generator.cpp"
+                  timestampString = "493005434.108363"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "571"
+                  endingLineNumber = "571"
+                  offsetFromSymbolStart = "488">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void std::__1::__sort&lt;octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*&gt;(std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;)"
+                  moduleName = "octopus-mock"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/danielcooke/Development/octopus/src/core/tools/haplotypegenerator/haplotype_generator.cpp"
+                  timestampString = "493005434.111087"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "571"
+                  endingLineNumber = "571"
+                  offsetFromSymbolStart = "784">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void std::__1::__sort&lt;octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*&gt;(std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;)"
+                  moduleName = "octopus-mock"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/danielcooke/Development/octopus/src/core/tools/haplotypegenerator/haplotype_generator.cpp"
+                  timestampString = "493005434.113769"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "571"
+                  endingLineNumber = "571"
+                  offsetFromSymbolStart = "1680">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void std::__1::__sort&lt;octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*&gt;(std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;)"
+                  moduleName = "octopus-mock"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/danielcooke/Development/octopus/src/core/tools/haplotypegenerator/haplotype_generator.cpp"
+                  timestampString = "493005434.116465"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "571"
+                  endingLineNumber = "571"
+                  offsetFromSymbolStart = "2304">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "unsigned int std::__1::__sort3&lt;octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*&gt;(std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;)"
+                  moduleName = "octopus-mock"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/danielcooke/Development/octopus/src/core/tools/haplotypegenerator/haplotype_generator.cpp"
+                  timestampString = "493005434.119111"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "571"
+                  endingLineNumber = "571"
+                  offsetFromSymbolStart = "25">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "bool std::__1::__insertion_sort_incomplete&lt;octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*&gt;(std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;)"
+                  moduleName = "octopus-mock"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/danielcooke/Development/octopus/src/core/tools/haplotypegenerator/haplotype_generator.cpp"
+                  timestampString = "493005434.121775"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "571"
+                  endingLineNumber = "571"
+                  offsetFromSymbolStart = "311">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "bool std::__1::__insertion_sort_incomplete&lt;octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*&gt;(std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, std::__1::pair&lt;octopus::GenomicRegion, unsigned int&gt;*, octopus::coretools::HaplotypeGenerator::extract_holdouts(octopus::GenomicRegion)::$_2&amp;)"
+                  moduleName = "octopus-mock"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/danielcooke/Development/octopus/src/core/tools/haplotypegenerator/haplotype_generator.cpp"
+                  timestampString = "493005434.1244"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "571"
+                  endingLineNumber = "571"
+                  offsetFromSymbolStart = "486">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

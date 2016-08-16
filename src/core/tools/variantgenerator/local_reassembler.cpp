@@ -15,6 +15,7 @@
 #include <concepts/mappable_range.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include <utils/sequence_utils.hpp>
+#include <utils/append.hpp>
 #include <basics/cigar_string.hpp>
 #include <logging/logging.hpp>
 
@@ -118,15 +119,14 @@ bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuali
                        });
 }
 
-namespace
-{
+namespace {
     auto expand_cigar(const AlignedRead& read)
     {
-        std::string result {};
+        std::vector<CigarOperation::Flag> result {};
         result.reserve(sequence_size(read));
         
         for (const auto& op : read.cigar()) {
-            result.append(op.size(), op.flag());
+            utils::append(result, op.size(), op.flag());
         }
         
         return result;
@@ -135,9 +135,9 @@ namespace
     bool is_match(const CigarOperation::Flag op)
     {
         switch (op) {
-            case CigarOperation::AlignmentMatch:
-            case CigarOperation::SequenceMatch:
-            case CigarOperation::Substitution: return true;
+            case CigarOperation::Flag::AlignmentMatch:
+            case CigarOperation::Flag::SequenceMatch:
+            case CigarOperation::Flag::Substitution: return true;
             default: return false;
         }
     }
@@ -153,7 +153,9 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
     const auto cigar = expand_cigar(read);
     
     auto cigar_op_itr = std::find_if_not(std::cbegin(cigar), std::cend(cigar),
-                                         [] (auto op) { return op == CigarOperation::HardClipped; });
+                                         [] (auto op) {
+                                             return op == CigarOperation::Flag::HardClipped;
+                                         });
     
     const auto ref_sequence = reference.fetch_sequence(mapped_region(read));
     
@@ -164,8 +166,8 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
                        const auto cigar_op = *cigar_op_itr++;
                        
                        if (!is_match(cigar_op)) {
-                           if (cigar_op != CigarOperation::Insertion) ++ref_itr;
-                           while (*cigar_op_itr == CigarOperation::Deletion) {
+                           if (cigar_op != CigarOperation::Flag::Insertion) ++ref_itr;
+                           while (*cigar_op_itr == CigarOperation::Flag::Deletion) {
                                ++cigar_op_itr;
                                ++ref_itr;
                            }
@@ -430,15 +432,17 @@ std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
     result.reserve(cigar.size());
     
     for (const auto& op : cigar) {
+        using Flag = CigarOperation::Flag;
+        
         switch(op.flag()) {
-            case CigarOperation::SequenceMatch:
+            case Flag::SequenceMatch:
             {
                 pos += op.size();
                 ref_it += op.size();
                 alt_it += op.size();
                 break;
             }
-            case CigarOperation::Substitution:
+            case Flag::Substitution:
             {
                 std::transform(ref_it, std::next(ref_it, op.size()), alt_it,
                                std::back_inserter(result),
@@ -449,13 +453,13 @@ std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
                 alt_it += op.size();
                 break;
             }
-            case CigarOperation::Insertion:
+            case Flag::Insertion:
             {
                 result.emplace_back(pos, "", Assembler::NucleotideSequence {alt_it, std::next(alt_it, op.size())});
                 alt_it += op.size();
                 break;
             }
-            case CigarOperation::Deletion:
+            case Flag::Deletion:
             {
                 result.emplace_back(pos, Assembler::NucleotideSequence {ref_it, std::next(ref_it, op.size())}, "");
                 pos += op.size();
