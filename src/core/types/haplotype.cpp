@@ -37,6 +37,15 @@ const GenomicRegion& Haplotype::mapped_region() const
 {
     return region_;
 }
+    
+namespace {
+    template <typename BidirIt, typename T>
+    BidirIt binary_find(BidirIt first, BidirIt last, const T& value)
+    {
+        const auto it = std::lower_bound(first, last, value);
+        return (it != last && *it == value) ? it : last;
+    }
+}
 
 bool Haplotype::contains(const ContigAllele& allele) const
 {
@@ -65,8 +74,7 @@ bool Haplotype::contains(const ContigAllele& allele) const
         
         using std::cbegin; using std::cend;
         
-        const auto it = std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
-                                         allele.mapped_region());
+        const auto it = binary_find(cbegin(explicit_alleles_), cend(explicit_alleles_), allele.mapped_region());
         
         if (it != cend(explicit_alleles_)) {
             if (*it == allele) return true;

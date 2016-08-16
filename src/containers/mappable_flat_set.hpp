@@ -88,12 +88,12 @@ public:
     iterator insert(const_iterator, MappableType&& mappable);
     template <typename InputIterator>
     void insert(InputIterator, InputIterator);
-//    iterator insert(std::initializer_list<MappableType>);
+    iterator insert(std::initializer_list<MappableType>);
     iterator erase(const_iterator);
     size_type erase(const MappableType&);
     iterator erase(const_iterator, const_iterator);
-    template <typename InputIt>
-    size_type erase_all(InputIt first, InputIt last);
+    template <typename BidirIt>
+    size_type erase_all(BidirIt first, BidirIt last);
     
     void clear();
     
@@ -585,18 +585,12 @@ void MappableFlatSet<MappableType, Allocator>::insert(InputIterator first, Input
     }
 }
 
-//template <typename MappableType, typename Allocator>
-//typename MappableFlatSet<MappableType, Allocator>::iterator
-//MappableFlatSet<MappableType, Allocator>::insert(std::initializer_list<MappableType> il)
-//{
-//    if (!il.empty()) {
-//        max_element_size_ = std::max(max_element_size_, region_size(*largest_element(il)));
-//    }
-//    return elements_.insert(std::move(il));
-//    if (is_bidirectionally_sorted_) {
-//        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
-//    }
-//}
+template <typename MappableType, typename Allocator>
+typename MappableFlatSet<MappableType, Allocator>::iterator
+MappableFlatSet<MappableType, Allocator>::insert(std::initializer_list<MappableType> il)
+{
+    return insert(std::begin(il), std::end(il));
+}
 
 template <typename MappableType, typename Allocator>
 typename MappableFlatSet<MappableType, Allocator>::iterator
@@ -668,10 +662,19 @@ MappableFlatSet<MappableType, Allocator>::erase(const_iterator first, const_iter
     return result;
 }
 
+namespace {
+    template <typename BidirIt, typename T>
+    BidirIt binary_find(BidirIt first, BidirIt last, const T& value)
+    {
+        const auto it = std::lower_bound(first, last, value);
+        return (it != last && *it == value) ? it : last;
+    }
+}
+
 template <typename MappableType, typename Allocator>
-template <typename InputIt>
+template <typename BidirIt>
 typename MappableFlatSet<MappableType, Allocator>::size_type
-MappableFlatSet<MappableType, Allocator>::erase_all(InputIt first, const InputIt last)
+MappableFlatSet<MappableType, Allocator>::erase_all(BidirIt first, const BidirIt last)
 {
     size_type num_erased {0};
     
@@ -693,7 +696,7 @@ MappableFlatSet<MappableType, Allocator>::erase_all(InputIt first, const InputIt
     auto last_element = std::end(elements_);
     
     while (first != last) {
-        const auto it = std::lower_bound(first_contained, last_contained, *first);
+        const auto it = binary_find(first_contained, last_contained, *first);
         
         if (it != last_contained) {
             const auto p = std::mismatch(std::next(it), last_contained, std::next(first), last);

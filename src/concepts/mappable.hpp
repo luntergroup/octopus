@@ -14,6 +14,9 @@ namespace octopus {
 /**
  A class that is derived from Mappable must implement the mapped_region() member method
  and will then be able to use all of the following methods.
+ 
+ In addition, it is assumed that Mappable types define the same meaning to equality and equivalence
+ (i.e. that lhs == rhs iff !(lhs < rhs) && !(rhs < lhs).
 */
 template <typename T>
 class Mappable {};
