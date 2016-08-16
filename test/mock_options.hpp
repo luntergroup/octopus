@@ -22,7 +22,7 @@ inline auto get_basic_mock_options()
         //"--help",
         //"--version",
         
-        //"--debug",
+        "--debug",
         //"--trace",
         
         //"--sites-only",
@@ -33,18 +33,18 @@ inline auto get_basic_mock_options()
         //"--working-directory", "~/Genomics/MCG",
         //"--working-directory", "~/Genomics/cancer/TCGA/benchmark",
         
-        //"--target-read-buffer-size", "1.0",
+        "--target-read-buffer-footprint", "2.0",
         //"--reference-cache-size", "100",
         
-        //"--threads",
+        "--threads",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -81,7 +81,7 @@ inline auto get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22",
+        "--regions", "21:40,000,000-", "22:45,000,000-",
         
         //"--regions", "20:29,827,997-29,831,254", // causing memory explosion
         

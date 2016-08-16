@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_CASE(align_handles_empty_sequences)
     
     constexpr coretools::Model default_model {};
     
-    std::string empty {}, nonempty {"A"};
+    const std::string empty {}, nonempty {"A"};
     
     BOOST_REQUIRE_NO_THROW(align(empty, empty));
     
@@ -44,7 +44,28 @@ BOOST_AUTO_TEST_CASE(align_handles_empty_sequences)
 
 BOOST_AUTO_TEST_CASE(align_returns_the_optimal_global_alignmenet)
 {
-    std::string sequence1 {}, sequence2 {};
+    using coretools::align;
+    
+    constexpr coretools::Model default_model {};
+    
+    const std::string sequence1 {"AAA"}, sequence2 {"ACA"};
+    
+    auto alignment = align(sequence1, sequence2);
+    
+    BOOST_CHECK_EQUAL(alignment.cigar, "1=1X1=");
+    BOOST_CHECK_EQUAL(alignment.score, 2 * default_model.match + default_model.mismatch);
+    
+    const std::string sequence3 {"AAAA"}, sequence4 {"AA"};
+    
+    alignment = align(sequence1, sequence3);
+    
+    BOOST_CHECK_EQUAL(alignment.cigar, "1I3=");
+    BOOST_CHECK_EQUAL(alignment.score, 3 * default_model.match + default_model.gap_open);
+    
+    alignment = align(sequence1, sequence4);
+    
+    BOOST_CHECK_EQUAL(alignment.cigar, "1D2=");
+    BOOST_CHECK_EQUAL(alignment.score, 2 * default_model.match + default_model.gap_open);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

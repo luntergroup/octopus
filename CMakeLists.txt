@@ -7,8 +7,6 @@ set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_BUILD_TYPE Release)
-
 # for the main octopus executable
 add_subdirectory(lib)
 add_subdirectory(src)

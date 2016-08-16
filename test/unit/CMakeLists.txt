@@ -38,6 +38,7 @@ set(CORE_TEST_SOURCES
     core/types/variant_tests.cpp
 
     core/tools/global_aligner_tests.cpp
+    core/tools/assembler_tests.cpp
 )
 
 set(OCTOPUS_TEST_SOURCES

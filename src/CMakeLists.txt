@@ -282,6 +282,11 @@ set(CORE_SOURCES
     core/octopus.cpp
 )
 
+set(MISC_SOURCES
+    ${octopus_SOURCE_DIR}/test/timers.hpp
+    ${octopus_SOURCE_DIR}/test/timers.cpp
+)
+
 set(OCTOPUS_SOURCES
     ${CONFIG_SOURCES}
     ${EXCEPTIONS_SOURCES}
@@ -293,6 +298,7 @@ set(OCTOPUS_SOURCES
     ${READPIPE_SOURCES}
     ${UTILS_SOURCES}
     ${CORE_SOURCES}
+    ${MISC_SOURCES}
 )
 
 set(INCLUDE_SOURCES
@@ -338,13 +344,40 @@ if (BUILD_TESTING)
         target_include_directories (Octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (Octopus ${HTSlib_LIBRARIES})
     endif (HTSlib_FOUND)
+elseif (CMAKE_BUILD_TYPE MATCHES Debug)
+    add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
+    
+    target_compile_features(octopus-debug PRIVATE cxx_thread_local)
+    
+    target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test)
+    
+    target_link_libraries(octopus-debug tandem)
+    
+    add_definitions(-DBOOST_LOG_DYN_LINK) # Required for log
+    find_package (Boost 1.61 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
+    if (Boost_FOUND)
+        target_include_directories (octopus-debug PUBLIC ${Boost_INCLUDE_DIR})
+        target_link_libraries (octopus-debug ${Boost_LIBRARIES})
+    endif (Boost_FOUND)
+    
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
+    
+    find_package (HTSlib 1.3.1 REQUIRED)
+    if (HTSlib_FOUND)
+        target_include_directories (octopus-debug PUBLIC ${HTSlib_INCLUDE_DIRS})
+        target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
+    endif (HTSlib_FOUND)
+    
+    option(INSTALL_ROOT "INSTALL_ROOT" OFF)
+    
+    install(TARGETS octopus-debug DESTINATION ${octopus_SOURCE_DIR}/bin)
 else()
     add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
-
+    
     target_compile_features(octopus PRIVATE cxx_thread_local)
-
+    
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test)
-
+    
     target_link_libraries(octopus tandem)
     
     add_definitions(-DBOOST_LOG_DYN_LINK) # Required for log

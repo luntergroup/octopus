@@ -242,7 +242,6 @@
 		CA17CE2E1D53E8D80089435A /* human_skip_regions2.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = human_skip_regions2.txt; sourceTree = "<group>"; };
 		CA17CE2F1D53E8D80089435A /* interesting_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = interesting_regions.txt; sourceTree = "<group>"; };
 		CA17CE301D53E8D80089435A /* mock_objects.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = mock_objects.hpp; sourceTree = "<group>"; };
-		CA17CE311D53E8D80089435A /* test_common.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = test_common.hpp; sourceTree = "<group>"; };
 		CA17CE321D53E8D80089435A /* test_files.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_files.txt; sourceTree = "<group>"; };
 		CA17CE331D53E8D80089435A /* test_regions.bed */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_regions.bed; sourceTree = "<group>"; };
 		CA17CE341D53E8D80089435A /* test_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_regions.txt; sourceTree = "<group>"; };
@@ -1183,7 +1182,6 @@
 				CA17CE2E1D53E8D80089435A /* human_skip_regions2.txt */,
 				CA17CE2F1D53E8D80089435A /* interesting_regions.txt */,
 				CA17CE301D53E8D80089435A /* mock_objects.hpp */,
-				CA17CE311D53E8D80089435A /* test_common.hpp */,
 				CA17CE321D53E8D80089435A /* test_files.txt */,
 				CA17CE331D53E8D80089435A /* test_regions.bed */,
 				CA17CE341D53E8D80089435A /* test_regions.txt */,
@@ -1235,9 +1233,9 @@
 		D424E0721D51027600654AA3 /* tools */ = {
 			isa = PBXGroup;
 			children = (
-				CA17CE091D53C55B0089435A /* cigar_scanner_tests.cpp */,
 				CA17CE0B1D53C56B0089435A /* global_aligner_tests.cpp */,
 				CA17CDF51D53C4BE0089435A /* assembler_tests.cpp */,
+				CA17CE091D53C55B0089435A /* cigar_scanner_tests.cpp */,
 				CA17CE0D1D53C57E0089435A /* local_reassembler.cpp */,
 				CA17CE0F1D53C58D0089435A /* vcf_extractor_tests.cpp */,
 				CA17CDF91D53C4BE0089435A /* variant_generator_tests.cpp */,
