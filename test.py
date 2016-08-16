@@ -41,7 +41,7 @@ os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
 cmake_options = []
 
 if args["type"] == "unit":
-    cmake_options.append(["-DBUILD_TESTING=ON", octopus_dir])
+    cmake_options.extend(["-DBUILD_TESTING=ON", octopus_dir])
 elif args["type"] == "valgrind":
     cmake_options.append("-DDEBUG=ON")
 

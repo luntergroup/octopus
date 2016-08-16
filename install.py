@@ -45,7 +45,7 @@ ret = 0
 cmake_options = []
 
 if args["root"]:
-    cmake_options.append(["-DINSTALL_ROOT=ON", octopus_dir])
+    cmake_options.extend(["-DINSTALL_ROOT=ON", octopus_dir])
 
 if args["compiler"]:
     cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["compiler"])
