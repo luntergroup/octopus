@@ -3,7 +3,8 @@ set(CONFIG_TEST_SOURCES
 )
 
 set(CONCEPTS_TEST_SOURCES
-    
+    concepts/comparable_tests.cpp
+    concepts/mappable_tests.cpp
 )
 
 set(BASICS_TEST_SOURCES
@@ -35,6 +36,8 @@ set(UTILS_TEST_SOURCES
 set(CORE_TEST_SOURCES
     core/types/allele_tests.cpp
     core/types/variant_tests.cpp
+
+    core/tools/global_aligner_tests.cpp
 )
 
 set(OCTOPUS_TEST_SOURCES

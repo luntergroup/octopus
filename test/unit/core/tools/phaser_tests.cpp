@@ -3,6 +3,8 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <core/tools/phaser/phaser.hpp>
+
 namespace octopus { namespace test {
 
 BOOST_AUTO_TEST_SUITE(core)

@@ -36,7 +36,7 @@ inline auto get_basic_mock_options()
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
         
-        "--threads",
+        //"--threads",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
@@ -81,7 +81,7 @@ inline auto get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "1",
+        "--regions", "22",
         
         //"--regions", "20:29,827,997-29,831,254", // causing memory explosion
         
