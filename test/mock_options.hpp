@@ -81,7 +81,7 @@ inline auto get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "Y",
+        "--regions", "22",
         
         //"--regions", "20:29,827,997-29,831,254", // causing memory explosion
         
@@ -229,7 +229,7 @@ inline auto get_basic_mock_options()
         //"--disable-raw-cigar-candidate-generator",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
-        //"--disable-assembly-candidate-generator",
+        "--disable-assembly-candidate-generator",
         //"--kmer-size", "75",
         //"--assembler-mask-base-quality=2",
         //"--max-variant-size", "25",
