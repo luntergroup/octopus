@@ -11,6 +11,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_subdirectory(lib)
 add_subdirectory(src)
 
+if (NOT CMAKE_BUILD_TYPE MATCHES Debug)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
 # for generating tests
 if (BUILD_TESTING)
     add_subdirectory(test)
