@@ -22,14 +22,7 @@
 		CA16B11F1D4F6ADE006722C1 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = CA16B11B1D4F6ADE006722C1 /* utils.c */; };
 		CA16B1221D4F6AEF006722C1 /* tandem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA16B1201D4F6AEF006722C1 /* tandem.cpp */; };
 		CA16B1251D4FEE37006722C1 /* variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA16B1241D4FEE37006722C1 /* variant_generator.cpp */; };
-		CA17CDD71D53C3A20089435A /* reference_genome_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDD41D53C3A20089435A /* reference_genome_tests.cpp */; };
-		CA17CDE21D53C4520089435A /* mappable_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE11D53C4520089435A /* mappable_tests.cpp */; };
-		CA17CDF41D53C4B50089435A /* phred_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF31D53C4B50089435A /* phred_tests.cpp */; };
-		CA17CE0A1D53C55B0089435A /* cigar_scanner_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE091D53C55B0089435A /* cigar_scanner_tests.cpp */; };
-		CA17CE0C1D53C56B0089435A /* global_aligner_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE0B1D53C56B0089435A /* global_aligner_tests.cpp */; };
 		CA17CE0E1D53C57E0089435A /* local_reassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE0D1D53C57E0089435A /* local_reassembler.cpp */; };
-		CA17CE231D53C6570089435A /* individual_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE221D53C6570089435A /* individual_model_tests.cpp */; };
-		CA17CE251D53C67E0089435A /* downsampler_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE241D53C67E0089435A /* downsampler_tests.cpp */; };
 		CA2827C11B2A4CD0007712D4 /* downloader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2827BF1B2A4CD0007712D4 /* downloader.cpp */; };
 		CA2D59F91CAEFB4B005EA347 /* read_transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2D59F81CAEFB4B005EA347 /* read_transform.cpp */; };
 		CA2D59FE1CB972FE005EA347 /* cancer_genotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2D59FD1CB972FE005EA347 /* cancer_genotype.cpp */; };
@@ -48,10 +41,7 @@
 		CA566E371D0488C7007C5180 /* octopus_vcf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA566E351D0488C7007C5180 /* octopus_vcf.cpp */; };
 		CA704FC41D11F4B2004218BB /* snv_error_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA704FC21D11F4B2004218BB /* snv_error_model.cpp */; };
 		CA7148B61CD00ABA0017820B /* read_filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA7148B51CD00ABA0017820B /* read_filter.cpp */; };
-		CA83B20B1D58D9BF00DC8035 /* mock_reference.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2091D58D9BF00DC8035 /* mock_reference.cpp */; };
 		CA83B2101D58FB8A00DC8035 /* coverage_tracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B20E1D58FB8A00DC8035 /* coverage_tracker.cpp */; };
-		CA83B2141D5BDD5800DC8035 /* mock_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2121D5BDD5800DC8035 /* mock_variant_generator.cpp */; };
-		CA83B2171D5BDD6B00DC8035 /* mock_read_manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2151D5BDD6B00DC8035 /* mock_read_manager.cpp */; };
 		CA83B21B1D5BDFE300DC8035 /* dynamic_cigar_scanner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2191D5BDFE300DC8035 /* dynamic_cigar_scanner.cpp */; };
 		CA83B21E1D5C774100DC8035 /* calling_components.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B21C1D5C774100DC8035 /* calling_components.cpp */; };
 		CA83B2211D5C7E8500DC8035 /* read_size_estimator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B21F1D5C7E8500DC8035 /* read_size_estimator.cpp */; };
@@ -105,6 +95,174 @@
 		D42F73001C621C4C00995F54 /* trio_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72FE1C621C4C00995F54 /* trio_caller.cpp */; };
 		D44ADE731C43C22700A854C6 /* caller_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE711C43C22700A854C6 /* caller_builder.cpp */; };
 		D44ADE781C452B9B00A854C6 /* compression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE771C452B9B00A854C6 /* compression.cpp */; };
+		D45AF3C91D638F220080B991 /* read_algorithms.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA16B0EE1D4D0393006722C1 /* read_algorithms.cpp */; };
+		D45AF3CA1D638F220080B991 /* snv_error_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA704FC21D11F4B2004218BB /* snv_error_model.cpp */; };
+		D45AF3CB1D638F220080B991 /* threshold_filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA3B6CF81D3EBC87005298BE /* threshold_filter.cpp */; };
+		D45AF3CC1D638F220080B991 /* octopus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA1472781AACECF1005FDCD1 /* octopus.cpp */; };
+		D45AF3CD1D638F220080B991 /* pedigree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA53D3021C03B746009A216D /* pedigree.cpp */; };
+		D45AF3CF1D638F220080B991 /* population_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C61B8DE00E00609FFA /* population_model.cpp */; };
+		D45AF3D01D638F220080B991 /* read_size_estimator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B21F1D5C7E8500DC8035 /* read_size_estimator.cpp */; };
+		D45AF3D11D638F220080B991 /* allele.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1A11B0A160000739A66 /* allele.cpp */; };
+		D45AF3D21D638F220080B991 /* haplotype_filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CACF81351C870E8300E9E6BD /* haplotype_filter.cpp */; };
+		D45AF3D31D638F220080B991 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
+		D45AF3D41D638F220080B991 /* individual_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D40B119B1CAEA2EF0050145D /* individual_model.cpp */; };
+		D45AF3D51D638F220080B991 /* read_manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CABA37801A8FA49800BBE598 /* read_manager.cpp */; };
+		D45AF3D61D638F220080B991 /* caching_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */; };
+		D45AF3D71D638F220080B991 /* error_handler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAAF62691D57E12D00D76140 /* error_handler.cpp */; };
+		D45AF3D81D638F220080B991 /* vcf_header_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA566E311D048304007C5180 /* vcf_header_factory.cpp */; };
+		D45AF3D91D638F220080B991 /* mappable_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE11D53C4520089435A /* mappable_tests.cpp */; };
+		D45AF3DA1D638F220080B991 /* tumour_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C91B8DE02300609FFA /* tumour_model.cpp */; };
+		D45AF3DB1D638F220080B991 /* option_parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E29B1AA139A000C01B2C /* option_parser.cpp */; };
+		D45AF3DC1D638F220080B991 /* octopus_vcf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA566E351D0488C7007C5180 /* octopus_vcf.cpp */; };
+		D45AF3DD1D638F220080B991 /* somatic_call.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D402C5451CC9359300C8B8A7 /* somatic_call.cpp */; };
+		D45AF3DE1D638F220080B991 /* logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D45D30621C907491007634E3 /* logging.cpp */; };
+		D45AF3DF1D638F220080B991 /* trio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72ED1C5B8A4D00995F54 /* trio.cpp */; };
+		D45AF3E01D638F220080B991 /* missing_index_error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAAF62711D57E12D00D76140 /* missing_index_error.cpp */; };
+		D45AF3E11D638F220080B991 /* coverage_tracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B20E1D58FB8A00DC8035 /* coverage_tracker.cpp */; };
+		D45AF3E21D638F220080B991 /* calling_components.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B21C1D5C774100DC8035 /* calling_components.cpp */; };
+		D45AF3E31D638F220080B991 /* genotype_reader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA2CEB1CF3ACA700C109D5 /* genotype_reader.cpp */; };
+		D45AF3E41D638F220080B991 /* read_transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2D59F81CAEFB4B005EA347 /* read_transform.cpp */; };
+		D45AF3E51D638F220080B991 /* missing_file_error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAAF626F1D57E12D00D76140 /* missing_file_error.cpp */; };
+		D45AF3E61D638F220080B991 /* genotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB0DFD91BBF035D001D2F99 /* genotype.cpp */; };
+		D45AF3E71D638F220080B991 /* reference_genome.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386D9C1B5AA3C80057A5A8 /* reference_genome.cpp */; };
+		D45AF3E81D638F220080B991 /* germline_likelihood_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42061141ACC3DA500D11553 /* germline_likelihood_model.cpp */; };
+		D45AF3E91D638F220080B991 /* somatic_mutation_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4A04BD21CBD205100193D63 /* somatic_mutation_model.cpp */; };
+		D45AF3EA1D638F220080B991 /* malformed_file_error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAAF626D1D57E12D00D76140 /* malformed_file_error.cpp */; };
+		D45AF3EB1D638F220080B991 /* haplotype_tree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */; };
+		D45AF3EC1D638F220080B991 /* haplotype_likelihood_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D48D2AE21BB5753F00C5596E /* haplotype_likelihood_model.cpp */; };
+		D45AF3ED1D638F220080B991 /* downsampler_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE241D53C67E0089435A /* downsampler_tests.cpp */; };
+		D45AF3EE1D638F220080B991 /* mock_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2121D5BDD5800DC8035 /* mock_variant_generator.cpp */; };
+		D45AF3EF1D638F220080B991 /* read_assignment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA3B6CF51D391487005298BE /* read_assignment.cpp */; };
+		D45AF3F01D638F220080B991 /* variant_call_filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3B59C1CFE3E3E005EEDE6 /* variant_call_filter.cpp */; };
+		D45AF3F11D638F220080B991 /* kmer_mapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D490E4201C74CE1200883184 /* kmer_mapper.cpp */; };
+		D45AF3F21D638F220080B991 /* vcf_extractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2A91AA2736D00C01B2C /* vcf_extractor.cpp */; };
+		D45AF3F31D638F220080B991 /* reference_call.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D402C5481CC935C100C8B8A7 /* reference_call.cpp */; };
+		D45AF3F41D638F220080B991 /* cancer_genotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2D59FD1CB972FE005EA347 /* cancer_genotype.cpp */; };
+		D45AF3F51D638F220080B991 /* read_reader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D47686621BD672940067E03D /* read_reader.cpp */; };
+		D45AF3F61D638F220080B991 /* hiseq_indel_error_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D482E00C1D0EB9440096A269 /* hiseq_indel_error_model.cpp */; };
+		D45AF3F71D638F220080B991 /* quality_by_depth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA16B0E71D481011006722C1 /* quality_by_depth.cpp */; };
+		D45AF3F81D638F220080B991 /* mock_reference.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2091D58D9BF00DC8035 /* mock_reference.cpp */; };
+		D45AF3F91D638F220080B991 /* variant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1A31B0A174B00739A66 /* variant.cpp */; };
+		D45AF3FA1D638F220080B991 /* compression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE771C452B9B00A854C6 /* compression.cpp */; };
+		D45AF3FB1D638F220080B991 /* variant_call_filter_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA3B6CFB1D3EBFBA005298BE /* variant_call_filter_factory.cpp */; };
+		D45AF3FC1D638F220080B991 /* pair_hmm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D490E41A1C74CE1200883184 /* pair_hmm.cpp */; };
+		D45AF3FD1D638F220080B991 /* read_pipe.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83E91BD466F40020366B /* read_pipe.cpp */; };
+		D45AF3FE1D638F220080B991 /* variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA16B1241D4FEE37006722C1 /* variant_generator.cpp */; };
+		D45AF3FF1D638F220080B991 /* call.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0DF5881CCADA36000193CF /* call.cpp */; };
+		D45AF4001D638F220080B991 /* dynamic_cigar_scanner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2191D5BDFE300DC8035 /* dynamic_cigar_scanner.cpp */; };
+		D45AF4011D638F220080B991 /* caller_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE711C43C22700A854C6 /* caller_builder.cpp */; };
+		D45AF4021D638F220080B991 /* timers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D424E0CC1D54BC1100654AA3 /* timers.cpp */; };
+		D45AF4031D638F220080B991 /* coalescent_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D40B119E1CAEA75C0050145D /* coalescent_model.cpp */; };
+		D45AF4041D638F220080B991 /* vcf_parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C6B1B7A24F400FEA7D2 /* vcf_parser.cpp */; };
+		D45AF4051D638F220080B991 /* progress_meter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA98BBA81C918B07000CE9C4 /* progress_meter.cpp */; };
+		D45AF4061D638F220080B991 /* haplotype_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB89DF41C78D95F002D6F8E /* haplotype_generator.cpp */; };
+		D45AF4071D638F220080B991 /* cigar_string.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA21B5AC2870057A5A8 /* cigar_string.cpp */; };
+		D45AF4081D638F220080B991 /* vcf_reader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C5F1B6788AC00FEA7D2 /* vcf_reader.cpp */; };
+		D45AF4091D638F220080B991 /* htslib_sam_facade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C14F1A8C0D3D000D3494 /* htslib_sam_facade.cpp */; };
+		D45AF40A1D638F220080B991 /* threadsafe_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */; };
+		D45AF40B1D638F220080B991 /* phaser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB89DF71C78F5AF002D6F8E /* phaser.cpp */; };
+		D45AF40C1D638F220080B991 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = CA16B11B1D4F6ADE006722C1 /* utils.c */; };
+		D45AF40D1D638F220080B991 /* vcf_header.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C651B678B8000FEA7D2 /* vcf_header.cpp */; };
+		D45AF40E1D638F220080B991 /* vcf_record_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D402C53E1CC9308800C8B8A7 /* vcf_record_factory.cpp */; };
+		D45AF40F1D638F220080B991 /* parallel_transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA16B1071D4E54F9006722C1 /* parallel_transform.cpp */; };
+		D45AF4101D638F220080B991 /* local_reassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE0D1D53C57E0089435A /* local_reassembler.cpp */; };
+		D45AF4111D638F220080B991 /* vcf_writer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C681B6919B500FEA7D2 /* vcf_writer.cpp */; };
+		D45AF4121D638F220080B991 /* mock_read_manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA83B2151D5BDD6B00DC8035 /* mock_read_manager.cpp */; };
+		D45AF4131D638F220080B991 /* vcf_type.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAEC8E191B73ACB9008FC858 /* vcf_type.cpp */; };
+		D45AF4141D638F220080B991 /* population_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FAE1BA826DB00657D4F /* population_caller.cpp */; };
+		D45AF4151D638F220080B991 /* supervised_variant_call_filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CABEBD261D436EE90017A7E7 /* supervised_variant_call_filter.cpp */; };
+		D45AF4161D638F220080B991 /* cigar_scanner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2A61AA25F7D00C01B2C /* cigar_scanner.cpp */; };
+		D45AF4171D638F220080B991 /* variant_call.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D402C54B1CCA588600C8B8A7 /* variant_call.cpp */; };
+		D45AF4181D638F220080B991 /* local_reassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2B11AA3342B00C01B2C /* local_reassembler.cpp */; };
+		D45AF4191D638F220080B991 /* trio_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72FE1C621C4C00995F54 /* trio_caller.cpp */; };
+		D45AF41A1D638F220080B991 /* vcf_utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAF23F6E1BA2C308006B673F /* vcf_utils.cpp */; };
+		D45AF41B1D638F220080B991 /* cancer_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FB31BA9716700657D4F /* cancer_caller.cpp */; };
+		D45AF41C1D638F220080B991 /* tandem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA16B1201D4F6AEF006722C1 /* tandem.cpp */; };
+		D45AF41D1D638F220080B991 /* common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D45D30891C983D84007634E3 /* common.cpp */; };
+		D45AF41E1D638F220080B991 /* haplotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19621ABF75D400F953D9 /* haplotype.cpp */; };
+		D45AF41F1D638F220080B991 /* individual_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D40B11A11CAEBC270050145D /* individual_caller.cpp */; };
+		D45AF4201D638F220080B991 /* phred_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF31D53C4B50089435A /* phred_tests.cpp */; };
+		D45AF4211D638F220080B991 /* cnv_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4A04BCE1CBD1D5400193D63 /* cnv_model.cpp */; };
+		D45AF4221D638F220080B991 /* error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAAF626B1D57E12D00D76140 /* error.cpp */; };
+		D45AF4231D638F220080B991 /* simd_pair_hmm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D490E41C1C74CE1200883184 /* simd_pair_hmm.cpp */; };
+		D45AF4241D638F220080B991 /* germline_variant_call.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D402C5421CC934CF00C8B8A7 /* germline_variant_call.cpp */; };
+		D45AF4251D638F220080B991 /* downloader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2827BF1B2A4CD0007712D4 /* downloader.cpp */; };
+		D45AF4261D638F220080B991 /* downsampler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83EC1BD467BE0020366B /* downsampler.cpp */; };
+		D45AF4271D638F220080B991 /* cigar_scanner_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE091D53C55B0089435A /* cigar_scanner_tests.cpp */; };
+		D45AF4281D638F220080B991 /* trsort.c in Sources */ = {isa = PBXBuildFile; fileRef = CA16B11A1D4F6ADE006722C1 /* trsort.c */; };
+		D45AF4291D638F220080B991 /* individual_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE221D53C6570089435A /* individual_model_tests.cpp */; };
+		D45AF42A1D638F220080B991 /* htslib_bcf_facade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2B41AA36EA600C01B2C /* htslib_bcf_facade.cpp */; };
+		D45AF42B1D638F220080B991 /* haplotype_likelihood_cache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D46F9EDB1C05D4E700DCC18D /* haplotype_likelihood_cache.cpp */; };
+		D45AF42C1D638F220080B991 /* read_stats.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAD5EC081AD6FD1E00892816 /* read_stats.cpp */; };
+		D45AF42D1D638F220080B991 /* assembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA98BBA51C8EEA20000CE9C4 /* assembler.cpp */; };
+		D45AF42E1D638F220080B991 /* indel_error_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB89DF11C753551002D6F8E /* indel_error_model.cpp */; };
+		D45AF42F1D638F220080B991 /* option_collation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA3B6CE81D363D83005298BE /* option_collation.cpp */; };
+		D45AF4301D638F220080B991 /* caller_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE7DC2B1C510905009411B6 /* caller_factory.cpp */; };
+		D45AF4311D638F220080B991 /* divsufsort.c in Sources */ = {isa = PBXBuildFile; fileRef = CA16B1161D4F6ADE006722C1 /* divsufsort.c */; };
+		D45AF4321D638F220080B991 /* caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FB11BA843B900657D4F /* caller.cpp */; };
+		D45AF4331D638F220080B991 /* read_transformer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA487B241C42833000488577 /* read_transformer.cpp */; };
+		D45AF4341D638F220080B991 /* read_filter.hpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2CC1AAB46BC00C01B2C /* read_filter.hpp */; };
+		D45AF4351D638F220080B991 /* randomiser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB0DFDE1BC01E2A001D2F99 /* randomiser.cpp */; };
+		D45AF4361D638F220080B991 /* sssort.c in Sources */ = {isa = PBXBuildFile; fileRef = CA16B1191D4F6ADE006722C1 /* sssort.c */; };
+		D45AF4371D638F220080B991 /* read_filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA7148B51CD00ABA0017820B /* read_filter.cpp */; };
+		D45AF4381D638F220080B991 /* vcf_record.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C621B6788C500FEA7D2 /* vcf_record.cpp */; };
+		D45AF4391D638F220080B991 /* global_aligner_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE0B1D53C56B0089435A /* global_aligner_tests.cpp */; };
+		D45AF43A1D638F220080B991 /* genome_walker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83E61BD2B0210020366B /* genome_walker.cpp */; };
+		D45AF43B1D638F220080B991 /* global_aligner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB7B6EA1D29920F0046C3E5 /* global_aligner.cpp */; };
+		D45AF43C1D638F220080B991 /* reference_genome_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDD41D53C3A20089435A /* reference_genome_tests.cpp */; };
+		D45AF43D1D638F220080B991 /* unwritable_file_error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAAF627B1D57E40A00D76140 /* unwritable_file_error.cpp */; };
+		D45AF43E1D638F220080B991 /* aligned_read.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */; };
+		D45AF4401D638F220080B991 /* libboost_date_time-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D307D1C907F81007634E3 /* libboost_date_time-mt.dylib */; };
+		D45AF4411D638F220080B991 /* libboost_filesystem-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D307E1C907F81007634E3 /* libboost_filesystem-mt.dylib */; };
+		D45AF4421D638F220080B991 /* libboost_log_setup-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D307F1C907F81007634E3 /* libboost_log_setup-mt.dylib */; };
+		D45AF4431D638F220080B991 /* libboost_log-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D30801C907F81007634E3 /* libboost_log-mt.dylib */; };
+		D45AF4441D638F220080B991 /* libboost_system-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D30811C907F81007634E3 /* libboost_system-mt.dylib */; };
+		D45AF4451D638F220080B991 /* libboost_thread-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D30821C907F81007634E3 /* libboost_thread-mt.dylib */; };
+		D45AF4461D638F220080B991 /* libboost_timer.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D4CC78941C7E1EF700F9CCB3 /* libboost_timer.a */; };
+		D45AF4471D638F220080B991 /* libboost_unit_test_framework.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA487B291C44390A00488577 /* libboost_unit_test_framework.a */; };
+		D45AF4481D638F220080B991 /* libboost_iostreams.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D413B0441B5E54F7007EFDE0 /* libboost_iostreams.a */; };
+		D45AF4491D638F220080B991 /* libboost_filesystem.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */; };
+		D45AF44A1D638F220080B991 /* libboost_program_options.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E641B2AD93500F6A89D /* libboost_program_options.a */; };
+		D45AF44B1D638F220080B991 /* libboost_system.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E651B2AD93500F6A89D /* libboost_system.a */; };
+		D45AF44C1D638F220080B991 /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E5F1B2AD88A00F6A89D /* libhts.a */; };
+		D45AF44E1D638F220080B991 /* octopus-mock in CopyFiles */ = {isa = PBXBuildFile; fileRef = CAA4DC211A81981400DD3E9A /* octopus-mock */; };
+		D45AF4531D638F8B0080B991 /* unit_test_main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE361D53EA0E0089435A /* unit_test_main.cpp */; };
+		D45AF4541D638FA50080B991 /* comparable_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE051D53C51C0089435A /* comparable_tests.cpp */; };
+		D45AF4551D638FA50080B991 /* contig_region_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE011D53C4EB0089435A /* contig_region_tests.cpp */; };
+		D45AF4561D638FA50080B991 /* genomic_region_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE031D53C4FA0089435A /* genomic_region_tests.cpp */; };
+		D45AF4571D638FA50080B991 /* cigar_string_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF11D53C4A70089435A /* cigar_string_tests.cpp */; };
+		D45AF4581D638FA50080B991 /* aligned_read_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE51D53C45B0089435A /* aligned_read_tests.cpp */; };
+		D45AF4591D638FA50080B991 /* mappable_flat_set_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE71D53C4770089435A /* mappable_flat_set_tests.cpp */; };
+		D45AF45A1D638FA50080B991 /* allele_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDEF1D53C4920089435A /* allele_tests.cpp */; };
+		D45AF45B1D638FA50080B991 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDEB1D53C4810089435A /* variant_tests.cpp */; };
+		D45AF45C1D638FA50080B991 /* haplotype_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDEA1D53C4810089435A /* haplotype_tests.cpp */; };
+		D45AF45D1D638FA50080B991 /* genotype_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE91D53C4810089435A /* genotype_tests.cpp */; };
+		D45AF45E1D638FA50080B991 /* assembler_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF51D53C4BE0089435A /* assembler_tests.cpp */; };
+		D45AF45F1D638FA50080B991 /* vcf_extractor_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE0F1D53C58D0089435A /* vcf_extractor_tests.cpp */; };
+		D45AF4601D638FA50080B991 /* variant_generator_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF91D53C4BE0089435A /* variant_generator_tests.cpp */; };
+		D45AF4611D638FA50080B991 /* haplotype_tree_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF71D53C4BE0089435A /* haplotype_tree_tests.cpp */; };
+		D45AF4621D638FA50080B991 /* genome_walker_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF61D53C4BE0089435A /* genome_walker_tests.cpp */; };
+		D45AF4631D638FA50080B991 /* haplotype_generator_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE071D53C54D0089435A /* haplotype_generator_tests.cpp */; };
+		D45AF4641D638FA50080B991 /* phaser_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDF81D53C4BE0089435A /* phaser_tests.cpp */; };
+		D45AF4651D638FA50080B991 /* pair_hmm_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE121D53C5C20089435A /* pair_hmm_tests.cpp */; };
+		D45AF4661D638FA50080B991 /* snv_error_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE141D53C5D20089435A /* snv_error_model_tests.cpp */; };
+		D45AF4671D638FA50080B991 /* indel_error_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE161D53C5E60089435A /* indel_error_model_tests.cpp */; };
+		D45AF4681D638FA50080B991 /* haplotype_likelihood_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE181D53C5F90089435A /* haplotype_likelihood_model_tests.cpp */; };
+		D45AF4691D638FA50080B991 /* haplotype_likelihood_cache_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE1A1D53C6080089435A /* haplotype_likelihood_cache_tests.cpp */; };
+		D45AF46A1D638FA50080B991 /* kmer_mapper_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE1C1D53C6160089435A /* kmer_mapper_tests.cpp */; };
+		D45AF46B1D638FA50080B991 /* coalescent_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE1E1D53C6350089435A /* coalescent_model_tests.cpp */; };
+		D45AF46C1D638FA50080B991 /* germline_likelihood_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE201D53C6440089435A /* germline_likelihood_model_tests.cpp */; };
+		D45AF46D1D638FA50080B991 /* caller_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDFF1D53C4C40089435A /* caller_tests.cpp */; };
+		D45AF46E1D638FA50080B991 /* read_manager_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDD31D53C3A20089435A /* read_manager_tests.cpp */; };
+		D45AF46F1D638FA50080B991 /* vcf_reader_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDD51D53C3A20089435A /* vcf_reader_tests.cpp */; };
+		D45AF4701D638FA50080B991 /* progress_meter_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDDF1D53C4270089435A /* progress_meter_tests.cpp */; };
+		D45AF4711D638FA50080B991 /* read_filterer_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDD91D53C3AD0089435A /* read_filterer_tests.cpp */; };
+		D45AF4721D638FA50080B991 /* read_pipe_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDDA1D53C3AD0089435A /* read_pipe_tests.cpp */; };
+		D45AF4731D638FA50080B991 /* read_transformer_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDDB1D53C3AD0089435A /* read_transformer_tests.cpp */; };
+		D45AF4741D638FA50080B991 /* mappable_algorithm_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CDE31D53C4570089435A /* mappable_algorithm_tests.cpp */; };
+		D45AF4751D638FA50080B991 /* maths_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE261D53C6910089435A /* maths_tests.cpp */; };
+		D45AF4761D638FA50080B991 /* read_stats_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA17CE281D53C6B10089435A /* read_stats_tests.cpp */; };
+		D45AF4781D63907B0080B991 /* test_common.hpp in Sources */ = {isa = PBXBuildFile; fileRef = D45AF4771D6390740080B991 /* test_common.hpp */; };
 		D45D2E601B2AD88A00F6A89D /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E5F1B2AD88A00F6A89D /* libhts.a */; };
 		D45D2E661B2AD93500F6A89D /* libboost_filesystem.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */; };
 		D45D2E671B2AD93500F6A89D /* libboost_program_options.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E641B2AD93500F6A89D /* libboost_program_options.a */; };
@@ -149,6 +307,16 @@
 			dstSubfolderSpec = 0;
 			files = (
 				CAA4DC351A83A39D00DD3E9A /* octopus-mock in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		D45AF44D1D638F220080B991 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /Users/danielcooke/Development/octopus/bin;
+			dstSubfolderSpec = 0;
+			files = (
+				D45AF44E1D638F220080B991 /* octopus-mock in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
@@ -439,6 +607,8 @@
 		D44ADE771C452B9B00A854C6 /* compression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = compression.cpp; sourceTree = "<group>"; };
 		D454B9511D50B2BB00F083F9 /* CONTRIBUTING.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = CONTRIBUTING.md; sourceTree = "<group>"; };
 		D454B9561D50DF2500F083F9 /* read_pipe_fwd.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = read_pipe_fwd.hpp; sourceTree = "<group>"; };
+		D45AF4521D638F220080B991 /* octopus-unit */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "octopus-unit"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D45AF4771D6390740080B991 /* test_common.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = test_common.hpp; sourceTree = "<group>"; };
 		D45D2E5F1B2AD88A00F6A89D /* libhts.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libhts.a; path = ../../../../../usr/local/Cellar/htslib/1.2.1/lib/libhts.a; sourceTree = "<absolute>"; };
 		D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_filesystem.a; path = ../../../../../usr/local/Cellar/boost/1.58.0/lib/libboost_filesystem.a; sourceTree = "<absolute>"; };
 		D45D2E641B2AD93500F6A89D /* libboost_program_options.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_program_options.a; path = ../../../../../usr/local/Cellar/boost/1.58.0/lib/libboost_program_options.a; sourceTree = "<absolute>"; };
@@ -525,6 +695,26 @@
 				D45D2E671B2AD93500F6A89D /* libboost_program_options.a in Frameworks */,
 				D45D2E681B2AD93500F6A89D /* libboost_system.a in Frameworks */,
 				D45D2E601B2AD88A00F6A89D /* libhts.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D45AF43F1D638F220080B991 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D45AF4401D638F220080B991 /* libboost_date_time-mt.dylib in Frameworks */,
+				D45AF4411D638F220080B991 /* libboost_filesystem-mt.dylib in Frameworks */,
+				D45AF4421D638F220080B991 /* libboost_log_setup-mt.dylib in Frameworks */,
+				D45AF4431D638F220080B991 /* libboost_log-mt.dylib in Frameworks */,
+				D45AF4441D638F220080B991 /* libboost_system-mt.dylib in Frameworks */,
+				D45AF4451D638F220080B991 /* libboost_thread-mt.dylib in Frameworks */,
+				D45AF4461D638F220080B991 /* libboost_timer.a in Frameworks */,
+				D45AF4471D638F220080B991 /* libboost_unit_test_framework.a in Frameworks */,
+				D45AF4481D638F220080B991 /* libboost_iostreams.a in Frameworks */,
+				D45AF4491D638F220080B991 /* libboost_filesystem.a in Frameworks */,
+				D45AF44A1D638F220080B991 /* libboost_program_options.a in Frameworks */,
+				D45AF44B1D638F220080B991 /* libboost_system.a in Frameworks */,
+				D45AF44C1D638F220080B991 /* libhts.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -798,6 +988,7 @@
 			isa = PBXGroup;
 			children = (
 				CAA4DC211A81981400DD3E9A /* octopus-mock */,
+				D45AF4521D638F220080B991 /* octopus-unit */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -860,6 +1051,7 @@
 				D4807FAD1BA710A400657D4F /* mock_options.hpp */,
 				D4C8FFA41D4B872600BEFC8E /* test_main.cpp */,
 				D424E0C81D510A7C00654AA3 /* CMakeLists.txt */,
+				D45AF4771D6390740080B991 /* test_common.hpp */,
 			);
 			path = test;
 			sourceTree = "<group>";
@@ -1341,8 +1533,8 @@
 			children = (
 				CA56D38B1D516CC90083501A /* matrix_map.hpp */,
 				CA56D38C1D516CC90083501A /* probability_matrix.hpp */,
-				CA386DA61B5BBBDE0057A5A8 /* mappable_flat_multi_set.hpp */,
 				CACF81391C876EE900E9E6BD /* mappable_flat_set.hpp */,
+				CA386DA61B5BBBDE0057A5A8 /* mappable_flat_multi_set.hpp */,
 				D413B0401B5D0431007EFDE0 /* mappable_map.hpp */,
 			);
 			path = containers;
@@ -1436,6 +1628,23 @@
 			productReference = CAA4DC211A81981400DD3E9A /* octopus-mock */;
 			productType = "com.apple.product-type.tool";
 		};
+		D45AF3C71D638F220080B991 /* octopus-unit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D45AF44F1D638F220080B991 /* Build configuration list for PBXNativeTarget "octopus-unit" */;
+			buildPhases = (
+				D45AF3C81D638F220080B991 /* Sources */,
+				D45AF43F1D638F220080B991 /* Frameworks */,
+				D45AF44D1D638F220080B991 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "octopus-unit";
+			productName = Octopus;
+			productReference = D45AF4521D638F220080B991 /* octopus-unit */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -1463,6 +1672,7 @@
 			projectRoot = "";
 			targets = (
 				CAA4DC201A81981400DD3E9A /* octopus-mock */,
+				D45AF3C71D638F220080B991 /* octopus-unit */,
 			);
 		};
 /* End PBXProject section */
@@ -1488,7 +1698,6 @@
 				CA386DAD1B603C380057A5A8 /* caching_fasta.cpp in Sources */,
 				CAAF62761D57E12D00D76140 /* error_handler.cpp in Sources */,
 				CA566E331D048304007C5180 /* vcf_header_factory.cpp in Sources */,
-				CA17CDE21D53C4520089435A /* mappable_tests.cpp in Sources */,
 				CA91C2CB1B8DE02300609FFA /* tumour_model.cpp in Sources */,
 				CAE3E29D1AA139A000C01B2C /* option_parser.cpp in Sources */,
 				CA566E371D0488C7007C5180 /* octopus_vcf.cpp in Sources */,
@@ -1508,8 +1717,6 @@
 				CAAF62781D57E12D00D76140 /* malformed_file_error.cpp in Sources */,
 				CAFA195B1ABF3DF400F953D9 /* haplotype_tree.cpp in Sources */,
 				D48D2AE41BB5753F00C5596E /* haplotype_likelihood_model.cpp in Sources */,
-				CA17CE251D53C67E0089435A /* downsampler_tests.cpp in Sources */,
-				CA83B2141D5BDD5800DC8035 /* mock_variant_generator.cpp in Sources */,
 				CA3B6CF71D391487005298BE /* read_assignment.cpp in Sources */,
 				CAE3B59E1CFE3E3E005EEDE6 /* variant_call_filter.cpp in Sources */,
 				D490E4241C74CE1200883184 /* kmer_mapper.cpp in Sources */,
@@ -1519,7 +1726,6 @@
 				D47686631BD672940067E03D /* read_reader.cpp in Sources */,
 				D482E00E1D0EB9440096A269 /* hiseq_indel_error_model.cpp in Sources */,
 				CA16B0E91D481011006722C1 /* quality_by_depth.cpp in Sources */,
-				CA83B20B1D58D9BF00DC8035 /* mock_reference.cpp in Sources */,
 				D463C1A41B0A174B00739A66 /* variant.cpp in Sources */,
 				D44ADE781C452B9B00A854C6 /* compression.cpp in Sources */,
 				CA3B6CFD1D3EBFBA005298BE /* variant_call_filter_factory.cpp in Sources */,
@@ -1545,7 +1751,6 @@
 				CA16B10B1D4E54F9006722C1 /* parallel_transform.cpp in Sources */,
 				CA17CE0E1D53C57E0089435A /* local_reassembler.cpp in Sources */,
 				D4636C6A1B6919B500FEA7D2 /* vcf_writer.cpp in Sources */,
-				CA83B2171D5BDD6B00DC8035 /* mock_read_manager.cpp in Sources */,
 				CAEC8E1A1B73ACB9008FC858 /* vcf_type.cpp in Sources */,
 				D4807FB01BA826DB00657D4F /* population_caller.cpp in Sources */,
 				CABEBD281D436EEA0017A7E7 /* supervised_variant_call_filter.cpp in Sources */,
@@ -1559,16 +1764,13 @@
 				D45D308A1C983D84007634E3 /* common.cpp in Sources */,
 				CAFA19641ABF75D400F953D9 /* haplotype.cpp in Sources */,
 				D40B11A31CAEBC270050145D /* individual_caller.cpp in Sources */,
-				CA17CDF41D53C4B50089435A /* phred_tests.cpp in Sources */,
 				D4A04BD01CBD1D5400193D63 /* cnv_model.cpp in Sources */,
 				CAAF62771D57E12D00D76140 /* error.cpp in Sources */,
 				D490E4231C74CE1200883184 /* simd_pair_hmm.cpp in Sources */,
 				D402C5441CC934CF00C8B8A7 /* germline_variant_call.cpp in Sources */,
 				CA2827C11B2A4CD0007712D4 /* downloader.cpp in Sources */,
 				CA0D83EE1BD467BE0020366B /* downsampler.cpp in Sources */,
-				CA17CE0A1D53C55B0089435A /* cigar_scanner_tests.cpp in Sources */,
 				CA16B11E1D4F6ADE006722C1 /* trsort.c in Sources */,
-				CA17CE231D53C6570089435A /* individual_model_tests.cpp in Sources */,
 				CAE3E2B61AA36EA600C01B2C /* htslib_bcf_facade.cpp in Sources */,
 				D46F9EDD1C05D4E700DCC18D /* haplotype_likelihood_cache.cpp in Sources */,
 				CAD5EC0A1AD6FD1E00892816 /* read_stats.cpp in Sources */,
@@ -1584,12 +1786,171 @@
 				CA16B11D1D4F6ADE006722C1 /* sssort.c in Sources */,
 				CA7148B61CD00ABA0017820B /* read_filter.cpp in Sources */,
 				D4636C641B6788C500FEA7D2 /* vcf_record.cpp in Sources */,
-				CA17CE0C1D53C56B0089435A /* global_aligner_tests.cpp in Sources */,
 				CA0D83E81BD2B0210020366B /* genome_walker.cpp in Sources */,
 				CAB7B6EC1D29920F0046C3E5 /* global_aligner.cpp in Sources */,
-				CA17CDD71D53C3A20089435A /* reference_genome_tests.cpp in Sources */,
 				CAAF627D1D57E40A00D76140 /* unwritable_file_error.cpp in Sources */,
 				CA386DA51B5AC3850057A5A8 /* aligned_read.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D45AF3C81D638F220080B991 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D45AF4781D63907B0080B991 /* test_common.hpp in Sources */,
+				D45AF4541D638FA50080B991 /* comparable_tests.cpp in Sources */,
+				D45AF4551D638FA50080B991 /* contig_region_tests.cpp in Sources */,
+				D45AF4561D638FA50080B991 /* genomic_region_tests.cpp in Sources */,
+				D45AF4571D638FA50080B991 /* cigar_string_tests.cpp in Sources */,
+				D45AF4581D638FA50080B991 /* aligned_read_tests.cpp in Sources */,
+				D45AF4591D638FA50080B991 /* mappable_flat_set_tests.cpp in Sources */,
+				D45AF45A1D638FA50080B991 /* allele_tests.cpp in Sources */,
+				D45AF45B1D638FA50080B991 /* variant_tests.cpp in Sources */,
+				D45AF45C1D638FA50080B991 /* haplotype_tests.cpp in Sources */,
+				D45AF45D1D638FA50080B991 /* genotype_tests.cpp in Sources */,
+				D45AF45E1D638FA50080B991 /* assembler_tests.cpp in Sources */,
+				D45AF45F1D638FA50080B991 /* vcf_extractor_tests.cpp in Sources */,
+				D45AF4601D638FA50080B991 /* variant_generator_tests.cpp in Sources */,
+				D45AF4611D638FA50080B991 /* haplotype_tree_tests.cpp in Sources */,
+				D45AF4621D638FA50080B991 /* genome_walker_tests.cpp in Sources */,
+				D45AF4631D638FA50080B991 /* haplotype_generator_tests.cpp in Sources */,
+				D45AF4641D638FA50080B991 /* phaser_tests.cpp in Sources */,
+				D45AF4651D638FA50080B991 /* pair_hmm_tests.cpp in Sources */,
+				D45AF4661D638FA50080B991 /* snv_error_model_tests.cpp in Sources */,
+				D45AF4671D638FA50080B991 /* indel_error_model_tests.cpp in Sources */,
+				D45AF4681D638FA50080B991 /* haplotype_likelihood_model_tests.cpp in Sources */,
+				D45AF4691D638FA50080B991 /* haplotype_likelihood_cache_tests.cpp in Sources */,
+				D45AF46A1D638FA50080B991 /* kmer_mapper_tests.cpp in Sources */,
+				D45AF46B1D638FA50080B991 /* coalescent_model_tests.cpp in Sources */,
+				D45AF46C1D638FA50080B991 /* germline_likelihood_model_tests.cpp in Sources */,
+				D45AF46D1D638FA50080B991 /* caller_tests.cpp in Sources */,
+				D45AF46E1D638FA50080B991 /* read_manager_tests.cpp in Sources */,
+				D45AF46F1D638FA50080B991 /* vcf_reader_tests.cpp in Sources */,
+				D45AF4701D638FA50080B991 /* progress_meter_tests.cpp in Sources */,
+				D45AF4711D638FA50080B991 /* read_filterer_tests.cpp in Sources */,
+				D45AF4721D638FA50080B991 /* read_pipe_tests.cpp in Sources */,
+				D45AF4731D638FA50080B991 /* read_transformer_tests.cpp in Sources */,
+				D45AF4741D638FA50080B991 /* mappable_algorithm_tests.cpp in Sources */,
+				D45AF4751D638FA50080B991 /* maths_tests.cpp in Sources */,
+				D45AF4761D638FA50080B991 /* read_stats_tests.cpp in Sources */,
+				D45AF4531D638F8B0080B991 /* unit_test_main.cpp in Sources */,
+				D45AF3C91D638F220080B991 /* read_algorithms.cpp in Sources */,
+				D45AF3CA1D638F220080B991 /* snv_error_model.cpp in Sources */,
+				D45AF3CB1D638F220080B991 /* threshold_filter.cpp in Sources */,
+				D45AF3CC1D638F220080B991 /* octopus.cpp in Sources */,
+				D45AF3CD1D638F220080B991 /* pedigree.cpp in Sources */,
+				D45AF3CF1D638F220080B991 /* population_model.cpp in Sources */,
+				D45AF3D01D638F220080B991 /* read_size_estimator.cpp in Sources */,
+				D45AF3D11D638F220080B991 /* allele.cpp in Sources */,
+				D45AF3D21D638F220080B991 /* haplotype_filter.cpp in Sources */,
+				D45AF3D31D638F220080B991 /* fasta.cpp in Sources */,
+				D45AF3D41D638F220080B991 /* individual_model.cpp in Sources */,
+				D45AF3D51D638F220080B991 /* read_manager.cpp in Sources */,
+				D45AF3D61D638F220080B991 /* caching_fasta.cpp in Sources */,
+				D45AF3D71D638F220080B991 /* error_handler.cpp in Sources */,
+				D45AF3D81D638F220080B991 /* vcf_header_factory.cpp in Sources */,
+				D45AF3D91D638F220080B991 /* mappable_tests.cpp in Sources */,
+				D45AF3DA1D638F220080B991 /* tumour_model.cpp in Sources */,
+				D45AF3DB1D638F220080B991 /* option_parser.cpp in Sources */,
+				D45AF3DC1D638F220080B991 /* octopus_vcf.cpp in Sources */,
+				D45AF3DD1D638F220080B991 /* somatic_call.cpp in Sources */,
+				D45AF3DE1D638F220080B991 /* logging.cpp in Sources */,
+				D45AF3DF1D638F220080B991 /* trio.cpp in Sources */,
+				D45AF3E01D638F220080B991 /* missing_index_error.cpp in Sources */,
+				D45AF3E11D638F220080B991 /* coverage_tracker.cpp in Sources */,
+				D45AF3E21D638F220080B991 /* calling_components.cpp in Sources */,
+				D45AF3E31D638F220080B991 /* genotype_reader.cpp in Sources */,
+				D45AF3E41D638F220080B991 /* read_transform.cpp in Sources */,
+				D45AF3E51D638F220080B991 /* missing_file_error.cpp in Sources */,
+				D45AF3E61D638F220080B991 /* genotype.cpp in Sources */,
+				D45AF3E71D638F220080B991 /* reference_genome.cpp in Sources */,
+				D45AF3E81D638F220080B991 /* germline_likelihood_model.cpp in Sources */,
+				D45AF3E91D638F220080B991 /* somatic_mutation_model.cpp in Sources */,
+				D45AF3EA1D638F220080B991 /* malformed_file_error.cpp in Sources */,
+				D45AF3EB1D638F220080B991 /* haplotype_tree.cpp in Sources */,
+				D45AF3EC1D638F220080B991 /* haplotype_likelihood_model.cpp in Sources */,
+				D45AF3ED1D638F220080B991 /* downsampler_tests.cpp in Sources */,
+				D45AF3EE1D638F220080B991 /* mock_variant_generator.cpp in Sources */,
+				D45AF3EF1D638F220080B991 /* read_assignment.cpp in Sources */,
+				D45AF3F01D638F220080B991 /* variant_call_filter.cpp in Sources */,
+				D45AF3F11D638F220080B991 /* kmer_mapper.cpp in Sources */,
+				D45AF3F21D638F220080B991 /* vcf_extractor.cpp in Sources */,
+				D45AF3F31D638F220080B991 /* reference_call.cpp in Sources */,
+				D45AF3F41D638F220080B991 /* cancer_genotype.cpp in Sources */,
+				D45AF3F51D638F220080B991 /* read_reader.cpp in Sources */,
+				D45AF3F61D638F220080B991 /* hiseq_indel_error_model.cpp in Sources */,
+				D45AF3F71D638F220080B991 /* quality_by_depth.cpp in Sources */,
+				D45AF3F81D638F220080B991 /* mock_reference.cpp in Sources */,
+				D45AF3F91D638F220080B991 /* variant.cpp in Sources */,
+				D45AF3FA1D638F220080B991 /* compression.cpp in Sources */,
+				D45AF3FB1D638F220080B991 /* variant_call_filter_factory.cpp in Sources */,
+				D45AF3FC1D638F220080B991 /* pair_hmm.cpp in Sources */,
+				D45AF3FD1D638F220080B991 /* read_pipe.cpp in Sources */,
+				D45AF3FE1D638F220080B991 /* variant_generator.cpp in Sources */,
+				D45AF3FF1D638F220080B991 /* call.cpp in Sources */,
+				D45AF4001D638F220080B991 /* dynamic_cigar_scanner.cpp in Sources */,
+				D45AF4011D638F220080B991 /* caller_builder.cpp in Sources */,
+				D45AF4021D638F220080B991 /* timers.cpp in Sources */,
+				D45AF4031D638F220080B991 /* coalescent_model.cpp in Sources */,
+				D45AF4041D638F220080B991 /* vcf_parser.cpp in Sources */,
+				D45AF4051D638F220080B991 /* progress_meter.cpp in Sources */,
+				D45AF4061D638F220080B991 /* haplotype_generator.cpp in Sources */,
+				D45AF4071D638F220080B991 /* cigar_string.cpp in Sources */,
+				D45AF4081D638F220080B991 /* vcf_reader.cpp in Sources */,
+				D45AF4091D638F220080B991 /* htslib_sam_facade.cpp in Sources */,
+				D45AF40A1D638F220080B991 /* threadsafe_fasta.cpp in Sources */,
+				D45AF40B1D638F220080B991 /* phaser.cpp in Sources */,
+				D45AF40C1D638F220080B991 /* utils.c in Sources */,
+				D45AF40D1D638F220080B991 /* vcf_header.cpp in Sources */,
+				D45AF40E1D638F220080B991 /* vcf_record_factory.cpp in Sources */,
+				D45AF40F1D638F220080B991 /* parallel_transform.cpp in Sources */,
+				D45AF4101D638F220080B991 /* local_reassembler.cpp in Sources */,
+				D45AF4111D638F220080B991 /* vcf_writer.cpp in Sources */,
+				D45AF4121D638F220080B991 /* mock_read_manager.cpp in Sources */,
+				D45AF4131D638F220080B991 /* vcf_type.cpp in Sources */,
+				D45AF4141D638F220080B991 /* population_caller.cpp in Sources */,
+				D45AF4151D638F220080B991 /* supervised_variant_call_filter.cpp in Sources */,
+				D45AF4161D638F220080B991 /* cigar_scanner.cpp in Sources */,
+				D45AF4171D638F220080B991 /* variant_call.cpp in Sources */,
+				D45AF4181D638F220080B991 /* local_reassembler.cpp in Sources */,
+				D45AF4191D638F220080B991 /* trio_caller.cpp in Sources */,
+				D45AF41A1D638F220080B991 /* vcf_utils.cpp in Sources */,
+				D45AF41B1D638F220080B991 /* cancer_caller.cpp in Sources */,
+				D45AF41C1D638F220080B991 /* tandem.cpp in Sources */,
+				D45AF41D1D638F220080B991 /* common.cpp in Sources */,
+				D45AF41E1D638F220080B991 /* haplotype.cpp in Sources */,
+				D45AF41F1D638F220080B991 /* individual_caller.cpp in Sources */,
+				D45AF4201D638F220080B991 /* phred_tests.cpp in Sources */,
+				D45AF4211D638F220080B991 /* cnv_model.cpp in Sources */,
+				D45AF4221D638F220080B991 /* error.cpp in Sources */,
+				D45AF4231D638F220080B991 /* simd_pair_hmm.cpp in Sources */,
+				D45AF4241D638F220080B991 /* germline_variant_call.cpp in Sources */,
+				D45AF4251D638F220080B991 /* downloader.cpp in Sources */,
+				D45AF4261D638F220080B991 /* downsampler.cpp in Sources */,
+				D45AF4271D638F220080B991 /* cigar_scanner_tests.cpp in Sources */,
+				D45AF4281D638F220080B991 /* trsort.c in Sources */,
+				D45AF4291D638F220080B991 /* individual_model_tests.cpp in Sources */,
+				D45AF42A1D638F220080B991 /* htslib_bcf_facade.cpp in Sources */,
+				D45AF42B1D638F220080B991 /* haplotype_likelihood_cache.cpp in Sources */,
+				D45AF42C1D638F220080B991 /* read_stats.cpp in Sources */,
+				D45AF42D1D638F220080B991 /* assembler.cpp in Sources */,
+				D45AF42E1D638F220080B991 /* indel_error_model.cpp in Sources */,
+				D45AF42F1D638F220080B991 /* option_collation.cpp in Sources */,
+				D45AF4301D638F220080B991 /* caller_factory.cpp in Sources */,
+				D45AF4311D638F220080B991 /* divsufsort.c in Sources */,
+				D45AF4321D638F220080B991 /* caller.cpp in Sources */,
+				D45AF4331D638F220080B991 /* read_transformer.cpp in Sources */,
+				D45AF4341D638F220080B991 /* read_filter.hpp in Sources */,
+				D45AF4351D638F220080B991 /* randomiser.cpp in Sources */,
+				D45AF4361D638F220080B991 /* sssort.c in Sources */,
+				D45AF4371D638F220080B991 /* read_filter.cpp in Sources */,
+				D45AF4381D638F220080B991 /* vcf_record.cpp in Sources */,
+				D45AF4391D638F220080B991 /* global_aligner_tests.cpp in Sources */,
+				D45AF43A1D638F220080B991 /* genome_walker.cpp in Sources */,
+				D45AF43B1D638F220080B991 /* global_aligner.cpp in Sources */,
+				D45AF43C1D638F220080B991 /* reference_genome_tests.cpp in Sources */,
+				D45AF43D1D638F220080B991 /* unwritable_file_error.cpp in Sources */,
+				D45AF43E1D638F220080B991 /* aligned_read.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1746,6 +2107,75 @@
 			};
 			name = Release;
 		};
+		D45AF4501D638F220080B991 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = BOOST_TEST_DYN_LINK;
+				GCC_UNROLL_LOOPS = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/Cellar/boost/1.61/include,
+					/usr/local/include,
+					"$(SRCROOT)/lib",
+					"$(SRCROOT)/src",
+					"$(SRCROOT)/test",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/lib",
+					/usr/local/lib,
+					/usr/local/Cellar/htslib/1.3.1/lib,
+					/usr/local/Cellar/boost/1.61/lib,
+				);
+				LLVM_LTO = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-mavx2",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		D45AF4511D638F220080B991 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = BOOST_TEST_DYN_LINK;
+				GCC_UNROLL_LOOPS = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/Cellar/boost/1.61/include,
+					/usr/local/include,
+					"$(SRCROOT)/lib",
+					"$(SRCROOT)/src",
+					"$(SRCROOT)/test",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/lib",
+					/usr/local/lib,
+					/usr/local/Cellar/htslib/1.3.1/lib,
+					/usr/local/Cellar/boost/1.61/lib,
+				);
+				LLVM_LTO = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-mavx2",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1763,6 +2193,15 @@
 			buildConfigurations = (
 				CAA4DC291A81981400DD3E9A /* Debug */,
 				CAA4DC2A1A81981400DD3E9A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D45AF44F1D638F220080B991 /* Build configuration list for PBXNativeTarget "octopus-unit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D45AF4501D638F220080B991 /* Debug */,
+				D45AF4511D638F220080B991 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

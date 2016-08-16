@@ -14,7 +14,7 @@
 #include <basics/aligned_read.hpp>
 #include <io/read/read_manager.hpp>
 
-#include <resources/test_common.hpp>
+#include "test_common.hpp"
 #include "mock_objects.hpp"
 
 namespace octopus { namespace test {

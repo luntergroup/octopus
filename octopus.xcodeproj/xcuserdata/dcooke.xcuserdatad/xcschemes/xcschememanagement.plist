@@ -9,6 +9,11 @@
 			<key>orderHint</key>
 			<integer>1</integer>
 		</dict>
+		<key>octopus-mock copy.xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
+		</dict>
 		<key>octopus-release.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
@@ -18,6 +23,11 @@
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
 		<key>CAA4DC201A81981400DD3E9A</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>D45AF3C71D638F220080B991</key>
 		<dict>
 			<key>primary</key>
 			<true/>
