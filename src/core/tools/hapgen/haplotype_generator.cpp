@@ -348,6 +348,8 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         max_lagged_region = holdout_walker_.walk(active_region_, reads_, alleles_);
     }
     
+    assert(has_contained(alleles_, max_lagged_region));
+    
     if (!overlaps(active_region_, max_lagged_region)) {
         next_active_region_ = std::move(max_lagged_region);
     } else {
@@ -592,6 +594,8 @@ void HaplotypeGenerator::extract_holdouts(GenomicRegion next_active_region)
         
         interaction_counts.pop_back();
     } while (require_more_holdouts(active_alleles, next_active_region, policies_.haplotype_limits.holdout));
+    
+    std::sort(std::begin(new_holdouts), std::end(new_holdouts));
     
     if (DEBUG_MODE) {
         logging::DebugLogger log {};
