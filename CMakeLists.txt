@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_subdirectory(lib)
 add_subdirectory(src)
 
-option(DEBUG "DEBUG" OFF)
+option(DEBUG "Build for debug" OFF)
 
 if(DEBUG)
     set(CMAKE_BUILD_TYPE Debug)

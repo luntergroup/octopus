@@ -12,6 +12,7 @@ def is_unix():
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', help='Install into /usr/local/bin', action='store_true')
 parser.add_argument('--compiler', help='C++ compiler path')
+parser.add_argument('--keep-cache', action='store_true')
 args = vars(parser.parse_args())
 
 octopus_dir = os.path.dirname(os.path.realpath(__file__))
@@ -35,6 +36,9 @@ if not os.path.exists(bin_dir):
     os.makedirs(bin_dir)
 
 os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
+
+if "keep-cache" in args:
+    call(["rm", "CMakeCache.txt"])
 
 ret = 0
 

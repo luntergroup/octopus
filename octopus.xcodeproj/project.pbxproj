@@ -383,7 +383,7 @@
 		CAE3E2CC1AAB46BC00C01B2C /* read_filter.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = read_filter.hpp; sourceTree = "<group>"; };
 		CAE7DC2B1C510905009411B6 /* caller_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = caller_factory.cpp; sourceTree = "<group>"; };
 		CAE7DC2C1C510905009411B6 /* caller_factory.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = caller_factory.hpp; sourceTree = "<group>"; };
-		CAE8F2801D52B7FF002D1B14 /* make.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = make.py; sourceTree = "<group>"; };
+		CAE8F2801D52B7FF002D1B14 /* install.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = install.py; sourceTree = "<group>"; };
 		CAEC8E181B73A9E5008FC858 /* vcf_type.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = vcf_type.hpp; sourceTree = "<group>"; };
 		CAEC8E191B73ACB9008FC858 /* vcf_type.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_type.cpp; sourceTree = "<group>"; };
 		CAF23F6C1BA16E94006B673F /* vcf.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = vcf.hpp; sourceTree = "<group>"; };
@@ -789,7 +789,7 @@
 				CA16B10D1D4E556B006722C1 /* LICENSE */,
 				CAA4DC311A82B36300DD3E9A /* README.md */,
 				CA56D3851D50A8D10083501A /* TODO.md */,
-				CAE8F2801D52B7FF002D1B14 /* make.py */,
+				CAE8F2801D52B7FF002D1B14 /* install.py */,
 				CA83B2111D5BD7E600DC8035 /* test.py */,
 			);
 			sourceTree = "<group>";
