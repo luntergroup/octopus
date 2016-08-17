@@ -17,9 +17,10 @@
 #include <boost/algorithm/string/join.hpp>
 
 #include <basics/genomic_region.hpp>
+#include <utils/string_utils.hpp>
+
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
-#include <utils/string_utils.hpp>
 
 #include <iostream> // TEST
 
@@ -589,21 +590,6 @@ void set_filter(const bcf_hdr_t* header, bcf1_t* record, const std::vector<std::
     }
 }
 
-namespace
-{
-    template <typename T>
-    std::vector<std::string> split(const T& str, const char delim) {
-        std::vector<std::string> elems;
-        elems.reserve(std::count(std::cbegin(str), std::cend(str), delim) + 1);
-        std::stringstream ss(str);
-        std::string item;
-        while (std::getline(ss, item, delim)) {
-            elems.emplace_back(item);
-        }
-        return elems;
-    }
-} // namespace
-
 void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& builder)
 {
     int* intinfo {nullptr};
@@ -653,7 +639,7 @@ void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& b
                 const auto nchars = bcf_get_info_string(header, record, key, &stringinfo, &nstringinfo);
                 if (nchars > 0) {
                     std::string tmp(stringinfo, nchars);
-                    values = split(tmp, ',');
+                    values = utils::split(tmp, ',');
                 }
                 break;
             }

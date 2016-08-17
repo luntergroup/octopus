@@ -33,33 +33,7 @@ public:
     
     using RecordContainer = IVcfReaderImpl::RecordContainer;
     
-    class RecordIterator
-    {
-    public:
-        using iterator_category = std::input_iterator_tag;
-        using value_type        = VcfRecord;
-        using difference_type   = std::ptrdiff_t;
-        using pointer           = const VcfRecord*;
-        using reference         = const VcfRecord&;
-        
-        RecordIterator(IVcfReaderImpl::RecordIteratorPtr itr);
-        
-        RecordIterator(const RecordIterator&);
-        RecordIterator& operator=(const RecordIterator&) = delete;
-        RecordIterator(RecordIterator&&)                 = default;
-        RecordIterator& operator=(RecordIterator&&)      = default;
-        
-        reference operator*() const;
-        pointer operator->() const;
-        
-        RecordIterator& operator++();
-        
-        friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
-        
-    private:
-        IVcfReaderImpl::RecordIteratorPtr itr_;
-        std::type_index type_;
-    };
+    class RecordIterator;
     
     using RecordIteratorPair = std::pair<RecordIterator, RecordIterator>;
     
@@ -105,6 +79,34 @@ private:
 
 bool operator==(const VcfReader& lhs, const VcfReader& rhs);
 
+class VcfReader::RecordIterator
+{
+public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type        = VcfRecord;
+    using difference_type   = std::ptrdiff_t;
+    using pointer           = const VcfRecord*;
+    using reference         = const VcfRecord&;
+    
+    RecordIterator(IVcfReaderImpl::RecordIteratorPtr itr);
+    
+    RecordIterator(const RecordIterator&);
+    RecordIterator& operator=(const RecordIterator&) = delete;
+    RecordIterator(RecordIterator&&)                 = default;
+    RecordIterator& operator=(RecordIterator&&)      = default;
+    
+    reference operator*() const;
+    pointer operator->() const;
+    
+    RecordIterator& operator++();
+    
+    friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
+    
+private:
+    IVcfReaderImpl::RecordIteratorPtr itr_;
+    std::type_index type_;
+};
+    
 bool operator!=(const VcfReader::RecordIterator& lhs, const VcfReader::RecordIterator& rhs);
 
 } // namespace octopus
