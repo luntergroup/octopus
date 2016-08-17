@@ -37,8 +37,10 @@ if not os.path.exists(bin_dir):
 
 os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
 
-if "keep-cache" not in args:
-    os.remove("CMakeCache.txt")
+cmake_cache_file = "CMakeCache.txt"
+
+if "keep-cache" not in args and os.path.exists(cmake_cache_file):
+    os.remove(cmake_cache_file)
 
 ret = 0
 
