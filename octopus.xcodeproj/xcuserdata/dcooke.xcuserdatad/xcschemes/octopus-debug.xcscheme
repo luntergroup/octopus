@@ -32,9 +32,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D45AF3C71D638F220080B991"
-            BuildableName = "octopus-unit"
-            BlueprintName = "octopus-unit"
+            BlueprintIdentifier = "CAA4DC201A81981400DD3E9A"
+            BuildableName = "octopus-mock"
+            BlueprintName = "octopus-mock"
             ReferencedContainer = "container:octopus.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -55,9 +55,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D45AF3C71D638F220080B991"
-            BuildableName = "octopus-unit"
-            BlueprintName = "octopus-unit"
+            BlueprintIdentifier = "CAA4DC201A81981400DD3E9A"
+            BuildableName = "octopus-mock"
+            BlueprintName = "octopus-mock"
             ReferencedContainer = "container:octopus.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

@@ -104,27 +104,6 @@ std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>&& writers)
     return result;
 }
 
-class VcfWriterIterator
-{
-public:
-    VcfWriterIterator() = delete;
-    
-    VcfWriterIterator(VcfWriter& writer) : writer_ {writer} {}
-    
-    VcfWriterIterator& operator=(const VcfRecord& record)
-    {
-        writer_ << record;
-        return *this;
-    }
-    
-    VcfWriterIterator& operator*() { return *this; }
-    VcfWriterIterator& operator++() { return *this; }
-    VcfWriterIterator& operator++(int) { return *this; }
-    
-private:
-    std::reference_wrapper<VcfWriter> writer_;
-};
-
 void copy(const VcfReader& src, VcfWriter& dst)
 {
     if (!dst.is_header_written()) {

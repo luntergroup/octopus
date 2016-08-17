@@ -8,6 +8,7 @@
 #include <mutex>
 #include <type_traits>
 #include <functional>
+#include <iterator>
 
 #include <boost/filesystem/path.hpp>
 
@@ -77,6 +78,33 @@ VcfWriter& operator<<(VcfWriter& dst, const Container& records)
     write(records, dst);
     return dst;
 }
+
+class VcfWriterIterator
+{
+public:
+    using iterator_category = std::output_iterator_tag;
+    using value_type        = void;
+    using difference_type   = void;
+    using pointer           = void;
+    using reference         = void;
+    
+    VcfWriterIterator() = delete;
+    
+    VcfWriterIterator(VcfWriter& writer) : writer_ {writer} {}
+    
+    VcfWriterIterator& operator=(const VcfRecord& record)
+    {
+        writer_ << record;
+        return *this;
+    }
+    
+    VcfWriterIterator& operator*() { return *this; }
+    VcfWriterIterator& operator++() { return *this; }
+    VcfWriterIterator& operator++(int) { return *this; }
+    
+private:
+    std::reference_wrapper<VcfWriter> writer_;
+};
 
 bool operator==(const VcfWriter& lhs, const VcfWriter& rhs);
 
