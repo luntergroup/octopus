@@ -61,14 +61,6 @@ set(LOGGING_SOURCES
 )
 
 set(IO_SOURCES
-    io/read/htslib_sam_facade.hpp
-    io/read/htslib_sam_facade.cpp
-    io/read/read_manager.hpp
-    io/read/read_manager.cpp
-    io/read/read_reader_impl.hpp
-    io/read/read_reader.hpp
-    io/read/read_reader.cpp
-    
     io/reference/caching_fasta.hpp
     io/reference/caching_fasta.cpp
     io/reference/fasta.hpp
@@ -78,6 +70,17 @@ set(IO_SOURCES
     io/reference/reference_reader.hpp
     io/reference/threadsafe_fasta.hpp
     io/reference/threadsafe_fasta.cpp
+
+    io/region/region_parser.hpp
+    io/region/region_parser.cpp
+
+    io/read/htslib_sam_facade.hpp
+    io/read/htslib_sam_facade.cpp
+    io/read/read_manager.hpp
+    io/read/read_manager.cpp
+    io/read/read_reader_impl.hpp
+    io/read/read_reader.hpp
+    io/read/read_reader.cpp
     
     io/variant/htslib_bcf_facade.hpp
     io/variant/htslib_bcf_facade.cpp

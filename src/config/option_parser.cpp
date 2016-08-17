@@ -403,8 +403,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("min-haplotype-filter-posterior",
      po::value<float>()->default_value(1e-10, "1e-10"),
-     "Haplotypes with posterior less than this can be filtered, allowing greater"
-     " longer haplotype extesion in complex regions")
+     "Haplotypes with posterior less than this can be filtered before extension")
     
     ("disable-inactive-flank-scoring",
      po::bool_switch()->default_value(false),

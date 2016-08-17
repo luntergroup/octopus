@@ -71,9 +71,6 @@ std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& referen
 
 GenomicRegion::Position calculate_genome_size(const ReferenceGenome& reference);
 
-// Requires reference access to get contig sizes for partially specified regions (e.g. "4")
-GenomicRegion parse_region(std::string region, const ReferenceGenome& reference);
-
 } // namespace octopus
 
 #endif

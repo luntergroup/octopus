@@ -7,8 +7,6 @@
 #include <iterator>
 #include <utility>
 #include <numeric>
-#include <regex>
-#include <stdexcept>
 
 #include "fasta.hpp"
 #include "threadsafe_fasta.hpp"
@@ -152,53 +150,6 @@ GenomicRegion::Position calculate_genome_size(const ReferenceGenome& reference)
                            [&reference] (const auto curr, const auto& contig) {
                                return curr + reference.contig_size(contig);
                            });
-}
-
-GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
-{
-    using Position = GenomicRegion::Position;
-    
-    region.erase(std::remove(std::begin(region), std::end(region), ','), std::end(region));
-    
-    static const std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
-    
-    std::smatch match;
-    if (std::regex_match(region, match, re) && match.size() == 5) {
-        GenomicRegion::ContigName contig {match.str(1)};
-        
-        const auto contig_size = reference.contig_size(contig);
-        
-        Position begin {0}, end {0};
-        
-        if (match.length(2) == 0) {
-            end = contig_size;
-        } else {
-            begin = static_cast<Position>(std::stoul(match.str(2)));
-            
-            if (match.length(3) == 0) {
-                end = begin + 1;
-            } else if (match.str(4).empty()) {
-                end = contig_size;
-            } else {
-                end = static_cast<Position>(std::stoul(match.str(4)));
-            }
-            
-            if (begin > end) {
-                throw std::invalid_argument {"parse_region: given region ("
-                        + region + ") with invalid format"};
-            }
-            
-            if (begin > contig_size) {
-                begin = contig_size;
-            }
-            
-            if (end > contig_size) end = contig_size;
-        }
-        
-        return GenomicRegion {std::move(contig), begin, end};
-    }
-    
-    throw std::invalid_argument {"parse_region: given region (" + region + ") with invalid format"};
 }
     
 } // namespace octopus
