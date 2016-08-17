@@ -556,31 +556,39 @@ auto make_contig_components(const ContigName& contig, GenomeCallingComponents& c
     return result;
 }
 
-void make_remaining_tasks(TaskMap& tasks, GenomeCallingComponents& components,
-                          const unsigned num_threads,
-                          Task::ExecutionPolicy policy, TaskMakerSyncPacket& sync)
+void make_remaining_tasks(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCallingComponents& components,
+                          const unsigned num_threads, Task::ExecutionPolicy policy, TaskMakerSyncPacket& sync)
 {
-    const auto& contigs = components.contigs();
+    assert(!contigs.empty());
     
-    std::for_each(std::next(std::cbegin(contigs)), std::cend(contigs), [&] (const auto& contig) {
-        auto contig_components = make_contig_components(contig, components, num_threads);
-        auto contig_tasks = divide_work_into_tasks(contig_components, policy);
-        std::unique_lock<std::mutex> lk {sync.mutex};
-        tasks.emplace(contig, std::move(contig_tasks));
-        lk.unlock();
-        sync.cv.notify_all();
-    });
+    std::unique_lock<std::mutex> lk {sync.mutex, std::defer_lock};
     
-    std::unique_lock<std::mutex> lk {sync.mutex};
+    std::for_each(std::make_move_iterator(std::begin(contigs)),
+                  std::make_move_iterator(std::prev(std::end(contigs))),
+                  [&] (auto&& contig) {
+                      auto contig_components = make_contig_components(contig, components, num_threads);
+                      auto contig_tasks = divide_work_into_tasks(contig_components, policy);
+                      
+                      lk.lock();
+                      tasks.emplace(std::move(contig), std::move(contig_tasks));
+                      lk.unlock();
+                      sync.cv.notify_all();
+                  });
+    
+    auto contig_components = make_contig_components(contigs.back(), components, num_threads);
+    auto contig_tasks = divide_work_into_tasks(contig_components, policy);
+    
+    lk.lock();
+    tasks.emplace(std::move(contigs.back()), std::move(contig_tasks));
     sync.done = true;
     lk.unlock();
-    sync.cv.notify_one();
+    sync.cv.notify_all();
 }
 
 std::thread make_tasks(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
                        TaskMakerSyncPacket& sync)
 {
-    const auto& contigs = components.contigs();
+    auto contigs = components.contigs();
     
     if (contigs.empty()) {
         sync.done = true;
@@ -591,14 +599,19 @@ std::thread make_tasks(TaskMap& tasks, GenomeCallingComponents& components, cons
     
     auto contig_components = make_contig_components(contigs.front(), components, num_threads);
     
-    tasks.emplace(contigs.front(), divide_work_into_tasks(contig_components, policy));
+    tasks.emplace(std::move(contigs.front()), divide_work_into_tasks(contig_components, policy));
     
     if (contigs.size() == 1) {
         sync.done = true;
         return std::thread {};
     }
     
-    return std::thread {make_remaining_tasks, std::ref(tasks), std::ref(components), num_threads, policy, std::ref(sync)};
+    contigs.erase(std::cbegin(contigs));
+    
+    return std::thread {
+        make_remaining_tasks, std::ref(tasks), std::move(contigs), std::ref(components),
+        num_threads, policy, std::ref(sync)
+    };
 }
 
 unsigned calculate_num_task_threads(const GenomeCallingComponents& components)
@@ -644,12 +657,19 @@ bool is_ready(const std::future<R>& f)
 
 struct CompletedTask : public Task, public Mappable<CompletedTask>
 {
-    CompletedTask(Task task) : Task {std::move(task)} {}
-    CompletedTask(Task task, std::deque<VcfRecord>&& calls)
-    : Task {std::move(task)}, calls {std::move(calls)} {}
+    CompletedTask(Task task) : Task {std::move(task)}, calls {}, runtime {} {}
     
     std::deque<VcfRecord> calls;
+    
+    utils::TimeInterval runtime;
 };
+
+std::string duration(const CompletedTask& task)
+{
+    std::ostringstream ss {};
+    ss << task.runtime;
+    return ss.str();
+}
 
 std::ostream& operator<<(std::ostream& os, const CompletedTask& task)
 {
@@ -673,10 +693,13 @@ auto run(Task task, ContigCallingComponents components, SyncPacket& sync)
     return std::async(std::launch::async,
                       [task = std::move(task), components = std::move(components), &sync]
                       () -> CompletedTask {
-                          CompletedTask result {
-                              task,
-                              components.caller->call(task.region, components.progress_meter)
-                          };
+                          CompletedTask result {task};
+                          
+                          result.runtime.start = std::chrono::system_clock::now();
+                          
+                          result.calls = components.caller->call(task.region, components.progress_meter);
+                          
+                          result.runtime.end = std::chrono::system_clock::now();
                           
                           std::unique_lock<std::mutex> lk {sync.mutex};
                           ++sync.count_finished;
@@ -848,7 +871,10 @@ void write(std::deque<CompletedTask>&& tasks, VcfWriter& temp_vcf)
 {
     static auto debug_log = get_debug_log();
     for (auto&& task : tasks) {
-        if (debug_log) stream(*debug_log) << "Writing completed task " << task;
+        if (debug_log) {
+            stream(*debug_log) << "Writing completed task " << task
+                               << " that finished in " << duration(task);
+        }
         write_calls(std::move(task.calls), temp_vcf);
     }
 }
@@ -869,7 +895,7 @@ void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffer
         
         resolve_connecting_calls(writable_tasks, calling_components);
         
-        // keep the last task buffered to enable connection resolution when the next task finishes
+        // Keep the last task buffered to enable connection resolution when the next task finishes
         
         const auto p = buffered_tasks.emplace(contig_region(writable_tasks.back()),
                                               std::move(writable_tasks.back()));
@@ -954,7 +980,7 @@ void write_remaining_tasks(FutureCompletedTasks& futures, CompletedTaskMap& buff
 }
 
 template <typename K>
-auto extract_values(std::unordered_map<K, VcfWriter>&& vcfs)
+auto extract_writers(std::unordered_map<K, VcfWriter>&& vcfs)
 {
     std::vector<VcfWriter> result {};
     result.reserve(vcfs.size());
@@ -971,7 +997,7 @@ auto extract_values(std::unordered_map<K, VcfWriter>&& vcfs)
 template <typename K>
 auto extract_as_readers(std::unordered_map<K, VcfWriter>&& vcfs)
 {
-    return writers_to_readers(extract_values(std::move(vcfs)));
+    return writers_to_readers(extract_writers(std::move(vcfs)));
 }
 
 template <typename K>
@@ -983,6 +1009,8 @@ void merge(std::unordered_map<K, VcfWriter>&& temp_vcf_writers, GenomeCallingCom
 
 void run_octopus_multi_threaded(GenomeCallingComponents& components)
 {
+    using namespace std::chrono_literals;
+    
     static auto debug_log = get_debug_log();
     
     const auto num_task_threads = calculate_num_task_threads(components);
@@ -1019,54 +1047,58 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     components.progress_meter().start();
     
+    unsigned num_idle_futures {0};
+    
     while (!pending_tasks.empty() || !task_maker_sync.done) {
-        if (pending_tasks.empty()) {
-            // tasks are still being generated
+        if (!task_maker_sync.done && pending_tasks.empty()) {
             std::unique_lock<std::mutex> lk {task_maker_sync.mutex};
-            task_maker_sync.cv.wait(lk, [&] () { return !pending_tasks.empty(); });
+            if (num_idle_futures < futures.size()) {
+                // If there are running futures then it's good periodically check to see if
+                // any have finished and process them while we wait for the task maker.
+                while (pending_tasks.empty() && task_sync.count_finished == 0) {
+                    auto now = std::chrono::system_clock::now();
+                    task_maker_sync.cv.wait_until(lk, now + 5s, [&] () { return !pending_tasks.empty(); });
+                }
+            } else {
+                task_maker_sync.cv.wait(lk, [&] () { return !pending_tasks.empty(); });
+            }
         }
         
-        unsigned num_unused_futures {0};
+        num_idle_futures = 0;
         
         for (auto& future : futures) {
             if (is_ready(future)) {
-                std::lock_guard<std::mutex> lk {task_sync.mutex};
+                auto completed_task = future.get();
+                                
+                const auto& contig = contig_name(completed_task);
                 
-                try {
-                    auto completed_task = future.get();
-                    
-                    const auto& contig = contig_name(completed_task);
-                    
-                    write_or_buffer(std::move(completed_task), buffered_tasks.at(contig),
-                                    running_tasks.at(contig), holdbacks.at(contig),
-                                    temp_vcfs.at(contig), calling_components.at(contig));
-                } catch (...) {
-                    throw; // TODO: which exceptions can we recover from?
-                }
+                write_or_buffer(std::move(completed_task), buffered_tasks.at(contig),
+                                running_tasks.at(contig), holdbacks.at(contig),
+                                temp_vcfs.at(contig), calling_components.at(contig));
                 
                 --task_sync.count_finished;
             }
             
-            if (!pending_tasks.empty() && !future.valid()) {
-                std::lock_guard<std::mutex> lk {task_sync.mutex};
-                
-                auto task = pop(pending_tasks, task_maker_sync);
-                
-                future = run(task, calling_components.at(contig_name(task))(), task_sync);
-                
-                running_tasks.at(contig_name(task)).push(std::move(task));
-            } else {
-                ++num_unused_futures;
+            if (!future.valid()) {
+                if (!pending_tasks.empty()) {
+                    auto task = pop(pending_tasks, task_maker_sync);
+                    
+                    future = run(task, calling_components.at(contig_name(task))(), task_sync);
+                    
+                    running_tasks.at(contig_name(task)).push(std::move(task));
+                } else {
+                    ++num_idle_futures;
+                }
             }
         }
         
-        // If there are unused filters then we must have run out of tasks, so we should
+        // If there are idle futures then we must have run out of tasks, so we should
         // wait on the task maker condition variable instead.
-        if (num_unused_futures == 0 && task_sync.count_finished == 0) {
+        if (num_idle_futures == 0 && task_sync.count_finished == 0) {
             std::unique_lock<std::mutex> lk {task_sync.mutex};
             task_sync.cv.wait(lk, [&] () { return task_sync.count_finished > 0; });
         } else {
-            if (debug_log) stream(*debug_log) << "There are " << num_unused_futures << " unused threads";
+            if (debug_log) stream(*debug_log) << "There are " << num_idle_futures << " idle futures";
         }
     }
     
