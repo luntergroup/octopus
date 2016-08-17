@@ -38,12 +38,6 @@ Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference)
     return Variant {make_reference_allele(mapped_region(alt_allele), reference), alt_allele};
 }
 
-Variant make_variant(const std::string& region_str, Variant::NucleotideSequence alt_sequence,
-                     const ReferenceGenome& reference)
-{
-    return make_variant(Allele {parse_region(region_str, reference), std::move(alt_sequence)}, reference);
-}
-
 const Variant::NucleotideSequence& ref_sequence(const Variant& variant)
 {
     return variant.ref_allele().sequence();

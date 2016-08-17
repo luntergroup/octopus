@@ -1220,25 +1220,25 @@ namespace debug {
                                     const MappableFlatSet<Variant>& candidates,
                                     const ReferenceGenome& reference)
     {
-        auto haplotype = debug::make_haplotype(haplotype_str, haplotype_region_str, reference);
-        
-        std::cout << "Haplotype: " << haplotype << std::endl;
-        debug::print_variant_alleles(haplotype);
-        std::cout << std::endl;
-        
-        const auto active_region = parse_region(active_region_str, reference);
-        
-        auto flank_state = calculate_flank_state({haplotype}, active_region, candidates);
-        
-        std::cout << "Flank sizes: " << flank_state.lhs_flank << " " << flank_state.rhs_flank << std::endl;
-        
-        auto read = *find_first_read(read_region_str, cigar_str, reads);
-        
-        std::cout << "Read: " << read << std::endl;
-        
-        auto likelihood = calculate_likelihood(haplotype, read, flank_state);
-        
-        std::cout << "Likelihood = " << likelihood << std::endl;
+//        auto haplotype = debug::make_haplotype(haplotype_str, haplotype_region_str, reference);
+//        
+//        std::cout << "Haplotype: " << haplotype << std::endl;
+//        debug::print_variant_alleles(haplotype);
+//        std::cout << std::endl;
+//        
+//        const auto active_region = parse_region(active_region_str, reference);
+//        
+//        auto flank_state = calculate_flank_state({haplotype}, active_region, candidates);
+//        
+//        std::cout << "Flank sizes: " << flank_state.lhs_flank << " " << flank_state.rhs_flank << std::endl;
+//        
+//        auto read = *find_first_read(read_region_str, cigar_str, reads);
+//        
+//        std::cout << "Read: " << read << std::endl;
+//        
+//        auto likelihood = calculate_likelihood(haplotype, read, flank_state);
+//        
+//        std::cout << "Likelihood = " << likelihood << std::endl;
     }
 } // namespace debug
 } // namespace octopus

@@ -667,6 +667,7 @@ std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype)
 }
 
 namespace debug {
+
     void print_alleles(const Haplotype& haplotype)
     {
         print_alleles(std::cout, haplotype);
@@ -676,36 +677,6 @@ namespace debug {
     {
         print_variant_alleles(std::cout, haplotype);
     }
-    
-    Haplotype make_haplotype(const std::string& str, const GenomicRegion& region,
-                             const ReferenceGenome& reference)
-    {
-        if (str.size() < 3 || str.front() != '<' || str.back() != '>') {
-            throw std::runtime_error {"make_haplotype: bad input"};
-        }
-        
-        Haplotype::Builder hb {region, reference};
-        
-        if (str.size() == 3) {
-            return hb.build(); // reference
-        }
-        
-        std::size_t pos {3};
-        
-        while (pos < str.size()) {
-            auto i = str.find(' ', pos);
-            auto j = str.find('}', i + 1);
-            hb.push_back(make_allele(str.substr(pos, i - pos), str.substr(i + 1, j - i - 1), reference));
-            pos = j + 3;
-        }
-        
-        return hb.build();
-    }
-    
-    Haplotype make_haplotype(const std::string& str, const std::string& region,
-                             const ReferenceGenome& reference)
-    {
-        return make_haplotype(str, parse_region(region, reference), reference);
-    }
+
 } // namespace debug
 } // namespace octopus

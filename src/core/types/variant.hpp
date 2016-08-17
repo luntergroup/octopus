@@ -91,8 +91,6 @@ alternative_ {reference_.mapped_region(), std::forward<Sequence2>(alt_sequence)}
 // non-member methods
 
 Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference);
-Variant make_variant(const std::string& region_str, Variant::NucleotideSequence alt_sequence,
-                     const ReferenceGenome& reference);
 
 const Variant::NucleotideSequence& ref_sequence(const Variant& variant);
 const Variant::NucleotideSequence& alt_sequence(const Variant& variant);

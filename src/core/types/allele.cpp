@@ -29,11 +29,6 @@ Allele make_reference_allele(const GenomicRegion& region, const ReferenceGenome&
     return Allele {region, reference.fetch_sequence(region)};
 }
 
-Allele make_reference_allele(const std::string& region, const ReferenceGenome& reference)
-{
-    return make_reference_allele(parse_region(region, reference), reference);
-}
-
 std::vector<Allele> make_reference_alleles(const std::vector<GenomicRegion>& regions,
                                            const ReferenceGenome& reference)
 {

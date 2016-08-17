@@ -334,41 +334,37 @@ struct HaplotypeHash
     }
 };
 
-namespace debug
+namespace debug {
+
+template <typename S>
+void print_alleles(S&& stream, const Haplotype& haplotype)
 {
-    template <typename S>
-    void print_alleles(S&& stream, const Haplotype& haplotype)
-    {
+    stream << "< ";
+    for (const auto& allele : haplotype.explicit_alleles_) {
+        stream << "{" << allele << "} ";
+    }
+    stream << ">";
+}
+
+template <typename S>
+void print_variant_alleles(S&& stream, const Haplotype& haplotype)
+{
+    if (is_reference(haplotype)) {
+        stream << "< >";
+    } else {
+        const auto& contig = contig_name(haplotype);
         stream << "< ";
-        for (const auto& allele : haplotype.explicit_alleles_) {
-            stream << "{" << allele << "} ";
+        for (const auto& contig_allele : haplotype.explicit_alleles_) {
+            Allele allele {GenomicRegion {contig, contig_allele.mapped_region()}, contig_allele.sequence()};
+            if (!is_reference(allele, haplotype.reference_)) stream << "{" << allele << "} ";
         }
         stream << ">";
     }
-    
-    template <typename S>
-    void print_variant_alleles(S&& stream, const Haplotype& haplotype)
-    {
-        if (is_reference(haplotype)) {
-            stream << "< >";
-        } else {
-            const auto& contig = contig_name(haplotype);
-            stream << "< ";
-            for (const auto& contig_allele : haplotype.explicit_alleles_) {
-                Allele allele {GenomicRegion {contig, contig_allele.mapped_region()}, contig_allele.sequence()};
-                if (!is_reference(allele, haplotype.reference_)) stream << "{" << allele << "} ";
-            }
-            stream << ">";
-        }
-    }
-    
-    void print_alleles(const Haplotype& haplotype);
-    void print_variant_alleles(const Haplotype& haplotype);
-    
-    Haplotype make_haplotype(const std::string& str, const GenomicRegion& region,
-                             const ReferenceGenome& reference);
-    Haplotype make_haplotype(const std::string& str, const std::string& region,
-                             const ReferenceGenome& reference);
+}
+
+void print_alleles(const Haplotype& haplotype);
+void print_variant_alleles(const Haplotype& haplotype);
+
 } // namespace debug
 } // namespace octopus
 
