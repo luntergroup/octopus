@@ -98,6 +98,22 @@ VcfParser::RecordIteratorPtrPair VcfParser::iterate(UnpackPolicy level) const
                           std::make_unique<RecordIterator>());
 }
 
+VcfParser::RecordIteratorPtrPair VcfParser::iterate(const std::string& contig, UnpackPolicy level) const
+{
+    // TODO
+    reset_vcf();
+    return std::make_pair(std::make_unique<RecordIterator>(*this, level),
+                          std::make_unique<RecordIterator>());
+}
+
+VcfParser::RecordIteratorPtrPair VcfParser::iterate(const GenomicRegion& region, const UnpackPolicy level) const
+{
+    // TODO
+    reset_vcf();
+    return std::make_pair(std::make_unique<RecordIterator>(*this, level),
+                          std::make_unique<RecordIterator>());
+}
+
 VcfParser::RecordContainer VcfParser::fetch_records(const UnpackPolicy level) const
 {
     RecordContainer result {};
@@ -486,7 +502,7 @@ local_ {vcf.file_path_.string()}
     local_.seekg(parent_vcf_->file_.tellg());
     
     if (std::getline(local_, line_)) {
-        if (unpack == UnpackPolicy::All) {
+        if (unpack_ == UnpackPolicy::All) {
             record_ = std::make_shared<VcfRecord>(parse_record(line_, vcf.samples_));
         } else {
             record_ = std::make_shared<VcfRecord>(parse_record(line_));
@@ -494,6 +510,34 @@ local_ {vcf.file_path_.string()}
     } else {
         record_ = nullptr;
     }
+}
+
+VcfParser::RecordIterator::RecordIterator(const RecordIterator& other)
+:
+parent_vcf_ {other.parent_vcf_},
+unpack_ {other.unpack_},
+local_ {parent_vcf_->file_path_.string()}
+{
+    local_.seekg(parent_vcf_->file_.tellg());
+    
+    if (std::getline(local_, line_)) {
+        if (unpack_ == UnpackPolicy::All) {
+            record_ = std::make_shared<VcfRecord>(parse_record(line_, parent_vcf_->samples_));
+        } else {
+            record_ = std::make_shared<VcfRecord>(parse_record(line_));
+        }
+    } else {
+        record_ = nullptr;
+    }
+}
+
+VcfParser::RecordIterator& VcfParser::RecordIterator::operator=(RecordIterator other)
+{
+    using std::swap;
+    swap(parent_vcf_, other.parent_vcf_);
+    swap(unpack_,     other.unpack_);
+    swap(local_,      other.local_);
+    return *this;
 }
 
 VcfParser::RecordIterator::reference VcfParser::RecordIterator::operator*() const

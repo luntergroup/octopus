@@ -57,8 +57,8 @@ public:
     std::size_t count_records(const GenomicRegion& region) const override;
     
     RecordIteratorPtrPair iterate(UnpackPolicy level) const override;
-    //RecordIteratorPtrPair iterate(const std::string& contig, UnpackPolicy level) override;
-    //RecordIteratorPtrPair iterate(const GenomicRegion& region, UnpackPolicy level) override;
+    RecordIteratorPtrPair iterate(const std::string& contig, UnpackPolicy level) const override;
+    RecordIteratorPtrPair iterate(const GenomicRegion& region, UnpackPolicy level) const override;
     
     RecordContainer fetch_records(UnpackPolicy level) const override;
     RecordContainer fetch_records(const std::string& contig, UnpackPolicy level) const override;
@@ -102,44 +102,49 @@ private:
     RecordContainer fetch_records(bcf_srs_t*, UnpackPolicy level, size_t num_records) const;
     
     friend RecordIterator;
-    
+};
+
+class HtslibBcfFacade::RecordIterator : public IVcfReaderImpl::RecordIterator
+{
 public:
-    class RecordIterator : public IVcfReaderImpl::RecordIterator
+    using iterator_category = std::input_iterator_tag;
+    using value_type        = VcfRecord;
+    using difference_type   = std::ptrdiff_t;
+    using pointer           = const VcfRecord*;
+    using reference         = const VcfRecord&;
+    
+    RecordIterator(const HtslibBcfFacade& facade);
+    RecordIterator(const HtslibBcfFacade& facade, HtsBcfSrPtr hts_iterator, UnpackPolicy level);
+    
+    RecordIterator(const RecordIterator&)            = default;
+    RecordIterator& operator=(const RecordIterator&) = default;
+    RecordIterator(RecordIterator&&)                 = default;
+    RecordIterator& operator=(RecordIterator&&)      = default;
+    
+    reference operator*() const override;
+    
+    pointer operator->() const override;
+    
+    void next() override;
+    
+    RecordIterator& operator++();
+    
+    std::unique_ptr<IVcfReaderImpl::RecordIterator> clone() const override
     {
-    public:
-        using iterator_category = std::input_iterator_tag;
-        using value_type        = VcfRecord;
-        using difference_type   = std::ptrdiff_t;
-        using pointer           = const VcfRecord*;
-        using reference         = const VcfRecord&;
-        
-        RecordIterator(const HtslibBcfFacade& facade);
-        RecordIterator(const HtslibBcfFacade& facade, HtsBcfSrPtr hts_iterator, UnpackPolicy level);
-        
-        ~RecordIterator() = default;
-        
-        RecordIterator(const RecordIterator&)            = default;
-        RecordIterator& operator=(const RecordIterator&) = default;
-        RecordIterator(RecordIterator&&)                 = default;
-        RecordIterator& operator=(RecordIterator&&)      = default;
-        
-        reference operator*() const override;
-        pointer operator->() const override;
-        
-        void next() override;
-        RecordIterator& operator++();
-        
-        friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
-    private:
-        using HtsBcfSrSharedPtr = std::shared_ptr<bcf_srs_t>;
-        
-        std::reference_wrapper<const HtslibBcfFacade> facade_;
-        
-        HtsBcfSrSharedPtr hts_iterator_;
-        UnpackPolicy level_;
-        
-        std::shared_ptr<VcfRecord> record_;
-    };
+        return std::make_unique<RecordIterator>(*this);
+    }
+    
+    friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
+    
+private:
+    using HtsBcfSrSharedPtr = std::shared_ptr<bcf_srs_t>;
+    
+    std::reference_wrapper<const HtslibBcfFacade> facade_;
+    
+    HtsBcfSrSharedPtr hts_iterator_;
+    UnpackPolicy level_;
+    
+    std::shared_ptr<VcfRecord> record_;
 };
 
 bool operator!=(const HtslibBcfFacade::RecordIterator& lhs, const HtslibBcfFacade::RecordIterator& rhs);

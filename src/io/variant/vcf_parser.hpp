@@ -52,6 +52,8 @@ public:
     std::size_t count_records(const GenomicRegion& region) const override;
     
     RecordIteratorPtrPair iterate(UnpackPolicy level) const override;
+    RecordIteratorPtrPair iterate(const std::string& contig, UnpackPolicy level) const override;
+    RecordIteratorPtrPair iterate(const GenomicRegion& region, UnpackPolicy level) const override;
     
     RecordContainer fetch_records(UnpackPolicy level) const override;
     RecordContainer fetch_records(const std::string& contig, UnpackPolicy level) const override;
@@ -59,6 +61,7 @@ public:
     
     friend RecordIterator;
     friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
+    
 private:
     fs::path file_path_;
     
@@ -85,20 +88,25 @@ public:
     
     RecordIterator(const VcfParser& vcf, UnpackPolicy unpack);
     
-    ~RecordIterator() = default;
-    
-    RecordIterator(const RecordIterator&)            = default;
-    RecordIterator& operator=(const RecordIterator&) = default;
-    RecordIterator(RecordIterator&&)                 = default;
-    RecordIterator& operator=(RecordIterator&&)      = default;
+    RecordIterator(const RecordIterator&);
+    RecordIterator& operator=(RecordIterator);
+    RecordIterator(RecordIterator&&)            = default;
+    RecordIterator& operator=(RecordIterator&&) = default;
     
     reference operator*() const override;
     pointer operator->() const override;
     
     void next() override;
+    
     RecordIterator& operator++();
     
+    std::unique_ptr<IVcfReaderImpl::RecordIterator> clone() const override
+    {
+        return std::make_unique<RecordIterator>(*this);
+    }
+    
     friend bool operator==(const RecordIterator& lhs, const RecordIterator& rhs);
+    
 private:
     std::shared_ptr<VcfRecord> record_;
     const VcfParser* parent_vcf_;

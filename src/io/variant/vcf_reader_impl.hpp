@@ -32,12 +32,14 @@ public:
         using pointer           = const VcfRecord*;
         using reference         = const VcfRecord&;
         
+        virtual ~RecordIterator() = default;
+        
         virtual reference operator*() const = 0;
         virtual pointer operator->() const = 0;
         
         virtual void next() = 0;
         
-        virtual ~RecordIterator() = default;
+        virtual std::unique_ptr<RecordIterator> clone() const = 0;
     };
     
     using RecordIteratorPtr     = std::unique_ptr<RecordIterator>;
@@ -56,6 +58,8 @@ public:
     virtual RecordContainer fetch_records(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::All) const = 0;
     
     virtual RecordIteratorPtrPair iterate(UnpackPolicy level = UnpackPolicy::All) const = 0;
+    virtual RecordIteratorPtrPair iterate(const std::string& contig, UnpackPolicy level) const  = 0;
+    virtual RecordIteratorPtrPair iterate(const GenomicRegion& region, UnpackPolicy level) const = 0;
     
     virtual ~IVcfReaderImpl() noexcept = default;
 };

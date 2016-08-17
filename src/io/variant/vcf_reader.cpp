@@ -51,6 +51,12 @@ itr_ {std::move(itr)},
 type_ {typeid(*itr_)}
 {}
 
+VcfReader::RecordIterator::RecordIterator(const RecordIterator& other)
+:
+itr_ {other.itr_->clone()},
+type_ {other.type_}
+{}
+
 VcfReader::RecordIterator::reference VcfReader::RecordIterator::operator*() const
 {
     return itr_->operator*();
@@ -189,6 +195,20 @@ VcfReader::RecordIteratorPair VcfReader::iterate(const UnpackPolicy level) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     auto p = reader_->iterate(level);
+    return std::make_pair(std::move(p.first), std::move(p.second));
+}
+
+VcfReader::RecordIteratorPair VcfReader::iterate(const std::string& contig, const UnpackPolicy level) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    auto p = reader_->iterate(contig, level);
+    return std::make_pair(std::move(p.first), std::move(p.second));
+}
+
+VcfReader::RecordIteratorPair VcfReader::iterate(const GenomicRegion& region, const UnpackPolicy level) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    auto p = reader_->iterate(region, level);
     return std::make_pair(std::move(p.first), std::move(p.second));
 }
 
