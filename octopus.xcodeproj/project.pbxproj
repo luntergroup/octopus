@@ -405,14 +405,11 @@
 		CA17CE281D53C6B10089435A /* read_stats_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_stats_tests.cpp; sourceTree = "<group>"; };
 		CA17CE2A1D53E8D80089435A /* contig_ploidies.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = contig_ploidies.txt; sourceTree = "<group>"; };
 		CA17CE2B1D53E8D80089435A /* hla_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = hla_regions.txt; sourceTree = "<group>"; };
-		CA17CE2C1D53E8D80089435A /* human_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = human_regions.txt; sourceTree = "<group>"; };
 		CA17CE2D1D53E8D80089435A /* human_skip_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = human_skip_regions.txt; sourceTree = "<group>"; };
 		CA17CE2E1D53E8D80089435A /* human_skip_regions2.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = human_skip_regions2.txt; sourceTree = "<group>"; };
-		CA17CE2F1D53E8D80089435A /* interesting_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = interesting_regions.txt; sourceTree = "<group>"; };
-		CA17CE301D53E8D80089435A /* mock_objects.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = mock_objects.hpp; sourceTree = "<group>"; };
-		CA17CE321D53E8D80089435A /* test_files.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_files.txt; sourceTree = "<group>"; };
-		CA17CE331D53E8D80089435A /* test_regions.bed */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_regions.bed; sourceTree = "<group>"; };
-		CA17CE341D53E8D80089435A /* test_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_regions.txt; sourceTree = "<group>"; };
+		CA17CE301D53E8D80089435A /* mock_objects.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = mock_objects.hpp; path = ../data/mock_objects.hpp; sourceTree = "<group>"; };
+		CA17CE331D53E8D80089435A /* regions.bed */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = regions.bed; sourceTree = "<group>"; };
+		CA17CE341D53E8D80089435A /* regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = regions.txt; sourceTree = "<group>"; };
 		CA17CE351D53E8D80089435A /* test_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = test_utils.hpp; sourceTree = "<group>"; };
 		CA17CE361D53EA0E0089435A /* unit_test_main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unit_test_main.cpp; sourceTree = "<group>"; };
 		CA17CE381D53F00E0089435A /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
@@ -609,6 +606,8 @@
 		D454B9561D50DF2500F083F9 /* read_pipe_fwd.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = read_pipe_fwd.hpp; sourceTree = "<group>"; };
 		D45AF4521D638F220080B991 /* octopus-unit */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "octopus-unit"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D45AF4771D6390740080B991 /* test_common.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = test_common.hpp; sourceTree = "<group>"; };
+		D45AF4791D64D18D0080B991 /* reference.fa */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = reference.fa; sourceTree = "<group>"; };
+		D45AF47A1D64D2D30080B991 /* empty.bed */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = empty.bed; sourceTree = "<group>"; };
 		D45D2E5F1B2AD88A00F6A89D /* libhts.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libhts.a; path = ../../../../../usr/local/Cellar/htslib/1.2.1/lib/libhts.a; sourceTree = "<absolute>"; };
 		D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_filesystem.a; path = ../../../../../usr/local/Cellar/boost/1.58.0/lib/libboost_filesystem.a; sourceTree = "<absolute>"; };
 		D45D2E641B2AD93500F6A89D /* libboost_program_options.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_program_options.a; path = ../../../../../usr/local/Cellar/boost/1.58.0/lib/libboost_program_options.a; sourceTree = "<absolute>"; };
@@ -931,6 +930,7 @@
 		CA83B2081D58D97D00DC8035 /* mock */ = {
 			isa = PBXGroup;
 			children = (
+				CA17CE301D53E8D80089435A /* mock_objects.hpp */,
 				CA83B20A1D58D9BF00DC8035 /* mock_reference.hpp */,
 				CA83B2091D58D9BF00DC8035 /* mock_reference.cpp */,
 				CA83B2161D5BDD6B00DC8035 /* mock_read_manager.hpp */,
@@ -1040,9 +1040,9 @@
 		CAA4DC2D1A8219D900DD3E9A /* test */ = {
 			isa = PBXGroup;
 			children = (
-				CA83B2081D58D97D00DC8035 /* mock */,
+				D424E06C1D51014A00654AA3 /* data */,
 				D424E0CB1D54BBEC00654AA3 /* benchmark */,
-				D424E06C1D51014A00654AA3 /* resources */,
+				CA83B2081D58D97D00DC8035 /* mock */,
 				CA0B46671AE860B600158BBA /* regression */,
 				CA0B46661AE8609A00158BBA /* unit */,
 				D424E0CD1D54BC1100654AA3 /* timers.hpp */,
@@ -1364,24 +1364,22 @@
 			path = models;
 			sourceTree = "<group>";
 		};
-		D424E06C1D51014A00654AA3 /* resources */ = {
+		D424E06C1D51014A00654AA3 /* data */ = {
 			isa = PBXGroup;
 			children = (
 				CA17CE2A1D53E8D80089435A /* contig_ploidies.txt */,
 				CA17CE2B1D53E8D80089435A /* hla_regions.txt */,
-				CA17CE2C1D53E8D80089435A /* human_regions.txt */,
 				CA17CE2D1D53E8D80089435A /* human_skip_regions.txt */,
 				CA17CE2E1D53E8D80089435A /* human_skip_regions2.txt */,
-				CA17CE2F1D53E8D80089435A /* interesting_regions.txt */,
-				CA17CE301D53E8D80089435A /* mock_objects.hpp */,
-				CA17CE321D53E8D80089435A /* test_files.txt */,
-				CA17CE331D53E8D80089435A /* test_regions.bed */,
-				CA17CE341D53E8D80089435A /* test_regions.txt */,
+				CA17CE331D53E8D80089435A /* regions.bed */,
+				CA17CE341D53E8D80089435A /* regions.txt */,
 				CA17CE351D53E8D80089435A /* test_utils.hpp */,
 				CA83B20C1D58DF5F00DC8035 /* empty.txt */,
+				D45AF47A1D64D2D30080B991 /* empty.bed */,
 				CA83B20D1D58E41B00DC8035 /* malformed_regions.txt */,
+				D45AF4791D64D18D0080B991 /* reference.fa */,
 			);
-			path = resources;
+			path = data;
 			sourceTree = "<group>";
 		};
 		D424E06D1D51021100654AA3 /* basics */ = {
