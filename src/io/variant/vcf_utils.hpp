@@ -44,7 +44,7 @@ VcfHeader merge(const std::vector<VcfHeader>& headers);
 
 void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
            const std::vector<std::string>& contigs);
-    
+
 void merge(const std::vector<VcfReader>& sources, VcfWriter& dst);
 
 void convert_to_legacy(const VcfReader& src, VcfWriter& dst);

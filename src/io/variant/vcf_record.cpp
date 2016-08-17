@@ -10,17 +10,22 @@ namespace octopus {
 
 // public methods
 
-const std::string& VcfRecord::chrom() const noexcept
+    const GenomicRegion& VcfRecord::mapped_region() const noexcept
 {
-    return chrom_;
+    return region_;
 }
 
-VcfRecord::SizeType VcfRecord::pos() const noexcept
+const GenomicRegion::ContigName& VcfRecord::chrom() const noexcept
 {
-    return pos_;
+    return region_.contig_name();
 }
 
-const VcfRecord::IdType& VcfRecord::id() const noexcept
+GenomicRegion::Position VcfRecord::pos() const noexcept
+{
+    return region_.begin() + 1;
+}
+
+const std::string& VcfRecord::id() const noexcept
 {
     return id_;
 }
@@ -157,10 +162,11 @@ const std::vector<VcfRecord::ValueType>& VcfRecord::get_sample_value(const Sampl
     return (key == "GT") ? genotypes_.at(sample).first : samples_.at(sample).at(key);
 }
 
+
+
 // helper non-members needed for printing
 
-namespace
-{
+namespace {
     template <typename T>
     std::ostream& print(std::ostream& os, const std::vector<T>& v, const std::string& delim = ",",
                         const std::string& empty_value = ".")
@@ -348,31 +354,26 @@ bool is_validated(const VcfRecord& record) noexcept
 bool operator==(const VcfRecord& lhs, const VcfRecord& rhs)
 {
     // TODO: this should really compare other fields
-    return lhs.chrom() == rhs.chrom() && lhs.pos() == rhs.pos()
-            && lhs.ref() == rhs.ref() && lhs.alt() == rhs.alt();
+    return mapped_region(lhs) == mapped_region(rhs) && lhs.ref() == rhs.ref() && lhs.alt() == rhs.alt();
 }
 
 bool operator<(const VcfRecord& lhs, const VcfRecord& rhs)
 {
-    if (lhs.chrom() == rhs.chrom()) {
-        if (lhs.pos() == rhs.pos()) {
-            if (lhs.ref().size() == rhs.ref().size()) {
-                return false; // TODO: also compare alt allele sizes
-            } else {
-                return lhs.ref().size() < rhs.ref().size();
-            }
+    if (mapped_region(lhs) == mapped_region(rhs)) {
+        if (lhs.ref() == rhs.ref()) {
+            return lhs.alt() < rhs.alt();
         } else {
-            return lhs.pos() < rhs.pos();
+            return lhs.ref() < rhs.ref();
         }
     } else {
-        return lhs.chrom() < rhs.chrom();
+        return mapped_region(lhs) < mapped_region(rhs);
     }
 }
 
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 {
-    os << record.chrom_ << "\t";
-    os << (record.pos_ + 1) << "\t";
+    os << record.chrom() << "\t";
+    os << record.pos() << "\t";
     os << record.id_ << "\t";
     os << record.ref_ << "\t";
     os << record.alt_ << "\t";
@@ -412,13 +413,13 @@ VcfRecord::Builder& VcfRecord::Builder::set_chrom(std::string name)
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_pos(SizeType pos)
+VcfRecord::Builder& VcfRecord::Builder::set_pos(GenomicRegion::Position pos)
 {
     pos_ = pos;
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_id(IdType id)
+VcfRecord::Builder& VcfRecord::Builder::set_id(std::string id)
 {
     id_ = std::move(id);
     return *this;
@@ -627,7 +628,7 @@ VcfRecord::Builder& VcfRecord::Builder::set_somatic()
     return this->set_info_flag("SOMATIC");
 }
 
-VcfRecord::SizeType VcfRecord::Builder::pos() const noexcept
+GenomicRegion::Position VcfRecord::Builder::pos() const noexcept
 {
     return pos_;
 }

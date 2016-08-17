@@ -36,6 +36,7 @@
 #include <io/reference/reference_genome.hpp>
 #include <io/read/read_manager.hpp>
 #include <readpipe/read_pipe_fwd.hpp>
+#include <utils/mappable_algorithms.hpp>
 #include <utils/read_stats.hpp>
 #include <config/octopus_vcf.hpp>
 #include <core/callers/caller_factory.hpp>
@@ -228,33 +229,6 @@ auto propose_call_subregion(const ContigCallingComponents& components,
     return propose_call_subregion(components, right_overhang_region(input_region, current_subregion));
 }
 
-namespace {
-    auto mapped_begin(const VcfRecord& call)
-    {
-        return call.pos() - 1;
-    }
-    
-    auto mapped_end(const VcfRecord& call)
-    {
-        return mapped_begin(call) + static_cast<GenomicRegion::Position>(call.ref().size());
-    }
-    
-    auto mapped_region(const VcfRecord& call)
-    {
-        return GenomicRegion {call.chrom(), mapped_begin(call), mapped_end(call)};
-    }
-    
-    template <typename Container>
-    auto encompassing_call_region(const Container& calls)
-    {
-        auto it = std::max_element(std::cbegin(calls), std::cend(calls),
-                                   [] (const auto& lhs, const auto& rhs) {
-                                       return mapped_end(lhs) < mapped_end(rhs);
-                                   });
-        return GenomicRegion {it->chrom(), mapped_begin(calls.front()), mapped_end(*it)};
-    }
-} // namespace
-
 void buffer_connecting_calls(std::deque<VcfRecord>& calls,
                              const GenomicRegion& next_calling_region,
                              std::vector<VcfRecord>& buffer)
@@ -299,7 +273,7 @@ void resolve_connecting_calls(std::vector<VcfRecord>& old_connecting_calls,
     using std::begin; using std::end; using std::make_move_iterator;
     
     if (!old_connecting_calls.empty()) {
-        const auto old_connecting_calls_region = encompassing_call_region(old_connecting_calls);
+        const auto old_connecting_calls_region = encompassing_region(old_connecting_calls);
         
         std::vector<VcfRecord> new_connecting_calls {};
         
@@ -331,7 +305,7 @@ void resolve_connecting_calls(std::vector<VcfRecord>& old_connecting_calls,
                          make_move_iterator(begin(merged_calls)),
                          make_move_iterator(end(merged_calls)));
         } else {
-            const auto unresolved_region = encompassing_call_region(merged_calls);
+            const auto unresolved_region = encompassing_region(merged_calls);
             
             merged_calls.clear();
             merged_calls.shrink_to_fit();
@@ -742,9 +716,9 @@ auto get_writable_completed_tasks(CompletedTask&& task, CompletedTaskMap::mapped
     return result;
 }
 
-auto encompassing_call_region(const CompletedTask& task)
+auto encompassing_region(const CompletedTask& task)
 {
-    return encompassing_call_region(task.calls);
+    return encompassing_region(task.calls);
 }
 
 using ContigCallingComponentFactory    = std::function<ContigCallingComponents()>;
@@ -783,8 +757,10 @@ auto find_last_rhs_connecting(const GenomicRegion& lhs_region, CompletedTask& rh
 void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                               const ContigCallingComponentFactory& calling_components)
 {
-    auto first_lhs_connecting = find_first_lhs_connecting(lhs, encompassing_call_region(rhs));
-    auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_call_region(lhs), rhs);
+    if (lhs.calls.empty() || rhs.calls.empty()) return;
+    
+    auto first_lhs_connecting = find_first_lhs_connecting(lhs, encompassing_region(rhs));
+    auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_region(lhs), rhs);
     
     using std::begin; using std::end; using std::make_move_iterator;
     
@@ -839,7 +815,7 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
             auto resolved_calls = components.caller->call(unresolved_region, components.progress_meter);
             
             if (!resolved_calls.empty()) {
-                if (!contains(unresolved_region, encompassing_call_region(resolved_calls))) {
+                if (!contains(unresolved_region, encompassing_region(resolved_calls))) {
                     // TODO
                 }
                 

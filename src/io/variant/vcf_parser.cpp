@@ -451,7 +451,7 @@ VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::Sam
     
     rb.set_chrom(it->data);
     ++it;
-    rb.set_pos(static_cast<VcfRecord::SizeType>(std::stol(it->data)));
+    rb.set_pos(static_cast<GenomicRegion::Position>(std::stol(it->data)));
     ++it;
     rb.set_id(it->data);
     ++it;

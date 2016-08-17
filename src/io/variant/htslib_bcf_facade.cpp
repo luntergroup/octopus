@@ -371,7 +371,7 @@ void HtslibBcfFacade::write(const VcfHeader& header)
 }
 
 void set_chrom(const bcf_hdr_t* header, bcf1_t* record, const std::string& chrom);
-void set_pos(bcf1_t* record, VcfRecord::SizeType pos);
+void set_pos(bcf1_t* record, GenomicRegion::Position pos);
 void set_id(bcf1_t* record, const std::string& id);
 void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::NucleotideSequence& ref,
                  const std::vector<VcfRecord::NucleotideSequence>& alts);
@@ -509,7 +509,7 @@ void extract_pos(const bcf1_t* record, VcfRecord::Builder& builder)
     builder.set_pos(record->pos + 1);
 }
 
-void set_pos(bcf1_t* record, const VcfRecord::SizeType pos)
+void set_pos(bcf1_t* record, const GenomicRegion::Position pos)
 {
     record->pos = static_cast<std::uint32_t>(pos);
 }

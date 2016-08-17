@@ -20,7 +20,7 @@ VcfHeader::VcfHeader(std::string file_format)
 : file_format_ {std::move(file_format)}
 {}
 
-const VcfHeader::ValueType& VcfHeader::file_format() const noexcept
+const VcfHeader::Value& VcfHeader::file_format() const noexcept
 {
     return file_format_;
 }
@@ -35,19 +35,34 @@ std::vector<std::string> VcfHeader::samples() const
     return samples_;
 }
 
-bool VcfHeader::has_field(const BasicKey& k) const noexcept
+bool VcfHeader::has(const BasicKey& k) const noexcept
 {
     return basic_fields_.count(k) == 1;
 }
 
-bool VcfHeader::has_field(const Tag& t) const noexcept
+bool VcfHeader::has(const Tag& t) const noexcept
 {
     return structured_fields_.count(t) > 0;
 }
 
-bool VcfHeader::has_field(const Tag& t, const StructuredKey& k) const noexcept
+bool VcfHeader::has(const Tag& t, const StructuredKey& k) const noexcept
 {
     return structured_fields_.count(t) > 0; // TODO: complete this
+}
+
+const VcfHeader::Value& VcfHeader::at(const BasicKey& k) const
+{
+    return basic_fields_.at(k);
+}
+
+const VcfHeader::Value& VcfHeader::find(const Tag& search_tag, const StructuredKey& search_key,
+                                        const StructuredKey& id_key, const Value& id_value) const
+{
+    const auto er = structured_fields_.equal_range(search_tag);
+    return std::find_if(er.first, er.second,
+                        [&] (const auto& p) {
+                            return p.second.at(id_key) == id_value;
+                        })->second.at(search_key);
 }
 
 std::vector<VcfHeader::BasicKey> VcfHeader::basic_keys() const
@@ -85,21 +100,6 @@ std::vector<VcfHeader::StructuredKey> VcfHeader::keys(const Tag& t) const
     return result;
 }
 
-const VcfHeader::ValueType& VcfHeader::get(const BasicKey& k) const
-{
-    return basic_fields_.at(k);
-}
-
-const VcfHeader::ValueType& VcfHeader::find(const StructuredKey& k, const Tag& t, const StructuredKey& search,
-                                            const StructuredKey& value) const
-{
-    const auto er = structured_fields_.equal_range(t);
-    return std::find_if(er.first, er.second,
-                        [&] (const auto& p) {
-                            return p.second.at(search) == value;
-                        })->second.at(k);
-}
-
 const VcfHeader::BasicFieldMap& VcfHeader::basic_fields() const noexcept
 {
     return basic_fields_;
@@ -125,40 +125,40 @@ const VcfHeader::StructuredFieldMap& VcfHeader::structured_fields() const noexce
 
 // non-member methods
 
-const VcfHeader::ValueType& get_id_field_value(const VcfHeader& header, const VcfHeader::Tag& tag,
-                                               const VcfHeader::ValueType& id_value,
+const VcfHeader::Value& get_id_field_value(const VcfHeader& header, const VcfHeader::Tag& tag,
+                                               const VcfHeader::Value& id_value,
                                                const VcfHeader::StructuredKey& lookup_key)
 {
-    return header.find("ID", tag, id_value, lookup_key);
+    return header.find(tag, "ID", id_value, lookup_key);
 }
 
-const VcfHeader::ValueType& get_id_field_type(const VcfHeader& header, const VcfHeader::Tag& tag,
-                                              const VcfHeader::ValueType& id_value)
+const VcfHeader::Value& get_id_field_type(const VcfHeader& header, const VcfHeader::Tag& tag,
+                                              const VcfHeader::Value& id_value)
 {
-    return header.find("ID", tag, id_value, "Type");
+    return header.find(tag, "ID", id_value, "Type");
 }
 
 VcfType get_typed_value(const VcfHeader& header, const VcfHeader::Tag& tag,
-                        const VcfHeader::StructuredKey& key, const VcfHeader::ValueType& value)
+                        const VcfHeader::StructuredKey& key, const VcfHeader::Value& value)
 {
     return make_vcf_type(get_id_field_type(header, tag, key), value);
 }
 
 VcfType get_typed_info_value(const VcfHeader& header, const VcfHeader::StructuredKey& key,
-                             const VcfHeader::ValueType& value)
+                             const VcfHeader::Value& value)
 {
     return get_typed_value(header, "INFO", key, value);
 }
 
 VcfType get_typed_format_value(const VcfHeader& header, const VcfHeader::StructuredKey& key,
-                               const VcfHeader::ValueType& value)
+                               const VcfHeader::Value& value)
 {
     return get_typed_value(header, "FORMAT", key, value);
 }
 
 std::vector<VcfType> get_typed_values(const VcfHeader& header, const VcfHeader::StructuredKey& format_key,
                                       const VcfHeader::StructuredKey& field_key,
-                                      const std::vector<VcfHeader::ValueType>& values)
+                                      const std::vector<VcfHeader::Value>& values)
 {
     std::vector<VcfType> result {};
     result.reserve(values.size());
@@ -172,20 +172,20 @@ std::vector<VcfType> get_typed_values(const VcfHeader& header, const VcfHeader::
 }
 
 std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfHeader::StructuredKey& field_key,
-                                           const std::vector<VcfHeader::ValueType>& values)
+                                           const std::vector<VcfHeader::Value>& values)
 {
     return get_typed_values(header, "INFO", field_key, values);
 }
 
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfHeader::StructuredKey& field_key,
-                                             const std::vector<VcfHeader::ValueType>& values)
+                                             const std::vector<VcfHeader::Value>& values)
 {
     return get_typed_values(header, "FORMAT", field_key, values);
 }
 
 bool contig_line_exists(const VcfHeader& header, const std::string& contig)
 {
-    return header.has_field("contig", contig);
+    return header.has("contig", contig);
 }
 
 bool operator==(const VcfHeader& lhs, const VcfHeader& rhs)
