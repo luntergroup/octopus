@@ -152,21 +152,41 @@ namespace detail {
         
         if (mapped_region(allele) == region) return sequence;
         
-        if (begins_equal(region, allele) && is_empty(region) && is_insertion(allele)) {
-            auto first = std::cbegin(sequence);
-            return NucleotideSequence {first, std::next(first, sequence.size() - region_size(allele))};
+        const auto region_offset = static_cast<std::size_t>(begin_distance(allele, region));
+        
+        auto first_base_itr = std::cbegin(sequence), last_base_itr = std::cend(sequence);
+        
+        const auto region_size = static_cast<std::size_t>(size(region));
+        
+        if (is_deletion(allele)) {
+            if (!is_sequence_empty(allele)) {
+                const auto base_offset = std::min(region_offset, sequence_size(allele));
+                
+                first_base_itr = std::next(std::cbegin(allele.sequence()), base_offset);
+                
+                const auto num_remaining_bases = std::min(region_size, sequence_size(allele) - base_offset);
+                
+                last_base_itr = std::next(first_base_itr, num_remaining_bases);
+            }
+        } else {
+            first_base_itr = std::next(std::cbegin(allele.sequence()), region_offset);
+            
+            if (is_insertion(allele)) {
+                const auto num_trailing_bases = static_cast<std::size_t>(end_distance(region, allele));
+                
+                const auto num_subsequence_bases = sequence_size(allele) - region_offset - num_trailing_bases;
+                
+                last_base_itr = std::next(first_base_itr, num_subsequence_bases);
+            } else {
+                last_base_itr = std::next(first_base_itr, region_size);
+            }
         }
         
-        const auto n = static_cast<std::size_t>(begin_distance(allele, region));
+        assert(first_base_itr <= last_base_itr);
+        assert(first_base_itr >= std::cbegin(sequence));
+        assert(last_base_itr <= std::cend(sequence));
         
-        const auto first = std::next(std::cbegin(allele.sequence()), n);
-        
-        // The minimum of the allele sequence size and region size is used as deletions will
-        // result in a sequence size smaller than the region size
-        return NucleotideSequence {
-            first,
-            std::next(first, std::min(sequence.size() - n, static_cast<std::size_t>(region_size(region))))
-        };
+        return NucleotideSequence {first_base_itr, last_base_itr};
     }
 } // namespace detail
 
