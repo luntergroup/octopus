@@ -8,12 +8,13 @@
 #include <iostream>
 #include <stdexcept>
 #include <sstream>
+#include <fstream>
 
 #include <basics/phred.hpp>
 #include <utils/string_utils.hpp>
 #include <exceptions/user_error.hpp>
 
-#include "common.hpp"
+#include "config.hpp"
 
 namespace po = boost::program_options;
 
@@ -458,7 +459,7 @@ OptionMap parse_options(const int argc, const char** argv)
     }
     
     if (vm_init.count("version") == 1) {
-        std::cout << "octopus " << info::Version << std::endl;
+        std::cout << "octopus " << config::Version << std::endl;
         return vm_init;
     }
     

@@ -7,8 +7,10 @@
 #include <vector>
 #include <cstddef>
 
-#include <logging/logging.hpp>
+#include <config/config.hpp>
 #include <utils/string_utils.hpp>
+
+#include "logging.hpp"
 
 namespace octopus {
 
@@ -63,7 +65,8 @@ void log_error(const Error& error)
     
     log_empty_line(log);
     
-    constexpr unsigned max_line_length {72};
+    const auto max_line_length = config::CommandLineWidth;
+    
     static const std::string tab {"    "};
     
     auto why_lines = tidy_and_format(error.why(), max_line_length - tab.length());

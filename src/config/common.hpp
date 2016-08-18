@@ -24,20 +24,6 @@ namespace octopus {
 extern bool DEBUG_MODE;
 extern bool TRACE_MODE;
 
-namespace info {
-    const static unsigned short VersionMajor {1};
-    const static unsigned short VersionMinor {0};
-    const static std::string Version {std::to_string(VersionMajor) + "." + std::to_string(VersionMinor)};
-    
-    
-    const static std::string HelpForum {""};
-    const static std::string BugReport {"https://github.com/dancooke/octopus/issues"};
-    
-    const static std::vector<std::string> Authors {"Daniel Cooke"};
-    
-    const static std::string CopyrightNotice {"Copyright (c) 2016 University of Oxford"};
-}
-
 using SampleName = std::string;
 
 using ContigName = GenomicRegion::ContigName;
@@ -46,20 +32,6 @@ using InputRegionMap = MappableSetMap<ContigName, GenomicRegion>;
 
 using ReadContainer = MappableFlatMultiSet<AlignedRead>;
 using ReadMap       = MappableMap<SampleName, AlignedRead>;
-
-void log_program_startup(); // Always uses InfoLogger
-
-template <typename Log>
-void log_program_end(Log& log)
-{
-    log << "------------------------------------------------------------------------";
-}
-
-inline void log_program_end()
-{
-    logging::InfoLogger log {};
-    log_program_end(log);
-}
 
 namespace logging {
     boost::optional<DebugLogger> get_debug_log();

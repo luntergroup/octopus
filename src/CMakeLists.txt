@@ -1,4 +1,6 @@
 set(CONFIG_SOURCES
+    config/config.hpp
+    config/config.cpp
     config/common.hpp
     config/common.cpp
     config/option_parser.hpp
@@ -23,8 +25,6 @@ set(EXCEPTIONS_SOURCES
     exceptions/missing_index_error.cpp
     exceptions/unwritable_file_error.hpp
     exceptions/unwritable_file_error.cpp
-    exceptions/error_handler.hpp
-    exceptions/error_handler.cpp
 )
 
 set(CONCEPTS_SOURCES
@@ -58,6 +58,10 @@ set(LOGGING_SOURCES
     logging/logging.cpp
     logging/progress_meter.hpp
     logging/progress_meter.cpp
+    logging/error_handler.hpp
+    logging/error_handler.cpp
+    logging/main_logging.hpp
+    logging/main_logging.cpp
 )
 
 set(IO_SOURCES

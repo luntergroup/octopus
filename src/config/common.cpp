@@ -3,24 +3,11 @@
 
 #include "common.hpp"
 
+#include "config.hpp"
+
 namespace octopus {
 
 bool DEBUG_MODE {false}, TRACE_MODE {false};
-
-void log_program_startup()
-{
-    logging::InfoLogger log {};
-    log << "------------------------------------------------------------------------";
-    if (TRACE_MODE) {
-        stream(log) << "octopus " << info::Version << " (trace mode)";
-    } else if (DEBUG_MODE) {
-        stream(log) << "octopus " << info::Version << " (debug mode)";
-    } else {
-        stream(log) << "octopus " << info::Version;
-    }
-    log << info::CopyrightNotice;
-    log << "------------------------------------------------------------------------";
-}
 
 namespace logging {
 
