@@ -7,62 +7,36 @@
 #include <vector>
 #include <string>
 #include <cstring>
-#include <sstream>
 #include <algorithm>
 #include <iterator>
-#include <cstddef>
 #include <type_traits>
-#include <iomanip>
+#include <cstddef>
 #include <cctype>
 #include <array>
-
-#include <boost/algorithm/string/join.hpp>
+#include <sstream>
+#include <iomanip>
+#include <locale>
 
 namespace octopus { namespace utils {
 
-template <typename T>
-std::vector<std::string> split(const T& str, const char delim) {
-    std::vector<std::string> elems;
-    elems.reserve(std::count(std::cbegin(str), std::cend(str), delim) + 1);
-    std::stringstream ss(str);
-    std::string item;
-    while (std::getline(ss, item, delim)) {
-        elems.emplace_back(item);
-    }
-    return elems;
-}
+std::vector<std::string> split(const std::string& str, const char delim);
 
-inline std::string join(const std::vector<std::string>& strings, const std::string delim)
-{
-    return boost::algorithm::join(strings, delim);
-}
+std::string join(const std::vector<std::string>& strings, const std::string delim);
+std::string join(const std::vector<std::string>& strings, const char delim);
 
-template <typename T>
-bool is_prefix(const T& lhs, const T& rhs)
-{
-    return std::equal(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));
-}
+bool is_prefix(const std::string& lhs, const std::string& rhs);
+bool is_suffix(const std::string& lhs, const std::string& rhs);
 
-template <typename T>
-bool is_suffix(const T& lhs, const T& rhs)
-{
-    return std::equal(std::cbegin(lhs), std::cend(lhs), std::next(std::cbegin(rhs)));
-}
+std::size_t length(const char* str);
+std::size_t length(const std::string& str);
 
-inline std::size_t length(const char* str)
-{
-    return std::strlen(str);
-}
+bool find(const std::string& lhs, const std::string& rhs);
 
-inline std::size_t length(const std::string& str)
-{
-    return str.length();
-}
+std::string& capitalise_front(std::string& str) noexcept;
+std::string capitalise_front(const std::string& str);
 
-inline bool find(const std::string& lhs, const std::string& rhs)
-{
-    return lhs.find(rhs) != std::string::npos;
-}
+bool is_vowel(const char c);
+bool begins_with_vowel(const std::string& str);
 
 template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
 std::string to_string(const T val, const unsigned precision = 2)
@@ -92,27 +66,37 @@ std::vector<std::string> to_strings(const std::vector<T>& values, const unsigned
     return result;
 }
 
-inline std::string& capitalise_front(std::string& str) noexcept
-{
-    if (!str.empty()) str.front() = std::toupper(str.front());
-    return str;
+namespace detail {
+    class CommaNumpunct : public std::numpunct<char>
+    {
+    protected:
+        virtual char do_thousands_sep() const noexcept override
+        {
+            return ',';
+        }
+        
+        virtual std::string do_grouping() const override
+        {
+            return "\03";
+        }
+    };
 }
 
-inline std::string capitalise_front(const std::string& str)
+template <typename T>
+std::string format_with_commas(const T value)
 {
-    auto result = str;
-    return capitalise_front(result);
-}
-
-inline bool is_vowel(const char c)
-{
-    static constexpr std::array<char, 5> vowels {'a', 'e', 'i', 'o', 'u'};
-    return std::find(std::cbegin(vowels), std::cend(vowels), std::tolower(c)) != std::cend(vowels);
-}
-
-inline bool begins_with_vowel(const std::string& str)
-{
-    return !str.empty() && is_vowel(str.front());
+    static_assert(std::is_arithmetic<T>::value, "T must be numeric");
+    
+    // std::locale is responsable for calling ~detail::CommaNumpunct
+    std::locale comma_locale {std::locale(), new detail::CommaNumpunct {}};
+    
+    std::stringstream ss;
+    
+    ss.imbue(comma_locale);
+    
+    ss << std::fixed << value;
+    
+    return ss.str();
 }
 
 } // namespace utils

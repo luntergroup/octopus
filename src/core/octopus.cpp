@@ -1213,7 +1213,9 @@ void run_octopus(GenomeCallingComponents& components)
     
     const auto search_size = sum_region_sizes(components.search_regions());
     
-    stream(info_log) << "Finished processing " << search_size << "bp, total runtime " << TimeInterval {start, end};
+    stream(info_log) << "Finished calling "
+                     << utils::format_with_commas(search_size) << "bp, total runtime "
+                     << TimeInterval {start, end};
 }
 } // namespace octopus
 
