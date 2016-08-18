@@ -24,11 +24,9 @@
 #include <iostream>
 #include <cassert>
 
-#include <boost/program_options.hpp>
 #include <boost/optional.hpp>
 
 #include <config/common.hpp>
-#include <config/option_collation.hpp>
 #include <basics/genomic_region.hpp>
 #include <concepts/mappable.hpp>
 #include <containers/mappable_flat_multi_set.hpp>
@@ -47,8 +45,6 @@
 #include <core/callers/utils/vcf_header_factory.hpp>
 #include <io/variant/vcf.hpp>
 #include <utils/timing.hpp>
-
-#include "calling_components.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -405,7 +401,7 @@ VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
     const auto begin   = std::to_string(region.begin());
     const auto end     = std::to_string(region.end());
     
-    auto file_name = fs::path {contig + "_" + begin + "-" + end + "_temp.bcf"};
+    boost::filesystem::path file_name {contig + "_" + begin + "-" + end + "_temp.bcf"};
     
     path /= file_name;
     
@@ -1121,12 +1117,12 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
     };
 }
 
-auto get_identified_path(const fs::path& base, const std::string& identifier)
+auto get_identified_path(const boost::filesystem::path& base, const std::string& identifier)
 {
     const auto old_stem  = base.stem();
     const auto extension = base.extension();
     
-    fs::path new_stem;
+    boost::filesystem::path new_stem;
     
     if (extension.string() == ".gz") {
         new_stem = old_stem.stem().string() + "." + identifier
@@ -1138,7 +1134,7 @@ auto get_identified_path(const fs::path& base, const std::string& identifier)
     return base.parent_path() / new_stem;
 }
 
-auto get_filtered_path(const fs::path& unfiltered_output_path)
+auto get_filtered_path(const boost::filesystem::path& unfiltered_output_path)
 {
     return get_identified_path(unfiltered_output_path, "filtered");
 }
@@ -1153,7 +1149,7 @@ void filter_calls(const GenomeCallingComponents& components)
     
 }
 
-auto get_legacy_path(const fs::path& native)
+auto get_legacy_path(const boost::filesystem::path& native)
 {
     return get_identified_path(native, "legacy");
 }
@@ -1166,6 +1162,20 @@ void print_foo(std::ostream& os)
 void run_octopus(GenomeCallingComponents& components)
 {
     static auto debug_log = get_debug_log();
+    
+    logging::InfoLogger info_log {};
+    
+    const auto start = std::chrono::system_clock::now();
+    
+    using utils::TimeInterval;
+    
+    log_startup_info(components);
+    
+    if (debug_log) {
+        print_input_regions(stream(*debug_log), components.search_regions());
+    }
+    
+    write_caller_output_header(components, components.sites_only());
     
     try {
         if (is_multithreaded(components)) {
@@ -1188,72 +1198,20 @@ void run_octopus(GenomeCallingComponents& components)
         } catch (...) {}
         throw;
     }
-}
-
-void run_octopus(options::OptionMap& options)
-{
-    static auto debug_log = get_debug_log();
     
-    logging::InfoLogger info_log {};
-    
-    const auto start = std::chrono::system_clock::now();
-    
-    auto end = start;
-    
-    std::size_t search_size {0};
-    
-    using utils::TimeInterval;
-    
-    // open scope to ensure calling components are destroyed before end message
-    {
-        auto components = collate_genome_calling_components(options);
+    if (components.legacy()) {
+        const VcfReader native {components.output().path()};
         
-        if (!components) return;
+        VcfWriter legacy {get_legacy_path(native.path())};
         
-        if (components->samples().empty()) {
-            return;
-        }
-        
-        end = std::chrono::system_clock::now();
-        
-        stream(info_log) << "Done initialising calling components in " << TimeInterval {start, end};
-        
-        log_startup_info(*components);
-        
-        if (debug_log) {
-            print_input_regions(stream(*debug_log), components->search_regions());
-        }
-        
-        write_caller_output_header(*components, options::call_sites_only(options));
-        
-        //options.clear();
-        
-        run_octopus(*components);
-        
-        if (!options.at("disable-call-filtering").as<bool>()) {
-            filter_calls(*components);
-            
-            if (options.at("legacy").as<bool>()) {
-                const auto filtered_path = get_filtered_path(*components);
-                
-                const VcfReader native {filtered_path};
-                VcfWriter legacy {get_legacy_path(native.path())};
-                
-                convert_to_legacy(native, legacy);
-            }
-        } else if (options.at("legacy").as<bool>()) {
-            const VcfReader native {components->output().path()};
-            VcfWriter legacy {get_legacy_path(native.path())};
-            
-            convert_to_legacy(native, legacy);
-        }
-        
-        cleanup(*components);
-        
-        end = std::chrono::system_clock::now();
-        
-        search_size = sum_region_sizes(components->search_regions());
+        convert_to_legacy(native, legacy);
     }
+    
+    cleanup(components);
+    
+    const auto end = std::chrono::system_clock::now();
+    
+    const auto search_size = sum_region_sizes(components.search_regions());
     
     stream(info_log) << "Finished processing " << search_size << "bp, total runtime " << TimeInterval {start, end};
 }

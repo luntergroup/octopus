@@ -71,6 +71,10 @@ public:
     
     ProgressMeter& progress_meter() noexcept;
     
+    bool sites_only() const noexcept;
+    
+    bool legacy() const noexcept;
+    
 private:
     struct Components
     {
@@ -98,6 +102,8 @@ private:
         std::size_t read_buffer_size;
         boost::optional<boost::filesystem::path> temp_directory;
         ProgressMeter progress_meter;
+        bool sites_only;
+        bool legacy;
     };
     
     Components components_;

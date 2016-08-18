@@ -4,11 +4,11 @@
 #ifndef octopus_hpp
 #define octopus_hpp
 
-#include <config/option_parser.hpp>
+#include "calling_components.hpp"
 
 namespace octopus {
-    
-    void run_octopus(options::OptionMap& options);
+
+void run_octopus(GenomeCallingComponents& components);
 
 }
 

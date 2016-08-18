@@ -10,6 +10,7 @@
 #include <functional>
 #include <exception>
 
+#include <config/config.hpp>
 #include <config/option_collation.hpp>
 #include <utils/read_size_estimator.hpp>
 #include <utils/map_utils.hpp>
@@ -103,6 +104,16 @@ const CallerFactory& GenomeCallingComponents::caller_factory() const noexcept
 ProgressMeter& GenomeCallingComponents::progress_meter() noexcept
 {
     return components_.progress_meter;
+}
+
+bool GenomeCallingComponents::legacy() const noexcept
+{
+    return components_.legacy;
+}
+
+bool GenomeCallingComponents::sites_only() const noexcept
+{
+    return components_.sites_only;
 }
 
 template <typename T>
@@ -255,7 +266,9 @@ output {std::move(output)},
 num_threads {options::get_num_threads(options)},
 read_buffer_size {},
 temp_directory {((!num_threads || *num_threads > 1) ? options::create_temp_file_directory(options) : boost::none)},
-progress_meter {regions}
+progress_meter {regions},
+legacy {options::legacy_vcf_requested(options)},
+sites_only {options::call_sites_only(options)}
 {
     const auto num_bp_to_process = sum_region_sizes(regions);
     

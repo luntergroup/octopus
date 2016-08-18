@@ -1190,5 +1190,10 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
     
     return result;
 }
+
+bool legacy_vcf_requested(const OptionMap& options)
+{
+    return options.at("legacy").as<bool>();
+}
 } // namespace options
 } // namespace octopus

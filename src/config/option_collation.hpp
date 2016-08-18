@@ -58,6 +58,8 @@ VcfWriter make_output_vcf_writer(const OptionMap& options);
 
 boost::optional<fs::path> create_temp_file_directory(const OptionMap& options);
 
+bool legacy_vcf_requested(const OptionMap& options);
+
 } // namespace options
 } // namespace octopus
 
