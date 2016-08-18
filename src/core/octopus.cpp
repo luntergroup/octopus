@@ -592,12 +592,17 @@ unsigned calculate_num_task_threads(const GenomeCallingComponents& components)
     
     // TODO: come up with a better calculation
     
-    const auto num_hardware_threads = std::thread::hardware_concurrency();
+    const auto num_cores = std::thread::hardware_concurrency();
     
-    if (num_hardware_threads > 0) return num_hardware_threads;
+    if (num_cores > 0) {
+        auto debug_log = logging::get_debug_log();
+        if (debug_log) *debug_log << "Detected " << num_cores << " system cores";
+        
+        return num_cores;
+    }
     
     logging::WarningLogger log {};
-    log << "Unable to detect the number of system threads,"
+    log << "Unable to detect the number of system cores,"
         " it may be better to run with a user number if the number of cores is known";
     
     const auto num_files = components.read_manager().num_files();
