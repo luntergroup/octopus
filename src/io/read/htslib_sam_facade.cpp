@@ -273,32 +273,71 @@ std::vector<std::string> HtslibSamFacade::extract_read_groups_in_sample(const Sa
 }
 
 namespace {
-    // is rhs a subset of lhs?
-    bool is_subset(std::vector<HtslibSamFacade::SampleName> lhs,
-                   std::vector<HtslibSamFacade::SampleName> rhs)
-    {
-        std::sort(std::begin(lhs), std::end(lhs));
-        std::sort(std::begin(rhs), std::end(rhs));
-        return std::includes(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
-    }
     
-    template <typename S>
-    auto get_readable_samples(std::vector<S> request_samples,
-                              const std::vector<S>& file_samples)
-    {
-        std::sort(std::begin(request_samples), std::end(request_samples));
-        
-        std::vector<S> result {};
-        result.reserve(request_samples.size());
-        
-        std::set_intersection(std::make_move_iterator(std::begin(request_samples)),
-                              std::make_move_iterator(std::end(request_samples)),
-                              std::cbegin(file_samples), std::cend(file_samples),
-                              std::back_inserter(result));
-        
-        return result;
+template <typename T>
+bool is_sorted(const std::vector<T>& v)
+{
+    return std::is_sorted(std::cbegin(v), std::cend(v));
+}
+
+template <typename T>
+bool is_subset_helper(const std::vector<T>& lhs, const std::vector<T>& rhs)
+{
+    return std::includes(cbegin(lhs), cend(lhs), cbegin(rhs), cend(rhs));
+}
+
+template <typename T>
+bool is_subset_helper_sort_rhs(const std::vector<T>& lhs, std::vector<T> rhs)
+{
+    std::sort(std::begin(rhs), std::end(rhs));
+    return is_subset_helper(lhs, rhs);
+}
+
+template <typename T>
+bool is_subset_helper_sort_lhs(std::vector<T> lhs, const std::vector<T>& rhs)
+{
+    std::sort(std::begin(lhs), std::end(lhs));
+    return is_subset_helper(lhs, rhs);
+}
+
+template <typename T>
+bool is_subset_helper_sort_both(std::vector<T> lhs, std::vector<T> rhs)
+{
+    std::sort(std::begin(lhs), std::end(lhs));
+    std::sort(std::begin(rhs), std::end(rhs));
+    return is_subset_helper(lhs, rhs);
+}
+
+// Returns true iff rhs a subset of lhs.
+template <typename T>
+bool is_subset(const std::vector<T>& lhs, const std::vector<T>& rhs)
+{
+    if (is_sorted(lhs)) {
+        return is_sorted(rhs) ? is_subset_helper(lhs, rhs) : is_subset_helper_sort_rhs(lhs, rhs);
+    } else if (is_sorted(rhs)) {
+        return is_subset_helper_sort_lhs(lhs, rhs);
+    } else {
+        return is_subset_helper_sort_both(lhs, rhs);
     }
 }
+
+template <typename S>
+auto get_readable_samples(std::vector<S> request_samples, const std::vector<S>& file_samples)
+{
+    std::sort(std::begin(request_samples), std::end(request_samples));
+    
+    std::vector<S> result {};
+    result.reserve(request_samples.size());
+    
+    std::set_intersection(std::make_move_iterator(std::begin(request_samples)),
+                          std::make_move_iterator(std::end(request_samples)),
+                          std::cbegin(file_samples), std::cend(file_samples),
+                          std::back_inserter(result));
+    
+    return result;
+}
+
+} // namespace
 
 // has_reads
 
