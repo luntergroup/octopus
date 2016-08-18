@@ -596,7 +596,7 @@ unsigned calculate_num_task_threads(const GenomeCallingComponents& components)
     
     if (num_cores > 0) {
         auto debug_log = logging::get_debug_log();
-        if (debug_log) *debug_log << "Detected " << num_cores << " system cores";
+        if (debug_log) stream(*debug_log) << "Detected " << num_cores << " system cores";
         
         return num_cores;
     }
