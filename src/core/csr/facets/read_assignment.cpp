@@ -75,8 +75,8 @@ auto calculate_likelihood(const Haplotype& haplotype,
                           const AlignedRead& read,
                           const HaplotypeLikelihoodModel& model)
 {
-    static constexpr unsigned char K {6};
-    auto mapping_positions = map_query_to_target<K>(read.sequence(), haplotype.sequence());
+    static constexpr unsigned char kmerSize {6};
+    auto mapping_positions = map_query_to_target<kmerSize>(read.sequence(), haplotype.sequence());
     return model.ln_probability(read, mapping_positions);
 }
 

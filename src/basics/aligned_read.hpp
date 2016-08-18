@@ -134,9 +134,9 @@ public:
     void cap_back_qualities(std::size_t num_bases, BaseQuality max = 0) noexcept;
     
 private:
-    static constexpr std::size_t num_flags_ = 8;
+    static constexpr std::size_t numFlags_ = 8;
     
-    using FlagBits = std::bitset<num_flags_>;
+    using FlagBits = std::bitset<numFlags_>;
     
     // should be ordered by sizeof
     GenomicRegion region_;

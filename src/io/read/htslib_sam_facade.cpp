@@ -21,9 +21,9 @@
 
 namespace octopus { namespace io {
 
-static const std::string Read_group_tag    {"RG"};
-static const std::string Read_group_id_tag {"ID"};
-static const std::string Sample_id_tag     {"SM"};
+static const std::string readGroupTag   {"RG"};
+static const std::string readGroupIdTag {"ID"};
+static const std::string sampleIdTag    {"SM"};
 
 class MissingBAM : public MissingFileError
 {
@@ -631,7 +631,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
         auto p = result.emplace(std::piecewise_construct,
                                 std::forward_as_tuple(sample),
                                 std::forward_as_tuple());
-        p.first->second.reserve(default_reserve_);
+        p.first->second.reserve(defaultReserve_);
     }
     
     while (++it) {
@@ -659,7 +659,7 @@ HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleName& sa
         return result;
     }
     
-    result.reserve(default_reserve_);
+    result.reserve(defaultReserve_);
     
     if (samples_.size() == 1) {
         while (++it) {
@@ -702,7 +702,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
             auto p = result.emplace(std::piecewise_construct,
                                     std::forward_as_tuple(sample),
                                     std::forward_as_tuple());
-            p.first->second.reserve(default_reserve_);
+            p.first->second.reserve(defaultReserve_);
         }
     }
     
@@ -800,14 +800,14 @@ void HtslibSamFacade::init_maps()
     unsigned num_read_groups {0};
     
     while (std::getline(header_ss, line, '\n')) {
-        if (is_tag_type(line, Read_group_tag)) {
-            if (!has_tag(line, Read_group_id_tag)) {
+        if (is_tag_type(line, readGroupTag)) {
+            if (!has_tag(line, readGroupIdTag)) {
                 MalformedBAMHeader e {file_path_};
                 e.set_reason("a read group identifier tag (ID) in @RG lines is required but was not found");
                 throw e;
             }
             
-            if (!has_tag(line, Sample_id_tag)) {
+            if (!has_tag(line, sampleIdTag)) {
                 // The SAM specification does not specify the sample tag 'SM' as a required,
                 // however we can't do much without it.
                 MalformedBAMHeader e {file_path_};
@@ -815,8 +815,8 @@ void HtslibSamFacade::init_maps()
                 throw e;
             }
             
-            sample_names_.emplace(extract_tag_value(line, Read_group_id_tag),
-                                  extract_tag_value(line, Sample_id_tag));
+            sample_names_.emplace(extract_tag_value(line, readGroupIdTag),
+                                  extract_tag_value(line, sampleIdTag));
             
             ++num_read_groups;
         }
@@ -902,8 +902,8 @@ auto extract_sequence_length(const bam1_t* b) noexcept
 
 char extract_base(const uint8_t* hts_sequence, const uint32_t index) noexcept
 {
-    static constexpr const char* symbol_table {"=ACMGRSVTWYHKDBN"};
-    return symbol_table[bam_seqi(hts_sequence, index)];
+    static constexpr const char* symbolTable {"=ACMGRSVTWYHKDBN"};
+    return symbolTable[bam_seqi(hts_sequence, index)];
 }
 
 AlignedRead::NucleotideSequence extract_sequence(const bam1_t* b)
@@ -1033,7 +1033,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         if (overhang_size == soft_clip_size) {
             cigar.erase(begin(cigar));
         } else { // then soft_clip_size > overhang_size
-            cigar.front() = CigarOperation {soft_clip_size - overhang_size, CigarOperation::Flag::SoftClipped};
+            cigar.front() = CigarOperation {soft_clip_size - overhang_size, CigarOperation::Flag::softClipped};
         }
         
         read_begin_tmp = 0;
@@ -1078,7 +1078,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 
 HtslibSamFacade::ReadGroupIdType HtslibSamFacade::HtslibIterator::read_group() const
 {
-    const auto ptr = bam_aux_get(hts_bam1_.get(), Read_group_tag.c_str());
+    const auto ptr = bam_aux_get(hts_bam1_.get(), readGroupTag.c_str());
     
     if (ptr == nullptr) {
         throw InvalidBamRecord {hts_facade_.file_path_, extract_read_name(hts_bam1_.get()), "no read group"};

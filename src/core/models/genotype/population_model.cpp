@@ -161,10 +161,10 @@ namespace detail
             return 2 * std::log(haplotype_frequencies.at(genotype[0]));
         }
         
-        static const double ln_2 {std::log(2.0)};
+        static const double ln2 {std::log(2.0)};
         
         return std::log(haplotype_frequencies.at(genotype[0]))
-        + std::log(haplotype_frequencies.at(genotype[1])) + ln_2;
+        + std::log(haplotype_frequencies.at(genotype[1])) + ln2;
     }
     
     template <typename Genotype, typename Map>

@@ -86,13 +86,16 @@ namespace debug {
                                             const GenomicRegion& haplotype_region,
                                             bool number_only = false);
     
-    enum class Resolution {Sequence, Alleles, VariantAlleles, SequenceAndAlleles, SequenceAndVariantAlleles};
+    enum class Resolution {
+        sequence, alleles, variantAlleles,
+        sequenceAndAlleles, SequenceAndVariantAlleles
+    };
     
     template <typename S>
     void print_haplotypes(S&& stream, const std::vector<Haplotype>& haplotypes,
-                          Resolution resolution = Resolution::SequenceAndAlleles);
+                          Resolution resolution = Resolution::sequenceAndAlleles);
     void print_haplotypes(const std::vector<Haplotype>& haplotypes,
-                          Resolution resolution = Resolution::SequenceAndAlleles);
+                          Resolution resolution = Resolution::sequenceAndAlleles);
     
     template <typename S, typename Map>
     void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n = 5);
@@ -626,7 +629,7 @@ std::vector<VcfRecord> Caller::regenotype(const std::vector<Variant>& variants, 
 
 bool Caller::refcalls_requested() const noexcept
 {
-    return parameters_.refcall_type != RefCallType::None;
+    return parameters_.refcall_type != RefCallType::none;
 }
 
 MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion& region) const
@@ -761,7 +764,7 @@ Caller::filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCach
     if (trace_log_) {
         stream(*trace_log_) << "Filtered " << removed_haplotypes.size() << " haplotypes:";
         debug::print_haplotypes(stream(*trace_log_), removed_haplotypes,
-                                debug::Resolution::VariantAlleles);
+                                debug::Resolution::variantAlleles);
     }
     
     return removed_haplotypes;
@@ -793,9 +796,9 @@ Caller::generate_callable_alleles(const GenomicRegion& region, const std::vector
     
     if (overlapped_candidates.empty()) {
         switch (parameters_.refcall_type) {
-            case RefCallType::Positional:
+            case RefCallType::positional:
                 return make_positional_reference_alleles(region, reference_);
-            case RefCallType::Blocked:
+            case RefCallType::blocked:
                 return std::vector<Allele> {make_reference_allele(region, reference_)};
             default:
                 return {};
@@ -804,14 +807,14 @@ Caller::generate_callable_alleles(const GenomicRegion& region, const std::vector
     
     auto variant_alleles = decompose(overlapped_candidates);
     
-    if (parameters_.refcall_type == RefCallType::None) return variant_alleles;
+    if (parameters_.refcall_type == RefCallType::none) return variant_alleles;
     
     auto covered_regions   = extract_covered_regions(overlapped_candidates);
     auto uncovered_regions = extract_intervening_regions(covered_regions, region);
     
     std::vector<Allele> result {};
     
-    if (parameters_.refcall_type == Caller::RefCallType::Blocked) {
+    if (parameters_.refcall_type == Caller::RefCallType::blocked) {
         auto reference_alleles = make_reference_alleles(uncovered_regions, reference_);
         result.reserve(reference_alleles.size() + variant_alleles.size());
         std::merge(make_move_iterator(begin(reference_alleles)),
@@ -859,7 +862,7 @@ ForwardIt find_next(ForwardIt first, ForwardIt last, const Variant& candidate)
 void append_allele(std::vector<Allele>& alleles, const Allele& allele,
                    const Caller::RefCallType refcall_type)
 {
-    if (refcall_type == Caller::RefCallType::Blocked && !alleles.empty()
+    if (refcall_type == Caller::RefCallType::blocked && !alleles.empty()
         && are_adjacent(alleles.back(), allele)) {
         alleles.back() = Allele {encompassing_region(alleles.back(), allele),
             alleles.back().sequence() + allele.sequence()};
@@ -879,7 +882,7 @@ Caller::generate_candidate_reference_alleles(const GenomicRegion& region,
     
     auto callable_alleles = generate_callable_alleles(region, candidates);
     
-    if (callable_alleles.empty() || parameters_.refcall_type == RefCallType::None) return {};
+    if (callable_alleles.empty() || parameters_.refcall_type == RefCallType::none) return {};
     
     if (candidates.empty()) return callable_alleles;
     
@@ -1116,13 +1119,13 @@ namespace debug {
         stream << "Printing " << haplotypes.size() << " haplotypes" << '\n';
         
         for (const auto& haplotype : haplotypes) {
-            if (resolution == Resolution::Sequence || resolution == Resolution::SequenceAndAlleles
+            if (resolution == Resolution::sequence || resolution == Resolution::sequenceAndAlleles
                 || resolution == Resolution::SequenceAndVariantAlleles) {
                 stream << haplotype << '\n';
             }
-            if (resolution == Resolution::Alleles || resolution == Resolution::SequenceAndAlleles) {
+            if (resolution == Resolution::alleles || resolution == Resolution::sequenceAndAlleles) {
                 debug::print_alleles(stream, haplotype); stream << '\n';
-            } else if (resolution != Resolution::Sequence) {
+            } else if (resolution != Resolution::sequence) {
                 debug::print_variant_alleles(stream, haplotype);
                 stream << '\n';
             }

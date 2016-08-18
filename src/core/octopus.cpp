@@ -439,11 +439,11 @@ TempVcfWriterMap make_temp_vcf_writers(const GenomeCallingComponents& components
 
 struct Task : public Mappable<Task>
 {
-    enum class ExecutionPolicy { Threaded, VectorThreaded, None };
+    enum class ExecutionPolicy { seq, par, par_vec }; // To match Parallelism TS
     
     Task() = delete;
     
-    Task(GenomicRegion region, ExecutionPolicy policy = ExecutionPolicy::None)
+    Task(GenomicRegion region, ExecutionPolicy policy = ExecutionPolicy::seq)
     : region {std::move(region)}, policy {policy} {};
     
     GenomicRegion region;
@@ -506,9 +506,9 @@ TaskQueue divide_work_into_tasks(const ContigCallingComponents& components,
 Task::ExecutionPolicy make_execution_policy(const GenomeCallingComponents& components)
 {
     if (components.num_threads()) {
-        return Task::ExecutionPolicy::None;
+        return Task::ExecutionPolicy::seq;
     }
-    return Task::ExecutionPolicy::Threaded;
+    return Task::ExecutionPolicy::par;
 }
 
 struct TaskMakerSyncPacket

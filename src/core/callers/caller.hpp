@@ -41,7 +41,7 @@ class Caller
 public:
     using CallTypeSet = std::set<std::type_index>;
     
-    enum class RefCallType { None, Blocked, Positional };
+    enum class RefCallType { none, blocked, positional };
     
     struct Components;
     struct Parameters;

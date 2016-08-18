@@ -18,9 +18,9 @@ BOOST_AUTO_TEST_CASE(assembler_can_be_constructed_with_reference_sequence)
 {
     const Assembler::NucleotideSequence reference {"AAAAACCCCC"};
     
-    constexpr unsigned kmer_size {5};
+    constexpr unsigned kmerSize {5};
     
-    Assembler assembler {kmer_size, reference};
+    Assembler assembler {kmerSize, reference};
     
     BOOST_CHECK(!assembler.is_empty());
     BOOST_CHECK(assembler.is_all_reference());
@@ -30,9 +30,9 @@ BOOST_AUTO_TEST_CASE(reference_sequence_can_be_inserted_into_an_empty_assembler)
 {
     const Assembler::NucleotideSequence reference {"AAAAACCCCC"};
     
-    constexpr unsigned kmer_size {5};
+    constexpr unsigned kmerSize {5};
     
-    Assembler assembler {kmer_size};
+    Assembler assembler {kmerSize};
     
     BOOST_REQUIRE(assembler.is_empty());
     
@@ -46,9 +46,9 @@ BOOST_AUTO_TEST_CASE(assemblers_can_be_cleared_and_reused)
 {
     const Assembler::NucleotideSequence reference {"AAAAACCCCC"};
     
-    constexpr unsigned kmer_size {5};
+    constexpr unsigned kmerSize {5};
     
-    Assembler assembler {kmer_size, reference};
+    Assembler assembler {kmerSize, reference};
     
     BOOST_REQUIRE(!assembler.is_empty());
     
@@ -65,9 +65,9 @@ BOOST_AUTO_TEST_CASE(assembler_throws_if_reference_sequence_is_inserted_twice)
 {
     const Assembler::NucleotideSequence reference {"AAAAACCCCC"};
     
-    constexpr unsigned kmer_size {5};
+    constexpr unsigned kmerSize {5};
     
-    Assembler assembler {kmer_size, reference};
+    Assembler assembler {kmerSize, reference};
     
     BOOST_CHECK_THROW(assembler.insert_reference(reference), std::exception);
 }

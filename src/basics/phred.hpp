@@ -41,9 +41,9 @@ public:
             throw std::domain_error {"Phred: negative error probability " + std::to_string(error)};
         }
         
-        static const Q Min_probability = std::nextafter(Q {0}, Q {1});
+        static const Q minProbability = std::nextafter(Q {0}, Q {1});
         
-        score_ = Q {-10} * std::log10(std::max(std::min(error.value, Q {1}), Min_probability));
+        score_ = Q {-10} * std::log10(std::max(std::min(error.value, Q {1}), minProbability));
     }
     
     Phred(const Phred&)            = default;
@@ -65,14 +65,14 @@ public:
     
     Probability probability_true() const noexcept
     {
-        static constexpr Q One {1};
-        return Probability {One - probability_false()};
+        static constexpr Q one {1};
+        return Probability {one - probability_false()};
     }
     
     Probability probability_false() const noexcept
     {
-        static constexpr Q Ten {10};
-        return Probability {std::pow(Ten, -score_ / Ten)};
+        static constexpr Q ten {10};
+        return Probability {std::pow(ten, -score_ / ten)};
     }
 private:
     Q score_;

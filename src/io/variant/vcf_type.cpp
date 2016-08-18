@@ -141,7 +141,7 @@ VcfType make_vcf_type(T&& val)
 
 VcfType make_vcf_type(const std::string& type, const std::string& value)
 {
-    static const std::unordered_map<std::string, std::function<VcfType(std::string)>> type_map {
+    static const std::unordered_map<std::string, std::function<VcfType(std::string)>> typeMap {
         {"String",    [] (const auto& value) { return make_vcf_type(value); }},
         {"Integer",   [] (const auto& value) { return make_vcf_type(std::stoi(value)); }},
         {"Float",     [] (const auto& value) { return make_vcf_type(std::stod(value)); }},
@@ -149,10 +149,10 @@ VcfType make_vcf_type(const std::string& type, const std::string& value)
         {"Flag",      [] (const auto& value) { return make_vcf_type(value == "1"); }}
     };
     
-    if (type_map.count(type) == 0) throw UnknownVcfType {type};
+    if (typeMap.count(type) == 0) throw UnknownVcfType {type};
     
     try {
-        return type_map.at(type)(value);
+        return typeMap.at(type)(value);
     } catch (std::invalid_argument& e) {
         throw BadVcfType {type, value};
     } catch (...) {

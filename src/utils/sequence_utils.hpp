@@ -22,10 +22,10 @@ namespace octopus { namespace utils
 {
 namespace detail
 {
-    static constexpr std::array<char, 4> DnaBases {'A', 'C', 'G', 'T'};
-    static constexpr std::array<char, 4> RnaBases {'A', 'C', 'G', 'U'};
+    static constexpr std::array<char, 4> dnaBases {'A', 'C', 'G', 'T'};
+    static constexpr std::array<char, 4> rnaBases {'A', 'C', 'G', 'U'};
     
-    static const std::unordered_map<char, std::vector<char>> AminoAcidCodes {
+    static const std::unordered_map<char, std::vector<char>> aminoAcidCodes {
         {'A', {'A'}},                    // Adenine
         {'C', {'C'}},                    // Cytosine
         {'G', {'G'}},                    // Guanine
@@ -44,7 +44,7 @@ namespace detail
         {'N', {'A', 'C', 'G', 'T', 'U'}} // Nucleic acid
     };
     
-    static constexpr std::array<char, 11> AmbiguousCodes
+    static constexpr std::array<char, 11> ambiguousCodes
     {
         'N', 'R', 'Y', 'K', 'M', 'S', 'W', 'B', 'D', 'H', 'V'
     };
@@ -148,13 +148,13 @@ template <typename SequenceType>
 static void randomise(SequenceType& sequence)
 {
     for (auto& base : sequence) {
-        base = detail::random_member(detail::AminoAcidCodes.at(base));
+        base = detail::random_member(detail::aminoAcidCodes.at(base));
     }
 }
 
 namespace detail
 {
-    static constexpr std::array<char, 128> complement_table
+    static constexpr std::array<char, 128> complementTable
     {
         4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
         4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
@@ -169,7 +169,7 @@ namespace detail
 
 static inline constexpr char complement(const char base) noexcept
 {
-    return detail::complement_table[base];
+    return detail::complementTable[base];
 }
 
 template <typename BidirIt, typename OutputIt>

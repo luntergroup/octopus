@@ -164,8 +164,8 @@ auto open(const boost::filesystem::path& file)
 
 bool is_valid_bed_record(const std::string& line)
 {
-    constexpr static char bed_delim {'\t'};
-    return std::count(std::cbegin(line), std::cend(line), bed_delim) >= 3;
+    constexpr static char bedDelim {'\t'};
+    return std::count(std::cbegin(line), std::cend(line), bedDelim) >= 3;
 }
 
 std::string convert_bed_line_to_region_str(const std::string& bed_line)
@@ -174,9 +174,9 @@ std::string convert_bed_line_to_region_str(const std::string& bed_line)
         throw std::runtime_error {"BadBEDRecord: insufficient columns"};
     }
     
-    constexpr static char bed_delim {'\t'};
+    constexpr static char bedDelim {'\t'};
     
-    const auto tokens = utils::split(bed_line, bed_delim);
+    const auto tokens = utils::split(bed_line, bedDelim);
     
     return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
 }

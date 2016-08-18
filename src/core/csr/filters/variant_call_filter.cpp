@@ -100,7 +100,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
         
         VcfRecord::Builder filtered_call {call};
         
-        if (classification.category != Classification::Category::Filtered) {
+        if (classification.category != Classification::Category::filtered) {
             pass(filtered_call);
         } else {
             fail(filtered_call);

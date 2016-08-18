@@ -102,7 +102,7 @@ void CigarScanner::do_add_read(const AlignedRead& read)
         using Flag = CigarOperation::Flag;
         
         switch (cigar_operation.flag()) {
-            case Flag::AlignmentMatch:
+            case Flag::alignmentMatch:
                 add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
                                         next(sequence_itr, read_index),
                                         next(sequence_itr, read_index + op_size),
@@ -112,12 +112,12 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                 ref_index  += op_size;
                 
                 break;
-            case Flag::SequenceMatch:
+            case Flag::sequenceMatch:
                 read_index += op_size;
                 ref_index  += op_size;
                 
                 break;
-            case Flag::Substitution:
+            case Flag::substitution:
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
@@ -135,7 +135,7 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                 
                 break;
             }
-            case Flag::Insertion:
+            case Flag::insertion:
             {
                 if (count_bad_qualities(read.qualities(), read_index, op_size, options_.min_base_quality)
                         <= options_.max_poor_quality_insertion_bases) {
@@ -151,7 +151,7 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                 
                 break;
             }
-            case Flag::Deletion:
+            case Flag::deletion:
             {
                 if (*next(qualities_itr, read_index) > 0 && *next(qualities_itr, read_index + 1) > 0) {
                     region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
@@ -165,15 +165,15 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                 
                 break;
             }
-            case Flag::SoftClipped:
+            case Flag::softClipped:
                 read_index += op_size;
                 ref_index  += op_size;
                 
                 break;
-            case Flag::HardClipped:
+            case Flag::hardClipped:
                 break;
-            case Flag::Padding:
-            case Flag::Skipped:
+            case Flag::padding:
+            case Flag::skipped:
                 ref_index += op_size;
                 
                 break;

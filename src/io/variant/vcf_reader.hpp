@@ -62,13 +62,13 @@ public:
     std::size_t count_records(const std::string& contig) const;
     std::size_t count_records(const GenomicRegion& region) const;
     
-    RecordContainer fetch_records(UnpackPolicy level = UnpackPolicy::All) const;
-    RecordContainer fetch_records(const std::string& contig, UnpackPolicy level = UnpackPolicy::All) const;
-    RecordContainer fetch_records(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::All) const;
+    RecordContainer fetch_records(UnpackPolicy level = UnpackPolicy::all) const;
+    RecordContainer fetch_records(const std::string& contig, UnpackPolicy level = UnpackPolicy::all) const;
+    RecordContainer fetch_records(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::all) const;
     
-    RecordIteratorPair iterate(UnpackPolicy level = UnpackPolicy::All) const;
-    RecordIteratorPair iterate(const std::string& contig, UnpackPolicy level = UnpackPolicy::All) const;
-    RecordIteratorPair iterate(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::All) const;
+    RecordIteratorPair iterate(UnpackPolicy level = UnpackPolicy::all) const;
+    RecordIteratorPair iterate(const std::string& contig, UnpackPolicy level = UnpackPolicy::all) const;
+    RecordIteratorPair iterate(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::all) const;
     
 private:
     Path file_path_;

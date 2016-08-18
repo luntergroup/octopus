@@ -178,7 +178,7 @@ public:
     using KeyType            = VcfRecord::KeyType;
     using ValueType          = VcfRecord::ValueType;
     
-    enum class Phasing { Phased, Unphased };
+    enum class Phasing { phased, unphased };
     
     Builder() = default;
     

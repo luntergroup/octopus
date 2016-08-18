@@ -23,7 +23,7 @@ constexpr auto num_kmers(const unsigned char k) noexcept
 template <typename T = short>
 constexpr auto perfect_hash(const char base) noexcept
 {
-    constexpr std::array<T, 128> hash_table
+    constexpr std::array<T, 128> hashTable
     {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -34,7 +34,7 @@ constexpr auto perfect_hash(const char base) noexcept
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
-    return hash_table[base];
+    return hashTable[base];
 }
 
 using KmerHashType = std::uint_fast32_t;

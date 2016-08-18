@@ -19,7 +19,7 @@ HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(const unsigned max_haplotypes
 cache_ {max_haplotypes},
 sample_indices_ {samples.size()}
 {
-    mapping_positions_.resize(MAX_MAPPING_POSITIONS);
+    mapping_positions_.resize(maxMappingPositions);
 }
 
 HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
@@ -30,7 +30,7 @@ likelihood_model_ {std::move(likelihood_model)},
 cache_ {max_haplotypes},
 sample_indices_ {samples.size()}
 {
-    mapping_positions_.resize(MAX_MAPPING_POSITIONS);
+    mapping_positions_.resize(maxMappingPositions);
 }
 
 HaplotypeLikelihoodCache::ReadPacket::ReadPacket(Iterator first, Iterator last)
@@ -69,18 +69,18 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
         
         std::transform(t.first, t.last, std::back_inserter(sample_read_hashes),
                        [] (const AlignedRead& read) {
-                           return compute_kmer_hashes<MAPPER_KMER_SIZE>(read.sequence());
+                           return compute_kmer_hashes<mapperKmerSize>(read.sequence());
                        });
         
         read_hashes.emplace_back(std::move(sample_read_hashes));
     }
     
-    auto haplotype_hashes = init_kmer_hash_table<MAPPER_KMER_SIZE>();
+    auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
     
     const auto first_mapping_position = std::begin(mapping_positions_);
     
     for (const auto& haplotype : haplotypes) {
-        populate_kmer_hash_table<MAPPER_KMER_SIZE>(haplotype.sequence(), haplotype_hashes);
+        populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
         
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
         
@@ -100,7 +100,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                const auto last_mapping_position = map_query_to_target(read_hashes, haplotype_hashes,
                                                                                       haplotype_mapping_counts,
                                                                                       first_mapping_position,
-                                                                                      MAX_MAPPING_POSITIONS);
+                                                                                      maxMappingPositions);
                                
                                reset_mapping_counts(haplotype_mapping_counts);
                                

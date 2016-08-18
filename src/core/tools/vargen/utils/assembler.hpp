@@ -182,7 +182,7 @@ private:
     using Path = std::deque<Vertex>;
     using PredecessorMap = std::unordered_map<Vertex, Vertex>;
     
-    static constexpr GraphEdge::ScoreType BlockedScore = 1000;
+    static constexpr GraphEdge::ScoreType blockedScore = 1000;
     
     unsigned k_;
     

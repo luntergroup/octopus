@@ -37,7 +37,7 @@ class HaplotypeGenerator
 public:
     struct Policies
     {
-        enum class Lagging { None, Conservative, Aggressive } lagging = Lagging::None;
+        enum class Lagging { none, conservative, aggressive } lagging = Lagging::none;
         
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         

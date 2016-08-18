@@ -100,7 +100,7 @@ public:
     using BaseQuality = AlignedRead::BaseQuality;
     using Position    = GenomicRegion::Position;
     
-    enum class Generator { Alignment, Assembler, External, Online, Random };
+    enum class Generator { alignment, assembler, external, online, random };
     
     Builder() = default;
     

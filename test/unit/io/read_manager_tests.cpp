@@ -85,9 +85,9 @@ BOOST_AUTO_TEST_CASE(read_manager_multiple_files_below_max_file_limit_test)
     
     std::vector<fs::path> read_paths {NA12878_low_coverage, HG00101};
     
-    constexpr unsigned max_open_files {2};
+    constexpr unsigned maxOpenFiles {2};
     
-    ReadManager read_manager(read_paths, max_open_files);
+    ReadManager read_manager(read_paths, maxOpenFiles);
     
     BOOST_REQUIRE(read_manager.num_samples() == 2);
     
@@ -123,9 +123,9 @@ BOOST_AUTO_TEST_CASE(read_manager_multiple_files_above_max_file_limit_test)
     
     std::vector<fs::path> read_paths {NA12878_low_coverage, HG00101, HG00102};
     
-    constexpr unsigned max_open_files {2};
+    constexpr unsigned maxOpenFiles {2};
     
-    ReadManager read_manager(read_paths, max_open_files);
+    ReadManager read_manager(read_paths, maxOpenFiles);
     
     BOOST_REQUIRE(read_manager.num_samples() == 3);
     

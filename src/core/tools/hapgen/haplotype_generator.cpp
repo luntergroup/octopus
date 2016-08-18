@@ -91,7 +91,7 @@ tree_ {contig_name(candidates.front()), reference},
 default_walker_ {max_included(policies_.haplotype_limits.target)},
 holdout_walker_ {
     max_included(policies_.haplotype_limits.target),
-    GenomeWalker::IndicatorPolicy::IncludeAll
+    GenomeWalker::IndicatorPolicy::includeAll
 },
 lagged_walker_ {},
 alleles_ {decompose(candidates)},
@@ -104,13 +104,13 @@ holdout_region_ {}
     
     active_region_ = shift(head_region(alleles_.leftmost()), -1);
     
-    if (policies_.lagging != Policies::Lagging::None) {
+    if (policies_.lagging != Policies::Lagging::none) {
         GenomeWalker::IndicatorPolicy walker_policy;
         
-        if (policies_.lagging == Policies::Lagging::Conservative) {
-            walker_policy = GenomeWalker::IndicatorPolicy::IncludeIfSharedWithNovelRegion;
+        if (policies_.lagging == Policies::Lagging::conservative) {
+            walker_policy = GenomeWalker::IndicatorPolicy::includeIfSharedWithNovelRegion;
         } else {
-            walker_policy = GenomeWalker::IndicatorPolicy::IncludeIfLinkableToNovelRegion;
+            walker_policy = GenomeWalker::IndicatorPolicy::includeIfLinkableToNovelRegion;
         }
         
         lagged_walker_ = GenomeWalker {max_included(policies_.haplotype_limits.target), walker_policy};

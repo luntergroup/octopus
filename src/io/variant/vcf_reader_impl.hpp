@@ -19,7 +19,7 @@ class VcfRecord;
 class IVcfReaderImpl
 {
 public:
-    enum class UnpackPolicy { All, Sites };
+    enum class UnpackPolicy { all, sites };
     
     using RecordContainer = std::vector<VcfRecord>;
     
@@ -53,11 +53,11 @@ public:
     virtual std::size_t count_records(const std::string& contig) const = 0;
     virtual std::size_t count_records(const GenomicRegion& region) const = 0;
     
-    virtual RecordContainer fetch_records(UnpackPolicy level = UnpackPolicy::All) const = 0; // fetches all records
-    virtual RecordContainer fetch_records(const std::string& contig, UnpackPolicy level = UnpackPolicy::All) const = 0;
-    virtual RecordContainer fetch_records(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::All) const = 0;
+    virtual RecordContainer fetch_records(UnpackPolicy level) const = 0; // fetches all records
+    virtual RecordContainer fetch_records(const std::string& contig, UnpackPolicy level) const = 0;
+    virtual RecordContainer fetch_records(const GenomicRegion& region, UnpackPolicy level) const = 0;
     
-    virtual RecordIteratorPtrPair iterate(UnpackPolicy level = UnpackPolicy::All) const = 0;
+    virtual RecordIteratorPtrPair iterate(UnpackPolicy level) const = 0;
     virtual RecordIteratorPtrPair iterate(const std::string& contig, UnpackPolicy level) const  = 0;
     virtual RecordIteratorPtrPair iterate(const GenomicRegion& region, UnpackPolicy level) const = 0;
     

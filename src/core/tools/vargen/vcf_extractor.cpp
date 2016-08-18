@@ -57,7 +57,7 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, const VcfReader
     auto batches = get_batch_regions(region, reader, max_batch_size);
     
     for (const auto& batch : batches) {
-        auto records = reader.fetch_records(batch, VcfReader::UnpackPolicy::Sites);
+        auto records = reader.fetch_records(batch, VcfReader::UnpackPolicy::sites);
         
         for (const auto& record : records) {
             for (const auto& alt_allele : record.alt()) {

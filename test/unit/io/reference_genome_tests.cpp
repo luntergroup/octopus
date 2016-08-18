@@ -107,9 +107,9 @@ BOOST_AUTO_TEST_CASE(CachingFasta_works_the_same_as_Fasta)
 {
     BOOST_REQUIRE(test_file_exists(ecoli_reference_fasta));
     
-    constexpr std::size_t max_cache_size {100000};
+    constexpr std::size_t maxCacheSize {100000};
     
-    const auto ecoli = make_reference(ecoli_reference_fasta, max_cache_size);
+    const auto ecoli = make_reference(ecoli_reference_fasta, maxCacheSize);
     
     BOOST_CHECK(ecoli.name() == "R00000042");
     BOOST_CHECK(ecoli.contains(GenomicRegion("R00000042", 10000, 2000000)));
@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(CachingFasta_works_the_same_as_Fasta)
     
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    const auto human = make_reference(human_reference_fasta, max_cache_size);
+    const auto human = make_reference(human_reference_fasta, maxCacheSize);
     
     BOOST_CHECK(human.name() == "human_g1k_v37");
     BOOST_CHECK(human.contains(GenomicRegion("1", 100, 10000)));

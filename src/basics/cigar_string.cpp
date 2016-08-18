@@ -31,12 +31,12 @@ CigarOperation::Size CigarOperation::size() const noexcept
 
 bool CigarOperation::advances_reference() const noexcept
 {
-    return !(flag_ == Flag::Insertion || flag_ == Flag::HardClipped || flag_ == Flag::Padding);
+    return !(flag_ == Flag::insertion || flag_ == Flag::hardClipped || flag_ == Flag::padding);
 }
 
 bool CigarOperation::advances_sequence() const noexcept
 {
-    return !(flag_ == Flag::Deletion || flag_ == Flag::HardClipped);
+    return !(flag_ == Flag::deletion || flag_ == Flag::hardClipped);
 }
 
 // non-member methods
@@ -45,15 +45,15 @@ bool is_valid(const CigarOperation::Flag flag) noexcept
 {
     using Flag = CigarOperation::Flag;
     switch (flag) {
-        case Flag::AlignmentMatch:
-        case Flag::SequenceMatch:
-        case Flag::Substitution:
-        case Flag::Insertion:
-        case Flag::Deletion:
-        case Flag::SoftClipped:
-        case Flag::HardClipped:
-        case Flag::Padding:
-        case Flag::Skipped: return true;
+        case Flag::alignmentMatch:
+        case Flag::sequenceMatch:
+        case Flag::substitution:
+        case Flag::insertion:
+        case Flag::deletion:
+        case Flag::softClipped:
+        case Flag::hardClipped:
+        case Flag::padding:
+        case Flag::skipped: return true;
         default: return false;
     }
 }
@@ -67,9 +67,9 @@ bool is_match(const CigarOperation& op) noexcept
 {
     using Flag = CigarOperation::Flag;
     switch (op.flag()) {
-        case Flag::AlignmentMatch:
-        case Flag::SequenceMatch:
-        case Flag::Substitution: return true;
+        case Flag::alignmentMatch:
+        case Flag::sequenceMatch:
+        case Flag::substitution: return true;
         default: return false;
     }
 }
@@ -77,13 +77,13 @@ bool is_match(const CigarOperation& op) noexcept
 bool is_indel(const CigarOperation& op) noexcept
 {
     using Flag = CigarOperation::Flag;
-    return op.flag() == Flag::Insertion || op.flag() == Flag::Deletion;
+    return op.flag() == Flag::insertion || op.flag() == Flag::deletion;
 }
 
 bool is_clipping(const CigarOperation& op) noexcept
 {
     using Flag = CigarOperation::Flag;
-    return op.flag() == Flag::SoftClipped || op.flag() == Flag::HardClipped;
+    return op.flag() == Flag::softClipped || op.flag() == Flag::hardClipped;
 }
 
 // CigarString
@@ -131,12 +131,12 @@ bool is_minimal(const CigarString& cigar) noexcept
 
 bool is_front_soft_clipped(const CigarString& cigar) noexcept
 {
-    return !cigar.empty() && cigar.front().flag() == CigarOperation::Flag::SoftClipped;
+    return !cigar.empty() && cigar.front().flag() == CigarOperation::Flag::softClipped;
 }
 
 bool is_back_soft_clipped(const CigarString& cigar) noexcept
 {
-    return !cigar.empty() && cigar.back().flag() == CigarOperation::Flag::SoftClipped;
+    return !cigar.empty() && cigar.back().flag() == CigarOperation::Flag::softClipped;
 }
 
 bool is_soft_clipped(const CigarString& cigar) noexcept

@@ -15,7 +15,7 @@
 
 namespace octopus {
 
-constexpr decltype(SnvErrorModel::Max_qualities_) SnvErrorModel::Max_qualities_;
+constexpr decltype(SnvErrorModel::maxQualities_) SnvErrorModel::maxQualities_;
 
 namespace
 {
@@ -115,7 +115,7 @@ void SnvErrorModel::evaluate(const Haplotype& haplotype,
     using std::cbegin; using std::cend; using std::crbegin; using std::crend;
     using std::begin; using std::rbegin; using std::next;
     
-    constexpr auto Max_period = Max_qualities_.size();
+    constexpr auto Max_period = maxQualities_.size();
     
     const auto repeats = extract_repeats(haplotype, Max_period);
     
@@ -130,8 +130,8 @@ void SnvErrorModel::evaluate(const Haplotype& haplotype,
                     repeat_hash(haplotype, repeat));
     }
     
-    forward_snv_priors.assign(num_bases, Max_qualities_.front().front());
-    reverse_snv_priors.assign(num_bases, Max_qualities_.front().front());
+    forward_snv_priors.assign(num_bases, maxQualities_.front().front());
+    reverse_snv_priors.assign(num_bases, maxQualities_.front().front());
     
     std::vector<unsigned> runs(num_bases);
     
@@ -139,9 +139,9 @@ void SnvErrorModel::evaluate(const Haplotype& haplotype,
         const auto max_gap = i + 2;
         const auto& repeat_mask = repeat_masks[i];
         count_runs(cbegin(repeat_mask), cend(repeat_mask), begin(runs), max_gap);
-        set_priors(runs, forward_snv_priors, Max_qualities_[i]);
+        set_priors(runs, forward_snv_priors, maxQualities_[i]);
         count_runs(crbegin(repeat_mask), crend(repeat_mask), rbegin(runs), max_gap);
-        set_priors(runs, reverse_snv_priors, Max_qualities_[i]);
+        set_priors(runs, reverse_snv_priors, maxQualities_[i]);
     }
     
     const auto& sequence = haplotype.sequence();

@@ -1153,24 +1153,24 @@ void Assembler::set_all_in_edge_transition_scores(const Vertex v, const GraphEdg
 
 bool Assembler::is_blocked(Edge e) const
 {
-    return graph_[e].transition_score >= BlockedScore;
+    return graph_[e].transition_score >= blockedScore;
 }
 
 void Assembler::block_edge(const Edge e)
 {
-    graph_[e].transition_score = BlockedScore;
+    graph_[e].transition_score = blockedScore;
 }
 
 void Assembler::block_all_in_edges(const Vertex v)
 {
-    set_all_in_edge_transition_scores(v, BlockedScore);
+    set_all_in_edge_transition_scores(v, blockedScore);
 }
 
 bool Assembler::all_in_edges_are_blocked(const Vertex v) const
 {
     const auto p = boost::in_edges(v, graph_);
     return std::all_of(p.first, p.second, [this] (const Edge e) {
-        return graph_[e].transition_score == BlockedScore;
+        return graph_[e].transition_score == blockedScore;
     });
 }
 

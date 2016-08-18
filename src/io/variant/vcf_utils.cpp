@@ -14,6 +14,7 @@
 #include <basics/contig_region.hpp>
 #include <basics/genomic_region.hpp>
 
+#include "vcf_spec.hpp"
 #include "htslib/vcf.h"
 #include "htslib/tbx.h"
 
@@ -23,14 +24,15 @@ namespace octopus {
 
 std::vector<std::string> get_contigs(const VcfHeader& header)
 {
+    using namespace vcfspec::header::meta;
     std::vector<std::string> result {};
     
-    const auto& contigs_fields = header.structured_fields("contig");
+    const auto& contigs_fields = header.structured_fields(tag::contig);
     
     result.reserve(contigs_fields.size());
     
     std::transform(std::cbegin(contigs_fields), std::cend(contigs_fields), std::back_inserter(result),
-                   [] (const auto& field) { return field.at("ID"); });
+                   [] (const auto& field) { return field.at(struc::id); });
     
     return result;
 }
@@ -110,9 +112,9 @@ void copy(const VcfReader& src, VcfWriter& dst)
         dst << src.fetch_header();
     }
     
-    constexpr std::size_t max_buffer_size {1000000};
+    constexpr std::size_t maxBufferSize {1000000};
     
-    if (src.count_records() <= max_buffer_size) {
+    if (src.count_records() <= maxBufferSize) {
         dst << src.fetch_records();
     } else {
         auto p = src.iterate();
@@ -333,7 +335,7 @@ void one_step_merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
     for (const auto& contig : contigs) {
         for (auto& reader : sources) {
             if (reader_contig_counts[reader].count(contig) == 1) {
-                auto records = reader.fetch_records(contig, VcfReader::UnpackPolicy::All);
+                auto records = reader.fetch_records(contig, VcfReader::UnpackPolicy::all);
                 for (auto&& record : records) {
                     record_queue.emplace(std::move(record));
                 }
@@ -421,9 +423,9 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
     if (is_unique_contig_per_reader(reader_contig_counts)) {
         merge_contig_unique(sources, dst, contigs, reader_contig_counts);
     } else {
-        static constexpr std::size_t max_buffer_size {100000};
+        static constexpr std::size_t maxBufferSize {100000};
         
-        if (count_records(reader_contig_counts) <= max_buffer_size) {
+        if (count_records(reader_contig_counts) <= maxBufferSize) {
             one_step_merge(sources, dst, contigs, reader_contig_counts);
         } else if (sources.size() == 2) {
             merge_pair(sources.front(), sources.back(), dst, contigs, reader_contig_counts);
@@ -477,11 +479,11 @@ void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
     
     const auto samples = src.fetch_header().samples();
     
-    const static char Deleted {'*'};
-    const static std::string Missing {"."};
+    const static char deleted {'*'};
+    const static std::string missing {vcfspec::missingValue};
     
     const auto has_deleted = [] (const auto& allele) {
-        return std::find(std::cbegin(allele), std::cend(allele), Deleted) != std::cend(allele);
+        return std::find(std::cbegin(allele), std::cend(allele), deleted) != std::cend(allele);
     };
     
     auto p = src.iterate();
@@ -504,10 +506,10 @@ void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
         }
         
         for (const auto& sample : samples) {
-            const auto& gt = call.get_sample_value(sample, "GT");
+            const auto& gt = call.get_sample_value(sample, vcfspec::format::genotype);
             
             const auto it2 = std::find_if(std::cbegin(gt), std::cend(gt), has_deleted);
-            const auto it3 = std::find(std::cbegin(gt), std::cend(gt), Missing);
+            const auto it3 = std::find(std::cbegin(gt), std::cend(gt), missing);
             
             const auto& ref = call.ref();
             
@@ -516,12 +518,12 @@ void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
                 
                 std::replace_if(std::begin(new_gt), std::end(new_gt), has_deleted, ref);
                 
-                std::replace(std::begin(new_gt), std::end(new_gt), Missing, ref);
+                std::replace(std::begin(new_gt), std::end(new_gt), missing, ref);
                 
-                auto phasing = VcfRecord::Builder::Phasing::Phased;
+                auto phasing = VcfRecord::Builder::Phasing::phased;
                 
                 if (!call.is_sample_phased(sample)) {
-                    phasing = VcfRecord::Builder::Phasing::Unphased;
+                    phasing = VcfRecord::Builder::Phasing::unphased;
                 }
                 
                 cb.set_genotype(sample, std::move(new_gt), phasing);

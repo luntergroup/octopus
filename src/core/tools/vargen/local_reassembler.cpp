@@ -47,15 +47,15 @@ max_variant_size_ {options.max_variant_size}
     default_kmer_sizes_.erase(std::unique(begin(default_kmer_sizes_), end(default_kmer_sizes_)),
                               end(default_kmer_sizes_));
     
-    constexpr unsigned num_fallbacks {6};
-    constexpr unsigned fallback_interval_size {10};
+    constexpr unsigned numFallbacks {6};
+    constexpr unsigned fallbackIntervalSize {10};
     
-    fallback_kmer_sizes_.resize(num_fallbacks);
+    fallback_kmer_sizes_.resize(numFallbacks);
     
     auto k = default_kmer_sizes_.back();
-    std::generate_n(begin(fallback_kmer_sizes_), num_fallbacks,
-                    [&k, fallback_interval_size] () {
-                        k += fallback_interval_size;
+    std::generate_n(begin(fallback_kmer_sizes_), numFallbacks,
+                    [&k, fallbackIntervalSize] () {
+                        k += fallbackIntervalSize;
                         return k;
                     });
 }
@@ -136,9 +136,9 @@ auto expand_cigar(const AlignedRead& read)
 bool is_match(const CigarOperation::Flag op)
 {
     switch (op) {
-        case CigarOperation::Flag::AlignmentMatch:
-        case CigarOperation::Flag::SequenceMatch:
-        case CigarOperation::Flag::Substitution: return true;
+        case CigarOperation::Flag::alignmentMatch:
+        case CigarOperation::Flag::sequenceMatch:
+        case CigarOperation::Flag::substitution: return true;
         default: return false;
     }
 }
@@ -157,7 +157,7 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
     const auto last_cigar_itr = std::cend(cigar);
     
     auto cigar_itr = std::find_if_not(std::cbegin(cigar), last_cigar_itr,
-                                      [] (auto op) { return op == Flag::HardClipped; });
+                                      [] (auto op) { return op == Flag::hardClipped; });
     
     const auto ref_sequence = reference.fetch_sequence(mapped_region(read));
     
@@ -170,13 +170,13 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
                        if (!is_match(cigar_op)) {
                            // Only matches get transformed
                            
-                           if (cigar_op != Flag::Insertion) {
+                           if (cigar_op != Flag::insertion) {
                                ++ref_itr;
                            }
                            
                            // Deletions are excess reference sequence so we need to move the
                            // reference iterator to the next nondeleted read base
-                           while (cigar_itr != last_cigar_itr && *cigar_itr == Flag::Deletion) {
+                           while (cigar_itr != last_cigar_itr && *cigar_itr == Flag::deletion) {
                                ++cigar_itr;
                                ++ref_itr;
                            }
@@ -447,14 +447,14 @@ std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
         using Flag = CigarOperation::Flag;
         
         switch(op.flag()) {
-            case Flag::SequenceMatch:
+            case Flag::sequenceMatch:
             {
                 pos += op.size();
                 ref_it += op.size();
                 alt_it += op.size();
                 break;
             }
-            case Flag::Substitution:
+            case Flag::substitution:
             {
                 std::transform(ref_it, std::next(ref_it, op.size()), alt_it,
                                std::back_inserter(result),
@@ -465,13 +465,13 @@ std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
                 alt_it += op.size();
                 break;
             }
-            case Flag::Insertion:
+            case Flag::insertion:
             {
                 result.emplace_back(pos, "", Assembler::NucleotideSequence {alt_it, std::next(alt_it, op.size())});
                 alt_it += op.size();
                 break;
             }
-            case Flag::Deletion:
+            case Flag::deletion:
             {
                 result.emplace_back(pos, Assembler::NucleotideSequence {ref_it, std::next(ref_it, op.size())}, "");
                 pos += op.size();

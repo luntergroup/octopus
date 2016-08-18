@@ -18,10 +18,10 @@ OptionMap parse_options(int argc, const char** argv);
 
 enum class ContigOutputOrder
 {
-    LexicographicalAscending, LexicographicalDescending,
-    ContigSizeAscending, ContigSizeDescending,
-    AsInReferenceIndex, AsInReferenceIndexReversed,
-    Unspecified
+    lexicographicalAscending, lexicographicalDescending,
+    contigSizeAscending, contigSizeDescending,
+    asInReferenceIndex, asInReferenceIndexReversed,
+    unspecified
 };
 
 struct ContigPloidy
@@ -31,9 +31,9 @@ struct ContigPloidy
     int ploidy;
 };
 
-enum class RefCallType { Positional, Blocked };
+enum class RefCallType { positional, blocked };
 
-enum class PhasingLevel { Minimal, Conservative, Aggressive };
+enum class PhasingLevel { minimal, conservative, aggressive };
 
 std::istream& operator>>(std::istream& in, ContigOutputOrder& coo);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& coo);

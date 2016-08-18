@@ -272,8 +272,8 @@ Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
     
     if (genotypes.front().get().ploidy() == 1 || partitions.size() == 1) {
         for (const auto& p : genotype_posteriors) {
-            static const Phred<double> Max_posterior {Phred<double>::Probability {0.0}};
-            result.phase_regions[p.first].emplace_back(haplotype_region, Max_posterior);
+            static const Phred<double> maxPosterior {Phred<double>::Probability {0.0}};
+            result.phase_regions[p.first].emplace_back(haplotype_region, maxPosterior);
         }
         return result;
     }

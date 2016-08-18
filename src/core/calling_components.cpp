@@ -129,23 +129,23 @@ auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& r
     std::function<bool(const ContigName&, const ContigName&)> result;
     
     switch (order) {
-        case ContigOutputOrder::LexicographicalAscending:
+        case ContigOutputOrder::lexicographicalAscending:
             result = std::less<> {};
             break;
-        case ContigOutputOrder::LexicographicalDescending:
+        case ContigOutputOrder::lexicographicalDescending:
             result = std::greater<> {};
             break;
-        case ContigOutputOrder::ContigSizeAscending:
+        case ContigOutputOrder::contigSizeAscending:
             result = [&reference] (const auto& lhs, const auto& rhs) -> bool {
                 return reference.contig_size(lhs) < reference.contig_size(rhs);
             };
             break;
-        case ContigOutputOrder::ContigSizeDescending:
+        case ContigOutputOrder::contigSizeDescending:
             result = [&reference] (const auto& lhs, const auto& rhs) -> bool {
                 return reference.contig_size(lhs) > reference.contig_size(rhs);
             };
             break;
-        case ContigOutputOrder::AsInReferenceIndex:
+        case ContigOutputOrder::asInReferenceIndex:
         {
             auto reference_contigs = reference.contig_names();
             result = [&reference, reference_contigs = std::move(reference_contigs)]
@@ -154,7 +154,7 @@ auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& r
             };
             break;
         }
-        case ContigOutputOrder::AsInReferenceIndexReversed:
+        case ContigOutputOrder::asInReferenceIndexReversed:
         {
             auto reference_contigs = reference.contig_names();
             result = [&reference, reference_contigs = std::move(reference_contigs)]
@@ -163,7 +163,7 @@ auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& r
             };
             break;
         }
-        case ContigOutputOrder::Unspecified:
+        case ContigOutputOrder::unspecified:
             result = std::less<> {};
             break;
     }
@@ -247,9 +247,9 @@ std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes,
 {
     if (samples.empty()) return 0;
     
-    static constexpr std::size_t min_buffer_bytes {1'000'000};
+    static constexpr std::size_t minBufferBytes {1'000'000};
     
-    return std::max(max_buffer_bytes, min_buffer_bytes) / estimate_read_size(samples, input_regions, read_manager);
+    return std::max(max_buffer_bytes, minBufferBytes) / estimate_read_size(samples, input_regions, read_manager);
 }
 
 GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, ReadManager&& read_manager,

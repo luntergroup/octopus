@@ -75,10 +75,10 @@ VcfReader::RecordIterator& VcfReader::RecordIterator::operator++()
 
 bool operator==(const VcfReader::RecordIterator& lhs, const VcfReader::RecordIterator& rhs)
 {
-    const static std::type_index hts_type {typeid(HtslibBcfFacade::RecordIterator)};
-    const static std::type_index parser_type {typeid(VcfParser::RecordIterator)};
+    const static std::type_index htsType {typeid(HtslibBcfFacade::RecordIterator)};
+    const static std::type_index parserType {typeid(VcfParser::RecordIterator)};
     
-    if (lhs.type_ == hts_type) {
+    if (lhs.type_ == htsType) {
         try {
             const auto& typed_lhs = dynamic_cast<HtslibBcfFacade::RecordIterator&>(*lhs.itr_);
             const auto& typed_rhs = dynamic_cast<HtslibBcfFacade::RecordIterator&>(*rhs.itr_);
@@ -86,7 +86,7 @@ bool operator==(const VcfReader::RecordIterator& lhs, const VcfReader::RecordIte
         } catch(const std::bad_cast&) {
             throw std::runtime_error {"VcfReader: trying to compare incompatible iterators"};
         }
-    } else if (lhs.type_ == parser_type) {
+    } else if (lhs.type_ == parserType) {
         try {
             const auto& typed_lhs = dynamic_cast<VcfParser::RecordIterator&>(*lhs.itr_);
             const auto& typed_rhs = dynamic_cast<VcfParser::RecordIterator&>(*rhs.itr_);

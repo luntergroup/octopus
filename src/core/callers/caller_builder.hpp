@@ -92,7 +92,7 @@ private:
         // common
         unsigned ploidy;
         
-        Caller::RefCallType refcall_type = Caller::RefCallType::None;
+        Caller::RefCallType refcall_type = Caller::RefCallType::none;
         bool call_sites_only = false;
         Phred<double> min_variant_posterior;
         Phred<double> min_refcall_posterior;

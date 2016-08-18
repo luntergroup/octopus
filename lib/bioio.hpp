@@ -159,8 +159,8 @@ inline std::size_t count_records(std::istream& is, const char record_delim)
     return result;
 }
 
-static constexpr char fasta_delim {'>'};
-static constexpr char fastq_delim {'@'};
+static constexpr char fastaDelim {'>'};
+static constexpr char fastqDelim {'@'};
 
 template<typename StringType = std::string, typename SequenceType = std::string>
 ::bioio::FastaRecord<StringType, SequenceType> read_fasta_record(std::istream& fasta)
@@ -173,7 +173,7 @@ template<typename StringType = std::string, typename SequenceType = std::string>
     
     // The FASTA format is not as simple as FASTQ - the sequence
     // may be broken into multiple lines. We assume each line is the same size.
-    if (!fasta.good() || fasta.peek() == fasta_delim) {
+    if (!fasta.good() || fasta.peek() == fastaDelim) {
         return ::bioio::FastaRecord<StringType, SequenceType> {std::move(name), std::move(line)};
     } else {
         const auto line_size = line.size();
@@ -190,7 +190,7 @@ template<typename StringType = std::string, typename SequenceType = std::string>
         while (fasta.good()) {
             fasta.getline(&line[0], line_size + 1);
             
-            if (line.front() == fasta_delim) {
+            if (line.front() == fastaDelim) {
                 if (fasta.good()) fasta.seekg(-fasta.gcount(), std::ios_base::cur);
                 break;
             }
@@ -467,7 +467,7 @@ FastaRecord<StringType, SequenceType> read_single_contig_fasta(const std::string
 
 inline std::size_t count_fasta_records(std::istream& fasta)
 {
-    return detail::count_records(fasta, detail::fasta_delim);
+    return detail::count_records(fasta, detail::fastaDelim);
 }
 
 inline std::size_t count_fasta_records(const std::string& fasta_path)
@@ -489,7 +489,7 @@ bool seek_fasta_record(std::istream& fasta, UnaryPredicate pred)
             return true;
         }
         while (fasta) {
-            if (fasta.peek() == detail::fasta_delim) break;
+            if (fasta.peek() == detail::fastaDelim) break;
             fasta.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         }
     }
@@ -731,7 +731,7 @@ void write_fasta(const std::string& path, const FastaReads<T, U>& records)
 
 inline std::size_t count_fastq_records(std::istream& fastq)
 {
-    return detail::count_records(fastq, detail::fastq_delim);
+    return detail::count_records(fastq, detail::fastqDelim);
 }
 
 inline std::size_t count_fastq_records(const std::string& fastq_path)

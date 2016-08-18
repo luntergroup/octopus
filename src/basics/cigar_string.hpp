@@ -23,15 +23,15 @@ class CigarOperation : public Comparable<CigarOperation> // Comparable so can co
 public:
     enum class Flag : char
     {
-        AlignmentMatch = 'M',
-        SequenceMatch  = '=',
-        Substitution   = 'X',
-        Insertion      = 'I',
-        Deletion       = 'D',
-        SoftClipped    = 'S',
-        HardClipped    = 'H',
-        Padding        = 'P',
-        Skipped        = 'N'
+        alignmentMatch = 'M',
+        sequenceMatch  = '=',
+        substitution   = 'X',
+        insertion      = 'I',
+        deletion       = 'D',
+        softClipped    = 'S',
+        hardClipped    = 'H',
+        padding        = 'P',
+        skipped        = 'N'
     };
     
     using Size = std::uint_fast32_t;

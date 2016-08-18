@@ -181,7 +181,7 @@ VariantGenerator VariantGenerator::Builder::build(const ReferenceGenome& referen
 VariantGenerator::Builder::GeneratorFactoryMap VariantGenerator::Builder::generate_factory() const
 {
     return GeneratorFactoryMap {
-        {Generator::Alignment, [this] (const ReferenceGenome& reference) {
+        {Generator::alignment, [this] (const ReferenceGenome& reference) {
             CigarScanner::Options options {
                 parameters_.min_base_quality,
                 parameters_.min_supporting_reads,
@@ -189,7 +189,7 @@ VariantGenerator::Builder::GeneratorFactoryMap VariantGenerator::Builder::genera
             };
             return std::make_unique<CigarScanner>(reference, options);
         }},
-        {Generator::Assembler, [this] (const ReferenceGenome& reference) {
+        {Generator::assembler, [this] (const ReferenceGenome& reference) {
             auto quality = (parameters_.min_assembler_base_quality)
             ? *parameters_.min_assembler_base_quality : parameters_.min_base_quality;
             LocalReassembler::Options options {
@@ -200,13 +200,13 @@ VariantGenerator::Builder::GeneratorFactoryMap VariantGenerator::Builder::genera
             };
             return std::make_unique<LocalReassembler>(reference, std::move(options));
         }},
-        {Generator::External, [this] (const ReferenceGenome& reference) {
+        {Generator::external, [this] (const ReferenceGenome& reference) {
             return std::make_unique<VcfExtractor>(parameters_.variant_source);
         }},
-        {Generator::Online, [this] (const ReferenceGenome& reference) {
+        {Generator::online, [this] (const ReferenceGenome& reference) {
             return std::make_unique<Downloader>(reference, parameters_.max_variant_size);
         }},
-        {Generator::Random, [this] (const ReferenceGenome& reference) {
+        {Generator::random, [this] (const ReferenceGenome& reference) {
             return std::make_unique<Randomiser>(reference);
         }}
     };

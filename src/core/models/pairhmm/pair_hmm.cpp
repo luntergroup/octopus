@@ -22,7 +22,7 @@
 
 namespace octopus { namespace hmm {
 
-using octopus::maths::constants::ln_10_div_10;
+using octopus::maths::constants::ln10Div10;
 
 template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
 constexpr auto num_values() noexcept
@@ -37,7 +37,7 @@ constexpr auto make_phred_to_ln_prob_lookup() noexcept
     
     for (std::size_t i {0}; i < N; ++i) {
         // This const_cast mess is because std::array::operator[] is not marked constexpr (until C++17)
-        const_cast<double&>(static_cast<std::array<double, N> const&>(result)[i]) = -ln_10_div_10<> * i;
+        const_cast<double&>(static_cast<std::array<double, N> const&>(result)[i]) = -ln10Div10<> * i;
     }
     
     return result;
@@ -74,7 +74,7 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
         const auto p = std::mismatch(it1, last1, it2);
         
         if (p.first != it1) {
-            result.emplace_back(std::distance(it1, p.first), CigarOperation::Flag::SequenceMatch);
+            result.emplace_back(std::distance(it1, p.first), CigarOperation::Flag::sequenceMatch);
             
             if (p.first == last1) break;
         }
@@ -86,7 +86,7 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
             
             const auto n = std::distance(p.first, it3);
             
-            result.emplace_back(n, CigarOperation::Flag::Insertion);
+            result.emplace_back(n, CigarOperation::Flag::insertion);
             
             it1 = it3;
             it2 = std::next(p.second, n);
@@ -95,7 +95,7 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
             
             const auto n = std::distance(p.second, it3);
             
-            result.emplace_back(n, CigarOperation::Flag::Deletion);
+            result.emplace_back(n, CigarOperation::Flag::deletion);
             
             it1 = std::next(p.first, n);
             it2 = it3;
@@ -103,7 +103,7 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
             const auto p2 = std::mismatch(std::next(p.first), last1, std::next(p.second),
                                           std::not_equal_to<> {});
             
-            result.emplace_back(std::distance(p.first, p2.first), CigarOperation::Flag::Substitution);
+            result.emplace_back(std::distance(p.first, p2.first), CigarOperation::Flag::substitution);
             
             std::tie(it1, it2) = p2;
         }
@@ -158,7 +158,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                                        model.gap_open_penalties.data() + alignment_offset,
                                        model.gap_extend, model.nuc_prior);
         
-        return -ln_10_div_10<> * static_cast<double>(score);
+        return -ln10Div10<> * static_cast<double>(score);
     }
     
     thread_local std::vector<char> align1 {}, align2 {};
@@ -213,7 +213,7 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     assert(flank_score <= score);
     
-    return -ln_10_div_10<> * static_cast<double>(score - flank_score);
+    return -ln10Div10<> * static_cast<double>(score - flank_score);
 }
 
 unsigned min_flank_pad() noexcept
@@ -247,7 +247,7 @@ double score(const std::string& truth, const std::string& target,
 {
     using std::cbegin; using std::cend; using std::next; using std::distance;
     
-    static constexpr auto Ln_probability = make_phred_to_ln_prob_lookup<std::uint8_t>();
+    static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
     
     validate(truth, target, target_qualities, target_offset, model);
     
@@ -280,10 +280,10 @@ double score(const std::string& truth, const std::string& target,
         
         if (mispatch_penalty <= model.gap_open_penalties[truth_index]
             || !std::equal(next(m1.first), cend(target), m1.second)) {
-            return Ln_probability[mispatch_penalty];
+            return lnProbability[mispatch_penalty];
         }
         
-        return Ln_probability[model.gap_open_penalties[truth_index]];
+        return lnProbability[model.gap_open_penalties[truth_index]];
     }
     
     // TODO: we should be able to optimise the alignment based of the first mismatch postition

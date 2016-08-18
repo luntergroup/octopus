@@ -215,12 +215,11 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     const CNVModel cnv_model {samples_, ploidy, std::move(cnv_model_priors)};
     const TumourModel somatic_model {samples_, ploidy, std::move(somatic_model_priors)};
     
-    static const SampleName merged_sample {"merged"};
+    static const SampleName mergedSample {"merged"};
     
-    const auto merged_likelihoods = merge_samples(samples_, merged_sample, haplotypes,
-                                                  haplotype_likelihoods);
+    const auto merged_likelihoods = merge_samples(samples_, mergedSample, haplotypes, haplotype_likelihoods);
     
-    merged_likelihoods.prime(merged_sample);
+    merged_likelihoods.prime(mergedSample);
     
     auto germline_inferences = germline_model.infer_latents(germline_genotypes, merged_likelihoods);
     
@@ -303,11 +302,11 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
 static double calculate_model_posterior(const double normal_germline_model_log_evidence,
                                         const double normal_dummy_model_log_evidence)
 {
-    constexpr double normal_model_prior {0.999};
-    constexpr double dummy_model_prior {1.0 - normal_model_prior};
+    constexpr double normalModelPrior {0.999};
+    constexpr double dummyModelPrior {1.0 - normalModelPrior};
     
-    const auto normal_model_ljp = std::log(normal_model_prior) + normal_germline_model_log_evidence;
-    const auto dummy_model_ljp  = std::log(dummy_model_prior) + normal_dummy_model_log_evidence;
+    const auto normal_model_ljp = std::log(normalModelPrior) + normal_germline_model_log_evidence;
+    const auto dummy_model_ljp  = std::log(dummyModelPrior) + normal_dummy_model_log_evidence;
     
     const auto norm = maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
     

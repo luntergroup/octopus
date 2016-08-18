@@ -22,7 +22,7 @@ static constexpr auto ln(const unsigned n)
 {
     using T = double;
     
-    constexpr std::array<T, 11> Ln {
+    constexpr std::array<T, 11> lnLookup {
         std::numeric_limits<T>::infinity(),
         0.0,
         0.693147180559945309417232121458176568075500134360255254120,
@@ -35,7 +35,7 @@ static constexpr auto ln(const unsigned n)
         2.197224577336219382790490473845051409294981115645498903469,
         2.302585092994045684017991454684364207601101488628772976033
     };
-    return Ln[n];
+    return lnLookup[n];
 }
 
 GermlineLikelihoodModel::GermlineLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods)

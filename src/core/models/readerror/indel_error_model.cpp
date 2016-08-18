@@ -14,11 +14,11 @@
 
 namespace octopus {
 
-constexpr decltype(IndelErrorModel::Homopolymer_errors_) IndelErrorModel::Homopolymer_errors_;
-constexpr decltype(IndelErrorModel::Homopolymer_errors_) IndelErrorModel::Di_nucleotide_tandem_repeat_errors_;
-constexpr decltype(IndelErrorModel::Homopolymer_errors_) IndelErrorModel::Tri_nucleotide_tandem_repeat_errors_;
-constexpr decltype(IndelErrorModel::Homopolymer_errors_) IndelErrorModel::Poly_nucleotide_tandem_repeat_errors_;
-constexpr decltype(IndelErrorModel::default_gap_extension_) IndelErrorModel::default_gap_extension_;
+constexpr decltype(IndelErrorModel::homopolymerErrors_) IndelErrorModel::homopolymerErrors_;
+constexpr decltype(IndelErrorModel::homopolymerErrors_) IndelErrorModel::diNucleotideTandemRepeatErrors_;
+constexpr decltype(IndelErrorModel::homopolymerErrors_) IndelErrorModel::triNucleotideTandemRepeatErrors_;
+constexpr decltype(IndelErrorModel::homopolymerErrors_) IndelErrorModel::polyNucleotideTandemRepeatErrors_;
+constexpr decltype(IndelErrorModel::defaultGapExtension_) IndelErrorModel::defaultGapExtension_;
 
 namespace {
     auto extract_repeats(const Haplotype& haplotype)
@@ -40,7 +40,7 @@ IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_pe
     
     const auto repeats = extract_repeats(haplotype);
     
-    gap_open_penalities.assign(sequence_size(haplotype), Homopolymer_errors_.front());
+    gap_open_penalities.assign(sequence_size(haplotype), homopolymerErrors_.front());
     
     tandem::StringRun max_repeat {};
     
@@ -50,14 +50,14 @@ IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_pe
         switch (repeat.period) {
             case 1:
             {
-                e = get_penalty(Homopolymer_errors_, repeat.length);
+                e = get_penalty(homopolymerErrors_, repeat.length);
                 break;
             }
             case 2:
             {
                 static constexpr std::array<char, 2> AC {'A', 'C'};
                 
-                e = get_penalty(Di_nucleotide_tandem_repeat_errors_, repeat.length / 2);
+                e = get_penalty(diNucleotideTandemRepeatErrors_, repeat.length / 2);
                 
                 const auto it = next(cbegin(haplotype.sequence()), repeat.pos);
                 
@@ -71,7 +71,7 @@ IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_pe
                 static constexpr std::array<char, 3> GGC {'G', 'G', 'C'};
                 static constexpr std::array<char, 3> GCC {'G', 'C', 'C'};
                 
-                e = get_penalty(Tri_nucleotide_tandem_repeat_errors_, repeat.length / 3);
+                e = get_penalty(triNucleotideTandemRepeatErrors_, repeat.length / 3);
                 
                 const auto it = next(cbegin(haplotype.sequence()), repeat.pos);
                 
@@ -83,7 +83,7 @@ IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_pe
                 break;
             }
             default:
-                e = get_penalty(Poly_nucleotide_tandem_repeat_errors_, repeat.length / repeat.period);
+                e = get_penalty(polyNucleotideTandemRepeatErrors_, repeat.length / repeat.period);
         }
         
         std::fill_n(next(begin(gap_open_penalities), repeat.pos), repeat.length, e);
@@ -97,7 +97,7 @@ IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_pe
         case 1: return 3;
         case 2: return 5;
         case 3: return 5;
-        default: return default_gap_extension_;
+        default: return defaultGapExtension_;
     }
 }
 

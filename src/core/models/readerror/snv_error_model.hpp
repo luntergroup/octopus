@@ -28,7 +28,7 @@ public:
                   MutationVector& reverse_snv_mask, PenaltyVector& reverse_snv_priors) const;
     
 private:
-    static constexpr std::array<std::array<PenaltyType, 51>, 3> Max_qualities_ =
+    static constexpr std::array<std::array<PenaltyType, 51>, 3> maxQualities_ =
     {{
         {
             125,125,60,55,40,25,20,15,12,11,9,8,7,7,6,6,6,6,6,6,

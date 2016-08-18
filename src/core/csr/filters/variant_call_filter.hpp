@@ -57,7 +57,7 @@ protected:
     
     struct Classification
     {
-        enum class Category { Filtered, Unfiltered } category;
+        enum class Category { filtered, unfiltered } category;
         boost::optional<Phred<double>> quality;
     };
     

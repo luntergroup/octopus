@@ -29,7 +29,7 @@
 namespace octopus {
 
 namespace {
-    static const std::string VcfMissingValue {vcfspec::MissingValue};
+    static const std::string VcfMissingValue {vcfspec::missingValue};
     
     namespace bc = boost::container;
 }
@@ -293,10 +293,10 @@ auto hts_tag_type(const std::string& tag)
 {
     using namespace vcfspec::header::meta::tag;
     const static std::unordered_map<std::string, int> types {
-        {Filter, BCF_HL_FLT},
-        {Info,   BCF_HL_INFO},
-        {Format, BCF_HL_FMT},
-        {Contig, BCF_HL_CTG}
+        {filter, BCF_HL_FLT},
+        {info,   BCF_HL_INFO},
+        {format, BCF_HL_FMT},
+        {contig, BCF_HL_CTG}
     };
     
     return (types.count(tag) == 1) ? types.at(tag) : BCF_HL_STR;
@@ -341,7 +341,7 @@ void HtslibBcfFacade::write(const VcfHeader& header)
             unsigned i {0};
             
             // Make sure the reserved fields are written in the required order
-            for (const auto& field : vcfspec::header::meta::struc::Order) {
+            for (const auto& field : vcfspec::header::meta::struc::order) {
                 if (fields.count(field) == 1) {
                     hrec->keys[i] = convert(field);
                     hrec->vals[i] = convert(fields[field]);
@@ -642,7 +642,7 @@ void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& b
                 const auto nchars = bcf_get_info_string(header, record, key, &stringinfo, &nstringinfo);
                 if (nchars > 0) {
                     std::string tmp(stringinfo, nchars);
-                    values = utils::split(tmp, vcfspec::info::ValueSeperator);
+                    values = utils::split(tmp, vcfspec::info::valueSeperator);
                 }
                 break;
             }
@@ -667,12 +667,12 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
         const auto& values    = source.info_value(key);
         const auto num_values = static_cast<int>(values.size());
         
-        static constexpr std::size_t DefaultBufferCapacity {100};
+        static constexpr std::size_t defaultBufferCapacity {100};
         
         switch (bcf_hdr_id2type(header, BCF_HL_INFO, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
             {
-                bc::small_vector<int, DefaultBufferCapacity> vals(num_values);
+                bc::small_vector<int, defaultBufferCapacity> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
                                [] (const auto& v) {
                                    return v != VcfMissingValue ? std::stoi(v) : bcf_int32_missing;
@@ -682,7 +682,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             }
             case BCF_HT_REAL:
             {
-                bc::small_vector<float, DefaultBufferCapacity> vals(num_values);
+                bc::small_vector<float, defaultBufferCapacity> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
                                [] (const auto& v) {
                                    return v != VcfMissingValue ? std::stof(v) : bcf_float_missing;
@@ -693,7 +693,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             case BCF_HT_STR:
             {
                 // Can we also use small_vector here?
-                const auto vals = utils::join(values, vcfspec::info::ValueSeperator);
+                const auto vals = utils::join(values, vcfspec::info::valueSeperator);
                 bcf_update_info_string(header, dest, key.c_str(), vals.c_str());
                 break;
             }
@@ -737,7 +737,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
     
     builder.reserve_samples(num_samples);
     
-    if (format.front() == vcfspec::format::Genotype) { // the first key must be GT if present
+    if (format.front() == vcfspec::format::genotype) { // the first key must be GT if present
         int ngt {}, g {};
         int* gt {nullptr};
         
@@ -771,7 +771,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
             using Phasing = VcfRecord::Builder::Phasing;
             
             builder.set_genotype(header->samples[sample], std::move(alleles),
-                                 bcf_gt_is_phased(g) ? Phasing::Phased : Phasing::Unphased);
+                                 bcf_gt_is_phased(g) ? Phasing::phased : Phasing::unphased);
         }
         
         std::free(gt);
@@ -875,7 +875,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     
     auto first_format = std::cbegin(format);
     
-    if (*first_format == vcfspec::format::Genotype) {
+    if (*first_format == vcfspec::format::genotype) {
         const auto& alt_alleles = source.alt();
         
         bc::small_vector<VcfRecord::NucleotideSequence, 5> alleles {};
@@ -900,7 +900,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
         for (const auto& sample : samples) {
             const bool is_phased {source.is_sample_phased(sample)};
             
-            const auto& genotype = source.get_sample_value(sample, vcfspec::format::Genotype);
+            const auto& genotype = source.get_sample_value(sample, vcfspec::format::genotype);
             
             const auto ploidy = static_cast<unsigned>(genotype.size());
             
@@ -920,12 +920,12 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     std::for_each(first_format, std::cend(format), [&] (const auto& key) {
         const auto num_values = num_samples * static_cast<int>(source.format_cardinality(key));
 
-        static constexpr std::size_t DefaultValueCpacity {100};
+        static constexpr std::size_t defaultValueCpacity {100};
         
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
           case BCF_HT_INT:
           {
-              bc::small_vector<int, DefaultValueCpacity> typed_values(num_values);
+              bc::small_vector<int, defaultValueCpacity> typed_values(num_values);
               auto it = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
@@ -939,7 +939,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
           }
           case BCF_HT_REAL:
           {
-              bc::small_vector<float, DefaultValueCpacity> typed_values(num_values);
+              bc::small_vector<float, defaultValueCpacity> typed_values(num_values);
               auto it = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
@@ -953,7 +953,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
           }
           case BCF_HT_STR:
           {
-              bc::small_vector<const char*, DefaultValueCpacity> typed_values(num_values);
+              bc::small_vector<const char*, defaultValueCpacity> typed_values(num_values);
               auto it = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
@@ -978,7 +978,7 @@ VcfRecord HtslibBcfFacade::fetch_record(const bcf_srs_t* sr, UnpackPolicy level)
 {
     auto hts_record = bcf_sr_get_line(sr, 0);
     
-    bcf_unpack(hts_record, level == UnpackPolicy::All ? BCF_UN_ALL : BCF_UN_SHR);
+    bcf_unpack(hts_record, level == UnpackPolicy::all ? BCF_UN_ALL : BCF_UN_SHR);
     
     VcfRecord::Builder record_builder {};
     
@@ -991,7 +991,7 @@ VcfRecord HtslibBcfFacade::fetch_record(const bcf_srs_t* sr, UnpackPolicy level)
     extract_filter(header_.get(), hts_record, record_builder);
     extract_info(header_.get(), hts_record, record_builder);
     
-    if (level == UnpackPolicy::All && has_samples(header_.get())) {
+    if (level == UnpackPolicy::all && has_samples(header_.get())) {
         extract_samples(header_.get(), hts_record, record_builder);
     }
     

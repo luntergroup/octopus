@@ -211,11 +211,11 @@ double HaplotypeLikelihoodModel::ln_probability(const AlignedRead& read,
     //                  + p(read correctly mapped) p(read | hap, correctly mapped)
     //               = p(read mismapped) p(read | hap, mismapped)
     //                  + (1 - p(read mismapped)) p(read | hap, correctly mapped)
-    // where p(read mismapped) = exp(-ln_10_div_10 * read.mapping_quality())
+    // where p(read mismapped) = exp(-ln10Div10 * read.mapping_quality())
     // and p(read | hap, mismapped) = p(read) = ???
     
-    using octopus::maths::constants::ln_10_div_10;
-    return std::max(p, -ln_10_div_10<> * read.mapping_quality() * 4);
+    using octopus::maths::constants::ln10Div10;
+    return std::max(p, -ln10Div10<> * read.mapping_quality() * 4);
 }
 
 } // namespace octopus

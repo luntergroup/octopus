@@ -608,7 +608,7 @@ namespace octopus
             result.push_back(allele.sequence());
         }
         
-        record.set_genotype(sample, result, VcfRecord::Builder::Phasing::Phased);
+        record.set_genotype(sample, result, VcfRecord::Builder::Phasing::phased);
     }
     
     VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
@@ -800,7 +800,7 @@ namespace octopus
             for (const auto& sample : samples_) {
                 const auto posterior = calls.front()->get_genotype_call(sample).posterior;
                 
-                result.set_genotype(sample, *sample_itr++, VcfRecord::Builder::Phasing::Phased);
+                result.set_genotype(sample, *sample_itr++, VcfRecord::Builder::Phasing::phased);
                 
                 auto gq = std::min(99, static_cast<int>(std::round(posterior.score())));
                 

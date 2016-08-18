@@ -26,24 +26,24 @@ public:
     
     enum class IndicatorPolicy
     {
-        IncludeNone,
-        IncludeIfLinkableToNovelRegion,
-        IncludeIfSharedWithNovelRegion,
-        IncludeAll
+        includeNone,
+        includeIfLinkableToNovelRegion,
+        includeIfSharedWithNovelRegion,
+        includeAll
     };
     
     enum class ExtensionPolicy
     {
-        IncludeIfWithinReadLengthOfFirstIncluded,
-        IncludeIfSharedWithFrontier,
-        NoLimit
+        includeIfWithinReadLengthOfFirstIncluded,
+        includeIfSharedWithFrontier,
+        noLimit
     };
     
     GenomeWalker() = delete;
     
     GenomeWalker(unsigned max_included,
-                 IndicatorPolicy indicator_policy = IndicatorPolicy::IncludeNone,
-                 ExtensionPolicy extension_policy = ExtensionPolicy::IncludeIfSharedWithFrontier);
+                 IndicatorPolicy indicator_policy = IndicatorPolicy::includeNone,
+                 ExtensionPolicy extension_policy = ExtensionPolicy::includeIfSharedWithFrontier);
     
     GenomeWalker(const GenomeWalker&)            = default;
     GenomeWalker& operator=(const GenomeWalker&) = default;

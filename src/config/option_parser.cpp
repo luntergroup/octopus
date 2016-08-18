@@ -4,6 +4,7 @@
 #include "option_parser.hpp"
 
 #include <vector>
+#include <array>
 #include <regex>
 #include <iostream>
 #include <stdexcept>
@@ -126,7 +127,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "File to where output is written")
     
     ("contig-output-order",
-     po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::AsInReferenceIndex),
+     po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::asInReferenceIndex),
      "The order contigs should be written to the output")
     
     ("legacy",
@@ -317,7 +318,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Report reference alleles with posterior probability (phred scale) greater than this")
     
     ("report-refcalls,g",
-     po::value<RefCallType>()->implicit_value(RefCallType::Blocked),
+     po::value<RefCallType>()->implicit_value(RefCallType::blocked),
      "Caller will report reference confidence calls for each position (Positional),"
      " or in automatically sized blocks (Blocked)")
     
@@ -379,7 +380,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description phaser("Phasing options");
     phaser.add_options()
     ("phasing-level,l",
-     po::value<PhasingLevel>()->default_value(PhasingLevel::Conservative),
+     po::value<PhasingLevel>()->default_value(PhasingLevel::conservative),
      "Level of phasing - longer range phasing can improve calling accuracy at the cost"
      " of runtime speed. Possible values are: Minimal, Conservative, Aggressive")
     
@@ -669,12 +670,11 @@ void validate_caller(const OptionMap& vm)
     if (vm.count("caller") == 1) {
         const auto caller = vm.at("caller").as<std::string>();
         
-        static const std::vector<std::string> valid_callers {
+        static const std::array<std::string, 4> validCallers {
             "individual", "population", "cancer", "trio"
         };
         
-        if (std::find(std::cbegin(valid_callers), std::cend(valid_callers), caller)
-            == std::cend(valid_callers)) {
+        if (std::find(std::cbegin(validCallers), std::cend(validCallers), caller) == std::cend(validCallers)) {
             throw po::validation_error {po::validation_error::kind_t::invalid_option_value, caller,
                 "caller"};
         }
@@ -748,10 +748,10 @@ std::istream& operator>>(std::istream& in, RefCallType& result)
 {
     std::string token;
     in >> token;
-    if (token == "Positional")
-        result = RefCallType::Positional;
-    else if (token == "Blocked")
-        result = RefCallType::Blocked;
+    if (token == "positional")
+        result = RefCallType::positional;
+    else if (token == "blocked")
+        result = RefCallType::blocked;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
         "refcalls"};
     return in;
@@ -760,11 +760,11 @@ std::istream& operator>>(std::istream& in, RefCallType& result)
 std::ostream& operator<<(std::ostream& out, const RefCallType& type)
 {
     switch (type) {
-        case RefCallType::Positional:
-            out << "Positional";
+        case RefCallType::positional:
+            out << "positional";
             break;
-        case RefCallType::Blocked:
-            out << "Blocked";
+        case RefCallType::blocked:
+            out << "blocked";
             break;
     }
     return out;
@@ -774,20 +774,20 @@ std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
 {
     std::string token;
     in >> token;
-    if (token == "LexicographicalAscending")
-        result = ContigOutputOrder::LexicographicalAscending;
-    else if (token == "LexicographicalDescending")
-        result = ContigOutputOrder::LexicographicalDescending;
-    else if (token == "ContigSizeAscending")
-        result = ContigOutputOrder::ContigSizeAscending;
-    else if (token == "ContigSizeDescending")
-        result = ContigOutputOrder::ContigSizeDescending;
-    else if (token == "AsInReference")
-        result = ContigOutputOrder::AsInReferenceIndex;
-    else if (token == "AsInReferenceReversed")
-        result = ContigOutputOrder::AsInReferenceIndexReversed;
-    else if (token == "Unspecified")
-        result = ContigOutputOrder::Unspecified;
+    if (token == "lexicographicalAscending")
+        result = ContigOutputOrder::lexicographicalAscending;
+    else if (token == "lexicographicalDescending")
+        result = ContigOutputOrder::lexicographicalDescending;
+    else if (token == "contigSizeAscending")
+        result = ContigOutputOrder::contigSizeAscending;
+    else if (token == "contigSizeDescending")
+        result = ContigOutputOrder::contigSizeDescending;
+    else if (token == "asInReference")
+        result = ContigOutputOrder::asInReferenceIndex;
+    else if (token == "asInReferenceReversed")
+        result = ContigOutputOrder::asInReferenceIndexReversed;
+    else if (token == "unspecified")
+        result = ContigOutputOrder::unspecified;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
         "contig-output-order"};
     return in;
@@ -796,26 +796,26 @@ std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
 std::ostream& operator<<(std::ostream& out, const ContigOutputOrder& order)
 {
     switch (order) {
-        case ContigOutputOrder::LexicographicalAscending:
-            out << "LexicographicalAscending";
+        case ContigOutputOrder::lexicographicalAscending:
+            out << "lexicographicalAscending";
             break;
-        case ContigOutputOrder::LexicographicalDescending:
-            out << "LexicographicalDescending";
+        case ContigOutputOrder::lexicographicalDescending:
+            out << "lexicographicalDescending";
             break;
-        case ContigOutputOrder::ContigSizeAscending:
-            out << "ContigSizeAscending";
+        case ContigOutputOrder::contigSizeAscending:
+            out << "contigSizeAscending";
             break;
-        case ContigOutputOrder::ContigSizeDescending:
-            out << "ContigSizeDescending";
+        case ContigOutputOrder::contigSizeDescending:
+            out << "contigSizeDescending";
             break;
-        case ContigOutputOrder::AsInReferenceIndex:
-            out << "AsInReferenceIndex";
+        case ContigOutputOrder::asInReferenceIndex:
+            out << "asInReferenceIndex";
             break;
-        case ContigOutputOrder::AsInReferenceIndexReversed:
-            out << "AsInReferenceIndexReversed";
+        case ContigOutputOrder::asInReferenceIndexReversed:
+            out << "asInReferenceIndexReversed";
             break;
-        case ContigOutputOrder::Unspecified:
-            out << "Unspecified";
+        case ContigOutputOrder::unspecified:
+            out << "unspecified";
             break;
     }
     return out;
@@ -825,12 +825,12 @@ std::istream& operator>>(std::istream& in, PhasingLevel& result)
 {
     std::string token;
     in >> token;
-    if (token == "Minimal")
-        result = PhasingLevel::Minimal;
-    else if (token == "Conservative")
-        result = PhasingLevel::Conservative;
-    else if (token == "Aggressive")
-        result = PhasingLevel::Aggressive;
+    if (token == "minimal")
+        result = PhasingLevel::minimal;
+    else if (token == "conservative")
+        result = PhasingLevel::conservative;
+    else if (token == "aggressive")
+        result = PhasingLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
         "phasing-level"};
     return in;
@@ -839,14 +839,14 @@ std::istream& operator>>(std::istream& in, PhasingLevel& result)
 std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
 {
     switch (level) {
-        case PhasingLevel::Minimal:
-            out << "Minimal";
+        case PhasingLevel::minimal:
+            out << "minimal";
             break;
-        case PhasingLevel::Conservative:
-            out << "Conservative";
+        case PhasingLevel::conservative:
+            out << "conservative";
             break;
-        case PhasingLevel::Aggressive:
-            out << "Aggressive";
+        case PhasingLevel::aggressive:
+            out << "aggressive";
             break;
     }
     return out;

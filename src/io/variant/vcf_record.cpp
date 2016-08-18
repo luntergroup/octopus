@@ -560,14 +560,14 @@ VcfRecord::Builder&VcfRecord::Builder:: set_homozygous_ref_genotype(const Sample
                                                                     unsigned ploidy)
 {
     std::vector<NucleotideSequence> tmp(ploidy, ref_);
-    return set_genotype(sample, tmp, Phasing::Phased);
+    return set_genotype(sample, tmp, Phasing::phased);
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_genotype(const SampleName& sample,
                                                      std::vector<NucleotideSequence> alleles,
                                                      Phasing phasing)
 {
-    genotypes_[sample] = std::make_pair(std::move(alleles), phasing == Phasing::Phased);
+    genotypes_[sample] = std::make_pair(std::move(alleles), phasing == Phasing::phased);
     return *this;
 }
 

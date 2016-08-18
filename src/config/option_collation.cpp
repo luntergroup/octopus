@@ -65,13 +65,13 @@ bool is_trace_mode(const OptionMap& options)
 
 boost::optional<fs::path> get_home_directory()
 {
-    static const auto env_p = std::getenv("HOME");
+    static const auto env = std::getenv("HOME");
     
-    if (env_p == nullptr) {
+    if (env == nullptr) {
         return boost::none;
     }
     
-    const fs::path home {env_p};
+    const fs::path home {env};
     
     if (fs::is_directory(home)) {
         return home;
@@ -308,8 +308,8 @@ boost::optional<unsigned> get_num_threads(const OptionMap& options)
 
 std::size_t get_target_read_buffer_size(const OptionMap& options)
 {
-    static constexpr std::size_t scale {1000000000};
-    return static_cast<std::size_t>(scale * options.at("target-read-buffer-footprint").as<float>());
+    static constexpr std::size_t numBytesInGB {1000000000};
+    return static_cast<std::size_t>(numBytesInGB * options.at("target-read-buffer-footprint").as<float>());
 }
 
 boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options)
@@ -336,11 +336,11 @@ ReferenceGenome make_reference(const OptionMap& options)
     
     const auto ref_cache_size = options.at("max-reference-cache-footprint").as<float>();
     
-    static constexpr unsigned Scale {1'000'000};
+    static constexpr unsigned numBytesInMB {1'000'000};
     
     try {
         return octopus::make_reference(std::move(resolved_path),
-                                       static_cast<std::size_t>(Scale * ref_cache_size),
+                                       static_cast<std::size_t>(numBytesInMB * ref_cache_size),
                                        is_threading_allowed(options));
     } catch (MissingFileError& e) {
         e.set_location_specified("the command line option --reference");
@@ -842,7 +842,7 @@ auto make_variant_generator_builder(const OptionMap& options)
     VGB result {};
     
     if (options.count("generate-candidates-from-source") == 1) {
-        result.add_generator(VGB::Generator::External);
+        result.add_generator(VGB::Generator::external);
         
         const fs::path input_path {options.at("generate-candidates-from-source").as<std::string>()};
         
@@ -868,7 +868,7 @@ auto make_variant_generator_builder(const OptionMap& options)
                 return result;
             }
         } else {
-            result.add_generator(VGB::Generator::External);
+            result.add_generator(VGB::Generator::external);
         }
         
         auto resolved_path = resolve_path(regenotype_path, options);
@@ -898,11 +898,11 @@ auto make_variant_generator_builder(const OptionMap& options)
     }
     
     if (!options.at("disable-raw-cigar-candidate-generator").as<bool>()) {
-        result.add_generator(VGB::Generator::Alignment);
+        result.add_generator(VGB::Generator::alignment);
     }
     
     if (!options.at("disable-assembly-candidate-generator").as<bool>()) {
-        result.add_generator(VGB::Generator::Assembler);
+        result.add_generator(VGB::Generator::assembler);
         const auto kmer_sizes = options.at("kmer-size").as<std::vector<int>>();
         
         for (const auto k : kmer_sizes) {
@@ -1024,14 +1024,14 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     
     LaggingPolicy lagging_policy;
     switch (options.at("phasing-level").as<PhasingLevel>()) {
-        case PhasingLevel::Minimal:
-            lagging_policy = LaggingPolicy::None;
+        case PhasingLevel::minimal:
+            lagging_policy = LaggingPolicy::none;
             break;
-        case PhasingLevel::Conservative:
-            lagging_policy = LaggingPolicy::Conservative;
+        case PhasingLevel::conservative:
+            lagging_policy = LaggingPolicy::conservative;
             break;
-        case PhasingLevel::Aggressive:
-            lagging_policy = LaggingPolicy::Aggressive;
+        case PhasingLevel::aggressive:
+            lagging_policy = LaggingPolicy::aggressive;
             break;
     }
     
@@ -1063,13 +1063,13 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (options.count("report-refcalls") == 1) {
         const auto refcall_type = options.at("report-refcalls").as<RefCallType>();
         
-        if (refcall_type == RefCallType::Positional) {
-            vc_builder.set_refcall_type(CallerBuilder::RefCallType::Positional);
+        if (refcall_type == RefCallType::positional) {
+            vc_builder.set_refcall_type(CallerBuilder::RefCallType::positional);
         } else {
-            vc_builder.set_refcall_type(CallerBuilder::RefCallType::Blocked);
+            vc_builder.set_refcall_type(CallerBuilder::RefCallType::blocked);
         }
     } else {
-        vc_builder.set_refcall_type(CallerBuilder::RefCallType::None);
+        vc_builder.set_refcall_type(CallerBuilder::RefCallType::none);
     }
     
     auto min_variant_posterior = options.at("min-variant-posterior").as<Phred<double>>();

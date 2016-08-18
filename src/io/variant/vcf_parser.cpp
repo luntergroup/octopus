@@ -120,7 +120,7 @@ VcfParser::RecordContainer VcfParser::fetch_records(const UnpackPolicy level) co
     
     result.reserve(count_records());
     
-    bool unpack_all {level == UnpackPolicy::All};
+    bool unpack_all {level == UnpackPolicy::all};
     
     std::transform(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                    std::back_inserter(result), [this, unpack_all] (const auto& line) {
@@ -138,7 +138,7 @@ VcfParser::RecordContainer VcfParser::fetch_records(const std::string& contig, c
     
     result.reserve(count_records(contig));
     
-    bool unpack_all {level == UnpackPolicy::All};
+    bool unpack_all {level == UnpackPolicy::all};
     
     std::for_each(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                   [this, &result, &contig, unpack_all] (const auto& line) {
@@ -158,7 +158,7 @@ VcfParser::RecordContainer VcfParser::fetch_records(const GenomicRegion& region,
     
     result.reserve(count_records(region));
     
-    bool unpack_all {level == UnpackPolicy::All};
+    bool unpack_all {level == UnpackPolicy::all};
     
     std::for_each(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                   [this, &result, &region, unpack_all] (const std::string& line) {
@@ -413,7 +413,7 @@ void parse_genotype(const VcfRecord::SampleName& sample, const std::string& geno
                        }
                    });
     
-    rb.set_genotype(sample, std::move(alleles), (phased) ? Phasing::Phased : Phasing::Unphased);
+    rb.set_genotype(sample, std::move(alleles), (phased) ? Phasing::phased : Phasing::unphased);
 }
 
 using SampleField = Token<':'>;
@@ -502,7 +502,7 @@ local_ {vcf.file_path_.string()}
     local_.seekg(parent_vcf_->file_.tellg());
     
     if (std::getline(local_, line_)) {
-        if (unpack_ == UnpackPolicy::All) {
+        if (unpack_ == UnpackPolicy::all) {
             record_ = std::make_shared<VcfRecord>(parse_record(line_, vcf.samples_));
         } else {
             record_ = std::make_shared<VcfRecord>(parse_record(line_));
@@ -521,7 +521,7 @@ local_ {parent_vcf_->file_path_.string()}
     local_.seekg(parent_vcf_->file_.tellg());
     
     if (std::getline(local_, line_)) {
-        if (unpack_ == UnpackPolicy::All) {
+        if (unpack_ == UnpackPolicy::all) {
             record_ = std::make_shared<VcfRecord>(parse_record(line_, parent_vcf_->samples_));
         } else {
             record_ = std::make_shared<VcfRecord>(parse_record(line_));
@@ -553,7 +553,7 @@ VcfParser::RecordIterator::pointer VcfParser::RecordIterator::operator->() const
 void VcfParser::RecordIterator::next()
 {
     if (std::getline(local_, line_) && !line_.empty()) {
-        if (unpack_ == UnpackPolicy::All) {
+        if (unpack_ == UnpackPolicy::all) {
             *record_ = parse_record(line_, parent_vcf_->samples_);
         } else {
             *record_ = parse_record(line_);

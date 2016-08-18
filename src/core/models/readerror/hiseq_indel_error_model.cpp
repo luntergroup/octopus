@@ -14,11 +14,11 @@
 
 namespace octopus {
     
-    constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Homopolymer_errors_;
-    constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Di_nucleotide_tandem_repeat_errors_;
-    constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Tri_nucleotide_tandem_repeat_errors_;
-    constexpr decltype(HiSeqIndelErrorModel::Homopolymer_errors_) HiSeqIndelErrorModel::Poly_nucleotide_tandem_repeat_errors_;
-    constexpr decltype(HiSeqIndelErrorModel::default_gap_extension_) HiSeqIndelErrorModel::default_gap_extension_;
+    constexpr decltype(HiSeqIndelErrorModel::homopolymerErrors_) HiSeqIndelErrorModel::homopolymerErrors_;
+    constexpr decltype(HiSeqIndelErrorModel::homopolymerErrors_) HiSeqIndelErrorModel::diNucleotideTandemRepeatErrors_;
+    constexpr decltype(HiSeqIndelErrorModel::homopolymerErrors_) HiSeqIndelErrorModel::triNucleotideTandemRepeatErrors_;
+    constexpr decltype(HiSeqIndelErrorModel::homopolymerErrors_) HiSeqIndelErrorModel::polyNucleotideTandemRepeatErrors_;
+    constexpr decltype(HiSeqIndelErrorModel::defaultGapExtension_) HiSeqIndelErrorModel::defaultGapExtension_;
     
     namespace
     {
@@ -49,13 +49,13 @@ namespace octopus {
             std::int8_t e;
             
             if (repeat.period == 1) {
-                e = get_penalty(Homopolymer_errors_, repeat.length);
+                e = get_penalty(homopolymerErrors_, repeat.length);
             } else if (repeat.period == 2) {
                 static constexpr std::array<char, 2> AC {'A', 'C'};
                 
                 const auto it = next(cbegin(haplotype.sequence()), repeat.pos);
                 
-                e = get_penalty(Di_nucleotide_tandem_repeat_errors_, repeat.length);
+                e = get_penalty(diNucleotideTandemRepeatErrors_, repeat.length);
                 
                 if (e > 10 && std::equal(cbegin(AC), cend(AC), it)) {
                     e -= 2;
@@ -66,7 +66,7 @@ namespace octopus {
                 
                 const auto it = next(cbegin(haplotype.sequence()), repeat.pos);
                 
-                e = get_penalty(Tri_nucleotide_tandem_repeat_errors_, repeat.length);
+                e = get_penalty(triNucleotideTandemRepeatErrors_, repeat.length);
                 
                 if (e > 10 && std::equal(cbegin(GGC), cend(GGC), it)) {
                     e -= 3;
@@ -74,7 +74,7 @@ namespace octopus {
                     e -= 2;
                 }
             } else {
-                e = get_penalty(Poly_nucleotide_tandem_repeat_errors_, repeat.length);
+                e = get_penalty(polyNucleotideTandemRepeatErrors_, repeat.length);
                 ++e;
             }
             
@@ -89,7 +89,7 @@ namespace octopus {
             case 1: return 3;
             case 2: return 2;
             case 3: return 1;
-            default: return default_gap_extension_;
+            default: return defaultGapExtension_;
         }
     }
 } // namespace octopus

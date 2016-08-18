@@ -86,8 +86,8 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     unsigned num_indicators {0};
     
     switch (indicator_policy_) {
-        case IndicatorPolicy::IncludeNone: break;
-        case IndicatorPolicy::IncludeIfSharedWithNovelRegion:
+        case IndicatorPolicy::includeNone: break;
+        case IndicatorPolicy::includeIfSharedWithNovelRegion:
         {
             if (distance(first_previous_itr, included_itr) > 0) {
                 const auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
@@ -96,7 +96,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
             }
             break;
         }
-        case IndicatorPolicy::IncludeIfLinkableToNovelRegion:
+        case IndicatorPolicy::includeIfLinkableToNovelRegion:
         {
             if (distance(first_previous_itr, included_itr) > 0) {
                 auto it = included_itr;
@@ -116,7 +116,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
             }
             break;
         }
-        case IndicatorPolicy::IncludeAll:
+        case IndicatorPolicy::includeAll:
             num_indicators = static_cast<unsigned>(distance(first_previous_itr, included_itr));
             break;
     }
@@ -129,7 +129,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     
     auto num_included = max_included_;
     
-    if (extension_policy_ == ExtensionPolicy::IncludeIfWithinReadLengthOfFirstIncluded) {
+    if (extension_policy_ == ExtensionPolicy::includeIfWithinReadLengthOfFirstIncluded) {
         auto max_candidates_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads, first_included_itr, last_candidate_itr));
         num_included = min({num_included, num_remaining_candidates, max_candidates_within_read_length + 1});
         num_excluded_candidates = max_candidates_within_read_length - num_included;
@@ -142,7 +142,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     while (--num_included > 0 &&
            is_optimal_to_extend(first_included_itr, next(included_itr), first_excluded_itr,
                                 last_candidate_itr, reads, num_included + num_excluded_candidates)) {
-               if (extension_policy_ == ExtensionPolicy::IncludeIfSharedWithFrontier
+               if (extension_policy_ == ExtensionPolicy::includeIfSharedWithFrontier
                    && !has_shared(reads, *included_itr, *next(included_itr))) {
                    break;
                }

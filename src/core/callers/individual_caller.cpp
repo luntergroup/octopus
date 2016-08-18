@@ -140,11 +140,11 @@ IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplot
 static auto calculate_model_posterior(const double normal_model_log_evidence,
                                       const double dummy_model_log_evidence)
 {
-    constexpr double normal_model_prior {0.9999999};
-    constexpr double dummy_model_prior {1.0 - normal_model_prior};
+    constexpr double normalModelPrior {0.9999999};
+    constexpr double dummyModelPrior {1.0 - normalModelPrior};
     
-    const auto normal_model_ljp = std::log(normal_model_prior) + normal_model_log_evidence;
-    const auto dummy_model_ljp  = std::log(dummy_model_prior) + dummy_model_log_evidence;
+    const auto normal_model_ljp = std::log(normalModelPrior) + normal_model_log_evidence;
+    const auto dummy_model_ljp  = std::log(dummyModelPrior) + dummy_model_log_evidence;
     
     const auto norm = maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
     
