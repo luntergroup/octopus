@@ -21,8 +21,8 @@
 
 namespace octopus {
 
-namespace
-{
+namespace {
+
 template <typename T>
 struct FilterGreater
 {
@@ -252,6 +252,7 @@ struct LikelihoodSum
         return result;
     }
 };
+
 } // namespace
 
 // main method

@@ -13,36 +13,37 @@
 
 #include "call.hpp"
 
-namespace octopus
+namespace octopus {
+
+class VcfRecordFactory
 {
-    class VcfRecordFactory
-    {
-    public:
-        VcfRecordFactory() = delete;
-        
-        VcfRecordFactory(const ReferenceGenome& reference, const ReadMap& reads,
-                         std::vector<SampleName> samples, bool sites_only);
-        
-        ~VcfRecordFactory() = default;
-        
-        VcfRecordFactory(const VcfRecordFactory&)            = default;
-        VcfRecordFactory& operator=(const VcfRecordFactory&) = default;
-        VcfRecordFactory(VcfRecordFactory&&)                 = default;
-        VcfRecordFactory& operator=(VcfRecordFactory&&)      = default;
-        
-        std::vector<VcfRecord> make(std::vector<std::unique_ptr<Call>>&& calls) const;
-        
-    private:
-        const ReferenceGenome& reference_;
-        const ReadMap& reads_;
-        
-        std::vector<SampleName> samples_;
-        
-        bool sites_only_;
-        
-        VcfRecord make(std::unique_ptr<Call> call) const;
-        VcfRecord make_segment(std::vector<std::unique_ptr<Call>>&& calls) const;
-    };
+public:
+    VcfRecordFactory() = delete;
+    
+    VcfRecordFactory(const ReferenceGenome& reference, const ReadMap& reads,
+                     std::vector<SampleName> samples, bool sites_only);
+    
+    VcfRecordFactory(const VcfRecordFactory&)            = default;
+    VcfRecordFactory& operator=(const VcfRecordFactory&) = default;
+    VcfRecordFactory(VcfRecordFactory&&)                 = default;
+    VcfRecordFactory& operator=(VcfRecordFactory&&)      = default;
+    
+    ~VcfRecordFactory() = default;
+    
+    std::vector<VcfRecord> make(std::vector<std::unique_ptr<Call>>&& calls) const;
+    
+private:
+    const ReferenceGenome& reference_;
+    const ReadMap& reads_;
+    
+    std::vector<SampleName> samples_;
+    
+    bool sites_only_;
+    
+    VcfRecord make(std::unique_ptr<Call> call) const;
+    VcfRecord make_segment(std::vector<std::unique_ptr<Call>>&& calls) const;
+};
+
 } // namespace octopus
 
 #endif
