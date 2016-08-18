@@ -12,7 +12,7 @@
 #include <io/reference/reference_reader.hpp>
 #include <io/reference/reference_genome.hpp>
 
-namespace octopus { namespace test {
+namespace octopus { namespace test { namespace mock {
 
 using octopus::io::ReferenceReader;
 
@@ -41,8 +41,9 @@ private:
     std::unordered_map<ContigName, GeneticSequence> mock_contigs_;
 };
     
-ReferenceGenome make_mock_reference();
+ReferenceGenome make_reference();
     
+} // namespace mock
 } // namespace test
 } // namespace octopus
 

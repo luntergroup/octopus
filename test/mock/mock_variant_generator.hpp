@@ -6,7 +6,7 @@
 
 #include <core/tools/vargen/variant_generator.hpp>
 
-namespace octopus { namespace test {
+namespace octopus { namespace test { namespace mock {
 
     class MockVariantGenerator : public VariantGenerator
     {
@@ -24,6 +24,7 @@ namespace octopus { namespace test {
         
     };
 
+} // namespace mock
 } // namespace test
 } // namespace octopus
 

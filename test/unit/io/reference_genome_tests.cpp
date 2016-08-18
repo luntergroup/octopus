@@ -22,21 +22,47 @@ namespace octopus { namespace test {
 BOOST_AUTO_TEST_SUITE(io)
 BOOST_AUTO_TEST_SUITE(reference)
 
+namespace {
+    auto to_ints(const std::vector<std::string>& strings)
+    {
+        std::vector<int> result(strings.size());
+        std::transform(std::cbegin(strings), std::cend(strings), std::begin(result),
+                       [] (const auto& str) { return std::stoi(str); });
+        return result;
+    }
+    
+    template <typename Container>
+    bool is_sorted(const Container& container)
+    {
+        return std::is_sorted(std::cbegin(container), std::cend(container));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(reference_genomes_can_be_fasta_files)
+{
+    BOOST_REQUIRE_NO_THROW(make_reference("/test/data/reference.fa"));
+    
+    const auto reference = make_reference("/test/data/reference.fa");
+    
+    auto contigs = reference.contig_names();
+    
+    BOOST_CHECK_EQUAL(contigs.size(), reference.num_contigs());
+    
+    BOOST_CHECK(is_sorted(to_ints(contigs)));
+    
+    BOOST_CHECK(std::all_of(std::cbegin(contigs), std::cend(contigs),
+                            [&] (const auto& contig) {
+                                return reference.has_contig(contig);
+                            }));
+}
+
 BOOST_AUTO_TEST_CASE(contigs_are_reported_in_apperance_order)
 {
-    const auto reference = make_mock_reference();
+    const auto reference = mock::make_reference();
     
     const auto contigs = reference.contig_names();
     
-    std::vector<int> contig_numbers(contigs.size());
-    
-    std::transform(std::cbegin(contigs), std::cend(contigs), std::begin(contig_numbers),
-                   [] (auto contig) -> int {
-                       contig.erase(std::cbegin(contig), std::next(std::cbegin(contig), 4));
-                       return std::stoi(contig);
-                   });
-    
-    BOOST_CHECK(std::is_sorted(std::cbegin(contig_numbers), std::cend(contig_numbers)));
+    BOOST_CHECK(is_sorted(to_ints(contigs)));
 }
 
 BOOST_AUTO_TEST_CASE(ReferenceGenome_handles_basic_queries)
@@ -77,96 +103,6 @@ BOOST_AUTO_TEST_CASE(ReferenceGenome_handles_edge_cases)
     BOOST_CHECK(human.fetch_sequence(GenomicRegion {"1", 100, 100}) == "");
 }
 
-BOOST_AUTO_TEST_CASE(parse_region_works_with_correctly_formatted_region_input)
-{
-    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
-    
-    const auto human = make_reference(human_reference_fasta);
-    
-    const auto r1 = parse_region("3", human);
-    
-    BOOST_CHECK(r1.contig_name() == "3");
-    BOOST_CHECK(r1.begin() == 0);
-    BOOST_CHECK(r1.end() == human.contig_size("3"));
-    
-    const auto r2 = parse_region("10:100-200", human);
-    
-    BOOST_CHECK(r2.contig_name() == "10");
-    BOOST_CHECK(r2.begin() == 100);
-    BOOST_CHECK(r2.end() == 200);
-    
-    const auto r3 = parse_region("18:102,029-102,029", human);
-    
-    BOOST_CHECK(r3.contig_name() == "18");
-    BOOST_CHECK(r3.begin() == 102'029);
-    BOOST_CHECK(r3.end() == 102'029);
-    
-    const auto r4 = parse_region("MT:100-", human);
-    
-    BOOST_CHECK(r4.contig_name() == "MT");
-    BOOST_CHECK(r4.begin() == 100);
-    BOOST_CHECK(r4.end() == human.contig_size("MT"));
-    
-    const auto r5 = parse_region("7:1,000,000", human);
-    
-    BOOST_CHECK(r5.contig_name() == "7");
-    BOOST_CHECK(r5.begin() == 1'000'000);
-    BOOST_CHECK(r5.end() == 1'000'001);
-}
-
-BOOST_AUTO_TEST_CASE(parse_region_throws_when_given_bad_region)
-{
-    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
-    
-    const auto human = make_reference(human_reference_fasta);
-    
-    bool all_throwed {true};
-    
-    try {
-        parse_region("", human);
-        all_throwed = false;
-    } catch (...) {}
-    try {
-        parse_region("-", human);
-        all_throwed = false;
-    } catch (...) {}
-    try {
-        parse_region("5:100-99", human);
-        all_throwed = false;
-    } catch (...) {}
-    try {
-        parse_region("not_in_human", human);
-        all_throwed = false;
-    } catch (...) {}
-    try {
-        parse_region("0", human);
-        all_throwed = false;
-    } catch (...) {}
-    try {
-        parse_region("-1", human);
-        all_throwed = false;
-    } catch (...) {}
-    try {
-        parse_region("--1", human);
-        all_throwed = false;
-    } catch (...) {}
-    try {
-        parse_region("1:", human);
-        all_throwed = false;
-    } catch (...) {}
-    try {
-        parse_region("1:-", human);
-        all_throwed = false;
-    } catch (...) {}
-    try {
-        parse_region("2::0-100", human);
-        all_throwed = false;
-    } catch (...) {}
-    
-    
-    BOOST_CHECK(all_throwed);
-}
-
 BOOST_AUTO_TEST_CASE(CachingFasta_works_the_same_as_Fasta)
 {
     BOOST_REQUIRE(test_file_exists(ecoli_reference_fasta));
@@ -196,43 +132,6 @@ BOOST_AUTO_TEST_CASE(CachingFasta_works_the_same_as_Fasta)
     BOOST_CHECK(human.contig_region("X") == GenomicRegion("X", 0, 155270560));
     BOOST_CHECK(human.fetch_sequence(GenomicRegion("15", 51265690, 51265700)) == "ACAATGTTGT");
     BOOST_CHECK(human.fetch_sequence(GenomicRegion("5", 100000, 100010)) == "AGGAAGTTTC");
-}
-
-BOOST_AUTO_TEST_CASE(ReferenceGenome_can_be_made_threadsafe)
-{
-    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
-    
-    const auto human = make_reference(human_reference_fasta, 0, true);
-    
-    auto fut1 = std::async(std::launch::async, [&] () {
-        return human.fetch_sequence(parse_region("1:1,000,000-1,000,005", human));
-    });
-    auto fut2 = std::async(std::launch::async, [&] () {
-        return human.fetch_sequence(parse_region("2:1,000,000-1,000,005", human));
-    });
-    auto fut3 = std::async(std::launch::async, [&] () {
-        return human.fetch_sequence(parse_region("3:1,000,000-1,000,005", human));
-    });
-    auto fut4 = std::async(std::launch::async, [&] () {
-        return human.fetch_sequence(parse_region("4:1,000,000-1,000,005", human));
-    });
-    auto fut5 = std::async(std::launch::async, [&] () {
-        return human.fetch_sequence(parse_region("5:1,000,000-1,000,005", human));
-    });
-    
-    bool throwed {false};
-    
-    try {
-        BOOST_CHECK(fut1.get() == "GGGCA");
-        BOOST_CHECK(fut2.get() == "AAGAA");
-        BOOST_CHECK(fut3.get() == "CCAAC");
-        BOOST_CHECK(fut4.get() == "CTCCC");
-        BOOST_CHECK(fut5.get() == "GTTTT");
-    } catch (...) {
-        throwed = true;
-    }
-    
-    BOOST_CHECK(!throwed);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
