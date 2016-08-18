@@ -104,6 +104,7 @@ set(IO_SOURCES
     io/variant/vcf_writer.hpp
     io/variant/vcf_writer.cpp
     io/variant/vcf.hpp
+    io/variant/vcf_spec.hpp
 )
 
 set(READPIPE_SOURCES
@@ -140,6 +141,7 @@ set(UTILS_SOURCES
     utils/sequence_complexity.hpp
     utils/sequence_utils.hpp
     utils/string_utils.hpp
+    utils/string_utils.cpp
     utils/timing.hpp
     utils/type_tricks.hpp
     utils/coverage_tracker.hpp

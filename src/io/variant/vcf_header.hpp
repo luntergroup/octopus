@@ -84,7 +84,7 @@ public:
     using StructuredField    = std::unordered_map<StructuredKey, Value, StructuredKeyHash>;
     using StructuredFieldMap = std::unordered_multimap<Tag, StructuredField, TagHash>;
     
-    VcfHeader() = default;
+    VcfHeader();
     
     VcfHeader(std::string file_format);
     
@@ -223,24 +223,31 @@ public:
     Builder(const VcfHeader& header);
     
     Builder& set_file_format(std::string file_format);
+    
     Builder& add_sample(std::string sample);
+    
     Builder& set_samples(std::vector<std::string> samples);
+    
     Builder& add_basic_field(std::string key, std::string value);
+    
     Builder& add_structured_field(std::string tag, std::unordered_map<std::string, std::string> values);
     
     Builder& add_info(std::string id, std::string number, std::string type, std::string description,
                       std::unordered_map<std::string, std::string> other_values = {});
+    
     Builder& add_filter(std::string id, std::string description,
                         std::unordered_map<std::string, std::string> other_values = {});
+    
     Builder& add_format(std::string id, std::string number, std::string type, std::string description,
                         std::unordered_map<std::string, std::string> other_values = {});
+    
     Builder& add_contig(std::string id, std::unordered_map<std::string, std::string> other_values = {});
     
     VcfHeader build() const;
     VcfHeader build_once() noexcept;
     
 private:
-    std::string file_format_ = "VCFv4.3";
+    std::string file_format_;
     std::vector<std::string> samples_ = {};
     VcfHeader::BasicFieldMap basic_fields_ = {};
     VcfHeader::StructuredFieldMap structured_fields_ = {};

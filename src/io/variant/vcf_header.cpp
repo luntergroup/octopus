@@ -7,6 +7,8 @@
 #include <utility>
 #include <iterator>
 
+#include "vcf_spec.hpp"
+
 namespace octopus {
 
 bool is_valid_line(const std::string& line);
@@ -15,6 +17,8 @@ bool is_format_line(const std::string& line);
 std::unordered_map<std::string, std::string> parse_fields(const std::string& fields);
 
 // public methods
+
+VcfHeader::VcfHeader() : VcfHeader {vcfspec::Version} {}
 
 VcfHeader::VcfHeader(std::string file_format)
 : file_format_ {std::move(file_format)}
@@ -126,16 +130,17 @@ const VcfHeader::StructuredFieldMap& VcfHeader::structured_fields() const noexce
 // non-member methods
 
 const VcfHeader::Value& get_id_field_value(const VcfHeader& header, const VcfHeader::Tag& tag,
-                                               const VcfHeader::Value& id_value,
-                                               const VcfHeader::StructuredKey& lookup_key)
+                                           const VcfHeader::Value& id_value,
+                                           const VcfHeader::StructuredKey& lookup_key)
 {
-    return header.find(tag, "ID", id_value, lookup_key);
+    return header.find(tag, vcfspec::header::meta::struc::Id, id_value, lookup_key);
 }
 
 const VcfHeader::Value& get_id_field_type(const VcfHeader& header, const VcfHeader::Tag& tag,
                                               const VcfHeader::Value& id_value)
 {
-    return header.find(tag, "ID", id_value, "Type");
+    using namespace vcfspec::header::meta;
+    return header.find(tag, struc::Id, id_value, struc::Type);
 }
 
 VcfType get_typed_value(const VcfHeader& header, const VcfHeader::Tag& tag,
@@ -147,13 +152,13 @@ VcfType get_typed_value(const VcfHeader& header, const VcfHeader::Tag& tag,
 VcfType get_typed_info_value(const VcfHeader& header, const VcfHeader::StructuredKey& key,
                              const VcfHeader::Value& value)
 {
-    return get_typed_value(header, "INFO", key, value);
+    return get_typed_value(header, vcfspec::header::meta::tag::Info, key, value);
 }
 
 VcfType get_typed_format_value(const VcfHeader& header, const VcfHeader::StructuredKey& key,
                                const VcfHeader::Value& value)
 {
-    return get_typed_value(header, "FORMAT", key, value);
+    return get_typed_value(header, vcfspec::header::meta::tag::Format, key, value);
 }
 
 std::vector<VcfType> get_typed_values(const VcfHeader& header, const VcfHeader::StructuredKey& format_key,
@@ -174,18 +179,18 @@ std::vector<VcfType> get_typed_values(const VcfHeader& header, const VcfHeader::
 std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfHeader::StructuredKey& field_key,
                                            const std::vector<VcfHeader::Value>& values)
 {
-    return get_typed_values(header, "INFO", field_key, values);
+    return get_typed_values(header, vcfspec::header::meta::tag::Info, field_key, values);
 }
 
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfHeader::StructuredKey& field_key,
                                              const std::vector<VcfHeader::Value>& values)
 {
-    return get_typed_values(header, "FORMAT", field_key, values);
+    return get_typed_values(header, vcfspec::header::meta::tag::Format, field_key, values);
 }
 
 bool contig_line_exists(const VcfHeader& header, const std::string& contig)
 {
-    return header.has("contig", contig);
+    return header.has(vcfspec::header::meta::tag::Contig, contig);
 }
 
 bool operator==(const VcfHeader& lhs, const VcfHeader& rhs)
@@ -213,18 +218,21 @@ std::ostream& operator<<(std::ostream& os, const VcfHeader::StructuredField& fie
 
 std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
 {
-    os << "##fileformat=" << header.file_format_ << std::endl;
+    using vcfspec::header::LineOpener;
+    
+    os << LineOpener << vcfspec::header::meta::VcfVersion;
+    
+    os << header.file_format_ << std::endl;
     
     for (const auto& field : header.basic_fields_) {
-        os << "##" << field.first.value << "=" << field.second << std::endl;
+        os << LineOpener << field.first.value << "=" << field.second << std::endl;
     }
     
     for (const auto& format : header.structured_fields_) {
-        os << "##" << format.first.value << "=" << format.second << std::endl;
+        os << LineOpener << format.first.value << "=" << format.second << std::endl;
     }
     
-    static const std::vector<std::string> columns {"CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO"};
-    
+    // TODO
     
     return os;
 }
@@ -259,7 +267,7 @@ VcfHeader::Builder& VcfHeader::Builder::set_samples(std::vector<std::string> sam
 
 VcfHeader::Builder& VcfHeader::Builder::add_basic_field(std::string key, std::string value)
 {
-    if (key != "fileformat") {
+    if (key != vcfspec::header::meta::VcfVersion) {
         basic_fields_.emplace(std::move(key), std::move(value));
     }
     return *this;
@@ -290,14 +298,16 @@ VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string num
                                                  std::string type, std::string description,
                                                  std::unordered_map<std::string, std::string> other_values)
 {
+    using namespace vcfspec::header::meta;
+    
     other_values.reserve(other_values.size() + 4);
     
-    other_values.emplace("ID", std::move(id));
-    other_values.emplace("Number", std::move(number));
-    other_values.emplace("Type", std::move(type));
-    other_values.emplace("Description", add_quotes(description));
+    other_values.emplace(struc::Id, std::move(id));
+    other_values.emplace(struc::Number, std::move(number));
+    other_values.emplace(struc::Type, std::move(type));
+    other_values.emplace(struc::Description, add_quotes(description));
     
-    add_structured_field("INFO", std::move(other_values));
+    add_structured_field(tag::Info, std::move(other_values));
     
     return *this;
 }
@@ -305,12 +315,14 @@ VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string num
 VcfHeader::Builder& VcfHeader::Builder::add_filter(std::string id, std::string description,
                                                    std::unordered_map<std::string, std::string> other_values)
 {
+    using namespace vcfspec::header::meta;
+    
     other_values.reserve(other_values.size() + 2);
     
-    other_values.emplace("ID", std::move(id));
-    other_values.emplace("Description", add_quotes(description));
+    other_values.emplace(struc::Id, std::move(id));
+    other_values.emplace(struc::Description, add_quotes(description));
     
-    add_structured_field("FILTER", std::move(other_values));
+    add_structured_field(tag::Filter, std::move(other_values));
     
     return *this;
 }
@@ -319,14 +331,16 @@ VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string n
                                                    std::string type, std::string description,
                                                    std::unordered_map<std::string, std::string> other_values)
 {
+    using namespace vcfspec::header::meta;
+    
     other_values.reserve(other_values.size() + 4);
     
-    other_values.emplace("ID", std::move(id));
-    other_values.emplace("Number", std::move(number));
-    other_values.emplace("Type", std::move(type));
-    other_values.emplace("Description", add_quotes(description));
+    other_values.emplace(struc::Id, std::move(id));
+    other_values.emplace(struc::Number, std::move(number));
+    other_values.emplace(struc::Type, std::move(type));
+    other_values.emplace(struc::Description, add_quotes(description));
     
-    add_structured_field("FORMAT", std::move(other_values));
+    add_structured_field(tag::Format, std::move(other_values));
     
     return *this;
 }
@@ -334,9 +348,11 @@ VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string n
 VcfHeader::Builder& VcfHeader::Builder::add_contig(std::string id,
                                                    std::unordered_map<std::string, std::string> other_values)
 {
-    other_values.emplace("ID", std::move(id));
+    using namespace vcfspec::header::meta;
     
-    add_structured_field("contig", std::move(other_values));
+    other_values.emplace(struc::Id, std::move(id));
+    
+    add_structured_field(tag::Contig, std::move(other_values));
     
     return *this;
 }

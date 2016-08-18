@@ -4,6 +4,7 @@
 #include "htslib_bcf_facade.hpp"
 
 #include <vector>
+#include <array>
 #include <unordered_map>
 #include <stdexcept>
 #include <algorithm>
@@ -14,11 +15,12 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/optional.hpp>
-#include <boost/algorithm/string/join.hpp>
+#include <boost/container/small_vector.hpp>
 
 #include <basics/genomic_region.hpp>
 #include <utils/string_utils.hpp>
 
+#include "vcf_spec.hpp"
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
 
@@ -27,7 +29,9 @@
 namespace octopus {
 
 namespace {
-    static const std::string VcfMissingValue {"."};
+    static const std::string VcfMissingValue {vcfspec::MissingValue};
+    
+    namespace bc = boost::container;
 }
 
 char* convert(const std::string& source)
@@ -287,11 +291,12 @@ HtslibBcfFacade::fetch_records(const GenomicRegion& region, const UnpackPolicy l
 
 auto hts_tag_type(const std::string& tag)
 {
+    using namespace vcfspec::header::meta::tag;
     const static std::unordered_map<std::string, int> types {
-        {"FILTER", BCF_HL_FLT},
-        {"INFO", BCF_HL_INFO},
-        {"FORMAT", BCF_HL_FMT},
-        {"CONTIG", BCF_HL_CTG}
+        {Filter, BCF_HL_FLT},
+        {Info,   BCF_HL_INFO},
+        {Format, BCF_HL_FMT},
+        {Contig, BCF_HL_CTG}
     };
     
     return (types.count(tag) == 1) ? types.at(tag) : BCF_HL_STR;
@@ -335,10 +340,8 @@ void HtslibBcfFacade::write(const VcfHeader& header)
             
             unsigned i {0};
             
-            static const std::vector<std::string> preset_fields {"ID", "Number", "Type", "Source", "Version"};
-            
-            // explicitly writing these preset fields first to get nice ordering in file
-            for (const auto& field : preset_fields) {
+            // Make sure the reserved fields are written in the required order
+            for (const auto& field : vcfspec::header::meta::struc::Order) {
                 if (fields.count(field) == 1) {
                     hrec->keys[i] = convert(field);
                     hrec->vals[i] = convert(fields[field]);
@@ -347,7 +350,7 @@ void HtslibBcfFacade::write(const VcfHeader& header)
                 }
             }
             
-            // the rest of the fields go in whatever order they come in the map
+            // The rest of the fields go in whatever order they come in the map
             for (const auto& field : fields) {
                 hrec->keys[i] = convert(field.first);
                 hrec->vals[i] = convert(field.second);
@@ -639,7 +642,7 @@ void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& b
                 const auto nchars = bcf_get_info_string(header, record, key, &stringinfo, &nstringinfo);
                 if (nchars > 0) {
                     std::string tmp(stringinfo, nchars);
-                    values = utils::split(tmp, ',');
+                    values = utils::split(tmp, vcfspec::info::ValueSeperator);
                 }
                 break;
             }
@@ -664,10 +667,12 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
         const auto& values    = source.info_value(key);
         const auto num_values = static_cast<int>(values.size());
         
+        static constexpr std::size_t DefaultBufferCapacity {100};
+        
         switch (bcf_hdr_id2type(header, BCF_HL_INFO, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
             {
-                std::vector<int> vals(num_values);
+                bc::small_vector<int, DefaultBufferCapacity> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
                                [] (const auto& v) {
                                    return v != VcfMissingValue ? std::stoi(v) : bcf_int32_missing;
@@ -677,7 +682,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             }
             case BCF_HT_REAL:
             {
-                std::vector<float> vals(num_values);
+                bc::small_vector<float, DefaultBufferCapacity> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
                                [] (const auto& v) {
                                    return v != VcfMissingValue ? std::stof(v) : bcf_float_missing;
@@ -687,7 +692,8 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             }
             case BCF_HT_STR:
             {
-                const auto vals = boost::join(values, ",");
+                // Can we also use small_vector here?
+                const auto vals = utils::join(values, vcfspec::info::ValueSeperator);
                 bcf_update_info_string(header, dest, key.c_str(), vals.c_str());
                 break;
             }
@@ -731,7 +737,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
     
     builder.reserve_samples(num_samples);
     
-    if (format.front() == "GT") { // the first key must be GT if present
+    if (format.front() == vcfspec::format::Genotype) { // the first key must be GT if present
         int ngt {}, g {};
         int* gt {nullptr};
         
@@ -869,10 +875,10 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     
     auto first_format = std::cbegin(format);
     
-    if (*first_format == "GT") {
+    if (*first_format == vcfspec::format::Genotype) {
         const auto& alt_alleles = source.alt();
         
-        std::vector<VcfRecord::NucleotideSequence> alleles {};
+        bc::small_vector<VcfRecord::NucleotideSequence, 5> alleles {};
         alleles.reserve(alt_alleles.size() + 1);
         
         alleles.push_back(source.ref());
@@ -887,14 +893,14 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
         
         const auto ngt = num_samples * static_cast<int>(max_ploidy);
         
-        std::vector<int> genotype(ngt);
+        bc::small_vector<int, 1000> genotype(ngt);
         
         auto it = std::begin(genotype);
         
         for (const auto& sample : samples) {
             const bool is_phased {source.is_sample_phased(sample)};
             
-            const auto& genotype = source.get_sample_value(sample, "GT");
+            const auto& genotype = source.get_sample_value(sample, vcfspec::format::Genotype);
             
             const auto ploidy = static_cast<unsigned>(genotype.size());
             
@@ -914,10 +920,12 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     std::for_each(first_format, std::cend(format), [&] (const auto& key) {
         const auto num_values = num_samples * static_cast<int>(source.format_cardinality(key));
 
+        static constexpr std::size_t DefaultValueCpacity {100};
+        
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
           case BCF_HT_INT:
           {
-              std::vector<int> typed_values(num_values);
+              bc::small_vector<int, DefaultValueCpacity> typed_values(num_values);
               auto it = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
@@ -931,7 +939,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
           }
           case BCF_HT_REAL:
           {
-              std::vector<float> typed_values(num_values);
+              bc::small_vector<float, DefaultValueCpacity> typed_values(num_values);
               auto it = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
@@ -945,7 +953,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
           }
           case BCF_HT_STR:
           {
-              std::vector<const char*> typed_values(num_values);
+              bc::small_vector<const char*, DefaultValueCpacity> typed_values(num_values);
               auto it = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
@@ -961,7 +969,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
 
 std::size_t HtslibBcfFacade::count_records(HtsBcfSrPtr& sr) const
 {
-    size_t result {0};
+    std::size_t result {0};
     while (bcf_sr_next_line(sr.get())) ++result;
     return result;
 }
@@ -991,7 +999,7 @@ VcfRecord HtslibBcfFacade::fetch_record(const bcf_srs_t* sr, UnpackPolicy level)
 }
 
 HtslibBcfFacade::RecordContainer
-HtslibBcfFacade::fetch_records(bcf_srs_t* sr, const UnpackPolicy level, const size_t num_records) const
+HtslibBcfFacade::fetch_records(bcf_srs_t* sr, const UnpackPolicy level, const std::size_t num_records) const
 {
     RecordContainer result {};
     result.reserve(num_records);
