@@ -80,6 +80,15 @@ auto count_bad_qualities(const Q& qualities, const P pos, const S size,
                          });
 }
 
+template <typename Iterator>
+bool is_surrounded_by_good_bases(Iterator base_quality_itr, const std::size_t read_index)
+{
+    // As we are on a deletion, base_quality_itr points to the base AFTER the deletion,
+    // and the previous base (if it exists) points to the base BEFORE the deletion.
+    const auto rhs_base_itr = std::next(base_quality_itr, read_index);
+    return *rhs_base_itr > 0 && (read_index == 0 || *std::prev(rhs_base_itr) > 0);
+}
+
 } // namespace
 
 void CigarScanner::do_add_read(const AlignedRead& read)
@@ -89,8 +98,8 @@ void CigarScanner::do_add_read(const AlignedRead& read)
     const auto& read_contig   = contig_name(read);
     const auto& read_sequence = read.sequence();
     
-    auto sequence_itr  = cbegin(read_sequence);
-    auto qualities_itr = cbegin(read.qualities());
+    auto sequence_itr     = cbegin(read_sequence);
+    auto base_quality_itr = cbegin(read.qualities());
     
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
@@ -106,7 +115,7 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                 add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
                                         next(sequence_itr, read_index),
                                         next(sequence_itr, read_index + op_size),
-                                        next(qualities_itr, read_index));
+                                        next(base_quality_itr, read_index));
                 
                 read_index += op_size;
                 ref_index  += op_size;
@@ -153,7 +162,7 @@ void CigarScanner::do_add_read(const AlignedRead& read)
             }
             case Flag::deletion:
             {
-                if (*next(qualities_itr, read_index) > 0 && *next(qualities_itr, read_index + 1) > 0) {
+                if (is_surrounded_by_good_bases(base_quality_itr, read_index)) {
                     region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                     
                     auto removed_sequence = reference_.get().fetch_sequence(region);
