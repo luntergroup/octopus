@@ -33,6 +33,8 @@ public:
         AlignedRead::BaseQuality mask_threshold       = 0;
         unsigned min_supporting_reads                 = 2;
         Variant::MappingDomain::Size max_variant_size = 500;
+        unsigned num_fallbacks                        = 6;
+        unsigned fallback_interval_size               = 10;
     };
     
     LocalReassembler() = delete;

@@ -24,36 +24,29 @@
 namespace octopus { namespace coretools {
 
 LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options options)
-:
-reference_ {reference},
-default_kmer_sizes_ {std::move(options.kmer_sizes)},
-fallback_kmer_sizes_ {},
-bin_size_ {1000},
-bins_ {},
-mask_threshold_ {options.mask_threshold},
-min_supporting_reads_ {options.min_supporting_reads},
-max_variant_size_ {options.max_variant_size}
+: reference_ {reference}
+, default_kmer_sizes_ {std::move(options.kmer_sizes)}
+, fallback_kmer_sizes_ {}
+, bin_size_ {1000}
+, bins_ {}
+, mask_threshold_ {options.mask_threshold}
+, min_supporting_reads_ {options.min_supporting_reads}
+, max_variant_size_ {options.max_variant_size}
 {
     using std::begin; using std::end;
     
-    if (default_kmer_sizes_.empty()) {
-        return;
-    }
+    if (default_kmer_sizes_.empty()) return;
     
     std::sort(begin(default_kmer_sizes_), end(default_kmer_sizes_));
     
     default_kmer_sizes_.erase(std::unique(begin(default_kmer_sizes_), end(default_kmer_sizes_)),
                               end(default_kmer_sizes_));
-    
-    constexpr unsigned numFallbacks {6};
-    constexpr unsigned fallbackIntervalSize {10};
-    
-    fallback_kmer_sizes_.resize(numFallbacks);
+    fallback_kmer_sizes_.resize(options.num_fallbacks);
     
     auto k = default_kmer_sizes_.back();
-    std::generate_n(begin(fallback_kmer_sizes_), numFallbacks,
-                    [&k, fallbackIntervalSize] () {
-                        k += fallbackIntervalSize;
+    std::generate_n(begin(fallback_kmer_sizes_), options.num_fallbacks,
+                    [&] () {
+                        k += options.fallback_interval_size;
                         return k;
                     });
 }
@@ -361,9 +354,8 @@ void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
     assert(contains(encompassing_region(bins_.front(), bins_.back()), read_region));
 }
 
-GenomicRegion
-LocalReassembler::propose_assembler_region(const GenomicRegion& input_region,
-                                                             unsigned kmer_size) const
+GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& input_region,
+                                                         unsigned kmer_size) const
 {
     return expand(input_region, kmer_size);
 }
