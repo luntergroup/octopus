@@ -67,7 +67,7 @@ std::vector<std::string> to_strings(const std::vector<T>& values, const unsigned
 }
 
 namespace detail {
-    class CommaNumpunct : public std::numpunct<char>
+    class CommaNumPunct : public std::numpunct<char>
     {
     protected:
         virtual char do_thousands_sep() const noexcept override
@@ -86,16 +86,11 @@ template <typename T>
 std::string format_with_commas(const T value)
 {
     static_assert(std::is_arithmetic<T>::value, "T must be numeric");
-    
-    // std::locale is responsable for calling ~detail::CommaNumpunct
-    std::locale comma_locale {std::locale(), new detail::CommaNumpunct {}};
-    
+    // std::locale is responsable for calling ~detail::CommaNumPunct
+    std::locale comma_locale {std::locale(), new detail::CommaNumPunct {}};
     std::stringstream ss;
-    
     ss.imbue(comma_locale);
-    
     ss << std::fixed << value;
-    
     return ss.str();
 }
 

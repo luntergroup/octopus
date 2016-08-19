@@ -17,7 +17,6 @@
 #include "variant.hpp"
 
 namespace octopus {
-// helper
 
 template <typename T, typename M>
 auto haplotype_overlap_range(const T& alleles, const M& mappable)
@@ -78,7 +77,6 @@ bool Haplotype::contains(const ContigAllele& allele) const
         
         if (it != cend(explicit_alleles_)) {
             if (*it == allele) return true;
-            
             if (is_same_region(*it, allele)) {
                 // If the allele is not explcitly contained but the region is then it must be a different
                 // allele, unless it is an insertion, in which case we must check the sequence
@@ -86,7 +84,6 @@ bool Haplotype::contains(const ContigAllele& allele) const
                     return contains(*std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
                                                       allele.mapped_region()), allele);
                 }
-                
                 return false;
             }
         }
@@ -112,18 +109,18 @@ bool Haplotype::contains(const Allele& allele) const
 bool Haplotype::includes(const ContigAllele& allele) const
 {
     using octopus::contains;
-    
-    if (!contains(region_.contig_region(), allele)) return false;
-    
+    const auto& this_region = region_.contig_region();
+    if (!contains(this_region, allele)) {
+        return false;
+    }
     if (contains(explicit_allele_region_, allele)) {
         return std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele);
     }
-    
-    if (overlaps(explicit_allele_region_, allele) || is_indel(allele)) return false;
-    
-    auto it = std::next(std::cbegin(sequence_), begin_distance(contig_region(region_), allele));
-    
-    return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()), it);
+    if (overlaps(explicit_allele_region_, allele) || is_indel(allele)) {
+        return false;
+    }
+    return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()),
+                      std::next(std::cbegin(sequence_), begin_distance(this_region, allele)));
 }
 
 bool Haplotype::includes(const Allele& allele) const
@@ -444,8 +441,8 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs)
             && lhs.sequence(rhs.region_) == rhs.sequence();
 }
 
-namespace detail
-{
+namespace detail {
+
 Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type)
 {
     using std::end; using std::cbegin; using std::cend; using std::prev;
@@ -515,6 +512,7 @@ Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::f
 {
     return Allele {region, haplotype.sequence(region)};
 }
+
 } // namespace detail
 
 ContigAllele splice(const Haplotype& haplotype, const ContigRegion& region)

@@ -309,6 +309,10 @@ struct HaveSameAlleles
     bool operator()(const Haplotype& lhs, const Haplotype& rhs) const;
 };
 
+bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
+
+bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region);
+
 struct IsLessComplex
 {
     IsLessComplex() = default;
@@ -318,11 +322,10 @@ private:
     boost::optional<Haplotype> reference_;
 };
 
+// Erases all duplicates haplotypes (w.r.t operator==) keeping the duplicate which is
+// considered least complex w.r.t IsLessComplex.
+// The optional Haplotype arguement can be used as a basis for the complexity comparison.
 unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optional<Haplotype> = boost::none);
-
-bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
-
-bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region);
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 

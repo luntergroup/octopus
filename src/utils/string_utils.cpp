@@ -13,7 +13,7 @@ std::vector<std::string> split(const std::string& str, const char delim) {
     std::stringstream ss(str);
     std::string item;
     while (std::getline(ss, item, delim)) {
-        elems.emplace_back(item);
+        elems.push_back(item);
     }
     return elems;
 }

@@ -71,7 +71,7 @@ AlignedRead::MappingQuality AlignedRead::mapping_quality() const noexcept
 
 const CigarString& AlignedRead::cigar() const noexcept
 {
-    return cigar_string_;
+    return cigar_;
 }
 
 bool AlignedRead::has_other_segment() const noexcept
@@ -224,11 +224,8 @@ GenomicRegion clipped_mapped_region(const AlignedRead& read)
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
 {
     if (contains(region, read)) return read.cigar();
-    
     const auto splice_region = overlapped_region(read, region);
-    
     const auto offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
-    
     return splice(read.cigar(), offset, size(region));
 }
 
@@ -237,7 +234,6 @@ ContigRegion::Size count_overlapped_bases(const AlignedRead& read, const Genomic
     if (contains(region, read)) {
         return static_cast<ContigRegion::Size>(sequence_size(read));
     }
-    
     // TODO: not quite right as doesn't account for indels
     return static_cast<ContigRegion::Size>(std::max(GenomicRegion::Distance {0}, overlap_size(read, region)));
 }
@@ -253,24 +249,21 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     if (contains(region, read)) return read;
     
     const auto splice_region = overlapped_region(read, region);
-    
     const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
     
     const auto uncontained_cigar_splice = splice_reference(read.cigar(), 0, reference_offset);
-    
     auto contained_cigar_splice = splice_reference(read.cigar(), reference_offset,
                                                    region_size(splice_region));
     
     const auto sequence_offset = sequence_size(uncontained_cigar_splice);
     const auto sequence_length = sequence_size(contained_cigar_splice);
     
-    AlignedRead::NucleotideSequence sequence_splice(next(cbegin(read.sequence()), sequence_offset),
-                                                    next(cbegin(read.sequence()),
-                                                         sequence_offset + sequence_length));
-    
-    AlignedRead::BaseQualityVector qualities_splice(next(cbegin(read.qualities()), sequence_offset),
-                                                    next(cbegin(read.qualities()),
-                                                         sequence_offset + sequence_length));
+    AlignedRead::NucleotideSequence sequence_splice {next(cbegin(read.sequence()), sequence_offset),
+                                                     next(cbegin(read.sequence()),
+                                                          sequence_offset + sequence_length)};
+    AlignedRead::BaseQualityVector qualities_splice {next(cbegin(read.qualities()), sequence_offset),
+                                                     next(cbegin(read.qualities()),
+                                                          sequence_offset + sequence_length)};
     
     return AlignedRead {
         splice_region,

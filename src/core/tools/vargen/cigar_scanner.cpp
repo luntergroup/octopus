@@ -116,15 +116,12 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                                         next(sequence_itr, read_index),
                                         next(sequence_itr, read_index + op_size),
                                         next(base_quality_itr, read_index));
-                
                 read_index += op_size;
                 ref_index  += op_size;
-                
                 break;
             case Flag::sequenceMatch:
                 read_index += op_size;
                 ref_index  += op_size;
-                
                 break;
             case Flag::substitution:
             {
@@ -138,10 +135,8 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                         add_candidate(move(region), move(removed_sequence), move(added_sequence));
                     }
                 }
-                
                 read_index += op_size;
                 ref_index  += op_size;
-                
                 break;
             }
             case Flag::insertion:
@@ -155,9 +150,7 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                                       "", move(added_sequence));
                     }
                 }
-                
                 read_index += op_size;
-                
                 break;
             }
             case Flag::deletion:
@@ -169,22 +162,20 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                     
                     add_candidate(move(region), move(removed_sequence), "");
                 }
-                
                 ref_index += op_size;
-                
                 break;
             }
             case Flag::softClipped:
                 read_index += op_size;
                 ref_index  += op_size;
-                
                 break;
             case Flag::hardClipped:
                 break;
             case Flag::padding:
+                ref_index += op_size;
+                break;
             case Flag::skipped:
                 ref_index += op_size;
-                
                 break;
         }
     }
@@ -215,9 +206,7 @@ auto copy_overlapped_indels(ForwardIt first, const ForwardIt last, const Contain
         if (!overlapped.empty()) {
             std::copy_if(std::cbegin(overlapped), std::cend(overlapped), std::back_inserter(result),
                          [] (const auto& v) { return is_indel(v); });
-            
             first = std::cbegin(overlapped).base();
-            
             if (first == last) break;
         }
     }
@@ -226,18 +215,21 @@ auto copy_overlapped_indels(ForwardIt first, const ForwardIt last, const Contain
 }
 
 template <typename Container1, typename Container2>
-auto copy_overlapped_indels(const Container1& all_candidates, const Container2& selected_candidates)
+std::deque<Variant> copy_overlapped_indels(const Container1& all_candidates,
+                                           const Container2& selected_candidates)
 {
     using std::cbegin; using std::cend; using std::begin; using std::end;
     
+    static const auto is_indel = [] (const auto& v) noexcept { return octopus::is_indel(v); };
+    
+    const auto first_indel = std::find_if(cbegin(all_candidates), cend(all_candidates), is_indel);
+    
+    if (first_indel == cend(all_candidates)) return  {};
+    
     std::vector<Variant> indels {};
+    indels.reserve(std::count_if(std::next(first_indel), cend(all_candidates), is_indel) + 1);
     
-    static const auto is_indel = [] (const auto& v) { return octopus::is_indel(v); };
-    
-    indels.reserve(std::count_if(cbegin(all_candidates), cend(all_candidates), is_indel));
-    
-    std::copy_if(cbegin(all_candidates), cend(all_candidates), std::back_inserter(indels), is_indel);
-    
+    std::copy_if((first_indel), cend(all_candidates), std::back_inserter(indels), is_indel);
     indels.erase(std::unique(begin(indels), end(indels)), end(indels));
     
     return copy_overlapped_indels(cbegin(indels), cend(indels), selected_candidates);
@@ -260,52 +252,43 @@ std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& reg
         result.reserve(size(overlapped, BidirectionallySortedTag {})); // the maximum
         
         while (true) {
-            // TODO: Clang 3.8 has a bug which wont let me use the std::function match_ member
-            // here.
+            // TODO: libc++ has a bug which wont let me use the std::function match_ member here.
             const auto TEMP_FIX = [] (const Variant& lhs, const Variant& rhs) -> bool {
                 return (is_insertion(lhs) && is_same_region(lhs, rhs)) || lhs == rhs;
             };
             
-            const auto it = std::adjacent_find(cbegin(overlapped), cend(overlapped), TEMP_FIX);
+            const auto first_duplicate = std::adjacent_find(cbegin(overlapped), cend(overlapped), TEMP_FIX);
             
-            if (it == cend(overlapped)) break;
+            if (first_duplicate == cend(overlapped)) break;
             
-            const Variant& duplicate {*it};
+            const Variant& duplicate {*first_duplicate};
+            const auto last_duplicate = std::find_if_not(std::next(first_duplicate), cend(overlapped),
+                                                         [this, &duplicate] (const auto& variant) {
+                                                             return match_(variant, duplicate);
+                                                         });
             
-            const auto it2 = std::find_if_not(std::next(it), cend(overlapped),
-                                              [this, &duplicate] (const auto& variant) {
-                                                  return match_(variant, duplicate);
-                                              });
+            const auto num_duplicates = distance(first_duplicate, last_duplicate);
             
-            const auto duplicate_count = distance(it, it2);
-            
-            if (duplicate_count >= options_.min_support) {
-                if (duplicate == *std::prev(it2)) {
+            if (num_duplicates >= options_.min_support) {
+                if (duplicate == *std::prev(last_duplicate)) {
                     result.push_back(duplicate);
                 } else {
-                    std::unique_copy(it, it2, std::back_inserter(result));
+                    std::unique_copy(first_duplicate, last_duplicate, std::back_inserter(result));
                 }
             }
             
-            if (it2 == cend(overlapped)) break;
+            if (last_duplicate == cend(overlapped)) break;
             
-            overlapped.advance_begin(distance(cbegin(overlapped), it) + duplicate_count);
+            overlapped.advance_begin(distance(cbegin(overlapped), first_duplicate) + num_duplicates);
         }
         
         if (options_.always_include_overlapping_indels) {
             auto overlapped_indels = copy_overlapped_indels(candidates_, result);
-            
             std::sort(begin(overlapped_indels), end(overlapped_indels));
-            
             result.reserve(result.size() + overlapped_indels.size());
-            
             const auto it = end(result);
-            
-            std::unique_copy(begin(overlapped_indels), end(overlapped_indels),
-                             std::back_inserter(result));
-            
+            std::unique_copy(begin(overlapped_indels), end(overlapped_indels), std::back_inserter(result));
             std::inplace_merge(begin(result), it, end(result));
-            
             result.erase(std::unique(begin(result), end(result)), end(result));
         }
         
