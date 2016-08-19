@@ -18,6 +18,7 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional.hpp>
 
+#include <concepts/equitable.hpp>
 #include <concepts/comparable.hpp>
 
 namespace octopus { namespace coretools { class Assembler; }}
@@ -40,7 +41,7 @@ class Assembler
 public:
     using NucleotideSequence = std::string;
     
-    struct Variant
+    struct Variant : public Equitable<Variant>
     {
         Variant() = default;
         template <typename S1, typename S2>
@@ -308,8 +309,7 @@ ref {std::forward<S1>(ref)},
 alt {std::forward<S2>(alt)}
 {}
 
-bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs);
-bool operator!=(const Assembler::Variant& lhs, const Assembler::Variant& rhs);
+bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noexcept;
 
 } // namespace coretools
 } // namespace octopus

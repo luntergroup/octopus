@@ -1512,14 +1512,9 @@ void Assembler::print_dominator_tree() const
 
 // non-member methods
 
-bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs)
+bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noexcept
 {
     return lhs.begin_pos == rhs.begin_pos && lhs.alt == rhs.alt;
-}
-
-bool operator!=(const Assembler::Variant& lhs, const Assembler::Variant& rhs)
-{
-    return !operator==(lhs, rhs);
 }
 
 namespace debug {
