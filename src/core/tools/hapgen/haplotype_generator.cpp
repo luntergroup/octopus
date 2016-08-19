@@ -124,7 +124,6 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
     if (alleles_.empty()) {
         return std::make_pair(std::vector<Haplotype> {}, active_region_);
     }
-    
     if (in_holdout_mode() && can_reintroduce_holdouts()) {
         reintroduce_holdouts();
         if (tree_.num_haplotypes() > policies_.haplotype_limits.overflow) {
@@ -138,25 +137,31 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
             // Then we are done
             return std::make_pair(std::vector<Haplotype> {}, *next_active_region_);
         }
+        
         progress(*next_active_region_);
         
         auto novel_active_region = *next_active_region_;
         if (!tree_.is_empty()) {
             novel_active_region = right_overhang_region(*next_active_region_, active_region_);
         }
-        auto novel_active_alleles = overlap_range(alleles_, novel_active_region);
         
+        auto novel_active_alleles = overlap_range(alleles_, novel_active_region);
         auto last_added_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
+        
         if (last_added_itr != std::cend(novel_active_alleles)) {
             reset_next_active_region();
             if (can_extract_holdouts(novel_active_region)) {
                 extract_holdouts(novel_active_region);
                 tree_.clear(novel_active_region);
+                
                 update_next_active_region();
+                
                 active_region_ = *std::move(next_active_region_);
                 reset_next_active_region();
+                
                 const auto new_novel_alleles = overlap_range(alleles_, active_region_);
                 auto it = extend_tree_until(new_novel_alleles, tree_, policies_.haplotype_limits.overflow);
+                
                 if (it != std::cend(new_novel_alleles)) {
                     throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()}; 
                 }

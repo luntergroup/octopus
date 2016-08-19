@@ -385,19 +385,14 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
 
 void trim_reference(Assembler::Variant& v)
 {
-    const auto p = std::mismatch(std::begin(v.ref), std::end(v.ref),
-                                 std::begin(v.alt), std::end(v.alt));
-
-    v.begin_pos += std::distance(std::begin(v.ref), p.first);
-    
-    v.ref.erase(std::begin(v.ref), p.first);
-    v.alt.erase(std::begin(v.alt), p.second);
-    
-    const auto p2 = std::mismatch(std::rbegin(v.ref), std::rend(v.ref),
-                                  std::rbegin(v.alt), std::rend(v.alt));
-    
-    v.ref.erase(p2.first.base(), std::end(v.ref));
-    v.alt.erase(p2.second.base(), std::end(v.alt));
+    using std::begin; using std::end; using std::rbegin; using std::rend;
+    const auto p = std::mismatch(begin(v.ref), end(v.ref), begin(v.alt), end(v.alt));
+    v.begin_pos += std::distance(begin(v.ref), p.first);
+    v.ref.erase(begin(v.ref), p.first);
+    v.alt.erase(begin(v.alt), p.second);
+    const auto p2 = std::mismatch(rbegin(v.ref), rend(v.ref), rbegin(v.alt), rend(v.alt));
+    v.ref.erase(p2.first.base(), end(v.ref));
+    v.alt.erase(p2.second.base(), end(v.alt));
 }
 
 template <typename Container>
