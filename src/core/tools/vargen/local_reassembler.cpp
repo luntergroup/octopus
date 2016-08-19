@@ -39,9 +39,8 @@ auto generate_fallback_kmer_sizes(std::vector<unsigned>& result,
     result.resize(num_fallbacks);
     auto k = default_kmer_sizes.back();
     std::generate_n(std::begin(result), num_fallbacks,
-                    [&k, interval_size] () noexcept {
-                        k += interval_size;
-                        return k;
+                    [&k, interval_size] () noexcept -> decltype(k) {
+                        return k += interval_size;
                     });
 }
 
@@ -276,16 +275,17 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
     std::deque<Variant> candidates {};
     
     for (auto& bin : overlapped_bins(bins_, region)) {
-        if (bin.read_sequences.empty()) continue;
-        if (debug_log_) {
-            stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
-                                << " reads in bin " << mapped_region(bin);
+        if (!bin.empty()) {
+            if (debug_log_) {
+                stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
+                << " reads in bin " << mapped_region(bin);
+            }
+            const auto num_default_failures = try_assemble_with_defaults(bin, candidates);
+            if (num_default_failures == default_kmer_sizes_.size()) {
+                try_assemble_with_fallbacks(bin, candidates);
+            }
+            bin.clear();
         }
-        const auto num_default_failures = try_assemble_with_defaults(bin, candidates);
-        if (num_default_failures == default_kmer_sizes_.size()) {
-            try_assemble_with_fallbacks(bin, candidates);
-        }
-        bin.clear();
     }
     
     return extract_final(std::move(candidates), region, max_variant_size_);
@@ -528,11 +528,11 @@ auto partition_complex(Container& variants)
 }
 
 template <typename InputIt>
-auto decompose_complex(InputIt first_complex, InputIt last_complex)
+auto decompose_complex(InputIt first, InputIt last)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     std::deque<Assembler::Variant> result {};
-    std::for_each(make_move_iterator(first_complex), make_move_iterator(last_complex),
+    std::for_each(make_move_iterator(first), make_move_iterator(first),
                   [&result] (auto&& complex) {
                       utils::append(decompose_complex(std::move(complex)), result);
                   });
