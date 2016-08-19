@@ -66,15 +66,11 @@ public:
     void clear() noexcept;
     
     // ln p(read | haplotype, model)
-    
-    double ln_probability(const AlignedRead& read) const;
-    
-    double ln_probability(const AlignedRead& read,
-                          const MappingPositionVector& mapping_positions) const;
-    
-    double ln_probability(const AlignedRead& read,
-                          MappingPositionItr first_mapping_position,
-                          MappingPositionItr last_mapping_position) const;
+    double evaluate(const AlignedRead& read) const;
+    double evaluate(const AlignedRead& read, const MappingPositionVector& mapping_positions) const;
+    double evaluate(const AlignedRead& read,
+                    MappingPositionItr first_mapping_position,
+                    MappingPositionItr last_mapping_position) const;
     
 private:
     SnvErrorModel snv_error_model_;

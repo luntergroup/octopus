@@ -16,19 +16,17 @@ namespace octopus {
 // public members
 
 ReadPipe::ReadPipe(const ReadManager& manager, std::vector<SampleName> samples)
-:
-ReadPipe {manager, {}, {}, boost::none, std::move(samples)}
+: ReadPipe {manager, {}, {}, boost::none, std::move(samples)}
 {}
 
 ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer transformer, ReadFilterer filterer,
                    boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
-:
-manager_ {manager},
-transformer_ {std::move(transformer)},
-filterer_ {std::move(filterer)},
-downsampler_ {std::move(downsampler)},
-samples_ {std::move(samples)},
-debug_log_ {}
+: manager_ {manager}
+, transformer_ {std::move(transformer)}
+, filterer_ {std::move(filterer)}
+, downsampler_ {std::move(downsampler)}
+, samples_ {std::move(samples)}
+, debug_log_ {}
 {
     if (DEBUG_MODE) debug_log_ = logging::DebugLogger {};
 }
@@ -57,46 +55,44 @@ const std::vector<SampleName>& ReadPipe::samples() const noexcept
     return samples_;
 }
 
-namespace
+namespace {
+
+template <typename Container>
+void move_construct(Container&& src, ReadMap::mapped_type& dst)
 {
-    template <typename Container>
-    void move_construct(Container&& src, ReadMap::mapped_type& dst)
-    {
-        dst.insert(std::make_move_iterator(std::begin(src)), std::make_move_iterator(std::end(src)));
-    }
-    
-    template <>
-    void move_construct<ReadMap::mapped_type>(ReadMap::mapped_type&& src, ReadMap::mapped_type& dst)
-    {
-        dst = std::move(src);
-    }
-    
-    template <typename Container>
-    void insert_each(Container&& src, ReadMap& dst)
-    {
-        for (auto& p : src) {
-            auto& sample_dst = dst.at(p.first);
-            
-            if (sample_dst.empty()) {
-                move_construct(std::move(p.second), sample_dst);
-            } else {
-                sample_dst.insert(std::make_move_iterator(std::begin(p.second)),
-                                  std::make_move_iterator(std::end(p.second)));
-            }
-            
-            p.second.clear();
-            p.second.shrink_to_fit();
+    dst.insert(std::make_move_iterator(std::begin(src)), std::make_move_iterator(std::end(src)));
+}
+
+template <>
+void move_construct<ReadMap::mapped_type>(ReadMap::mapped_type&& src, ReadMap::mapped_type& dst)
+{
+    dst = std::move(src);
+}
+
+template <typename Container>
+void insert_each(Container&& src, ReadMap& dst)
+{
+    for (auto& p : src) {
+        auto& sample_dst = dst.at(p.first);
+        if (sample_dst.empty()) {
+            move_construct(std::move(p.second), sample_dst);
+        } else {
+            sample_dst.insert(std::make_move_iterator(std::begin(p.second)),
+                              std::make_move_iterator(std::end(p.second)));
         }
-        
-        src.clear();
+        p.second.clear();
+        p.second.shrink_to_fit();
     }
-    
-    void shrink_to_fit(ReadMap& reads)
-    {
-        for (auto& p : reads) {
-            p.second.shrink_to_fit();
-        }
+    src.clear();
+}
+
+void shrink_to_fit(ReadMap& reads)
+{
+    for (auto& p : reads) {
+        p.second.shrink_to_fit();
     }
+}
+
 } // namespace
 
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
@@ -104,14 +100,11 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
     using namespace readpipe;
     
     ReadMap result {samples_.size()};
-    
     for (const auto& sample : samples_) {
         result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
     }
     
-    const auto batches = batch_samples(samples_);
-    
-    for (const auto& batch : batches) {
+    for (const auto& batch : batch_samples(samples_)) {
         auto batch_reads = manager_.get().fetch_reads(batch, region);
         
         if (debug_log_) {
@@ -124,13 +117,10 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
         if (debug_log_) {
             SampleFilterCountMap<SampleName, decltype(filterer_)> filter_counts {};
             filter_counts.reserve(samples_.size());
-            
             for (const auto& sample : samples_) {
                 filter_counts[sample].reserve(filterer_.num_filters());
             }
-            
             erase_filtered_reads(batch_reads, filter(batch_reads, filterer_, filter_counts));
-            
             if (filterer_.num_filters() > 0) {
                 for (const auto& p : filter_counts) {
                     stream(*debug_log_) << "In sample " << p.first;
@@ -154,11 +144,8 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
         
         if (downsampler_) {
             auto reads = make_mappable_map(std::move(batch_reads));
-            
             const auto n = downsample(reads, *downsampler_);
-            
             if (debug_log_) stream(*debug_log_) << "Downsampling removed " << n << " reads from " << region;
-            
             insert_each(std::move(reads), result);
         } else {
             insert_each(std::move(batch_reads), result);
@@ -178,7 +165,6 @@ std::vector<GenomicRegion> join_close_regions(const std::vector<GenomicRegion>& 
     if (regions.empty()) return result;
     
     result.reserve(regions.size());
-    
     auto tmp = regions.front();
     
     std::for_each(std::next(std::cbegin(regions)), std::cend(regions),

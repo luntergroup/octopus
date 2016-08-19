@@ -36,7 +36,6 @@ std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path
         if (vcf_file_size > 1e9) { // 1GB
             throw std::runtime_error {"VCF file " + file_path.string() + " is too big"};
         }
-        
         return std::make_unique<VcfParser>(file_path);
     } else {
         return std::make_unique<HtslibBcfFacade>(file_path, "r");
@@ -46,15 +45,13 @@ std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path
 // VcfReader::Iterator
 
 VcfReader::RecordIterator::RecordIterator(IVcfReaderImpl::RecordIteratorPtr itr)
-:
-itr_ {std::move(itr)},
-type_ {typeid(*itr_)}
+: itr_ {std::move(itr)}
+, type_ {typeid(*itr_)}
 {}
 
 VcfReader::RecordIterator::RecordIterator(const RecordIterator& other)
-:
-itr_ {other.itr_->clone()},
-type_ {other.type_}
+: itr_ {other.itr_->clone()}
+, type_ {other.type_}
 {}
 
 VcfReader::RecordIterator::reference VcfReader::RecordIterator::operator*() const
@@ -100,9 +97,8 @@ bool operator==(const VcfReader::RecordIterator& lhs, const VcfReader::RecordIte
 }
 
 VcfReader::VcfReader(Path file_path)
-:
-file_path_ {std::move(file_path)},
-reader_ {make_vcf_reader(file_path_)}
+: file_path_ {std::move(file_path)}
+, reader_ {make_vcf_reader(file_path_)}
 {}
 
 VcfReader::VcfReader(VcfReader&& other)

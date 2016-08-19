@@ -35,9 +35,7 @@ public:
 private:
     const ReferenceGenome& reference_;
     const ReadMap& reads_;
-    
     std::vector<SampleName> samples_;
-    
     bool sites_only_;
     
     VcfRecord make(std::unique_ptr<Call> call) const;

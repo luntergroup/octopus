@@ -24,12 +24,12 @@ public:
     template <typename V, typename T>
     GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality);
     
-    virtual ~GermlineVariantCall() = default;
-    
     GermlineVariantCall(const GermlineVariantCall&)            = default;
     GermlineVariantCall& operator=(const GermlineVariantCall&) = default;
     GermlineVariantCall(GermlineVariantCall&&)                 = default;
     GermlineVariantCall& operator=(GermlineVariantCall&&)      = default;
+    
+    virtual ~GermlineVariantCall() = default;
     
     void decorate(VcfRecord::Builder& record) const override;
 };

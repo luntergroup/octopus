@@ -164,7 +164,6 @@ VcfHeader merge(const std::vector<VcfHeader>& headers)
     if (!all_same_format(headers)) {
         throw std::logic_error {"cannot merge VcfHeader's with different formats"};
     }
-    
     if (!contain_same_samples(headers)) {
         throw std::logic_error {"cannot merge VcfHeader's that do not contain the same samples"};
     }
@@ -244,7 +243,6 @@ bool is_unique_contig_per_reader(const ReaderContigRecordCountMap& counts)
     
     for (const auto& p : counts) {
         const auto it = find_active_contig(std::cbegin(p.second), std::cend(p.second));
-        
         if (it != std::cend(p.second)) {
             if (find_active_contig(std::next(it), std::cend(p.second)) != std::cend(p.second)) {
                 return false;
@@ -408,7 +406,6 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
            const std::vector<std::string>& contigs)
 {
     if (sources.empty()) return;
-    
     if (sources.size() == 1) {
         copy(sources.front(), dst);
         return;
@@ -454,21 +451,15 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
 void merge(const std::vector<VcfReader>& sources, VcfWriter& dst)
 {
     if (sources.empty()) return;
-    
     if (sources.size() == 1) {
         copy(sources.front(), dst);
         return;
     }
-    
     const auto header = merge(get_headers(sources));
-    
     if (!dst.is_header_written()) {
         dst << header;
     }
-    
-    const auto contigs = get_contigs(header);
-    
-    return merge(sources, dst, contigs);
+    return merge(sources, dst, get_contigs(header));
 }
 
 void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
@@ -478,54 +469,39 @@ void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
     }
     
     const auto samples = src.fetch_header().samples();
-    
     const static char deleted {'*'};
     const static std::string missing {vcfspec::missingValue};
-    
     const auto has_deleted = [] (const auto& allele) {
         return std::find(std::cbegin(allele), std::cend(allele), deleted) != std::cend(allele);
     };
-    
     auto p = src.iterate();
     
     std::for_each(std::move(p.first), std::move(p.second), [&] (const auto& call) {
         const auto& alt = call.alt();
-        
         VcfRecord::Builder cb {call};
         
         const auto it = std::find_if(std::cbegin(alt), std::cend(alt), has_deleted);
-        
         if (it != std::cend(alt)) {
             const auto i = std::distance(std::cbegin(alt), it);
-            
             auto new_alt = alt;
-            
             new_alt.erase(std::next(std::begin(new_alt), i));
-            
             cb.set_alt(std::move(new_alt));
         }
         
         for (const auto& sample : samples) {
             const auto& gt = call.get_sample_value(sample, vcfspec::format::genotype);
-            
             const auto it2 = std::find_if(std::cbegin(gt), std::cend(gt), has_deleted);
             const auto it3 = std::find(std::cbegin(gt), std::cend(gt), missing);
-            
             const auto& ref = call.ref();
             
             if (it2 != std::cend(gt) || it3 != std::cend(gt)) {
                 auto new_gt = gt;
-                
                 std::replace_if(std::begin(new_gt), std::end(new_gt), has_deleted, ref);
-                
                 std::replace(std::begin(new_gt), std::end(new_gt), missing, ref);
-                
                 auto phasing = VcfRecord::Builder::Phasing::phased;
-                
                 if (!call.is_sample_phased(sample)) {
                     phasing = VcfRecord::Builder::Phasing::unphased;
                 }
-                
                 cb.set_genotype(sample, std::move(new_gt), phasing);
             }
         }

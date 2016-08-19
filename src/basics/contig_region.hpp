@@ -48,9 +48,8 @@ private:
 // public member methods
 
 inline ContigRegion::ContigRegion(const Position begin, const Position end)
-:
-begin_ {begin},
-end_ {end}
+: begin_ {begin}
+, end_ {end}
 {
     if (end < begin) throw std::runtime_error {"ContigRegion: constructed with end < begin"};
 }

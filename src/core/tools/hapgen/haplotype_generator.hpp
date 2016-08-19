@@ -115,11 +115,14 @@ private:
     
     struct HoldoutSet
     {
-        template <typename InputIt>
-        HoldoutSet(InputIt first, InputIt last, GenomicRegion region)
-        : alleles {first, last}, region {std::move(region)} {}
         std::vector<Allele> alleles;
         GenomicRegion region;
+        
+        template <typename InputIt>
+        HoldoutSet(InputIt first, InputIt last, GenomicRegion region)
+        : alleles {first, last}
+        , region {std::move(region)}
+        {}
     };
     
     mutable std::stack<HoldoutSet> active_holdouts_;

@@ -101,23 +101,14 @@ public:
     ~AlignedRead() = default;
     
     const std::string& name() const noexcept;
-    
     const std::string& read_group() const noexcept;
-    
     const GenomicRegion& mapped_region() const noexcept;
-    
     const NucleotideSequence& sequence() const noexcept;
-    
     const BaseQualityVector& qualities() const noexcept;
-    
     MappingQuality mapping_quality() const noexcept;
-    
     const CigarString& cigar() const noexcept;
-    
     bool has_other_segment() const noexcept;
-    
     const Segment& next_segment() const;
-    
     Flags flags() const noexcept;
     
     bool is_marked_all_segments_in_read_aligned() const noexcept;
@@ -176,15 +167,14 @@ template <typename GenomicRegion_, typename String1_, typename Qualities_, typen
 AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          Qualities_&& qualities, CigarString_&& cigar,
                          MappingQuality mapping_quality, const Flags& flags)
-:
-region_ {std::forward<GenomicRegion_>(reference_region)},
-sequence_ {std::forward<String1_>(sequence)},
-qualities_ {std::forward<Qualities_>(qualities)},
-cigar_ {std::forward<CigarString_>(cigar)},
-read_group_ {},
-next_segment_ {},
-flags_ {compress(flags)},
-mapping_quality_ {mapping_quality}
+: region_ {std::forward<GenomicRegion_>(reference_region)}
+, sequence_ {std::forward<String1_>(sequence)}
+, qualities_ {std::forward<Qualities_>(qualities)}
+, cigar_ {std::forward<CigarString_>(cigar)}
+, read_group_ {}
+, next_segment_ {}
+, flags_ {compress(flags)}
+, mapping_quality_ {mapping_quality}
 {}
 
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
@@ -196,26 +186,26 @@ AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          MappingDomain::Position next_segment_begin,
                          MappingDomain::Size inferred_template_length,
                          const Segment::Flags& next_segment_flags)
-:
-region_ {std::forward<GenomicRegion_>(reference_region)},
-sequence_ {std::forward<String1_>(sequence)},
-qualities_ {std::forward<Qualities_>(qualities)},
-cigar_ {std::forward<CigarString_>(cigar)},
-read_group_ {},
-next_segment_ {Segment {std::forward<String2_>(next_segment_contig_name), next_segment_begin,
-    inferred_template_length, next_segment_flags}},
-flags_ {compress(flags)},
-mapping_quality_ {mapping_quality}
+: region_ {std::forward<GenomicRegion_>(reference_region)}
+, sequence_ {std::forward<String1_>(sequence)}
+, qualities_ {std::forward<Qualities_>(qualities)}
+, cigar_ {std::forward<CigarString_>(cigar)}
+, read_group_ {}
+, next_segment_ {
+    Segment {std::forward<String2_>(next_segment_contig_name), next_segment_begin,
+    inferred_template_length, next_segment_flags}
+  }
+, flags_ {compress(flags)}
+, mapping_quality_ {mapping_quality}
 {}
 
 template <typename String_>
 AlignedRead::Segment::Segment(String_&& contig_name, GenomicRegion::Position begin,
                                       GenomicRegion::Size inferred_template_length, Flags data)
-:
-contig_name_ {std::forward<String_>(contig_name)},
-begin_ {begin},
-inferred_template_length_ {inferred_template_length},
-flags_ {compress(data)}
+: contig_name_ {std::forward<String_>(contig_name)}
+, begin_ {begin}
+, inferred_template_length_ {inferred_template_length}
+, flags_ {compress(data)}
 {}
 
 // Non-member methods

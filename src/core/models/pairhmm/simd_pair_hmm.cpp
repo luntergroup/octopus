@@ -54,12 +54,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 {
     // target is the read; the shorter of the sequences
     // no checks for overflow are done
-    
+    //
     // the bottom-left and top-right corners of the DP table are just
     // included at the extreme ends of the diagonal, which measures
     // n=8 entries diagonally across.  This fixes the length of the
     // longer (horizontal) sequence to 15 (2*8-1) more than the shorter
-    
+    //
     // the << 2's are because the lower two bits are reserved for back tracing
     
     assert(truth_len > bandSize && (truth_len == target_len + 2 * bandSize - 1));
@@ -120,10 +120,8 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         // at this point, extract minimum score.  Referred-to position must
         // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
-        
         if (s / 2 >= target_len) {
             cur_score = _mm_extract_epi16(_m1, s / 2 - target_len);
-            
             if (cur_score < minscore) {
                 minscore = cur_score;
             }
@@ -131,22 +129,17 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         _m1 = _mm_add_epi16(_m1, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
                                                                 _qualitieswin), _truthnqual));
-        
         _d1 = _mm_min_epi16(_mm_add_epi16(_d2, _gap_extend),
                             _mm_add_epi16(_mm_min_epi16(_m2, _i2),
                                           _mm_srli_si128(_gap_open, 2))); // allow I->D
-        
         _d1 = _mm_insert_epi16(_mm_slli_si128(_d1, 2), inf, 0);
-        
         _i1 = _mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_i2, _gap_extend),
                                           _mm_add_epi16(_m2, _gap_open)),
                             _nuc_prior);
         
         // S odd
-        
         // truth needs updating; target is current
         const auto pos = bandSize + s / 2;
-        
         const char base {(pos < truth_len) ? truth[pos] : 'N'};
         
         _truthwin   = _mm_insert_epi16(_mm_srli_si128(_truthwin, 2), base,
@@ -166,7 +159,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         if (s / 2 >= target_len) {
             cur_score = _mm_extract_epi16(_m2, s / 2 - target_len);
-            
             if (cur_score < minscore) {
                 minscore = cur_score;
             }
@@ -174,10 +166,8 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         _m2 = _mm_add_epi16(_m2, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
                                                                  _qualitieswin), _truthnqual));
-        
         _d2 = _mm_min_epi16(_mm_add_epi16(_d1, _gap_extend),
                             _mm_add_epi16(_mm_min_epi16(_m1, _i1), _gap_open)); // allow I->D
-        
         _i2 = _mm_insert_epi16(_mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_mm_srli_si128(_i1, 2),
                                                                          _gap_extend),
                                                            _mm_add_epi16(_mm_srli_si128(_m1, 2),
@@ -256,7 +246,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         if (s / 2 >= target_len) {
             cur_score = _mm_extract_epi16(_m1, s / 2 - target_len);
-            
             if (cur_score < minscore) {
                 minscore = cur_score;
             }
@@ -269,40 +258,31 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
                                                                                _mm_or_si128(_mm_and_si128(_snvmask, _snv_priorwin),
                                                                                             _mm_andnot_si128(_snvmask, _qualitieswin)))),
                                                _truthnqual));
-        
         _d1 = _mm_min_epi16(_mm_add_epi16(_d2, _gap_extend),
                             _mm_add_epi16(_mm_min_epi16(_m2, _i2),
                                           _mm_srli_si128(_gap_open, 2))); // allow I->D
-        
         _d1 = _mm_insert_epi16(_mm_slli_si128(_d1, 2), inf, 0);
-        
         _i1 = _mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_i2, _gap_extend),
                                           _mm_add_epi16(_m2, _gap_open)),
                             _nuc_prior);
         
         // S odd
-        
         // truth needs updating; target is current
         const auto pos = bandSize + s / 2;
-        
         const char base {pos < truth_len ? truth[pos] : 'N'};
         
         _truthwin     = _mm_insert_epi16(_mm_srli_si128(_truthwin, 2),
                                          base,
                                          bandSize - 1);
-        
         _truthnqual   = _mm_insert_epi16(_mm_srli_si128(_truthnqual, 2),
                                          base == 'N' ? nScore : inf,
                                          bandSize - 1);
-        
         _snvmaskwin   = _mm_insert_epi16(_mm_srli_si128(_snvmaskwin, 2),
                                          pos < truth_len ? snv_mask[pos] : 'N',
                                          bandSize - 1);
-        
         _snv_priorwin = _mm_insert_epi16(_mm_srli_si128(_snv_priorwin, 2),
                                          (pos < truth_len ? snv_prior[pos] : inf) << 2,
                                          bandSize - 1);
-        
         _gap_open     = _mm_insert_epi16(_mm_srli_si128(_gap_open, 2),
                                          gap_open[pos < truth_len ? pos : truth_len - 1] << 2,
                                          bandSize - 1);
@@ -314,7 +294,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         if (s / 2 >= target_len) {
             cur_score = _mm_extract_epi16(_m2, s / 2 - target_len);
-            
             if (cur_score < minscore) {
                 minscore = cur_score;
             }
@@ -327,16 +306,13 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
                                                                               _mm_or_si128(_mm_and_si128(_snvmask, _snv_priorwin),
                                                                                            _mm_andnot_si128(_snvmask, _qualitieswin)))),
                                                _truthnqual));
-        
         _d2 = _mm_min_epi16(_mm_add_epi16(_d1, _gap_extend),
                             _mm_add_epi16(_mm_min_epi16(_m1, _i1), _gap_open)); // allow I->D
-        
         _i2 = _mm_insert_epi16(_mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_mm_srli_si128(_i1, 2),
                                                                          _gap_extend),
                                                            _mm_add_epi16(_mm_srli_si128(_m1, 2),
                                                                          _gap_open)),
                                              _nuc_prior), inf, bandSize - 1);
-        
     }
     
     return (minscore + 0x8000) >> 2;
@@ -403,7 +379,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     // main loop.  Do one extra iteration, with nucs from sequence 2 just moved out
     // of the targetwin/qual arrays, to simplify getting back pointers
     int s;
-    
     for (s = 0; s <= 2 * (target_len + bandSize); s += 2) {
         // truth is current; target needs updating
         _targetwin    = _mm_slli_si128(_targetwin, 2);
@@ -418,7 +393,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         }
         
         // S even
-        
         // initialize to -0x8000
         _m1 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m1));
         _m2 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m2));
@@ -429,7 +403,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         if (s / 2 >= target_len) {
             cur_score = _mm_extract_epi16(_m1, s / 2 - target_len);
-            
             if (cur_score < minscore) {
                 minscore = cur_score;
                 minscoreidx = s;     // point back to the match state at this entry, so as not to
@@ -438,13 +411,10 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         _m1 = _mm_add_epi16(_m1, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
                                                                 _qualitieswin), _truthnqual));
-        
         _d1 = _mm_min_epi16(_mm_add_epi16(_d2, _gap_extend),
                             _mm_add_epi16(_mm_min_epi16(_m2, _i2),
                                           _mm_srli_si128(_gap_open, 2))); // allow I->D
-        
         _d1 = _mm_insert_epi16(_mm_slli_si128(_d1, 2), inf, 0);
-        
         _i1 = _mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_i2, _gap_extend),
                                           _mm_add_epi16(_m2, _gap_open)), _nuc_prior);
         
@@ -466,17 +436,14 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _truthnqual = _mm_insert_epi16(_mm_srli_si128(_truthnqual, 2), (c == 'N') ? nScore : inf, bandSize - 1);
         _gap_open   = _mm_insert_epi16(_mm_srli_si128(_gap_open,  2),
                                        gap_open[bandSize + s / 2 < truth_len ? bandSize + s / 2 : truth_len - 1] << 2, bandSize - 1);
-        
         _initmask  = _mm_slli_si128(_initmask, 2);
         _initmask2 = _mm_slli_si128(_initmask2, 2);
-        
         _m2 = _mm_min_epi16(_m2, _mm_min_epi16(_i2, _d2));
         
         // at this point, extract minimum score.  Referred-to position must
         // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         if (s / 2 >= target_len) {
             cur_score = _mm_extract_epi16(_m2, s / 2 - target_len);
-            
             if (cur_score < minscore) {
                 minscore = cur_score;
                 minscoreidx = s+1;
@@ -485,16 +452,13 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         _m2 = _mm_add_epi16(_m2, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin), _qualitieswin),
                                                _truthnqual));
-        
         _d2 = _mm_min_epi16(_mm_add_epi16(_d1, _gap_extend),
                             _mm_add_epi16(_mm_min_epi16(_m1, _i1),  // allow I->D
                                           _gap_open));
-        
         _i2 = _mm_insert_epi16(_mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_mm_srli_si128(_i1, 2), _gap_extend),
                                                            _mm_add_epi16(_mm_srli_si128(_m1, 2), _gap_open)),
                                              _nuc_prior),
                                inf, bandSize - 1);
-        
         _backpointers[s + 1] = _mm_or_si128(_mm_or_si128(_mm_and_si128(_three, _m2),
                                                          _mm_slli_epi16(_mm_and_si128(_three, _i2), 2 * insertLabel)),
                                             _mm_slli_epi16(_mm_and_si128(_three, _d2), 2 * deleteLabel));
@@ -534,7 +498,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
             aln1[alnidx] = truth[--x];
             aln2[alnidx] = gap;
         }
-        
         state = new_state;
         alnidx++;
     }
@@ -549,7 +512,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     for (i = 0, j = alnidx - 1; i < j; ++i, j--) {
         x = aln1[i];
         y = aln2[i];
-        
         aln1[i] = aln1[j];
         aln2[i] = aln2[j];
         aln1[j] = x;
@@ -608,7 +570,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     SimdInt _truthnqual {_mm_add_epi16(_mm_and_si128(_mm_cmpeq_epi16(_truthwin, _mm_set1_epi16('N')),
                                                      _mm_set1_epi16(nScore - inf)),
                                        _mm_set1_epi16(inf))};
-    
     SimdInt _gap_open {_mm_set_epi16(gap_open[7] << 2,gap_open[6] << 2,gap_open[5] << 2,gap_open[4] << 2,
                                      gap_open[3] << 2,gap_open[2] << 2,gap_open[1] << 2,gap_open[0] << 2)};
     
@@ -640,7 +601,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         if (s / 2 >= target_len) {
             cur_score = _mm_extract_epi16(_m1, s / 2 - target_len);
-            
             if (cur_score < minscore) {
                 minscore = cur_score;
                 minscoreidx = s;     // point back to the match state at this entry, so as not to
@@ -648,19 +608,15 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         }
         
         _snvmask = _mm_cmpeq_epi16(_targetwin, _snvmaskwin);
-        
         _m1 = _mm_add_epi16(_m1, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
                                                                 _mm_min_epi16(_qualitieswin,
                                                                               _mm_or_si128(_mm_and_si128(_snvmask, _snv_priorwin),
                                                                                            _mm_andnot_si128(_snvmask, _qualitieswin)))),
                                                _truthnqual));
-        
         _d1 = _mm_min_epi16(_mm_add_epi16(_d2, _gap_extend),
                             _mm_add_epi16(_mm_min_epi16(_m2, _i2),
                                           _mm_srli_si128(_gap_open, 2))); // allow I->D
-        
         _d1 = _mm_insert_epi16(_mm_slli_si128(_d1, 2), inf, 0);
-        
         _i1 = _mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_i2, _gap_extend),
                                           _mm_add_epi16(_m2, _gap_open)), _nuc_prior);
         
@@ -678,21 +634,16 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         // truth needs updating; target is current
         const auto pos = bandSize + s / 2;
-        
         const char base {(pos < truth_len) ? truth[pos] : 'N'};
         
         _truthwin   = _mm_insert_epi16(_mm_srli_si128(_truthwin, 2), base, bandSize - 1);
-        
         _truthnqual = _mm_insert_epi16(_mm_srli_si128(_truthnqual, 2),
                                        (base == 'N') ? nScore : inf, bandSize - 1);
-        
         _snvmaskwin   = _mm_insert_epi16(_mm_srli_si128(_snvmaskwin, 2),
                                          pos < truth_len ? snv_mask[pos] : 'N', bandSize - 1);
-        
         _snv_priorwin = _mm_insert_epi16(_mm_srli_si128(_snv_priorwin, 2),
                                          (pos < truth_len) ? snv_prior[pos] << 2 : inf << 2,
                                          bandSize - 1);
-        
         _gap_open  = _mm_insert_epi16(_mm_srli_si128(_gap_open,  2),
                                       gap_open[pos < truth_len ? pos : truth_len - 1] << 2,
                                       bandSize - 1);
@@ -706,7 +657,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         if (s / 2 >= target_len) {
             cur_score = _mm_extract_epi16(_m2, s / 2 - target_len);
-            
             if (cur_score < minscore) {
                 minscore = cur_score;
                 minscoreidx = s+1;
@@ -720,16 +670,13 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
                                                                               _mm_or_si128(_mm_and_si128(_snvmask, _snv_priorwin),
                                                                                            _mm_andnot_si128(_snvmask, _qualitieswin)))),
                                                _truthnqual));
-        
         _d2 = _mm_min_epi16(_mm_add_epi16(_d1, _gap_extend),
                             _mm_add_epi16(_mm_min_epi16(_m1, _i1),  // allow I->D
                                           _gap_open));
-        
         _i2 = _mm_insert_epi16(_mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_mm_srli_si128(_i1, 2), _gap_extend),
                                                            _mm_add_epi16(_mm_srli_si128(_m1, 2), _gap_open)),
                                              _nuc_prior),
                                inf, bandSize - 1);
-        
         _backpointers[s + 1] = _mm_or_si128(_mm_or_si128(_mm_and_si128(_three, _m2),
                                                          _mm_slli_epi16(_mm_and_si128(_three, _i2), 2 * insertLabel)),
                                             _mm_slli_epi16(_mm_and_si128(_three, _d2), 2 * deleteLabel));
@@ -769,14 +716,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
             aln1[alnidx] = truth[--x];
             aln2[alnidx] = gap;
         }
-        
         state = new_state;
         alnidx++;
     }
     
     aln1[alnidx] = 0;
     aln2[alnidx] = 0;
-    
     first_pos = x;
     
     // reverse them
@@ -784,7 +729,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     for (i = 0, j = alnidx - 1; i < j; ++i, j--) {
         x = aln1[i];
         y = aln2[i];
-        
         aln1[i] = aln1[j];
         aln2[i] = aln2[j];
         aln1[j] = x;
@@ -877,9 +821,7 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
     int x {first_pos}; // index into truth
     int y {0};         // index into target
     int i {0};         // index into alignment
-    
-    int result {0}; // alignment score (within flank)
-    
+    int result {0};    // alignment score (within flank)
     const auto rhs_flank_begin = truth_len - rhs_flank_len;
     
     while (aln1[i]) {
@@ -929,7 +871,6 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                 break;
             }
         }
-        
         ++i;
         prev_state = new_state;
     }

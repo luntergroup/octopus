@@ -246,21 +246,19 @@ template <typename String1, typename String2, typename Sequence1, typename Seque
 typename Filters, typename Info>
 VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,  Sequence1&& ref, Sequence2&& alt,
                      boost::optional<QualityType> qual, Filters&& filters, Info&& info)
-:
-region_ {
+: region_ {
     std::forward<String1>(chrom),
     pos - 1,
-    pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1
-},
-id_ {std::forward<String2>(id)},
-ref_ {std::forward<Sequence1>(ref)},
-alt_ {std::forward<Sequence2>(alt)},
-qual_ {qual},
-filter_ {std::forward<Filters>(filters)},
-info_ {std::forward<Info>(info)},
-format_ {},
-genotypes_ {},
-samples_ {}
+    pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1}
+, id_ {std::forward<String2>(id)}
+, ref_ {std::forward<Sequence1>(ref)}
+, alt_ {std::forward<Sequence2>(alt)}
+, qual_ {qual}
+, filter_ {std::forward<Filters>(filters)}
+, info_ {std::forward<Info>(info)}
+, format_ {}
+, genotypes_ {}
+, samples_ {}
 {}
 
 template <typename String1, typename String2, typename Sequence1, typename Sequence2,
@@ -268,21 +266,19 @@ typename Filters, typename Info, typename Format, typename Genotypes, typename S
 VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,   Sequence1&& ref, Sequence2&& alt,
                      boost::optional<QualityType> qual, Filters&& filters,
                      Info&& info, Format&& format, Genotypes&& genotypes, Samples&& samples)
-:
-region_ {
+: region_ {
     std::forward<String1>(chrom),
     pos - 1,
-    pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1
-},
-id_ {std::forward<String2>(id)},
-ref_ {std::forward<Sequence1>(ref)},
-alt_ {std::forward<Sequence2>(alt)},
-qual_ {qual},
-filter_ {std::forward<Filters>(filters)},
-info_ {std::forward<Info>(info)},
-format_ {std::forward<Format>(format)},
-genotypes_ {std::forward<Genotypes>(genotypes)},
-samples_ {std::forward<Samples>(samples)}
+    pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1}
+, id_ {std::forward<String2>(id)}
+, ref_ {std::forward<Sequence1>(ref)}
+, alt_ {std::forward<Sequence2>(alt)}
+, qual_ {qual}
+, filter_ {std::forward<Filters>(filters)}
+, info_ {std::forward<Info>(info)}
+, format_ {std::forward<Format>(format)}
+, genotypes_ {std::forward<Genotypes>(genotypes)}
+, samples_ {std::forward<Samples>(samples)}
 {}
 
 template <typename T>

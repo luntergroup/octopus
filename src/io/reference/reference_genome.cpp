@@ -15,19 +15,15 @@
 namespace octopus {
 
 ReferenceGenome::ReferenceGenome(std::unique_ptr<io::ReferenceReader> impl)
-:
-impl_ {std::move(impl)},
-name_{},
-contig_sizes_ {}
+: impl_ {std::move(impl)}
+, name_{}
+, contig_sizes_ {}
 {
     if (impl_->is_open()) {
         try {
             name_ = impl_->fetch_reference_name();
-            
             ordered_contigs_ = impl_->fetch_contig_names();
-            
             contig_sizes_.reserve(ordered_contigs_.size());
-            
             for (const auto& contig_name : ordered_contigs_) {
                 contig_sizes_.emplace(contig_name, impl_->fetch_contig_size(contig_name));
             }
@@ -40,11 +36,10 @@ contig_sizes_ {}
 }
 
 ReferenceGenome::ReferenceGenome(const ReferenceGenome& other)
-:
-impl_ {other.impl_->clone()},
-name_ {other.name_},
-contig_sizes_ {other.contig_sizes_},
-ordered_contigs_ {other.ordered_contigs_}
+: impl_ {other.impl_->clone()}
+, name_ {other.name_}
+, contig_sizes_ {other.contig_sizes_}
+, ordered_contigs_ {other.ordered_contigs_}
 {}
 
 ReferenceGenome& ReferenceGenome::operator=(ReferenceGenome other)
@@ -115,11 +110,7 @@ ReferenceGenome make_reference(boost::filesystem::path reference_path,
     
     if (max_cached_bases > 0) {
         double locality_bias {0.99}, forward_bias {0.99};
-        
-        if (is_threaded) {
-            locality_bias = 0.25;
-        }
-        
+        if (is_threaded) locality_bias = 0.25;
         return ReferenceGenome {std::make_unique<CachingFasta>(std::move(impl_), max_cached_bases,
                                                                locality_bias, forward_bias)};
     } else {

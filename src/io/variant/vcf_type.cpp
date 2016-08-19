@@ -96,9 +96,8 @@ class UnknownVcfType : std::runtime_error
 {
 public:
     UnknownVcfType(std::string type)
-    :
-    runtime_error {"Invalid VcfType"},
-    type_ {std::move(type)}
+    : runtime_error {"Invalid VcfType"}
+    , type_ {std::move(type)}
     {}
     
     virtual ~UnknownVcfType() noexcept = default;
@@ -116,10 +115,9 @@ class BadVcfType : std::invalid_argument
 {
 public:
     BadVcfType(std::string type, std::string value)
-    :
-    invalid_argument {"invalid VcfType"},
-    type_ {std::move(type)},
-    value_ {std::move(value)}
+    : invalid_argument {"invalid VcfType"}
+    , type_ {std::move(type)}
+    , value_ {std::move(value)}
     {}
     
     virtual ~BadVcfType() noexcept = default;

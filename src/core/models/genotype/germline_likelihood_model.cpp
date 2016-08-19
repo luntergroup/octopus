@@ -39,8 +39,7 @@ static constexpr auto ln(const unsigned n)
 }
 
 GermlineLikelihoodModel::GermlineLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods)
-:
-likelihoods_ {likelihoods}
+: likelihoods_ {likelihoods}
 {}
 
 // ln p(read | genotype)  = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
@@ -74,13 +73,10 @@ double GermlineLikelihoodModel::ln_likelihood_haploid(const Genotype<Haplotype>&
 double GermlineLikelihoodModel::ln_likelihood_diploid(const Genotype<Haplotype>& genotype) const
 {
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
-    
     if (genotype.is_homozygous()) {
         return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), 0.0);
     }
-    
     const auto& log_likelihoods2 = likelihoods_[genotype[1]];
-    
     return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                               std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
                               [this] (const auto a, const auto b) -> double {
@@ -91,13 +87,12 @@ double GermlineLikelihoodModel::ln_likelihood_diploid(const Genotype<Haplotype>&
 double GermlineLikelihoodModel::ln_likelihood_triploid(const Genotype<Haplotype>& genotype) const
 {
     using std::cbegin; using std::cend;
+    static const double ln2 {std::log(2)};
     
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
-    
     if (genotype.is_homozygous()) {
         return std::accumulate(cbegin(log_likelihoods1), cend(log_likelihoods1), 0.0);
     }
-    
     if (genotype.zygosity() == 3) {
         const auto& log_likelihoods2 = likelihoods_[genotype[1]];
         const auto& log_likelihoods3 = likelihoods_[genotype[2]];
@@ -108,9 +103,6 @@ double GermlineLikelihoodModel::ln_likelihood_triploid(const Genotype<Haplotype>
                                         return maths::log_sum_exp(a, b, c) - ln(3);
                                     });
     }
-    
-    static const double ln2 {std::log(2)};
-    
     if (genotype[0] != genotype[1]) {
         const auto& log_likelihoods2 = likelihoods_[genotype[1]];
         return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
@@ -119,9 +111,7 @@ double GermlineLikelihoodModel::ln_likelihood_triploid(const Genotype<Haplotype>
                                       return maths::log_sum_exp(a, ln2 + b) - ln(3);
                                   });
     }
-    
     const auto& log_likelihoods3 = likelihoods_[genotype[2]];
-    
     return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
                               cbegin(log_likelihoods3), 0.0, std::plus<> {},
                               [this] (const auto a, const auto b) -> double {
@@ -132,13 +122,10 @@ double GermlineLikelihoodModel::ln_likelihood_triploid(const Genotype<Haplotype>
 double GermlineLikelihoodModel::ln_likelihood_tetraploid(const Genotype<Haplotype>& genotype) const
 {
     const auto z = genotype.zygosity();
-    
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
-    
     if (z == 1) {
         return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), 0.0);
     }
-    
     if (z == 4) {
         const auto& log_likelihoods2 = likelihoods_[genotype[1]];
         const auto& log_likelihoods3 = likelihoods_[genotype[2]];
@@ -159,20 +146,15 @@ double GermlineLikelihoodModel::ln_likelihood_tetraploid(const Genotype<Haplotyp
 double GermlineLikelihoodModel::ln_likelihood_polyploid(const Genotype<Haplotype>& genotype) const
 {
     const auto ploidy = genotype.ploidy();
-    
     const auto z = genotype.zygosity();
-    
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
     
     if (z == 1) {
         return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), 0.0);
     }
-    
     if (z == 2) {
         static const double lnpm1 {std::log(ploidy - 1)};
-        
         const auto unique_haplotypes = genotype.copy_unique_ref();
-        
         const auto& log_likelihoods2 = likelihoods_[unique_haplotypes.back()];
         
         if (genotype.count(unique_haplotypes.front()) == 1) {
@@ -182,7 +164,6 @@ double GermlineLikelihoodModel::ln_likelihood_polyploid(const Genotype<Haplotype
                                           return maths::log_sum_exp(a, lnpm1 + b) - ln(ploidy);
                                       });
         }
-        
         return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                   std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
                                   [ploidy] (const auto a, const auto b) -> double {
@@ -200,9 +181,7 @@ double GermlineLikelihoodModel::ln_likelihood_polyploid(const Genotype<Haplotype
                    });
     
     std::vector<double> tmp(ploidy);
-    
     double result {0};
-    
     const auto num_likelihoods = ln_likelihoods.front().get().size();
     
     for (std::size_t i {0}; i < num_likelihoods; ++i) {
@@ -210,7 +189,6 @@ double GermlineLikelihoodModel::ln_likelihood_polyploid(const Genotype<Haplotype
                        [i] (const auto& likelihoods) {
                            return likelihoods.get()[i];
                        });
-        
         result += maths::log_sum_exp(tmp) - ln(ploidy);
     }
     

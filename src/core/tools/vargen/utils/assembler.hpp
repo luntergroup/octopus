@@ -162,7 +162,10 @@ private:
         GraphNode() = default;
         template <typename T>
         explicit GraphNode(std::size_t index, T&& kmer, bool is_reference = false)
-        : index {index}, kmer {std::forward<T>(kmer)}, is_reference {is_reference} {}
+        : index {index}
+        , kmer {std::forward<T>(kmer)}
+        , is_reference {is_reference}
+        {}
         
         std::size_t index;
         Kmer kmer;
@@ -303,10 +306,9 @@ private:
 
 template <typename S1, typename S2>
 Assembler::Variant::Variant(std::size_t pos, S1&& ref, S2&& alt)
-:
-begin_pos {pos},
-ref {std::forward<S1>(ref)},
-alt {std::forward<S2>(alt)}
+: begin_pos {pos}
+, ref {std::forward<S1>(ref)}
+, alt {std::forward<S2>(alt)}
 {}
 
 bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noexcept;

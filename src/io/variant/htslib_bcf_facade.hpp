@@ -89,16 +89,12 @@ private:
     using HtsBcf1Ptr  = std::unique_ptr<bcf1_t, HtsBcf1Deleter>;
     
     Path file_path_;
-    
     std::unique_ptr<htsFile, HtsFileDeleter> file_;
     std::unique_ptr<bcf_hdr_t, HtsHeaderDeleter> header_;
-    
     std::vector<std::string> samples_;
     
     std::size_t count_records(HtsBcfSrPtr& sr) const;
-    
     VcfRecord fetch_record(const bcf_srs_t* sr, UnpackPolicy level) const;
-    
     RecordContainer fetch_records(bcf_srs_t*, UnpackPolicy level, size_t num_records) const;
     
     friend RecordIterator;

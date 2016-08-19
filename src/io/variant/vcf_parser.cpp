@@ -43,12 +43,11 @@ using Column = Token<'\t'>;
 // public methods
 
 VcfParser::VcfParser(const fs::path& file_path)
-:
-file_path_ {file_path},
-file_ {file_path_.string()},
-header_ {parse_header(file_)},
-samples_ {header_.samples()},
-first_record_pos_ {file_.tellg()}
+: file_path_ {file_path}
+, file_ {file_path_.string()}
+, header_ {parse_header(file_)}
+, samples_ {header_.samples()}
+, first_record_pos_ {file_.tellg()}
 {}
 
 bool VcfParser::is_header_written() const noexcept
@@ -271,18 +270,14 @@ void parse_header_meta_line(const std::string& line, VcfHeader::Builder& hb)
 void parse_header_sample_names(const std::string& line, VcfHeader::Builder& hb)
 {
     std::istringstream ss {line};
-    
     std::istream_iterator<Column> it {ss}, eos {};
     
     std::advance(it, 8);
-    
     if (it != eos) {
         std::advance(it, 1); // now on FORMAT
-        
         std::vector<std::string> samples {};
         std::copy(it, eos, std::back_inserter(samples));
         samples.shrink_to_fit();
-        
         hb.set_samples(std::move(samples));
     }
 }
@@ -292,7 +287,6 @@ VcfHeader parse_header(std::ifstream& vcf_file)
     vcf_file.seekg(0, std::ios::beg); // reset
     
     VcfHeader::Builder hb {};
-    
     std::string line;
     std::getline(vcf_file, line);
     
@@ -314,28 +308,19 @@ VcfHeader parse_header(std::ifstream& vcf_file)
 bool is_same_contig(const std::string& line, const std::string& contig)
 {
     std::istringstream ss {line};
-    
     std::istream_iterator<Column> it {ss};
-    
     return it->data == contig;
 }
 
 bool overlaps(const std::string& line, const GenomicRegion& region)
 {
     std::istringstream ss {line};
-    
     std::istream_iterator<Column> it {ss};
-    
     if (it->data != region.contig_name()) return false; // CHROM
-    
     std::advance(it, 1); // POS
-    
     const auto begin = std::stol(it->data);
-    
     std::advance(it, 2); // REF
-    
     const auto end = begin + static_cast<long>(it->data.length());
-    
     return (std::min(static_cast<long>(region.end()), end) -
                 std::max(static_cast<long>(region.begin()), begin)) > 0;
 }
@@ -344,7 +329,6 @@ std::vector<std::string> split(const std::string& str, char delim = ',')
 {
     std::stringstream ss {str};
     std::string item;
-    
     std::vector<std::string> result {};
     result.reserve(std::count(std::cbegin(str), std::cend(str), delim) + 1);
     
@@ -371,7 +355,6 @@ using InfoField = Token<';'>;
 void parse_info(const std::string& column, VcfRecord::Builder& rb)
 {
     std::istringstream ss {column};
-    
     std::for_each(std::istream_iterator<InfoField>(ss), std::istream_iterator<InfoField>(),
                   [&rb] (const auto& field) {
                       parse_info_field(field, rb);
@@ -381,11 +364,9 @@ void parse_info(const std::string& column, VcfRecord::Builder& rb)
 bool is_phased(const std::string& genotype)
 {
     const auto pos = genotype.find_first_of("|/");
-    
     if (pos == std::string::npos) {
         return true; // must be haploid
     }
-    
     return genotype[pos] == '|';
 }
 
@@ -393,15 +374,10 @@ void parse_genotype(const VcfRecord::SampleName& sample, const std::string& geno
                     VcfRecord::Builder& rb)
 {
     const bool phased {is_phased(genotype)};
-    
     auto allele_numbers = split(genotype, (phased) ? '|' : '/');
-    
     using Phasing = VcfRecord::Builder::Phasing;
-    
     std::vector<boost::optional<unsigned>> alleles {};
-    
     const auto ploidy = allele_numbers.size();
-    
     alleles.reserve(ploidy);
     
     std::transform(std::cbegin(allele_numbers), std::cend(allele_numbers), std::back_inserter(alleles),
@@ -422,14 +398,11 @@ void parse_sample(const std::string& column, const VcfRecord::SampleName& sample
                   const std::vector<std::string>& format, VcfRecord::Builder& rb)
 {
     auto first_key = std::cbegin(format);
-    
     std::istringstream ss {column};
-    
     std::istream_iterator<SampleField> first_value {ss};
     
     if (format.front() == "GT") { // GT must always come first, if present
         parse_genotype(sample, *first_value, rb);
-        
         ++first_key;
         ++first_value;
     }
@@ -444,9 +417,7 @@ void parse_sample(const std::string& column, const VcfRecord::SampleName& sample
 VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::SampleName>& samples)
 {
     std::istringstream ss {line};
-    
     std::istream_iterator<Column> it {ss}, eos {};
-    
     VcfRecord::Builder rb {};
     
     rb.set_chrom(it->data);
@@ -494,10 +465,9 @@ VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::Sam
 // VcfParser::RecordIterator
 
 VcfParser::RecordIterator::RecordIterator(const VcfParser& vcf, UnpackPolicy unpack)
-:
-parent_vcf_ {&vcf},
-unpack_ {unpack},
-local_ {vcf.file_path_.string()}
+: parent_vcf_ {&vcf}
+, unpack_ {unpack}
+, local_ {vcf.file_path_.string()}
 {
     local_.seekg(parent_vcf_->file_.tellg());
     
@@ -513,10 +483,9 @@ local_ {vcf.file_path_.string()}
 }
 
 VcfParser::RecordIterator::RecordIterator(const RecordIterator& other)
-:
-parent_vcf_ {other.parent_vcf_},
-unpack_ {other.unpack_},
-local_ {parent_vcf_->file_path_.string()}
+: parent_vcf_ {other.parent_vcf_}
+, unpack_ {other.unpack_}
+, local_ {parent_vcf_->file_path_.string()}
 {
     local_.seekg(parent_vcf_->file_.tellg());
     

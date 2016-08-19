@@ -80,22 +80,16 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                           const CallTypeSet& call_types)
 {
     auto builder = Vcf::make_octopus_header_template().set_samples(samples);
-    
     for (const auto& contig : contigs) {
         builder.add_contig(contig, {{"length", std::to_string(reference.contig_size(contig))}});
     }
-    
     builder.add_basic_field("reference", reference.name());
     builder.add_structured_field("octopus", {{"some", "option"}});
-    
     VcfHeaderFactory factory {};
-    
     for (const auto& type : call_types) {
         factory.register_call_type(type);
     }
-    
     factory.annotate(builder);
-    
     return builder.build_once();
 }
 
@@ -119,9 +113,7 @@ auto get_call_types(const GenomeCallingComponents& components, const std::vector
     
     for (const auto& contig : components.contigs()) {
         const auto tmp_caller = components.caller_factory().make(contig);
-        
         auto caller_call_types = tmp_caller->get_call_types();
-        
         result.insert(std::begin(caller_call_types), std::end(caller_call_types));
     }
     
@@ -131,13 +123,10 @@ auto get_call_types(const GenomeCallingComponents& components, const std::vector
 void write_caller_output_header(GenomeCallingComponents& components, const bool sites_only = false)
 {
     const auto call_types = get_call_types(components, components.contigs());
-    
     if (sites_only) {
-        components.output() << make_vcf_header({}, components.contigs(),
-                                               components.reference(), call_types);
+        components.output() << make_vcf_header({}, components.contigs(), components.reference(), call_types);
     } else {
-        components.output() << make_vcf_header(components.samples(),
-                                               components.contigs(),
+        components.output() << make_vcf_header(components.samples(), components.contigs(),
                                                components.reference(), call_types);
     }
 }
@@ -145,7 +134,6 @@ void write_caller_output_header(GenomeCallingComponents& components, const bool 
 void log_startup_info(const GenomeCallingComponents& components)
 {
     std::ostringstream ss {};
-    
     if (!components.samples().empty()) {
         if (components.samples().size() == 1) {
             ss << "Sample is: ";
@@ -153,17 +141,13 @@ void log_startup_info(const GenomeCallingComponents& components)
             ss << "Samples are: ";
         }
     }
-    
     std::transform(std::cbegin(components.samples()), std::cend(components.samples()),
                    std::ostream_iterator<std::string> {ss, " "},
                    [] (const auto& sample) -> std::string {
                        return "\"" + sample + "\"";
                    });
-    
     auto str = ss.str();
-    
     str.pop_back(); // the extra whitespace
-    
     logging::InfoLogger log {};
     log << str;
     stream(log) << "Writing calls to " << components.output().path();
@@ -192,7 +176,6 @@ auto find_max_window(const ContigCallingComponents& components,
     
     if (ends_before(result, remaining_call_region)) {
         auto rest = right_overhang_region(remaining_call_region, result);
-        
         if (!rm.has_reads(components.samples.get(), rest)) {
             result = remaining_call_region;
         }
@@ -207,13 +190,10 @@ auto propose_call_subregion(const ContigCallingComponents& components,
     if (is_empty(remaining_call_region)) {
         return remaining_call_region;
     }
-    
     const auto max_window = find_max_window(components, remaining_call_region);
-    
     if (ends_before(remaining_call_region, max_window)) {
         return remaining_call_region;
     }
-    
     return max_window;
 }
 
@@ -233,11 +213,9 @@ void buffer_connecting_calls(std::deque<VcfRecord>& calls,
                                  [&next_calling_region] (const auto& call) {
                                      return mapped_end(call) > next_calling_region.begin();
                                  });
-    
     buffer.insert(std::end(buffer),
                   std::make_move_iterator(it),
                   std::make_move_iterator(std::end(calls)));
-    
     calls.erase(it, std::end(calls));
 }
 
@@ -249,11 +227,9 @@ void buffer_connecting_calls(const GenomicRegion& buffered_region,
                                      [&buffered_region] (const auto& call) {
                                          return mapped_begin(call) < buffered_region.end();
                                      });
-    
     buffer.insert(std::end(buffer),
                   std::make_move_iterator(std::begin(calls)),
                   std::make_move_iterator(it));
-    
     calls.erase(std::begin(calls), it);
 }
 
@@ -269,14 +245,12 @@ void resolve_connecting_calls(std::vector<VcfRecord>& old_connecting_calls,
     using std::begin; using std::end; using std::make_move_iterator;
     
     if (!old_connecting_calls.empty()) {
-        const auto old_connecting_calls_region = encompassing_region(old_connecting_calls);
-        
         std::vector<VcfRecord> new_connecting_calls {};
+        const auto old_connecting_calls_region = encompassing_region(old_connecting_calls);
         
         buffer_connecting_calls(old_connecting_calls_region, calls, new_connecting_calls);
         
         std::deque<VcfRecord> merged_calls {};
-        
         std::set_union(make_move_iterator(begin(old_connecting_calls)),
                        make_move_iterator(end(old_connecting_calls)),
                        make_move_iterator(begin(new_connecting_calls)),
@@ -295,23 +269,18 @@ void resolve_connecting_calls(std::vector<VcfRecord>& old_connecting_calls,
                                            && lhs.alt() == rhs.alt();
                                        }),
                            end(merged_calls));
-        
         if (is_consistent(merged_calls)) {
             calls.insert(begin(calls),
                          make_move_iterator(begin(merged_calls)),
                          make_move_iterator(end(merged_calls)));
         } else {
             const auto unresolved_region = encompassing_region(merged_calls);
-            
             merged_calls.clear();
             merged_calls.shrink_to_fit();
-            
             auto new_calls = components.caller->call(unresolved_region, components.progress_meter);
-            
             // TODO: we need to make sure the new calls don't contain any calls
             // outside the unresolved_region, and also possibly adjust phase regions
             // in calls past unresolved_region.
-            
             calls.insert(begin(calls),
                          make_move_iterator(begin(new_calls)),
                          make_move_iterator(end(new_calls)));
@@ -322,21 +291,17 @@ void resolve_connecting_calls(std::vector<VcfRecord>& old_connecting_calls,
 void run_octopus_on_contig(ContigCallingComponents&& components)
 {
     // TODO: refactor to use connection resolution developed for multithreaded version
-    
     static auto debug_log = get_debug_log();
     
     assert(!components.regions.empty());
-    
     #ifdef BENCHMARK
     init_timers();
     #endif
     
     std::deque<VcfRecord> calls;
     std::vector<VcfRecord> connecting_calls {};
-    
     auto input_region = components.regions.front();
     auto subregion    = propose_call_subregion(components, input_region);
-    
     auto first_input_region      = std::cbegin(components.regions);
     const auto last_input_region = std::cend(components.regions);
     
@@ -349,7 +314,6 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
             // TODO: which exceptions can we recover from?
             throw;
         }
-        
         resolve_connecting_calls(connecting_calls, calls, components);
         
         auto next_subregion = propose_call_subregion(components, subregion, input_region);
@@ -361,18 +325,15 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
                 next_subregion = propose_call_subregion(components, input_region);
             }
         }
-        
         assert(connecting_calls.empty());
         
         buffer_connecting_calls(calls, next_subregion, connecting_calls);
-        
         try {
             write_calls(std::move(calls), components.output);
         } catch(...) {
             // TODO: which exceptions can we recover from?
             throw;
         }
-        
         subregion = std::move(next_subregion);
     }
     
@@ -384,11 +345,9 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
 void run_octopus_single_threaded(GenomeCallingComponents& components)
 {
     components.progress_meter().start();
-    
     for (const auto& contig : components.contigs()) {
         run_octopus_on_contig(ContigCallingComponents {contig, components});
     }
-    
     components.progress_meter().stop();
 }
 
@@ -396,19 +355,13 @@ VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
                                          const GenomeCallingComponents& components)
 {
     auto path = *components.temp_directory();
-    
     const auto& contig = region.contig_name();
     const auto begin   = std::to_string(region.begin());
     const auto end     = std::to_string(region.end());
-    
     boost::filesystem::path file_name {contig + "_" + begin + "-" + end + "_temp.bcf"};
-    
     path /= file_name;
-    
     const auto call_types = get_call_types(components, {region.contig_name()});
-    
     auto header = make_vcf_header(components.samples(), contig, components.reference(), call_types);
-    
     return VcfWriter {std::move(path), std::move(header)};
 }
 
@@ -426,14 +379,11 @@ TempVcfWriterMap make_temp_vcf_writers(const GenomeCallingComponents& components
     if (!components.temp_directory()) {
         throw std::runtime_error {"Could not make temp writers"};
     }
-    
     TempVcfWriterMap result {};
     result.reserve(components.contigs().size());
-    
     for (const auto& contig : components.contigs()) {
         result.emplace(contig, create_unique_temp_output_file(contig, components));
     }
-    
     return result;
 }
 
@@ -441,13 +391,15 @@ struct Task : public Mappable<Task>
 {
     enum class ExecutionPolicy { seq, par, par_vec }; // To match Parallelism TS
     
+    GenomicRegion region;
+    ExecutionPolicy policy;
+    
     Task() = delete;
     
     Task(GenomicRegion region, ExecutionPolicy policy = ExecutionPolicy::seq)
-    : region {std::move(region)}, policy {policy} {};
-    
-    GenomicRegion region;
-    ExecutionPolicy policy;
+    : region {std::move(region)}
+    , policy {policy}
+    {};
     
     const GenomicRegion& mapped_region() const noexcept { return region; }
 };
@@ -464,7 +416,9 @@ struct ContigOrder
     
     template <typename Container>
     ContigOrder(const Container& contigs)
-    : contigs_ {std::cbegin(contigs), std::cend(contigs)} {}
+    : contigs_ {std::cbegin(contigs)
+    , std::cend(contigs)}
+    {}
     
     bool operator()(const ContigName& lhs, const ContigName& rhs) const
     {
@@ -489,12 +443,10 @@ TaskQueue divide_work_into_tasks(const ContigCallingComponents& components,
     
     for (const auto& region : components.regions) {
         auto subregion = propose_call_subregion(components, region);
-        
         while (!is_empty(subregion)) {
             result.emplace(subregion, policy);
             subregion = propose_call_subregion(components, subregion, region);
         }
-        
         if (result.empty()) {
             result.emplace(region, policy);
         }
@@ -544,7 +496,6 @@ void make_remaining_tasks(TaskMap& tasks, std::vector<ContigName> contigs, Genom
                       lk.unlock();
                       sync.cv.notify_all();
                   });
-    
     auto contig_components = make_contig_components(contigs.back(), components, num_threads);
     auto contig_tasks = divide_work_into_tasks(contig_components, policy);
     
@@ -559,29 +510,35 @@ std::thread make_tasks(TaskMap& tasks, GenomeCallingComponents& components, cons
                        TaskMakerSyncPacket& sync)
 {
     auto contigs = components.contigs();
-    
     if (contigs.empty()) {
         sync.done = true;
         return std::thread {};
     }
-    
     const auto policy = make_execution_policy(components);
-    
     auto contig_components = make_contig_components(contigs.front(), components, num_threads);
-    
     tasks.emplace(std::move(contigs.front()), divide_work_into_tasks(contig_components, policy));
-    
     if (contigs.size() == 1) {
         sync.done = true;
         return std::thread {};
     }
-    
     contigs.erase(std::cbegin(contigs));
-    
     return std::thread {
         make_remaining_tasks, std::ref(tasks), std::move(contigs), std::ref(components),
         num_threads, policy, std::ref(sync)
     };
+}
+
+void log_num_cores(const unsigned num_cores)
+{
+    auto debug_log = logging::get_debug_log();
+    if (debug_log) stream(*debug_log) << "Detected " << num_cores << " system cores";
+}
+
+void warn_undetected_cores()
+{
+    logging::WarningLogger log {};
+    log << "Unable to detect the number of system cores,"
+    " it may be better to run with a user number if the number of cores is known";
 }
 
 unsigned calculate_num_task_threads(const GenomeCallingComponents& components)
@@ -589,25 +546,15 @@ unsigned calculate_num_task_threads(const GenomeCallingComponents& components)
     if (components.num_threads()) {
         return *components.num_threads();
     }
-    
     // TODO: come up with a better calculation
-    
     const auto num_cores = std::thread::hardware_concurrency();
-    
     if (num_cores > 0) {
-        auto debug_log = logging::get_debug_log();
-        if (debug_log) stream(*debug_log) << "Detected " << num_cores << " system cores";
-        
+        log_num_cores(num_cores);
         return num_cores;
+    } else {
+        warn_undetected_cores();
+        return std::min(components.read_manager().num_files(), 8u);
     }
-    
-    logging::WarningLogger log {};
-    log << "Unable to detect the number of system cores,"
-        " it may be better to run with a user number if the number of cores is known";
-    
-    const auto num_files = components.read_manager().num_files();
-    
-    return std::min(num_files, 8u);
 }
 
 Task pop(TaskMap& tasks, TaskMakerSyncPacket& sync)
@@ -624,18 +571,10 @@ Task pop(TaskMap& tasks, TaskMakerSyncPacket& sync)
     return result;
 }
 
-template<typename R>
-bool is_ready(const std::future<R>& f)
-{
-    return f.valid() && f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
-}
-
 struct CompletedTask : public Task, public Mappable<CompletedTask>
 {
     CompletedTask(Task task) : Task {std::move(task)}, calls {}, runtime {} {}
-    
     std::deque<VcfRecord> calls;
-    
     utils::TimeInterval runtime;
 };
 
@@ -659,21 +598,23 @@ struct SyncPacket
     std::atomic_uint count_finished;
 };
 
+template<typename R>
+bool is_ready(const std::future<R>& f)
+{
+    return f.valid() && f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+}
+
 auto run(Task task, ContigCallingComponents components, SyncPacket& sync)
 {
     static auto debug_log = get_debug_log();
-    
     if (debug_log) stream(*debug_log) << "Spawning task " << task;
     
     return std::async(std::launch::async,
                       [task = std::move(task), components = std::move(components), &sync]
                       () -> CompletedTask {
                           CompletedTask result {task};
-                          
                           result.runtime.start = std::chrono::system_clock::now();
-                          
                           result.calls = components.caller->call(task.region, components.progress_meter);
-                          
                           result.runtime.end = std::chrono::system_clock::now();
                           
                           std::unique_lock<std::mutex> lk {sync.mutex};
@@ -686,7 +627,6 @@ auto run(Task task, ContigCallingComponents components, SyncPacket& sync)
 }
 
 using CompletedTaskMap = std::map<ContigName, std::map<ContigRegion, CompletedTask>>;
-
 using HoldbackTask = boost::optional<std::reference_wrapper<const CompletedTask>>;
 
 auto get_writable_completed_tasks(CompletedTask&& task, CompletedTaskMap::mapped_type& buffered_tasks,
@@ -696,7 +636,6 @@ auto get_writable_completed_tasks(CompletedTask&& task, CompletedTaskMap::mapped
     
     while (!running_tasks.empty()) {
         const auto it = buffered_tasks.find(contig_region(running_tasks.front()));
-        
         if (it != std::end(buffered_tasks)) {
             result.push_back(std::move(it->second));
             buffered_tasks.erase(it);
@@ -705,7 +644,6 @@ auto get_writable_completed_tasks(CompletedTask&& task, CompletedTaskMap::mapped
             break;
         }
     }
-    
     if (holdback) {
         const auto it = buffered_tasks.find(contig_region(holdback->get()));
         assert(it->second < result.front());
@@ -728,12 +666,10 @@ using ContigCallingComponentFactoryMap = std::map<ContigName, ContigCallingCompo
 auto make_contig_calling_component_factory_map(GenomeCallingComponents& components)
 {
     ContigCallingComponentFactoryMap result {};
-    
     for (const auto& contig : components.contigs()) {
         result.emplace(contig, [&components, contig] () -> ContigCallingComponents
                        { return ContigCallingComponents {contig, components}; });
     }
-    
     return result;
 }
 
@@ -758,20 +694,21 @@ auto find_last_rhs_connecting(const GenomicRegion& lhs_region, CompletedTask& rh
 void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                               const ContigCallingComponentFactory& calling_components)
 {
+    static auto debug_log = get_debug_log();
+    using std::begin; using std::end; using std::make_move_iterator;
+    
     if (lhs.calls.empty() || rhs.calls.empty()) return;
     
     auto first_lhs_connecting = find_first_lhs_connecting(lhs, encompassing_region(rhs));
     auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_region(lhs), rhs);
     
-    using std::begin; using std::end; using std::make_move_iterator;
-    
     if (first_lhs_connecting == end(lhs.calls) && last_rhs_connecting == begin(rhs.calls)) {
         return;
     }
     
-    static auto debug_log = get_debug_log();
-    
-    if (debug_log) stream(*debug_log) << "Resolving connecting calls between tasks " << lhs << " & " << rhs;
+    if (debug_log) {
+        stream(*debug_log) << "Resolving connecting calls between tasks " << lhs << " & " << rhs;
+    }
     
     std::deque<VcfRecord> merged_calls {};
     
@@ -780,10 +717,9 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                    make_move_iterator(begin(rhs.calls)),
                    make_move_iterator(last_rhs_connecting),
                    std::back_inserter(merged_calls));
-    
+                   
     lhs.calls.erase(first_lhs_connecting, end(lhs.calls));
     rhs.calls.erase(begin(rhs.calls), last_rhs_connecting);
-    
     merged_calls.erase(std::unique(begin(merged_calls), end(merged_calls),
                                    [] (const auto& lhs, const auto& rhs) {
                                        return lhs.pos() == rhs.pos()
@@ -799,9 +735,7 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
     } else {
         const auto unresolved_region = encompassing_region(mapped_region(merged_calls.front()),
                                                            mapped_region(merged_calls.back()));
-        
         const auto components = calling_components();
-        
         auto num_unresolved_region_reads = components.read_manager.get().count_reads(components.samples, unresolved_region);
         
         if (num_unresolved_region_reads <= components.read_buffer_size) {
@@ -819,9 +753,7 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                 if (!contains(unresolved_region, encompassing_region(resolved_calls))) {
                     // TODO
                 }
-                
                 // TODO: we may need to adjust phase regions in calls past the unresolved_region
-                
                 rhs.calls.insert(begin(rhs.calls),
                                  make_move_iterator(begin(resolved_calls)),
                                  make_move_iterator(end(resolved_calls)));
@@ -864,12 +796,10 @@ void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffer
     
     if (is_same_region(task, running_tasks.front())) {
         running_tasks.pop();
-        
         auto writable_tasks = get_writable_completed_tasks(std::move(task), buffered_tasks,
                                                            running_tasks, holdback);
         
         assert(holdback == boost::none);
-        
         resolve_connecting_calls(writable_tasks, calling_components);
         
         // Keep the last task buffered to enable connection resolution when the next task finishes
@@ -883,7 +813,6 @@ void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffer
         if (debug_log) stream(*debug_log) << "Holding back completed task " << *holdback;
         
         writable_tasks.pop_back();
-        
         write(std::move(writable_tasks), temp_vcf);
     } else {
         if (debug_log) stream(*debug_log) << "Buffering completed task " << task;
@@ -892,44 +821,54 @@ void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffer
 }
 
 using FutureCompletedTasks = std::vector<std::future<CompletedTask>>;
-
 using RemainingTaskMap = std::map<ContigName, std::deque<CompletedTask>>;
 
-auto extract_remaining_tasks(FutureCompletedTasks& futures, CompletedTaskMap& buffered_tasks)
+void extract_remaining_future_tasks(FutureCompletedTasks& futures, std::deque<CompletedTask>& result)
 {
     const auto it = std::remove_if(std::begin(futures), std::end(futures),
                                    [] (const auto& f) { return !f.valid(); });
-    
-    std::deque<CompletedTask> tasks {};
-    
-    std::transform(std::begin(futures), it, std::back_inserter(tasks),
+    std::transform(std::begin(futures), it, std::back_inserter(result),
                    [] (auto& fut) { return fut.get(); });
-    
     futures.clear();
     futures.shrink_to_fit();
-    
+}
+
+void extract_buffered_tasks(CompletedTaskMap& buffered_tasks, std::deque<CompletedTask>& result)
+{
     for (auto& p : buffered_tasks) {
         std::transform(std::make_move_iterator(std::begin(p.second)),
                        std::make_move_iterator(std::end(p.second)),
-                       std::back_inserter(tasks),
+                       std::back_inserter(result),
                        [] (auto&& p) { return std::move(p.second); });
         p.second.clear();
     }
-    
     buffered_tasks.clear();
-    
+}
+
+void sort_ignoring_contig_name(std::deque<CompletedTask>& tasks)
+{
     std::sort(std::begin(tasks), std::end(tasks),
               [] (const auto& lhs, const auto& rhs) {
                   return contig_region(lhs) < contig_region(rhs);
               });
-    
+}
+
+RemainingTaskMap make_map(std::deque<CompletedTask>& tasks)
+{
+    sort_ignoring_contig_name(tasks);
     RemainingTaskMap result {};
-    
     for (auto&& task : tasks) {
         result[contig_name(task)].push_back(std::move(task));
     }
-    
     return result;
+}
+
+RemainingTaskMap extract_remaining_tasks(FutureCompletedTasks& futures, CompletedTaskMap& buffered_tasks)
+{
+    std::deque<CompletedTask> tasks {};
+    extract_remaining_future_tasks(futures, tasks);
+    extract_buffered_tasks(buffered_tasks, tasks);
+    return make_map(tasks);
 }
 
 void resolve_connecting_calls(RemainingTaskMap& remaining_tasks,
@@ -961,13 +900,10 @@ auto extract_writers(std::unordered_map<K, VcfWriter>&& vcfs)
 {
     std::vector<VcfWriter> result {};
     result.reserve(vcfs.size());
-    
     for (auto&& p : vcfs) {
         result.push_back(std::move(p.second));
     }
-    
     vcfs.clear();
-    
     return result;
 }
 
@@ -987,31 +923,22 @@ void merge(std::unordered_map<K, VcfWriter>&& temp_vcf_writers, GenomeCallingCom
 void run_octopus_multi_threaded(GenomeCallingComponents& components)
 {
     using namespace std::chrono_literals;
-    
     static auto debug_log = get_debug_log();
     
+    auto temp_vcfs = make_temp_vcf_writers(components);
     const auto num_task_threads = calculate_num_task_threads(components);
     
-    // TODO: start running tasks as soon as they are added into the task map,
-    // this will require some additional syncronisation on the task map
-    
     TaskMap pending_tasks {components.contigs()};
-    
     TaskMakerSyncPacket task_maker_sync {};
     
     auto maker_thread = make_tasks(pending_tasks, components, num_task_threads, task_maker_sync);
-    
     if (maker_thread.joinable()) maker_thread.detach();
     
-    auto temp_vcfs = make_temp_vcf_writers(components);
-    
     FutureCompletedTasks futures(num_task_threads);
-    
     TaskMap running_tasks {ContigOrder {components.contigs()}};
     CompletedTaskMap buffered_tasks {};
     std::map<ContigName, HoldbackTask> holdbacks {};
-    
-    // populate the all the maps first so we can make unchecked acceses
+    // Populate all the maps first so we can make unchecked acceses
     for (const auto& contig : components.contigs()) {
         running_tasks.emplace(contig, TaskMap::mapped_type {});
         buffered_tasks.emplace(contig, CompletedTaskMap::mapped_type {});
@@ -1019,12 +946,10 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     }
     
     SyncPacket task_sync {};
-    
     const auto calling_components = make_contig_calling_component_factory_map(components);
+    unsigned num_idle_futures {0};
     
     components.progress_meter().start();
-    
-    unsigned num_idle_futures {0};
     
     while (!pending_tasks.empty() || !task_maker_sync.done) {
         if (!task_maker_sync.done && pending_tasks.empty()) {
@@ -1040,35 +965,26 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
                 task_maker_sync.cv.wait(lk, [&] () { return !pending_tasks.empty(); });
             }
         }
-        
         num_idle_futures = 0;
-        
         for (auto& future : futures) {
             if (is_ready(future)) {
                 auto completed_task = future.get();
-                                
                 const auto& contig = contig_name(completed_task);
-                
                 write_or_buffer(std::move(completed_task), buffered_tasks.at(contig),
                                 running_tasks.at(contig), holdbacks.at(contig),
                                 temp_vcfs.at(contig), calling_components.at(contig));
-                
                 --task_sync.count_finished;
             }
-            
             if (!future.valid()) {
                 if (!pending_tasks.empty()) {
                     auto task = pop(pending_tasks, task_maker_sync);
-                    
                     future = run(task, calling_components.at(contig_name(task))(), task_sync);
-                    
                     running_tasks.at(contig_name(task)).push(std::move(task));
                 } else {
                     ++num_idle_futures;
                 }
             }
         }
-        
         // If there are idle futures then we must have run out of tasks, so we should
         // wait on the task maker condition variable instead.
         if (num_idle_futures == 0 && task_sync.count_finished == 0) {
@@ -1079,13 +995,10 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
         }
     }
     
+    components.progress_meter().stop();
     running_tasks.clear();
     holdbacks.clear();
-    
     write_remaining_tasks(futures, buffered_tasks, temp_vcfs, calling_components);
-    
-    components.progress_meter().stop();
-    
     merge(std::move(temp_vcfs), components);
 }
 
@@ -1149,38 +1062,28 @@ auto get_filtered_path(const GenomeCallingComponents& components)
     return get_filtered_path(components.output().path());
 }
 
-void filter_calls(const GenomeCallingComponents& components)
-{
-    
-}
-
 auto get_legacy_path(const boost::filesystem::path& native)
 {
     return get_identified_path(native, "legacy");
 }
-        
-void print_foo(std::ostream& os)
+
+void log_run_start(const GenomeCallingComponents& components)
 {
-    os << "foo" << "\n";
+    static auto debug_log = get_debug_log();
+    log_startup_info(components);
+    if (debug_log) print_input_regions(stream(*debug_log), components.search_regions());
 }
 
 void run_octopus(GenomeCallingComponents& components)
 {
     static auto debug_log = get_debug_log();
-    
     logging::InfoLogger info_log {};
-    
-    const auto start = std::chrono::system_clock::now();
-    
     using utils::TimeInterval;
     
-    log_startup_info(components);
-    
-    if (debug_log) {
-        print_input_regions(stream(*debug_log), components.search_regions());
-    }
-    
+    log_run_start(components);
     write_caller_output_header(components, components.sites_only());
+    
+    const auto start = std::chrono::system_clock::now();
     
     try {
         if (is_multithreaded(components)) {
@@ -1194,33 +1097,27 @@ void run_octopus(GenomeCallingComponents& components)
         }
         
         components.output().close();
+        
+        if (components.legacy()) {
+            const VcfReader native {components.output().path()};
+            VcfWriter legacy {get_legacy_path(native.path())};
+            convert_to_legacy(native, legacy);
+        }
     } catch (const std::exception& e) {
         try {
-            if (debug_log) {
-                *debug_log << "Encounted an error, attempting to cleanup";
-            }
+            if (debug_log) *debug_log << "Encounted an error, attempting to cleanup";
             cleanup(components);
         } catch (...) {}
         throw;
     }
     
-    if (components.legacy()) {
-        const VcfReader native {components.output().path()};
-        
-        VcfWriter legacy {get_legacy_path(native.path())};
-        
-        convert_to_legacy(native, legacy);
-    }
-    
-    cleanup(components);
-    
     const auto end = std::chrono::system_clock::now();
-    
     const auto search_size = sum_region_sizes(components.search_regions());
-    
     stream(info_log) << "Finished calling "
                      << utils::format_with_commas(search_size) << "bp, total runtime "
                      << TimeInterval {start, end};
+    
+    cleanup(components);
 }
 } // namespace octopus
 

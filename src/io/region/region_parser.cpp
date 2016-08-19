@@ -40,7 +40,9 @@ public:
     MalformedRegion(std::string region) : region_ {std::move(region)} {}
     
     MalformedRegion(std::string region, std::string why)
-    : region_ {std::move(region)}, why_ {std::move(why)} {}
+    : region_ {std::move(region)}
+    , why_ {std::move(why)}
+    {}
     
     std::string why_ = "is not formatted correctly";
 };
@@ -64,7 +66,9 @@ class MissingReferenceContig : public UserError
     
 public:
     MissingReferenceContig(std::string region, std::string reference)
-    : region_ {std::move(region)}, reference_ {std::move(reference)} {}
+    : region_ {std::move(region)}
+    , reference_ {std::move(reference)}
+    {}
 };
 
 GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
@@ -74,7 +78,6 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
     region.erase(std::remove(std::begin(region), std::end(region), ','), std::end(region));
     
     static const std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
-    
     std::smatch match;
     
     if (std::regex_match(region, match, re) && match.size() == 5) {
@@ -105,17 +108,14 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
                 throw MalformedRegion {region, "has begin greater than end"};
             }
             
-            if (begin > contig_size) {
-                begin = contig_size;
-            }
-            
+            if (begin > contig_size) begin = contig_size;
             if (end > contig_size) end = contig_size;
         }
         
         return GenomicRegion {std::move(contig), begin, end};
+    } else {
+        throw MalformedRegion {region};
     }
-    
-    throw MalformedRegion {region};
 }
 
 namespace {

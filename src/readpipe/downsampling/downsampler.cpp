@@ -82,28 +82,20 @@ auto pick_sample(BidirIt first_unsampled, BidirIt last_unsampled,
                  const AlignedRead::MappingDomain::Size max_read_size)
 {
     assert(first_unsampled < last_unsampled);
-    
     const auto candidates = overlap_range(first_unsampled, last_unsampled,
                                           positions[sample(required_coverage)],
                                           max_read_size);
-    
     assert(!candidates.empty());
-    
     return random_sample(candidates);
 }
 
 void reduce(PositionCoverages& coverages, const ReadWrapper& read, const GenomicRegion& region)
 {
     assert(!begins_before(read, region));
-    
     const auto read_offset = begin_distance(region, read);
-    
     const auto first = std::next(std::begin(coverages), read_offset);
-    
     auto last = std::next(first, region_size(read));
-    
     if (last > std::end(coverages)) last = std::end(coverages);
-    
     std::transform(first, last, first, [] (const auto x) { return (x > 0) ? x - 1 : 0; });
 }
 
@@ -145,7 +137,6 @@ auto extract_sampled(std::vector<ReadWrapper>& reads,
                      std::vector<ReadWrapper>::iterator last_unsampled)
 {
     reads.erase(first_unsampled, last_unsampled);
-    
     std::sort(std::begin(reads), std::end(reads));
     
     std::vector<AlignedRead> result {};
@@ -166,14 +157,12 @@ auto sample(const InputIt first_read, const InputIt last_read, const GenomicRegi
     if (first_read == last_read) return std::vector<AlignedRead> {};
     
     const auto positions = decompose(region);
-    
     auto required_coverage = calculate_minimum_coverages(first_read, last_read, region,
                                                          target_coverage);
     
     assert(positions.size() == required_coverage.size());
     
     std::vector<ReadWrapper> reads {first_read, last_read};
-    
     const auto max_read_size = size(largest_region(reads)); // for efficient overlap detection
     
     // The reads are partitioned into three groups: sampled | unsampled | sampled
@@ -184,9 +173,7 @@ auto sample(const InputIt first_read, const InputIt last_read, const GenomicRegi
     while (!has_minimum_coverage(required_coverage)) {
         const auto sampled_itr = pick_sample(first_unsampled_itr, last_unsampled_itr,
                                              positions, required_coverage, max_read_size);
-        
         reduce(required_coverage, *sampled_itr, region);
-        
         remove_sample(first_unsampled_itr, sampled_itr, last_unsampled_itr);
     }
     
@@ -203,11 +190,8 @@ auto find_target_regions(const ReadContainer& reads, const unsigned max_coverage
     const auto above_max_coverage_regions = find_high_coverage_regions(reads, max_coverage);
     
     std::vector<GenomicRegion> result {};
-    
     if (above_max_coverage_regions.empty()) return result;
-    
     result.reserve(above_max_coverage_regions.size());
-    
     auto above_min_coverage_regions = find_high_coverage_regions(reads, min_coverage);
     
     std::copy_if(std::make_move_iterator(std::begin(above_min_coverage_regions)),
@@ -236,11 +220,8 @@ std::size_t sample(ReadContainer& reads, const unsigned trigger_coverage, const 
     using std::begin; using std::end; using std::make_move_iterator;
     
     const auto prior_num_reads = reads.size();
-    
     if (prior_num_reads == 0) return 0;
-    
     const auto targets = find_target_regions(reads, trigger_coverage, target_coverage);
-    
     if (targets.empty()) return 0;
     
     std::deque<AlignedRead> sampled {};
@@ -250,9 +231,7 @@ std::size_t sample(ReadContainer& reads, const unsigned trigger_coverage, const 
     std::for_each(std::crbegin(targets), std::crend(targets),
                   [&] (const auto& region) {
                       const auto contained = bases(contained_range(begin(reads), end(reads), region));
-                      
                       prepend(sample(begin(contained), end(contained), region, target_coverage), sampled);
-                      
                       reads.erase(begin(contained), end(contained));
                   });
     
@@ -263,10 +242,9 @@ std::size_t sample(ReadContainer& reads, const unsigned trigger_coverage, const 
 
 // Downsampler
 
-Downsampler::Downsampler(unsigned trigger_coverage, unsigned target_coverage)
-:
-trigger_coverage_ {trigger_coverage},
-target_coverage_ {target_coverage}
+Downsampler::Downsampler(const unsigned trigger_coverage, const unsigned target_coverage)
+: trigger_coverage_ {trigger_coverage}
+, target_coverage_ {target_coverage}
 {
     if (target_coverage > trigger_coverage) {
         target_coverage_ = trigger_coverage;

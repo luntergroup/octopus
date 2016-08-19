@@ -98,7 +98,8 @@ private:
     Variant::MappingDomain::Size max_variant_size_;
     
     void prepare_bins_to_insert(const AlignedRead& read);
-    
+    unsigned try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result);
+    void try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result);
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;
     bool assemble_bin(unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const;
     bool try_assemble_region(Assembler& assembler,

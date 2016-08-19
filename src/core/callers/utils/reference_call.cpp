@@ -22,16 +22,12 @@ void ReferenceCall::replace_called_alleles(const char old_base, const char repla
     const auto& ref_sequence = reference_.sequence();
     
     auto it = std::find(std::cbegin(ref_sequence), std::cend(ref_sequence), old_base);
-    
     if (it != std::cend(ref_sequence)) {
         Allele::NucleotideSequence new_sequence {};
         new_sequence.reserve(ref_sequence.size());
-        
         new_sequence.insert(std::end(new_sequence), std::cbegin(ref_sequence), it);
-        
         std::replace_copy(it, std::cend(ref_sequence), std::back_inserter(new_sequence),
                           old_base, replacement_base);
-        
         reference_ = Allele {reference_.mapped_region(), std::move(new_sequence)};
     }
 }

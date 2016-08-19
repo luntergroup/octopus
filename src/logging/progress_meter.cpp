@@ -64,19 +64,18 @@ unsigned calculate_position_tab_length(const T& region)
 }
 
 ProgressMeter::ProgressMeter(InputRegionMap regions)
-:
-regions_ {std::move(regions)},
-completed_regions_ {},
-num_bp_to_search_ {sum_region_sizes(regions_)},
-num_bp_completed_ {0},
-percent_unitl_log_ {percent_block_size_},
-percent_at_last_log_ {0},
-start_ {std::chrono::system_clock::now()},
-last_log_ {start_},
-done_ {false},
-position_tab_length_ {},
-block_compute_times_ {},
-log_ {}
+: regions_ {std::move(regions)}
+, completed_regions_ {}
+, num_bp_to_search_ {sum_region_sizes(regions_)}
+, num_bp_completed_ {0}
+, percent_unitl_log_ {percent_block_size_}
+, percent_at_last_log_ {0}
+, start_ {std::chrono::system_clock::now()}
+, last_log_ {start_}
+, done_ {false}
+, position_tab_length_ {}
+, block_compute_times_ {}
+, log_ {}
 {
     if (!regions_.empty()) {
         position_tab_length_ = calculate_position_tab_length(regions_);
@@ -84,10 +83,9 @@ log_ {}
 }
 
 ProgressMeter::ProgressMeter(GenomicRegion region)
-:
-ProgressMeter {
+: ProgressMeter {
     InputRegionMap {std::make_pair(region.contig_name(), InputRegionMap::mapped_type {region})}
-}
+  }
 {}
 
 ProgressMeter::ProgressMeter(ProgressMeter&& other)
@@ -172,7 +170,6 @@ void remove_outliers(Container& durations)
     
     const auto mean  = mean_duration(std::begin(durations), it);
     const auto stdev = stdev_duration(std::begin(durations), it);
-    
     const auto min = std::max(0.0, mean - (2 * stdev));
     const auto max = mean + (2 * stdev);
     
@@ -180,7 +177,6 @@ void remove_outliers(Container& durations)
                         [=] (const auto& duration) {
                             return duration.count() < min || duration.count() > max;
                         });
-    
     durations.erase(it, std::end(durations));
 }
 
@@ -202,7 +198,6 @@ ProgressMeter::~ProgressMeter()
 {
     if (!done_ && !regions_.empty() && num_bp_completed_ > 0) {
         const TimeInterval duration {start_, std::chrono::system_clock::now()};
-        
         const auto time_taken = to_string(duration);
         
         stream(log_) << std::string(position_tab_length_ - 4, ' ')
@@ -247,7 +242,6 @@ void ProgressMeter::stop()
 {
     if (!done_ && !regions_.empty()) {
         const TimeInterval duration {start_, std::chrono::system_clock::now()};
-        
         const auto time_taken = to_string(duration);
         
         stream(log_) << std::string(position_tab_length_ - 4, ' ')
@@ -266,18 +260,11 @@ void ProgressMeter::stop()
 void ProgressMeter::log_completed(const GenomicRegion& region)
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    
     const auto new_bp_processed = merge(region);
-    
     const auto new_percent_done = percent_completed(new_bp_processed, num_bp_to_search_);
-    
     num_bp_completed_ += new_bp_processed;
-    
     percent_unitl_log_ -= new_percent_done;
-    
-    if (percent_unitl_log_ <= 0) {
-        output_log(region);
-    }
+    if (percent_unitl_log_ <= 0) output_log(region);
 }
 
 // private methods
@@ -310,7 +297,6 @@ ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
             } else if (begins_before(overlapped.front(), new_region)) {
                 new_region = encompassing_region(overlapped.front(), new_region);
             }
-            
             if (ends_before(overlapped.front(), new_region)) {
                 result += right_overhang_size(new_region, overlapped.front());
             } else if (ends_before(new_region, overlapped.front())) {
@@ -327,23 +313,16 @@ ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
         auto result     = size(new_region);
         
         result -= overlap_size(overlapped.front(), contig_region);
-        
         if (begins_before(overlapped.front(), new_region)) {
             new_region = encompassing_region(overlapped.front(), new_region);
         }
-        
         overlapped.advance_begin(1);
-        
         result -= overlap_size(overlapped.back(), new_region);
-        
         if (ends_before(new_region, overlapped.back())) {
             new_region = encompassing_region(new_region, overlapped.back());
         }
-        
         overlapped.advance_end(-1);
-        
         for (const auto& r : overlapped) result -= size(r);
-        
         completed_regions.erase_overlapped(contig_region);
         completed_regions.insert(std::move(new_region));
         
@@ -358,11 +337,8 @@ ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
 void ProgressMeter::write_header()
 {
     const std::string pos_tab_bar(position_tab_length_, '-');
-    
     const auto num_position_tab_whitespaces = position_tab_length_ - 8;
-    
     const std::string pos_tab_lhs_pad((position_tab_length_ - 8) / 2, ' ');
-    
     auto pos_tab_rhs_pad = pos_tab_lhs_pad;
     
     if (num_position_tab_whitespaces % 2) {
@@ -380,24 +356,18 @@ void ProgressMeter::write_header()
 void ProgressMeter::output_log(const GenomicRegion& region)
 {
     const auto percent_done = percent_completed(num_bp_completed_, num_bp_to_search_);
-    
     const auto now = std::chrono::system_clock::now();
-    
     const TimeInterval duration {start_, now};
-    
     const auto time_taken = to_string(duration);
     
     if (percent_done >= 100) return;
     
     const auto percent_since_last_log = percent_done - percent_at_last_log_;
-    
     const auto num_blocks_completed = static_cast<std::size_t>(std::floor(percent_since_last_log / percent_block_size_));
-    
     std::string ttc {"-"};
     
     if (num_blocks_completed > 0) {
         const auto duration_since_last_log = std::chrono::duration_cast<DurationUnits>(now - last_log_);
-        
         const DurationUnits duration_per_block {duration_since_last_log.count() / num_blocks_completed};
         
         std::fill_n(std::back_inserter(block_compute_times_), num_blocks_completed,
@@ -406,11 +376,8 @@ void ProgressMeter::output_log(const GenomicRegion& region)
         const auto num_remaining_blocks = static_cast<std::size_t>((100.0 - percent_done) / percent_block_size_);
         
         remove_outliers(block_compute_times_);
-        
         ttc = to_string(estimate_ttc(now, block_compute_times_, num_remaining_blocks));
-        
         assert(!ttc.empty());
-        
         if (ttc.front() == '0') {
             ttc = "-";
         }
@@ -435,16 +402,12 @@ void ProgressMeter::output_log(const GenomicRegion& region)
 std::string ProgressMeter::curr_position_pad(const GenomicRegion& completed_region) const
 {
     assert(position_tab_length_ > 3);
-    
     const auto num_contig_name_letters = completed_region.contig_name().size();
     const auto num_region_end_digits = num_digits(completed_region.end());
-    
     const auto l = num_contig_name_letters + num_region_end_digits + 1; // +1 for ':'
-    
     if (l < position_tab_length_ - 3) {
         return std::string(position_tab_length_ - l - 3, ' ');
     }
-    
     return "";
 }
 

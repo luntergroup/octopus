@@ -10,8 +10,7 @@
 namespace octopus {
 
 Genotype<Haplotype>::Genotype(const unsigned ploidy)
-:
-haplotypes_ {}
+: haplotypes_ {}
 {
     haplotypes_.reserve(ploidy);
 }
@@ -26,8 +25,7 @@ Genotype<Haplotype>::Genotype(const unsigned ploidy, const Haplotype& init)
 }
 
 Genotype<Haplotype>::Genotype(const unsigned ploidy, const std::shared_ptr<Haplotype>& init)
-:
-haplotypes_ {ploidy, init}
+: haplotypes_ {ploidy, init}
 {}
 
 Genotype<Haplotype>::Genotype(std::initializer_list<Haplotype> haplotypes)
@@ -38,8 +36,7 @@ Genotype<Haplotype>::Genotype(std::initializer_list<Haplotype> haplotypes)
 }
 
 Genotype<Haplotype>::Genotype(std::initializer_list<std::shared_ptr<Haplotype>> haplotypes)
-:
-haplotypes_ {haplotypes}
+: haplotypes_ {haplotypes}
 {
     std::sort(std::begin(haplotypes_), std::end(haplotypes_), HaplotypePtrLess {});
 }

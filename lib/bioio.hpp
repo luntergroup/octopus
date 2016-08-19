@@ -66,19 +66,17 @@ struct FastaContigIndex
     template <typename T>
     explicit FastaContigIndex(T&& contig_name, std::size_t length, std::size_t offset,
                               std::size_t line_length, std::size_t line_byte_length)
-    :
-    contig_name {std::forward<T>(contig_name)},
-    offset {offset}, 
-    length {length},
-    line_length {line_length}, 
-    line_byte_length {line_byte_length} 
+    : contig_name {std::forward<T>(contig_name)}
+    , offset {offset}
+    , length {length}
+    , line_length {line_length}
+    , line_byte_length {line_byte_length}
     {}
     
     template <typename T>
     explicit FastaContigIndex(const T& fasta_index_line)
     {
         const auto parts = detail::split(fasta_index_line, '\t');
-        
         contig_name      = parts[0];
         length           = std::stoull(parts[1]);
         offset           = std::stoull(parts[2]);
@@ -98,9 +96,8 @@ struct FastaRecord
     FastaRecord() = delete;
     template<typename StringType_, typename SequenceType_>
     explicit FastaRecord(StringType_&& name, SequenceType_&& sequence)
-    : 
-    name {std::forward<StringType_>(name)}, 
-    sequence {std::forward<SequenceType_>(sequence)}
+    : name {std::forward<StringType_>(name)}
+    , sequence {std::forward<SequenceType_>(sequence)}
     {}
 };
 
@@ -115,10 +112,9 @@ struct FastqRecord
     FastqRecord() = delete;
     template<typename StringType_, typename SequenceType1_, typename SequenceType2_>
     explicit FastqRecord(StringType_&& name, SequenceType1_&& seq, SequenceType2_&& qual)
-    :
-    name {std::forward<StringType_>(name)}, 
-    seq {std::forward<SequenceType1_>(seq)}, 
-    qual {std::forward<SequenceType2_>(qual)} 
+    : name {std::forward<StringType_>(name)}
+    , seq {std::forward<SequenceType1_>(seq)}
+    , qual {std::forward<SequenceType2_>(qual)}
     {}
 };
 
@@ -145,17 +141,13 @@ namespace detail {
 inline std::size_t count_records(std::istream& is, const char record_delim)
 {
     const auto current_position = is.tellg();
-    
     std::size_t result {};
-    
     while (is) {
         if (is.peek() == record_delim) ++result;
         is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
-    
     is.clear();
     is.seekg(current_position, std::ios::beg);
-    
     return result;
 }
 
@@ -167,7 +159,6 @@ template<typename StringType = std::string, typename SequenceType = std::string>
 {
     StringType name;
     std::getline(fasta, name); // name is always a single line
-    
     SequenceType line;
     std::getline(fasta, line);
     
@@ -177,29 +168,24 @@ template<typename StringType = std::string, typename SequenceType = std::string>
         return ::bioio::FastaRecord<StringType, SequenceType> {std::move(name), std::move(line)};
     } else {
         const auto line_size = line.size();
-        
         line.resize(line_size);
         
         SequenceType seq {};
         seq.reserve(line_size * 100);
         
         const auto line_begin = line.cbegin(), line_end = line.cend();
-        
         seq.insert(seq.end(), line_begin, line_end);
         
         while (fasta.good()) {
             fasta.getline(&line[0], line_size + 1);
-            
             if (line.front() == fastaDelim) {
                 if (fasta.good()) fasta.seekg(-fasta.gcount(), std::ios_base::cur);
                 break;
             }
-            
             if (fasta.gcount() < line_size) {
                 seq.insert(seq.end(), line_begin, line_begin + fasta.gcount() - 1);
                 break;
             }
-            
             seq.insert(seq.end(), line_begin, line_end);
         }
         
@@ -216,13 +202,11 @@ template<typename StringType = std::string, typename SequenceType1 = std::string
     StringType name;
     SequenceType1 seq;
     SequenceType2 quals;
-    
     // Unlike FASTA, FASTQ always use one line per field.
     std::getline(fastq, name);
     std::getline(fastq, seq);
     fastq.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     std::getline(fastq, quals);
-    
     return ::bioio::FastqRecord<StringType, SequenceType1, SequenceType2> 
             {std::move(name), std::move(seq), std::move(quals)};
 }
@@ -249,15 +233,11 @@ inline std::vector<std::string> read_fasta_index_contig_names(std::istream& fast
 {
     std::vector<std::string> result {};
     result.reserve(100);
-    
     std::string line;
-    
     while (std::getline(fasta_index, line)) {
         result.emplace_back(line.substr(0, line.find('\t')));
     }
-    
     result.shrink_to_fit();
-    
     return result;
 }
 
@@ -271,16 +251,12 @@ inline FastaIndex read_fasta_index(std::istream& fasta_index)
 {
     FastaIndex result {};
     result.reserve(100);
-    
     std::string line;
-    
     while (std::getline(fasta_index, line)) {
         FastaContigIndex contig_index {line};
         result.emplace(contig_index.contig_name, std::move(contig_index));
     }
-    
     result.rehash(result.size());
-    
     return result;
 }
 
@@ -324,7 +300,7 @@ inline std::size_t calculate_contig_size(const std::string& fasta_index_path, co
 inline std::ostream& operator<<(std::ostream& os, const FastaContigIndex& row)
 {
     os << row.contig_name << '\t' << row.length << '\t' << row.offset << '\t'
-        << row.line_length << '\t' << row.line_byte_length;
+       << row.line_length << '\t' << row.line_byte_length;
     return os;
 }
 

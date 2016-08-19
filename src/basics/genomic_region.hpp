@@ -88,16 +88,14 @@ private:
 
 template <typename T>
 GenomicRegion::GenomicRegion(T&& contig_name, const Position begin, const Position end)
-:
-contig_name_ {std::forward<T>(contig_name)},
-contig_region_ {begin, end}
+: contig_name_ {std::forward<T>(contig_name)}
+, contig_region_ {begin, end}
 {}
 
 template <typename T, typename R>
 GenomicRegion::GenomicRegion(T&& contig_name, R&& contig_region)
-:
-contig_name_ {std::forward<T>(contig_name)},
-contig_region_ {std::forward<R>(contig_region)}
+: contig_name_ {std::forward<T>(contig_name)}
+, contig_region_ {std::forward<R>(contig_region)}
 {}
 
 inline const GenomicRegion::ContigName& GenomicRegion::contig_name() const noexcept

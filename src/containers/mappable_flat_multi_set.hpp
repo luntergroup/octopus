@@ -210,27 +210,24 @@ private:
 
 template <typename MappableType, typename Allocator>
 MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet()
-:
-elements_ {},
-is_bidirectionally_sorted_ {true},
-max_element_size_ {}
+: elements_ {}
+, is_bidirectionally_sorted_ {true}
+, max_element_size_ {}
 {}
 
 template <typename MappableType, typename Allocator>
 template <typename InputIterator>
 MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet(InputIterator first, InputIterator second)
-:
-elements_ {first, second},
-is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)},
-max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(elements_))}
+: elements_ {first, second}
+, is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)}
+, max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(elements_))}
 {}
 
 template <typename MappableType, typename Allocator>
 MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet(std::initializer_list<MappableType> mappables)
-:
-elements_ {mappables},
-is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)},
-max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(elements_))}
+: elements_ {mappables}
+, is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)}
+, max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(elements_))}
 {}
 
 template <typename MappableType, typename Allocator>
@@ -479,11 +476,8 @@ typename MappableFlatMultiSet<MappableType, Allocator>::iterator
 MappableFlatMultiSet<MappableType, Allocator>::erase(const_iterator p)
 {
     if (p == cend()) return elements_.erase(p);
-    
     const auto erased_size = region_size(*p);
-    
     const auto result = elements_.erase(p);
-    
     if (elements_.empty()) {
         max_element_size_ = 0;
         is_bidirectionally_sorted_ = true;
@@ -492,7 +486,6 @@ MappableFlatMultiSet<MappableType, Allocator>::erase(const_iterator p)
             max_element_size_ = region_size(*largest_mappable(elements_));
         }
     }
-    
     return result;
 }
 
@@ -501,9 +494,7 @@ typename MappableFlatMultiSet<MappableType, Allocator>::size_type
 MappableFlatMultiSet<MappableType, Allocator>::erase(const MappableType& m)
 {
     const auto m_size = region_size(m);
-    
     const auto result = elements_.erase(m);
-    
     if (result > 0) {
         if (elements_.empty()) {
             max_element_size_ = 0;
@@ -513,10 +504,8 @@ MappableFlatMultiSet<MappableType, Allocator>::erase(const MappableType& m)
                 max_element_size_ = region_size(*largest_mappable(elements_));
             }
         }
-        
         return result;
     }
-    
     return 0;
 }
 
@@ -525,11 +514,8 @@ typename MappableFlatMultiSet<MappableType, Allocator>::iterator
 MappableFlatMultiSet<MappableType, Allocator>::erase(const_iterator first, const_iterator last)
 {
     if (first == last) return elements_.erase(first, last);
-    
     const auto max_erased_size = region_size(*largest_mappable(first, last));
-    
     const auto result = elements_.erase(first, last);
-    
     if (elements_.empty()) {
         max_element_size_ = 0;
         is_bidirectionally_sorted_ = true;
@@ -538,7 +524,6 @@ MappableFlatMultiSet<MappableType, Allocator>::erase(const_iterator first, const
             max_element_size_ = region_size(*largest_mappable(elements_));
         }
     }
-    
     return result;
 }
 
@@ -552,19 +537,15 @@ MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt 
     if (first == last) return result;
     
     auto from = std::cbegin(elements_);
-    
     typename RegionType<MappableType>::SizeType max_erased_size {0};
     
     std::for_each(first, last, [this, &result, &from, &max_erased_size] (const auto& element) {
         const auto er = elements_.equal_range(element);
-        
         if (er.first != er.second) {
             if (region_size(element) > max_erased_size) {
                 max_erased_size = region_size(element);
             }
-            
             result += std::distance(er.first, er.second);
-            
             elements_.erase(er.first, er.second);
         }
     });
@@ -715,13 +696,10 @@ typename MappableFlatMultiSet<MappableType, Allocator>::size_type
 MappableFlatMultiSet<MappableType, Allocator>::count_overlapped(const MappableType_& mappable) const
 {
     using octopus::size;
-    
     const auto overlapped = overlap_range(mappable);
-    
     if (is_bidirectionally_sorted_) {
         return size(overlapped, BidirectionallySortedTag {});
     }
-    
     return size(overlapped);
 }
 
@@ -732,13 +710,10 @@ MappableFlatMultiSet<MappableType, Allocator>::count_overlapped(iterator first, 
                                                                 const MappableType_& mappable) const
 {
     using octopus::size;
-    
     const auto overlapped = overlap_range(first, last, mappable);
-    
     if (is_bidirectionally_sorted_) {
         return size(overlapped, BidirectionallySortedTag {});
     }
-    
     return size(overlapped);
 }
 
@@ -749,13 +724,10 @@ MappableFlatMultiSet<MappableType, Allocator>::count_overlapped(const_iterator f
                                                                 const MappableType_& mappable) const
 {
     using octopus::size;
-    
     const auto overlapped = overlap_range(first, last, mappable);
-    
     if (is_bidirectionally_sorted_) {
         return size(overlapped, BidirectionallySortedTag {});
     }
-    
     return size(overlapped);
 }
 
@@ -796,9 +768,7 @@ void MappableFlatMultiSet<MappableType, Allocator>::erase_overlapped(const Mappa
     // TODO: find better implementation
     
     const auto overlapped = overlap_range(mappable);
-    
     using octopus::size;
-    
     if (is_bidirectionally_sorted_ || size(overlapped) == bases(overlapped).size()) {
         erase(std::cbegin(overlapped).base(), std::cend(overlapped).base());
     } else {
@@ -942,11 +912,8 @@ MappableFlatMultiSet<MappableType, Allocator>::has_shared(const_iterator first, 
                                                           const MappableType2_& mappable2) const
 {
     if (inner_distance(mappable1, mappable2) > max_element_size_) return false;
-    
     const auto m = std::minmax(mapped_region(mappable1), mapped_region(mappable2));
-    
     const auto overlapped_lhs = overlap_range(first, last, m.first);
-    
     return std::any_of(std::cbegin(overlapped_lhs), std::cend(overlapped_lhs),
                        [&m] (const auto& region) { return overlaps(region, m.second); });
 }

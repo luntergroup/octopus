@@ -60,7 +60,10 @@ namespace tandem
         StringRun() = default;
         
         explicit StringRun(uint32_t pos, uint32_t length, uint32_t period)
-        : pos {pos}, length {length}, period {period} {}
+        : pos {pos}
+        , length {length}
+        , period {period}
+        {}
         
         uint32_t pos, length, period;
     };

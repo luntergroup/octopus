@@ -52,7 +52,9 @@ private:
 struct PhaseComplementEqual
 {
     PhaseComplementEqual(PartitionIterator first, PartitionIterator last)
-    : first_ {first}, last_ {last} {}
+    : first_ {first}
+    , last_ {last}
+    {}
     
     bool operator()(const GenotypeReference& lhs, const GenotypeReference& rhs) const
     {

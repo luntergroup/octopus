@@ -74,17 +74,15 @@ using Allele       = BasicAllele<GenomicRegion>;
 template <typename RegionTp>
 template <typename R, typename S>
 BasicAllele<RegionTp>::BasicAllele(R&& region, S&& sequence)
-:
-sequence_ {std::forward<S>(sequence)},
-region_ {std::forward<R>(region)}
+: sequence_ {std::forward<S>(sequence)}
+, region_ {std::forward<R>(region)}
 {}
 
 template <typename RegionTp>
 template <typename S>
 BasicAllele<RegionTp>::BasicAllele(const ContigRegion::Position begin, S&& sequence)
-:
-sequence_ {std::forward<S>(sequence)},
-region_ {begin, static_cast<ContigRegion::Position>(begin + sequence_.size())}
+: sequence_ {std::forward<S>(sequence)}
+, region_ {begin, static_cast<ContigRegion::Position>(begin + sequence_.size())}
 {
     static_assert(std::is_same<RegionTp, ContigRegion>::value,
                   "This constructor is only for ContigAllele");
@@ -93,9 +91,8 @@ region_ {begin, static_cast<ContigRegion::Position>(begin + sequence_.size())}
 template <typename RegionTp>
 template <typename T, typename S>
 BasicAllele<RegionTp>::BasicAllele(T&& contig_name, const GenomicRegion::Position begin, S&& sequence)
-:
-sequence_ {std::forward<S>(sequence)},
-region_ {
+: sequence_ {std::forward<S>(sequence)}
+, region_ {
     std::forward<T>(contig_name), begin,
     static_cast<GenomicRegion::Position>(begin + sequence_.size())
 }
@@ -145,7 +142,6 @@ namespace detail {
     auto subsequence(const BasicAllele<RegionTp>& allele, const RegionTp& region)
     {
         using NucleotideSequence = typename BasicAllele<RegionTp>::NucleotideSequence;
-        
         assert(contains(allele, region));
         
         const auto& sequence = allele.sequence();
@@ -153,29 +149,21 @@ namespace detail {
         if (mapped_region(allele) == region) return sequence;
         
         const auto region_offset = static_cast<std::size_t>(begin_distance(allele, region));
-        
         auto first_base_itr = std::cbegin(sequence), last_base_itr = std::cend(sequence);
-        
         const auto region_size = static_cast<std::size_t>(size(region));
         
         if (is_deletion(allele)) {
             if (!is_sequence_empty(allele)) {
                 const auto base_offset = std::min(region_offset, sequence_size(allele));
-                
                 first_base_itr = std::next(std::cbegin(allele.sequence()), base_offset);
-                
                 const auto num_remaining_bases = std::min(region_size, sequence_size(allele) - base_offset);
-                
                 last_base_itr = std::next(first_base_itr, num_remaining_bases);
             }
         } else {
             first_base_itr = std::next(std::cbegin(allele.sequence()), region_offset);
-            
             if (is_insertion(allele)) {
                 const auto num_trailing_bases = static_cast<std::size_t>(end_distance(region, allele));
-                
                 const auto num_subsequence_bases = sequence_size(allele) - region_offset - num_trailing_bases;
-                
                 last_base_itr = std::next(first_base_itr, num_subsequence_bases);
             } else {
                 last_base_itr = std::next(first_base_itr, region_size);
@@ -197,14 +185,12 @@ bool contains(const BasicAllele<RegionTp>& lhs, const BasicAllele<RegionTp>& rhs
     if (!contains(mapped_region(lhs), mapped_region(rhs))) {
         return false;
     }
-    
     if (is_empty_region(lhs)) {
         // If the alleles are both insertions then both regions will be the same so we can only test
         // if the inserted rhs sequence is a subsequence of the lhs sequence. The rhs sequence
         // is required to be non-empty otherwise it would be a subsequence of everything.
         return !rhs.sequence().empty() && detail::is_subsequence(lhs.sequence(), rhs.sequence());
     }
-    
     return detail::subsequence(lhs, rhs.mapped_region()) == rhs.sequence();
 }
 

@@ -46,14 +46,12 @@ void Call::replace(const char old_base, const char replacement_base)
     
     for (auto& p : genotype_calls_) {
         auto& called_genotype = p.second.genotype;
-        
         auto it = std::find_if_not(std::cbegin(called_genotype), std::cend(called_genotype),
                                    [old_base] (const Allele& allele) {
                                        const auto& seq = allele.sequence();
                                        return std::find(std::cbegin(seq), std::cend(seq),
                                                         old_base) == std::cend(seq);
                                    });
-        
         if (it != std::cend(called_genotype)) {
             Genotype<Allele> new_genotype {called_genotype.ploidy()};
             
@@ -61,22 +59,16 @@ void Call::replace(const char old_base, const char replacement_base)
                           [&new_genotype] (const Allele& allele) {
                               new_genotype.emplace(allele);
                           });
-            
             std::for_each(it, std::cend(called_genotype),
                           [&new_genotype, old_base, replacement_base] (const Allele& allele) {
                               Allele::NucleotideSequence new_sequence {};
-                              
                               const auto& old_sequence = allele.sequence();
-                              
                               new_sequence.reserve(old_sequence.size());
-                              
                               std::replace_copy(std::cbegin(old_sequence), std::cend(old_sequence),
                                                 std::back_inserter(new_sequence),
                                                 old_base, replacement_base);
-                              
                               new_genotype.emplace(Allele {allele.mapped_region(), std::move(new_sequence)});
                           });
-            
             called_genotype = std::move(new_genotype);
         }
     }

@@ -31,7 +31,6 @@ MappableMap<typename Map::key_type, typename Map::mapped_type::value_type>
 make_mappable_map(Map map)
 {
     using std::make_move_iterator; using std::begin; using std::end;
-    
     using MappableTp = typename Map::mapped_type::value_type;
     
     MappableMap<typename Map::key_type, MappableTp> result {map.size()};

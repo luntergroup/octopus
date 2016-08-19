@@ -221,13 +221,11 @@ std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
     using vcfspec::header::lineOpener;
     
     os << lineOpener << vcfspec::header::meta::vcfVersion;
-    
     os << header.file_format_ << std::endl;
     
     for (const auto& field : header.basic_fields_) {
         os << lineOpener << field.first.value << "=" << field.second << std::endl;
     }
-    
     for (const auto& format : header.structured_fields_) {
         os << lineOpener << format.first.value << "=" << format.second << std::endl;
     }
@@ -240,11 +238,10 @@ std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
 // VcfHeader::Builder
 
 VcfHeader::Builder::Builder(const VcfHeader& header)
-:
-file_format_ {header.file_format_},
-samples_ {header.samples_},
-basic_fields_ {header.basic_fields_},
-structured_fields_ {header.structured_fields_}
+: file_format_ {header.file_format_}
+, samples_ {header.samples_}
+, basic_fields_ {header.basic_fields_}
+, structured_fields_ {header.structured_fields_}
 {}
 
 VcfHeader::Builder& VcfHeader::Builder::set_file_format(std::string file_format)

@@ -27,9 +27,7 @@ template <typename E>
 auto log_exception(const E& e)
 {
     log_error(e);
-    
     log_program_end();
-    
     return EXIT_FAILURE;
 }
 
@@ -37,16 +35,13 @@ template <typename E>
 auto log_startup_exception(const E& e)
 {
     logging::init();
-    
     log_program_startup();
-    
     return log_exception(e);
 }
 
 void init_common(const OptionMap& options)
 {
     logging::init(get_debug_log_file_name(options), get_trace_log_file_name(options));
-    
     DEBUG_MODE = options::is_debug_mode(options);
     TRACE_MODE = options::is_trace_mode(options);
 }
@@ -56,7 +51,6 @@ void init_common(const OptionMap& options)
 int main(const int argc, const char** argv)
 {
     OptionMap options;
-    
     try {
         options = parse_options(argc, argv);
     } catch (const Error& e) {
@@ -74,11 +68,9 @@ int main(const int argc, const char** argv)
     if (is_run_command(options)) {
         try {
             init_common(options);
-            
             log_program_startup();
             
             logging::InfoLogger info_log {};
-            
             const auto start = std::chrono::system_clock::now();
             
             auto components = collate_genome_calling_components(options);
@@ -86,7 +78,6 @@ int main(const int argc, const char** argv)
             auto end = std::chrono::system_clock::now();
             
             using utils::TimeInterval;
-            
             stream(info_log) << "Done initialising calling components in " << TimeInterval {start, end};
             
             options.clear();
@@ -100,9 +91,7 @@ int main(const int argc, const char** argv)
             return log_exception(e);
         } catch (...) {
             log_unknown_error();
-            
             log_program_end();
-            
             return EXIT_FAILURE;
         }
     }

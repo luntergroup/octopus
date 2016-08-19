@@ -65,9 +65,8 @@ public:
     }
     
     MatrixMap(const MatrixMap& other)
-    :
-    key2s_ {other.key2s_},
-    values_ {other.values_}
+    : key2s_ {other.key2s_}
+    , values_ {other.values_}
     {
         this->generate_indice_map();
     }
@@ -87,9 +86,8 @@ public:
     }
     
     MatrixMap(MatrixMap&& other)
-    :
-    key2s_ {std::move(other.key2s_)},
-    values_ {std::move(other.values_)}
+    : key2s_ {std::move(other.key2s_)}
+    , values_ {std::move(other.values_)}
     {
         this->generate_indice_map();
     }
@@ -179,14 +177,11 @@ public:
     bool assign_keys(InputIt first, InputIt last)
     {
         key2s_.assign(first, last);
-        
         this->regenerate_indice_map();
-        
         if (!values_.empty()) {
             values_.clear();
             return true;
         }
-        
         return false;;
     }
     
@@ -194,12 +189,10 @@ public:
     bool push_back(K&& key)
     {
         this->push_back_reallocate(std::forward<K>(key));
-        
         if (!values_.empty()) {
             values_.clear();
             return true;
         }
-        
         return false;
     }
     
@@ -207,12 +200,10 @@ public:
     bool emplace_back(Args&&... args)
     {
         this->emplace_back_reallocate(std::forward<Args>(args)...);
-        
         if (!values_.empty()) {
             values_.clear();
             return true;
         }
-        
         return false;
     }
     
@@ -275,25 +266,18 @@ public:
             throw std::out_of_range {"MatrixMap::insert_each called with value range of different"
                 " length to Key1 range in this MatrixMap"};
         }
-        
         if (key2_indices_.count(key) == 0) {
             for (auto& p : values_) {
                 p.second.push_back(*first++);
             }
-            
             this->push_back_reallocate(std::forward<K>(key));
-            
             return true;
         }
-        
         const auto index = key2_indices_[key];
-        
         for (auto& p : values_) {
             p.second[index] = *first++;
         }
-        
         this->push_back_reallocate(std::forward<K>(key));
-        
         return false;
     }
     
@@ -302,11 +286,8 @@ public:
         if (key2s_.empty()) {
             return;
         }
-        
         key2_indices_.erase(key2s_.back());
-        
         key2s_.pop_back();
-        
         for (auto& p : values_) {
             p.second.pop_back();
         }
@@ -322,19 +303,13 @@ public:
         if (key2_indices_.count(key) == 0) {
             return false;
         }
-        
         const auto key_index = key2_indices_[key];
-        
         for (auto& p : values_) {
             p.second.erase(std::next(std::begin(p.second), key_index));
         }
-        
         const auto it = key2s_.erase(std::next(std::begin(key2s_), key_index));
-        
         key2_indices_.erase(key);
-        
         std::for_each(it, std::end(key2s_), [this] (const auto& key) { --key2_indices_[key]; });
-        
         return true;
     }
     
@@ -344,18 +319,14 @@ public:
     {
         const auto key2_begin = std::begin(key2s_);
         const auto key2_end   = std::end(key2s_);
-        
         const auto it = std::find_first_of(key2_begin, key2_end, first, last);
         
         if (it == key2_end) return 0;
         
         std::vector<IndexSizeType> indices_removed {};
         indices_removed.reserve(std::distance(it, key2_end));
-        
         auto i = std::distance(key2_begin, it);
-        
         indices_removed.push_back(i++);
-        
         for (auto it2 = it; ++it != key2_end; ++i) {
             if (std::find(first, last, *it) == last) {
                 *it++ = std::move(*it2);
@@ -363,9 +334,7 @@ public:
                 indices_removed.push_back(i);
             }
         }
-        
         indices_removed.shrink_to_fit();
-        
         return 1;
     }
     
@@ -377,9 +346,7 @@ private:
     void generate_indice_map()
     {
         key2_indices_.reserve(key2s_.size());
-        
         IndexSizeType i {0};
-        
         for (const auto& key : key2s_) {
             key2_indices_.emplace(key, i++);
         }
@@ -444,7 +411,9 @@ public:
         ZipIterator() = delete;
         
         explicit ZipIterator(Key2Iterator key2_itr, ValueIterator value_itr)
-        : key2_itr_ {key2_itr}, value_itr_ {value_itr} {}
+        : key2_itr_ {key2_itr}
+        , value_itr_ {value_itr}
+        {}
         
         ~ZipIterator() = default;
         
@@ -517,7 +486,9 @@ public:
         ~InnerMap() = default;
         
         InnerMap(ZipIterator begin, ZipIterator end, const IndiceMap& key2_indices)
-        : begin_ {begin}, end_ {end}, key2_indices_ {key2_indices} {}
+        : begin_ {begin}
+        , end_ {end}, key2_indices_ {key2_indices}
+        {}
         
         ZipIterator begin() const { return begin_; }
         ZipIterator end() const { return end_; }
@@ -559,7 +530,10 @@ public:
         
         explicit Iterator(ValueMapIterator map_itr, Key2Iterator key2_begin_itr,
                           const IndiceMap& key2_indices)
-        : map_itr_ {map_itr}, key2_begin_itr_ {key2_begin_itr}, key2_indices_ {key2_indices} {}
+        : map_itr_ {map_itr}
+        , key2_begin_itr_ {key2_begin_itr}
+        , key2_indices_ {key2_indices}
+        {}
         
         ~Iterator() = default;
         

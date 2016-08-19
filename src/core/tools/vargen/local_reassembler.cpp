@@ -23,6 +23,30 @@
 
 namespace octopus { namespace coretools {
 
+namespace {
+
+void remove_duplicates(std::vector<unsigned>& kmer_sizes)
+{
+    std::sort(std::begin(kmer_sizes), std::end(kmer_sizes));
+    kmer_sizes.erase(std::unique(std::begin(kmer_sizes), std::end(kmer_sizes)), std::end(kmer_sizes));
+}
+
+auto generate_fallback_kmer_sizes(std::vector<unsigned>& result,
+                                  const std::vector<unsigned>& default_kmer_sizes,
+                                  const unsigned num_fallbacks, const unsigned interval_size)
+{
+    assert(!default_kmer_sizes.empty());
+    result.resize(num_fallbacks);
+    auto k = default_kmer_sizes.back();
+    std::generate_n(std::begin(result), num_fallbacks,
+                    [&k, interval_size] () noexcept {
+                        k += interval_size;
+                        return k;
+                    });
+}
+
+} // namespace
+
 LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options options)
 : reference_ {reference}
 , default_kmer_sizes_ {std::move(options.kmer_sizes)}
@@ -33,22 +57,10 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , min_supporting_reads_ {options.min_supporting_reads}
 , max_variant_size_ {options.max_variant_size}
 {
-    using std::begin; using std::end;
-    
     if (default_kmer_sizes_.empty()) return;
-    
-    std::sort(begin(default_kmer_sizes_), end(default_kmer_sizes_));
-    
-    default_kmer_sizes_.erase(std::unique(begin(default_kmer_sizes_), end(default_kmer_sizes_)),
-                              end(default_kmer_sizes_));
-    fallback_kmer_sizes_.resize(options.num_fallbacks);
-    
-    auto k = default_kmer_sizes_.back();
-    std::generate_n(begin(fallback_kmer_sizes_), options.num_fallbacks,
-                    [&] () {
-                        k += options.fallback_interval_size;
-                        return k;
-                    });
+    remove_duplicates(default_kmer_sizes_);
+    generate_fallback_kmer_sizes(fallback_kmer_sizes_, default_kmer_sizes_,
+                                 options.num_fallbacks, options.fallback_interval_size);
 }
 
 std::unique_ptr<VariantGenerator> LocalReassembler::do_clone() const
@@ -57,8 +69,7 @@ std::unique_ptr<VariantGenerator> LocalReassembler::do_clone() const
 }
 
 LocalReassembler::Bin::Bin(GenomicRegion region)
-:
-region {std::move(region)}
+: region {std::move(region)}
 {}
 
 const GenomicRegion& LocalReassembler::Bin::mapped_region() const noexcept
@@ -196,18 +207,12 @@ auto overlapped_bins(C& bins, const R& read)
 void LocalReassembler::do_add_read(const AlignedRead& read)
 {
     prepare_bins_to_insert(read);
-    
     auto active_bins = overlapped_bins(bins_, read);
-    
     assert(!active_bins.empty());
-    
     if (!has_low_quality_match(read, mask_threshold_)) {
-        for (auto& bin : active_bins) {
-            bin.insert(read);
-        }
+        for (auto& bin : active_bins) bin.insert(read);
     } else {
-        auto masked_sequence = transform_low_quality_matches_to_reference(read, mask_threshold_,
-                                                                          reference_);
+        auto masked_sequence = transform_low_quality_matches_to_reference(read, mask_threshold_, reference_);
         masked_sequence_buffer_.emplace_back(std::move(masked_sequence));
         for (auto& bin : active_bins) {
             bin.insert(std::cref(masked_sequence_buffer_.back()));
@@ -235,22 +240,12 @@ void remove_nonoverlapping(Container& candidates, const GenomicRegion& region)
     candidates.erase(it, std::end(candidates));
 }
 
-template <typename L>
-void log_success(L& log, const char* type, const unsigned k)
-{
-    if (log) stream(*log, 8) << type << " assembler with kmer size " << k << " completed";
-}
-
-template <typename L>
-void log_failure(L& log, const char* type, const unsigned k)
-{
-    if (log) stream(*log, 8) << type << " assembler with kmer size " << k << " failed";
-}
-
 auto extract_unique(std::deque<Variant>&& variants)
 {
-    std::vector<Variant> result {std::make_move_iterator(std::begin(variants)),
-        std::make_move_iterator(std::end(variants))};
+    std::vector<Variant> result {
+        std::make_move_iterator(std::begin(variants)),
+        std::make_move_iterator(std::end(variants))
+    };
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
@@ -265,53 +260,35 @@ void remove_oversized(std::vector<Variant>& variants, const Variant::MappingDoma
                    std::end(variants));
 }
 
+auto extract_final(std::deque<Variant>&& variants, const GenomicRegion& extract_region,
+                   const Variant::MappingDomain::Size max_size)
+{
+    auto result = extract_unique(std::move(variants));
+    remove_oversized(result, max_size);
+    remove_nonoverlapping(result, extract_region); // as we expanded original region
+    return result;
+}
+
 std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion& region)
 {
     if (bins_.empty()) return {};
     
-    auto active_bins = overlapped_bins(bins_, region);
-    
     std::deque<Variant> candidates {};
     
-    for (Bin& bin : active_bins) {
+    for (auto& bin : overlapped_bins(bins_, region)) {
         if (bin.read_sequences.empty()) continue;
-        
         if (debug_log_) {
             stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
                                 << " reads in bin " << mapped_region(bin);
         }
-        
-        unsigned num_defaults_unsuccessful {0};
-        
-        for (const auto k : default_kmer_sizes_) {
-            const auto success = assemble_bin(k, bin, candidates);
-            if (success) {
-                log_success(debug_log_, "Default", k);
-            } else {
-                log_failure(debug_log_, "Default", k);
-                ++num_defaults_unsuccessful;
-            }
+        const auto num_default_failures = try_assemble_with_defaults(bin, candidates);
+        if (num_default_failures == default_kmer_sizes_.size()) {
+            try_assemble_with_fallbacks(bin, candidates);
         }
-        
-        if (num_defaults_unsuccessful == default_kmer_sizes_.size()) {
-            for (const auto k : fallback_kmer_sizes_) {
-                const auto success = assemble_bin(k, bin, candidates);
-                if (success) {
-                    log_success(debug_log_, "Fallback", k);
-                    break;
-                } else {
-                    log_failure(debug_log_, "Fallback", k);
-                }
-            }
-        }
-        
         bin.clear();
     }
     
-    auto result = extract_unique(std::move(candidates));
-    remove_oversized(result, max_variant_size_);
-    remove_nonoverlapping(result, region); // as we expanded original region
-    return result;
+    return extract_final(std::move(candidates), region, max_variant_size_);
 }
 
 void LocalReassembler::do_clear() noexcept
@@ -326,6 +303,8 @@ std::string LocalReassembler::name() const
 {
     return "Local reassembly";
 }
+
+// private methods
 
 void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
 {
@@ -352,6 +331,50 @@ void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
     }
     
     assert(contains(encompassing_region(bins_.front(), bins_.back()), read_region));
+}
+
+namespace {
+
+template <typename L>
+void log_success(L& log, const char* type, const unsigned k)
+{
+    if (log) stream(*log, 8) << type << " assembler with kmer size " << k << " completed";
+}
+
+template <typename L>
+void log_failure(L& log, const char* type, const unsigned k)
+{
+    if (log) stream(*log, 8) << type << " assembler with kmer size " << k << " failed";
+}
+    
+} // namespace
+
+unsigned LocalReassembler::try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result)
+{
+    unsigned num_failures {0};
+    for (const auto k : default_kmer_sizes_) {
+        const auto success = assemble_bin(k, bin, result);
+        if (success) {
+            log_success(debug_log_, "Default", k);
+        } else {
+            log_failure(debug_log_, "Default", k);
+            ++num_failures;
+        }
+    }
+    return num_failures;
+}
+
+void LocalReassembler::try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result)
+{
+    for (const auto k : fallback_kmer_sizes_) {
+        const auto success = assemble_bin(k, bin, result);
+        if (success) {
+            log_success(debug_log_, "Fallback", k);
+            break;
+        } else {
+            log_failure(debug_log_, "Fallback", k);
+        }
+    }
 }
 
 GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& input_region,
@@ -402,7 +425,6 @@ auto split_mnp(Assembler::Variant&& v)
     result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
     
     auto p = std::mismatch(next(begin(v.ref)), prev(end(v.ref)), next(begin(v.alt)));
-    
     while (p.first != prev(end(v.ref))) {
         result.emplace_back(v.begin_pos + distance(begin(v.ref), p.first), *p.first, *p.second);
         p = std::mismatch(next(p.first), prev(end(v.ref)), next(p.second));
@@ -584,22 +606,13 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
                                            const GenomicRegion& reference_region,
                                            std::deque<Variant>& result) const
 {
-    if (!assembler.prune(min_supporting_reads_)) {
-        return false;
-    }
-    
+    if (!assembler.prune(min_supporting_reads_)) return false;
     auto variants = assembler.extract_variants();
-    
     assembler.clear();
-    
-    if (variants.empty()) {
-        return true;
-    }
-    
+    if (variants.empty()) return true;
     trim_reference(variants);
     decompose_complex(variants);
     add_to_mapped_variants(result, std::move(variants), reference_region);
-    
     return true;
 }
 

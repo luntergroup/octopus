@@ -37,9 +37,8 @@ namespace octopus {
 IndividualCaller::IndividualCaller(Caller::Components&& components,
                                    Caller::Parameters general_parameters,
                                    Parameters specific_parameters)
-:
-Caller {std::move(components), std::move(general_parameters)},
-parameters_ {std::move(specific_parameters)}
+: Caller {std::move(components), std::move(general_parameters)}
+, parameters_ {std::move(specific_parameters)}
 {
     if (parameters_.ploidy == 0) {
         throw std::logic_error {"IndividualCaller: ploidy must be > 0"};
@@ -57,18 +56,15 @@ IndividualCaller::Latents::Latents(const SampleName& sample,
                                    const std::vector<Haplotype>& haplotypes,
                                    std::vector<Genotype<Haplotype>>&& genotypes,
                                    ModelInferences&& inferences)
-:
-genotype_posteriors_ {},
-haplotype_posteriors_ {},
-model_log_evidence_ {inferences.log_evidence}
+: genotype_posteriors_ {}
+, haplotype_posteriors_ {}
+, model_log_evidence_ {inferences.log_evidence}
 {
     GenotypeProbabilityMap genotype_posteriors {
         std::make_move_iterator(std::begin(genotypes)),
         std::make_move_iterator(std::end(genotypes))
     };
-    
     insert_sample(sample, inferences.posteriors.genotype_probabilities, genotype_posteriors);
-    
     genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
     haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
 }
@@ -118,9 +114,7 @@ IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     
     const auto prior_model = make_prior_model(haplotypes);
-    
     const model::IndividualModel model {prior_model, debug_log_};
-    
     haplotype_likelihoods.prime(sample());
     
     auto inferences = model.infer_latents(genotypes, haplotype_likelihoods);
@@ -159,9 +153,7 @@ IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplot
     const auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
     
     const auto prior_model = make_prior_model(haplotypes);
-    
     const model::IndividualModel model {prior_model, debug_log_};
-    
     haplotype_likelihoods.prime(sample());
     
     const auto inferences = model.infer_latents(genotypes, haplotype_likelihoods);
@@ -182,9 +174,13 @@ struct VariantCall : Mappable<VariantCall>
 {
     VariantCall() = delete;
     VariantCall(const std::pair<VariantReference, Phred<double>>& p)
-    : variant {p.first}, posterior {p.second} {}
+    : variant {p.first}
+    , posterior {p.second}
+    {}
     VariantCall(const Variant& variant, Phred<double> posterior)
-    : variant {variant}, posterior {posterior} {}
+    : variant {variant}
+    , posterior {posterior}
+    {}
     
     const GenomicRegion& mapped_region() const noexcept
     {
@@ -201,7 +197,9 @@ using VariantCalls = std::vector<VariantCall>;
 struct GenotypeCall
 {
     template <typename T> GenotypeCall(T&& genotype, Phred<double> posterior)
-    : genotype {std::forward<T>(genotype)}, posterior {posterior} {}
+    : genotype {std::forward<T>(genotype)}
+    , posterior {posterior}
+    {}
     
     Genotype<Allele> genotype;
     Phred<double> posterior;
@@ -287,9 +285,7 @@ GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
     
     for (const auto& region : variant_regions) {
         auto spliced_genotype = splice<Allele>(genotype_call, region);
-        
         const auto posterior = compute_posterior(spliced_genotype, genotype_posteriors);
-        
         result.emplace_back(std::move(spliced_genotype), posterior);
     }
     
@@ -359,22 +355,14 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
                                        const Latents& latents) const
 {
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
-    
     debug::log(genotype_posteriors, debug_log_, trace_log_);
-    
     const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
-    
     debug::log(candidate_posteriors, debug_log_, trace_log_);
-    
     const auto genotype_call = call_genotype(genotype_posteriors);
-    
     auto variant_calls = call_candidates(candidate_posteriors, genotype_call,
                                          parameters_.min_variant_posterior);
-    
     const auto called_regions = extract_regions(variant_calls);
-    
     auto genotype_calls = call_genotypes(genotype_call, genotype_posteriors, called_regions);
-    
     return transform_calls(sample(), std::move(variant_calls), std::move(genotype_calls));
 }
 
@@ -387,9 +375,8 @@ namespace {
         
         template <typename A>
         RefCall(A&& reference_allele, double posterior)
-        :
-        reference_allele {std::forward<A>(reference_allele)},
-        posterior {posterior}
+        : reference_allele {std::forward<A>(reference_allele)}
+        , posterior {posterior}
         {}
         
         const GenomicRegion& mapped_region() const noexcept { return reference_allele.mapped_region(); }

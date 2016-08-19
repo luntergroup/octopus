@@ -58,33 +58,27 @@ namespace octopus {
     {
         using Position = GenomicRegion::Position;
         
-        std::vector<GenomicRegion> result {};
-        
         auto positional_coverage = calculate_positional_coverage(reads, region);
         
         using Iterator = typename decltype(positional_coverage)::const_iterator;
-        
         Iterator first {positional_coverage.cbegin()};
         Iterator current {first};
         Iterator last {positional_coverage.cend()};
         Iterator high_range_first, high_range_last;
-        
         Position high_range_begin, high_range_end;
+        
+        std::vector<GenomicRegion> result {};
         
         while (current != last) {
             const auto is_high_coverage = [max_coverage] (const auto coverage) { return coverage > max_coverage; };
-            
             high_range_first = std::find_if(current, last, is_high_coverage);
             
             if (high_range_first == last) break;
             
-            high_range_last = std::find_if_not(high_range_first, last, is_high_coverage);
-            
+            high_range_last  = std::find_if_not(high_range_first, last, is_high_coverage);
             high_range_begin = mapped_begin(region) + static_cast<Position>(std::distance(first, high_range_first));
             high_range_end   = high_range_begin + static_cast<Position>(std::distance(high_range_first, high_range_last));
-            
             result.emplace_back(contig_name(region), high_range_begin, high_range_end);
-            
             current = high_range_last;
         }
         

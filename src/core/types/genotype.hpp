@@ -172,22 +172,19 @@ void Genotype<MappableType>::emplace(T&& element)
 
 template <typename MappableType>
 Genotype<MappableType>::Genotype(const unsigned ploidy)
-:
-elements_ {}
+: elements_ {}
 {
     elements_.reserve(ploidy);
 }
 
 template <typename MappableType>
 Genotype<MappableType>::Genotype(const unsigned ploidy, const MappableType& init)
-:
-elements_ {ploidy, init}
+: elements_ {ploidy, init}
 {}
 
 template <typename MappableType>
 Genotype<MappableType>::Genotype(std::initializer_list<MappableType> elements)
-:
-elements_ {elements}
+: elements_ {elements}
 {}
 
 template <typename MappableType>

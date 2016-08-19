@@ -19,9 +19,8 @@ namespace octopus { namespace model {
 
 IndividualModel::IndividualModel(const CoalescentModel& genotype_prior_model,
                                  boost::optional<logging::DebugLogger> debug_log)
-:
-genotype_prior_model_ {genotype_prior_model},
-debug_log_ {debug_log}
+: genotype_prior_model_ {genotype_prior_model}
+, debug_log_ {debug_log}
 {}
 
 namespace debug {
@@ -93,14 +92,11 @@ namespace debug {
                        std::back_inserter(v), [] (const auto& g, const auto& p) {
                            return std::make_pair(std::cref(g), p);
                        });
-        
         const auto mth = std::next(std::begin(v), m);
-        
         std::partial_sort(std::begin(v), mth, std::end(v),
                           [] (const auto& lhs, const auto& rhs) {
                               return lhs.second > rhs.second;
                           });
-        
         std::for_each(std::begin(v), mth,
                       [&] (const auto& p) {
                           print_variant_alleles(stream, p.first);
@@ -137,14 +133,11 @@ namespace debug {
                        std::back_inserter(v), [] (const auto& g, const auto& p) {
                            return std::make_pair(std::cref(g), p);
                        });
-        
         const auto mth = std::next(std::begin(v), m);
-        
         std::partial_sort(std::begin(v), mth, std::end(v),
                           [] (const auto& lhs, const auto& rhs) {
                               return lhs.second > rhs.second;
                           });
-        
         std::for_each(std::begin(v), mth,
                       [&] (const auto& p) {
                           print_variant_alleles(stream, p.first);

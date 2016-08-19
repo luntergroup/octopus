@@ -65,7 +65,6 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
     
     auto it1 = std::cbegin(align1);
     auto it2 = std::cbegin(align2);
-    
     const auto last1 = std::find_if_not(std::crbegin(align1), std::crend(align1),
                                         [] (const auto x) { return x == 0; }).base();
     const auto last2 = std::next(it1, std::distance(it1, last1));
@@ -75,7 +74,6 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
         
         if (p.first != it1) {
             result.emplace_back(std::distance(it1, p.first), CigarOperation::Flag::sequenceMatch);
-            
             if (p.first == last1) break;
         }
         
@@ -83,28 +81,20 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
         
         if (*p.first == '-') {
             const auto it3 = std::find_if_not(std::next(p.first), last1, is_gap);
-            
             const auto n = std::distance(p.first, it3);
-            
             result.emplace_back(n, CigarOperation::Flag::insertion);
-            
             it1 = it3;
             it2 = std::next(p.second, n);
         } else if (*p.second == '-') {
             const auto it3 = std::find_if_not(std::next(p.second), last2, is_gap);
-            
             const auto n = std::distance(p.second, it3);
-            
             result.emplace_back(n, CigarOperation::Flag::deletion);
-            
             it1 = std::next(p.first, n);
             it2 = it3;
         } else {
             const auto p2 = std::mismatch(std::next(p.first), last1, std::next(p.second),
                                           std::not_equal_to<> {});
-            
             result.emplace_back(std::distance(p.first, p2.first), CigarOperation::Flag::substitution);
-            
             std::tie(it1, it2) = p2;
         }
     }
@@ -136,9 +126,7 @@ auto simd_align(const std::string& truth, const std::string& target,
     
     const auto truth_size  = static_cast<int>(truth.size());
     const auto target_size = static_cast<int>(target.size());
-    
     const auto truth_alignment_size = static_cast<int>(target_size + 2 * pad - 1);
-    
     const auto alignment_offset = std::max(0, static_cast<int>(target_offset) - pad);
     
     if (alignment_offset + truth_alignment_size > truth_size) {
@@ -157,7 +145,6 @@ auto simd_align(const std::string& truth, const std::string& target,
                                        model.snv_priors.data() + alignment_offset,
                                        model.gap_open_penalties.data() + alignment_offset,
                                        model.gap_extend, model.nuc_prior);
-        
         return -ln10Div10<> * static_cast<double>(score);
     }
     
@@ -182,7 +169,6 @@ auto simd_align(const std::string& truth, const std::string& target,
                                    align1.data(), align2.data(), first_pos);
     
     auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
-    
     if (lhs_flank_size < alignment_offset) {
         lhs_flank_size = 0;
     } else {
@@ -190,7 +176,6 @@ auto simd_align(const std::string& truth, const std::string& target,
     }
     
     auto rhs_flank_size = static_cast<int>(model.rhs_flank_size);
-    
     if (alignment_offset + truth_alignment_size < truth_size - rhs_flank_size) {
         rhs_flank_size = 0;
     } else {
@@ -210,9 +195,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                                                          model.gap_extend, model.nuc_prior,
                                                          first_pos,
                                                          align1.data(), align2.data());
-    
     assert(flank_score <= score);
-    
     return -ln10Div10<> * static_cast<double>(score - flank_score);
 }
 
@@ -252,7 +235,6 @@ double score(const std::string& truth, const std::string& target,
     validate(truth, target, target_qualities, target_offset, model);
     
     const auto offsetted_truth_begin_itr = next(cbegin(truth), target_offset);
-    
     const auto m1 = std::mismatch(cbegin(target), cend(target), offsetted_truth_begin_itr);
     
     if (m1.first == cend(target)) {
@@ -270,7 +252,6 @@ double score(const std::string& truth, const std::string& target,
         }
         
         const auto target_index = distance(cbegin(target), m1.first);
-        
         auto mispatch_penalty = target_qualities[target_index];
         
         if (model.snv_mask[truth_index] == *m1.first) {

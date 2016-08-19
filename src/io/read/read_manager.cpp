@@ -19,32 +19,28 @@
 namespace octopus {
 
 ReadManager::ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files)
-:
-max_open_files_ {max_open_files},
-num_files_ {static_cast<unsigned>(read_file_paths.size())},
-closed_readers_ {std::make_move_iterator(std::begin(read_file_paths)),
-                 std::make_move_iterator(std::end(read_file_paths))},
-open_readers_ {FileSizeCompare {}},
-reader_paths_containing_sample_ {},
-possible_regions_in_readers_ {},
-samples_ {}
+: max_open_files_ {max_open_files}
+, num_files_ {static_cast<unsigned>(read_file_paths.size())}
+, closed_readers_ {
+    std::make_move_iterator(std::begin(read_file_paths)),
+    std::make_move_iterator(std::end(read_file_paths))}
+, open_readers_ {FileSizeCompare {}}
+, reader_paths_containing_sample_ {}
+, possible_regions_in_readers_ {}
+, samples_ {}
 {
     setup_reader_samples_and_regions();
-    
     open_initial_files();
-    
     samples_.reserve(reader_paths_containing_sample_.size());
-    
     for (const auto& pair : reader_paths_containing_sample_) {
         samples_.emplace_back(pair.first);
     }
-    
     std::sort(std::begin(samples_), std::end(samples_)); // just for consistency
 }
 
 ReadManager::ReadManager(std::initializer_list<Path> read_file_paths)
-:
-ReadManager {std::vector<Path> {read_file_paths}, static_cast<unsigned>(read_file_paths.size())}
+: ReadManager {std::vector<Path> {read_file_paths}
+, static_cast<unsigned>(read_file_paths.size())}
 {}
 
 ReadManager::ReadManager(ReadManager&& other)
@@ -61,15 +57,16 @@ num_files_ {std::move(other.num_files_)}
 
 void swap(ReadManager& lhs, ReadManager& rhs) noexcept
 {
-    using std::swap;
     if (&lhs == &rhs) return;
+    
     std::lock(lhs.mutex_, rhs.mutex_);
     std::lock_guard<std::mutex> lock_lhs {lhs.mutex_, std::adopt_lock}, lock_rhs {rhs.mutex_, std::adopt_lock};
-    //swap(lhs.num_files_, rhs.num_files_);
-    swap(lhs.closed_readers_, rhs.closed_readers_);
-    swap(lhs.open_readers_, rhs.open_readers_);
+    
+    using std::swap;
+    swap(lhs.closed_readers_,                 rhs.closed_readers_);
+    swap(lhs.open_readers_,                   rhs.open_readers_);
     swap(lhs.reader_paths_containing_sample_, rhs.reader_paths_containing_sample_);
-    swap(lhs.possible_regions_in_readers_, rhs.possible_regions_in_readers_);
+    swap(lhs.possible_regions_in_readers_,    rhs.possible_regions_in_readers_);
     swap(lhs.samples_, rhs.samples_);
 }
 
@@ -105,7 +102,6 @@ bool ReadManager::has_reads(const std::vector<SampleName>& samples,
     auto reader_paths = get_reader_paths_containing_samples(samples);
     
     auto it = partition_open(reader_paths);
-    
     while (!reader_paths.empty()) {
         if (std::any_of(it, end(reader_paths),
                         [this, &region, &samples] (const auto& reader_path) {
@@ -113,7 +109,6 @@ bool ReadManager::has_reads(const std::vector<SampleName>& samples,
                         })) {
                             return true;
                         }
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -124,9 +119,7 @@ bool ReadManager::has_reads(const std::vector<SampleName>& samples,
 bool ReadManager::has_reads(const GenomicRegion& region) const
 {
     auto reader_paths = get_reader_paths_containing_samples(samples());
-    
     auto it = partition_open(reader_paths);
-    
     while (!reader_paths.empty()) {
         if (std::any_of(it, end(reader_paths),
                         [this, &region] (const auto& reader_path) {
@@ -134,7 +127,6 @@ bool ReadManager::has_reads(const GenomicRegion& region) const
                         })) {
                             return true;
                         }
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -149,9 +141,7 @@ std::size_t ReadManager::count_reads(const SampleName& sample, const GenomicRegi
     std::lock_guard<std::mutex> lock {mutex_};
     
     auto reader_paths = get_possible_reader_paths({sample}, region);
-    
     auto it = partition_open(reader_paths);
-    
     std::size_t result {0};
     
     while (!reader_paths.empty()) {
@@ -159,7 +149,6 @@ std::size_t ReadManager::count_reads(const SampleName& sample, const GenomicRegi
                  [this, &sample, &region, &result] (const auto& reader_path) {
                      result += open_readers_.at(reader_path).count_reads(sample, region);
                  });
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -175,9 +164,7 @@ std::size_t ReadManager::count_reads(const std::vector<SampleName>& samples,
     std::lock_guard<std::mutex> lock {mutex_};
     
     auto reader_paths = get_possible_reader_paths(samples, region);
-    
     auto it = partition_open(reader_paths);
-    
     std::size_t result {0};
     
     while (!reader_paths.empty()) {
@@ -185,7 +172,6 @@ std::size_t ReadManager::count_reads(const std::vector<SampleName>& samples,
                  [this, &samples, &region, &result] (const auto& reader_path) {
                      result += open_readers_.at(reader_path).count_reads(samples, region);
                  });
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -216,11 +202,8 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
     std::lock_guard<std::mutex> lock {mutex_};
     
     auto reader_paths = get_possible_reader_paths(samples, region);
-    
     auto it = partition_open(reader_paths);
-    
     auto result = head_region(region);
-    
     std::deque<unsigned> position_coverage {};
     
     while (!reader_paths.empty()) {
@@ -237,7 +220,6 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
                      if (is_after(p.first, result)) return;
                      
                      auto overlap_begin = make_pair(begin(position_coverage), begin(p.second));
-                     
                      if (begins_before(p.first, result)) {
                          overlap_begin.second = next(begin(p.second), begin_distance(p.first, result));
                          overlap_begin.first = position_coverage.insert(begin(position_coverage),
@@ -246,7 +228,6 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
                      }
                      
                      auto overlap_end = end(position_coverage);
-                     
                      if (ends_before(p.first, result)) {
                          overlap_end = std::prev(end(position_coverage), end_distance(p.first, result));
                          overlap_end = position_coverage.erase(overlap_end, end(position_coverage));
@@ -259,7 +240,6 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
                                         return curr + x;
                                     });
                  });
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -271,9 +251,7 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
     std::partial_sum(begin(position_coverage), end(position_coverage), begin(position_coverage));
     
     const auto limit = std::lower_bound(begin(position_coverage), end(position_coverage), max_reads);
-    
     using SizeType = GenomicRegion::Position;
-    
     auto result_size = static_cast<SizeType>(std::distance(begin(position_coverage), limit));
     
     if (begins_before(result, region)) {
@@ -281,7 +259,6 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
     }
     
     const auto result_end = std::min(result_begin + result_size, region.end());
-    
     return GenomicRegion {region.contig_name(), result_begin, result_end};
 }
 
@@ -306,9 +283,7 @@ ReadManager::ReadContainer ReadManager::fetch_reads(const SampleName& sample, co
     std::lock_guard<std::mutex> lock {mutex_};
     
     auto reader_paths = get_possible_reader_paths({sample}, region);
-    
     auto it = partition_open(reader_paths);
-    
     ReadContainer result {};
     
     while (!reader_paths.empty()) {
@@ -316,7 +291,6 @@ ReadManager::ReadContainer ReadManager::fetch_reads(const SampleName& sample, co
                  [&] (const auto& reader_path) {
                      merge_insert(open_readers_.at(reader_path).fetch_reads(sample, region), result);
                  });
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -332,11 +306,9 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleName
     std::lock_guard<std::mutex> lock {mutex_};
     
     auto reader_paths = get_possible_reader_paths(samples, region);
-    
     auto it = partition_open(reader_paths);
-    
     SampleReadMap result {samples.size()};
-    
+    // Populate here so we can do unchcked access
     for (const auto& sample : samples) {
         result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
     }
@@ -351,7 +323,6 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleName
                          p.second.shrink_to_fit();
                      }
                  });
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -383,14 +354,10 @@ void ReadManager::setup_reader_samples_and_regions()
 void ReadManager::open_initial_files()
 {
     using std::begin; using std::end; using std::cbegin; using std::cend;
-    
     std::vector<Path> reader_paths {cbegin(closed_readers_), cend(closed_readers_)};
-    
     auto num_files_to_open = std::min(max_open_files_, static_cast<unsigned>(closed_readers_.size()));
-    
     std::nth_element(begin(reader_paths), begin(reader_paths) + num_files_to_open, end(reader_paths),
                      FileSizeCompare {});
-    
     open_readers(begin(reader_paths), begin(reader_paths) + num_files_to_open);
 }
 
@@ -436,21 +403,15 @@ ReadManager::open_readers(std::vector<Path>::iterator first, std::vector<Path>::
     
     auto num_available_spaces = num_reader_spaces();
     auto num_requested_spaces = static_cast<unsigned>(std::distance(first, last));
-    
     if (num_requested_spaces <= num_available_spaces) {
         std::for_each(first, last, [this] (const auto& path) { open_reader(path); });
         return first;
     }
-    
     auto num_readers_to_close = std::min(num_open_readers(), num_requested_spaces - num_available_spaces);
-    
     close_readers(num_readers_to_close);
-    
     num_available_spaces += num_readers_to_close;
-    
     // partition range so opened readers come last
     auto first_open = std::next(first, num_requested_spaces - num_available_spaces);
-    
     std::for_each(first_open, last, [this] (const auto& path) { open_reader(path); });
     
     return first_open;
@@ -503,7 +464,6 @@ ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& re
             result.emplace_back(reader_path);
         }
     }
-    
     for (const auto& reader : open_readers_) {
         if (could_reader_contain_region(reader.first, region)) {
             result.emplace_back(reader.first);
@@ -539,14 +499,11 @@ std::vector<ReadManager::Path>
 ReadManager::get_possible_reader_paths(const std::vector<SampleName>& samples, const GenomicRegion& region) const
 {
     auto result = get_reader_paths_containing_samples(samples);
-    
     auto it = std::remove_if(std::begin(result), std::end(result),
                              [this, &region] (const auto& path) {
                                  return !could_reader_contain_region(path, region);
                              });
-    
     result.erase(it, std::end(result));
-    
     return result;
 }
 

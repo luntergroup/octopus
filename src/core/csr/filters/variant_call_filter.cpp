@@ -34,11 +34,10 @@ VariantCallFilter::VariantCallFilter(const ReferenceGenome& reference,
                                      const ReadPipe& read_pipe,
                                      std::vector<MeasureWrapper> measures,
                                      std::size_t max_read_buffer_size)
-:
-measures_ {std::move(measures)},
-reference_ {reference},
-read_pipe_ {read_pipe},
-read_buffer_size_ {max_read_buffer_size}
+: measures_ {std::move(measures)}
+, reference_ {reference}
+, read_pipe_ {read_pipe}
+, read_buffer_size_ {max_read_buffer_size}
 {}
 
 namespace
@@ -56,7 +55,6 @@ namespace
         
         std::transform(std::cbegin(calls), std::cend(calls), std::back_inserter(result),
                        [] (const auto& call) { return mapped_region(call); });
-        
         std::sort(std::begin(result), std::end(result));
         
         return result;

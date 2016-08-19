@@ -19,10 +19,9 @@ namespace octopus {
 
 HaplotypeLikelihoodModel::ShortHaplotypeError::ShortHaplotypeError(const Haplotype& haplotype,
                                                                    Length required_extension)
-:
-std::runtime_error {"Haplotype is too short for alignment"},
-haplotype_ {haplotype},
-required_extension_ {required_extension}
+: std::runtime_error {"Haplotype is too short for alignment"}
+, haplotype_ {haplotype}
+, required_extension_ {required_extension}
 {}
 
 const Haplotype& HaplotypeLikelihoodModel::ShortHaplotypeError::haplotype() const noexcept
@@ -46,13 +45,10 @@ unsigned HaplotypeLikelihoodModel::pad_requirement() noexcept
 void HaplotypeLikelihoodModel::reset(const Haplotype& haplotype, boost::optional<FlankState> flank_state)
 {
     haplotype_ = std::addressof(haplotype);
-    
     haplotype_flank_state_ = std::move(flank_state);
-    
     snv_error_model_.evaluate(haplotype,
                               haplotype_snv_forward_mask_, haplotype_snv_forward_priors_,
                               haplotype_snv_reverse_mask_, haplotype_snv_reverse_priors_);
-    
     haplotype_gap_extension_penalty_ = indel_error_model_.evaluate(haplotype, haplotype_gap_open_penalities_);
 }
 
@@ -63,18 +59,16 @@ void HaplotypeLikelihoodModel::clear() noexcept
 }
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel()
-:
-HaplotypeLikelihoodModel {SnvErrorModel {}, IndelErrorModel {}}
+: HaplotypeLikelihoodModel {SnvErrorModel {}, IndelErrorModel {}}
 {}
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model, IndelErrorModel indel_model)
-:
-snv_error_model_ {std::move(snv_model)},
-indel_error_model_ {std::move(indel_model)},
-haplotype_ {nullptr},
-haplotype_flank_state_ {},
-haplotype_gap_open_penalities_ {},
-haplotype_gap_extension_penalty_ {}
+: snv_error_model_ {std::move(snv_model)}
+, indel_error_model_ {std::move(indel_model)}
+, haplotype_ {nullptr}
+, haplotype_flank_state_ {}
+, haplotype_gap_open_penalities_ {}
+, haplotype_gap_extension_penalty_ {}
 {}
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model,
@@ -86,36 +80,36 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model,
     this->reset(haplotype, std::move(flank_state));
 }
 
-double HaplotypeLikelihoodModel::ln_probability(const AlignedRead& read) const
+double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read) const
 {
     const static MappingPositionVector empty {};
-    return this->ln_probability(read, std::cbegin(empty), std::cend(empty));
+    return this->evaluate(read, std::cbegin(empty), std::cend(empty));
 }
 
-double HaplotypeLikelihoodModel::ln_probability(const AlignedRead& read,
-                                                const MappingPositionVector& mapping_positions) const
+double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
+                                          const MappingPositionVector& mapping_positions) const
 {
-    return this->ln_probability(read, std::cbegin(mapping_positions), std::cend(mapping_positions));
+    return this->evaluate(read, std::cbegin(mapping_positions), std::cend(mapping_positions));
 }
 
 namespace {
-    std::size_t num_out_of_range_bases(const std::size_t mapping_position, const AlignedRead& read,
-                                       const Haplotype& haplotype)
-    {
-        const auto alignment_size = sequence_size(read) + mapping_position + 2 * hmm::min_flank_pad();
-        
-        if (alignment_size > sequence_size(haplotype)) {
-            return alignment_size - sequence_size(haplotype);
-        }
-        
-        return 0;
+
+std::size_t num_out_of_range_bases(const std::size_t mapping_position, const AlignedRead& read,
+                                   const Haplotype& haplotype)
+{
+    const auto alignment_size = sequence_size(read) + mapping_position + 2 * hmm::min_flank_pad();
+    if (alignment_size > sequence_size(haplotype)) {
+        return alignment_size - sequence_size(haplotype);
     }
-    
-    bool is_in_range(const std::size_t mapping_position,
-                     const AlignedRead& read, const Haplotype& haplotype)
-    {
-        return num_out_of_range_bases(mapping_position, read, haplotype) == 0;
-    }
+    return 0;
+}
+
+bool is_in_range(const std::size_t mapping_position,
+                 const AlignedRead& read, const Haplotype& haplotype)
+{
+    return num_out_of_range_bases(mapping_position, read, haplotype) == 0;
+}
+
 } // namespace
 
 template <typename InputIt>
@@ -128,21 +122,18 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
     using PositionType = typename std::iterator_traits<InputIt>::value_type;
     
     const auto original_mapping_position = static_cast<PositionType>(begin_distance(haplotype, read));
-    
     auto max_log_probability = std::numeric_limits<double>::lowest();
-    
     bool is_original_position_mapped {false}, has_in_range_mapping_position {false};
     
     std::for_each(first_mapping_position, last_mapping_position, [&] (const auto position) {
         if (position == original_mapping_position) {
             is_original_position_mapped = true;
         }
-        
         if (is_in_range(position, read, haplotype)) {
             has_in_range_mapping_position = true;
             
             auto cur = hmm::score(haplotype.sequence(), read.sequence(), read.qualities(), position, model);
-          
+            
             if (cur > max_log_probability) {
                 max_log_probability = cur;
             }
@@ -151,10 +142,8 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
     
     if (!is_original_position_mapped && is_in_range(original_mapping_position, read, haplotype)) {
         has_in_range_mapping_position = true;
-        
         auto cur = hmm::score(haplotype.sequence(), read.sequence(), read.qualities(),
                               original_mapping_position, model);
-        
         if (cur > max_log_probability) {
             max_log_probability = cur;
         }
@@ -179,9 +168,9 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
     return max_log_probability;
 }
 
-double HaplotypeLikelihoodModel::ln_probability(const AlignedRead& read,
-                                                MappingPositionItr first_mapping_position,
-                                                MappingPositionItr last_mapping_position) const
+double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
+                                          MappingPositionItr first_mapping_position,
+                                          MappingPositionItr last_mapping_position) const
 {
     if (haplotype_ == nullptr) {
         throw std::runtime_error {"HaplotypeLikelihoodModel: no buffered Haplotype"};

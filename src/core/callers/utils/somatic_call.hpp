@@ -51,11 +51,13 @@ protected:
 };
 
 template <typename V, typename C>
-SomaticCall::SomaticCall(V&& variant, const CancerGenotype<Allele>& genotype_call,
-                         Phred<double> genotype_posterior, C&& credible_regions, Phred<double> quality)
-:
-VariantCall {std::forward<V>(variant), decltype(genotype_calls_) {}, quality},
-credible_regions_ {std::forward<C>(credible_regions)}
+SomaticCall::SomaticCall(V&& variant,
+                         const CancerGenotype<Allele>& genotype_call,
+                         Phred<double> genotype_posterior,
+                         C&& credible_regions,
+                         Phred<double> quality)
+: VariantCall {std::forward<V>(variant), decltype(genotype_calls_) {}, quality}
+, credible_regions_ {std::forward<C>(credible_regions)}
 {
     if (variant_.ref_allele() == variant_.alt_allele()) {
         Allele::NucleotideSequence missing_sequence(ref_sequence_size(variant_), 'N');

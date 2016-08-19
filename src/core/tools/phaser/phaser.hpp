@@ -84,23 +84,20 @@ struct Phaser::PhaseSet
 
 template <typename Region>
 Phaser::PhaseSet::PhaseRegion::PhaseRegion(Region&& region, const Phred<double> score)
-:
-region {std::forward<Region>(region)},
-score {score}
+: region {std::forward<Region>(region)}
+, score {score}
 {}
 
 template <typename R>
 Phaser::PhaseSet::PhaseSet(R&& region)
-:
-region {std::forward<R>(region)},
-phase_regions {}
+: region {std::forward<R>(region)}
+, phase_regions {}
 {}
 
 template <typename R, typename T>
 Phaser::PhaseSet::PhaseSet(R&& region, T&& phase_regions)
-:
-region {std::forward<R>(region)},
-phase_regions {std::forward<T>(phase_regions)}
+: region {std::forward<R>(region)}
+, phase_regions {std::forward<T>(phase_regions)}
 {}
 
 // non-member methods

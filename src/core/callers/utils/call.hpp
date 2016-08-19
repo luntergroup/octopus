@@ -106,26 +106,30 @@ private:
 
 template <typename T>
 Call::Call(T&& genotype_calls, Phred<double> quality)
-:
-genotype_calls_ {std::begin(genotype_calls),
-std::end(genotype_calls)},
-quality_ {quality},
-model_posterior_ {}
+: genotype_calls_ {std::begin(genotype_calls)
+, std::end(genotype_calls)}
+, quality_ {quality}
+, model_posterior_ {}
 {}
 
 template <typename R>
 Call::PhaseCall::PhaseCall(R&& region, Phred<double> score)
-: region_ {std::forward<R>(region)}, score_ {score}
+: region_ {std::forward<R>(region)}
+, score_ {score}
 {}
 
 template <typename G>
 Call::GenotypeCall::GenotypeCall(G&& genotype, Phred<double> posterior)
-: genotype {std::forward<G>(genotype)}, posterior {posterior}, phase {}
+: genotype {std::forward<G>(genotype)}
+, posterior {posterior}
+, phase {}
 {}
 
 template <typename G, typename P>
 Call::GenotypeCall::GenotypeCall(G&& genotype, Phred<double> posterior, P&& phase)
-: genotype {std::forward<G>(genotype)}, posterior {posterior}, phase {std::forward<P>(phase)}
+: genotype {std::forward<G>(genotype)}
+, posterior {posterior}
+, phase {std::forward<P>(phase)}
 {}
 
 } // namespace octopus

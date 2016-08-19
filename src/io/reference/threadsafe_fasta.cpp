@@ -8,8 +8,7 @@
 namespace octopus { namespace io {
 
 ThreadsafeFasta::ThreadsafeFasta(std::unique_ptr<Fasta> fasta)
-:
-fasta_ {std::move(fasta)}
+: fasta_ {std::move(fasta)}
 {}
 
 ThreadsafeFasta::ThreadsafeFasta(const ThreadsafeFasta& other)

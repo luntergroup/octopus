@@ -155,9 +155,9 @@ namespace detail
     std::size_t count_base_pairs(const T& reads, NonMapTag)
     {
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [] (const auto curr, const auto& read) {
-                                   return curr + static_cast<size_t>(sequence_size(read));
+                                   return curr + static_cast<std::size_t>(sequence_size(read));
                                });
     }
     
@@ -166,7 +166,7 @@ namespace detail
     {
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         const auto overlapped = overlap_range(reads, region);
-        return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), size_t {},
+        return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), std::size_t {0},
                                [&region] (const auto curr, const auto& read) {
                                    return curr + count_overlapped_bases(read, region);
                                });
@@ -176,9 +176,9 @@ namespace detail
     std::size_t count_forward_base_pairs(const T& reads, NonMapTag)
     {
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [] (const auto curr, const auto& read) {
-                                   return curr + ((IsForward()(read)) ? static_cast<size_t>(sequence_size(read)) : 0);
+                                   return curr + ((IsForward()(read)) ? static_cast<std::size_t>(sequence_size(read)) : 0);
                                });
     }
     
@@ -187,9 +187,9 @@ namespace detail
     {
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         const auto overlapped = overlap_range(reads, region);
-        return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), size_t {},
+        return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), std::size_t {0},
                                [&region] (const auto curr, const auto& read) {
-                                   return curr + ((IsForward()(read)) ? static_cast<size_t>(num_overlapped_bases(read, region)) : 0);
+                                   return curr + ((IsForward()(read)) ? static_cast<std::size_t>(num_overlapped_bases(read, region)) : 0);
                                });
     }
     
@@ -197,9 +197,9 @@ namespace detail
     std::size_t count_reverse_base_pairs(const T& reads, NonMapTag)
     {
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {},
                                [] (const auto curr, const auto& read) {
-                                   return curr + ((IsReverse()(read)) ? static_cast<size_t>(sequence_size(read)) : 0);
+                                   return curr + ((IsReverse()(read)) ? static_cast<std::size_t>(sequence_size(read)) : 0);
                                });
     }
     
@@ -208,9 +208,9 @@ namespace detail
     {
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         const auto overlapped = overlap_range(reads, region);
-        return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), size_t {},
+        return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), std::size_t {0},
                                [&region] (const auto curr, const auto& read) {
-                                   return curr + ((IsReverse()(read)) ? static_cast<size_t>(num_overlapped_bases(read, region)) : 0);
+                                   return curr + ((IsReverse()(read)) ? static_cast<std::size_t>(num_overlapped_bases(read, region)) : 0);
                                });
     }
     
@@ -280,7 +280,6 @@ namespace detail
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         
         const auto overlapped = overlap_range(reads, region);
-        
         std::vector<double> qualities {};
         qualities.reserve(count_base_pairs(reads, region, NonMapTag {}));
         
@@ -440,7 +439,7 @@ namespace detail
     template <typename T>
     std::size_t count_reads(const T& reads, const GenomicRegion& region, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [&region] (const auto curr, const auto& sample_reads) {
                                    return curr + count_reads(sample_reads.second, region, NonMapTag {});
                                });
@@ -449,7 +448,7 @@ namespace detail
     template <typename T>
     std::size_t count_forward(const T& reads, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [] (const auto curr, const auto& sample_reads) {
                                    return curr + count_forward(sample_reads.second, NonMapTag {});
                                });
@@ -458,7 +457,7 @@ namespace detail
     template <typename T>
     std::size_t count_forward(const T& reads, const GenomicRegion& region, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [&region] (const auto curr, const auto& sample_reads) {
                                    return curr + count_forward(sample_reads.second, region, NonMapTag {});
                                });
@@ -467,7 +466,7 @@ namespace detail
     template <typename T>
     std::size_t count_reverse(const T& reads, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [] (const auto curr, const auto& sample_reads) {
                                    return curr + count_reverse(sample_reads.second, NonMapTag {});
                                });
@@ -476,7 +475,7 @@ namespace detail
     template <typename T>
     std::size_t count_reverse(const T& reads, const GenomicRegion& region, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [&region] (const auto curr, const auto& sample_reads) {
                                    return curr + count_reverse(sample_reads.second, region, NonMapTag {});
                                });
@@ -485,7 +484,7 @@ namespace detail
     template <typename T>
     std::size_t count_base_pairs(const T& reads, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [] (const auto curr, const auto& sample_reads) {
                                    return curr + count_base_pairs(sample_reads.second, NonMapTag {});
                                });
@@ -494,7 +493,7 @@ namespace detail
     template <typename T>
     std::size_t count_base_pairs(const T& reads, const GenomicRegion& region, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [&region] (const auto curr, const auto& sample_reads) {
                                    return curr + count_base_pairs(sample_reads.second, region, NonMapTag {});
                                });
@@ -503,7 +502,7 @@ namespace detail
     template <typename T>
     std::size_t count_forward_base_pairs(const T& reads, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [] (const auto curr, const auto& sample_reads) {
                                    return curr + count_forward_base_pairs(sample_reads.second, NonMapTag {});
                                });
@@ -512,7 +511,7 @@ namespace detail
     template <typename T>
     std::size_t count_forward_base_pairs(const T& reads, const GenomicRegion& region, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [&region] (const auto curr, const auto& sample_reads) {
                                    return curr + count_forward_base_pairs(sample_reads.second, region, NonMapTag {});
                                });
@@ -521,7 +520,7 @@ namespace detail
     template <typename T>
     std::size_t count_reverse_base_pairs(const T& reads, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [] (const auto curr, const auto& sample_reads) {
                                    return curr + count_reverse_base_pairs(sample_reads.second, NonMapTag {});
                                });
@@ -530,7 +529,7 @@ namespace detail
     template <typename T>
     std::size_t count_reverse_base_pairs(const T& reads, const GenomicRegion& region, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [&region] (const auto curr, const auto& sample_reads) {
                                    return curr + count_reverse_base_pairs(sample_reads.second, region, NonMapTag {});
                                });
@@ -539,7 +538,7 @@ namespace detail
     template <typename T>
     std::size_t count_mapq_zero(const T& reads, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [] (const auto curr, const auto& sample_reads) {
                                    return curr + count_mapq_zero(sample_reads.second, NonMapTag {});
                                });
@@ -548,7 +547,7 @@ namespace detail
     template <typename T>
     std::size_t count_mapq_zero(const T& reads, const GenomicRegion& region, MapTag)
     {
-        return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
+        return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
                                [&region] (const auto curr, const auto& sample_reads) {
                                    return curr + count_mapq_zero(sample_reads.second, region, NonMapTag {});
                                });

@@ -13,21 +13,17 @@ namespace octopus {
 
 // public methods
 
-CallerBuilder::CallerBuilder(const ReferenceGenome& reference,
-                             const ReadPipe& read_pipe,
-                             VariantGenerator::Builder vgb,
-                             HaplotypeGenerator::Builder hgb)
-:
-components_ {reference, read_pipe, std::move(vgb), std::move(hgb)},
-factory_ {generate_factory()}
+CallerBuilder::CallerBuilder(const ReferenceGenome& reference, const ReadPipe& read_pipe,
+                             VariantGenerator::Builder vgb, HaplotypeGenerator::Builder hgb)
+: components_ {reference, read_pipe, std::move(vgb), std::move(hgb)}
+, factory_ {generate_factory()}
 {}
 
 CallerBuilder::CallerBuilder(const CallerBuilder& other)
-:
-caller_ {other.caller_},
-components_ {other.components_},
-params_ {other.params_},
-factory_    {generate_factory()}
+: caller_ {other.caller_}
+, components_ {other.components_}
+, params_ {other.params_}
+, factory_    {generate_factory()}
 {}
 
 CallerBuilder& CallerBuilder::operator=(const CallerBuilder& other)
@@ -40,11 +36,10 @@ CallerBuilder& CallerBuilder::operator=(const CallerBuilder& other)
 }
 
 CallerBuilder::CallerBuilder(CallerBuilder&& other)
-:
-caller_ {std::move(other.caller_)},
-components_ {std::move(other.components_)},
-params_ {std::move(other.params_)},
-factory_    {generate_factory()}
+: caller_ {std::move(other.caller_)}
+, components_ {std::move(other.components_)}
+, params_ {std::move(other.params_)}
+, factory_    {generate_factory()}
 {}
 
 CallerBuilder& CallerBuilder::operator=(CallerBuilder&& other)
@@ -69,8 +64,7 @@ CallerBuilder& CallerBuilder::set_read_pipe(const ReadPipe& read_pipe) noexcept
     return *this;
 }
 
-CallerBuilder&
-CallerBuilder::set_variant_generator(const VariantGenerator::Builder& vgb) noexcept
+CallerBuilder& CallerBuilder::set_variant_generator(const VariantGenerator::Builder& vgb) noexcept
 {
     components_.variant_generator_builder = vgb;
     return *this;
@@ -185,8 +179,6 @@ CallerBuilder& CallerBuilder::set_min_somatic_posterior(Phred<double> posterior)
     return *this;
 }
 
-// trio
-
 CallerBuilder& CallerBuilder::set_maternal_sample(SampleName mother)
 {
     params_.maternal_sample = std::move(mother);
@@ -199,15 +191,11 @@ CallerBuilder& CallerBuilder::set_paternal_sample(SampleName father)
     return *this;
 }
 
-// pedigree
-
 CallerBuilder& CallerBuilder::set_pedigree(Pedigree pedigree)
 {
     params_.pedigree = std::move(pedigree);
     return *this;
 }
-
-// build
 
 std::unique_ptr<Caller> CallerBuilder::build() const
 {

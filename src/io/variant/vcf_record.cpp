@@ -233,9 +233,7 @@ void VcfRecord::print_info(std::ostream& os) const
                           }
                           os << ';';
                       });
-        
         os << last->first;
-        
         if (!last->second.empty()) {
             os << "=" << last->second;
         }
@@ -273,34 +271,26 @@ void VcfRecord::print_sample_data(std::ostream& os) const
     if (num_samples() > 0) {
         print(os, format_, ":");
         os << '\t';
-        
         auto samples = this->samples();
-        
         std::for_each(std::cbegin(samples), std::prev(std::cend(samples)),
                       [this, &os] (const auto& sample) {
                           auto it = std::cbegin(format_);
-                          
                           if (*it == "GT") {
                               print_genotype_allele_numbers(os, sample);
                               ++it;
                           }
-                          
                           std::for_each(it, std::cend(format_),
                                         [this, &os, &sample] (const auto& key) {
                                             os << ':';
                                             print(os, get_sample_value(sample, key), ",");
                                         });
-                          
                           os << '\t';
         });
-        
         auto it = std::cbegin(format_);
-        
         if (*it == "GT") {
             print_genotype_allele_numbers(os, samples.back());
             ++it;
         }
-        
         std::for_each(it, std::cend(format_),
                       [this, &os, &samples] (const auto& key) {
                           os << ':';
@@ -393,18 +383,17 @@ std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 // VcfRecord::Builder
 
 VcfRecord::Builder::Builder(const VcfRecord& call)
-:
-chrom_ {call.chrom()},
-pos_ {call.pos()},
-id_ {call.id()},
-ref_ {call.ref()},
-alt_ {call.alt()},
-qual_ {call.qual()},
-filter_ {call.filter()},
-info_ {call.info_},
-format_ {call.format()},
-genotypes_ {call.genotypes_},
-samples_ {call.samples_}
+: chrom_ {call.chrom()}
+, pos_ {call.pos()}
+, id_ {call.id()}
+, ref_ {call.ref()}
+, alt_ {call.alt()}
+, qual_ {call.qual()}
+, filter_ {call.filter()}
+, info_ {call.info_}
+, format_ {call.format()}
+, genotypes_ {call.genotypes_}
+, samples_ {call.samples_}
 {}
 
 VcfRecord::Builder& VcfRecord::Builder::set_chrom(std::string name)

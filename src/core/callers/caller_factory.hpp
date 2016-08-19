@@ -35,7 +35,6 @@ public:
     
     CallerFactory& set_reference(const ReferenceGenome& reference) noexcept;
     CallerFactory& set_read_pipe(ReadPipe& read_pipe) noexcept;
-    
     CallerFactory& set_contig_ploidy(const ContigName& contig, unsigned ploidy);
     
     std::unique_ptr<Caller> make(const ContigName& contig) const;

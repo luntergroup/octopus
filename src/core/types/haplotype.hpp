@@ -102,15 +102,10 @@ public:
     
 private:
     GenomicRegion region_;
-    
     std::vector<ContigAllele> explicit_alleles_;
-    
     ContigRegion explicit_allele_region_;
-    
     NucleotideSequence sequence_;
-    
     std::size_t cached_hash_;
-    
     std::reference_wrapper<const ReferenceGenome> reference_;
     
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
@@ -123,24 +118,22 @@ private:
 
 template <typename R>
 Haplotype::Haplotype(R&& region, const ReferenceGenome& reference)
-:
-region_ {std::forward<R>(region)},
-explicit_alleles_ {},
-explicit_allele_region_ {},
-sequence_ {reference.fetch_sequence(region_)},
-cached_hash_ {std::hash<NucleotideSequence>()(sequence_)},
-reference_ {reference}
+: region_ {std::forward<R>(region)}
+, explicit_alleles_ {}
+, explicit_allele_region_ {}
+, sequence_ {reference.fetch_sequence(region_)}
+, cached_hash_ {std::hash<NucleotideSequence>()(sequence_)}
+, reference_ {reference}
 {}
 
 template <typename R, typename S>
 Haplotype::Haplotype(R&& region, S&& sequence, const ReferenceGenome& reference)
-:
-region_ {std::forward<R>(region)},
-explicit_alleles_ {},
-explicit_allele_region_ {region_.contig_region()},
-sequence_ {std::forward<S>(sequence)},
-cached_hash_ {std::hash<NucleotideSequence>()(sequence_)},
-reference_ {reference}
+: region_ {std::forward<R>(region)}
+, explicit_alleles_ {}
+, explicit_allele_region_ {region_.contig_region()}
+, sequence_ {std::forward<S>(sequence)}
+, cached_hash_ {std::hash<NucleotideSequence>()(sequence_)}
+, reference_ {reference}
 {
     explicit_alleles_.reserve(1);
     explicit_alleles_.emplace_back(explicit_allele_region_, sequence_);
@@ -159,47 +152,37 @@ namespace detail {
 template <typename R, typename ForwardIt>
 Haplotype::Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele,
                      const ReferenceGenome& reference)
-:
-region_ {std::forward<R>(region)},
-explicit_alleles_ {first_allele, last_allele},
-explicit_allele_region_ {},
-sequence_ {},
-cached_hash_ {0},
-reference_ {reference}
+: region_ {std::forward<R>(region)}
+, explicit_alleles_ {first_allele, last_allele}
+, explicit_allele_region_ {}
+, sequence_ {}
+, cached_hash_ {0}
+, reference_ {reference}
 {
     if (!explicit_alleles_.empty()) {
         explicit_allele_region_ = encompassing_region(explicit_alleles_.front(), explicit_alleles_.back());
-        
         auto num_bases = std::accumulate(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_),
                                          0, [] (const auto curr, const auto& allele) {
                                              return curr + ::octopus::sequence_size(allele);
                                          });
-        
         const auto lhs_reference_region = left_overhang_region(region_.contig_region(),
                                                                explicit_allele_region_);
-        
         const auto rhs_reference_region = right_overhang_region(region_.contig_region(),
                                                                 explicit_allele_region_);
-        
         num_bases += region_size(lhs_reference_region) + region_size(rhs_reference_region);
         
         sequence_.reserve(num_bases);
-        
         const auto& contig = region_.contig_name();
-        
         if (!is_empty(lhs_reference_region)) {
             detail::append(sequence_, reference, contig, lhs_reference_region);
         }
-        
         append(sequence_, std::cbegin(explicit_alleles_), std::cend(explicit_alleles_));
-        
         if (!is_empty(rhs_reference_region)) {
             detail::append(sequence_, reference, contig, rhs_reference_region);
         }
     } else {
         sequence_ = reference.fetch_sequence(region_);
     }
-    
     cached_hash_ = std::hash<NucleotideSequence>()(sequence_);
 }
 
@@ -269,9 +252,7 @@ std::vector<MappableType> splice_all(const Container& haplotypes, const GenomicR
     
     std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(result),
                    [&region] (const auto& haplotype) { return splice<MappableType>(haplotype, region); });
-    
     std::sort(std::begin(result), std::end(result));
-    
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     
     return result;
@@ -287,9 +268,7 @@ std::vector<ContigAllele> splice_all(const Container& haplotypes, const ContigRe
     for (const auto& haplotype : haplotypes) {
         result.emplace_back(splice(haplotype, region));
     }
-    
     std::sort(std::begin(result), std::end(result));
-    
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     
     return result;

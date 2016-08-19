@@ -14,9 +14,8 @@
 namespace octopus {
 
 CigarOperation::CigarOperation(const Size size, const Flag flag) noexcept
-:
-size_ {size},
-flag_ {flag}
+: size_ {size}
+, flag_ {flag}
 {}
 
 CigarOperation::Flag CigarOperation::flag() const noexcept
@@ -92,7 +91,6 @@ CigarString parse_cigar(const std::string& cigar)
 {
     CigarString result {};
     result.reserve(cigar.size() / 2); // max possible CigarOperation
-    
     std::string digits {};
     digits.reserve(3); // 100+ matches are common
     
@@ -159,25 +157,20 @@ CigarString splice(const CigarString& cigar, CigarOperation::Size offset,
 {
     CigarString result {};
     result.reserve(cigar.size());
-    
     auto op_it = std::cbegin(cigar);
-    
     const auto last_op = std::cend(cigar);
     
     while (op_it != last_op && (offset >= op_it->size() || !pred(*op_it))) {
         if (pred(*op_it)) offset -= op_it->size();
         ++op_it;
     }
-    
     if (op_it != last_op) {
         const auto remainder = op_it->size() - offset;
-        
         if (remainder >= size) {
             result.emplace_back(size, op_it->flag());
             result.shrink_to_fit();
             return result;
         }
-        
         result.emplace_back(remainder, op_it->flag());
         size -= remainder;
         ++op_it;
@@ -188,7 +181,6 @@ CigarString splice(const CigarString& cigar, CigarOperation::Size offset,
         if (pred(*op_it)) size -= op_it->size();
         ++op_it;
     }
-    
     if (op_it != last_op && size > 0) {
         result.emplace_back(size, op_it->flag());
     }
@@ -246,8 +238,8 @@ std::ostream& operator<<(std::ostream& os, const CigarString& cigar)
 
 std::size_t CigarHash::operator()(const CigarOperation& op) const noexcept
 {
+    std::size_t result {};
     using boost::hash_combine;
-    size_t result {};
     hash_combine(result, op.flag());
     hash_combine(result, op.size());
     return result;

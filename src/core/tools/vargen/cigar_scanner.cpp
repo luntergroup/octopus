@@ -27,14 +27,12 @@ std::unique_ptr<VariantGenerator> CigarScanner::do_clone() const
 }
 
 CigarScanner::CigarScanner(const ReferenceGenome& reference, Options options)
-:
-reference_ {reference},
-options_ {options},
-match_ {[] (const Variant& lhs, const Variant& rhs) -> bool {
-    return (is_insertion(lhs) && is_same_region(lhs, rhs)) || lhs == rhs;
-}},
-candidates_ {},
-max_seen_candidate_size_ {}
+: reference_ {reference}
+, options_ {options}
+, match_ {[] (const Variant& lhs, const Variant& rhs) -> bool {
+        return (is_insertion(lhs) && is_same_region(lhs, rhs)) || lhs == rhs;}}
+, candidates_ {}
+, max_seen_candidate_size_ {}
 {}
 
 bool CigarScanner::do_requires_reads() const noexcept
@@ -94,6 +92,7 @@ bool is_surrounded_by_good_bases(Iterator base_quality_itr, const std::size_t re
 void CigarScanner::do_add_read(const AlignedRead& read)
 {
     using std::cbegin; using std::next; using std::move;
+    using Flag = CigarOperation::Flag;
     
     const auto& read_contig   = contig_name(read);
     const auto& read_sequence = read.sequence();
@@ -107,8 +106,6 @@ void CigarScanner::do_add_read(const AlignedRead& read)
     
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
-        
-        using Flag = CigarOperation::Flag;
         
         switch (cigar_operation.flag()) {
             case Flag::alignmentMatch:
@@ -126,11 +123,9 @@ void CigarScanner::do_add_read(const AlignedRead& read)
             case Flag::substitution:
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
-                
                 if (op_size <= options_.max_variant_size) {
                     auto removed_sequence = reference_.get().fetch_sequence(region);
                     auto added_sequence   = splice(read_sequence, read_index, op_size);
-                    
                     if (is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
                         add_candidate(move(region), move(removed_sequence), move(added_sequence));
                     }
@@ -144,7 +139,6 @@ void CigarScanner::do_add_read(const AlignedRead& read)
                 if (count_bad_qualities(read.qualities(), read_index, op_size, options_.min_base_quality)
                         <= options_.max_poor_quality_insertion_bases) {
                     auto added_sequence = splice(read_sequence, read_index, op_size);
-                    
                     if (is_good_sequence(added_sequence)) {
                         add_candidate(GenomicRegion {read_contig, ref_index, ref_index},
                                       "", move(added_sequence));
@@ -157,9 +151,7 @@ void CigarScanner::do_add_read(const AlignedRead& read)
             {
                 if (is_surrounded_by_good_bases(base_quality_itr, read_index)) {
                     region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
-                    
                     auto removed_sequence = reference_.get().fetch_sequence(region);
-                    
                     add_candidate(move(region), move(removed_sequence), "");
                 }
                 ref_index += op_size;
@@ -258,15 +250,12 @@ std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& reg
             };
             
             const auto first_duplicate = std::adjacent_find(cbegin(overlapped), cend(overlapped), TEMP_FIX);
-            
             if (first_duplicate == cend(overlapped)) break;
-            
             const Variant& duplicate {*first_duplicate};
             const auto last_duplicate = std::find_if_not(std::next(first_duplicate), cend(overlapped),
                                                          [this, &duplicate] (const auto& variant) {
                                                              return match_(variant, duplicate);
                                                          });
-            
             const auto num_duplicates = distance(first_duplicate, last_duplicate);
             
             if (num_duplicates >= options_.min_support) {
@@ -276,7 +265,6 @@ std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& reg
                     std::unique_copy(first_duplicate, last_duplicate, std::back_inserter(result));
                 }
             }
-            
             if (last_duplicate == cend(overlapped)) break;
             
             overlapped.advance_begin(distance(cbegin(overlapped), first_duplicate) + num_duplicates);
@@ -315,27 +303,21 @@ void CigarScanner::add_snvs_in_match_range(const GenomicRegion& region, const Se
                                           const SequenceIterator last_base, const QualitiesIterator first_quality)
 {
     using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
-    
     using Tuple = boost::tuple<char, char, AlignedRead::BaseQuality>;
     
     const NucleotideSequence ref_segment {reference_.get().fetch_sequence(region)};
-    
     const auto& contig = region.contig_name();
-    
     const auto last_quality = std::next(first_quality, std::distance(first_base, last_base));
-    
     auto ref_index = mapped_begin(region);
     
     for_each(make_zip_iterator(boost::make_tuple(cbegin(ref_segment), first_base, first_quality)),
              make_zip_iterator(boost::make_tuple(cend(ref_segment), last_base, last_quality)),
              [this, &contig, &ref_index] (const Tuple& t) {
                  const char ref_base  {t.get<0>()}, read_base {t.get<1>()};
-                 
                  if (ref_base != read_base && ref_base != 'N' && read_base != 'N'
                      && t.get<2>() >= options_.min_base_quality) {
                      add_candidate(GenomicRegion {contig, ref_index, ref_index + 1}, ref_base, read_base);
                  }
-                 
                  ++ref_index;
              });
 }

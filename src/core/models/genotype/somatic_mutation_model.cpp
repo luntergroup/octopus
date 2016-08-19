@@ -12,9 +12,8 @@ namespace octopus {
 
 SomaticMutationModel::SomaticMutationModel(const CoalescentModel& germline_model,
                                            double somatic_mutation_rate)
-:
-germline_model_ {germline_model},
-somatic_mutation_rate_ {somatic_mutation_rate}
+: germline_model_ {germline_model}
+, somatic_mutation_rate_ {somatic_mutation_rate}
 {
     if (somatic_mutation_rate <= 0) {
         throw std::domain_error {"SomaticMutationModel: somatic mutation rate must be > 0"};

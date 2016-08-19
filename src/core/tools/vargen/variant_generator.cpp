@@ -18,9 +18,8 @@
 namespace octopus { namespace coretools {
 
 VariantGenerator::VariantGenerator()
-:
-debug_log_ {logging::get_debug_log()},
-trace_log_ {logging::get_trace_log()}
+: debug_log_ {logging::get_debug_log()}
+, trace_log_ {logging::get_trace_log()}
 {}
 
 VariantGenerator::VariantGenerator(const VariantGenerator& other)
@@ -83,10 +82,10 @@ std::vector<Variant> VariantGenerator::generate(const GenomicRegion& region)
         auto it = result.insert(std::end(result),
                                 std::make_move_iterator(std::begin(generator_result)),
                                 std::make_move_iterator(std::end(generator_result)));
-        
         std::inplace_merge(std::begin(result), it, std::end(result));
     }
-    
+    // Each generator is guaranteed to return unique variants, but two generators can still
+    // propose the same varinat independently.
     remove_duplicates(result);
     
     return result;

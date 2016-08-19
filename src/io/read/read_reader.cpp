@@ -14,10 +14,9 @@ class UnknownReadFileFormat : public std::runtime_error
 {
 public:
     UnknownReadFileFormat(boost::filesystem::path file_path)
-    :
-    runtime_error {"Unknown read file format"},
-    file_path_ {std::move(file_path)},
-    msg_ {}
+    : runtime_error {"Unknown read file format"}
+    , file_path_ {std::move(file_path)}
+    , msg_ {}
     {}
     
     virtual ~UnknownReadFileFormat() = default;
@@ -48,9 +47,8 @@ namespace {
 }
 
 ReadReader::ReadReader(const boost::filesystem::path& file_path)
-:
-file_path_ {file_path},
-impl_ {make_reader(file_path_)}
+: file_path_ {file_path}
+, impl_ {make_reader(file_path_)}
 {}
 
 ReadReader::ReadReader(ReadReader&& other)
@@ -62,10 +60,10 @@ ReadReader::ReadReader(ReadReader&& other)
 
 void swap(ReadReader& lhs, ReadReader& rhs) noexcept
 {
-    using std::swap;
     if (&lhs == &rhs) return;
     std::lock(lhs.mutex_, rhs.mutex_);
     std::lock_guard<std::mutex> lock_lhs {lhs.mutex_, std::adopt_lock}, lock_rhs {rhs.mutex_, std::adopt_lock};
+    using std::swap;
     swap(lhs.file_path_, rhs.file_path_);
     swap(lhs.impl_, rhs.impl_);
 }

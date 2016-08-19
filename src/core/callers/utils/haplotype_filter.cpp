@@ -32,12 +32,10 @@ struct FilterGreater
     {
         return values_.at(lhs) > rhs;
     }
-    
     bool operator()(const T& lhs, const Haplotype& rhs) const
     {
         return lhs > values_.at(rhs);
     }
-    
     bool operator()(const Haplotype& lhs, const Haplotype& rhs) const
     {
         return values_.at(lhs) > values_.at(rhs);
@@ -71,9 +69,7 @@ std::size_t try_filter(std::vector<Haplotype>& haplotypes,
     std::nth_element(first, nth, last, cmp);
     
     const auto nth_best = filter_score.at(*nth);
-    
     const auto rlast = std::make_reverse_iterator(first);
-    
     const auto it = std::find_if(std::make_reverse_iterator(std::prev(nth)), rlast,
                                  [nth_best, &filter_score] (const Haplotype& haplotype) {
                                      return filter_score.at(haplotype) == nth_best;
@@ -82,24 +78,16 @@ std::size_t try_filter(std::vector<Haplotype>& haplotypes,
     if (it != rlast) {
         std::sort(first, nth, cmp);
         std::sort(nth, last, cmp);
-        
         const auto er = std::equal_range(first, last, nth_best, cmp);
-        
         result.insert(std::end(result), std::make_move_iterator(er.second), std::make_move_iterator(last));
-        
         const auto num_removed = std::distance(er.second, last);
-        
         haplotypes.erase(er.second, last);
-        
         return num_removed;
     }
     
     result.insert(std::end(result), std::make_move_iterator(nth), std::make_move_iterator(last));
-    
     const auto num_removed = std::distance(nth, last);
-    
     haplotypes.erase(nth, last);
-    
     return num_removed;
 }
 
@@ -120,15 +108,10 @@ void force_filter(std::vector<Haplotype>& haplotypes,
     
     const auto first = std::begin(haplotypes);
     const auto last  = std::end(haplotypes);
-    
     const auto nth = std::next(first, n);
-    
     const FilterGreater<T> cmp {filter_likelihoods};
-    
     std::nth_element(first, nth, last, cmp);
-    
     result.insert(std::end(result), std::make_move_iterator(nth), std::make_move_iterator(last));
-    
     haplotypes.erase(nth, last);
 }
 
@@ -198,7 +181,6 @@ public:
                 
                 std::for_each(first, last, [&] (const auto& haplotype) {
                     const auto p = haplotype_likelihoods(sample, haplotype)[i];
-                    
                     if (maths::almost_equal(p, cur_max)) {
                         top.emplace_back(haplotype);
                     } else if (p > cur_max) {
@@ -221,8 +203,7 @@ public:
     AssignmentCount(const std::vector<Haplotype>& haplotypes,
                     const std::vector<SampleName>& samples,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods)
-    :
-    AssignmentCount {std::cbegin(haplotypes), std::cend(haplotypes), samples, haplotype_likelihoods}
+    : AssignmentCount {std::cbegin(haplotypes), std::cend(haplotypes), samples, haplotype_likelihoods}
     {}
     
     auto operator()(const Haplotype& haplotype) const
@@ -278,54 +259,33 @@ filter_to_n(std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& s
         stream(debug_log) << "Filtering " << num_to_filter << " of "
                             << haplotypes.size() << " haplotypes";
     }
-    
     num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
                                 MaxLikelihood {});
-    
     if (DEBUG_MODE) {
         stream(debug_log) << "There are " << haplotypes.size()
                             << " remaining haplotypes after maximum likelihood filtering";
     }
-    
     if (num_to_filter == 0) {
         return result;
     }
-    
     num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
                                 AssignmentCount {haplotypes, samples, haplotype_likelihoods});
-    
     if (DEBUG_MODE) {
         stream(debug_log) << "There are " << haplotypes.size()
                             << " remaining haplotypes after assignment count filtering";
     }
-    
     if (num_to_filter == 0) {
         return result;
     }
-    
     num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
                                 LikelihoodZeroCount {});
-    
     if (DEBUG_MODE) {
         stream(debug_log) << "There are " << haplotypes.size()
                             << " remaining haplotypes after likelihood zero count filtering";
     }
-    
     if (num_to_filter == 0) {
         return result;
     }
-    
-//    num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
-//                                LikelihoodSum {});
-//    
-//    if (DEBUG_MODE) {
-//        stream(debug_log) << "There are " << haplotypes.size()
-//                            << " remaining haplotypes after likelihood sum filtering";
-//    }
-//    
-//    if (num_to_filter == 0) {
-//        return result;
-//    }
     
     if (DEBUG_MODE) {
         stream(debug_log) << "Force filtering " << num_to_filter << " of "
@@ -368,14 +328,11 @@ extract_removable(const std::vector<Haplotype>& haplotypes,
                           [] (const auto& lhs, const auto& rhs) {
                               return lhs.second > rhs.second;
                           });
-        
         const auto min_safe_posterior = std::prev(first_unsafe)->second;
-        
         first_unsafe = std::partition(first_unsafe, first_safe,
                                       [min_safe_posterior] (const auto& p) {
                                           return maths::almost_equal(p.second, min_safe_posterior);
                                       });
-        
         std::reverse(begin(sorted), first_unsafe);
         
         const auto assignment_bound_itr = std::prev(first_unsafe);
@@ -387,12 +344,10 @@ extract_removable(const std::vector<Haplotype>& haplotypes,
         };
         
         const auto max_unsafe_assignment = assignments(assignment_bound_itr->first);
-        
         first_safe = std::partition(first_unsafe, first_safe,
                                     [&assignments, max_unsafe_assignment] (const auto& p) {
                                         return assignments(p.first) <= max_unsafe_assignment;
                                     });
-        
         first_safe = std::rotate(begin(sorted), first_unsafe, first_safe);
     }
     

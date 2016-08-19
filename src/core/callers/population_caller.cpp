@@ -34,9 +34,8 @@ namespace octopus {
 PopulationCaller::PopulationCaller(Caller::Components&& components,
                                    Caller::Parameters general_parameters,
                                    Parameters specific_parameters)
-:
-Caller {std::move(components), std::move(general_parameters)},
-parameters_ {specific_parameters}
+: Caller {std::move(components), std::move(general_parameters)}
+, parameters_ {specific_parameters}
 {}
 
 // IndividualCaller::Latents public methods
@@ -45,11 +44,10 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                    const std::vector<Haplotype>& haplotypes,
                                    std::vector<Genotype<Haplotype>>&& genotypes,
                                    ModelInferences&& inferences)
-:
-genotype_posteriors_ {},
-haplotype_posteriors_ {},
-model_log_evidence_ {inferences.log_evidence},
-dummy_latents_ {}
+: genotype_posteriors_ {}
+, haplotype_posteriors_ {}
+, model_log_evidence_ {inferences.log_evidence}
+, dummy_latents_ {}
 {
 //    GenotypeProbabilityMap genotype_posteriors {
 //        std::make_move_iterator(std::begin(genotypes)),
@@ -67,11 +65,10 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                           std::vector<Genotype<Haplotype>>&& genotypes,
                                           ModelInferences&& inferences,
                                           ModelInferences&& dummy_inferences)
-:
-genotype_posteriors_ {},
-haplotype_posteriors_ {},
-model_log_evidence_ {inferences.log_evidence},
-dummy_latents_ {std::move(dummy_inferences)}
+: genotype_posteriors_ {}
+, haplotype_posteriors_ {}
+, model_log_evidence_ {inferences.log_evidence}
+, dummy_latents_ {std::move(dummy_inferences)}
 {
 //    GenotypeProbabilityMap genotype_posteriors {
 //        std::make_move_iterator(std::begin(genotypes)),
@@ -168,9 +165,13 @@ namespace {
     {
         VariantCall() = delete;
         VariantCall(const std::pair<VariantReference, double>& p)
-        : variant {p.first}, posterior {p.second} {}
+        : variant {p.first}
+        , posterior {p.second}
+        {}
         VariantCall(const Variant& variant, double posterior)
-        : variant {variant}, posterior {posterior} {}
+        : variant {variant}
+        , posterior {posterior}
+        {}
         
         const GenomicRegion& mapped_region() const noexcept
         {
@@ -187,7 +188,9 @@ namespace {
     {
         GenotypeCall() = default;
         template <typename T> GenotypeCall(T&& genotype, double posterior)
-        : genotype {std::forward<T>(genotype)}, posterior {posterior} {}
+        : genotype {std::forward<T>(genotype)}
+        , posterior {posterior}
+        {}
         
         Genotype<Allele> genotype;
         double posterior;

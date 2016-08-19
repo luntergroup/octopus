@@ -80,7 +80,6 @@ void MaskSoftClippedBoundries::operator()(AlignedRead& read) const noexcept
         if (num_front_bases > 0) {
             read.cap_front_qualities(num_front_bases + num_bases_);
         }
-        
         if (num_back_bases > 0) {
             read.cap_back_qualities(num_back_bases + num_bases_);
         }
@@ -94,36 +93,25 @@ void QualityAdjustedSoftClippedMasker::operator()(AlignedRead& read) const noexc
         using std::accumulate; using std::min_element; using std::min;
         
         using S = AlignedRead::NucleotideSequence::size_type;
-        
         S num_front_bases, num_back_bases;
-        
         std::tie(num_front_bases, num_back_bases) = get_soft_clipped_sizes(read);
-        
         const auto& qualities = read.qualities();
         
         using Q = AlignedRead::BaseQuality;
         
         if (num_front_bases > 0) {
             const auto sum = accumulate(cbegin(qualities), next(cbegin(qualities), num_front_bases), 0.0);
-            
             const auto mean = static_cast<Q>(sum / num_front_bases);
-            
             const auto min_quality = *min_element(cbegin(qualities), next(cbegin(qualities)));
-            
             const auto mask_size = num_front_bases + min(static_cast<S>(mean - min_quality), num_front_bases);
-            
             read.cap_front_qualities(mask_size);
         }
         
         if (num_back_bases > 0) {
             const auto sum = accumulate(crbegin(qualities), next(crbegin(qualities), num_back_bases), 0.0);
-            
             const auto mean = static_cast<Q>(sum / num_back_bases);
-            
             const auto min_quality = *min_element(cbegin(qualities), next(cbegin(qualities)));
-            
             const auto mask_size = num_back_bases + min(static_cast<S>(mean - min_quality), num_back_bases);
-            
             read.cap_back_qualities(mask_size);
         }
     }

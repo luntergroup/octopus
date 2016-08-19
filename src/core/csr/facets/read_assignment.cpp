@@ -24,12 +24,10 @@ auto max_posterior_haplotypes(const Genotype<Haplotype>& genotype, const unsigne
 {
     std::vector<unsigned> result {};
     result.reserve(genotype.ploidy());
-    
     auto max_likelihood = std::numeric_limits<double>::lowest();
     
     for (unsigned k {0}; k < genotype.ploidy(); ++k) {
         const auto curr = likelihoods[k][read];
-        
         if (maths::almost_equal(curr, max_likelihood)) {
             result.push_back(k);
         } else if (curr > max_likelihood) {
@@ -51,7 +49,6 @@ auto calculate_support(const Genotype<Haplotype>& genotype,
     
     for (unsigned i {0}; i < reads.size(); ++i) {
         const auto top = max_posterior_haplotypes(genotype, i, likelihoods);
-        
         if (top.size() == 1) {
             result[genotype[top.front()]].push_back(reads[i]);
         }
@@ -77,7 +74,7 @@ auto calculate_likelihood(const Haplotype& haplotype,
 {
     static constexpr unsigned char kmerSize {6};
     auto mapping_positions = map_query_to_target<kmerSize>(read.sequence(), haplotype.sequence());
-    return model.ln_probability(read, mapping_positions);
+    return model.evaluate(read, mapping_positions);
 }
 
 auto calculate_likelihoods(const Haplotype& haplotype,
@@ -98,23 +95,17 @@ auto calculate_likelihoods(const Genotype<Haplotype>& genotype,
                            HaplotypeLikelihoodModel& model)
 {
     const auto& genotype_region = mapped_region(genotype);
-    
     const auto reads_region = encompassing_region(reads);
-    
-    unsigned min_lhs_expansion {0};
+    unsigned min_lhs_expansion {0}, min_rhs_expansion {};
     
     if (begins_before(reads_region, genotype_region)) {
         min_lhs_expansion += begin_distance(reads_region, genotype_region);
     }
-    
-    unsigned min_rhs_expansion {0};
-    
     if (ends_before(genotype_region, reads_region)) {
         min_rhs_expansion += end_distance(genotype_region, reads_region);
     }
     
     const auto min_expansion = std::max({min_lhs_expansion, min_rhs_expansion, 20u});
-    
     std::map<Haplotype, Haplotype> expanded_haplotypes {};
     
     for (const auto& haplotype : genotype) {
@@ -122,9 +113,7 @@ auto calculate_likelihoods(const Genotype<Haplotype>& genotype,
     }
     
     const auto expanded_genotype = expand(genotype, min_expansion);
-    
     const auto haplotypes = expanded_genotype.copy_unique();
-    
     HaplotypeLikelihoods result(genotype.ploidy());
     
     std::transform(std::cbegin(genotype), std::cend(genotype), std::begin(result),

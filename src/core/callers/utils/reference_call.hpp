@@ -42,7 +42,8 @@ private:
 
 template <typename A>
 ReferenceCall::ReferenceCall(A&& reference, Phred<double> quality)
-: Call {quality}, reference_ {std::forward<A>(reference)}
+: Call {quality}
+, reference_ {std::forward<A>(reference)}
 {}
 
 } // namespace octopus

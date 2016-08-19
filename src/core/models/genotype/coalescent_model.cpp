@@ -25,7 +25,6 @@ auto percent_of_bases_in_repeat(const Haplotype& haplotype)
     
     const auto c = std::count_if(std::cbegin(repeat_counts), std::cend(repeat_counts),
                                  [] (const auto c) { return c > 0; });
-    
     return static_cast<double>(c) / repeat_counts.size();
 }
 
@@ -39,12 +38,9 @@ auto calculate_base_indel_heterozygosities(const Haplotype& haplotype,
     for (const auto& repeat : repeats) {
         const auto it1 = std::next(std::begin(result), repeat.pos);
         const auto it2 = std::next(it1, repeat.length);
-        
         const auto n = repeat.length / repeat.period;
-        
         // TODO: implement a proper model for this
         const auto t = std::min(base_indel_heterozygosity * std::pow(n, 2.6), 1.0);
-        
         std::transform(it1, it2, it1, [t] (const auto h) { return std::max(h, t); });
     }
     
@@ -55,11 +51,10 @@ CoalescentModel::CoalescentModel(Haplotype reference,
                                  double snp_heterozygosity,
                                  double indel_heterozygosity,
                                  unsigned max_haplotypes)
-:
-reference_ {std::move(reference)},
-reference_base_indel_heterozygosities_ {},
-snp_heterozygosity_ {snp_heterozygosity},
-indel_heterozygosity_ {indel_heterozygosity}
+: reference_ {std::move(reference)}
+, reference_base_indel_heterozygosities_ {}
+, snp_heterozygosity_ {snp_heterozygosity}
+, indel_heterozygosity_ {indel_heterozygosity}
 {
     if (snp_heterozygosity <= 0 || indel_heterozygosity <= 0) {
         throw std::domain_error {"CoalescentModel: snp and indel heterozygosity must be > 0"};

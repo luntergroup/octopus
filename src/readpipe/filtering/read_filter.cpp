@@ -52,13 +52,12 @@ bool IsNotSupplementaryAlignment::passes(const AlignedRead& read) const noexcept
 
 IsGoodMappingQuality::IsGoodMappingQuality(MappingQuality good_mapping_quality)
 :
-BasicReadFilter {"IsGoodMappingQuality"},
-good_mapping_quality_ {good_mapping_quality} {}
+BasicReadFilter {"IsGoodMappingQuality"}
+, good_mapping_quality_ {good_mapping_quality} {}
 
 IsGoodMappingQuality::IsGoodMappingQuality(std::string name, MappingQuality good_mapping_quality)
-:
-BasicReadFilter {std::move(name)},
-good_mapping_quality_ {good_mapping_quality} {}
+: BasicReadFilter {std::move(name)}
+, good_mapping_quality_ {good_mapping_quality} {}
 
 bool IsGoodMappingQuality::passes(const AlignedRead& read) const noexcept
 {
@@ -67,43 +66,40 @@ bool IsGoodMappingQuality::passes(const AlignedRead& read) const noexcept
 
 HasSufficientGoodBaseFraction::HasSufficientGoodBaseFraction(BaseQuality good_base_quality,
                                                              double min_good_base_fraction)
-:
-BasicReadFilter {"HasSufficientGoodBaseFraction"},
-good_base_quality_ {good_base_quality}, min_good_base_fraction_ {min_good_base_fraction} {}
+: BasicReadFilter {"HasSufficientGoodBaseFraction"}
+, good_base_quality_ {good_base_quality}
+, min_good_base_fraction_ {min_good_base_fraction}
+{}
 
 HasSufficientGoodBaseFraction::HasSufficientGoodBaseFraction(std::string name,
                                                              BaseQuality good_base_quality,
                                                              double min_good_base_fraction)
-:
-BasicReadFilter {std::move(name)},
-good_base_quality_ {good_base_quality}, min_good_base_fraction_ {min_good_base_fraction} {}
+: BasicReadFilter {std::move(name)}
+, good_base_quality_ {good_base_quality}
+, min_good_base_fraction_ {min_good_base_fraction}
+{}
 
 bool HasSufficientGoodBaseFraction::passes(const AlignedRead& read) const noexcept
 {
     const auto& qualities = read.qualities();
-    
     auto num_good_bases = std::count_if(std::cbegin(qualities), std::cend(qualities),
                                         [this] (const auto quality) {
                                             return quality >= good_base_quality_;
                                         });
-    
     auto good_base_fraction = static_cast<double>(num_good_bases) / static_cast<double>(sequence_size(read));
-    
     return good_base_fraction >= min_good_base_fraction_;
 }
 
 HasSufficientGoodQualityBases::HasSufficientGoodQualityBases(BaseQuality good_base_quality,
                                                              unsigned min_good_bases)
-:
-BasicReadFilter {"HasSufficientGoodQualityBases"},
-good_base_quality_ {good_base_quality}, min_good_bases_ {min_good_bases} {}
+: BasicReadFilter {"HasSufficientGoodQualityBases"}
+, good_base_quality_ {good_base_quality}, min_good_bases_ {min_good_bases} {}
 
 HasSufficientGoodQualityBases::HasSufficientGoodQualityBases(std::string name,
                                                              BaseQuality good_base_quality,
                                                              unsigned min_good_bases)
-:
-BasicReadFilter {std::move(name)},
-good_base_quality_ {good_base_quality}, min_good_bases_ {min_good_bases} {}
+: BasicReadFilter {std::move(name)}
+, good_base_quality_ {good_base_quality}, min_good_bases_ {min_good_bases} {}
 
 bool HasSufficientGoodQualityBases::passes(const AlignedRead& read) const noexcept
 {
@@ -147,14 +143,12 @@ bool IsNotMarkedDuplicate::passes(const AlignedRead& read) const noexcept
 }
 
 IsShort::IsShort(Length max_length)
-:
-BasicReadFilter {"IsShort"},
-max_length_ {max_length} {}
+: BasicReadFilter {"IsShort"}
+, max_length_ {max_length} {}
 
 IsShort::IsShort(std::string name, Length max_length)
-:
-BasicReadFilter {std::move(name)},
-max_length_ {max_length} {}
+: BasicReadFilter {std::move(name)}
+, max_length_ {max_length} {}
 
 bool IsShort::passes(const AlignedRead& read) const noexcept
 {
@@ -162,14 +156,12 @@ bool IsShort::passes(const AlignedRead& read) const noexcept
 }
 
 IsLong::IsLong(Length min_length)
-:
-BasicReadFilter {"IsLong"},
-min_length_ {min_length} {}
+: BasicReadFilter {"IsLong"}
+, min_length_ {min_length} {}
 
 IsLong::IsLong(std::string name, Length min_length)
-:
-BasicReadFilter {std::move(name)},
-min_length_ {min_length} {}
+: BasicReadFilter {std::move(name)}
+, min_length_ {min_length} {}
 
 bool IsLong::passes(const AlignedRead& read) const noexcept
 {
@@ -184,9 +176,7 @@ bool IsNotContaminated::passes(const AlignedRead& read) const noexcept
     if (!read.has_other_segment() || read.next_segment().is_marked_unmapped()) {
         return true;
     }
-    
     const auto template_length = read.next_segment().inferred_template_length();
-    
     return template_length > region_size(read);
 }
 

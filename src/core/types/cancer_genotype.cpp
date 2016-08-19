@@ -23,8 +23,7 @@ std::size_t estimate_num_cancer_genotypes(const std::size_t num_haplotypes, cons
     return (num_genotypes(static_cast<unsigned>(num_haplotypes), ploidy) - 1) * num_haplotypes;
 }
 
-namespace
-{
+namespace {
     auto make_all_shared(const std::vector<Haplotype>& elements)
     {
         std::vector<std::shared_ptr<Haplotype>> result(elements.size());
@@ -32,7 +31,7 @@ namespace
                        [] (const auto& element) { return std::make_shared<Haplotype>(element); });
         return result;
     }
-} // namespace
+}
 
 std::pair<std::vector<CancerGenotype<Haplotype>>, std::vector<Genotype<Haplotype>>>
 generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const unsigned ploidy)

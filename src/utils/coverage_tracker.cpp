@@ -109,18 +109,15 @@ void CoverageTracker::do_add(const octopus::GenomicRegion& region)
             coverage_.insert(std::cbegin(coverage_), left_overhang_size(region, encompassing_region_), 0);
             region_change = true;
         }
-        
         if (ends_before(encompassing_region_, region)) {
             coverage_.insert(std::cend(coverage_), right_overhang_size(region, encompassing_region_), 0);
             region_change = true;
         }
-        
         if (region_change) {
             encompassing_region_ = octopus::encompassing_region(encompassing_region_, region);
         }
         
         const auto first = std::next(std::begin(coverage_), begin_distance(encompassing_region_, region));
-        
         std::transform(first, std::next(first, size(region)), first, [] (auto count) { return count + 1; });
     }
     

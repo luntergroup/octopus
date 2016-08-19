@@ -28,10 +28,8 @@ public:
     
     CallerBuilder() = delete;
     
-    CallerBuilder(const ReferenceGenome& reference,
-                  const ReadPipe& read_pipe,
-                  VariantGenerator::Builder vgb,
-                  HaplotypeGenerator::Builder hgb);
+    CallerBuilder(const ReferenceGenome& reference, const ReadPipe& read_pipe,
+                  VariantGenerator::Builder vgb, HaplotypeGenerator::Builder hgb);
     
     CallerBuilder(const CallerBuilder&);
     CallerBuilder& operator=(const CallerBuilder&);
@@ -55,7 +53,6 @@ public:
     CallerBuilder& set_flank_scoring(bool b) noexcept;
     CallerBuilder& set_model_filtering(bool b) noexcept;
     CallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
-    
     CallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
     
@@ -67,12 +64,10 @@ public:
     CallerBuilder& set_min_somatic_posterior(Phred<double> posterior) noexcept;
     
     // trio
-    
     CallerBuilder& set_maternal_sample(SampleName mother);
     CallerBuilder& set_paternal_sample(SampleName father);
     
     // pedigree
-    
     CallerBuilder& set_pedigree(Pedigree pedigree);
     
     std::unique_ptr<Caller> build() const;
@@ -91,7 +86,6 @@ private:
     {
         // common
         unsigned ploidy;
-        
         Caller::RefCallType refcall_type = Caller::RefCallType::none;
         bool call_sites_only = false;
         Phred<double> min_variant_posterior;
@@ -100,14 +94,11 @@ private:
         double min_haplotype_posterior;
         bool allow_flank_scoring;
         bool allow_model_filtering;
-        
         double snp_heterozygosity;
         double indel_heterozygosity;
-        
         Phred<double> min_phase_score;
         
         // cancer
-        
         boost::optional<SampleName> normal_sample;
         double somatic_mutation_rate;
         double min_somatic_frequency;
@@ -116,26 +107,19 @@ private:
         bool call_somatics_only;
         
         // trio
-        
         boost::optional<SampleName> maternal_sample, paternal_sample;
         
         // pedigree
-        
         boost::optional<Pedigree> pedigree;
     };
     
     using CallerFactoryMap = std::unordered_map<std::string, std::function<std::unique_ptr<Caller>()>>;
     
     std::string caller_;
-    
     Components components_;
-    
     Parameters params_;
-    
     CallerFactoryMap factory_;
-    
     Caller::Components make_components() const;
-    
     CallerFactoryMap generate_factory() const;
 };
 

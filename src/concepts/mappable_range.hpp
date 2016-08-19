@@ -224,7 +224,9 @@ namespace detail {
         
         template <typename MappableType1_, typename MappableType2_>
         IsShared(const MappableType1_& lhs, MappableType2_ rhs)
-        : lhs_ {mapped_region(lhs)}, rhs_ {mapped_region(rhs)} {}
+        : lhs_ {mapped_region(lhs)}
+        , rhs_ {mapped_region(rhs)}
+        {}
         
         bool operator()(const MappableType& mappable) const
         {

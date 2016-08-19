@@ -20,8 +20,7 @@ namespace octopus {
 
 GenomeCallingComponents::GenomeCallingComponents(ReferenceGenome&& reference, ReadManager&& read_manager,
                         VcfWriter&& output, const options::OptionMap& options)
-:
-components_ {std::move(reference), std::move(read_manager), std::move(output), options}
+: components_ {std::move(reference), std::move(read_manager), std::move(output), options}
 {}
 
 GenomeCallingComponents::GenomeCallingComponents(GenomeCallingComponents&& other) noexcept
@@ -254,21 +253,20 @@ std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes,
 
 GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, ReadManager&& read_manager,
                                                 VcfWriter&& output, const options::OptionMap& options)
-:
-reference {std::move(reference)},
-read_manager {std::move(read_manager)},
-samples {extract_samples(options, this->read_manager)},
-regions {options::get_search_regions(options, this->reference)},
-contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))},
-read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)},
-caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options)},
-output {std::move(output)},
-num_threads {options::get_num_threads(options)},
-read_buffer_size {},
-temp_directory {((!num_threads || *num_threads > 1) ? options::create_temp_file_directory(options) : boost::none)},
-progress_meter {regions},
-legacy {options::legacy_vcf_requested(options)},
-sites_only {options::call_sites_only(options)}
+: reference {std::move(reference)}
+, read_manager {std::move(read_manager)}
+, samples {extract_samples(options, this->read_manager)}
+, regions {options::get_search_regions(options, this->reference)}
+, contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
+, read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)}
+, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options)}
+, output {std::move(output)}
+, num_threads {options::get_num_threads(options)}
+, read_buffer_size {}
+, temp_directory {((!num_threads || *num_threads > 1) ? options::create_temp_file_directory(options) : boost::none)}
+, progress_meter {regions}
+, legacy {options::legacy_vcf_requested(options)}
+, sites_only {options::call_sites_only(options)}
 {
     const auto num_bp_to_process = sum_region_sizes(regions);
     
@@ -350,28 +348,26 @@ boost::optional<GenomeCallingComponents> collate_genome_calling_components(const
 
 ContigCallingComponents::ContigCallingComponents(const GenomicRegion::ContigName& contig,
                                                  GenomeCallingComponents& genome_components)
-:
-reference {genome_components.reference()},
-read_manager {genome_components.read_manager()},
-regions {genome_components.search_regions().at(contig)},
-samples {genome_components.samples()},
-caller {genome_components.caller_factory().make(contig)},
-read_buffer_size {genome_components.read_buffer_size()},
-output {genome_components.output()},
-progress_meter {genome_components.progress_meter()}
+: reference {genome_components.reference()}
+, read_manager {genome_components.read_manager()}
+, regions {genome_components.search_regions().at(contig)}
+, samples {genome_components.samples()}
+, caller {genome_components.caller_factory().make(contig)}
+, read_buffer_size {genome_components.read_buffer_size()}
+, output {genome_components.output()}
+, progress_meter {genome_components.progress_meter()}
 {}
 
 ContigCallingComponents::ContigCallingComponents(const GenomicRegion::ContigName& contig, VcfWriter& output,
                                                  GenomeCallingComponents& genome_components)
-:
-reference {genome_components.reference()},
-read_manager {genome_components.read_manager()},
-regions {genome_components.search_regions().at(contig)},
-samples {genome_components.samples()},
-caller {genome_components.caller_factory().make(contig)},
-read_buffer_size {genome_components.read_buffer_size()},
-output {output},
-progress_meter {genome_components.progress_meter()}
+: reference {genome_components.reference()}
+, read_manager {genome_components.read_manager()}
+, regions {genome_components.search_regions().at(contig)}
+, samples {genome_components.samples()}
+, caller {genome_components.caller_factory().make(contig)}
+, read_buffer_size {genome_components.read_buffer_size()}
+, output {output}
+, progress_meter {genome_components.progress_meter()}
 {}
 
 } // namespace octopus

@@ -48,9 +48,8 @@ namespace {
 // public methods
 
 Assembler::BadReferenceSequence::BadReferenceSequence(NucleotideSequence reference_sequence)
-:
-std::invalid_argument {"bad reference sequence"},
-reference_sequence_ {std::move(reference_sequence)}
+: std::invalid_argument {"bad reference sequence"}
+, reference_sequence_ {std::move(reference_sequence)}
 {}
 
 const char* Assembler::BadReferenceSequence::what() const noexcept
@@ -59,18 +58,16 @@ const char* Assembler::BadReferenceSequence::what() const noexcept
 }
 
 Assembler::Assembler(const unsigned kmer_size)
-:
-k_ {kmer_size},
-reference_kmers_ {},
-reference_head_position_ {0}
+: k_ {kmer_size}
+, reference_kmers_ {}
+, reference_head_position_ {0}
 {}
 
 Assembler::Assembler(const unsigned kmer_size,
                      const NucleotideSequence& reference)
-:
-k_ {kmer_size},
-reference_kmers_ {},
-reference_head_position_ {0}
+: k_ {kmer_size}
+, reference_kmers_ {}
+, reference_head_position_ {0}
 {
     insert_reference_into_empty_graph(reference);
 }
@@ -197,15 +194,12 @@ bool Assembler::prune(const unsigned min_weight)
         clear();
         return false;
     }
-    
     auto old_size = boost::num_vertices(graph_);
-    
     if (old_size < 2) return true;
     
     remove_trivial_nonreference_cycles();
     
     auto new_size = boost::num_vertices(graph_);
-    
     if (new_size != old_size) {
         regenerate_vertex_indices();
         if (new_size < 2) {
@@ -215,7 +209,6 @@ bool Assembler::prune(const unsigned min_weight)
     }
     
     remove_low_weight_edges(min_weight);
-    
     remove_disconnected_vertices();
     
     new_size = boost::num_vertices(graph_);
@@ -231,7 +224,6 @@ bool Assembler::prune(const unsigned min_weight)
     remove_vertices_that_cant_be_reached_from(reference_head());
     
     new_size = boost::num_vertices(graph_);
-    
     if (new_size != old_size) {
         regenerate_vertex_indices();
         if (new_size < 2) return true;
@@ -269,7 +261,6 @@ bool Assembler::prune(const unsigned min_weight)
         clear();
         return true;
     }
-    
     if (can_prune_reference_flanks()) {
         // something is wrong, have seen cases, bug?
         clear();
@@ -277,7 +268,6 @@ bool Assembler::prune(const unsigned min_weight)
     }
     
     new_size = boost::num_vertices(graph_);
-    
     assert(new_size != 0);
     assert(!(boost::num_edges(graph_) == 0 && new_size > 1));
     assert(is_reference_unique_path());
@@ -286,7 +276,6 @@ bool Assembler::prune(const unsigned min_weight)
         regenerate_vertex_indices();
         old_size = new_size;
     }
-    
     return true;
 }
 
@@ -303,26 +292,21 @@ std::deque<Assembler::Variant> Assembler::extract_variants(const unsigned max)
     if (is_empty() || is_all_reference()) {
         return std::deque<Variant> {};
     }
-    
     set_all_edge_transition_scores_from(reference_head());
-    
     return extract_k_highest_scoring_bubble_paths(max);
 }
 
 // Assembler private types
-
 Assembler::GraphEdge::GraphEdge(const GraphEdge::WeightType weight, const bool is_reference)
-:
-weight {weight},
-is_reference {is_reference}
+: weight {weight}
+, is_reference {is_reference}
 {}
 
 // Kmer
-
 Assembler::Kmer::Kmer(SequenceIterator first, SequenceIterator last) noexcept
-:
-first_ {first}, last_ {last},
-hash_ {boost::hash_range(first_, last_)}
+: first_ {first}
+, last_ {last}
+, hash_ {boost::hash_range(first_, last_)}
 {}
 
 char Assembler::Kmer::front() const noexcept
@@ -366,7 +350,6 @@ bool operator<(const Assembler::Kmer& lhs, const Assembler::Kmer& rhs) noexcept
 }
 
 // Assembler private methods
-
 void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequence)
 {
     if (sequence.size() < k_) {
@@ -374,27 +357,20 @@ void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequ
     }
     
     vertex_cache_.reserve(sequence.size() + std::pow(4, 5));
-    
     auto it1 = std::cbegin(sequence);
     auto it2 = std::next(it1, k_);
-    
     reference_kmers_.emplace_back(it1, it2);
-    
     if (!contains_kmer(reference_kmers_.back())) {
         const auto u = add_vertex(reference_kmers_.back(), true);
         if (!u) {
             throw BadReferenceSequence {sequence};
         }
     }
-    
     ++it1;
     ++it2;
-    
     for (; it2 <= std::cend(sequence); ++it1, ++it2) {
         reference_kmers_.emplace_back(it1, it2);
-        
         const auto& kmer = reference_kmers_.back();
-        
         if (!contains_kmer(kmer)) {
             const auto v = add_vertex(kmer, true);
             if (v) {
@@ -409,7 +385,6 @@ void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequ
             add_reference_edge(u, v);
         }
     }
-    
     reference_kmers_.shrink_to_fit();
 }
 
@@ -418,13 +393,11 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
     if (!reference_kmers_.empty()) {
         throw std::runtime_error {"Assembler: only one reference sequence can be inserted into the graph"};
     }
-    
     if (sequence.size() < k_) {
         throw std::runtime_error {"Assembler:: reference length must >= kmer_size"};
     }
     
     vertex_cache_.reserve(vertex_cache_.size() + sequence.size() + std::pow(4, 5));
-    
     auto it1 = std::cbegin(sequence);
     auto it2 = std::next(it1, k_);
     
@@ -441,10 +414,8 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
     
     ++it1;
     ++it2;
-    
     for (; it2 <= std::cend(sequence); ++it1, ++it2) {
         reference_kmers_.emplace_back(it1, it2);
-        
         if (!contains_kmer(reference_kmers_.back())) {
             const auto v = add_vertex(reference_kmers_.back(), true);
             if (v) {
@@ -462,7 +433,6 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
             Edge e;
             bool e_in_graph;
             std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
-            
             if (e_in_graph) {
                 set_edge_reference(e);
             } else {
@@ -470,12 +440,9 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
             }
         }
     }
-    
     vertex_cache_.rehash(vertex_cache_.size());
     reference_kmers_.shrink_to_fit();
-    
     regenerate_vertex_indices();
-    
     reference_head_position_ = 0;
 }
 
@@ -504,9 +471,7 @@ void Assembler::regenerate_vertex_indices()
 bool Assembler::is_reference_unique_path() const
 {
     auto u = reference_head();
-    
     const auto tail = reference_tail();
-    
     const auto is_reference_edge = [this] (const Edge e) { return is_reference(e); };
     
     while (u != tail) {
@@ -520,12 +485,10 @@ bool Assembler::is_reference_unique_path() const
     }
     
     const auto p = boost::out_edges(tail, graph_);
-    
     return std::none_of(p.first, p.second, is_reference_edge);
 }
 
-namespace
-{
+namespace {
     template <typename T>
     bool is_dna(const T& sequence)
     {
@@ -534,7 +497,7 @@ namespace
                                return base == 'A' || base == 'C' || base == 'G' || base == 'T';
                            });
     }
-} // namespace
+}
 
 Assembler::Vertex Assembler::null_vertex() const
 {
@@ -718,13 +681,11 @@ Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Verte
     NucleotideSequence result {};
     
     const auto null = null_vertex();
-    
     if (from == to || from == null) {
         return result;
     }
     
     auto last = to;
-    
     if (last == null) {
         if (from == reference_tail()) {
             return static_cast<NucleotideSequence>(kmer_of(from));
@@ -738,18 +699,15 @@ Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Verte
     result.insert(std::end(result), std::cbegin(first_kmer), std::cend(first_kmer));
     
     from = next_reference(from);
-    
     while (from != last) {
         result.push_back(back_base_of(from));
         from = next_reference(from);
     }
-    
     if (to == null) {
         result.push_back(back_base_of(last));
     }
     
     result.shrink_to_fit();
-    
     return result;
 }
 
@@ -832,9 +790,7 @@ bool Assembler::is_on_path(const Edge e, const Path& path) const
     
     auto it1 = std::cbegin(path);
     auto it2 = std::next(it1);
-    
     const auto last = std::cend(path);
-    
     Edge path_edge;
     bool good;
     
@@ -878,25 +834,20 @@ std::unordered_set<Assembler::Vertex> Assembler::find_reachable_kmers(const Vert
 {
     std::unordered_set<Vertex> result {};
     result.reserve(boost::num_vertices(graph_));
-    
     auto vis = boost::make_bfs_visitor(boost::write_property(boost::typed_identity_property_map<Vertex>(),
                                                              std::inserter(result, std::begin(result)),
                                                              boost::on_discover_vertex()));
-    
     boost::breadth_first_search(graph_, from,
                                 boost::visitor(vis)
                                 .vertex_index_map(boost::get(&GraphNode::index, graph_)));
-    
     return result;
 }
 
 void Assembler::remove_vertices_that_cant_be_reached_from(const Vertex v)
 {
     const auto reachables = find_reachable_kmers(v);
-    
     VertexIterator vi, vi_end, vi_next;
     std::tie(vi, vi_end) = boost::vertices(graph_);
-    
     for (vi_next = vi; vi != vi_end; vi = vi_next) {
         ++vi_next;
         if (reachables.count(*vi) == 0) {
@@ -910,20 +861,16 @@ void Assembler::remove_vertices_that_cant_reach(const Vertex v)
     if (is_reference_empty()) return;
     
     const auto transpose = boost::make_reverse_graph(graph_);
-    
     const auto index_map = boost::get(&GraphNode::index, transpose);
-    
     std::unordered_set<Vertex> reachables {};
     
     auto vis = boost::make_bfs_visitor(boost::write_property(boost::typed_identity_property_map<Vertex>(),
                                                              std::inserter(reachables, std::begin(reachables)),
                                                              boost::on_discover_vertex()));
-    
     boost::breadth_first_search(transpose, v, boost::visitor(vis).vertex_index_map(index_map));
     
     VertexIterator vi, vi_end, vi_next;
     std::tie(vi, vi_end) = boost::vertices(graph_);
-    
     for (vi_next = vi; vi != vi_end; vi = vi_next) {
         ++vi_next;
         if (reachables.count(*vi) == 0) {
@@ -935,9 +882,7 @@ void Assembler::remove_vertices_that_cant_reach(const Vertex v)
 void Assembler::remove_vertices_past(const Vertex v)
 {
     auto reachables = find_reachable_kmers(v);
-    
     reachables.erase(v);
-    
     for (const Vertex u : reachables) {
         clear_and_remove_vertex(u);
     }
@@ -967,7 +912,6 @@ void Assembler::prune_reference_flanks()
                                          return boost::out_degree(v, graph_) == 1
                                          && is_reference(*boost::out_edges(v, graph_).first);
                                      });
-    
     std::for_each(std::cbegin(sorted_vertices), it,
                   [this] (const Vertex u) {
                       remove_edge(u, *boost::adjacent_vertices(u, graph_).first);
@@ -975,13 +919,11 @@ void Assembler::prune_reference_flanks()
                       reference_kmers_.pop_front();
                       ++reference_head_position_;
                   });
-    
     const auto it2 = std::find_if_not(std::crbegin(sorted_vertices), std::make_reverse_iterator(it),
                                       [this] (const Vertex v) {
                                           return boost::in_degree(v, graph_) == 1
                                           && is_reference(*boost::in_edges(v, graph_).first);
                                       });
-    
     std::for_each(std::crbegin(sorted_vertices), it2,
                   [this] (const Vertex u) {
                       remove_edge(*boost::inv_adjacent_vertices(u, graph_).first, u);
@@ -995,11 +937,8 @@ Assembler::build_dominator_tree(const Vertex from) const
 {
     DominatorMap result;
     result.reserve(boost::num_vertices(graph_));
-    
     boost::lengauer_tarjan_dominator_tree(graph_, from,  boost::make_assoc_property_map(result));
-    
     auto it = std::begin(result);
-    
     for (; it != std::end(result);) {
         if (it->second == null_vertex()) {
             it = result.erase(it);
@@ -1007,32 +946,25 @@ Assembler::build_dominator_tree(const Vertex from) const
             ++it;
         }
     }
-    
     result.rehash(result.size());
-    
     return result;
 }
 
 std::unordered_set<Assembler::Vertex> Assembler::extract_nondominants(const Vertex from) const
 {
     const auto dom_tree = build_dominator_tree(from);
-    
     std::unordered_set<Vertex> dominators {};
     dominators.reserve(dom_tree.size());
-    
     for (const auto& p : dom_tree) {
         dominators.emplace(p.second);
     }
-    
     std::unordered_set<Vertex> result {};
     result.reserve(dom_tree.size());
-    
     for (const auto& p : dom_tree) {
         if (dominators.count(p.first) == 0) {
             result.emplace(p.first);
         }
     }
-    
     return result;
 }
 
@@ -1040,19 +972,15 @@ std::deque<Assembler::Vertex> Assembler::extract_nondominant_reference(const Dom
 {
     std::unordered_set<Vertex> dominators {};
     dominators.reserve(dominator_tree.size());
-    
     for (const auto& p : dominator_tree) {
         dominators.emplace(p.second);
     }
-    
     std::deque<Vertex> result {};
-    
     for (const auto& p : dominator_tree) {
         if (is_reference(p.first) && p.first != reference_tail() && dominators.count(p.first) == 0) {
             result.push_back(p.first);
         }
     }
-    
     return result;
 }
 
@@ -1087,22 +1015,17 @@ auto compute_transition_score(const T edge_weight, const T total_out_weight, con
     if (total_out_weight == 0) {
         return R {0};
     }
-    
     if (edge_weight == 0) {
         return max_score;
     }
-    
     return std::abs(std::log(static_cast<R>(edge_weight) / total_out_weight));
 }
 
 void Assembler::set_out_edge_transition_scores(const Vertex v)
 {
     const auto total_out_weight = count_out_weight(v, graph_);
-    
     const auto p = boost::out_edges(v, graph_);
-    
     using R = GraphEdge::ScoreType;
-    
     std::for_each(p.first, p.second, [this, total_out_weight] (const Edge& e) {
         graph_[e].transition_score = compute_transition_score<R>(graph_[e].weight, total_out_weight);
     });
@@ -1120,9 +1043,7 @@ struct TransitionScorer : public boost::default_dfs_visitor
     void discover_vertex(Vertex v, const G& g)
     {
         const auto total_out_weight = count_out_weight(v, g);
-        
         const auto p = boost::out_edges(v, g);
-        
         std::for_each(p.first, p.second, [this, &g, total_out_weight] (const auto& e) {
             boost::put(map, e, compute_transition_score<R>(g[e].weight, total_out_weight));
         });
@@ -1132,12 +1053,9 @@ struct TransitionScorer : public boost::default_dfs_visitor
 void Assembler::set_all_edge_transition_scores_from(const Vertex src)
 {
     auto score_map = boost::get(&GraphEdge::transition_score, graph_);
-    
     TransitionScorer<GraphEdge::ScoreType, KmerGraph, decltype(score_map)> vis {score_map};
-    
     boost::depth_first_search(graph_, boost::visitor(vis)
                               .vertex_index_map(boost::get(&GraphNode::index, graph_)));
-    
     for (auto p = boost::edges(graph_); p.first != p.second; ++p.first) {
         graph_[*p.first].transition_score = score_map[*p.first];
     }
@@ -1190,46 +1108,35 @@ bool Assembler::all_vertices_are_blocked(const std::deque<Vertex>& vertices) con
 Assembler::PredecessorMap Assembler::find_shortest_scoring_paths(const Vertex from) const
 {
     assert(from != null_vertex());
-    
     std::unordered_map<Vertex, Vertex> preds {};
     preds.reserve(boost::num_vertices(graph_));
-    
     boost::dag_shortest_paths(graph_, from,
                               boost::weight_map(boost::get(&GraphEdge::transition_score, graph_))
                               .predecessor_map(boost::make_assoc_property_map(preds))
                               .vertex_index_map(boost::get(&GraphNode::index, graph_)));
-    
     return preds;
 }
 
 bool Assembler::is_on_path(const Vertex v, const PredecessorMap& predecessors, const Vertex from) const
 {
     if (v == from) return true;
-    
     assert(predecessors.count(from) == 1);
-    
     auto it = predecessors.find(from);
-    
     while (it != std::end(predecessors) && it->first != it->second) {
         if (it->second == v) return true;
         it = predecessors.find(it->second);
     }
-    
     return false;
 }
 
 bool Assembler::is_on_path(const Edge e, const PredecessorMap& predecessors, const Vertex from) const
 {
     assert(predecessors.count(from) == 1);
-    
     auto it1 = predecessors.find(from);
     auto it2 = predecessors.find(it1->second);
-    
     const auto last = std::cend(predecessors);
-    
     Edge path_edge;
     bool good;
-    
     while (it2 != last && it1 != it2) {
         std::tie(path_edge, good) = boost::edge(it2->second, it1->second, graph_);
         assert(good);
@@ -1239,23 +1146,18 @@ bool Assembler::is_on_path(const Edge e, const PredecessorMap& predecessors, con
         it1 = it2;
         it2 = predecessors.find(it1->second);
     }
-    
     return false;
 }
 
 Assembler::Path Assembler::extract_full_path(const PredecessorMap& predecessors, const Vertex from) const
 {
     assert(predecessors.count(from) == 1);
-    
     Path result {from};
-    
     auto it = predecessors.find(from);
-    
     while (it != std::end(predecessors) && it->first != it->second) {
         result.push_front(it->second);
         it = predecessors.find(it->second);
     }
-    
     return result;
 }
 
@@ -1263,13 +1165,9 @@ std::tuple<Assembler::Vertex, Assembler::Vertex, unsigned>
 Assembler::backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const
 {
     assert(predecessors.count(from) == 1);
-    
     auto v = predecessors.at(from);
-    
     unsigned count {1};
-    
     const auto head = reference_head();
-    
     while (v != head) {
         assert(from != v); // was not reachable from source
         const auto p = boost::edge(v, from, graph_);
@@ -1280,7 +1178,6 @@ Assembler::backtrack_until_nonreference(const PredecessorMap& predecessors, Vert
         v = predecessors.at(from);
         ++count;
     }
-    
     return std::make_tuple(v, from, count);
 }
 
@@ -1288,14 +1185,11 @@ Assembler::Path
 Assembler::extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const
 {
     Path result {from};
-    
     from = predecessors.at(from);
-    
     while (!is_reference(from)) {
         result.push_front(from);
         from = predecessors.at(from);
     }
-    
     return result;
 }
 
@@ -1328,16 +1222,11 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
     // TODO: should implement Eppstein's algorithm here
     
     auto dominator_tree = build_dominator_tree(reference_head());
-    
     auto num_remaining_alt_kmers = num_kmers() - num_reference_kmers();
-    
     Vertex ref, alt;
     unsigned rhs_kmer_count;
-    
     boost::optional<Edge> blocked_edge {};
-    
     std::deque<Variant> result {};
-    
     unsigned max_blockings {50}; // HACK
     
     while (k > 0 && num_remaining_alt_kmers > 0) {
@@ -1365,36 +1254,27 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
         assert(count_unreachables(predecessors) == 1);
         
         std::tie(alt, ref, rhs_kmer_count) = backtrack_until_nonreference(predecessors, reference_tail());
-        
         if (alt == reference_head()) {
             // complete reference path is shortest path
             const auto nondominant_reference = extract_nondominant_reference(dominator_tree);
-            
             if (all_vertices_are_blocked(nondominant_reference)) {
                 return result; // nothing more we can do?
             }
-            
             block_all_vertices(nondominant_reference);
-            
             continue;
         }
         
         while (alt != reference_head()) {
             auto alt_path = extract_nonreference_path(predecessors, alt);
-            
             assert(!alt_path.empty());
-            
             const auto ref_before_bubble = predecessors.at(alt_path.front());
-            
             auto ref_seq = make_reference(ref_before_bubble, ref);
             alt_path.push_front(ref_before_bubble);
             auto alt_seq = make_sequence(alt_path);
             alt_path.pop_front();
             
             rhs_kmer_count += count_kmers(ref_seq, k_);
-            
             const auto pos = reference_head_position_ + reference_size() - sequence_length(rhs_kmer_count, k_);
-            
             result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
             
             --rhs_kmer_count; // because we padded one reference kmer to make ref_seq
@@ -1402,18 +1282,14 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             Edge edge_to_alt;
             bool good;
             std::tie(edge_to_alt, good) = boost::edge(alt, ref, graph_);
-            
             assert(good);
-            
             if (alt_path.size() == 1 && is_simple_deletion(edge_to_alt)) {
                 remove_edge(alt_path.front(), ref);
                 set_out_edge_transition_scores(alt_path.front());
             } else {
                 auto vertex_before_bridge = ref_before_bubble;
-                
                 while (!alt_path.empty()) {
                     const auto it = is_bridge_until(alt_path);
-                    
                     if (it == std::cend(alt_path)) {
                         remove_path(alt_path);
                         regenerate_vertex_indices();
@@ -1445,25 +1321,19 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
                     }
                 }
             }
-            
             unsigned kmer_count_to_alt;
             std::tie(alt, ref, kmer_count_to_alt) = backtrack_until_nonreference(predecessors, ref_before_bubble);
-            
             rhs_kmer_count += kmer_count_to_alt;
-            
             if (k > 0) --k;
         }
-        
         assert(boost::out_degree(reference_head(), graph_) > 0);
         assert(boost::in_degree(reference_tail(), graph_) > 0);
-        
         if (can_prune_reference_flanks()) {
             prune_reference_flanks();
             regenerate_vertex_indices();
             dominator_tree = build_dominator_tree(reference_head());
         }
     }
-    
     return result;
 }
 

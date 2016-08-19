@@ -38,21 +38,18 @@ public:
         std::string value;
         operator std::string() const { return value; }
     };
-    
     struct Tag : public Comparable<Tag>
     {
         template <typename T> Tag(T&& t) : value {std::forward<T>(t)} {}
         std::string value;
         operator std::string() const { return value; }
     };
-    
     struct StructuredKey : public Comparable<StructuredKey>
     {
         template <typename K> StructuredKey(K&& k) : value {std::forward<K>(k)} {}
         std::string value;
         operator std::string() const { return value; }
     };
-    
     struct BasicKeyHash
     {
         std::size_t operator()(const BasicKey& k) const
@@ -60,7 +57,6 @@ public:
             return std::hash<decltype(k.value)>()(k.value);
         }
     };
-    
     struct StructuredKeyHash
     {
         std::size_t operator()(const StructuredKey& k) const
@@ -68,7 +64,6 @@ public:
             return std::hash<decltype(k.value)>()(k.value);
         }
     };
-    
     struct TagHash
     {
         std::size_t operator()(const Tag& k) const
@@ -77,10 +72,8 @@ public:
         }
     };
     
-    using Value = std::string; // basic & structured fields share the same value type
-    
-    using BasicFieldMap = std::unordered_map<BasicKey, Value, BasicKeyHash>;
-    
+    using Value              = std::string; // basic & structured fields share the same value type
+    using BasicFieldMap      = std::unordered_map<BasicKey, Value, BasicKeyHash>;
     using StructuredField    = std::unordered_map<StructuredKey, Value, StructuredKeyHash>;
     using StructuredFieldMap = std::unordered_multimap<Tag, StructuredField, TagHash>;
     
@@ -105,26 +98,18 @@ public:
     std::vector<std::string> samples() const;
     
     bool has(const BasicKey& k) const noexcept;
-    
     bool has(const Tag& t) const noexcept;
-    
     bool has(const Tag& tag, const StructuredKey& k) const noexcept;
     
     const Value& at(const BasicKey& k) const;
-    
     const Value& find(const Tag& search_tag, const StructuredKey& search_key,
                       const StructuredKey& id_key, const Value& id_value) const;
     
     std::vector<BasicKey> basic_keys() const;
-    
     std::vector<Tag> tags() const;
-    
     std::vector<StructuredKey> keys(const Tag& t) const;
-    
     const BasicFieldMap& basic_fields() const noexcept;
-    
     std::vector<StructuredField> structured_fields(const Tag& t) const;
-    
     const StructuredFieldMap& structured_fields() const noexcept;
     
     friend bool operator==(const BasicKey& lhs, const BasicKey& rhs)
@@ -171,11 +156,10 @@ private:
 
 template <typename T, typename U, typename B, typename S>
 VcfHeader::VcfHeader(T&& file_format, U&& samples, B&& basic_fields, S&& structured_fields)
-:
-file_format_ {std::forward<T>(file_format)},
-samples_ {std::forward<U>(samples)},
-basic_fields_ {std::forward<B>(basic_fields)},
-structured_fields_ {std::forward<S>(structured_fields)}
+: file_format_ {std::forward<T>(file_format)}
+, samples_ {std::forward<U>(samples)}
+, basic_fields_ {std::forward<B>(basic_fields)}
+, structured_fields_ {std::forward<S>(structured_fields)}
 {}
 
 const std::string& get_id_field_value(const VcfHeader& header, const VcfHeader::Tag& t,
@@ -223,24 +207,16 @@ public:
     Builder(const VcfHeader& header);
     
     Builder& set_file_format(std::string file_format);
-    
     Builder& add_sample(std::string sample);
-    
     Builder& set_samples(std::vector<std::string> samples);
-    
     Builder& add_basic_field(std::string key, std::string value);
-    
     Builder& add_structured_field(std::string tag, std::unordered_map<std::string, std::string> values);
-    
     Builder& add_info(std::string id, std::string number, std::string type, std::string description,
                       std::unordered_map<std::string, std::string> other_values = {});
-    
     Builder& add_filter(std::string id, std::string description,
                         std::unordered_map<std::string, std::string> other_values = {});
-    
     Builder& add_format(std::string id, std::string number, std::string type, std::string description,
                         std::unordered_map<std::string, std::string> other_values = {});
-    
     Builder& add_contig(std::string id, std::unordered_map<std::string, std::string> other_values = {});
     
     VcfHeader build() const;

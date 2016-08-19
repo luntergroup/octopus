@@ -63,21 +63,18 @@ public:
 };
 
 Fasta::Fasta(Path fasta_path)
-:
-Fasta {fasta_path, fasta_path.string() + ".fai"}
+: Fasta {fasta_path, fasta_path.string() + ".fai"}
 {}
 
 Fasta::Fasta(Path fasta_path, Path fasta_index_path)
-:
-path_ {std::move(fasta_path)},
-index_path_ {std::move(fasta_index_path)}
+: path_ {std::move(fasta_path)}
+, index_path_ {std::move(fasta_index_path)}
 {
     using boost::filesystem::exists;
     
     if (!exists(path_)) {
         throw MissingFasta {path_};
     }
-    
     if (!is_valid_fasta()) {
         throw MalformedFasta {path_};
     }
@@ -85,7 +82,6 @@ index_path_ {std::move(fasta_index_path)}
     if (!exists(index_path_)) {
         index_path_ = path_;
         index_path_.replace_extension("fai");
-        
         if (!exists(index_path_)) {
             throw MissingFastaIndex {path_};
         }
@@ -100,10 +96,9 @@ index_path_ {std::move(fasta_index_path)}
 }
 
 Fasta::Fasta(const Fasta& other)
-:
-path_ {other.path_},
-index_path_ {other.index_path_},
-fasta_ {path_.string()}
+: path_ {other.path_}
+, index_path_ {other.index_path_}
+, fasta_ {path_.string()}
 {}
 
 Fasta& Fasta::operator=(Fasta other)

@@ -11,7 +11,9 @@ namespace octopus {
 MissingFileError::MissingFileError(Path file) : file_ {std::move(file)} {}
 
 MissingFileError::MissingFileError(Path file, std::string type)
-: file_ {std::move(file)}, type_ {std::move(type)} {}
+: file_ {std::move(file)}
+, type_ {std::move(type)}
+{}
 
 void MissingFileError::set_location_specified(std::string location) noexcept
 {

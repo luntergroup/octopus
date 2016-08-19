@@ -12,13 +12,11 @@
 namespace octopus { namespace coretools {
 
 VcfExtractor::VcfExtractor(std::unique_ptr<const VcfReader> reader)
-:
-reader_ {std::move(reader)}
+: reader_ {std::move(reader)}
 {}
 
 VcfExtractor::VcfExtractor(const std::shared_ptr<const VcfReader>& reader)
-:
-reader_ {reader}
+: reader_ {reader}
 {}
 
 std::unique_ptr<VariantGenerator> VcfExtractor::do_clone() const

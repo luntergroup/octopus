@@ -27,13 +27,10 @@ template <typename MapType>
 auto extract_keys(const MapType& map)
 {
     static_assert(is_map<MapType>, "MapType must be a map type");
-    
     std::vector<typename MapType::key_type> result {};
     result.reserve(map.size());
-    
     std::transform(std::cbegin(map), std::cend(map), std::back_inserter(result),
                    [] (const auto& p) { return p.first; });
-    
     return result;
 }
 
@@ -41,13 +38,10 @@ template <typename MapType>
 auto extract_values(const MapType& map)
 {
     static_assert(is_map<MapType>, "MapType must be a map type");
-    
     std::vector<typename MapType::mapped_type> result {};
     result.reserve(map.size());
-    
     std::transform(std::cbegin(map), std::cend(map), std::back_inserter(result),
                    [] (const auto& p) { return p.second; });
-    
     return result;
 }
 
@@ -61,7 +55,6 @@ auto extract_value_sorted_keys(const MapType& map)
     
     std::transform(std::cbegin(map), std::cend(map), std::back_inserter(pairs),
                    [] (const auto& p) { return std::make_pair(p.second, p.first); });
-    
     std::sort(std::begin(pairs), std::end(pairs),
               [] (const auto& lhs, const auto& rhs) { return lhs.first > rhs.first; });
     
@@ -78,7 +71,6 @@ template <typename MapType, typename UnaryFunction>
 void for_each_value(MapType& map, UnaryFunction f)
 {
     static_assert(is_map<MapType>, "map must be a map type");
-    
     for (auto& p : map) {
         f(*p.second);
     }

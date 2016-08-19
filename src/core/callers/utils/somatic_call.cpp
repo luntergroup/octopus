@@ -9,9 +9,7 @@ namespace octopus {
     void SomaticCall::decorate(VcfRecord::Builder& record) const
     {
         record.set_somatic();
-        
         record.set_alt(variant_.alt_allele().sequence());
-        
         record.add_format("SCR");
         
         for (const auto& p : credible_regions_) {

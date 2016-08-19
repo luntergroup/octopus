@@ -17,9 +17,7 @@ namespace octopus {
 std::string tidy(std::string message)
 {
     utils::capitalise_front(message);
-    
     if (!message.empty() && message.back() != '.') message += '.';
-    
     return message;
 }
 
@@ -28,9 +26,7 @@ std::vector<std::string> format_as_paragraph(const std::string& message, const s
     if (message.empty()) return {};
     
     auto words = utils::split(message, ' ');
-    
     std::vector<std::string> result {};
-    
     std::string cur_line {};
     
     for (auto& word : words) {
@@ -66,9 +62,7 @@ void log_error(const Error& error)
     log_empty_line(log);
     
     const auto max_line_length = config::CommandLineWidth;
-    
     static const std::string tab {"    "};
-    
     auto why_lines = tidy_and_format(error.why(), max_line_length - tab.length());
     
     for (auto& line : why_lines) {
@@ -79,7 +73,6 @@ void log_error(const Error& error)
     log_empty_line(log);
     
     auto help = std::string {"To help resolve this error "} + error.help();
-    
     const auto help_lines = tidy_and_format(help, max_line_length);
     
     for (const auto& line : help_lines) {

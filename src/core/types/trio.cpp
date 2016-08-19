@@ -11,10 +11,9 @@ namespace octopus {
 // public member methods
 
 Trio::Trio(Mother mother, Father father, Child child)
-:
-mother_ {std::move(mother.name)},
-father_ {std::move(father.name)},
-child_  {std::move(child.name)}
+: mother_ {std::move(mother.name)}
+, father_ {std::move(father.name)}
+, child_  {std::move(child.name)}
 {
     if (mother_ == father_ || mother_ == child_ || father_ == child_) {
         throw std::logic_error {"Trio: members of a trio must be unique"};

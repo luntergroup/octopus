@@ -64,9 +64,8 @@ private:
 
 template <typename R, typename A>
 Variant::Variant(R&& reference, A&& alternative)
-:
-reference_ {std::forward<R>(reference)},
-alternative_ {std::forward<A>(alternative)}
+: reference_ {std::forward<R>(reference)}
+, alternative_ {std::forward<A>(alternative)}
 {
     if (!is_same_region(reference_, alternative_)) {
         throw std::logic_error {"Variant: reference & alternative alleles must define the same region"};
@@ -75,17 +74,15 @@ alternative_ {std::forward<A>(alternative)}
 
 template <typename GenomicRegion_, typename Sequence1, typename Sequence2>
 Variant::Variant(GenomicRegion_&& ref_region, Sequence1&& ref_sequence, Sequence2&& alt_sequence)
-:
-reference_ {ref_region, std::forward<Sequence1>(ref_sequence)},
-alternative_ {std::forward<GenomicRegion_>(ref_region), std::forward<Sequence2>(alt_sequence)}
+: reference_ {ref_region, std::forward<Sequence1>(ref_sequence)}
+, alternative_ {std::forward<GenomicRegion_>(ref_region), std::forward<Sequence2>(alt_sequence)}
 {}
 
 template <typename String, typename Sequence1, typename Sequence2>
 Variant::Variant(String&& ref_contig_name, const MappingDomain::Position ref_begin,
                  Sequence1&& ref_sequence, Sequence2&& alt_sequence)
-:
-reference_ {std::forward<String>(ref_contig_name), ref_begin, std::forward<Sequence1>(ref_sequence)},
-alternative_ {reference_.mapped_region(), std::forward<Sequence2>(alt_sequence)}
+: reference_ {std::forward<String>(ref_contig_name), ref_begin, std::forward<Sequence1>(ref_sequence)}
+, alternative_ {reference_.mapped_region(), std::forward<Sequence2>(alt_sequence)}
 {}
 
 // non-member methods

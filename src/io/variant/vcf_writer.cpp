@@ -18,10 +18,9 @@
 namespace octopus {
 
 VcfWriter::VcfWriter(Path file_path)
-:
-file_path_ {std::move(file_path)},
-writer_ {nullptr},
-is_header_written_ {false}
+: file_path_ {std::move(file_path)}
+, writer_ {nullptr}
+, is_header_written_ {false}
 {
     using namespace boost::filesystem;
     
@@ -53,8 +52,7 @@ is_header_written_ {false}
 }
 
 VcfWriter::VcfWriter(Path file_path, const VcfHeader& header)
-:
-VcfWriter {std::move(file_path)}
+: VcfWriter {std::move(file_path)}
 {
     this->write(std::move(header));
 }
@@ -81,10 +79,10 @@ VcfWriter::~VcfWriter()
 
 void swap(VcfWriter& lhs, VcfWriter& rhs) noexcept
 {
-    using std::swap;
     if (&lhs == &rhs) return;
     std::lock(lhs.mutex_, rhs.mutex_);
     std::lock_guard<std::mutex> lock_lhs {lhs.mutex_, std::adopt_lock}, lock_rhs {rhs.mutex_, std::adopt_lock};
+    using std::swap;
     swap(lhs.file_path_, rhs.file_path_);
     swap(lhs.is_header_written_, rhs.is_header_written_);
     swap(lhs.writer_, rhs.writer_);

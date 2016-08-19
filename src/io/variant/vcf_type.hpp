@@ -86,11 +86,10 @@ namespace detail {
     class VcfTypeError : std::runtime_error {
     public:
         VcfTypeError(std::string op, std::string type1, std::string type2)
-        :
-        runtime_error {"invalid operation on types"},
-        op_ {std::move(op)},
-        type1_ {std::move(type1)},
-        type2_ {std::move(type2)}
+        : runtime_error {"invalid operation on types"}
+        , op_ {std::move(op)}
+        , type1_ {std::move(type1)}
+        , type2_ {std::move(type2)}
         {}
         
         const char* what() const noexcept

@@ -72,34 +72,30 @@ private:
 template <typename MappableType>
 CancerGenotype<MappableType>::CancerGenotype(std::initializer_list<MappableType> germline_elements,
                                              const MappableType& somatic_element)
-:
-germline_genotype_ {germline_elements},
-somatic_element_ {std::make_shared<MappableType>(somatic_element)}
+: germline_genotype_ {germline_elements}
+, somatic_element_ {std::make_shared<MappableType>(somatic_element)}
 {}
 
 template <typename MappableType>
 CancerGenotype<MappableType>::CancerGenotype(std::initializer_list<MappableType> germline_elements,
                                              MappableType&& somatic_element)
-:
-germline_genotype_ {germline_elements},
-somatic_element_ {std::make_shared<MappableType>(std::move(somatic_element))}
+: germline_genotype_ {germline_elements}
+, somatic_element_ {std::make_shared<MappableType>(std::move(somatic_element))}
 {}
 
 template <typename MappableType>
 template <typename G>
 CancerGenotype<MappableType>::CancerGenotype(G&& germline_genotype,
                                              const std::shared_ptr<MappableType>& somatic_element)
-:
-germline_genotype_ {std::forward<G>(germline_genotype)},
-somatic_element_ {somatic_element}
+: germline_genotype_ {std::forward<G>(germline_genotype)}
+, somatic_element_ {somatic_element}
 {}
 
 template <typename MappableType>
 template <typename G, typename C>
 CancerGenotype<MappableType>::CancerGenotype(G&& germline_genotype, C&& somatic_element)
-:
-germline_genotype_ {std::forward<G>(germline_genotype)},
-somatic_element_ {std::make_shared<MappableType>(std::forward<C>(somatic_element))}
+: germline_genotype_ {std::forward<G>(germline_genotype)}
+, somatic_element_ {std::make_shared<MappableType>(std::forward<C>(somatic_element))}
 {}
 
 template <typename MappableType>

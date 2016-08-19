@@ -68,9 +68,7 @@ private:
     double snp_heterozygosity_, indel_heterozygosity_;
     
     mutable std::vector<std::reference_wrapper<const Variant>> site_buffer1_, site_buffer2_;
-    
     mutable std::unordered_map<Haplotype, std::vector<Variant>> difference_cache_;
-    
     mutable std::unordered_map<SiteCountTuple, double, SiteCountTupleHash> result_cache_;
     
     template <typename Container>
@@ -164,15 +162,11 @@ inline auto coalescent(const unsigned n, const unsigned k_snp, const unsigned k_
                        const double theta_snp, const double theta_indel)
 {
     const auto theta = theta_snp + theta_indel;
-    
     const auto k_tot = k_snp + k_indel;
-    
     auto result = coalescent(n, k_tot, theta);
-    
     result += k_snp * std::log(theta_snp / theta);
     result += k_indel * std::log(theta_indel / theta);
     result += detail::log_binom(k_tot, k_snp);
-    
     return result;
 }
 
@@ -189,7 +183,6 @@ double CoalescentModel::evaluate(const Container& haplotypes) const
     if (k_indel == 0) {
         // indel heterozygosity is default in this case
         const auto it = result_cache_.find(t);
-        
         if (it != std::cend(result_cache_)) return it->second;
     }
     
@@ -199,13 +192,9 @@ double CoalescentModel::evaluate(const Container& haplotypes) const
         for (const auto& site : site_buffer1_) {
             if (is_indel(site)) {
                 const auto offset = begin_distance(reference_, site.get());
-                
                 auto it = std::next(std::cbegin(reference_base_indel_heterozygosities_), offset);
-                
                 using S = Variant::MappingDomain::Size;
-                
                 it = std::max_element(it, std::next(it, std::max(S {1}, region_size(site.get()))));
-                
                 indel_heterozygosity = std::max(*it, indel_heterozygosity);
             }
         }
@@ -231,19 +220,15 @@ void CoalescentModel::fill_site_buffer(const Container& haplotypes) const
     
     for (const Haplotype& haplotype : haplotypes) {
         auto it = difference_cache_.find(haplotype);
-        
         if (it == cend(difference_cache_)) {
             it = difference_cache_.emplace(std::piecewise_construct,
                                            std::forward_as_tuple(haplotype),
                                            std::forward_as_tuple(haplotype.difference(reference_))).first;
         }
-        
         std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
                        std::cbegin(it->second), std::cend(it->second),
                        std::back_inserter(site_buffer2_));
-        
         std::swap(site_buffer1_, site_buffer2_);
-        
         site_buffer2_.clear();
     }
 }
@@ -253,10 +238,8 @@ CoalescentModel::SiteCountTuple
 CoalescentModel::count_segregating_sites(const Container& haplotypes) const
 {
     fill_site_buffer(haplotypes);
-    
     const auto num_indels = std::count_if(std::cbegin(site_buffer1_), std::cend(site_buffer1_),
                                           [] (const auto& v) { return is_indel(v); });
-    
     return std::make_tuple(site_buffer1_.size() - num_indels, num_indels,
                            static_cast<unsigned>(detail::size(haplotypes) + 1));
 }
@@ -272,7 +255,6 @@ std::vector<double> calculate_log_priors(const Container& genotypes, const Coale
                    [&model] (const auto& genotype) {
                        return model.evaluate(genotype);
                    });
-    
     maths::normalise_logs(result);
     
     return result;

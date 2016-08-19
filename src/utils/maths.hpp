@@ -196,7 +196,6 @@ RealType log_factorial(IntegerType x)
     if (x == 2) return std::log(2);
     if (x == 3) return std::log(6);
     if (x == 4) return std::log(24);
-    
     if (x > 100) {
         return x * std::log(x) - x; // Stirling's approximation
     } else {
@@ -213,10 +212,8 @@ template <typename ForwardIt>
 auto log_beta(const ForwardIt first, const ForwardIt last)
 {
     using T = std::decay_t<typename std::iterator_traits<ForwardIt>::value_type>;
-    
     static_assert(std::is_floating_point<T>::value,
                   "log_beta is only defined for floating point types.");
-    
     return std::accumulate(first, last, T {0},
                            [] (const auto curr, const auto x) {
                                return curr + boost::math::lgamma(x);
@@ -233,10 +230,8 @@ template <typename ForwardIt1, typename ForwardIt2>
 auto log_dirichlet(ForwardIt1 firstalpha, ForwardIt1 lastalpha, ForwardIt2 firstpi)
 {
     using T = std::decay_t<typename std::iterator_traits<ForwardIt1>::value_type>;
-    
     static_assert(std::is_floating_point<T>::value,
                   "log_dirichlet is only defined for floating point types.");
-    
     return std::inner_product(firstalpha, lastalpha, firstpi, T {0}, std::plus<void> {},
                               [] (const auto a, const auto p) { return (a - 1) * std::log(p); })
             - log_beta(firstalpha, lastalpha);
@@ -296,11 +291,9 @@ template <typename IntegerType, typename RealType>
 inline RealType multinomial_pdf(const std::vector<IntegerType>& z, const std::vector<RealType>& p)
 {
     RealType r {1};
-    
-    for (size_t i {0}; i < z.size(); ++i) {
+    for (std::size_t i {0}; i < z.size(); ++i) {
         r *= std::pow(p[i], z[i]);
     }
-    
     return multinomial_coefficient<IntegerType, RealType>(std::cbegin(z), std::cend(z)) * r;
 }
 
@@ -310,12 +303,10 @@ inline RealType digamma_inv(const RealType x, const RealType epsilon = 10e-8)
 {
     RealType l {1};
     auto y = std::exp(x);
-    
     while (l > epsilon) {
         y += l * boost::math::sign(x - boost::math::digamma<RealType>(y));
         l /= 2;
     }
-    
     return y;
 }
 
@@ -325,7 +316,6 @@ RealType dirichlet_multinomial(const RealType z1, const RealType z2, const RealT
     auto z_0 = z1 + z2;
     auto a_0 = a1 + a2;
     auto z_m = boost::math::factorial<RealType>(z1) * boost::math::factorial<RealType>(z2);
-    
     return (boost::math::factorial<RealType>(z_0) / z_m) *
             (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) *
             (boost::math::tgamma<RealType>(z1 + a1) * boost::math::tgamma<RealType>(z2 + a2)) /
@@ -340,7 +330,6 @@ RealType dirichlet_multinomial(const RealType z1, const RealType z2, const RealT
     auto a_0 = a1 + a2 + a3;
     auto z_m = boost::math::factorial<RealType>(z1) * boost::math::factorial<RealType>(z2) *
                 boost::math::factorial<RealType>(z3);
-    
     return (boost::math::factorial<RealType>(z_0) / z_m) *
             (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) *
             (boost::math::tgamma<RealType>(z1 + a1) * boost::math::tgamma<RealType>(z2 + a2) *
@@ -353,14 +342,12 @@ RealType dirichlet_multinomial(const std::vector<RealType>& z, const std::vector
 {
     auto z_0 = std::accumulate(std::cbegin(z), std::cend(z), RealType {0});
     auto a_0 = std::accumulate(std::cbegin(a), std::cend(a), RealType {0});
-    
     RealType z_m {1};
     for (auto z_i : z) {
         z_m *= boost::math::factorial<RealType>(z_i);
     }
-    
     RealType g {1};
-    for (size_t i {0}; i < z.size(); ++i) {
+    for (std::size_t i {0}; i < z.size(); ++i) {
         g *= boost::math::tgamma<RealType>(z[i] + a[i]) / boost::math::tgamma<RealType>(a[i]);
     }
     
@@ -374,8 +361,7 @@ RealType beta_binomial(const RealType k, const RealType n, const RealType alpha,
     return dirichlet_multinomial<RealType>(k, n - k, alpha, beta);
 }
 
-namespace detail
-{
+namespace detail {
     template <typename RealType>
     bool is_mldp_converged(std::vector<RealType>& lhs, const std::vector<RealType>& rhs,
                            const RealType epsilon)
@@ -385,7 +371,7 @@ namespace detail
         return std::all_of(std::cbegin(lhs), std::cend(lhs),
                            [epsilon] (const auto x) { return x < epsilon; });
     }
-} // namespace detail
+}
 
 template <typename RealType>
 std::vector<RealType>
@@ -396,27 +382,23 @@ dirichlet_mle(std::vector<RealType> pi, const RealType precision,
                    [] (const auto p) { return std::log(p); });
     
     const auto l = pi.size();
-    
     const RealType u {RealType {1} / l};
-    
     std::vector<RealType> result(l, u), curr_result(l, u), means(l, u);
     
     for (unsigned n {0}; n < max_iterations; ++n) {
         RealType v {0};
-        
         for (std::size_t j {0}; j < l; ++j) {
             v += means[j] * (pi[j] - boost::math::digamma<RealType>(precision * means[j]));
         }
-        
         for (std::size_t k {0}; k < l; ++k) {
             curr_result[k] = digamma_inv<RealType>(pi[k] - v);
             means[k]       = curr_result[k] / std::accumulate(std::cbegin(curr_result),
                                                               std::cend(curr_result),
                                                               RealType {0});
         }
-        
-        if (detail::is_mldp_converged(result, curr_result, epsilon)) return curr_result;
-        
+        if (detail::is_mldp_converged(result, curr_result, epsilon)) {
+            return curr_result;
+        }
         result = curr_result;
     }
     
@@ -444,46 +426,37 @@ RealType phred_to_probability(const NumericType phred)
 }
 
 template <typename MapType>
-inline
-typename MapType::key_type
-sum_keys(const MapType& map)
+typename MapType::key_type sum_keys(const MapType& map)
 {
     return std::accumulate(std::cbegin(map), std::cend(map), typename MapType::key_type {},
                            [] (const auto previous, const auto& p) { return previous + p.first; });
 }
 
 template <typename ResultType, typename MapType, typename UnaryOperation>
-inline
-ResultType
-sum_keys(const MapType& map, UnaryOperation op)
+ResultType sum_keys(const MapType& map, UnaryOperation op)
 {
     return std::accumulate(std::cbegin(map), std::cend(map), ResultType {0},
                            [op] (const auto previous, const auto& p) { return previous + op(p.first); });
 }
 
 template <typename MapType>
-inline
-typename MapType::mapped_type
-sum_values(const MapType& map)
+typename MapType::mapped_type sum_values(const MapType& map)
 {
     return std::accumulate(std::cbegin(map), std::cend(map), typename MapType::mapped_type {},
                            [] (const auto previous, const auto& p) { return previous + p.second; });
 }
 
 template <typename ResultType, typename MapType, typename UnaryOperation>
-inline
-ResultType
-sum_values(const MapType& map, UnaryOperation op)
+ResultType sum_values(const MapType& map, UnaryOperation op)
 {
     return std::accumulate(std::cbegin(map), std::cend(map), ResultType {0},
                            [op] (const auto previous, const auto& p) { return previous + op(p.second); });
 }
 
 template <typename Map>
-inline
-size_t sum_sizes(const Map& map)
+std::size_t sum_sizes(const Map& map)
 {
-    return std::accumulate(std::cbegin(map), std::cend(map), size_t {0},
+    return std::accumulate(std::cbegin(map), std::cend(map), std::size_t {0},
                            [] (const auto& p, const auto& v) { return p + v.second.size(); });
 }
 
@@ -533,48 +506,49 @@ RealType beta_cdf_complement(const RealType a, const RealType b, const RealType 
     return boost::math::cdf(boost::math::complement(beta_dist, x));
 }
 
-namespace detail
+namespace detail {
+
+template <typename RealType>
+std::pair<RealType, RealType>
+uniform_hdi(const RealType mass)
 {
-    template <typename RealType>
-    std::pair<RealType, RealType>
-    uniform_hdi(const RealType mass)
-    {
-        const auto x = RealType {0.5} - mass / 2;
-        return std::make_pair(x, x + mass);
-    }
-    
-    template <typename RealType>
-    std::pair<RealType, RealType>
-    beta_hdi_symmetric(const RealType a, const RealType mass)
-    {
-        const auto x = boost::math::ibeta_inv(a, a, (RealType {1} - mass) / 2);
-        return std::make_pair(x, RealType {1} - x);
-    }
-    
-    template <typename RealType>
-    std::pair<RealType, RealType>
-    beta_hdi_unbounded_rhs(const RealType a, const RealType mass)
-    {
-        // Reverse J shaped
-        return std::make_pair(boost::math::ibeta_inv(a, RealType {1}, RealType {1} - mass), RealType {1});
-    }
-    
-    template <typename RealType>
-    std::pair<RealType, RealType>
-    beta_hdi_unbounded_lhs(const RealType b, const RealType mass)
-    {
-        // J shaped
-        return std::make_pair(RealType {0}, boost::math::ibeta_inv(RealType {1}, b, mass));
-    }
-    
-    template <typename RealType>
-    std::pair<RealType, RealType>
-    beta_hdi_skewed(const RealType a, const RealType b, const RealType mass)
-    {
-        const auto c = (RealType {1} - mass) / 2;
-        return std::make_pair(boost::math::ibeta_inv(a, b, c),
-                              boost::math::ibeta_inv(a, b, c + mass));
-    }
+    const auto x = RealType {0.5} - mass / 2;
+    return std::make_pair(x, x + mass);
+}
+
+template <typename RealType>
+std::pair<RealType, RealType>
+beta_hdi_symmetric(const RealType a, const RealType mass)
+{
+    const auto x = boost::math::ibeta_inv(a, a, (RealType {1} - mass) / 2);
+    return std::make_pair(x, RealType {1} - x);
+}
+
+template <typename RealType>
+std::pair<RealType, RealType>
+beta_hdi_unbounded_rhs(const RealType a, const RealType mass)
+{
+    // Reverse J shaped
+    return std::make_pair(boost::math::ibeta_inv(a, RealType {1}, RealType {1} - mass), RealType {1});
+}
+
+template <typename RealType>
+std::pair<RealType, RealType>
+beta_hdi_unbounded_lhs(const RealType b, const RealType mass)
+{
+    // J shaped
+    return std::make_pair(RealType {0}, boost::math::ibeta_inv(RealType {1}, b, mass));
+}
+
+template <typename RealType>
+std::pair<RealType, RealType>
+beta_hdi_skewed(const RealType a, const RealType b, const RealType mass)
+{
+    const auto c = (RealType {1} - mass) / 2;
+    return std::make_pair(boost::math::ibeta_inv(a, b, c),
+                          boost::math::ibeta_inv(a, b, c + mass));
+}
+
 } // namespace detail
 
 template <typename RealType>
@@ -587,7 +561,6 @@ beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
     if (mass < RealType {0} || mass > RealType {1}) {
         throw std::domain_error {"beta_hdi: given mass not in range [0, 1]"};
     }
-    
     if (a <= RealType {0} || b <= RealType {0}) {
         throw std::domain_error {"beta_hdi: given non-positive parameter"};
     }
@@ -596,11 +569,9 @@ beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
         const auto mean = a / (a + b);
         return std::make_pair(mean, mean);
     }
-    
     if (mass == RealType {1}) {
         return std::make_pair(RealType {0}, RealType {1});
     }
-    
     if (a == b) {
         if (a == RealType {1}) {
             return detail::uniform_hdi(mass);
@@ -608,15 +579,12 @@ beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
             return detail::beta_hdi_symmetric(a, mass);
         }
     }
-    
     if (a == RealType {1}) {
         return detail::beta_hdi_unbounded_lhs(b, mass);
     }
-    
     if (b == RealType {1}) {
         return detail::beta_hdi_unbounded_rhs(a, mass);
     }
-    
     return detail::beta_hdi_skewed(a, b, mass);
 }
 

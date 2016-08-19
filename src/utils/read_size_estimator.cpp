@@ -87,11 +87,8 @@ boost::optional<std::size_t> estimate_mean_read_size(const std::vector<SampleNam
     // take read samples from each sample seperatly to ensure we cover each
     for (const auto& sample : samples) {
         const auto it = random_select(std::cbegin(sample_regions), std::cend(sample_regions));
-        
         assert(!it->second.empty());
-        
         const auto it2 = random_select(std::cbegin(it->second), std::cend(it->second));
-        
         auto test_region = read_manager.find_covered_subregion(sample, *it2, num_samples_per_sample);
         
         if (is_empty(test_region)) {

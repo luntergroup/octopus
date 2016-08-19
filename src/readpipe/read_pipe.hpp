@@ -68,13 +68,10 @@ public:
     
 private:
     std::reference_wrapper<const ReadManager> manager_;
-    
     ReadTransformer transformer_;
     ReadFilterer filterer_;
     boost::optional<Downsampler> downsampler_;
-    
     std::vector<SampleName> samples_;
-    
     mutable boost::optional<logging::DebugLogger> debug_log_;
 };
 

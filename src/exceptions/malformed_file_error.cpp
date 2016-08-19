@@ -17,10 +17,14 @@ MalformedFileError::MalformedFileError(Path file) : file_ {std::move(file)}
 {}
 
 MalformedFileError::MalformedFileError(Path file, std::string required_type)
-: file_ {std::move(file)}, valid_types_ {std::move(required_type)} {}
+: file_ {std::move(file)}
+, valid_types_ {std::move(required_type)}
+{}
 
 MalformedFileError::MalformedFileError(Path file, std::vector<std::string> valid_types)
-: file_ {std::move(file)}, valid_types_ {std::move(valid_types)} {}
+: file_ {std::move(file)}
+, valid_types_ {std::move(valid_types)}
+{}
 
 void MalformedFileError::set_reason(std::string reason) noexcept
 {

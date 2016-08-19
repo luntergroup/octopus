@@ -21,10 +21,9 @@ namespace octopus { namespace coretools {
 GenomeWalker::GenomeWalker(unsigned max_included,
                            IndicatorPolicy indicator_policy,
                            ExtensionPolicy extension_policy)
-:
-max_included_ {max_included},
-indicator_policy_ {indicator_policy},
-extension_policy_ {extension_policy}
+: max_included_ {max_included}
+, indicator_policy_ {indicator_policy}
+, extension_policy_ {extension_policy}
 {}
 
 GenomicRegion GenomeWalker::walk(const ContigName& contig, const ReadMap& reads,
@@ -65,16 +64,13 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     using std::distance; using std::advance;
     
     auto last_candidate_itr = cend(candidates);
-    
     auto previous_candidates = bases(overlap_range(candidates, previous_region));
-    
     auto first_previous_itr = cbegin(previous_candidates);
     auto included_itr       = cend(previous_candidates);
     
     if (included_itr == last_candidate_itr) {
         return shift(tail_region(previous_region), 2);
     }
-    
     if (max_included_ == 0) {
         if (included_itr != last_candidate_itr) {
             return intervening_region(previous_region, *included_itr);
@@ -91,7 +87,6 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
         {
             if (distance(first_previous_itr, included_itr) > 0) {
                 const auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
-                
                 num_indicators = static_cast<unsigned>(distance(it, included_itr));
             }
             break;
@@ -103,7 +98,6 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
                 
                 while (true) {
                     const auto it2 = find_first_shared(reads, first_previous_itr, it, *it);
-                    
                     if (it2 == it) {
                         it = it2;
                         break;
@@ -122,11 +116,8 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     }
     
     auto first_included_itr = prev(included_itr, num_indicators);
-    
     auto num_remaining_candidates = static_cast<unsigned>(distance(included_itr, last_candidate_itr));
-    
     unsigned num_excluded_candidates {0};
-    
     auto num_included = max_included_;
     
     if (extension_policy_ == ExtensionPolicy::includeIfWithinReadLengthOfFirstIncluded) {
@@ -150,13 +141,9 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
            }
     
     // first_excluded_itr = find_first_after(included_itr, last_candidate_itr, rightmost
-    
     first_excluded_itr = next(included_itr);
-    
     const auto& rightmost = *rightmost_mappable(first_included_itr, first_excluded_itr);
-    
     auto num_remaining = static_cast<size_t>(distance(first_excluded_itr, last_candidate_itr));
-    
     auto num_overlapped = candidates.count_overlapped(first_excluded_itr, last_candidate_itr, rightmost);
     
     advance(included_itr, min(num_remaining, num_overlapped));

@@ -48,7 +48,7 @@ namespace {
 
 bool Haplotype::contains(const ContigAllele& allele) const
 {
-    using octopus::contains;
+    using octopus::contains; using std::cbegin; using std::cend;
     
     if (contains(region_.contig_region(), allele)) {
         if (begins_before(allele, explicit_allele_region_)) {
@@ -60,7 +60,6 @@ bool Haplotype::contains(const ContigAllele& allele) const
                 return false;
             }
         }
-        
         if (ends_before(explicit_allele_region_, allele)) {
             if (is_after(allele, explicit_allele_region_)) {
                 return allele.sequence() == fetch_reference_sequence(contig_region(allele));
@@ -70,11 +69,7 @@ bool Haplotype::contains(const ContigAllele& allele) const
                 return false;
             }
         }
-        
-        using std::cbegin; using std::cend;
-        
         const auto it = binary_find(cbegin(explicit_alleles_), cend(explicit_alleles_), allele.mapped_region());
-        
         if (it != cend(explicit_alleles_)) {
             if (*it == allele) return true;
             if (is_same_region(*it, allele)) {
@@ -87,13 +82,10 @@ bool Haplotype::contains(const ContigAllele& allele) const
                 return false;
             }
         }
-        
         const auto overlapped = haplotype_overlap_range(explicit_alleles_, allele);
-        
         if (overlapped.size() == 1 && contains(overlapped.front(), allele)) {
             return allele == splice(overlapped.front(), contig_region(allele));
         }
-        
         return sequence(allele.mapped_region()) == allele.sequence();
     }
     
@@ -157,7 +149,6 @@ Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) co
         return sequence_.substr(begin_distance(region_.contig_region(), region),
                                 region_size(region));
     }
-    
     if (is_in_reference_flank(region, explicit_allele_region_, explicit_alleles_)) {
         return fetch_reference_sequence(region);
     }
@@ -175,20 +166,15 @@ Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) co
     
     if (contains(overlapped_explicit_alleles.front(), region)) {
         append(result, splice(overlapped_explicit_alleles.front(), region));
-        
         overlapped_explicit_alleles.advance_begin(1);
-        
         if (!overlapped_explicit_alleles.empty() && is_insertion(overlapped_explicit_alleles.front())) {
             append(result, overlapped_explicit_alleles.front());
         }
-        
         return result;
     } else if (begins_before(overlapped_explicit_alleles.front(), region)) {
         append(result, splice(overlapped_explicit_alleles.front(),
                               overlapped_region(overlapped_explicit_alleles.front(), region)));
-        
         overlapped_explicit_alleles.advance_begin(1);
-        
         if (overlapped_explicit_alleles.empty()) {
             append_reference(result, right_overhang_region(region, explicit_allele_region_));
             return result;
@@ -243,9 +229,7 @@ std::vector<Variant> Haplotype::difference(const Haplotype& other) const
 {
     std::vector<Variant> result {};
     result.reserve(explicit_alleles_.size());
-    
     const auto& contig = region_.contig_name();
-    
     for (const auto& allele : explicit_alleles_) {
         if (!other.contains(allele)) {
             result.emplace_back(GenomicRegion {contig, allele.mapped_region()},
@@ -253,7 +237,6 @@ std::vector<Variant> Haplotype::difference(const Haplotype& other) const
                                 allele.sequence());
         }
     }
-    
     return result;
 }
 
@@ -618,7 +601,6 @@ unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optiona
     
     auto first_dup  = begin(haplotypes);
     const auto last = end(haplotypes);
-    
     const IsLessComplex cmp {std::move(reference)};
     
     while (true) {
@@ -627,9 +609,7 @@ unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optiona
         if (first_dup == last) break;
         
         auto least_complex = (cmp(*first_dup, *std::next(first_dup))) ? first_dup : std::next(first_dup);
-        
         auto last_dup = std::next(first_dup, 2);
-        
         for (; last_dup != last; ++last_dup) {
             if (*last_dup != *first_dup) {
                 break;
@@ -638,16 +618,12 @@ unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optiona
                 least_complex = last_dup;
             }
         }
-        
         std::iter_swap(first_dup, least_complex);
-        
         first_dup = last_dup;
     }
     
     const auto it = std::unique(begin(haplotypes), end(haplotypes));
-    
     const auto result = std::distance(it, end(haplotypes));
-    
     haplotypes.erase(it, last);
     
     return static_cast<unsigned>(result);
