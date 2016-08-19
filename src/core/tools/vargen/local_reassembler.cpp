@@ -10,18 +10,16 @@
 #include <cassert>
 
 #include <config/common.hpp>
-#include <io/reference/reference_genome.hpp>
+#include <basics/cigar_string.hpp>
 #include <basics/aligned_read.hpp>
 #include <concepts/mappable_range.hpp>
 #include <utils/mappable_algorithms.hpp>
 #include <utils/sequence_utils.hpp>
 #include <utils/append.hpp>
-#include <basics/cigar_string.hpp>
+#include <io/reference/reference_genome.hpp>
 #include <logging/logging.hpp>
 
 #include "utils/global_aligner.hpp"
-
-#include "timers.hpp" // BENCHMARK
 
 namespace octopus { namespace coretools {
 
@@ -103,7 +101,7 @@ bool LocalReassembler::do_requires_reads() const noexcept
 
 namespace {
 
-bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuality good_quality)
+bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuality good_quality) noexcept
 {
     if (good_quality == 0) return false;
     auto quality_itr = std::cbegin(read.qualities());
@@ -121,19 +119,32 @@ bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuali
                        });
 }
 
-auto expand_cigar(const AlignedRead& read)
+using ExpandedCigarString = std::vector<CigarOperation::Flag>;
+
+auto expand_cigar(const CigarString& cigar, const std::size_t size_hint = 0)
 {
-    std::vector<CigarOperation::Flag> result {};
-    result.reserve(sequence_size(read));
+    ExpandedCigarString result {};
+    result.reserve(size_hint);
     
-    for (const auto& op : read.cigar()) {
+    for (const auto& op : cigar) {
         utils::append(result, op.size(), op.flag());
     }
     
     return result;
 }
 
-bool is_match(const CigarOperation::Flag op)
+auto expand_cigar(const AlignedRead& read)
+{
+    return expand_cigar(read.cigar(), sequence_size(read));
+}
+
+auto find_first_sequence_op(const ExpandedCigarString& cigar) noexcept
+{
+    return std::find_if_not(std::cbegin(cigar), std::cend(cigar),
+                            [] (auto op) { return op == CigarOperation::Flag::hardClipped; });
+}
+
+bool is_match(const CigarOperation::Flag op) noexcept
 {
     switch (op) {
         case CigarOperation::Flag::alignmentMatch:
@@ -143,53 +154,42 @@ bool is_match(const CigarOperation::Flag op)
     }
 }
 
+auto transform_low_quality_matches_to_reference(AlignedRead::NucleotideSequence read_sequence,
+                                                const AlignedRead::BaseQualityVector& base_qualities,
+                                                const AlignedRead::NucleotideSequence& reference_sequence,
+                                                const ExpandedCigarString& cigar,
+                                                const AlignedRead::BaseQuality min_quality)
+{
+    auto ref_itr = std::cbegin(reference_sequence);
+    auto cigar_itr = find_first_sequence_op(cigar);
+    std::transform(std::cbegin(read_sequence), std::cend(read_sequence), std::cbegin(base_qualities),
+                   std::begin(read_sequence), [&] (const auto read_base, const auto base_quality) {
+                       using Flag = CigarOperation::Flag;
+                       const auto op = *cigar_itr++;
+                       if (!is_match(op)) {
+                           if (op != Flag::insertion) ++ref_itr;
+                           // Deletions are excess reference sequence so we need to move the
+                           // reference iterator to the next nondeleted read base
+                           while (cigar_itr != std::cend(cigar) && *cigar_itr == Flag::deletion) {
+                               ++cigar_itr;
+                               ++ref_itr;
+                           }
+                           return read_base;
+                       }
+                       const auto ref_base = *ref_itr++; // Don't forget to increment ref_itr!
+                       return base_quality >= min_quality ? read_base : ref_base;
+                   });
+    return read_sequence;
+}
+
 AlignedRead::NucleotideSequence
 transform_low_quality_matches_to_reference(const AlignedRead& read,
                                            const AlignedRead::BaseQuality min_quality,
                                            const ReferenceGenome& reference)
 {
-    using Flag = CigarOperation::Flag;
-    
-    auto result = read.sequence();
-    
-    const auto cigar = expand_cigar(read);
-    
-    const auto last_cigar_itr = std::cend(cigar);
-    
-    auto cigar_itr = std::find_if_not(std::cbegin(cigar), last_cigar_itr,
-                                      [] (auto op) { return op == Flag::hardClipped; });
-    
-    const auto ref_sequence = reference.fetch_sequence(mapped_region(read));
-    
-    auto ref_itr = std::cbegin(ref_sequence);
-    
-    std::transform(std::cbegin(result), std::cend(result), std::cbegin(read.qualities()),
-                   std::begin(result), [&] (const char base, const auto quality) {
-                       const auto cigar_op = *cigar_itr++;
-                       
-                       if (!is_match(cigar_op)) {
-                           // Only matches get transformed
-                           
-                           if (cigar_op != Flag::insertion) {
-                               ++ref_itr;
-                           }
-                           
-                           // Deletions are excess reference sequence so we need to move the
-                           // reference iterator to the next nondeleted read base
-                           while (cigar_itr != last_cigar_itr && *cigar_itr == Flag::deletion) {
-                               ++cigar_itr;
-                               ++ref_itr;
-                           }
-                           
-                           return base;
-                       }
-                       
-                       auto ref_base = *ref_itr++;
-                       
-                       return quality >= min_quality ? base : ref_base;
-                   });
-    
-    return result;
+    return transform_low_quality_matches_to_reference(read.sequence(), read.qualities(),
+                                                      reference.fetch_sequence(mapped_region(read)),
+                                                      expand_cigar(read), min_quality);
 }
 
 } // namespace
@@ -215,9 +215,7 @@ void LocalReassembler::do_add_read(const AlignedRead& read)
     } else {
         auto masked_sequence = transform_low_quality_matches_to_reference(read, mask_threshold_,
                                                                           reference_);
-        
         masked_sequence_buffer_.emplace_back(std::move(masked_sequence));
-        
         for (auto& bin : active_bins) {
             bin.insert(std::cref(masked_sequence_buffer_.back()));
         }
@@ -256,8 +254,25 @@ void log_failure(L& log, const char* type, const unsigned k)
     if (log) stream(*log, 8) << type << " assembler with kmer size " << k << " failed";
 }
 
-std::vector<Variant>
-LocalReassembler::do_generate_variants(const GenomicRegion& region)
+auto extract_unique(std::deque<Variant>&& variants)
+{
+    std::vector<Variant> result {std::make_move_iterator(std::begin(variants)),
+        std::make_move_iterator(std::end(variants))};
+    std::sort(std::begin(result), std::end(result));
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    return result;
+}
+
+void remove_oversized(std::vector<Variant>& variants, const Variant::MappingDomain::Size max_size)
+{
+    variants.erase(std::remove_if(std::begin(variants), std::end(variants),
+                                  [max_size] (const auto& variant) {
+                                        return region_size(variant) > max_size;
+                                  }),
+                   std::end(variants));
+}
+
+std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion& region)
 {
     if (bins_.empty()) return {};
     
@@ -269,39 +284,30 @@ LocalReassembler::do_generate_variants(const GenomicRegion& region)
         if (bin.read_sequences.empty()) continue;
         
         if (debug_log_) {
-            stream(*debug_log_) << "Assembling " << bin.read_sequences.size() << " reads in bin " << mapped_region(bin);
+            stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
+                                << " reads in bin " << mapped_region(bin);
         }
         
         unsigned num_defaults_unsuccessful {0};
         
         for (const auto k : default_kmer_sizes_) {
-            try {
-                const auto success = assemble_bin(k, bin, candidates);
-                
-                if (success) {
-                    log_success(debug_log_, "Default", k);
-                } else {
-                    log_failure(debug_log_, "Default", k);
-                    ++num_defaults_unsuccessful;
-                }
-            } catch (std::exception& e) {
-                break;
+            const auto success = assemble_bin(k, bin, candidates);
+            if (success) {
+                log_success(debug_log_, "Default", k);
+            } else {
+                log_failure(debug_log_, "Default", k);
+                ++num_defaults_unsuccessful;
             }
         }
         
         if (num_defaults_unsuccessful == default_kmer_sizes_.size()) {
             for (const auto k : fallback_kmer_sizes_) {
-                try {
-                    const auto success = assemble_bin(k, bin, candidates);
-                    
-                    if (success) {
-                        log_success(debug_log_, "Fallback", k);
-                        break;
-                    } else {
-                        log_failure(debug_log_, "Fallback", k);
-                    }
-                } catch (std::exception& e) {
+                const auto success = assemble_bin(k, bin, candidates);
+                if (success) {
+                    log_success(debug_log_, "Fallback", k);
                     break;
+                } else {
+                    log_failure(debug_log_, "Fallback", k);
                 }
             }
         }
@@ -309,20 +315,9 @@ LocalReassembler::do_generate_variants(const GenomicRegion& region)
         bin.clear();
     }
     
-    std::vector<Variant> result {std::make_move_iterator(std::begin(candidates)),
-                                 std::make_move_iterator(std::end(candidates))};
-    
-    std::sort(std::begin(result), std::end(result));
-    
-    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    
-    result.erase(std::remove_if(std::begin(result), std::end(result),
-                                [this] (const auto& variant) {
-                                    return region_size(variant) > max_variant_size_;
-                                }), std::end(result));
-    
+    auto result = extract_unique(std::move(candidates));
+    remove_oversized(result, max_variant_size_);
     remove_nonoverlapping(result, region); // as we expanded original region
-    
     return result;
 }
 
@@ -377,7 +372,7 @@ void trim_reference(Assembler::Variant& v)
 {
     const auto p = std::mismatch(std::begin(v.ref), std::end(v.ref),
                                  std::begin(v.alt), std::end(v.alt));
-    
+
     v.begin_pos += std::distance(std::begin(v.ref), p.first);
     
     v.ref.erase(std::begin(v.ref), p.first);
@@ -406,60 +401,57 @@ bool is_mnp(const Assembler::Variant& v)
     return v.ref.size() > 1 && v.ref.size() == v.alt.size();
 }
 
-std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
+auto split_mnp(Assembler::Variant&& v)
 {
     using std::begin; using std::end; using std::next; using std::prev; using std::distance;
     
     std::vector<Assembler::Variant> result {};
+    result.reserve(4);
+    result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
     
-    if (is_mnp(v)) {
-        result.reserve(4);
-        
-        result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
-        
-        auto p = std::mismatch(next(begin(v.ref)), prev(end(v.ref)), next(begin(v.alt)));
-        
-        while (p.first != prev(end(v.ref))) {
-            result.emplace_back(v.begin_pos + distance(begin(v.ref), p.first), *p.first, *p.second);
-            p = std::mismatch(next(p.first), prev(end(v.ref)), next(p.second));
-        }
-        
-        const auto pos = v.begin_pos + v.ref.size() - 1;
-        
-        v.ref.erase(begin(v.ref), prev(end(v.ref)));
-        v.alt.erase(begin(v.alt), prev(end(v.alt)));
-        
-        result.emplace_back(pos, std::move(v.ref), std::move(v.alt));
-        
-        return result;
+    auto p = std::mismatch(next(begin(v.ref)), prev(end(v.ref)), next(begin(v.alt)));
+    
+    while (p.first != prev(end(v.ref))) {
+        result.emplace_back(v.begin_pos + distance(begin(v.ref), p.first), *p.first, *p.second);
+        p = std::mismatch(next(p.first), prev(end(v.ref)), next(p.second));
     }
     
-    auto cigar = parse_cigar(align(v.ref, v.alt).cigar);
+    const auto pos = v.begin_pos + v.ref.size() - 1;
     
-    auto ref_it = std::cbegin(v.ref);
-    auto alt_it = std::cbegin(v.alt);
+    v.ref.erase(begin(v.ref), prev(end(v.ref)));
+    v.alt.erase(begin(v.alt), prev(end(v.alt)));
     
-    auto pos = v.begin_pos;
+    result.emplace_back(pos, std::move(v.ref), std::move(v.alt));
     
+    return result;
+}
+
+auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler::NucleotideSequence& alt,
+                      const CigarString& cigar, std::size_t ref_offset)
+{
+    std::vector<Assembler::Variant> result {};
     result.reserve(cigar.size());
+    
+    auto ref_it = std::cbegin(ref);
+    auto alt_it = std::cbegin(alt);
     
     for (const auto& op : cigar) {
         using Flag = CigarOperation::Flag;
+        using NucleotideSequence = Assembler::NucleotideSequence;
         
         switch(op.flag()) {
             case Flag::sequenceMatch:
             {
-                pos += op.size();
+                ref_offset += op.size();
                 ref_it += op.size();
                 alt_it += op.size();
                 break;
             }
             case Flag::substitution:
             {
-                std::transform(ref_it, std::next(ref_it, op.size()), alt_it,
-                               std::back_inserter(result),
-                               [&pos] (const auto ref, const auto alt) {
-                                   return Assembler::Variant {pos++, ref, alt};
+                std::transform(ref_it, std::next(ref_it, op.size()), alt_it, std::back_inserter(result),
+                               [&ref_offset] (const auto ref, const auto alt) {
+                                   return Assembler::Variant {ref_offset++, ref, alt};
                                });
                 ref_it += op.size();
                 alt_it += op.size();
@@ -467,92 +459,124 @@ std::vector<Assembler::Variant> split_complex(Assembler::Variant&& v)
             }
             case Flag::insertion:
             {
-                result.emplace_back(pos, "", Assembler::NucleotideSequence {alt_it, std::next(alt_it, op.size())});
+                result.emplace_back(ref_offset, "", NucleotideSequence {alt_it, std::next(alt_it, op.size())});
                 alt_it += op.size();
                 break;
             }
             case Flag::deletion:
             {
-                result.emplace_back(pos, Assembler::NucleotideSequence {ref_it, std::next(ref_it, op.size())}, "");
-                pos += op.size();
+                result.emplace_back(ref_offset, NucleotideSequence {ref_it, std::next(ref_it, op.size())}, "");
+                ref_offset += op.size();
                 ref_it += op.size();
                 break;
             }
+            default:
+                throw std::runtime_error {"LocalReassembler: unexpected cigar op"};
         }
     }
     
     return result;
 }
 
+auto align(const Assembler::Variant& v)
+{
+    return parse_cigar(align(v.ref, v.alt).cigar);
+}
+
+auto decompose_complex_indel(Assembler::Variant&& v)
+{
+    const auto cigar = align(v);
+    return extract_variants(v.ref, v.alt, cigar, v.begin_pos);
+}
+
+auto decompose_complex(Assembler::Variant&& v)
+{
+    return is_mnp(v) ? split_mnp(std::move(v)) : decompose_complex_indel(std::move(v));
+}
+
+struct VariantLess
+{
+    using Variant = Assembler::Variant;
+    bool operator()(const Variant& lhs, const Variant& rhs) const noexcept
+    {
+        if (lhs.begin_pos == rhs.begin_pos) {
+            if (lhs.ref.size() == rhs.ref.size()) {
+                return lhs.alt < rhs.alt;
+            }
+            return lhs.ref.size() < rhs.alt.size();
+        }
+        return lhs.begin_pos < rhs.begin_pos;
+    }
+};
+
 template <typename Container>
-void split_complex(Container& candidates)
+auto partition_complex(Container& variants)
+{
+    return std::stable_partition(std::begin(variants), std::end(variants),
+                                 [] (const auto& candidate) {
+                                     return !is_complex(candidate);
+                                 });
+}
+
+template <typename InputIt>
+auto decompose_complex(InputIt first_complex, InputIt last_complex)
 {
     using std::begin; using std::end; using std::make_move_iterator;
-    
-    const auto it = std::stable_partition(begin(candidates), end(candidates),
-                                          [] (const auto& candidate) {
-                                              return !is_complex(candidate);
-                                          });
-    
-    std::deque<Assembler::Variant> snps {};
-    
-    std::for_each(make_move_iterator(it), make_move_iterator(end(candidates)),
-                  [&snps] (auto&& mnv) {
-                      auto split = split_complex(std::move(mnv));
-                      snps.insert(end(snps),
-                                  make_move_iterator(begin(split)),
-                                  make_move_iterator(end(split)));
+    std::deque<Assembler::Variant> result {};
+    std::for_each(make_move_iterator(first_complex), make_move_iterator(last_complex),
+                  [&result] (auto&& complex) {
+                      utils::append(decompose_complex(std::move(complex)), result);
                   });
-    
-    const auto variant_less = [] (const auto& lhs, const auto& rhs) {
-        return lhs.begin_pos < rhs.begin_pos || lhs.alt < rhs.alt;
-    };
-    
-    std::sort(begin(snps), end(snps), variant_less);
-    
-    snps.erase(std::unique(begin(snps), end(snps)), end(snps));
-    
-    const auto num_mnvs = std::distance(it, end(candidates));
-    
-    if (snps.size() < num_mnvs) {
-        candidates.erase(std::move(begin(snps), end(snps), it), end(candidates));
-        std::inplace_merge(begin(candidates), it, end(candidates), variant_less);
+    std::sort(begin(result), end(result), VariantLess {});
+    result.erase(std::unique(begin(result), end(result)), end(result));
+    return result;
+}
+
+template <typename Container1, typename Container2, typename Iterator>
+void merge(Container1&& decomposed, Container2& variants, Iterator first_complex)
+{
+    using std::begin; using std::end; using std::make_move_iterator;
+    const auto num_complex = std::distance(first_complex, end(variants));
+    if (decomposed.size() < num_complex) {
+        variants.erase(std::move(begin(decomposed), end(decomposed), first_complex), end(variants));
+        std::inplace_merge(begin(variants), first_complex, end(variants), VariantLess {});
     } else {
-        const auto it2 = std::next(begin(snps), num_mnvs);
-        
-        std::move(begin(snps), it2, it);
-        
-        const auto it3 = candidates.insert(end(candidates),
-                                           make_move_iterator(it2),
-                                           make_move_iterator(end(snps)));
-        
-        std::inplace_merge(begin(candidates), it3, end(candidates), variant_less);
+        // The variants in [first_complex, end(variants)) where moved from so can now be assigned to
+        const auto last_assignable = std::next(begin(decomposed), num_complex);
+        std::move(begin(decomposed), last_assignable, first_complex);
+        first_complex = variants.insert(end(variants),
+                                        make_move_iterator(last_assignable),
+                                        make_move_iterator(end(decomposed)));
+        first_complex -= num_complex;
+        std::inplace_merge(begin(variants), first_complex, end(variants), VariantLess {});
     }
+}
+
+template <typename Container>
+void decompose_complex(Container& variants)
+{
+    const auto first_complex = partition_complex(variants);
+    merge(decompose_complex(first_complex, std::end(variants)), variants, first_complex);
 }
 
 template <typename C1, typename C2>
 void add_to_mapped_variants(C1& result, C2&& variants, const GenomicRegion& region)
 {
     for (auto& variant : variants) {
-        result.emplace_back(contig_name(region),
-                            region.begin() + variant.begin_pos,
-                            std::move(variant.ref),
-                            std::move(variant.alt));
+        result.emplace_back(contig_name(region), region.begin() + variant.begin_pos,
+                            std::move(variant.ref), std::move(variant.alt));
     }
 }
 
 bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin,
-                                                      std::deque<Variant>& result) const
+                                    std::deque<Variant>& result) const
 {
     if (bin.empty()) return true;
     
-    const auto assembler_region = propose_assembler_region(bin.region, kmer_size);
-    
+    const auto assembler_region   = propose_assembler_region(bin.region, kmer_size);
     const auto reference_sequence = reference_.get().fetch_sequence(assembler_region);
     
-    if (utils::has_ns(reference_sequence)) {
-        throw std::runtime_error {"Bad reference"};
-    }
+    if (utils::has_ns(reference_sequence)) return false;
     
     Assembler assembler {kmer_size, reference_sequence};
     
@@ -581,7 +605,7 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
     }
     
     trim_reference(variants);
-    split_complex(variants);
+    decompose_complex(variants);
     add_to_mapped_variants(result, std::move(variants), reference_region);
     
     return true;
