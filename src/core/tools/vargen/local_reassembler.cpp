@@ -278,7 +278,7 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
         if (!bin.empty()) {
             if (debug_log_) {
                 stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
-                << " reads in bin " << mapped_region(bin);
+                                    << " reads in bin " << mapped_region(bin);
             }
             const auto num_default_failures = try_assemble_with_defaults(bin, candidates);
             if (num_default_failures == default_kmer_sizes_.size()) {
@@ -386,13 +386,13 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
 void trim_reference(Assembler::Variant& v)
 {
     using std::begin; using std::end; using std::rbegin; using std::rend;
-    const auto p = std::mismatch(begin(v.ref), end(v.ref), begin(v.alt), end(v.alt));
-    v.begin_pos += std::distance(begin(v.ref), p.first);
-    v.ref.erase(begin(v.ref), p.first);
-    v.alt.erase(begin(v.alt), p.second);
-    const auto p2 = std::mismatch(rbegin(v.ref), rend(v.ref), rbegin(v.alt), rend(v.alt));
-    v.ref.erase(p2.first.base(), end(v.ref));
-    v.alt.erase(p2.second.base(), end(v.alt));
+    const auto p1 = std::mismatch(rbegin(v.ref), rend(v.ref), rbegin(v.alt), rend(v.alt));
+    v.ref.erase(p1.first.base(), end(v.ref));
+    v.alt.erase(p1.second.base(), end(v.alt));
+    const auto p2 = std::mismatch(begin(v.ref), end(v.ref), begin(v.alt), end(v.alt));
+    v.begin_pos += std::distance(begin(v.ref), p2.first);
+    v.ref.erase(begin(v.ref), p2.first);
+    v.alt.erase(begin(v.alt), p2.second);
 }
 
 template <typename Container>
@@ -414,24 +414,22 @@ bool is_mnp(const Assembler::Variant& v)
 auto split_mnp(Assembler::Variant&& v)
 {
     using std::begin; using std::end; using std::next; using std::prev; using std::distance;
-    
+    assert(v.ref.size() > 1 && v.alt.size() > 1);
+    assert(v.ref.front() != v.alt.front() && v.ref.back() != v.alt.back());
     std::vector<Assembler::Variant> result {};
     result.reserve(4);
+    // We need to allocate new variants for all but the last SNV
     result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
-    
     auto p = std::mismatch(next(begin(v.ref)), prev(end(v.ref)), next(begin(v.alt)));
     while (p.first != prev(end(v.ref))) {
         result.emplace_back(v.begin_pos + distance(begin(v.ref), p.first), *p.first, *p.second);
         p = std::mismatch(next(p.first), prev(end(v.ref)), next(p.second));
     }
-    
-    const auto pos = v.begin_pos + v.ref.size() - 1;
-    
+    // But can reuse the existing memory for the last one
+    const auto new_begin = v.begin_pos + v.ref.size() - 1;
     v.ref.erase(begin(v.ref), prev(end(v.ref)));
     v.alt.erase(begin(v.alt), prev(end(v.alt)));
-    
-    result.emplace_back(pos, std::move(v.ref), std::move(v.alt));
-    
+    result.emplace_back(new_begin, std::move(v.ref), std::move(v.alt));
     return result;
 }
 
@@ -458,7 +456,8 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
             }
             case Flag::substitution:
             {
-                std::transform(ref_it, std::next(ref_it, op.size()), alt_it, std::back_inserter(result),
+                const auto next_ref_it = std::next(ref_it, op.size());
+                std::transform(ref_it, next_ref_it, alt_it, std::back_inserter(result),
                                [&ref_offset] (const auto ref, const auto alt) {
                                    return Assembler::Variant {ref_offset++, ref, alt};
                                });
@@ -468,15 +467,17 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
             }
             case Flag::insertion:
             {
-                result.emplace_back(ref_offset, "", NucleotideSequence {alt_it, std::next(alt_it, op.size())});
-                alt_it += op.size();
+                const auto next_alt_it =  std::next(alt_it, op.size());
+                result.emplace_back(ref_offset, "", NucleotideSequence {alt_it, next_alt_it});
+                alt_it = next_alt_it;
                 break;
             }
             case Flag::deletion:
             {
-                result.emplace_back(ref_offset, NucleotideSequence {ref_it, std::next(ref_it, op.size())}, "");
+                const auto next_ref_it = std::next(ref_it, op.size());
+                result.emplace_back(ref_offset, NucleotideSequence {ref_it, next_ref_it}, "");
                 ref_offset += op.size();
-                ref_it += op.size();
+                ref_it = next_ref_it;
                 break;
             }
             default:
@@ -518,8 +519,7 @@ struct VariantLess
     }
 };
 
-template <typename Container>
-auto partition_complex(Container& variants)
+auto partition_complex(std::deque<Assembler::Variant>& variants)
 {
     return std::stable_partition(std::begin(variants), std::end(variants),
                                  [] (const auto& candidate) {
@@ -527,12 +527,13 @@ auto partition_complex(Container& variants)
                                  });
 }
 
-template <typename InputIt>
-auto decompose_complex(InputIt first, InputIt last)
+using VariantIterator = std::deque<Assembler::Variant>::iterator;
+
+auto decompose_complex(VariantIterator first, VariantIterator last)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     std::deque<Assembler::Variant> result {};
-    std::for_each(make_move_iterator(first), make_move_iterator(first),
+    std::for_each(make_move_iterator(first), make_move_iterator(last),
                   [&result] (auto&& complex) {
                       utils::append(decompose_complex(std::move(complex)), result);
                   });
@@ -541,31 +542,35 @@ auto decompose_complex(InputIt first, InputIt last)
     return result;
 }
 
-template <typename Container1, typename Container2, typename Iterator>
-void merge(Container1&& decomposed, Container2& variants, Iterator first_complex)
+void merge(std::deque<Assembler::Variant>&& decomposed, std::deque<Assembler::Variant>& variants,
+           std::deque<Assembler::Variant>::iterator first_complex)
 {
     using std::begin; using std::end; using std::make_move_iterator;
-    const auto num_complex = std::distance(first_complex, end(variants));
-    if (decomposed.size() < num_complex) {
+    assert(!decomposed.empty());
+    assert(begin(variants) <= first_complex && first_complex <= end(variants));
+    const auto num_complex = static_cast<std::size_t>(std::distance(first_complex, end(variants)));
+    // The variants in [first_complex, end(variants)) where moved from so can now be assigned to
+    if (decomposed.size() <= num_complex) {
         variants.erase(std::move(begin(decomposed), end(decomposed), first_complex), end(variants));
-        std::inplace_merge(begin(variants), first_complex, end(variants), VariantLess {});
     } else {
-        // The variants in [first_complex, end(variants)) where moved from so can now be assigned to
         const auto last_assignable = std::next(begin(decomposed), num_complex);
+        assert(last_assignable <= end(decomposed));
         std::move(begin(decomposed), last_assignable, first_complex);
         first_complex = variants.insert(end(variants),
                                         make_move_iterator(last_assignable),
                                         make_move_iterator(end(decomposed)));
         first_complex -= num_complex;
-        std::inplace_merge(begin(variants), first_complex, end(variants), VariantLess {});
     }
+    assert(begin(variants) <= first_complex && first_complex <= end(variants));
+    std::inplace_merge(begin(variants), first_complex, end(variants), VariantLess {});
 }
 
-template <typename Container>
-void decompose_complex(Container& variants)
+void decompose_complex(std::deque<Assembler::Variant>& variants)
 {
     const auto first_complex = partition_complex(variants);
-    merge(decompose_complex(first_complex, std::end(variants)), variants, first_complex);
+    if (first_complex != std::end(variants)) {
+        merge(decompose_complex(first_complex, std::end(variants)), variants, first_complex);
+    }
 }
 
 template <typename C1, typename C2>
