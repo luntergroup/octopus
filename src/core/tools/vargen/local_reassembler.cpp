@@ -385,14 +385,14 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
 
 void trim_reference(Assembler::Variant& v)
 {
-    using std::begin; using std::end; using std::rbegin; using std::rend;
-    const auto p1 = std::mismatch(rbegin(v.ref), rend(v.ref), rbegin(v.alt), rend(v.alt));
-    v.ref.erase(p1.first.base(), end(v.ref));
-    v.alt.erase(p1.second.base(), end(v.alt));
-    const auto p2 = std::mismatch(begin(v.ref), end(v.ref), begin(v.alt), end(v.alt));
-    v.begin_pos += std::distance(begin(v.ref), p2.first);
-    v.ref.erase(begin(v.ref), p2.first);
-    v.alt.erase(begin(v.alt), p2.second);
+    using std::cbegin; using std::cend; using std::crbegin; using std::crend;
+    const auto p1 = std::mismatch(crbegin(v.ref), crend(v.ref), crbegin(v.alt), crend(v.alt));
+    v.ref.erase(p1.first.base(), cend(v.ref));
+    v.alt.erase(p1.second.base(), cend(v.alt));
+    const auto p2 = std::mismatch(cbegin(v.ref), cend(v.ref), cbegin(v.alt), cend(v.alt));
+    v.begin_pos += std::distance(cbegin(v.ref), p2.first);
+    v.ref.erase(cbegin(v.ref), p2.first);
+    v.alt.erase(cbegin(v.alt), p2.second);
 }
 
 template <typename Container>
@@ -413,22 +413,28 @@ bool is_mnp(const Assembler::Variant& v)
 
 auto split_mnp(Assembler::Variant&& v)
 {
-    using std::begin; using std::end; using std::next; using std::prev; using std::distance;
     assert(v.ref.size() > 1 && v.alt.size() > 1);
     assert(v.ref.front() != v.alt.front() && v.ref.back() != v.alt.back());
+    
     std::vector<Assembler::Variant> result {};
     result.reserve(4);
-    // We need to allocate new variants for all but the last SNV
+    
+    // Need to allocate new memory for all but the last SNV
     result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
-    auto p = std::mismatch(next(begin(v.ref)), prev(end(v.ref)), next(begin(v.alt)));
-    while (p.first != prev(end(v.ref))) {
-        result.emplace_back(v.begin_pos + distance(begin(v.ref), p.first), *p.first, *p.second);
-        p = std::mismatch(next(p.first), prev(end(v.ref)), next(p.second));
+    const auto first_ref_itr       = std::cbegin(v.ref);
+    const auto penultimate_ref_itr = std::prev(std::cend(v.ref));
+    const auto first_alt_itr       = std::cbegin(v.alt);
+    const auto penultimate_alt_itr = std::prev(std::cend(v.alt));
+    auto p = std::mismatch(std::next(first_ref_itr), penultimate_ref_itr, std::next(first_alt_itr));
+    while (p.first != penultimate_ref_itr) {
+        result.emplace_back(v.begin_pos + std::distance(first_ref_itr, p.first), *p.first, *p.second);
+        p = std::mismatch(std::next(p.first), penultimate_ref_itr, std::next(p.second));
     }
-    // But can reuse the existing memory for the last one
+    
+    // So just need to remove the unwanted sequence from the last one
     const auto new_begin = v.begin_pos + v.ref.size() - 1;
-    v.ref.erase(begin(v.ref), prev(end(v.ref)));
-    v.alt.erase(begin(v.alt), prev(end(v.alt)));
+    v.ref.erase(first_ref_itr, penultimate_ref_itr);
+    v.alt.erase(first_alt_itr, penultimate_alt_itr);
     result.emplace_back(new_begin, std::move(v.ref), std::move(v.alt));
     return result;
 }
@@ -439,8 +445,8 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
     std::vector<Assembler::Variant> result {};
     result.reserve(cigar.size());
     
-    auto ref_it = std::cbegin(ref);
-    auto alt_it = std::cbegin(alt);
+    auto ref_itr = std::cbegin(ref);
+    auto alt_itr = std::cbegin(alt);
     
     for (const auto& op : cigar) {
         using Flag = CigarOperation::Flag;
@@ -450,34 +456,34 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
             case Flag::sequenceMatch:
             {
                 ref_offset += op.size();
-                ref_it += op.size();
-                alt_it += op.size();
+                ref_itr += op.size();
+                alt_itr += op.size();
                 break;
             }
             case Flag::substitution:
             {
-                const auto next_ref_it = std::next(ref_it, op.size());
-                std::transform(ref_it, next_ref_it, alt_it, std::back_inserter(result),
+                const auto next_ref_itr = std::next(ref_itr, op.size());
+                std::transform(ref_itr, next_ref_itr, alt_itr, std::back_inserter(result),
                                [&ref_offset] (const auto ref, const auto alt) {
                                    return Assembler::Variant {ref_offset++, ref, alt};
                                });
-                ref_it += op.size();
-                alt_it += op.size();
+                ref_itr = next_ref_itr;
+                alt_itr += op.size();
                 break;
             }
             case Flag::insertion:
             {
-                const auto next_alt_it =  std::next(alt_it, op.size());
-                result.emplace_back(ref_offset, "", NucleotideSequence {alt_it, next_alt_it});
-                alt_it = next_alt_it;
+                const auto next_alt_itr = std::next(alt_itr, op.size());
+                result.emplace_back(ref_offset, "", NucleotideSequence {alt_itr, next_alt_itr});
+                alt_itr = next_alt_itr;
                 break;
             }
             case Flag::deletion:
             {
-                const auto next_ref_it = std::next(ref_it, op.size());
-                result.emplace_back(ref_offset, NucleotideSequence {ref_it, next_ref_it}, "");
+                const auto next_ref_itr = std::next(ref_itr, op.size());
+                result.emplace_back(ref_offset, NucleotideSequence {ref_itr, next_ref_itr}, "");
                 ref_offset += op.size();
-                ref_it = next_ref_it;
+                ref_itr = next_ref_itr;
                 break;
             }
             default:

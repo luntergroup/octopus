@@ -28,21 +28,23 @@
 namespace octopus { namespace coretools {
 
 namespace {
-    template <typename I>
-    auto sequence_length(const I num_kmers, const unsigned kmer_size)
-    {
-        return num_kmers + kmer_size - 1;
+
+template <typename I>
+auto sequence_length(const I num_kmers, const unsigned kmer_size) noexcept
+{
+    return num_kmers + kmer_size - 1;
+}
+
+template <typename T>
+auto count_kmers(const T& sequence, const unsigned kmer_size) noexcept
+{
+    if (sequence.size() < kmer_size) {
+        return std::size_t {0};
+    } else {
+        return sequence.size() - kmer_size + 1;
     }
-    
-    template <typename T>
-    auto count_kmers(const T& sequence, const unsigned kmer_size)
-    {
-        if (sequence.size() < kmer_size) {
-            return std::size_t {0};
-        } else {
-            return sequence.size() - kmer_size + 1;
-        }
-    }
+}
+
 } // namespace
 
 // public methods
@@ -90,26 +92,20 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
 {
     if (sequence.size() < k_) return;
     
-    auto it1 = std::cbegin(sequence);
-    auto it2 = std::next(it1, k_);
-    
-    Kmer prev_kmer {it1, it2};
-    
+    auto kmer_begin = std::cbegin(sequence);
+    auto kmer_end   = std::next(kmer_begin, k_);
+    Kmer prev_kmer {kmer_begin, kmer_end};
     bool prev_kmer_good {true};
-    
     if (!contains_kmer(prev_kmer)) {
         const auto u = add_vertex(prev_kmer);
         if (!u) {
             prev_kmer_good = false;
         }
     }
-    
-    ++it1;
-    ++it2;
-    
-    for (; it2 <= std::cend(sequence); ++it1, ++it2) {
-        Kmer kmer {it1, it2};
-        
+    ++kmer_begin;
+    ++kmer_end;
+    for (; kmer_end <= std::cend(sequence); ++kmer_begin, ++kmer_end) {
+        Kmer kmer {kmer_begin, kmer_end};
         if (!contains_kmer(kmer)) {
             const auto v = add_vertex(kmer);
             if (v) {
@@ -124,11 +120,9 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
         } else if (prev_kmer_good) {
             const auto u = vertex_cache_.at(prev_kmer);
             const auto v = vertex_cache_.at(kmer);
-            
             Edge e;
             bool e_in_graph;
             std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
-            
             if (e_in_graph) {
                 increment_weight(e);
             } else {
@@ -137,7 +131,6 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
         } else {
             prev_kmer_good = true;
         }
-        
         prev_kmer = kmer;
     }
 }
@@ -357,19 +350,19 @@ void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequ
     }
     
     vertex_cache_.reserve(sequence.size() + std::pow(4, 5));
-    auto it1 = std::cbegin(sequence);
-    auto it2 = std::next(it1, k_);
-    reference_kmers_.emplace_back(it1, it2);
+    auto kmer_begin = std::cbegin(sequence);
+    auto kmer_end   = std::next(kmer_begin, k_);
+    reference_kmers_.emplace_back(kmer_begin, kmer_end);
     if (!contains_kmer(reference_kmers_.back())) {
         const auto u = add_vertex(reference_kmers_.back(), true);
         if (!u) {
             throw BadReferenceSequence {sequence};
         }
     }
-    ++it1;
-    ++it2;
-    for (; it2 <= std::cend(sequence); ++it1, ++it2) {
-        reference_kmers_.emplace_back(it1, it2);
+    ++kmer_begin;
+    ++kmer_end;
+    for (; kmer_end <= std::cend(sequence); ++kmer_begin, ++kmer_end) {
+        reference_kmers_.emplace_back(kmer_begin, kmer_end);
         const auto& kmer = reference_kmers_.back();
         if (!contains_kmer(kmer)) {
             const auto v = add_vertex(kmer, true);
@@ -398,11 +391,9 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
     }
     
     vertex_cache_.reserve(vertex_cache_.size() + sequence.size() + std::pow(4, 5));
-    auto it1 = std::cbegin(sequence);
-    auto it2 = std::next(it1, k_);
-    
-    reference_kmers_.emplace_back(it1, it2);
-    
+    auto kmer_begin = std::cbegin(sequence);
+    auto kmer_end   = std::next(kmer_begin, k_);
+    reference_kmers_.emplace_back(kmer_begin, kmer_end);
     if (!contains_kmer(reference_kmers_.back())) {
         const auto u = add_vertex(reference_kmers_.back(), true);
         if (!u) {
@@ -411,11 +402,10 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
     } else {
         set_vertex_reference(reference_kmers_.back());
     }
-    
-    ++it1;
-    ++it2;
-    for (; it2 <= std::cend(sequence); ++it1, ++it2) {
-        reference_kmers_.emplace_back(it1, it2);
+    ++kmer_begin;
+    ++kmer_end;
+    for (; kmer_end <= std::cend(sequence); ++kmer_begin, ++kmer_end) {
+        reference_kmers_.emplace_back(kmer_begin, kmer_end);
         if (!contains_kmer(reference_kmers_.back())) {
             const auto v = add_vertex(reference_kmers_.back(), true);
             if (v) {
@@ -427,9 +417,7 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
         } else {
             const auto u = vertex_cache_.at(std::crbegin(reference_kmers_)[1]);
             const auto v = vertex_cache_.at(reference_kmers_.back());
-            
             set_vertex_reference(v);
-            
             Edge e;
             bool e_in_graph;
             std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
@@ -464,8 +452,8 @@ std::size_t Assembler::reference_size() const noexcept
 void Assembler::regenerate_vertex_indices()
 {
     const auto p = boost::vertices(graph_);
-    unsigned i {0};
-    std::for_each(p.first, p.second, [this, &i] (Vertex v) { graph_[v].index = i++; });
+    unsigned idx {0};
+    std::for_each(p.first, p.second, [this, &idx] (Vertex v) { graph_[v].index = idx++; });
 }
 
 bool Assembler::is_reference_unique_path() const
@@ -507,8 +495,7 @@ Assembler::Vertex Assembler::null_vertex() const
 boost::optional<Assembler::Vertex> Assembler::add_vertex(const Kmer& kmer, const bool is_reference)
 {
     if (!is_dna(kmer)) return boost::none;
-    const auto u = boost::add_vertex(GraphNode {boost::num_vertices(graph_), kmer, is_reference},
-                                     graph_);
+    const auto u = boost::add_vertex(GraphNode {boost::num_vertices(graph_), kmer, is_reference}, graph_);
     vertex_cache_.emplace(kmer, u);
     return u;
 }
@@ -640,18 +627,17 @@ Assembler::Vertex Assembler::reference_tail() const
 Assembler::Vertex Assembler::next_reference(const Vertex u) const
 {
     const auto p = boost::out_edges(u, graph_);
-    const auto it = std::find_if(p.first, p.second, [this] (const Edge e) { return is_reference(e); });
-    assert(it != p.second);
-    return boost::target(*it, graph_);
+    const auto itr = std::find_if(p.first, p.second, [this] (const Edge e) { return is_reference(e); });
+    assert(itr != p.second);
+    return boost::target(*itr, graph_);
 }
 
 Assembler::Vertex Assembler::prev_reference(const Vertex v) const
 {
     const auto p = boost::in_edges(v, graph_);
-    const auto it = std::find_if(p.first, p.second,
-                                 [this] (const Edge e) { return is_reference(e); });
-    assert(it != p.second);
-    return boost::source(*it, graph_);
+    const auto itr = std::find_if(p.first, p.second, [this] (const Edge e) { return is_reference(e); });
+    assert(itr != p.second);
+    return boost::source(*itr, graph_);
 }
 
 std::size_t Assembler::num_reference_kmers() const
@@ -664,15 +650,12 @@ Assembler::NucleotideSequence Assembler::make_sequence(const Path& path) const
 {
     NucleotideSequence result {};
     result.reserve(k_ + path.size() - 1);
-    
     const auto& first_kmer = kmer_of(path.front());
     result.insert(std::end(result), std::cbegin(first_kmer), std::cend(first_kmer));
-    
     std::for_each(std::next(std::cbegin(path)), std::cend(path),
                   [this, &result] (const Vertex v) {
                       result.push_back(back_base_of(v));
                   });
-    
     return result;
 }
 
@@ -708,6 +691,7 @@ Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Verte
     }
     
     result.shrink_to_fit();
+    
     return result;
 }
 
@@ -787,19 +771,16 @@ bool Assembler::is_simple_deletion(Edge e) const
 bool Assembler::is_on_path(const Edge e, const Path& path) const
 {
     if (path.size() < 2) return false;
-    
-    auto it1 = std::cbegin(path);
-    auto it2 = std::next(it1);
-    const auto last = std::cend(path);
+    auto first_vertex = std::cbegin(path);
+    auto next_vertex = std::next(first_vertex);
+    const auto last_vertex = std::cend(path);
     Edge path_edge;
     bool good;
-    
-    for (; it2 != last; ++it1, ++it2) {
-        std::tie(path_edge, good) = boost::edge(*it1, *it2, graph_);
+    for (; next_vertex != last_vertex; ++first_vertex, ++next_vertex) {
+        std::tie(path_edge, good) = boost::edge(*first_vertex, *next_vertex, graph_);
         assert(good);
         if (path_edge == e) return true;
     }
-    
     return false;
 }
 
@@ -1121,10 +1102,10 @@ bool Assembler::is_on_path(const Vertex v, const PredecessorMap& predecessors, c
 {
     if (v == from) return true;
     assert(predecessors.count(from) == 1);
-    auto it = predecessors.find(from);
-    while (it != std::end(predecessors) && it->first != it->second) {
-        if (it->second == v) return true;
-        it = predecessors.find(it->second);
+    auto itr = predecessors.find(from);
+    while (itr != std::end(predecessors) && itr->first != itr->second) {
+        if (itr->second == v) return true;
+        itr = predecessors.find(itr->second);
     }
     return false;
 }
@@ -1132,19 +1113,19 @@ bool Assembler::is_on_path(const Vertex v, const PredecessorMap& predecessors, c
 bool Assembler::is_on_path(const Edge e, const PredecessorMap& predecessors, const Vertex from) const
 {
     assert(predecessors.count(from) == 1);
-    auto it1 = predecessors.find(from);
-    auto it2 = predecessors.find(it1->second);
+    auto itr1 = predecessors.find(from);
+    auto itr2 = predecessors.find(itr1->second);
     const auto last = std::cend(predecessors);
     Edge path_edge;
     bool good;
-    while (it2 != last && it1 != it2) {
-        std::tie(path_edge, good) = boost::edge(it2->second, it1->second, graph_);
+    while (itr2 != last && itr1 != itr2) {
+        std::tie(path_edge, good) = boost::edge(itr2->second, itr1->second, graph_);
         assert(good);
         if (path_edge == e) {
             return true;
         }
-        it1 = it2;
-        it2 = predecessors.find(it1->second);
+        itr1 = itr2;
+        itr2 = predecessors.find(itr1->second);
     }
     return false;
 }
@@ -1153,10 +1134,10 @@ Assembler::Path Assembler::extract_full_path(const PredecessorMap& predecessors,
 {
     assert(predecessors.count(from) == 1);
     Path result {from};
-    auto it = predecessors.find(from);
-    while (it != std::end(predecessors) && it->first != it->second) {
-        result.push_front(it->second);
-        it = predecessors.find(it->second);
+    auto itr = predecessors.find(from);
+    while (itr != std::end(predecessors) && itr->first != itr->second) {
+        result.push_front(itr->second);
+        itr = predecessors.find(itr->second);
     }
     return result;
 }
@@ -1268,6 +1249,7 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             auto alt_path = extract_nonreference_path(predecessors, alt);
             assert(!alt_path.empty());
             const auto ref_before_bubble = predecessors.at(alt_path.front());
+            
             auto ref_seq = make_reference(ref_before_bubble, ref);
             alt_path.push_front(ref_before_bubble);
             auto alt_seq = make_sequence(alt_path);
@@ -1276,11 +1258,9 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             rhs_kmer_count += count_kmers(ref_seq, k_);
             const auto pos = reference_head_position_ + reference_size() - sequence_length(rhs_kmer_count, k_);
             result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
-            
             --rhs_kmer_count; // because we padded one reference kmer to make ref_seq
             
-            Edge edge_to_alt;
-            bool good;
+            Edge edge_to_alt; bool good;
             std::tie(edge_to_alt, good) = boost::edge(alt, ref, graph_);
             assert(good);
             if (alt_path.size() == 1 && is_simple_deletion(edge_to_alt)) {
@@ -1289,34 +1269,39 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             } else {
                 auto vertex_before_bridge = ref_before_bubble;
                 while (!alt_path.empty()) {
-                    const auto it = is_bridge_until(alt_path);
-                    if (it == std::cend(alt_path)) {
+                    const auto bifurication_point = is_bridge_until(alt_path);
+                    if (bifurication_point == std::cend(alt_path)) {
                         remove_path(alt_path);
                         regenerate_vertex_indices();
                         set_out_edge_transition_scores(vertex_before_bridge);
                         erase_all(alt_path, dominator_tree);
                         num_remaining_alt_kmers -= alt_path.size();
                         alt_path.clear();
-                    } else if (joins_reference_only(*it)) {
-                        alt_path.erase(it, std::end(alt_path));
+                    } else if (joins_reference_only(*bifurication_point)) {
+                        alt_path.erase(bifurication_point, std::cend(alt_path));
                         remove_path(alt_path);
                         regenerate_vertex_indices();
                         set_out_edge_transition_scores(vertex_before_bridge);
                         erase_all(alt_path, dominator_tree);
                         num_remaining_alt_kmers -= alt_path.size();
                         break;
-                    } else if (is_dominated_by_path(*it, std::cbegin(alt_path), it, dominator_tree)) {
-                        vertex_before_bridge = *it;
-                        alt_path.erase(std::begin(alt_path), std::next(it));
+                    } else if (is_dominated_by_path(*bifurication_point, std::cbegin(alt_path),
+                                                    bifurication_point, dominator_tree)) {
+                        vertex_before_bridge = *bifurication_point;
+                        alt_path.erase(std::cbegin(alt_path), std::next(bifurication_point));
                     } else {
                         // TODO: This is almost certainly not optimal... fortunatly it seems to
                         // be a rare case.
-                        Edge e;
-                        bool good;
-                        std::tie(e, good) = boost::edge(*std::prev(it), *it, graph_);
-                        assert(good);
-                        block_edge(e);
-                        blocked_edge = e;
+                        if (bifurication_point != std::cbegin(alt_path)) {
+                            Edge e; bool good;
+                            std::tie(e, good) = boost::edge(*std::prev(bifurication_point),
+                                                            *bifurication_point, graph_);
+                            assert(good);
+                            block_edge(e);
+                            blocked_edge = e;
+                        } else {
+                            block_all_in_edges(alt_path.front()); // ???
+                        }
                         break;
                     }
                 }
