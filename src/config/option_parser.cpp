@@ -21,6 +21,7 @@ namespace po = boost::program_options;
 
 namespace octopus { namespace options {
 
+// boost::option cannot handle option dependencies so we must do our own checks
 void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2);
 void option_dependency(const OptionMap& vm, const std::string& for_what, const std::string& required_option);
 void check_positive(const std::string& option, const OptionMap& vm);
@@ -28,9 +29,9 @@ void check_reads_present(const OptionMap& vm);
 void check_region_files_consistent(const OptionMap& vm);
 void check_trio_consistent(const OptionMap& vm);
 void validate_caller(const OptionMap& vm);
-void validate_options(const OptionMap& vm);
+void validate(const OptionMap& vm);
 
-void try_notify(OptionMap& vm);
+po::parsed_options run(po::command_line_parser& parser);
 
 OptionMap parse_options(const int argc, const char** argv)
 {
@@ -430,19 +431,13 @@ OptionMap parse_options(const int argc, const char** argv)
     .add(call_filtering);
     
     OptionMap vm_init;
-    
-    po::store(po::command_line_parser(argc, argv).options(general).allow_unregistered().run(),
-              vm_init);
+    po::store(run(po::command_line_parser(argc, argv).options(general).allow_unregistered()), vm_init);
     
     if (vm_init.count("help") == 1) {
-        po::store(po::command_line_parser(argc, argv).options(caller).allow_unregistered().run(),
-                  vm_init);
-        
+        po::store(run(po::command_line_parser(argc, argv).options(caller).allow_unregistered()), vm_init);
         if (vm_init.count("caller") == 1) {
             const auto caller = vm_init.at("caller").as<std::string>();
-            
             validate_caller(vm_init);
-            
             if (caller == "individual") {
                 std::cout << all << std::endl;
             } else if (caller == "population") {
@@ -455,7 +450,6 @@ OptionMap parse_options(const int argc, const char** argv)
         } else {
             std::cout << all << std::endl;
         }
-        
         return vm_init;
     }
     
@@ -475,26 +469,28 @@ OptionMap parse_options(const int argc, const char** argv)
     
     vm_init.clear();
     
-    po::store(po::command_line_parser(argc, argv).options(all).run(), vm);
-    
-    const std::vector<std::string> positive_int_options {
-        "threads", "max-open-read-files", "mask-tails", "mask-soft-clipped-boundries",
-        "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
-        "max-read-length", "downsample-above", "downsample-target", "min-base-quality"
-        "min-supporting-reads", "max-variant-size", "assembler-mask-base-quality", "organism-ploidy",
-        "max-haplotypes"
-    };
-    
-    for (const auto& option : positive_int_options) {
-        check_positive(option, vm);
-    }
-    
-    // boost::option cannot handle option dependencies so we must do our own checks
-    validate_options(vm);
-    
-    try_notify(vm);
+    po::store(run(po::command_line_parser(argc, argv).options(all)), vm);
+    validate(vm);
+    po::notify(vm);
     
     return vm;
+}
+
+namespace {
+
+std::string prepend_dashes(std::string option)
+{
+    option.insert(0, "--");
+    return option;
+}
+
+std::string implode(std::vector<std::string> options)
+{
+    std::transform(std::cbegin(options), std::cend(options), std::begin(options), prepend_dashes);
+    static const std::string delim {" | "};
+    return utils::join(options, delim);
+}
+
 }
 
 class CommandLineError : public UserError
@@ -528,33 +524,16 @@ class UnknownCommandLineOption : public CommandLineError
 {
 public:
     UnknownCommandLineOption(std::string option)
-    : CommandLineError {
-        "The option given option '" + option + "' is not recognised"
-    } {}
+    : CommandLineError { "The option you specified '--" + option + "' is not recognised"}
+    {}
 };
-    
-namespace {
-    std::string prepend_dashes(std::string option)
-    {
-        option.insert(0, "--");
-        return option;
-    }
-    
-    std::string implode(std::vector<std::string> options)
-    {
-        std::transform(std::cbegin(options), std::cend(options), std::begin(options), prepend_dashes);
-        static const std::string delim {" | "};
-        return utils::join(options, delim);
-    }
-}
 
 class MissingRequiredCommandLineArguement : public CommandLineError
 {
 public:
     MissingRequiredCommandLineArguement(std::string option)
-    : CommandLineError {
-        "The command line option '--" + option + "' is required but is missing"
-    } {}
+    : CommandLineError {"The command line option '--" + option + "' is required but is missing"}
+    {}
     
     MissingRequiredCommandLineArguement(std::vector<std::string> options, bool strict = false)
     {
@@ -689,14 +668,16 @@ namespace {
     }
 }
 
-void try_notify(OptionMap& vm)
+po::parsed_options run(po::command_line_parser& parser)
 {
     try {
-        po::notify(vm);
+        return parser.run();
     } catch (const po::required_option& e) {
         throw MissingRequiredCommandLineArguement {strip(e.get_option_name())};
     } catch (const po::unknown_option& e) {
         throw UnknownCommandLineOption {strip(e.get_option_name())};
+    } catch (const po::ambiguous_option& e) {
+        throw CommandLineError {e.what()};
     } catch (const po::reading_file& e) {
         throw CommandLineError {e.what()};
     } catch (const po::invalid_command_line_syntax& e) {
@@ -706,8 +687,19 @@ void try_notify(OptionMap& vm)
     }
 }
 
-void validate_options(const OptionMap& vm)
+void validate(const OptionMap& vm)
 {
+    const std::vector<std::string> positive_int_options {
+        "threads", "max-open-read-files", "mask-tails", "mask-soft-clipped-boundries",
+        "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
+        "max-read-length", "downsample-above", "downsample-target", "min-base-quality"
+        "min-supporting-reads", "max-variant-size", "assembler-mask-base-quality", "organism-ploidy",
+        "max-haplotypes"
+    };
+    
+    for (const auto& option : positive_int_options) {
+        check_positive(option, vm);
+    }
     check_reads_present(vm);
     check_region_files_consistent(vm);
     check_trio_consistent(vm);
@@ -720,8 +712,8 @@ std::istream& operator>>(std::istream& in, ContigPloidy& result)
     
     std::string token;
     in >> token;
-    
     std::smatch match;
+    
     if (std::regex_match(token, match, re) && match.size() == 4) {
         if (match.length(1) > 0) {
             result.sample = match.str(1);
