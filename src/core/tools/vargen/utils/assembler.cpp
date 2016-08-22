@@ -65,8 +65,7 @@ Assembler::Assembler(const unsigned kmer_size)
 , reference_head_position_ {0}
 {}
 
-Assembler::Assembler(const unsigned kmer_size,
-                     const NucleotideSequence& reference)
+Assembler::Assembler(const unsigned kmer_size, const NucleotideSequence& reference)
 : k_ {kmer_size}
 , reference_kmers_ {}
 , reference_head_position_ {0}
@@ -98,9 +97,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
     bool prev_kmer_good {true};
     if (!contains_kmer(prev_kmer)) {
         const auto u = add_vertex(prev_kmer);
-        if (!u) {
-            prev_kmer_good = false;
-        }
+        if (!u) prev_kmer_good = false;
     }
     ++kmer_begin;
     ++kmer_end;
@@ -120,8 +117,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
         } else if (prev_kmer_good) {
             const auto u = vertex_cache_.at(prev_kmer);
             const auto v = vertex_cache_.at(kmer);
-            Edge e;
-            bool e_in_graph;
+            Edge e; bool e_in_graph;
             std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
             if (e_in_graph) {
                 increment_weight(e);
@@ -418,8 +414,7 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
             const auto u = vertex_cache_.at(std::crbegin(reference_kmers_)[1]);
             const auto v = vertex_cache_.at(reference_kmers_.back());
             set_vertex_reference(v);
-            Edge e;
-            bool e_in_graph;
+            Edge e; bool e_in_graph;
             std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
             if (e_in_graph) {
                 set_edge_reference(e);
@@ -667,7 +662,6 @@ Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Verte
     if (from == to || from == null) {
         return result;
     }
-    
     auto last = to;
     if (last == null) {
         if (from == reference_tail()) {
@@ -677,7 +671,6 @@ Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Verte
     }
     
     result.reserve(2 * k_);
-    
     const auto& first_kmer = kmer_of(from);
     result.insert(std::end(result), std::cbegin(first_kmer), std::cend(first_kmer));
     
@@ -757,10 +750,7 @@ bool Assembler::is_trivial_cycle(const Edge e) const
 bool Assembler::graph_has_trivial_cycle() const
 {
     const auto p = boost::edges(graph_);
-    return std::any_of(p.first, p.second,
-                       [this] (const Edge& e) {
-                           return is_trivial_cycle(e);
-                       });
+    return std::any_of(p.first, p.second, [this] (const Edge& e) { return is_trivial_cycle(e); });
 }
 
 bool Assembler::is_simple_deletion(Edge e) const
@@ -802,7 +792,6 @@ void Assembler::remove_disconnected_vertices()
 {
     VertexIterator vi, vi_end, vi_next;
     std::tie(vi, vi_end) = boost::vertices(graph_);
-    
     for (vi_next = vi; vi != vi_end; vi = vi_next) {
         ++vi_next;
         if (boost::degree(*vi, graph_) == 0) {
@@ -880,7 +869,6 @@ void Assembler::prune_reference_flanks()
     
     // NB: I don't think this topological_sort is really needed (just iterate from reference_head
     // and reference_tail). Leaving it in for now as it's helping to uncover bugs!
-    
     std::deque<Vertex> sorted_vertices {};
     
     boost::topological_sort(graph_, std::front_inserter(sorted_vertices),
@@ -900,6 +888,7 @@ void Assembler::prune_reference_flanks()
                       reference_kmers_.pop_front();
                       ++reference_head_position_;
                   });
+    
     const auto it2 = std::find_if_not(std::crbegin(sorted_vertices), std::make_reverse_iterator(it),
                                       [this] (const Vertex v) {
                                           return boost::in_degree(v, graph_) == 1

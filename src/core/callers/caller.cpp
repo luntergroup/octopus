@@ -681,7 +681,6 @@ auto calculate_flank_state(const std::vector<Haplotype>& haplotypes,
 {
     const auto flank_regions = calculate_flank_regions(haplotype_region(haplotypes), active_region,
                                                        candidates);
-    
     return HaplotypeLikelihoodCache::FlankState {
         size(flank_regions.first), size(flank_regions.second)
     };

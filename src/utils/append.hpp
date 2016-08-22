@@ -26,7 +26,7 @@ auto append(const std::vector<T>& src, std::vector<T>& dest)
         dest   = src;
         result = std::begin(dest);
     } else {
-        result = dest.insert(std::end(dest), std::cbegin(src), std::cend(src));
+        result = dest.insert(std::cend(dest), std::cbegin(src), std::cend(src));
     }
     
     return result;
@@ -41,7 +41,7 @@ auto append(std::vector<T>&& src, std::vector<T>& dest)
         dest   = std::move(src);
         result = std::begin(dest);
     } else {
-        result = dest.insert(std::end(dest),
+        result = dest.insert(std::cend(dest),
                              std::make_move_iterator(std::begin(src)),
                              std::make_move_iterator(std::end(src)));
     }
@@ -61,7 +61,7 @@ auto append(const std::deque<T>& src, std::deque<T>& dest)
         dest   = src;
         result = std::begin(dest);
     } else {
-        result = dest.insert(std::end(dest), std::cbegin(src), std::cend(src));
+        result = dest.insert(std::cend(dest), std::cbegin(src), std::cend(src));
     }
     
     return result;
@@ -76,7 +76,7 @@ auto append(std::deque<T>&& src, std::deque<T>& dest)
         dest   = std::move(src);
         result = std::begin(dest);
     } else {
-        result = dest.insert(std::end(dest),
+        result = dest.insert(std::cend(dest),
                              std::make_move_iterator(std::begin(src)),
                              std::make_move_iterator(std::end(src)));
     }
@@ -90,13 +90,13 @@ auto append(std::deque<T>&& src, std::deque<T>& dest)
 template <typename T>
 auto append(const std::deque<T>& src, std::vector<T>& dest)
 {
-    return dest.insert(std::end(dest), std::cbegin(src), std::cend(src));
+    return dest.insert(std::cend(dest), std::cbegin(src), std::cend(src));
 }
 
 template <typename T>
 auto append(std::deque<T>&& src, std::vector<T>& dest)
 {
-    const auto result = dest.insert(std::end(dest),
+    const auto result = dest.insert(std::cend(dest),
                                     std::make_move_iterator(std::begin(src)),
                                     std::make_move_iterator(std::end(src)));
     
@@ -109,13 +109,13 @@ auto append(std::deque<T>&& src, std::vector<T>& dest)
 template <typename T>
 auto append(const std::vector<T>& src, std::deque<T>& dest)
 {
-    return dest.insert(std::end(dest), std::cbegin(src), std::cend(src));
+    return dest.insert(std::cend(dest), std::cbegin(src), std::cend(src));
 }
 
 template <typename T>
 auto append(std::vector<T>&& src, std::deque<T>& dest)
 {
-    const auto result = dest.insert(std::end(dest),
+    const auto result = dest.insert(std::cend(dest),
                                     std::make_move_iterator(std::begin(src)),
                                     std::make_move_iterator(std::end(src)));
     

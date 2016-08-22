@@ -115,18 +115,15 @@ auto make_cigar(const AlignmentString& alignment)
     std::string result {};
     result.reserve(alignment.size());
     
-    auto it = std::cbegin(alignment);
+    auto itr = std::cbegin(alignment);
     const auto last = std::cend(alignment);
     
-    while (it != last) {
-        auto it2 = std::adjacent_find(it, last, std::not_equal_to<> {});
-        
-        if (it2 != last) ++it2;
-        
-        result += std::to_string(std::distance(it, it2));
-        result += *it;
-        
-        it = it2;
+    while (itr != last) {
+        auto next_unique = std::adjacent_find(itr, last, std::not_equal_to<> {});
+        if (next_unique != last) ++next_unique;
+        result += std::to_string(std::distance(itr, next_unique));
+        result += *itr;
+        itr = next_unique;
     }
     
     result.shrink_to_fit();
@@ -137,10 +134,8 @@ auto make_cigar(const AlignmentString& alignment)
 auto extract_alignment(const DPMatrix& matrix)
 {
     AlignmentString alignment {};
-    
     auto i = ncols(matrix) - 1;
     auto j = nrows(matrix) - 1;
-    
     while(i > 0 || j > 0) {
         switch(matrix[i][j].traceback) {
             case '=':
@@ -171,15 +166,12 @@ auto extract_alignment(const DPMatrix& matrix)
             }
         }
     }
-    
     return make_cigar(alignment);
 }
 } // namespace
 
 Alignment align(const std::string& target, const std::string& query, Model model)
 {
-    using std::make_pair;
-    
     if (target.empty()) {
         if (query.empty()) {
             return {"", 0};
@@ -187,16 +179,12 @@ Alignment align(const std::string& target, const std::string& query, Model model
         return {std::to_string(query.size()) + std::string {"I"},
             model.gap_open + static_cast<int>(query.size() - 1) * model.gap_extend};
     }
-    
     if (query.empty()) {
         return {std::to_string(target.size()) + std::string {"D"},
             model.gap_open + static_cast<int>(target.size() - 1) * model.gap_extend};
     }
-    
     auto matrix = init_dp_matrix(target, query, model);
-    
     fill(matrix, target, query, model);
-    
     return {extract_alignment(matrix), matrix.back().back().score};
 }
 

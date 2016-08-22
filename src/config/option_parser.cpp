@@ -468,7 +468,6 @@ OptionMap parse_options(const int argc, const char** argv)
     }
     
     vm_init.clear();
-    
     po::store(run(po::command_line_parser(argc, argv).options(all)), vm);
     validate(vm);
     po::notify(vm);
@@ -538,15 +537,12 @@ public:
     MissingRequiredCommandLineArguement(std::vector<std::string> options, bool strict = false)
     {
         std::ostringstream ss {};
-        
         if (strict) {
             ss << "One ";
         } else {
             ss << "At least one ";
         }
-        
         ss << "of the command line options '" + implode(options) + "' is required but none are present";
-        
         why_ = ss.str();
     }
 };
@@ -568,14 +564,11 @@ public:
     ConflictingCommandLineOptions(std::vector<std::string> conflicts)
     {
         std::ostringstream ss {};
-        
         ss << "the options";
-        
         for (const auto& option : conflicts) {
             ss << " " << option;
         }
         ss << " are mutually exclusive";
-        
         why_ = ss.str();
     }
 };
@@ -718,7 +711,6 @@ std::istream& operator>>(std::istream& in, ContigPloidy& result)
         if (match.length(1) > 0) {
             result.sample = match.str(1);
         }
-        
         result.contig = match.str(2);
         result.ploidy = boost::lexical_cast<decltype(result.ploidy)>(match.str(3));
     } else {

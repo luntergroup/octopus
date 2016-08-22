@@ -383,6 +383,12 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
     return expand(input_region, kmer_size);
 }
 
+auto partition_complex(std::deque<Assembler::Variant>& variants)
+{
+    return std::stable_partition(std::begin(variants), std::end(variants),
+                                 [] (const auto& candidate) { return !is_complex(candidate); });
+}
+
 void trim_reference(Assembler::Variant& v)
 {
     using std::cbegin; using std::cend; using std::crbegin; using std::crend;
@@ -418,15 +424,17 @@ auto split_mnp(Assembler::Variant&& v)
     
     std::vector<Assembler::Variant> result {};
     result.reserve(4);
-    
     // Need to allocate new memory for all but the last SNV
     result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
+    
     const auto first_ref_itr       = std::cbegin(v.ref);
     const auto penultimate_ref_itr = std::prev(std::cend(v.ref));
     const auto first_alt_itr       = std::cbegin(v.alt);
     const auto penultimate_alt_itr = std::prev(std::cend(v.alt));
+    
     auto p = std::mismatch(std::next(first_ref_itr), penultimate_ref_itr, std::next(first_alt_itr));
     while (p.first != penultimate_ref_itr) {
+        assert(p.first < penultimate_ref_itr && p.second < penultimate_alt_itr);
         result.emplace_back(v.begin_pos + std::distance(first_ref_itr, p.first), *p.first, *p.second);
         p = std::mismatch(std::next(p.first), penultimate_ref_itr, std::next(p.second));
     }
@@ -436,6 +444,7 @@ auto split_mnp(Assembler::Variant&& v)
     v.ref.erase(first_ref_itr, penultimate_ref_itr);
     v.alt.erase(first_alt_itr, penultimate_alt_itr);
     result.emplace_back(new_begin, std::move(v.ref), std::move(v.alt));
+    
     return result;
 }
 
@@ -489,6 +498,7 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
             default:
                 throw std::runtime_error {"LocalReassembler: unexpected cigar op"};
         }
+        assert(ref_itr <= std::cend(ref) && alt_itr <= std::cend(alt));
     }
     
     return result;
@@ -524,14 +534,6 @@ struct VariantLess
         return lhs.begin_pos < rhs.begin_pos;
     }
 };
-
-auto partition_complex(std::deque<Assembler::Variant>& variants)
-{
-    return std::stable_partition(std::begin(variants), std::end(variants),
-                                 [] (const auto& candidate) {
-                                     return !is_complex(candidate);
-                                 });
-}
 
 using VariantIterator = std::deque<Assembler::Variant>::iterator;
 
