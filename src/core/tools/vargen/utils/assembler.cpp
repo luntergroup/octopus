@@ -337,8 +337,9 @@ bool operator<(const Assembler::Kmer& lhs, const Assembler::Kmer& rhs) noexcept
 {
     return std::lexicographical_compare(lhs.first_, lhs.last_, rhs.first_, rhs.last_);
 }
-
+//
 // Assembler private methods
+//
 void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequence)
 {
     if (sequence.size() < k_) {
@@ -656,9 +657,9 @@ Assembler::NucleotideSequence Assembler::make_sequence(const Path& path) const
 
 Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Vertex to) const
 {
+    const auto null = null_vertex();
     NucleotideSequence result {};
     
-    const auto null = null_vertex();
     if (from == to || from == null) {
         return result;
     }
@@ -669,11 +670,9 @@ Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Verte
         }
         last = reference_tail();
     }
-    
     result.reserve(2 * k_);
     const auto& first_kmer = kmer_of(from);
     result.insert(std::end(result), std::cbegin(first_kmer), std::cend(first_kmer));
-    
     from = next_reference(from);
     while (from != last) {
         result.push_back(back_base_of(from));
@@ -691,7 +690,6 @@ Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Verte
 void Assembler::remove_path(const std::deque<Vertex>& path)
 {
     assert(!path.empty());
-    
     if (path.size() == 1) {
         clear_and_remove_vertex(path.front());
     } else {
@@ -764,8 +762,7 @@ bool Assembler::is_on_path(const Edge e, const Path& path) const
     auto first_vertex = std::cbegin(path);
     auto next_vertex = std::next(first_vertex);
     const auto last_vertex = std::cend(path);
-    Edge path_edge;
-    bool good;
+    Edge path_edge; bool good;
     for (; next_vertex != last_vertex; ++first_vertex, ++next_vertex) {
         std::tie(path_edge, good) = boost::edge(*first_vertex, *next_vertex, graph_);
         assert(good);
@@ -1105,8 +1102,7 @@ bool Assembler::is_on_path(const Edge e, const PredecessorMap& predecessors, con
     auto itr1 = predecessors.find(from);
     auto itr2 = predecessors.find(itr1->second);
     const auto last = std::cend(predecessors);
-    Edge path_edge;
-    bool good;
+    Edge path_edge; bool good;
     while (itr2 != last && itr1 != itr2) {
         std::tie(path_edge, good) = boost::edge(itr2->second, itr1->second, graph_);
         assert(good);

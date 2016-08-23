@@ -13,8 +13,8 @@
 
 namespace octopus { namespace coretools {
 
-namespace
-{
+namespace {
+
 struct Cell
 {
     int score      = 0;
@@ -35,7 +35,7 @@ auto ncols(const DPMatrix& matrix) noexcept
 
 auto nrows(const DPMatrix& matrix) noexcept
 {
-    return matrix[0].size();
+    return matrix.front().size();
 }
 
 auto init_dp_matrix(const std::string& target, const std::string& query,
@@ -173,9 +173,7 @@ auto extract_alignment(const DPMatrix& matrix)
 Alignment align(const std::string& target, const std::string& query, Model model)
 {
     if (target.empty()) {
-        if (query.empty()) {
-            return {"", 0};
-        }
+        if (query.empty()) return {"", 0};
         return {std::to_string(query.size()) + std::string {"I"},
             model.gap_open + static_cast<int>(query.size() - 1) * model.gap_extend};
     }

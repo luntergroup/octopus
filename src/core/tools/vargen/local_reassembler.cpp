@@ -163,7 +163,7 @@ auto transform_low_quality_matches_to_reference(AlignedRead::NucleotideSequence 
                                                 const ExpandedCigarString& cigar,
                                                 const AlignedRead::BaseQuality min_quality)
 {
-    auto ref_itr = std::cbegin(reference_sequence);
+    auto ref_itr   = std::cbegin(reference_sequence);
     auto cigar_itr = find_first_sequence_op(cigar);
     std::transform(std::cbegin(read_sequence), std::cend(read_sequence), std::cbegin(base_qualities),
                    std::begin(read_sequence), [&] (const auto read_base, const auto base_quality) {
@@ -197,10 +197,10 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
 
 } // namespace
 
-template <typename C, typename R>
-auto overlapped_bins(C& bins, const R& read)
+template <typename Container, typename M>
+auto overlapped_bins(Container& bins, const M& mappable)
 {
-    return bases(overlap_range(std::begin(bins), std::end(bins), read, BidirectionallySortedTag {}));
+    return bases(overlap_range(std::begin(bins), std::end(bins), mappable, BidirectionallySortedTag {}));
 }
 
 void LocalReassembler::do_add_read(const AlignedRead& read)
@@ -309,7 +309,6 @@ std::string LocalReassembler::name() const
 void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
 {
     const auto& read_region = mapped_region(read);
-    
     if (bins_.empty()) {
         if (region_size(read_region) > bin_size_) {
             for (auto subregion : decompose(read_region, bin_size_)) {
@@ -329,7 +328,6 @@ void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
             bins_.emplace_back(shift(mapped_region(bins_.back()), bin_size_));
         }
     }
-    
     assert(contains(encompassing_region(bins_.front(), bins_.back()), read_region));
 }
 
@@ -383,6 +381,25 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
     return expand(input_region, kmer_size);
 }
 
+bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin,
+                                    std::deque<Variant>& result) const
+{
+    if (bin.empty()) return true;
+    
+    const auto assemble_region    = propose_assembler_region(bin.region, kmer_size);
+    const auto reference_sequence = reference_.get().fetch_sequence(assemble_region);
+    
+    if (utils::has_ns(reference_sequence)) return false;
+    
+    Assembler assembler {kmer_size, reference_sequence};
+    
+    for (const auto& sequence : bin.read_sequences) {
+        assembler.insert_read(sequence);
+    }
+    
+    return try_assemble_region(assembler, reference_sequence, assemble_region, result);
+}
+
 auto partition_complex(std::deque<Assembler::Variant>& variants)
 {
     return std::stable_partition(std::begin(variants), std::end(variants),
@@ -401,18 +418,17 @@ void trim_reference(Assembler::Variant& v)
     v.alt.erase(cbegin(v.alt), p2.second);
 }
 
-template <typename Container>
-void trim_reference(Container& variants)
+void trim_reference(std::deque<Assembler::Variant>& variants)
 {
     for (auto& v : variants) trim_reference(v);
 }
 
-bool is_complex(const Assembler::Variant& v)
+bool is_complex(const Assembler::Variant& v) noexcept
 {
     return (v.ref.size() > 1 && !v.alt.empty()) || (v.alt.size() > 1 && !v.ref.empty());
 }
 
-bool is_mnp(const Assembler::Variant& v)
+bool is_mnp(const Assembler::Variant& v) noexcept
 {
     return v.ref.size() > 1 && v.ref.size() == v.alt.size();
 }
@@ -440,10 +456,10 @@ auto split_mnp(Assembler::Variant&& v)
     }
     
     // So just need to remove the unwanted sequence from the last one
-    const auto new_begin = v.begin_pos + v.ref.size() - 1;
+    const auto last_snv_begin = v.begin_pos + v.ref.size() - 1;
     v.ref.erase(first_ref_itr, penultimate_ref_itr);
     v.alt.erase(first_alt_itr, penultimate_alt_itr);
-    result.emplace_back(new_begin, std::move(v.ref), std::move(v.alt));
+    result.emplace_back(last_snv_begin, std::move(v.ref), std::move(v.alt));
     
     return result;
 }
@@ -581,37 +597,18 @@ void decompose_complex(std::deque<Assembler::Variant>& variants)
     }
 }
 
-template <typename C1, typename C2>
-void add_to_mapped_variants(C1& result, C2&& variants, const GenomicRegion& region)
+void add_to_mapped_variants(std::deque<Assembler::Variant>&& variants, std::deque<Variant>& result,
+                            const GenomicRegion& assemble_region)
 {
     for (auto& variant : variants) {
-        result.emplace_back(contig_name(region), region.begin() + variant.begin_pos,
+        result.emplace_back(contig_name(assemble_region), assemble_region.begin() + variant.begin_pos,
                             std::move(variant.ref), std::move(variant.alt));
     }
 }
 
-bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin,
-                                    std::deque<Variant>& result) const
-{
-    if (bin.empty()) return true;
-    
-    const auto assembler_region   = propose_assembler_region(bin.region, kmer_size);
-    const auto reference_sequence = reference_.get().fetch_sequence(assembler_region);
-    
-    if (utils::has_ns(reference_sequence)) return false;
-    
-    Assembler assembler {kmer_size, reference_sequence};
-    
-    for (const auto& sequence : bin.read_sequences) {
-        assembler.insert_read(sequence);
-    }
-    
-    return try_assemble_region(assembler, reference_sequence, assembler_region, result);
-}
-
 bool LocalReassembler::try_assemble_region(Assembler& assembler,
                                            const NucleotideSequence& reference_sequence,
-                                           const GenomicRegion& reference_region,
+                                           const GenomicRegion& assemble_region,
                                            std::deque<Variant>& result) const
 {
     if (!assembler.prune(min_supporting_reads_)) return false;
@@ -619,8 +616,10 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
     assembler.clear();
     if (variants.empty()) return true;
     trim_reference(variants);
+    std::sort(std::begin(variants), std::end(variants), VariantLess {});
+    variants.erase(std::unique(std::begin(variants), std::end(variants)), std::end(variants));
     decompose_complex(variants);
-    add_to_mapped_variants(result, std::move(variants), reference_region);
+    add_to_mapped_variants(std::move(variants), result, assemble_region);
     return true;
 }
 
