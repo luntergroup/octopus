@@ -53,7 +53,6 @@ auto init_dp_matrix(const std::string& target, const std::string& query,
         result[i][0].score = model.gap_open + static_cast<S>(i - 1) * model.gap_extend;
         result[i][0].traceback = 'D';
     }
-    
     for (std::size_t j {1}; j < nrows(result); ++j) {
         result[0][j].score = model.gap_open + static_cast<S>(j - 1) * model.gap_extend;
         result[0][j].traceback = 'I';
@@ -108,11 +107,11 @@ void fill(DPMatrix& matrix, const std::string& target, const std::string& query,
     }
 }
 
-using AlignmentString = std::deque<char>;
+using AlignmentString = std::deque<CigarOperation::Flag>;
 
 auto make_cigar(const AlignmentString& alignment)
 {
-    std::string result {};
+    CigarString result {};
     result.reserve(alignment.size());
     
     auto itr = std::cbegin(alignment);
@@ -121,8 +120,8 @@ auto make_cigar(const AlignmentString& alignment)
     while (itr != last) {
         auto next_unique = std::adjacent_find(itr, last, std::not_equal_to<> {});
         if (next_unique != last) ++next_unique;
-        result += std::to_string(std::distance(itr, next_unique));
-        result += *itr;
+        assert(std::distance(itr, next_unique) > 0);
+        result.emplace_back(static_cast<CigarOperation::Size>(std::distance(itr, next_unique)), *itr);
         itr = next_unique;
     }
     
@@ -137,30 +136,35 @@ auto extract_alignment(const DPMatrix& matrix)
     auto i = ncols(matrix) - 1;
     auto j = nrows(matrix) - 1;
     while(i > 0 || j > 0) {
+        using Flag = CigarOperation::Flag;
         switch(matrix[i][j].traceback) {
             case '=':
             {
-                alignment.push_front('=');
+                assert(i > 0 && j > 0);
+                alignment.push_front(Flag::sequenceMatch);
                 --i;
                 --j;
                 break;
             }
             case 'X':
             {
-                alignment.push_front('X');
+                assert(i > 0 && j > 0);
+                alignment.push_front(Flag::substitution);
                 --i;
                 --j;
                 break;
             }
             case 'I':
             {
-                alignment.push_front('I');
+                assert(j > 0);
+                alignment.push_front(Flag::insertion);
                 --j;
                 break;
             }
             case 'D':
             {
-                alignment.push_front('D');
+                assert(i > 0);
+                alignment.push_front(Flag::deletion);
                 --i;
                 break;
             }
@@ -168,18 +172,21 @@ auto extract_alignment(const DPMatrix& matrix)
     }
     return make_cigar(alignment);
 }
+
 } // namespace
 
 Alignment align(const std::string& target, const std::string& query, Model model)
 {
+    using Flag = CigarOperation::Flag;
+    using Size = CigarOperation::Size;
     if (target.empty()) {
-        if (query.empty()) return {"", 0};
-        return {std::to_string(query.size()) + std::string {"I"},
-            model.gap_open + static_cast<int>(query.size() - 1) * model.gap_extend};
+        if (query.empty()) return {CigarString {}, 0};
+        return {CigarString {CigarOperation {static_cast<Size>(query.size()), Flag::insertion}},
+                model.gap_open + static_cast<int>(query.size() - 1) * model.gap_extend};
     }
     if (query.empty()) {
-        return {std::to_string(target.size()) + std::string {"D"},
-            model.gap_open + static_cast<int>(target.size() - 1) * model.gap_extend};
+        return {CigarString {CigarOperation {static_cast<Size>(target.size()), Flag::deletion}},
+                model.gap_open + static_cast<int>(target.size() - 1) * model.gap_extend};
     }
     auto matrix = init_dp_matrix(target, query, model);
     fill(matrix, target, query, model);

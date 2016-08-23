@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include <basics/cigar_string.hpp>
+
 namespace octopus { namespace coretools {
 
 struct Model
@@ -18,7 +20,7 @@ struct Model
 
 struct Alignment
 {
-    std::string cigar;
+    CigarString cigar;
     int score;
 };
 

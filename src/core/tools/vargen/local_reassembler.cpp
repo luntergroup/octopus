@@ -522,7 +522,7 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
 
 auto align(const Assembler::Variant& v)
 {
-    return parse_cigar(align(v.ref, v.alt).cigar);
+    return align(v.ref, v.alt).cigar;
 }
 
 auto decompose_complex_indel(Assembler::Variant&& v)
