@@ -644,6 +644,7 @@ std::size_t Assembler::num_reference_kmers() const
 
 Assembler::NucleotideSequence Assembler::make_sequence(const Path& path) const
 {
+    assert(!path.empty());
     NucleotideSequence result {};
     result.reserve(k_ + path.size() - 1);
     const auto& first_kmer = kmer_of(path.front());
@@ -905,8 +906,8 @@ Assembler::build_dominator_tree(const Vertex from) const
     DominatorMap result;
     result.reserve(boost::num_vertices(graph_));
     boost::lengauer_tarjan_dominator_tree(graph_, from,  boost::make_assoc_property_map(result));
-    auto it = std::begin(result);
-    for (; it != std::end(result);) {
+    auto it = std::cbegin(result);
+    for (; it != std::cend(result);) {
         if (it->second == null_vertex()) {
             it = result.erase(it);
         } else {
@@ -1099,9 +1100,10 @@ bool Assembler::is_on_path(const Vertex v, const PredecessorMap& predecessors, c
 bool Assembler::is_on_path(const Edge e, const PredecessorMap& predecessors, const Vertex from) const
 {
     assert(predecessors.count(from) == 1);
-    auto itr1 = predecessors.find(from);
-    auto itr2 = predecessors.find(itr1->second);
     const auto last = std::cend(predecessors);
+    auto itr1 = predecessors.find(from);
+    assert(itr1 != last);
+    auto itr2 = predecessors.find(itr1->second);
     Edge path_edge; bool good;
     while (itr2 != last && itr1 != itr2) {
         std::tie(path_edge, good) = boost::edge(itr2->second, itr1->second, graph_);
@@ -1147,8 +1149,7 @@ Assembler::backtrack_until_nonreference(const PredecessorMap& predecessors, Vert
     return std::make_tuple(v, from, count);
 }
 
-Assembler::Path
-Assembler::extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const
+Assembler::Path Assembler::extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const
 {
     Path result {from};
     from = predecessors.at(from);
@@ -1202,9 +1203,7 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             if (max_blockings == 0) { // HACK
                 return result; // HACK
             } // HACK
-            
             --max_blockings; // HACK
-            
             // TODO: This is almost certainly not optimal and is it even guaranteed to terminate?
             if (!is_on_path(boost::target(*blocked_edge, graph_), predecessors, reference_tail())) {
                 set_out_edge_transition_scores(boost::source(*blocked_edge, graph_));
@@ -1234,12 +1233,10 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             auto alt_path = extract_nonreference_path(predecessors, alt);
             assert(!alt_path.empty());
             const auto ref_before_bubble = predecessors.at(alt_path.front());
-            
             auto ref_seq = make_reference(ref_before_bubble, ref);
             alt_path.push_front(ref_before_bubble);
             auto alt_seq = make_sequence(alt_path);
             alt_path.pop_front();
-            
             rhs_kmer_count += count_kmers(ref_seq, k_);
             const auto pos = reference_head_position_ + reference_size() - sequence_length(rhs_kmer_count, k_);
             result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
@@ -1335,16 +1332,13 @@ void Assembler::print(const Path& path) const
     assert(!path.empty());
     std::transform(std::cbegin(path), std::prev(std::cend(path)),
                    std::ostream_iterator<Kmer> {std::cout, "->"},
-                   [this] (const Vertex v) {
-                       return kmer_of(v);
-                   });
+                   [this] (const Vertex v) { return kmer_of(v); });
     std::cout << kmer_of(path.back());
 }
 
 void Assembler::print_dominator_tree() const
 {
     const auto dom_tree = build_dominator_tree(reference_head());
-    
     for (const auto& p : dom_tree) {
         std::cout << kmer_of(p.first) << " dominated by " << kmer_of(p.second) << std::endl;
     }
