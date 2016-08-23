@@ -995,10 +995,10 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
         }
     }
     
-    components.progress_meter().stop();
     running_tasks.clear();
     holdbacks.clear();
     write_remaining_tasks(futures, buffered_tasks, temp_vcfs, calling_components);
+    components.progress_meter().stop();
     merge(std::move(temp_vcfs), components);
 }
 

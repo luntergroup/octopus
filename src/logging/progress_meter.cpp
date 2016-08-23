@@ -21,14 +21,13 @@ namespace octopus {
 
 using utils::TimeInterval;
 
-namespace
-{
+namespace {
     template <typename T>
-    unsigned num_digits(T x)
+    unsigned num_digits(const T x)
     {
         return static_cast<unsigned>(std::to_string(x).size());
     }
-} // namespace
+}
 
 template <typename T>
 unsigned max_str_length(const T& p)
@@ -92,19 +91,19 @@ ProgressMeter::ProgressMeter(ProgressMeter&& other)
 {
     using std::move;
     std::lock_guard<std::mutex> lock {other.mutex_};
-    regions_ = move(other.regions_);
-    completed_regions_ = move(other.completed_regions_);
-    num_bp_to_search_ = move(other.num_bp_to_search_);
-    num_bp_completed_ = move(other.num_bp_completed_);
-    percent_block_size_ = move(other.percent_block_size_);
-    percent_unitl_log_ = move(other.percent_unitl_log_);
+    regions_             = move(other.regions_);
+    completed_regions_   = move(other.completed_regions_);
+    num_bp_to_search_    = move(other.num_bp_to_search_);
+    num_bp_completed_    = move(other.num_bp_completed_);
+    percent_block_size_  = move(other.percent_block_size_);
+    percent_unitl_log_   = move(other.percent_unitl_log_);
     percent_at_last_log_ = move(other.percent_at_last_log_);
-    start_ = move(other.start_);
-    last_log_ = move(other.last_log_);
-    done_ = move(other.done_);
+    start_               = move(other.start_);
+    last_log_            = move(other.last_log_);
+    done_                = move(other.done_);
     position_tab_length_ = move(other.position_tab_length_);
     block_compute_times_ = move(other.block_compute_times_);
-    log_ = move(other.log_);
+    log_                 = move(other.log_);
 }
 
 double percent_completed(const std::size_t num_bp_completed, const std::size_t num_bp_to_search)
@@ -154,14 +153,12 @@ void remove_outliers(Container& durations)
     if (durations.size() < 2) {
         return;
     }
-    
     if (std::adjacent_find(std::cbegin(durations), std::cend(durations),
         std::not_equal_to<void> {}) == std::cend(durations)) {
         return;
     }
     
     auto it = std::min_element(std::begin(durations), std::end(durations));
-    
     if (it == std::begin(durations)) {
         it = std::remove(it, std::end(durations), *it);
     } else {
@@ -199,7 +196,6 @@ ProgressMeter::~ProgressMeter()
     if (!done_ && !regions_.empty() && num_bp_completed_ > 0) {
         const TimeInterval duration {start_, std::chrono::system_clock::now()};
         const auto time_taken = to_string(duration);
-        
         stream(log_) << std::string(position_tab_length_ - 4, ' ')
                      << "-"
                      << completed_pad("100%")
@@ -243,7 +239,6 @@ void ProgressMeter::stop()
     if (!done_ && !regions_.empty()) {
         const TimeInterval duration {start_, std::chrono::system_clock::now()};
         const auto time_taken = to_string(duration);
-        
         stream(log_) << std::string(position_tab_length_ - 4, ' ')
         << "-"
         << completed_pad("100%")
@@ -253,7 +248,6 @@ void ProgressMeter::stop()
         << ttc_pad("-")
         << "-";
     }
-    
     done_ = true;
 }
 
