@@ -386,10 +386,13 @@ bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin,
 {
     if (bin.empty()) return true;
     
-    const auto assemble_region    = propose_assembler_region(bin.region, kmer_size);
+    const auto assemble_region = propose_assembler_region(bin.region, kmer_size);
+    
+    if (size(assemble_region) < kmer_size) return false;
+    
     const auto reference_sequence = reference_.get().fetch_sequence(assemble_region);
     
-    if (utils::has_ns(reference_sequence)) return false;
+    if (!utils::is_canonical_dna(reference_sequence)) return false;
     
     Assembler assembler {kmer_size, reference_sequence};
     

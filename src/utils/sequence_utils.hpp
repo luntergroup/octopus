@@ -17,55 +17,85 @@
 #include <tandem/tandem.hpp>
 
 #include <basics/contig_region.hpp>
+#include <basics/genomic_region.hpp>
 
-namespace octopus { namespace utils
+namespace octopus { namespace utils {
+
+namespace detail {
+
+static constexpr std::array<char, 4> dnaBases {'A', 'C', 'G', 'T'};
+static constexpr std::array<char, 4> rnaBases {'A', 'C', 'G', 'U'};
+
+static const std::unordered_map<char, std::vector<char>> aminoAcidCodes {
+    {'A', {'A'}},                    // Adenine
+    {'C', {'C'}},                    // Cytosine
+    {'G', {'G'}},                    // Guanine
+    {'T', {'T'}},                    // Thymine
+    {'U', {'U'}},                    // Uracil
+    {'R', {'A', 'G'}},               // puRine
+    {'Y', {'C', 'T', 'U'}},          // pYrimidines
+    {'K', {'G', 'T', 'U'}},          // Ketones
+    {'M', {'A', 'C'}},               // aMino groups
+    {'S', {'C', 'G'}},               // Strong interaction
+    {'W', {'A', 'T', 'U'}},          // Weak interaction
+    {'B', {'C', 'G', 'T', 'U'}},     // not A
+    {'D', {'A', 'G', 'T', 'U'}},     // not C
+    {'H', {'A', 'C', 'T', 'U'}},     // not G
+    {'V', {'A', 'C', 'G'}},          // not T/U
+    {'N', {'A', 'C', 'G', 'T', 'U'}} // Nucleic acid
+};
+
+static constexpr std::array<char, 11> ambiguousCodes
 {
-namespace detail
+    'N', 'R', 'Y', 'K', 'M', 'S', 'W', 'B', 'D', 'H', 'V'
+};
+
+inline bool is_dna_nucleotide(const char b) noexcept
 {
-    static constexpr std::array<char, 4> dnaBases {'A', 'C', 'G', 'T'};
-    static constexpr std::array<char, 4> rnaBases {'A', 'C', 'G', 'U'};
-    
-    static const std::unordered_map<char, std::vector<char>> aminoAcidCodes {
-        {'A', {'A'}},                    // Adenine
-        {'C', {'C'}},                    // Cytosine
-        {'G', {'G'}},                    // Guanine
-        {'T', {'T'}},                    // Thymine
-        {'U', {'U'}},                    // Uracil
-        {'R', {'A', 'G'}},               // puRine
-        {'Y', {'C', 'T', 'U'}},          // pYrimidines
-        {'K', {'G', 'T', 'U'}},          // Ketones
-        {'M', {'A', 'C'}},               // aMino groups
-        {'S', {'C', 'G'}},               // Strong interaction
-        {'W', {'A', 'T', 'U'}},          // Weak interaction
-        {'B', {'C', 'G', 'T', 'U'}},     // not A
-        {'D', {'A', 'G', 'T', 'U'}},     // not C
-        {'H', {'A', 'C', 'T', 'U'}},     // not G
-        {'V', {'A', 'C', 'G'}},          // not T/U
-        {'N', {'A', 'C', 'G', 'T', 'U'}} // Nucleic acid
-    };
-    
-    static constexpr std::array<char, 11> ambiguousCodes
-    {
-        'N', 'R', 'Y', 'K', 'M', 'S', 'W', 'B', 'D', 'H', 'V'
-    };
+    return b == 'A' || b == 'C' || b == 'G' || b == 'T';
+}
+
+inline bool is_rna_nucleotide(const char b) noexcept
+{
+    return b == 'A' || b == 'C' || b == 'G' || b == 'U';
+}
+
 } // namespace detail
 
 template <typename SequenceType>
-bool has_ns(const SequenceType& sequence)
+bool has_ns(const SequenceType& sequence) noexcept
 {
     return std::find(std::cbegin(sequence), std::cend(sequence), 'N') != std::cend(sequence);
 }
 
 template <typename SequenceType>
-bool is_dna(const SequenceType& sequence)
+bool is_dna(const SequenceType& sequence) noexcept
 {
-    return sequence.find_first_not_of("ACGTN") == SequenceType::npos;
+    return std::all_of(std::cbegin(sequence), std::cend(sequence),
+                       [] (const auto c) noexcept {
+                           return detail::is_dna_nucleotide(c) || c == 'N';
+                       });
 }
 
 template <typename SequenceType>
-bool is_rna(const SequenceType& sequence)
+bool is_canonical_dna(const SequenceType& sequence) noexcept
 {
-    return sequence.find_first_not_of("ACGUN") == SequenceType::npos;
+    return std::all_of(std::cbegin(sequence), std::cend(sequence), detail::is_dna_nucleotide);
+}
+
+template <typename SequenceType>
+bool is_rna(const SequenceType& sequence) noexcept
+{
+    return std::all_of(std::cbegin(sequence), std::cend(sequence),
+                       [] (const auto c) noexcept {
+                           return detail::is_rna_nucleotide(c) || c == 'N';
+                       });
+}
+
+template <typename SequenceType>
+bool is_canonical_rna(const SequenceType& sequence) noexcept
+{
+    return std::all_of(std::cbegin(sequence), std::cend(sequence), detail::is_rna_nucleotide);
 }
 
 template <typename SequenceType>
@@ -106,8 +136,7 @@ bool has_mixed_case(SequenceType& sequence)
     return false;
 }
 
-namespace detail
-{
+namespace detail {
     struct CapitaliseBase
     {
         auto operator()(const char base) const noexcept
@@ -131,8 +160,7 @@ static void capitalise(SequenceType& sequence)
                    detail::CapitaliseBase {});
 }
 
-namespace detail
-{
+namespace detail {
     template <typename Container>
     typename Container::value_type random_member(const Container& values)
     {
@@ -152,8 +180,7 @@ static void randomise(SequenceType& sequence)
     }
 }
 
-namespace detail
-{
+namespace detail {
     static constexpr std::array<char, 128> complementTable
     {
         4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
@@ -188,38 +215,39 @@ SequenceType reverse_complement_copy(const SequenceType& sequence)
     return result;
 }
 
-namespace detail
+namespace detail {
+
+static inline void complement_swap(char& lhs, char& rhs) noexcept
 {
-    static inline void complement_swap(char& lhs, char& rhs) noexcept
+    const auto tmp = complement(lhs);
+    lhs = complement(rhs);
+    rhs = tmp;
+}
+
+template <typename BidirIt>
+void reverse_complement(BidirIt first, BidirIt last, std::bidirectional_iterator_tag)
+{
+    while (first != last)
     {
-        const auto tmp = complement(lhs);
-        lhs = complement(rhs);
-        rhs = tmp;
-    }
-    
-    template <typename BidirIt>
-    void reverse_complement(BidirIt first, BidirIt last, std::bidirectional_iterator_tag)
-    {
-        while (first != last)
-        {
-            if (first == --last) {
-                *first = complement(*first);
-                break;
-            }
-            complement_swap(*first, *last);
-            ++first;
-        }
-    }
-    
-    template <typename BidirIt>
-    void reverse_complement(BidirIt first, BidirIt last, std::random_access_iterator_tag)
-    {
-        if (first != last)
-            for (; first < --last; ++first)
-                complement_swap(*first, *last);
-        if (first == last)
+        if (first == --last) {
             *first = complement(*first);
+            break;
+        }
+        complement_swap(*first, *last);
+        ++first;
     }
+}
+
+template <typename BidirIt>
+void reverse_complement(BidirIt first, BidirIt last, std::random_access_iterator_tag)
+{
+    if (first != last)
+        for (; first < --last; ++first)
+            complement_swap(*first, *last);
+    if (first == last)
+        *first = complement(*first);
+}
+
 } // namespace detail
 
 template <typename BidirIt>
@@ -250,36 +278,37 @@ bool is_reverse_complement(const SeqType1& lhs, const SeqType2& rhs)
     return is_reverse_complement(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
 }
 
-namespace detail
+namespace detail {
+
+template <typename RandomIt>
+bool is_palindromic(RandomIt first, RandomIt last, std::random_access_iterator_tag)
 {
-    template <typename RandomIt>
-    bool is_palindromic(RandomIt first, RandomIt last, std::random_access_iterator_tag)
-    {
-        if (first == last) return true;
-        
-        const auto size = std::distance(first, last);
-        
-        if (size % 2 != 0) return false;
-        
-        return std::equal(first, std::next(first, size / 2), std::make_reverse_iterator(last),
-                          [] (const char lhs, const char rhs) {
-                              return lhs == complement(rhs);
-                          });
+    if (first == last) return true;
+    
+    const auto size = std::distance(first, last);
+    
+    if (size % 2 != 0) return false;
+    
+    return std::equal(first, std::next(first, size / 2), std::make_reverse_iterator(last),
+                      [] (const char lhs, const char rhs) {
+                          return lhs == complement(rhs);
+                      });
+}
+
+template <typename BidirIt>
+bool is_palindromic(BidirIt first, BidirIt last, std::bidirectional_iterator_tag)
+{
+    if (first == last)   return true;
+    if (first == --last) return false;
+    
+    for (; first != last; ++first, --last) {
+        if (*first != complement(*last)) return false;
+        if (std::next(first) == last) return true;
     }
     
-    template <typename BidirIt>
-    bool is_palindromic(BidirIt first, BidirIt last, std::bidirectional_iterator_tag)
-    {
-        if (first == last)   return true;
-        if (first == --last) return false;
-        
-        for (; first != last; ++first, --last) {
-            if (*first != complement(*last)) return false;
-            if (std::next(first) == last) return true;
-        }
-        
-        return false;
-    }
+    return false;
+}
+
 } // namespace detail
 
 template <typename BidirIt>
@@ -361,6 +390,7 @@ double gc_bias(const SequenceType& sequence)
                                         [] (const char base) { return base == 'G' || base == 'C'; });
     return static_cast<double>(gc_count) / sequence.size();
 }
+
 } // namespace utils
 } // namespace octopus
 

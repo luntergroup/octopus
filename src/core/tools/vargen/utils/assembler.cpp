@@ -23,6 +23,8 @@
 #include <boost/graph/graph_utility.hpp>
 #include <boost/graph/exception.hpp>
 
+#include <utils/sequence_utils.hpp>
+
 #include "timers.hpp"
 
 namespace octopus { namespace coretools {
@@ -472,17 +474,6 @@ bool Assembler::is_reference_unique_path() const
     return std::none_of(p.first, p.second, is_reference_edge);
 }
 
-namespace {
-    template <typename T>
-    bool is_dna(const T& sequence)
-    {
-        return std::all_of(std::cbegin(sequence), std::cend(sequence),
-                           [] (const char base) {
-                               return base == 'A' || base == 'C' || base == 'G' || base == 'T';
-                           });
-    }
-}
-
 Assembler::Vertex Assembler::null_vertex() const
 {
     return boost::graph_traits<KmerGraph>::null_vertex();
@@ -490,7 +481,7 @@ Assembler::Vertex Assembler::null_vertex() const
 
 boost::optional<Assembler::Vertex> Assembler::add_vertex(const Kmer& kmer, const bool is_reference)
 {
-    if (!is_dna(kmer)) return boost::none;
+    if (!utils::is_canonical_dna(kmer)) return boost::none;
     const auto u = boost::add_vertex(GraphNode {boost::num_vertices(graph_), kmer, is_reference}, graph_);
     vertex_cache_.emplace(kmer, u);
     return u;
