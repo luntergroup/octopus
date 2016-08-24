@@ -13,6 +13,7 @@
 
 #include <boost/filesystem/path.hpp>
 #include <boost/range/iterator_range_core.hpp>
+#include <boost/optional.hpp>
 
 #include <basics/contig_region.hpp>
 
@@ -101,9 +102,9 @@ private:
     GenomicRegion get_new_contig_chunk(const GenomicRegion& requested_region) const;
     GenomicRegion get_partial_contig_chunk(const GenomicRegion& requested_region) const;
     bool is_contig_cached(const GenomicRegion& region) const;
-    CacheIterator find_cache_iterator(const GenomicRegion& requested_region) const;
+    boost::optional<CacheIterator> find_cached(const GenomicRegion& request_region) const noexcept;
     void add_sequence_to_cache(GeneticSequence&& sequence, GenomicRegion&& region) const;
-    void update_cache_position(const GenomicRegion& region) const;
+    void register_cache_hit(const GenomicRegion& region) const;
     OverlapRange overlap_range(const GenomicRegion& region) const;
     void remove_from_sequence_cache(const GenomicRegion& region) const;
     void remove_from_usage_cache(const GenomicRegion& region) const;
