@@ -183,11 +183,8 @@ auto estimate_ttc(const std::chrono::system_clock::time_point now,
                   const std::size_t num_remaining_blocks)
 {
     const auto mean_block_duration = mean_duration(durations);
-    
     const auto estimated_remaining_ticks = static_cast<std::size_t>(num_remaining_blocks * mean_block_duration);
-    
     const std::chrono::milliseconds estimated_remaining_duration {estimated_remaining_ticks};
-    
     return TimeInterval {now, now + estimated_remaining_duration};
 }
 
@@ -279,33 +276,32 @@ ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
     if (completed_regions.has_overlapped(contig_region)) {
         auto overlapped = completed_regions.overlap_range(contig_region);
         
+        assert(size(overlapped) >= 1);
+        
         if (size(overlapped) == 1) {
             RegionSizeType result {0};
+            const auto& interactor = overlapped.front();
             
-            if (contains(overlapped.front(), contig_region)) return result;
+            if (contains(interactor, contig_region)) return result;
             
             auto new_region = contig_region;
-            
-            if (begins_before(new_region, overlapped.front())) {
-                result += left_overhang_size(new_region, overlapped.front());
-            } else if (begins_before(overlapped.front(), new_region)) {
+            if (begins_before(new_region, interactor)) {
+                result += left_overhang_size(new_region, interactor);
+            } else if (begins_before(interactor, new_region)) {
                 new_region = encompassing_region(overlapped.front(), new_region);
             }
-            if (ends_before(overlapped.front(), new_region)) {
-                result += right_overhang_size(new_region, overlapped.front());
-            } else if (ends_before(new_region, overlapped.front())) {
-                new_region = encompassing_region(overlapped.front(), new_region);
+            if (ends_before(interactor, new_region)) {
+                result += right_overhang_size(new_region, interactor);
+            } else if (ends_before(new_region, interactor)) {
+                new_region = encompassing_region(interactor, new_region);
             }
-            
-            completed_regions.erase(overlapped.front());
+            completed_regions.erase(interactor);
             completed_regions.insert(std::move(new_region));
-            
             return result;
         }
         
         auto new_region = contig_region;
         auto result     = size(new_region);
-        
         result -= overlap_size(overlapped.front(), contig_region);
         if (begins_before(overlapped.front(), new_region)) {
             new_region = encompassing_region(overlapped.front(), new_region);
@@ -319,7 +315,6 @@ ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
         for (const auto& r : overlapped) result -= size(r);
         completed_regions.erase_overlapped(contig_region);
         completed_regions.insert(std::move(new_region));
-        
         return result;
     }
     
@@ -331,6 +326,7 @@ ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
 void ProgressMeter::write_header()
 {
     const std::string pos_tab_bar(position_tab_length_, '-');
+    assert(position_tab_length_ >= 8);
     const auto num_position_tab_whitespaces = position_tab_length_ - 8;
     const std::string pos_tab_lhs_pad((position_tab_length_ - 8) / 2, ' ');
     auto pos_tab_rhs_pad = pos_tab_lhs_pad;
@@ -407,16 +403,19 @@ std::string ProgressMeter::curr_position_pad(const GenomicRegion& completed_regi
 
 std::string ProgressMeter::completed_pad(const std::string& percent_completed) const
 {
+    if (percent_completed.size() >= 17) return {};
     return std::string(std::size_t {17} - percent_completed.size(), ' ');
 }
 
 std::string ProgressMeter::time_taken_pad(const std::string& time_taken) const
 {
+    if (time_taken.size() >= 16) return {};
     return std::string(16 - time_taken.size(), ' ');
 }
 
 std::string ProgressMeter::ttc_pad(const std::string& ttc) const
 {
+    if (ttc.size() >= 16) return {};
     return std::string(16 - ttc.size(), ' ');
 }
 
