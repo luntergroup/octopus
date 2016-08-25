@@ -134,6 +134,7 @@ private:
     bool is_active_region_lagged() const;
     
     void reset_next_active_region() const noexcept;
+    GenomicRegion find_max_lagged_region() const;
     void update_next_active_region() const;
     void update_lagged_next_active_region() const;
     
