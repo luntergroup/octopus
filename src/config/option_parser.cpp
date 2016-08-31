@@ -653,22 +653,18 @@ void validate_caller(const OptionMap& vm)
     }
 }
 
-namespace {
-    std::string strip(std::string option)
-    {
-        option.erase(option.begin(), option.begin() + 2);
-        return option;
-    }
-}
-
 po::parsed_options run(po::command_line_parser& parser)
 {
     try {
         return parser.run();
     } catch (const po::required_option& e) {
-        throw MissingRequiredCommandLineArguement {strip(e.get_option_name())};
+        throw MissingRequiredCommandLineArguement {po::strip_prefixes(e.get_option_name())};
     } catch (const po::unknown_option& e) {
-        throw UnknownCommandLineOption {strip(e.get_option_name())};
+        throw UnknownCommandLineOption {po::strip_prefixes(e.get_option_name())};
+    } catch (const po::invalid_option_value& e) {
+        throw CommandLineError {e.what()};
+    } catch (const po::invalid_bool_value& e) {
+        throw CommandLineError {e.what()};
     } catch (const po::ambiguous_option& e) {
         throw CommandLineError {e.what()};
     } catch (const po::reading_file& e) {
