@@ -185,7 +185,8 @@ auto find_max_window(const ContigCallingComponents& components,
 }
 
 auto propose_call_subregion(const ContigCallingComponents& components,
-                            const GenomicRegion& remaining_call_region)
+                            const GenomicRegion& remaining_call_region,
+                            boost::optional<GenomicRegion::Size> min_size = boost::none)
 {
     if (is_empty(remaining_call_region)) {
         return remaining_call_region;
@@ -194,15 +195,22 @@ auto propose_call_subregion(const ContigCallingComponents& components,
     if (ends_before(remaining_call_region, max_window)) {
         return remaining_call_region;
     }
+    if (min_size && size(max_window) < *min_size) {
+        if (size(remaining_call_region) < *min_size) {
+            return remaining_call_region;
+        }
+        return expand_rhs(head_region(max_window), *min_size);
+    }
     return max_window;
 }
 
 auto propose_call_subregion(const ContigCallingComponents& components,
                             const GenomicRegion& current_subregion,
-                            const GenomicRegion& input_region)
+                            const GenomicRegion& input_region,
+                            boost::optional<GenomicRegion::Size> min_size = boost::none)
 {
     assert(contains(input_region, current_subregion));
-    return propose_call_subregion(components, right_overhang_region(input_region, current_subregion));
+    return propose_call_subregion(components, right_overhang_region(input_region, current_subregion), min_size);
 }
 
 void buffer_connecting_calls(std::deque<VcfRecord>& calls,
@@ -441,12 +449,14 @@ TaskQueue divide_work_into_tasks(const ContigCallingComponents& components,
     
     if (components.regions.empty()) return result;
     
+    static constexpr GenomicRegion::Size minTaskSize {1000};
+    
     for (const auto& region : components.regions) {
-        auto subregion = propose_call_subregion(components, region);
-        while (!is_empty(subregion)) {
+        auto subregion = propose_call_subregion(components, region, minTaskSize);
+        do {
             result.emplace(subregion, policy);
-            subregion = propose_call_subregion(components, subregion, region);
-        }
+            subregion = propose_call_subregion(components, subregion, region, minTaskSize);
+        } while (ends_before(subregion, region));
         if (result.empty()) {
             result.emplace(region, policy);
         }
