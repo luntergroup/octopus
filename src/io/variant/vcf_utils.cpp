@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <deque>
 #include <queue>
+#include <unordered_set>
 #include <algorithm>
 #include <functional>
 #include <stdexcept>
@@ -26,14 +27,10 @@ std::vector<std::string> get_contigs(const VcfHeader& header)
 {
     using namespace vcfspec::header::meta;
     std::vector<std::string> result {};
-    
     const auto& contigs_fields = header.structured_fields(tag::contig);
-    
     result.reserve(contigs_fields.size());
-    
     std::transform(std::cbegin(contigs_fields), std::cend(contigs_fields), std::back_inserter(result),
                    [] (const auto& field) { return field.at(struc::id); });
-    
     return result;
 }
 
@@ -157,30 +154,40 @@ bool all_equal(const std::vector<VcfHeader>& headers)
                               std::not_equal_to<VcfHeader>()) == std::cend(headers);
 }
 
+void add_contigs(const std::vector<VcfHeader>& headers, VcfHeader::Builder& hb)
+{
+    using namespace vcfspec::header::meta;
+    std::unordered_set<std::string> added {};
+    for (const auto& header : headers) {
+        for (auto contig_fields : header.structured_fields(tag::contig)) {
+            const auto& contig = contig_fields.at(struc::id);
+            if (added.count(contig) == 0) {
+                contig_fields.erase(contig);
+                std::unordered_map<std::string, std::string> tmp {std::begin(contig_fields), std::end(contig_fields)};
+                hb.add_contig(contig, std::move(tmp));
+                added.insert(contig);
+            }
+        }
+    }
+}
+
 VcfHeader merge(const std::vector<VcfHeader>& headers)
 {
-    if (headers.empty()) return VcfHeader {};
-    
+    if (headers.empty()) {
+        return VcfHeader {};
+    }
     if (!all_same_format(headers)) {
         throw std::logic_error {"cannot merge VcfHeader's with different formats"};
     }
     if (!contain_same_samples(headers)) {
         throw std::logic_error {"cannot merge VcfHeader's that do not contain the same samples"};
     }
-    
-    if (all_equal(headers)) return headers.front();
-    
-    return headers.front(); // TODO: implement this
-//    VcfHeader::Builder hb {};
-//    
-//    hb.set_file_format(headers.front().file_format());
-//    hb.set_samples(headers.front().samples());
-//    
-////    for (const auto& header : headers) {
-////        
-////    }
-//    
-//    return hb.build_once();
+    if (all_equal(headers)) {
+        return headers.front();
+    }
+    VcfHeader::Builder hb {headers.front()};
+    add_contigs(headers, hb);
+    return hb.build_once();
 }
 
 std::vector<VcfHeader> get_headers(const std::vector<VcfReader>& readers)
@@ -279,8 +286,10 @@ auto extract_unique_readers(const ReaderContigRecordCountMap& reader_contig_coun
     result.reserve(reader_contig_counts.size());
     
     for (const auto& p : reader_contig_counts) {
-        const auto it = find_active_contig(std::cbegin(p.second), std::cend(p.second));
-        result.emplace(it->first, p.first);
+        const auto itr = find_active_contig(std::cbegin(p.second), std::cend(p.second));
+        if (itr != std::cend(p.second)) {
+            result.emplace(itr->first, p.first);
+        }
     }
     
     return result;
