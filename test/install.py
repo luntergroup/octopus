@@ -22,7 +22,8 @@ if args["type"] not in ["unit", "valgrind", "regression"]:
     print("Unknown test type " + type)
     exit()
 
-octopus_dir = os.path.dirname(os.path.realpath(__file__))
+# This file is in octopus-dir/test
+octopus_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 root_cmake = octopus_dir + "/CMakeLists.txt"
 
