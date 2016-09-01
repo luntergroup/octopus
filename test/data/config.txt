@@ -1,0 +1,10 @@
+working-directory = ~/Genomics/giab_benchmark
+reference = ~/Genomics/References/human_g1k_v37.fasta
+reads = ~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam
+disable-assembly-candidate-generator = ON
+disable-call-filtering = ON
+output = octopus_calls_debug.vcf
+
+#skip-regions-file =
+#organism-ploidy =
+#contig-ploidies =
