@@ -380,7 +380,7 @@ auto is_before(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
 }
 
 template <typename T>
-auto is_before(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+auto is_before(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
     return is_before(static_cast<const T&>(lhs).mapped_region(), rhs);
 }
@@ -392,13 +392,13 @@ auto is_before(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
 }
 
 template <typename T>
-auto is_before(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
+auto is_before(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
     return is_before(lhs, static_cast<const T&>(rhs).mapped_region());
 }
 
 template <typename T1, typename T2>
-auto is_before(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
+auto is_before(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return is_before(static_cast<const T1&>(lhs).mapped_region(),
                      static_cast<const T2&>(rhs).mapped_region());
@@ -411,7 +411,7 @@ auto is_after(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
 }
 
 template <typename T>
-auto is_after(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+auto is_after(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
     return is_after(static_cast<const T&>(lhs).mapped_region(), rhs);
 }
@@ -423,13 +423,13 @@ auto is_after(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
 }
 
 template <typename T>
-auto is_after(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
+auto is_after(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
     return is_after(lhs, static_cast<const T&>(rhs).mapped_region());
 }
 
 template <typename T1, typename T2>
-auto is_after(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
+auto is_after(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return is_after(static_cast<const T1&>(lhs).mapped_region(),
                     static_cast<const T2&>(rhs).mapped_region());

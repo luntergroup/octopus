@@ -196,13 +196,13 @@ inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
     return lhs.contig_region() < rhs.contig_region();
 }
 
-inline bool is_before(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+inline bool is_before(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
     return is_before(lhs.contig_region(), rhs.contig_region());
 }
 
-inline bool is_after(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+inline bool is_after(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
     return is_after(lhs.contig_region(), rhs.contig_region());
@@ -282,7 +282,7 @@ inline GenomicRegion intervening_region(const GenomicRegion& lhs, const GenomicR
     return GenomicRegion {lhs.contig_name(), intervening_region(lhs.contig_region(),  rhs.contig_region())};
 }
 
-inline GenomicRegion overlapped_region(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+inline GenomicRegion overlapped_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     return GenomicRegion {lhs.contig_name(), overlapped_region(lhs.contig_region(), rhs.contig_region())};
 }
