@@ -20,6 +20,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <utils/path_utils.hpp>
 #include <basics/phred.hpp>
 #include <basics/genomic_region.hpp>
 #include <basics/aligned_read.hpp>
@@ -63,68 +64,7 @@ bool is_trace_mode(const OptionMap& options)
     return options.at("trace").as<bool>();
 }
 
-boost::optional<fs::path> get_home_directory()
-{
-    static const auto env = std::getenv("HOME");
-    
-    if (env == nullptr) {
-        return boost::none;
-    }
-    
-    const fs::path home {env};
-    
-    if (fs::is_directory(home)) {
-        return home;
-    }
-    
-    return boost::none;
-}
-
-bool is_shorthand_user_path(const fs::path& path)
-{
-    return !path.empty() && path.string().front() == '~';
-}
-
-class UnknownHomeDirectory : public SystemError
-{
-    std::string do_where() const override
-    {
-        return "expand_user_path";
-    }
-    
-    std::string do_why() const override
-    {
-        std::ostringstream ss {};
-        ss << "Unable to expand shorthand path you specified ";
-        ss << path_;
-        ss << " as your home directory cannot be located";
-        return ss.str();
-    }
-    
-    std::string do_help() const override
-    {
-        return "ensure your HOME environment variable is set properly";
-    }
-    
-    fs::path path_;
-public:
-    UnknownHomeDirectory(fs::path p) : path_ {std::move(p)} {}
-};
-
-fs::path expand_user_path(const fs::path& path)
-{
-    if (is_shorthand_user_path(path)) {
-        if (path.string().size() > 1 && path.string()[1] == '/') {
-            const auto home_dir = get_home_directory();
-            if (home_dir) {
-                return fs::path {home_dir->string() + path.string().substr(1)};
-            }
-            throw UnknownHomeDirectory {path};
-        }
-        return path;
-    }
-    return path;
-}
+namespace {
 
 class InvalidWorkingDirectory : public UserError
 {
@@ -132,7 +72,7 @@ class InvalidWorkingDirectory : public UserError
     {
         return "get_working_directory";
     }
-    
+
     std::string do_why() const override
     {
         std::ostringstream ss {};
@@ -141,12 +81,12 @@ class InvalidWorkingDirectory : public UserError
         ss << " does not exist";
         return ss.str();
     }
-    
+
     std::string do_help() const override
     {
         return "enter a valid working directory";
     }
-    
+
     fs::path path_;
 public:
     InvalidWorkingDirectory(fs::path p) : path_ {std::move(p)} {}
@@ -155,12 +95,10 @@ public:
 fs::path get_working_directory(const OptionMap& options)
 {
     if (options.count("working-directory") == 1) {
-        auto result = expand_user_path(options.at("working-directory").as<std::string>());
-        
+        auto result = expand_user_path(options.at("working-directory").as<fs::path>());
         if (!fs::exists(result) && !fs::is_directory(result)) {
             throw InvalidWorkingDirectory {result};
         }
-        
         return result;
     }
     return fs::current_path();
@@ -168,50 +106,28 @@ fs::path get_working_directory(const OptionMap& options)
 
 fs::path resolve_path(const fs::path& path, const OptionMap& options)
 {
-    if (is_shorthand_user_path(path)) {
-        return expand_user_path(path); // must be a root path
-    }
-    if (fs::exists(path)) {
-        return path; // must be a root path
-    }
-    
-    const auto parent_dir = path.parent_path();
-    const auto wd = get_working_directory(options);
-    
-    if (fs::exists(parent_dir) && fs::is_directory(parent_dir)) {
-        auto tmp = wd;
-        tmp /= path;
-        auto wd_parent = tmp.parent_path();
-        if (fs::exists(wd_parent) && fs::is_directory(wd_parent)) {
-            return tmp; // prefer working directory in case of name clash
-        }
-        return path; // must be yet-to-be-created root path
-    }
-    
-    auto result = wd;
-    result /= path;
-    return result;
+    return ::octopus::resolve_path(path, get_working_directory(options));
 }
 
-namespace {
-    struct Line
+struct Line
+{
+    std::string line_data;
+
+    operator std::string() const
     {
-        std::string line_data;
-        
-        operator std::string() const
-        {
-            return line_data;
-        }
-    };
-    
-    std::istream& operator>>(std::istream& is, Line& data)
-    {
-        std::getline(is, data.line_data);
-        if (!data.line_data.empty() && data.line_data.back() == '\r') {
-            data.line_data.pop_back();
-        }
-        return is;
+        return line_data;
     }
+};
+
+std::istream& operator>>(std::istream& is, Line& data)
+{
+    std::getline(is, data.line_data);
+    if (!data.line_data.empty() && data.line_data.back() == '\r') {
+        data.line_data.pop_back();
+    }
+    return is;
+}
+
 } // namespace
 
 std::vector<fs::path> extract_paths_from_file(const fs::path& file_path, const OptionMap& options)
@@ -485,7 +401,7 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
         append(parse_regions(region_strings, reference), skip_regions);
     }
     if (options.count("skip-regions-file") == 1) {
-        const auto& input_path = options.at("skip-regions-file").as<std::string>();
+        const auto& input_path = options.at("skip-regions-file").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
         
         if (!fs::exists(resolved_path)) {
@@ -523,7 +439,7 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
         append(parse_regions(region_strings, reference), input_regions);
     }
     if (options.count("regions-file") == 1) {
-        const auto& input_path = options.at("regions-file").as<std::string>();
+        const auto& input_path = options.at("regions-file").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
         
         if (!fs::exists(resolved_path)) {
@@ -585,7 +501,7 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
     }
     
     if (options.count("reads-file") == 1) {
-        const fs::path input_path {options.at("reads-file").as<std::string>()};
+        const fs::path input_path {options.at("reads-file").as<fs::path>()};
         auto resolved_path = resolve_path(input_path, options);
         
         if (!fs::exists(resolved_path)) {
@@ -772,7 +688,7 @@ auto make_variant_generator_builder(const OptionMap& options)
     
     if (options.count("generate-candidates-from-source") == 1) {
         result.add_generator(VGB::Generator::external);
-        const fs::path input_path {options.at("generate-candidates-from-source").as<std::string>()};
+        const auto input_path = options.at("generate-candidates-from-source").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
         
         if (!fs::exists(resolved_path)) {
@@ -783,7 +699,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         result.set_variant_source(std::move(resolved_path));
     }
     if (options.count("regenotype") == 1) {
-        fs::path regenotype_path {options.at("regenotype").as<std::string>()};
+        auto regenotype_path = options.at("regenotype").as<fs::path>();
         if (options.count("generate-candidates-from-source") == 1) {
             fs::path input_path {options.at("generate-candidates-from-source").as<std::string>()};
             
@@ -1035,7 +951,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
 
 fs::path get_final_output_path(const OptionMap& options)
 {
-    return resolve_path(options.at("output").as<std::string>(), options);
+    return resolve_path(options.at("output").as<fs::path>(), options);
 }
 
 VcfWriter make_output_vcf_writer(const OptionMap& options)

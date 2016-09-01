@@ -11,6 +11,10 @@
 #include <sstream>
 #include <fstream>
 
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/operations.hpp>
+
+#include <utils/path_utils.hpp>
 #include <basics/phred.hpp>
 #include <utils/string_utils.hpp>
 #include <exceptions/user_error.hpp>
@@ -18,8 +22,12 @@
 #include "config.hpp"
 
 namespace po = boost::program_options;
+namespace fs = boost::filesystem;
 
 namespace octopus { namespace options {
+
+fs::path resolve_path(const fs::path& path, const OptionMap& options);
+void parse_config_file(const fs::path& config_file, OptionMap& vm, const po::options_description& options);
 
 // boost::option cannot handle option dependencies so we must do our own checks
 void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2);
@@ -33,6 +41,7 @@ void validate(const OptionMap& vm);
 
 po::parsed_options run(po::command_line_parser& parser);
 
+
 OptionMap parse_options(const int argc, const char** argv)
 {
     po::options_description general("General");
@@ -41,7 +50,9 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("version", "Output the version number")
     
-    ("config", "A config file, used to populate command line options")
+    ("config",
+     po::value<fs::path>(),
+     "A config file, used to populate command line options")
     
     ("debug",
      po::bool_switch()->default_value(false),
@@ -55,7 +66,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description backend("Backend");
     backend.add_options()
     ("working-directory,w",
-     po::value<std::string>(),
+     po::value<fs::path>(),
      "Sets the working directory")
     
     ("threads",
@@ -89,7 +100,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " May be specified multiple times")
     
     ("reads-file",
-     po::value<std::string>(),
+     po::value<fs::path>(),
      "File containing a list of BAM/CRAM files, one per line, to be analysed")
     
     ("one-based-indexing",
@@ -102,7 +113,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " May be specified multiple times")
     
     ("regions-file",
-     po::value<std::string>(),
+     po::value<fs::path>(),
      "File containing a list of regions (chrom:begin-end), one per line, to be analysed")
     
     ("skip-regions,t",
@@ -111,7 +122,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " May be specified multiple times")
     
     ("skip-regions-file",
-     po::value<std::string>(),
+     po::value<fs::path>(),
      "File of regions (chrom:begin-end), one per line, to skip")
     
     ("samples,S",
@@ -119,12 +130,12 @@ OptionMap parse_options(const int argc, const char** argv)
      "Space-seperated list of sample names to analyse")
     
     ("samples-file",
-     po::value<std::string>(),
+     po::value<fs::path>(),
      "File of sample names to analyse, one per line, which must be a subset of the samples"
      " that appear in the read files")
     
     ("output,o",
-     po::value<std::string>()->default_value("octopus_calls.vcf"),
+     po::value<fs::path>()->default_value("octopus_calls.vcf"),
      "File to where output is written")
     
     ("contig-output-order",
@@ -136,7 +147,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Outputs a legacy version of the final callset in addition to the native version")
     
     ("regenotype",
-     po::value<std::string>(),
+     po::value<fs::path>(),
      "VCF file specifying calls to regenotype, only sites in this files will appear in the"
      " final output")
     ;
@@ -259,7 +270,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Disables candidate generation using local re-assembly")
     
     ("generate-candidates-from-source",
-     po::value<std::string>(),
+     po::value<fs::path>(),
      "Variant file path containing known variants. These variants will automatically become"
      " candidates")
     
@@ -306,7 +317,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " (sample:contig=ploidy) ploidies")
     
     ("contig-ploidies-file",
-     po::value<std::string>(),
+     po::value<fs::path>(),
      "File containing a list of contig (contig=ploidy) or sample contig"
      " (sample:contig=ploidy) ploidies, one per line")
     
@@ -461,18 +472,59 @@ OptionMap parse_options(const int argc, const char** argv)
     OptionMap vm;
     
     if (vm_init.count("config") == 1) {
-        std::ifstream config {vm.at("config").as<std::string>()};
-        if (config) {
-            po::store(po::parse_config_file(config, all), vm);
-        }
+        auto config_path = resolve_path(vm_init.at("config").as<fs::path>(), vm_init);
+        parse_config_file(config_path, vm, all);
     }
-    
+
     vm_init.clear();
     po::store(run(po::command_line_parser(argc, argv).options(all)), vm);
     validate(vm);
     po::notify(vm);
-    
+
     return vm;
+}
+
+class InvalidWorkingDirectory : public UserError
+{
+    std::string do_where() const override
+    {
+        return "get_working_directory";
+    }
+
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "The working directory you specified ";
+        ss << path_;
+        ss << " does not exist";
+        return ss.str();
+    }
+
+    std::string do_help() const override
+    {
+        return "enter a valid working directory";
+    }
+
+    fs::path path_;
+public:
+    InvalidWorkingDirectory(fs::path p) : path_ {std::move(p)} {}
+};
+
+fs::path get_working_directory(const OptionMap& options)
+{
+    if (options.count("working-directory") == 1) {
+        auto result = expand_user_path(options.at("working-directory").as<fs::path>());
+        if (!fs::exists(result) && !fs::is_directory(result)) {
+            throw InvalidWorkingDirectory {result};
+        }
+        return result;
+    }
+    return fs::current_path();
+}
+
+fs::path resolve_path(const fs::path& path, const OptionMap& options)
+{
+    return ::octopus::resolve_path(path, get_working_directory(options));
 }
 
 namespace {
@@ -496,28 +548,54 @@ class CommandLineError : public UserError
 {
 public:
     CommandLineError() = default;
-    
+
     CommandLineError(std::string&& why) : why_ {std::move(why)} {}
-    
+
 protected:
     std::string why_;
-    
+
 private:
     virtual std::string do_where() const override
     {
         return "parse_options";
     }
-    
+
     virtual std::string do_why() const override
     {
         return why_;
     }
-    
+
     virtual std::string do_help() const override
     {
         return "use the --help command to view required and allowable options";
     }
 };
+
+class BadConfigFile : public  CommandLineError
+{
+public:
+    BadConfigFile(fs::path p)
+    {
+        std::ostringstream ss {};
+        ss << "The config file path (" << p << ") given in the option '--config' does not exist";
+        why_ = ss.str();
+    }
+};
+
+void parse_config_file(const fs::path& config_file, OptionMap& vm, const po::options_description& options)
+{
+    if (!fs::exists(config_file)) {
+        throw BadConfigFile {config_file};
+    }
+    std::ifstream config {config_file.string()};
+    if (config) {
+        try {
+            po::store(po::parse_config_file(config, options), vm);
+        } catch (const po::invalid_config_file_syntax& e) {
+            throw CommandLineError {e.what()};
+        }
+    }
+}
 
 class UnknownCommandLineOption : public CommandLineError
 {
