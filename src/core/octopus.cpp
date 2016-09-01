@@ -905,8 +905,7 @@ void write_remaining_tasks(FutureCompletedTasks& futures, CompletedTaskMap& buff
     write(std::move(remaining_tasks), temp_vcfs);
 }
 
-template <typename K>
-auto extract_writers(std::unordered_map<K, VcfWriter>&& vcfs)
+auto extract_writers(TempVcfWriterMap&& vcfs)
 {
     std::vector<VcfWriter> result {};
     result.reserve(vcfs.size());
@@ -917,14 +916,12 @@ auto extract_writers(std::unordered_map<K, VcfWriter>&& vcfs)
     return result;
 }
 
-template <typename K>
-auto extract_as_readers(std::unordered_map<K, VcfWriter>&& vcfs)
+auto extract_as_readers(TempVcfWriterMap&& vcfs)
 {
     return writers_to_readers(extract_writers(std::move(vcfs)));
 }
 
-template <typename K>
-void merge(std::unordered_map<K, VcfWriter>&& temp_vcf_writers, GenomeCallingComponents& components)
+void merge(TempVcfWriterMap&& temp_vcf_writers, GenomeCallingComponents& components)
 {
     auto temp_readers = extract_as_readers(std::move(temp_vcf_writers));
     merge(temp_readers, components.output(), components.contigs());
@@ -948,7 +945,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     TaskMap running_tasks {ContigOrder {components.contigs()}};
     CompletedTaskMap buffered_tasks {};
     std::map<ContigName, HoldbackTask> holdbacks {};
-    // Populate all the maps first so we can make unchecked acceses
+    // Populate all the maps first so we can make unchecked accesses
     for (const auto& contig : components.contigs()) {
         running_tasks.emplace(contig, TaskMap::mapped_type {});
         buffered_tasks.emplace(contig, CompletedTaskMap::mapped_type {});
@@ -1006,7 +1003,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     }
     
     running_tasks.clear();
-    holdbacks.clear();
+    holdbacks.clear(); // holdbacks are just references to buffered tasks
     write_remaining_tasks(futures, buffered_tasks, temp_vcfs, calling_components);
     components.progress_meter().stop();
     merge(std::move(temp_vcfs), components);
@@ -1022,14 +1019,12 @@ bool is_multithreaded(const GenomeCallingComponents& components)
 auto make_filter_read_pipe(const GenomeCallingComponents& components)
 {
     using std::make_unique;
-    
     using namespace readpipe;
     
     ReadTransformer transformer {};
     transformer.register_transform(MaskSoftClipped {});
     
     using ReadFilterer = ReadPipe::ReadFilterer;
-    
     ReadFilterer filterer {};
     filterer.add(make_unique<HasValidQualities>());
     filterer.add(make_unique<HasWellFormedCigar>());
