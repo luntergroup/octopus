@@ -134,6 +134,8 @@ set(UTILS_SOURCES
     utils/mappable_algorithms.hpp
     utils/maths.hpp
     utils/merge_transform.hpp
+    utils/path_utils.hpp
+    utils/path_utils.cpp
     utils/read_algorithms.hpp
     utils/read_algorithms.cpp
     utils/read_stats.hpp
@@ -292,8 +294,8 @@ set(CORE_SOURCES
 )
 
 set(MISC_SOURCES
-    ${octopus_SOURCE_DIR}/test/timers.hpp
-    ${octopus_SOURCE_DIR}/test/timers.cpp
+    ${octopus_SOURCE_DIR}/src/timers.hpp
+    ${octopus_SOURCE_DIR}/src/timers.cpp
 )
 
 set(OCTOPUS_SOURCES
@@ -358,7 +360,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
     
-    target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test)
+    target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     
     target_link_libraries(octopus-debug tandem)
     
@@ -381,7 +383,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     
     install(TARGETS octopus-debug DESTINATION ${octopus_SOURCE_DIR}/bin)
 else()
-    add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
+    add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES} utils/path_utils.hpp utils/path_utils.cpp)
     
     target_compile_features(octopus PRIVATE cxx_thread_local)
     

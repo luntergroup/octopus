@@ -43,7 +43,7 @@ cmake_options = []
 if args["type"] == "unit":
     cmake_options.extend(["-DBUILD_TESTING=ON", octopus_dir])
 elif args["type"] == "valgrind":
-    cmake_options.append("-DDEBUG=ON")
+    cmake_options.append("-DCMAKE_BUILD_TYPE=Debug")
 
 if args["compiler"]:
     cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["compiler"])

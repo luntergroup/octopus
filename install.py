@@ -52,6 +52,8 @@ if args["root"]:
 if args["compiler"]:
     cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["compiler"])
 
+cmake_options.append("-DCMAKE_BUILD_TYPE=Release")
+
 ret = call(["cmake"] + cmake_options + [".."])
 
 if ret == 0:

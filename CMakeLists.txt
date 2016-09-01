@@ -7,14 +7,6 @@ set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(DEBUG "Build for debug" OFF)
-
-if(DEBUG)
-    set(CMAKE_BUILD_TYPE Debug)
-else()
-    set(CMAKE_BUILD_TYPE Release)
-endif()
-
 message("-- Build type is " ${CMAKE_BUILD_TYPE})
 
 # for the main octopus executable
