@@ -16,9 +16,8 @@
 
 #include <boost/math/special_functions/digamma.hpp>
 
-#include <utils/maths.hpp>
-#include <logging/logging.hpp>
-
+#include "utils/maths.hpp"
+#include "logging/logging.hpp"
 #include "germline_likelihood_model.hpp"
 
 namespace octopus { namespace model {

@@ -7,8 +7,8 @@
 #include <iterator>
 #include <algorithm>
 
-#include <basics/contig_region.hpp>
-#include <containers/mappable_flat_set.hpp>
+#include "basics/contig_region.hpp"
+#include "containers/mappable_flat_set.hpp"
 
 namespace octopus { namespace test {
 

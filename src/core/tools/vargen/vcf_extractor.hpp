@@ -9,9 +9,8 @@
 
 #include <boost/filesystem.hpp>
 
-#include <io/variant/vcf_reader.hpp>
-#include <core/types/variant.hpp>
-
+#include "io/variant/vcf_reader.hpp"
+#include "core/types/variant.hpp"
 #include "variant_generator.hpp"
 
 namespace octopus {

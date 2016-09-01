@@ -15,8 +15,7 @@
 #include <boost/range/iterator_range_core.hpp>
 #include <boost/optional.hpp>
 
-#include <basics/contig_region.hpp>
-
+#include "basics/contig_region.hpp"
 #include "reference_reader.hpp"
 #include "fasta.hpp"
 

@@ -17,15 +17,14 @@
 #include <cstddef>
 #include <tuple>
 #include <cassert>
-
 #include <iostream>
 
 #include <boost/math/special_functions/binomial.hpp>
 #include <boost/functional/hash.hpp>
 
-#include <core/types/haplotype.hpp>
-#include <core/types/variant.hpp>
-#include <utils/maths.hpp>
+#include "core/types/haplotype.hpp"
+#include "core/types/variant.hpp"
+#include "utils/maths.hpp"
 
 namespace octopus {
 

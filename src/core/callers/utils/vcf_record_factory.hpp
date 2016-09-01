@@ -7,10 +7,9 @@
 #include <vector>
 #include <memory>
 
-#include <config/common.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <io/variant/vcf_record.hpp>
-
+#include "config/common.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "io/variant/vcf_record.hpp"
 #include "call.hpp"
 
 namespace octopus {

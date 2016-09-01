@@ -12,12 +12,12 @@
 
 #include <boost/filesystem/operations.hpp>
 
-#include <basics/cigar_string.hpp>
-#include <basics/genomic_region.hpp>
-#include <basics/contig_region.hpp>
-#include <exceptions/missing_file_error.hpp>
-#include <exceptions/missing_index_error.hpp>
-#include <exceptions/malformed_file_error.hpp>
+#include "basics/cigar_string.hpp"
+#include "basics/genomic_region.hpp"
+#include "basics/contig_region.hpp"
+#include "exceptions/missing_file_error.hpp"
+#include "exceptions/missing_index_error.hpp"
+#include "exceptions/malformed_file_error.hpp"
 
 namespace octopus { namespace io {
 

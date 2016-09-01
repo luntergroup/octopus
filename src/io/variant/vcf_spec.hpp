@@ -7,7 +7,6 @@
 #include <array>
 
 #define VCF_SPEC_SEPERATOR static constexpr char
-
 #define VCF_SPEC_CONSTANT static constexpr const char*
 
 /**

@@ -16,9 +16,9 @@
 
 #include <boost/math/special_functions/digamma.hpp>
 
-#include <utils/maths.hpp>
-#include <logging/logging.hpp>
-#include <core/models/genotype/individual_model.hpp>
+#include "utils/maths.hpp"
+#include "logging/logging.hpp"
+#include "core/models/genotype/individual_model.hpp"
 
 namespace octopus { namespace model {
 // public methods

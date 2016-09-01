@@ -9,8 +9,7 @@
 #include <vector>
 #include <functional>
 
-#include <config/common.hpp>
-
+#include "config/common.hpp"
 #include "matrix_map.hpp"
 
 namespace octopus {

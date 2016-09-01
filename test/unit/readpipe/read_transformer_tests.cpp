@@ -10,11 +10,11 @@
 #include <algorithm>
 #include <iterator>
 
+#include "basics/genomic_region.hpp"
+#include "io/read/read_manager.hpp"
+#include "readpipe/transformers/read_transformer.hpp"
+#include "readpipe/transformers/read_transform.hpp"
 #include "test_common.hpp"
-#include <basics/genomic_region.hpp>
-#include <io/read/read_manager.hpp>
-#include "read_transformer.hpp"
-#include "read_transform.hpp"
 
 using std::cout;
 using std::endl;

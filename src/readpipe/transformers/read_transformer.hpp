@@ -10,7 +10,7 @@
 #include <iterator>
 #include <type_traits>
 
-#include <basics/aligned_read.hpp>
+#include "basics/aligned_read.hpp"
 
 namespace octopus { namespace readpipe
 {

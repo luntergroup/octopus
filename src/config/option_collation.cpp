@@ -20,25 +20,25 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <utils/path_utils.hpp>
-#include <basics/phred.hpp>
-#include <basics/genomic_region.hpp>
-#include <basics/aligned_read.hpp>
-#include <readpipe/read_pipe_fwd.hpp>
-#include <core/tools/coretools.hpp>
-#include <core/callers/caller_builder.hpp>
-#include <utils/read_stats.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <utils/string_utils.hpp>
-#include <utils/append.hpp>
-#include <utils/maths.hpp>
-#include <logging/logging.hpp>
-#include <io/region/region_parser.hpp>
-#include <io/variant/vcf_reader.hpp>
-#include <io/variant/vcf_writer.hpp>
-#include <exceptions/user_error.hpp>
-#include <exceptions/system_error.hpp>
-#include <exceptions/missing_file_error.hpp>
+#include "utils/path_utils.hpp"
+#include "basics/phred.hpp"
+#include "basics/genomic_region.hpp"
+#include "basics/aligned_read.hpp"
+#include "readpipe/read_pipe_fwd.hpp"
+#include "core/tools/coretools.hpp"
+#include "core/callers/caller_builder.hpp"
+#include "utils/read_stats.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/string_utils.hpp"
+#include "utils/append.hpp"
+#include "utils/maths.hpp"
+#include "logging/logging.hpp"
+#include "io/region/region_parser.hpp"
+#include "io/variant/vcf_reader.hpp"
+#include "io/variant/vcf_writer.hpp"
+#include "exceptions/user_error.hpp"
+#include "exceptions/system_error.hpp"
+#include "exceptions/missing_file_error.hpp"
 
 namespace octopus { namespace options {
 

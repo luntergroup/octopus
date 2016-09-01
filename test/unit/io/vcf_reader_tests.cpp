@@ -6,10 +6,10 @@
 #include <iostream>
 #include <string>
 
+#include "basics/genomic_region.hpp"
+#include "core/types/variant.hpp"
+#include "io/variant/vcf.hpp"
 #include "test_common.hpp"
-#include <basics/genomic_region.hpp>
-#include <core/types/variant.hpp>
-#include "vcf.hpp"
 
 using std::cout;
 using std::endl;

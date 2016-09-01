@@ -14,7 +14,7 @@
 
 #include <boost/test/floating_point_comparison.hpp>
 
-#include <basics/phred.hpp>
+#include "basics/phred.hpp"
 
 namespace octopus { namespace test {
 

@@ -6,7 +6,7 @@
 
 #include <exception>
 
-#include <exceptions/error.hpp>
+#include "exceptions/error.hpp"
 
 namespace octopus {
 

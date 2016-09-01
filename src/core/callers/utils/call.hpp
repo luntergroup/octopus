@@ -11,14 +11,14 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <basics/phred.hpp>
-#include <basics/genomic_region.hpp>
-#include <concepts/mappable.hpp>
-#include <core/types/allele.hpp>
-#include <core/types/genotype.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <io/variant/vcf_record.hpp>
+#include "config/common.hpp"
+#include "basics/phred.hpp"
+#include "basics/genomic_region.hpp"
+#include "concepts/mappable.hpp"
+#include "core/types/allele.hpp"
+#include "core/types/genotype.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "io/variant/vcf_record.hpp"
 
 namespace octopus {
 

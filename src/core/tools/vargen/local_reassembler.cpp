@@ -9,16 +9,15 @@
 #include <stdexcept>
 #include <cassert>
 
-#include <config/common.hpp>
-#include <basics/cigar_string.hpp>
-#include <basics/aligned_read.hpp>
-#include <concepts/mappable_range.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <utils/sequence_utils.hpp>
-#include <utils/append.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <logging/logging.hpp>
-
+#include "config/common.hpp"
+#include "basics/cigar_string.hpp"
+#include "basics/aligned_read.hpp"
+#include "concepts/mappable_range.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/sequence_utils.hpp"
+#include "utils/append.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "logging/logging.hpp"
 #include "utils/global_aligner.hpp"
 
 namespace octopus { namespace coretools {

@@ -13,11 +13,10 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <basics/genomic_region.hpp>
-#include <containers/mappable_flat_set.hpp>
-#include <core/types/allele.hpp>
-
+#include "config/common.hpp"
+#include "basics/genomic_region.hpp"
+#include "containers/mappable_flat_set.hpp"
+#include "core/types/allele.hpp"
 #include "genome_walker.hpp"
 #include "haplotype_tree.hpp"
 

@@ -10,29 +10,30 @@ namespace octopus {
 
 class VcfHeader;
 
-namespace csr
+namespace csr  {
+
+class ThresholdVariantCallFilter : public VariantCallFilter
 {
-    class ThresholdVariantCallFilter : public VariantCallFilter
-    {
-    public:
-        ThresholdVariantCallFilter() = delete;
-        
-        ThresholdVariantCallFilter(const ReferenceGenome& reference,
-                                   const ReadPipe& read_pipe,
-                                   std::vector<MeasureWrapper> measures,
-                                   std::size_t max_read_buffer_size);
-        
-        ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;
-        ThresholdVariantCallFilter& operator=(const ThresholdVariantCallFilter&) = delete;
-        ThresholdVariantCallFilter(ThresholdVariantCallFilter&&)                 = default;
-        ThresholdVariantCallFilter& operator=(ThresholdVariantCallFilter&&)      = default;
-        
-        virtual ~ThresholdVariantCallFilter() = default;
-        
-    private:
-        virtual void annotate(VcfHeader& dest) const override;
-        virtual Classification classify(const MeasureVector& call_measures) const override;
-    };
+public:
+    ThresholdVariantCallFilter() = delete;
+    
+    ThresholdVariantCallFilter(const ReferenceGenome& reference,
+                               const ReadPipe& read_pipe,
+                               std::vector<MeasureWrapper> measures,
+                               std::size_t max_read_buffer_size);
+    
+    ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;
+    ThresholdVariantCallFilter& operator=(const ThresholdVariantCallFilter&) = delete;
+    ThresholdVariantCallFilter(ThresholdVariantCallFilter&&)                 = default;
+    ThresholdVariantCallFilter& operator=(ThresholdVariantCallFilter&&)      = default;
+    
+    virtual ~ThresholdVariantCallFilter() = default;
+
+private:
+    virtual void annotate(VcfHeader& dest) const override;
+    virtual Classification classify(const MeasureVector& call_measures) const override;
+};
+
 } // namespace csr
 } // namespace octopus
 

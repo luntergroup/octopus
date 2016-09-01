@@ -7,11 +7,10 @@
 #include <algorithm>
 #include <iterator>
 
-#include <basics/genomic_region.hpp>
-#include <core/types/allele.hpp>
-#include <core/types/variant.hpp>
-#include <utils/mappable_algorithms.hpp>
-
+#include "basics/genomic_region.hpp"
+#include "core/types/allele.hpp"
+#include "core/types/variant.hpp"
+#include "utils/mappable_algorithms.hpp"
 #include "mock/mock_reference.hpp"
 
 namespace octopus { namespace test {

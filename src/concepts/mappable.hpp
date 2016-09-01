@@ -6,8 +6,8 @@
 
 #include <type_traits>
 
-#include <basics/contig_region.hpp>
-#include <basics/genomic_region.hpp>
+#include "basics/contig_region.hpp"
+#include "basics/genomic_region.hpp"
 
 namespace octopus {
 

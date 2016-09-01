@@ -3,7 +3,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <core/tools/hapgen/genome_walker.hpp>
+#include "core/tools/hapgen/genome_walker.hpp"
 
 namespace octopus { namespace test {
 

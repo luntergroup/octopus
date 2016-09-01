@@ -10,8 +10,8 @@
 #include <fstream>
 #include <functional>
 
-#include <exceptions/user_error.hpp>
-#include <utils/string_utils.hpp>
+#include "exceptions/user_error.hpp"
+#include "utils/string_utils.hpp"
 
 namespace octopus { namespace io {
 
@@ -88,7 +88,6 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
         }
         
         const auto contig_size = reference.contig_size(contig);
-        
         Position begin {0}, end {0};
         
         if (match.length(2) == 0) {
@@ -103,15 +102,12 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
             } else {
                 end = static_cast<Position>(std::stoul(match.str(4)));
             }
-            
             if (begin > end) {
                 throw MalformedRegion {region, "has begin greater than end"};
             }
-            
             if (begin > contig_size) begin = contig_size;
             if (end > contig_size) end = contig_size;
         }
-        
         return GenomicRegion {std::move(contig), begin, end};
     } else {
         throw MalformedRegion {region};
@@ -173,11 +169,8 @@ std::string convert_bed_line_to_region_str(const std::string& bed_line)
     if (!is_valid_bed_record(bed_line)) {
         throw std::runtime_error {"BadBEDRecord: insufficient columns"};
     }
-    
     constexpr static char bedDelim {'\t'};
-    
     const auto tokens = utils::split(bed_line, bedDelim);
-    
     return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
 }
 
@@ -187,10 +180,13 @@ make_region_line_parser(const boost::filesystem::path& file, const ReferenceGeno
     if (is_bed_file(file)) {
         return [&] (const std::string& line) -> GenomicRegion
         {
-            return io::parse_region(convert_bed_line_to_region_str(line), reference);
+            return parse_region(convert_bed_line_to_region_str(line), reference);
         };
     } else {
-        return [&] (const std::string& line) { return io::parse_region(line, reference); };
+        return [&] (const std::string& line) -> GenomicRegion
+        {
+            return parse_region(line, reference);
+        };
     }
 }
 
@@ -200,14 +196,10 @@ std::deque<GenomicRegion> extract_regions(const boost::filesystem::path& file,
                                           const ReferenceGenome& reference)
 {
     auto stream = open(file);
-    
     std::deque<GenomicRegion> result {};
-    
     std::transform(std::istream_iterator<Line>(stream), std::istream_iterator<Line>(),
                    std::back_inserter(result), make_region_line_parser(file, reference));
-    
     result.shrink_to_fit();
-    
     return result;
 }
 

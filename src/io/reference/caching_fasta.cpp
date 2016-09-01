@@ -9,9 +9,7 @@
 #include <utility>
 #include <cassert>
 
-#include <basics/genomic_region.hpp>
-
-#include <iostream> // TEST
+#include "basics/genomic_region.hpp"
 
 namespace octopus { namespace io {
 

@@ -8,10 +8,10 @@
 #include <unordered_map>
 #include <utility>
 
-#include <concepts/mappable.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <core/types/genotype.hpp>
-#include <core/types/variant.hpp>
+#include "concepts/mappable.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "core/types/genotype.hpp"
+#include "core/types/variant.hpp"
 
 namespace octopus
 {

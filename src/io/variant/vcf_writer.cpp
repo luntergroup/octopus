@@ -13,8 +13,6 @@
 #include "vcf_record.hpp"
 #include "vcf_utils.hpp"
 
-#include <iostream> // TEST
-
 namespace octopus {
 
 VcfWriter::VcfWriter(Path file_path)

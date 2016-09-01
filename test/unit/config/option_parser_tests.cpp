@@ -15,12 +15,12 @@
 #include <sstream>
 #include <boost/program_options.hpp>
 
+#include "basics/genomic_region.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "io/read/read_manager.hpp"
+#include "config/option_parser.hpp"
+#include "config/option_collation.hpp"
 #include "test_common.hpp"
-#include <basics/genomic_region.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <io/read/read_manager.hpp>
-#include "option_parser.hpp"
-#include "option_collation.hpp"
 
 namespace octopus { namespace test {
 

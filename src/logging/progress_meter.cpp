@@ -11,11 +11,11 @@
 #include <initializer_list>
 #include <cassert>
 
-#include <utils/mappable_algorithms.hpp>
-#include <containers/mappable_map.hpp>
-#include <utils/timing.hpp>
-#include <utils/string_utils.hpp>
-#include <utils/maths.hpp>
+#include "utils/mappable_algorithms.hpp"
+#include "containers/mappable_map.hpp"
+#include "utils/timing.hpp"
+#include "utils/string_utils.hpp"
+#include "utils/maths.hpp"
 
 namespace octopus {
 

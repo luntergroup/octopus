@@ -8,9 +8,8 @@
 #include <algorithm>
 #include <future>
 
-#include <io/region/region_parser.hpp>
-#include <exceptions/user_error.hpp>
-
+#include "io/region/region_parser.hpp"
+#include "exceptions/user_error.hpp"
 #include "mock/mock_reference.hpp"
 
 namespace octopus { namespace test {

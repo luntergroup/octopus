@@ -15,9 +15,8 @@
 #include <cassert>
 #include <iostream>
 
-#include <basics/cigar_string.hpp>
-#include <utils/maths.hpp>
-
+#include "basics/cigar_string.hpp"
+#include "utils/maths.hpp"
 #include "simd_pair_hmm.hpp"
 
 namespace octopus { namespace hmm {

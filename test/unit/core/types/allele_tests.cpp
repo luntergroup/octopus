@@ -5,8 +5,8 @@
 
 #include <utility>
 
-#include <basics/contig_region.hpp>
-#include <core/types/allele.hpp>
+#include "basics/contig_region.hpp"
+#include "core/types/allele.hpp"
 
 namespace octopus { namespace test {
 

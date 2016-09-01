@@ -10,11 +10,10 @@
 #include <deque>
 #include <mutex>
 
-#include <config/common.hpp>
-#include <basics/contig_region.hpp>
-#include <basics/genomic_region.hpp>
-#include <containers/mappable_flat_set.hpp>
-
+#include "config/common.hpp"
+#include "basics/contig_region.hpp"
+#include "basics/genomic_region.hpp"
+#include "containers/mappable_flat_set.hpp"
 #include "logging.hpp"
 
 namespace octopus {

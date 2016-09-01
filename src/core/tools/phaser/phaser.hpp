@@ -12,16 +12,16 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <basics/genomic_region.hpp>
-#include <containers/probability_matrix.hpp>
-#include <concepts/mappable.hpp>
-#include <concepts/mappable_range.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <core/types/variant.hpp>
-#include <core/types/haplotype.hpp>
-#include <core/types/genotype.hpp>
-#include <basics/phred.hpp>
+#include "config/common.hpp"
+#include "basics/genomic_region.hpp"
+#include "containers/probability_matrix.hpp"
+#include "concepts/mappable.hpp"
+#include "concepts/mappable_range.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "core/types/variant.hpp"
+#include "core/types/haplotype.hpp"
+#include "core/types/genotype.hpp"
+#include "basics/phred.hpp"
 
 namespace octopus {
 

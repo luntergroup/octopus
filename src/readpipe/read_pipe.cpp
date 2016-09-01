@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <cassert>
 
-#include <utils/read_stats.hpp>
-#include <utils/mappable_algorithms.hpp>
+#include "utils/read_stats.hpp"
+#include "utils/mappable_algorithms.hpp"
 
 namespace octopus {
 

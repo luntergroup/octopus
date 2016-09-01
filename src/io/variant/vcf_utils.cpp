@@ -12,14 +12,11 @@
 #include <stdexcept>
 #include <numeric>
 
-#include <basics/contig_region.hpp>
-#include <basics/genomic_region.hpp>
-
+#include "basics/contig_region.hpp"
+#include "basics/genomic_region.hpp"
 #include "vcf_spec.hpp"
 #include "htslib/vcf.h"
 #include "htslib/tbx.h"
-
-#include <iostream> // DEBUG
 
 namespace octopus {
 

@@ -15,8 +15,8 @@
 #include <boost/graph/visitors.hpp>
 #include <boost/graph/copy.hpp>
 
-#include <io/reference/reference_genome.hpp>
-#include <utils/mappable_algorithms.hpp>
+#include "io/reference/reference_genome.hpp"
+#include "utils/mappable_algorithms.hpp"
 
 namespace octopus { namespace coretools {
 

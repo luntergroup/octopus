@@ -11,10 +11,9 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <core/types/haplotype.hpp>
-#include <basics/aligned_read.hpp>
-
+#include "config/common.hpp"
+#include "core/types/haplotype.hpp"
+#include "basics/aligned_read.hpp"
 #include "utils/kmer_mapper.hpp"
 #include "haplotype_likelihood_model.hpp"
 

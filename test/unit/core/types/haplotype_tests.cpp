@@ -9,11 +9,11 @@
 #include "test_common.hpp"
 #include "test_utils.hpp"
 
-#include <io/reference/reference_genome.hpp>
-#include <io/read/read_manager.hpp>
-#include <core/types/variant.hpp>
-#include <core/types/haplotype.hpp>
-#include <utils/mappable_algorithms.hpp>
+#include "io/reference/reference_genome.hpp"
+#include "io/read/read_manager.hpp"
+#include "core/types/variant.hpp"
+#include "core/types/haplotype.hpp"
+#include "utils/mappable_algorithms.hpp"
 
 using std::cout;
 using std::endl;

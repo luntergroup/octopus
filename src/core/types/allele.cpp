@@ -3,7 +3,7 @@
 
 #include "allele.hpp"
 
-#include <utils/mappable_algorithms.hpp>
+#include "utils/mappable_algorithms.hpp"
 
 namespace octopus {
 

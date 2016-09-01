@@ -8,25 +8,26 @@
 
 #include <io/variant/vcf_header.hpp>
 
-namespace octopus {
-    namespace Vcf {
-        namespace Info
-        {
-            
-        } // namespace Info
-        
-        namespace Filter
-        {
-            
-        } // namespace Filter
-        
-        namespace Format
-        {
-            
-        } // namespace Format
-        
-        VcfHeader::Builder make_octopus_header_template();
-    } // namespace Vcf
+namespace octopus {  namespace Vcf {
+
+namespace Info
+{
+    
+} // namespace Info
+
+namespace Filter
+{
+    
+} // namespace Filter
+
+namespace Format
+{
+    
+} // namespace Format
+
+VcfHeader::Builder make_octopus_header_template();
+
+} // namespace Vcf
 } // namespace octopus
 
 #endif

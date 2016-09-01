@@ -5,8 +5,8 @@
 
 #include <sstream>
 
-#include <config/config.hpp>
-#include <config/common.hpp>
+#include "config/config.hpp"
+#include "config/common.hpp"
 
 namespace octopus {
 

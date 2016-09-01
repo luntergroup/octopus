@@ -4,25 +4,25 @@
 #ifndef mock_variant_generator_hpp
 #define mock_variant_generator_hpp
 
-#include <core/tools/vargen/variant_generator.hpp>
+#include "core/tools/vargen/variant_generator.hpp"
 
 namespace octopus { namespace test { namespace mock {
 
-    class MockVariantGenerator : public VariantGenerator
-    {
-    public:
-        MockVariantGenerator() = delete;
-        
-        MockVariantGenerator(const MockVariantGenerator&)            = default;
-        MockVariantGenerator& operator=(const MockVariantGenerator&) = default;
-        MockVariantGenerator(MockVariantGenerator&&)                 = default;
-        MockVariantGenerator& operator=(MockVariantGenerator&&)      = default;
-        
-        ~MockVariantGenerator() override = default;
-        
-    private:
-        
-    };
+class MockVariantGenerator : public VariantGenerator
+{
+public:
+    MockVariantGenerator() = delete;
+    
+    MockVariantGenerator(const MockVariantGenerator&)            = default;
+    MockVariantGenerator& operator=(const MockVariantGenerator&) = default;
+    MockVariantGenerator(MockVariantGenerator&&)                 = default;
+    MockVariantGenerator& operator=(MockVariantGenerator&&)      = default;
+    
+    ~MockVariantGenerator() override = default;
+
+private:
+    
+};
 
 } // namespace mock
 } // namespace test

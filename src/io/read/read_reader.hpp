@@ -13,8 +13,8 @@
 
 #include <boost/filesystem/path.hpp>
 
+#include "concepts/equitable.hpp"
 #include "read_reader_impl.hpp"
-#include <concepts/equitable.hpp>
 
 namespace octopus {
 

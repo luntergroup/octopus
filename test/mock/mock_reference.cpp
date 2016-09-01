@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include <utils/map_utils.hpp>
+#include "utils/map_utils.hpp"
 
 namespace octopus { namespace test { namespace mock {
 

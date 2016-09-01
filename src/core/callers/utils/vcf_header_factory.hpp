@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <functional>
 
-#include <io/variant/vcf_header.hpp>
+#include "io/variant/vcf_header.hpp"
 
 namespace octopus {
 

@@ -9,11 +9,10 @@
 #include <iostream>
 #include <cassert>
 
-#include <io/reference/reference_genome.hpp>
-#include <basics/genomic_region.hpp>
-#include <concepts/mappable_range.hpp>
-#include <utils/mappable_algorithms.hpp>
-
+#include "io/reference/reference_genome.hpp"
+#include "basics/genomic_region.hpp"
+#include "concepts/mappable_range.hpp"
+#include "utils/mappable_algorithms.hpp"
 #include "variant.hpp"
 
 namespace octopus {

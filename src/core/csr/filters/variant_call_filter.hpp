@@ -10,13 +10,12 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <basics/phred.hpp>
-#include <readpipe/read_pipe.hpp>
-#include <core/types/variant.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <io/variant/vcf_record.hpp>
-
+#include "config/common.hpp"
+#include "basics/phred.hpp"
+#include "readpipe/read_pipe.hpp"
+#include "core/types/variant.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "io/variant/vcf_record.hpp"
 #include "../measures/measure.hpp"
 
 namespace octopus {

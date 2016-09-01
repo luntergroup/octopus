@@ -17,10 +17,10 @@
 
 #include <boost/graph/adjacency_list.hpp>
 
-#include <basics/genomic_region.hpp>
-#include <core/types/allele.hpp>
-#include <core/types/haplotype.hpp>
-#include <core/types/variant.hpp>
+#include "basics/genomic_region.hpp"
+#include "core/types/allele.hpp"
+#include "core/types/haplotype.hpp"
+#include "core/types/variant.hpp"
 
 namespace octopus {
 

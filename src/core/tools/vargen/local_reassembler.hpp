@@ -9,11 +9,10 @@
 #include <functional>
 #include <memory>
 
+#include "basics/genomic_region.hpp"
+#include "concepts/mappable.hpp"
+#include "core/types/variant.hpp"
 #include "variant_generator.hpp"
-#include <basics/genomic_region.hpp>
-#include <concepts/mappable.hpp>
-#include <core/types/variant.hpp>
-
 #include "utils/assembler.hpp"
 
 namespace octopus {

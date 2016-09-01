@@ -11,11 +11,10 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <basics/genomic_region.hpp>
-#include <io/read/read_manager.hpp>
-#include <logging/logging.hpp>
-
+#include "config/common.hpp"
+#include "basics/genomic_region.hpp"
+#include "io/read/read_manager.hpp"
+#include "logging/logging.hpp"
 #include "filtering/read_filterer.hpp"
 #include "transformers/read_transformer.hpp"
 #include "downsampling/downsampler.hpp"

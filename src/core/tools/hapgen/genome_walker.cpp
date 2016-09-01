@@ -7,14 +7,12 @@
 #include <algorithm>
 #include <cmath>
 
-#include <basics/genomic_region.hpp>
-#include <concepts/mappable.hpp>
-#include <basics/aligned_read.hpp>
-#include <core/types/variant.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <containers/mappable_map.hpp>
-
-#include <iostream> // DEBUG
+#include "basics/genomic_region.hpp"
+#include "concepts/mappable.hpp"
+#include "basics/aligned_read.hpp"
+#include "core/types/variant.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "containers/mappable_map.hpp"
 
 namespace octopus { namespace coretools {
 

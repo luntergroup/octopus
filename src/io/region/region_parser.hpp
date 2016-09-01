@@ -9,8 +9,8 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include <io/reference/reference_genome.hpp>
-#include <basics/genomic_region.hpp>
+#include "io/reference/reference_genome.hpp"
+#include "basics/genomic_region.hpp"
 
 namespace octopus { namespace io {
 

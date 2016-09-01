@@ -9,8 +9,8 @@
 #include <cstddef>
 #include <utility>
 
-#include <concepts/mappable.hpp>
-#include <basics/genomic_region.hpp>
+#include "concepts/mappable.hpp"
+#include "basics/genomic_region.hpp"
 
 namespace octopus {
 

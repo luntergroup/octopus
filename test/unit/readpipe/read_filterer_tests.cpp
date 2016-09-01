@@ -10,9 +10,8 @@
 #include <algorithm> // std::sort
 #include <iterator>  // std::back_inserter
 
-//#include "test_common.hpp"
-//#include <basics/genomic_region.hpp>
-//#include <io/read/read_manager.hpp>
+//#include "basics/genomic_region.hpp"
+//#include "io/read/read_manager.hpp"
 //#include "read_filter.hpp"
 //#include "read_filters.hpp"
 

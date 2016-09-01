@@ -5,7 +5,7 @@
 
 #include <stdexcept>
 
-#include <basics/contig_region.hpp>
+#include "basics/contig_region.hpp"
 
 namespace octopus { namespace test {
 

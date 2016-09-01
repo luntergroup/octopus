@@ -10,10 +10,9 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <basics/phred.hpp>
-#include <core/models/genotype/individual_model.hpp>
-
+#include "config/common.hpp"
+#include "basics/phred.hpp"
+#include "core/models/genotype/individual_model.hpp"
 #include "caller.hpp"
 
 namespace octopus {

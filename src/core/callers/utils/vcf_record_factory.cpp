@@ -14,15 +14,15 @@
 
 #include <boost/optional.hpp>
 
-#include <concepts/equitable.hpp>
-#include <basics/genomic_region.hpp>
-#include <concepts/mappable.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <core/types/allele.hpp>
+#include "concepts/equitable.hpp"
+#include "basics/genomic_region.hpp"
+#include "concepts/mappable.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "core/types/allele.hpp"
+#include "utils/read_stats.hpp"
+#include "utils/string_utils.hpp"
+#include "utils/maths.hpp"
 #include "variant_call.hpp"
-#include <utils/read_stats.hpp>
-#include <utils/string_utils.hpp>
-#include <utils/maths.hpp>
 
 #include "timers.hpp"
 

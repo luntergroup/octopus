@@ -5,7 +5,7 @@
 
 #include <exception>
 
-#include <core/tools/vargen/utils/assembler.hpp>
+#include "core/tools/vargen/utils/assembler.hpp"
 
 namespace octopus { namespace test {
 

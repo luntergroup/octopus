@@ -12,7 +12,7 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include <bioio.hpp>
+#include "bioio.hpp"
 
 #include "reference_reader.hpp"
 

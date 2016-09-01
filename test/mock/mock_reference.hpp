@@ -9,8 +9,8 @@
 #include <vector>
 #include <unordered_map>
 
-#include <io/reference/reference_reader.hpp>
-#include <io/reference/reference_genome.hpp>
+#include "io/reference/reference_reader.hpp"
+#include "io/reference/reference_genome.hpp"
 
 namespace octopus { namespace test { namespace mock {
 

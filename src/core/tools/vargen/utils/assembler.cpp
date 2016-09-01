@@ -23,7 +23,7 @@
 #include <boost/graph/graph_utility.hpp>
 #include <boost/graph/exception.hpp>
 
-#include <utils/sequence_utils.hpp>
+#include "utils/sequence_utils.hpp"
 
 #include "timers.hpp"
 

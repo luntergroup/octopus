@@ -9,7 +9,7 @@
 
 #include <boost/graph/adjacency_list.hpp>
 
-#include <config/common.hpp>
+#include "config/common.hpp"
 
 namespace octopus {
 

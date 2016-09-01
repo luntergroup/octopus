@@ -17,10 +17,10 @@
 
 #include <boost/optional.hpp>
 
-#include <concepts/comparable.hpp>
-#include <concepts/equitable.hpp>
-#include <basics/genomic_region.hpp>
-#include <concepts/mappable.hpp>
+#include "concepts/comparable.hpp"
+#include "concepts/equitable.hpp"
+#include "basics/genomic_region.hpp"
+#include "concepts/mappable.hpp"
 #include "cigar_string.hpp"
 
 namespace octopus {

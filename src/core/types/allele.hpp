@@ -16,10 +16,10 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <concepts/comparable.hpp>
-#include <basics/genomic_region.hpp>
-#include <concepts/mappable.hpp>
-#include <io/reference/reference_genome.hpp>
+#include "concepts/comparable.hpp"
+#include "basics/genomic_region.hpp"
+#include "concepts/mappable.hpp"
+#include "io/reference/reference_genome.hpp"
 
 namespace octopus {
 

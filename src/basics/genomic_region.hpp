@@ -12,8 +12,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <concepts/comparable.hpp>
-
+#include "concepts/comparable.hpp"
 #include "contig_region.hpp"
 
 namespace octopus {

@@ -10,29 +10,29 @@
 #include "caller.hpp"
 
 namespace octopus {
+
+class GenomicRegion;
+class Variant;
+class VcfRecord;
+class ReadPipe;
+
+class TrioCaller// : public Caller
+{
+public:
+    TrioCaller() = delete;
     
-    class GenomicRegion;
-    class Variant;
-    class VcfRecord;
-    class ReadPipe;
+    ~TrioCaller() = default;
     
-    class TrioCaller// : public Caller
-    {
-    public:
-        TrioCaller() = delete;
-        
-        ~TrioCaller() = default;
-        
-        TrioCaller(const TrioCaller&)            = delete;
-        TrioCaller& operator=(const TrioCaller&) = delete;
-        TrioCaller(TrioCaller&&)                 = delete;
-        TrioCaller& operator=(TrioCaller&&)      = delete;
-        
-    private:
-        const unsigned ploidy_;
-        const SampleName mother_, father_;
-        const double min_variant_posterior_ = 0.95;
-    };
+    TrioCaller(const TrioCaller&)            = delete;
+    TrioCaller& operator=(const TrioCaller&) = delete;
+    TrioCaller(TrioCaller&&)                 = delete;
+    TrioCaller& operator=(TrioCaller&&)      = delete;
+
+private:
+    const unsigned ploidy_;
+    const SampleName mother_, father_;
+    const double min_variant_posterior_ = 0.95;
+};
     
 } // namespace octopus
 

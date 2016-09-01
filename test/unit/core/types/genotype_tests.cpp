@@ -9,17 +9,16 @@
 //#include <set>
 //#include <vector>
 //
-//#include "test_common.hpp"
-//#include "test_utils.hpp"
+////#include "test_utils.hpp"
 //
-//#include <io/reference/reference_genome.hpp>
-//#include <io/read/read_manager.hpp>
-//#include <core/types/variant.hpp>
+//#include "io/reference/reference_genome.hpp"
+//#include "io/read/read_manager.hpp"
+//#include "core/types/variant.hpp"
 //#include "variant_generator.hpp"
 //#include "cigar_scanner.hpp"
-//#include <core/types/haplotype.hpp>
+//#include "core/types/haplotype.hpp"
 //#include "haplotype_tree.hpp"
-//#include <core/types/genotype.hpp>
+//#include "core/types/genotype.hpp"
 //
 //using std::cout;
 //using std::endl;

@@ -17,8 +17,7 @@
 #include "htslib/hts.h"
 #include "htslib/sam.h"
 
-#include <basics/aligned_read.hpp>
-
+#include "basics/aligned_read.hpp"
 #include "read_reader_impl.hpp"
 
 namespace octopus {

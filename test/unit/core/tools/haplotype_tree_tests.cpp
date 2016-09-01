@@ -11,7 +11,6 @@
 //#include <cstddef>
 //#include <algorithm>
 //
-//#include "test_common.hpp"
 //#include "test_utils.hpp"
 //
 //#include <io/reference/reference_genome.hpp>

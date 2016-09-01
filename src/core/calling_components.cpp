@@ -10,11 +10,11 @@
 #include <functional>
 #include <exception>
 
-#include <config/config.hpp>
-#include <config/option_collation.hpp>
-#include <utils/read_size_estimator.hpp>
-#include <utils/map_utils.hpp>
-#include <logging/logging.hpp>
+#include "config/config.hpp"
+#include "config/option_collation.hpp"
+#include "utils/read_size_estimator.hpp"
+#include "utils/map_utils.hpp"
+#include "logging/logging.hpp"
 
 namespace octopus {
 

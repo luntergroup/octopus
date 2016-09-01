@@ -8,10 +8,10 @@
 #include <vector>
 #include <iosfwd>
 
-#include <core/types/haplotype.hpp>
-#include <basics/aligned_read.hpp>
-#include <core/types/genotype.hpp>
-#include <core/types/allele.hpp>
+#include "core/types/haplotype.hpp"
+#include "basics/aligned_read.hpp"
+#include "core/types/genotype.hpp"
+#include "core/types/allele.hpp"
 
 namespace octopus {
 

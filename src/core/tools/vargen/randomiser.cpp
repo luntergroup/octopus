@@ -6,11 +6,11 @@
 #include <random>
 #include <chrono>
 
-#include <io/reference/reference_genome.hpp>
-#include <basics/genomic_region.hpp>
-#include <core/types/allele.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <utils/sequence_utils.hpp>
+#include "io/reference/reference_genome.hpp"
+#include "basics/genomic_region.hpp"
+#include "core/types/allele.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/sequence_utils.hpp"
 
 namespace octopus { namespace coretools {
 

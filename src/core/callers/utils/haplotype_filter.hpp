@@ -9,8 +9,8 @@
 #include <functional>
 #include <unordered_map>
 
-#include <config/common.hpp>
-#include <core/types/haplotype.hpp>
+#include "config/common.hpp"
+#include "core/types/haplotype.hpp"
 
 namespace octopus {
 

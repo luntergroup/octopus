@@ -12,12 +12,12 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include "vcf_reader_impl.hpp"
-#include "vcf_record.hpp"
-
 #include "htslib/hts.h"
 #include "htslib/vcf.h"
 #include "htslib/synced_bcf_reader.h"
+
+#include "vcf_reader_impl.hpp"
+#include "vcf_record.hpp"
 
 namespace octopus {
 

@@ -5,7 +5,7 @@
 
 #include <string>
 
-#include <core/tools/vargen/utils/global_aligner.hpp>
+#include "core/tools/vargen/utils/global_aligner.hpp"
 
 namespace octopus { namespace test {
     

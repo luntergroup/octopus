@@ -14,11 +14,10 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 
-#include <utils/path_utils.hpp>
-#include <basics/phred.hpp>
-#include <utils/string_utils.hpp>
-#include <exceptions/user_error.hpp>
-
+#include "utils/path_utils.hpp"
+#include "basics/phred.hpp"
+#include "utils/string_utils.hpp"
+#include "exceptions/user_error.hpp"
 #include "config.hpp"
 
 namespace po = boost::program_options;

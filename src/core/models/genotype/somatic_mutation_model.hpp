@@ -7,10 +7,10 @@
 #include <type_traits>
 #include <functional>
 
-#include <core/models/genotype/coalescent_model.hpp>
-#include <core/types/cancer_genotype.hpp>
-#include <core/types/haplotype.hpp>
-#include <utils/maths.hpp>
+#include "core/models/genotype/coalescent_model.hpp"
+#include "core/types/cancer_genotype.hpp"
+#include "core/types/haplotype.hpp"
+#include "utils/maths.hpp"
 
 namespace octopus {
 

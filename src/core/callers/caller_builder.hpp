@@ -11,12 +11,11 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <readpipe/read_pipe.hpp>
-#include <core/tools/coretools.hpp>
-#include <core/types/trio.hpp>
-#include <core/types/pedigree.hpp>
-
+#include "config/common.hpp"
+#include "readpipe/read_pipe.hpp"
+#include "core/tools/coretools.hpp"
+#include "core/types/trio.hpp"
+#include "core/types/pedigree.hpp"
 #include "caller.hpp"
 
 namespace octopus {

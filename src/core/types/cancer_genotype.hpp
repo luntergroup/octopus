@@ -11,8 +11,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <concepts/equitable.hpp>
-
+#include "concepts/equitable.hpp"
 #include "genotype.hpp"
 
 namespace octopus {

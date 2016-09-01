@@ -8,7 +8,7 @@
 
 #include <boost/filesystem/operations.hpp>
 
-#include <exceptions/system_error.hpp>
+#include "exceptions/system_error.hpp"
 
 namespace octopus {
 

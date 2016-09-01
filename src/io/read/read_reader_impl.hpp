@@ -10,8 +10,8 @@
 #include <unordered_map>
 #include <utility>
 
-#include <basics/genomic_region.hpp>
-#include <basics/aligned_read.hpp>
+#include "basics/genomic_region.hpp"
+#include "basics/aligned_read.hpp"
 
 namespace octopus { namespace io {
 

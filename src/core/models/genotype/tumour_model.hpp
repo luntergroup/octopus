@@ -8,11 +8,11 @@
 #include <unordered_map>
 #include <utility>
 
-#include <config/common.hpp>
-#include <core/types/haplotype.hpp>
+#include "config/common.hpp"
+#include "core/types/haplotype.hpp"
+#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/types/cancer_genotype.hpp"
 #include "somatic_mutation_model.hpp"
-#include <core/models/haplotype_likelihood_cache.hpp>
-#include <core/types/cancer_genotype.hpp>
 
 namespace octopus { namespace model
 {

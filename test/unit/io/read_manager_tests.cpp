@@ -10,10 +10,9 @@
 
 #include <boost/filesystem.hpp>
 
-#include <basics/genomic_region.hpp>
-#include <basics/aligned_read.hpp>
-#include <io/read/read_manager.hpp>
-
+#include "basics/genomic_region.hpp"
+#include "basics/aligned_read.hpp"
+#include "io/read/read_manager.hpp"
 #include "test_common.hpp"
 #include "mock_objects.hpp"
 

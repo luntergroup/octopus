@@ -8,13 +8,11 @@
 #include <algorithm>
 #include <future>
 
-#include <io/reference/reference_genome.hpp>
-#include <io/reference/fasta.hpp>
-#include <io/reference/caching_fasta.hpp>
-#include <utils/mappable_algorithms.hpp>
-
+#include "io/reference/reference_genome.hpp"
+#include "io/reference/fasta.hpp"
+#include "io/reference/caching_fasta.hpp"
+#include "utils/mappable_algorithms.hpp"
 #include "mock/mock_reference.hpp"
-
 #include "test_common.hpp"
 
 namespace octopus { namespace test {

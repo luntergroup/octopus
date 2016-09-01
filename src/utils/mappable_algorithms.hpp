@@ -14,11 +14,10 @@
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
 
-#include <basics/contig_region.hpp>
-#include <basics/genomic_region.hpp>
-#include <concepts/mappable.hpp>
-
-#include <concepts/mappable_range.hpp>
+#include "basics/contig_region.hpp"
+#include "basics/genomic_region.hpp"
+#include "concepts/mappable.hpp"
+#include "concepts/mappable_range.hpp"
 #include "type_tricks.hpp"
 
 /**

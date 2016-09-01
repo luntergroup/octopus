@@ -5,7 +5,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <readpipe/read_pipe.hpp>
+#include "readpipe/read_pipe.hpp"
 
 BOOST_AUTO_TEST_SUITE(Components)
 BOOST_AUTO_TEST_SUITE(IO)

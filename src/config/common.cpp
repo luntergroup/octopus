@@ -3,8 +3,6 @@
 
 #include "common.hpp"
 
-#include "config.hpp"
-
 namespace octopus {
 
 bool DEBUG_MODE {false}, TRACE_MODE {false};

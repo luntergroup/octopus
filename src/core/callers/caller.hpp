@@ -14,20 +14,19 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <basics/genomic_region.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <readpipe/read_pipe.hpp>
-#include <core/types/variant.hpp>
-#include <core/types/haplotype.hpp>
-#include <core/tools/coretools.hpp>
-#include <core/models/haplotype_likelihood_cache.hpp>
-#include <containers/mappable_flat_set.hpp>
-#include <containers/probability_matrix.hpp>
-#include <logging/progress_meter.hpp>
-#include <logging/logging.hpp>
-#include <io/variant/vcf_record.hpp>
-
+#include "config/common.hpp"
+#include "basics/genomic_region.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "readpipe/read_pipe.hpp"
+#include "core/types/variant.hpp"
+#include "core/types/haplotype.hpp"
+#include "core/tools/coretools.hpp"
+#include "core/models/haplotype_likelihood_cache.hpp"
+#include "containers/mappable_flat_set.hpp"
+#include "containers/probability_matrix.hpp"
+#include "logging/progress_meter.hpp"
+#include "logging/logging.hpp"
+#include "io/variant/vcf_record.hpp"
 #include "utils/vcf_record_factory.hpp"
 
 namespace octopus {

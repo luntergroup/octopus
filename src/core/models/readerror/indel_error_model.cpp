@@ -6,9 +6,9 @@
 #include <algorithm>
 #include <iterator>
 
-#include <tandem/tandem.hpp>
+#include "tandem/tandem.hpp"
 
-#include <core/types/haplotype.hpp>
+#include "core/types/haplotype.hpp"
 
 #include <iostream> // DEBUG
 

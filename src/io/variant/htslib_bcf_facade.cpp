@@ -17,9 +17,8 @@
 #include <boost/optional.hpp>
 #include <boost/container/small_vector.hpp>
 
-#include <basics/genomic_region.hpp>
-#include <utils/string_utils.hpp>
-
+#include "basics/genomic_region.hpp"
+#include "utils/string_utils.hpp"
 #include "vcf_spec.hpp"
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"

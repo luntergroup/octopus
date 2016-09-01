@@ -10,10 +10,10 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
+#include "config/common.hpp"
+#include "core/types/allele.hpp"
+#include "core/types/cancer_genotype.hpp"
 #include "variant_call.hpp"
-#include <core/types/allele.hpp>
-#include <core/types/cancer_genotype.hpp>
 
 namespace octopus {
 

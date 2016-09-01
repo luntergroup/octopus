@@ -9,27 +9,25 @@
 #include <numeric>
 #include <cmath>
 
-#include <config/common.hpp>
-
-#include <containers/mappable_flat_set.hpp>
-#include <containers/mappable_map.hpp>
-#include <core/types/variant.hpp>
-#include <core/models/haplotype_likelihood_cache.hpp>
-#include <basics/genomic_region.hpp>
-#include <basics/aligned_read.hpp>
-#include <utils/read_stats.hpp>
-#include <utils/maths.hpp>
-#include <utils/string_utils.hpp>
-#include <io/variant/vcf_reader.hpp>
-#include <io/variant/vcf_writer.hpp>
-#include <io/variant/vcf_header.hpp>
-
-#include "../utils/genotype_reader.hpp"
-
 #include <boost/math/distributions/hypergeometric.hpp>
 
-namespace octopus { namespace csr
-{
+#include "config/common.hpp"
+#include "containers/mappable_flat_set.hpp"
+#include "containers/mappable_map.hpp"
+#include "core/types/variant.hpp"
+#include "core/models/haplotype_likelihood_cache.hpp"
+#include "basics/genomic_region.hpp"
+#include "basics/aligned_read.hpp"
+#include "utils/read_stats.hpp"
+#include "utils/maths.hpp"
+#include "utils/string_utils.hpp"
+#include "io/variant/vcf_reader.hpp"
+#include "io/variant/vcf_writer.hpp"
+#include "io/variant/vcf_header.hpp"
+#include "../utils/genotype_reader.hpp"
+
+namespace octopus { namespace csr  {
+
 VariantCallFilter::VariantCallFilter(const ReferenceGenome& reference,
                                      const ReadPipe& read_pipe,
                                      std::vector<MeasureWrapper> measures,
@@ -40,35 +38,36 @@ VariantCallFilter::VariantCallFilter(const ReferenceGenome& reference,
 , read_buffer_size_ {max_read_buffer_size}
 {}
 
-namespace
+namespace  {
+
+auto mapped_region(const VcfRecord& call)
 {
-    auto mapped_region(const VcfRecord& call)
-    {
-        const auto begin = call.pos() - 1;
-        return GenomicRegion {call.chrom(), begin, begin + static_cast<GenomicRegion::Size>(call.ref().size())};
-    }
+    const auto begin = call.pos() - 1;
+    return GenomicRegion {call.chrom(), begin, begin + static_cast<GenomicRegion::Size>(call.ref().size())};
+}
+
+auto mapped_regions(const std::vector<VcfRecord>& calls)
+{
+    std::vector<GenomicRegion> result {};
+    result.reserve(calls.size());
     
-    auto mapped_regions(const std::vector<VcfRecord>& calls)
-    {
-        std::vector<GenomicRegion> result {};
-        result.reserve(calls.size());
-        
-        std::transform(std::cbegin(calls), std::cend(calls), std::back_inserter(result),
-                       [] (const auto& call) { return mapped_region(call); });
-        std::sort(std::begin(result), std::end(result));
-        
-        return result;
-    }
+    std::transform(std::cbegin(calls), std::cend(calls), std::back_inserter(result),
+                   [] (const auto& call) { return mapped_region(call); });
+    std::sort(std::begin(result), std::end(result));
     
-    auto encompassing_region(const std::vector<VcfRecord>& calls)
-    {
-        return encompassing_region(mapped_regions(calls));
-    }
-    
-    auto fetch_reads(const std::vector<VcfRecord>& calls, const ReadPipe& read_pipe)
-    {
-        return read_pipe.fetch_reads(encompassing_region(calls));
-    }
+    return result;
+}
+
+auto encompassing_region(const std::vector<VcfRecord>& calls)
+{
+    return encompassing_region(mapped_regions(calls));
+}
+
+auto fetch_reads(const std::vector<VcfRecord>& calls, const ReadPipe& read_pipe)
+{
+    return read_pipe.fetch_reads(encompassing_region(calls));
+}
+
 } // namespace
 
 void VariantCallFilter::register_training_set(const VcfReader& calls, double confidence)
@@ -127,5 +126,6 @@ void VariantCallFilter::fail(VcfRecord::Builder& call) const
 {
     call.set_passed();
 }
+
 } // namespace csr
 } // namespace octopus

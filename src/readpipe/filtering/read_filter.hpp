@@ -10,8 +10,8 @@
 #include <iterator>
 #include <memory>
 
-#include <basics/cigar_string.hpp>
-#include <basics/aligned_read.hpp>
+#include "basics/cigar_string.hpp"
+#include "basics/aligned_read.hpp"
 
 namespace octopus { namespace readpipe
 {

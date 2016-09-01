@@ -14,10 +14,10 @@
 #include <functional>
 #include <random>
 
-#include <tandem/tandem.hpp>
+#include "tandem/tandem.hpp"
 
-#include <basics/contig_region.hpp>
-#include <basics/genomic_region.hpp>
+#include "basics/contig_region.hpp"
+#include "basics/genomic_region.hpp"
 
 namespace octopus { namespace utils {
 

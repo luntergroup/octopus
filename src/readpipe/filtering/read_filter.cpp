@@ -3,7 +3,7 @@
 
 #include "read_filter.hpp"
 
-#include <basics/cigar_string.hpp>
+#include "basics/cigar_string.hpp"
 
 #include <iostream> // DEBUG
 

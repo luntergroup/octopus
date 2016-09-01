@@ -13,12 +13,11 @@
 
 #include "common.hpp"
 #include "option_parser.hpp"
-#include <io/reference/reference_genome.hpp>
-#include <io/read/read_manager.hpp>
-#include <readpipe/read_pipe.hpp>
-#include <core/callers/caller_factory.hpp>
-#include <io/variant/vcf_writer.hpp>
-//#include "variant_call_filter.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "io/read/read_manager.hpp"
+#include "readpipe/read_pipe.hpp"
+#include "core/callers/caller_factory.hpp"
+#include "io/variant/vcf_writer.hpp"
 
 namespace fs = boost::filesystem;
 

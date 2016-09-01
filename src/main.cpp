@@ -6,17 +6,16 @@
 #include <chrono>
 #include <exception>
 
-#include <config/config.hpp>
-#include <config/common.hpp>
-#include <config/option_parser.hpp>
-#include <config/option_collation.hpp>
-#include <core/octopus.hpp>
-#include <utils/string_utils.hpp>
-#include <utils/timing.hpp>
-#include <exceptions/error.hpp>
-#include <logging/error_handler.hpp>
-#include <logging/logging.hpp>
-#include <logging/main_logging.hpp>
+#include "config/config.hpp"
+#include "config/common.hpp"
+#include "logging/logging.hpp"
+#include "logging/main_logging.hpp"
+#include "config/option_parser.hpp"
+#include "config/option_collation.hpp"
+#include "core/octopus.hpp"
+#include "utils/timing.hpp"
+#include "exceptions/error.hpp"
+#include "logging/error_handler.hpp"
 
 using namespace octopus;
 using namespace octopus::options;
@@ -59,9 +58,7 @@ int main(const int argc, const char** argv)
         return log_startup_exception(e);
     } catch (...) {
         logging::init();
-        
         log_program_end();
-        
         return EXIT_FAILURE;
     }
     
@@ -69,21 +66,14 @@ int main(const int argc, const char** argv)
         try {
             init_common(options);
             log_program_startup();
-            
             logging::InfoLogger info_log {};
             const auto start = std::chrono::system_clock::now();
-            
             auto components = collate_genome_calling_components(options);
-            
             auto end = std::chrono::system_clock::now();
-            
             using utils::TimeInterval;
             stream(info_log) << "Done initialising calling components in " << TimeInterval {start, end};
-            
             options.clear();
-            
             if (components) run_octopus(*components);
-            
             log_program_end();
         } catch (const Error& e) {
             return log_exception(e);

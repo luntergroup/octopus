@@ -13,19 +13,18 @@
 #include <utility>
 #include <iostream>
 
-#include <basics/genomic_region.hpp>
-#include <core/types/allele.hpp>
-#include <core/types/variant.hpp>
-#include <core/types/haplotype.hpp>
-#include <core/types/genotype.hpp>
-#include <utils/maths.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <utils/read_stats.hpp>
-#include <containers/probability_matrix.hpp>
-#include <core/models/genotype/coalescent_model.hpp>
-#include <core/models/genotype/individual_model.hpp>
-#include <logging/logging.hpp>
-
+#include "basics/genomic_region.hpp"
+#include "core/types/allele.hpp"
+#include "core/types/variant.hpp"
+#include "core/types/haplotype.hpp"
+#include "core/types/genotype.hpp"
+#include "utils/maths.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/read_stats.hpp"
+#include "containers/probability_matrix.hpp"
+#include "core/models/genotype/coalescent_model.hpp"
+#include "core/models/genotype/individual_model.hpp"
+#include "logging/logging.hpp"
 #include "utils/germline_variant_call.hpp"
 #include "utils/reference_call.hpp"
 

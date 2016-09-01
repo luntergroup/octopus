@@ -13,9 +13,8 @@
 
 #include <boost/range/algorithm.hpp>
 
-#include <basics/aligned_read.hpp>
-#include <containers/mappable_map.hpp>
-
+#include "basics/aligned_read.hpp"
+#include "containers/mappable_map.hpp"
 #include "mappable_algorithms.hpp"
 #include "maths.hpp"
 #include "type_tricks.hpp"

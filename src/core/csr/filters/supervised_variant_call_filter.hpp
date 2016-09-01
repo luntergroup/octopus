@@ -8,8 +8,8 @@
 
 #include "variant_call_filter.hpp"
 
-namespace octopus { namespace csr
-{
+namespace octopus { namespace csr  {
+
 class SupervisedVariantCallFilter : public VariantCallFilter
 {
 public:
@@ -40,7 +40,8 @@ protected:
 private:
     virtual bool is_online() const noexcept = 0;
 };
+
 } // namespace csr
 } // namespace octopus
 
-#endif /* supervised_variant_call_filter_hpp */
+#endif

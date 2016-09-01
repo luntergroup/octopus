@@ -5,7 +5,7 @@
 
 #include <stdexcept>
 
-#include <tandem/tandem.hpp>
+#include "tandem/tandem.hpp"
 
 namespace octopus {
 

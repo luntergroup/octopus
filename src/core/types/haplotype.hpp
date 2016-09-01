@@ -15,10 +15,9 @@
 #include <boost/functional/hash.hpp>
 #include <boost/optional.hpp>
 
-#include <concepts/comparable.hpp>
-#include <basics/contig_region.hpp>
-#include <concepts/mappable.hpp>
-
+#include "concepts/comparable.hpp"
+#include "basics/contig_region.hpp"
+#include "concepts/mappable.hpp"
 #include "allele.hpp"
 
 namespace octopus {

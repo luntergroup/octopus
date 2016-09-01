@@ -4,9 +4,9 @@
 #ifndef germline_likelihood_model_hpp
 #define germline_likelihood_model_hpp
 
-#include <core/types/haplotype.hpp>
-#include <core/types/genotype.hpp>
-#include <core/models/haplotype_likelihood_cache.hpp>
+#include "core/types/haplotype.hpp"
+#include "core/types/genotype.hpp"
+#include "core/models/haplotype_likelihood_cache.hpp"
 
 namespace octopus { namespace model {
 

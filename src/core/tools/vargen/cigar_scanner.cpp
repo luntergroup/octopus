@@ -9,15 +9,13 @@
 #include <boost/iterator/zip_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#include <config/common.hpp>
-#include <basics/aligned_read.hpp>
-#include <basics/cigar_string.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <concepts/mappable_range.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <logging/logging.hpp>
-
-#include <iostream> // DEBUG
+#include "config/common.hpp"
+#include "basics/aligned_read.hpp"
+#include "basics/cigar_string.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "concepts/mappable_range.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "logging/logging.hpp"
 
 namespace octopus { namespace coretools {
 

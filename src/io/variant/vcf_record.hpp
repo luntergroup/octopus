@@ -17,10 +17,10 @@
 #include <boost/optional.hpp>
 #include <boost/container/flat_map.hpp>
 
-#include <concepts/comparable.hpp>
-#include <concepts/mappable.hpp>
-#include <basics/genomic_region.hpp>
-#include <utils/string_utils.hpp>
+#include "concepts/comparable.hpp"
+#include "concepts/mappable.hpp"
+#include "basics/genomic_region.hpp"
+#include "utils/string_utils.hpp"
 
 namespace octopus {
 

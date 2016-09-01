@@ -3,7 +3,7 @@
 
 #include "threshold_filter.hpp"
 
-#include <io/variant/vcf_header.hpp>
+#include "io/variant/vcf_header.hpp"
 
 namespace octopus { namespace csr {
 
@@ -11,8 +11,7 @@ ThresholdVariantCallFilter::ThresholdVariantCallFilter(const ReferenceGenome& re
                                                        const ReadPipe& read_pipe,
                                                        std::vector<MeasureWrapper> measures,
                                                        std::size_t max_read_buffer_size)
-:
-VariantCallFilter {reference, read_pipe, std::move(measures), max_read_buffer_size}
+: VariantCallFilter {reference, read_pipe, std::move(measures), max_read_buffer_size}
 {}
 
 void ThresholdVariantCallFilter::annotate(VcfHeader& header) const

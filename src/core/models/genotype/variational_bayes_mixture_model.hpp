@@ -7,9 +7,9 @@
 #include <array>
 #include <vector>
 
-#include <config/common.hpp>
-#include <core/types/haplotype.hpp>
-#include <core/models/haplotype_likelihood_cache.hpp>
+#include "config/common.hpp"
+#include "core/types/haplotype.hpp"
+#include "core/models/haplotype_likelihood_cache.hpp"
 
 namespace octopus
 {

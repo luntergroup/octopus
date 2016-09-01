@@ -4,7 +4,7 @@
 #ifndef read_transform_hpp
 #define read_transform_hpp
 
-#include <basics/aligned_read.hpp>
+#include "basics/aligned_read.hpp"
 
 namespace octopus { namespace readpipe
 {

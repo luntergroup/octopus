@@ -5,8 +5,8 @@
 
 #include <utility>
 
-#include <io/reference/reference_genome.hpp>
-#include <readpipe/read_pipe.hpp>
+#include "io/reference/reference_genome.hpp"
+#include "readpipe/read_pipe.hpp"
 
 namespace octopus {
 

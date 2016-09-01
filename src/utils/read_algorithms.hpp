@@ -8,10 +8,9 @@
 #include <vector>
 #include <iterator>
 
-#include <basics/genomic_region.hpp>
-#include <basics/aligned_read.hpp>
-#include <containers/mappable_flat_multi_set.hpp>
-
+#include "basics/genomic_region.hpp"
+#include "basics/aligned_read.hpp"
+#include "containers/mappable_flat_multi_set.hpp"
 #include "mappable_algorithms.hpp"
 
 namespace octopus {

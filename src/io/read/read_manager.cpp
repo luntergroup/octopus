@@ -11,10 +11,8 @@
 
 #include <boost/filesystem/operations.hpp>
 
-#include <basics/aligned_read.hpp>
-#include <utils/append.hpp>
-
-#include <iostream> // TEST
+#include "basics/aligned_read.hpp"
+#include "utils/append.hpp"
 
 namespace octopus {
 

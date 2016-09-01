@@ -26,25 +26,25 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <basics/genomic_region.hpp>
-#include <concepts/mappable.hpp>
-#include <containers/mappable_flat_multi_set.hpp>
-#include <containers/mappable_map.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <io/read/read_manager.hpp>
-#include <readpipe/read_pipe_fwd.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <utils/read_stats.hpp>
-#include <config/octopus_vcf.hpp>
-#include <core/callers/caller_factory.hpp>
-#include <core/callers/caller.hpp>
-#include <utils/maths.hpp>
-#include <logging/progress_meter.hpp>
-#include <logging/logging.hpp>
-#include <core/callers/utils/vcf_header_factory.hpp>
-#include <io/variant/vcf.hpp>
-#include <utils/timing.hpp>
+#include "config/common.hpp"
+#include "basics/genomic_region.hpp"
+#include "concepts/mappable.hpp"
+#include "containers/mappable_flat_multi_set.hpp"
+#include "containers/mappable_map.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "io/read/read_manager.hpp"
+#include "readpipe/read_pipe_fwd.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/read_stats.hpp"
+#include "config/octopus_vcf.hpp"
+#include "core/callers/caller_factory.hpp"
+#include "core/callers/caller.hpp"
+#include "utils/maths.hpp"
+#include "logging/progress_meter.hpp"
+#include "logging/logging.hpp"
+#include "core/callers/utils/vcf_header_factory.hpp"
+#include "io/variant/vcf.hpp"
+#include "utils/timing.hpp"
 
 #include "timers.hpp" // BENCHMARK
 

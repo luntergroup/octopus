@@ -9,10 +9,9 @@
 #include <memory>
 #include <typeindex>
 
-#include <config/common.hpp>
-#include <core/models/genotype/population_model.hpp>
-#include <basics/phred.hpp>
-
+#include "config/common.hpp"
+#include "core/models/genotype/population_model.hpp"
+#include "basics/phred.hpp"
 #include "caller.hpp"
 
 namespace octopus {

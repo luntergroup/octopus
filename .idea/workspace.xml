@@ -15,43 +15,208 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a13f301b-6ef8-4c1d-9a6c-ea0fe79754e0" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/test/data/config.txt" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/project.pbxproj" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/project.xcworkspace/contents.xcworkspacedata" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/project.xcworkspace/xcuserdata/danielcooke.xcuserdatad/UserInterfaceState.xcuserstate" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/project.xcworkspace/xcuserdata/dcooke.xcuserdatad/UserInterfaceState.xcuserstate" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/project.xcworkspace/xcuserdata/dcooke.xcuserdatad/WorkspaceSettings.xcsettings" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/danielcooke.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/danielcooke.xcuserdatad/xcschemes/octopus-mock-debug.xcscheme" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/danielcooke.xcuserdatad/xcschemes/octopus-mock-release.xcscheme" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/danielcooke.xcuserdatad/xcschemes/octopus-unit-debug.xcscheme" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/danielcooke.xcuserdatad/xcschemes/octopus-unit-release.xcscheme" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/danielcooke.xcuserdatad/xcschemes/octopus-unit.xcscheme" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/danielcooke.xcuserdatad/xcschemes/xcschememanagement.plist" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/dcooke.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/dcooke.xcuserdatad/xcschemes/octopus-debug.xcscheme" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/dcooke.xcuserdatad/xcschemes/octopus-mock copy.xcscheme" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/dcooke.xcuserdatad/xcschemes/octopus-release.xcscheme" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/octopus.xcodeproj/xcuserdata/dcooke.xcuserdatad/xcschemes/xcschememanagement.plist" afterPath="" />
       <change type="DELETED" beforePath="$PROJECT_DIR$/test/Testing/Temporary/CTestCostData.txt" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/test/mock_options.hpp" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/test/test_common.hpp" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/test/test_main.cpp" afterPath="" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/test/timers.cpp" afterPath="$PROJECT_DIR$/src/timers.cpp" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/test/timers.hpp" afterPath="$PROJECT_DIR$/src/timers.hpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/CMakeLists.txt" afterPath="$PROJECT_DIR$/CMakeLists.txt" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/CONTRIBUTING.md" afterPath="$PROJECT_DIR$/CONTRIBUTING.md" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/install.py" afterPath="$PROJECT_DIR$/install.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/test/data/mock_objects.hpp" afterPath="$PROJECT_DIR$/test/mock/mock_objects.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/octopus.iml" afterPath="$PROJECT_DIR$/.idea/octopus.iml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/CMakeLists.txt" afterPath="$PROJECT_DIR$/src/CMakeLists.txt" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/basics/aligned_read.hpp" afterPath="$PROJECT_DIR$/src/basics/aligned_read.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/basics/cigar_string.hpp" afterPath="$PROJECT_DIR$/src/basics/cigar_string.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/basics/contig_region.hpp" afterPath="$PROJECT_DIR$/src/basics/contig_region.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/basics/genomic_region.hpp" afterPath="$PROJECT_DIR$/src/basics/genomic_region.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/basics/mappable_reference_wrapper.hpp" afterPath="$PROJECT_DIR$/src/basics/mappable_reference_wrapper.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/basics/phred.hpp" afterPath="$PROJECT_DIR$/src/basics/phred.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/concepts/equitable.hpp" afterPath="$PROJECT_DIR$/src/concepts/equitable.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/concepts/mappable.hpp" afterPath="$PROJECT_DIR$/src/concepts/mappable.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/config/common.cpp" afterPath="$PROJECT_DIR$/src/config/common.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/config/common.hpp" afterPath="$PROJECT_DIR$/src/config/common.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/config/octopus_vcf.cpp" afterPath="$PROJECT_DIR$/src/config/octopus_vcf.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/config/octopus_vcf.hpp" afterPath="$PROJECT_DIR$/src/config/octopus_vcf.hpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/config/option_collation.cpp" afterPath="$PROJECT_DIR$/src/config/option_collation.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/config/option_collation.hpp" afterPath="$PROJECT_DIR$/src/config/option_collation.hpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/config/option_parser.cpp" afterPath="$PROJECT_DIR$/src/config/option_parser.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/containers/mappable_flat_multi_set.hpp" afterPath="$PROJECT_DIR$/src/containers/mappable_flat_multi_set.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/containers/mappable_flat_set.hpp" afterPath="$PROJECT_DIR$/src/containers/mappable_flat_set.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/containers/probability_matrix.hpp" afterPath="$PROJECT_DIR$/src/containers/probability_matrix.hpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/caller.cpp" afterPath="$PROJECT_DIR$/src/core/callers/caller.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/caller.hpp" afterPath="$PROJECT_DIR$/src/core/callers/caller.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/caller_builder.cpp" afterPath="$PROJECT_DIR$/src/core/callers/caller_builder.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/caller_builder.hpp" afterPath="$PROJECT_DIR$/src/core/callers/caller_builder.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/caller_factory.cpp" afterPath="$PROJECT_DIR$/src/core/callers/caller_factory.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/caller_factory.hpp" afterPath="$PROJECT_DIR$/src/core/callers/caller_factory.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/cancer_caller.cpp" afterPath="$PROJECT_DIR$/src/core/callers/cancer_caller.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/cancer_caller.hpp" afterPath="$PROJECT_DIR$/src/core/callers/cancer_caller.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/individual_caller.cpp" afterPath="$PROJECT_DIR$/src/core/callers/individual_caller.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/individual_caller.hpp" afterPath="$PROJECT_DIR$/src/core/callers/individual_caller.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/population_caller.cpp" afterPath="$PROJECT_DIR$/src/core/callers/population_caller.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/population_caller.hpp" afterPath="$PROJECT_DIR$/src/core/callers/population_caller.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/trio_caller.cpp" afterPath="$PROJECT_DIR$/src/core/callers/trio_caller.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/trio_caller.hpp" afterPath="$PROJECT_DIR$/src/core/callers/trio_caller.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/call.hpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/call.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/germline_variant_call.hpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/germline_variant_call.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/haplotype_filter.cpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/haplotype_filter.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/haplotype_filter.hpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/haplotype_filter.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/reference_call.cpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/reference_call.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/somatic_call.cpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/somatic_call.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/somatic_call.hpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/somatic_call.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/variant_call.cpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/variant_call.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/variant_call.hpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/variant_call.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/vcf_header_factory.hpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/vcf_header_factory.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/vcf_record_factory.cpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/vcf_record_factory.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/callers/utils/vcf_record_factory.hpp" afterPath="$PROJECT_DIR$/src/core/callers/utils/vcf_record_factory.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/calling_components.cpp" afterPath="$PROJECT_DIR$/src/core/calling_components.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/calling_components.hpp" afterPath="$PROJECT_DIR$/src/core/calling_components.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/facets/read_assignment.cpp" afterPath="$PROJECT_DIR$/src/core/csr/facets/read_assignment.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/facets/read_assignment.hpp" afterPath="$PROJECT_DIR$/src/core/csr/facets/read_assignment.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/filters/supervised_variant_call_filter.cpp" afterPath="$PROJECT_DIR$/src/core/csr/filters/supervised_variant_call_filter.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/filters/supervised_variant_call_filter.hpp" afterPath="$PROJECT_DIR$/src/core/csr/filters/supervised_variant_call_filter.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/filters/threshold_filter.cpp" afterPath="$PROJECT_DIR$/src/core/csr/filters/threshold_filter.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/filters/threshold_filter.hpp" afterPath="$PROJECT_DIR$/src/core/csr/filters/threshold_filter.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/filters/variant_call_filter.cpp" afterPath="$PROJECT_DIR$/src/core/csr/filters/variant_call_filter.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/filters/variant_call_filter.hpp" afterPath="$PROJECT_DIR$/src/core/csr/filters/variant_call_filter.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/measures/measure.hpp" afterPath="$PROJECT_DIR$/src/core/csr/measures/measure.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/measures/quality_by_depth.cpp" afterPath="$PROJECT_DIR$/src/core/csr/measures/quality_by_depth.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/measures/quality_by_depth.hpp" afterPath="$PROJECT_DIR$/src/core/csr/measures/quality_by_depth.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/utils/genotype_reader.cpp" afterPath="$PROJECT_DIR$/src/core/csr/utils/genotype_reader.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/utils/genotype_reader.hpp" afterPath="$PROJECT_DIR$/src/core/csr/utils/genotype_reader.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/utils/variant_call_filter_factory.cpp" afterPath="$PROJECT_DIR$/src/core/csr/utils/variant_call_filter_factory.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/csr/utils/variant_call_filter_factory.hpp" afterPath="$PROJECT_DIR$/src/core/csr/utils/variant_call_filter_factory.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/cnv_model.cpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/cnv_model.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/cnv_model.hpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/cnv_model.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/coalescent_model.cpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/coalescent_model.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/coalescent_model.hpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/coalescent_model.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/germline_likelihood_model.cpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/germline_likelihood_model.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/germline_likelihood_model.hpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/germline_likelihood_model.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/individual_model.cpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/individual_model.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/individual_model.hpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/individual_model.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/population_model.cpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/population_model.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/population_model.hpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/population_model.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/somatic_mutation_model.hpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/somatic_mutation_model.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/tumour_model.cpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/tumour_model.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/tumour_model.hpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/tumour_model.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/genotype/variational_bayes_mixture_model.hpp" afterPath="$PROJECT_DIR$/src/core/models/genotype/variational_bayes_mixture_model.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/haplotype_likelihood_cache.hpp" afterPath="$PROJECT_DIR$/src/core/models/haplotype_likelihood_cache.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/haplotype_likelihood_model.cpp" afterPath="$PROJECT_DIR$/src/core/models/haplotype_likelihood_model.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/haplotype_likelihood_model.hpp" afterPath="$PROJECT_DIR$/src/core/models/haplotype_likelihood_model.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/pairhmm/pair_hmm.cpp" afterPath="$PROJECT_DIR$/src/core/models/pairhmm/pair_hmm.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/readerror/hiseq_indel_error_model.cpp" afterPath="$PROJECT_DIR$/src/core/models/readerror/hiseq_indel_error_model.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/models/readerror/indel_error_model.cpp" afterPath="$PROJECT_DIR$/src/core/models/readerror/indel_error_model.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/octopus.cpp" afterPath="$PROJECT_DIR$/src/core/octopus.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/coretools.hpp" afterPath="$PROJECT_DIR$/src/core/tools/coretools.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/hapgen/genome_walker.cpp" afterPath="$PROJECT_DIR$/src/core/tools/hapgen/genome_walker.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/hapgen/genome_walker.hpp" afterPath="$PROJECT_DIR$/src/core/tools/hapgen/genome_walker.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/hapgen/haplotype_generator.cpp" afterPath="$PROJECT_DIR$/src/core/tools/hapgen/haplotype_generator.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/hapgen/haplotype_generator.hpp" afterPath="$PROJECT_DIR$/src/core/tools/hapgen/haplotype_generator.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/hapgen/haplotype_tree.cpp" afterPath="$PROJECT_DIR$/src/core/tools/hapgen/haplotype_tree.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/hapgen/haplotype_tree.hpp" afterPath="$PROJECT_DIR$/src/core/tools/hapgen/haplotype_tree.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/phaser/phaser.cpp" afterPath="$PROJECT_DIR$/src/core/tools/phaser/phaser.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/phaser/phaser.hpp" afterPath="$PROJECT_DIR$/src/core/tools/phaser/phaser.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/cigar_scanner.cpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/cigar_scanner.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/cigar_scanner.hpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/cigar_scanner.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/downloader.cpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/downloader.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/downloader.hpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/downloader.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/dynamic_cigar_scanner.hpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/dynamic_cigar_scanner.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/local_reassembler.cpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/local_reassembler.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/local_reassembler.hpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/local_reassembler.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/randomiser.cpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/randomiser.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/randomiser.hpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/randomiser.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/utils/assembler.cpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/utils/assembler.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/utils/assembler.hpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/utils/assembler.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/utils/global_aligner.hpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/utils/global_aligner.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/variant_generator.cpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/variant_generator.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/variant_generator.hpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/variant_generator.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/vcf_extractor.cpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/vcf_extractor.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/tools/vargen/vcf_extractor.hpp" afterPath="$PROJECT_DIR$/src/core/tools/vargen/vcf_extractor.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/types/allele.cpp" afterPath="$PROJECT_DIR$/src/core/types/allele.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/types/allele.hpp" afterPath="$PROJECT_DIR$/src/core/types/allele.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/types/cancer_genotype.hpp" afterPath="$PROJECT_DIR$/src/core/types/cancer_genotype.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/types/genotype.hpp" afterPath="$PROJECT_DIR$/src/core/types/genotype.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/types/haplotype.cpp" afterPath="$PROJECT_DIR$/src/core/types/haplotype.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/types/haplotype.hpp" afterPath="$PROJECT_DIR$/src/core/types/haplotype.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/types/pedigree.hpp" afterPath="$PROJECT_DIR$/src/core/types/pedigree.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/types/trio.hpp" afterPath="$PROJECT_DIR$/src/core/types/trio.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/types/variant.cpp" afterPath="$PROJECT_DIR$/src/core/types/variant.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/core/types/variant.hpp" afterPath="$PROJECT_DIR$/src/core/types/variant.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/read/htslib_sam_facade.cpp" afterPath="$PROJECT_DIR$/src/io/read/htslib_sam_facade.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/read/htslib_sam_facade.hpp" afterPath="$PROJECT_DIR$/src/io/read/htslib_sam_facade.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/read/read_manager.cpp" afterPath="$PROJECT_DIR$/src/io/read/read_manager.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/read/read_manager.hpp" afterPath="$PROJECT_DIR$/src/io/read/read_manager.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/read/read_reader.hpp" afterPath="$PROJECT_DIR$/src/io/read/read_reader.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/read/read_reader_impl.hpp" afterPath="$PROJECT_DIR$/src/io/read/read_reader_impl.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/reference/caching_fasta.cpp" afterPath="$PROJECT_DIR$/src/io/reference/caching_fasta.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/reference/caching_fasta.hpp" afterPath="$PROJECT_DIR$/src/io/reference/caching_fasta.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/reference/fasta.cpp" afterPath="$PROJECT_DIR$/src/io/reference/fasta.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/reference/fasta.hpp" afterPath="$PROJECT_DIR$/src/io/reference/fasta.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/reference/reference_genome.hpp" afterPath="$PROJECT_DIR$/src/io/reference/reference_genome.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/reference/reference_reader.hpp" afterPath="$PROJECT_DIR$/src/io/reference/reference_reader.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/reference/threadsafe_fasta.cpp" afterPath="$PROJECT_DIR$/src/io/reference/threadsafe_fasta.cpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/region/region_parser.cpp" afterPath="$PROJECT_DIR$/src/io/region/region_parser.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/region/region_parser.hpp" afterPath="$PROJECT_DIR$/src/io/region/region_parser.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/variant/htslib_bcf_facade.cpp" afterPath="$PROJECT_DIR$/src/io/variant/htslib_bcf_facade.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/variant/htslib_bcf_facade.hpp" afterPath="$PROJECT_DIR$/src/io/variant/htslib_bcf_facade.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/variant/vcf.hpp" afterPath="$PROJECT_DIR$/src/io/variant/vcf.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/variant/vcf_header.hpp" afterPath="$PROJECT_DIR$/src/io/variant/vcf_header.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/variant/vcf_parser.cpp" afterPath="$PROJECT_DIR$/src/io/variant/vcf_parser.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/variant/vcf_record.hpp" afterPath="$PROJECT_DIR$/src/io/variant/vcf_record.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/variant/vcf_spec.hpp" afterPath="$PROJECT_DIR$/src/io/variant/vcf_spec.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/variant/vcf_utils.cpp" afterPath="$PROJECT_DIR$/src/io/variant/vcf_utils.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/io/variant/vcf_writer.cpp" afterPath="$PROJECT_DIR$/src/io/variant/vcf_writer.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/logging/error_handler.cpp" afterPath="$PROJECT_DIR$/src/logging/error_handler.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/logging/error_handler.hpp" afterPath="$PROJECT_DIR$/src/logging/error_handler.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/logging/main_logging.cpp" afterPath="$PROJECT_DIR$/src/logging/main_logging.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/logging/progress_meter.cpp" afterPath="$PROJECT_DIR$/src/logging/progress_meter.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/logging/progress_meter.hpp" afterPath="$PROJECT_DIR$/src/logging/progress_meter.hpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main.cpp" afterPath="$PROJECT_DIR$/src/main.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test.py" afterPath="$PROJECT_DIR$/test.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/readpipe/downsampling/downsampler.cpp" afterPath="$PROJECT_DIR$/src/readpipe/downsampling/downsampler.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/readpipe/downsampling/downsampler.hpp" afterPath="$PROJECT_DIR$/src/readpipe/downsampling/downsampler.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/readpipe/filtering/read_filter.cpp" afterPath="$PROJECT_DIR$/src/readpipe/filtering/read_filter.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/readpipe/filtering/read_filter.hpp" afterPath="$PROJECT_DIR$/src/readpipe/filtering/read_filter.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/readpipe/read_pipe.cpp" afterPath="$PROJECT_DIR$/src/readpipe/read_pipe.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/readpipe/read_pipe.hpp" afterPath="$PROJECT_DIR$/src/readpipe/read_pipe.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/readpipe/read_pipe_fwd.hpp" afterPath="$PROJECT_DIR$/src/readpipe/read_pipe_fwd.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/readpipe/transformers/read_transform.hpp" afterPath="$PROJECT_DIR$/src/readpipe/transformers/read_transform.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/readpipe/transformers/read_transformer.hpp" afterPath="$PROJECT_DIR$/src/readpipe/transformers/read_transformer.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/utils/coverage_tracker.hpp" afterPath="$PROJECT_DIR$/src/utils/coverage_tracker.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/utils/mappable_algorithms.hpp" afterPath="$PROJECT_DIR$/src/utils/mappable_algorithms.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/utils/path_utils.cpp" afterPath="$PROJECT_DIR$/src/utils/path_utils.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/utils/read_algorithms.hpp" afterPath="$PROJECT_DIR$/src/utils/read_algorithms.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/utils/read_size_estimator.hpp" afterPath="$PROJECT_DIR$/src/utils/read_size_estimator.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/utils/read_stats.hpp" afterPath="$PROJECT_DIR$/src/utils/read_stats.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/utils/sequence_complexity.hpp" afterPath="$PROJECT_DIR$/src/utils/sequence_complexity.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/utils/sequence_utils.hpp" afterPath="$PROJECT_DIR$/src/utils/sequence_utils.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/mock/mock_reference.cpp" afterPath="$PROJECT_DIR$/test/mock/mock_reference.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/mock/mock_reference.hpp" afterPath="$PROJECT_DIR$/test/mock/mock_reference.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/mock/mock_variant_generator.hpp" afterPath="$PROJECT_DIR$/test/mock/mock_variant_generator.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/mock/utils.cpp" afterPath="$PROJECT_DIR$/test/mock/utils.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/mock/utils.hpp" afterPath="$PROJECT_DIR$/test/mock/utils.hpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/basics/aligned_read_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/basics/aligned_read_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/basics/cigar_string_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/basics/cigar_string_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/basics/contig_region_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/basics/contig_region_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/basics/phred_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/basics/phred_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/concepts/comparable_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/concepts/comparable_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/concepts/mappable_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/concepts/mappable_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/config/option_parser_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/config/option_parser_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/containers/mappable_flat_set_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/containers/mappable_flat_set_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/tools/assembler_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/tools/assembler_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/tools/cigar_scanner_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/tools/cigar_scanner_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/tools/genome_walker_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/tools/genome_walker_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/tools/global_aligner_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/tools/global_aligner_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/tools/haplotype_generator_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/tools/haplotype_generator_tests.cpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/tools/haplotype_tree_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/tools/haplotype_tree_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/tools/phaser_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/tools/phaser_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/tools/variant_generator_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/tools/variant_generator_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/types/allele_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/types/allele_tests.cpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/types/genotype_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/types/genotype_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/types/haplotype_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/types/haplotype_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/core/types/variant_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/core/types/variant_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/io/read_manager_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/io/read_manager_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/io/reference_genome_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/io/reference_genome_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/io/region_parser_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/io/region_parser_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/io/vcf_reader_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/io/vcf_reader_tests.cpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/readpipe/read_filterer_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/readpipe/read_filterer_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/readpipe/read_pipe_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/readpipe/read_pipe_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/readpipe/read_transformer_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/readpipe/read_transformer_tests.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/unit/utils/mappable_algorithm_tests.cpp" afterPath="$PROJECT_DIR$/test/unit/utils/mappable_algorithm_tests.cpp" />
     </list>
     <ignored path="octopus.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -70,52 +235,7 @@
     <favorites_list name="octopus" />
   </component>
   <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="main.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main.cpp">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="552">
-              <caret line="64" column="4" selection-start-line="64" selection-start-column="4" selection-end-line="64" selection-end-column="4" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="CMakeLists.txt" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/CMakeLists.txt">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="450">
-              <caret line="153" column="0" selection-start-line="153" selection-start-column="0" selection-end-line="153" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="option_collation.cpp" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/config/option_collation.cpp">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1395">
-              <caret line="106" column="0" selection-start-line="106" selection-start-column="0" selection-end-line="109" selection-end-column="1" />
-              <folding>
-                <element signature="e#133#164#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="option_parser.hpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/config/option_parser.hpp">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-3">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding>
-                <element signature="e#186#203#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -123,19 +243,57 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/CMakeLists.txt" />
-        <option value="$PROJECT_DIR$/install.py" />
-        <option value="$PROJECT_DIR$/test.py" />
-        <option value="$PROJECT_DIR$/test/data/config.txt" />
-        <option value="$PROJECT_DIR$/src/main.cpp" />
-        <option value="$PROJECT_DIR$/test/unit/core/tools/haplotype_tree_tests.cpp" />
-        <option value="$PROJECT_DIR$/test/unit/core/types/genotype_tests.cpp" />
-        <option value="$PROJECT_DIR$/test/unit/readpipe/read_filterer_tests.cpp" />
-        <option value="$PROJECT_DIR$/src/utils/path_utils.cpp" />
-        <option value="$PROJECT_DIR$/src/CMakeLists.txt" />
-        <option value="$PROJECT_DIR$/src/utils/path_utils.hpp" />
-        <option value="$PROJECT_DIR$/src/config/option_collation.cpp" />
+        <option value="$PROJECT_DIR$/src/containers/mappable_flat_set.hpp" />
+        <option value="$PROJECT_DIR$/src/containers/mappable_flat_multi_set.hpp" />
+        <option value="$PROJECT_DIR$/src/config/common.hpp" />
+        <option value="$PROJECT_DIR$/src/config/common.cpp" />
+        <option value="$PROJECT_DIR$/src/config/octopus_vcf.cpp" />
+        <option value="$PROJECT_DIR$/src/config/octopus_vcf.hpp" />
         <option value="$PROJECT_DIR$/src/config/option_parser.cpp" />
+        <option value="$PROJECT_DIR$/src/config/option_parser.hpp" />
+        <option value="$PROJECT_DIR$/src/config/option_collation.hpp" />
+        <option value="$PROJECT_DIR$/src/config/option_collation.cpp" />
+        <option value="$PROJECT_DIR$/src/concepts/equitable.hpp" />
+        <option value="$PROJECT_DIR$/src/concepts/mappable.hpp" />
+        <option value="$PROJECT_DIR$/src/basics/aligned_read.hpp" />
+        <option value="$PROJECT_DIR$/src/basics/cigar_string.hpp" />
+        <option value="$PROJECT_DIR$/src/basics/contig_region.hpp" />
+        <option value="$PROJECT_DIR$/src/basics/genomic_region.hpp" />
+        <option value="$PROJECT_DIR$/src/basics/mappable_reference_wrapper.hpp" />
+        <option value="$PROJECT_DIR$/src/basics/phred.hpp" />
+        <option value="$PROJECT_DIR$/test/unit/utils/mappable_algorithm_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/readpipe/read_filterer_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/readpipe/read_pipe_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/readpipe/read_transformer_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/io/read_manager_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/io/reference_genome_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/io/region_parser_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/io/vcf_reader_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/types/allele_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/types/genotype_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/types/haplotype_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/types/variant_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/tools/assembler_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/tools/cigar_scanner_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/tools/genome_walker_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/tools/global_aligner_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/tools/haplotype_generator_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/tools/phaser_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/core/tools/variant_generator_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/containers/mappable_flat_set_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/config/option_parser_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/concepts/comparable_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/concepts/mappable_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/basics/aligned_read_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/basics/cigar_string_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/basics/contig_region_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/unit/basics/phred_tests.cpp" />
+        <option value="$PROJECT_DIR$/test/mock/mock_reference.cpp" />
+        <option value="$PROJECT_DIR$/test/mock/mock_reference.hpp" />
+        <option value="$PROJECT_DIR$/test/mock/mock_variant_generator.hpp" />
+        <option value="$PROJECT_DIR$/test/mock/utils.hpp" />
+        <option value="$PROJECT_DIR$/test/mock/utils.cpp" />
+        <option value="$PROJECT_DIR$/test/data/mock_objects.hpp" />
       </list>
     </option>
   </component>
@@ -193,52 +351,6 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="octopus" />
-              <option name="myItemType" value="com.jetbrains.cidr.projectView.CidrFilesViewHelper$MyProjectTreeStructure$1" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="octopus" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="test" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="octopus" />
-              <option name="myItemType" value="com.jetbrains.cidr.projectView.CidrFilesViewHelper$MyProjectTreeStructure$1" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="octopus" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="octopus" />
-              <option name="myItemType" value="com.jetbrains.cidr.projectView.CidrFilesViewHelper$MyProjectTreeStructure$1" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="octopus" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="utils" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
         </subPane>
       </pane>
     </panes>
@@ -246,11 +358,12 @@
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="FullScreen" value="true" />
-    <property name="settings.editor.selected.configurable" value="fileTemplates" />
+    <property name="settings.editor.selected.configurable" value="preferences.sourceCode.C/C++" />
     <property name="settings.editor.splitter.proportion" value="0.2" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/test/mock" />
       <recent name="$PROJECT_DIR$/src" />
     </key>
   </component>
@@ -462,12 +575,12 @@
       <updated>1472678983571</updated>
       <workItem from="1472678986554" duration="208000" />
       <workItem from="1472679503139" duration="2042000" />
-      <workItem from="1472681688642" duration="10095000" />
+      <workItem from="1472681688642" duration="15973000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="12345000" />
+    <option name="totallyTimeSpent" value="18223000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -482,7 +595,7 @@
     <frame x="0" y="0" width="1280" height="800" extended-state="0" />
     <editor active="false" />
     <layout>
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.14455917" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.17474186" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32876712" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32876712" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.29041097" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
@@ -513,17 +626,17 @@
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="true" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32876712" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32876712" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="12" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32876712" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.17474186" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32876712" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.2494043" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.46849316" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.46849316" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
     </layout-to-restore>
   </component>
   <component name="Vcs.Log.UiProperties">
@@ -539,239 +652,416 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="20" />
+      <option name="time" value="24" />
     </breakpoint-manager>
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/basics/aligned_read.hpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1920">
-          <caret line="128" column="3" selection-start-line="128" selection-start-column="3" selection-end-line="128" selection-end-column="3" />
-          <folding>
-            <element signature="e#1095#1107#0" expanded="true" />
-            <element signature="e#2574#2695#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test/data/config.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/config/option_parser.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#133#161#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/basics/aligned_read.hpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="525">
-          <caret line="35" column="3" selection-start-line="35" selection-start-column="3" selection-end-line="35" selection-end-column="3" />
-          <folding>
-            <element signature="e#1095#1107#0" expanded="true" />
-            <element signature="e#2574#2695#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/install.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/basics/aligned_read.hpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#1095#1107#0" expanded="true" />
-            <element signature="e#2574#2695#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/basics/cigar_string.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="255">
-          <caret line="24" column="0" selection-start-line="24" selection-start-column="0" selection-end-line="24" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/basics/aligned_read.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="376">
-          <caret line="134" column="0" selection-start-line="134" selection-start-column="0" selection-end-line="134" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/basics/aligned_read.hpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="105">
-          <caret line="128" column="3" selection-start-line="128" selection-start-column="3" selection-end-line="128" selection-end-column="3" />
-          <folding>
-            <element signature="e#1095#1107#0" expanded="true" />
-            <element signature="e#2574#2695#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file:///usr/local/Cellar/llvm/3.8.1/include/c++/v1/map">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="120">
-          <caret line="1271" column="0" selection-start-line="1271" selection-start-column="0" selection-end-line="1271" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="120">
-          <caret line="45" column="50" selection-start-line="45" selection-start-column="50" selection-end-line="45" selection-end-column="50" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/install.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="255">
-          <caret line="54" column="48" selection-start-line="54" selection-start-column="48" selection-end-line="54" selection-end-column="48" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="150">
-          <caret line="10" column="0" selection-start-line="10" selection-start-column="0" selection-end-line="10" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test/data/config.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="105">
-          <caret line="7" column="0" selection-start-line="7" selection-start-column="0" selection-end-line="7" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test/mock_options.hpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-2643">
-          <caret line="75" column="28" selection-start-line="75" selection-start-column="13" selection-end-line="75" selection-end-column="28" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test/test_common.hpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1995">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/haplotype_tree_tests.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1151">
-          <caret line="13" column="0" selection-start-line="13" selection-start-column="0" selection-end-line="13" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/test/unit/readpipe/read_filterer_tests.cpp">
       <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="120">
+          <caret line="13" column="37" selection-start-line="13" selection-start-column="37" selection-end-line="13" selection-end-column="37" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/readpipe/downsampler_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/logging/progress_meter_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/io/read_manager_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="180">
+          <caret line="12" column="36" selection-start-line="12" selection-start-column="36" selection-end-line="12" selection-end-column="36" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/io/reference_genome_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="195">
+          <caret line="13" column="40" selection-start-line="13" selection-start-column="40" selection-end-line="13" selection-end-column="40" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/io/region_parser_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="150">
+          <caret line="10" column="38" selection-start-line="10" selection-start-column="38" selection-end-line="10" selection-end-column="38" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/io/vcf_reader_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="150">
+          <caret line="10" column="20" selection-start-line="10" selection-start-column="20" selection-end-line="10" selection-end-column="20" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/types/allele_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="105">
-          <caret line="12" column="0" selection-start-line="12" selection-start-column="0" selection-end-line="12" selection-end-column="0" />
+          <caret line="7" column="35" selection-start-line="7" selection-start-column="35" selection-end-line="7" selection-end-column="35" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/test/unit/core/types/genotype_tests.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="139">
-          <caret line="10" column="2" selection-start-line="10" selection-start-column="2" selection-end-line="10" selection-end-column="2" />
+        <state relative-caret-position="300">
+          <caret line="20" column="12" selection-start-line="20" selection-start-column="12" selection-end-line="20" selection-end-column="12" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main.cpp">
+    <entry file="file://$PROJECT_DIR$/test/unit/core/types/haplotype_tests.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="552">
-          <caret line="64" column="4" selection-start-line="64" selection-start-column="4" selection-end-line="64" selection-end-column="4" />
+        <state relative-caret-position="225">
+          <caret line="15" column="40" selection-start-line="15" selection-start-column="40" selection-end-line="15" selection-end-column="40" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/config/option_parser.hpp">
+    <entry file="file://$PROJECT_DIR$/test/unit/core/types/variant_tests.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-3">
+        <state relative-caret-position="180">
+          <caret line="12" column="40" selection-start-line="12" selection-start-column="40" selection-end-line="12" selection-end-column="40" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/assembler_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="105">
+          <caret line="7" column="48" selection-start-line="7" selection-start-column="48" selection-end-line="7" selection-end-column="48" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/cigar_scanner_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="75">
+          <caret line="5" column="50" selection-start-line="5" selection-start-column="50" selection-end-line="5" selection-end-column="50" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/genome_walker_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="75">
+          <caret line="5" column="46" selection-start-line="5" selection-start-column="46" selection-end-line="5" selection-end-column="46" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/global_aligner_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="105">
+          <caret line="7" column="53" selection-start-line="7" selection-start-column="53" selection-end-line="7" selection-end-column="53" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/haplotype_generator_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="75">
+          <caret line="5" column="52" selection-start-line="5" selection-start-column="52" selection-end-line="5" selection-end-column="52" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/haplotype_tree_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#186#203#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/utils/path_utils.hpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="270">
-          <caret line="18" column="0" selection-start-line="18" selection-start-column="0" selection-end-line="18" selection-end-column="0" />
-          <folding>
-            <element signature="e#180#216#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/utils/path_utils.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="222">
-          <caret line="77" column="0" selection-start-line="77" selection-start-column="0" selection-end-line="77" selection-end-column="0" />
-          <folding>
-            <element signature="e#133#158#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/config/option_parser.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="150">
-          <caret line="473" column="39" selection-start-line="473" selection-start-column="39" selection-end-line="473" selection-end-column="39" />
-          <folding>
-            <element signature="e#133#161#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/CMakeLists.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="450">
-          <caret line="153" column="0" selection-start-line="153" selection-start-column="0" selection-end-line="153" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/config/option_collation.cpp">
+    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/local_reassembler.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1395">
-          <caret line="106" column="0" selection-start-line="106" selection-start-column="0" selection-end-line="109" selection-end-column="1" />
-          <folding>
-            <element signature="e#133#164#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/phaser_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="75">
+          <caret line="5" column="39" selection-start-line="5" selection-start-column="39" selection-end-line="5" selection-end-column="39" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/variant_generator_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="75">
+          <caret line="5" column="50" selection-start-line="5" selection-start-column="50" selection-end-line="5" selection-end-column="50" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/tools/vcf_extractor_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/models/coalescent_model_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/models/germline_likelihood_model_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/models/haplotype_likelihood_cache_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/models/haplotype_likelihood_model_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/models/indel_error_model_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/models/individual_model_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/models/kmer_mapper_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/models/pair_hmm_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/models/snv_error_model_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/core/callers/caller_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/containers/mappable_flat_set_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="135">
+          <caret line="9" column="35" selection-start-line="9" selection-start-column="35" selection-end-line="9" selection-end-column="35" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/config/option_parser_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="345">
+          <caret line="23" column="0" selection-start-line="23" selection-start-column="0" selection-end-line="23" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/concepts/mappable_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="75">
+          <caret line="5" column="32" selection-start-line="5" selection-start-column="32" selection-end-line="5" selection-end-column="32" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/concepts/comparable_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="120">
+          <caret line="8" column="34" selection-start-line="8" selection-start-column="34" selection-end-line="8" selection-end-column="34" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/basics/aligned_read_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="225">
+          <caret line="15" column="40" selection-start-line="15" selection-start-column="40" selection-end-line="15" selection-end-column="40" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/basics/cigar_string_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="105">
+          <caret line="7" column="34" selection-start-line="7" selection-start-column="34" selection-end-line="7" selection-end-column="34" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/basics/contig_region_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="105">
+          <caret line="7" column="35" selection-start-line="7" selection-start-column="35" selection-end-line="7" selection-end-column="35" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/basics/genomic_region_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/unit/basics/phred_tests.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="240">
+          <caret line="16" column="27" selection-start-line="16" selection-start-column="27" selection-end-line="16" selection-end-column="27" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/regression/regression.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/mock/mock_read_manager.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/mock/mock_read_manager.hpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/mock/mock_reference.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="135">
+          <caret line="9" column="30" selection-start-line="9" selection-start-column="30" selection-end-line="9" selection-end-column="30" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/mock/mock_reference.hpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="180">
+          <caret line="12" column="44" selection-start-line="12" selection-start-column="44" selection-end-line="12" selection-end-column="44" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/mock/mock_variant_generator.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/mock/mock_variant_generator.hpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="360">
+          <caret line="24" column="2" selection-start-line="24" selection-start-column="2" selection-end-line="24" selection-end-column="2" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/mock/utils.hpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="180">
+          <caret line="12" column="34" selection-start-line="12" selection-start-column="34" selection-end-line="12" selection-end-column="34" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/mock/utils.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="105">
+          <caret line="7" column="10" selection-start-line="7" selection-start-column="10" selection-end-line="7" selection-end-column="10" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/mock/mock_objects.hpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="225">
+          <caret line="15" column="34" selection-start-line="15" selection-start-column="34" selection-end-line="15" selection-end-column="34" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/benchmark/benchmark_utils.hpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>

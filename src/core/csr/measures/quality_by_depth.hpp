@@ -14,13 +14,14 @@ namespace octopus {
 
 class VcfRecord;
 
-namespace csr
+namespace csr  {
+
+class QualityByDepth : public Measure
 {
-    class QualityByDepth : public Measure
-    {
-        virtual double operator()(const VcfRecord& call) const override;
-        virtual std::string name() const override;
-    };
+    virtual double operator()(const VcfRecord &call) const override;
+    virtual std::string name() const override;
+};
+
 } // namespace csr
 } // namespace octopus
 

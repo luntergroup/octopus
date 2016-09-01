@@ -12,15 +12,15 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include <config/common.hpp>
-#include <config/option_parser.hpp>
-#include <basics/genomic_region.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <io/read/read_manager.hpp>
-#include <readpipe/read_pipe_fwd.hpp>
-#include <core/callers/caller_factory.hpp>
-#include <io/variant/vcf_writer.hpp>
-#include <logging/progress_meter.hpp>
+#include "config/common.hpp"
+#include "config/option_parser.hpp"
+#include "basics/genomic_region.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "io/read/read_manager.hpp"
+#include "readpipe/read_pipe_fwd.hpp"
+#include "core/callers/caller_factory.hpp"
+#include "io/variant/vcf_writer.hpp"
+#include "logging/progress_meter.hpp"
 
 namespace octopus {
 

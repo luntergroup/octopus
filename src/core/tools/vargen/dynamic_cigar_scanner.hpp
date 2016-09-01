@@ -11,10 +11,9 @@
 #include <functional>
 #include <memory>
 
-#include <basics/aligned_read.hpp>
-#include <core/types/variant.hpp>
-#include <utils/coverage_tracker.hpp>
-
+#include "basics/aligned_read.hpp"
+#include "core/types/variant.hpp"
+#include "utils/coverage_tracker.hpp"
 #include "variant_generator.hpp"
 
 namespace octopus {

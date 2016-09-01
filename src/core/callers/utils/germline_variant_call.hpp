@@ -9,7 +9,7 @@
 #include <vector>
 #include <utility>
 
-#include <core/types/allele.hpp>
+#include "core/types/allele.hpp"
 
 namespace octopus {
 

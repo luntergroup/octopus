@@ -258,6 +258,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/config/config.hpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/timers.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/containers/mappable_flat_multi_set.hpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/containers/mappable_map.hpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/containers/mappable_flat_set.hpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/containers/matrix_map.hpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/containers/probability_matrix.hpp" isTestSource="false" />

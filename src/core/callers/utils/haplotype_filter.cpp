@@ -14,10 +14,10 @@
 
 #include <boost/iterator/transform_iterator.hpp>
 
-#include <config/common.hpp>
-#include <core/models/haplotype_likelihood_cache.hpp>
-#include <utils/maths.hpp>
-#include <logging/logging.hpp>
+#include "config/common.hpp"
+#include "core/models/haplotype_likelihood_cache.hpp"
+#include "utils/maths.hpp"
+#include "logging/logging.hpp"
 
 namespace octopus {
 

@@ -12,11 +12,11 @@
 
 #include <boost/range/iterator_range.hpp>
 
-#include <core/types/variant.hpp>
-#include <core/types/haplotype.hpp>
-#include <concepts/mappable.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <logging/logging.hpp>
+#include "core/types/variant.hpp"
+#include "core/types/haplotype.hpp"
+#include "concepts/mappable.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "logging/logging.hpp"
 
 #include <iostream> // DEBUG
 #include "timers.hpp"

@@ -9,8 +9,7 @@
 #include <cassert>
 #include <iostream>
 
-#include <utils/maths.hpp>
-
+#include "utils/maths.hpp"
 #include "germline_likelihood_model.hpp"
 
 #include "timers.hpp"

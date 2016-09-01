@@ -11,9 +11,8 @@
 #include <functional>
 #include <memory>
 
-#include <basics/aligned_read.hpp>
-#include <core/types/variant.hpp>
-
+#include "basics/aligned_read.hpp"
+#include "core/types/variant.hpp"
 #include "variant_generator.hpp"
 
 namespace octopus {

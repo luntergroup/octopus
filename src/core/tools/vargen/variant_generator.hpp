@@ -17,12 +17,12 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 
-#include <config/common.hpp>
-#include <logging/logging.hpp>
-#include <core/types/variant.hpp>
-#include <containers/mappable_flat_multi_set.hpp>
-#include <io/reference/reference_genome.hpp>
-#include <io/variant/vcf_reader.hpp>
+#include "config/common.hpp"
+#include "logging/logging.hpp"
+#include "core/types/variant.hpp"
+#include "containers/mappable_flat_multi_set.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "io/variant/vcf_reader.hpp"
 
 namespace octopus {
 

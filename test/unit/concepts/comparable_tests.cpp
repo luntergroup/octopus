@@ -5,8 +5,8 @@
 
 #include <iostream>
 
-#include <concepts/equitable.hpp>
-#include <concepts/comparable.hpp>
+#include "concepts/equitable.hpp"
+#include "concepts/comparable.hpp"
 
 namespace octopus { namespace test {
 

@@ -10,14 +10,13 @@
 
 #include <boost/optional.hpp>
 
-#include <basics/genomic_region.hpp>
-#include <basics/aligned_read.hpp>
-
-#include <io/read/read_manager.hpp>
-#include <containers/mappable_flat_set.hpp>
-#include <containers/mappable_flat_multi_set.hpp>
-#include <containers/mappable_map.hpp>
-#include <logging/logging.hpp>
+#include "basics/genomic_region.hpp"
+#include "basics/aligned_read.hpp"
+#include "io/read/read_manager.hpp"
+#include "containers/mappable_flat_set.hpp"
+#include "containers/mappable_flat_multi_set.hpp"
+#include "containers/mappable_map.hpp"
+#include "logging/logging.hpp"
 
 namespace octopus {
 

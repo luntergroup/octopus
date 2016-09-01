@@ -9,8 +9,8 @@
 
 #include <boost/optional.hpp>
 
-#include <config/common.hpp>
-#include <io/read/read_manager.hpp>
+#include "config/common.hpp"
+#include "io/read/read_manager.hpp"
 
 namespace octopus {
 

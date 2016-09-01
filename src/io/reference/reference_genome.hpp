@@ -12,8 +12,7 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include <basics/genomic_region.hpp>
-
+#include "basics/genomic_region.hpp"
 #include "reference_reader.hpp"
 
 namespace octopus {

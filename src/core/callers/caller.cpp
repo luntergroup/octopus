@@ -11,12 +11,11 @@
 #include <cassert>
 #include <iostream>
 
-#include <concepts/mappable.hpp>
-#include <utils/mappable_algorithms.hpp>
-#include <utils/read_stats.hpp>
-#include <utils/maths.hpp>
-#include <core/models/haplotype_likelihood_model.hpp>
-
+#include "concepts/mappable.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/read_stats.hpp"
+#include "utils/maths.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 #include "utils/haplotype_filter.hpp"
 #include "utils/call.hpp"
 #include "utils/variant_call.hpp"
@@ -380,6 +379,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
             haplotype_generator.clear_progress();
             haplotype_likelihoods.clear();
+            progress_meter.log_completed(active_region);
             continue;
         }
         
@@ -391,7 +391,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                     stream(*debug_log_) << "No haplotypes were generated in the active region";
                 } else {
                     stream(*debug_log_) << "Generated " << haplotypes.size()
-                                << " haplotypes but active region is after call region";
+                                        << " haplotypes but active region is after call region";
                 }
             }
             progress_meter.log_completed(active_region);
@@ -407,7 +407,8 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         if (!refcalls_requested() && !has_coverage(active_reads)) {
             if (debug_log_) stream(*debug_log_) << "Skipping active region as there are no active reads";
             continue;
-        } else if (debug_log_) {
+        }
+        if (debug_log_) {
             stream(*debug_log_) << "There are " << count_reads(active_reads) << " active reads";
         }
         

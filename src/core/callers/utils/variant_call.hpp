@@ -4,9 +4,8 @@
 #ifndef variant_call_hpp
 #define variant_call_hpp
 
-#include <core/types/allele.hpp>
-#include <core/types/variant.hpp>
-
+#include "core/types/allele.hpp"
+#include "core/types/variant.hpp"
 #include "call.hpp"
 
 namespace octopus {

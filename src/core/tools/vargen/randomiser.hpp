@@ -8,9 +8,10 @@
 #include <functional>
 #include <memory>
 
+#include "basics/aligned_read.hpp"
+#include "core/types/variant.hpp"
 #include "variant_generator.hpp"
-#include <basics/aligned_read.hpp>
-#include <core/types/variant.hpp>
+
 
 namespace octopus {
     

@@ -10,12 +10,12 @@
 #include <iterator>
 #include <vector>
 
+#include "basics/genomic_region.hpp"
+#include "basics/aligned_read.hpp"
+#include "io/read/read_manager.hpp"
+#include "utils/mappable_algorithms.hpp"
 #include "test_common.hpp"
-#include <basics/genomic_region.hpp>
-#include <basics/aligned_read.hpp>
-#include <io/read/read_manager.hpp>
 #include "mock_objects.hpp"
-#include <utils/mappable_algorithms.hpp>
 
 using std::cout;
 using std::endl;

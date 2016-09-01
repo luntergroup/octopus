@@ -19,9 +19,8 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <concepts/equitable.hpp>
-#include <concepts/mappable.hpp>
-
+#include "concepts/equitable.hpp"
+#include "concepts/mappable.hpp"
 #include "allele.hpp"
 #include "haplotype.hpp"
 

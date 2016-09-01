@@ -7,9 +7,8 @@
 #include <vector>
 #include <cstddef>
 
-#include <config/config.hpp>
-#include <utils/string_utils.hpp>
-
+#include "config/config.hpp"
+#include "utils/string_utils.hpp"
 #include "logging.hpp"
 
 namespace octopus {

@@ -4,8 +4,8 @@
 #ifndef coretools_hpp
 #define coretools_hpp
 
-#include <core/tools/vargen/variant_generator.hpp>
-#include <core/tools/hapgen/haplotype_generator.hpp>
-#include <core/tools/phaser/phaser.hpp>
+#include "core/tools/vargen/variant_generator.hpp"
+#include "core/tools/hapgen/haplotype_generator.hpp"
+#include "core/tools/phaser/phaser.hpp"
 
 #endif

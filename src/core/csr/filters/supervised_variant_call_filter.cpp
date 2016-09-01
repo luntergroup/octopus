@@ -3,8 +3,8 @@
 
 #include "supervised_variant_call_filter.hpp"
 
-namespace octopus { namespace csr
-{
+namespace octopus { namespace csr  {
+
     
 } // namespace csr
 } // namespace octopus

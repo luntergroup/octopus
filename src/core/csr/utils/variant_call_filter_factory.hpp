@@ -4,15 +4,16 @@
 #ifndef variant_call_filter_factory_hpp
 #define variant_call_filter_factory_hpp
 
-namespace octopus { namespace csr
+namespace octopus { namespace csr  {
+
+class VariantCallFilterFactory
 {
-    class VariantCallFilterFactory
-    {
-    public:
-        
-    private:
-        
-    };
+public:
+
+private:
+
+};
+
 } // namespace csr
 } // namespace octopus
 

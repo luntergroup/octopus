@@ -18,8 +18,8 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional.hpp>
 
-#include <concepts/equitable.hpp>
-#include <concepts/comparable.hpp>
+#include "concepts/equitable.hpp"
+#include "concepts/comparable.hpp"
 
 namespace octopus { namespace coretools { class Assembler; }}
 

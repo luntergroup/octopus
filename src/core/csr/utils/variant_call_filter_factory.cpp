@@ -3,8 +3,9 @@
 
 #include "variant_call_filter_factory.hpp"
 
-namespace octopus { namespace csr
-    {
-        
-    } // namespace csr
+namespace octopus { namespace csr {
+
+
+
+} // namespace csr
 } // namespace octopus

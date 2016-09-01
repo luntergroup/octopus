@@ -6,10 +6,10 @@
 
 #include <cstddef>
 
-#include <config/common.hpp>
-#include <containers/mappable_flat_multi_set.hpp>
-#include <containers/mappable_map.hpp>
-#include <basics/aligned_read.hpp>
+#include "config/common.hpp"
+#include "containers/mappable_flat_multi_set.hpp"
+#include "containers/mappable_map.hpp"
+#include "basics/aligned_read.hpp"
 
 namespace octopus { namespace readpipe {
 

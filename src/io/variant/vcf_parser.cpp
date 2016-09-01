@@ -9,9 +9,7 @@
 #include <boost/optional.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <basics/genomic_region.hpp>
-
-#include <iostream> // TEST
+#include "basics/genomic_region.hpp"
 
 namespace octopus {
 

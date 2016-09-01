@@ -3,7 +3,7 @@
 
 #include "threadsafe_fasta.hpp"
 
-#include <basics/genomic_region.hpp>
+#include "basics/genomic_region.hpp"
 
 namespace octopus { namespace io {
 

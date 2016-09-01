@@ -4,7 +4,7 @@
 #ifndef trio_hpp
 #define trio_hpp
 
-#include <config/common.hpp>
+#include "config/common.hpp"
 
 namespace octopus {
 

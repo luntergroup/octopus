@@ -49,6 +49,7 @@ set(BASICS_SOURCES
 set(CONTAINERS_SOURCES
     containers/mappable_flat_multi_set.hpp
     containers/mappable_flat_set.hpp
+    containers/mappable_map.hpp
     containers/matrix_map.hpp
     containers/probability_matrix.hpp
 )

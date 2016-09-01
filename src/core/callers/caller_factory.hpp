@@ -7,8 +7,7 @@
 #include <unordered_map>
 #include <memory>
 
-#include <basics/genomic_region.hpp>
-
+#include "basics/genomic_region.hpp"
 #include "caller.hpp"
 #include "caller_builder.hpp"
 

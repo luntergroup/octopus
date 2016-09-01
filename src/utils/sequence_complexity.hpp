@@ -9,7 +9,7 @@
 #include <numeric>
 #include <tuple>
 
-#include <tandem/tandem.hpp>
+#include "tandem/tandem.hpp"
 
 inline
 std::vector<unsigned>

@@ -8,8 +8,8 @@
 #include <functional>
 #include <memory>
 
+#include "core/types/variant.hpp"
 #include "variant_generator.hpp"
-#include <core/types/variant.hpp>
 
 namespace octopus {
 

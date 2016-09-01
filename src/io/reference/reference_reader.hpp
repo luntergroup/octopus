@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <memory>
 
-#include <basics/genomic_region.hpp>
+#include "basics/genomic_region.hpp"
 
 namespace octopus { namespace io {
 

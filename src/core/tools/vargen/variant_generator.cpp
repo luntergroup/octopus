@@ -5,10 +5,8 @@
 
 #include <algorithm>
 
-#include <basics/genomic_region.hpp>
-#include <basics/aligned_read.hpp>
-
-// generators
+#include "basics/genomic_region.hpp"
+#include "basics/aligned_read.hpp"
 #include "cigar_scanner.hpp"
 #include "local_reassembler.hpp"
 #include "vcf_extractor.hpp"
