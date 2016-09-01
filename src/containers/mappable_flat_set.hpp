@@ -115,23 +115,16 @@ public:
     template <typename MappableType_>
     bool has_overlapped(const MappableType_& mappable) const;
     template <typename MappableType_>
-    bool has_overlapped(iterator first, iterator last, const MappableType_& mappable) const;
-    template <typename MappableType_>
     bool has_overlapped(const_iterator first, const_iterator last, const MappableType_& mappable) const;
     
     template <typename MappableType_>
     size_type count_overlapped(const MappableType_& mappable) const;
-    template <typename MappableType_>
-    size_type count_overlapped(iterator first, iterator last, const MappableType_& mappable) const;
     template <typename MappableType_>
     size_type count_overlapped(const_iterator first, const_iterator last,
                                const MappableType_& mappable) const;
     
     template <typename MappableType_>
     OverlapRange<const_iterator> overlap_range(const MappableType_& mappable) const;
-    template <typename MappableType_>
-    OverlapRange<iterator> overlap_range(iterator first, iterator last,
-                                         const MappableType_& mappable) const;
     template <typename MappableType_>
     OverlapRange<const_iterator> overlap_range(const_iterator first, const_iterator last,
                                                const MappableType_& mappable) const;
@@ -142,23 +135,16 @@ public:
     template <typename MappableType_>
     bool has_contained(const MappableType_& mappable) const;
     template <typename MappableType_>
-    bool has_contained(iterator first, iterator last, const MappableType_& mappable) const;
-    template <typename MappableType_>
     bool has_contained(const_iterator first, const_iterator last, const MappableType_& mappable) const;
     
     template <typename MappableType_>
     size_type count_contained(const MappableType_& mappable) const;
-    template <typename MappableType_>
-    size_type count_contained(iterator first, iterator last, const MappableType_& mappable) const;
     template <typename MappableType_>
     size_type count_contained(const_iterator first, const_iterator last,
                               const MappableType_& mappable) const;
     
     template <typename MappableType_>
     ContainedRange<const_iterator> contained_range(const MappableType_& mappable) const;
-    template <typename MappableType_>
-    ContainedRange<iterator> contained_range(iterator first, iterator last,
-                                             const MappableType_& mappable) const;
     template <typename MappableType_>
     ContainedRange<const_iterator> contained_range(const_iterator first, const_iterator last,
                                                    const MappableType_& mappable) const;
@@ -791,19 +777,6 @@ MappableFlatSet<MappableType, Allocator>::has_overlapped(const MappableType_& ma
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableFlatSet<MappableType, Allocator>::has_overlapped(iterator first, iterator last,
-                                                         const MappableType_& mappable) const
-{
-    using octopus::has_overlapped;
-    if (is_bidirectionally_sorted_) {
-        has_overlapped(first, last, mappable, BidirectionallySortedTag {});
-    }
-    return has_overlapped(first, last, mappable, max_element_size_);
-}
-
-template <typename MappableType, typename Allocator>
-template <typename MappableType_>
-bool
 MappableFlatSet<MappableType, Allocator>::has_overlapped(const_iterator first, const_iterator last,
                                                          const MappableType_& mappable) const
 {
@@ -820,20 +793,6 @@ typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::count_overlapped(const MappableType_& mappable) const
 {
     const auto overlapped = overlap_range(mappable);
-    using octopus::size;
-    if (is_bidirectionally_sorted_) {
-        return size(overlapped, BidirectionallySortedTag {});
-    }
-    return size(overlapped);
-}
-
-template <typename MappableType, typename Allocator>
-template <typename MappableType_>
-typename MappableFlatSet<MappableType, Allocator>::size_type
-MappableFlatSet<MappableType, Allocator>::count_overlapped(iterator first, iterator last,
-                                                           const MappableType_& mappable) const
-{
-    const auto overlapped = overlap_range(first, last, mappable);
     using octopus::size;
     if (is_bidirectionally_sorted_) {
         return size(overlapped, BidirectionallySortedTag {});
@@ -861,15 +820,6 @@ OverlapRange<typename MappableFlatSet<MappableType, Allocator>::const_iterator>
 MappableFlatSet<MappableType, Allocator>::overlap_range(const MappableType_& mappable) const
 {
     return overlap_range(std::cbegin(elements_), std::cend(elements_), mappable);
-}
-
-template <typename MappableType, typename Allocator>
-template <typename MappableType_>
-OverlapRange<typename MappableFlatSet<MappableType, Allocator>::iterator>
-MappableFlatSet<MappableType, Allocator>::overlap_range(iterator first, iterator last,
-                                                        const MappableType_& mappable) const
-{
-    return overlap_range(const_iterator {first}, const_iterator {last}, mappable);
 }
 
 template <typename MappableType, typename Allocator>
@@ -911,17 +861,8 @@ MappableFlatSet<MappableType, Allocator>::has_contained(const MappableType_& map
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableFlatSet<MappableType, Allocator>::has_contained(iterator first, iterator last,
-                                                        const MappableType_& mappable) const
-{
-    return has_contained(const_iterator {first}, const_iterator {last}, mappable);
-}
-
-template <typename MappableType, typename Allocator>
-template <typename MappableType_>
-bool
 MappableFlatSet<MappableType, Allocator>::has_contained(const_iterator first, const_iterator last,
-                                                             const MappableType_& mappable) const
+                                                        const MappableType_& mappable) const
 {
     using octopus::has_contained;
     return has_contained(first, last, mappable);
@@ -938,17 +879,8 @@ MappableFlatSet<MappableType, Allocator>::count_contained(const MappableType_& m
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 typename MappableFlatSet<MappableType, Allocator>::size_type
-MappableFlatSet<MappableType, Allocator>::count_contained(iterator first, iterator last,
-                                                               const MappableType_& mappable) const
-{
-    return count_contained(const_iterator(first), const_iterator(last), mappable);
-}
-
-template <typename MappableType, typename Allocator>
-template <typename MappableType_>
-typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::count_contained(const_iterator first, const_iterator last,
-                                                               const MappableType_& mappable) const
+                                                          const MappableType_& mappable) const
 {
     const auto contained = contained_range(first, last, mappable);
     using octopus::size;
@@ -968,18 +900,9 @@ MappableFlatSet<MappableType, Allocator>::contained_range(const MappableType_& m
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-ContainedRange<typename MappableFlatSet<MappableType, Allocator>::iterator>
-MappableFlatSet<MappableType, Allocator>::contained_range(iterator first, iterator last,
-                                                               const MappableType_& mappable) const
-{
-    return contained_range(const_iterator(first), const_iterator(last), mappable);
-}
-
-template <typename MappableType, typename Allocator>
-template <typename MappableType_>
 ContainedRange<typename MappableFlatSet<MappableType, Allocator>::const_iterator>
 MappableFlatSet<MappableType, Allocator>::contained_range(const_iterator first, const_iterator last,
-                                                               const MappableType_& mappable) const
+                                                          const MappableType_& mappable) const
 {
     using octopus::contained_range;
     return contained_range(first, last, mappable);
