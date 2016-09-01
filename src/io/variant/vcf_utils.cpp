@@ -121,11 +121,8 @@ void sort(const VcfReader& src, VcfWriter& dst)
     if (!dst.is_header_written()) {
         dst << src.fetch_header();
     }
-    
     auto records = src.fetch_records();
-    
     std::sort(std::begin(records), std::end(records));
-    
     dst << records;
 }
 
@@ -211,11 +208,9 @@ ReaderContigRecordCountMap get_contig_count_map(const std::vector<VcfReader>& re
     for (auto& reader : readers) {
         ContigRecordCountMap contig_counts {};
         contig_counts.reserve(contigs.size());
-        
         for (const auto& contig : contigs) {
             contig_counts.emplace(contig, reader.count_records(contig));
         }
-        
         result.emplace(reader, std::move(contig_counts));
     }
     
@@ -297,7 +292,6 @@ void merge_contig_unique(const std::vector<VcfReader>& sources, VcfWriter& dst,
                          const ReaderContigRecordCountMap& reader_contig_counts)
 {
     const auto contig_readers = extract_unique_readers(reader_contig_counts);
-    
     for (const auto& contig : contigs) {
         if (contig_readers.count(contig) == 1) {
             copy(contig_readers.at(contig), dst);
@@ -335,7 +329,6 @@ void one_step_merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
                     ReaderContigRecordCountMap& reader_contig_counts)
 {
     VcfRecordQueue record_queue {};
-    
     for (const auto& contig : contigs) {
         for (auto& reader : sources) {
             if (reader_contig_counts[reader].count(contig) == 1) {
@@ -400,11 +393,9 @@ using RecordIteratorQueue = std::priority_queue<
 auto make_record_iterator_queue(const std::vector<VcfReader>& sources, const std::string& contig)
 {
     RecordIteratorQueue result {};
-    
     for (const auto& reader : sources) {
         result.push(reader.iterate(contig));
     }
-    
     return result;
 }
 
@@ -427,7 +418,6 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
         merge_contig_unique(sources, dst, contigs, reader_contig_counts);
     } else {
         static constexpr std::size_t maxBufferSize {100000};
-        
         if (count_records(reader_contig_counts) <= maxBufferSize) {
             one_step_merge(sources, dst, contigs, reader_contig_counts);
         } else if (sources.size() == 2) {
@@ -435,16 +425,11 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
         } else {
             for (const auto& contig : contigs) {
                 auto record_queue = make_record_iterator_queue(sources, contig);
-                
                 while (!record_queue.empty()) {
                     auto p = record_queue.top();
-                    
                     dst << front(p);
-                    
                     record_queue.pop();
-                    
                     ++p.first;
-                    
                     if (!is_empty(p)) {
                         record_queue.push(std::move(p));
                     }

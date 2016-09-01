@@ -1,6 +1,7 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
+#include "io/variant/vcf_spec.hpp"
 #include "octopus_vcf.hpp"
 
 namespace octopus {  namespace Vcf {
@@ -8,6 +9,8 @@ namespace octopus {  namespace Vcf {
 VcfHeader::Builder make_octopus_header_template()
 {
     VcfHeader::Builder result {};
+    
+    result.set_file_format(vcfspec::version);
     
     result.add_info("AA", "1", "String", "Ancestral allele");
     result.add_info("AC", "1", "Integer", "Allele count in genotypes, for each ALT allele, in the same order as listed");
