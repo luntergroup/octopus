@@ -54,15 +54,15 @@ std::vector<std::string> extract_samples(const bcf_hdr_t* header)
 
 // public methods
 
-std::string get_hts_mode(const HtslibBcfFacade::Path& file_path, const std::string& mode)
+std::string get_hts_mode(const HtslibBcfFacade::Path& file_path, HtslibBcfFacade::Mode mode)
 {
-    if (!(mode == "r" || mode == "w")) {
-        throw std::runtime_error {"invalid mode " + mode + " given to HtslibBcfFacade; must be r or w"};
-    }
+    std::string result {"["};
     
-    auto result = "[" + mode + "]";
-    
-    if (mode == "w" && file_path != "-") { // "-" is for stdout
+    using Mode = HtslibBcfFacade::Mode;
+    if (mode == Mode::read) {
+        result += "r]";
+    } else {
+        result += 'w';
         auto extension = file_path.extension();
         if (extension == ".bcf") {
             result += "b";
@@ -74,14 +74,21 @@ std::string get_hts_mode(const HtslibBcfFacade::Path& file_path, const std::stri
     return result;
 }
 
-HtslibBcfFacade::HtslibBcfFacade(Path file_path, const std::string& mode)
+HtslibBcfFacade::HtslibBcfFacade()
+: file_path_ {}
+, file_ {bcf_open("-", "[w]"), HtsFileDeleter {}}
+, header_ {bcf_hdr_init("[w]"), HtsHeaderDeleter {}}
+, samples_ {}
+{}
+
+HtslibBcfFacade::HtslibBcfFacade(Path file_path, Mode mode)
 : file_path_ {std::move(file_path)}
 , file_ {nullptr, HtsFileDeleter {}}
 , header_ {nullptr, HtsHeaderDeleter {}}
 , samples_ {}
 {
     const auto hts_mode = get_hts_mode(file_path_, mode);
-    if (mode == "r") {
+    if (mode == Mode::read) {
         if (boost::filesystem::exists(file_path_)) {
             file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
             if (file_ == nullptr) return;

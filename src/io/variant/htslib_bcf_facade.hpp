@@ -28,18 +28,15 @@ class HtslibBcfFacade : public IVcfReaderImpl
 {
 public:
     using Path = boost::filesystem::path;
-    
     using IVcfReaderImpl::UnpackPolicy;
-    
     using IVcfReaderImpl::RecordContainer;
-    
+    using IVcfReaderImpl::RecordIteratorPtrPair;
     class RecordIterator;
     
-    using IVcfReaderImpl::RecordIteratorPtrPair;
+    enum class Mode { read, write };
     
-    HtslibBcfFacade() = delete;
-    
-    HtslibBcfFacade(Path file_path, const std::string& mode = "r");
+    HtslibBcfFacade(); // write only, goes to stdout
+    HtslibBcfFacade(Path file_path, Mode mode = Mode::read);
     
     HtslibBcfFacade(const HtslibBcfFacade&)            = delete;
     HtslibBcfFacade& operator=(const HtslibBcfFacade&) = delete;

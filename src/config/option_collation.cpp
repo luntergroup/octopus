@@ -949,14 +949,18 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     return result;
 }
 
-fs::path get_final_output_path(const OptionMap& options)
+boost::optional<fs::path> get_final_output_path(const OptionMap& options)
 {
-    return resolve_path(options.at("output").as<fs::path>(), options);
+    if (options.count("output") == 1) {
+        return resolve_path(options.at("output").as<fs::path>(), options);
+    }
+    return boost::none;
 }
 
 VcfWriter make_output_vcf_writer(const OptionMap& options)
 {
-    return VcfWriter {get_final_output_path(options)};
+    auto output = get_final_output_path(options);
+    return output ? VcfWriter {std::move(*output)} : VcfWriter {};
 }
 
 boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)

@@ -11,6 +11,7 @@
 #include <iterator>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/optional.hpp>
 
 #include "htslib_bcf_facade.hpp"
 
@@ -25,9 +26,9 @@ class VcfWriter
 public:
     using Path = boost::filesystem::path;
     
-    VcfWriter() = default;
-    
+    VcfWriter();
     VcfWriter(Path file_path);
+    VcfWriter(const VcfHeader& header);
     VcfWriter(Path file_path, const VcfHeader& header);
     
     VcfWriter(const VcfWriter&)            = delete;
@@ -45,13 +46,13 @@ public:
     
     bool is_header_written() const noexcept;
     
-    const Path& path() const noexcept;
+    boost::optional<Path> path() const;
     
     void write(const VcfHeader& header);
     void write(const VcfRecord& record);
     
 private:
-    Path file_path_;
+    boost::optional<Path> file_path_;
     
     std::unique_ptr<HtslibBcfFacade> writer_;
     
@@ -115,7 +116,8 @@ namespace std {
     {
         size_t operator()(const octopus::VcfWriter& writer) const
         {
-            return hash<string>()(writer.path().string());
+            const auto output_path = writer.path();
+            return output_path ? hash<string>()(output_path->string()) : 0;
         }
     };
 } // namespace std

@@ -150,7 +150,14 @@ void log_startup_info(const GenomeCallingComponents& components)
     str.pop_back(); // the extra whitespace
     logging::InfoLogger log {};
     log << str;
-    stream(log) << "Writing calls to " << components.output().path();
+    auto sl = stream(log);
+    sl << "Writing calls to ";
+    const auto output_path = components.output().path();
+    if (output_path) {
+        sl << *output_path;
+    } else {
+        sl << "standard out";
+    }
 }
 
 void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
@@ -1040,7 +1047,7 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
     };
 }
 
-auto get_identified_path(const boost::filesystem::path& base, const std::string& identifier)
+auto add_identifier(const boost::filesystem::path& base, const std::string& identifier)
 {
     const auto old_stem  = base.stem();
     const auto extension = base.extension();
@@ -1057,19 +1064,9 @@ auto get_identified_path(const boost::filesystem::path& base, const std::string&
     return base.parent_path() / new_stem;
 }
 
-auto get_filtered_path(const boost::filesystem::path& unfiltered_output_path)
-{
-    return get_identified_path(unfiltered_output_path, "filtered");
-}
-
-auto get_filtered_path(const GenomeCallingComponents& components)
-{
-    return get_filtered_path(components.output().path());
-}
-
 auto get_legacy_path(const boost::filesystem::path& native)
 {
-    return get_identified_path(native, "legacy");
+    return add_identifier(native, "legacy");
 }
 
 void log_run_start(const GenomeCallingComponents& components)
@@ -1104,9 +1101,12 @@ void run_octopus(GenomeCallingComponents& components)
         components.output().close();
         
         if (components.legacy()) {
-            const VcfReader native {components.output().path()};
-            VcfWriter legacy {get_legacy_path(native.path())};
-            convert_to_legacy(native, legacy);
+            auto output_path = components.output().path();
+            if (output_path) {
+                const VcfReader native {*output_path};
+                VcfWriter legacy {get_legacy_path(native.path())};
+                convert_to_legacy(native, legacy);
+            }
         }
     } catch (const std::exception& e) {
         try {

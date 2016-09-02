@@ -134,8 +134,8 @@ OptionMap parse_options(const int argc, const char** argv)
      " that appear in the read files")
     
     ("output,o",
-     po::value<fs::path>()->default_value("octopus_calls.vcf"),
-     "File to where output is written")
+     po::value<fs::path>(),
+     "File to where output is written. If unspecified, calls are written to stdout")
     
     ("contig-output-order",
      po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::asInReferenceIndex),

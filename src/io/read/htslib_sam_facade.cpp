@@ -688,7 +688,7 @@ std::vector<std::string> HtslibSamFacade::extract_reference_contig_names() const
     std::vector<std::string> result {};
     result.reserve(hts_header_->n_targets);
     
-    for (HtsTidType hts_tid {}; hts_tid < hts_header_->n_targets; ++hts_tid) {
+    for (HtsTidType hts_tid {0}; hts_tid < hts_header_->n_targets; ++hts_tid) {
         result.emplace_back(contig_name(hts_tid));
     }
     
@@ -751,9 +751,7 @@ void HtslibSamFacade::init_maps()
     }
     
     const std::string header_text(hts_header_->text, hts_header_->l_text);
-    
     std::istringstream header_ss {header_text};
-    
     std::string line;
     unsigned num_read_groups {0};
     
@@ -764,7 +762,6 @@ void HtslibSamFacade::init_maps()
                 e.set_reason("a read group identifier tag (ID) in @RG lines is required but was not found");
                 throw e;
             }
-            
             if (!has_tag(line, sampleIdTag)) {
                 // The SAM specification does not specify the sample tag 'SM' as a required,
                 // however we can't do much without it.
@@ -772,10 +769,8 @@ void HtslibSamFacade::init_maps()
                 e.set_reason("a sample tag (SM) in @RG lines is required but was not found");
                 throw e;
             }
-            
             sample_names_.emplace(extract_tag_value(line, readGroupIdTag),
                                   extract_tag_value(line, sampleIdTag));
-            
             ++num_read_groups;
         }
     }

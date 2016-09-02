@@ -92,7 +92,9 @@ std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>&& writers)
     for (auto&& writer : writers) {
         auto path = writer.path();
         writer.close();
-        result.emplace_back(std::move(path));
+        if (path) {
+            result.emplace_back(std::move(*path));
+        }
     }
     
     writers.clear();

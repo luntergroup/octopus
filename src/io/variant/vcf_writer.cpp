@@ -15,6 +15,12 @@
 
 namespace octopus {
 
+VcfWriter::VcfWriter()
+: file_path_ {}
+, writer_ {std::make_unique<HtslibBcfFacade>()}
+, is_header_written_ {false}
+{}
+
 VcfWriter::VcfWriter(Path file_path)
 : file_path_ {std::move(file_path)}
 , writer_ {nullptr}
@@ -22,31 +28,34 @@ VcfWriter::VcfWriter(Path file_path)
 {
     using namespace boost::filesystem;
     
-    if (file_path_.string() != "-") { // - is for stdout
-        if (exists(file_path_)) {
-            remove(file_path_);
-        } else {
-            const auto dir = file_path_.parent_path();
-            
-            if (!(is_directory(dir) && exists(dir))) {
-                std::ostringstream ss {};
-                ss << "VcfWriter: the path ";
-                ss << file_path_;
-                ss << " is not writable";
-                throw std::runtime_error {ss.str()};
-            }
-        }
-        
-        Path index_path1 {file_path_.string() + ".csi"}, index_path2 {file_path_.string() + ".tbi"};
-        
-        if (exists(index_path1)) {
-            remove(index_path1);
-        } else if (exists(index_path2)) {
-            remove(index_path2);
+    if (exists(*file_path_)) {
+        remove(*file_path_);
+    } else {
+        const auto dir = file_path_->parent_path();
+        if (!(is_directory(dir) && exists(dir))) {
+            std::ostringstream ss {};
+            ss << "VcfWriter: the path ";
+            ss << *file_path_;
+            ss << " is not writable";
+            throw std::runtime_error {ss.str()};
         }
     }
     
-    writer_ = std::make_unique<HtslibBcfFacade>(file_path_, "w");
+    Path index_path1 {file_path_->string() + ".csi"}, index_path2 {file_path_->string() + ".tbi"};
+    
+    if (exists(index_path1)) {
+        remove(index_path1);
+    } else if (exists(index_path2)) {
+        remove(index_path2);
+    }
+    
+    writer_ = std::make_unique<HtslibBcfFacade>(*file_path_, HtslibBcfFacade::Mode::write);
+}
+
+VcfWriter::VcfWriter(const VcfHeader& header)
+: VcfWriter {}
+{
+    this->write(std::move(header));
 }
 
 VcfWriter::VcfWriter(Path file_path, const VcfHeader& header)
@@ -67,8 +76,8 @@ VcfWriter::~VcfWriter()
 {
     try {
         this->close();
-        if (!file_path_.empty() && is_indexable(file_path_) && boost::filesystem::exists(file_path_)) {
-            index_vcf(file_path_);
+        if (file_path_ && is_indexable(*file_path_) && boost::filesystem::exists(*file_path_)) {
+            index_vcf(*file_path_);
         }
     } catch(...) {
         return;
@@ -97,7 +106,7 @@ void VcfWriter::open(Path file_path) noexcept
     std::lock_guard<std::mutex> lock {mutex_};
     try {
         file_path_         = std::move(file_path);
-        writer_            = std::make_unique<HtslibBcfFacade>(file_path_, "w");
+        writer_            = std::make_unique<HtslibBcfFacade>(*file_path_, HtslibBcfFacade::Mode::write);
         is_header_written_ = writer_->is_header_written();
     } catch (...) {
         this->close();
@@ -116,7 +125,7 @@ bool VcfWriter::is_header_written() const noexcept
     return is_header_written_;
 }
 
-const VcfWriter::Path& VcfWriter::path() const noexcept
+boost::optional<VcfWriter::Path> VcfWriter::path() const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return file_path_;

@@ -38,7 +38,7 @@ std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path
         }
         return std::make_unique<VcfParser>(file_path);
     } else {
-        return std::make_unique<HtslibBcfFacade>(file_path, "r");
+        return std::make_unique<HtslibBcfFacade>(file_path, HtslibBcfFacade::Mode::read);
     }
 }
 
