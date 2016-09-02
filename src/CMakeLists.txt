@@ -151,6 +151,8 @@ set(UTILS_SOURCES
     utils/coverage_tracker.cpp
     utils/read_size_estimator.hpp
     utils/read_size_estimator.cpp
+    utils/kmer_mapper.hpp
+    utils/kmer_mapper.cpp
 )
 
 set(CORE_SOURCES
@@ -213,21 +215,16 @@ set(CORE_SOURCES
     
     core/models/genotype/cnv_model.hpp
     core/models/genotype/cnv_model.cpp
-    core/models/mutation/coalescent_model.hpp
-    core/models/mutation/coalescent_model.cpp
+
     core/models/genotype/germline_likelihood_model.hpp
     core/models/genotype/germline_likelihood_model.cpp
     core/models/genotype/individual_model.hpp
     core/models/genotype/individual_model.cpp
     core/models/genotype/population_model.hpp
     core/models/genotype/population_model.cpp
-    core/models/mutation/somatic_mutation_model.hpp
-    core/models/mutation/somatic_mutation_model.cpp
     core/models/genotype/tumour_model.hpp
     core/models/genotype/tumour_model.cpp
     core/models/genotype/variational_bayes_mixture_model.hpp
-    core/models/mutation/denovo_mutation_model.hpp
-    core/models/mutation/denovo_mutation_model.cpp
     core/models/genotype/trio_model.hpp
     core/models/genotype/trio_model.cpp
     
@@ -242,9 +239,12 @@ set(CORE_SOURCES
     core/models/mutation/indel_error_model.cpp
     core/models/mutation/snv_error_model.hpp
     core/models/mutation/snv_error_model.cpp
-
-    utils/kmer_mapper.hpp
-    utils/kmer_mapper.cpp
+    core/models/mutation/somatic_mutation_model.hpp
+    core/models/mutation/somatic_mutation_model.cpp
+    core/models/mutation/coalescent_model.hpp
+    core/models/mutation/coalescent_model.cpp
+    core/models/mutation/denovo_model.hpp
+    core/models/mutation/denovo_model.cpp
     
     core/tools/coretools.hpp
     
