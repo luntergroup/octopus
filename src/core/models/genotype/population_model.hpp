@@ -10,7 +10,7 @@
 
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
-#include "core/models/genotype/coalescent_model.hpp"
+#include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/haplotype_likelihood_cache.hpp"
 #include "core/types/genotype.hpp"
 #include "containers/probability_matrix.hpp"

@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <functional>
 
-#include "core/models/genotype/coalescent_model.hpp"
+#include "coalescent_model.hpp"
 #include "core/types/cancer_genotype.hpp"
 #include "core/types/haplotype.hpp"
 #include "utils/maths.hpp"
@@ -22,15 +22,15 @@ public:
     SomaticMutationModel(const CoalescentModel& germline_model,
                          double somatic_mutation_rate = 0.00001);
     
-    SomaticMutationModel(const SomaticMutationModel&)            = default;
+    SomaticMutationModel(const SomaticMutationModel&) = default;
     SomaticMutationModel& operator=(const SomaticMutationModel&) = default;
-    SomaticMutationModel(SomaticMutationModel&&)                 = default;
+    SomaticMutationModel(SomaticMutationModel&&) = default;
     SomaticMutationModel& operator=(SomaticMutationModel&&)      = default;
     
     ~SomaticMutationModel() = default;
     
     double evaluate(const CancerGenotype<Haplotype>& genotype) const;
-    
+
 private:
     std::reference_wrapper<const CoalescentModel> germline_model_;
     double somatic_mutation_rate_;
@@ -46,7 +46,7 @@ std::vector<double> calculate_log_priors(const Container& genotypes,
     std::vector<double> result(genotypes.size());
     
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&model] (const auto& genotype) {
+                   [&model](const auto& genotype) {
                        return model.evaluate(genotype);
                    });
     

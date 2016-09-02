@@ -13,8 +13,8 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
-#include "core/models/genotype/coalescent_model.hpp"
-#include "core/models/genotype/somatic_mutation_model.hpp"
+#include "core/models/mutation/coalescent_model.hpp"
+#include "core/models/mutation/somatic_mutation_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
 #include "core/models/genotype/cnv_model.hpp"
 #include "core/models/genotype/tumour_model.hpp"

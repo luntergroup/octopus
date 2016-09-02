@@ -38,17 +38,18 @@ public:
                     double indel_heterozygosity = 0.0001,
                     unsigned max_haplotypes = 1024);
     
-    CoalescentModel(const CoalescentModel&)            = default;
+    CoalescentModel(const CoalescentModel&) = default;
     CoalescentModel& operator=(const CoalescentModel&) = default;
-    CoalescentModel(CoalescentModel&&)                 = default;
+    CoalescentModel(CoalescentModel&&) = default;
     CoalescentModel& operator=(CoalescentModel&&)      = default;
     
     ~CoalescentModel() = default;
     
     void set_reference(Haplotype reference);
     
-    template <typename Container> double evaluate(const Container& haplotypes) const;
-    
+    template <typename Container>
+    double evaluate(const Container& haplotypes) const;
+
 private:
     using SiteCountTuple = std::tuple<unsigned, unsigned, unsigned>;
     
@@ -105,11 +106,11 @@ inline auto log_binom(const unsigned n, const unsigned k)
 
 inline auto coalescent_real_space(const unsigned n, const unsigned k, const double theta)
 {
-    double result {0};
+    double result{0};
     
-    for (unsigned i {2}; i <= n; ++i) {
+    for (unsigned i{2}; i <= n; ++i) {
         result += powm1(i) * binom(n - 1, i - 1) * ((i - 1) / (theta + i - 1))
-                        * std::pow(theta / (theta + i - 1), k);
+                  * std::pow(theta / (theta + i - 1), k);
     }
     
     return std::log(result);
@@ -119,10 +120,10 @@ template <typename ForwardIt>
 auto complex_log_sum_exp(ForwardIt first, ForwardIt last)
 {
     using ComplexType = typename std::iterator_traits<ForwardIt>::value_type;
-    const auto l = [] (const auto& lhs, const auto& rhs) { return lhs.real() < rhs.real(); };
+    const auto l = [](const auto& lhs, const auto& rhs) { return lhs.real() < rhs.real(); };
     const auto max = *std::max_element(first, last, l);
     return max + std::log(std::accumulate(first, last, ComplexType {},
-                                          [max] (const auto curr, const auto x) {
+                                          [max](const auto curr, const auto x) {
                                               return curr + std::exp(x - max);
                                           }));
 }
@@ -137,7 +138,7 @@ inline auto coalescent_log_space(const unsigned n, const unsigned k, const doubl
 {
     std::vector<std::complex<double>> tmp(n - 1, std::log(std::complex<double> {-1}));
     
-    for (unsigned i {2}; i <= n; ++i) {
+    for (unsigned i{2}; i <= n; ++i) {
         auto& cur = tmp[i - 2];
         cur *= i;
         cur += std::log(binom(n - 1, i - 1));
@@ -168,7 +169,7 @@ inline auto coalescent(const unsigned n, const unsigned k_snp, const unsigned k_
     result += detail::log_binom(k_tot, k_snp);
     return result;
 }
-
+    
 } // namespace detail
 
 template <typename Container>
@@ -238,7 +239,7 @@ CoalescentModel::count_segregating_sites(const Container& haplotypes) const
 {
     fill_site_buffer(haplotypes);
     const auto num_indels = std::count_if(std::cbegin(site_buffer1_), std::cend(site_buffer1_),
-                                          [] (const auto& v) { return is_indel(v); });
+                                          [](const auto& v) { return is_indel(v); });
     return std::make_tuple(site_buffer1_.size() - num_indels, num_indels,
                            static_cast<unsigned>(detail::size(haplotypes) + 1));
 }
@@ -251,7 +252,7 @@ std::vector<double> calculate_log_priors(const Container& genotypes, const Coale
     std::vector<double> result(genotypes.size());
     
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&model] (const auto& genotype) {
+                   [&model](const auto& genotype) {
                        return model.evaluate(genotype);
                    });
     maths::normalise_logs(result);

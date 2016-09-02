@@ -48,8 +48,8 @@ constexpr auto make_phred_to_ln_prob_lookup() noexcept
     return make_phred_to_ln_prob_lookup<num_values<T>()>();
 }
 
-bool is_target_in_truth_flank(const std::string& truth, const std::string& target,
-                              const std::size_t target_offset, const Model& model)
+bool is_target_in_truth_flank(const std::string& truth, const std::string& target, const std::size_t target_offset,
+                              const MutationModel& model)
 {
     return target_offset < model.lhs_flank_size
                 || (target_offset + target.size()) > (truth.size() - model.rhs_flank_size);
@@ -119,7 +119,7 @@ namespace debug {
 auto simd_align(const std::string& truth, const std::string& target,
                 const std::vector<std::uint8_t>& target_qualities,
                 const std::size_t target_offset,
-                const Model& model)
+                const MutationModel& model)
 {
     constexpr auto pad = simd::min_flank_pad();
     
@@ -150,12 +150,10 @@ auto simd_align(const std::string& truth, const std::string& target,
     thread_local std::vector<char> align1 {}, align2 {};
     
     const auto max_alignment_size = 2 * (target.size() + pad);
-    
     align1.assign(max_alignment_size + 1, 0);
     align2.assign(max_alignment_size + 1, 0);
     
     int first_pos;
-    
     const auto score = simd::align(truth.data() + alignment_offset,
                                    target.data(),
                                    qualities,
@@ -173,7 +171,6 @@ auto simd_align(const std::string& truth, const std::string& target,
     } else {
         lhs_flank_size -= alignment_offset;
     }
-    
     auto rhs_flank_size = static_cast<int>(model.rhs_flank_size);
     if (alignment_offset + truth_alignment_size < truth_size - rhs_flank_size) {
         rhs_flank_size = 0;
@@ -206,7 +203,7 @@ unsigned min_flank_pad() noexcept
 void validate(const std::string& truth, const std::string& target,
               const std::vector<std::uint8_t>& target_qualities,
               const std::size_t target_offset,
-              const Model& model)
+              const MutationModel& model)
 {
     if (target.size() != target_qualities.size()) {
         throw std::invalid_argument {"PairHMM::align: target size not equal to target qualities length"};
@@ -222,10 +219,10 @@ void validate(const std::string& truth, const std::string& target,
     }
 }
 
-double score(const std::string& truth, const std::string& target,
-             const std::vector<std::uint8_t>& target_qualities,
-             const std::size_t target_offset,
-             const Model& model)
+double evaluate(const std::string& truth, const std::string& target,
+                const std::vector<std::uint8_t>& target_qualities,
+                const std::size_t target_offset,
+                const MutationModel& model)
 {
     using std::cbegin; using std::cend; using std::next; using std::distance;
     
@@ -235,39 +232,30 @@ double score(const std::string& truth, const std::string& target,
     
     const auto offsetted_truth_begin_itr = next(cbegin(truth), target_offset);
     const auto m1 = std::mismatch(cbegin(target), cend(target), offsetted_truth_begin_itr);
-    
     if (m1.first == cend(target)) {
         return 0; // sequences are equal, can't do better than this
     }
-    
     const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
-    
     if (m2.first == cend(target)) {
         // then there is only a single base difference between the sequences, can optimise
         const auto truth_index = distance(offsetted_truth_begin_itr, m1.second) + target_offset;
-        
         if (truth_index < model.lhs_flank_size || truth_index >= (truth.size() - model.rhs_flank_size)) {
             return 0;
         }
-        
         const auto target_index = distance(cbegin(target), m1.first);
         auto mispatch_penalty = target_qualities[target_index];
-        
         if (model.snv_mask[truth_index] == *m1.first) {
             mispatch_penalty = std::min(target_qualities[target_index],
                                         static_cast<std::uint8_t>(model.snv_priors[truth_index]));
         }
-        
         if (mispatch_penalty <= model.gap_open_penalties[truth_index]
             || !std::equal(next(m1.first), cend(target), m1.second)) {
             return lnProbability[mispatch_penalty];
         }
-        
         return lnProbability[model.gap_open_penalties[truth_index]];
     }
     
     // TODO: we should be able to optimise the alignment based of the first mismatch postition
-    
     return simd_align(truth, target, target_qualities, target_offset, model);
 }
 

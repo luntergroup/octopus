@@ -17,8 +17,7 @@ namespace octopus {
 
 constexpr decltype(SnvErrorModel::maxQualities_) SnvErrorModel::maxQualities_;
 
-namespace
-{
+namespace {
 auto extract_repeats(const Haplotype& haplotype, const unsigned max_period)
 {
     return tandem::find_maximal_repetitions(haplotype.sequence(), 1, max_period);
@@ -34,12 +33,12 @@ OutputIt count_runs(ForwardIt first, ForwardIt last, OutputIt result,
     
     auto prev = *first;
     auto count = (prev > 0) ? 1 : 0;
-    unsigned gap {0};
+    unsigned gap{0};
     
     *result++ = 0;
     
     return std::transform(std::next(first), last, result,
-                          [&count, &gap, &prev, max_gap] (const auto x) -> ValueType {
+                          [&count, &gap, &prev, max_gap](const auto x) -> ValueType {
                               if (x == 0) {
                                   ++gap;
                                   if (count > 0) {
@@ -71,12 +70,17 @@ OutputIt count_runs(ForwardIt first, ForwardIt last, OutputIt result,
 constexpr auto base_hash(const char b) noexcept
 {
     using T = std::int8_t;
-    switch(b) {
-        case 'A': return T {1};
-        case 'C': return T {2};
-        case 'G': return T {3};
-        case 'T': return T {4};
-        default:  return T {5};
+    switch (b) {
+        case 'A':
+            return T {1};
+        case 'C':
+            return T {2};
+        case 'G':
+            return T {3};
+        case 'T':
+            return T {4};
+        default:
+            return T {5};
     }
 }
 
@@ -84,9 +88,9 @@ auto repeat_hash(const Haplotype& haplotype, const tandem::StringRun& repeat)
 {
     const auto& sequence = haplotype.sequence();
     const auto first = std::next(std::begin(sequence), repeat.pos);
-    const auto last  = std::next(first, repeat.period);
+    const auto last = std::next(first, repeat.period);
     return std::accumulate(first, last, std::int8_t {0},
-                           [] (const auto& curr, const auto b) {
+                           [](const auto& curr, const auto b) {
                                return curr + base_hash(b);
                            });
 }
@@ -102,9 +106,9 @@ void set_priors(const std::vector<T1>& run_lengths, std::vector<T2>& result, con
 {
     std::transform(std::cbegin(run_lengths), std::cend(run_lengths), std::cbegin(result),
                    std::begin(result),
-                   [&penalties] (const auto l, const auto curr) {
+                   [&penalties](const auto l, const auto curr) {
                        return std::min(get_penalty(penalties, l), curr);
-                   } );
+                   });
 }
 } // namespace
 
@@ -121,7 +125,7 @@ void SnvErrorModel::evaluate(const Haplotype& haplotype,
     
     const auto num_bases = sequence_size(haplotype);
     
-    std::array<std::vector<std::int8_t>, Max_period> repeat_masks {};
+    std::array<std::vector<std::int8_t>, Max_period> repeat_masks{};
     
     repeat_masks.fill(std::vector<std::int8_t>(num_bases, 0));
     
@@ -135,7 +139,7 @@ void SnvErrorModel::evaluate(const Haplotype& haplotype,
     
     std::vector<unsigned> runs(num_bases);
     
-    for (unsigned i {0}; i < Max_period; ++i) {
+    for (unsigned i{0}; i < Max_period; ++i) {
         const auto max_gap = i + 2;
         const auto& repeat_mask = repeat_masks[i];
         count_runs(cbegin(repeat_mask), cend(repeat_mask), begin(runs), max_gap);

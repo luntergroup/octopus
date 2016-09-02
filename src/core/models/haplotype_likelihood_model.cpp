@@ -115,7 +115,7 @@ bool is_in_range(const std::size_t mapping_position,
 template <typename InputIt>
 double max_score(const AlignedRead& read, const Haplotype& haplotype,
                  InputIt first_mapping_position, InputIt last_mapping_position,
-                 const hmm::Model& model)
+                 const hmm::MutationModel& model)
 {
     assert(contains(haplotype, read));
     
@@ -131,9 +131,7 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
         }
         if (is_in_range(position, read, haplotype)) {
             has_in_range_mapping_position = true;
-            
-            auto cur = hmm::score(haplotype.sequence(), read.sequence(), read.qualities(), position, model);
-            
+            auto cur = hmm::evaluate(haplotype.sequence(), read.sequence(), read.qualities(), position, model);
             if (cur > max_log_probability) {
                 max_log_probability = cur;
             }
@@ -142,8 +140,8 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
     
     if (!is_original_position_mapped && is_in_range(original_mapping_position, read, haplotype)) {
         has_in_range_mapping_position = true;
-        auto cur = hmm::score(haplotype.sequence(), read.sequence(), read.qualities(),
-                              original_mapping_position, model);
+        auto cur = hmm::evaluate(haplotype.sequence(), read.sequence(), read.qualities(),
+                                 original_mapping_position, model);
         if (cur > max_log_probability) {
             max_log_probability = cur;
         }
@@ -151,16 +149,13 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
     
     if (!has_in_range_mapping_position) {
         const auto min_shift = num_out_of_range_bases(original_mapping_position, read, haplotype);
-        
         if (original_mapping_position < min_shift) {
             auto required_extension = min_shift - original_mapping_position;
             throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, required_extension};
         }
-        
         const auto final_mapping_position = original_mapping_position - min_shift;
-        
-        max_log_probability = hmm::score(haplotype.sequence(), read.sequence(), read.qualities(),
-                                         final_mapping_position, model);
+        max_log_probability = hmm::evaluate(haplotype.sequence(), read.sequence(), read.qualities(),
+                                            final_mapping_position, model);
     }
     
     assert(max_log_probability > std::numeric_limits<double>::lowest() && max_log_probability <= 0);
@@ -178,7 +173,7 @@ double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
     
     const auto is_forward = !read.is_marked_reverse_mapped();
     
-    hmm::Model model {
+    hmm::MutationModel model {
         is_forward ? haplotype_snv_forward_mask_ : haplotype_snv_reverse_mask_,
         is_forward ? haplotype_snv_forward_priors_ : haplotype_snv_reverse_priors_,
         haplotype_gap_open_penalities_,

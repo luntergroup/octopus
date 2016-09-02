@@ -17,8 +17,8 @@
 #include "config/common.hpp"
 #include "basics/contig_region.hpp"
 #include "core/types/haplotype.hpp"
-#include "readerror/snv_error_model.hpp"
-#include "readerror/indel_error_model.hpp"
+#include "mutation/snv_error_model.hpp"
+#include "mutation/indel_error_model.hpp"
 #include "pairhmm/pair_hmm.hpp"
 
 #include "timers.hpp"
@@ -30,7 +30,7 @@ class AlignedRead;
 class HaplotypeLikelihoodModel
 {
 public:
-    using Penalty = hmm::Model::Penalty;
+    using Penalty = hmm::MutationModel::Penalty;
     
     struct FlankState
     {

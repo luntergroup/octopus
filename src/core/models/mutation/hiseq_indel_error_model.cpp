@@ -92,4 +92,5 @@ namespace octopus {
             default: return defaultGapExtension_;
         }
     }
+
 } // namespace octopus

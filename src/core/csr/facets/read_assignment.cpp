@@ -13,7 +13,7 @@
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
-#include "core/models/utils/kmer_mapper.hpp"
+#include "utils/kmer_mapper.hpp"
 
 namespace octopus {
 

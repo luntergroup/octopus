@@ -7,15 +7,17 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <cstdint>
 
 namespace octopus { namespace hmm {
 
+// This is the minimum number of bases the truth must exceed the target either side around
+// the mapped position
 unsigned min_flank_pad() noexcept;
 
-struct Model
+struct MutationModel
 {
     using Penalty = std::int8_t;
-    
     const std::vector<char>& snv_mask;
     const std::vector<Penalty>& snv_priors;
     const std::vector<Penalty>& gap_open_penalties;
@@ -25,10 +27,10 @@ struct Model
 };
 
 // p(target | truth, target_qualities, model)
-double score(const std::string& truth, const std::string& target,
-             const std::vector<std::uint8_t>& target_qualities,
-             std::size_t target_offset,
-             const Model& model);
+double evaluate(const std::string& truth, const std::string& target,
+                const std::vector<std::uint8_t>& target_qualities,
+                std::size_t target_offset,
+                const MutationModel& model);
 
 } // namespace hmm
 } // namespace octopus

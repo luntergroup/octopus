@@ -5,13 +5,11 @@
 #define individual_model_hpp
 
 #include <vector>
-#include <functional>
 
 #include <boost/optional.hpp>
 
-#include "config/common.hpp"
 #include "core/types/haplotype.hpp"
-#include "core/models/genotype/coalescent_model.hpp"
+#include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/haplotype_likelihood_cache.hpp"
 #include "core/types/genotype.hpp"
 #include "logging/logging.hpp"
@@ -24,7 +22,6 @@ public:
     struct Latents
     {
         using GenotypeProbabilityVector = std::vector<double>;
-        
         GenotypeProbabilityVector genotype_probabilities;
     };
     

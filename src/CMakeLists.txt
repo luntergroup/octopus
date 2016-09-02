@@ -213,34 +213,38 @@ set(CORE_SOURCES
     
     core/models/genotype/cnv_model.hpp
     core/models/genotype/cnv_model.cpp
-    core/models/genotype/coalescent_model.hpp
-    core/models/genotype/coalescent_model.cpp
+    core/models/mutation/coalescent_model.hpp
+    core/models/mutation/coalescent_model.cpp
     core/models/genotype/germline_likelihood_model.hpp
     core/models/genotype/germline_likelihood_model.cpp
     core/models/genotype/individual_model.hpp
     core/models/genotype/individual_model.cpp
     core/models/genotype/population_model.hpp
     core/models/genotype/population_model.cpp
-    core/models/genotype/somatic_mutation_model.hpp
-    core/models/genotype/somatic_mutation_model.cpp
+    core/models/mutation/somatic_mutation_model.hpp
+    core/models/mutation/somatic_mutation_model.cpp
     core/models/genotype/tumour_model.hpp
     core/models/genotype/tumour_model.cpp
     core/models/genotype/variational_bayes_mixture_model.hpp
+    core/models/mutation/denovo_mutation_model.hpp
+    core/models/mutation/denovo_mutation_model.cpp
+    core/models/genotype/trio_model.hpp
+    core/models/genotype/trio_model.cpp
     
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
     core/models/pairhmm/simd_pair_hmm.hpp
     core/models/pairhmm/simd_pair_hmm.cpp
-    
-    core/models/readerror/hiseq_indel_error_model.hpp
-    core/models/readerror/hiseq_indel_error_model.cpp
-    core/models/readerror/indel_error_model.hpp
-    core/models/readerror/indel_error_model.cpp
-    core/models/readerror/snv_error_model.hpp
-    core/models/readerror/snv_error_model.cpp
-    
-    core/models/utils/kmer_mapper.hpp
-    core/models/utils/kmer_mapper.cpp
+
+    core/models/mutation/hiseq_indel_error_model.hpp
+    core/models/mutation/hiseq_indel_error_model.cpp
+    core/models/mutation/indel_error_model.hpp
+    core/models/mutation/indel_error_model.cpp
+    core/models/mutation/snv_error_model.hpp
+    core/models/mutation/snv_error_model.cpp
+
+    utils/kmer_mapper.hpp
+    utils/kmer_mapper.cpp
     
     core/tools/coretools.hpp
     
@@ -338,7 +342,7 @@ if (BUILD_TESTING)
 
     target_compile_features(Octopus PRIVATE cxx_thread_local)
 
-    target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test)
+    target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     
     target_link_libraries(Octopus tandem)
     
@@ -388,7 +392,7 @@ else()
     
     target_compile_features(octopus PRIVATE cxx_thread_local)
     
-    target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test)
+    target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     
     target_link_libraries(octopus tandem)
     
