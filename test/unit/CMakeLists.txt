@@ -5,11 +5,14 @@ set(CONFIG_TEST_SOURCES
 set(CONCEPTS_TEST_SOURCES
     concepts/comparable_tests.cpp
     concepts/mappable_tests.cpp
+    concepts/mappable_range_tests.cpp
 )
 
 set(BASICS_TEST_SOURCES
     basics/contig_region_tests.cpp
+    basics/genomic_region_tests.cpp
     basics/cigar_string_tests.cpp
+    basics/aligned_read_tests.cpp
     basics/phred_tests.cpp
 )
 
@@ -30,7 +33,7 @@ set(READPIPE_TEST_SOURCES
 )
 
 set(UTILS_TEST_SOURCES
-    
+    utils/mappable_algorithm_tests.cpp
 )
 
 set(CORE_TEST_SOURCES

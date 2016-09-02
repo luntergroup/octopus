@@ -3,8 +3,8 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "concepts/mappable.hpp"
 #include "basics/contig_region.hpp"
+#include "concepts/mappable.hpp"
 
 namespace octopus { namespace test {
 

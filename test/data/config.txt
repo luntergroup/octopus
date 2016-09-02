@@ -1,6 +1,7 @@
-working-directory = ~/Genomics/giab_benchmark
+working-directory = ~/Genomics/giab
 reference = ~/Genomics/References/human_g1k_v37.fasta
-reads = ~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam
+#reads = ~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam
+reads = ~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.low_coverage.20121211.bam
 disable-assembly-candidate-generator = ON
 disable-call-filtering = ON
 output = octopus_calls_debug.vcf
