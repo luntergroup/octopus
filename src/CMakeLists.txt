@@ -384,7 +384,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     
     install(TARGETS octopus-debug DESTINATION ${octopus_SOURCE_DIR}/bin)
 else()
-    add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES} utils/path_utils.hpp utils/path_utils.cpp)
+    add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     
     target_compile_features(octopus PRIVATE cxx_thread_local)
     
