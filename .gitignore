@@ -236,3 +236,7 @@ TSWLatexianTemp*
 
 # KBibTeX
 *~[0-9]*
+
+# CLion stuff
+.DS_Store
+.idea/
