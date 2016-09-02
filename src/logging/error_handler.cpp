@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <cctype>
 
 #include "config/config.hpp"
 #include "utils/string_utils.hpp"
@@ -48,35 +49,52 @@ auto tidy_and_format(std::string message, const std::size_t max_line_length)
     return format_as_paragraph(tidy(message), max_line_length);
 }
 
-void log_error(const Error& error)
+void log_error_type(const Error& error, logging::ErrorLogger& log)
 {
-    logging::ErrorLogger log {};
-    
-    {
-        auto ss = stream(log);
-        ss << "A ";
-        ss << error.type() << " error has occurred:";
+    auto ls = stream(log);
+    const auto type = error.type();
+    assert(!type.empty());
+    if (type.front() == 'u') {
+        ls << "An ";
+    } else {
+        ls << "A ";
     }
-    
-    log_empty_line(log);
-    
+    ls << type << " error has occurred:";
+}
+
+void log_error_details(const Error& error, logging::ErrorLogger& log)
+{
     const auto max_line_length = config::CommandLineWidth;
     static const std::string tab {"    "};
     auto why_lines = tidy_and_format(error.why(), max_line_length - tab.length());
-    
     for (auto& line : why_lines) {
         line.insert(0, tab);
         log << line;
     }
-    
-    log_empty_line(log);
-    
-    auto help = std::string {"To help resolve this error "} + error.help();
+}
+
+void log_error_help(const Error& error, logging::ErrorLogger& log)
+{
+    std::string help {"To help resolve this error "};
+    auto help_detail = error.help();
+    assert(!help_detail.empty());
+    help_detail.front() = std::tolower(help.front());
+    help += help_detail;
+    const auto max_line_length = config::CommandLineWidth;
     const auto help_lines = tidy_and_format(help, max_line_length);
-    
     for (const auto& line : help_lines) {
         log << line;
     }
+}
+
+void log_error(const Error& error)
+{
+    logging::ErrorLogger log {};
+    log_error_type(error, log);
+    log_empty_line(log);
+    log_error_details(error, log);
+    log_empty_line(log);
+    log_error_help(error, log);
 }
 
 class UnclassifiedError : public Error
@@ -107,4 +125,4 @@ void log_unknown_error()
     log_error(e);
 }
 
-} // namepace octopus
+} // namespace octopus
