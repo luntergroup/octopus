@@ -34,45 +34,27 @@ public:
     
     GenomeCallingComponents(const GenomeCallingComponents&)            = delete;
     GenomeCallingComponents& operator=(const GenomeCallingComponents&) = delete;
-    
     GenomeCallingComponents(GenomeCallingComponents&& other) noexcept;
-    
     GenomeCallingComponents& operator=(GenomeCallingComponents&& other) = delete;
     
     ~GenomeCallingComponents() = default;
     
     const ReferenceGenome& reference() const noexcept;
-    
     ReadManager& read_manager() noexcept;
-    
     const ReadManager& read_manager() const noexcept;
-    
     ReadPipe& read_pipe() noexcept;
-    
     const ReadPipe& read_pipe() const noexcept;
-    
     const std::vector<SampleName>& samples() const noexcept;
-    
     const InputRegionMap& search_regions() const noexcept;
-    
     const std::vector<GenomicRegion::ContigName>& contigs() const noexcept;
-    
     VcfWriter& output() noexcept;
-    
     const VcfWriter& output() const noexcept;
-    
     std::size_t read_buffer_size() const noexcept;
-    
     const boost::optional<boost::filesystem::path>& temp_directory() const noexcept;
-    
     boost::optional<unsigned> num_threads() const noexcept;
-    
     const CallerFactory& caller_factory() const noexcept;
-    
     ProgressMeter& progress_meter() noexcept;
-    
     bool sites_only() const noexcept;
-    
     bool legacy() const noexcept;
     
 private:
@@ -111,11 +93,11 @@ private:
     void update_dependents() noexcept;
 };
 
-bool check_components_valid(const GenomeCallingComponents& components);
+GenomeCallingComponents collate_genome_calling_components(const options::OptionMap& options);
+
+bool validate(const GenomeCallingComponents& components);
 
 void cleanup(GenomeCallingComponents& components) noexcept;
-
-boost::optional<GenomeCallingComponents> collate_genome_calling_components(const options::OptionMap& options);
 
 struct ContigCallingComponents
 {

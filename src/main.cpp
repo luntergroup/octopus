@@ -73,7 +73,9 @@ int main(const int argc, const char** argv)
             using utils::TimeInterval;
             stream(info_log) << "Done initialising calling components in " << TimeInterval {start, end};
             options.clear();
-            if (components) run_octopus(*components);
+            if (validate(components)) {
+                run_octopus(components);
+            }
             log_program_end();
         } catch (const Error& e) {
             return log_exception(e);

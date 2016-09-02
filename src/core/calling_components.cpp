@@ -15,6 +15,7 @@
 #include "utils/read_size_estimator.hpp"
 #include "utils/map_utils.hpp"
 #include "logging/logging.hpp"
+#include "exceptions/user_error.hpp"
 
 namespace octopus {
 
@@ -24,8 +25,7 @@ GenomeCallingComponents::GenomeCallingComponents(ReferenceGenome&& reference, Re
 {}
 
 GenomeCallingComponents::GenomeCallingComponents(GenomeCallingComponents&& other) noexcept
-:
-components_ {std::move(other.components_)}
+:  components_ {std::move(other.components_)}
 {
     update_dependents();
 }
@@ -292,20 +292,84 @@ void GenomeCallingComponents::update_dependents() noexcept
     components_.caller_factory.set_read_pipe(components_.read_pipe);
 }
 
-bool check_components_valid(const GenomeCallingComponents& components)
+bool reads_map_to_matched_reference(const ReadManager& rm, const ReferenceGenome& reference)
+{
+    // TODO: There must be a better way to do this...
+    const auto contigs = reference.contig_names();
+    return std::all_of(std::cbegin(contigs), std::cend(contigs),
+                       [&reference, &rm] (const auto& contig) {
+                           bool ok {true};
+                           try {
+                               rm.has_reads(reference.contig_region(contig));
+                           } catch (...) {
+                               ok = false;
+                           }
+                           return ok;
+                       });
+}
+
+class UnmatchedReference : public UserError
+{
+public:
+    UnmatchedReference(const ReferenceGenome& reference)
+    {
+        std::ostringstream ss {};
+        ss << "Some or all of the reads are not mapped to the given reference genome (";
+        ss << reference.name();
+        ss << ")";
+        why_ = ss.str();
+    }
+
+private:
+    std::string do_where() const override
+    {
+        return "validate";
+    }
+    
+    std::string do_why() const override
+    {
+        return why_;
+    }
+    
+    std::string do_help() const override
+    {
+        return "Ensure the given reference genome is the correct version";
+    }
+    
+    std::string why_;
+};
+
+GenomeCallingComponents collate_genome_calling_components(const options::OptionMap& options)
+{
+    auto reference    = options::make_reference(options);
+    auto read_manager = options::make_read_manager(options);
+    
+    if (!reads_map_to_matched_reference(read_manager, reference)) {
+        throw UnmatchedReference {reference};
+    }
+    
+    auto output = options::make_output_vcf_writer(options);
+    
+    return GenomeCallingComponents {
+        std::move(reference),
+        std::move(read_manager),
+        std::move(output),
+        options
+    };
+}
+
+bool validate(const GenomeCallingComponents& components)
 {
     if (components.samples().empty()) {
         logging::WarningLogger log {};
         log << "No samples detected - at least one is required for calling";
         return false;
     }
-    
     if (components.search_regions().empty()) {
         logging::WarningLogger log {};
         log << "There are no input regions - at least one is required for calling";
         return false;
     }
-    
     return true;
 }
 
@@ -320,30 +384,6 @@ void cleanup(GenomeCallingComponents& components) noexcept
             stream(log) << "Cleanup failed with exception: " << e.what();
         }
     }
-}
-
-boost::optional<GenomeCallingComponents> collate_genome_calling_components(const options::OptionMap& options)
-{
-    auto reference = options::make_reference(options);
-    
-    auto read_manager = options::make_read_manager(options);
-    
-    auto output = options::make_output_vcf_writer(options);
-    
-    if (!output.is_open()) {
-        return boost::none;
-    }
-    
-    GenomeCallingComponents result {
-        std::move(reference),
-        std::move(read_manager),
-        std::move(output),
-        options
-    };
-    
-    check_components_valid(result);
-    
-    return boost::optional<GenomeCallingComponents> {std::move(result)};
 }
 
 ContigCallingComponents::ContigCallingComponents(const GenomicRegion::ContigName& contig,
