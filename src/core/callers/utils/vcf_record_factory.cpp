@@ -93,6 +93,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>
     // TODO: refactor this!!!
     
     auto wrapped_calls = wrap(move(calls));
+    
     calls.clear();
     calls.shrink_to_fit();
     
@@ -221,7 +222,11 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>
                                     [it2] (const auto& call) {
                                         return begins_equal(call, *it2);
                                     });
-        for_each(it2, it3, [this] (auto& call) {
+        boost::optional<decltype(it3)> base;
+        if ((*it2)->reference().sequence().front() != '#') {
+            base = it2;
+        }
+        for_each(base ? next(it2) : it2, it3, [this, base] (auto& call) {
             if (call->reference().sequence().front() == '#') {
                 const auto actual_reference_base = reference_.fetch_sequence(head_position(call)).front();
                 auto new_sequence = call->reference().sequence();
@@ -239,7 +244,12 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>
                     for (unsigned i {0}; i < ploidy; ++i) {
                         if (old_genotype[i].sequence().front() == '#') {
                             auto new_sequence = old_genotype[i].sequence();
-                            new_sequence.front() = actual_reference_base;
+                            if (base) {
+                                const auto& base_sequence = (**base)->get_genotype_call(sample).genotype[i].sequence();
+                                new_sequence.front() = base_sequence.front();
+                            } else {
+                                new_sequence.front() = actual_reference_base;
+                            }
                             Allele new_allele {mapped_region(call), move(new_sequence)};
                             replacements.emplace(old_genotype[i], new_allele);
                             new_genotype.emplace(move(new_allele));
@@ -254,7 +264,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>
                 }
             }
         });
-        if (it2 != it3) {
+        if (std::distance(it2, it3) > 1) {
             auto rit3 = next(std::make_reverse_iterator(it3));
             const auto rit2 = std::make_reverse_iterator(it2);
             for (; rit3 != rit2; ++rit3) {
