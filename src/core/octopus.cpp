@@ -463,10 +463,7 @@ TaskQueue divide_work_into_tasks(const ContigCallingComponents& components,
         do {
             result.emplace(subregion, policy);
             subregion = propose_call_subregion(components, subregion, region, minTaskSize);
-        } while (ends_before(subregion, region));
-        if (result.empty()) {
-            result.emplace(region, policy);
-        }
+        } while (!is_after(subregion, region));
     }
     
     return result;
