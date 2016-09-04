@@ -24,41 +24,21 @@
 namespace octopus { namespace coretools { class Assembler; }}
 
 namespace boost {
-    template <typename G>
-    static decltype(auto) get(vertex_index_t, G& g);
-    template <typename G>
-    static decltype(auto) get(vertex_index_t, const G& g);
+    template <typename G> static decltype(auto) get(vertex_index_t, G& g);
+    template <typename G> static decltype(auto) get(vertex_index_t, const G& g);
 }
 
 namespace octopus { namespace coretools {
 
-namespace debug {
-    void print(const Assembler& assembler);
-}
+namespace debug { void print(const Assembler& assembler); }
 
 class Assembler
 {
 public:
     using NucleotideSequence = std::string;
     
-    struct Variant : public Equitable<Variant>
-    {
-        Variant() = default;
-        template <typename S1, typename S2>
-        Variant(std::size_t pos, S1&& ref, S2&& alt);
-        std::size_t begin_pos;
-        NucleotideSequence ref, alt;
-    };
-    
-    class BadReferenceSequence : public std::invalid_argument
-    {
-    public:
-        BadReferenceSequence(NucleotideSequence reference_sequence);
-        ~BadReferenceSequence() noexcept = default;
-        const char* what() const noexcept override;
-    private:
-        NucleotideSequence reference_sequence_;
-    };
+    struct Variant;
+    class BadReferenceSequence;
     
     Assembler() = delete;
     
@@ -104,11 +84,10 @@ private:
     class Kmer : public Comparable<Kmer>
     {
     public:
-        using NucleotideSequence     = Assembler::NucleotideSequence;
-        using SequenceIterator = NucleotideSequence::const_iterator;
+        using NucleotideSequence = Assembler::NucleotideSequence;
+        using SequenceIterator   = NucleotideSequence::const_iterator;
         
         Kmer() = delete;
-        
         Kmer(SequenceIterator first, SequenceIterator last) noexcept;
         
         Kmer(const Kmer&)            = default;
@@ -172,8 +151,7 @@ private:
         bool is_reference;
     };
     
-    using KmerGraph = boost::adjacency_list<boost::listS, boost::listS, boost::bidirectionalS,
-    GraphNode, GraphEdge>;
+    using KmerGraph = boost::adjacency_list<boost::listS, boost::listS, boost::bidirectionalS, GraphNode, GraphEdge>;
     
     using Vertex = boost::graph_traits<KmerGraph>::vertex_descriptor;
     using Edge   = boost::graph_traits<KmerGraph>::edge_descriptor;
@@ -304,11 +282,30 @@ private:
     friend decltype(auto) boost::get(boost::vertex_index_t, const G&);
 };
 
+struct Assembler::Variant : public Equitable<Variant>
+{
+    Variant() = default;
+    template <typename S1, typename S2>
+    Variant(std::size_t pos, S1&& ref, S2&& alt);
+    NucleotideSequence ref, alt;
+    std::size_t begin_pos;
+};
+
+class Assembler::BadReferenceSequence : public std::invalid_argument
+{
+public:
+    BadReferenceSequence(NucleotideSequence reference_sequence);
+    ~BadReferenceSequence() noexcept = default;
+    const char* what() const noexcept override;
+private:
+    NucleotideSequence reference_sequence_;
+};
+
 template <typename S1, typename S2>
 Assembler::Variant::Variant(std::size_t pos, S1&& ref, S2&& alt)
-: begin_pos {pos}
-, ref {std::forward<S1>(ref)}
+: ref {std::forward<S1>(ref)}
 , alt {std::forward<S2>(alt)}
+, begin_pos {pos}
 {}
 
 bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noexcept;

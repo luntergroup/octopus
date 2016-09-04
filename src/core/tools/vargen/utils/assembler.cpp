@@ -38,13 +38,9 @@ auto sequence_length(const I num_kmers, const unsigned kmer_size) noexcept
 }
 
 template <typename T>
-auto count_kmers(const T& sequence, const unsigned kmer_size) noexcept
+std::size_t count_kmers(const T& sequence, const unsigned kmer_size) noexcept
 {
-    if (sequence.size() < kmer_size) {
-        return std::size_t {0};
-    } else {
-        return sequence.size() - kmer_size + 1;
-    }
+    return (sequence.size() >= kmer_size) ? sequence.size() - kmer_size + 1 : 0;
 }
 
 } // namespace
@@ -161,15 +157,10 @@ protected:
 bool Assembler::is_acyclic() const
 {
     if (graph_has_trivial_cycle()) return false;
-    
     bool is_acyclic {true};
-    
     CycleDetector<KmerGraph> vis {is_acyclic};
-    
     const auto index_map = boost::get(&GraphNode::index, graph_);
-    
     boost::depth_first_search(graph_, boost::visitor(vis).vertex_index_map(index_map));
-    
     return is_acyclic;
 }
 
@@ -278,13 +269,25 @@ void Assembler::clear()
     reference_kmers_.shrink_to_fit();
 }
 
+bool operator<(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noexcept
+{
+    if (lhs.begin_pos == rhs.begin_pos) {
+        if (lhs.ref.size() == rhs.ref.size()) {
+            return lhs.alt < rhs.alt;
+        }
+        return lhs.ref.size() < rhs.alt.size();
+    }
+    return lhs.begin_pos < rhs.begin_pos;
+}
+
 std::deque<Assembler::Variant> Assembler::extract_variants(const unsigned max)
 {
-    if (is_empty() || is_all_reference()) {
-        return std::deque<Variant> {};
-    }
+    if (is_empty() || is_all_reference()) return {};
     set_all_edge_transition_scores_from(reference_head());
-    return extract_k_highest_scoring_bubble_paths(max);
+    auto result = extract_k_highest_scoring_bubble_paths(max);
+    std::sort(std::begin(result), std::end(result));
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    return result;
 }
 
 // Assembler private types
@@ -636,22 +639,19 @@ std::size_t Assembler::num_reference_kmers() const
 Assembler::NucleotideSequence Assembler::make_sequence(const Path& path) const
 {
     assert(!path.empty());
-    NucleotideSequence result {};
-    result.reserve(k_ + path.size() - 1);
+    NucleotideSequence result(k_ + path.size() - 1, 'N');
     const auto& first_kmer = kmer_of(path.front());
-    result.insert(std::end(result), std::cbegin(first_kmer), std::cend(first_kmer));
-    std::for_each(std::next(std::cbegin(path)), std::cend(path),
-                  [this, &result] (const Vertex v) {
-                      result.push_back(back_base_of(v));
-                  });
+    auto itr = std::copy(std::cbegin(first_kmer), std::cend(first_kmer), std::begin(result));
+    std::transform(std::next(std::cbegin(path)), std::cend(path), itr,
+                  [this] (const Vertex v) { return back_base_of(v); });
     return result;
 }
 
 Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Vertex to) const
 {
     const auto null = null_vertex();
-    NucleotideSequence result {};
     
+    NucleotideSequence result {};
     if (from == to || from == null) {
         return result;
     }
@@ -664,7 +664,7 @@ Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Verte
     }
     result.reserve(2 * k_);
     const auto& first_kmer = kmer_of(from);
-    result.insert(std::end(result), std::cbegin(first_kmer), std::cend(first_kmer));
+    result.assign(std::cbegin(first_kmer), std::cend(first_kmer));
     from = next_reference(from);
     while (from != last) {
         result.push_back(back_base_of(from));
@@ -1171,7 +1171,7 @@ bool is_dominated_by_path(const V& vertex, const BidirectionalIt first, const Bi
     const auto& dominator = dominator_tree.at(vertex);
     const auto rfirst = std::make_reverse_iterator(last);
     const auto rlast  = std::make_reverse_iterator(first);
-    // reverse becasue more likely to be a closer vertex
+    // reverse because more likely to be a closer vertex
     return std::find(rfirst, rlast, dominator) != rlast;
 }
 
@@ -1181,8 +1181,7 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
     
     auto dominator_tree = build_dominator_tree(reference_head());
     auto num_remaining_alt_kmers = num_kmers() - num_reference_kmers();
-    Vertex ref, alt;
-    unsigned rhs_kmer_count;
+    
     boost::optional<Edge> blocked_edge {};
     std::deque<Variant> result {};
     unsigned max_blockings {50}; // HACK
@@ -1202,14 +1201,15 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             } else {
                 const auto p = boost::out_edges(boost::target(*blocked_edge, graph_), graph_);
                 if (std::all_of(p.first, p.second, [this] (const Edge e) { return is_blocked(e); })) {
-                    return result; // Othersie might not terminate?
+                    return result; // Otherwise might not terminate?
                 }
             }
         }
-        
         assert(count_unreachables(predecessors) == 1);
         
+        Vertex ref, alt; unsigned rhs_kmer_count;
         std::tie(alt, ref, rhs_kmer_count) = backtrack_until_nonreference(predecessors, reference_tail());
+        
         if (alt == reference_head()) {
             // complete reference path is shortest path
             const auto nondominant_reference = extract_nondominant_reference(dominator_tree);
@@ -1223,6 +1223,7 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
         while (alt != reference_head()) {
             auto alt_path = extract_nonreference_path(predecessors, alt);
             assert(!alt_path.empty());
+            assert(predecessors.count(alt_path.front()) == 1);
             const auto ref_before_bubble = predecessors.at(alt_path.front());
             auto ref_seq = make_reference(ref_before_bubble, ref);
             alt_path.push_front(ref_before_bubble);

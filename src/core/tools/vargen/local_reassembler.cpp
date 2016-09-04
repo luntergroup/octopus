@@ -384,17 +384,12 @@ bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin,
                                     std::deque<Variant>& result) const
 {
     if (bin.empty()) return true;
-    
     const auto assemble_region = propose_assembler_region(bin.region, kmer_size);
-    
     if (size(assemble_region) < kmer_size) return false;
-    
     const auto reference_sequence = reference_.get().fetch_sequence(assemble_region);
-    
     if (!utils::is_canonical_dna(reference_sequence)) return false;
     
     Assembler assembler {kmer_size, reference_sequence};
-    
     for (const auto& sequence : bin.read_sequences) {
         assembler.insert_read(sequence);
     }
