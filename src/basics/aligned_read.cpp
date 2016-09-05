@@ -169,7 +169,8 @@ AlignedRead::FlagBits AlignedRead::compress(const Flags& flags) const noexcept
 
 AlignedRead::Flags AlignedRead::decompress(const FlagBits& flags) const noexcept
 {
-    return { flags[0], flags[1], flags[2], flags[3], flags[4], flags[5], flags[6], flags[7] };
+    // Note: first_template_segment and last_template_segmenet are not currently used
+    return {flags[0], flags[1], flags[2], flags[3], flags[4], flags[5], flags[6], flags[7], false, false};
 }
 
 AlignedRead::Segment::FlagBits AlignedRead::Segment::compress(const Flags& flags)

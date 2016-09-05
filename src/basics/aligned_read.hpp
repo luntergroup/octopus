@@ -126,7 +126,6 @@ public:
     
 private:
     static constexpr std::size_t numFlags_ = 8;
-    
     using FlagBits = std::bitset<numFlags_>;
     
     // should be ordered by sizeof
@@ -155,12 +154,12 @@ struct AlignedRead::Flags
     bool all_segments_in_read_aligned;
     bool unmapped;
     bool reverse_mapped;
-    bool first_template_segment;
-    bool last_template_segmenet;
     bool secondary_alignment;
     bool qc_fail;
     bool duplicate;
     bool supplementary_alignment;
+    bool first_template_segment;
+    bool last_template_segment;
 };
 
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
