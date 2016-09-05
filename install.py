@@ -12,7 +12,8 @@ def is_unix():
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', help='Install into /usr/local/bin', action='store_true')
 parser.add_argument('--compiler', help='C++ compiler path')
-parser.add_argument('--keep-cache', action='store_true')
+parser.add_argument('--keep-cache', help='Do not refresh CMake cache', action='store_true')
+parser.add_argument('--debug', help='Builds in debug mode', action='store_true')
 args = vars(parser.parse_args())
 
 octopus_dir = os.path.dirname(os.path.realpath(__file__))
@@ -52,8 +53,11 @@ if args["root"]:
 if args["compiler"]:
     cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["compiler"])
 
-cmake_options.append("-DCMAKE_BUILD_TYPE=Release")
-
+if "debug" not in args:
+    cmake_options.append("-DCMAKE_BUILD_TYPE=Release")
+else:
+    cmake_options.append("-DCMAKE_BUILD_TYPE=Debug")
+    
 ret = call(["cmake"] + cmake_options + [".."])
 
 if ret == 0:
