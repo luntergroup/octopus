@@ -44,33 +44,33 @@ GermlineLikelihoodModel::GermlineLikelihoodModel(const HaplotypeLikelihoodCache&
 
 // ln p(read | genotype)  = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
 // ln p(reads | genotype) = sum {read in reads} ln p(read | genotype)
-double GermlineLikelihoodModel::ln_likelihood(const Genotype<Haplotype>& genotype) const
+double GermlineLikelihoodModel::evaluate(const Genotype<Haplotype>& genotype) const
 {
     assert(likelihoods_.is_primed());
     
     // These cases are just for optimisation
     switch (genotype.ploidy()) {
         case 1:
-            return ln_likelihood_haploid(genotype);
+            return evaluate_haploid(genotype);
         case 2:
-            return ln_likelihood_diploid(genotype);
+            return evaluate_diploid(genotype);
         case 3:
-            return ln_likelihood_triploid(genotype);
+            return evaluate_triploid(genotype);
         case 4:
-            return ln_likelihood_polyploid(genotype);
+            return evaluate_polyploid(genotype);
             //return log_likelihood_tetraploid(sample, genotype);
         default:
-            return ln_likelihood_polyploid(genotype);
+            return evaluate_polyploid(genotype);
     }
 }
 
-double GermlineLikelihoodModel::ln_likelihood_haploid(const Genotype<Haplotype>& genotype) const
+double GermlineLikelihoodModel::evaluate_haploid(const Genotype<Haplotype>& genotype) const
 {
     const auto& log_likelihoods = likelihoods_[genotype[0]];
     return std::accumulate(std::cbegin(log_likelihoods), std::cend(log_likelihoods), 0.0);
 }
 
-double GermlineLikelihoodModel::ln_likelihood_diploid(const Genotype<Haplotype>& genotype) const
+double GermlineLikelihoodModel::evaluate_diploid(const Genotype<Haplotype>& genotype) const
 {
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
     if (genotype.is_homozygous()) {
@@ -84,7 +84,7 @@ double GermlineLikelihoodModel::ln_likelihood_diploid(const Genotype<Haplotype>&
                               });
 }
 
-double GermlineLikelihoodModel::ln_likelihood_triploid(const Genotype<Haplotype>& genotype) const
+double GermlineLikelihoodModel::evaluate_triploid(const Genotype<Haplotype>& genotype) const
 {
     using std::cbegin; using std::cend;
     static const double ln2 {std::log(2)};
@@ -119,7 +119,7 @@ double GermlineLikelihoodModel::ln_likelihood_triploid(const Genotype<Haplotype>
                               });
 }
 
-double GermlineLikelihoodModel::ln_likelihood_tetraploid(const Genotype<Haplotype>& genotype) const
+double GermlineLikelihoodModel::evaluate_tetraploid(const Genotype<Haplotype>& genotype) const
 {
     const auto z = genotype.zygosity();
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
@@ -143,7 +143,7 @@ double GermlineLikelihoodModel::ln_likelihood_tetraploid(const Genotype<Haplotyp
     return 0;
 }
 
-double GermlineLikelihoodModel::ln_likelihood_polyploid(const Genotype<Haplotype>& genotype) const
+double GermlineLikelihoodModel::evaluate_polyploid(const Genotype<Haplotype>& genotype) const
 {
     const auto ploidy = genotype.ploidy();
     const auto z = genotype.zygosity();

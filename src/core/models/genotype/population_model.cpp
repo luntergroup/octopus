@@ -241,7 +241,7 @@ compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
                        std::transform(std::cbegin(genotypes), std::cend(genotypes),
                                       std::begin(likelihoods),
                                       [&sample, &likelihood_model] (const auto& genotype) {
-                                          return likelihood_model.ln_likelihood(genotype);
+                                          return likelihood_model.evaluate(genotype);
                                       });
                        
                        return likelihoods;

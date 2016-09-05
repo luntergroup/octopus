@@ -24,17 +24,17 @@ public:
     
     ~GermlineLikelihoodModel() = default;
     
-    double ln_likelihood(const Genotype<Haplotype>& genotype) const;
+    double evaluate(const Genotype<Haplotype>& genotype) const;
     
 private:
     const HaplotypeLikelihoodCache& likelihoods_;
     
     // These are just for optimisation
-    double ln_likelihood_haploid(const Genotype<Haplotype>& genotype) const;
-    double ln_likelihood_diploid(const Genotype<Haplotype>& genotype) const;
-    double ln_likelihood_triploid(const Genotype<Haplotype>& genotype) const;
-    double ln_likelihood_tetraploid(const Genotype<Haplotype>& genotype) const;
-    double ln_likelihood_polyploid(const Genotype<Haplotype>& genotype) const;
+    double evaluate_haploid(const Genotype<Haplotype>& genotype) const;
+    double evaluate_diploid(const Genotype<Haplotype>& genotype) const;
+    double evaluate_triploid(const Genotype<Haplotype>& genotype) const;
+    double evaluate_tetraploid(const Genotype<Haplotype>& genotype) const;
+    double evaluate_polyploid(const Genotype<Haplotype>& genotype) const;
 };
 
 } // namespace model

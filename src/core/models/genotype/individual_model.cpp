@@ -50,7 +50,7 @@ IndividualModel::infer_latents(const std::vector<Genotype<Haplotype>>& genotypes
     
     std::transform(cbegin(genotypes), cend(genotypes), begin(result),
                    [&likelihood_model] (const auto& genotype) {
-                       return likelihood_model.ln_likelihood(genotype);
+                       return likelihood_model.evaluate(genotype);
                    });
     
     if (debug_log_) debug::print_genotype_likelihoods(stream(*debug_log_), genotypes, result);

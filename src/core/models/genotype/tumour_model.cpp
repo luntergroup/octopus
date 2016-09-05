@@ -780,7 +780,7 @@ auto calculate_log_posteriors_with_germline_model(const SampleName& sample,
     
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&] (const auto& genotype) {
-                       return likelihood_model.ln_likelihood(genotype.germline_genotype());
+                       return likelihood_model.evaluate(genotype.germline_genotype());
                    });
     
     maths::normalise_logs(result);
@@ -803,7 +803,7 @@ auto calculate_log_posteriors_with_germline_model(const SampleName& sample,
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&] (const auto& genotype) {
                        return genotype_prior_model.evaluate(genotype)
-                            + likelihood_model.ln_likelihood(genotype.germline_genotype());
+                            + likelihood_model.evaluate(genotype.germline_genotype());
                    });
     
     maths::normalise_logs(result);

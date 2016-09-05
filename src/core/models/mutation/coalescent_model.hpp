@@ -38,9 +38,9 @@ public:
                     double indel_heterozygosity = 0.0001,
                     unsigned max_haplotypes = 1024);
     
-    CoalescentModel(const CoalescentModel&) = default;
+    CoalescentModel(const CoalescentModel&)            = default;
     CoalescentModel& operator=(const CoalescentModel&) = default;
-    CoalescentModel(CoalescentModel&&) = default;
+    CoalescentModel(CoalescentModel&&)                 = default;
     CoalescentModel& operator=(CoalescentModel&&)      = default;
     
     ~CoalescentModel() = default;
