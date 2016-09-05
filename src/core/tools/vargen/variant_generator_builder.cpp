@@ -14,36 +14,42 @@ VariantGeneratorBuilder&
 VariantGeneratorBuilder::set_cigar_scanner(CigarScanner::Options options)
 {
     cigar_scanner_ = std::move(options);
+    return *this;
 }
 
 VariantGeneratorBuilder&
 VariantGeneratorBuilder::set_dynamic_cigar_scanner(DynamicCigarScanner::Options options)
 {
     dynamic_cigar_scanner_ = std::move(options);
+    return *this;
 }
 
 VariantGeneratorBuilder&
 VariantGeneratorBuilder::set_local_reassembler(LocalReassembler::Options options)
 {
     local_reassembler_ = std::move(options);
+    return *this;
 }
 
 VariantGeneratorBuilder&
 VariantGeneratorBuilder::add_vcf_extractor(boost::filesystem::path file, VcfExtractor::Options options)
 {
     vcf_extractors_.push_back({std::move(file), std::move(options)});
+    return *this;
 }
 
 VariantGeneratorBuilder&
 VariantGeneratorBuilder::add_downloader(Downloader::Options options)
 {
     downloaders_.push_back(std::move(options));
+    return *this;
 }
 
 VariantGeneratorBuilder&
 VariantGeneratorBuilder::add_randomiser(Randomiser::Options options)
 {
     randomisers_.push_back(std::move(options));
+    return *this;
 }
 
 VariantGenerator VariantGeneratorBuilder::build(const ReferenceGenome& reference) const
