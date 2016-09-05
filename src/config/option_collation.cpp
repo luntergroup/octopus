@@ -939,8 +939,12 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
     } else if (caller == "trio") {
-        vc_builder.set_maternal_sample(options.at("maternal-sample").as<std::string>());
-        vc_builder.set_paternal_sample(options.at("paternal-sample").as<std::string>());
+        Trio trio {
+            Trio::Mother {options.at("maternal-sample").as<std::string>()},
+            Trio::Father {options.at("paternal-sample").as<std::string>()},
+            Trio::Child {"TODO"}
+        };
+        vc_builder.set_trio(std::move(trio));
     }
     
     vc_builder.set_model_filtering(!(options.at("disable-call-filtering").as<bool>()
