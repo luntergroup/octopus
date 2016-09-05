@@ -12,6 +12,7 @@
 
 #include "config/common.hpp"
 #include "basics/phred.hpp"
+#include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
 #include "caller.hpp"
 
@@ -21,7 +22,6 @@ class GenomicRegion;
 class ReadPipe;
 class Variant;
 class HaplotypeLikelihoodCache;
-class CoalescentModel;
 class VariantCall;
 
 class IndividualCaller : public Caller
@@ -34,8 +34,7 @@ public:
         Phred<double> min_variant_posterior;
         Phred<double> min_refcall_posterior;
         unsigned ploidy;
-        double snp_heterozygosity;
-        double indel_heterozygosity;
+        CoalescentModel::Parameters prior_model_params;
     };
     
     IndividualCaller() = delete;
@@ -117,6 +116,7 @@ private:
     
     HaplotypeProbabilityMap calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
 };
+
 } // namespace octopus
 
 #endif

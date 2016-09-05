@@ -194,8 +194,14 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         stream(*debug_log_) << "There are " << cancer_genotypes.size() << " candidate cancer genotypes";
     }
     
-    const CoalescentModel germline_prior_model {Haplotype {octopus::mapped_region(haplotypes.front()), reference_}};
-    const SomaticMutationModel somatic_prior_model {germline_prior_model, parameters_.somatic_mutation_rate};
+    const CoalescentModel germline_prior_model {
+        Haplotype {octopus::mapped_region(haplotypes.front()), reference_},
+        parameters_.germline_prior_model_params
+    };
+    const SomaticMutationModel somatic_prior_model {
+        germline_prior_model,
+        parameters_.somatic_mutation_model_params
+    };
     
     auto cnv_model_priors     = get_cnv_model_priors(germline_prior_model);
     auto somatic_model_priors = get_somatic_model_priors(somatic_prior_model);
@@ -296,7 +302,10 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
                                         const Latents& latents) const
 {
     if (has_normal_sample()) {
-        const CoalescentModel prior_model {Haplotype {octopus::mapped_region(haplotypes.front()), reference_}};
+        const CoalescentModel prior_model {
+            Haplotype {octopus::mapped_region(haplotypes.front()), reference_},
+            parameters_.germline_prior_model_params
+        };
         const GermlineModel germline_model {prior_model};
         haplotype_likelihoods.prime(normal_sample());
         const auto normal_inferences = germline_model.infer_latents(latents.germline_genotypes_,
@@ -808,7 +817,7 @@ CancerCaller::ModelPriors
 CancerCaller::get_model_priors() const
 {
     const double cnv_model_prior      {0.01};
-    const double somatic_model_prior  {parameters_.somatic_mutation_rate};
+    const double somatic_model_prior  {parameters_.somatic_mutation_model_params.somatic_mutation_rate};
     const double germline_model_prior {std::max(0.0, 1.0 - (cnv_model_prior + somatic_model_prior))};
     return {germline_model_prior, cnv_model_prior, somatic_model_prior};
 }

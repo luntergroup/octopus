@@ -8,8 +8,9 @@
 #include <functional>
 
 #include "coalescent_model.hpp"
-#include "core/types/cancer_genotype.hpp"
 #include "core/types/haplotype.hpp"
+#include "core/types/genotype.hpp"
+#include "core/types/cancer_genotype.hpp"
 #include "utils/maths.hpp"
 
 namespace octopus {
@@ -17,10 +18,15 @@ namespace octopus {
 class SomaticMutationModel
 {
 public:
+    struct Parameters
+    {
+        double somatic_mutation_rate = 0.00001;
+    };
+    
     SomaticMutationModel() = delete;
     
     SomaticMutationModel(const CoalescentModel& germline_model,
-                         double somatic_mutation_rate = 0.00001);
+                         Parameters params);
     
     SomaticMutationModel(const SomaticMutationModel&) = default;
     SomaticMutationModel& operator=(const SomaticMutationModel&) = default;
@@ -33,7 +39,11 @@ public:
 
 private:
     std::reference_wrapper<const CoalescentModel> germline_model_;
-    double somatic_mutation_rate_;
+    Parameters params_;
+    
+    // p(somatic | germline)
+    double probability_of_somatic(const Haplotype& somatic, const Genotype<Haplotype>& germline) const;
+    double probability_of_somatic(const Haplotype& somatic, const Haplotype& germline) const;
 };
 
 template <typename Container>

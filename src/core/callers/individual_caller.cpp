@@ -23,8 +23,6 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
 #include "containers/probability_matrix.hpp"
-#include "core/models/mutation/coalescent_model.hpp"
-#include "core/models/genotype/individual_model.hpp"
 #include "logging/logging.hpp"
 #include "utils/germline_variant_call.hpp"
 #include "utils/reference_call.hpp"
@@ -126,8 +124,7 @@ IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplot
                                             const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                             const Caller::Latents& latents) const
 {
-    return calculate_model_posterior(haplotypes, haplotype_likelihoods,
-                                           dynamic_cast<const Latents&>(latents));
+    return calculate_model_posterior(haplotypes, haplotype_likelihoods, dynamic_cast<const Latents&>(latents));
 }
 
 static auto calculate_model_posterior(const double normal_model_log_evidence,
@@ -439,7 +436,7 @@ IndividualCaller::call_reference(const std::vector<Allele>& alleles,
 
 std::vector<std::unique_ptr<ReferenceCall>>
 IndividualCaller::call_reference(const std::vector<Allele>& alleles, const Latents& latents,
-                                        const ReadMap& reads) const
+                                 const ReadMap& reads) const
 {
     return {};
 }
@@ -453,8 +450,7 @@ CoalescentModel IndividualCaller::make_prior_model(const std::vector<Haplotype>&
 {
     return CoalescentModel {
         Haplotype {mapped_region(haplotypes.front()), reference_},
-        parameters_.snp_heterozygosity,
-        parameters_.indel_heterozygosity
+        parameters_.prior_model_params
     };
 }
 

@@ -31,11 +31,16 @@ namespace octopus {
 class CoalescentModel
 {
 public:
+    struct Parameters
+    {
+        double snp_heterozygosity   = 0.001;
+        double indel_heterozygosity = 0.0001;
+    };
+    
     CoalescentModel() = delete;
     
     CoalescentModel(Haplotype reference,
-                    double snp_heterozygosity = 0.001,
-                    double indel_heterozygosity = 0.0001,
+                    Parameters parameters,
                     unsigned max_haplotypes = 1024);
     
     CoalescentModel(const CoalescentModel&)            = default;
@@ -65,7 +70,7 @@ private:
     
     std::vector<double> reference_base_indel_heterozygosities_;
     
-    double snp_heterozygosity_, indel_heterozygosity_;
+    Parameters params_;
     
     mutable std::vector<std::reference_wrapper<const Variant>> site_buffer1_, site_buffer2_;
     mutable std::unordered_map<Haplotype, std::vector<Variant>> difference_cache_;
@@ -186,7 +191,7 @@ double CoalescentModel::evaluate(const Container& haplotypes) const
         if (it != std::cend(result_cache_)) return it->second;
     }
     
-    auto indel_heterozygosity = indel_heterozygosity_;
+    auto indel_heterozygosity = params_.indel_heterozygosity;
     
     if (k_indel > 0) {
         for (const auto& site : site_buffer1_) {
@@ -200,7 +205,7 @@ double CoalescentModel::evaluate(const Container& haplotypes) const
         }
     }
     
-    const auto result = detail::coalescent(n, k_snp, k_indel, snp_heterozygosity_, indel_heterozygosity);
+    const auto result = detail::coalescent(n, k_snp, k_indel, params_.snp_heterozygosity, indel_heterozygosity);
     
     if (k_indel > 0) {
         result_cache_.emplace(t, result);

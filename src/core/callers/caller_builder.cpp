@@ -7,6 +7,7 @@
 #include "individual_caller.hpp"
 #include "population_caller.hpp"
 #include "cancer_caller.hpp"
+#include "trio_caller.hpp"
 
 namespace octopus {
 
@@ -14,7 +15,7 @@ namespace octopus {
 
 CallerBuilder::CallerBuilder(const ReferenceGenome& reference, const ReadPipe& read_pipe,
                              VariantGeneratorBuilder vgb, HaplotypeGenerator::Builder hgb)
-: components_ {reference, read_pipe, std::move(vgb), std::move(hgb)}
+: components_ {reference, read_pipe, std::move(vgb), std::move(hgb), Phaser {}}
 , factory_ {generate_factory()}
 {}
 
@@ -178,21 +179,9 @@ CallerBuilder& CallerBuilder::set_min_somatic_posterior(Phred<double> posterior)
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_maternal_sample(SampleName mother)
+CallerBuilder& CallerBuilder::set_trio(Trio trio)
 {
-    params_.maternal_sample = std::move(mother);
-    return *this;
-}
-
-CallerBuilder& CallerBuilder::set_paternal_sample(SampleName father)
-{
-    params_.paternal_sample = std::move(father);
-    return *this;
-}
-
-CallerBuilder& CallerBuilder::set_pedigree(Pedigree pedigree)
-{
-    params_.pedigree = std::move(pedigree);
+    params_.trio = std::move(trio);
     return *this;
 }
 
@@ -237,8 +226,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
                                                           params_.ploidy,
-                                                          params_.snp_heterozygosity,
-                                                          params_.indel_heterozygosity
+                                                          {params_.snp_heterozygosity,
+                                                          params_.indel_heterozygosity}
                                                       });
         }},
         {"population", [this, general_parameters = std::move(general_parameters)] () {
@@ -247,7 +236,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       PopulationCaller::Parameters {
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
-                                                          params_.ploidy
+                                                          params_.ploidy,
+                                                          {params_.snp_heterozygosity,
+                                                           params_.indel_heterozygosity}
                                                       });
         }},
         {"cancer", [this, general_parameters = std::move(general_parameters)] () {
@@ -259,11 +250,26 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.min_refcall_posterior,
                                                       params_.ploidy,
                                                       params_.normal_sample,
-                                                      params_.somatic_mutation_rate,
+                                                      {params_.snp_heterozygosity,
+                                                      params_.indel_heterozygosity},
+                                                      {params_.somatic_mutation_rate},
                                                       params_.min_somatic_frequency,
                                                       params_.credible_mass,
                                                       50'000
                                                   });
+        }},
+        {"trio", [this, general_parameters = std::move(general_parameters)] () {
+            return std::make_unique<TrioCaller>(make_components(),
+                                                std::move(general_parameters),
+                                                TrioCaller::Parameters {
+                                                *params_.trio,
+                                                params_.min_variant_posterior,
+                                                params_.min_refcall_posterior,
+                                                params_.ploidy,
+                                                {params_.snp_heterozygosity,
+                                                 params_.indel_heterozygosity},
+                                                {0.000000001}
+                                                });
         }}
     };
 }

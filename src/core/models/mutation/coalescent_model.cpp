@@ -48,19 +48,17 @@ auto calculate_base_indel_heterozygosities(const Haplotype& haplotype,
 }
 
 CoalescentModel::CoalescentModel(Haplotype reference,
-                                 double snp_heterozygosity,
-                                 double indel_heterozygosity,
+                                 Parameters params,
                                  unsigned max_haplotypes)
 : reference_ {std::move(reference)}
 , reference_base_indel_heterozygosities_ {}
-, snp_heterozygosity_ {snp_heterozygosity}
-, indel_heterozygosity_ {indel_heterozygosity}
+, params_ {params}
 {
-    if (snp_heterozygosity <= 0 || indel_heterozygosity <= 0) {
+    if (params_.snp_heterozygosity <= 0 || params_.indel_heterozygosity <= 0) {
         throw std::domain_error {"CoalescentModel: snp and indel heterozygosity must be > 0"};
     }
     
-    reference_base_indel_heterozygosities_ = calculate_base_indel_heterozygosities(reference_, indel_heterozygosity_);
+    reference_base_indel_heterozygosities_ = calculate_base_indel_heterozygosities(reference_, params_.indel_heterozygosity);
     
     site_buffer1_.reserve(128);
     site_buffer2_.reserve(128);

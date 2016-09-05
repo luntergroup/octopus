@@ -63,8 +63,7 @@ public:
     CallerBuilder& set_min_somatic_posterior(Phred<double> posterior) noexcept;
     
     // trio
-    CallerBuilder& set_maternal_sample(SampleName mother);
-    CallerBuilder& set_paternal_sample(SampleName father);
+    CallerBuilder& set_trio(Trio trio);
     
     // pedigree
     CallerBuilder& set_pedigree(Pedigree pedigree);
@@ -106,7 +105,7 @@ private:
         bool call_somatics_only;
         
         // trio
-        boost::optional<SampleName> maternal_sample, paternal_sample;
+        boost::optional<Trio> trio;
         
         // pedigree
         boost::optional<Pedigree> pedigree;

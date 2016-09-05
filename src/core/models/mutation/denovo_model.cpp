@@ -6,12 +6,13 @@
 #include <iterator>
 #include <algorithm>
 
+#include "basics/phred.hpp"
 #include "../pairhmm/pair_hmm.hpp"
 
 namespace octopus {
 
-DeNovoModel::DeNovoModel(double mutation_rate)
-: mutation_rate_ {mutation_rate}
+DeNovoModel::DeNovoModel(Parameters params)
+: params_ {params}
 {}
 
 auto pad(const Haplotype::NucleotideSequence& sequence)
@@ -25,7 +26,8 @@ auto pad(const Haplotype::NucleotideSequence& sequence)
 
 double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) const
 {
-    hmm::BasicMutationModel model {10, 20, 20};
+    const auto p = static_cast<std::int8_t>(probability_to_phred(params_.mutation_rate).score());
+    hmm::BasicMutationModel model {p, p, p};
     return hmm::evaluate(target.sequence(), pad(given.sequence()), model);
 }
 

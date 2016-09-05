@@ -22,7 +22,6 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
 #include "containers/probability_matrix.hpp"
-#include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
 #include "logging/logging.hpp"
 #include "utils/germline_variant_call.hpp"
@@ -45,8 +44,8 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                    ModelInferences&& inferences)
 : genotype_posteriors_ {}
 , haplotype_posteriors_ {}
-, model_log_evidence_ {inferences.log_evidence}
 , dummy_latents_ {}
+, model_log_evidence_ {inferences.log_evidence}
 {
 //    GenotypeProbabilityMap genotype_posteriors {
 //        std::make_move_iterator(std::begin(genotypes)),
@@ -66,8 +65,8 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                           ModelInferences&& dummy_inferences)
 : genotype_posteriors_ {}
 , haplotype_posteriors_ {}
-, model_log_evidence_ {inferences.log_evidence}
 , dummy_latents_ {std::move(dummy_inferences)}
+, model_log_evidence_ {inferences.log_evidence}
 {
 //    GenotypeProbabilityMap genotype_posteriors {
 //        std::make_move_iterator(std::begin(genotypes)),
@@ -123,9 +122,9 @@ PopulationCaller::Latents::calculate_haplotype_posteriors(const std::vector<Hapl
 
 std::unique_ptr<PopulationCaller::Caller::Latents>
 PopulationCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
-                                       const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                                const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
+    CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}, CoalescentModel::Parameters {}};
     
     model::PopulationModel model {prior_model};
     

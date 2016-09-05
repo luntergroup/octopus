@@ -11,31 +11,13 @@
 namespace octopus {
 
 SomaticMutationModel::SomaticMutationModel(const CoalescentModel& germline_model,
-                                           double somatic_mutation_rate)
-: germline_model_{germline_model}
-, somatic_mutation_rate_{somatic_mutation_rate}
+                                           Parameters params)
+: germline_model_ {germline_model}
+, params_ {params}
 {
-    if (somatic_mutation_rate <= 0) {
+    if (params_.somatic_mutation_rate <= 0) {
         throw std::domain_error {"SomaticMutationModel: somatic mutation rate must be > 0"};
     }
-}
-
-double probability_of_somatic(const Haplotype& somatic, const Haplotype& germline,
-                              double somatic_mutation_probability = 0.00001)
-{
-    const auto variants = difference(somatic, germline);
-    return std::pow(somatic_mutation_probability, variants.size());
-}
-
-// p(somatic | germline) = 1 / M sum k = 1 -> M p(somatic | germline_k) (M = germline ploidy)
-double probability_of_somatic(const Haplotype& somatic,
-                              const Genotype<Haplotype>& germline_genotype,
-                              const CoalescentModel& germline_model)
-{
-    return std::accumulate(std::cbegin(germline_genotype), std::cend(germline_genotype), 0.0,
-                           [&somatic](const auto curr, const Haplotype& germline) {
-                               return curr + probability_of_somatic(somatic, germline);
-                           }) / germline_genotype.ploidy();
 }
 
 double SomaticMutationModel::evaluate(const CancerGenotype<Haplotype>& genotype) const
@@ -43,9 +25,23 @@ double SomaticMutationModel::evaluate(const CancerGenotype<Haplotype>& genotype)
     const auto& germline = genotype.germline_genotype();
     const auto& somatic = genotype.somatic_element();
     const auto germline_log_prior = germline_model_.get().evaluate(germline);
-    const auto somatic_probability_given_germline = probability_of_somatic(somatic, germline,
-                                                                           germline_model_);
+    const auto somatic_probability_given_germline = probability_of_somatic(somatic, germline);
     return germline_log_prior + std::log(somatic_probability_given_germline);
+}
+
+// p(somatic | germline) = 1 / M sum k = 1 -> M p(somatic | germline_k) (M = germline ploidy)
+double SomaticMutationModel::probability_of_somatic(const Haplotype& somatic, const Genotype<Haplotype>& germline) const
+{
+    return std::accumulate(std::cbegin(germline), std::cend(germline), 0.0,
+                           [this, &somatic](const auto curr, const Haplotype& germline) {
+                               return curr + probability_of_somatic(somatic, germline);
+                           }) / germline.ploidy();
+}
+
+double SomaticMutationModel::probability_of_somatic(const Haplotype& somatic, const Haplotype& germline) const
+{
+    const auto variants = difference(somatic, germline);
+    return std::pow(params_.somatic_mutation_rate, variants.size());
 }
 
 } // namespace octopus

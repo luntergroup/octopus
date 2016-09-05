@@ -11,9 +11,14 @@ namespace octopus {
 class DeNovoModel
 {
 public:
+    struct Parameters
+    {
+        double mutation_rate;
+    };
+    
     DeNovoModel() = delete;
     
-    DeNovoModel(double mutation_rate);
+    DeNovoModel(Parameters params);
     
     DeNovoModel(const DeNovoModel&) = default;
     DeNovoModel& operator=(const DeNovoModel&) = default;
@@ -25,7 +30,7 @@ public:
     double evaluate(const Haplotype& target, const Haplotype& given) const;
 
 private:
-    double mutation_rate_;
+    Parameters params_;
 };
 
 } // namespace octopus

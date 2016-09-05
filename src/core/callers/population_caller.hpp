@@ -10,6 +10,7 @@
 #include <typeindex>
 
 #include "config/common.hpp"
+#include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/genotype/population_model.hpp"
 #include "basics/phred.hpp"
 #include "caller.hpp"
@@ -32,6 +33,7 @@ public:
         Phred<double> min_variant_posterior;
         Phred<double> min_refcall_posterior;
         unsigned ploidy;
+        CoalescentModel::Parameters prior_model_params;
     };
     
     PopulationCaller() = delete;
