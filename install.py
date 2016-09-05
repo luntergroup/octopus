@@ -12,7 +12,7 @@ def is_unix():
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', help='Install into /usr/local/bin', action='store_true')
 parser.add_argument('--compiler', help='C++ compiler path')
-parser.add_argument('--keep-cache', help='Do not refresh CMake cache', action='store_true')
+parser.add_argument('--keep_cache', help='Do not refresh CMake cache', action='store_true')
 parser.add_argument('--debug', help='Builds in debug mode', action='store_true')
 args = vars(parser.parse_args())
 
@@ -40,7 +40,7 @@ os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
 
 cmake_cache_file = "CMakeCache.txt"
 
-if "keep-cache" not in args and os.path.exists(cmake_cache_file):
+if not args["keep_cache"] and os.path.exists(cmake_cache_file):
     os.remove(cmake_cache_file)
 
 ret = 0
@@ -53,7 +53,7 @@ if args["root"]:
 if args["compiler"]:
     cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["compiler"])
 
-if "debug" not in args:
+if not args["debug"]:
     cmake_options.append("-DCMAKE_BUILD_TYPE=Release")
 else:
     cmake_options.append("-DCMAKE_BUILD_TYPE=Debug")
