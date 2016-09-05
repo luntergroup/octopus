@@ -55,11 +55,8 @@ public:
     
 private:
     std::deque<unsigned> coverage_ = {};
-    
     GenomicRegion encompassing_region_;
-    
     std::size_t num_mappables_added_ = 0;
-    
     void do_add(const GenomicRegion& region);
     
     using Iterator = decltype(coverage_)::const_iterator;

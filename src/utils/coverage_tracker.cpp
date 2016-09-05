@@ -6,6 +6,7 @@
 #include <iterator>
 #include <algorithm>
 #include <stdexcept>
+#include <cassert>
 
 #include "maths.hpp"
 
@@ -95,6 +96,7 @@ void CoverageTracker::clear() noexcept
 
 void CoverageTracker::do_add(const octopus::GenomicRegion& region)
 {
+    if (is_empty(region)) return;
     if (num_mappables_added_ == 0) {
         coverage_.assign(size(region), 1);
         encompassing_region_ = region;
@@ -118,9 +120,10 @@ void CoverageTracker::do_add(const octopus::GenomicRegion& region)
         }
         
         const auto first = std::next(std::begin(coverage_), begin_distance(encompassing_region_, region));
+        assert(first < std::end(coverage_));
+        assert(std::next(first, size(region)) <= std::end(coverage_));
         std::transform(first, std::next(first, size(region)), first, [] (auto count) { return count + 1; });
     }
-    
     ++num_mappables_added_;
 }
 
