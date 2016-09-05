@@ -49,7 +49,7 @@ private:
 template <typename InputIt>
 void ReadTransformer::transform_reads(InputIt first, InputIt last) const
 {
-    std::for_each(first, last, [this] (auto& read) { transform_read(read); });
+    std::for_each(first, last, [this] (AlignedRead& read) { transform_read(read); });
 }
 
 // non-member methods

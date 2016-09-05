@@ -100,7 +100,7 @@ BidirIt ReadFilterer<BidirIt>::remove(BidirIt first, BidirIt last) const
     
     if (!basic_filters_.empty()) {
         last = std::remove_if(first, last,
-                              [this] (const auto& read) {
+                              [this] (const AlignedRead& read) {
                                   return !passes_all_basic_filters(read);
                               });
     }
@@ -118,7 +118,7 @@ BidirIt ReadFilterer<BidirIt>::partition(BidirIt first, BidirIt last) const
 {
     if (first == last || num_filters() == 0) return last;
     
-    const auto passes_basic_filters = [this] (const auto& read) {
+    const auto passes_basic_filters = [this] (const AlignedRead& read) {
         return !passes_all_basic_filters(read);
     };
     
@@ -159,7 +159,7 @@ BidirIt ReadFilterer<BidirIt>::remove(BidirIt first, BidirIt last,
         std::vector<std::size_t> flat_counts(basic_filters_.size(), 0);
         
         last = std::remove_if(first, last,
-                              [this, &flat_counts] (const auto& read) {
+                              [this, &flat_counts] (const AlignedRead& read) {
                                   const auto it = find_failing_basic_filter(read);
                                   
                                   if (it != std::cend(basic_filters_)) {
@@ -212,7 +212,7 @@ BidirIt ReadFilterer<BidirIt>::partition(BidirIt first, BidirIt last,
         std::vector<std::size_t> flat_counts(basic_filters_.size(), 0);
         
         last = std::stable_partition(first, last,
-                      [this, &flat_counts] (const auto& read) {
+                      [this, &flat_counts] (const AlignedRead& read) {
                           const auto it = find_failing_basic_filter(read);
                           
                           if (it != std::cend(basic_filters_)) {

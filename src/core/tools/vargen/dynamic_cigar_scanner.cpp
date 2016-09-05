@@ -130,12 +130,12 @@ void DynamicCigarScanner::do_add_read(const AlignedRead& read)
 
 void DynamicCigarScanner::do_add_reads(VectorIterator first, VectorIterator last)
 {
-    std::for_each(first, last, [this] (const auto& read ) { do_add_read(read); });
+    std::for_each(first, last, [this] (const AlignedRead& read ) { do_add_read(read); });
 }
 
 void DynamicCigarScanner::do_add_reads(FlatSetIterator first, FlatSetIterator last)
 {
-    std::for_each(first, last, [this] (const auto& read ) { do_add_read(read); });
+    std::for_each(first, last, [this] (const AlignedRead& read ) { do_add_read(read); });
 }
 
 std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegion& region)
@@ -157,7 +157,7 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
         const auto num_observations = static_cast<unsigned>(distance(cbegin(overlapped), next_candidate));
         const auto min_depth = read_coverage_tracker_.min_coverage(mapped_region(candidate));
         const auto base_quality_sum = std::accumulate(cbegin(overlapped), next_candidate, 0u,
-                                                      [this] (auto curr, const Candidate& candidate) {
+                                                      [this] (const unsigned curr, const Candidate& candidate) {
                                                           return curr + sum_base_qualities(candidate);
                                                       });
         if (options_.include(candidate.variant, num_observations, min_depth, base_quality_sum)) {

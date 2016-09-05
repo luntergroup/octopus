@@ -253,7 +253,7 @@ void Haplotype::append(NucleotideSequence& result, const ContigAllele& allele) c
 
 void Haplotype::append(NucleotideSequence& result, AlleleIterator first, AlleleIterator last) const
 {
-    std::for_each(first, last, [this, &result] (const auto& allele) { append(result, allele); });
+    std::for_each(first, last, [this, &result] (const ContigAllele& allele) { append(result, allele); });
 }
 
 void Haplotype::append_reference(NucleotideSequence& result, const ContigRegion& region) const

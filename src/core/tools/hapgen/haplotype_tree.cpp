@@ -318,7 +318,7 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
         const auto possible_leafs = haplotype_leaf_cache_.equal_range(haplotype);
         
         for_each(possible_leafs.first, possible_leafs.second,
-                 [this, &haplotype] (const auto& leaf_pair) {
+                 [this, &haplotype] (const HaplotypeVertexMultiMap::value_type& leaf_pair) {
                      const auto p = clear(leaf_pair.second, contig_region(haplotype));
                      auto leaf_itr = find(cbegin(haplotype_leafs_), cend(haplotype_leafs_),
                                           leaf_pair.second);
@@ -351,7 +351,7 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
         const auto possible_leafs = haplotype_leaf_cache_.equal_range(haplotype);
         const auto it = std::find_if(possible_leafs.first, possible_leafs.second,
-                                     [this, &haplotype] (const auto& leaf_pair) {
+                                     [this, &haplotype] (const HaplotypeVertexMultiMap::value_type& leaf_pair) {
                                          return is_branch_exact_haplotype(leaf_pair.second, haplotype);
                                      });
         
@@ -361,7 +361,7 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
         
         const auto leaf_to_keep_itr = it->second;
         std::for_each(possible_leafs.first, possible_leafs.second,
-                      [this, &haplotype, leaf_to_keep_itr] (auto& leaf_pair) {
+                      [this, &haplotype, leaf_to_keep_itr] (HaplotypeVertexMultiMap::value_type& leaf_pair) {
                           if (leaf_pair.second != leaf_to_keep_itr) {
                               const auto p = clear(leaf_pair.second, contig_region(haplotype));
                               auto leaf_itr = std::find(cbegin(haplotype_leafs_), cend(haplotype_leafs_),

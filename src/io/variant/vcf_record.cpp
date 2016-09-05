@@ -245,7 +245,7 @@ void VcfRecord::print_genotype_allele_numbers(std::ostream& os, const SampleName
     std::vector<std::string> allele_numbers(ploidy(sample));
     const auto& genotype = genotypes_.at(sample);
     std::transform(std::cbegin(genotype.first), std::cend(genotype.first), std::begin(allele_numbers),
-                   [this] (const auto& allele) { return get_allele_number(allele); });
+                   [this] (const std::string& allele) { return get_allele_number(allele); });
     print(os, allele_numbers, (genotype.second) ? "|" : "/");
 }
 
@@ -273,14 +273,14 @@ void VcfRecord::print_sample_data(std::ostream& os) const
         os << '\t';
         auto samples = this->samples();
         std::for_each(std::cbegin(samples), std::prev(std::cend(samples)),
-                      [this, &os] (const auto& sample) {
+                      [this, &os] (const SampleName& sample) {
                           auto it = std::cbegin(format_);
                           if (*it == "GT") {
                               print_genotype_allele_numbers(os, sample);
                               ++it;
                           }
                           std::for_each(it, std::cend(format_),
-                                        [this, &os, &sample] (const auto& key) {
+                                        [this, &os, &sample] (const KeyType& key) {
                                             os << ':';
                                             print(os, get_sample_value(sample, key), ",");
                                         });
@@ -292,7 +292,7 @@ void VcfRecord::print_sample_data(std::ostream& os) const
             ++it;
         }
         std::for_each(it, std::cend(format_),
-                      [this, &os, &samples] (const auto& key) {
+                      [this, &os, &samples] (const KeyType& key) {
                           os << ':';
                           print(os, get_sample_value(samples.back(), key), ",");
                       });
