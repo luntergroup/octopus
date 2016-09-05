@@ -257,7 +257,7 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
                 
                 if (phase && overlaps(calling_region, phase->get().region)) {
                     if (begins_before(phase->get().region, calling_region)) {
-                        const auto output_call_region = overlapped_region(calling_region, phase->get().region);
+                        const auto output_call_region = *overlapped_region(calling_region, phase->get().region);
                         const auto output_calls = overlap_range(call_regions, output_call_region);
                         
                         if (!output_calls.empty()) {
@@ -534,7 +534,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         if (next_active_region && begins_before(active_region, *next_active_region)
             && overlaps(active_region, call_region)) {
             auto passed_region   = left_overhang_region(active_region, *next_active_region);
-            auto uncalled_region = overlapped_region(active_region, passed_region);
+            auto uncalled_region = *overlapped_region(active_region, passed_region);
             
             if (phase_set && ends_before(phase_set->region, passed_region)) {
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);

@@ -71,7 +71,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     }
     if (max_included_ == 0) {
         if (included_itr != last_candidate_itr) {
-            return intervening_region(previous_region, *included_itr);
+            return *intervening_region(previous_region, *included_itr);
         } else {
             return previous_region;
         }

@@ -1523,7 +1523,7 @@ auto extract_intervening_regions(ForwardIt first, ForwardIt last)
     
     std::transform(first, std::prev(last), std::next(first), std::back_inserter(result),
                    [] (const auto& mappable, const auto& next_mappable) {
-                       return intervening_region(mappable, next_mappable);
+                       return *intervening_region(mappable, next_mappable);
                    });
     
     return result;
@@ -1561,7 +1561,7 @@ auto extract_intervening_regions(ForwardIt first, ForwardIt last, const Mappable
     
     std::transform(first, std::prev(last), std::next(first), std::back_inserter(result),
                    [] (const auto& mappable, const auto& next_mappable) {
-                       return intervening_region(mappable, next_mappable);
+                       return *intervening_region(mappable, next_mappable);
                    });
     
     if (ends_before(*std::prev(last), mappable)) {

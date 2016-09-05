@@ -191,7 +191,7 @@ GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls, const VcfHead
             ++it;
             
             for (auto penultimate = std::prev(std::cend(wrapped_calls)); it != penultimate; ++it) {
-                region = intervening_region(std::prev(it)->back(), std::next(it)->front());
+                region = *intervening_region(std::prev(it)->back(), std::next(it)->front());
                 result.at(sample).insert(extract_genotype(*it, region, sample, reference));
             }
             

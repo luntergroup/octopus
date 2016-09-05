@@ -172,7 +172,7 @@ Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) co
         return result;
     } else if (begins_before(overlapped_explicit_alleles.front(), region)) {
         append(result, splice(overlapped_explicit_alleles.front(),
-                              overlapped_region(overlapped_explicit_alleles.front(), region)));
+                              *overlapped_region(overlapped_explicit_alleles.front(), region)));
         overlapped_explicit_alleles.advance_begin(1);
         if (overlapped_explicit_alleles.empty()) {
             append_reference(result, right_overhang_region(region, explicit_allele_region_));
@@ -192,7 +192,7 @@ Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) co
     if (region_ends_before_last_overlapped_allele) {
         overlapped_explicit_alleles.advance_end(1); // as we previously removed this allele
         append(result, splice(overlapped_explicit_alleles.back(),
-                              overlapped_region(overlapped_explicit_alleles.back(), region)));
+                              *overlapped_region(overlapped_explicit_alleles.back(), region)));
     } else if (ends_before(explicit_allele_region_, region)) {
         append_reference(result, right_overhang_region(region, explicit_allele_region_));
     }
@@ -396,7 +396,7 @@ void Haplotype::Builder::update_region(const Allele& allele)
 
 ContigAllele Haplotype::Builder::get_intervening_reference_allele(const ContigAllele& lhs, const ContigAllele& rhs) const
 {
-    const auto region = intervening_region(lhs, rhs);
+    const auto region = *intervening_region(lhs, rhs);
     return ContigAllele {region, reference_.get().fetch_sequence(GenomicRegion {region_.contig_name(), region})};
 }
 
@@ -472,7 +472,7 @@ Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std
     }
     
     if (!contains(contig_region, overlapped.front())) {
-        result.push_front(splice(overlapped.front(), overlapped_region(overlapped.front(), contig_region)));
+        result.push_front(splice(overlapped.front(), *overlapped_region(overlapped.front(), contig_region)));
         overlapped.advance_begin(1);
     }
     
@@ -483,7 +483,7 @@ Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std
         } else {
             result.explicit_alleles_.insert(end(result.explicit_alleles_),
                                             cbegin(overlapped), prev(cend(overlapped)));
-            result.push_back(splice(overlapped.back(), overlapped_region(overlapped.back(), contig_region)));
+            result.push_back(splice(overlapped.back(), *overlapped_region(overlapped.back(), contig_region)));
         }
     }
     

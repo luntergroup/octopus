@@ -225,7 +225,7 @@ GenomicRegion clipped_mapped_region(const AlignedRead& read)
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
 {
     if (contains(region, read)) return read.cigar();
-    const auto splice_region = overlapped_region(read, region);
+    const auto splice_region = *overlapped_region(read, region);
     const auto offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
     return splice(read.cigar(), offset, size(region));
 }
@@ -249,7 +249,7 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     
     if (contains(region, read)) return read;
     
-    const auto splice_region = overlapped_region(read, region);
+    const auto splice_region = *overlapped_region(read, region);
     const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
     
     const auto uncontained_cigar_splice = splice_reference(read.cigar(), 0, reference_offset);

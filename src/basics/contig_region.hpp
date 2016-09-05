@@ -11,6 +11,7 @@
 #include <functional>
 
 #include <boost/functional/hash.hpp>
+#include <boost/optional.hpp>
 
 #include "concepts/comparable.hpp"
 
@@ -226,12 +227,11 @@ inline ContigRegion expand(const ContigRegion& region,
     return expand_lhs(expand_rhs(region, rhs), lhs);
 }
 
-inline ContigRegion overlapped_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline boost::optional<ContigRegion> overlapped_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (!overlaps(lhs, rhs)) {
-        throw std::runtime_error {"ContigRegion: cannot calculate overlapped region between non overlapping regions"};
+        return boost::none;
     }
-    
     return ContigRegion {std::max(lhs.begin(), rhs.begin()), std::min(lhs.end(), rhs.end())};
 }
 
@@ -240,12 +240,11 @@ inline ContigRegion encompassing_region(const ContigRegion& lhs, const ContigReg
     return ContigRegion {std::min(lhs.begin(), rhs.begin()), std::max(lhs.end(), rhs.end())};
 }
 
-inline ContigRegion intervening_region(const ContigRegion& lhs, const ContigRegion& rhs)
+inline boost::optional<ContigRegion> intervening_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (begins_before(rhs, lhs) || overlaps(lhs, rhs)) {
-        throw std::runtime_error {"ContigRegion: cannot calculate intervening region between overlapping regions"};
+        return boost::none;
     }
-    
     return ContigRegion {lhs.end(), rhs.begin()};
 }
 

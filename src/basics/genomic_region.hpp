@@ -10,6 +10,7 @@
 #include <ostream>
 #include <cassert>
 
+#include <boost/optional.hpp>
 #include <boost/functional/hash.hpp>
 
 #include "concepts/comparable.hpp"
@@ -277,14 +278,21 @@ inline GenomicRegion encompassing_region(const GenomicRegion& lhs, const Genomic
     return GenomicRegion {lhs.contig_name(), encompassing_region(lhs.contig_region(), rhs.contig_region())};
 }
 
-inline GenomicRegion intervening_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
+inline boost::optional<GenomicRegion> intervening_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    return GenomicRegion {lhs.contig_name(), intervening_region(lhs.contig_region(),  rhs.contig_region())};
+    const auto contig_region = intervening_region(lhs.contig_region(),  rhs.contig_region());
+    if (contig_region) {
+        return GenomicRegion {lhs.contig_name(), *contig_region};
+    }
+    return boost::none;
 }
 
-inline GenomicRegion overlapped_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
+inline boost::optional<GenomicRegion> overlapped_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    return GenomicRegion {lhs.contig_name(), overlapped_region(lhs.contig_region(), rhs.contig_region())};
+    if (!overlaps(lhs, rhs)) {
+        return boost::none;
+    }
+    return GenomicRegion {lhs.contig_name(), *overlapped_region(lhs.contig_region(), rhs.contig_region())};
 }
 
 inline GenomicRegion::Size left_overhang_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
