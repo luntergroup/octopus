@@ -26,11 +26,27 @@ struct MutationModel
     std::size_t lhs_flank_size = 0, rhs_flank_size = 0;
 };
 
-// p(target | truth, target_qualities, model)
-double evaluate(const std::string& truth, const std::string& target,
+// p(target | truth, target_qualities, target_offset, model)
+//
+// Warning: The target must be contained by the truth by at least
+// min_flank_pad() on either side.
+double evaluate(const std::string& target, const std::string& truth,
                 const std::vector<std::uint8_t>& target_qualities,
                 std::size_t target_offset,
                 const MutationModel& model);
+
+struct BasicMutationModel
+{
+    std::int8_t mutation;
+    short gap_open, gap_extend;
+};
+
+// p(target | truth, model)
+//
+// Warning: The target must be contained by the truth by exactly
+// min_flank_pad() on either side.
+double evaluate(const std::string& target, const std::string& truth,
+                const BasicMutationModel& model);
 
 } // namespace hmm
 } // namespace octopus
