@@ -340,6 +340,12 @@ set(REQUIRED_BOOST_LIBRARIES
     thread
 )
 
+set(WarningIgnores
+    -Wno-unused-parameter
+    -Wno-unused-function
+    -Wno-missing-braces
+)
+
 if (BUILD_TESTING)
     # Make a library of all octopus non-main.cpp sources so can be used with tests
     add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
@@ -347,6 +353,11 @@ if (BUILD_TESTING)
     target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(Octopus tandem)
     target_compile_definitions(Octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    if (CMAKE_COMPILER_IS_GNUCXX)
+        target_compile_options(Octopus PRIVATE ${WarningIgnores})
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(Octopus PRIVATE ${WarningIgnores})
+    endif()
     find_package (Boost 1.61 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (Octopus PUBLIC ${Boost_INCLUDE_DIR})
@@ -361,11 +372,11 @@ if (BUILD_TESTING)
 elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
-#    if (CMAKE_COMPILER_IS_GNUCXX)
-#        target_compile_options(octopus-debug PRIVATE -stdlib=libstdc++)
-#    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-#        target_compile_options(octopus-debug PRIVATE -stdlib=libc++)
-#    endif()
+   if (CMAKE_COMPILER_IS_GNUCXX)
+       target_compile_options(octopus-debug PRIVATE ${WarningIgnores})
+   elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+       target_compile_options(octopus-debug PRIVATE ${WarningIgnores})
+   endif()
     target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus-debug tandem)
     target_compile_definitions(octopus-debug PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
@@ -385,11 +396,11 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
 else()
     add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus PRIVATE cxx_thread_local)
-#    if (CMAKE_COMPILER_IS_GNUCXX)
-#        target_compile_options(octopus PRIVATE -stdlib=libstdc++)
-#    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-#        target_compile_options(octopus PRIVATE -stdlib=libc++)
-#    endif()
+    if (CMAKE_COMPILER_IS_GNUCXX)
+        target_compile_options(octopus PRIVATE ${WarningIgnores})
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(octopus PRIVATE ${WarningIgnores})
+    endif()
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus tandem)
     target_compile_definitions(octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
