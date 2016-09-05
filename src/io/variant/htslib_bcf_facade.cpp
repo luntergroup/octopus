@@ -24,6 +24,7 @@
 #include "vcf_record.hpp"
 
 #include <iostream> // TEST
+#include <vcf.h>
 
 namespace octopus {
 
@@ -44,7 +45,7 @@ char* convert(const std::string& source)
 std::vector<std::string> extract_samples(const bcf_hdr_t* header)
 {
     std::vector<std::string> result {};
-    const auto num_samples = bcf_hdr_nsamples(header);
+    const auto num_samples = static_cast<unsigned>(bcf_hdr_nsamples(header));
     result.reserve(num_samples);
     for (unsigned s {0}; s < num_samples; ++s) {
         result.emplace_back(header->samples[s]);
@@ -455,7 +456,7 @@ std::unordered_map<std::string, std::string> extract_format(const bcf_hrec_t* li
     std::unordered_map<std::string, std::string> result {};
     result.reserve(line->nkeys);
     
-    for (unsigned k {0}; k < line->nkeys; ++k) {
+    for (decltype(line->nkeys) k {0}; k < line->nkeys; ++k) {
         if (std::strcmp(line->keys[k], "IDX") != 0) {
             result.emplace(line->keys[k], line->vals[k]);
         }
@@ -545,7 +546,7 @@ void extract_filter(const bcf_hdr_t* header, const bcf1_t* record, VcfRecord::Bu
     std::vector<VcfRecord::KeyType> filter {};
     filter.reserve(record->d.n_flt);
     
-    for (unsigned i {0}; i < record->d.n_flt; ++i) {
+    for (decltype(record->d.n_flt) i {0}; i < record->d.n_flt; ++i) {
         filter.emplace_back(bcf_hdr_int2id(header, BCF_DT_ID, record->d.flt[i]));
     }
     
@@ -705,7 +706,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
         
         bcf_get_genotypes(header, record, &gt, &ngt); // mallocs gt
         
-        const auto max_ploidy = record->d.fmt->n;
+        const auto max_ploidy = static_cast<unsigned>(record->d.fmt->n);
         
         for (unsigned sample {0}, i {0}; sample < num_samples; ++sample, i += max_ploidy) {
             std::vector<VcfRecord::NucleotideSequence> alleles {};

@@ -265,8 +265,8 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , read_buffer_size {}
 , temp_directory {((!num_threads || *num_threads > 1) ? options::create_temp_file_directory(options) : boost::none)}
 , progress_meter {regions}
-, legacy {options::legacy_vcf_requested(options)}
 , sites_only {options::call_sites_only(options)}
+, legacy {options::legacy_vcf_requested(options)}
 {
     const auto num_bp_to_process = sum_region_sizes(regions);
     

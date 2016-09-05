@@ -210,7 +210,7 @@ public:
     template <typename K, typename InputIt>
     bool insert_at(K&& key, InputIt first, InputIt last)
     {
-        if (std::distance(first, last) != this->size2()) {
+        if (static_cast<std::size_t>(std::distance(first, last)) != this->size2()) {
             throw std::out_of_range {"MatrixMap::insert_at called with value range of different"
                 " length to Key2 range in this MatrixMap"};
         }
@@ -240,7 +240,7 @@ public:
     template <typename K, typename InputIt>
     bool insert_each(K&& key, InputIt first, InputIt last)
     {
-        if (std::distance(first, last) != this->size1()) {
+        if (static_cast<std::size_t>(std::distance(first, last)) != this->size1()) {
             throw std::out_of_range {"MatrixMap::insert_each called with value range of different"
                 " length to Key1 range in this MatrixMap"};
         }

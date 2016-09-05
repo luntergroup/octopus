@@ -137,7 +137,7 @@ public:
     }
 private:
     boost::filesystem::path file_path_;
-    std::string message_, read_name_;
+    std::string read_name_, message_;
     mutable std::string msg_;
 };
 
@@ -911,12 +911,12 @@ AlignedRead::Flags extract_flags(const bam1_core_t& c) noexcept
     result.all_segments_in_read_aligned = (c.flag & BAM_FPROPER_PAIR)   != 0;
     result.unmapped                     = (c.flag & BAM_FUNMAP)         != 0;
     result.reverse_mapped               = (c.flag & BAM_FREVERSE)       != 0;
-    result.first_template_segment       = (c.flag & BAM_FREAD1)         != 0;
-    result.last_template_segmenet       = (c.flag & BAM_FREAD2)         != 0;
     result.secondary_alignment          = (c.flag & BAM_FSECONDARY)     != 0;
     result.qc_fail                      = (c.flag & BAM_FQCFAIL)        != 0;
     result.duplicate                    = (c.flag & BAM_FDUP)           != 0;
     result.supplementary_alignment      = (c.flag & BAM_FSUPPLEMENTARY) != 0;
+    result.first_template_segment       = (c.flag & BAM_FREAD1)         != 0;
+    result.last_template_segment        = (c.flag & BAM_FREAD2)         != 0;
     
     return result;
 }
@@ -969,7 +969,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
     if (read_begin_tmp < 0) {
         // Then the read hangs off the left of the contig, and we must remove bases, qualities, and
         // adjust the cigar string as we cannot have a negative begin position
-        auto overhang_size = std::abs(read_begin_tmp);
+        const auto overhang_size = static_cast<unsigned>(std::abs(read_begin_tmp));
         sequence.erase(begin(sequence), next(begin(sequence), overhang_size));
         qualities.erase(begin(qualities), next(begin(qualities), overhang_size));
         

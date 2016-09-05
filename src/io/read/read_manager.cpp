@@ -91,7 +91,7 @@ const std::vector<ReadManager::SampleName>& ReadManager::samples() const
 
 bool ReadManager::has_reads(const SampleName& sample, const GenomicRegion& region) const
 {
-    return has_reads({sample}, region);
+    return has_reads(std::vector<SampleName> {sample}, region);
 }
 
 bool ReadManager::has_reads(const std::vector<SampleName>& samples,

@@ -67,8 +67,8 @@ struct FastaContigIndex
     explicit FastaContigIndex(T&& contig_name, std::size_t length, std::size_t offset,
                               std::size_t line_length, std::size_t line_byte_length)
     : contig_name {std::forward<T>(contig_name)}
-    , offset {offset}
     , length {length}
+    , offset {offset}
     , line_length {line_length}
     , line_byte_length {line_byte_length}
     {}

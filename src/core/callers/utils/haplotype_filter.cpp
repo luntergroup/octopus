@@ -317,11 +317,11 @@ extract_removable(const std::vector<Haplotype>& haplotypes,
                                          return p.second < min_posterior;
                                      });
     
-    auto num_unsafe = std::distance(begin(sorted), first_safe);
+    auto num_unsafe = static_cast<std::size_t>(std::distance(begin(sorted), first_safe));
     
     const auto extractor = [] (const auto& p) { return p.first; };
     
-    if (std::distance(begin(sorted), first_safe) > max_to_remove) {
+    if (static_cast<std::size_t>(std::distance(begin(sorted), first_safe)) > max_to_remove) {
         auto first_unsafe = std::next(begin(sorted), num_unsafe - max_to_remove);
         
         std::partial_sort(begin(sorted), first_unsafe, first_safe,
