@@ -23,9 +23,14 @@ namespace coretools {
 class Randomiser : public VariantGenerator
 {
 public:
+    struct Options
+    {
+        Variant::MappingDomain::Size max_variant_size = 100;
+    };
+    
     Randomiser() = delete;
     
-    Randomiser(const ReferenceGenome& reference);
+    Randomiser(const ReferenceGenome& reference, Options options);
     
     Randomiser(const Randomiser&)            = default;
     Randomiser& operator=(const Randomiser&) = default;
@@ -48,7 +53,8 @@ private:
     std::string name() const override;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
-    AlignedRead::MappingDomain::Size max_read_size_ = 100;
+    Options options_;
+    AlignedRead::MappingDomain::Size max_read_size_;
 };
 
 } // namespace coretools

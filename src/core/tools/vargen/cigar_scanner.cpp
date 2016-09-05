@@ -94,17 +94,14 @@ void CigarScanner::do_add_read(const AlignedRead& read)
     
     const auto& read_contig   = contig_name(read);
     const auto& read_sequence = read.sequence();
-    
     auto sequence_itr     = cbegin(read_sequence);
     auto base_quality_itr = cbegin(read.qualities());
-    
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
     GenomicRegion region;
     
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
-        
         switch (cigar_operation.flag()) {
             case Flag::alignmentMatch:
                 add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
@@ -192,7 +189,6 @@ auto copy_overlapped_indels(ForwardIt first, const ForwardIt last, const Contain
     
     for (const auto& candidate : candidates) {
         const auto overlapped = overlap_range(first, last, candidate, max_indel_size);
-        
         if (!overlapped.empty()) {
             std::copy_if(std::cbegin(overlapped), std::cend(overlapped), std::back_inserter(result),
                          [] (const auto& v) { return is_indel(v); });
@@ -211,7 +207,6 @@ std::deque<Variant> copy_overlapped_indels(const Container1& all_candidates,
     using std::cbegin; using std::cend; using std::begin; using std::end;
     
     static const auto is_indel = [] (const auto& v) noexcept { return octopus::is_indel(v); };
-    
     const auto first_indel = std::find_if(cbegin(all_candidates), cend(all_candidates), is_indel);
     
     if (first_indel == cend(all_candidates)) return  {};
@@ -230,13 +225,12 @@ std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& reg
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::distance;
     
     std::sort(begin(candidates_), end(candidates_));
-    
     auto overlapped = overlap_range(candidates_, region, max_seen_candidate_size_);
     
     std::vector<Variant> result {};
     
     if (options_.min_support < 2) {
-        result.insert(end(result), cbegin(overlapped), cend(overlapped));
+        result.assign(cbegin(overlapped), cend(overlapped));
         result.erase(std::unique(begin(result), end(result)), end(result));
     } else {
         result.reserve(size(overlapped, BidirectionallySortedTag {})); // the maximum
@@ -292,13 +286,14 @@ void CigarScanner::do_clear() noexcept
 
 std::string CigarScanner::name() const
 {
-    return "raw CIGAR";
+    return "CigarScanner";
 }
 
 // private methods
 
-void CigarScanner::add_snvs_in_match_range(const GenomicRegion& region, const SequenceIterator first_base,
-                                          const SequenceIterator last_base, const QualitiesIterator first_quality)
+void CigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
+                                           const SequenceIterator first_base, const SequenceIterator last_base,
+                                           const AlignedRead::BaseQualityVector::const_iterator first_quality)
 {
     using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
     using Tuple = boost::tuple<char, char, AlignedRead::BaseQuality>;

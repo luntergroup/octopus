@@ -22,12 +22,15 @@ namespace coretools {
 class VcfExtractor : public VariantGenerator
 {
 public:
+    struct Options
+    {
+        Variant::MappingDomain::Size max_variant_size = 100;
+    };
+    
     VcfExtractor() = delete;
     
-    VcfExtractor(std::unique_ptr<const VcfReader> reader);
-    
-    VcfExtractor(const std::shared_ptr<const VcfReader>& reader);
-    
+    VcfExtractor(std::unique_ptr<const VcfReader> reader, Options options);
+        
     VcfExtractor(const VcfExtractor&)            = default;
     VcfExtractor& operator=(const VcfExtractor&) = default;
     VcfExtractor(VcfExtractor&&)                 = default;
@@ -43,6 +46,7 @@ private:
     std::string name() const override;
     
     std::shared_ptr<const VcfReader> reader_;
+    Options options_;
 };
 
 } // namespace coretools

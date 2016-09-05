@@ -14,8 +14,9 @@
 
 namespace octopus { namespace coretools {
 
-Randomiser::Randomiser(const ReferenceGenome& reference)
+Randomiser::Randomiser(const ReferenceGenome& reference, Options options)
 : reference_ {reference}
+, options_ {options}
 {}
 
 std::unique_ptr<VariantGenerator> Randomiser::do_clone() const

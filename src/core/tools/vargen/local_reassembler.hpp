@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "basics/genomic_region.hpp"
+#include "basics/aligned_read.hpp"
 #include "concepts/mappable.hpp"
 #include "core/types/variant.hpp"
 #include "variant_generator.hpp"
@@ -18,8 +19,6 @@
 namespace octopus {
 
 class ReferenceGenome;
-class AlignedRead;
-class GenomicRegion;
 
 namespace coretools {
 
@@ -31,9 +30,10 @@ public:
         std::vector<unsigned> kmer_sizes              = {10, 25, 35};
         AlignedRead::BaseQuality mask_threshold       = 0;
         unsigned min_supporting_reads                 = 2;
-        Variant::MappingDomain::Size max_variant_size = 500;
+        Variant::MappingDomain::Size max_variant_size = 5000;
         unsigned num_fallbacks                        = 6;
         unsigned fallback_interval_size               = 10;
+        GenomicRegion::Size bin_size                  = 1000;
     };
     
     LocalReassembler() = delete;
@@ -88,7 +88,7 @@ private:
     std::vector<unsigned> default_kmer_sizes_;
     std::vector<unsigned> fallback_kmer_sizes_;
     
-    ContigRegion::Size bin_size_;
+    GenomicRegion::Size bin_size_;
     std::deque<Bin> bins_;
     std::deque<NucleotideSequence> masked_sequence_buffer_;
     

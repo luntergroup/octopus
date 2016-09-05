@@ -11,7 +11,6 @@
 
 #include "config/common.hpp"
 #include "basics/cigar_string.hpp"
-#include "basics/aligned_read.hpp"
 #include "concepts/mappable_range.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/sequence_utils.hpp"
@@ -49,7 +48,7 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 : reference_ {reference}
 , default_kmer_sizes_ {std::move(options.kmer_sizes)}
 , fallback_kmer_sizes_ {}
-, bin_size_ {1000}
+, bin_size_ {options.bin_size}
 , bins_ {}
 , mask_threshold_ {options.mask_threshold}
 , min_supporting_reads_ {options.min_supporting_reads}
@@ -300,7 +299,7 @@ void LocalReassembler::do_clear() noexcept
 
 std::string LocalReassembler::name() const
 {
-    return "Local reassembly";
+    return "LocalReassembler";
 }
 
 // private methods

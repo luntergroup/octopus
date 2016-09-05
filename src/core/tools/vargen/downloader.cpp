@@ -9,9 +9,9 @@
 
 namespace octopus { namespace coretools {
 
-Downloader::Downloader(const ReferenceGenome& reference, Variant::MappingDomain::Size max_variant_size)
+Downloader::Downloader(const ReferenceGenome& reference, Options options)
 : reference_ {reference}
-, max_variant_size_ {max_variant_size}
+, options_ {options}
 {}
 
 std::unique_ptr<VariantGenerator> Downloader::do_clone() const

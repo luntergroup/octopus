@@ -22,9 +22,14 @@ namespace coretools {
 class Downloader : public VariantGenerator
 {
 public:
+    struct Options
+    {
+        Variant::MappingDomain::Size max_variant_size = 100;
+    };
+    
     Downloader() = delete;
     
-    Downloader(const ReferenceGenome& reference, Variant::MappingDomain::Size max_variant_size = 100);
+    Downloader(const ReferenceGenome& reference, Options options);
     
     Downloader(const Downloader&)            = default;
     Downloader& operator=(const Downloader&) = default;
@@ -41,7 +46,7 @@ private:
     std::string name() const override;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
-    Variant::MappingDomain::Size max_variant_size_;
+    Options options_;
 };
 
 } // namespace coretools
