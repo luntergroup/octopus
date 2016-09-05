@@ -8,9 +8,12 @@
 
 #include "simd_pair_hmm.hpp"
 
-#include <emmintrin.h>
+#include <vector>
 #include <algorithm>
+#include <emmintrin.h>
 #include <cassert>
+
+#include <boost/container/small_vector.hpp>
 
 //#include <iostream> // DEBUG
 //#include <iterator> // DEBUG
@@ -42,6 +45,11 @@
 //}
 
 namespace octopus { namespace hmm { namespace simd {
+
+constexpr std::size_t staticBackpointerCapacity {10000};
+
+template <typename T>
+using SmallVector = boost::container::small_vector<T, staticBackpointerCapacity>;
 
 constexpr short nScore {0 << 2};
 constexpr int   bandSize {8};
@@ -357,7 +365,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     SimdInt _initmask2  {_mm_set_epi16(0,0,0,0,0,0,0,-0x8000)};
     
     static const SimdInt _three {_mm_set1_epi16(3)};
-    SimdInt _backpointers[2 * (truth_len + bandSize)];
+    SmallVector<SimdInt> _backpointers(2 * (truth_len + bandSize));
     
     // sequence 1 is initialized with the n-long prefix, in forward direction
     // sequence 2 is initialized as empty; reverse direction
@@ -475,13 +483,13 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     auto y      = target_len;
     auto x      = s - y;
     auto alnidx = 0;
-    auto state  = ((((short*)(_backpointers + s))[i]) >> (2 * matchLabel)) & 3;
+    auto state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * matchLabel)) & 3;
     
     s -= 2;
     
     // this is 2*y (s even) or 2*y+1 (s odd)
     while (y > 0) {
-        const auto new_state = ((((short*)(_backpointers + s))[i]) >> (2 * state)) & 3;
+        const auto new_state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * state)) & 3;
         
         if (state == matchLabel) {
             s -= 2;
@@ -552,7 +560,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     SimdInt _initmask2  {_mm_set_epi16(0,0,0,0,0,0,0,-0x8000)};
     
     static const SimdInt _three {_mm_set1_epi16(3)};
-    SimdInt _backpointers[2 * (truth_len + bandSize)];
+    SmallVector<SimdInt> _backpointers(2 * (truth_len + bandSize));
     
     SimdInt _truthwin  {_mm_set_epi16(truth[7], truth[6], truth[5], truth[4],
                                       truth[3], truth[2], truth[1], truth[0])};
@@ -693,13 +701,13 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     auto y      = target_len;
     auto x      = s - y;
     auto alnidx = 0;
-    auto state  = ((((short*)(_backpointers + s))[i]) >> (2 * matchLabel)) & 3;
+    auto state  = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * matchLabel)) & 3;
     
     s -= 2;
     
     // this is 2*y (s even) or 2*y+1 (s odd)
     while (y > 0) {
-        const auto new_state = ((((short*)(_backpointers + s))[i]) >> (2 * state)) & 3;
+        const auto new_state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * state)) & 3;
         
         if (state == matchLabel) {
             s -= 2;
