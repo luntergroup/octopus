@@ -28,7 +28,7 @@ public:
     CallerBuilder() = delete;
     
     CallerBuilder(const ReferenceGenome& reference, const ReadPipe& read_pipe,
-                  VariantGenerator::Builder vgb, HaplotypeGenerator::Builder hgb);
+                  VariantGeneratorBuilder vgb, HaplotypeGenerator::Builder hgb);
     
     CallerBuilder(const CallerBuilder&);
     CallerBuilder& operator=(const CallerBuilder&);
@@ -40,7 +40,7 @@ public:
     // common
     CallerBuilder& set_reference(const ReferenceGenome& reference) noexcept;
     CallerBuilder& set_read_pipe(const ReadPipe& read_pipe) noexcept;
-    CallerBuilder& set_variant_generator(const VariantGenerator::Builder& vb) noexcept;
+    CallerBuilder& set_variant_generator(const VariantGeneratorBuilder& vb) noexcept;
     CallerBuilder& set_ploidy(unsigned ploidy) noexcept;
     CallerBuilder& set_caller(std::string caller);
     CallerBuilder& set_refcall_type(Caller::RefCallType type) noexcept;
@@ -76,7 +76,7 @@ private:
     {
         std::reference_wrapper<const ReferenceGenome> reference;
         std::reference_wrapper<const ReadPipe> read_pipe;
-        VariantGenerator::Builder variant_generator_builder;
+        VariantGeneratorBuilder variant_generator_builder;
         HaplotypeGenerator::Builder haplotype_generator_builder;
         Phaser phaser;
     };

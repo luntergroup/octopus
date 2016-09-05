@@ -676,70 +676,89 @@ ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> sampl
 
 auto make_variant_generator_builder(const OptionMap& options)
 {
-    using VGB = coretools::VariantGenerator::Builder;
+    using namespace coretools;
     
     logging::WarningLogger warning_log {};
     logging::ErrorLogger log {};
     
-    VGB result {};
+    VariantGeneratorBuilder result {};
     
-    result.set_min_base_quality(as_unsigned("min-base-quality", options));
-    result.set_max_variant_size(as_unsigned("max-variant-size", options));
+    if (!options.at("disable-raw-cigar-candidate-generator").as<bool>()) {
+        if (options.count("min-supporting-reads") == 1) {
+            CigarScanner::Options scanner_options {};
+            scanner_options.min_base_quality = as_unsigned("min-base-quality", options);
+            scanner_options.min_support = as_unsigned("min-supporting-reads", options);
+            if (scanner_options.min_support == 0) {
+                warning_log << "The option --min_supporting_reads was set to 0 - assuming this is a typo and setting to 1";
+                ++scanner_options.min_support;
+            }
+            result.set_cigar_scanner(scanner_options);
+        } else {
+            DynamicCigarScanner::Options scanner_options {
+                [] (const Variant& v, unsigned num_observations, unsigned depth, unsigned base_quality_sum)
+                {
+                    if (depth < 4) return num_observations > 1 || base_quality_sum >= 20 || is_deletion(v);
+                    if (is_snp(v)) {
+                        return num_observations > 1
+                               || base_quality_sum > 40
+                               || static_cast<double>(num_observations) / depth > 0.2;
+                    } else if (is_insertion(v)) {
+                        return num_observations > 1
+                               || static_cast<double>(num_observations) / depth > 0.1
+                               || static_cast<double>(base_quality_sum) / alt_sequence_size(v) > 20;
+                    } else {
+                        return num_observations > 1
+                               || static_cast<double>(num_observations) / depth > 0.15;
+                    }
+                },
+                [] (const Variant& lhs, const Variant& rhs)
+                {
+                    if (!are_same_type(lhs, rhs) || is_snp(lhs) || is_mnv(lhs)) {
+                        return lhs == rhs;
+                    }
+                    return overlaps(lhs, rhs);
+                },
+                true
+            };
+            result.set_dynamic_cigar_scanner(std::move(scanner_options));
+        }
+    }
+    
+    if (!options.at("disable-assembly-candidate-generator").as<bool>()) {
+        LocalReassembler::Options reassembler_options {};
+        const auto kmer_sizes = options.at("kmer-size").as<std::vector<int>>();
+        reassembler_options.kmer_sizes.assign(std::cbegin(kmer_sizes), std::cend(kmer_sizes));
+        if (options.count("assembler-mask-base-quality") == 1) {
+            reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
+        }
+        result.set_local_reassembler(std::move(reassembler_options));
+    }
     
     if (options.count("generate-candidates-from-source") == 1) {
-        result.add_generator(VGB::Generator::external);
         const auto input_path = options.at("generate-candidates-from-source").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
-        
         if (!fs::exists(resolved_path)) {
             stream(log) << "The path " << input_path
-            << " given in the input option (--generate-candidates-from-source) does not exist";
+                         << " given in the input option (--generate-candidates-from-source) does not exist";
         }
-        
-        result.set_variant_source(std::move(resolved_path));
+        result.add_vcf_extractor(std::move(resolved_path));
     }
+    
     if (options.count("regenotype") == 1) {
         auto regenotype_path = options.at("regenotype").as<fs::path>();
         if (options.count("generate-candidates-from-source") == 1) {
             fs::path input_path {options.at("generate-candidates-from-source").as<std::string>()};
-            
             if (regenotype_path != input_path) {
                 warning_log << "Running in regenotype mode but given a different source variant file";
             }
-            
             return result;
-        } else {
-            result.add_generator(VGB::Generator::external);
         }
         auto resolved_path = resolve_path(regenotype_path, options);
-        
         if (!fs::exists(resolved_path)) {
             stream(log) << "The path " << regenotype_path
-            << " given in the input option (--generate-candidates-from-source) does not exist";
+                        << " given in the input option (--generate-candidates-from-source) does not exist";
         }
-        
-        result.set_variant_source(std::move(resolved_path));
-    }
-    if (options.count("min-supporting-reads")) {
-        auto min_supporting_reads = as_unsigned("min-supporting-reads", options);
-        if (min_supporting_reads == 0) {
-            warning_log << "The option --min_supporting_reads was set to 0 - assuming this is a typo and setting to 1";
-            ++min_supporting_reads;
-        }
-        result.set_min_supporting_reads(min_supporting_reads);
-    } else {
-        result.set_min_supporting_reads(2); // TODO: octopus should automatically calculate this
-    }
-    if (!options.at("disable-raw-cigar-candidate-generator").as<bool>()) {
-        result.add_generator(VGB::Generator::alignment);
-    }
-    if (!options.at("disable-assembly-candidate-generator").as<bool>()) {
-        result.add_generator(VGB::Generator::assembler);
-        const auto kmer_sizes = options.at("kmer-size").as<std::vector<int>>();
-        for (const auto k : kmer_sizes) result.add_kmer_size(k);
-        if (options.count("assembler-mask-base-quality") == 1) {
-            result.set_assembler_min_base_quality(as_unsigned("assembler-mask-base-quality", options));
-        }
+        result.add_vcf_extractor(std::move(resolved_path));
     }
     
     return result;

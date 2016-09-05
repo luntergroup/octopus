@@ -528,6 +528,15 @@ bool is_mnv(const Variant& variant) noexcept
     return ref_sequence_size(variant) == alt_sequence_size(variant) && ref_sequence_size(variant) > 1;
 }
 
+bool are_same_type(const Variant& lhs, const Variant& rhs) noexcept
+{
+    if (ref_sequence_size(lhs) == alt_sequence_size(rhs)) {
+        return (ref_sequence_size(lhs) == 1) ? is_snp(rhs) : is_mnv(rhs);
+    }
+    if (is_insertion(lhs)) return is_insertion(rhs);
+    return is_deletion(rhs);
+}
+
 bool is_transition(const Variant& variant) noexcept
 {
     return is_snp(variant)

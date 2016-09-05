@@ -5,6 +5,7 @@
 #define coretools_hpp
 
 #include "core/tools/vargen/variant_generator.hpp"
+#include "core/tools/vargen/variant_generator_builder.hpp"
 #include "core/tools/hapgen/haplotype_generator.hpp"
 #include "core/tools/phaser/phaser.hpp"
 

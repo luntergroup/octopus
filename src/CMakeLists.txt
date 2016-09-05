@@ -260,6 +260,8 @@ set(CORE_SOURCES
     
     core/tools/vargen/cigar_scanner.hpp
     core/tools/vargen/cigar_scanner.cpp
+    core/tools/vargen/dynamic_cigar_scanner.hpp
+    core/tools/vargen/dynamic_cigar_scanner.cpp
     core/tools/vargen/downloader.hpp
     core/tools/vargen/downloader.cpp
     core/tools/vargen/local_reassembler.hpp
@@ -270,6 +272,8 @@ set(CORE_SOURCES
     core/tools/vargen/variant_generator.cpp
     core/tools/vargen/vcf_extractor.hpp
     core/tools/vargen/vcf_extractor.cpp
+    core/tools/vargen/variant_generator_builder.hpp
+    core/tools/vargen/variant_generator_builder.cpp
     
     core/tools/vargen/utils/assembler.hpp
     core/tools/vargen/utils/assembler.cpp
@@ -339,22 +343,16 @@ set(REQUIRED_BOOST_LIBRARIES
 if (BUILD_TESTING)
     # Make a library of all octopus non-main.cpp sources so can be used with tests
     add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
-
     target_compile_features(Octopus PRIVATE cxx_thread_local)
-
     target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    
     target_link_libraries(Octopus tandem)
-    
-    add_definitions(-DBOOST_LOG_DYN_LINK) # Required for log
+    target_compile_definitions(Octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     find_package (Boost 1.61 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (Octopus PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (Octopus ${Boost_LIBRARIES})
     endif (Boost_FOUND)
-    
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
-
     find_package (HTSlib 1.3.1 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (Octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
@@ -362,59 +360,52 @@ if (BUILD_TESTING)
     endif (HTSlib_FOUND)
 elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
-    
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
-    
+#    if (CMAKE_COMPILER_IS_GNUCXX)
+#        target_compile_options(octopus-debug PRIVATE -stdlib=libstdc++)
+#    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+#        target_compile_options(octopus-debug PRIVATE -stdlib=libc++)
+#    endif()
     target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    
     target_link_libraries(octopus-debug tandem)
-    
-    add_definitions(-DBOOST_LOG_DYN_LINK) # Required for log
+    target_compile_definitions(octopus-debug PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     find_package (Boost 1.61 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (octopus-debug PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (octopus-debug ${Boost_LIBRARIES})
     endif (Boost_FOUND)
-    
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
-    
     find_package (HTSlib 1.3.1 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (octopus-debug PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
     endif (HTSlib_FOUND)
-    
     option(INSTALL_ROOT "INSTALL_ROOT" OFF)
-    
     install(TARGETS octopus-debug DESTINATION ${octopus_SOURCE_DIR}/bin)
 else()
     add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
-    
     target_compile_features(octopus PRIVATE cxx_thread_local)
-    
+#    if (CMAKE_COMPILER_IS_GNUCXX)
+#        target_compile_options(octopus PRIVATE -stdlib=libstdc++)
+#    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+#        target_compile_options(octopus PRIVATE -stdlib=libc++)
+#    endif()
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    
     target_link_libraries(octopus tandem)
-    
-    add_definitions(-DBOOST_LOG_DYN_LINK) # Required for log
+    target_compile_definitions(octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     find_package (Boost 1.61 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (octopus PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (octopus ${Boost_LIBRARIES})
     endif (Boost_FOUND)
-    
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
-    
     find_package (HTSlib 1.3.1 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (octopus ${HTSlib_LIBRARIES})
     endif (HTSlib_FOUND)
-    
     set_target_properties(octopus PROPERTIES INTERPROCEDURAL_OPTIMIZATION True)
-    
     option(INSTALL_ROOT "INSTALL_ROOT" OFF)
-    
     if(INSTALL_ROOT)
         install(TARGETS octopus DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
     else()

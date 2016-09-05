@@ -13,7 +13,7 @@ namespace octopus {
 // public methods
 
 CallerBuilder::CallerBuilder(const ReferenceGenome& reference, const ReadPipe& read_pipe,
-                             VariantGenerator::Builder vgb, HaplotypeGenerator::Builder hgb)
+                             VariantGeneratorBuilder vgb, HaplotypeGenerator::Builder hgb)
 : components_ {reference, read_pipe, std::move(vgb), std::move(hgb)}
 , factory_ {generate_factory()}
 {}
@@ -63,7 +63,7 @@ CallerBuilder& CallerBuilder::set_read_pipe(const ReadPipe& read_pipe) noexcept
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_variant_generator(const VariantGenerator::Builder& vgb) noexcept
+CallerBuilder& CallerBuilder::set_variant_generator(const VariantGeneratorBuilder& vgb) noexcept
 {
     components_.variant_generator_builder = vgb;
     return *this;

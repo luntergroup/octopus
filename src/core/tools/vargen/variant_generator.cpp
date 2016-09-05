@@ -5,13 +5,8 @@
 
 #include <algorithm>
 
+#include "config/common.hpp"
 #include "basics/genomic_region.hpp"
-#include "basics/aligned_read.hpp"
-#include "cigar_scanner.hpp"
-#include "local_reassembler.hpp"
-#include "vcf_extractor.hpp"
-#include "downloader.hpp"
-#include "randomiser.hpp"
 
 namespace octopus { namespace coretools {
 
@@ -110,104 +105,6 @@ std::unique_ptr<VariantGenerator> VariantGenerator::do_clone() const
     return std::make_unique<VariantGenerator>(*this);
 }
 
-// VariantGenerator::Builder
-
-VariantGenerator::Builder& VariantGenerator::Builder::add_generator(const Generator type)
-{
-    if (std::find(std::cbegin(generators_), std::cend(generators_), type) == std::cend(generators_)) {
-        generators_.push_back(type);
-    }
-    return *this;
-}
-
-VariantGenerator::Builder& VariantGenerator::Builder::set_min_base_quality(const BaseQuality min)
-{
-    parameters_.min_base_quality = min;
-    return *this;
-}
-
-VariantGenerator::Builder& VariantGenerator::Builder::set_min_supporting_reads(const unsigned num_reads)
-{
-    parameters_.min_supporting_reads = num_reads;
-    return *this;
-}
-
-VariantGenerator::Builder& VariantGenerator::Builder::set_max_variant_size(const Variant::MappingDomain::Size max)
-{
-    parameters_.max_variant_size = max;
-    return *this;
-}
-
-VariantGenerator::Builder& VariantGenerator::Builder::add_kmer_size(const unsigned kmer_size)
-{
-    parameters_.kmer_sizes.push_back(kmer_size);
-    return *this;
-}
-
-VariantGenerator::Builder& VariantGenerator::Builder::set_assembler_min_base_quality(const BaseQuality min)
-{
-    parameters_.min_assembler_base_quality = min;
-    return *this;
-}
-
-VariantGenerator::Builder& VariantGenerator::Builder::set_variant_source(boost::filesystem::path variant_source)
-{
-    parameters_.variant_source = std::make_shared<VcfReader>(std::move(variant_source));
-    return *this;
-}
-
-VariantGenerator::Builder& VariantGenerator::Builder::set_variant_source(const std::shared_ptr<const VcfReader>& variant_source)
-{
-    parameters_.variant_source = variant_source;
-    return *this;
-}
-
-VariantGenerator VariantGenerator::Builder::build(const ReferenceGenome& reference) const
-{
-    const auto factory = generate_factory();
-    
-    VariantGenerator result {};
-    
-    for (const auto type : generators_) {
-        result.add(factory.at(type)(reference));
-    }
-    
-    return result;
-}
-
-VariantGenerator::Builder::GeneratorFactoryMap VariantGenerator::Builder::generate_factory() const
-{
-    return GeneratorFactoryMap {
-        {Generator::alignment, [this] (const ReferenceGenome& reference) {
-            CigarScanner::Options options {
-                parameters_.min_base_quality,
-                parameters_.min_supporting_reads,
-                parameters_.max_variant_size
-            };
-            return std::make_unique<CigarScanner>(reference, options);
-        }},
-        {Generator::assembler, [this] (const ReferenceGenome& reference) {
-            auto quality = (parameters_.min_assembler_base_quality)
-            ? *parameters_.min_assembler_base_quality : parameters_.min_base_quality;
-            LocalReassembler::Options options {
-                parameters_.kmer_sizes,
-                quality,
-                parameters_.min_supporting_reads,
-                parameters_.max_variant_size
-            };
-            return std::make_unique<LocalReassembler>(reference, std::move(options));
-        }},
-        {Generator::external, [this] (const ReferenceGenome& reference) {
-            return std::make_unique<VcfExtractor>(parameters_.variant_source);
-        }},
-        {Generator::online, [this] (const ReferenceGenome& reference) {
-            return std::make_unique<Downloader>(reference, parameters_.max_variant_size);
-        }},
-        {Generator::random, [this] (const ReferenceGenome& reference) {
-            return std::make_unique<Randomiser>(reference);
-        }}
-    };
-}
 
 } // namespace coretools
 } // namespace octopus

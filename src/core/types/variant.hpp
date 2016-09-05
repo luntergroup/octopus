@@ -259,6 +259,7 @@ bool is_insertion(const Variant& variant) noexcept;
 bool is_deletion(const Variant& variant) noexcept;
 bool is_indel(const Variant& variant) noexcept;
 bool is_mnv(const Variant& variant) noexcept;
+bool are_same_type(const Variant& lhs, const Variant& rhs) noexcept;
 
 bool is_transition(const Variant& variant) noexcept;
 bool is_transversion(const Variant& variant) noexcept;

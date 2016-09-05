@@ -6,8 +6,6 @@
 
 #include <vector>
 #include <string>
-#include <deque>
-#include <unordered_map>
 #include <memory>
 #include <iterator>
 #include <functional>
@@ -15,18 +13,14 @@
 #include <type_traits>
 
 #include <boost/optional.hpp>
-#include <boost/filesystem.hpp>
 
-#include "config/common.hpp"
 #include "logging/logging.hpp"
+#include "basics/aligned_read.hpp"
 #include "core/types/variant.hpp"
 #include "containers/mappable_flat_multi_set.hpp"
-#include "io/reference/reference_genome.hpp"
-#include "io/variant/vcf_reader.hpp"
 
 namespace octopus {
 
-class AlignedRead;
 class GenomicRegion;
 
 namespace coretools {
@@ -34,14 +28,12 @@ namespace coretools {
 class VariantGenerator
 {
 public:
-    class Builder;
-    
     VariantGenerator();
     
     VariantGenerator(const VariantGenerator&);
     VariantGenerator& operator=(VariantGenerator);
-    VariantGenerator(VariantGenerator&&)                 = default;
-    VariantGenerator& operator=(VariantGenerator&&)      = default;
+    VariantGenerator(VariantGenerator&&)            = default;
+    VariantGenerator& operator=(VariantGenerator&&) = default;
     
     virtual ~VariantGenerator() = default;
     
@@ -91,68 +83,7 @@ private:
     
     virtual void do_clear() noexcept {};
     
-    virtual std::string name() const { return "Composer"; }
-};
-
-class VariantGenerator::Builder
-{
-public:
-    using BaseQuality = AlignedRead::BaseQuality;
-    using Position    = GenomicRegion::Position;
-    
-    enum class Generator { alignment, assembler, external, online, random };
-    
-    Builder() = default;
-    
-    Builder(const Builder&)            = default;
-    Builder& operator=(const Builder&) = default;
-    Builder(Builder&&)                 = default;
-    Builder& operator=(Builder&&)      = default;
-    
-    ~Builder() = default;
-    
-    Builder& add_generator(Generator type);
-    
-    Builder& set_min_base_quality(BaseQuality min);
-    Builder& set_min_supporting_reads(unsigned num_reads);
-    Builder& set_max_variant_size(Position size);
-    
-    Builder& add_kmer_size(unsigned kmer_size);
-    Builder& set_assembler_min_base_quality(BaseQuality min);
-    
-    Builder& set_variant_source(boost::filesystem::path source);
-    Builder& set_variant_source(const std::shared_ptr<const VcfReader>& source);
-    
-    VariantGenerator build(const ReferenceGenome& reference) const;
-    
-private:
-    struct Parameters
-    {
-        BaseQuality min_base_quality = 10;
-        unsigned min_supporting_reads = 1;
-        Position max_variant_size = 500;
-        
-        // assembler
-        std::vector<unsigned> kmer_sizes;
-        boost::optional<BaseQuality> min_assembler_base_quality;
-        
-        // external
-        std::shared_ptr<const VcfReader> variant_source;
-    };
-    
-    struct GeneratorTypeHash
-    {
-        std::size_t operator()(Generator type) const { return static_cast<std::size_t>(type); }
-    };
-    
-    using GeneratorFactory    = std::function<std::unique_ptr<VariantGenerator>(const ReferenceGenome&)>;
-    using GeneratorFactoryMap = std::unordered_map<Generator, GeneratorFactory, GeneratorTypeHash>;
-    
-    std::deque<Generator> generators_;
-    
-    Parameters parameters_;
-    
-    GeneratorFactoryMap generate_factory() const;
+    virtual std::string name() const { return "VariantGenerator"; }
 };
 
 template <typename InputIt>
@@ -164,19 +95,21 @@ void VariantGenerator::add_reads(InputIt first, InputIt last)
 // non-member methods
 
 namespace detail {
-    template <typename Container, typename G>
-    void add_reads(const Container& reads, G& generator, std::true_type)
-    {
-        generator.add_reads(std::cbegin(reads), std::cend(reads));
+
+template <typename Container, typename G>
+void add_reads(const Container& reads, G& generator, std::true_type)
+{
+    generator.add_reads(std::cbegin(reads), std::cend(reads));
+}
+
+template <typename ReadMap, typename G>
+void add_reads(const ReadMap& reads, G& generator, std::false_type)
+{
+    for (const auto& p : reads) {
+        generator.add_reads(std::cbegin(p.second), std::cend(p.second));
     }
-    
-    template <typename ReadMap, typename G>
-    void add_reads(const ReadMap& reads, G& generator, std::false_type)
-    {
-        for (const auto& p : reads) {
-            generator.add_reads(std::cbegin(p.second), std::cend(p.second));
-        }
-    }
+}
+
 } // namespace detail
 
 template <typename Container, typename G,
