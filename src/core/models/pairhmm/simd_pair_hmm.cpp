@@ -56,6 +56,20 @@ constexpr int   bandSize {8};
 constexpr short inf {0x7800};
 constexpr char  gap {'-'};
 
+auto extract_epi16(const __m128i a, const int imm) noexcept
+{
+    switch (imm) {
+        case 0: return _mm_extract_epi16(a, 0);
+        case 1: return _mm_extract_epi16(a, 1);
+        case 2: return _mm_extract_epi16(a, 2);
+        case 3: return _mm_extract_epi16(a, 3);
+        case 4: return _mm_extract_epi16(a, 4);
+        case 5: return _mm_extract_epi16(a, 5);
+        case 6: return _mm_extract_epi16(a, 6);
+        case 7: return _mm_extract_epi16(a, 7);
+    }
+}
+
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           const int truth_len, const int target_len,
           const std::int8_t* gap_open, short gap_extend, short nuc_prior)
@@ -129,7 +143,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         // at this point, extract minimum score.  Referred-to position must
         // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         if (s / 2 >= target_len) {
-            cur_score = _mm_extract_epi16(_m1, s / 2 - target_len);
+            cur_score = extract_epi16(_m1, s / 2 - target_len);
             if (cur_score < minscore) {
                 minscore = cur_score;
             }
@@ -166,7 +180,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         // at this point, extract minimum score.  Referred-to position must
         // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         if (s / 2 >= target_len) {
-            cur_score = _mm_extract_epi16(_m2, s / 2 - target_len);
+            cur_score = extract_epi16(_m2, s / 2 - target_len);
             if (cur_score < minscore) {
                 minscore = cur_score;
             }
@@ -253,7 +267,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _m1 = _mm_min_epi16(_m1, _mm_min_epi16(_i1, _d1));
         
         if (s / 2 >= target_len) {
-            cur_score = _mm_extract_epi16(_m1, s / 2 - target_len);
+            cur_score = extract_epi16(_m1, s / 2 - target_len);
             if (cur_score < minscore) {
                 minscore = cur_score;
             }
@@ -301,7 +315,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _m2 = _mm_min_epi16(_m2, _mm_min_epi16(_i2, _d2));
         
         if (s / 2 >= target_len) {
-            cur_score = _mm_extract_epi16(_m2, s / 2 - target_len);
+            cur_score = extract_epi16(_m2, s / 2 - target_len);
             if (cur_score < minscore) {
                 minscore = cur_score;
             }
@@ -410,7 +424,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         
         if (s / 2 >= target_len) {
-            cur_score = _mm_extract_epi16(_m1, s / 2 - target_len);
+            cur_score = extract_epi16(_m1, s / 2 - target_len);
             if (cur_score < minscore) {
                 minscore = cur_score;
                 minscoreidx = s;     // point back to the match state at this entry, so as not to
@@ -451,7 +465,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         // at this point, extract minimum score.  Referred-to position must
         // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         if (s / 2 >= target_len) {
-            cur_score = _mm_extract_epi16(_m2, s / 2 - target_len);
+            cur_score = extract_epi16(_m2, s / 2 - target_len);
             if (cur_score < minscore) {
                 minscore = cur_score;
                 minscoreidx = s+1;
@@ -608,7 +622,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         
         if (s / 2 >= target_len) {
-            cur_score = _mm_extract_epi16(_m1, s / 2 - target_len);
+            cur_score = extract_epi16(_m1, s / 2 - target_len);
             if (cur_score < minscore) {
                 minscore = cur_score;
                 minscoreidx = s;     // point back to the match state at this entry, so as not to
@@ -664,7 +678,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         // at this point, extract minimum score.  Referred-to position must
         // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         if (s / 2 >= target_len) {
-            cur_score = _mm_extract_epi16(_m2, s / 2 - target_len);
+            cur_score = extract_epi16(_m2, s / 2 - target_len);
             if (cur_score < minscore) {
                 minscore = cur_score;
                 minscoreidx = s+1;
