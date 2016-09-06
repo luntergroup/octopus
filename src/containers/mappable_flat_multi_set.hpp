@@ -814,7 +814,7 @@ MappableFlatMultiSet<MappableType, Allocator>::has_shared(const_iterator first, 
                                                           const MappableType1_& mappable1,
                                                           const MappableType2_& mappable2) const
 {
-    if (inner_distance(mappable1, mappable2) > max_element_size_) return false;
+    if (static_cast<decltype(max_element_size_)>(inner_distance(mappable1, mappable2)) > max_element_size_) return false;
     const auto m = std::minmax(mapped_region(mappable1), mapped_region(mappable2));
     const auto overlapped_lhs = overlap_range(first, last, m.first);
     return std::any_of(std::cbegin(overlapped_lhs), std::cend(overlapped_lhs),
@@ -837,7 +837,7 @@ MappableFlatMultiSet<MappableType, Allocator>::count_shared(const_iterator first
                                                             const MappableType1_& mappable1,
                                                             const MappableType2_& mappable2) const
 {
-    if (inner_distance(mappable1, mappable2) > max_element_size_) return 0;
+    if (static_cast<decltype(max_element_size_)>(inner_distance(mappable1, mappable2)) > max_element_size_) return 0;
     const auto m = std::minmax(mapped_region(mappable1), mapped_region(mappable2));
     const auto overlapped_lhs = overlap_range(first, last, m.first);
     return std::count_if(std::cbegin(overlapped_lhs), std::cend(overlapped_lhs),

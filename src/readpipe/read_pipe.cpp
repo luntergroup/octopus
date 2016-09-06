@@ -169,7 +169,7 @@ std::vector<GenomicRegion> join_close_regions(const std::vector<GenomicRegion>& 
     
     std::for_each(std::next(std::cbegin(regions)), std::cend(regions),
                   [&tmp, &result, max_distance] (const auto& region) {
-                      if (inner_distance(tmp, region) <= max_distance) {
+                      if (static_cast<GenomicRegion::Size>(inner_distance(tmp, region)) <= max_distance) {
                           tmp = encompassing_region(tmp, region);
                       } else {
                           result.push_back(tmp);
