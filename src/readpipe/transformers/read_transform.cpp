@@ -49,7 +49,7 @@ void MaskAdapters::operator()(AlignedRead& read) const noexcept
     }
 }
 
-MaskTail::MaskTail(Length num_bases) : num_bases_ {num_bases} {};
+MaskTail::MaskTail(Length num_bases) : num_bases_ {num_bases} {}
 
 void MaskTail::operator()(AlignedRead& read) const noexcept
 {
@@ -69,7 +69,7 @@ void MaskSoftClipped::operator()(AlignedRead& read) const noexcept
     }
 }
 
-MaskSoftClippedBoundries::MaskSoftClippedBoundries(Length num_bases) : num_bases_ {num_bases} {};
+MaskSoftClippedBoundries::MaskSoftClippedBoundries(Length num_bases) : num_bases_ {num_bases} {}
 
 void MaskSoftClippedBoundries::operator()(AlignedRead& read) const noexcept
 {

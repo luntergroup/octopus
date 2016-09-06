@@ -462,9 +462,9 @@ void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
     }
     
     const auto samples = src.fetch_header().samples();
-    const static char deleted {'*'};
     const static std::string missing {vcfspec::missingValue};
     const auto has_deleted = [] (const auto& allele) {
+        static constexpr char deleted {'*'};
         return std::find(std::cbegin(allele), std::cend(allele), deleted) != std::cend(allele);
     };
     auto p = src.iterate();

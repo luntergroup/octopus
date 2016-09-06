@@ -737,41 +737,41 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
 
 // Builder
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_lagging_policy(Policies::Lagging policy) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_lagging_policy(const Policies::Lagging policy) noexcept
 {
     policies_.lagging = policy;
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_target_limit(unsigned n) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_target_limit(const unsigned n) noexcept
 {
-    policies_.haplotype_limits.target   = n;
-    if (policies_.haplotype_limits.holdout >= policies_.haplotype_limits.holdout) {
+    policies_.haplotype_limits.target = n;
+    if (policies_.haplotype_limits.holdout >= n) {
         policies_.haplotype_limits.holdout  = n + 1;
         policies_.haplotype_limits.overflow = n + 1;
     }
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_holdout_limit(unsigned n) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_holdout_limit(const unsigned n) noexcept
 {
     policies_.haplotype_limits.holdout = n;
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_overflow_limit(unsigned n) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_overflow_limit(const unsigned n) noexcept
 {
     policies_.haplotype_limits.overflow = n;
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_holdout_depth(unsigned n) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_holdout_depth(const unsigned n) noexcept
 {
     policies_.max_holdout_depth = n;
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_min_flank_pad(Haplotype::MappingDomain::Size n) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_min_flank_pad(const Haplotype::MappingDomain::Size n) noexcept
 {
     min_flank_pad_ = n;
     return *this;
