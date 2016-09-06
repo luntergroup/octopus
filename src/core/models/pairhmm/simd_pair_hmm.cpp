@@ -59,14 +59,14 @@ constexpr char  gap {'-'};
 auto extract_epi16(const __m128i a, const int imm) noexcept
 {
     switch (imm) {
-        case 0: return _mm_extract_epi16(a, 0);
-        case 1: return _mm_extract_epi16(a, 1);
-        case 2: return _mm_extract_epi16(a, 2);
-        case 3: return _mm_extract_epi16(a, 3);
-        case 4: return _mm_extract_epi16(a, 4);
-        case 5: return _mm_extract_epi16(a, 5);
-        case 6: return _mm_extract_epi16(a, 6);
-        case 7: return _mm_extract_epi16(a, 7);
+        case 0:  return _mm_extract_epi16(a, 0);
+        case 1:  return _mm_extract_epi16(a, 1);
+        case 2:  return _mm_extract_epi16(a, 2);
+        case 3:  return _mm_extract_epi16(a, 3);
+        case 4:  return _mm_extract_epi16(a, 4);
+        case 5:  return _mm_extract_epi16(a, 5);
+        case 6:  return _mm_extract_epi16(a, 6);
+        default: return _mm_extract_epi16(a, 7);
     }
 }
 
