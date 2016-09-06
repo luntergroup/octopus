@@ -102,7 +102,7 @@ void cleanup(GenomeCallingComponents& components) noexcept;
 struct ContigCallingComponents
 {
     std::reference_wrapper<const ReferenceGenome> reference;
-    std::reference_wrapper<ReadManager> read_manager;
+    std::reference_wrapper<const ReadManager> read_manager;
     const InputRegionMap::mapped_type regions;
     std::reference_wrapper<const std::vector<SampleName>> samples;
     std::unique_ptr<const Caller> caller;
