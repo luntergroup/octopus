@@ -496,7 +496,6 @@ void make_remaining_tasks(TaskMap& tasks, std::vector<ContigName> contigs, Genom
                           const unsigned num_threads, Task::ExecutionPolicy policy, TaskMakerSyncPacket& sync)
 {
     assert(!contigs.empty());
-    
     std::unique_lock<std::mutex> lk {sync.mutex, std::defer_lock};
     
     std::for_each(std::make_move_iterator(std::begin(contigs)),
@@ -571,12 +570,11 @@ unsigned calculate_num_task_threads(const GenomeCallingComponents& components)
     }
 }
 
-Task pop(TaskMap& tasks, TaskMakerSyncPacket& sync)
+Task pop(TaskMap& tasks)
 {
     assert(!tasks.empty());
     const auto it = std::begin(tasks);
     assert(!it->second.empty());
-    std::lock_guard<std::mutex> {sync.mutex};
     const auto result = std::move(it->second.front());
     it->second.pop();
     if (it->second.empty()) {
@@ -926,6 +924,12 @@ void merge(TempVcfWriterMap&& temp_vcf_writers, GenomeCallingComponents& compone
     merge(temp_readers, components.output(), components.contigs());
 }
 
+bool done(const TaskMap& pending_tasks, TaskMakerSyncPacket& sync) noexcept
+{
+    std::lock_guard<std::mutex> lk {sync.mutex};
+    return pending_tasks.empty() && sync.done;
+}
+
 void run_octopus_multi_threaded(GenomeCallingComponents& components)
 {
     using namespace std::chrono_literals;
@@ -936,7 +940,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     TaskMap pending_tasks {components.contigs()};
     TaskMakerSyncPacket task_maker_sync {};
-    
+    std::unique_lock<std::mutex> pending_task_lock {task_maker_sync.mutex, std::defer_lock};
     auto maker_thread = make_tasks(pending_tasks, components, num_task_threads, task_maker_sync);
     if (maker_thread.joinable()) maker_thread.detach();
     
@@ -957,20 +961,21 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     components.progress_meter().start();
     
-    while (!pending_tasks.empty() || !task_maker_sync.done) {
+    while (!done(pending_tasks, task_maker_sync)) {
+        pending_task_lock.lock();
         if (!task_maker_sync.done && pending_tasks.empty()) {
-            std::unique_lock<std::mutex> lk {task_maker_sync.mutex};
             if (num_idle_futures < futures.size()) {
                 // If there are running futures then it's good periodically check to see if
                 // any have finished and process them while we wait for the task maker.
                 while (pending_tasks.empty() && task_sync.count_finished == 0) {
                     auto now = std::chrono::system_clock::now();
-                    task_maker_sync.cv.wait_until(lk, now + 5s, [&] () { return !pending_tasks.empty(); });
+                    task_maker_sync.cv.wait_until(pending_task_lock, now + 5s, [&] () { return !pending_tasks.empty(); });
                 }
             } else {
-                task_maker_sync.cv.wait(lk, [&] () { return !pending_tasks.empty(); });
+                task_maker_sync.cv.wait(pending_task_lock, [&] () { return !pending_tasks.empty(); });
             }
         }
+        pending_task_lock.unlock();
         num_idle_futures = 0;
         for (auto& future : futures) {
             if (is_ready(future)) {
@@ -982,11 +987,14 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
                 --task_sync.count_finished;
             }
             if (!future.valid()) {
+                pending_task_lock.lock();
                 if (!pending_tasks.empty()) {
-                    auto task = pop(pending_tasks, task_maker_sync);
+                    auto task = pop(pending_tasks);
+                    pending_task_lock.unlock();
                     future = run(task, calling_components.at(contig_name(task))(), task_sync);
                     running_tasks.at(contig_name(task)).push(std::move(task));
                 } else {
+                    pending_task_lock.unlock();
                     ++num_idle_futures;
                 }
             }
