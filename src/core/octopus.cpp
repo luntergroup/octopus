@@ -585,7 +585,7 @@ Task pop(TaskMap& tasks, TaskMakerSyncPacket& sync)
     return result;
 }
 
-struct CompletedTask : public Task, public Mappable<CompletedTask>
+struct CompletedTask : public Task
 {
     CompletedTask(Task task) : Task {std::move(task)}, calls {}, runtime {} {}
     std::deque<VcfRecord> calls;
@@ -669,11 +669,6 @@ auto get_writable_completed_tasks(CompletedTask&& task, CompletedTaskMap::mapped
     return result;
 }
 
-auto encompassing_region(const CompletedTask& task)
-{
-    return encompassing_region(task.calls);
-}
-
 using ContigCallingComponentFactory    = std::function<ContigCallingComponents()>;
 using ContigCallingComponentFactoryMap = std::map<ContigName, ContigCallingComponentFactory>;
 
@@ -713,8 +708,8 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
     
     if (lhs.calls.empty() || rhs.calls.empty()) return;
     
-    auto first_lhs_connecting = find_first_lhs_connecting(lhs, encompassing_region(rhs));
-    auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_region(lhs), rhs);
+    auto first_lhs_connecting = find_first_lhs_connecting(lhs, encompassing_region(rhs.calls));
+    auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_region(lhs.calls), rhs);
     
     if (first_lhs_connecting == end(lhs.calls) && last_rhs_connecting == begin(rhs.calls)) {
         return;
@@ -784,7 +779,7 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
 void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks,
                               const ContigCallingComponentFactory& calling_components)
 {
-    assert(std::is_sorted(std::cbegin(adjacent_tasks), std::cend(adjacent_tasks)));
+    //assert(std::is_sorted(std::cbegin(adjacent_tasks), std::cend(adjacent_tasks)));
     auto lhs = std::begin(adjacent_tasks);
     std::for_each(std::next(lhs), std::end(adjacent_tasks),
                   [&] (auto& rhs) { resolve_connecting_calls(*lhs++, rhs, calling_components); });
@@ -872,7 +867,7 @@ RemainingTaskMap make_map(std::deque<CompletedTask>& tasks)
     sort_ignoring_contig_name(tasks);
     RemainingTaskMap result {};
     for (auto&& task : tasks) {
-        result[contig_name(task)].push_back(std::move(task));
+        result[contig_name(task.region)].push_back(std::move(task));
     }
     return result;
 }
@@ -980,7 +975,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
         for (auto& future : futures) {
             if (is_ready(future)) {
                 auto completed_task = future.get();
-                const auto& contig = contig_name(completed_task);
+                const auto& contig = contig_name(completed_task.region);
                 write_or_buffer(std::move(completed_task), buffered_tasks.at(contig),
                                 running_tasks.at(contig), holdbacks.at(contig),
                                 temp_vcfs.at(contig), calling_components.at(contig));
@@ -1107,7 +1102,7 @@ void run_octopus(GenomeCallingComponents& components)
         }
     } catch (const std::exception& e) {
         try {
-            if (debug_log) *debug_log << "Encounted an error, attempting to cleanup";
+            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
             cleanup(components);
         } catch (...) {}
         throw;
