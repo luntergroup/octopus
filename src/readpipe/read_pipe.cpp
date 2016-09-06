@@ -161,9 +161,7 @@ std::vector<GenomicRegion> join_close_regions(const std::vector<GenomicRegion>& 
                                               const GenomicRegion::Size max_distance)
 {
     std::vector<GenomicRegion> result {};
-    
     if (regions.empty()) return result;
-    
     result.reserve(regions.size());
     auto tmp = regions.front();
     
@@ -178,9 +176,7 @@ std::vector<GenomicRegion> join_close_regions(const std::vector<GenomicRegion>& 
                   });
     
     result.push_back(std::move(tmp));
-    
     assert(contains(encompassing_region(result), encompassing_region(regions)));
-    
     return result;
 }
 
@@ -189,17 +185,13 @@ ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
     assert(std::is_sorted(std::cbegin(regions), std::cend(regions)));
     
     const auto covered_regions = extract_covered_regions(regions);
-    
     const auto fetch_regions = join_close_regions(covered_regions, 10000);
     
     ReadMap result {samples_.size()};
-    
     const auto total_fetch_bp = sum_region_sizes(fetch_regions);
-    
     for (const auto& sample : samples_) {
         const auto p = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample),
                                       std::forward_as_tuple());
-        
         p.first->second.reserve(20 * total_fetch_bp); // TODO: use estimated coverage
     }
     
@@ -207,7 +199,6 @@ ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
         auto reads = fetch_reads(region);
         
         const auto request_regions = contained_range(covered_regions, region);
-        
         const auto removal_regions = extract_intervening_regions(request_regions, region);
         
         std::for_each(std::crbegin(removal_regions), std::crend(removal_regions),
@@ -216,7 +207,6 @@ ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
                               p.second.erase_contained(region);
                           }
                       });
-        
         insert_each(std::move(reads), result);
     }
     
