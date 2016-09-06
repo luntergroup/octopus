@@ -293,16 +293,12 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     if (!is_left_alignable(variant)) return variant;
     
     using SizeType = Variant::MappingDomain::Size;
-    
     const auto& ref_allele_sequence = ref_sequence(variant);
     const auto& alt_allele_sequence = alt_sequence(variant);
-    
     NucleotideList big_allele {}, small_allele {};
     tie(big_allele, small_allele) = get_alleles(ref_allele_sequence, alt_allele_sequence);
-    
     const auto big_allele_size   = static_cast<SizeType>(big_allele.size());
     const auto small_allele_size = static_cast<SizeType>(small_allele.size());
-    
     GenomicRegion current_region {variant.mapped_region()};
     auto big_allele_ritr   = crbegin(big_allele);
     auto small_allele_ritr = crbegin(small_allele);
@@ -323,12 +319,11 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     
     // Although the alleles can change, their sizes must remain constant, so we pad to the left
     // of the new alleles to retain the original sizes.
-    auto removable_extension = std::distance(small_allele_ritr, crend(small_allele));
-    
+    auto removable_extension = static_cast<SizeType>(std::distance(small_allele_ritr, crend(small_allele)));
     if (removable_extension >= small_allele_size) {
         removable_extension -= small_allele_size;
     } else {
-        auto required_left_padding = static_cast<SizeType>(small_allele_size - removable_extension);
+        const auto required_left_padding = small_allele_size - removable_extension;
         // Note this will automatically pad to the right if we've reached the start of the contig
         if (current_region.begin() >= required_left_padding) {
             current_region = extend_alleles(big_allele, small_allele, reference,
@@ -339,13 +334,10 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     
     const auto new_big_allele_begin   = next(cbegin(big_allele), removable_extension);
     const auto new_small_allele_begin = next(cbegin(small_allele), removable_extension);
-    
     Variant::NucleotideSequence new_big_allele {new_big_allele_begin, next(new_big_allele_begin, big_allele_size)};
     Variant::NucleotideSequence new_small_allele {new_small_allele_begin, next(new_small_allele_begin, small_allele_size)};
-    
-    const auto new_ref_region_begin = current_region.begin() + static_cast<SizeType>(removable_extension);
+    const auto new_ref_region_begin = current_region.begin() + removable_extension;
     const auto new_ref_region_end   = new_ref_region_begin + static_cast<SizeType>(ref_allele_sequence.size());
-    
     GenomicRegion new_ref_region {current_region.contig_name(), new_ref_region_begin, new_ref_region_end};
     
     if (ref_allele_sequence.size() > alt_allele_sequence.size()) {
