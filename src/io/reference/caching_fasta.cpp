@@ -312,7 +312,7 @@ void CachingFasta::recache_overlapped_regions(const GeneticSequence& sequence, c
             to_recache.reserve(num_overlapped);
             
             std::for_each(std::begin(cached_overlapped), std::end(cached_overlapped),
-                          [this, &region, &to_recache] (auto& p){
+                          [this, &region, &to_recache] (const ContigSequenceCache::value_type& p) {
                 const ContigRegion& cached_contig_region {p.first};
                 const GenomicRegion cached_region {region.contig_name(), cached_contig_region};
                 current_cache_size_ -= size(cached_contig_region);

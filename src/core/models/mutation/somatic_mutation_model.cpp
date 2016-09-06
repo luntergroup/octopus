@@ -33,7 +33,7 @@ double SomaticMutationModel::evaluate(const CancerGenotype<Haplotype>& genotype)
 double SomaticMutationModel::probability_of_somatic(const Haplotype& somatic, const Genotype<Haplotype>& germline) const
 {
     return std::accumulate(std::cbegin(germline), std::cend(germline), 0.0,
-                           [this, &somatic](const auto curr, const Haplotype& germline) {
+                           [this, &somatic](const double curr, const Haplotype& germline) {
                                return curr + probability_of_somatic(somatic, germline);
                            }) / germline.ploidy();
 }

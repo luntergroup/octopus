@@ -86,17 +86,15 @@ private:
     using Vertex = boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = boost::graph_traits<Tree>::edge_descriptor;
     
+    using HaplotypeVertexMultiMap = std::unordered_multimap<Haplotype, Vertex>;
+    
     std::reference_wrapper<const ReferenceGenome> reference_;
-    
     Tree tree_;
-    
     Vertex root_;
-    
     std::list<Vertex> haplotype_leafs_;
-    
     GenomicRegion::ContigName contig_;
     
-    mutable std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
+    mutable HaplotypeVertexMultiMap haplotype_leaf_cache_;
     
     using LeafIterator  = decltype(haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;

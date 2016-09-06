@@ -40,29 +40,6 @@ VariantCallFilter::VariantCallFilter(const ReferenceGenome& reference,
 
 namespace  {
 
-auto mapped_region(const VcfRecord& call)
-{
-    const auto begin = call.pos() - 1;
-    return GenomicRegion {call.chrom(), begin, begin + static_cast<GenomicRegion::Size>(call.ref().size())};
-}
-
-auto mapped_regions(const std::vector<VcfRecord>& calls)
-{
-    std::vector<GenomicRegion> result {};
-    result.reserve(calls.size());
-    
-    std::transform(std::cbegin(calls), std::cend(calls), std::back_inserter(result),
-                   [] (const auto& call) { return mapped_region(call); });
-    std::sort(std::begin(result), std::end(result));
-    
-    return result;
-}
-
-auto encompassing_region(const std::vector<VcfRecord>& calls)
-{
-    return encompassing_region(mapped_regions(calls));
-}
-
 auto fetch_reads(const std::vector<VcfRecord>& calls, const ReadPipe& read_pipe)
 {
     return read_pipe.fetch_reads(encompassing_region(calls));

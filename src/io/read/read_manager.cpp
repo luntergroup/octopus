@@ -372,7 +372,7 @@ bool ReadManager::is_open(const Path& reader_path) const noexcept
 std::vector<ReadManager::Path>::iterator ReadManager::partition_open(std::vector<Path>& reader_paths) const
 {
     return std::partition(std::begin(reader_paths), std::end(reader_paths),
-                          [this] (const auto& path) { return !is_open(path); });
+                          [this] (const Path& path) { return !is_open(path); });
 }
 
 unsigned ReadManager::num_open_readers() const noexcept
@@ -402,7 +402,7 @@ ReadManager::open_readers(std::vector<Path>::iterator first, std::vector<Path>::
     auto num_available_spaces = num_reader_spaces();
     auto num_requested_spaces = static_cast<unsigned>(std::distance(first, last));
     if (num_requested_spaces <= num_available_spaces) {
-        std::for_each(first, last, [this] (const auto& path) { open_reader(path); });
+        std::for_each(first, last, [this] (const Path& path) { open_reader(path); });
         return first;
     }
     auto num_readers_to_close = std::min(num_open_readers(), num_requested_spaces - num_available_spaces);
@@ -410,7 +410,7 @@ ReadManager::open_readers(std::vector<Path>::iterator first, std::vector<Path>::
     num_available_spaces += num_readers_to_close;
     // partition range so opened readers come last
     auto first_open = std::next(first, num_requested_spaces - num_available_spaces);
-    std::for_each(first_open, last, [this] (const auto& path) { open_reader(path); });
+    std::for_each(first_open, last, [this] (const Path& path) { open_reader(path); });
     
     return first_open;
 }
@@ -498,7 +498,7 @@ ReadManager::get_possible_reader_paths(const std::vector<SampleName>& samples, c
 {
     auto result = get_reader_paths_containing_samples(samples);
     auto it = std::remove_if(std::begin(result), std::end(result),
-                             [this, &region] (const auto& path) {
+                             [this, &region] (const Path& path) {
                                  return !could_reader_contain_region(path, region);
                              });
     result.erase(it, std::end(result));
