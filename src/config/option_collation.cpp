@@ -871,11 +871,14 @@ auto make_haplotype_generator_builder(const OptionMap& options)
             break;
     }
     
-    const auto max_haplotypes = as_unsigned("max-haplotypes", options);
+    const auto max_haplotypes    = as_unsigned("max-haplotypes", options);
+    const auto holdout_limit     = as_unsigned("haplotype-holdout-threshold", options);
+    const auto overflow_limit    = as_unsigned("haplotype-overflow", options);
+    const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
     
     return HaplotypeGenerator::Builder()
-    .set_target_limit(max_haplotypes).set_holdout_limit(2048).set_overflow_limit(16384)
-    .set_lagging_policy(lagging_policy).set_max_holdout_depth(3);
+    .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
+    .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,

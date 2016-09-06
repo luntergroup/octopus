@@ -258,8 +258,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "The target coverage for the downsampler")
     ;
     
-    po::options_description candidates("Candidate variant generation");
-    candidates.add_options()
+    po::options_description variant_generation("Candidate variant generation");
+    variant_generation.add_options()
     ("disable-raw-cigar-candidate-generator,G",
      po::bool_switch()->default_value(false),
      "Disables candidate generation from raw read alignments (CIGAR strings)")
@@ -297,7 +297,29 @@ OptionMap parse_options(const int argc, const char** argv)
      " Ff no value is specified then min-base-quality is used")
     ;
     
-    po::options_description caller("Common caller options");
+    po::options_description haplotype_generation("Haplotype generation");
+    haplotype_generation.add_options()
+    ("max-haplotypes",
+     po::value<int>()->default_value(128),
+     "Maximum number of candidate haplotypes the caller may consider. If a region contains"
+     " more candidate haplotypes than this then filtering is applied")
+    
+    ("haplotype-holdout-threshold",
+     po::value<int>()->default_value(2048),
+     "Forces the haplotype generator to temporarily hold out some alleles if the number"
+     " of haplotypes in a region exceeds this threshold")
+    
+    ("haplotype-overflow",
+     po::value<int>()->default_value(16384),
+     "Regions with more haplotypes than this will be skipped")
+    
+    ("max-holdout-depth",
+     po::value<int>()->default_value(3),
+     "Maximum number of holdout attempts the haplotype generator can make before the region"
+     " is skipped")
+    ;
+    
+    po::options_description caller("Caller (general)");
     caller.add_options()
     ("caller,C",
      po::value<std::string>()->default_value("population"),
@@ -346,7 +368,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "The germline indel heterozygosity used to calculate genotype priors")
     ;
     
-    po::options_description cancer("Cancer caller");
+    po::options_description cancer("Caller (cancer)");
     cancer.add_options()
     ("normal-sample,N",
      po::value<std::string>(),
@@ -373,7 +395,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Only report somatic variant calls")
     ;
     
-    po::options_description trio("Trio caller");
+    po::options_description trio("Caller (trio)");
     trio.add_options()
     ("maternal-sample,M",
      po::value<std::string>(),
@@ -388,8 +410,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "Only report de novo variant calls (i.e. alleles unique to the child)")
     ;
     
-    po::options_description phaser("Phasing options");
-    phaser.add_options()
+    po::options_description phasing("Phasing");
+    phasing.add_options()
     ("phasing-level,l",
      po::value<PhasingLevel>()->default_value(PhasingLevel::conservative),
      "Level of phasing - longer range phasing can improve calling accuracy at the cost"
@@ -410,10 +432,6 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description advanced("Advanced calling algorithm");
     advanced.add_options()
-    ("max-haplotypes",
-     po::value<int>()->default_value(128),
-     "Maximum number of candidate haplotypes the caller may consider")
-    
     ("min-haplotype-filter-posterior",
      po::value<float>()->default_value(1e-10, "1e-10"),
      "Haplotypes with posterior less than this can be filtered before extension")
@@ -437,8 +455,8 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description all("octopus options");
     all.add(general).add(backend).add(input).add(transforms).add(filters)
-    .add(candidates).add(caller).add(advanced).add(cancer).add(trio).add(phaser)
-    .add(call_filtering);
+    .add(variant_generation).add(haplotype_generation).add(caller)
+    .add(advanced).add(cancer).add(trio).add(phasing).add(call_filtering);
     
     OptionMap vm_init;
     po::store(run(po::command_line_parser(argc, argv).options(general).allow_unregistered()), vm_init);
@@ -760,9 +778,8 @@ void validate(const OptionMap& vm)
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "downsample-above", "downsample-target", "min-base-quality"
         "min-supporting-reads", "max-variant-size", "assembler-mask-base-quality", "organism-ploidy",
-        "max-haplotypes"
+        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow", "max-holdout-depth"
     };
-    
     for (const auto& option : positive_int_options) {
         check_positive(option, vm);
     }
