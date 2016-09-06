@@ -1305,19 +1305,15 @@ namespace detail {
     auto decompose(const MappableTp& mappable, ContigRegion)
     {
         std::vector<ContigRegion> result {};
-        
         const auto num_elements = size(mappable);
-        
         if (num_elements == 0) return result;
-        
         result.reserve(num_elements);
-        
         ContigRegion::Position n {0};
-        
         std::generate_n(std::back_inserter(result), num_elements, [&] () {
-            return ContigRegion {begin(mappable) + n, begin(mappable) + ++n};
+            const auto begin = mapped_begin(mappable) + n;
+            ++n;
+            return ContigRegion {begin, begin + 1};
         });
-        
         return result;
     }
     
@@ -1325,21 +1321,16 @@ namespace detail {
     auto decompose(const MappableTp& mappable, GenomicRegion)
     {
         std::vector<GenomicRegion> result {};
-        
         const auto num_elements = region_size(mappable);
-        
         if (num_elements == 0) return result;
-        
         result.reserve(num_elements);
-        
         GenomicRegion::Position n {0};
-        
         const auto& contig = contig_name(mappable);
-        
         std::generate_n(std::back_inserter(result), num_elements, [&] () {
-            return GenomicRegion {contig, mapped_begin(mappable) + n, mapped_begin(mappable) + ++n};
+            const auto begin = mapped_begin(mappable) + n;
+            ++n;
+            return GenomicRegion {contig, begin, begin + 1};
         });
-        
         return result;
     }
 } // namespace detail
