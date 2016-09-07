@@ -513,7 +513,7 @@ MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt 
     if (first == last) return result;
     
     auto from = std::cbegin(elements_);
-    typename RegionType<MappableType>::SizeType max_erased_size {0};
+    typename RegionType<MappableType>::Size max_erased_size {0};
     
     std::for_each(first, last, [this, &result, &from, &max_erased_size] (const auto& element) {
         const auto er = elements_.equal_range(element);
