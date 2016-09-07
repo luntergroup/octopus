@@ -82,15 +82,15 @@ boost::iterator_range<Iterator> bases(const OverlapRange<Iterator>& overlap_rang
 }
 
 template <typename Iterator>
-std::size_t size(const OverlapRange<Iterator>& range, ForwardSortedTag)
+auto size(const OverlapRange<Iterator>& range, ForwardSortedTag)
 {
-    return std::distance(range.begin(), range.end());
+    return static_cast<std::size_t>(std::distance(range.begin(), range.end()));
 }
 
 template <typename Iterator>
-std::size_t size(const OverlapRange<Iterator>& range, BidirectionallySortedTag)
+auto size(const OverlapRange<Iterator>& range, BidirectionallySortedTag)
 {
-    return std::distance(range.begin().base(), range.end().base());
+    return static_cast<std::size_t>(std::distance(range.begin().base(), range.end().base()));
 }
 
 template <typename Iterator>
@@ -109,14 +109,10 @@ template <typename Iterator, typename MappableType>
 OverlapRange<Iterator> make_overlap_range(Iterator first, Iterator last, const MappableType& mappable)
 {
     using boost::make_iterator_range; using boost::make_filter_iterator; using detail::IsOverlapped;
-    
     using MappableType2 = typename std::iterator_traits<Iterator>::value_type;
-    
     return make_iterator_range(
-        make_filter_iterator<IsOverlapped<MappableType2>>(IsOverlapped<MappableType2>(mappable),
-                                                          first, last),
-        make_filter_iterator<IsOverlapped<MappableType2>>(IsOverlapped<MappableType2>(mappable),
-                                                          last, last)
+        make_filter_iterator<IsOverlapped<MappableType2>>(IsOverlapped<MappableType2>(mappable), first, last),
+        make_filter_iterator<IsOverlapped<MappableType2>>(IsOverlapped<MappableType2>(mappable), last, last)
     );
 }
 
@@ -177,15 +173,15 @@ boost::iterator_range<Iterator> bases(const ContainedRange<Iterator>& contained_
 }
 
 template <typename Iterator>
-std::size_t size(const ContainedRange<Iterator>& range, ForwardSortedTag)
+auto size(const ContainedRange<Iterator>& range, ForwardSortedTag)
 {
-    return std::distance(range.begin(), range.end());
+    return static_cast<std::size_t>(std::distance(range.begin(), range.end()));
 }
 
 template <typename Iterator>
-std::size_t size(const ContainedRange<Iterator>& range, BidirectionallySortedTag)
+auto size(const ContainedRange<Iterator>& range, BidirectionallySortedTag)
 {
-    return std::distance(range.begin().base(), range.end().base());
+    return static_cast<std::size_t>(std::distance(range.begin().base(), range.end().base()));
 }
 
 template <typename Iterator>
@@ -204,14 +200,10 @@ template <typename Iterator, typename MappableType>
 ContainedRange<Iterator> make_contained_range(Iterator first, Iterator last, const MappableType& mappable)
 {
     using boost::make_iterator_range; using boost::make_filter_iterator; using detail::IsContained;
-    
     using MappableType2 = typename std::iterator_traits<Iterator>::value_type;
-    
     return make_iterator_range(
-        make_filter_iterator<IsContained<MappableType2>>(IsContained<MappableType2>(mappable),
-                                                         first, last),
-        make_filter_iterator<IsContained<MappableType2>>(IsContained<MappableType2>(mappable),
-                                                         last, last)
+        make_filter_iterator<IsContained<MappableType2>>(IsContained<MappableType2>(mappable), first, last),
+        make_filter_iterator<IsContained<MappableType2>>(IsContained<MappableType2>(mappable), last, last)
     );
 }
 
@@ -275,15 +267,15 @@ boost::iterator_range<Iterator> bases(const SharedRange<Iterator>& shared_range)
 }
 
 template <typename Iterator>
-std::size_t size(const SharedRange<Iterator>& range, ForwardSortedTag)
+auto size(const SharedRange<Iterator>& range, ForwardSortedTag)
 {
-    return std::distance(range.begin(), range.end());
+    return static_cast<std::size_t>(std::distance(range.begin(), range.end()));
 }
 
 template <typename Iterator>
-std::size_t size(const SharedRange<Iterator>& range, BidirectionallySortedTag)
+auto size(const SharedRange<Iterator>& range, BidirectionallySortedTag)
 {
-    return std::distance(range.begin().base(), range.end().base());
+    return static_cast<std::size_t>(std::distance(range.begin().base(), range.end().base()));
 }
 
 template <typename Iterator>
@@ -303,14 +295,10 @@ SharedRange<Iterator> make_shared_range(Iterator first, Iterator last,
                                         const MappableType1& mappable1, const MappableType2& mappable2)
 {
     using boost::make_iterator_range; using boost::make_filter_iterator; using detail::IsShared;
-    
     using MappableType_ = typename std::iterator_traits<Iterator>::value_type;
-    
     return make_iterator_range(
-        make_filter_iterator<IsShared<MappableType_>>(IsShared<MappableType_>(mappable1, mappable2),
-                                                      first, last),
-        make_filter_iterator<IsShared<MappableType_>>(IsShared<MappableType_>(mappable1, mappable2),
-                                                      last, last)
+        make_filter_iterator<IsShared<MappableType_>>(IsShared<MappableType_>(mappable1, mappable2), first, last),
+        make_filter_iterator<IsShared<MappableType_>>(IsShared<MappableType_>(mappable1, mappable2), last, last)
     );
 }
 
