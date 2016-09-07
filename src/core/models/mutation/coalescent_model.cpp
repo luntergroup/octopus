@@ -11,7 +11,7 @@ namespace octopus {
 
 auto percent_of_bases_in_repeat(const Haplotype& haplotype)
 {
-    const auto repeats = tandem::find_maximal_repetitions(haplotype.sequence(), 1, 6);
+    const auto repeats = tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 6);
     
     if (repeats.empty()) return 0.0;
     
@@ -33,7 +33,7 @@ auto calculate_base_indel_heterozygosities(const Haplotype& haplotype,
 {
     std::vector<double> result(sequence_size(haplotype), base_indel_heterozygosity);
     
-    const auto repeats = tandem::find_maximal_repetitions(haplotype.sequence(), 1, 3);
+    const auto repeats = tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 3);
     
     for (const auto& repeat : repeats) {
         const auto it1 = std::next(std::begin(result), repeat.pos);

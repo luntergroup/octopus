@@ -24,7 +24,7 @@ namespace octopus {
     {
         auto extract_repeats(const Haplotype& haplotype)
         {
-            return tandem::find_maximal_repetitions(haplotype.sequence(), 1, 3);
+            return tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 3);
         }
     }
     
@@ -43,7 +43,7 @@ namespace octopus {
         
         gap_open_penalities.assign(sequence_size(haplotype), 50);
         
-        tandem::StringRun max_repeat {};
+        tandem::Repeat max_repeat {};
         
         for (const auto& repeat : repeats) {
             std::int8_t e;

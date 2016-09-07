@@ -23,7 +23,7 @@ constexpr decltype(IndelErrorModel::defaultGapExtension_) IndelErrorModel::defau
 namespace {
     auto extract_repeats(const Haplotype& haplotype)
     {
-        return tandem::find_maximal_repetitions(haplotype.sequence(), 1, 3);
+        return tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 3);
     }
 }
 
@@ -42,7 +42,7 @@ IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_pe
     
     gap_open_penalities.assign(sequence_size(haplotype), homopolymerErrors_.front());
     
-    tandem::StringRun max_repeat {};
+    tandem::Repeat max_repeat {};
     
     for (const auto& repeat : repeats) {
         std::int8_t e;

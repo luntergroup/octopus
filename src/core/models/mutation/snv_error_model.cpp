@@ -20,7 +20,7 @@ constexpr decltype(SnvErrorModel::maxQualities_) SnvErrorModel::maxQualities_;
 namespace {
 auto extract_repeats(const Haplotype& haplotype, const unsigned max_period)
 {
-    return tandem::find_maximal_repetitions(haplotype.sequence(), 1, max_period);
+    return tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, max_period);
 }
 
 template <typename ForwardIt, typename OutputIt>
@@ -84,7 +84,7 @@ constexpr auto base_hash(const char b) noexcept
     }
 }
 
-auto repeat_hash(const Haplotype& haplotype, const tandem::StringRun& repeat)
+auto repeat_hash(const Haplotype& haplotype, const tandem::Repeat& repeat)
 {
     const auto& sequence = haplotype.sequence();
     const auto first = std::next(std::begin(sequence), repeat.pos);
