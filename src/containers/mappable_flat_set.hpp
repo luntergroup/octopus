@@ -821,8 +821,8 @@ MappableFlatSet<MappableType, Allocator>::overlap_range(const_iterator first, co
 }
 
 namespace {
-template <typename Iterator>
-bool is_complete(const OverlapRange<Iterator>& range)
+template <typename Range>
+bool is_complete(const Range& range)
 {
     return size(range) == static_cast<std::size_t>(bases(range).size());
 }
@@ -906,16 +906,15 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 void MappableFlatSet<MappableType, Allocator>::erase_contained(const MappableType_& mappable)
 {
-    auto contained = this->contained_range(mappable);
+    const auto contained = contained_range(mappable);
     using octopus::size;
-    if (is_bidirectionally_sorted_ || size(contained) == bases(contained).size()) {
-        this->erase(std::cbegin(contained).base(), std::cend(contained).base());
+    if (is_bidirectionally_sorted_ || is_complete(contained)) {
+        erase(std::cbegin(contained).base(), std::cend(contained).base());
     } else {
-        // TODO: find better implementation
-        while (!contained.empty()) {
-            this->erase(contained.front());
-            contained = this->contained_range(mappable);
-        }
+        // Must make copies as the iterator range passed to erase_all
+        // cannot overlap with elements_
+        const auto tmp = extract_regions(contained);
+        erase_all(std::cbegin(tmp), std::cend(tmp));
     }
 }
 
