@@ -411,13 +411,10 @@ typename MappableFlatSet<MappableType, Allocator>::iterator
 MappableFlatSet<MappableType, Allocator>::insert(const_iterator hint, const MappableType& m)
 {
     // hint is a hint pointing to where the insert should start to search.
-    
     typename MappableFlatSet<MappableType, Allocator>::iterator result;
-    
     if (hint != std::cend(elements_)) {
         if (hint != std::cbegin(elements_)) {
             const auto& prev_hint_element = *std::prev(hint);
-            
             if (prev_hint_element < m) {
                 // hint is good
                 if (*hint > m) {
@@ -428,7 +425,6 @@ MappableFlatSet<MappableType, Allocator>::insert(const_iterator hint, const Mapp
                     return remove_constness(elements_, std::prev(hint));
                 } else {
                     hint = std::lower_bound(hint, std::cend(elements_), m);
-                    
                     if (hint == std::end(elements_) || *hint != m) {
                         result = elements_.insert(hint, m);
                     } else {
@@ -468,11 +464,9 @@ typename MappableFlatSet<MappableType, Allocator>::iterator
 MappableFlatSet<MappableType, Allocator>::insert(const_iterator hint, MappableType&& m)
 {
     typename MappableFlatSet<MappableType, Allocator>::iterator result;
-    
     if (hint != std::cend(elements_)) {
         if (hint != std::cbegin(elements_)) {
             const auto& prev_hint_element = *std::prev(hint);
-            
             if (prev_hint_element < m) {
                 // hint is good
                 if (*hint > m) {
@@ -483,7 +477,6 @@ MappableFlatSet<MappableType, Allocator>::insert(const_iterator hint, MappableTy
                     return remove_constness(elements_, std::prev(hint));
                 } else {
                     hint = std::lower_bound(hint, std::cend(elements_), m);
-                    
                     if (hint == std::end(elements_) || *hint != m) {
                         result = elements_.insert(hint, std::move(m));
                     } else {
@@ -620,16 +613,11 @@ typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::erase_all(BidirIt first, const BidirIt last)
 {
     using octopus::contained_range;
-    
     size_type num_erased {0};
-    
     if (first == last) return num_erased;
-    
     const auto region = encompassing_region(first, last);
     auto contained_elements = bases(contained_range(std::begin(elements_), std::end(elements_), region));
-    
     if (contained_elements.empty()) return num_erased;
-    
     typename RegionType<MappableType>::Size max_erased_size {0};
     auto first_contained = std::begin(contained_elements);
     auto last_contained  = std::end(contained_elements);
@@ -643,10 +631,7 @@ MappableFlatSet<MappableType, Allocator>::erase_all(BidirIt first, const BidirIt
             last_element = std::rotate(it, p.first, last_element);
             first_contained = it;
             last_contained  = std::next(it, n);
-            const auto m = region_size(*largest_mappable(first, p.second));
-            if (m > max_erased_size) {
-                max_erased_size = m;
-            }
+            max_erased_size = std::max(max_erased_size, region_size(*largest_mappable(first, p.second)));
             num_erased += std::distance(first, p.second);
             first = p.second;
         } else {
@@ -835,18 +820,24 @@ MappableFlatSet<MappableType, Allocator>::overlap_range(const_iterator first, co
     return overlap_range(first, last, mappable, max_element_size_);
 }
 
+namespace {
+template <typename Iterator>
+bool is_complete(const OverlapRange<Iterator>& range)
+{
+    return size(range) == static_cast<std::size_t>(bases(range).size());
+}
+}
+
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 void MappableFlatSet<MappableType, Allocator>::erase_overlapped(const MappableType_& mappable)
 {
-    // TODO: find better implementation
     const auto overlapped = overlap_range(mappable);
     using octopus::size;
-    if (is_bidirectionally_sorted_ || size(overlapped) == bases(overlapped).size()) {
+    if (is_bidirectionally_sorted_ || is_complete(overlapped)) {
         erase(std::cbegin(overlapped).base(), std::cend(overlapped).base());
     } else {
-        const std::vector<MappableType> tmp {std::cbegin(overlapped), std::cend(overlapped)};
-        erase_all(std::cbegin(tmp), std::cend(tmp));
+        erase_all(std::cbegin(overlapped), std::cend(overlapped));
     }
 }
 
