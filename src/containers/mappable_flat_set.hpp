@@ -837,7 +837,10 @@ void MappableFlatSet<MappableType, Allocator>::erase_overlapped(const MappableTy
     if (is_bidirectionally_sorted_ || is_complete(overlapped)) {
         erase(std::cbegin(overlapped).base(), std::cend(overlapped).base());
     } else {
-        erase_all(std::cbegin(overlapped), std::cend(overlapped));
+        // Must make copies as the iterator range passed to erase_all
+        // cannot overlap with elements_
+        const auto tmp = extract_regions(overlapped);
+        erase_all(std::cbegin(tmp), std::cend(tmp));
     }
 }
 
