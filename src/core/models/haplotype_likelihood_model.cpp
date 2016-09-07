@@ -131,20 +131,16 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
         }
         if (is_in_range(position, read, haplotype)) {
             has_in_range_mapping_position = true;
-            auto cur = hmm::evaluate(read.sequence(), haplotype.sequence(), read.qualities(), position, model);
-            if (cur > max_log_probability) {
-                max_log_probability = cur;
-            }
+            auto p = hmm::evaluate(read.sequence(), haplotype.sequence(), read.qualities(), position, model);
+            max_log_probability = std::max(p, max_log_probability);
         }
     });
     
     if (!is_original_position_mapped && is_in_range(original_mapping_position, read, haplotype)) {
         has_in_range_mapping_position = true;
-        auto cur = hmm::evaluate(read.sequence(), haplotype.sequence(), read.qualities(),
-                                 original_mapping_position, model);
-        if (cur > max_log_probability) {
-            max_log_probability = cur;
-        }
+        auto p = hmm::evaluate(read.sequence(), haplotype.sequence(), read.qualities(),
+                               original_mapping_position, model);
+        max_log_probability = std::max(p, max_log_probability);
     }
     
     if (!has_in_range_mapping_position) {
