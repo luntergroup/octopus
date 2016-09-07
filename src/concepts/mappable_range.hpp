@@ -26,23 +26,25 @@ struct ForwardSortedTag {};
 struct BidirectionallySortedTag {};
 
 namespace detail {
-    template <typename MappableType>
-    class IsOverlapped
+
+template <typename MappableType>
+class IsOverlapped
+{
+public:
+    IsOverlapped() = delete;
+    
+    template <typename MappableType2>
+    IsOverlapped(const MappableType2& mappable) : region_ {mapped_region(mappable)} {}
+    
+    bool operator()(const MappableType& mappable) const
     {
-    public:
-        IsOverlapped() = delete;
-        
-        template <typename MappableType2>
-        IsOverlapped(const MappableType2& mappable) : region_ {mapped_region(mappable)} {}
-        
-        bool operator()(const MappableType& mappable) const
-        {
-            return overlaps(mappable, region_);
-        }
-        
-    private:
-        RegionType<MappableType> region_;
-    };
+        return overlaps(mappable, region_);
+    }
+    
+private:
+    RegionType<MappableType> region_;
+};
+
 } // namespace detail
 
 template <typename Iterator>
@@ -50,27 +52,6 @@ using OverlapIterator = boost::filter_iterator<
     detail::IsOverlapped<typename std::iterator_traits<Iterator>::value_type>,
     Iterator
 >;
-
-template <typename Iterator>
-bool operator==(const Iterator& lhs, const OverlapIterator<Iterator>& rhs) noexcept
-{
-    return lhs == rhs.base();
-}
-template <typename Iterator>
-bool operator!=(const Iterator& lhs, const OverlapIterator<Iterator>& rhs) noexcept
-{
-    return !operator==(lhs, rhs);
-}
-template <typename Iterator>
-bool operator==(const OverlapIterator<Iterator>& lhs, const Iterator& rhs) noexcept
-{
-    return operator==(rhs, lhs);
-}
-template <typename Iterator>
-bool operator!=(const OverlapIterator<Iterator>& lhs, const Iterator& rhs) noexcept
-{
-    return !operator==(lhs, rhs);
-}
 
 template <typename Iterator>
 using OverlapRange = boost::iterator_range<OverlapIterator<Iterator>>;
@@ -117,23 +98,25 @@ OverlapRange<Iterator> make_overlap_range(Iterator first, Iterator last, const M
 }
 
 namespace detail {
-    template <typename MappableType>
-    class IsContained
+
+template <typename MappableType>
+class IsContained
+{
+public:
+    IsContained() = delete;
+    
+    template <typename MappableType_>
+    IsContained(const MappableType_& mappable) : region_ {mapped_region(mappable)} {}
+    
+    bool operator()(const MappableType& mappable) const
     {
-    public:
-        IsContained() = delete;
-        
-        template <typename MappableType_>
-        IsContained(const MappableType_& mappable) : region_ {mapped_region(mappable)} {}
-        
-        bool operator()(const MappableType& mappable) const
-        {
-            return contains(region_, mappable);
-        }
-        
-    private:
-        RegionType<MappableType> region_;
-    };
+        return contains(region_, mappable);
+    }
+    
+private:
+    RegionType<MappableType> region_;
+};
+
 } // namespace detail
 
 template <typename Iterator>
@@ -141,27 +124,6 @@ using ContainedIterator = boost::filter_iterator<detail::IsContained<
     typename std::iterator_traits<Iterator>::value_type>,
     Iterator
 >;
-
-template <typename Iterator>
-bool operator==(const Iterator& lhs, const ContainedIterator<Iterator>& rhs) noexcept
-{
-    return lhs == rhs.base();
-}
-template <typename Iterator>
-bool operator!=(const Iterator& lhs, const ContainedIterator<Iterator>& rhs) noexcept
-{
-    return !operator==(lhs, rhs);
-}
-template <typename Iterator>
-bool operator==(const ContainedIterator<Iterator>& lhs, const Iterator& rhs) noexcept
-{
-    return operator==(rhs, lhs);
-}
-template <typename Iterator>
-bool operator!=(const ContainedIterator<Iterator>& lhs, const Iterator& rhs) noexcept
-{
-    return !operator==(lhs, rhs);
-}
 
 template <typename Iterator>
 using ContainedRange = boost::iterator_range<ContainedIterator<Iterator>>;
@@ -208,26 +170,28 @@ ContainedRange<Iterator> make_contained_range(Iterator first, Iterator last, con
 }
 
 namespace detail {
-    template <typename MappableType>
-    class IsShared
+
+template <typename MappableType>
+class IsShared
+{
+public:
+    IsShared() = delete;
+    
+    template <typename MappableType1_, typename MappableType2_>
+    IsShared(const MappableType1_& lhs, MappableType2_ rhs)
+    : lhs_ {mapped_region(lhs)}
+    , rhs_ {mapped_region(rhs)}
+    {}
+    
+    bool operator()(const MappableType& mappable) const
     {
-    public:
-        IsShared() = delete;
-        
-        template <typename MappableType1_, typename MappableType2_>
-        IsShared(const MappableType1_& lhs, MappableType2_ rhs)
-        : lhs_ {mapped_region(lhs)}
-        , rhs_ {mapped_region(rhs)}
-        {}
-        
-        bool operator()(const MappableType& mappable) const
-        {
-            return overlaps(lhs_, mappable) && overlaps(mappable, rhs_);
-        }
-        
-    private:
-        RegionType<MappableType> lhs_, rhs_;
-    };
+        return overlaps(lhs_, mappable) && overlaps(mappable, rhs_);
+    }
+    
+private:
+    RegionType<MappableType> lhs_, rhs_;
+};
+
 } // namespace detail
 
 template <typename Iterator>
@@ -235,27 +199,6 @@ using SharedIterator = boost::filter_iterator<detail::IsShared<
     typename std::iterator_traits<Iterator>::value_type>,
     Iterator
 >;
-
-template <typename Iterator>
-bool operator==(const Iterator& lhs, const SharedIterator<Iterator>& rhs) noexcept
-{
-    return lhs == rhs.base();
-}
-template <typename Iterator>
-bool operator!=(const Iterator& lhs, const SharedIterator<Iterator>& rhs) noexcept
-{
-    return !operator==(lhs, rhs);
-}
-template <typename Iterator>
-bool operator==(const SharedIterator<Iterator>& lhs, const Iterator& rhs) noexcept
-{
-    return operator==(rhs, lhs);
-}
-template <typename Iterator>
-bool operator!=(const SharedIterator<Iterator>& lhs, const Iterator& rhs) noexcept
-{
-    return !operator==(lhs, rhs);
-}
 
 template <typename Iterator>
 using SharedRange = boost::iterator_range<SharedIterator<Iterator>>;
