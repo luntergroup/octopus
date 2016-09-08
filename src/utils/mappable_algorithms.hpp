@@ -1090,9 +1090,9 @@ std::size_t count_shared(BidirIt first, BidirIt last,
     const auto rhs_overlapped = overlap_range(first, last, rhs, OrderTag {});
     return (size(lhs_overlapped) <= size(rhs_overlapped)) ?
             std::count_if(lhs_overlapped.begin(), lhs_overlapped.end(),
-                          [&rhs] (const auto& region) { return overlaps(region, rhs); }) :
+                          [&rhs] (const auto& m) { return overlaps(m, rhs); }) :
             std::count_if(rhs_overlapped.begin(), rhs_overlapped.end(),
-                          [&lhs] (const auto& region) { return overlaps(region, lhs); });
+                          [&lhs] (const auto& m) { return overlaps(m, lhs); });
 }
 
 template <typename Container, typename MappableTp1, typename MappableTp2, typename OrderTag>
@@ -1120,9 +1120,9 @@ bool has_shared(BidirIt first, BidirIt last,
     const auto rhs_overlapped = overlap_range(first, last, rhs, OrderTag {});
     return (size(lhs_overlapped) <= size(rhs_overlapped)) ?
             std::any_of(lhs_overlapped.begin(), lhs_overlapped.end(),
-                        [&rhs] (const auto& region) { return overlaps(region, rhs); }) :
+                        [&rhs] (const auto& m) { return overlaps(m, rhs); }) :
             std::any_of(rhs_overlapped.begin(), rhs_overlapped.end(),
-                        [&lhs] (const auto& region) { return overlaps(region, lhs); });
+                        [&lhs] (const auto& m) { return overlaps(m, lhs); });
 }
 
 template <typename Container, typename MappableTp1, typename MappableTp2, typename OrderTag>
@@ -1173,17 +1173,16 @@ std::size_t count_if_shared_with_first(BidirIt1 first1, BidirIt1 last1,
     if (first2 == last2) return 0;
     const auto overlapped = overlap_range(first1, last1, *first2, OrderTag {});
     if (empty(overlapped)) return 0;
-    return size(overlap_range(std::next(first2), last2, *std::prev(overlapped.end()), OrderTag {}));
+    return count_overlapped(std::next(first2), last2, *rightmost_mappable(overlapped), OrderTag {});
 }
 
 template <typename Container, typename ForwardIt>
-std::size_t count_if_shared_with_first(const Container& mappables,
-                                       ForwardIt first, ForwardIt last)
+std::size_t count_if_shared_with_first(const Container& mappables, ForwardIt first, ForwardIt last)
 {
     if (first == last) return 0;
     const auto overlapped = overlap_range(mappables, *first);
     if (empty(overlapped)) return 0;
-    return count_overlapped(std::next(first), last, overlapped.back());
+    return count_overlapped(std::next(first), last, *rightmost_mappable(overlapped));
 }
 
 // adjacent_overlap_find
