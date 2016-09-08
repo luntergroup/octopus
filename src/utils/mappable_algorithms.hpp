@@ -557,8 +557,8 @@ Container copy_overlapped(const Container& mappables, const MappableTp& mappable
 
 // copy_nonoverlapped
 
-template <typename Container, typename MappableType>
-Container copy_nonoverlapped(const Container& mappables, const MappableType& mappable)
+template <typename Container, typename MappableTp>
+Container copy_nonoverlapped(const Container& mappables, const MappableTp& mappable)
 {
     using std::cbegin; using std::cend;
     const auto num_overlapped = count_overlapped(mappables, mappable);
@@ -1490,8 +1490,8 @@ auto extract_intervening_regions(ForwardIt first, ForwardIt last, const Mappable
     return result;
 }
 
-template <typename Container, typename Mappable>
-auto extract_intervening_regions(const Container& mappables, const Mappable& mappable)
+template <typename Container, typename MappableTp>
+auto extract_intervening_regions(const Container& mappables, const MappableTp& mappable)
 {
     return extract_intervening_regions(std::cbegin(mappables), std::cend(mappables), mappable);
 }
