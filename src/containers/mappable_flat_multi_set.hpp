@@ -703,7 +703,7 @@ void MappableFlatMultiSet<MappableType, Allocator>::erase_overlapped(const Mappa
 {
     const auto overlapped = overlap_range(mappable);
     using octopus::size;
-    if (is_bidirectionally_sorted_ || size(overlapped) == static_cast<std::size_t>(bases(overlapped).size())) {
+    if (is_bidirectionally_sorted_ || size(overlapped) == base_size(overlapped)) {
         erase(std::cbegin(overlapped).base(), std::cend(overlapped).base());
     } else {
         const std::vector<MappableType> tmp {std::cbegin(overlapped), std::cend(overlapped)};
@@ -771,7 +771,7 @@ void MappableFlatMultiSet<MappableType, Allocator>::erase_contained(const Mappab
 {
     auto contained = contained_range(mappable);
     using octopus::size;
-    if (is_bidirectionally_sorted_ || size(contained) == static_cast<std::size_t>(bases(contained).size())) {
+    if (is_bidirectionally_sorted_ || size(contained) == base_size(contained)) {
         erase(std::cbegin(contained).base(), std::cend(contained).base());
     } else {
         const std::vector<MappableType> tmp {std::cbegin(contained), std::cend(contained)};

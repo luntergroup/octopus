@@ -57,9 +57,15 @@ template <typename Iterator>
 using OverlapRange = boost::iterator_range<OverlapIterator<Iterator>>;
 
 template <typename Iterator>
-boost::iterator_range<Iterator> bases(const OverlapRange<Iterator>& overlap_range)
+boost::iterator_range<Iterator> bases(const OverlapRange<Iterator>& range)
 {
-    return boost::make_iterator_range(overlap_range.begin().base(), overlap_range.end().base());
+    return boost::make_iterator_range(range.begin().base(), range.end().base());
+}
+
+template <typename Iterator>
+auto base_size(const OverlapRange<Iterator>& range)
+{
+    return static_cast<std::size_t>(std::distance(range.begin().base(), range.end().base()));
 }
 
 template <typename Iterator>
@@ -71,7 +77,7 @@ auto size(const OverlapRange<Iterator>& range, ForwardSortedTag)
 template <typename Iterator>
 auto size(const OverlapRange<Iterator>& range, BidirectionallySortedTag)
 {
-    return static_cast<std::size_t>(std::distance(range.begin().base(), range.end().base()));
+    return base_size(range);
 }
 
 template <typename Iterator>
@@ -129,9 +135,15 @@ template <typename Iterator>
 using ContainedRange = boost::iterator_range<ContainedIterator<Iterator>>;
 
 template <typename Iterator>
-boost::iterator_range<Iterator> bases(const ContainedRange<Iterator>& contained_range)
+boost::iterator_range<Iterator> bases(const ContainedRange<Iterator>& range)
 {
-    return boost::make_iterator_range(contained_range.begin().base(), contained_range.end().base());
+    return boost::make_iterator_range(range.begin().base(), range.end().base());
+}
+
+template <typename Iterator>
+auto base_size(const ContainedRange<Iterator>& range)
+{
+    return static_cast<std::size_t>(std::distance(range.begin().base(), range.end().base()));
 }
 
 template <typename Iterator>
@@ -143,7 +155,7 @@ auto size(const ContainedRange<Iterator>& range, ForwardSortedTag)
 template <typename Iterator>
 auto size(const ContainedRange<Iterator>& range, BidirectionallySortedTag)
 {
-    return static_cast<std::size_t>(std::distance(range.begin().base(), range.end().base()));
+    return base_size(range);
 }
 
 template <typename Iterator>
@@ -204,9 +216,15 @@ template <typename Iterator>
 using SharedRange = boost::iterator_range<SharedIterator<Iterator>>;
 
 template <typename Iterator>
-boost::iterator_range<Iterator> bases(const SharedRange<Iterator>& shared_range)
+boost::iterator_range<Iterator> bases(const SharedRange<Iterator>& range)
 {
-    return boost::make_iterator_range(shared_range.begin().base(), shared_range.end().base());
+    return boost::make_iterator_range(range.begin().base(), range.end().base());
+}
+
+template <typename Iterator>
+auto base_size(const SharedRange<Iterator>& range)
+{
+    return static_cast<std::size_t>(std::distance(range.begin().base(), range.end().base()));
 }
 
 template <typename Iterator>
@@ -218,7 +236,7 @@ auto size(const SharedRange<Iterator>& range, ForwardSortedTag)
 template <typename Iterator>
 auto size(const SharedRange<Iterator>& range, BidirectionallySortedTag)
 {
-    return static_cast<std::size_t>(std::distance(range.begin().base(), range.end().base()));
+    return base_size(range);
 }
 
 template <typename Iterator>
