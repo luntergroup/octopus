@@ -866,28 +866,23 @@ bool call_sites_only(const OptionMap& options)
     return options.at("sites-only").as<bool>();
 }
 
-auto make_haplotype_generator_builder(const OptionMap& options)
+auto get_lagging_policy(const OptionMap& options)
 {
     using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
-    
-    LaggingPolicy lagging_policy;
     switch (options.at("phasing-level").as<PhasingLevel>()) {
-        case PhasingLevel::minimal:
-            lagging_policy = LaggingPolicy::none;
-            break;
-        case PhasingLevel::conservative:
-            lagging_policy = LaggingPolicy::conservative;
-            break;
-        case PhasingLevel::aggressive:
-            lagging_policy = LaggingPolicy::aggressive;
-            break;
+        case PhasingLevel::aggressive: return LaggingPolicy::aggressive;
+        case PhasingLevel::conservative: return LaggingPolicy::conservative;
+        default: return LaggingPolicy::none;
     }
-    
+}
+
+auto make_haplotype_generator_builder(const OptionMap& options)
+{
+    const auto lagging_policy    = get_lagging_policy(options);
     const auto max_haplotypes    = as_unsigned("max-haplotypes", options);
     const auto holdout_limit     = as_unsigned("haplotype-holdout-threshold", options);
     const auto overflow_limit    = as_unsigned("haplotype-overflow", options);
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
-    
     return HaplotypeGenerator::Builder()
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
