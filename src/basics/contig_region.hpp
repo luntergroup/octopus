@@ -4,11 +4,11 @@
 #ifndef contig_region_hpp
 #define contig_region_hpp
 
-#include <ostream>
 #include <cstdint>
 #include <algorithm>
-#include <stdexcept>
 #include <functional>
+#include <stdexcept>
+#include <ostream>
 
 #include <boost/functional/hash.hpp>
 #include <boost/optional.hpp>
@@ -28,6 +28,8 @@ public:
     using Size     = Position;
     using Distance = std::int_fast64_t;
     
+    class BadRegion;
+    
     ContigRegion() = default;
     
     explicit ContigRegion(Position begin, Position end);
@@ -46,14 +48,38 @@ private:
     Position begin_, end_;
 };
 
+// BadRegion
+
+class ContigRegion::BadRegion : public std::logic_error
+{
+public:
+    using Position = ContigRegion::Position;
+    
+    BadRegion(Position begin, Position end) noexcept;
+    
+    virtual ~BadRegion() override = default;
+    
+    Position begin() const noexcept { return begin_; }
+    Position end() const noexcept  { return end_; }
+    
+private:
+    ContigRegion::Position begin_, end_;
+};
+
 // public member methods
 
 inline ContigRegion::ContigRegion(const Position begin, const Position end)
 : begin_ {begin}
 , end_ {end}
 {
-    if (end < begin) throw std::runtime_error {"ContigRegion: constructed with end < begin"};
+    if (end < begin) throw BadRegion {begin, end};
 }
+
+inline ContigRegion::BadRegion::BadRegion(const Position begin, const Position end) noexcept
+: std::logic_error {"BadRegion"}
+, begin_ {begin}
+, end_ {end}
+{}
 
 // non-member methods
 
@@ -145,22 +171,17 @@ inline bool contains(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
     return lhs.begin() <= rhs.begin() && rhs.end() <= lhs.end();
 }
 
-inline ContigRegion::Distance inner_distance(const ContigRegion& lhs,
-                                                    const ContigRegion& rhs) noexcept
+inline ContigRegion::Distance inner_distance(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (overlaps(lhs, rhs)) return 0;
-    
     return (is_before(lhs, rhs)) ? static_cast<ContigRegion::Distance>(rhs.begin() - lhs.end())
                                 : -inner_distance(rhs, lhs);
 }
 
-inline ContigRegion::Distance outer_distance(const ContigRegion& lhs,
-                                                    const ContigRegion& rhs) noexcept
+inline ContigRegion::Distance outer_distance(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     using Distance = ContigRegion::Distance;
-    
     if (contains(lhs, rhs) || contains(rhs, lhs)) return 0;
-    
     return static_cast<Distance>(rhs.end()) - static_cast<Distance>(lhs.begin());
 }
 
@@ -169,9 +190,7 @@ inline ContigRegion shift(const ContigRegion& region, ContigRegion::Distance n)
     if (n < 0 && region.begin() + n > region.begin()) {
         throw std::out_of_range {"ContigRegion: shifted past contig start"};
     }
-    
     using P = ContigRegion::Position;
-    
     return ContigRegion {
             static_cast<P>(region.begin() + n), static_cast<P>(region.end() + n)
     };
@@ -187,11 +206,6 @@ inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::D
     if (n < 0 && region.begin() + n > region.begin()) {
         throw std::out_of_range {"ContigRegion: compressed past contig start"};
     }
-    
-    if (region.begin() - n > region.end()) {
-        throw std::out_of_range {"ContigRegion: compressed past region end"};
-    }
-    
     return ContigRegion {
         static_cast<ContigRegion::Position>(region.begin() - n),
         region.end()
@@ -200,10 +214,6 @@ inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::D
 
 inline ContigRegion expand_rhs(const ContigRegion& region, const ContigRegion::Distance n)
 {
-    if (region.end() + n < region.begin()) {
-        throw std::out_of_range {"ContigRegion: expanded past region begin"};
-    }
-    
     return ContigRegion {
         region.begin(),
         static_cast<ContigRegion::Position>(region.end() + n)
@@ -260,15 +270,17 @@ inline ContigRegion::Size right_overhang_size(const ContigRegion& lhs, const Con
 
 inline ContigRegion left_overhang_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    if (begins_before(rhs, lhs)) return ContigRegion {lhs.begin(), lhs.begin()};
-    
+    if (begins_before(rhs, lhs)) {
+        return ContigRegion {lhs.begin(), lhs.begin()};
+    }
     return ContigRegion {lhs.begin(), rhs.begin()};
 }
 
 inline ContigRegion right_overhang_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    if (ends_before(lhs, rhs)) return ContigRegion {lhs.end(), lhs.end()};
-    
+    if (ends_before(lhs, rhs)) {
+        return ContigRegion {lhs.end(), lhs.end()};
+    }
     return ContigRegion {rhs.end(), lhs.end()};
 }
 
@@ -337,7 +349,7 @@ struct ContigRegionHash
 namespace std {
     template <> struct hash<octopus::ContigRegion>
     {
-        size_t operator()(const octopus::ContigRegion& region) const
+        size_t operator()(const octopus::ContigRegion& region) const noexcept
         {
             return octopus::ContigRegionHash()(region);
         }
