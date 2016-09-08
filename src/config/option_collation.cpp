@@ -583,6 +583,11 @@ auto make_read_transformer(const OptionMap& options)
     return result;
 }
 
+bool is_read_filtering_enabled(const OptionMap& options)
+{
+    return !options.at("disable-read-filtering").as<bool>();
+}
+
 auto make_read_filterer(const OptionMap& options)
 {
     using std::make_unique;
@@ -595,7 +600,7 @@ auto make_read_filterer(const OptionMap& options)
     result.add(make_unique<HasValidQualities>());
     result.add(make_unique<HasWellFormedCigar>());
     
-    if (options.at("disable-read-filtering").as<bool>()) {
+    if (!is_read_filtering_enabled(options)) {
         return result;
     }
     if (!options.at("consider-unmapped-reads").as<bool>()) {
@@ -653,13 +658,20 @@ auto make_read_filterer(const OptionMap& options)
     return result;
 }
 
+bool is_downsampling_enabled(const OptionMap& options)
+{
+    return is_read_filtering_enabled(options) && !options.at("disable-downsampling").as<bool>();
+}
+
 boost::optional<readpipe::Downsampler> make_downsampler(const OptionMap& options)
 {
-    using namespace octopus::readpipe;
-    if (options.at("disable-downsampling").as<bool>()) return boost::none;
-    auto max_coverage    = as_unsigned("downsample-above", options);
-    auto target_coverage = as_unsigned("downsample-target", options);
-    return Downsampler {max_coverage, target_coverage};
+    if (is_downsampling_enabled(options)) {
+        using namespace octopus::readpipe;
+        const auto max_coverage    = as_unsigned("downsample-above", options);
+        const auto target_coverage = as_unsigned("downsample-target", options);
+        return Downsampler {max_coverage, target_coverage};
+    }
+    return boost::none;
 }
 
 ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
