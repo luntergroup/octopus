@@ -32,9 +32,7 @@ make_mappable_map(Map map)
 {
     using std::make_move_iterator; using std::begin; using std::end;
     using MappableTp = typename Map::mapped_type::value_type;
-    
     MappableMap<typename Map::key_type, MappableTp> result {map.size()};
-    
     std::for_each(make_move_iterator(begin(map)), make_move_iterator(end(map)),
                   [&result] (auto&& p) {
                       result.emplace(std::piecewise_construct,
@@ -42,7 +40,6 @@ make_mappable_map(Map map)
                                      std::forward_as_tuple(make_move_iterator(begin(p.second)),
                                                            make_move_iterator(end(p.second))));
                   });
-    
     return result;
 }
 
@@ -166,26 +163,19 @@ find_first_shared(const MappableMap<KeyType, typename Container::value_type, Con
                   const MappableType2& mappable)
 {
     using std::cbegin; using std::cend; using std::begin; using std::end;
-    
     if (mappables.empty()) return last;
-    
     if (mappables.size() == 1) {
         return find_first_shared(cbegin(mappables)->second, first, last, mappable);
     }
-    
     std::vector<ForwardIterator> smallest(mappables.size());
-    
     std::transform(cbegin(mappables), cend(mappables), begin(smallest),
                    [first, last, &mappable] (const auto& p) {
                        return find_first_shared(p.second, first, last, mappable);
                    });
-    
     smallest.erase(std::remove_if(begin(smallest), end(smallest),
                                   [last] (auto it) { return it == last; }),
                    end(smallest));
-    
     if (smallest.empty()) return last;
-    
     return *std::min_element(cbegin(smallest), cend(smallest), []
                              (auto lhs, auto rhs) { return *lhs < *rhs; });
 }
@@ -195,17 +185,11 @@ std::size_t
 max_count_if_shared_with_first(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
                                ForwardIterator first, ForwardIterator last)
 {
-    std::size_t maximum {0};
-    std::size_t count {0};
-    
-    for (const auto& map_pair : mappables) {
-        count = count_if_shared_with_first(map_pair.second, first, last);
-        if (count > maximum) {
-            maximum = count;
-        }
+    std::size_t result {0};
+    for (const auto& p : mappables) {
+        result = std::max(result, count_if_shared_with_first(p.second, first, last));
     }
-    
-    return maximum;
+    return result;
 }
 
 template <typename KeyType, typename Container, typename MappableType2>
@@ -216,12 +200,9 @@ leftmost_overlapped(const MappableMap<KeyType, typename Container::value_type, C
     if (mappables.empty()) {
         throw std::logic_error {"leftmost_overlapped called with empty MappableMap"};
     }
-    
-    auto first = std::cbegin(mappables);
-    auto last  = std::cend(mappables);
-    
+    auto first  = std::cbegin(mappables);
+    auto last   = std::cend(mappables);
     auto result = std::cbegin(first->second);
-    
     while (first != last) {
         if (!first->second.empty()) {
             const auto overlapped = overlap_range(first->second, mappable);
@@ -233,14 +214,12 @@ leftmost_overlapped(const MappableMap<KeyType, typename Container::value_type, C
         }
         ++first;
     }
-    
     std::for_each(first, last, [&mappable, &result] (const auto& p) {
         const auto overlapped = overlap_range(p.second, mappable);
         if (!overlapped.empty() && begins_before(overlapped.front(), *result)) {
             result = std::cbegin(overlapped).base();
         }
     });
-    
     return result;
 }
 
@@ -252,13 +231,9 @@ rightmost_overlapped(const MappableMap<KeyType, typename Container::value_type, 
     if (mappables.empty()) {
         throw std::logic_error {"rightmost_overlapped called with empty MappableMap"};
     }
-    
-    auto first = std::cbegin(mappables);
-    
+    auto first      = std::cbegin(mappables);
     const auto last = std::cend(mappables);
-    
-    auto result = std::cend(first->second);
-    
+    auto result     = std::cend(first->second);
     while (first != last) {
         if (!first->second.empty()) {
             const auto overlapped = overlap_range(first->second, mappable);
@@ -270,7 +245,6 @@ rightmost_overlapped(const MappableMap<KeyType, typename Container::value_type, 
         }
         ++first;
     }
-    
     std::for_each(first, last, [&mappable, &result] (const auto& p) {
         const auto overlapped = overlap_range(p.second, mappable);
         if (!overlapped.empty()) {
@@ -280,7 +254,6 @@ rightmost_overlapped(const MappableMap<KeyType, typename Container::value_type, 
             }
         }
     });
-    
     return result;
 }
 
@@ -290,14 +263,11 @@ calculate_positional_coverage(const MappableMap<KeyType, typename Container::val
                               const GenomicRegion& region)
 {
     std::vector<unsigned> result(region_size(region), 0);
-    
     for (const auto& p : mappables) {
         const auto pcoverage = calculate_positional_coverage(p.second, region);
-        
         std::transform(std::cbegin(result), std::cend(result), std::cbegin(pcoverage),
                        std::begin(result), std::plus<void> {});
     }
-    
     return result;
 }
 
@@ -314,11 +284,9 @@ copy_overlapped(const MappableMap<KeyType, typename Container::value_type, Conta
                 const MappableType2& mappable)
 {
     MappableMap<KeyType, typename Container::value_type, Container> result {mappables.size()};
-    
     for (const auto& p : mappables) {
         result.emplace(p.first, copy_overlapped(p.second, mappable));
     }
-    
     return result;
 }
 
@@ -328,11 +296,9 @@ copy_contained(const MappableMap<KeyType, typename Container::value_type, Contai
                const MappableType2& mappable)
 {
     MappableMap<KeyType, typename Container::value_type, Container> result {mappables.size()};
-    
     for (const auto& p : mappables) {
         result.emplace(p.first, copy_contained(p.second, mappable));
     }
-    
     return result;
 }
 

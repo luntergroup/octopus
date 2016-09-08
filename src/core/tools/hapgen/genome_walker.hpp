@@ -21,8 +21,7 @@ namespace coretools {
 class GenomeWalker
 {
 public:
-    using ContigName = GenomicRegion::ContigName;
-    using Candidates = MappableFlatSet<Allele>;
+    using AlleleSet = MappableFlatSet<Allele>;
     
     enum class IndicatorPolicy
     {
@@ -31,7 +30,6 @@ public:
         includeIfSharedWithNovelRegion,
         includeAll
     };
-    
     enum class ExtensionPolicy
     {
         includeIfWithinReadLengthOfFirstIncluded,
@@ -52,19 +50,17 @@ public:
     
     ~GenomeWalker() = default;
     
-    GenomicRegion walk(const ContigName& contig, const ReadMap& reads,
-                       const Candidates& candidates) const;
-    
-    GenomicRegion walk(const GenomicRegion& previous_region, const ReadMap& reads,
-                       const Candidates& candidates) const;
+    GenomicRegion walk(const GenomicRegion::ContigName& contig,
+                       const ReadMap& reads,
+                       const AlleleSet& alleles) const;
+    GenomicRegion walk(const GenomicRegion& previous_region,
+                       const ReadMap& reads,
+                       const AlleleSet& alleles) const;
     
 private:
     unsigned max_included_;
-    
     IndicatorPolicy indicator_policy_;
     ExtensionPolicy extension_policy_;
-    
-    using CandidateIterator = Candidates::const_iterator;
 };
 
 } // namespace coretools

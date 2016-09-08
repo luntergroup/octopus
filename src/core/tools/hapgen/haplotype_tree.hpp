@@ -156,14 +156,14 @@ namespace detail {
         }
     }
     
-    inline unsigned max_haplotypes_after_extension(const HaplotypeTree& tree, unsigned num_new_alleles)
+    inline unsigned max_haplotypes_after_extension(const HaplotypeTree& tree, const unsigned num_new_alleles)
     {
         return tree.num_haplotypes() * static_cast<unsigned>(std::exp2(num_new_alleles));
     }
     
     template <typename RandomIt, typename A>
     RandomIt extend_tree_until(RandomIt first, RandomIt last, HaplotypeTree& tree,
-                               unsigned max_haplotypes, A, std::random_access_iterator_tag)
+                               const unsigned max_haplotypes, A, std::random_access_iterator_tag)
     {
         if (max_haplotypes_after_extension(tree, std::distance(first, last)) <= max_haplotypes) {
             extend_tree(first, last, tree, A {});
@@ -201,7 +201,7 @@ namespace detail {
     
     template <typename RandomIt>
     RandomIt extend_tree_until(RandomIt first, RandomIt last, HaplotypeTree& tree,
-                               unsigned max_haplotypes, Variant, std::random_access_iterator_tag)
+                               const unsigned max_haplotypes, Variant, std::random_access_iterator_tag)
     {
         if (max_haplotypes_after_extension(tree, 2 * std::distance(first, last)) <= max_haplotypes) {
             extend_tree(first, last, tree, Variant {});
@@ -229,9 +229,7 @@ template <typename InputIt>
 void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree)
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
-    
     static_assert(detail::is_variant_or_allele<MappableType>, "not Allele or Variant");
-    
     detail::extend_tree(first, last, tree, MappableType {});
 }
 
@@ -246,9 +244,7 @@ InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
                           const unsigned max_haplotypes)
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
-    
     static_assert(detail::is_variant_or_allele<MappableType>, "not Allele or Variant");
-    
     return detail::extend_tree_until(first, last, tree, max_haplotypes, MappableType {});
 }
 
@@ -286,15 +282,10 @@ template <typename InputIt>
 auto generate_all_haplotypes(InputIt first, InputIt last, const ReferenceGenome& reference)
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
-    
     static_assert(detail::is_variant_or_allele<MappableType>, "not Allele or Variant");
-    
     if (first == last) return std::vector<Haplotype> {};
-    
     HaplotypeTree tree {contig_name(*first), reference};
-    
     extend_tree(first, last, tree);
-    
     return tree.extract_haplotypes();
 }
 
