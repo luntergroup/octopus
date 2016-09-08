@@ -10,8 +10,9 @@
 #include <algorithm>
 #include <iterator>
 #include <initializer_list>
-#include <stdexcept>
 #include <vector>
+#include <type_traits>
+#include <stdexcept>
 
 #include "concepts/comparable.hpp"
 #include "concepts/mappable.hpp"
@@ -22,7 +23,7 @@
 namespace octopus {
 
 /*
- MappableFlatSet is a container designed to allow fast retrival of MappableType elements with minimal
+ MappableFlatSet is a container designed to allow fast retrieval of MappableType elements with minimal
  memory overhead.
  */
 template <typename MappableType, typename Allocator = std::allocator<MappableType>>
@@ -612,7 +613,10 @@ template <typename BidirIt>
 typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::erase_all(BidirIt first, const BidirIt last)
 {
+    using ItrValueType = typename std::iterator_traits<BidirIt>::value_type;
+    static_assert(std::is_same<ItrValueType, MappableType>::value, "Cannot erase different type");
     using octopus::contained_range;
+    
     size_type num_erased {0};
     if (first == last) return num_erased;
     const auto region = encompassing_region(first, last);
@@ -839,7 +843,7 @@ void MappableFlatSet<MappableType, Allocator>::erase_overlapped(const MappableTy
     } else {
         // Must make copies as the iterator range passed to erase_all
         // cannot overlap with elements_
-        const auto tmp = extract_regions(overlapped);
+        const std::vector<MappableType> tmp {std::cbegin(overlapped), std::cend(overlapped)};
         erase_all(std::cbegin(tmp), std::cend(tmp));
     }
 }
@@ -913,7 +917,7 @@ void MappableFlatSet<MappableType, Allocator>::erase_contained(const MappableTyp
     } else {
         // Must make copies as the iterator range passed to erase_all
         // cannot overlap with elements_
-        const auto tmp = extract_regions(contained);
+        const std::vector<MappableType> tmp {std::cbegin(contained), std::cend(contained)};
         erase_all(std::cbegin(tmp), std::cend(tmp));
     }
 }
