@@ -19,11 +19,11 @@ bool HasWellFormedCigar::passes(const AlignedRead& read) const noexcept
     return is_valid(read.cigar()) && is_minimal(read.cigar());
 }
 
-HasValidQualities::HasValidQualities() : BasicReadFilter {"HasValidQualities"} {}
+HasValidBaseQualities::HasValidBaseQualities() : BasicReadFilter {"HasValidBaseQualities"} {}
 
-HasValidQualities::HasValidQualities(std::string name) : BasicReadFilter {std::move(name)} {}
+HasValidBaseQualities::HasValidBaseQualities(std::string name) : BasicReadFilter {std::move(name)} {}
 
-bool HasValidQualities::passes(const AlignedRead& read) const noexcept
+bool HasValidBaseQualities::passes(const AlignedRead& read) const noexcept
 {
     return read.sequence().size() == read.qualities().size();
 }

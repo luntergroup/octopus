@@ -1033,7 +1033,7 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
     
     using ReadFilterer = ReadPipe::ReadFilterer;
     ReadFilterer filterer {};
-    filterer.add(make_unique<HasValidQualities>());
+    filterer.add(make_unique<HasValidBaseQualities>());
     filterer.add(make_unique<HasWellFormedCigar>());
     filterer.add(make_unique<IsMapped>());
     filterer.add(make_unique<IsNotMarkedQcFail>());

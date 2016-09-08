@@ -597,7 +597,7 @@ auto make_read_filterer(const OptionMap& options)
     ReadFilterer result {};
     
     // these filters are mandatory
-    result.add(make_unique<HasValidQualities>());
+    result.add(make_unique<HasValidBaseQualities>());
     result.add(make_unique<HasWellFormedCigar>());
     
     if (!is_read_filtering_enabled(options)) {

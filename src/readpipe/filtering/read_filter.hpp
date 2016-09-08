@@ -61,10 +61,10 @@ struct HasWellFormedCigar : BasicReadFilter
     bool passes(const AlignedRead& read) const noexcept override;
 };
 
-struct HasValidQualities : BasicReadFilter
+struct HasValidBaseQualities : BasicReadFilter
 {
-    HasValidQualities();
-    HasValidQualities(std::string name);
+    HasValidBaseQualities();
+    HasValidBaseQualities(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
