@@ -6,6 +6,7 @@
 #include <iterator>
 #include <algorithm>
 #include <cmath>
+#include <cassert>
 
 #include "basics/genomic_region.hpp"
 #include "concepts/mappable.hpp"
@@ -123,7 +124,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
     } else {
         num_included = min(num_included, num_remaining_alleles);
     }
-    
+    assert(num_included > 0);
     auto first_excluded_itr = next(included_itr, num_included);
     while (--num_included > 0 &&
            is_optimal_to_extend(first_included_itr, next(included_itr), first_excluded_itr,
