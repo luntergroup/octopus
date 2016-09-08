@@ -55,22 +55,21 @@ auto max_included(const unsigned max_haplotypes)
 }
 
 namespace {
-    auto decompose(const MappableFlatSet<Variant>& variants)
-    {
-        std::deque<Allele> alleles {};
-        
-        for (const auto& variant : variants) {
-            alleles.push_back(variant.ref_allele());
-            alleles.push_back(variant.alt_allele());
-        }
-        
-        std::sort(std::begin(alleles), std::end(alleles));
-        
-        return MappableFlatSet<Allele> {
-            std::make_move_iterator(std::begin(alleles)),
-            std::make_move_iterator(std::unique(std::begin(alleles), std::end(alleles)))
-        };
+
+auto decompose(const MappableFlatSet<Variant>& variants)
+{
+    std::vector<Allele> alleles {};
+    alleles.reserve(2 * variants.size());
+    for (const auto& variant : variants) {
+        alleles.push_back(variant.ref_allele());
+        alleles.push_back(variant.alt_allele());
     }
+    return MappableFlatSet<Allele> {
+        std::make_move_iterator(std::begin(alleles)),
+        std::make_move_iterator(std::end(alleles))
+    };
+}
+
 }
 
 namespace debug {

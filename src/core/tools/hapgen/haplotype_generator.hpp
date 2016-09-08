@@ -37,9 +37,7 @@ public:
     struct Policies
     {
         enum class Lagging { none, conservative, aggressive } lagging = Lagging::none;
-        
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
-        
         unsigned max_holdout_depth = 2;
     };
     
@@ -157,9 +155,7 @@ public:
     virtual ~HaplotypeOverflow() noexcept = default;
     
     virtual const char* what() const noexcept override;
-    
     const GenomicRegion& region() const noexcept;
-    
     unsigned size() const noexcept;
     
 private:
