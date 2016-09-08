@@ -9,8 +9,9 @@
 #include <algorithm>
 #include <iterator>
 #include <initializer_list>
-#include <stdexcept>
 #include <vector>
+#include <type_traits>
+#include <stdexcept>
 
 #include <boost/container/flat_set.hpp>
 
@@ -22,7 +23,7 @@
 namespace octopus {
 
 /*
- MappableFlatMultiSet is a container designed to allow fast retrival of MappableType elements with minimal
+ MappableFlatMultiSet is a container designed to allow fast retrieval of MappableType elements with minimal
  memory overhead.
  */
 template <typename MappableType, typename Allocator = std::allocator<MappableType>>
@@ -508,10 +509,11 @@ template <typename InputIt>
 typename MappableFlatMultiSet<MappableType, Allocator>::size_type
 MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt last)
 {
+    using ItrValueType = typename std::iterator_traits<InputIt>::value_type;
+    static_assert(std::is_same<ItrValueType, MappableType>::value, "Cannot erase different type");
+    
     size_type result {0};
-    
     if (first == last) return result;
-    
     auto from = std::cbegin(elements_);
     typename RegionType<MappableType>::Size max_erased_size {0};
     
@@ -658,12 +660,7 @@ template <typename MappableType_>
 typename MappableFlatMultiSet<MappableType, Allocator>::size_type
 MappableFlatMultiSet<MappableType, Allocator>::count_overlapped(const MappableType_& mappable) const
 {
-    using octopus::size;
-    const auto overlapped = overlap_range(mappable);
-    if (is_bidirectionally_sorted_) {
-        return size(overlapped, BidirectionallySortedTag {});
-    }
-    return size(overlapped);
+    return count_overlapped(std::cbegin(elements_), std::cend(elements_), mappable);
 }
 
 template <typename MappableType, typename Allocator>
@@ -672,12 +669,11 @@ typename MappableFlatMultiSet<MappableType, Allocator>::size_type
 MappableFlatMultiSet<MappableType, Allocator>::count_overlapped(const_iterator first, const_iterator last,
                                                                 const MappableType_& mappable) const
 {
-    using octopus::size;
-    const auto overlapped = overlap_range(first, last, mappable);
+    using octopus::count_overlapped;
     if (is_bidirectionally_sorted_) {
-        return size(overlapped, BidirectionallySortedTag {});
+        return count_overlapped(first, last, mappable, BidirectionallySortedTag {});
     }
-    return size(overlapped);
+    return count_overlapped(first, last, mappable, max_element_size_);
 }
 
 template <typename MappableType, typename Allocator>
@@ -705,15 +701,12 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 void MappableFlatMultiSet<MappableType, Allocator>::erase_overlapped(const MappableType_& mappable)
 {
-    // TODO: find better implementation
-    
     const auto overlapped = overlap_range(mappable);
     using octopus::size;
-    if (is_bidirectionally_sorted_ || size(overlapped) == bases(overlapped).size()) {
+    if (is_bidirectionally_sorted_ || size(overlapped) == static_cast<std::size_t>(bases(overlapped).size())) {
         erase(std::cbegin(overlapped).base(), std::cend(overlapped).base());
     } else {
         const std::vector<MappableType> tmp {std::cbegin(overlapped), std::cend(overlapped)};
-        
         erase_all(std::cbegin(tmp), std::cend(tmp));
     }
 }
@@ -750,15 +743,8 @@ typename MappableFlatMultiSet<MappableType, Allocator>::size_type
 MappableFlatMultiSet<MappableType, Allocator>::count_contained(const_iterator first, const_iterator last,
                                                                const MappableType_& mappable) const
 {
-    const auto contained = contained_range(first, last, mappable);
-    
-    using octopus::size;
-    
-    if (is_bidirectionally_sorted_) {
-        return size(contained, BidirectionallySortedTag {});
-    }
-    
-    return size(contained);
+    using octopus::count_contained;
+    return count_contained(first, last, mappable);
 }
 
 template <typename MappableType, typename Allocator>
@@ -783,18 +769,13 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 void MappableFlatMultiSet<MappableType, Allocator>::erase_contained(const MappableType_& mappable)
 {
-    auto contained = this->contained_range(mappable);
-    
+    auto contained = contained_range(mappable);
     using octopus::size;
-    
-    if (is_bidirectionally_sorted_ || size(contained) == bases(contained).size()) {
-        this->erase(std::cbegin(contained).base(), std::cend(contained).base());
+    if (is_bidirectionally_sorted_ || size(contained) == static_cast<std::size_t>(bases(contained).size())) {
+        erase(std::cbegin(contained).base(), std::cend(contained).base());
     } else {
-        // TODO: find better implementation
-        while (!contained.empty()) {
-            this->erase(contained.front());
-            contained = this->contained_range(mappable);
-        }
+        const std::vector<MappableType> tmp {std::cbegin(contained), std::cend(contained)};
+        erase_all(std::cbegin(tmp), std::cend(tmp));
     }
 }
 

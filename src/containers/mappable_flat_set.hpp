@@ -781,12 +781,7 @@ template <typename MappableType_>
 typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::count_overlapped(const MappableType_& mappable) const
 {
-    const auto overlapped = overlap_range(mappable);
-    using octopus::size;
-    if (is_bidirectionally_sorted_) {
-        return size(overlapped, BidirectionallySortedTag {});
-    }
-    return size(overlapped);
+    return count_overlapped(std::cbegin(elements_), std::cend(elements_), mappable);
 }
 
 template <typename MappableType, typename Allocator>
@@ -795,12 +790,11 @@ typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::count_overlapped(const_iterator first, const_iterator last,
                                                            const MappableType_& mappable) const
 {
-    const auto overlapped = overlap_range(first, last, mappable);
-    using octopus::size;
+    using octopus::count_overlapped;
     if (is_bidirectionally_sorted_) {
-        return size(overlapped, BidirectionallySortedTag {});
+        return count_overlapped(first, last, mappable, BidirectionallySortedTag {});
     }
-    return size(overlapped);
+    return count_overlapped(first, last, mappable, max_element_size_);
 }
 
 template <typename MappableType, typename Allocator>
@@ -824,21 +818,13 @@ MappableFlatSet<MappableType, Allocator>::overlap_range(const_iterator first, co
     return overlap_range(first, last, mappable, max_element_size_);
 }
 
-namespace {
-template <typename Range>
-bool is_complete(const Range& range)
-{
-    return size(range) == static_cast<std::size_t>(bases(range).size());
-}
-}
-
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 void MappableFlatSet<MappableType, Allocator>::erase_overlapped(const MappableType_& mappable)
 {
     const auto overlapped = overlap_range(mappable);
     using octopus::size;
-    if (is_bidirectionally_sorted_ || is_complete(overlapped)) {
+    if (is_bidirectionally_sorted_ || size(overlapped) == static_cast<std::size_t>(bases(overlapped).size())) {
         erase(std::cbegin(overlapped).base(), std::cend(overlapped).base());
     } else {
         // Must make copies as the iterator range passed to erase_all
@@ -880,12 +866,8 @@ typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::count_contained(const_iterator first, const_iterator last,
                                                           const MappableType_& mappable) const
 {
-    const auto contained = contained_range(first, last, mappable);
-    using octopus::size;
-    if (is_bidirectionally_sorted_) {
-        return size(contained, BidirectionallySortedTag {});
-    }
-    return size(contained);
+    using octopus::count_contained;
+    return count_contained(first, last, mappable);
 }
 
 template <typename MappableType, typename Allocator>
@@ -912,7 +894,7 @@ void MappableFlatSet<MappableType, Allocator>::erase_contained(const MappableTyp
 {
     const auto contained = contained_range(mappable);
     using octopus::size;
-    if (is_bidirectionally_sorted_ || is_complete(contained)) {
+    if (is_bidirectionally_sorted_ || size(contained) == static_cast<std::size_t>(bases(contained).size())) {
         erase(std::cbegin(contained).base(), std::cend(contained).base());
     } else {
         // Must make copies as the iterator range passed to erase_all
