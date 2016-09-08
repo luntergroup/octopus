@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <functional>
+#include <cmath>
 #include <stdexcept>
 #include <ostream>
 
@@ -187,7 +188,7 @@ inline ContigRegion::Distance outer_distance(const ContigRegion& lhs, const Cont
 
 inline ContigRegion shift(const ContigRegion& region, ContigRegion::Distance n)
 {
-    if (n < 0 && region.begin() + n > region.begin()) {
+    if (n < 0 && std::abs(n) > region.begin()) {
         throw std::out_of_range {"ContigRegion: shifted past contig start"};
     }
     using P = ContigRegion::Position;
@@ -203,7 +204,7 @@ inline ContigRegion next_position(const ContigRegion& region)
 
 inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::Distance n)
 {
-    if (n < 0 && region.begin() + n > region.begin()) {
+    if (n < 0 && std::abs(n) > region.begin()) {
         throw std::out_of_range {"ContigRegion: compressed past contig start"};
     }
     return ContigRegion {
