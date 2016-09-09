@@ -29,7 +29,7 @@
 namespace octopus {
 
 namespace {
-    static const std::string VcfMissingValue {vcfspec::missingValue};
+    static const std::string vcfMissingValue {vcfspec::missingValue};
     
     namespace bc = boost::container;
 }
@@ -58,7 +58,6 @@ std::vector<std::string> extract_samples(const bcf_hdr_t* header)
 std::string get_hts_mode(const HtslibBcfFacade::Path& file_path, HtslibBcfFacade::Mode mode)
 {
     std::string result {"["};
-    
     using Mode = HtslibBcfFacade::Mode;
     if (mode == Mode::read) {
         result += "r]";
@@ -71,7 +70,6 @@ std::string get_hts_mode(const HtslibBcfFacade::Path& file_path, HtslibBcfFacade
             result += "z";
         }
     }
-    
     return result;
 }
 
@@ -455,13 +453,11 @@ std::unordered_map<std::string, std::string> extract_format(const bcf_hrec_t* li
 {
     std::unordered_map<std::string, std::string> result {};
     result.reserve(line->nkeys);
-    
     for (decltype(line->nkeys) k {0}; k < line->nkeys; ++k) {
         if (std::strcmp(line->keys[k], "IDX") != 0) {
             result.emplace(line->keys[k], line->vals[k]);
         }
     }
-    
     return result;
 }
 
@@ -504,28 +500,21 @@ void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::Nucle
                  const std::vector<VcfRecord::NucleotideSequence>& alts)
 {
     const auto num_alleles = alts.size() + 1;
-    
     std::vector<const char*> alleles(num_alleles);
-    
     alleles.front() = ref.c_str();
-    
     std::transform(std::begin(alts), std::end(alts), std::next(std::begin(alleles)),
                    [] (const auto& allele) { return allele.c_str(); });
-    
     bcf_update_alleles(header, record, alleles.data(), static_cast<int>(num_alleles));
 }
 
 void extract_alt(const bcf1_t* record, VcfRecord::Builder& builder)
 {
     const auto num_alleles = record->n_allele;
-    
     std::vector<VcfRecord::NucleotideSequence> alleles {};
     alleles.reserve(num_alleles - 1); // first is the reference
-    
     for (unsigned i {1}; i < num_alleles; ++i) {
         alleles.emplace_back(record->d.allele[i]);
     }
-    
     builder.set_alt(std::move(alleles));
 }
 
@@ -545,11 +534,9 @@ void extract_filter(const bcf_hdr_t* header, const bcf1_t* record, VcfRecord::Bu
 {
     std::vector<VcfRecord::KeyType> filter {};
     filter.reserve(record->d.n_flt);
-    
     for (decltype(record->d.n_flt) i {0}; i < record->d.n_flt; ++i) {
         filter.emplace_back(bcf_hdr_int2id(header, BCF_DT_ID, record->d.flt[i]));
     }
-    
     builder.set_filter(std::move(filter));
 }
 
@@ -589,7 +576,7 @@ void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& b
                     values.reserve(nintinfo);
                     std::transform(intinfo, intinfo + nintinfo, std::back_inserter(values),
                                    [] (auto v) {
-                                       return v != bcf_int32_missing ? std::to_string(v) : VcfMissingValue;
+                                       return v != bcf_int32_missing ? std::to_string(v) : vcfMissingValue;
                                    });
                 }
                 break;
@@ -598,7 +585,7 @@ void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& b
                     values.reserve(nfloatinfo);
                     std::transform(floatinfo, floatinfo + nfloatinfo, std::back_inserter(values),
                                    [] (auto v) {
-                                       return v != bcf_float_missing ? std::to_string(v) : VcfMissingValue;
+                                       return v != bcf_float_missing ? std::to_string(v) : vcfMissingValue;
                                    });
                 }
                 break;
@@ -640,7 +627,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
                 bc::small_vector<int, defaultBufferCapacity> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
                                [] (const auto& v) {
-                                   return v != VcfMissingValue ? std::stoi(v) : bcf_int32_missing;
+                                   return v != vcfMissingValue ? std::stoi(v) : bcf_int32_missing;
                                });
                 bcf_update_info_int32(header, dest, key.c_str(), vals.data(), num_values);
                 break;
@@ -650,7 +637,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
                 bc::small_vector<float, defaultBufferCapacity> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
                                [] (const auto& v) {
-                                   return v != VcfMissingValue ? std::stof(v) : bcf_float_missing;
+                                   return v != vcfMissingValue ? std::stof(v) : bcf_float_missing;
                                });
                 bcf_update_info_float(header, dest, key.c_str(), vals.data(), num_values);
                 break;
@@ -695,17 +682,13 @@ auto extract_format(const bcf_hdr_t* header, const bcf1_t* record)
 void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& builder)
 {
     auto format = extract_format(header, record);
-    
     const auto num_samples = record->n_sample;
-    
     builder.reserve_samples(num_samples);
     
     if (format.front() == vcfspec::format::genotype) { // the first key must be GT if present
         int ngt {}, g {};
         int* gt {nullptr};
-        
         bcf_get_genotypes(header, record, &gt, &ngt); // mallocs gt
-        
         const auto max_ploidy = static_cast<unsigned>(record->d.fmt->n);
         
         for (unsigned sample {0}, i {0}; sample < num_samples; ++sample, i += max_ploidy) {
@@ -718,13 +701,13 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     alleles.shrink_to_fit();
                     break;
                 } else if (bcf_gt_is_missing(g)) {
-                    alleles.push_back(VcfMissingValue);
+                    alleles.push_back(vcfMissingValue);
                 } else {
                     const auto idx = bcf_gt_allele(g);
                     if (idx < record->n_allele) {
                         alleles.emplace_back(record->d.allele[idx]);
                     } else {
-                        alleles.push_back(VcfMissingValue);
+                        alleles.push_back(vcfMissingValue);
                     }
                 }
             }
@@ -758,7 +741,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                         values[sample].reserve(num_values_per_sample);
                         std::transform(ptr, ptr + num_values_per_sample, std::back_inserter(values[sample]),
                                        [] (auto v) {
-                                           return v != bcf_int32_missing ? std::to_string(v) : VcfMissingValue;
+                                           return v != bcf_int32_missing ? std::to_string(v) : vcfMissingValue;
                                        });
                     }
                 }
@@ -772,7 +755,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                         
                         std::transform(ptr, ptr + num_samples, std::back_inserter(values[sample]),
                                        [] (auto v) {
-                                           return v != bcf_float_missing ? std::to_string(v) : VcfMissingValue;
+                                           return v != bcf_float_missing ? std::to_string(v) : vcfMissingValue;
                                        });
                     }
                 }
@@ -808,7 +791,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
 template <typename T, typename Container>
 auto genotype_number(const T& allele, const Container& alleles, const bool is_phased)
 {
-    if (allele == VcfMissingValue) {
+    if (allele == vcfMissingValue) {
         return (is_phased) ? bcf_gt_missing + 1 : bcf_gt_missing;
     }
     const auto it = std::find(std::cbegin(alleles), std::cend(alleles), allele);
@@ -820,10 +803,8 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
                  const std::vector<std::string>& samples)
 {
     if (samples.empty()) return;
-    
     const auto num_samples = static_cast<int>(source.num_samples());
     const auto& format = source.format();
-    
     if (format.empty()) return;
     
     auto first_format = std::cbegin(format);
@@ -835,7 +816,6 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
         alleles.insert(std::end(alleles), std::cbegin(alt_alleles), std::cend(alt_alleles));
         
         unsigned max_ploidy {};
-        
         for (const auto& sample : samples) {
             const auto p = source.ploidy(sample);
             if (p > max_ploidy) max_ploidy = p;
@@ -864,18 +844,18 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     std::for_each(first_format, std::cend(format), [&] (const auto& key) {
         const auto num_values = num_samples * static_cast<int>(source.format_cardinality(key));
 
-        static constexpr std::size_t defaultValueCpacity {100};
+        static constexpr std::size_t defaultValueCapacity {100};
         
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
           case BCF_HT_INT:
           {
-              bc::small_vector<int, defaultValueCpacity> typed_values(num_values);
+              bc::small_vector<int, defaultValueCapacity> typed_values(num_values);
               auto it = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
                   it = std::transform(std::cbegin(values), std::cend(values), it,
                                       [] (const auto& v) {
-                                          return v != VcfMissingValue ? std::stoi(v) : bcf_int32_missing;
+                                          return v != vcfMissingValue ? std::stoi(v) : bcf_int32_missing;
                                       });
               }
               bcf_update_format_int32(header, dest, key.c_str(), typed_values.data(), num_values);
@@ -883,13 +863,13 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
           }
           case BCF_HT_REAL:
           {
-              bc::small_vector<float, defaultValueCpacity> typed_values(num_values);
+              bc::small_vector<float, defaultValueCapacity> typed_values(num_values);
               auto it = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
                   it = std::transform(std::cbegin(values), std::cend(values), it,
                                       [] (const auto& v) {
-                                          return v != VcfMissingValue ? std::stof(v) : bcf_float_missing;
+                                          return v != vcfMissingValue ? std::stof(v) : bcf_float_missing;
                                       });
               }
               bcf_update_format_float(header, dest, key.c_str(), typed_values.data(), num_values);
@@ -897,7 +877,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
           }
           case BCF_HT_STR:
           {
-              bc::small_vector<const char*, defaultValueCpacity> typed_values(num_values);
+              bc::small_vector<const char*, defaultValueCapacity> typed_values(num_values);
               auto it = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
