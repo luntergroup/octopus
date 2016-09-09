@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <boost/optional.hpp>
+
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
 
@@ -30,7 +32,7 @@ public:
     virtual void close() = 0;
     
     virtual std::vector<SampleName> extract_samples() const = 0;
-    virtual std::vector<std::string> extract_read_groups_in_sample(const SampleName& sample) const = 0;
+    virtual std::vector<std::string> extract_read_groups(const SampleName& sample) const = 0;
     
     virtual bool has_reads(const GenomicRegion& region) const = 0;
     virtual bool has_reads(const SampleName& sample,
@@ -59,10 +61,11 @@ public:
     virtual SampleReadMap fetch_reads(const std::vector<SampleName>& samples,
                                       const GenomicRegion& region) const = 0;
     
-    virtual unsigned count_reference_contigs() const = 0;
-    virtual std::vector<std::string> extract_reference_contig_names() const = 0;
-    virtual ContigRegion::Size get_reference_contig_size(const std::string& contig_name) const = 0;
-    virtual std::vector<GenomicRegion> extract_possible_regions_in_file() const = 0;
+    virtual std::vector<GenomicRegion::ContigName> reference_contigs() const = 0;
+    virtual GenomicRegion::Size reference_size(const GenomicRegion::ContigName& contig) const = 0;
+    
+    virtual boost::optional<std::vector<GenomicRegion::ContigName>> mapped_contigs() const { return boost::none; };
+    virtual boost::optional<std::vector<GenomicRegion>> mapped_regions() const { return boost::none; };
 };
 
 } // namespace io

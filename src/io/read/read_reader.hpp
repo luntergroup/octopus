@@ -12,6 +12,7 @@
 #include <functional>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/optional.hpp>
 
 #include "concepts/equitable.hpp"
 #include "read_reader_impl.hpp"
@@ -55,13 +56,14 @@ public:
     
     const Path& path() const noexcept;
     
-    std::vector<std::string> extract_reference_contig_names() const;
-    unsigned count_reference_contigs() const;
-    
     std::vector<SampleName> extract_samples() const;
-    std::vector<std::string> extract_read_groups_in_sample(const SampleName& sample) const;
     
-    std::vector<GenomicRegion> extract_possible_regions_in_file() const;
+    std::vector<std::string> extract_read_groups(const SampleName& sample) const;
+    
+    std::vector<GenomicRegion::ContigName> reference_contigs() const;
+    GenomicRegion::Size reference_size(const GenomicRegion::ContigName& contig) const;
+    boost::optional<std::vector<GenomicRegion::ContigName>> mapped_contigs() const;
+    boost::optional<std::vector<GenomicRegion>> mapped_regions() const;
     
     bool has_reads(const GenomicRegion& region) const;
     bool has_reads(const SampleName& sample,

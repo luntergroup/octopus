@@ -13,6 +13,7 @@
 #include <utility>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/optional.hpp>
 
 #include "htslib/hts.h"
 #include "htslib/sam.h"
@@ -56,7 +57,7 @@ public:
     void close() override;
     
     std::vector<SampleName> extract_samples() const override;
-    std::vector<ReadGroupIdType> extract_read_groups_in_sample(const SampleName& sample) const override;
+    std::vector<ReadGroupIdType> extract_read_groups(const SampleName& sample) const override;
     
     bool has_reads(const GenomicRegion& region) const override;
     bool has_reads(const SampleName& sample,
@@ -85,13 +86,12 @@ public:
     SampleReadMap fetch_reads(const std::vector<SampleName>& samples,
                               const GenomicRegion& region) const override;
     
-    unsigned count_reference_contigs() const override;
-    std::vector<std::string> extract_reference_contig_names() const override;
-    ContigRegion::Size get_reference_contig_size(const std::string& contig_name) const override;
-    std::vector<GenomicRegion> extract_possible_regions_in_file() const override;
+    GenomicRegion::Size reference_size(const GenomicRegion::ContigName& contig) const override;
+    std::vector<GenomicRegion::ContigName> reference_contigs() const override;
+    boost::optional<std::vector<GenomicRegion::ContigName>> mapped_contigs() const override;
     
 private:
-    using HtsTidType = std::int32_t;
+    using HtsTid = std::int32_t;
     
     static constexpr std::size_t defaultReserve_ {10'000'000};
     
@@ -151,16 +151,16 @@ private:
     std::unique_ptr<bam_hdr_t, HtsHeaderDeleter> hts_header_;
     std::unique_ptr<hts_idx_t, HtsIndexDeleter> hts_index_;
     
-    std::unordered_map<std::string, HtsTidType> hts_tids_;
-    std::unordered_map<HtsTidType, std::string> contig_names_;
+    std::unordered_map<GenomicRegion::ContigName, HtsTid> hts_targets_;
+    std::unordered_map<HtsTid, GenomicRegion::ContigName> contig_names_;
     std::unordered_map<ReadGroupIdType, SampleName> sample_names_;
     
     std::vector<SampleName> samples_;
     
     void init_maps();
-    HtsTidType get_htslib_tid(const std::string& contig_name) const;
-    const std::string& contig_name(HtsTidType hts_tid) const;
-    uint64_t get_num_mapped_reads(const std::string& contig_name) const;
+    HtsTid get_htslib_target(const GenomicRegion::ContigName& contig) const;
+    const GenomicRegion::ContigName& get_contig_name(HtsTid target) const;
+    std::uint64_t get_num_mapped_reads(const GenomicRegion::ContigName& contig) const;
 };
 
 } // namespace io

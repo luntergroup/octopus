@@ -14,7 +14,7 @@
 #include "basics/aligned_read.hpp"
 #include "utils/append.hpp"
 
-namespace octopus {
+namespace octopus { namespace io {
 
 ReadManager::ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files)
 : max_open_files_ {max_open_files}
@@ -340,11 +340,36 @@ bool ReadManager::FileSizeCompare::operator()(const Path& lhs, const Path& rhs) 
     return boost::filesystem::file_size(lhs) < boost::filesystem::file_size(rhs);
 }
 
+namespace {
+
+auto extract_spanning_regions(std::vector<GenomicRegion::ContigName> contigs,
+                              const ReadReader& reader)
+{
+    std::vector<GenomicRegion> result {};
+    result.reserve(contigs.size());
+    for (auto&& contig : contigs) {
+        result.emplace_back(std::move(contig), 0, reader.reference_size(contig));
+    }
+    return result;
+}
+
+} // namespace
+
 void ReadManager::setup_reader_samples_and_regions()
 {
     for (const auto& reader_path : closed_readers_) {
         auto reader = make_reader(reader_path);
-        add_possible_regions_to_reader_map(reader_path, reader.extract_possible_regions_in_file());
+        auto possible_reader_regions = reader.mapped_regions();
+        if (possible_reader_regions) {
+            add_possible_regions_to_reader_map(reader_path, *possible_reader_regions);
+        } else {
+            auto possible_reader_contigs = reader.mapped_contigs();
+            if (possible_reader_contigs) {
+                add_possible_regions_to_reader_map(reader_path, extract_spanning_regions(*possible_reader_contigs, reader));
+            } else {
+                add_possible_regions_to_reader_map(reader_path, extract_spanning_regions(reader.reference_contigs(), reader));
+            }
+        }
         add_reader_to_sample_map(reader_path, reader.extract_samples());
     }
 }
@@ -359,9 +384,9 @@ void ReadManager::open_initial_files()
     open_readers(begin(reader_paths), begin(reader_paths) + num_files_to_open);
 }
 
-io::ReadReader ReadManager::make_reader(const Path& reader_path) const
+ReadReader ReadManager::make_reader(const Path& reader_path) const
 {
-    return io::ReadReader {reader_path};
+    return ReadReader {reader_path};
 }
 
 bool ReadManager::is_open(const Path& reader_path) const noexcept
@@ -452,7 +477,7 @@ bool ReadManager::could_reader_contain_region(const Path& reader_path, const Gen
 }
 
 std::vector<ReadManager::Path>
-ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& region) const
+ReadManager::get_possible_reader_paths(const GenomicRegion& region) const
 {
     std::vector<Path> result {};
     result.reserve(num_files_);
@@ -505,4 +530,5 @@ ReadManager::get_possible_reader_paths(const std::vector<SampleName>& samples, c
     return result;
 }
 
+} // namespace io
 } // namespace octopus
