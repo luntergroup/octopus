@@ -156,9 +156,9 @@ inline bool are_adjacent(const ContigRegion& lhs, const ContigRegion& rhs) noexc
 
 inline ContigRegion::Distance overlap_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    using Distance = ContigRegion::Distance;
-    return static_cast<Distance>(std::min(lhs.end(), rhs.end())) -
-                    static_cast<Distance>(std::max(lhs.begin(), rhs.begin()));
+    using D = ContigRegion::Distance;
+    return static_cast<D>(std::min(lhs.end(), rhs.end()))
+           - static_cast<D>(std::max(lhs.begin(), rhs.begin()));
 }
 
 inline bool overlaps(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
@@ -188,12 +188,13 @@ inline ContigRegion::Distance outer_distance(const ContigRegion& lhs, const Cont
 
 inline ContigRegion shift(const ContigRegion& region, ContigRegion::Distance n)
 {
-    if (n < 0 && std::abs(n) > region.begin()) {
+    using P = ContigRegion::Position;
+    if (n < 0 && static_cast<P>(std::abs(n)) > region.begin()) {
         throw std::out_of_range {"ContigRegion: shifted past contig start"};
     }
-    using P = ContigRegion::Position;
     return ContigRegion {
-            static_cast<P>(region.begin() + n), static_cast<P>(region.end() + n)
+        static_cast<P>(region.begin() + n),
+        static_cast<P>(region.end() + n)
     };
 }
 
@@ -204,11 +205,12 @@ inline ContigRegion next_position(const ContigRegion& region)
 
 inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::Distance n)
 {
-    if (n < 0 && std::abs(n) > region.begin()) {
+    using P = ContigRegion::Position;
+    if (n < 0 && static_cast<P>(std::abs(n)) > region.begin()) {
         throw std::out_of_range {"ContigRegion: compressed past contig start"};
     }
     return ContigRegion {
-        static_cast<ContigRegion::Position>(region.begin() - n),
+        static_cast<P>(region.begin() - n),
         region.end()
     };
 }
