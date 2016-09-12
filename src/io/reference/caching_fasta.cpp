@@ -124,7 +124,6 @@ CachingFasta::GeneticSequence CachingFasta::do_fetch_sequence(const GenomicRegio
     const auto cache_itr = find_cached(region);
     if (cache_itr) {
         register_cache_hit(region);
-        lock.unlock();
         return get_subsequence(region.contig_region(), (*cache_itr)->first, (*cache_itr)->second);
     }
     auto fetch_region = get_region_to_fetch(region);
