@@ -64,6 +64,7 @@ public:
     
     // trio
     CallerBuilder& set_trio(Trio trio);
+    CallerBuilder& set_denovo_mutation_rate(double rate) noexcept;
     
     // pedigree
     CallerBuilder& set_pedigree(Pedigree pedigree);
@@ -106,6 +107,7 @@ private:
         
         // trio
         boost::optional<Trio> trio;
+        boost::optional<double> denovo_mutation_rate;
         
         // pedigree
         boost::optional<Pedigree> pedigree;

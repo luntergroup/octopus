@@ -185,6 +185,12 @@ CallerBuilder& CallerBuilder::set_trio(Trio trio)
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_denovo_mutation_rate(double rate) noexcept
+{
+    params_.denovo_mutation_rate = rate;
+    return *this;
+}
+
 std::unique_ptr<Caller> CallerBuilder::build() const
 {
     if (factory_.count(caller_) == 0) {
@@ -223,11 +229,11 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
             return std::make_unique<IndividualCaller>(make_components(),
                                                       std::move(general_parameters),
                                                       IndividualCaller::Parameters {
-                                                          params_.min_variant_posterior,
-                                                          params_.min_refcall_posterior,
                                                           params_.ploidy,
                                                           {params_.snp_heterozygosity,
-                                                          params_.indel_heterozygosity}
+                                                           params_.indel_heterozygosity},
+                                                          params_.min_variant_posterior,
+                                                          params_.min_refcall_posterior
                                                       });
         }},
         {"population", [this, general_parameters = std::move(general_parameters)] () {
@@ -262,13 +268,13 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
             return std::make_unique<TrioCaller>(make_components(),
                                                 std::move(general_parameters),
                                                 TrioCaller::Parameters {
-                                                *params_.trio,
-                                                params_.min_variant_posterior,
-                                                params_.min_refcall_posterior,
-                                                params_.ploidy,
-                                                {params_.snp_heterozygosity,
-                                                 params_.indel_heterozygosity},
-                                                {0.000000001}
+                                                    *params_.trio,
+                                                    params_.ploidy, params_.ploidy, params_.ploidy,
+                                                    {params_.snp_heterozygosity,
+                                                     params_.indel_heterozygosity},
+                                                    {*params_.denovo_mutation_rate},
+                                                    params_.min_variant_posterior,
+                                                    params_.min_refcall_posterior,
                                                 });
         }}
     };

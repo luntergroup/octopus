@@ -31,10 +31,9 @@ public:
     
     struct Parameters
     {
-        Phred<double> min_variant_posterior;
-        Phred<double> min_refcall_posterior;
         unsigned ploidy;
         CoalescentModel::Parameters prior_model_params;
+        Phred<double> min_variant_posterior, min_refcall_posterior;
     };
     
     IndividualCaller() = delete;

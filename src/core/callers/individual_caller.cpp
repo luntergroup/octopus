@@ -84,21 +84,16 @@ IndividualCaller::Latents::HaplotypeProbabilityMap
 IndividualCaller::Latents::calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes)
 {
     assert(genotype_posteriors_ != nullptr);
-    
     HaplotypeProbabilityMap result {haplotypes.size()};
-    
     for (const auto& haplotype : haplotypes) {
         result.emplace(haplotype, 0.0);
     }
-    
     const auto& sample = std::cbegin(*genotype_posteriors_)->first;
-    
     for (const auto& p : (*genotype_posteriors_)[sample]) {
         for (const auto& haplotype : p.first.copy_unique_ref()) {
             result.at(haplotype) += p.second;
         }
     }
-    
     return result;
 }
 
@@ -107,15 +102,11 @@ IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                 const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
-    
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
-    
     const auto prior_model = make_prior_model(haplotypes);
     const model::IndividualModel model {prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
-    
     auto inferences = model.infer_latents(genotypes, haplotype_likelihoods);
-    
     return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
 }
 
@@ -132,12 +123,9 @@ static auto calculate_model_posterior(const double normal_model_log_evidence,
 {
     constexpr double normalModelPrior {0.9999999};
     constexpr double dummyModelPrior {1.0 - normalModelPrior};
-    
     const auto normal_model_ljp = std::log(normalModelPrior) + normal_model_log_evidence;
     const auto dummy_model_ljp  = std::log(dummyModelPrior) + dummy_model_log_evidence;
-    
     const auto norm = maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
-    
     return std::exp(normal_model_ljp - norm);
 }
 
@@ -147,22 +135,17 @@ IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplot
                                             const Latents& latents) const
 {
     const auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
-    
     const auto prior_model = make_prior_model(haplotypes);
     const model::IndividualModel model {prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
-    
     const auto inferences = model.infer_latents(genotypes, haplotype_likelihoods);
-    
     return octopus::calculate_model_posterior(latents.model_log_evidence_, inferences.log_evidence);
 }
 
 namespace {
 
 using GM = model::IndividualModel;
-
 using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
-
 using VariantReference  = std::reference_wrapper<const Variant>;
 using VariantPosteriors = std::vector<std::pair<VariantReference, Phred<double>>>;
 
@@ -202,10 +185,7 @@ struct GenotypeCall
 };
 
 using GenotypeCalls = std::vector<GenotypeCall>;
-} // namespace
 
-namespace
-{
 // allele posterior calculations
 
 auto compute_posterior(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
@@ -301,12 +281,10 @@ transform_call(const SampleName& sample, VariantCall&& variant_call, GenotypeCal
     std::vector<std::pair<SampleName, Call::GenotypeCall>> tmp {
         std::make_pair(sample, convert(std::move(genotype_call)))
     };
-    
     std::unique_ptr<octopus::VariantCall> result {
         std::make_unique<GermlineVariantCall>(variant_call.variant.get(), std::move(tmp),
                                               variant_call.posterior)
     };
-    
     return result;
 }
 
@@ -326,6 +304,7 @@ auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
     
     return result;
 }
+
 } // namespace
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
@@ -363,26 +342,27 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
 }
 
 namespace {
-    // reference genotype calling
+
+// reference genotype calling
+
+struct RefCall : public Mappable<RefCall>
+{
+    RefCall() = default;
     
-    struct RefCall : public Mappable<RefCall>
-    {
-        RefCall() = default;
-        
-        template <typename A>
-        RefCall(A&& reference_allele, double posterior)
-        : reference_allele {std::forward<A>(reference_allele)}
-        , posterior {posterior}
-        {}
-        
-        const GenomicRegion& mapped_region() const noexcept { return reference_allele.mapped_region(); }
-        
-        Allele reference_allele;
-        double posterior;
-    };
+    template <typename A>
+    RefCall(A&& reference_allele, double posterior)
+    : reference_allele {std::forward<A>(reference_allele)}
+    , posterior {posterior}
+    {}
     
-    using RefCalls = std::vector<RefCall>;
+    const GenomicRegion& mapped_region() const noexcept { return reference_allele.mapped_region(); }
     
+    Allele reference_allele;
+    double posterior;
+};
+
+using RefCalls = std::vector<RefCall>;
+
 //    double marginalise_reference_genotype(const Allele& reference_allele,
 //                                          const GenotypeProbabilityMap& sample_genotype_posteriors)
 //    {
@@ -396,7 +376,7 @@ namespace {
 //        
 //        return result;
 //    }
-    
+
 //    RefCalls call_reference(const GenotypeProbabilityMap& genotype_posteriors,
 //                            const std::vector<Allele>& reference_alleles,
 //                            const ReadMap::mapped_type& reads, const double min_call_posterior)
@@ -424,6 +404,7 @@ namespace {
 //        
 //        return result;
 //    }
+
 } // namespace
 
 std::vector<std::unique_ptr<ReferenceCall>>
