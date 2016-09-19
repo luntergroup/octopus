@@ -4,9 +4,9 @@
 #include "trio_model.hpp"
 
 #include <functional>
-#include <cstddef>
 #include <iterator>
 #include <algorithm>
+#include <cmath>
 #include <cassert>
 
 #include "utils/maths.hpp"
@@ -24,18 +24,30 @@ TrioModel::TrioModel(const Trio& trio,
 , debug_log_ {debug_log}
 {}
 
-auto compute_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-                         const GermlineLikelihoodModel& model)
+namespace {
+
+template <typename Container>
+void clear(Container& c)
 {
-    std::vector<double> result(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&model] (const auto& genotype) { return model.evaluate(genotype); });
-    return result;
+    c.clear();
+    c.shrink_to_fit();
+}
+
+using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+
+bool operator==(const GenotypeReference lhs, const GenotypeReference rhs)
+{
+    return lhs.get() == rhs.get();
+}
+
+bool operator<(const GenotypeReference lhs, const GenotypeReference rhs)
+{
+    return lhs.get() < rhs.get();
 }
 
 struct GenotypeRefProbabilityPair
 {
-    std::reference_wrapper<const Genotype<Haplotype>> genotype;
+    GenotypeReference genotype;
     double probability;
 };
 
@@ -48,26 +60,146 @@ bool operator>(const GenotypeRefProbabilityPair& lhs, const GenotypeRefProbabili
     return lhs.probability > rhs.probability;
 }
 
-auto zip(const std::vector<Genotype<Haplotype>>& genotypes,
-         const std::vector<double>& probabilities)
+struct ParentsProbabilityPair
 {
-    assert(genotypes.size() == probabilities.size());
+    GenotypeReference maternal, paternal;
+    double probability;
+};
+
+bool operator<(const ParentsProbabilityPair& lhs, const ParentsProbabilityPair& rhs) noexcept
+{
+    return lhs.probability < rhs.probability;
+}
+bool operator>(const ParentsProbabilityPair& lhs, const ParentsProbabilityPair& rhs) noexcept
+{
+    return lhs.probability > rhs.probability;
+}
+
+auto compute_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
+                         const GermlineLikelihoodModel& model)
+{
     std::vector<GenotypeRefProbabilityPair> result {};
     result.reserve(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes),
-                   std::cbegin(probabilities), std::back_inserter(result),
-                   [] (const auto& genotype, const auto p) {
-                       return GenotypeRefProbabilityPair {genotype, p};
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::back_inserter(result),
+                   [&model] (const auto& genotype) {
+                       return GenotypeRefProbabilityPair {genotype, model.evaluate(genotype)};
                    });
     return result;
 }
 
-void erase_least_likely(std::vector<GenotypeRefProbabilityPair>& zipped, const std::size_t max_keep)
+template <typename T>
+void reduce(std::vector<T>& zipped, const std::size_t max_keep)
 {
     const auto first_erase = std::next(std::begin(zipped), std::min(zipped.size(), max_keep));
     std::partial_sort(std::begin(zipped), first_erase, std::end(zipped), std::greater<> {});
     zipped.erase(first_erase, std::end(zipped));
 }
+
+double probability_of_parents(const Genotype<Haplotype>& mother,
+                              const Genotype<Haplotype>& father,
+                              const CoalescentModel& model)
+{
+    thread_local std::vector<std::reference_wrapper<const Haplotype>> parental_haplotypes;
+    parental_haplotypes.reserve(mother.ploidy() + father.ploidy());
+    parental_haplotypes.assign(std::cbegin(mother), std::cend(mother));
+    parental_haplotypes.insert(std::cbegin(parental_haplotypes), std::cbegin(father), std::cend(father));
+    return model.evaluate(parental_haplotypes);
+}
+
+auto join(const std::vector<GenotypeRefProbabilityPair>& maternal,
+          const std::vector<GenotypeRefProbabilityPair>& paternal,
+          const CoalescentModel& model)
+{
+    std::vector<ParentsProbabilityPair> result {};
+    result.reserve(maternal.size() * paternal.size());
+    for (const auto& m : maternal) {
+        for (const auto& p : paternal) {
+            result.push_back({m.genotype, p.genotype,
+                                m.probability + p.probability
+                                + probability_of_parents(m.genotype, p.genotype, model)});
+        }
+    }
+    return result;
+}
+
+bool all_diploid(const Genotype<Haplotype>& child,
+                 const Genotype<Haplotype>& mother,
+                 const Genotype<Haplotype>& father)
+{
+    return is_diploid(child) && is_diploid(mother) && is_diploid(father);
+}
+
+double probability_of_child_given_parent(const Haplotype& child,
+                                         const Genotype<Haplotype>& parent,
+                                         const DeNovoModel& model)
+{
+    static const double ln2 {std::log(2)};
+    const auto p1 = model.evaluate(child, parent[0]);
+    const auto p2 = model.evaluate(child, parent[1]);
+    return maths::log_sum_exp(p1, p2) - ln2;
+}
+
+double probability_of_child_given_parents(const Haplotype& child_from_mother,
+                                          const Haplotype& child_from_father,
+                                          const Genotype<Haplotype>& mother,
+                                          const Genotype<Haplotype>& father,
+                                          const DeNovoModel& model)
+{
+    return probability_of_child_given_parent(child_from_mother, mother, model)
+            + probability_of_child_given_parent(child_from_father, father, model);
+}
+
+double probability_of_child_given_parents(const Genotype<Haplotype>& child,
+                                          const Genotype<Haplotype>& mother,
+                                          const Genotype<Haplotype>& father,
+                                          const DeNovoModel& model)
+{
+    if (all_diploid(child, mother, father)) {
+        static const double ln2 {std::log(2)};
+        const auto p1 = probability_of_child_given_parents(child[0], child[1], mother, father, model);
+        const auto p2 = probability_of_child_given_parents(child[1], child[0], mother, father, model);
+        return maths::log_sum_exp(p1, p2) - ln2;
+    }
+    return 0; // TODO
+}
+
+using JointProbability = TrioModel::Latents::JointProbability;
+
+auto join(const std::vector<ParentsProbabilityPair>& parents,
+          const std::vector<GenotypeRefProbabilityPair>& child,
+          const DeNovoModel& model)
+{
+    std::vector<JointProbability> result {};
+    result.reserve(parents.size() * child.size());
+    for (const auto& p : parents) {
+        for (const auto& c : child) {
+            result.push_back({p.maternal, p.paternal, c.genotype,
+                                p.probability + c.probability
+                                + probability_of_child_given_parents(p.maternal, p.paternal,
+                                                                     c.genotype, model)});
+        }
+    }
+    return result;
+}
+
+auto extract_probabilities(const std::vector<JointProbability>& joint_likelihoods)
+{
+    std::vector<double> result(joint_likelihoods.size());
+    std::transform(std::cbegin(joint_likelihoods), std::cend(joint_likelihoods),
+                   std::begin(result), [] (const auto& p) { return p.probability; });
+    return result;
+}
+
+auto normalise_exp(std::vector<JointProbability>& joint_likelihoods)
+{
+    auto likelihoods = extract_probabilities(joint_likelihoods);
+    const auto norm = maths::normalise_exp(likelihoods);
+    auto iter = std::cbegin(likelihoods);
+    for (auto& p : joint_likelihoods) p.probability = *iter++;
+    return norm;
+}
+    
+} // namespace
 
 TrioModel::InferredLatents
 TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
@@ -75,27 +207,32 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
                     const GenotypeVector& child_genotypes,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    assert(!maternal_genotypes.empty());
-    assert(!paternal_genotypes.empty());
-    assert(!child_genotypes.empty());
-    
+    assert(!maternal_genotypes.empty() && !paternal_genotypes.empty() && !child_genotypes.empty());
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
-    const auto maternal_likelihoods = compute_likelihoods(maternal_genotypes, likelihood_model);
-    const auto paternal_likelihoods = compute_likelihoods(paternal_genotypes, likelihood_model);
     
-    auto maternal_sorted_likelihoods = zip(maternal_genotypes, maternal_likelihoods);
-    auto paternal_sorted_likelihoods = zip(paternal_genotypes, paternal_likelihoods);
-    constexpr std::size_t max_genotypes {1000};
-    erase_least_likely(maternal_sorted_likelihoods, max_genotypes);
-    erase_least_likely(paternal_sorted_likelihoods, max_genotypes);
+    haplotype_likelihoods.prime(trio_.mother());
+    auto maternal_likelihoods = compute_likelihoods(maternal_genotypes, likelihood_model);
+    reduce(maternal_likelihoods, max_search_size_);
     
+    haplotype_likelihoods.prime(trio_.father());
+    auto paternal_likelihoods = compute_likelihoods(paternal_genotypes, likelihood_model);
+    reduce(paternal_likelihoods, max_search_size_);
     
+    auto parents_joint_likelihoods = join(maternal_likelihoods, paternal_likelihoods, genotype_prior_model_);
+    reduce(parents_joint_likelihoods, max_search_size_);
+    clear(maternal_likelihoods);
+    clear(paternal_likelihoods);
     
-    const auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
+    haplotype_likelihoods.prime(trio_.child());
+    auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
+    reduce(child_likelihoods, max_search_size_);
     
-    InferredLatents result {};
+    auto joint_likelihoods = join(parents_joint_likelihoods, child_likelihoods, mutation_model_);
+    clear(parents_joint_likelihoods);
+    clear(child_likelihoods);
+    const auto evidence = normalise_exp(joint_likelihoods);
     
-    return result;
+    return {std::move(joint_likelihoods), evidence};
 }
 
 } // namespace model

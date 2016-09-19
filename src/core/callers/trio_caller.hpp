@@ -25,11 +25,10 @@ public:
     struct Parameters
     {
         Trio trio;
-        Phred<double> min_variant_posterior;
-        Phred<double> min_refcall_posterior;
-        unsigned ploidy;
+        unsigned maternal_ploidy, paternal_ploidy, child_ploidy;
         CoalescentModel::Parameters germline_prior_model_params;
         DeNovoModel::Parameters denovo_model_params;
+        Phred<double> min_variant_posterior, min_refcall_posterior;
     };
     
     TrioCaller() = delete;
@@ -86,8 +85,11 @@ class TrioCaller::Latents : public Caller::Latents
 public:
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override { return nullptr; }
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override { return nullptr; }
-};
     
+private:
+    std::vector<Genotype<Haplotype>> maternal, paternal, child;
+};
+
 } // namespace octopus
 
 #endif

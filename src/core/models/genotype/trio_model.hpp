@@ -5,6 +5,8 @@
 #define trio_model_hpp
 
 #include <vector>
+#include <functional>
+#include <cstddef>
 
 #include <boost/optional.hpp>
 
@@ -25,8 +27,12 @@ public:
     
     struct Latents
     {
-        using GenotypeProbabilityVector = std::vector<double>;
-        GenotypeProbabilityVector maternal, paternal, child;
+        struct JointProbability
+        {
+            std::reference_wrapper<const Genotype<Haplotype>> maternal, paternal, child;
+            double probability;
+        };
+        std::vector<JointProbability> joint_genotype_probabilities;
     };
     
     struct InferredLatents
@@ -58,6 +64,8 @@ private:
     const Trio& trio_;
     const CoalescentModel& genotype_prior_model_;
     const DeNovoModel& mutation_model_;
+    
+    std::size_t max_search_size_ = 1000;
     
     mutable boost::optional<logging::DebugLogger> debug_log_;
 };
