@@ -54,7 +54,7 @@ void log_error_type(const Error& error, logging::ErrorLogger& log)
     auto ls = stream(log);
     const auto type = error.type();
     assert(!type.empty());
-    if (type.front() == 'u') {
+    if (type == "unclassified") {
         ls << "An ";
     } else {
         ls << "A ";
