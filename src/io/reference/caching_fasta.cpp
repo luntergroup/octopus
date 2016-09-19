@@ -164,21 +164,17 @@ boost::optional<CachingFasta::CacheIterator>
 CachingFasta::find_cached(const GenomicRegion& request_region) const noexcept
 {
     if (!is_contig_cached(request_region)) return boost::none;
-    
     const auto& contig_cache = sequence_cache_.at(request_region.contig_name());
-    
     if (contig_cache.empty()) return boost::none;
-    
     const auto& contig_region = request_region.contig_region();
-    
-    auto it = contig_cache.lower_bound(contig_region);
-    // it now points to the first region that is not before the request region
-    if (it != std::cbegin(contig_cache)
-        && (it == std::cend(contig_cache) || !begins_equal(contig_region, it->first))) {
-        --it;
+    auto iter = contig_cache.lower_bound(contig_region);
+    // iter now points to the first region that is not before the request region
+    if (iter != std::cbegin(contig_cache)
+        && (iter == std::cend(contig_cache) || !begins_equal(contig_region, iter->first))) {
+        --iter;
     }
-    if (contains(it->first, contig_region)) {
-        return it;
+    if (contains(iter->first, contig_region)) {
+        return iter;
     } else {
         return boost::none;
     }
@@ -186,7 +182,7 @@ CachingFasta::find_cached(const GenomicRegion& request_region) const noexcept
 
 GenomicRegion CachingFasta::get_region_to_fetch(const GenomicRegion& requested_region) const
 {
-    // we know the entire region is not in cache, but parts of it may be
+    // We know the entire region is not in cache, but parts of it may be
     if (sequence_cache_.count(requested_region.contig_name()) == 0) {
         return get_new_contig_chunk(requested_region);
     } else {
@@ -224,25 +220,22 @@ GenomicRegion CachingFasta::get_partial_contig_chunk(const GenomicRegion& reques
 void CachingFasta::add_sequence_to_cache(GeneticSequence&& sequence, GenomicRegion&& region) const
 {
     assert(size(region) <= max_cache_size_);
-    
     recache_overlapped_regions(sequence, region);
-    
     const auto& contig = region.contig_name();
-    
     if (sequence_cache_.count(contig) == 0 && contig_sizes_.at(contig) >= get_remaining_cache_size()) {
         const auto target_cache_size = static_cast<GenomicSize>(current_cache_size_ * (1.0 - locality_bias_));
         while (current_cache_size_ > target_cache_size) {
+            assert(!recently_used_regions_.empty());
             remove_from_sequence_cache(recently_used_regions_.back());
             current_cache_size_ -= size(recently_used_regions_.back());
             recently_used_regions_.pop_back();
         }
     }
-    
     sequence_cache_[region.contig_name()].emplace(region.contig_region(), std::move(sequence));
     current_cache_size_ += size(region);
     recently_used_regions_.push_front(std::move(region));
-    
     while (current_cache_size_ > max_cache_size_) {
+        assert(!recently_used_regions_.empty());
         remove_from_sequence_cache(recently_used_regions_.back());
         current_cache_size_ -= size(recently_used_regions_.back());
         recently_used_regions_.pop_back();
