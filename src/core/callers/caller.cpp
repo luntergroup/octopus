@@ -181,12 +181,7 @@ auto calculate_candidate_region(const GenomicRegion& call_region, const ReadMap&
                                 const VariantGenerator& candidate_generator)
 {
     if (!candidate_generator.requires_reads()) return call_region;
-    
-    if (all_empty(reads)) {
-        return call_region;
-    }
-    
-    return encompassing_region(reads);
+    return all_empty(reads) ? call_region : encompassing_region(reads);
 }
 
 bool has_passed(const GenomicRegion& next_active_region, const GenomicRegion& active_region)
@@ -298,11 +293,8 @@ void merge(std::vector<CallWrapper>&& src, std::deque<VcfRecord>& dst,
            const VcfRecordFactory& factory, const GenomicRegion& call_region)
 {
     using std::begin; using std::end;
-    
     if (src.empty()) return;
-    
     auto new_records = factory.make(unwrap(std::move(src)));
-    
     erase_calls_outside_region(new_records, call_region);
     const auto it = dst.insert(end(dst),
                                std::make_move_iterator(begin(new_records)),
@@ -317,7 +309,6 @@ void merge(std::vector<CallWrapper>&& src, std::deque<VcfRecord>& dst,
                                      return lhs.pos() == rhs.pos() && lhs.ref() == rhs.ref()
                                             && lhs.alt() == rhs.alt();
                                  });
-    
     dst.erase(it2, end(dst));
 }
 
@@ -345,7 +336,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     }
     
     const auto candidate_region = calculate_candidate_region(call_region, reads, candidate_generator_);
-    
     auto candidates = generate_candidate_variants(candidate_region);
     
     if (debug_log_) debug::print_final_candidates(stream(*debug_log_), candidates);
@@ -607,15 +597,10 @@ bool Caller::refcalls_requested() const noexcept
 MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion& region) const
 {
     if (debug_log_) stream(*debug_log_) << "Generating candidate variants in region " << region;
-    
     auto raw_candidates = candidate_generator_.generate(region);
-    
     if (debug_log_) debug::print_left_aligned_candidates(stream(*debug_log_), raw_candidates, reference_);
-    
     auto final_candidates = unique_left_align(std::move(raw_candidates), reference_);
-    
     candidate_generator_.clear();
-    
     return MappableFlatSet<Variant> {
         std::make_move_iterator(std::begin(final_candidates)),
         std::make_move_iterator(std::end(final_candidates))
@@ -654,7 +639,6 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
     }
     
     const auto lhs_inactive_candidates = contained_range(candidates, lhs_flank);
-    
     if (lhs_inactive_candidates.empty()) {
         lhs_flank = head_region(lhs_flank);
     } else {
@@ -666,7 +650,6 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
     }
     
     const auto rhs_inactive_candidates = contained_range(candidates, rhs_flank);
-    
     if (rhs_inactive_candidates.empty()) {
         rhs_flank = tail_region(rhs_flank);
     } else {
