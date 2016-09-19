@@ -376,7 +376,23 @@ void LocalReassembler::try_assemble_with_fallbacks(const Bin& bin, std::deque<Va
 GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& input_region,
                                                          unsigned kmer_size) const
 {
-    return expand(input_region, kmer_size);
+    if (input_region.begin() < kmer_size) {
+        const auto& contig = input_region.contig_name();
+        if (reference_.get().contig_size(contig) >= kmer_size) {
+            return GenomicRegion {contig, 0, input_region.end() + kmer_size};
+        } else {
+            return reference_.get().contig_region(contig);
+        }
+    } else {
+        auto ideal_proposal = expand(input_region, kmer_size);
+        if (reference_.get().contains(ideal_proposal)) {
+            return ideal_proposal;
+        } else {
+            const auto& contig = input_region.contig_name();
+            const auto end = reference_.get().contig_size(contig);
+            return GenomicRegion {contig, input_region.begin() - kmer_size, end};
+        }
+    }
 }
 
 bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin,
@@ -387,12 +403,10 @@ bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin,
     if (size(assemble_region) < kmer_size) return false;
     const auto reference_sequence = reference_.get().fetch_sequence(assemble_region);
     if (!utils::is_canonical_dna(reference_sequence)) return false;
-    
     Assembler assembler {kmer_size, reference_sequence};
     for (const auto& sequence : bin.read_sequences) {
         assembler.insert_read(sequence);
     }
-    
     return try_assemble_region(assembler, reference_sequence, assemble_region, result);
 }
 
