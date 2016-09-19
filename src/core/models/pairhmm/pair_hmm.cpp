@@ -262,6 +262,8 @@ double evaluate(const std::string& target, const std::string& truth,
 double evaluate(const std::string& target, const std::string& truth,
                 const BasicMutationModel& model)
 {
+    assert(truth.size() == target.size() + 2 * min_flank_pad());
+    
     using std::cbegin; using std::cend; using std::next; using std::distance;
     
     static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
@@ -284,13 +286,12 @@ double evaluate(const std::string& target, const std::string& truth,
     
     thread_local std::vector<std::int8_t> dummy_qualities;
     thread_local std::vector<std::int8_t> dummy_gap_open_penalities;
-    
     dummy_qualities.assign(truth.size(), model.mutation);
     dummy_gap_open_penalities.assign(truth.size(), model.gap_open);
     
     auto score = simd::align(truth.c_str(), target.c_str(),
                              dummy_qualities.data(),
-                             static_cast<int>(truth.size()),
+                             static_cast<int>(truth.size()) - 1,
                              static_cast<int>(target.size()),
                              dummy_gap_open_penalities.data(),
                              model.gap_extend, 2);
