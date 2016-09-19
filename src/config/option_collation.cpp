@@ -132,22 +132,14 @@ std::istream& operator>>(std::istream& is, Line& data)
 
 std::vector<fs::path> extract_paths_from_file(const fs::path& file_path, const OptionMap& options)
 {
-    const auto resolved_path = resolve_path(file_path, options);
-    std::vector<fs::path> result {};
     std::ifstream file {file_path.string()};
-    
-    if (!file.good()) {
-        std::ostringstream ss {};
-        ss << "Could not open path file " << file_path;
-        throw std::runtime_error {ss.str()};
-    }
-    
+    assert(file.good());
+    std::vector<fs::path> result {};
     std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
-                   std::back_inserter(result), [] (const Line& line) { return line.line_data; });
+                   std::back_inserter(result), [] (const auto& line) { return line.line_data; });
     result.erase(std::remove_if(std::begin(result), std::end(result),
                                 [] (const auto& path) { return path.empty(); }),
                  std::end(result));
-    
     return result;
 }
 
@@ -888,6 +880,139 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
 }
 
+auto get_caller_type(const OptionMap& options)
+{
+    // TODO: could think about getting rid of the 'caller' option and just
+    // deduce the caller type directly from the options.
+    // Will need to report an error if conflicting caller options are given anyway.
+    return options.at("caller").as<std::string>();
+}
+
+class BadTrioSampleSet : public UserError
+{
+    std::string do_where() const override
+    {
+        return "make_trio";
+    }
+    
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "Trio calling requires exactly 3 samples but "
+           << num_samples_
+           << " where provided";
+        return ss.str();
+    }
+    
+    std::string do_help() const override
+    {
+        return "Ensure only three samples are present; if the read files contain more than"
+                " this then explicitly constrain the sample set using the command line option"
+                " '--samples'";
+    }
+    
+    std::size_t num_samples_;
+    
+public:
+    BadTrioSampleSet(std::size_t num_samples) : num_samples_ {num_samples} {}
+};
+
+class BadTrio : public UserError
+{
+    std::string do_where() const override
+    {
+        return "make_trio";
+    }
+    
+    std::string do_why() const override
+    {
+        return "The given maternal and paternal samples are the same";
+    }
+    
+    std::string do_help() const override
+    {
+        return "Ensure the sample names given in the command line options"
+               " '--maternal-sample' and '--paternal-sample' differ and"
+                " refer to valid samples";
+    }
+};
+
+class BadTrioSamples : public UserError
+{
+    std::string do_where() const override
+    {
+        return "make_trio";
+    }
+    
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        if (mother_ && father_) {
+            ss << "Neither of the parent sample names given command line options"
+                  " '--maternal-sample' (" << *mother_ << ") and '--paternal-sample' ("
+               << *father_ << ") appear in the read sample set";
+        } else if (mother_) {
+            ss << "The maternal sample name given in the command line option"
+                    " '--maternal-sample' (" << *mother_ << ") does not appear in the"
+                    " read sample set";
+        } else {
+            assert(father_);
+            ss << "The paternal sample name given in the command line option"
+            " '--paternal-sample' (" << *father_  << ") does not appear in the"
+            " read sample set";
+        }
+        return ss.str();
+    }
+    
+    std::string do_help() const override
+    {
+        return "Ensure the sample names given in the command line options"
+        " '--maternal-sample' and '--paternal-sample' refer to valid samples";
+    }
+    
+    boost::optional<SampleName> mother_, father_;
+    
+public:
+    BadTrioSamples(boost::optional<SampleName> mother,
+                   boost::optional<SampleName> father)
+    : mother_ {mother}
+    , father_ {father}
+    {}
+};
+
+Trio make_trio(std::vector<SampleName> samples, const OptionMap& options)
+{
+    if (samples.size() != 3) {
+        throw BadTrioSampleSet {samples.size()};
+    }
+    auto mother = options.at("maternal-sample").as<SampleName>();
+    auto father = options.at("paternal-sample").as<SampleName>();
+    if (mother == father) {
+        throw BadTrio {};
+    }
+    std::array<SampleName, 2> parents {mother, father};
+    std::vector<SampleName> children {};
+    std::sort(std::begin(samples), std::end(samples));
+    std::sort(std::begin(parents), std::end(parents));
+    assert(std::unique(std::begin(samples), std::end(samples)) == std::end(samples));
+    std::set_difference(std::cbegin(samples), std::cend(samples),
+                        std::cbegin(parents), std::cend(parents),
+                        std::back_inserter(children));
+    if (children.size() != 1) {
+        const auto iter1 = std::find(std::cbegin(children), std::cend(children), mother);
+        const auto iter2 = std::find(std::cbegin(children), std::cend(children), father);
+        boost::optional<SampleName> mother, father;
+        if (iter1 != std::cend(children)) mother = *iter1;
+        if (iter2 != std::cend(children)) father = *iter2;
+        throw BadTrioSamples {mother, father};
+    }
+    return Trio {
+        Trio::Mother {std::move(mother)},
+        Trio::Father {std::move(father)},
+        Trio::Child  {std::move(children.front())}
+    };
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options)
 {
@@ -898,7 +1023,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         make_haplotype_generator_builder(options)
     };
     
-    auto caller = options.at("caller").as<std::string>();
+    auto caller = get_caller_type(options);
     
     if (caller == "population" && read_pipe.num_samples() == 1) {
         caller = "individual";
@@ -949,12 +1074,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
     } else if (caller == "trio") {
-        Trio trio {
-            Trio::Mother {options.at("maternal-sample").as<std::string>()},
-            Trio::Father {options.at("paternal-sample").as<std::string>()},
-            Trio::Child {"TODO"}
-        };
-        vc_builder.set_trio(std::move(trio));
+        vc_builder.set_trio(make_trio(read_pipe.samples(), options));
+        vc_builder.set_denovo_mutation_rate(options.at("denovo-mutation-rate").as<float>());
     }
     
     vc_builder.set_model_filtering(!(options.at("disable-call-filtering").as<bool>()

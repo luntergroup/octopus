@@ -405,6 +405,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>(),
      "Paternal sample")
     
+    ("denovo-mutation-rate",
+     po::value<float>()->default_value(0.00001, "0.00001"),
+     "Expected de novo mutation rate, per megabase pair, for this sample")
+    
     ("denovos-only,d",
      po::bool_switch()->default_value(false),
      "Only report de novo variant calls (i.e. alleles unique to the child)")
