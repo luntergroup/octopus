@@ -17,8 +17,6 @@
 #include "basics/genomic_region.hpp"
 #include "core/types/allele.hpp"
 #include "core/types/variant.hpp"
-#include "core/types/haplotype.hpp"
-#include "core/types/genotype.hpp"
 #include "utils/maths.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
@@ -147,7 +145,7 @@ namespace {
 using GM = model::IndividualModel;
 using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
 using VariantReference  = std::reference_wrapper<const Variant>;
-using VariantPosteriors = std::vector<std::pair<VariantReference, Phred<double>>>;
+using VariantPosteriorVector = std::vector<std::pair<VariantReference, Phred<double>>>;
 
 struct VariantCall : Mappable<VariantCall>
 {
@@ -197,10 +195,10 @@ auto compute_posterior(const Allele& allele, const GenotypeProbabilityMap& genot
     return probability_to_phred(p);
 }
 
-VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candidates,
-                                               const GenotypeProbabilityMap& genotype_posteriors)
+auto compute_candidate_posteriors(const std::vector<Variant>& candidates,
+                                  const GenotypeProbabilityMap& genotype_posteriors)
 {
-    VariantPosteriors result {};
+    VariantPosteriorVector result {};
     result.reserve(candidates.size());
     
     for (const auto& candidate : candidates) {
@@ -217,7 +215,7 @@ bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReferen
     return includes(genotype_call, candidate.get().alt_allele());
 }
 
-VariantCalls call_candidates(const VariantPosteriors& candidate_posteriors,
+VariantCalls call_candidates(const VariantPosteriorVector& candidate_posteriors,
                              const Genotype<Haplotype>& genotype_call,
                              const Phred<double> min_posterior)
 {
@@ -318,7 +316,7 @@ namespace debug {
     void log(const GenotypeProbabilityMap& genotype_posteriors,
              boost::optional<logging::DebugLogger>& debug_log,
              boost::optional<logging::TraceLogger>& trace_log);
-    void log(const VariantPosteriors& candidate_posteriors,
+    void log(const VariantPosteriorVector& candidate_posteriors,
              boost::optional<logging::DebugLogger>& debug_log,
              boost::optional<logging::TraceLogger>& trace_log);
     void log(const Genotype<Haplotype>& called_genotype,
@@ -327,7 +325,7 @@ namespace debug {
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
 IndividualCaller::call_variants(const std::vector<Variant>& candidates,
-                                       const Latents& latents) const
+                                const Latents& latents) const
 {
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
     debug::log(genotype_posteriors, debug_log_, trace_log_);
@@ -478,7 +476,7 @@ namespace debug {
     }
     
     template <typename S>
-    void print_candidate_posteriors(S&& stream, const VariantPosteriors& candidate_posteriors,
+    void print_candidate_posteriors(S&& stream, const VariantPosteriorVector& candidate_posteriors,
                                     const std::size_t n)
     {
         const auto m = std::min(n, candidate_posteriors.size());
@@ -508,7 +506,7 @@ namespace debug {
                       });
     }
     
-    void print_candidate_posteriors(const VariantPosteriors& candidate_posteriors,
+    void print_candidate_posteriors(const VariantPosteriorVector& candidate_posteriors,
                                     const std::size_t n)
     {
         print_candidate_posteriors(std::cout, candidate_posteriors, n);
@@ -526,7 +524,7 @@ namespace debug {
         }
     }
     
-    void log(const VariantPosteriors& candidate_posteriors,
+    void log(const VariantPosteriorVector& candidate_posteriors,
              boost::optional<logging::DebugLogger>& debug_log,
              boost::optional<logging::TraceLogger>& trace_log)
     {

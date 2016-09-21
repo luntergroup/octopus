@@ -12,6 +12,8 @@
 
 #include "config/common.hpp"
 #include "basics/phred.hpp"
+#include "core/types/haplotype.hpp"
+#include "core/types/genotype.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
 #include "caller.hpp"
@@ -110,7 +112,6 @@ public:
 private:
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
-    
     double model_log_evidence_;
     
     HaplotypeProbabilityMap calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
