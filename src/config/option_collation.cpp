@@ -703,16 +703,15 @@ auto make_variant_generator_builder(const OptionMap& options)
                 {
                     if (depth < 4) return num_observations > 1 || base_quality_sum >= 20 || is_deletion(v);
                     if (is_snp(v)) {
-                        return num_observations > 1
-                               || base_quality_sum > 40
+                        return (num_observations > 1
+                                && static_cast<double>(base_quality_sum) / num_observations > 20)
                                || static_cast<double>(num_observations) / depth > 0.2;
                     } else if (is_insertion(v)) {
-                        return num_observations > 1
-                               || static_cast<double>(num_observations) / depth > 0.1
+                        return (num_observations > 1
+                                && static_cast<double>(num_observations) / depth > 0.1)
                                || static_cast<double>(base_quality_sum) / alt_sequence_size(v) > 20;
                     } else {
-                        return num_observations > 1
-                               || static_cast<double>(num_observations) / depth > 0.15;
+                        return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.15;
                     }
                 },
                 [] (const Variant& lhs, const Variant& rhs)
