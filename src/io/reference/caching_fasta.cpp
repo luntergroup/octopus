@@ -5,6 +5,7 @@
 
 #include <iterator>
 #include <algorithm>
+#include <numeric>
 #include <stdexcept>
 #include <utility>
 #include <cassert>
@@ -16,8 +17,12 @@ namespace octopus { namespace io {
 // public methods
 
 CachingFasta::CachingFasta(std::unique_ptr<ReferenceReader> fasta)
-: CachingFasta {std::move(fasta), 10'000'000}
-{}
+: CachingFasta {std::move(fasta), 0}
+{
+    max_cache_size_ = std::accumulate(std::cbegin(contig_sizes_), std::cend(contig_sizes_), 0,
+                                      [] (const auto curr, const auto& p) { return curr + p.second; });
+}
+
 CachingFasta::CachingFasta(std::unique_ptr<ReferenceReader> fasta,
                            GenomicSize max_cache_size)
 : CachingFasta {std::move(fasta), max_cache_size, 0.99, 0.5}
@@ -245,13 +250,14 @@ void CachingFasta::add_sequence_to_cache(GeneticSequence&& sequence, GenomicRegi
 
 void CachingFasta::register_cache_hit(const GenomicRegion& region) const
 {
-    const auto it = std::find_if(std::cbegin(recently_used_regions_), std::cend(recently_used_regions_),
+    const auto hit = std::find_if(std::cbegin(recently_used_regions_), std::cend(recently_used_regions_),
                                  [&region] (const auto& cached_region) {
                                      return contains(cached_region, region);
                                  });
-    if (it != std::cbegin(recently_used_regions_)) {
-        recently_used_regions_.push_front(*it);
-        recently_used_regions_.erase(it);
+    assert(hit != std::cend(recently_used_regions_));
+    if (hit != std::cbegin(recently_used_regions_)) {
+        recently_used_regions_.splice(std::begin(recently_used_regions_),
+                                      recently_used_regions_, hit, std::next(hit));
     }
 }
 
@@ -260,12 +266,12 @@ CachingFasta::OverlapRange CachingFasta::overlap_range(const GenomicRegion& regi
     assert(sequence_cache_.count(region.contig_name()) == 1);
     const auto& contig_cache = sequence_cache_.at(region.contig_name());
     const auto& contig_region = region.contig_region();
-    auto it = contig_cache.lower_bound(contig_region);
-    if (it != std::cbegin(contig_cache)) --it;
-    return {it, std::find_if_not(it, std::cend(contig_cache),
-                                 [&contig_region] (const auto& cached_region) {
-                                     return overlaps(contig_region, cached_region.first);
-                                 })};
+    auto iter = contig_cache.lower_bound(contig_region);
+    if (iter != std::cbegin(contig_cache)) --iter;
+    return {iter, std::find_if_not(iter, std::cend(contig_cache),
+                                     [&contig_region] (const auto& cached_region) {
+                                         return overlaps(contig_region, cached_region.first);
+                                     })};
 }
 
 void CachingFasta::remove_from_sequence_cache(const GenomicRegion& region) const
@@ -290,7 +296,7 @@ void CachingFasta::replace_in_usage_cache(const GenomicRegion& from, const Genom
 
 auto get_nonoverlapped_part(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    return (begins_before(lhs, rhs)) ? left_overhang_region(lhs, rhs) : right_overhang_region(lhs, rhs);
+    return begins_before(lhs, rhs) ? left_overhang_region(lhs, rhs) : right_overhang_region(lhs, rhs);
 }
 
 void CachingFasta::recache_overlapped_regions(const GeneticSequence& sequence, const GenomicRegion& region) const
@@ -335,6 +341,7 @@ CachingFasta::GeneticSequence CachingFasta::get_subsequence(const ContigRegion& 
                                                             const ContigRegion& sequence_region,
                                                             const GeneticSequence& sequence) const
 {
+    assert(size(sequence_region) == sequence.size());
     assert(contains(sequence_region, requested_region));
     return sequence.substr(begin_distance(sequence_region, requested_region), size(requested_region));
 }

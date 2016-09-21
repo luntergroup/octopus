@@ -53,7 +53,7 @@ public:
     
     CachingFasta() = delete;
     
-    CachingFasta(std::unique_ptr<ReferenceReader> fasta);
+    CachingFasta(std::unique_ptr<ReferenceReader> fasta); // Use for unlimited caching
     CachingFasta(std::unique_ptr<ReferenceReader> fasta, GenomicSize max_cache_size);
     CachingFasta(std::unique_ptr<ReferenceReader> fasta, GenomicSize max_cache_size,
                  double locality_bias, double forward_bias);
@@ -70,20 +70,13 @@ private:
     using OverlapRange        = boost::iterator_range<CacheIterator>;
     
     std::unique_ptr<ReferenceReader> fasta_;
-    
     std::unordered_map<ContigName, GenomicSize> contig_sizes_;
-    
     mutable SequenceCache sequence_cache_;
     mutable std::list<GenomicRegion> recently_used_regions_; // TODO: also make into map of contigs?
-    
     GenomicSize genome_size_;
-    
     GenomicSize max_cache_size_;
     mutable GenomicSize current_cache_size_;
-    
-    double locality_bias_;
-    double forward_bias_;
-    
+    double locality_bias_, forward_bias_;
     mutable std::mutex mutex_;
     
     std::unique_ptr<ReferenceReader> do_clone() const override;
