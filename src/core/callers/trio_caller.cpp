@@ -142,6 +142,25 @@ auto sort_copy(std::vector<Genotype<Haplotype>> genotypes)
     return genotypes;
 }
 
+using JointProbability      = TrioModel::Latents::JointProbability;
+using TrioProbabilityVector = std::vector<JointProbability>;
+
+bool contains(const JointProbability& trio, const Haplotype& haplotype)
+{
+    return contains(trio.maternal.get(), haplotype)
+           || contains(trio.paternal.get(), haplotype)
+           || contains(trio.child.get(), haplotype);
+}
+
+auto compute_posterior(const Haplotype& haplotype,
+                       const TrioProbabilityVector& trio_posteriors)
+{
+    return std::accumulate(std::cbegin(trio_posteriors), std::cend(trio_posteriors), 0.0,
+                           [&haplotype] (const auto curr, const auto& p) {
+                               return curr + (contains(p, haplotype) ? p.probability : 0.0);
+                           });
+}
+
 } // namespace
 
 TrioCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
@@ -149,11 +168,11 @@ TrioCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
                              model::TrioModel::InferredLatents&& latents,
                              const Trio& trio)
 : maternal {std::move(genotypes)}
-, latents {std::move(latents)}
+, model_latents {std::move(latents)}
 {
-    auto maternal_posteriors = marginalise_mother(latents.posteriors.joint_genotype_probabilities);
-    auto paternal_posteriors = marginalise_father(latents.posteriors.joint_genotype_probabilities);
-    auto child_posteriors = marginalise_child(latents.posteriors.joint_genotype_probabilities);
+    auto maternal_posteriors = marginalise_mother(model_latents.posteriors.joint_genotype_probabilities);
+    auto paternal_posteriors = marginalise_father(model_latents.posteriors.joint_genotype_probabilities);
+    auto child_posteriors = marginalise_child(model_latents.posteriors.joint_genotype_probabilities);
     const auto sorted_genotypes = sort_copy(maternal);
     fill_missing_genotypes(maternal_posteriors, sorted_genotypes);
     fill_missing_genotypes(paternal_posteriors, sorted_genotypes);
@@ -172,7 +191,7 @@ TrioCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
     
     HaplotypeProbabilityMap haplotype_posteriors {haplotypes.size()};
     for (const auto& haplotype : haplotypes) {
-        haplotype_posteriors.emplace(haplotype, 1.0 / haplotypes.size());
+        haplotype_posteriors.emplace(haplotype, compute_posterior(haplotype, model_latents.posteriors.joint_genotype_probabilities));
     }
     marginal_haplotype_posteriors = std::make_shared<HaplotypeProbabilityMap>(haplotype_posteriors);
 }
@@ -227,9 +246,6 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Caller::
 }
 
 namespace {
-
-using JointProbability      = TrioModel::Latents::JointProbability;
-using TrioProbabilityVector = std::vector<JointProbability>;
 
 bool contains(const JointProbability& trio, const Allele& allele)
 {
@@ -337,7 +353,7 @@ auto call_denovos(const AllelePosteriorMap& denovo_posteriors,
 
 auto extract_regions(const AllelePosteriorMap& calls)
 {
-    auto result = extract_regions(extract_keys(calls));
+    auto result = octopus::extract_regions(extract_keys(calls));
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
@@ -377,7 +393,7 @@ std::vector<std::unique_ptr<VariantCall>>
 TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
     const auto alleles = decompose(candidates);
-    const auto& trio_posteriors = latents.latents.posteriors.joint_genotype_probabilities;
+    const auto& trio_posteriors = latents.model_latents.posteriors.joint_genotype_probabilities;
     const auto allele_posteriors = compute_posteriors(alleles, trio_posteriors);
     const auto called_trio = call_trio(trio_posteriors);
     const auto called_alleles = call_alleles(allele_posteriors, called_trio, parameters_.min_variant_posterior);
@@ -385,10 +401,15 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     const auto called_denovos = call_denovos(denovo_posteriors, called_trio.child, parameters_.min_variant_posterior);
     const auto denovo_regions = extract_regions(called_denovos);
     if (!called_denovos.empty()) {
+        std::cout << "called trio" << std::endl;
+        debug::print_variant_alleles(called_trio.mother); std::cout << '\n';
+        debug::print_variant_alleles(called_trio.father); std::cout << '\n';
+        debug::print_variant_alleles(called_trio.child); std::cout << '\n';
         std::cout << "De Novo!" << std::endl;
         for (const auto& p : called_denovos) {
             std::cout << p.first << " " << p.second << std::endl;
         }
+        exit(0);
     }
     return {};
 }

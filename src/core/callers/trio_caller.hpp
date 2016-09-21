@@ -99,7 +99,7 @@ public:
     
 private:
     std::vector<Genotype<Haplotype>> maternal, paternal, child;
-    ModelInferences latents;
+    ModelInferences model_latents;
     std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
     std::shared_ptr<HaplotypeProbabilityMap> marginal_haplotype_posteriors;
 };
