@@ -37,12 +37,12 @@ public:
     SomaticCall(V&& variant, const CancerGenotype<Allele>& genotype_call,
                 Phred<double> genotype_posterior, C&& credible_regions, Phred<double> quality);
     
-    virtual ~SomaticCall() = default;
-    
     SomaticCall(const SomaticCall&)            = default;
     SomaticCall& operator=(const SomaticCall&) = default;
     SomaticCall(SomaticCall&&)                 = default;
     SomaticCall& operator=(SomaticCall&&)      = default;
+    
+    virtual ~SomaticCall() = default;
     
     virtual void decorate(VcfRecord::Builder& record) const override;
     
