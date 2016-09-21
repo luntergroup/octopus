@@ -7,6 +7,7 @@
 #include <iterator>
 #include <algorithm>
 #include <cmath>
+#include <random>
 #include <cassert>
 
 #include "utils/maths.hpp"
@@ -51,6 +52,14 @@ struct GenotypeRefProbabilityPair
     double probability;
 };
 
+bool operator==(const GenotypeRefProbabilityPair& lhs, const GenotypeRefProbabilityPair& rhs) noexcept
+{
+    return lhs.probability == rhs.probability;
+}
+bool operator!=(const GenotypeRefProbabilityPair& lhs, const GenotypeRefProbabilityPair& rhs) noexcept
+{
+    return lhs.probability != rhs.probability;
+}
 bool operator<(const GenotypeRefProbabilityPair& lhs, const GenotypeRefProbabilityPair& rhs) noexcept
 {
     return lhs.probability < rhs.probability;
@@ -66,6 +75,14 @@ struct ParentsProbabilityPair
     double probability;
 };
 
+bool operator==(const ParentsProbabilityPair& lhs, const ParentsProbabilityPair& rhs) noexcept
+{
+    return lhs.probability == rhs.probability;
+}
+bool operator!=(const ParentsProbabilityPair& lhs, const ParentsProbabilityPair& rhs) noexcept
+{
+    return lhs.probability != rhs.probability;
+}
 bool operator<(const ParentsProbabilityPair& lhs, const ParentsProbabilityPair& rhs) noexcept
 {
     return lhs.probability < rhs.probability;
@@ -88,10 +105,21 @@ auto compute_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
 }
 
 template <typename T>
+bool all_equal(const std::vector<T>& v)
+{
+    return std::adjacent_find(std::cbegin(v), std::cend(v), std::not_equal_to<> {}) == std::cend(v);
+}
+
+template <typename T>
 void reduce(std::vector<T>& zipped, const std::size_t max_keep)
 {
     const auto first_erase = std::next(std::begin(zipped), std::min(zipped.size(), max_keep));
-    std::partial_sort(std::begin(zipped), first_erase, std::end(zipped), std::greater<> {});
+    if (all_equal(zipped)) {
+        static std::default_random_engine g {};
+        std::shuffle(std::begin(zipped), std::end(zipped), g);
+    } else {
+        std::partial_sort(std::begin(zipped), first_erase, std::end(zipped), std::greater<> {});
+    }
     zipped.erase(first_erase, std::end(zipped));
 }
 
@@ -158,19 +186,20 @@ double probability_of_child_given_parents(const Genotype<Haplotype>& child,
         static const double ln2 {std::log(2)};
         const auto p1 = probability_of_child_given_parents(child[0], child[1], mother, father, model);
         const auto p2 = probability_of_child_given_parents(child[1], child[0], mother, father, model);
-//        std::cout << "Child = ";
-//        debug::print_variant_alleles(child);
-//        std::cout << "\nMother = ";
-//        debug::print_variant_alleles(mother);
-//        std::cout << "\nFather = ";
-//        debug::print_variant_alleles(father);
-//        std::cout << "\n" << (maths::log_sum_exp(p1, p2) - ln2) << '\n';
         return maths::log_sum_exp(p1, p2) - ln2;
     }
     return 0; // TODO
 }
 
 using JointProbability = TrioModel::Latents::JointProbability;
+
+auto joint_probability(const ParentsProbabilityPair& parents,
+                       const GenotypeRefProbabilityPair& child,
+                       const DeNovoModel& model)
+{
+    return parents.probability + child.probability
+           + probability_of_child_given_parents(child.genotype, parents.maternal, parents.paternal, model);
+}
 
 auto join(const std::vector<ParentsProbabilityPair>& parents,
           const std::vector<GenotypeRefProbabilityPair>& child,
@@ -181,9 +210,7 @@ auto join(const std::vector<ParentsProbabilityPair>& parents,
     for (const auto& p : parents) {
         for (const auto& c : child) {
             result.push_back({p.maternal, p.paternal, c.genotype,
-                                p.probability + c.probability
-                                + probability_of_child_given_parents(p.maternal, p.paternal,
-                                                                     c.genotype, model)});
+                              joint_probability(p, c, model)});
         }
     }
     return result;
@@ -235,18 +262,21 @@ void print(const std::vector<JointProbability>& ps)
         std::cout << " " << p.probability << "\n";
     }
 }
-void print_top(std::vector<JointProbability> ps)
+void print_top(std::vector<JointProbability> ps, const std::size_t n = 1)
 {
-    std::sort(std::begin(ps), std::end(ps),
+    const auto nth = std::next(std::begin(ps), std::min(ps.size(), n));
+    std::partial_sort(std::begin(ps), nth, std::end(ps),
               [] (const auto& lhs, const auto& rhs) {
                   return lhs.probability > rhs.probability;
               });
-    debug::print_variant_alleles(ps.front().maternal);
-    std::cout << " | ";
-    debug::print_variant_alleles(ps.front().paternal);
-    std::cout << " | ";
-    debug::print_variant_alleles(ps.front().child);
-    std::cout << " " << ps.front().probability << "\n";
+    std::for_each(std::begin(ps), nth, [] (const auto& p) {
+        debug::print_variant_alleles(p.maternal);
+        std::cout << " | ";
+        debug::print_variant_alleles(p.paternal);
+        std::cout << " | ";
+        debug::print_variant_alleles(p.child);
+        std::cout << " " << p.probability << "\n";
+    });
 }
 
 TrioModel::InferredLatents
@@ -293,7 +323,8 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
     
 //    std::cout << "trio joint" << '\n';
 //    print(joint_likelihoods);
-//    print_top(joint_likelihoods);
+//    std::cout << "trio top" << '\n';
+//    print_top(joint_likelihoods, 5);
 //    std::cout << '\n';
     
     return {std::move(joint_likelihoods), evidence};
