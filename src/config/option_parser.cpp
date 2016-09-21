@@ -15,8 +15,9 @@
 #include <boost/filesystem/operations.hpp>
 
 #include "utils/path_utils.hpp"
-#include "basics/phred.hpp"
+#include "utils/memory_footprint.hpp"
 #include "utils/string_utils.hpp"
+#include "basics/phred.hpp"
 #include "exceptions/user_error.hpp"
 #include "config.hpp"
 
@@ -98,7 +99,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Space-seperated list of BAM/CRAM files to be analysed."
      " May be specified multiple times")
     
-    ("reads-file",
+    ("reads-file,i",
      po::value<fs::path>(),
      "File containing a list of BAM/CRAM files, one per line, to be analysed")
     
@@ -111,16 +112,16 @@ OptionMap parse_options(const int argc, const char** argv)
      "Space-seperated list of regions (chrom:begin-end) to be analysed."
      " May be specified multiple times")
     
-    ("regions-file",
+    ("regions-file,t",
      po::value<fs::path>(),
      "File containing a list of regions (chrom:begin-end), one per line, to be analysed")
     
-    ("skip-regions,t",
+    ("skip-regions,N",
      po::value<std::vector<std::string>>()->multitoken(),
      "Space-seperated list of regions (chrom:begin-end) to skip"
      " May be specified multiple times")
     
-    ("skip-regions-file",
+    ("skip-regions-file,n",
      po::value<fs::path>(),
      "File of regions (chrom:begin-end), one per line, to skip")
     
@@ -128,7 +129,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<std::string>>()->multitoken(),
      "Space-seperated list of sample names to analyse")
     
-    ("samples-file",
+    ("samples-file,s",
      po::value<fs::path>(),
      "File of sample names to analyse, one per line, which must be a subset of the samples"
      " that appear in the read files")
@@ -260,11 +261,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description variant_generation("Candidate variant generation");
     variant_generation.add_options()
-    ("disable-raw-cigar-candidate-generator,G",
+    ("disable-raw-cigar-candidate-generator,g",
      po::bool_switch()->default_value(false),
      "Disables candidate generation from raw read alignments (CIGAR strings)")
     
-    ("disable-assembly-candidate-generator,A",
+    ("disable-assembly-candidate-generator,a",
      po::bool_switch()->default_value(false),
      "Disables candidate generation using local re-assembly")
     
@@ -350,7 +351,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
      "Report reference alleles with posterior probability (phred scale) greater than this")
     
-    ("report-refcalls,g",
+    ("report-refcalls,v",
      po::value<RefCallType>()->implicit_value(RefCallType::blocked),
      "Caller will report reference confidence calls for each position (Positional),"
      " or in automatically sized blocks (Blocked)")
@@ -370,7 +371,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description cancer("Caller (cancer)");
     cancer.add_options()
-    ("normal-sample,N",
+    ("normal-sample",
      po::value<std::string>(),
      "Normal sample - all other samples are considered tumour")
     
@@ -448,11 +449,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description call_filtering("Callset filtering");
     call_filtering.add_options()
-    ("disable-call-filtering,K",
+    ("disable-call-filtering,k",
      po::bool_switch()->default_value(false),
      "Disables all callset filtering")
     
-    ("disable-model-filtering,k",
+    ("disable-model-filtering,e",
      po::bool_switch()->default_value(false),
      "Disables model based filtering of variant calls")
     ;
