@@ -9,5 +9,6 @@
 #include "germline_variant_call.hpp"
 #include "reference_call.hpp"
 #include "somatic_call.hpp"
+#include "denovo_call.hpp"
 
 #endif

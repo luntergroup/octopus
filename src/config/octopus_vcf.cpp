@@ -24,6 +24,7 @@ VcfHeader::Builder make_octopus_header_template()
     result.add_info("NS", "1", "Integer", "Number of samples with data");
     result.add_info("SB", "1", "Float", "Strand bias at this position");
     result.add_info("SOMATIC", "0", "Flag", "Indicates that the record is a somatic mutation, for cancer genomics");
+    result.add_info("DENOVO", "0", "Flag", "Indicates that the record is a de novo mutation");
     
     result.add_format("GT", "1", "String", "Genotype");
     result.add_format("DP", "1", "Integer", "Read depth at this position for this sample");

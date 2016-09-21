@@ -617,6 +617,11 @@ VcfRecord::Builder& VcfRecord::Builder::set_somatic()
     return this->set_info_flag("SOMATIC");
 }
 
+VcfRecord::Builder& VcfRecord::Builder::set_denovo()
+{
+    return this->set_info_flag("DENOVO");
+}
+
 GenomicRegion::Position VcfRecord::Builder::pos() const noexcept
 {
     return pos_;

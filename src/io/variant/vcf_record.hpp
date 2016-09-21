@@ -222,6 +222,7 @@ public:
     
     Builder& set_refcall();
     Builder& set_somatic();
+    Builder& set_denovo();
     
     GenomicRegion::Position pos() const noexcept;
     
