@@ -21,17 +21,18 @@
 #include <boost/lexical_cast.hpp>
 
 #include "utils/path_utils.hpp"
+#include "utils/memory_footprint.hpp"
+#include "utils/read_stats.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/string_utils.hpp"
+#include "utils/append.hpp"
+#include "utils/maths.hpp"
 #include "basics/phred.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/tools/coretools.hpp"
 #include "core/callers/caller_builder.hpp"
-#include "utils/read_stats.hpp"
-#include "utils/mappable_algorithms.hpp"
-#include "utils/string_utils.hpp"
-#include "utils/append.hpp"
-#include "utils/maths.hpp"
 #include "logging/logging.hpp"
 #include "io/region/region_parser.hpp"
 #include "io/variant/vcf_reader.hpp"
@@ -196,8 +197,7 @@ boost::optional<unsigned> get_num_threads(const OptionMap& options)
 
 std::size_t get_target_read_buffer_size(const OptionMap& options)
 {
-    static constexpr std::size_t numBytesInGB {1000000000};
-    return static_cast<std::size_t>(numBytesInGB * options.at("target-read-buffer-footprint").as<float>());
+    return options.at("target-read-buffer-footprint").as<MemoryFootprint>().num_bytes();
 }
 
 boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options)
@@ -218,14 +218,12 @@ boost::optional<fs::path> get_trace_log_file_name(const OptionMap& options)
 
 ReferenceGenome make_reference(const OptionMap& options)
 {
-    static constexpr unsigned numBytesInMB {1'000'000};
     const fs::path input_path {options.at("reference").as<std::string>()};
     auto resolved_path = resolve_path(input_path, options);
-    const auto ref_cache_size = options.at("max-reference-cache-footprint").as<float>();
-    
+    const auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>().num_bytes();
     try {
         return octopus::make_reference(std::move(resolved_path),
-                                       static_cast<std::size_t>(numBytesInMB * ref_cache_size),
+                                       ref_cache_size,
                                        is_threading_allowed(options));
     } catch (MissingFileError& e) {
         e.set_location_specified("the command line option --reference");

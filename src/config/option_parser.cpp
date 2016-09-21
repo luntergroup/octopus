@@ -73,13 +73,13 @@ OptionMap parse_options(const int argc, const char** argv)
      "Maximum number of threads to be used, enabling this option with no argument lets the application"
      " decide the number of threads ands enables specific algorithm parallelisation")
     
-    ("max-reference-cache-footprint",
-     po::value<float>()->default_value(50),
-     "Maximum memory footprint for cached reference sequence (in megabytes)")
+    ("max-reference-cache-footprint,X",
+     po::value<MemoryFootprint>()->default_value(*parse_footprint("200MB"), "200MB"),
+     "Maximum memory footprint for cached reference sequence")
     
     ("target-read-buffer-footprint,B",
-     po::value<float>()->default_value(0.5),
-     "None binding request to limit the memory footprint of buffered read data (in gigabytes)")
+     po::value<MemoryFootprint>()->default_value(*parse_footprint("500MB"), "500MB"),
+     "None binding request to limit the memory footprint of buffered read data")
     
     ("max-open-read-files",
      po::value<int>()->default_value(250),
