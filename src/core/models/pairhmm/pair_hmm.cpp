@@ -262,7 +262,9 @@ double evaluate(const std::string& target, const std::string& truth,
 double evaluate(const std::string& target, const std::string& truth,
                 const BasicMutationModel& model)
 {
-    assert(truth.size() == target.size() + 2 * min_flank_pad());
+    if (truth.size() != target.size() + 2 * min_flank_pad()) {
+        return -ln10Div10<> * std::max(target.size(), truth.size()) * model.mutation;
+    }
     
     using std::cbegin; using std::cend; using std::next; using std::distance;
     
@@ -289,7 +291,8 @@ double evaluate(const std::string& target, const std::string& truth,
     dummy_qualities.assign(truth.size(), model.mutation);
     dummy_gap_open_penalities.assign(truth.size(), model.gap_open);
     
-    auto score = simd::align(truth.c_str(), target.c_str(),
+    auto score = simd::align(truth.c_str(),
+                             target.c_str(),
                              dummy_qualities.data(),
                              static_cast<int>(truth.size()) - 1,
                              static_cast<int>(target.size()),
