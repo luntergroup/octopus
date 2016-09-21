@@ -78,7 +78,7 @@ void log_error_help(const Error& error, logging::ErrorLogger& log)
     std::string help {"To help resolve this error "};
     auto help_detail = error.help();
     assert(!help_detail.empty());
-    help_detail.front() = std::tolower(help.front());
+    help_detail.front() = std::tolower(help_detail.front());
     help += help_detail;
     const auto max_line_length = config::CommandLineWidth;
     const auto help_lines = tidy_and_format(help, max_line_length);
