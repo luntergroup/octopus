@@ -406,7 +406,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Paternal sample")
     
     ("denovo-mutation-rate",
-     po::value<float>()->default_value(0.00001, "0.00001"),
+     po::value<float>()->default_value(1e-8, "1e-8"),
      "Expected de novo mutation rate, per megabase pair, for this sample")
     
     ("denovos-only,d",
