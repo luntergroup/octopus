@@ -102,6 +102,7 @@ private:
     void remove_from_usage_cache(const GenomicRegion& region) const;
     void replace_in_usage_cache(const GenomicRegion& from, const GenomicRegion& to) const;
     void recache_overlapped_regions(const GeneticSequence& sequence, const GenomicRegion& region) const;
+    void reduce_cache(std::size_t target_size) const;
     GeneticSequence get_subsequence(const ContigRegion& requested_region,
                                     const ContigRegion& sequence_region,
                                     const GeneticSequence& sequence) const;
