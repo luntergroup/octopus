@@ -65,7 +65,7 @@ private:
     const CoalescentModel& genotype_prior_model_;
     const DeNovoModel& mutation_model_;
     
-    std::size_t max_search_size_ = 1000;
+    std::size_t max_search_size_ = 100;
     
     mutable boost::optional<logging::DebugLogger> debug_log_;
 };

@@ -42,7 +42,7 @@ bool operator==(const GenotypeReference lhs, const GenotypeReference rhs)
 
 bool operator<(const GenotypeReference lhs, const GenotypeReference rhs)
 {
-    return lhs.get() < rhs.get();
+    return GenotypeLess{}(lhs.get(), rhs.get());
 }
 
 struct GenotypeRefProbabilityPair
@@ -158,6 +158,13 @@ double probability_of_child_given_parents(const Genotype<Haplotype>& child,
         static const double ln2 {std::log(2)};
         const auto p1 = probability_of_child_given_parents(child[0], child[1], mother, father, model);
         const auto p2 = probability_of_child_given_parents(child[1], child[0], mother, father, model);
+//        std::cout << "Child = ";
+//        debug::print_variant_alleles(child);
+//        std::cout << "\nMother = ";
+//        debug::print_variant_alleles(mother);
+//        std::cout << "\nFather = ";
+//        debug::print_variant_alleles(father);
+//        std::cout << "\n" << (maths::log_sum_exp(p1, p2) - ln2) << '\n';
         return maths::log_sum_exp(p1, p2) - ln2;
     }
     return 0; // TODO
@@ -201,6 +208,47 @@ auto normalise_exp(std::vector<JointProbability>& joint_likelihoods)
     
 } // namespace
 
+void print(const std::vector<GenotypeRefProbabilityPair>& ps)
+{
+    for (const auto& p : ps) {
+        debug::print_variant_alleles(p.genotype);
+        std::cout << " " << p.probability << "\n";
+    }
+}
+void print(const std::vector<ParentsProbabilityPair>& ps)
+{
+    for (const auto& p : ps) {
+        debug::print_variant_alleles(p.maternal);
+        std::cout << " | ";
+        debug::print_variant_alleles(p.paternal);
+        std::cout << " " << p.probability << "\n";
+    }
+}
+void print(const std::vector<JointProbability>& ps)
+{
+    for (const auto& p : ps) {
+        debug::print_variant_alleles(p.maternal);
+        std::cout << " | ";
+        debug::print_variant_alleles(p.paternal);
+        std::cout << " | ";
+        debug::print_variant_alleles(p.child);
+        std::cout << " " << p.probability << "\n";
+    }
+}
+void print_top(std::vector<JointProbability> ps)
+{
+    std::sort(std::begin(ps), std::end(ps),
+              [] (const auto& lhs, const auto& rhs) {
+                  return lhs.probability > rhs.probability;
+              });
+    debug::print_variant_alleles(ps.front().maternal);
+    std::cout << " | ";
+    debug::print_variant_alleles(ps.front().paternal);
+    std::cout << " | ";
+    debug::print_variant_alleles(ps.front().child);
+    std::cout << " " << ps.front().probability << "\n";
+}
+
 TrioModel::InferredLatents
 TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
                     const GenotypeVector& paternal_genotypes,
@@ -218,19 +266,35 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
     auto paternal_likelihoods = compute_likelihoods(paternal_genotypes, likelihood_model);
     reduce(paternal_likelihoods, max_search_size_);
     
+//    std::cout << "maternal" << '\n';
+//    print(maternal_likelihoods);
+//    std::cout << "paternal" << '\n';
+//    print(paternal_likelihoods);
+    
     auto parents_joint_likelihoods = join(maternal_likelihoods, paternal_likelihoods, genotype_prior_model_);
     reduce(parents_joint_likelihoods, max_search_size_);
     clear(maternal_likelihoods);
     clear(paternal_likelihoods);
     
+//    std::cout << "joint parents" << '\n';
+//    print(parents_joint_likelihoods);
+    
     haplotype_likelihoods.prime(trio_.child());
     auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
     reduce(child_likelihoods, max_search_size_);
+    
+//    std::cout << "child" << '\n';
+//    print(child_likelihoods);
     
     auto joint_likelihoods = join(parents_joint_likelihoods, child_likelihoods, mutation_model_);
     clear(parents_joint_likelihoods);
     clear(child_likelihoods);
     const auto evidence = normalise_exp(joint_likelihoods);
+    
+//    std::cout << "trio joint" << '\n';
+//    print(joint_likelihoods);
+//    print_top(joint_likelihoods);
+//    std::cout << '\n';
     
     return {std::move(joint_likelihoods), evidence};
 }

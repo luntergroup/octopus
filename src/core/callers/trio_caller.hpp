@@ -9,8 +9,11 @@
 
 #include "caller.hpp"
 #include "core/types/trio.hpp"
+#include "core/types/haplotype.hpp"
+#include "core/types/genotype.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/mutation/denovo_model.hpp"
+#include "core/models/genotype/trio_model.hpp"
 
 namespace octopus {
 
@@ -83,11 +86,22 @@ private:
 class TrioCaller::Latents : public Caller::Latents
 {
 public:
-    std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override { return nullptr; }
-    std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override { return nullptr; }
+    using ModelInferences = model::TrioModel::InferredLatents;
+    friend TrioCaller;
+    
+    Latents(const std::vector<Haplotype>& haplotypes,
+            std::vector<Genotype<Haplotype>>&& genotypes,
+            ModelInferences&& latents,
+            const Trio& trio);
+    
+    std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
+    std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
     
 private:
     std::vector<Genotype<Haplotype>> maternal, paternal, child;
+    ModelInferences latents;
+    std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
+    std::shared_ptr<HaplotypeProbabilityMap> marginal_haplotype_posteriors;
 };
 
 } // namespace octopus
