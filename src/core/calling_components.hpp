@@ -17,9 +17,9 @@
 #include "basics/genomic_region.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/read/read_manager.hpp"
+#include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/callers/caller_factory.hpp"
-#include "io/variant/vcf_writer.hpp"
 #include "logging/progress_meter.hpp"
 
 namespace octopus {

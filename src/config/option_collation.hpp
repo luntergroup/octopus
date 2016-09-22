@@ -13,11 +13,12 @@
 
 #include "common.hpp"
 #include "option_parser.hpp"
+#include "utils/memory_footprint.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/read/read_manager.hpp"
+#include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe.hpp"
 #include "core/callers/caller_factory.hpp"
-#include "io/variant/vcf_writer.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -33,7 +34,7 @@ boost::optional<fs::path> get_trace_log_file_name(const OptionMap& options);
 
 boost::optional<unsigned> get_num_threads(const OptionMap& options);
 
-std::size_t get_target_read_buffer_size(const OptionMap& options);
+MemoryFootprint get_target_read_buffer_size(const OptionMap& options);
 
 ReferenceGenome make_reference(const OptionMap& options);
 

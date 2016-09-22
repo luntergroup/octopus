@@ -279,7 +279,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
     }
     
     if (!samples.empty() && !regions.empty() && read_manager.good()) {
-        read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options),
+        read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options).num_bytes(),
                                                    this->samples, this->regions,
                                                    this->read_manager);
     }

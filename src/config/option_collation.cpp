@@ -21,7 +21,6 @@
 #include <boost/lexical_cast.hpp>
 
 #include "utils/path_utils.hpp"
-#include "utils/memory_footprint.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/string_utils.hpp"
@@ -195,9 +194,9 @@ boost::optional<unsigned> get_num_threads(const OptionMap& options)
     return boost::none;
 }
 
-std::size_t get_target_read_buffer_size(const OptionMap& options)
+MemoryFootprint get_target_read_buffer_size(const OptionMap& options)
 {
-    return options.at("target-read-buffer-footprint").as<MemoryFootprint>().num_bytes();
+    return options.at("target-read-buffer-footprint").as<MemoryFootprint>();
 }
 
 boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options)
