@@ -266,9 +266,12 @@ CachingFasta::OverlapRange CachingFasta::overlap_range(const GenomicRegion& regi
     if (p.first != std::cbegin(contig_cache)
         && (p.first == std::cend(contig_cache) || !begins_equal(contig_region, p.first->first))) {
         --p.first;
+        if (p.first->first.end() <= contig_region.begin()) {
+            ++p.first;
+        }
     }
     // p.second points to the first region that is greater than the request region
-    if (p.second != std::cend(contig_cache) && overlaps(p.second->first, contig_region)) {
+    if (p.second != std::cend(contig_cache) && contig_region.end() > p.second->first.begin()) {
         ++p.second;
     }
     return {p.first, p.second};
