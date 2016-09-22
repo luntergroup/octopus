@@ -64,32 +64,36 @@ boost::optional<MemoryUnit> parse_units(const std::string& str)
     }
 }
 
-constexpr std::size_t cpow(const std::size_t a, unsigned n) noexcept
+constexpr std::size_t ipow(std::size_t base, unsigned exp) noexcept
 {
-    auto result = a;
-    for (; n > 0; --n) result *= a;
+    auto result = 1;
+    while (exp) {
+        if (exp & 1) result *= base;
+        exp >>= 1;
+        base *= base;
+    }
     return result;
 }
 
 std::size_t get_multiplier(const MemoryUnit units)
 {
     static const std::unordered_map<MemoryUnit, std::size_t> multiplier {
-        {MemoryUnit::kB, cpow(1000, 1)},
-        {MemoryUnit::MB, cpow(1000, 2)},
-        {MemoryUnit::GB, cpow(1000, 3)},
-        {MemoryUnit::TB, cpow(1000, 4)},
-        {MemoryUnit::PB, cpow(1000, 5)},
-        {MemoryUnit::EB, cpow(1000, 6)},
-        {MemoryUnit::ZB, cpow(1000, 7)},
-        {MemoryUnit::YB, cpow(1000, 8)},
-        {MemoryUnit::KiB, cpow(1024, 1)},
-        {MemoryUnit::MiB, cpow(1024, 2)},
-        {MemoryUnit::GiB, cpow(1024, 3)},
-        {MemoryUnit::TiB, cpow(1024, 4)},
-        {MemoryUnit::PiB, cpow(1024, 5)},
-        {MemoryUnit::EiB, cpow(1024, 6)},
-        {MemoryUnit::ZiB, cpow(1024, 7)},
-        {MemoryUnit::YiB, cpow(1024, 8)}
+        {MemoryUnit::kB, ipow(1000, 1)},
+        {MemoryUnit::MB, ipow(1000, 2)},
+        {MemoryUnit::GB, ipow(1000, 3)},
+        {MemoryUnit::TB, ipow(1000, 4)},
+        {MemoryUnit::PB, ipow(1000, 5)},
+        {MemoryUnit::EB, ipow(1000, 6)},
+        {MemoryUnit::ZB, ipow(1000, 7)},
+        {MemoryUnit::YB, ipow(1000, 8)},
+        {MemoryUnit::KiB, ipow(1024, 1)},
+        {MemoryUnit::MiB, ipow(1024, 2)},
+        {MemoryUnit::GiB, ipow(1024, 3)},
+        {MemoryUnit::TiB, ipow(1024, 4)},
+        {MemoryUnit::PiB, ipow(1024, 5)},
+        {MemoryUnit::EiB, ipow(1024, 6)},
+        {MemoryUnit::ZiB, ipow(1024, 7)},
+        {MemoryUnit::YiB, ipow(1024, 8)}
     };
     return multiplier.at(units);
 }
