@@ -6,7 +6,7 @@
 
 ---
 
-**Warning: this project is incomplete and untested - do not use it for production work.**
+**Warning: this project is incomplete - do not use it for production work.**
 
 ---
 
@@ -20,12 +20,14 @@ Octopus is a mapping-based variant caller that implements several calling models
 * CMake 3.3 or greater
 * Optional:
     * Python3 or greater
+    
+Warning: GCC 6.1.1 and below have bugs which affect octopus, so only trust 6.2 and above. Clang seems ok at 3.8. Visual Studio is untested.
 
 ##Installation
 
-Octopus can be built and installed on a wide range of operating systems including most Unix based systems (Linux, OS X) and Windows.
+Octopus can be built and installed on a wide range of operating systems including most Unix based systems (Linux, OS X) and Windows (untested).
 
-####*Installing with Homebrew (for OS X)*
+####*Installing with Homebrew on OS X*
 
 The recommended method of installation for Mac OS X is with the package manager [Homebrew](http://brew.sh):
 
@@ -34,7 +36,7 @@ $ brew tap science
 $ brew install octopus
 ```
 
-This will download the relevant files (including any dependancies) and install to `usr/local/bin`. Octopus can then be easily updated or removed:
+This will download the relevant files (including any dependencies) and install to `usr/local/bin`. Octopus can then be easily updated or removed:
 
 ```shell
 $ brew upgrade octopus
@@ -52,16 +54,22 @@ $ git clone https://github.com/dancooke/octopus.git
 then use the Python3 install helper:
 
 ```shell
-$ ./octopus/make.py
+$ ./octopus/install.py
 ```
 
 by default this installs to `/bin` relative to where you installed octopus. To intall to a root directory (e.g. `/usr/local/bin`) use:
 
 ```shell
-$ ./octopus/make.py --root
+$ ./octopus/install.py --root
 ```
 
 this may prompt you to enter a `sudo` password.
+
+To build octopus using a specific compiler:
+
+```shell
+$ ./octopus/install.py --compiler /path/to/cpp/compiler
+```
 
 ####*Installing with CMake*
 
@@ -83,7 +91,7 @@ $ cmake -DINSTALL_ROOT=ON ..
 CMake will try to find a suitable compiler on your system, if you'd like you use a specific compiler use the `-D` option, for example:
 
 ```shell
-$ cmake -D CMAKE_C_COMPILER=gcc-4.2 -D CMAKE_CXX_COMPILER=g++-4.2 ..
+$ cmake -D CMAKE_C_COMPILER=gcc-6.2 -D CMAKE_CXX_COMPILER=g++-6.2 ..
 ```
 
 You can check installation was successful by executing the command:
@@ -99,7 +107,7 @@ Octopus comes packaged with unit, regression, and benchmark testing. The unit te
 ####*Running the tests with Python3*
 
 ```shell
-$ ./test.py
+$ test/install.py
 ```
 
 ####*Running tests with CMake*
@@ -121,24 +129,16 @@ This is the simplest case, if the file `NA12878.bam` contains a single sample, o
 $ octopus --reference hs37d5.fa --reads NA12878.bam
 ```
 
-or less verbosly:
+or less verbosely:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam
 ```
 
-Note octopus automatically detects the samples contained in the input read file and will jointly call all samples present by default, to restrict calling to a single sample in this case it is required to explictly specify which sample to use:
+Note octopus automatically detects the samples contained in the input read file and will jointly call all samples present by default, to restrict calling to a single sample in this case it is required to explicitly specify which sample to use:
 
 ```shell
 $ octopus -R hs37d5.fa -I multi-sample.bam -S NA12878
-```
-
-####*Joint variant calling*
-
-Octopus uses different calling models for populations and individuals. Briefly, the individual model is exact whilst the population model uses approximations. However, it is recommended to use the population model to call *germline variants* in multiple samples from the same population as the model can leverage information between individuals:
-
-```shell
-$ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
 ```
 
 ####*Targeted calling*
@@ -175,12 +175,28 @@ $ octopus -C somatic -R hs37d5.fa -I normal.bam tumourA.bam tumourB -N NORMAL
 
 Octopus will then emit separate genotype calls for each sample.
 
-####*Calling denovo mutations*
+####*Calling de novo mutations*
 
-Octopus has a bespoke model for trios which will also classify Denovo mutations in the child, this model requires specifying which sample is maternal (`--maternal-sample`; `-M`) option and which is paternal (`--paternal-sample`; `-P`):
+Octopus has a bespoke model for trios which will also classify de novo mutations in the child, this model requires specifying which sample is maternal (`--maternal-sample`; `-M`) option and which is paternal (`--paternal-sample`; `-P`):
 
 ```shell
 $ octopus -C denovo -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -P NA12891
+```
+
+####*Joint variant calling (NOT YET IMPLEMENTED!)*
+
+Octopus uses different calling models for populations and individuals. Briefly, the individual model is exact whilst the population model uses approximations. However, it is recommended to use the population model to call *germline variants* in multiple samples from the same population as the model can leverage information between individuals:
+
+```shell
+$ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
+```
+
+####*Quick callings*
+
+By default, octopus is geared towards more accurate variant calling which requires the use of complex (slow) algorithms. If speed is a concern for you, then many of these features can be disabled to get very fast runtimes:
+
+```shell
+$ octopus -R hs37d5.fa -I NA12878.bam --phasing-level minimal -k -a --max-haplotypes 50 --disable-inactive-flank-scoring
 ```
 
 ##Documentation
@@ -197,9 +213,11 @@ Contributions are very welcome, but please first review the [contribution guidel
 
 ##Authors
 
-Daniel Cooke & Gerton Lunter
+Daniel Cooke and Gerton Lunter
 
 ##Citing
+
+TBA
 
 ##License
 
