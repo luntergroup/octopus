@@ -5,15 +5,19 @@
 
 #include <iterator>
 #include <algorithm>
+#include <cstdint>
 
 #include "basics/phred.hpp"
 #include "../pairhmm/pair_hmm.hpp"
 
 namespace octopus {
 
-DeNovoModel::DeNovoModel(Parameters params)
-: params_ {params}
-{}
+DeNovoModel::DeNovoModel(Parameters parameters)
+: parameters_ {parameters}
+, cache_ {}
+{
+    cache_.reserve(1000);
+}
 
 auto pad(const Haplotype::NucleotideSequence& given, const std::size_t target_size)
 {
@@ -32,9 +36,23 @@ auto pad(const Haplotype::NucleotideSequence& given, const std::size_t target_si
 
 double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) const
 {
-    const auto p = static_cast<std::int8_t>(probability_to_phred(params_.mutation_rate).score());
-    hmm::BasicMutationModel model {p, p, p};
-    return hmm::evaluate(target.sequence(), pad(given.sequence(), sequence_size(target)), model);
+    const auto target_iter = cache_.find(target);
+    if (target_iter != std::cend(cache_)) {
+        const auto given_iter = target_iter->second.find(given);
+        if (given_iter != std::cend(target_iter->second)) {
+            return given_iter->second;
+        }
+    }
+    const auto p = static_cast<std::int8_t>(probability_to_phred(parameters_.mutation_rate).score());
+    const hmm::BasicMutationModel model {p, p, p};
+    const auto result = hmm::evaluate(target.sequence(), pad(given.sequence(), sequence_size(target)), model);
+    if (target_iter != std::cend(cache_)) {
+        target_iter->second.emplace(given, result);
+    } else {
+        cache_[target].reserve(1000);
+        cache_[target].emplace(given, result);
+    }
+    return result;
 }
 
 } // namespace octopus
