@@ -1,12 +1,46 @@
-# Enable C++ support
+sudo: required
+dist: trusty
+
 language: cpp
 
-# Compiler selection
+os:
+  - linux
+  - osx
+
 compiler:
   - clang
   - gcc
 
+before_install:
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+    sudo apt-get update boost
+  else
+    brew upgrade boost
+    brew install htslib
+  fi
+
+matrix:
+  include:
+  - os: linux
+    compiler: gcc
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+      packages:
+        - g++-6
+    env: COMPILER=g++-6
+  - os: osx
+    compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+    env: COMPILER=clang++-3.8
+
 # Build steps
 script:
-    cd build
-    cmake .. && make
+    ./install.py --compiler $COMPILER
