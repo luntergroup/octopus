@@ -7,6 +7,8 @@
 #include <chrono>
 #include <ctime>
 #include <iomanip>
+#include <cstdlib>
+#include <stdlib.h>
 
 namespace octopus { namespace utils
 {
@@ -47,8 +49,22 @@ inline std::ostream& operator<<(std::ostream& os, const TimeInterval& interval)
            << ((100 * (duration_s.count() % 60)) / 60) << 'm';
     } else {
         const auto duration_h = duration<std::chrono::hours>(interval);
-        os << duration_h.count() << '.' << std::setw(2) << std::setfill('0')
-           << ((100 * (duration_m.count() % 60)) / 60) << 'h';
+        if (duration_h.count() <= 24) {
+            os << duration_h.count() << '.' << std::setw(2) << std::setfill('0')
+               << ((100 * (duration_m.count() % 60)) / 60) << 'h';
+        } else {
+            using H = std::chrono::hours::rep;
+            const auto days = std::div(duration_h.count(), H {24});
+            if (days.quot < 7) {
+                os << days.quot << '.' << std::setw(2) << std::setfill('0')
+                   << days.rem << 'd';
+            } else {
+                const auto weeks = std::div(duration_h.count(), H {24 * 7});
+                os << weeks.quot << '.' << std::setw(2) << std::setfill('0')
+                   << weeks.rem << 'w';
+            }
+        }
+        
     }
     return os;
 }
