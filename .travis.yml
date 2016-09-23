@@ -1,5 +1,5 @@
 sudo: required
-dist: trusty
+dist: precise
 
 language: cpp
 
@@ -27,7 +27,7 @@ before_install:
     fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew update;
-      brew install cmake;
+      brew upgrade cmake;
       brew install python3;
       brew upgrade boost;
       brew tap homebrew/science;
@@ -56,6 +56,5 @@ matrix:
           - clang-3.8
     env: COMPILER=clang++-3.8
 
-# Build steps
 script:
     ./install.py --compiler $COMPILER
