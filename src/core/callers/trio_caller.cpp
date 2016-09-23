@@ -418,18 +418,43 @@ auto call_genotypes(const Trio& trio, const TrioCall& called_trio,
     return result;
 }
 
-auto make_variant(const CalledDenovo& call, const std::map<Allele, Allele>& reference_alleles)
+auto make_variant(Allele&& denovo, const std::map<Allele, Allele>& reference_alleles)
 {
-    return Variant {reference_alleles.at(call.allele), call.allele};
+    return Variant {reference_alleles.at(denovo), std::move(denovo)};
 }
 
-auto make_genotype_calls(GenotypedTrio call, const Trio& trio)
+auto make_genotype_calls(GenotypedTrio&& call, const Trio& trio)
 {
     return std::vector<std::pair<SampleName, Call::GenotypeCall>> {
-        {trio.mother(), {call.mother.genotype, call.mother.posterior}},
-        {trio.father(), {call.father.genotype, call.father.posterior}},
-        {trio.child(), {call.child.genotype, call.child.posterior}}
+        {trio.mother(), {std::move(call.mother.genotype), call.mother.posterior}},
+        {trio.father(), {std::move(call.father.genotype), call.father.posterior}},
+        {trio.child(), {std::move(call.child.genotype), call.child.posterior}}
     };
+}
+
+auto make_calls(std::vector<CalledDenovo>&& alleles,
+                std::vector<GenotypedTrio>&& genotypes,
+                const Trio& trio,
+                const std::vector<Variant>& candidates)
+{
+    std::map<Allele, Allele> reference_alleles {};
+    for (const auto& denovo : alleles) {
+        auto iter = std::find_if(std::cbegin(candidates), std::cend(candidates),
+                                 [denovo] (const auto& c) { return is_same_region(c, denovo); });
+        reference_alleles.emplace(denovo.allele, iter->ref_allele());
+    }
+    std::vector<std::unique_ptr<VariantCall>> result {};
+    result.reserve(alleles.size());
+    std::transform(std::make_move_iterator(std::begin(alleles)),
+                   std::make_move_iterator(std::end(alleles)),
+                   std::make_move_iterator(std::begin(genotypes)),
+                   std::back_inserter(result),
+                   [&trio, &reference_alleles] (auto&& allele, auto&& genotype) {
+                       return std::make_unique<DenovoCall>(make_variant(std::move(allele.allele), reference_alleles),
+                                                           make_genotype_calls(std::move(genotype), trio),
+                                                           allele.posterior);
+                   });
+    return result;
 }
 
 } // namespace
@@ -443,42 +468,13 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     const auto called_trio = call_trio(trio_posteriors);
     const auto called_alleles = call_alleles(allele_posteriors, called_trio, parameters_.min_variant_posterior);
     const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors);
-    const auto called_denovos = call_denovos(denovo_posteriors, called_trio.child, parameters_.min_variant_posterior);
+    auto called_denovos = call_denovos(denovo_posteriors, called_trio.child, parameters_.min_variant_posterior);
     const auto denovo_regions = extract_regions(called_denovos);
     auto denovo_genotypes = call_genotypes(parameters_.trio, called_trio,
                                            *latents.genotype_posteriors(),
                                            denovo_regions);
-    
-//    if (!called_denovos.empty()) {
-//        std::cout << "called trio" << std::endl;
-//        debug::print_variant_alleles(called_trio.mother); std::cout << '\n';
-//        debug::print_variant_alleles(called_trio.father); std::cout << '\n';
-//        debug::print_variant_alleles(called_trio.child); std::cout << '\n';
-//        std::cout << "De Novo!" << std::endl;
-//        for (const auto& p : called_denovos) {
-//            std::cout << p.allele << " " << p.posterior << std::endl;
-//        }
-//        //exit(0);
-//    }
-    
-    std::map<Allele, Allele> reference_alleles {};
-    for (const auto& denovo : called_denovos) {
-        auto iter = std::find_if(std::cbegin(candidates), std::cend(candidates),
-                                 [denovo] (const auto& c) { return is_same_region(c, denovo); });
-        reference_alleles.emplace(denovo.allele, iter->ref_allele());
-    }
-    
-    std::vector<std::unique_ptr<VariantCall>> result {};
-    result.reserve(called_denovos.size());
-    std::transform(std::begin(called_denovos), std::end(called_denovos),
-                   std::begin(denovo_genotypes),
-                   std::back_inserter(result),
-                   [this, &reference_alleles] (auto&& allele, auto&& genotype) {
-                       return std::make_unique<DenovoCall>(make_variant(allele, reference_alleles),
-                                                           make_genotype_calls(genotype, parameters_.trio),
-                                                           allele.posterior);
-                   });
-    return result;
+    return make_calls(std::move(called_denovos), std::move(denovo_genotypes),
+                      parameters_.trio, candidates);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
