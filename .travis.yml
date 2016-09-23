@@ -13,10 +13,20 @@ compiler:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      sudo apt-get upgrade boost;
+      sudo apt-get update;
+      sudo apt-get install python3;
+      sudo apt-get upgrade libboost-all-dev;
+      git clone https://github.com/samtools/htslib.git
+      cd htslib
+      autoheader
+      autoconf
+      ./configure
+      make && make install
     fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew update;
+      brew install cmake;
+      brew install python3;
       brew upgrade boost;
       brew tap homebrew/science;
       brew install htslib;
