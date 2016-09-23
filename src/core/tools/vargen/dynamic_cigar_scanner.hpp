@@ -30,8 +30,9 @@ class DynamicCigarScanner : public VariantGenerator
 public:
     struct Options
     {
-        using MatchPredicate     = std::function<bool(const Variant&, const Variant&)>;
-        using InclusionPredicate = std::function<bool(const Variant&, unsigned, unsigned, unsigned)>;
+        // Signature is (Variant, depth, observed qualities). For insertions, observed qualities is the sum.
+        using InclusionPredicate = std::function<bool(const Variant&, unsigned, std::vector<unsigned>&)>;
+        using MatchPredicate = std::function<bool(const Variant&, const Variant&)>;
         InclusionPredicate include;
         MatchPredicate match = std::equal_to<> {};
         bool use_clipped_coverage_tracking = false;
@@ -39,7 +40,6 @@ public:
     };
     
     DynamicCigarScanner() = delete;
-    
     DynamicCigarScanner(const ReferenceGenome& reference, Options options);
     
     DynamicCigarScanner(const DynamicCigarScanner&)            = default;

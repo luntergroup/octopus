@@ -138,6 +138,20 @@ void DynamicCigarScanner::do_add_reads(FlatSetIterator first, FlatSetIterator la
     std::for_each(first, last, [this] (const AlignedRead& read ) { do_add_read(read); });
 }
 
+unsigned get_min_depth(const Variant& v, const CoverageTracker& tracker)
+{
+    if (is_insertion(v)) {
+        const auto& region = mapped_region(v);
+        if (region.begin() > 0) {
+            return tracker.min_coverage(expand(region, 1, 1));
+        } else {
+            return tracker.min_coverage(expand_rhs(region, 1));
+        }
+    } else {
+        return tracker.min_coverage(mapped_region(v));
+    }
+}
+
 std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next; using std::distance;
@@ -155,12 +169,14 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
                                                          return options_.match(c.variant, candidate.variant);
                                                      });
         const auto num_observations = static_cast<unsigned>(distance(cbegin(overlapped), next_candidate));
-        const auto min_depth = read_coverage_tracker_.min_coverage(mapped_region(candidate));
-        const auto base_quality_sum = std::accumulate(cbegin(overlapped), next_candidate, 0u,
-                                                      [this] (const unsigned curr, const Candidate& candidate) {
-                                                          return curr + sum_base_qualities(candidate);
-                                                      });
-        if (options_.include(candidate.variant, num_observations, min_depth, base_quality_sum)) {
+        const auto min_depth = get_min_depth(candidate.variant, read_coverage_tracker_);
+        thread_local std::vector<unsigned> observed_qualities {};
+        observed_qualities.resize(num_observations);
+        std::transform(cbegin(overlapped), next_candidate, begin(observed_qualities),
+                       [this] (const Candidate& c) noexcept {
+                           return sum_base_qualities(c);
+                       });
+        if (options_.include(candidate.variant, min_depth, observed_qualities)) {
             if (num_observations > 1) {
                 auto unique_iter = cbegin(overlapped);
                 while (unique_iter != next_candidate) {
