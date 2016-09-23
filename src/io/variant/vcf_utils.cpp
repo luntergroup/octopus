@@ -7,6 +7,7 @@
 #include <deque>
 #include <queue>
 #include <unordered_set>
+#include <iterator>
 #include <algorithm>
 #include <functional>
 #include <stdexcept>
@@ -461,36 +462,36 @@ void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
         dst << src.fetch_header();
     }
     
-    const auto samples = src.fetch_header().samples();
-    const static std::string missing {vcfspec::missingValue};
-    const auto has_deleted = [] (const auto& allele) {
-        static constexpr char deleted {'*'};
-        return std::find(std::cbegin(allele), std::cend(allele), deleted) != std::cend(allele);
+    static const std::string missing {vcfspec::missingValue};
+    static const auto has_deleted = [] (const auto& allele) noexcept {
+        return std::find(std::cbegin(allele), std::cend(allele), vcfspec::deletedBase) != std::cend(allele);
     };
-    auto p = src.iterate();
+    static const auto is_missing_or_has_deleted = [] (const auto& allele) noexcept {
+        return allele == missing || has_deleted(allele);
+    };
     
+    const auto samples = src.fetch_header().samples();
+    auto p = src.iterate();
     std::for_each(std::move(p.first), std::move(p.second), [&] (const auto& call) {
-        const auto& alt = call.alt();
         VcfRecord::Builder cb {call};
-        
-        const auto it = std::find_if(std::cbegin(alt), std::cend(alt), has_deleted);
-        if (it != std::cend(alt)) {
-            const auto i = std::distance(std::cbegin(alt), it);
+        const auto& alt = call.alt();
+        const auto first_deleted = std::find_if(std::cbegin(alt), std::cend(alt), has_deleted);
+        if (first_deleted != std::cend(alt)) {
             auto new_alt = alt;
-            new_alt.erase(std::next(std::begin(new_alt), i));
+            new_alt.erase(std::next(std::begin(new_alt), std::distance(std::cbegin(alt), first_deleted)));
             cb.set_alt(std::move(new_alt));
         }
-        
         for (const auto& sample : samples) {
             const auto& gt = call.get_sample_value(sample, vcfspec::format::genotype);
-            const auto it2 = std::find_if(std::cbegin(gt), std::cend(gt), has_deleted);
-            const auto it3 = std::find(std::cbegin(gt), std::cend(gt), missing);
-            const auto& ref = call.ref();
-            
-            if (it2 != std::cend(gt) || it3 != std::cend(gt)) {
+            const auto first_non_legacy = std::find_if(std::cbegin(gt), std::cend(gt),
+                                                       is_missing_or_has_deleted);
+            if (first_non_legacy != std::cend(gt)) {
+                const auto& ref = call.ref();
                 auto new_gt = gt;
-                std::replace_if(std::begin(new_gt), std::end(new_gt), has_deleted, ref);
-                std::replace(std::begin(new_gt), std::end(new_gt), missing, ref);
+                auto iter = std::next(std::begin(new_gt), std::distance(std::cbegin(gt), first_non_legacy));
+                *iter = ref;
+                std::replace_if(std::next(iter), std::end(new_gt),
+                                is_missing_or_has_deleted, ref);
                 auto phasing = VcfRecord::Builder::Phasing::phased;
                 if (!call.is_sample_phased(sample)) {
                     phasing = VcfRecord::Builder::Phasing::unphased;
@@ -498,7 +499,6 @@ void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
                 cb.set_genotype(sample, std::move(new_gt), phasing);
             }
         }
-        
         dst << cb.build_once();
     });
 }
