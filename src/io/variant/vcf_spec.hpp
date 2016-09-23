@@ -6,8 +6,8 @@
 
 #include <array>
 
-#define VCF_SPEC_SEPERATOR static constexpr char
-#define VCF_SPEC_CONSTANT static constexpr const char*
+#define VCF_SPEC_SEPERATOR constexpr char
+#define VCF_SPEC_CONSTANT constexpr const char*
 
 /**
  The namespace vcfspec contains all the reserved definitions used in the VCF specification.
