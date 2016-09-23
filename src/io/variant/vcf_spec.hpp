@@ -19,6 +19,8 @@ namespace octopus { namespace vcfspec {
     
     VCF_SPEC_CONSTANT missingValue {"."};
     
+    constexpr char deletedBase {'*'};
+    
     namespace header {
     
     VCF_SPEC_CONSTANT lineOpener {"#"};
