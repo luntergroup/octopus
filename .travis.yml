@@ -2,6 +2,26 @@ sudo: required
 dist: trusty
 
 language: cpp
+osx_image: xcode8
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo add-apt-repository ppa:george-edison55/cmake-3.x -y;
+      sudo apt-get update -q;
+      sudo apt-get upgrade cmake -y;
+      sudo apt-get install python3 -y;
+      sudo apt-get upgrade libboost-all-dev -y;
+      git clone https://github.com/samtools/htslib.git;
+      cd htslib && autoheader && autoconf && ./configure && make && sudo make install;
+    fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      brew update;
+      brew outdated cmake || upgrade cmake;
+      brew install python3;
+      brew outdated boost || upgrade boost;
+      brew tap homebrew/science;
+      brew install htslib;
+    fi
 
 matrix:
   include:
@@ -13,6 +33,7 @@ matrix:
           - ubuntu-toolchain-r-test
       packages:
         - g++-6
+    install: export CXX="g++-6"
     env: COMPILER=g++-6
   - os: osx
     compiler: clang
@@ -23,31 +44,8 @@ matrix:
           - llvm-toolchain-precise-3.8
         packages:
           - clang-3.8
+    install: CXX="clang++-3.8"
     env: COMPILER=clang++-3.8
-
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      sudo add-apt-repository ppa:george-edison55/cmake-3.x;
-      sudo apt-get update;
-      sudo apt-get -q -y upgrade cmake;
-      sudo apt-get -q -y install python3;
-      sudo apt-get -q -y upgrade libboost-all-dev;
-      git clone https://github.com/samtools/htslib.git;
-      cd htslib;
-      autoheader;
-      autoconf;
-      ./configure;
-      make && make install;
-    fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      brew update;
-      brew upgrade cmake;
-      brew install python3;
-      brew upgrade boost;
-      brew tap homebrew/science;
-      brew install htslib;
-      export CXX="clang++-3.8" CC="clang-3.8"
-    fi
 
 script:
   - echo ${PATH}
