@@ -4,6 +4,7 @@
 #ifndef denovo_model_hpp
 #define denovo_model_hpp
 
+#include <cstddef>
 #include <unordered_map>
 
 #include "core/types/haplotype.hpp"
@@ -19,7 +20,7 @@ public:
     };
     
     DeNovoModel() = delete;
-    DeNovoModel(Parameters parameters);
+    DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint = 1000);
     
     DeNovoModel(const DeNovoModel&)            = default;
     DeNovoModel& operator=(const DeNovoModel&) = default;
@@ -33,7 +34,7 @@ public:
     
 private:
     Parameters parameters_;
-    
+    std::size_t num_haplotypes_hint_;
     mutable std::unordered_map<Haplotype, std::unordered_map<Haplotype, double>> cache_;
 };
 

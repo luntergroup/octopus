@@ -49,7 +49,7 @@ auto calculate_base_indel_heterozygosities(const Haplotype& haplotype,
 
 CoalescentModel::CoalescentModel(Haplotype reference,
                                  Parameters params,
-                                 unsigned max_haplotypes)
+                                 std::size_t num_haplotyes_hint)
 : reference_ {std::move(reference)}
 , reference_base_indel_heterozygosities_ {}
 , params_ {params}
@@ -62,11 +62,11 @@ CoalescentModel::CoalescentModel(Haplotype reference,
     
     site_buffer1_.reserve(128);
     site_buffer2_.reserve(128);
-    difference_cache_.reserve(max_haplotypes);
+    difference_cache_.reserve(num_haplotyes_hint);
     difference_cache_.emplace(std::piecewise_construct,
                               std::forward_as_tuple(reference_),
                               std::forward_as_tuple());
-    result_cache_.reserve(max_haplotypes);
+    result_cache_.reserve(num_haplotyes_hint);
 }
 
 void CoalescentModel::set_reference(Haplotype reference)

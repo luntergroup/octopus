@@ -226,7 +226,7 @@ TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         Haplotype {mapped_region(haplotypes.front()), reference_},
         parameters_.germline_prior_model_params
     };
-    const DeNovoModel denovo_model {parameters_.denovo_model_params};
+    const DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size()};
     const model::TrioModel model {parameters_.trio, germline_prior_model, denovo_model};
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy);
     auto latents = model.evaluate(genotypes, genotypes, genotypes, haplotype_likelihoods);

@@ -41,7 +41,7 @@ public:
     
     CoalescentModel(Haplotype reference,
                     Parameters parameters,
-                    unsigned max_haplotypes = 1024);
+                    std::size_t num_haplotyes_hint = 1024);
     
     CoalescentModel(const CoalescentModel&)            = default;
     CoalescentModel& operator=(const CoalescentModel&) = default;
@@ -67,9 +67,7 @@ private:
     };
     
     Haplotype reference_;
-    
     std::vector<double> reference_base_indel_heterozygosities_;
-    
     Parameters params_;
     
     mutable std::vector<std::reference_wrapper<const Variant>> site_buffer1_, site_buffer2_;

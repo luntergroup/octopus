@@ -6,17 +6,23 @@
 #include <iterator>
 #include <algorithm>
 #include <cstdint>
+#include <cassert>
 
 #include "basics/phred.hpp"
 #include "../pairhmm/pair_hmm.hpp"
 
 namespace octopus {
 
-DeNovoModel::DeNovoModel(Parameters parameters)
+DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint)
 : parameters_ {parameters}
-, cache_ {}
+, num_haplotypes_hint_ {num_haplotypes_hint}
+, cache_ {num_haplotypes_hint}
+{}
+
+auto make_hmm_model(const double denovo_mutation_rate) noexcept
 {
-    cache_.reserve(1000);
+    const auto p = static_cast<std::int8_t>(probability_to_phred(denovo_mutation_rate).score());
+    return hmm::BasicMutationModel {p, p, p};
 }
 
 auto pad(const Haplotype::NucleotideSequence& given, const std::size_t target_size)
@@ -43,14 +49,16 @@ double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) co
             return given_iter->second;
         }
     }
-    const auto p = static_cast<std::int8_t>(probability_to_phred(parameters_.mutation_rate).score());
-    const hmm::BasicMutationModel model {p, p, p};
+    const auto model = make_hmm_model(parameters_.mutation_rate);
     const auto result = hmm::evaluate(target.sequence(), pad(given.sequence(), sequence_size(target)), model);
     if (target_iter != std::cend(cache_)) {
         target_iter->second.emplace(given, result);
     } else {
-        cache_[target].reserve(1000);
-        cache_[target].emplace(given, result);
+        auto p = cache_.emplace(std::piecewise_construct,
+                                std::forward_as_tuple(target),
+                                std::forward_as_tuple(num_haplotypes_hint_));
+        assert(p.second);
+        p.first->second.emplace(given, result);
     }
     return result;
 }
