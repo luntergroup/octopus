@@ -1180,8 +1180,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_denovo_mutation_rate(options.at("denovo-mutation-rate").as<float>());
     }
     
-    vc_builder.set_model_filtering(!(options.at("disable-call-filtering").as<bool>()
-                                     || options.at("disable-model-filtering").as<bool>()));
+    vc_builder.set_model_filtering(false); // TODO: turn back on when variant filtering is implemented
+//    vc_builder.set_model_filtering(!(options.at("disable-call-filtering").as<bool>()
+//                                     || options.at("disable-model-filtering").as<bool>()));
     
     const auto contig_ploidies = extract_contig_ploidies(options);
     if (!contig_ploidies) {
