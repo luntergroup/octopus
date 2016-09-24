@@ -24,17 +24,16 @@ before_install:
     fi
 
 matrix:
-  include:
-  - os: linux
-    compiler: gcc
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-      packages:
-        - g++-6
-    install: export CXX="g++-6"
-    env: COMPILER=g++-6
+#  include:
+#  - os: linux
+#    compiler: gcc
+#    addons:
+#      apt:
+#        sources:
+#          - ubuntu-toolchain-r-test
+#      packages:
+#        - g++-6
+#    env: COMPILER=g++-6
   - os: osx
     compiler: clang
     addons:
@@ -44,11 +43,8 @@ matrix:
           - llvm-toolchain-precise-3.8
         packages:
           - clang-3.8
-    install: CXX="clang++-3.8"
+    install: export PATH=/usr/local/clang/bin/clang:$PATH
     env: COMPILER=clang++-3.8
 
 script:
-  - echo ${PATH}
-  - ${CXX} --version
-  - ${CXX} -v
   - ./install.py --compiler=$COMPILER
