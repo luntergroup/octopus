@@ -37,6 +37,7 @@
 #include "io/variant/vcf_reader.hpp"
 #include "io/variant/vcf_writer.hpp"
 #include "exceptions/user_error.hpp"
+#include "exceptions/program_error.hpp"
 #include "exceptions/system_error.hpp"
 #include "exceptions/missing_file_error.hpp"
 
@@ -950,12 +951,22 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
 }
 
-auto get_caller_type(const OptionMap& options)
+auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
 {
     // TODO: could think about getting rid of the 'caller' option and just
     // deduce the caller type directly from the options.
     // Will need to report an error if conflicting caller options are given anyway.
-    return options.at("caller").as<std::string>();
+    auto result = options.at("caller").as<std::string>();
+    if (result == "population" && samples.size() == 1) {
+        result = "individual";
+    }
+    if (options.count("maternal-sample") == 1 || options.count("paternal-sample") == 1) {
+        result = "trio";
+    }
+    if (options.count("normal-sample") == 1) {
+        result = "cancer";
+    }
+    return result;
 }
 
 class BadTrioSampleSet : public UserError
@@ -1083,6 +1094,29 @@ Trio make_trio(std::vector<SampleName> samples, const OptionMap& options)
     };
 }
 
+class UnimplementedCaller : public ProgramError
+{
+    std::string do_where() const override
+    {
+        return "get_caller_type";
+    }
+    
+    std::string do_why() const override
+    {
+        return "The caller " + caller_ + " is not yet implemented. Sorry!";
+    }
+    
+    std::string do_help() const override
+    {
+        return "please wait for updates";
+    }
+    
+    std::string caller_;
+
+public:
+    UnimplementedCaller(std::string caller) : caller_ {caller} {}
+};
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options)
 {
@@ -1093,12 +1127,10 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         make_haplotype_generator_builder(options)
     };
     
-    auto caller = get_caller_type(options);
-    
-    if (caller == "population" && read_pipe.num_samples() == 1) {
-        caller = "individual";
+    const auto caller = get_caller_type(options, read_pipe.samples());
+    if (caller == "population") {
+        throw UnimplementedCaller {caller};
     }
-    
     vc_builder.set_caller(caller);
     
     if (options.count("report-refcalls") == 1) {

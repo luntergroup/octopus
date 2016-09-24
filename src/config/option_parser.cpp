@@ -741,11 +741,9 @@ void validate_caller(const OptionMap& vm)
 {
     if (vm.count("caller") == 1) {
         const auto caller = vm.at("caller").as<std::string>();
-        
         static const std::array<std::string, 4> validCallers {
             "individual", "population", "cancer", "trio"
         };
-        
         if (std::find(std::cbegin(validCallers), std::cend(validCallers), caller) == std::cend(validCallers)) {
             throw po::validation_error {po::validation_error::kind_t::invalid_option_value, caller,
                 "caller"};
@@ -785,6 +783,8 @@ void validate(const OptionMap& vm)
         "min-supporting-reads", "max-variant-size", "assembler-mask-base-quality", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow", "max-holdout-depth"
     };
+    conflicting_options(vm, "maternal-sample", "normal-sample");
+    conflicting_options(vm, "paternal-sample", "normal-sample");
     for (const auto& option : positive_int_options) {
         check_positive(option, vm);
     }
