@@ -20,6 +20,7 @@
 #include "utils/denovo_call.hpp"
 #include "utils/reference_call.hpp"
 #include "utils/map_utils.hpp"
+#include "utils/mappable_algorithms.hpp"
 
 namespace octopus {
 
@@ -377,6 +378,74 @@ auto call_denovos(const AllelePosteriorMap& denovo_posteriors,
     return result;
 }
 
+struct CallCompare
+{
+    bool operator()(const AllelePosteriorMap::value_type& lhs, const CalledDenovo& rhs) const
+    {
+        return lhs.first < rhs.allele;
+    }
+    bool operator()(const CalledDenovo& lhs, const AllelePosteriorMap::value_type& rhs) const
+    {
+        return lhs.allele < rhs.first;
+    }
+};
+
+auto get_germline_alleles(const AllelePosteriorMap& called_alleles,
+                          const std::vector<CalledDenovo>& denovos)
+{
+    std::vector<AllelePosteriorMap::value_type> result {};
+    result.reserve(called_alleles.size() - denovos.size());
+    std::set_difference(std::cbegin(called_alleles), std::cend(called_alleles),
+                        std::cbegin(denovos), std::cend(denovos),
+                        std::back_inserter(result), CallCompare {});
+    return result;
+}
+
+struct CalledGermlineVariant : public Mappable<CalledGermlineVariant>
+{
+    Variant variant;
+    Phred<double> posterior;
+    CalledGermlineVariant(Variant variant, Phred<double> posterior)
+    : variant {std::move(variant)}
+    , posterior {posterior}
+    {}
+    const GenomicRegion& mapped_region() const noexcept { return variant.mapped_region(); }
+};
+
+boost::optional<Variant> find_variant(const Allele& allele, const std::vector<Variant>& variants)
+{
+    const auto er = std::equal_range(std::cbegin(variants), std::cend(variants), allele,
+                                     [] (const auto& lhs, const auto& rhs) {
+                                        return mapped_region(lhs) < mapped_region(rhs);
+                                    });
+    const auto iter = std::find_if(er.first, er.second,
+                                   [&allele] (const Variant& v) {
+                                       return v.alt_allele() == allele;
+                                   });
+    if (iter != er.second) {
+        return *iter;
+    } else {
+        return boost::none;
+    }
+}
+
+auto call_germline_variants(const std::vector<AllelePosteriorMap::value_type>& germline_allele_posteriors,
+                            const std::vector<Variant>& variants,
+                            const TrioCall& called_trio, const Phred<double> min_posterior)
+{
+    std::vector<CalledGermlineVariant> result {};
+    result.reserve(germline_allele_posteriors.size());
+    
+    for (const auto& p : germline_allele_posteriors) {
+        if (p.second >= min_posterior && includes(called_trio, p.first)) {
+            const auto variant = find_variant(p.first, variants);
+            if (variant) result.emplace_back(*variant, p.second);
+        }
+    }
+    
+    return result;
+}
+
 using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>;
 
 auto compute_posterior(const Genotype<Allele>& genotype,
@@ -461,6 +530,45 @@ auto make_calls(std::vector<CalledDenovo>&& alleles,
     return result;
 }
 
+auto make_calls(std::vector<CalledGermlineVariant>&& variants,
+                std::vector<GenotypedTrio>&& genotypes,
+                const Trio& trio)
+{
+    std::vector<std::unique_ptr<VariantCall>> result {};
+    result.reserve(variants.size());
+    std::transform(std::make_move_iterator(std::begin(variants)),
+                   std::make_move_iterator(std::end(variants)),
+                   std::make_move_iterator(std::begin(genotypes)),
+                   std::back_inserter(result),
+                   [&trio] (auto&& variant, auto&& genotype) {
+                       return std::make_unique<GermlineVariantCall>(std::move(variant.variant),
+                                                                    make_genotype_calls(std::move(genotype), trio),
+                                                                    variant.posterior);
+                   });
+    return result;
+}
+
+auto make_calls(std::vector<CalledGermlineVariant>&& variants,
+                std::vector<GenotypedTrio>&& germline_genotypes,
+                std::vector<CalledDenovo>&& alleles,
+                std::vector<GenotypedTrio>&& denovo_genotypes,
+                const Trio& trio, const std::vector<Variant>& candidates)
+{
+    auto germline_calls = make_calls(std::move(variants), std::move(germline_genotypes), trio);
+    auto denovo_calls = make_calls(std::move(alleles), std::move(denovo_genotypes), trio, candidates);
+    std::vector<std::unique_ptr<VariantCall>> result {};
+    result.reserve(germline_calls.size() + denovo_calls.size());
+    std::merge(std::make_move_iterator(std::begin(germline_calls)),
+               std::make_move_iterator(std::end(germline_calls)),
+               std::make_move_iterator(std::begin(denovo_calls)),
+               std::make_move_iterator(std::end(denovo_calls)),
+               std::back_inserter(result),
+               [] (const auto& lhs, const auto& rhs) {
+                   return lhs->mapped_region() < rhs->mapped_region();
+               });
+    return result;
+}
+
 } // namespace
 
 std::vector<std::unique_ptr<VariantCall>>
@@ -473,11 +581,17 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     const auto called_alleles = call_alleles(allele_posteriors, called_trio, parameters_.min_variant_posterior);
     const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors);
     auto called_denovos = call_denovos(denovo_posteriors, called_trio.child, parameters_.min_variant_posterior);
-    const auto denovo_regions = extract_regions(called_denovos);
     auto denovo_genotypes = call_genotypes(parameters_.trio, called_trio,
                                            *latents.genotype_posteriors(),
-                                           denovo_regions);
-    return make_calls(std::move(called_denovos), std::move(denovo_genotypes),
+                                           extract_regions(called_denovos));
+    const auto germline_alleles = get_germline_alleles(called_alleles, called_denovos);
+    auto germline_variants = call_germline_variants(germline_alleles, candidates,
+                                                    called_trio, parameters_.min_variant_posterior);
+    auto germline_genotypes = call_genotypes(parameters_.trio, called_trio,
+                                             *latents.genotype_posteriors(),
+                                             extract_regions(germline_variants));
+    return make_calls(std::move(germline_variants), std::move(germline_genotypes),
+                      std::move(called_denovos), std::move(denovo_genotypes),
                       parameters_.trio, candidates);
 }
 
