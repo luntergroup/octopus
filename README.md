@@ -107,6 +107,8 @@ $ cmake -DBUILD_TESTING=ON .. && make test
 
 Here are some common use-cases to get started. These examples are by no means exhaustive, please consult the documentation for explanations of all options, algorithms, and further examples.
 
+Note by default octopus will output all calls in VCF format to standard output, in order to write calls to a file (`.vcf`, `.vcf.gz`, and `.bcf` are supported), use the command line option `--output` (`-o`).
+
 ####*Calling germline variants in an individual*
 
 This is the simplest case, if the file `NA12878.bam` contains a single sample, octopus will default to its individual calling model:
@@ -153,7 +155,7 @@ $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -F NA12
 
 By default octopus will use either the individual or population models. To invoke another calling model, either the `--caller` (`-C`) option must be set, or another option which allows octopus to deduce the required caller must be supplied.
 
-In the case of somatic variant, the somatic caller is automatically invoked if the option `--normal-sample ('-N')` is set:
+In the case of somatic variant, the somatic caller is automatically invoked if the option `--normal-sample` (`-N`) is set:
 
 ```shell
 $ octopus -R hs37d5.fa -I normal.bam tumour.bam --normal-sample NORMAL
