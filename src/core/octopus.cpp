@@ -79,7 +79,7 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                           const ReferenceGenome& reference,
                           const CallTypeSet& call_types)
 {
-    auto builder = Vcf::make_octopus_header_template().set_samples(samples);
+    auto builder = vcf::make_header_template().set_samples(samples);
     for (const auto& contig : contigs) {
         builder.add_contig(contig, {{"length", std::to_string(reference.contig_size(contig))}});
     }

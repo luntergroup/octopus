@@ -4,9 +4,9 @@
 #include "io/variant/vcf_spec.hpp"
 #include "octopus_vcf.hpp"
 
-namespace octopus {  namespace Vcf {
+namespace octopus { namespace vcf {
 
-VcfHeader::Builder make_octopus_header_template()
+VcfHeader::Builder make_header_template()
 {
     VcfHeader::Builder result {};
     
@@ -39,14 +39,14 @@ VcfHeader::Builder make_octopus_header_template()
     result.add_format("MQ", "1", "Integer", "RMS mapping quality");
     result.add_format("BQ", "1", "Integer", "RMS base quality at this position");
     
-    result.add_filter("PASS", "All filters passed");
-    result.add_filter("MQ", "Root-mean-square mapping quality across calling region is low");
-    result.add_filter("q10", "Variant quality is below 10");
-    result.add_filter("SB", "One of the alternative alleles has strand bias");
-    result.add_filter("KL", "High Kullback–Leibler divergence between REF and ALT mapping quality distributions");
+//    result.add_filter("PASS", "All filters passed");
+//    result.add_filter("MQ", "Root-mean-square mapping quality across calling region is low");
+//    result.add_filter("q10", "Variant quality is below 10");
+//    result.add_filter("SB", "One of the alternative alleles has strand bias");
+//    result.add_filter("KL", "High Kullback–Leibler divergence between REF and ALT mapping quality distributions");
     
     return result;
 }
 
-} // namespace Vcf
+} // namespace vcf
 } // namespace octopus
