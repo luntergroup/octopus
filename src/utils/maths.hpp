@@ -15,6 +15,7 @@
 #include <limits>
 #include <utility>
 #include <stdexcept>
+#include <cassert>
 
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>
@@ -173,6 +174,7 @@ template <typename ForwardIt,
           typename = std::enable_if_t<!std::is_floating_point<ForwardIt>::value>>
 auto log_sum_exp(ForwardIt first, ForwardIt last)
 {
+    assert(first != last);
     using RealType = typename std::iterator_traits<ForwardIt>::value_type;
     const auto max = *std::max_element(first, last);
     return max + std::log(std::accumulate(first, last, RealType {0},
