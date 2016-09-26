@@ -120,12 +120,12 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "File containing a list of regions (chrom:begin-end), one per line, to be analysed")
     
-    ("skip-regions,N",
+    ("skip-regions,K",
      po::value<std::vector<std::string>>()->multitoken(),
      "Space-seperated list of regions (chrom:begin-end) to skip"
      " May be specified multiple times")
     
-    ("skip-regions-file,n",
+    ("skip-regions-file,k",
      po::value<fs::path>(),
      "File of regions (chrom:begin-end), one per line, to skip")
     
@@ -375,12 +375,12 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description cancer("Caller (cancer)");
     cancer.add_options()
-    ("normal-sample",
+    ("normal-sample,N",
      po::value<std::string>(),
      "Normal sample - all other samples are considered tumour")
     
     ("somatic-mutation-rate",
-     po::value<float>()->default_value(0.00001, "0.00001"),
+     po::value<float>()->default_value(1e-05, "1e-05"),
      "Expected somatic mutation rate, per megabase pair, for this sample")
     
     ("min-somatic-frequency",
@@ -395,7 +395,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
      "Minimum somatic mutation call posterior probability (phred scale)")
     
-    ("somatics-only,y",
+    ("somatics-only",
      po::bool_switch()->default_value(false),
      "Only report somatic variant calls")
     ;
@@ -453,11 +453,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description call_filtering("Callset filtering");
     call_filtering.add_options()
-    ("disable-call-filtering,k",
+    ("disable-call-filtering",
      po::bool_switch()->default_value(false),
      "Disables all callset filtering")
     
-    ("disable-model-filtering,e",
+    ("disable-model-filtering",
      po::bool_switch()->default_value(false),
      "Disables model based filtering of variant calls")
     ;
