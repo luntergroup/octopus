@@ -5,11 +5,14 @@
 
 #include <iterator>
 #include <algorithm>
+#include <numeric>
+#include <cmath>
 #include <cstdint>
 #include <cassert>
 
 #include "basics/phred.hpp"
-#include "../pairhmm/pair_hmm.hpp"
+#include "core/types/variant.hpp"
+//#include "../pairhmm/pair_hmm.hpp"
 
 namespace octopus {
 
@@ -19,26 +22,31 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint)
 , cache_ {num_haplotypes_hint}
 {}
 
-auto make_hmm_model(const double denovo_mutation_rate) noexcept
-{
-    const auto p = static_cast<std::int8_t>(probability_to_phred(denovo_mutation_rate).score());
-    return hmm::BasicMutationModel {p, p, p};
-}
-
-auto pad(const Haplotype::NucleotideSequence& given, const std::size_t target_size)
-{
-    auto required_pad = 2 * hmm::min_flank_pad();
-    const auto given_size = given.size();
-    if (target_size > given_size) {
-        required_pad += target_size - given_size;
-    } else if (given_size > target_size && (given_size - target_size) > required_pad) {
-        return given;
-    }
-    Haplotype::NucleotideSequence result(given.size() + required_pad, 'N');
-    std::copy(std::cbegin(given), std::cend(given),
-              std::next(std::begin(result), hmm::min_flank_pad()));
-    return result;
-}
+//auto make_hmm_model(const double denovo_mutation_rate) noexcept
+//{
+//    const auto p = static_cast<std::int8_t>(probability_to_phred(denovo_mutation_rate).score());
+//    return hmm::BasicMutationModel {p, p, p};
+//}
+//
+//auto pad(const Haplotype::NucleotideSequence& given, const std::size_t target_size)
+//{
+//    auto required_pad = 2 * hmm::min_flank_pad();
+//    const auto given_size = given.size();
+//    if (target_size > given_size) {
+//        required_pad += target_size - given_size;
+//    } else if (given_size > target_size) {
+//        const auto excess = given_size - target_size;
+//        if (excess >= required_pad) {
+//            return given;
+//        } else {
+//            required_pad -= excess;
+//        }
+//    }
+//    Haplotype::NucleotideSequence result(given.size() + required_pad, 'N');
+//    std::copy(std::cbegin(given), std::cend(given),
+//              std::next(std::begin(result), hmm::min_flank_pad()));
+//    return result;
+//}
 
 double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) const
 {
@@ -49,8 +57,20 @@ double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) co
             return given_iter->second;
         }
     }
-    const auto model = make_hmm_model(parameters_.mutation_rate);
-    const auto result = hmm::evaluate(target.sequence(), pad(given.sequence(), sequence_size(target)), model);
+    // TODO: make indel errors context based
+    const auto variants = target.difference(given);
+    const auto result = std::accumulate(std::cbegin(variants), std::cend(variants), 0.0,
+                                        [this] (const double curr, const Variant& v) {
+                                            double penalty {std::log(parameters_.mutation_rate)};
+//                                            if (is_insertion(v)) {
+//                                                penalty *= alt_sequence_size(v);
+//                                            } else if (is_deletion(v)) {
+//                                                penalty *= region_size(v);
+//                                            }
+                                            return curr + penalty;
+                                        });
+//    const auto model = make_hmm_model(parameters_.mutation_rate);
+//    const auto result = hmm::evaluate(target.sequence(), pad(given.sequence(), sequence_size(target)), model);
     if (target_iter != std::cend(cache_)) {
         target_iter->second.emplace(given, result);
     } else {
