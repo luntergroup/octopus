@@ -55,15 +55,15 @@ matrix:
           - clang-3.8
     install: export PATH=/usr/local/clang/bin:$PATH
     env: COMPILER=clang++-3.8
-    - os: osx
-      compiler: gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-6
-      env: COMPILER=g++-6
+  - os: osx
+    compiler: gcc
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - g++-6
+    env: COMPILER=g++-6
 
 script:
   - ./install.py --compiler=$COMPILER
