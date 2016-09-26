@@ -262,28 +262,15 @@ void resolve_connecting_calls(std::vector<VcfRecord>& old_connecting_calls,
     if (!old_connecting_calls.empty()) {
         std::vector<VcfRecord> new_connecting_calls {};
         const auto old_connecting_calls_region = encompassing_region(old_connecting_calls);
-        
         buffer_connecting_calls(old_connecting_calls_region, calls, new_connecting_calls);
-        
         std::deque<VcfRecord> merged_calls {};
-        std::set_union(make_move_iterator(begin(old_connecting_calls)),
-                       make_move_iterator(end(old_connecting_calls)),
-                       make_move_iterator(begin(new_connecting_calls)),
-                       make_move_iterator(end(new_connecting_calls)),
+        std::set_union(begin(old_connecting_calls), end(old_connecting_calls),
+                       begin(new_connecting_calls), end(new_connecting_calls),
                        std::back_inserter(merged_calls));
-        
         old_connecting_calls.clear();
         old_connecting_calls.shrink_to_fit();
         new_connecting_calls.clear();
         new_connecting_calls.shrink_to_fit();
-        
-        merged_calls.erase(std::unique(begin(merged_calls), end(merged_calls),
-                                       [] (const auto& lhs, const auto& rhs) {
-                                           return lhs.pos() == rhs.pos()
-                                           && lhs.ref() == rhs.ref()
-                                           && lhs.alt() == rhs.alt();
-                                       }),
-                           end(merged_calls));
         if (is_consistent(merged_calls)) {
             calls.insert(begin(calls),
                          make_move_iterator(begin(merged_calls)),
@@ -680,19 +667,19 @@ auto make_contig_calling_component_factory_map(GenomeCallingComponents& componen
     return result;
 }
 
-auto find_first_lhs_connecting(CompletedTask& lhs, const GenomicRegion& rhs_region)
+auto find_first_lhs_connecting(const std::deque<VcfRecord>& lhs_calls, const GenomicRegion& rhs_region)
 {
     const auto rhs_begin = mapped_begin(rhs_region);
-    return std::find_if(std::begin(lhs.calls), std::end(lhs.calls),
+    return std::find_if(std::cbegin(lhs_calls), std::cend(lhs_calls),
                         [&rhs_begin] (const auto& call) {
                             return mapped_end(call) > rhs_begin;
                         });
 }
 
-auto find_last_rhs_connecting(const GenomicRegion& lhs_region, CompletedTask& rhs)
+auto find_last_rhs_connecting(const GenomicRegion& lhs_region, const std::deque<VcfRecord>& rhs_calls)
 {
     const auto lhs_end = mapped_end(lhs_region);
-    return std::find_if_not(std::begin(rhs.calls), std::end(rhs.calls),
+    return std::find_if_not(std::cbegin(rhs_calls), std::cend(rhs_calls),
                             [&lhs_end] (const auto& call) {
                                 return mapped_begin(call) < lhs_end;
                             });
@@ -702,38 +689,22 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                               const ContigCallingComponentFactory& calling_components)
 {
     static auto debug_log = get_debug_log();
-    using std::begin; using std::end; using std::make_move_iterator;
-    
+    using std::begin; using std::end; using std::cbegin; using std::cend; using std::make_move_iterator;
     if (lhs.calls.empty() || rhs.calls.empty()) return;
-    
-    auto first_lhs_connecting = find_first_lhs_connecting(lhs, encompassing_region(rhs.calls));
-    auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_region(lhs.calls), rhs);
-    
-    if (first_lhs_connecting == end(lhs.calls) && last_rhs_connecting == begin(rhs.calls)) {
+    const auto first_lhs_connecting = find_first_lhs_connecting(lhs.calls, encompassing_region(rhs.calls));
+    const auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_region(lhs.calls), rhs.calls);
+    if (first_lhs_connecting == cend(lhs.calls) && last_rhs_connecting == cbegin(rhs.calls)) {
         return;
     }
-    
     if (debug_log) {
         stream(*debug_log) << "Resolving connecting calls between tasks " << lhs << " & " << rhs;
     }
-    
     std::deque<VcfRecord> merged_calls {};
-    
-    std::set_union(make_move_iterator(first_lhs_connecting),
-                   make_move_iterator(end(lhs.calls)),
-                   make_move_iterator(begin(rhs.calls)),
-                   make_move_iterator(last_rhs_connecting),
+    std::set_union(first_lhs_connecting, cend(lhs.calls),
+                   cbegin(rhs.calls), last_rhs_connecting,
                    std::back_inserter(merged_calls));
-                   
-    lhs.calls.erase(first_lhs_connecting, end(lhs.calls));
-    rhs.calls.erase(begin(rhs.calls), last_rhs_connecting);
-    merged_calls.erase(std::unique(begin(merged_calls), end(merged_calls),
-                                   [] (const auto& lhs, const auto& rhs) {
-                                       return lhs.pos() == rhs.pos()
-                                       && lhs.ref() == rhs.ref()
-                                       && lhs.alt() == rhs.alt();
-                                   }),
-                       end(merged_calls));
+    lhs.calls.erase(first_lhs_connecting, cend(lhs.calls));
+    rhs.calls.erase(cbegin(rhs.calls), last_rhs_connecting);
     
     if (is_consistent(merged_calls)) {
         rhs.calls.insert(begin(rhs.calls),
@@ -777,7 +748,8 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
 void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks,
                               const ContigCallingComponentFactory& calling_components)
 {
-    //assert(std::is_sorted(std::cbegin(adjacent_tasks), std::cend(adjacent_tasks)));
+    if (adjacent_tasks.size() < 2) return;
+    assert(std::is_sorted(std::cbegin(adjacent_tasks), std::cend(adjacent_tasks)));
     auto lhs = std::begin(adjacent_tasks);
     std::for_each(std::next(lhs), std::end(adjacent_tasks),
                   [&] (auto& rhs) { resolve_connecting_calls(*lhs++, rhs, calling_components); });
@@ -1008,7 +980,6 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
             if (debug_log) stream(*debug_log) << "There are " << num_idle_futures << " idle futures";
         }
     }
-    
     running_tasks.clear();
     holdbacks.clear(); // holdbacks are just references to buffered tasks
     write_remaining_tasks(futures, buffered_tasks, temp_vcfs, calling_components);
