@@ -155,33 +155,43 @@ Or conversely a set of regions to *exclude* can be given with `--skip-regions` (
 $ octopus -R hs37d5.fa -I NA12878.bam -t 1 2:30,000,000- 3:10,000,000-20,000,000
 ```
 
-####*Calling somatic variants*
+####*Calling de novo mutations in a trio*
 
-By default octopus will use either the individual or population models. To use a different calling model, use the `--caller` (`-C`) option.
-
-To call somatic mutations in an *individual* with a normal sample (`--normal-sample`; `-N`) use:
+To call germline and de novo mutations in a trio, just specify maternal (`--maternal-sample`; `-M`) and paternal (`--paternal-sample`; `-P`) samples:
 
 ```shell
-$ octopus -C somatic -R hs37d5.fa -I normal.bam tumour.bam -N NORMAL
+$ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -P NA12891
 ```
 
-The normal sample is optional, but without it octopus will assume all samples are tumour, and classification power is significantly reduced.
+Octopus will deduce which sample is the child.
 
+####*Calling somatic mutations in tumours*
+
+By default octopus will use either the individual or population models. To invoke another calling model, either the `--caller` (`-C`) option must be set, or another option which allows octopus to deduce the required caller must be supplied.
+
+In the case of somatic variant, the somatic caller is automatically invoked if the option `--normal-sample` is set:
+
+```shell
+$ octopus -R hs37d5.fa -I normal.bam tumour.bam --normal-sample NORMAL
+```
+
+This will call somatic and germline variants in a single individual.
+ 
 It is also possible to call multiple tumours from the same individual jointly:
 
 ```shell
-$ octopus -C somatic -R hs37d5.fa -I normal.bam tumourA.bam tumourB -N NORMAL
+$ octopus -R hs37d5.fa -I normal.bam tumourA.bam tumourB --normal-sample NORMAL
 ```
 
 Octopus will then emit separate genotype calls for each sample.
 
-####*Calling de novo mutations*
-
-Octopus has a bespoke model for trios which will also classify de novo mutations in the child, this model requires specifying which sample is maternal (`--maternal-sample`; `-M`) option and which is paternal (`--paternal-sample`; `-P`):
+If a normal sample is not present the cancer model must be invoked explicitly:
 
 ```shell
-$ octopus -C denovo -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -P NA12891
+$ octopus -R hs37d5.fa -I tumour1.bam tumour2.bam -C cancer
 ```
+
+Note without a normal sample classification power is significantly reduced.
 
 ####*Joint variant calling (NOT YET IMPLEMENTED!)*
 
@@ -191,13 +201,29 @@ Octopus uses different calling models for populations and individuals. Briefly, 
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
 ```
 
-####*Quick callings*
+####*Multithreaded calling*
+
+All the octopus callers can be run using multiple cores, activated with the `--threads` command line option:
+
+```shell
+$ octopus -R hs37d5.fa -I NA12878.bam --threads
+```
+
+This will let octopus automatically decide how many threads to use, and is the recommended approach as octopus can dynamically juggle thread usage at an algorithm level. However, a strict upper limit on the number of threads can also be used:
+
+```shell
+$ octopus -R hs37d5.fa -I NA12878.bam --threads=4
+```
+
+####*Fast calling*
 
 By default, octopus is geared towards more accurate variant calling which requires the use of complex (slow) algorithms. If speed is a concern for you, then many of these features can be disabled to get very fast runtimes:
 
 ```shell
-$ octopus -R hs37d5.fa -I NA12878.bam --phasing-level minimal -k -a --max-haplotypes 50 --disable-inactive-flank-scoring
+$ octopus -R hs37d5.fa -I NA12878.bam --fast
 ```
+
+Note this does not turn on multithreading or increase buffer sizes.
 
 ##Documentation
 
