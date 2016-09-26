@@ -10,37 +10,23 @@
 
 ---
 
-Octopus is a mapping-based variant caller that implements several calling models within a unified haplotype-aware framework. Octopus explicitly stores allele phasing which allows haplotypes to be dynamically excluded and extended whilst retaining the existing phasing information. Primarily this means Octopus can jointly consider allele sets far exceeding the cardinality of other approaches. But perhaps more importantly, this allows *marginalisation* over posterior distributions in haplotype space at specific loci. In practise this means Octopus can achieve far greater allelic genotyping accuracy than other methods, but can also infer conditional or unconditional phase probabilities directly from genotype probability distributions. This allows Octopus to report consistent allele event level variant calls *and* independent phase information.
+Octopus is a mapping-based variant caller that implements several calling models within a unified haplotype-aware framework. Octopus explicitly stores allele phasing infomation which allows haplotypes to be dynamically excluded and extended. Primarily this means octopus can jointly consider allele sets far exceeding the cardinality of other approaches, but perhaps more importantly, it allows *marginalisation* over posterior distributions in haplotype space at specific loci. In practise this means octopus can achieve far greater allelic genotyping accuracy than other methods, but can also infer conditional or unconditional phase probabilities directly from genotype probability distributions. This allows octopus to report consistent allele event level variant calls *and* independent phase information.
 
 ##Requirements
 * A C++14 compiler with SSE2 support
 * Git 2.5 or greater
 * Boost 1.61 or greater
 * htslib 1.31.1 or greater
-* CMake 3.3 or greater
+* CMake 3.5 or greater
 * Optional:
     * Python3 or greater
     
-Warning: GCC 6.1.1 and below have bugs which affect octopus, so only trust 6.2 and above. Clang seems ok at 3.8. Visual Studio is untested.
+Warning: GCC 6.1.1 and below have bugs which affect octopus, the code may compile, but do not trust the results. GCC 6.2 should be safe. Clang 3.8 has been tested. Visual Studio likely won't compile as it is not C++14 feature complete.
 
 ##Installation
 
-Octopus can be built and installed on a wide range of operating systems including most Unix based systems (Linux, OS X) and Windows (untested).
+Octopus can be built and installed on a wide range of operating systems including most Unix based systems (Linux, OS X) and Windows (once MSVC is C++14 feature complete).
 
-####*Installing with Homebrew on OS X*
-
-The recommended method of installation for Mac OS X is with the package manager [Homebrew](http://brew.sh):
-
-```shell
-$ brew tap science
-$ brew install octopus
-```
-
-This will download the relevant files (including any dependencies) and install to `usr/local/bin`. Octopus can then be easily updated or removed:
-
-```shell
-$ brew upgrade octopus
-$ brew uninstall octopus
 ```
 
 ####*Quick installation with Python3*
@@ -119,7 +105,7 @@ $ cmake -DBUILD_TESTING=ON .. && make test
 
 ##Examples
 
-Here are some basic examples to get started. These examples are by no means exhaustive, and users are directed to the documentation for further details.
+Here are some common use-cases to get started. These examples are by no means exhaustive, please consult the documentation for explanations of all options, algorithms, and further examples.
 
 ####*Calling germline variants in an individual*
 
@@ -135,7 +121,7 @@ or less verbosely:
 $ octopus -R hs37d5.fa -I NA12878.bam
 ```
 
-Note octopus automatically detects the samples contained in the input read file and will jointly call all samples present by default, to restrict calling to a single sample in this case it is required to explicitly specify which sample to use:
+Note octopus automatically detects the samples contained in the input read file and will jointly call (see below) all samples present by default, to restrict calling to a single sample in this case it is required to explicitly specify which sample to use:
 
 ```shell
 $ octopus -R hs37d5.fa -I multi-sample.bam -S NA12878
@@ -143,13 +129,13 @@ $ octopus -R hs37d5.fa -I multi-sample.bam -S NA12878
 
 ####*Targeted calling*
 
-By default octopus will call all possible regions (as specified in the reference FASTA). In order to select a set of target regions, use the `--regions` (`-T`) option:
+By default, octopus will call all possible regions (as specified in the reference FASTA). In order to select a set of target regions, use the `--regions` (`-T`) option:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam -T 1 2:30,000,000- 3:10,000,000-20,000,000
 ```
 
-Or conversely a set of regions to *exclude* can be given with `--skip-regions` (`-t`):
+Or conversely a set of regions to *exclude* can be given with `--skip-regions` (`-K`):
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam -t 1 2:30,000,000- 3:10,000,000-20,000,000
@@ -157,19 +143,17 @@ $ octopus -R hs37d5.fa -I NA12878.bam -t 1 2:30,000,000- 3:10,000,000-20,000,000
 
 ####*Calling de novo mutations in a trio*
 
-To call germline and de novo mutations in a trio, just specify maternal (`--maternal-sample`; `-M`) and paternal (`--paternal-sample`; `-P`) samples:
+To call germline and de novo mutations in a trio, just specify maternal (`--maternal-sample`; `-M`) and paternal (`--paternal-sample`; `-F`) samples:
 
 ```shell
-$ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -P NA12891
+$ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -F NA12891
 ```
-
-Octopus will deduce which sample is the child.
 
 ####*Calling somatic mutations in tumours*
 
 By default octopus will use either the individual or population models. To invoke another calling model, either the `--caller` (`-C`) option must be set, or another option which allows octopus to deduce the required caller must be supplied.
 
-In the case of somatic variant, the somatic caller is automatically invoked if the option `--normal-sample` is set:
+In the case of somatic variant, the somatic caller is automatically invoked if the option `--normal-sample ('-N')` is set:
 
 ```shell
 $ octopus -R hs37d5.fa -I normal.bam tumour.bam --normal-sample NORMAL
