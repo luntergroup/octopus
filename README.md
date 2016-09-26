@@ -138,7 +138,7 @@ $ octopus -R hs37d5.fa -I NA12878.bam -T 1 2:30,000,000- 3:10,000,000-20,000,000
 Or conversely a set of regions to *exclude* can be given with `--skip-regions` (`-K`):
 
 ```shell
-$ octopus -R hs37d5.fa -I NA12878.bam -t 1 2:30,000,000- 3:10,000,000-20,000,000
+$ octopus -R hs37d5.fa -I NA12878.bam -K 1 2:30,000,000- 3:10,000,000-20,000,000
 ```
 
 ####*Calling de novo mutations in a trio*
