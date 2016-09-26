@@ -10,7 +10,7 @@ namespace octopus {
 
 // public methods
 
-    const GenomicRegion& VcfRecord::mapped_region() const noexcept
+const GenomicRegion& VcfRecord::mapped_region() const noexcept
 {
     return region_;
 }
@@ -162,30 +162,30 @@ const std::vector<VcfRecord::ValueType>& VcfRecord::get_sample_value(const Sampl
     return (key == "GT") ? genotypes_.at(sample).first : samples_.at(sample).at(key);
 }
 
-
-
 // helper non-members needed for printing
 
 namespace {
-    template <typename T>
-    std::ostream& print(std::ostream& os, const std::vector<T>& v, const std::string& delim = ",",
-                        const std::string& empty_value = ".")
-    {
-        if (v.empty()) {
-            os << empty_value;
-        } else {
-            std::copy(std::cbegin(v), std::prev(std::cend(v)),
-                      std::ostream_iterator<T>(os, delim.c_str()));
-            os << v.back();
-        }
-        return os;
+
+template <typename T>
+std::ostream& print(std::ostream& os, const std::vector<T>& v, const std::string& delim = ",",
+                    const std::string& empty_value = ".")
+{
+    if (v.empty()) {
+        os << empty_value;
+    } else {
+        std::copy(std::cbegin(v), std::prev(std::cend(v)),
+                  std::ostream_iterator<T>(os, delim.c_str()));
+        os << v.back();
     }
-    
-    template <typename T>
-    std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
-    {
-        return print(os, v);
-    }
+    return os;
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
+{
+    return print(os, v);
+}
+
 } // namespace
 
 // private methods
