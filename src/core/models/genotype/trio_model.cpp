@@ -168,7 +168,7 @@ bool reduce(std::vector<T>& zipped, const std::size_t min_to_keep,
             std::sort(first_removed, std::end(zipped), std::greater<> {});
             zipped.erase(compute_first_removable(zipped, max_removed_mass), std::cend(zipped));
             if (zipped.size() > max_to_keep) {
-                zipped.erase(std::next(std::cend(zipped), max_to_keep), std::cend(zipped));
+                zipped.erase(std::next(std::cbegin(zipped), max_to_keep), std::cend(zipped));
                 hit_max_bound = true;
             }
         } else {
