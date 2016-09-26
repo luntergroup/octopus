@@ -48,7 +48,7 @@ public:
     CallerBuilder& set_min_variant_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_min_refcall_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_max_haplotypes(unsigned n) noexcept;
-    CallerBuilder& set_min_haplotype_posterior(double p) noexcept;
+    CallerBuilder& set_haplotype_extension_threshold(Phred<double> p) noexcept;
     CallerBuilder& set_flank_scoring(bool b) noexcept;
     CallerBuilder& set_model_filtering(bool b) noexcept;
     CallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
@@ -90,7 +90,7 @@ private:
         Phred<double> min_variant_posterior;
         Phred<double> min_refcall_posterior;
         unsigned max_haplotypes;
-        double min_haplotype_posterior;
+        Phred<double> haplotype_extension_threshold;
         bool allow_flank_scoring;
         bool allow_model_filtering;
         double snp_heterozygosity;

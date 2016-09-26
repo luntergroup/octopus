@@ -112,9 +112,9 @@ CallerBuilder& CallerBuilder::set_max_haplotypes(unsigned n) noexcept
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_min_haplotype_posterior(double p) noexcept
+CallerBuilder& CallerBuilder::set_haplotype_extension_threshold(Phred<double> p) noexcept
 {
-    params_.min_haplotype_posterior = p;
+    params_.haplotype_extension_threshold = p;
     return *this;
 }
 
@@ -219,7 +219,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
         params_.refcall_type,
         params_.call_sites_only,
         params_.max_haplotypes,
-        params_.min_haplotype_posterior,
+        params_.haplotype_extension_threshold,
         params_.allow_flank_scoring,
         params_.allow_model_filtering
     };

@@ -1185,6 +1185,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     
     vc_builder.set_min_refcall_posterior(min_refcall_posterior);
     vc_builder.set_max_haplotypes(get_max_haplotypes(options));
+    vc_builder.set_haplotype_extension_threshold(options.at("haplotype-extension-threshold").as<Phred<double>>());
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
     vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());

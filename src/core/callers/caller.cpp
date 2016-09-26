@@ -38,12 +38,6 @@ Caller::Caller(Components&& components, Parameters parameters)
 , phaser_ {std::move(components.phaser)}
 , parameters_ {std::move(parameters)}
 {
-    if (parameters_.min_haplotype_posterior < 0) {
-        parameters_.min_haplotype_posterior = 0;
-    } else if (parameters_.min_haplotype_posterior > 1) {
-        parameters_.min_haplotype_posterior = 1;
-    }
-    
     if (parameters_.max_haplotypes == 0) {
         throw std::logic_error {"Caller: max haplotypes must be > 0"};
     }
@@ -731,7 +725,7 @@ Caller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
                                  const unsigned max_to_remove) const
 {
     return extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
-                             max_to_remove, parameters_.min_haplotype_posterior);
+                             max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
 }
 
 bool Caller::done_calling(const GenomicRegion& region) const noexcept

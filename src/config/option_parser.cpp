@@ -441,9 +441,9 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description advanced("Advanced calling algorithm");
     advanced.add_options()
-    ("min-haplotype-filter-posterior",
-     po::value<float>()->default_value(1e-10, "1e-10"),
-     "Haplotypes with posterior less than this can be filtered before extension")
+    ("haplotype-extension-threshold",
+     po::value<Phred<double>>()->default_value(Phred<double> {200.0}, "200"),
+     "Haplotypes with posterior probability less than this can be filtered before extension")
     
     ("disable-inactive-flank-scoring",
      po::bool_switch()->default_value(false),

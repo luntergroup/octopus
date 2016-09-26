@@ -103,20 +103,16 @@ public:
         RefCallType refcall_type;
         bool call_sites_only;
         unsigned max_haplotypes;
-        double min_haplotype_posterior;
+        Phred<double> haplotype_extension_threshold;
         bool allow_inactive_flank_scoring;
         bool allow_model_filtering;
     };
     
 private:
     std::reference_wrapper<const ReadPipe> read_pipe_;
-    
     mutable VariantGenerator candidate_generator_;
-    
     HaplotypeGenerator::Builder haplotype_generator_builder_;
-    
     Phaser phaser_;
-    
     Parameters parameters_;
     
     // virtual methods
