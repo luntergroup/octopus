@@ -1123,7 +1123,7 @@ class UnimplementedCaller : public ProgramError
     
     std::string do_why() const override
     {
-        return "The caller " + caller_ + " is not yet implemented. Sorry!";
+        return "The " + caller_ + " caller is not yet implemented. Sorry!";
     }
     
     std::string do_help() const override
