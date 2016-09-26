@@ -61,6 +61,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("trace",
      po::bool_switch()->default_value(false),
      "Writes very verbose debug information to trace.log in the working directory")
+
+    ("fast",
+     po::bool_switch()->default_value(false),
+     "Turns off certain features to improve runtime, at the cost of decreased callings accuracy")
     ;
     
     po::options_description backend("Backend");

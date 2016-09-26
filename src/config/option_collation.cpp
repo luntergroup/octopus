@@ -216,6 +216,11 @@ boost::optional<fs::path> get_trace_log_file_name(const OptionMap& options)
     return boost::none;
 }
 
+bool is_fast_mode(const OptionMap& options)
+{
+    return options.at("fast").as<bool>();
+}
+
 ReferenceGenome make_reference(const OptionMap& options)
 {
     const fs::path input_path {options.at("reference").as<std::string>()};
@@ -773,6 +778,11 @@ auto get_default_match_predicate() noexcept
     };
 }
 
+bool allow_assembler_generation(const OptionMap& options)
+{
+    return !(is_fast_mode(options) || options.at("disable-assembly-candidate-generator").as<bool>());
+}
+
 auto make_variant_generator_builder(const OptionMap& options)
 {
     using namespace coretools;
@@ -801,7 +811,7 @@ auto make_variant_generator_builder(const OptionMap& options)
             result.set_dynamic_cigar_scanner(std::move(scanner_options));
         }
     }
-    if (!options.at("disable-assembly-candidate-generator").as<bool>()) {
+    if (allow_assembler_generation(options)) {
         LocalReassembler::Options reassembler_options {};
         const auto kmer_sizes = options.at("kmer-size").as<std::vector<int>>();
         reassembler_options.kmer_sizes.assign(std::cbegin(kmer_sizes), std::cend(kmer_sizes));
@@ -932,6 +942,7 @@ bool call_sites_only(const OptionMap& options)
 auto get_lagging_policy(const OptionMap& options)
 {
     using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
+    if (is_fast_mode(options)) return LaggingPolicy::none;
     switch (options.at("phasing-level").as<PhasingLevel>()) {
         case PhasingLevel::aggressive: return LaggingPolicy::aggressive;
         case PhasingLevel::conservative: return LaggingPolicy::conservative;
@@ -939,10 +950,19 @@ auto get_lagging_policy(const OptionMap& options)
     }
 }
 
+auto get_max_haplotypes(const OptionMap& options)
+{
+    if (is_fast_mode(options)) {
+        return 50u;
+    } else {
+        return as_unsigned("max-haplotypes", options);
+    }
+}
+
 auto make_haplotype_generator_builder(const OptionMap& options)
 {
     const auto lagging_policy    = get_lagging_policy(options);
-    const auto max_haplotypes    = as_unsigned("max-haplotypes", options);
+    const auto max_haplotypes    = get_max_haplotypes(options);
     const auto holdout_limit     = as_unsigned("haplotype-holdout-threshold", options);
     const auto overflow_limit    = as_unsigned("haplotype-overflow", options);
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
@@ -1117,6 +1137,11 @@ public:
     UnimplementedCaller(std::string caller) : caller_ {caller} {}
 };
 
+bool allow_flank_scoring(const OptionMap& options)
+{
+    return !(is_fast_mode(options) || options.at("disable-inactive-flank-scoring").as<bool>());
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options)
 {
@@ -1159,8 +1184,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     auto min_refcall_posterior = options.at("min-refcall-posterior").as<Phred<double>>();
     
     vc_builder.set_min_refcall_posterior(min_refcall_posterior);
-    vc_builder.set_max_haplotypes(as_unsigned("max-haplotypes", options));
-    vc_builder.set_min_haplotype_posterior(options.at("min-haplotype-filter-posterior").as<float>());
+    vc_builder.set_max_haplotypes(get_max_haplotypes(options));
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
     vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
@@ -1192,7 +1216,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_sites_only();
     }
     
-    vc_builder.set_flank_scoring(!options.at("disable-inactive-flank-scoring").as<bool>());
+    vc_builder.set_flank_scoring(allow_flank_scoring(options));
     
     CallerFactory result {std::move(vc_builder), as_unsigned("organism-ploidy", options)};
     for (const auto& p : regions) {
