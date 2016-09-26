@@ -39,6 +39,13 @@ public:
     {
         Latents posteriors;
         double log_evidence;
+        bool overflowed = false;
+    };
+    
+    struct Options
+    {
+        std::size_t min_to_keep = 50, max_to_keep = 500;
+        double max_removal_posterior_mass = 1e-20;
     };
     
     TrioModel() = delete;
@@ -46,6 +53,7 @@ public:
     TrioModel(const Trio& trio,
               const CoalescentModel& genotype_prior_model,
               const DeNovoModel& mutation_model,
+              Options options,
               boost::optional<logging::DebugLogger> debug_log = boost::none);
     
     TrioModel(const TrioModel&)            = delete;
@@ -64,9 +72,7 @@ private:
     const Trio& trio_;
     const CoalescentModel& genotype_prior_model_;
     const DeNovoModel& mutation_model_;
-    
-    std::size_t max_search_size_ = 100;
-    
+    Options options_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
 };
     

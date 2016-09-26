@@ -182,18 +182,19 @@ TrioCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
 : maternal {std::move(genotypes)}
 , model_latents {std::move(latents)}
 {
-    auto maternal_posteriors = marginalise_mother(model_latents.posteriors.joint_genotype_probabilities);
-    auto paternal_posteriors = marginalise_father(model_latents.posteriors.joint_genotype_probabilities);
-    auto child_posteriors = marginalise_child(model_latents.posteriors.joint_genotype_probabilities);
+    auto& trio_posteriors = model_latents.posteriors.joint_genotype_probabilities;
+    // marginalise_mother may change the order of trio_posteriors
+    auto maternal_posteriors = marginalise_mother(trio_posteriors);
+    auto paternal_posteriors = marginalise_father(trio_posteriors);
+    auto child_posteriors = marginalise_child(trio_posteriors);
     const auto sorted_genotypes = sort_copy(maternal);
     fill_missing_genotypes(maternal_posteriors, sorted_genotypes);
     fill_missing_genotypes(paternal_posteriors, sorted_genotypes);
     fill_missing_genotypes(child_posteriors, sorted_genotypes);
-    
     // TODO: Current GenotypeProbabilityMap only allows one Genotype set, but it should
     // at least support sets of different ploidy. So for now we just generate
     // one set and assume all contigs are autosomes.
-    GenotypeProbabilityMap genotype_posteriors {std::begin(maternal), std::end(maternal)};
+    GenotypeProbabilityMap genotype_posteriors {std::begin(sorted_genotypes), std::end(sorted_genotypes)};
     insert_sample(trio.child(), extract_probabilities(child_posteriors), genotype_posteriors);
     insert_sample(trio.mother(), extract_probabilities(maternal_posteriors), genotype_posteriors);
     insert_sample(trio.father(), extract_probabilities(paternal_posteriors), genotype_posteriors);
@@ -201,7 +202,7 @@ TrioCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
     
     HaplotypeProbabilityMap haplotype_posteriors {haplotypes.size()};
     for (const auto& haplotype : haplotypes) {
-        haplotype_posteriors.emplace(haplotype, compute_posterior(haplotype, model_latents.posteriors.joint_genotype_probabilities));
+        haplotype_posteriors.emplace(haplotype, compute_posterior(haplotype, trio_posteriors));
     }
     marginal_haplotype_posteriors = std::make_shared<HaplotypeProbabilityMap>(haplotype_posteriors);
 }
@@ -227,7 +228,10 @@ TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         parameters_.germline_prior_model_params
     };
     const DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size()};
-    const model::TrioModel model {parameters_.trio, germline_prior_model, denovo_model};
+    const model::TrioModel model {
+        parameters_.trio, germline_prior_model, denovo_model,
+        TrioModel::Options {100, 500, 1e-20}, debug_log_
+    };
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy);
     auto latents = model.evaluate(genotypes, genotypes, genotypes, haplotype_likelihoods);
     return std::make_unique<Latents>(haplotypes, std::move(genotypes), std::move(latents), parameters_.trio);
@@ -257,6 +261,20 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Caller::
 
 namespace {
 
+struct TrioCall
+{
+    Genotype<Haplotype> mother, father, child;
+};
+
+auto call_trio(const TrioProbabilityVector& trio_posteriors)
+{
+    auto iter = std::max_element(std::cbegin(trio_posteriors), std::cend(trio_posteriors),
+                                 [] (const auto& lhs, const auto& rhs) {
+                                     return lhs.probability < rhs.probability;
+                                 });
+    return TrioCall {iter->maternal, iter->paternal, iter->child};
+}
+
 bool contains(const JointProbability& trio, const Allele& allele)
 {
     return contains(trio.maternal, allele)
@@ -282,20 +300,6 @@ auto compute_posteriors(const std::vector<Allele>& alleles, const TrioProbabilit
         result.emplace(allele, compute_posterior(allele, trio_posteriors));
     }
     return result;
-}
-
-struct TrioCall
-{
-    Genotype<Haplotype> mother, father, child;
-};
-
-auto call_trio(const TrioProbabilityVector& trio_posteriors)
-{
-    auto iter = std::max_element(std::cbegin(trio_posteriors), std::cbegin(trio_posteriors),
-                            [] (const auto& lhs, const auto& rhs) {
-                                return lhs.probability > rhs.probability;
-                            });
-    return TrioCall {iter->maternal, iter->paternal, iter->child};
 }
 
 bool includes(const TrioCall& trio, const Allele& allele)
@@ -329,7 +333,7 @@ auto compute_denovo_posterior(const Allele& allele, const TrioProbabilityVector&
 {
     auto p = std::accumulate(std::cbegin(trio_posteriors), std::cend(trio_posteriors),
                              0.0, [&allele] (const auto curr, const auto& p) {
-        return curr + (is_denovo(allele, p) ? 0.0 : p.probability);
+                return curr + (is_denovo(allele, p) ? 0.0 : p.probability);
     });
     return probability_to_phred(p);
 }
@@ -464,8 +468,8 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
 {
     const auto alleles = decompose(candidates);
     const auto& trio_posteriors = latents.model_latents.posteriors.joint_genotype_probabilities;
-    const auto allele_posteriors = compute_posteriors(alleles, trio_posteriors);
     const auto called_trio = call_trio(trio_posteriors);
+    const auto allele_posteriors = compute_posteriors(alleles, trio_posteriors);
     const auto called_alleles = call_alleles(allele_posteriors, called_trio, parameters_.min_variant_posterior);
     const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors);
     auto called_denovos = call_denovos(denovo_posteriors, called_trio.child, parameters_.min_variant_posterior);
