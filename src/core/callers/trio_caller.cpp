@@ -35,7 +35,12 @@ TrioCaller::TrioCaller(Caller::Components&& components,
     }
 }
 
-Caller::CallTypeSet TrioCaller::do_get_call_types() const
+std::string TrioCaller::do_name() const
+{
+    return "trio";
+}
+
+Caller::CallTypeSet TrioCaller::do_call_types() const
 {
     return {std::type_index(typeid(GermlineVariantCall)),
             std::type_index(typeid(DenovoCall))};

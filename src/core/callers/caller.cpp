@@ -50,6 +50,16 @@ Caller::Caller(Components&& components, Parameters parameters)
     }
 }
 
+std::string Caller::name() const
+{
+    return do_name();
+}
+
+Caller::CallTypeSet Caller::call_types() const
+{
+    return do_call_types();
+}
+
 namespace debug {
     template <typename S>
     void print_left_aligned_candidates(S&& stream, const std::vector<Variant>& raw_candidates,
@@ -304,11 +314,6 @@ void merge(std::vector<CallWrapper>&& src, std::deque<VcfRecord>& dst,
                                             && lhs.alt() == rhs.alt();
                                  });
     dst.erase(it2, end(dst));
-}
-
-Caller::CallTypeSet Caller::get_call_types() const
-{
-    return this->do_get_call_types();
 }
 
 std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const

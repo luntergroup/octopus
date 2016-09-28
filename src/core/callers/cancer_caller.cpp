@@ -53,8 +53,10 @@ CancerCaller::CancerCaller(Caller::Components&& components,
         throw std::logic_error {"CancerCaller: max genotypes must be > 0"};
     }
     
-    if (std::find(std::cbegin(samples_), std::cend(samples_), parameters_.normal_sample) == std::cend(samples_)) {
-        throw std::invalid_argument {"CancerCaller: normal sample is not a valid sample"};
+    if (has_normal_sample()) {
+        if (std::find(std::cbegin(samples_), std::cend(samples_), normal_sample()) == std::cend(samples_)) {
+            throw std::invalid_argument {"CancerCaller: normal sample is not a valid sample"};
+        }
     }
     
     if (parameters_.min_variant_posterior == Phred<double> {0}) {
@@ -71,7 +73,12 @@ CancerCaller::CancerCaller(Caller::Components&& components,
     }
 }
 
-CancerCaller::CallTypeSet CancerCaller::do_get_call_types() const
+std::string CancerCaller::do_name() const
+{
+    return "cancer";
+}
+
+CancerCaller::CallTypeSet CancerCaller::do_call_types() const
 {
     return {
         std::type_index(typeid(GermlineVariantCall)),

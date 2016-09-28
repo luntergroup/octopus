@@ -36,6 +36,16 @@ PopulationCaller::PopulationCaller(Caller::Components&& components,
 , parameters_ {specific_parameters}
 {}
 
+std::string PopulationCaller::do_name() const
+{
+    return "population";
+}
+
+PopulationCaller::CallTypeSet PopulationCaller::do_call_types() const
+{
+    return {std::type_index(typeid(GermlineVariantCall))};
+}
+
 // IndividualCaller::Latents public methods
 
 PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
@@ -77,11 +87,6 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
 //    
 //    genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
 //    haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
-}
-
-PopulationCaller::CallTypeSet PopulationCaller::do_get_call_types() const
-{
-    return {std::type_index(typeid(GermlineVariantCall))};
 }
 
 std::shared_ptr<PopulationCaller::Latents::HaplotypeProbabilityMap>

@@ -40,7 +40,12 @@ IndividualCaller::IndividualCaller(Caller::Components&& components,
     }
 }
 
-IndividualCaller::CallTypeSet IndividualCaller::do_get_call_types() const
+std::string IndividualCaller::do_name() const
+{
+    return "individual";
+}
+
+IndividualCaller::CallTypeSet IndividualCaller::do_call_types() const
 {
     return {std::type_index(typeid(GermlineVariantCall))};
 }

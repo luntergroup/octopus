@@ -58,7 +58,9 @@ public:
     
     virtual ~Caller() = default;
     
-    CallTypeSet get_call_types() const;
+    std::string name() const;
+    
+    CallTypeSet call_types() const;
     
     std::deque<VcfRecord> call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const;
     
@@ -117,7 +119,8 @@ private:
     
     // virtual methods
     
-    virtual CallTypeSet do_get_call_types() const = 0;
+    virtual std::string do_name() const = 0;
+    virtual CallTypeSet do_call_types() const = 0;
     
     virtual std::unique_ptr<Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,

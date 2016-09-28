@@ -81,7 +81,8 @@ private:
     
     // overrides
     
-    CallTypeSet do_get_call_types() const override;
+    std::string do_name() const override;
+    CallTypeSet do_call_types() const override;
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
