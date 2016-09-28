@@ -23,11 +23,26 @@ Octopus is a mapping-based variant caller that implements several calling models
     
 Warning: GCC 6.1.1 and below have bugs which affect octopus, the code may compile, but do not trust the results. GCC 6.2 should be safe. Clang 3.8 has been tested. Visual Studio likely won't compile as it is not C++14 feature complete.
 
+####*Obtaining requirements on OS X*
+
+On OS X, Clang is recommended. All requirements can be installed using the package manager [Homebrew](http://brew.sh/index.html):
+
+```shell
+$ brew update
+$ brew install git
+$ brew install --with-clang llvm
+$ brew install boost
+$ brew install cmake
+$ brew tap homebrew/science # required for htslib
+$ brew install htslib
+$ brew install python3
+```
+
+Note if you already have any of these packages installed via Homebrew on your system the command will fail, but you can update to the latest version using `brew upgrade`.
+
 ##Installation
 
 Octopus can be built and installed on a wide range of operating systems including most Unix based systems (Linux, OS X) and Windows (once MSVC is C++14 feature complete).
-
-```
 
 ####*Quick installation with Python3*
 
