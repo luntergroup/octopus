@@ -21,7 +21,7 @@ namespace octopus { namespace utils {
 
 std::vector<std::string> split(const std::string& str, const char delim);
 
-std::string join(const std::vector<std::string>& strings, const std::string delim);
+std::string join(const std::vector<std::string>& strings, const std::string delim = "");
 std::string join(const std::vector<std::string>& strings, const char delim);
 
 bool is_prefix(const std::string& lhs, const std::string& rhs);
