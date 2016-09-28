@@ -113,7 +113,7 @@ auto get_call_types(const GenomeCallingComponents& components, const std::vector
     
     for (const auto& contig : components.contigs()) {
         const auto tmp_caller = components.caller_factory().make(contig);
-        auto caller_call_types = tmp_caller->get_call_types();
+        auto caller_call_types = tmp_caller->call_types();
         result.insert(std::begin(caller_call_types), std::end(caller_call_types));
     }
     
@@ -131,14 +131,25 @@ void write_caller_output_header(GenomeCallingComponents& components, const bool 
     }
 }
 
+std::string get_caller_name(const GenomeCallingComponents& components)
+{
+    assert(!components.contigs().empty());
+    const auto& test_contig = components.contigs().front();
+    const auto test_caller = components.caller_factory().make(test_contig);
+    return test_caller->name(); // There can only be one caller type per run
+}
+
 void log_startup_info(const GenomeCallingComponents& components)
 {
+    logging::InfoLogger log {};
+    stream(log) << "Invoked calling model: " << get_caller_name(components);
     std::ostringstream ss {};
     if (!components.samples().empty()) {
-        if (components.samples().size() == 1) {
-            ss << "Sample is: ";
+        const auto num_samples = components.samples().size();
+        if (num_samples == 1) {
+            ss << "Detected 1 sample: ";
         } else {
-            ss << "Samples are: ";
+            ss << "Detected " << num_samples << " samples: ";
         }
     }
     std::transform(std::cbegin(components.samples()), std::cend(components.samples()),
@@ -148,7 +159,6 @@ void log_startup_info(const GenomeCallingComponents& components)
                    });
     auto str = ss.str();
     str.pop_back(); // the extra whitespace
-    logging::InfoLogger log {};
     log << str;
     auto sl = stream(log);
     sl << "Writing calls to ";
@@ -156,7 +166,7 @@ void log_startup_info(const GenomeCallingComponents& components)
     if (output_path) {
         sl << *output_path;
     } else {
-        sl << "standard out";
+        sl << "stdout";
     }
 }
 
