@@ -357,8 +357,8 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("report-refcalls,v",
      po::value<RefCallType>()->implicit_value(RefCallType::blocked),
-     "Caller will report reference confidence calls for each position (Positional),"
-     " or in automatically sized blocks (Blocked)")
+     "Caller will report reference confidence calls for each position (positional),"
+     " or in automatically sized blocks (blocked)")
     
     ("sites-only",
      po::bool_switch()->default_value(false),
@@ -424,7 +424,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("phasing-level,l",
      po::value<PhasingLevel>()->default_value(PhasingLevel::conservative),
      "Level of phasing - longer range phasing can improve calling accuracy at the cost"
-     " of runtime speed. Possible values are: Minimal, Conservative, Aggressive")
+     " of runtime speed. Possible values are: minimal, conservative, aggressive")
     
     ("min-phase-score",
      po::value<Phred<double>>()->default_value(Phred<double> {20.0}),
