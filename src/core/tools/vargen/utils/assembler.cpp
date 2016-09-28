@@ -180,7 +180,6 @@ bool Assembler::prune(const unsigned min_weight)
     if (old_size < 2) return true;
     
     remove_trivial_nonreference_cycles();
-    
     auto new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
@@ -192,9 +191,7 @@ bool Assembler::prune(const unsigned min_weight)
     
     remove_low_weight_edges(min_weight);
     remove_disconnected_vertices();
-    
     new_size = boost::num_vertices(graph_);
-    
     if (new_size != old_size) {
         regenerate_vertex_indices();
         if (new_size < 2) {
@@ -204,7 +201,6 @@ bool Assembler::prune(const unsigned min_weight)
     }
     
     remove_vertices_that_cant_be_reached_from(reference_head());
-    
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
@@ -213,7 +209,6 @@ bool Assembler::prune(const unsigned min_weight)
     }
     
     remove_vertices_past(reference_tail());
-    
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
@@ -222,7 +217,6 @@ bool Assembler::prune(const unsigned min_weight)
     }
     
     remove_vertices_that_cant_reach(reference_tail());
-    
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
@@ -234,11 +228,10 @@ bool Assembler::prune(const unsigned min_weight)
         if (can_prune_reference_flanks()) {
             prune_reference_flanks();
         }
-    } catch (boost::not_a_dag& e) {
+    } catch (const boost::not_a_dag& e) {
         clear();
         return false;
     }
-    
     if (is_reference_empty()) {
         clear();
         return true;
@@ -248,16 +241,15 @@ bool Assembler::prune(const unsigned min_weight)
         clear();
         return false;
     }
-    
     new_size = boost::num_vertices(graph_);
     assert(new_size != 0);
     assert(!(boost::num_edges(graph_) == 0 && new_size > 1));
     assert(is_reference_unique_path());
-    
     if (new_size != old_size) {
         regenerate_vertex_indices();
         old_size = new_size;
     }
+    
     return true;
 }
 

@@ -622,6 +622,7 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
                                            std::deque<Variant>& result) const
 {
     if (!assembler.prune(min_supporting_reads_)) return false;
+    if (!assembler.is_acyclic()) return false;
     auto variants = assembler.extract_variants();
     assembler.clear();
     if (variants.empty()) return true;
