@@ -14,6 +14,7 @@
 #include "config/option_collation.hpp"
 #include "core/octopus.hpp"
 #include "utils/timing.hpp"
+#include "utils/string_utils.hpp"
 #include "exceptions/error.hpp"
 #include "logging/error_handler.hpp"
 
@@ -45,6 +46,12 @@ void init_common(const OptionMap& options)
     TRACE_MODE = options::is_trace_mode(options);
 }
 
+std::string to_string(const int argc, const char** argv)
+{
+    std::vector<std::string> arguements {argv, argv + argc};
+    return utils::join(arguements, ' ');
+}
+
 } // namespace
 
 int main(const int argc, const char** argv)
@@ -74,7 +81,7 @@ int main(const int argc, const char** argv)
             stream(info_log) << "Done initialising calling components in " << TimeInterval {start, end};
             options.clear();
             if (validate(components)) {
-                run_octopus(components);
+                run_octopus(components, to_string(argc, argv));
             }
             log_program_end();
         } catch (const Error& e) {

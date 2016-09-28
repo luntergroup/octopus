@@ -77,14 +77,15 @@ using CallTypeSet = std::set<std::type_index>;
 VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                           const std::vector<GenomicRegion::ContigName>& contigs,
                           const ReferenceGenome& reference,
-                          const CallTypeSet& call_types)
+                          const CallTypeSet& call_types,
+                          const std::string& command)
 {
     auto builder = vcf::make_header_template().set_samples(samples);
     for (const auto& contig : contigs) {
         builder.add_contig(contig, {{"length", std::to_string(reference.contig_size(contig))}});
     }
     builder.add_basic_field("reference", reference.name());
-    builder.add_structured_field("octopus", {{"some", "option"}});
+    builder.add_structured_field("octopus", {{"command", command}});
     VcfHeaderFactory factory {};
     for (const auto& type : call_types) {
         factory.register_call_type(type);
@@ -96,10 +97,11 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
 VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                           const GenomicRegion::ContigName& contig,
                           const ReferenceGenome& reference,
-                          const CallTypeSet& call_types)
+                          const CallTypeSet& call_types,
+                          const std::string& command)
 {
     return make_vcf_header(samples, std::vector<GenomicRegion::ContigName> {contig},
-                           reference, call_types);
+                           reference, call_types, command);
 }
 
 bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
@@ -120,14 +122,16 @@ auto get_call_types(const GenomeCallingComponents& components, const std::vector
     return result;
 }
 
-void write_caller_output_header(GenomeCallingComponents& components, const bool sites_only = false)
+void write_caller_output_header(GenomeCallingComponents& components,
+                                const std::string& command)
 {
     const auto call_types = get_call_types(components, components.contigs());
-    if (sites_only) {
-        components.output() << make_vcf_header({}, components.contigs(), components.reference(), call_types);
+    if (components.sites_only()) {
+        components.output() << make_vcf_header({}, components.contigs(), components.reference(),
+                                               call_types, command);
     } else {
         components.output() << make_vcf_header(components.samples(), components.contigs(),
-                                               components.reference(), call_types);
+                                               components.reference(), call_types, command);
     }
 }
 
@@ -373,7 +377,8 @@ VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
     boost::filesystem::path file_name {contig + "_" + begin + "-" + end + "_temp.bcf"};
     path /= file_name;
     const auto call_types = get_call_types(components, {region.contig_name()});
-    auto header = make_vcf_header(components.samples(), contig, components.reference(), call_types);
+    auto header = make_vcf_header(components.samples(), contig, components.reference(), call_types,
+                                  "octopus-internal");
     return VcfWriter {std::move(path), std::move(header)};
 }
 
@@ -1057,14 +1062,14 @@ void log_run_start(const GenomeCallingComponents& components)
     if (debug_log) print_input_regions(stream(*debug_log), components.search_regions());
 }
 
-void run_octopus(GenomeCallingComponents& components)
+void run_octopus(GenomeCallingComponents& components, std::string command)
 {
     static auto debug_log = get_debug_log();
     logging::InfoLogger info_log {};
     using utils::TimeInterval;
     
     log_run_start(components);
-    write_caller_output_header(components, components.sites_only());
+    write_caller_output_header(components, command);
     
     const auto start = std::chrono::system_clock::now();
     

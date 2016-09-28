@@ -4,11 +4,13 @@
 #ifndef octopus_hpp
 #define octopus_hpp
 
+#include <string>
+
 #include "calling_components.hpp"
 
 namespace octopus {
 
-void run_octopus(GenomeCallingComponents& components);
+void run_octopus(GenomeCallingComponents& components, std::string command);
 
 }
 
