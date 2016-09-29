@@ -1158,8 +1158,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     }
     vc_builder.set_caller(caller);
     
-    if (options.count("report-refcalls") == 1) {
-        const auto refcall_type = options.at("report-refcalls").as<RefCallType>();
+    if (options.count("refcall") == 1) {
+        const auto refcall_type = options.at("refcall").as<RefCallType>();
         if (refcall_type == RefCallType::positional) {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::positional);
         } else {

@@ -355,7 +355,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
      "Report reference alleles with posterior probability (phred scale) greater than this")
     
-    ("report-refcalls,v",
+    ("refcall,v",
      po::value<RefCallType>()->implicit_value(RefCallType::blocked),
      "Caller will report reference confidence calls for each position (positional),"
      " or in automatically sized blocks (blocked)")
