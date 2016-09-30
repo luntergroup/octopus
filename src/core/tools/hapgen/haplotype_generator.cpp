@@ -140,14 +140,11 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
             // Then we are done
             return std::make_pair(std::vector<Haplotype> {}, *next_active_region_);
         }
-        
         progress(*next_active_region_);
-        
         auto novel_active_region = *next_active_region_;
         if (!tree_.is_empty()) {
             novel_active_region = right_overhang_region(*next_active_region_, active_region_);
         }
-        
         auto novel_active_alleles = overlap_range(alleles_, novel_active_region);
         auto last_added_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
         
@@ -156,17 +153,13 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
             if (can_extract_holdouts(novel_active_region)) {
                 extract_holdouts(novel_active_region);
                 tree_.clear(novel_active_region);
-                
                 update_next_active_region();
-                
                 active_region_ = *std::move(next_active_region_);
                 reset_next_active_region();
-                
                 const auto new_novel_alleles = overlap_range(alleles_, active_region_);
                 auto it = extend_tree_until(new_novel_alleles, tree_, policies_.haplotype_limits.overflow);
-                
                 if (it != std::cend(new_novel_alleles)) {
-                    throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()}; 
+                    throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
                 }
             } else {
                 last_added_itr = extend_tree_until(last_added_itr, std::cend(novel_active_alleles), tree_,
@@ -181,7 +174,9 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
             reset_next_active_region();
         }
     }
-    auto haplotypes = tree_.extract_haplotypes(calculate_haplotype_region());
+    const auto haplotype_region = calculate_haplotype_region();
+    assert(contains(haplotype_region, tree_.encompassing_region()));
+    auto haplotypes = tree_.extract_haplotypes(haplotype_region);
     if (!is_lagging_enabled()) tree_.clear();
     return std::make_pair(std::move(haplotypes), active_region_);
 }
