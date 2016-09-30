@@ -435,27 +435,27 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
             next_active_region_ = test_tree.encompassing_region();
             return;
         }
-        // Use contained_range for indicators as previous active alleles must be contained
-        // within the reported active region.
-        const auto indicator_region  = *overlapped_region(active_region_, max_lagged_region);
-        const auto indicator_alleles = contained_range(alleles_, indicator_region);
-        assert(!indicator_alleles.empty());
-        auto mutually_exclusive_indicator_regions = extract_mutually_exclusive_regions(indicator_alleles);
-        remove_edge_insertions(mutually_exclusive_indicator_regions);
-        // Where-as overlap_range is required for novel alleles as any holdout alleles
+        // overlap_range is required for novel alleles as any holdout alleles
         // just reintroduced may overlap with the indicator and novel region.
         const auto novel_region  = right_overhang_region(max_lagged_region, active_region_);
         const auto novel_alleles = overlap_range(alleles_, novel_region);
         assert(!novel_alleles.empty());
         auto mutually_exclusive_novel_regions = extract_mutually_exclusive_regions(novel_alleles);
-        
-        if (mutually_exclusive_indicator_regions.back() == mutually_exclusive_novel_regions.front()) {
-            assert(is_empty(mutually_exclusive_novel_regions.front()));
-            pop_front(mutually_exclusive_novel_regions);
-        }
-        if (!in_holdout_mode()) {
-            prune_indicators(test_tree, mutually_exclusive_indicator_regions,
-                             policies_.haplotype_limits.target);
+        // contained_range is required for indicators as previous active alleles must be contained
+        // within the reported active region.
+        const auto indicator_region  = *overlapped_region(active_region_, max_lagged_region);
+        const auto indicator_alleles = contained_range(alleles_, indicator_region);
+        if (!indicator_alleles.empty()) {
+            auto mutually_exclusive_indicator_regions = extract_mutually_exclusive_regions(indicator_alleles);
+            remove_edge_insertions(mutually_exclusive_indicator_regions);
+            if (mutually_exclusive_indicator_regions.back() == mutually_exclusive_novel_regions.front()) {
+                assert(is_empty(mutually_exclusive_novel_regions.front()));
+                pop_front(mutually_exclusive_novel_regions);
+            }
+            if (!in_holdout_mode()) {
+                prune_indicators(test_tree, mutually_exclusive_indicator_regions,
+                                 policies_.haplotype_limits.target);
+            }
         }
         const auto num_novel_regions_added = extend_novel(test_tree, mutually_exclusive_novel_regions,
                                                           novel_alleles, policies_.haplotype_limits);
