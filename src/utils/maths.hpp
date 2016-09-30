@@ -40,19 +40,19 @@ RealType round(const RealType val, const unsigned precision = 2)
     return std::round(val * factor) / factor;
 }
 
-template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
+template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
 bool almost_equal(const T lhs, T rhs, const int ulp = 1)
 {
     return lhs == rhs || std::abs(lhs - rhs) < std::numeric_limits<T>::epsilon() * std::abs(lhs + rhs) * ulp;
 }
 
-template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
+template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
 bool almost_zero(const T x, const int ulp = 1)
 {
     return almost_equal(x, T {0}, ulp);
 }
 
-template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
+template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
 bool almost_one(const T x, const int ulp = 1)
 {
     return almost_equal(x, T {1}, ulp);
