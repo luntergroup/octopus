@@ -22,6 +22,7 @@ unsigned CoverageTracker::max_coverage() const noexcept
     
 unsigned CoverageTracker::max_coverage(const GenomicRegion& region) const noexcept
 {
+    if (is_empty(region)) return 0;
     const auto p = range(region);
     if (p.first == p.second) return 0;
     return *std::max_element(p.first, p.second);
@@ -35,6 +36,7 @@ unsigned CoverageTracker::min_coverage() const noexcept
 
 unsigned CoverageTracker::min_coverage(const GenomicRegion& region) const noexcept
 {
+    if (is_empty(region)) return 0;
     const auto p = range(region);
     if (p.first == p.second) return 0;
     return *std::min_element(p.first, p.second);
@@ -48,6 +50,7 @@ double CoverageTracker::mean_coverage() const noexcept
 
 double CoverageTracker::mean_coverage(const GenomicRegion& region) const noexcept
 {
+    if (is_empty(region)) return 0;
     const auto p = range(region);
     return maths::mean(p.first, p.second);
 }
@@ -60,6 +63,7 @@ double CoverageTracker::stdev_coverage() const noexcept
 
 double CoverageTracker::stdev_coverage(const GenomicRegion& region) const noexcept
 {
+    if (is_empty(region)) return 0;
     const auto p = range(region);
     return maths::stdev(p.first, p.second);
 }
@@ -130,8 +134,11 @@ void CoverageTracker::do_add(const octopus::GenomicRegion& region)
 std::pair<CoverageTracker::Iterator, CoverageTracker::Iterator>
 CoverageTracker::range(const GenomicRegion& region) const
 {
-    const auto first = std::next(std::begin(coverage_), begin_distance(encompassing_region_, region));
-    return std::make_pair(first, std::next(first, size(region)));
+    auto first = std::begin(coverage_);
+    if (begins_before(encompassing_region_, region)) {
+        std::advance(first, begin_distance(encompassing_region_, region));
+    }
+    return std::make_pair(first, std::next(first, overlap_size(region, encompassing_region_)));
 }
 
 } // namespace octopus
