@@ -175,7 +175,7 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
         }
     }
     const auto haplotype_region = calculate_haplotype_region();
-    assert(contains(haplotype_region, tree_.encompassing_region()));
+    assert(contains(haplotype_region, active_region_));
     auto haplotypes = tree_.extract_haplotypes(haplotype_region);
     if (!is_lagging_enabled()) tree_.clear();
     return std::make_pair(std::move(haplotypes), active_region_);
@@ -706,29 +706,41 @@ auto sum_indel_sizes(const Range& alleles)
 GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
 {
     const auto overlapped = overlap_range(alleles_, active_region_);
-    
     // We want to keep haplotypes as small as possible, while allowing sufficient flanking
     // reference sequence for full read re-mapping and alignment (i.e. the read must be
     // contained by the haplotype). Note the sum of the indel sizes may not be sufficient
     // as the candidate generator may not propopse all variation in the original reads.
-    const auto additional_padding = 2 * sum_indel_sizes(overlapped) + min_flank_pad_;
+    const auto min_flank_padding = sum_indel_sizes(overlapped) + min_flank_pad_;
     
     if (has_overlapped(reads_.get(), active_region_)) {
         const auto& lhs_read = *leftmost_overlapped(reads_.get(), active_region_);
         const auto& rhs_read = *rightmost_overlapped(reads_.get(), active_region_);
+        const auto read_region = closed_region(lhs_read, rhs_read);
+        GenomicRegion::Size lhs_expansion {}, rhs_expansion {};
         
-        const auto unpadded_region = encompassing_region(lhs_read, rhs_read);
-        
-        if (mapped_begin(lhs_read) < additional_padding / 2) {
-            const auto lhs_padding = mapped_begin(lhs_read);
-            const auto rhs_padding = additional_padding - lhs_padding;
-            return expand(unpadded_region, lhs_padding, rhs_padding);
+        if (begins_before(read_region, active_region_)) {
+            lhs_expansion = begin_distance(read_region, active_region_) + min_flank_padding;
+        } else {
+            const auto diff = static_cast<GenomicRegion::Size>(begin_distance(active_region_, read_region));
+            if (diff < min_flank_padding) {
+                lhs_expansion = min_flank_padding - diff;
+            }
         }
-        
-        return expand(unpadded_region, additional_padding / 2);
+        if (ends_before(active_region_, read_region)) {
+            rhs_expansion = end_distance(active_region_, read_region) + min_flank_padding;
+        } else {
+            const auto diff = static_cast<GenomicRegion::Size>(end_distance(read_region, active_region_));
+            if (diff < min_flank_padding) {
+                rhs_expansion = min_flank_padding - diff;
+            }
+        }
+        if (read_region.begin() < lhs_expansion) {
+            rhs_expansion += lhs_expansion - read_region.begin();
+            lhs_expansion = read_region.begin();
+        }
+        return expand(active_region_, lhs_expansion, rhs_expansion);
     }
-    
-    return expand(active_region_, additional_padding / 2);
+    return active_region_;
 }
 
 // Builder
