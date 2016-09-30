@@ -187,20 +187,19 @@ double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
     // This calculation is approximately
     // p(read | hap) = p(read missmapped) p(read | hap, missmapped)
     //                  + p(read correctly mapped) p(read | hap, correctly mapped)
+    // = p(read correctly mapped) p(read | hap, correctly mapped)
+    //      + p(read missmapped)
+    // assuming p(read | hap, missmapped) = 1
     const auto ln_prob_given_mapped = max_score(read, *haplotype_,
                                                 first_mapping_position, last_mapping_position,
                                                 model);
-    const AlignedRead::MappingQuality max_mapping_quality {60};
-    if (read.mapping_quality() == max_mapping_quality) {
-        return ln_prob_given_mapped;
-    } else {
-        using octopus::maths::constants::ln10Div10;
-        const auto ln_prob_missmapped = -ln10Div10<> * read.mapping_quality();
-        const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
-        return maths::log_sum_exp(ln_prob_mapped + ln_prob_given_mapped,
-                                  ln_prob_missmapped);
-        //return std::max(ln_prob_given_mapped, 2 * ln_prob_missmapped);
-    }
+    using octopus::maths::constants::ln10Div10;
+    const auto ln_prob_missmapped = -ln10Div10<> * read.mapping_quality();
+    const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
+//    const auto result = maths::log_sum_exp(ln_prob_mapped + ln_prob_given_mapped,
+//                                           ln_prob_missmapped);
+//    return result > -1e-15 ? 0.0 : result;
+    return std::max(ln_prob_given_mapped, ln_prob_missmapped);
 }
 
 } // namespace octopus
