@@ -52,7 +52,8 @@ std::vector<std::uint32_t> make_lpf_array(std::vector<std::uint32_t> sa, std::ve
     
     std::vector<std::uint32_t> result(n, 0);
     
-    sa.push_back(-1);
+    static constexpr auto sentinal = std::numeric_limits<std::uint32_t>::max();
+    sa.push_back(sentinal);
     lcp.push_back(0);
     
     std::stack<std::uint32_t> stack {};
@@ -60,7 +61,7 @@ std::vector<std::uint32_t> make_lpf_array(std::vector<std::uint32_t> sa, std::ve
     
     for (std::uint32_t i {1}; i <= n; ++i) {
         while (!stack.empty()
-               && (sa[i] == -1 || sa[i] < sa[stack.top()]
+               && (sa[i] == sentinal || sa[i] < sa[stack.top()]
                    || (sa[i] > sa[stack.top()] && lcp[i] <= lcp[stack.top()]))) {
                    if (sa[i] < sa[stack.top()]) {
                        std::tie(lcp[i], result[sa[stack.top()]]) = std::minmax(lcp[stack.top()], std::uint32_t {lcp[i]});
@@ -85,7 +86,8 @@ make_lpf_and_prev_occ_arrays(std::vector<std::uint32_t> sa, std::vector<std::uin
     
     std::vector<std::uint32_t> lpf(n, 0), prev_occ(n, 0);
     
-    sa.push_back(-1);
+    static constexpr auto sentinal = std::numeric_limits<std::uint32_t>::max();
+    sa.push_back(sentinal);
     lcp.push_back(0);
     
     std::stack<std::pair<std::uint32_t, std::uint32_t>> stack {}; // default std::stack uses std::deque
@@ -93,12 +95,12 @@ make_lpf_and_prev_occ_arrays(std::vector<std::uint32_t> sa, std::vector<std::uin
     
     for (std::uint32_t i {1}; i <= n; ++i) {
         auto u = lcp[i];
-        while (!stack.empty() && (sa[i] == -1 || sa[i] < stack.top().second)) {
+        while (!stack.empty() && (sa[i] == sentinal || sa[i] < stack.top().second)) {
             std::tie(u, lpf[stack.top().second]) = std::minmax(stack.top().first, std::uint32_t {u});
             const auto v = stack.top();
             stack.pop();
             if (lpf[v.second] == 0) {
-                prev_occ[v.second] = -1;
+                prev_occ[v.second] = sentinal;
             } else if (v.first > u) {
                 prev_occ[v.second] = stack.top().second;
             } else {
