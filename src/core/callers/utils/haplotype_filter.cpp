@@ -45,6 +45,25 @@ private:
     const std::unordered_map<Haplotype, T>& values_;
 };
 
+template <typename T>
+bool are_equal(const T& lhs, const T& rhs, std::true_type) noexcept
+{
+    return maths::almost_equal(lhs, rhs);
+}
+
+template <typename T>
+bool are_equal(const T& lhs, const T& rhs, std::false_type) noexcept
+{
+    return lhs == rhs;
+}
+
+template <typename T>
+bool are_equal(const T& lhs, const T& rhs) noexcept
+
+{
+    return are_equal(lhs, rhs, std::is_floating_point<T> {});
+}
+
 template <typename F>
 std::size_t try_filter(std::vector<Haplotype>& haplotypes,
                        const std::vector<SampleName>& samples,
@@ -72,7 +91,7 @@ std::size_t try_filter(std::vector<Haplotype>& haplotypes,
     const auto rlast = std::make_reverse_iterator(first);
     const auto it = std::find_if(std::make_reverse_iterator(std::prev(nth)), rlast,
                                  [nth_best, &filter_score] (const Haplotype& haplotype) {
-                                     return filter_score.at(haplotype) == nth_best;
+                                     return are_equal(filter_score.at(haplotype), nth_best);
                                  });
     
     if (it != rlast) {
