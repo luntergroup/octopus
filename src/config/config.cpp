@@ -5,21 +5,20 @@
 
 #include <ostream>
 
-//#include "cmake_config.hpp"
-
 namespace octopus { namespace config {
 
-const VersionNumber Version {0, 1};
+const VersionNumber Version {0, 1, boost::optional<std::string> {"alpha"}};
 
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version)
 {
-    os << version.major << "." << version.minor;
+    os << version.major << '.' << version.minor;
+    if (version.name) os << ' ' << *version.name;
     return os;
 }
 
-const std::string HelpForum {"https://github.com/dancooke/octopus/issues"};
+const std::string HelpForum {"https://github.com/luntergroup/octopus/issues"};
 
-const std::string BugReport {"https://github.com/dancooke/octopus/issues"};
+const std::string BugReport {"https://github.com/luntergroup/octopus/issues"};
 
 const std::vector<std::string> Authors {"Daniel Cooke"};
 
