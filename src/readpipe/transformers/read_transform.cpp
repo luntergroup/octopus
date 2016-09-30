@@ -33,7 +33,8 @@ void MaskOverlappedSegment::operator()(AlignedRead& read) const noexcept
 
 void MaskAdapters::operator()(AlignedRead& read) const noexcept
 {
-    if (read.has_other_segment() && contig_name(read) == read.next_segment().contig_name()) {
+    if (read.has_other_segment() && read.is_marked_all_segments_in_read_aligned()
+        && contig_name(read) == read.next_segment().contig_name()) {
         const auto insert_size = read.next_segment().inferred_template_length();
         const auto read_size   = sequence_size(read);
         
