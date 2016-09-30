@@ -196,10 +196,10 @@ double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
     using octopus::maths::constants::ln10Div10;
     const auto ln_prob_missmapped = -ln10Div10<> * read.mapping_quality();
     const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
-//    const auto result = maths::log_sum_exp(ln_prob_mapped + ln_prob_given_mapped,
-//                                           ln_prob_missmapped);
-//    return result > -1e-15 ? 0.0 : result;
-    return std::max(ln_prob_given_mapped, ln_prob_missmapped);
+    const auto result = maths::log_sum_exp(ln_prob_mapped + ln_prob_given_mapped,
+                                           ln_prob_missmapped);
+    return result > -1e-15 ? 0.0 : result;
+    //return std::max(ln_prob_given_mapped, ln_prob_missmapped);
 }
 
 } // namespace octopus
