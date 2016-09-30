@@ -46,7 +46,7 @@ class MissingFastaIndex : public MissingIndexError
     std::string do_help() const override
     {
         return "ensure that a valid fasta index (.fai) exists in the same directory as the given "
-        "fasta file. You can make one with the 'samtools index' command";
+        "fasta file. You can make one with the 'samtools faidx' command";
     }
 public:
     MissingFastaIndex(Fasta::Path file) : MissingIndexError {std::move(file), "fasta"} {}
