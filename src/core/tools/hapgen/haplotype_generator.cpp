@@ -101,8 +101,10 @@ try
 , holdout_region_ {}
 {
     rightmost_allele_ = *rightmost_mappable(alleles_);
-    active_region_    = shift(head_region(alleles_.leftmost()), -1);
-    
+    active_region_ = head_region(alleles_.leftmost());
+    if (active_region_.begin() != 0) {
+        active_region_ = shift(active_region_, -1);
+    }
     if (policies_.lagging != Policies::Lagging::none) {
         GenomeWalker::IndicatorPolicy walker_policy;
         if (policies_.lagging == Policies::Lagging::conservative) {
