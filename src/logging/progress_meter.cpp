@@ -375,7 +375,7 @@ void ProgressMeter::output_log(const GenomicRegion& region)
     
     const auto percent_completed = percent_completed_str(num_bp_completed_, num_bp_to_search_);
     
-    stream(log_) << curr_position_pad(region)
+    stream(log_) << position_pad(region)
                  << region.contig_name() << ':' << region.end()
                  << completed_pad(percent_completed)
                  << percent_completed
@@ -389,7 +389,7 @@ void ProgressMeter::output_log(const GenomicRegion& region)
     percent_at_last_log_ = percent_done;
 }
 
-std::string ProgressMeter::curr_position_pad(const GenomicRegion& completed_region) const
+std::string ProgressMeter::position_pad(const GenomicRegion& completed_region) const
 {
     assert(position_tab_length_ > 3);
     const auto num_contig_name_letters = completed_region.contig_name().size();
