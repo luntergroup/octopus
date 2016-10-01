@@ -140,14 +140,11 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
             // Then we are done
             return std::make_pair(std::vector<Haplotype> {}, *next_active_region_);
         }
-        
         progress(*next_active_region_);
-        
         auto novel_active_region = *next_active_region_;
         if (!tree_.is_empty()) {
             novel_active_region = right_overhang_region(*next_active_region_, active_region_);
         }
-        
         auto novel_active_alleles = overlap_range(alleles_, novel_active_region);
         auto last_added_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
         
@@ -156,17 +153,13 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
             if (can_extract_holdouts(novel_active_region)) {
                 extract_holdouts(novel_active_region);
                 tree_.clear(novel_active_region);
-                
                 update_next_active_region();
-                
                 active_region_ = *std::move(next_active_region_);
                 reset_next_active_region();
-                
                 const auto new_novel_alleles = overlap_range(alleles_, active_region_);
                 auto it = extend_tree_until(new_novel_alleles, tree_, policies_.haplotype_limits.overflow);
-                
                 if (it != std::cend(new_novel_alleles)) {
-                    throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()}; 
+                    throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
                 }
             } else {
                 last_added_itr = extend_tree_until(last_added_itr, std::cend(novel_active_alleles), tree_,
@@ -181,7 +174,9 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
             reset_next_active_region();
         }
     }
-    auto haplotypes = tree_.extract_haplotypes(calculate_haplotype_region());
+    const auto haplotype_region = calculate_haplotype_region();
+    assert(contains(haplotype_region, active_region_));
+    auto haplotypes = tree_.extract_haplotypes(haplotype_region);
     if (!is_lagging_enabled()) tree_.clear();
     return std::make_pair(std::move(haplotypes), active_region_);
 }
@@ -711,29 +706,41 @@ auto sum_indel_sizes(const Range& alleles)
 GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
 {
     const auto overlapped = overlap_range(alleles_, active_region_);
-    
     // We want to keep haplotypes as small as possible, while allowing sufficient flanking
     // reference sequence for full read re-mapping and alignment (i.e. the read must be
     // contained by the haplotype). Note the sum of the indel sizes may not be sufficient
     // as the candidate generator may not propopse all variation in the original reads.
-    const auto additional_padding = 2 * sum_indel_sizes(overlapped) + min_flank_pad_;
+    const auto min_flank_padding = sum_indel_sizes(overlapped) + min_flank_pad_;
     
     if (has_overlapped(reads_.get(), active_region_)) {
         const auto& lhs_read = *leftmost_overlapped(reads_.get(), active_region_);
         const auto& rhs_read = *rightmost_overlapped(reads_.get(), active_region_);
+        const auto read_region = closed_region(lhs_read, rhs_read);
+        GenomicRegion::Size lhs_expansion {}, rhs_expansion {};
         
-        const auto unpadded_region = encompassing_region(lhs_read, rhs_read);
-        
-        if (mapped_begin(lhs_read) < additional_padding / 2) {
-            const auto lhs_padding = mapped_begin(lhs_read);
-            const auto rhs_padding = additional_padding - lhs_padding;
-            return expand(unpadded_region, lhs_padding, rhs_padding);
+        if (begins_before(read_region, active_region_)) {
+            lhs_expansion = begin_distance(read_region, active_region_) + min_flank_padding;
+        } else {
+            const auto diff = static_cast<GenomicRegion::Size>(begin_distance(active_region_, read_region));
+            if (diff < min_flank_padding) {
+                lhs_expansion = min_flank_padding - diff;
+            }
         }
-        
-        return expand(unpadded_region, additional_padding / 2);
+        if (ends_before(active_region_, read_region)) {
+            rhs_expansion = end_distance(active_region_, read_region) + min_flank_padding;
+        } else {
+            const auto diff = static_cast<GenomicRegion::Size>(end_distance(read_region, active_region_));
+            if (diff < min_flank_padding) {
+                rhs_expansion = min_flank_padding - diff;
+            }
+        }
+        if (read_region.begin() < lhs_expansion) {
+            rhs_expansion += lhs_expansion - read_region.begin();
+            lhs_expansion = read_region.begin();
+        }
+        return expand(active_region_, lhs_expansion, rhs_expansion);
     }
-    
-    return expand(active_region_, additional_padding / 2);
+    return active_region_;
 }
 
 // Builder
