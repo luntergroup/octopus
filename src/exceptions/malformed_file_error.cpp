@@ -87,9 +87,9 @@ std::string MalformedFileError::do_why() const
     
     if (valid_types_.empty()) {
         if (reason_) {
-            ss << "is malformed becsause " << *reason_;
+            ss << "is malformed because " << *reason_;
         } else {
-            ss << "is malformed or currupted";
+            ss << "is malformed or corrupted";
         }
     } else if (valid_types_.size() == 1) {
         ss << "is not a valid " << valid_types_.front() << " file";
