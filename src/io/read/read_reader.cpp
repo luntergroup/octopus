@@ -4,33 +4,42 @@
 #include "read_reader.hpp"
 
 #include <stdexcept>
+#include <string>
 #include <sstream>
 
 #include "htslib_sam_facade.hpp"
+#include "exceptions/user_error.hpp"
 
 namespace octopus { namespace io {
 
-class UnknownReadFileFormat : public std::runtime_error
+class UnknownReadFileFormat : public UserError
 {
+    virtual std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "the file you specified "
+           << file_path_ << " is not a BAM or CRAM file";
+        return ss.str();
+    }
+    
+    virtual std::string do_where() const override
+    {
+        return "make_reader";
+    }
+    
+    virtual std::string do_help() const override
+    {
+        return "Enter a valid BAM or CRAM file";
+    }
+    
+    boost::filesystem::path file_path_;
+    
 public:
     UnknownReadFileFormat(boost::filesystem::path file_path)
-    : std::runtime_error {"Unknown read file format"}
-    , file_path_ {std::move(file_path)}
-    , msg_ {}
+    : file_path_ {std::move(file_path)}
     {}
     
     virtual ~UnknownReadFileFormat() = default;
-    
-    virtual const char* what() const noexcept override
-    {
-        std::ostringstream ss {};
-        ss << std::runtime_error::what() << ": the file " << file_path_ << " is not a BAM or CRAM file";
-        msg_ = ss.str();
-        return msg_.c_str();
-    }
-private:
-    boost::filesystem::path file_path_;
-    mutable std::string msg_;
 };
 
 namespace {
