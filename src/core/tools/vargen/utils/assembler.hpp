@@ -228,6 +228,8 @@ private:
     bool graph_has_trivial_cycle() const;
     bool is_simple_deletion(Edge e) const;
     bool is_on_path(Edge e, const Path& path) const;
+    bool connects_to_path(Edge e, const Path& path) const;
+    bool is_dependent_on_path(Edge e, const Path& path) const;
     
     void remove_trivial_nonreference_cycles();
     void remove_low_weight_edges(unsigned min_weight);

@@ -755,6 +755,17 @@ bool Assembler::is_on_path(const Edge e, const Path& path) const
     return false;
 }
 
+bool Assembler::connects_to_path(Edge e, const Path& path) const
+{
+    return e == *boost::in_edges(path.front(), graph_).first
+           ||  e == *boost::out_edges(path.back(), graph_).first;
+}
+
+bool Assembler::is_dependent_on_path(Edge e, const Path& path) const
+{
+    return connects_to_path(e, path) || is_on_path(e, path);
+}
+
 void Assembler::remove_trivial_nonreference_cycles()
 {
     boost::remove_edge_if([this] (const Edge e) {
@@ -1230,6 +1241,11 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             std::tie(edge_to_alt, good) = boost::edge(alt, ref, graph_);
             assert(good);
             if (alt_path.size() == 1 && is_simple_deletion(edge_to_alt)) {
+                if (blocked_edge
+                    && boost::source(*blocked_edge, graph_) == alt_path.front()
+                    && boost::target(*blocked_edge, graph_) == ref) {
+                    blocked_edge = boost::none;
+                }
                 remove_edge(alt_path.front(), ref);
                 set_out_edge_transition_scores(alt_path.front());
             } else {
@@ -1237,6 +1253,9 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
                 while (!alt_path.empty()) {
                     const auto bifurication_point = is_bridge_until(alt_path);
                     if (bifurication_point == std::cend(alt_path)) {
+                        if (blocked_edge && is_dependent_on_path(*blocked_edge, alt_path)) {
+                            blocked_edge = boost::none;
+                        }
                         remove_path(alt_path);
                         regenerate_vertex_indices();
                         set_out_edge_transition_scores(vertex_before_bridge);
@@ -1245,6 +1264,9 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
                         alt_path.clear();
                     } else if (joins_reference_only(*bifurication_point)) {
                         alt_path.erase(bifurication_point, std::cend(alt_path));
+                        if (blocked_edge && is_dependent_on_path(*blocked_edge, alt_path)) {
+                            blocked_edge = boost::none;
+                        }
                         remove_path(alt_path);
                         regenerate_vertex_indices();
                         set_out_edge_transition_scores(vertex_before_bridge);
@@ -1256,7 +1278,7 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
                         vertex_before_bridge = *bifurication_point;
                         alt_path.erase(std::cbegin(alt_path), std::next(bifurication_point));
                     } else {
-                        // TODO: This is almost certainly not optimal... fortunatly it seems to
+                        // TODO: This is almost certainly not optimal... fortunately it seems to
                         // be a rare case.
                         if (bifurication_point != std::cbegin(alt_path)) {
                             Edge e; bool good;
