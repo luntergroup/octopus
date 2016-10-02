@@ -734,9 +734,9 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
                 rhs_expansion = min_flank_padding - diff;
             }
         }
-        if (read_region.begin() < lhs_expansion) {
-            rhs_expansion += lhs_expansion - read_region.begin();
-            lhs_expansion = read_region.begin();
+        if (active_region_.begin() < lhs_expansion) {
+            rhs_expansion += lhs_expansion - active_region_.begin();
+            lhs_expansion = active_region_.begin();
         }
         return expand(active_region_, lhs_expansion, rhs_expansion);
     }
