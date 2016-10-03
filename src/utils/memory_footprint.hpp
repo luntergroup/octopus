@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <string>
+#include <functional>
 #include <iosfwd>
 
 #include <boost/optional.hpp>
@@ -38,5 +39,15 @@ std::istream& operator>>(std::istream& is, MemoryFootprint& result);
 boost::optional<MemoryFootprint> parse_footprint(std::string str);
 
 } // namespace octopus
+
+namespace std {
+template <> struct hash<octopus::MemoryFootprint>
+{
+    size_t operator()(const octopus::MemoryFootprint& fp) const noexcept
+    {
+        return hash<decltype(fp.num_bytes())>()(fp.num_bytes());
+    }
+};
+} // namespace std
 
 #endif
