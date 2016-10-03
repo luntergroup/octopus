@@ -42,11 +42,12 @@ if args["clean"]:
     move(octopus_build_dir + "/cmake", octopus_dir + "/cmake")
     rmtree(octopus_build_dir)
     move(octopus_dir + "/cmake", octopus_build_dir + "/cmake")
-elif not args["keep_cache"] and os.path.exists(cmake_cache_file):
-    os.remove(cmake_cache_file)
 
-os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
 cmake_cache_file = "CMakeCache.txt"
+os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
+
+if not args["keep_cache"] and os.path.exists(cmake_cache_file):
+    os.remove(cmake_cache_file)
 
 ret = 0
 cmake_options = []
