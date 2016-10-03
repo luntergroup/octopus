@@ -14,6 +14,7 @@ Octopus is a mapping-based variant caller that implements several calling models
 
 ##Requirements
 * A C++14 compiler with SSE2 support
+* A C++14 standard library implementation
 * Git 2.5 or greater
 * Boost 1.58 or greater
 * htslib 1.31.1 or greater
@@ -37,8 +38,32 @@ $ brew tap homebrew/science # required for htslib
 $ brew install htslib
 $ brew install python3
 ```
-
 Note if you already have any of these packages installed via Homebrew on your system the command will fail, but you can update to the latest version using `brew upgrade`.
+
+####*Obtaining requirements on Ubuntu Xenial*
+
+On Ubuntu, Clang 3.8 is recommended as GCC 6.2 has a [bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77550) which slows down octopus. However, due to a Debian [bug](https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=808086) listdc++ is also required:
+
+```shell
+$ sudo apt-get update && sudo apt-get upgrade
+$ sudo apt-get install clang-3.8
+$ sudo apt-get install libstdc++6
+$ sudo apt-get install libboost-all-dev
+$ sudo apt-get install cmake
+$ sudo apt-get install git-all
+$ sudo apt-get install python3
+```
+
+Only htslib 1.2.1 is currently available via `apt-get` so this will need to be installed manually:
+
+```shell
+$ sudo apt-get install autoconf
+$ git clone https://github.com/samtools/htslib.git
+$ autoheader
+$ autoconf
+$ ./configure
+$ make && sudo make install
+```
 
 ##Installation
 
@@ -52,13 +77,25 @@ Manually installing octopus requires obtaining a copy the binaries. In the comma
 $ git clone https://github.com/dancooke/octopus.git
 ```
 
-then use the Python3 install helper:
+then *if your default compiler is Clang 3.8 or GCC 6.2* use the Python3 install helper:
 
 ```shell
 $ ./octopus/install.py
 ```
 
-by default this installs to `/bin` relative to where you installed octopus. To intall to a root directory (e.g. `/usr/local/bin`) use:
+otherwise explicitly specify the compiler to use:
+
+```shell
+$ ./octopus/install.py --compiler /path/to/cpp/compiler # or just the compiler name if on your PATH
+```
+
+For example, if the requirement instructions above were used:
+
+```shell
+$ ./octopus/install.py --compiler clang++-3.8
+```
+
+By default this installs to `/bin` relative to where you installed octopus. To install to a root directory (e.g. `/usr/local/bin`) use:
 
 ```shell
 $ ./octopus/install.py --root
@@ -66,11 +103,7 @@ $ ./octopus/install.py --root
 
 this may prompt you to enter a `sudo` password.
 
-To build octopus using a specific compiler:
-
-```shell
-$ ./octopus/install.py --compiler /path/to/cpp/compiler
-```
+If anything goes wrong with the build process and you need to start again, be sure to add the command `--clean`!
 
 ####*Installing with CMake*
 
