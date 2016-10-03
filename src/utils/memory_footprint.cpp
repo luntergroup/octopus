@@ -75,9 +75,17 @@ constexpr std::size_t ipow(std::size_t base, unsigned exp) noexcept
     return result;
 }
 
+struct MemoryUnitHash
+{
+    std::size_t operator()(const MemoryUnit& mu) const noexcept
+    {
+        return static_cast<std::size_t>(mu);
+    }
+};
+
 std::size_t get_multiplier(const MemoryUnit units)
 {
-    static const std::unordered_map<MemoryUnit, std::size_t> multiplier {
+    static const std::unordered_map<MemoryUnit, std::size_t, MemoryUnitHash> multiplier {
         {MemoryUnit::kB, ipow(1000, 1)},
         {MemoryUnit::MB, ipow(1000, 2)},
         {MemoryUnit::GB, ipow(1000, 3)},
