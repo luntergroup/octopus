@@ -42,7 +42,7 @@ Note if you already have any of these packages installed via Homebrew on your sy
 
 ####*Obtaining requirements on Ubuntu Xenial*
 
-On Ubuntu, Clang 3.8 is recommended as GCC 6.2 has a [bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77550) which slows down octopus. However, due to a Debian [bug](https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=808086) listdc++ is also required:
+On Ubuntu, Clang 3.8 is recommended as GCC 6.2 has a [bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77550) which slows down octopus. To install the requirements use:
 
 ```shell
 $ sudo apt-get update && sudo apt-get upgrade
