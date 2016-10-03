@@ -174,9 +174,13 @@ auto get_contigs(const InputRegionMap& regions, const ReferenceGenome& reference
                  const options::ContigOutputOrder order)
 {
     auto result = extract_keys(regions);
-    
-    std::sort(std::begin(result), std::end(result), get_sorter(order, reference));
-    
+    const auto cmp = get_sorter(order, reference);
+    // Pass a lambda here rather than cmp to avoid compiler bug
+    // https://llvm.org/bugs/show_bug.cgi?id=24115
+    std::sort(std::begin(result), std::end(result),
+              [&cmp] (const auto& lhs, const auto& rhs) {
+                  return cmp(lhs, rhs);
+              });
     return result;
 }
 
