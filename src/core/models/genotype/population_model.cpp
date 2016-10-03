@@ -547,18 +547,20 @@ PopulationModel::infer_latents(const std::vector<SampleName>& samples, const Gen
 //                                              genotype_log_likilhoods);
 //    }
     
-    const ModelConstants constants {haplotypes, genotypes, genotype_log_likilhoods};
+//    const ModelConstants constants {haplotypes, genotypes, genotype_log_likilhoods};
+//
+//    auto haplotype_frequencies = init_haplotype_frequencies(constants);
+//
+//    auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
+//    auto genotype_posteriors    = init_genotype_posteriors(genotype_log_marginals,
+//                                                           genotype_log_likilhoods);
+//
+//    run_em(genotype_posteriors, haplotype_frequencies, genotype_log_marginals,
+//           constants, 100, 0.001);
+//
+//    return make_latents(haplotypes, genotypes, std::move(genotype_posteriors), constants);
     
-    auto haplotype_frequencies = init_haplotype_frequencies(constants);
-    
-    auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
-    auto genotype_posteriors    = init_genotype_posteriors(genotype_log_marginals,
-                                                           genotype_log_likilhoods);
-    
-    run_em(genotype_posteriors, haplotype_frequencies, genotype_log_marginals,
-           constants, 100, 0.001);
-    
-    return make_latents(haplotypes, genotypes, std::move(genotype_posteriors), constants);
+    return InferredLatents {};
 }
 
 namespace debug {

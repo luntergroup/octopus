@@ -55,7 +55,7 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
 : genotype_posteriors_ {}
 , haplotype_posteriors_ {}
 , dummy_latents_ {}
-, model_log_evidence_ {inferences.log_evidence}
+//, model_log_evidence_ {inferences.log_evidence}
 {
 //    GenotypeProbabilityMap genotype_posteriors {
 //        std::make_move_iterator(std::begin(genotypes)),
@@ -76,7 +76,7 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
 : genotype_posteriors_ {}
 , haplotype_posteriors_ {}
 , dummy_latents_ {std::move(dummy_inferences)}
-, model_log_evidence_ {inferences.log_evidence}
+//, model_log_evidence_ {inferences.log_evidence}
 {
 //    GenotypeProbabilityMap genotype_posteriors {
 //        std::make_move_iterator(std::begin(genotypes)),

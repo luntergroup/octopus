@@ -63,10 +63,10 @@ protected:
     std::vector<MeasureWrapper> measures_;
     
 private:
-    const ReferenceGenome& reference_;
-    const ReadPipe& read_pipe_;
-    
-    std::size_t read_buffer_size_;
+//    const ReferenceGenome& reference_;
+//    const ReadPipe& read_pipe_;
+//
+//    std::size_t read_buffer_size_;
     
     std::deque<std::pair<std::reference_wrapper<const VcfReader>, double>> training_sets_;
     

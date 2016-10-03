@@ -33,9 +33,9 @@ VariantCallFilter::VariantCallFilter(const ReferenceGenome& reference,
                                      std::vector<MeasureWrapper> measures,
                                      std::size_t max_read_buffer_size)
 : measures_ {std::move(measures)}
-, reference_ {reference}
-, read_pipe_ {read_pipe}
-, read_buffer_size_ {max_read_buffer_size}
+//, reference_ {reference}
+//, read_pipe_ {read_pipe}
+//, read_buffer_size_ {max_read_buffer_size}
 {}
 
 namespace  {

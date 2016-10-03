@@ -78,7 +78,7 @@ private:
         
         boost::optional<ModelInferences> dummy_latents_;
         
-        double model_log_evidence_;
+        //double model_log_evidence_;
         
         HaplotypeProbabilityMap
         calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
