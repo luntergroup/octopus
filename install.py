@@ -41,6 +41,7 @@ if args["clean"]:
     print("Cleaning build directory")
     move(octopus_build_dir + "/cmake", octopus_dir + "/cmake")
     rmtree(octopus_build_dir)
+    os.makedirs(octopus_build_dir)
     move(octopus_dir + "/cmake", octopus_build_dir + "/cmake")
 
 cmake_cache_file = "CMakeCache.txt"
