@@ -6,7 +6,7 @@
 
 ---
 
-**Warning: this project is incomplete - do not use it for production work.**
+**Warning: this project is incomplete - it may be unstable and contain bugs.**
 
 ---
 
@@ -74,7 +74,7 @@ Octopus can be built and installed on a wide range of operating systems includin
 Manually installing octopus requires obtaining a copy the binaries. In the command line, direct to an appropriate install directory and execute:
 
 ```shell
-$ git clone https://github.com/dancooke/octopus.git
+$ git clone https://github.com/luntergroup/octopus.git
 ```
 
 then *if your default compiler is Clang 3.8 or GCC 6.2* use the Python3 install helper:
@@ -110,7 +110,7 @@ If anything goes wrong with the build process and you need to start again, be su
 If Python3 isn't available, the binaries can be installed manually with [CMake](https://cmake.org):
 
 ```shell
-$ git clone https://github.com/dancooke/octopus.git
+$ git clone https://github.com/luntergroup/octopus.git
 $ cd octopus/build
 $ cmake ..
 $ make install
@@ -125,7 +125,7 @@ $ cmake -DINSTALL_ROOT=ON ..
 CMake will try to find a suitable compiler on your system, if you'd like you use a specific compiler use the `-D` option, for example:
 
 ```shell
-$ cmake -D CMAKE_C_COMPILER=gcc-6.2 -D CMAKE_CXX_COMPILER=g++-6.2 ..
+$ cmake -D CMAKE_C_COMPILER=clang-3.8 -D CMAKE_CXX_COMPILER=clang++-3.8 ..
 ```
 
 You can check installation was successful by executing the command:
