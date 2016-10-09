@@ -42,8 +42,8 @@ private:
     Parameters params_;
     
     // p(somatic | germline)
-    double probability_of_somatic(const Haplotype& somatic, const Genotype<Haplotype>& germline) const;
-    double probability_of_somatic(const Haplotype& somatic, const Haplotype& germline) const;
+    double ln_probability_of_somatic(const Haplotype& somatic, const Genotype<Haplotype>& germline) const;
+    double ln_probability_of_somatic(const Haplotype& somatic, const Haplotype& germline) const;
 };
 
 template <typename Container>
@@ -52,16 +52,12 @@ std::vector<double> calculate_log_priors(const Container& genotypes,
 {
     static_assert(std::is_same<typename Container::value_type, CancerGenotype<Haplotype>>::value,
                   "genotypes must contain CancerGenotype<Haplotype>'s");
-    
     std::vector<double> result(genotypes.size());
-    
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&model](const auto& genotype) {
                        return model.evaluate(genotype);
                    });
-    
     maths::normalise_logs(result);
-    
     return result;
 }
 
