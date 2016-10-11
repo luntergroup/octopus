@@ -44,7 +44,8 @@ set(BASICS_SOURCES
     basics/aligned_read.hpp
     basics/aligned_read.cpp
     basics/mappable_reference_wrapper.hpp
-)
+    basics/ploidy_map.hpp
+    basics/ploidy_map.cpp)
 
 set(CONTAINERS_SOURCES
     containers/mappable_flat_multi_set.hpp
