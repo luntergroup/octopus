@@ -10,10 +10,8 @@
 
 namespace octopus {
 
-CallerFactory::CallerFactory(CallerBuilder template_builder, const unsigned default_ploidy)
+CallerFactory::CallerFactory(CallerBuilder template_builder)
 : template_builder_ {std::move(template_builder)}
-, contig_ploidies_ {}
-, default_ploidy_ {default_ploidy}
 {}
 
 CallerFactory& CallerFactory::set_reference(const ReferenceGenome& reference) noexcept
@@ -28,20 +26,9 @@ CallerFactory& CallerFactory::set_read_pipe(ReadPipe& read_pipe) noexcept
     return *this;
 }
 
-CallerFactory& CallerFactory::set_contig_ploidy(const ContigName& contig, const unsigned ploidy)
-{
-    contig_ploidies_[contig] = ploidy;
-    return *this;
-}
-
 std::unique_ptr<Caller> CallerFactory::make(const ContigName& contig) const
 {
-    if (contig_ploidies_.count(contig) == 1) {
-        template_builder_.set_ploidy(contig_ploidies_.at(contig));
-    } else {
-        template_builder_.set_ploidy(default_ploidy_);
-    }
-    return template_builder_.build();
+    return template_builder_.build(contig);
 }
 
 } // namespace octopus
