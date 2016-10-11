@@ -12,6 +12,7 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
+#include "basics/ploidy_map.hpp"
 #include "readpipe/read_pipe.hpp"
 #include "core/tools/coretools.hpp"
 #include "core/types/trio.hpp"
@@ -41,7 +42,7 @@ public:
     CallerBuilder& set_reference(const ReferenceGenome& reference) noexcept;
     CallerBuilder& set_read_pipe(const ReadPipe& read_pipe) noexcept;
     CallerBuilder& set_variant_generator(const VariantGeneratorBuilder& vb) noexcept;
-    CallerBuilder& set_ploidy(unsigned ploidy) noexcept;
+    CallerBuilder& set_ploidies(PloidyMap ploidies) noexcept;
     CallerBuilder& set_caller(std::string caller);
     CallerBuilder& set_refcall_type(Caller::RefCallType type) noexcept;
     CallerBuilder& set_sites_only() noexcept;
@@ -69,7 +70,7 @@ public:
     // pedigree
     CallerBuilder& set_pedigree(Pedigree pedigree);
     
-    std::unique_ptr<Caller> build() const;
+    std::unique_ptr<Caller> build(const ContigName& contig) const;
     
 private:
     struct Components
@@ -84,7 +85,7 @@ private:
     struct Parameters
     {
         // common
-        unsigned ploidy;
+        PloidyMap ploidies;
         Caller::RefCallType refcall_type = Caller::RefCallType::none;
         bool call_sites_only = false;
         Phred<double> min_variant_posterior;
@@ -119,6 +120,9 @@ private:
     Components components_;
     Parameters params_;
     CallerFactoryMap factory_;
+    
+    mutable boost::optional<ContigName> requested_contig_;
+    
     Caller::Components make_components() const;
     CallerFactoryMap generate_factory() const;
 };

@@ -29,6 +29,7 @@
 #include "basics/phred.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/ploidy_map.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/tools/coretools.hpp"
 #include "core/callers/caller_builder.hpp"
@@ -849,88 +850,141 @@ auto make_variant_generator_builder(const OptionMap& options)
     return result;
 }
 
-void print_ambiguous_contig_ploidies(const std::vector<ContigPloidy>& contig_ploidies,
-                                     const OptionMap& options)
+struct ContigPloidyLess
 {
-    logging::WarningLogger log {};
-    log << "Ambiguous ploidies found";
-    
-    for (auto it = std::cbegin(contig_ploidies), end = std::cend(contig_ploidies); it != end;) {
-        it = std::adjacent_find(it, std::cend(contig_ploidies),
-                                [] (const auto& lhs, const auto& rhs) {
-                                    return lhs.contig == rhs.contig;
-                                });
-        if (it != std::cend(contig_ploidies)) {
-            const auto it2 = std::find_if(std::next(it), std::cend(contig_ploidies),
-                                          [=] (const auto& cp) {
-                                              return it->contig != cp.contig;
-                                          });
-            std::ostringstream ss {};
-            std::copy(it, it2, std::ostream_iterator<ContigPloidy>(ss, " "));
-            log << ss.str();
-            it = it2;
+    bool operator()(const ContigPloidy& lhs, const ContigPloidy& rhs) const noexcept
+    {
+        if (lhs.sample) {
+            if (rhs.sample && *lhs.sample != *rhs.sample) {
+                return *lhs.sample < *rhs.sample;
+            } else {
+                return true;
+            }
+        } else if (rhs.sample) {
+            return false;
         }
+        return lhs.contig == rhs.contig ? lhs.ploidy < rhs.ploidy : lhs.contig < rhs.contig;
     }
-}
+};
+
+struct ContigPloidyEqual
+{
+    bool operator()(const ContigPloidy& lhs, const ContigPloidy& rhs) const noexcept
+    {
+        return lhs.sample == rhs.sample && lhs.contig == rhs.contig && lhs.ploidy == rhs.ploidy;
+    }
+};
+
+struct ContigPloidyAmbiguous
+{
+    bool operator()(const ContigPloidy& lhs, const ContigPloidy& rhs) const noexcept
+    {
+        if (lhs.sample && rhs.sample) {
+            return *lhs.sample == *rhs.sample && lhs.contig == rhs.contig;
+        } else if (!(lhs.sample || rhs.sample)) {
+            return lhs.contig == rhs.contig;
+        }
+        return false;
+    }
+};
+
+class AmbiguousPloidy : public UserError
+{
+    std::string do_where() const override
+    {
+        return "make_caller_factory";
+    }
+    
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "The are contigs with ambiguous ploidy: ";
+        for (auto it = std::cbegin(ploidies_), end = std::cend(ploidies_); it != end;) {
+            it = std::adjacent_find(it, std::cend(ploidies_), ContigPloidyAmbiguous {});
+            if (it != std::cend(ploidies_)) {
+                const auto it2 = std::find_if(std::next(it), std::cend(ploidies_),
+                                              [=] (const auto& cp) {
+                                                  return ContigPloidyAmbiguous{}(*it, cp);
+                                              });
+                std::ostringstream ss {};
+                std::copy(it, it2, std::ostream_iterator<ContigPloidy> {ss, " "});
+                it = it2;
+            }
+        }
+        return ss.str();
+    }
+    
+    std::string do_help() const override
+    {
+        return "Ensure ploidies are specified only once per sample or per sample contig";
+    }
+    
+    std::vector<ContigPloidy> ploidies_;
+
+public:
+    AmbiguousPloidy(std::vector<ContigPloidy> ploidies) : ploidies_ {ploidies} {}
+};
 
 void remove_duplicate_ploidies(std::vector<ContigPloidy>& contig_ploidies)
 {
     std::sort(std::begin(contig_ploidies), std::end(contig_ploidies),
-              [] (const auto& lhs, const auto& rhs) {
-                  return (lhs.contig == rhs.contig) ? lhs.ploidy < rhs.ploidy : lhs.contig < rhs.contig;
-              });
-    const auto it = std::unique(std::begin(contig_ploidies), std::end(contig_ploidies),
-                                [] (const auto& lhs, const auto& rhs) {
-                                    return lhs.contig == rhs.contig && lhs.ploidy == rhs.ploidy;
-                                });
-    contig_ploidies.erase(it, std::end(contig_ploidies));
+              ContigPloidyLess {});
+    const auto itr = std::unique(std::begin(contig_ploidies), std::end(contig_ploidies),
+                                 ContigPloidyEqual {});
+    contig_ploidies.erase(itr, std::end(contig_ploidies));
 }
 
 bool has_ambiguous_ploidies(const std::vector<ContigPloidy>& contig_ploidies)
 {
     const auto it2 = std::adjacent_find(std::cbegin(contig_ploidies), std::cend(contig_ploidies),
-                                        [] (const auto& lhs, const auto& rhs) {
-                                            return lhs.contig == rhs.contig;
-                                        });
+                                        ContigPloidyAmbiguous {});
     return it2 != std::cend(contig_ploidies);
 }
 
-boost::optional<std::vector<ContigPloidy>> extract_contig_ploidies(const OptionMap& options)
+class MissingPloidyFile : public MissingFileError
 {
-    std::vector<ContigPloidy> result {};
-    
+    std::string do_where() const override
+    {
+        return "get_ploidy_map";
+    }
+public:
+    MissingPloidyFile(fs::path p) : MissingFileError {std::move(p), "read path"} {};
+};
+
+
+PloidyMap get_ploidy_map(const OptionMap& options)
+{
+    std::vector<ContigPloidy> flat_plodies {};
     if (options.count("contig-ploidies-file") == 1) {
         const fs::path input_path {options.at("contig-ploidies-file").as<std::string>()};
         const auto resolved_path = resolve_path(input_path, options);
-        
-        logging::ErrorLogger log {};
-        
         if (!fs::exists(resolved_path)) {
-            stream(log) << "The path " << input_path
-            << " given in the input option (--contig-ploidies-file) does not exist";
-            return boost::none;
+            throw MissingPloidyFile {input_path};
         }
-        
         std::ifstream file {resolved_path.string()};
         std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
-                       std::back_inserter(result), [] (const Line& line) {
-                           std::istringstream ss {line.line_data};
-                           ContigPloidy result {};
-                           ss >> result;
-                           return result;
-                       });
+                       std::back_inserter(flat_plodies), [] (const Line& line) {
+            std::istringstream ss {line.line_data};
+            ContigPloidy result {};
+            ss >> result;
+            return result;
+        });
     }
-    
     if (options.count("contig-ploidies") == 1) {
-        utils::append(options.at("contig-ploidies").as<std::vector<ContigPloidy>>(), result);
+        utils::append(options.at("contig-ploidies").as<std::vector<ContigPloidy>>(), flat_plodies);
     }
-    
-    remove_duplicate_ploidies(result);
-    if (has_ambiguous_ploidies(result)) {
-        print_ambiguous_contig_ploidies(result, options);
-        return boost::none;
+    remove_duplicate_ploidies(flat_plodies);
+    if (has_ambiguous_ploidies(flat_plodies)) {
+        throw AmbiguousPloidy {flat_plodies};
     }
-    
+    PloidyMap result {as_unsigned("organism-ploidy", options)};
+    for (const auto& p : flat_plodies) {
+        if (p.sample) {
+            result.set(*p.sample, p.contig, p.ploidy);
+        } else {
+            result.set(p.contig, p.ploidy);
+        }
+    }
     return result;
 }
 
@@ -1182,7 +1236,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     } else {
         vc_builder.set_min_variant_posterior(min_variant_posterior);
     }
-    
+    vc_builder.set_ploidies(get_ploidy_map(options));
     vc_builder.set_max_haplotypes(get_max_haplotypes(options));
     vc_builder.set_haplotype_extension_threshold(options.at("haplotype-extension-threshold").as<Phred<double>>());
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
@@ -1208,26 +1262,12 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
 //    vc_builder.set_model_filtering(!(options.at("disable-call-filtering").as<bool>()
 //                                     || options.at("disable-model-filtering").as<bool>()));
     
-    const auto contig_ploidies = extract_contig_ploidies(options);
-    if (!contig_ploidies) {
-        // TODO
-    }
     if (call_sites_only(options)) {
         vc_builder.set_sites_only();
     }
-    
     vc_builder.set_flank_scoring(allow_flank_scoring(options));
     
-    CallerFactory result {std::move(vc_builder), as_unsigned("organism-ploidy", options)};
-    for (const auto& p : regions) {
-        const auto it = std::find_if(std::cbegin(*contig_ploidies), std::cend(*contig_ploidies),
-                                     [&] (const auto& cp) { return cp.contig == p.first; });
-        if (it != std::cend(*contig_ploidies)) {
-            result.set_contig_ploidy(p.first, it->ploidy);
-        }
-    }
-    
-    return result;
+    return CallerFactory {std::move(vc_builder)};
 }
 
 boost::optional<fs::path> get_final_output_path(const OptionMap& options)

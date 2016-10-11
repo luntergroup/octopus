@@ -70,9 +70,9 @@ CallerBuilder& CallerBuilder::set_variant_generator(const VariantGeneratorBuilde
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_ploidy(unsigned ploidy) noexcept
+CallerBuilder& CallerBuilder::set_ploidies(PloidyMap ploidies) noexcept
 {
-    params_.ploidy = ploidy;
+    params_.ploidies = std::move(ploidies);
     return *this;
 }
 
@@ -191,11 +191,12 @@ CallerBuilder& CallerBuilder::set_denovo_mutation_rate(double rate) noexcept
     return *this;
 }
 
-std::unique_ptr<Caller> CallerBuilder::build() const
+std::unique_ptr<Caller> CallerBuilder::build(const ContigName& contig) const
 {
     if (factory_.count(caller_) == 0) {
         throw std::runtime_error {"CallerBuilder: unknown caller " + caller_};
     }
+    requested_contig_ = contig;
     return factory_.at(caller_)();
 }
 
@@ -223,38 +224,38 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
         params_.allow_flank_scoring,
         params_.allow_model_filtering
     };
-    
+    const auto& samples = components_.read_pipe.get().samples();
     return CallerFactoryMap {
-        {"individual", [this, general_parameters = std::move(general_parameters)] () {
+        {"individual", [this, general_parameters = std::move(general_parameters), &samples] () {
             return std::make_unique<IndividualCaller>(make_components(),
                                                       std::move(general_parameters),
                                                       IndividualCaller::Parameters {
-                                                          params_.ploidy,
+                                                          params_.ploidies(samples.front(), *requested_contig_),
                                                           {params_.snp_heterozygosity,
                                                            params_.indel_heterozygosity},
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior
                                                       });
         }},
-        {"population", [this, general_parameters = std::move(general_parameters)] () {
+        {"population", [this, general_parameters = std::move(general_parameters), &samples] () {
             return std::make_unique<PopulationCaller>(make_components(),
                                                       std::move(general_parameters),
                                                       PopulationCaller::Parameters {
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
-                                                          params_.ploidy,
+                                                          params_.ploidies(samples.front(), *requested_contig_),
                                                           {params_.snp_heterozygosity,
                                                            params_.indel_heterozygosity}
                                                       });
         }},
-        {"cancer", [this, general_parameters = std::move(general_parameters)] () {
+        {"cancer", [this, general_parameters = std::move(general_parameters), &samples] () {
             return std::make_unique<CancerCaller>(make_components(),
                                                   std::move(general_parameters),
                                                   CancerCaller::Parameters {
                                                       params_.min_variant_posterior,
                                                       params_.min_somatic_posterior,
                                                       params_.min_refcall_posterior,
-                                                      params_.ploidy,
+                                                      params_.ploidies(samples.front(), *requested_contig_),
                                                       params_.normal_sample,
                                                       {params_.snp_heterozygosity,
                                                       params_.indel_heterozygosity},
@@ -269,7 +270,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                 std::move(general_parameters),
                                                 TrioCaller::Parameters {
                                                     *params_.trio,
-                                                    params_.ploidy, params_.ploidy, params_.ploidy,
+                                                    params_.ploidies(params_.trio->mother(), *requested_contig_),
+                                                    params_.ploidies(params_.trio->father(), *requested_contig_),
+                                                    params_.ploidies(params_.trio->child(), *requested_contig_),
                                                     {params_.snp_heterozygosity,
                                                      params_.indel_heterozygosity},
                                                     {*params_.denovo_mutation_rate},
