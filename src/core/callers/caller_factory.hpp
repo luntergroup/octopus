@@ -23,7 +23,7 @@ public:
     
     CallerFactory() = delete;
     
-    CallerFactory(CallerBuilder template_builder, unsigned default_ploidy);
+    CallerFactory(CallerBuilder template_builder);
     
     CallerFactory(const CallerFactory&)            = default;
     CallerFactory& operator=(const CallerFactory&) = default;
@@ -34,14 +34,11 @@ public:
     
     CallerFactory& set_reference(const ReferenceGenome& reference) noexcept;
     CallerFactory& set_read_pipe(ReadPipe& read_pipe) noexcept;
-    CallerFactory& set_contig_ploidy(const ContigName& contig, unsigned ploidy);
     
     std::unique_ptr<Caller> make(const ContigName& contig) const;
     
 private:
     mutable CallerBuilder template_builder_;
-    std::unordered_map<ContigName, unsigned> contig_ploidies_;
-    unsigned default_ploidy_;
 };
 
 } // namespace octopus

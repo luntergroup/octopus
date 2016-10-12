@@ -1,69 +1,98 @@
 sudo: required
 dist: trusty
 
-language: cpp
+language: generic
 osx_image: xcode8
 
-before_install:
+install:
+  ############################################################################
+  # All the Linux dependencies are installed in ${TRAVIS_BUILD_DIR}/deps/
+  ############################################################################
+  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+  - mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
+
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export DEBIAN_FRONTEND=noninteractive; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -qy; fi
+
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+
+  ############################################################################
+  # Install CMake
+  ############################################################################
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      sudo add-apt-repository ppa:george-edison55/cmake-3.x -y;
-      sudo apt-get update -q;
-      sudo apt-get upgrade cmake -y;
-      sudo apt-get install python3 -y;
-      sudo apt-get upgrade libboost-all-dev -y;
+      CMAKE_URL="https://cmake.org/files/v3.6/cmake-3.6.2-Linux-x86_64.tar.gz";
+      mkdir -p cmake && travis_retry wget --no-check-certificate --quiet -O - "${CMAKE_URL}" | tar --strip-components=1 -xz -C cmake;
+      export PATH=${DEPS_DIR}/cmake/bin:${PATH};
+    else
+      brew outdated cmake || brew upgrade cmake;
+    fi
+
+  ############################################################################
+  # Install Boost
+  ############################################################################
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      BOOST_VERSION=trunk;
+      BOOST_DIR=${DEPS_DIR}/boost-${BOOST_VERSION};
+      BOOST_URL="http://github.com/boostorg/boost.git";
+      travis_retry git clone --depth 1 --recursive --quiet ${BOOST_URL} ${BOOST_DIR} || exit 1;
+      cd ${BOOST_DIR} && ./bootstrap.sh && ./b2 headers;
+      cd ${BOOST_DIR}/tools/build && ./bootstrap.sh && ./b2 install --prefix=${DEPS_DIR}/b2;
+      export PATH=${DEPS_DIR}/b2/bin:${PATH};
+    fi
+
+  ############################################################################
+  # Install Python3
+  ############################################################################
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo apt-get install python3 -qy;
+    else
+      brew install python3;
+    fi
+
+  ############################################################################
+  # Install htslib
+  ############################################################################
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       git clone https://github.com/samtools/htslib.git;
       cd htslib && autoheader && autoconf && ./configure && make && sudo make install;
-    fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      brew update;
-      brew outdated cmake || upgrade cmake;
-      brew install python3;
-      brew outdated boost || upgrade boost;
+    else
       brew tap homebrew/science;
       brew install htslib;
     fi
 
 matrix:
   include:
-  - os: linux
-    compiler: gcc
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-      packages:
-        - g++-6
-    env: COMPILER=g++-6
-  - os: linux
-    compiler: clang
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-          - llvm-toolchain-precise-3.8
-      packages:
-        - clang-3.8
-    env: COMPILER=clang++-3.8
+#  - os: linux
+#    compiler: gcc
+#    addons:
+#      apt:
+#        sources:
+#          - ubuntu-toolchain-r-test
+#      packages:
+#        - g++-6
+#    env: COMPILER=g++
+#  - os: linux
+#    compiler: clang
+#    addons:
+#      apt:
+#        sources:
+#          - ubuntu-toolchain-r-test
+#          - llvm-toolchain-precise-3.8
+#      packages:
+#        - clang-3.8
+#    env: COMPILER=clang++
   - os: osx
     compiler: clang
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-          - llvm-toolchain-precise-3.8
-        packages:
-          - clang-3.8
-    install: export PATH=/usr/local/clang/bin:$PATH
-    env: COMPILER=clang++-3.8
-  - os: osx
-    compiler: gcc
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - g++-6
-    env: COMPILER=g++-6
+    before_install:
+      - brew install --with-clang llvm
+      - brew outdated boost || brew upgrade boost
+    env: COMPILER=clang++
+
+before_script:
+  - cd "${TRAVIS_BUILD_DIR}"
 
 script:
   - ./install.py --compiler=$COMPILER
+
+notifications:
+  email: false
