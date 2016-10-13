@@ -15,6 +15,7 @@ namespace octopus { namespace config {
 struct VersionNumber
 {
     unsigned short major, minor;
+    boost::optional<unsigned short> patch;
     boost::optional<std::string> name;
 };
 
