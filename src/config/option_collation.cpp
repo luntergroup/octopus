@@ -227,10 +227,10 @@ ReferenceGenome make_reference(const OptionMap& options)
     const fs::path input_path {options.at("reference").as<std::string>()};
     auto resolved_path = resolve_path(input_path, options);
     const auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>().num_bytes();
+    const auto capitalise = !options.at("disable-reference-base-capitalisation").as<bool>();
     try {
-        return octopus::make_reference(std::move(resolved_path),
-                                       ref_cache_size,
-                                       is_threading_allowed(options));
+        return octopus::make_reference(std::move(resolved_path), ref_cache_size,
+                                       is_threading_allowed(options), capitalise);
     } catch (MissingFileError& e) {
         e.set_location_specified("the command line option --reference");
         throw;
@@ -544,23 +544,24 @@ ReadManager make_read_manager(const OptionMap& options)
 auto make_read_transformer(const OptionMap& options)
 {
     using namespace octopus::readpipe;
-    
     ReadTransformer result {};
     result.register_transform(CapBaseQualities {125});
     
     if (options.at("disable-read-transforms").as<bool>()) {
         return result;
     }
+    
+    if (!options.at("disable-read-base-capitalisation").as<bool>()) {
+        result.register_transform(CapitaliseBases {});
+    }
     if (options.count("mask-tails")) {
         const auto tail_mask_size = as_unsigned("mask-tails", options);
-        
         if (tail_mask_size > 0) {
             result.register_transform(MaskTail {tail_mask_size});
         }
     }
     if (!options.at("disable-soft-clip-masking").as<bool>()) {
         const auto soft_clipped_mask_size = as_unsigned("mask-soft-clipped-boundries", options);
-        
         if (soft_clipped_mask_size > 0) {
             result.register_transform(MaskSoftClippedBoundries {soft_clipped_mask_size});
         } else {
