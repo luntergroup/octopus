@@ -7,6 +7,8 @@
 
 #include <boost/functional/hash.hpp>
 
+#include "utils/sequence_utils.hpp"
+
 namespace octopus {
 
 // AlignedRead::Segment public
@@ -131,6 +133,11 @@ bool AlignedRead::is_marked_duplicate() const noexcept
 bool AlignedRead::is_marked_supplementary_alignment() const noexcept
 {
     return flags_[7];
+}
+
+void AlignedRead::capitalise_bases() noexcept
+{
+    utils::capitalise(sequence_);
 }
 
 void AlignedRead::cap_qualities(const BaseQuality max) noexcept

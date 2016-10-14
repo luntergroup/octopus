@@ -10,6 +10,11 @@
 namespace octopus { namespace readpipe
 {
 
+void CapitaliseBases::operator()(AlignedRead& read) const noexcept
+{
+    read.capitalise_bases();
+}
+
 CapBaseQualities::CapBaseQualities(BaseQuality max) : max_ {max} {}
 
 void CapBaseQualities::operator()(AlignedRead& read) const noexcept

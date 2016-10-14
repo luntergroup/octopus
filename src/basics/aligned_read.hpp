@@ -120,6 +120,7 @@ public:
     bool is_marked_duplicate() const noexcept;
     bool is_marked_supplementary_alignment() const noexcept;
     
+    void capitalise_bases() noexcept;
     void cap_qualities(BaseQuality max = 0) noexcept;
     void cap_front_qualities(std::size_t num_bases, BaseQuality max = 0) noexcept;
     void cap_back_qualities(std::size_t num_bases, BaseQuality max = 0) noexcept;
