@@ -10,6 +10,7 @@
 #include <boost/filesystem/operations.hpp>
 
 #include "basics/genomic_region.hpp"
+#include "utils/sequence_utils.hpp"
 #include "exceptions/missing_file_error.hpp"
 #include "exceptions/missing_index_error.hpp"
 #include "exceptions/malformed_file_error.hpp"
@@ -62,13 +63,14 @@ public:
     MalformedFastaIndex(Fasta::Path file) : MalformedFileError {std::move(file), "fasta"} {}
 };
 
-Fasta::Fasta(Path fasta_path)
-: Fasta {fasta_path, fasta_path.string() + ".fai"}
+Fasta::Fasta(Path fasta_path, BaseTransformPolicy base_transform)
+: Fasta {fasta_path, fasta_path.string() + ".fai", base_transform}
 {}
 
-Fasta::Fasta(Path fasta_path, Path fasta_index_path)
+Fasta::Fasta(Path fasta_path, Path fasta_index_path, BaseTransformPolicy base_transform)
 : path_ {std::move(fasta_path)}
 , index_path_ {std::move(fasta_index_path)}
+, base_transform_ {base_transform}
 {
     using boost::filesystem::exists;
     
@@ -149,8 +151,12 @@ Fasta::GenomicSize Fasta::do_fetch_contig_size(const ContigName& contig) const
 Fasta::GeneticSequence Fasta::do_fetch_sequence(const GenomicRegion& region) const
 {
     try {
-        return bioio::read_fasta_contig(fasta_, fasta_index_.at(contig_name(region)),
-                                        mapped_begin(region), size(region));
+        auto result = bioio::read_fasta_contig(fasta_, fasta_index_.at(contig_name(region)),
+                                               mapped_begin(region), size(region));
+        if (base_transform_ == BaseTransformPolicy::capitalise) {
+            utils::capitalise(result);
+        }
+        return result;
     } catch (const std::ios::failure& e) {
         throw; // TODO: test to see if the file has disappeared, throw octopus error if so.
     } catch (const std::exception& e) {
@@ -163,22 +169,18 @@ Fasta::GeneticSequence Fasta::do_fetch_sequence(const GenomicRegion& region) con
 bool Fasta::is_valid_fasta() const noexcept
 {
     const auto extension = path_.extension().string();
-    
     if (extension != ".fa" && extension != ".fasta") {
         return false;
     }
-    
     return true; // TODO: could actually check valid fasta format
 }
 
 bool Fasta::is_valid_fasta_index() const noexcept
 {
     const auto extension = index_path_.extension().string();
-    
     if (extension != ".fai") {
         return false;
     }
-    
     return true; // TODO: could actually check valid fasta format
 }
 

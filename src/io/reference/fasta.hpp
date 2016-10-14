@@ -17,7 +17,7 @@
 #include "reference_reader.hpp"
 
 namespace octopus {
-    
+
 class GenomicRegion;
 
 namespace io {
@@ -31,10 +31,12 @@ public:
     using GenomicSize     = ReferenceReader::GenomicSize;
     using GeneticSequence = ReferenceReader::GeneticSequence;
     
+    enum class BaseTransformPolicy { capitalise, original };
+    
     Fasta() = delete;
     
-    Fasta(Path fasta_path);
-    Fasta(Path fasta_path, Path fasta_index_path);
+    Fasta(Path fasta_path, BaseTransformPolicy base_transform = BaseTransformPolicy::capitalise);
+    Fasta(Path fasta_path, Path fasta_index_path, BaseTransformPolicy base_transform = BaseTransformPolicy::capitalise);
     
     Fasta(const Fasta&);
     Fasta& operator=(Fasta);
@@ -47,6 +49,8 @@ private:
     
     mutable std::ifstream fasta_;
     bioio::FastaIndex fasta_index_;
+    
+    BaseTransformPolicy base_transform_;
     
     std::unique_ptr<ReferenceReader> do_clone() const override;
     bool do_is_open() const noexcept override;
