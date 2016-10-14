@@ -9,6 +9,11 @@
 namespace octopus { namespace readpipe
 {
 
+struct CapitaliseBases
+{
+    void operator()(AlignedRead& read) const noexcept;
+};
+
 struct CapBaseQualities
 {
     using BaseQuality = AlignedRead::BaseQuality;
