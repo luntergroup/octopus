@@ -96,16 +96,22 @@ ReferenceGenome::GeneticSequence ReferenceGenome::fetch_sequence(const GenomicRe
 
 ReferenceGenome make_reference(boost::filesystem::path reference_path,
                                const std::size_t max_cached_bases,
-                               const bool is_threaded)
+                               const bool is_threaded,
+                               bool capitalise_bases)
 {
     using namespace io;
     
     std::unique_ptr<ReferenceReader> impl_ {};
     
+    Fasta::BaseTransformPolicy policy = Fasta::BaseTransformPolicy::original;
+    if (capitalise_bases) {
+        policy = Fasta::BaseTransformPolicy::capitalise;
+    }
+    
     if (is_threaded) {
-        impl_ = std::make_unique<ThreadsafeFasta>(std::make_unique<Fasta>(reference_path));
+        impl_ = std::make_unique<ThreadsafeFasta>(std::make_unique<Fasta>(reference_path, policy));
     } else {
-        impl_ = std::make_unique<Fasta>(std::move(reference_path));
+        impl_ = std::make_unique<Fasta>(std::move(reference_path), policy);
     }
     
     if (max_cached_bases > 0) {
@@ -122,11 +128,9 @@ std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& referen
 {
     std::vector<GenomicRegion> result {};
     result.reserve(reference.num_contigs());
-    
     for (const auto& contig : reference.contig_names()) {
         result.emplace_back(reference.contig_region(contig));
     }
-    
     std::sort(std::begin(result), std::end(result),
               [] (const auto& lhs, const auto& rhs) { return size(lhs) < size(rhs); });
     
