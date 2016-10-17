@@ -227,10 +227,10 @@ ReferenceGenome make_reference(const OptionMap& options)
     const fs::path input_path {options.at("reference").as<std::string>()};
     auto resolved_path = resolve_path(input_path, options);
     const auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>().num_bytes();
-    const auto capitalise = !options.at("disable-reference-base-capitalisation").as<bool>();
     try {
-        return octopus::make_reference(std::move(resolved_path), ref_cache_size,
-                                       is_threading_allowed(options), capitalise);
+        return octopus::make_reference(std::move(resolved_path),
+                                       ref_cache_size,
+                                       is_threading_allowed(options));
     } catch (MissingFileError& e) {
         e.set_location_specified("the command line option --reference");
         throw;
@@ -545,14 +545,11 @@ auto make_read_transformer(const OptionMap& options)
 {
     using namespace octopus::readpipe;
     ReadTransformer result {};
+    result.register_transform(CapitaliseBases {});
     result.register_transform(CapBaseQualities {125});
     
     if (options.at("disable-read-transforms").as<bool>()) {
         return result;
-    }
-    
-    if (!options.at("disable-read-base-capitalisation").as<bool>()) {
-        result.register_transform(CapitaliseBases {});
     }
     if (options.count("mask-tails")) {
         const auto tail_mask_size = as_unsigned("mask-tails", options);
@@ -820,6 +817,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         if (options.count("assembler-mask-base-quality") == 1) {
             reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
         }
+        reassembler_options.bin_size = as_unsigned("assembler-bin-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (options.count("generate-candidates-from-source") == 1) {

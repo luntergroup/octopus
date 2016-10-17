@@ -154,10 +154,6 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "VCF file specifying calls to regenotype, only sites in this files will appear in the"
      " final output")
-    
-    ("disable-reference-base-capitalisation",
-     po::bool_switch()->default_value(false),
-     "Disables capitalisation of all reference genome bases")
     ;
     
     po::options_description transforms("Read transformations");
@@ -165,10 +161,6 @@ OptionMap parse_options(const int argc, const char** argv)
     ("disable-read-transforms",
      po::bool_switch()->default_value(false),
      "Disables all read transformations")
-
-    ("disable-read-base-capitalisation",
-     po::bool_switch()->default_value(false),
-     "Disables capitalisation of all read bases")
     
     ("disable-soft-clip-masking",
      po::bool_switch()->default_value(false),
@@ -303,6 +295,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<int>>()->multitoken()
      ->default_value(std::vector<int> {10, 25}, "10 25")->composing(),
      "K-mer sizes to use for local re-assembly")
+
+    ("assembler-bin-size",
+     po::value<int>()->default_value(1000),
+     "How many reference positions to assemble")
     
     ("assembler-mask-base-quality",
      po::value<int>()->implicit_value(10),

@@ -188,7 +188,7 @@ bool Assembler::prune(const unsigned min_weight)
         }
         old_size = new_size;
     }
-    
+    assert(is_reference_unique_path());
     remove_low_weight_edges(min_weight);
     remove_disconnected_vertices();
     new_size = boost::num_vertices(graph_);
@@ -199,7 +199,7 @@ bool Assembler::prune(const unsigned min_weight)
         }
         old_size = new_size;
     }
-    
+    assert(is_reference_unique_path());
     remove_vertices_that_cant_be_reached_from(reference_head());
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
@@ -207,7 +207,7 @@ bool Assembler::prune(const unsigned min_weight)
         if (new_size < 2) return true;
         old_size = new_size;
     }
-    
+    assert(is_reference_unique_path());
     remove_vertices_past(reference_tail());
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
@@ -215,7 +215,7 @@ bool Assembler::prune(const unsigned min_weight)
         if (new_size < 2) return true;
         old_size = new_size;
     }
-    
+    assert(is_reference_unique_path());
     remove_vertices_that_cant_reach(reference_tail());
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
@@ -223,7 +223,7 @@ bool Assembler::prune(const unsigned min_weight)
         if (new_size < 2) return true;
         old_size = new_size;
     }
-    
+    assert(is_reference_unique_path());
     try {
         if (can_prune_reference_flanks()) {
             prune_reference_flanks();
@@ -232,6 +232,7 @@ bool Assembler::prune(const unsigned min_weight)
         clear();
         return false;
     }
+    assert(is_reference_unique_path());
     if (is_reference_empty()) {
         clear();
         return true;
@@ -482,19 +483,26 @@ boost::optional<Assembler::Vertex> Assembler::add_vertex(const Kmer& kmer, const
     return u;
 }
 
-void Assembler::remove_vertex(const Vertex v)
+bool Assembler::remove_vertex(const Vertex v)
 {
     const auto c = vertex_cache_.erase(kmer_of(v));
-    assert(c == 1);
-    boost::remove_vertex(v, graph_);
+    if (c == 1) {
+        boost::remove_vertex(v, graph_);
+        return true;
+    } else {
+        return false;
+    }
 }
 
-void Assembler::clear_and_remove_vertex(const Vertex v)
+bool Assembler::clear_and_remove_vertex(const Vertex v)
 {
     const auto c = vertex_cache_.erase(kmer_of(v));
-    assert(c == 1);
-    boost::clear_vertex(v, graph_);
-    boost::remove_vertex(v, graph_);
+    if (c == 1) {
+        boost::clear_vertex(v, graph_);
+        boost::remove_vertex(v, graph_);
+        return true;
+    }
+    return false;
 }
 
 void Assembler::clear_and_remove_all(const std::unordered_set<Vertex>& vertices)
@@ -621,7 +629,7 @@ Assembler::Vertex Assembler::prev_reference(const Vertex v) const
     assert(itr != p.second);
     return boost::source(*itr, graph_);
 }
-
+ 
 std::size_t Assembler::num_reference_kmers() const
 {
     const auto p = boost::vertices(graph_);
@@ -825,12 +833,10 @@ void Assembler::remove_vertices_that_cant_reach(const Vertex v)
     const auto transpose = boost::make_reverse_graph(graph_);
     const auto index_map = boost::get(&GraphNode::index, transpose);
     std::unordered_set<Vertex> reachables {};
-    
     auto vis = boost::make_bfs_visitor(boost::write_property(boost::typed_identity_property_map<Vertex>(),
                                                              std::inserter(reachables, std::begin(reachables)),
                                                              boost::on_discover_vertex()));
     boost::breadth_first_search(transpose, v, boost::visitor(vis).vertex_index_map(index_map));
-    
     VertexIterator vi, vi_end, vi_next;
     std::tie(vi, vi_end) = boost::vertices(graph_);
     for (vi_next = vi; vi != vi_end; vi = vi_next) {
@@ -845,9 +851,42 @@ void Assembler::remove_vertices_past(const Vertex v)
 {
     auto reachables = find_reachable_kmers(v);
     reachables.erase(v);
-    for (const Vertex u : reachables) {
-        clear_and_remove_vertex(u);
+    boost::clear_out_edges(v, graph_);
+    std::deque<Vertex> cycle_tails {};
+    // Must check for cycles that lead back to v
+    for (auto u : reachables) {
+        Edge e; bool present;
+        std::tie(e, present) = boost::edge(u, v, graph_);
+        if (present) cycle_tails.push_back(u);
     }
+    if (!cycle_tails.empty()) {
+        // We can check reachable back edges as the links from v were cut previously
+        const auto transpose = boost::make_reverse_graph(graph_);
+        const auto index_map = boost::get(&GraphNode::index, transpose);
+        std::unordered_set<Vertex> back_reachables {};
+        auto vis = boost::make_bfs_visitor(boost::write_property(boost::typed_identity_property_map<Vertex>(),
+                                                                 std::inserter(back_reachables, std::begin(back_reachables)),
+                                                                 boost::on_discover_vertex()));
+        for (auto u : cycle_tails) {
+            boost::breadth_first_search(transpose, u, boost::visitor(vis).vertex_index_map(index_map));
+            reachables.erase(u);
+        }
+        // The intersection of reachables & back_reachables are vertices part
+        // of a cycle past v. The remaining vertices in reachables are safe to
+        // remove.
+        cycle_tails.clear();
+        for (auto u : back_reachables) {
+            const auto iter = reachables.find(u);
+            if (iter != std::cend(reachables)) {
+                cycle_tails.push_back(u);
+                reachables.erase(iter);
+            }
+        }
+        if (!cycle_tails.empty()) {
+            remove_vertices_that_cant_be_reached_from(reference_head());
+        }
+    }
+    clear_and_remove_all(reachables);
 }
 
 bool Assembler::can_prune_reference_flanks() const
