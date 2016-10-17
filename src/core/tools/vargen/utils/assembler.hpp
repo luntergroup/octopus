@@ -189,8 +189,8 @@ private:
     
     Vertex null_vertex() const;
     boost::optional<Vertex> add_vertex(const Kmer& kmer, bool is_reference = false);
-    void remove_vertex(Vertex v);
-    void clear_and_remove_vertex(Vertex v);
+    bool remove_vertex(Vertex v);
+    bool clear_and_remove_vertex(Vertex v);
     void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
     void add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, bool is_reference = false);
     void add_reference_edge(Vertex u, Vertex v);
