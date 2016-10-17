@@ -189,8 +189,8 @@ private:
     
     Vertex null_vertex() const;
     boost::optional<Vertex> add_vertex(const Kmer& kmer, bool is_reference = false);
-    bool remove_vertex(Vertex v);
-    bool clear_and_remove_vertex(Vertex v);
+    void remove_vertex(Vertex v);
+    void clear_and_remove_vertex(Vertex v);
     void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
     void add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, bool is_reference = false);
     void add_reference_edge(Vertex u, Vertex v);
@@ -235,7 +235,7 @@ private:
     void remove_low_weight_edges(unsigned min_weight);
     void remove_disconnected_vertices();
     std::unordered_set<Vertex> find_reachable_kmers(Vertex from) const;
-    void remove_vertices_that_cant_be_reached_from(Vertex v);
+    std::deque<Vertex> remove_vertices_that_cant_be_reached_from(Vertex v);
     void remove_vertices_that_cant_reach(Vertex v);
     void remove_vertices_past(Vertex v);
     bool can_prune_reference_flanks() const;
