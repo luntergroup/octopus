@@ -820,6 +820,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         if (options.count("assembler-mask-base-quality") == 1) {
             reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
         }
+        reassembler_options.bin_size = as_unsigned("assembler-bin-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (options.count("generate-candidates-from-source") == 1) {

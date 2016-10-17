@@ -303,6 +303,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<int>>()->multitoken()
      ->default_value(std::vector<int> {10, 25}, "10 25")->composing(),
      "K-mer sizes to use for local re-assembly")
+
+    ("assembler-bin-size",
+     po::value<int>()->default_value(1000),
+     "How many reference positions to assemble")
     
     ("assembler-mask-base-quality",
      po::value<int>()->implicit_value(10),
