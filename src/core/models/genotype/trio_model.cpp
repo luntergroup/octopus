@@ -407,7 +407,7 @@ void print(std::vector<ParentsProbabilityPair> ps, std::size_t n)
 template <typename S>
 void print(S&& stream, std::vector<JointProbability> ps, const std::size_t n)
 {
-    stream << "trio top:" << '\n';
+    stream << "trio top (maternal | paternal | child):" << '\n';
     const auto nth = std::next(std::begin(ps), std::min(ps.size(), n));
     std::partial_sort(std::begin(ps), nth, std::end(ps),
                       [] (const auto& lhs, const auto& rhs) {
