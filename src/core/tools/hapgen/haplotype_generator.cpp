@@ -177,7 +177,7 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
     const auto haplotype_region = calculate_haplotype_region();
     assert(contains(haplotype_region, active_region_));
     auto haplotypes = tree_.extract_haplotypes(haplotype_region);
-    if (!is_lagging_enabled()) tree_.clear();
+    if (!(is_lagging_enabled() || in_holdout_mode())) tree_.clear();
     return std::make_pair(std::move(haplotypes), active_region_);
 }
 
