@@ -154,10 +154,18 @@ namespace detail {
 }
 
 template <typename SequenceType>
-static void capitalise(SequenceType& sequence)
+void capitalise(SequenceType& sequence)
 {
     std::transform(std::begin(sequence), std::end(sequence), std::begin(sequence),
                    detail::CapitaliseBase {});
+}
+
+template <typename SequenceType>
+SequenceType capitalise_copy(const SequenceType& sequence)
+{
+    auto result = sequence;
+    capitalise(result);
+    return result;
 }
 
 namespace detail {
