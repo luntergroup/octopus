@@ -139,7 +139,9 @@ auto compute_first_removable(const std::vector<T>& zipped, const double max_remo
                      std::rbegin(likelihoods));
     const auto iter = std::upper_bound(std::crbegin(likelihoods), std::crend(likelihoods),
                                        max_removed_mass);
-    return std::next(std::cbegin(zipped), std::distance(iter, std::crend(likelihoods)));
+    const auto num_to_keep = std::distance(iter, std::crend(likelihoods));
+    assert(num_to_keep <= zipped.size());
+    return std::next(std::cbegin(zipped), num_to_keep);
 }
 
 template <typename T>
@@ -159,6 +161,7 @@ bool reduce(std::vector<T>& zipped, const std::size_t min_to_keep,
             num_to_keep = max_to_keep;
             hit_max_bound = true;
         }
+        assert(num_to_keep <= zipped.size());
         zipped.erase(std::next(std::cbegin(zipped), num_to_keep), std::cend(zipped));
     } else {
         const auto first_removed = std::next(std::begin(zipped), std::min(zipped.size(), min_to_keep));
@@ -192,7 +195,7 @@ double probability_of_parents(const Genotype<Haplotype>& mother,
     thread_local std::vector<std::reference_wrapper<const Haplotype>> parental_haplotypes;
     parental_haplotypes.reserve(mother.ploidy() + father.ploidy());
     parental_haplotypes.assign(std::cbegin(mother), std::cend(mother));
-    parental_haplotypes.insert(std::cbegin(parental_haplotypes), std::cbegin(father), std::cend(father));
+    parental_haplotypes.insert(std::cend(parental_haplotypes), std::cbegin(father), std::cend(father));
     return model.evaluate(parental_haplotypes);
 }
 
@@ -404,7 +407,7 @@ void print(std::vector<ParentsProbabilityPair> ps, std::size_t n)
 template <typename S>
 void print(S&& stream, std::vector<JointProbability> ps, const std::size_t n)
 {
-    stream << "trio top:" << '\n';
+    stream << "trio top (maternal | paternal | child):" << '\n';
     const auto nth = std::next(std::begin(ps), std::min(ps.size(), n));
     std::partial_sort(std::begin(ps), nth, std::end(ps),
                       [] (const auto& lhs, const auto& rhs) {

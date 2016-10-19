@@ -142,6 +142,8 @@ namespace octopus
     
     bool VariantCall::parsimonise(const char dummy_base)
     {
+        // TODO: make a new class for mutations that revert to the reference
+        if (variant_.ref_allele() == variant_.alt_allele()) return false;
         if (is_parsimonious(variant_)) return false;
         
         auto parsimonised_variant = make_parsimonious(variant_, DummyGenerator {dummy_base});
@@ -176,6 +178,8 @@ namespace octopus
     
     bool VariantCall::parsimonise(const ReferenceGenome& reference)
     {
+        // TODO: make a new class for mutations that revert to the reference
+        if (variant_.ref_allele() == variant_.alt_allele()) return false;
         if (is_parsimonious(variant_)) return false;
         
         auto parsimonised_variant = make_parsimonious(variant_, reference);

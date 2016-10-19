@@ -554,7 +554,8 @@ auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& can
                                            }
                                            return curr;
                                        });
-        result.emplace_back(candidate, probability_to_phred(1.0 - somatic_model_posterior * p * somatic_posterior));
+        const auto complement = std::min(somatic_model_posterior * p * somatic_posterior, 1.0);
+        result.emplace_back(candidate, probability_to_phred(1.0 - complement));
     }
     
     return result;
@@ -819,7 +820,6 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     
     return result;
 }
-        
 CancerCaller::ModelPriors
 CancerCaller::get_model_priors() const
 {

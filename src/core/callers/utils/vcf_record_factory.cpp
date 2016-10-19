@@ -272,15 +272,16 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>
                 for (const auto& sample : samples_) {
                     auto& genotype_call = curr_call->get_genotype_call(sample);
                     auto& old_genotype = genotype_call.genotype;
-                    const auto& prev_call = *prev(it3);
+                    const auto& prev_call = *prev(rit3);
                     const auto& prev_genotype_call = prev_call->get_genotype_call(sample);
                     const auto& prev_genotype = prev_genotype_call.genotype;
                     const auto ploidy = old_genotype.ploidy();
                     Genotype<Allele> new_genotype {ploidy};
                     
                     for (unsigned i {0}; i < ploidy; ++i) {
-                        if (prev_genotype[i].sequence() == old_genotype[i].sequence()
-                            && sequence_size(old_genotype[i]) < region_size(old_genotype)) {
+                        if (prev_genotype[i].sequence() == "*" ||
+                            (prev_genotype[i].sequence() == old_genotype[i].sequence()
+                             && sequence_size(old_genotype[i]) < region_size(old_genotype))) {
                             Allele::NucleotideSequence new_sequence(1, '*');
                             Allele new_allele {mapped_region(curr_call), move(new_sequence)};
                             new_genotype.emplace(move(new_allele));

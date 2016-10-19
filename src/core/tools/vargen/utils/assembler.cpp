@@ -483,26 +483,19 @@ boost::optional<Assembler::Vertex> Assembler::add_vertex(const Kmer& kmer, const
     return u;
 }
 
-bool Assembler::remove_vertex(const Vertex v)
+void Assembler::remove_vertex(const Vertex v)
 {
     const auto c = vertex_cache_.erase(kmer_of(v));
-    if (c == 1) {
-        boost::remove_vertex(v, graph_);
-        return true;
-    } else {
-        return false;
-    }
+    assert(c == 1);
+    boost::remove_vertex(v, graph_);
 }
 
-bool Assembler::clear_and_remove_vertex(const Vertex v)
+void Assembler::clear_and_remove_vertex(const Vertex v)
 {
     const auto c = vertex_cache_.erase(kmer_of(v));
-    if (c == 1) {
-        boost::clear_vertex(v, graph_);
-        boost::remove_vertex(v, graph_);
-        return true;
-    }
-    return false;
+    assert(c == 1);
+    boost::clear_vertex(v, graph_);
+    boost::remove_vertex(v, graph_);
 }
 
 void Assembler::clear_and_remove_all(const std::unordered_set<Vertex>& vertices)
@@ -813,17 +806,20 @@ std::unordered_set<Assembler::Vertex> Assembler::find_reachable_kmers(const Vert
     return result;
 }
 
-void Assembler::remove_vertices_that_cant_be_reached_from(const Vertex v)
+std::deque<Assembler::Vertex> Assembler::remove_vertices_that_cant_be_reached_from(const Vertex v)
 {
     const auto reachables = find_reachable_kmers(v);
     VertexIterator vi, vi_end, vi_next;
     std::tie(vi, vi_end) = boost::vertices(graph_);
+    std::deque<Vertex> result {};
     for (vi_next = vi; vi != vi_end; vi = vi_next) {
         ++vi_next;
         if (reachables.count(*vi) == 0) {
+            result.push_back(*vi);
             clear_and_remove_vertex(*vi);
         }
     }
+    return result;
 }
 
 void Assembler::remove_vertices_that_cant_reach(const Vertex v)
@@ -874,16 +870,17 @@ void Assembler::remove_vertices_past(const Vertex v)
         // The intersection of reachables & back_reachables are vertices part
         // of a cycle past v. The remaining vertices in reachables are safe to
         // remove.
-        cycle_tails.clear();
+        bool has_intersects {false};
         for (auto u : back_reachables) {
             const auto iter = reachables.find(u);
             if (iter != std::cend(reachables)) {
-                cycle_tails.push_back(u);
                 reachables.erase(iter);
+                has_intersects = true;
             }
         }
-        if (!cycle_tails.empty()) {
-            remove_vertices_that_cant_be_reached_from(reference_head());
+        if (has_intersects) {
+            const auto removed = remove_vertices_that_cant_be_reached_from(reference_head());
+            for (auto u : removed) reachables.erase(u);
         }
     }
     clear_and_remove_all(reachables);
