@@ -300,6 +300,14 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(1000),
      "How many reference positions to assemble")
     
+    ("num-assembler-fallbacks",
+     po::value<int>()->default_value(6),
+     "How many fallback k-mer sizes to use if the default sizes fail")
+    
+    ("assembler-fallback-interval",
+     po::value<int>()->default_value(10),
+     "The interval size used to generate fallback kmer sizes")
+    
     ("assembler-mask-base-quality",
      po::value<int>()->implicit_value(10),
      "Matching alignment bases with quality less than this will be reference masked before."
@@ -788,7 +796,8 @@ void validate(const OptionMap& vm)
         "threads", "max-open-read-files", "mask-tails", "mask-soft-clipped-boundries",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "downsample-above", "downsample-target", "min-base-quality"
-        "min-supporting-reads", "max-variant-size", "assembler-mask-base-quality", "organism-ploidy",
+        "min-supporting-reads", "max-variant-size", "assembler-bin-size", "num-assembler-fallbacks",
+        "assembler-fallback-interval", "assembler-mask-base-quality", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow", "max-holdout-depth"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");

@@ -203,18 +203,20 @@ MemoryFootprint get_target_read_buffer_size(const OptionMap& options)
 
 boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options)
 {
-    if (options.at("debug").as<bool>()) {
-        return resolve_path("octopus_debug.log", options);
+    if (options.count("debug") == 1) {
+        return resolve_path(options.at("debug").as<fs::path>(), options);
+    } else {
+        return boost::none;
     }
-    return boost::none;
 }
 
 boost::optional<fs::path> get_trace_log_file_name(const OptionMap& options)
 {
-    if (options.at("trace").as<bool>()) {
-        return resolve_path("octopus_trace.log", options);
+    if (options.count("trace") == 1) {
+        return resolve_path(options.at("trace").as<fs::path>(), options);
+    } else {
+        return boost::none;
     }
-    return boost::none;
 }
 
 bool is_fast_mode(const OptionMap& options)
@@ -817,6 +819,8 @@ auto make_variant_generator_builder(const OptionMap& options)
         if (options.count("assembler-mask-base-quality") == 1) {
             reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
         }
+        reassembler_options.num_fallbacks = as_unsigned("num-assembler-fallbacks", options);
+        reassembler_options.fallback_interval_size = as_unsigned("assembler-fallback-interval", options);
         reassembler_options.bin_size = as_unsigned("assembler-bin-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
