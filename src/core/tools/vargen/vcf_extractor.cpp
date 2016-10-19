@@ -3,11 +3,14 @@
 
 #include "vcf_extractor.hpp"
 
-#include <cstddef>
+#include <deque>
 #include <algorithm>
+#include <iterator>
 #include <utility>
 
+#include "io/variant/vcf_spec.hpp"
 #include "io/variant/vcf_record.hpp"
+#include "utils/sequence_utils.hpp"
 
 namespace octopus { namespace coretools {
 
@@ -21,71 +24,55 @@ std::unique_ptr<VariantGenerator> VcfExtractor::do_clone() const
     return std::make_unique<VcfExtractor>(*this);
 }
 
-std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, const VcfReader& reader,
-                                             std::size_t max_batch_size)
+static bool is_canonical(const VcfRecord::NucleotideSequence& allele)
 {
-    std::vector<GenomicRegion> result {};
-    
-    if (reader.count_records(region) > max_batch_size) {
-        // umm?
-    } else {
-        result.push_back(region);
-    }
-    
+    return allele != vcfspec::missingValue
+           && std::none_of(std::cbegin(allele), std::cend(allele),
+                           [] (const auto base) { return base == vcfspec::deletedBase; });
+}
+
+template <typename Iterator>
+auto make_allele(const Iterator first_base, const Iterator last_base)
+{
+    Variant::NucleotideSequence result {first_base, last_base};
+    utils::capitalise(result);
     return result;
 }
 
-static bool is_missing(const VcfRecord::NucleotideSequence& allele)
+template <typename Container>
+void extract_variants(const VcfRecord& record, Container& result)
 {
-    return allele == "*";
+    for (const auto& alt_allele : record.alt()) {
+        if (is_canonical(alt_allele)) {
+            const auto& ref_allele = record.ref();
+            if (ref_allele.size() != alt_allele.size()) {
+                auto begin = record.pos();
+                const auto p = std::mismatch(std::cbegin(ref_allele), std::cend(ref_allele),
+                                             std::cbegin(alt_allele), std::cend(alt_allele));
+                begin += std::distance(std::cbegin(ref_allele), p.first);
+                result.emplace_back(record.chrom(), begin - 1,
+                                    make_allele(p.first, std::cend(ref_allele)),
+                                    make_allele(p.second, std::cend(alt_allele)));
+            } else {
+                using utils::capitalise_copy;
+                result.emplace_back(record.chrom(), record.pos() - 1,
+                                    capitalise_copy(record.ref()),
+                                    capitalise_copy(alt_allele));
+            }
+        }
+    }
 }
 
 std::vector<Variant> fetch_variants(const GenomicRegion& region, const VcfReader& reader)
 {
-    std::vector<Variant> result {};
-    result.reserve(reader.count_records(region));
-    
-    std::size_t max_batch_size {1000000000};
-    
-    // TODO: we really need iterators in VcfReader
-    
-    auto batches = get_batch_regions(region, reader, max_batch_size);
-    
-    for (const auto& batch : batches) {
-        auto records = reader.fetch_records(batch, VcfReader::UnpackPolicy::sites);
-        
-        for (const auto& record : records) {
-            for (const auto& alt_allele : record.alt()) {
-                if (!is_missing(alt_allele)) {
-                    const auto& ref_allele = record.ref();
-                    
-                    if (ref_allele.size() != alt_allele.size()) {
-                        auto begin = record.pos();
-                        
-                        const auto p = std::mismatch(std::cbegin(ref_allele), std::cend(ref_allele),
-                                                     std::cbegin(alt_allele), std::cend(alt_allele));
-                        
-                        Variant::NucleotideSequence new_ref_allele {p.first, std::cend(ref_allele)};
-                        Variant::NucleotideSequence new_alt_allele {p.second, std::cend(alt_allele)};
-                        
-                        begin += std::distance(std::cbegin(ref_allele), p.first);
-                        
-                        result.emplace_back(record.chrom(), begin - 1,
-                                            std::move(new_ref_allele), std::move(new_alt_allele));
-                    } else {
-                        result.emplace_back(record.chrom(), record.pos() - 1, record.ref(), alt_allele);
-                    }
-                }
-            }
-        }
-    }
-    
-    result.shrink_to_fit();
-    
+    std::deque<Variant> variants {}; // Use deque to prevent reallocating
+    auto p = reader.iterate(region, VcfReader::UnpackPolicy::sites);
+    std::for_each(std::move(p.first), std::move(p.second),
+                  [&variants] (const auto& record) { extract_variants(record, variants); });
+    std::vector<Variant> result {std::make_move_iterator(std::begin(variants)),
+                                 std::make_move_iterator(std::end(variants))};
     std::sort(std::begin(result), std::end(result));
-    
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    
     return result;
 }
 
