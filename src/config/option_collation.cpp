@@ -784,6 +784,16 @@ bool allow_assembler_generation(const OptionMap& options)
     return !(is_fast_mode(options) || options.at("disable-assembly-candidate-generator").as<bool>());
 }
 
+class MissingSourceVariantFile : public MissingFileError
+{
+    std::string do_where() const override
+    {
+        return "make_variant_generator_builder";
+    }
+public:
+    MissingSourceVariantFile(fs::path p) : MissingFileError {std::move(p), "source variant"} {};
+};
+
 auto make_variant_generator_builder(const OptionMap& options)
 {
     using namespace coretools;
@@ -828,8 +838,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         const auto input_path = options.at("generate-candidates-from-source").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
         if (!fs::exists(resolved_path)) {
-            stream(log) << "The path " << input_path
-                         << " given in the input option (--generate-candidates-from-source) does not exist";
+            throw MissingSourceVariantFile {input_path};
         }
         result.add_vcf_extractor(std::move(resolved_path));
     }
@@ -844,8 +853,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         auto resolved_path = resolve_path(regenotype_path, options);
         if (!fs::exists(resolved_path)) {
-            stream(log) << "The path " << regenotype_path
-                        << " given in the input option (--generate-candidates-from-source) does not exist";
+            throw MissingSourceVariantFile {resolved_path};
         }
         result.add_vcf_extractor(std::move(resolved_path));
     }
