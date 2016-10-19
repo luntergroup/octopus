@@ -951,9 +951,8 @@ class MissingPloidyFile : public MissingFileError
         return "get_ploidy_map";
     }
 public:
-    MissingPloidyFile(fs::path p) : MissingFileError {std::move(p), "read path"} {};
+    MissingPloidyFile(fs::path p) : MissingFileError {std::move(p), "ploidy"} {};
 };
-
 
 PloidyMap get_ploidy_map(const OptionMap& options)
 {
