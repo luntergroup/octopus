@@ -58,12 +58,12 @@ bool is_run_command(const OptionMap& options)
 
 bool is_debug_mode(const OptionMap& options)
 {
-    return options.at("debug").as<bool>();
+    return options.count("debug") == 1;
 }
 
 bool is_trace_mode(const OptionMap& options)
 {
-    return options.at("trace").as<bool>();
+    return options.count("trace") == 1;
 }
 
 namespace {

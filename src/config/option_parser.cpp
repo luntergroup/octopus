@@ -55,11 +55,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "A config file, used to populate command line options")
     
     ("debug",
-     po::bool_switch()->default_value(false),
+     po::value<fs::path>()->implicit_value("octopus_debug.log"),
      "Writes verbose debug information to debug.log in the working directory")
     
     ("trace",
-     po::bool_switch()->default_value(false),
+     po::value<fs::path>()->implicit_value("octopus_trace.log"),
      "Writes very verbose debug information to trace.log in the working directory")
 
     ("fast",
