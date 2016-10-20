@@ -714,6 +714,16 @@ void check_positive(const std::string& option, const OptionMap& vm)
     }
 }
 
+void check_strictly_positive(const std::string& option, const OptionMap& vm)
+{
+    if (vm.count(option) == 1) {
+        const auto value = vm.at(option).as<int>();
+        if (value < 1) {
+            throw InvalidCommandLineOptionValue {option, value, "must be greater than zero" };
+        }
+    }
+}
+
 void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2)
 {
     if (vm.count(opt1) == 1 && !vm[opt1].defaulted() && vm.count(opt2) == 1 && !vm[opt2].defaulted()) {
@@ -797,17 +807,23 @@ po::parsed_options run(po::command_line_parser& parser)
 void validate(const OptionMap& vm)
 {
     const std::vector<std::string> positive_int_options {
-        "threads", "max-open-read-files", "mask-tails", "mask-soft-clipped-boundries",
+        "threads", "mask-tails", "mask-soft-clipped-boundries",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
-        "max-read-length", "downsample-above", "downsample-target", "min-base-quality"
-        "min-supporting-reads", "max-variant-size", "assembler-bin-size", "num-assembler-fallbacks",
-        "assembler-fallback-interval", "assembler-mask-base-quality", "min-prune", "organism-ploidy",
-        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow", "max-holdout-depth"
+        "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
+        "num-assembler-fallbacks", "assembler-mask-base-quality", "min-prune", "max-holdout-depth"
+    };
+    const std::vector<std::string> strictly_positive_int_options {
+        "max-open-read-files", "downsample-above", "downsample-target", "assembler-bin-size",
+        "assembler-fallback-interval", "organism-ploidy",
+        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");
     for (const auto& option : positive_int_options) {
         check_positive(option, vm);
+    }
+    for (const auto& option : strictly_positive_int_options) {
+        check_strictly_positive(option, vm);
     }
     check_reads_present(vm);
     check_region_files_consistent(vm);
