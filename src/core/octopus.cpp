@@ -85,7 +85,7 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
         builder.add_contig(contig, {{"length", std::to_string(reference.contig_size(contig))}});
     }
     builder.add_basic_field("reference", reference.name());
-    builder.add_structured_field("octopus", {{"command", command}});
+    builder.add_structured_field("octopus", {{"command", '"' + command + '"'}});
     VcfHeaderFactory factory {};
     for (const auto& type : call_types) {
         factory.register_call_type(type);
