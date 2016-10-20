@@ -232,14 +232,13 @@ auto estimate_read_size(const std::vector<SampleName>& samples,
                         ReadManager& read_manager)
 {
     auto result = estimate_mean_read_size(samples, input_regions, read_manager);
-    
     if (!result) {
+        result = default_read_size_estimate();
         logging::WarningLogger log {};
         log << "Could not estimate read size from data, resorting to default";
-        
-        return default_read_size_estimate();
     }
-    
+    auto debug_log = logging::get_debug_log();
+    if (debug_log) stream(*debug_log) << "Estimated read size is " << *result << " bytes";
     return *result;
 }
 
@@ -249,9 +248,7 @@ std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes,
                                     ReadManager& read_manager)
 {
     if (samples.empty()) return 0;
-    
     static constexpr std::size_t minBufferBytes {1'000'000};
-    
     return std::max(max_buffer_bytes, minBufferBytes) / estimate_read_size(samples, input_regions, read_manager);
 }
 
