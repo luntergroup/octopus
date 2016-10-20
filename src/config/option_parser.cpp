@@ -255,11 +255,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "Diables all downsampling")
     
     ("downsample-above",
-     po::value<int>()->default_value(500),
+     po::value<int>()->default_value(1000),
      "Downsample reads in regions where coverage is over this")
     
     ("downsample-target",
-     po::value<int>()->default_value(400),
+     po::value<int>()->default_value(500),
      "The target coverage for the downsampler")
     ;
     
