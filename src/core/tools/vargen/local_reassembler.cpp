@@ -54,6 +54,12 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , min_supporting_reads_ {options.min_supporting_reads}
 , max_variant_size_ {options.max_variant_size}
 {
+    if (bin_size_ == 0) {
+        throw std::runtime_error {"bin size must be greater than zero"};
+    }
+    if (options.fallback_interval_size == 0) {
+        throw std::runtime_error {"fallback interval size must be greater than zero"};
+    }
     if (default_kmer_sizes_.empty()) return;
     remove_duplicates(default_kmer_sizes_);
     generate_fallback_kmer_sizes(fallback_kmer_sizes_, default_kmer_sizes_,
