@@ -312,6 +312,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->implicit_value(10),
      "Matching alignment bases with quality less than this will be reference masked before."
      " Ff no value is specified then min-base-quality is used")
+    
+    ("min-prune",
+     po::value<int>()->default_value(2),
+     "Minimum number of observations to keep a path in the assembly graph")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");
@@ -797,7 +801,7 @@ void validate(const OptionMap& vm)
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "downsample-above", "downsample-target", "min-base-quality"
         "min-supporting-reads", "max-variant-size", "assembler-bin-size", "num-assembler-fallbacks",
-        "assembler-fallback-interval", "assembler-mask-base-quality", "organism-ploidy",
+        "assembler-fallback-interval", "assembler-mask-base-quality", "min-prune", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow", "max-holdout-depth"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");

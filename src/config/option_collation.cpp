@@ -832,6 +832,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         reassembler_options.num_fallbacks = as_unsigned("num-assembler-fallbacks", options);
         reassembler_options.fallback_interval_size = as_unsigned("assembler-fallback-interval", options);
         reassembler_options.bin_size = as_unsigned("assembler-bin-size", options);
+        reassembler_options.min_supporting_reads = as_unsigned("min-prune", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (options.count("generate-candidates-from-source") == 1) {
