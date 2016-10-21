@@ -293,7 +293,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("kmer-size",
      po::value<std::vector<int>>()->multitoken()
-     ->default_value(std::vector<int> {10, 25}, "10 25")->composing(),
+     ->default_value(std::vector<int> {10, 15, 25}, "10 15 25")->composing(),
      "K-mer sizes to use for local re-assembly")
     
     ("num-fallback-kmers",
