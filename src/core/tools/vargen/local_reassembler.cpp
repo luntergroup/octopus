@@ -324,7 +324,7 @@ void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
         } else {
             bins_.emplace_back(expand_rhs(head_region(read_region), bin_size_));
         }
-    } else if (!contains(encompassing_region(bins_.front(), bins_.back()), read_region)) {
+    } else if (!contains(closed_region(bins_.front(), bins_.back()), read_region)) {
         while (begins_before(read_region, bins_.front())) {
             bins_.emplace_front(shift(mapped_region(bins_.front()), -bin_size_));
         }
@@ -332,7 +332,7 @@ void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
             bins_.emplace_back(shift(mapped_region(bins_.back()), bin_size_));
         }
     }
-    assert(contains(encompassing_region(bins_.front(), bins_.back()), read_region));
+    assert(contains(closed_region(bins_.front(), bins_.back()), read_region));
 }
 
 namespace {
@@ -628,7 +628,7 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
                                            std::deque<Variant>& result) const
 {
     if (!assembler.prune(min_supporting_reads_)) return false;
-    if (!assembler.is_acyclic()) return false;
+    if (assembler.is_empty() || assembler.is_all_reference() || !assembler.is_acyclic()) return false;
     auto variants = assembler.extract_variants();
     assembler.clear();
     if (variants.empty()) return true;
