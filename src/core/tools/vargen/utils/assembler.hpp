@@ -232,6 +232,9 @@ private:
     bool is_dependent_on_path(Edge e, const Path& path) const;
     
     void remove_trivial_nonreference_cycles();
+    GraphEdge::WeightType sum_source_in_edge_weight(Edge e) const;
+    GraphEdge::WeightType sum_target_out_edge_weight(Edge e) const;
+    bool is_low_weight(Edge e, unsigned min_weight) const;
     void remove_low_weight_edges(unsigned min_weight);
     void remove_disconnected_vertices();
     std::unordered_set<Vertex> find_reachable_kmers(Vertex from) const;
