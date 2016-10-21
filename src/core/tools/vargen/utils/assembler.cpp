@@ -774,10 +774,41 @@ void Assembler::remove_trivial_nonreference_cycles()
     }, graph_);
 }
 
+Assembler::GraphEdge::WeightType Assembler::sum_source_in_edge_weight(const Edge e) const
+{
+    const auto p = boost::in_edges(boost::source(e, graph_), graph_);
+    using Weight = GraphEdge::WeightType;
+    return std::accumulate(p.first, p.second, Weight {0},
+                           [this] (const Weight curr, const Edge& e) {
+                               return curr + graph_[e].weight;
+                           });
+}
+
+Assembler::GraphEdge::WeightType Assembler::sum_target_out_edge_weight(const Edge e) const
+{
+    const auto p = boost::out_edges(boost::target(e, graph_), graph_);
+    using Weight = GraphEdge::WeightType;
+    return std::accumulate(p.first, p.second, Weight {0},
+                           [this] (const Weight curr, const Edge& e) {
+                               return curr + graph_[e].weight;
+                           });
+}
+
+bool Assembler::is_low_weight(const Edge e, const unsigned min_weight) const
+{
+    if (is_reference(e)) return false;
+    const auto edge_weight = graph_[e].weight;
+    if (edge_weight >= min_weight) return false;
+    const auto source_weight = sum_source_in_edge_weight(e);
+    if (source_weight < min_weight) return true;
+    const auto target_weight = sum_target_out_edge_weight(e);
+    return (source_weight + edge_weight + target_weight) < 3 * min_weight;
+}
+
 void Assembler::remove_low_weight_edges(const unsigned min_weight)
 {
     boost::remove_edge_if([this, min_weight] (const Edge& e) {
-        return !is_reference(e) && graph_[e].weight < min_weight;
+        return is_low_weight(e, min_weight);
     }, graph_);
 }
 
