@@ -832,7 +832,9 @@ auto make_variant_generator_builder(const OptionMap& options)
         reassembler_options.num_fallbacks = as_unsigned("num-fallback-kmers", options);
         reassembler_options.fallback_interval_size = as_unsigned("fallback-kmer-interval", options);
         reassembler_options.bin_size = as_unsigned("assembly-region-size", options);
-        reassembler_options.min_supporting_reads = as_unsigned("min-assembler-prune", options);
+        reassembler_options.min_hard_prune_weight = as_unsigned("min-assembler-prune", options);
+        reassembler_options.min_mean_path_weight = options.at("min-mean-assembler-path-weight").as<double>();
+        reassembler_options.max_paths = as_unsigned("max-assembler-paths", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (options.count("generate-candidates-from-source") == 1) {

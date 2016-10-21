@@ -28,12 +28,14 @@ public:
     struct Options
     {
         std::vector<unsigned> kmer_sizes              = {10, 25, 35};
-        AlignedRead::BaseQuality mask_threshold       = 0;
-        unsigned min_supporting_reads                 = 2;
-        Variant::MappingDomain::Size max_variant_size = 5000;
         unsigned num_fallbacks                        = 6;
         unsigned fallback_interval_size               = 10;
         GenomicRegion::Size bin_size                  = 1000;
+        AlignedRead::BaseQuality mask_threshold       = 0;
+        unsigned min_hard_prune_weight                = 1;
+        double min_mean_path_weight                   = 2.0;
+        unsigned max_paths                            = 10;
+        Variant::MappingDomain::Size max_variant_size = 5000;
     };
     
     LocalReassembler() = delete;
@@ -93,7 +95,9 @@ private:
     std::deque<NucleotideSequence> masked_sequence_buffer_;
     
     AlignedRead::BaseQuality mask_threshold_;
-    unsigned min_supporting_reads_;
+    unsigned min_hard_prune_weight_;
+    double min_mean_path_weight_;
+    unsigned max_paths_;
     Variant::MappingDomain::Size max_variant_size_;
     
     void prepare_bins_to_insert(const AlignedRead& read);
