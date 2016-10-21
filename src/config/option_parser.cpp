@@ -295,25 +295,25 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<int>>()->multitoken()
      ->default_value(std::vector<int> {10, 25}, "10 25")->composing(),
      "K-mer sizes to use for local re-assembly")
-
-    ("assembler-bin-size",
-     po::value<int>()->default_value(1000),
-     "How many reference positions to assemble")
     
-    ("num-assembler-fallbacks",
-     po::value<int>()->default_value(6),
+    ("num-fallback-kmers",
+     po::value<int>()->default_value(7),
      "How many fallback k-mer sizes to use if the default sizes fail")
     
-    ("assembler-fallback-interval",
+    ("fallback-kmer-interval",
      po::value<int>()->default_value(10),
      "The interval size used to generate fallback kmer sizes")
+    
+    ("assembly-region-size",
+     po::value<int>()->default_value(1000),
+     "How many reference positions to assemble")
     
     ("assembler-mask-base-quality",
      po::value<int>()->implicit_value(10),
      "Matching alignment bases with quality less than this will be reference masked before."
      " Ff no value is specified then min-base-quality is used")
     
-    ("min-prune",
+    ("min-assembler-prune",
      po::value<int>()->default_value(2),
      "Minimum number of observations to keep a path in the assembly graph")
     ;
@@ -810,11 +810,11 @@ void validate(const OptionMap& vm)
         "threads", "mask-tails", "mask-soft-clipped-boundries",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
-        "num-assembler-fallbacks", "assembler-mask-base-quality", "min-prune", "max-holdout-depth"
+        "num-fallback-kmers", "assembler-mask-base-quality", "min-assembler-prune", "max-holdout-depth"
     };
     const std::vector<std::string> strictly_positive_int_options {
-        "max-open-read-files", "downsample-above", "downsample-target", "assembler-bin-size",
-        "assembler-fallback-interval", "organism-ploidy",
+        "max-open-read-files", "downsample-above", "downsample-target", "assembly-region-size",
+        "fallback-kmer-interval", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
