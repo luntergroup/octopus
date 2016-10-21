@@ -314,8 +314,16 @@ OptionMap parse_options(const int argc, const char** argv)
      " Ff no value is specified then min-base-quality is used")
     
     ("min-assembler-prune",
-     po::value<int>()->default_value(2),
-     "Minimum number of observations to keep a path in the assembly graph")
+     po::value<int>()->default_value(1),
+     "Minimum number of observations to keep a path in the assembly graph before bubble extraction")
+    
+    ("min-mean-assembler-path-weight",
+     po::value<double>()->default_value(2.0),
+     "Minimum mean assembly graph bubble weight that is extracted")
+    
+    ("max-assembler-paths",
+     po::value<int>()->default_value(10),
+     "Maximum number of paths to extract from the assembly graph")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");
@@ -810,7 +818,8 @@ void validate(const OptionMap& vm)
         "threads", "mask-tails", "mask-soft-clipped-boundries",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
-        "num-fallback-kmers", "assembler-mask-base-quality", "min-assembler-prune", "max-holdout-depth"
+        "num-fallback-kmers", "assembler-mask-base-quality", "min-assembler-prune", "max-assembler-paths",
+        "max-holdout-depth"
     };
     const std::vector<std::string> strictly_positive_int_options {
         "max-open-read-files", "downsample-above", "downsample-target", "assembly-region-size",

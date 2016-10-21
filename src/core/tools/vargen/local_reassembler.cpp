@@ -51,7 +51,9 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , bin_size_ {options.bin_size}
 , bins_ {}
 , mask_threshold_ {options.mask_threshold}
-, min_supporting_reads_ {options.min_supporting_reads}
+, min_hard_prune_weight_ {options.min_hard_prune_weight}
+, min_mean_path_weight_ {options.min_mean_path_weight}
+, max_paths_ {options.max_paths}
 , max_variant_size_ {options.max_variant_size}
 {
     if (bin_size_ == 0) {
@@ -200,6 +202,7 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
 }
 
 } // namespace
+
 
 template <typename Container, typename M>
 auto overlapped_bins(Container& bins, const M& mappable)
@@ -627,9 +630,9 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
                                            const GenomicRegion& assemble_region,
                                            std::deque<Variant>& result) const
 {
-    if (!assembler.prune(min_supporting_reads_)) return false;
+    if (!assembler.prune(min_hard_prune_weight_)) return false;
     if (assembler.is_empty() || assembler.is_all_reference() || !assembler.is_acyclic()) return false;
-    auto variants = assembler.extract_variants();
+    auto variants = assembler.extract_variants(min_mean_path_weight_, max_paths_);
     assembler.clear();
     if (variants.empty()) return true;
     trim_reference(variants);
