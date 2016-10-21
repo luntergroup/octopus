@@ -829,10 +829,10 @@ auto make_variant_generator_builder(const OptionMap& options)
         if (options.count("assembler-mask-base-quality") == 1) {
             reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
         }
-        reassembler_options.num_fallbacks = as_unsigned("num-assembler-fallbacks", options);
-        reassembler_options.fallback_interval_size = as_unsigned("assembler-fallback-interval", options);
-        reassembler_options.bin_size = as_unsigned("assembler-bin-size", options);
-        reassembler_options.min_supporting_reads = as_unsigned("min-prune", options);
+        reassembler_options.num_fallbacks = as_unsigned("num-fallback-kmers", options);
+        reassembler_options.fallback_interval_size = as_unsigned("fallback-kmer-interval", options);
+        reassembler_options.bin_size = as_unsigned("assembly-region-size", options);
+        reassembler_options.min_supporting_reads = as_unsigned("min-assembler-prune", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (options.count("generate-candidates-from-source") == 1) {
