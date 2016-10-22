@@ -52,9 +52,9 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , bin_overlap_ {options.bin_overlap}
 , bins_ {}
 , mask_threshold_ {options.mask_threshold}
-, min_hard_prune_weight_ {options.min_hard_prune_weight}
-, min_mean_path_weight_ {options.min_mean_path_weight}
-, max_paths_ {options.max_paths}
+, min_kmer_observations_ {options.min_kmer_observations}
+, min_mean_bubble_weight_ {options.min_mean_bubble_weight}
+, max_bubbles_ {options.max_bubbles}
 , max_variant_size_ {options.max_variant_size}
 {
     if (bin_size_ == 0) {
@@ -286,7 +286,7 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
     std::deque<Variant> candidates {};
     
     for (auto& bin : overlapped_bins(bins_, region)) {
-        if (!bin.empty()) {
+        if (should_assemble_bin(bin)) {
             if (debug_log_) {
                 stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
                                     << " reads in bin " << mapped_region(bin);
@@ -295,8 +295,8 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
             if (num_default_failures == default_kmer_sizes_.size()) {
                 try_assemble_with_fallbacks(bin, candidates);
             }
-            bin.clear();
         }
+        bin.clear();
     }
     
     return extract_final(std::move(candidates), region, max_variant_size_);
@@ -362,6 +362,11 @@ void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
         }
     }
     assert(contains(closed_region(bins_.front(), bins_.back()), read_region));
+}
+
+bool LocalReassembler::should_assemble_bin(const Bin& bin) const
+{
+    return !bin.empty();
 }
 
 namespace {
@@ -656,9 +661,9 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
                                            const GenomicRegion& assemble_region,
                                            std::deque<Variant>& result) const
 {
-    if (!assembler.prune(min_hard_prune_weight_)) return false;
+    if (!assembler.prune(min_kmer_observations_)) return false;
     if (assembler.is_empty() || assembler.is_all_reference() || !assembler.is_acyclic()) return false;
-    auto variants = assembler.extract_variants(min_mean_path_weight_, max_paths_);
+    auto variants = assembler.extract_variants(min_mean_bubble_weight_, max_bubbles_);
     assembler.clear();
     if (variants.empty()) return true;
     trim_reference(variants);

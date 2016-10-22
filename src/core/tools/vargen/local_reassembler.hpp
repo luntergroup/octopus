@@ -33,9 +33,9 @@ public:
         GenomicRegion::Size bin_size                  = 1000;
         GenomicRegion::Size bin_overlap               = 0;
         AlignedRead::BaseQuality mask_threshold       = 0;
-        unsigned min_hard_prune_weight                = 1;
-        double min_mean_path_weight                   = 2.0;
-        unsigned max_paths                            = 10;
+        unsigned min_kmer_observations                = 1;
+        double min_mean_bubble_weight                 = 2.0;
+        unsigned max_bubbles                          = 10;
         Variant::MappingDomain::Size max_variant_size = 5000;
     };
     
@@ -88,22 +88,20 @@ private:
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     
-    std::vector<unsigned> default_kmer_sizes_;
-    std::vector<unsigned> fallback_kmer_sizes_;
-    
-    GenomicRegion::Size bin_size_;
+    std::vector<unsigned> default_kmer_sizes_, fallback_kmer_sizes_;
         
     GenomicRegion::Size bin_size_, bin_overlap_;
     std::deque<Bin> bins_;
     std::deque<NucleotideSequence> masked_sequence_buffer_;
     
     AlignedRead::BaseQuality mask_threshold_;
-    unsigned min_hard_prune_weight_;
-    double min_mean_path_weight_;
-    unsigned max_paths_;
+    unsigned min_kmer_observations_;
+    double min_mean_bubble_weight_;
+    unsigned max_bubbles_;
     Variant::MappingDomain::Size max_variant_size_;
     
     void prepare_bins_to_insert(const AlignedRead& read);
+    bool should_assemble_bin(const Bin& bin) const;
     unsigned try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result);
     void try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result);
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;
