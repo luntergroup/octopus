@@ -31,6 +31,7 @@ public:
         unsigned num_fallbacks                        = 6;
         unsigned fallback_interval_size               = 10;
         GenomicRegion::Size bin_size                  = 1000;
+        GenomicRegion::Size bin_overlap               = 0;
         AlignedRead::BaseQuality mask_threshold       = 0;
         unsigned min_hard_prune_weight                = 1;
         double min_mean_path_weight                   = 2.0;
@@ -91,6 +92,8 @@ private:
     std::vector<unsigned> fallback_kmer_sizes_;
     
     GenomicRegion::Size bin_size_;
+        
+    GenomicRegion::Size bin_size_, bin_overlap_;
     std::deque<Bin> bins_;
     std::deque<NucleotideSequence> masked_sequence_buffer_;
     

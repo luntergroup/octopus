@@ -308,6 +308,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(1000),
      "How many reference positions to assemble")
     
+    ("max-assemble-region-overlap",
+     po::value<int>()->default_value(100),
+     "The maximum number of bases allowed to overlap assembly regions")
+    
     ("assembler-mask-base-quality",
      po::value<int>()->implicit_value(10),
      "Matching alignment bases with quality less than this will be reference masked before."
