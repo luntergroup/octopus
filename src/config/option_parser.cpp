@@ -100,7 +100,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("reads,I",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-seperated list of BAM/CRAM files to be analysed."
+     "Space-separated list of BAM/CRAM files to be analysed."
      " May be specified multiple times")
     
     ("reads-file,i",
@@ -113,7 +113,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("regions,T",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-seperated list of regions (chrom:begin-end) to be analysed."
+     "Space-separated list of regions (chrom:begin-end) to be analysed."
      " May be specified multiple times")
     
     ("regions-file,t",
@@ -122,7 +122,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("skip-regions,K",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-seperated list of regions (chrom:begin-end) to skip"
+     "Space-separated list of regions (chrom:begin-end) to skip"
      " May be specified multiple times")
     
     ("skip-regions-file,k",
@@ -131,7 +131,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("samples,S",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-seperated list of sample names to analyse")
+     "Space-separated list of sample names to analyse")
     
     ("samples-file,s",
      po::value<fs::path>(),
@@ -234,7 +234,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Filters reads marked as secondary alignments")
     
-    ("no-supplementary-alignmenets",
+    ("no-supplementary-alignments",
      po::bool_switch()->default_value(false),
      "Filters reads marked as supplementary alignments")
     
@@ -252,7 +252,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("disable-downsampling",
      po::bool_switch()->default_value(false),
-     "Diables all downsampling")
+     "Disables downsampling")
     
     ("downsample-above",
      po::value<int>()->default_value(1000),
@@ -289,7 +289,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("max-variant-size",
      po::value<int>()->default_value(2000),
-     "Maximum candidate varaint size to consider (in region space)")
+     "Maximum candidate variant size to consider (in region space)")
     
     ("kmer-size",
      po::value<std::vector<int>>()->multitoken()
@@ -471,7 +471,7 @@ OptionMap parse_options(const int argc, const char** argv)
     call_filtering.add_options()
     ("disable-call-filtering",
      po::bool_switch()->default_value(false),
-     "Disables all callset filtering")
+     "Disables all variant call filtering")
     
     ("disable-model-filtering",
      po::bool_switch()->default_value(false),

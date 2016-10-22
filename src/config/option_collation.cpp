@@ -635,7 +635,7 @@ auto make_read_filterer(const OptionMap& options)
     if (options.at("no-secondary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSecondaryAlignment>());
     }
-    if (options.at("no-supplementary-alignmenets").as<bool>()) {
+    if (options.at("no-supplementary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSupplementaryAlignment>());
     }
     if (!options.at("consider-reads-with-unmapped-segments").as<bool>()) {
