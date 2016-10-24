@@ -317,7 +317,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Forces all regions to be assembled")
     
     ("assembler-mask-base-quality",
-     po::value<int>()->default_value(10),
+     po::value<int>()->default_value(15),
      "Alignmened bases with quality less than this will be converted to reference before "
      "being inserted into the De Buijn graph")
     
