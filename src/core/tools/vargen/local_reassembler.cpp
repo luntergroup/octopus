@@ -595,7 +595,7 @@ struct VariantLess
             if (lhs.ref.size() == rhs.ref.size()) {
                 return lhs.alt < rhs.alt;
             }
-            return lhs.ref.size() < rhs.alt.size();
+            return lhs.ref.size() < rhs.ref.size();
         }
         return lhs.begin_pos < rhs.begin_pos;
     }
