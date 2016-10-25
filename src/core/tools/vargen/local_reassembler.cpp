@@ -167,6 +167,16 @@ bool is_match(const CigarOperation::Flag op) noexcept
     }
 }
 
+template <typename T>
+auto make_optional(bool b, T&& value)
+{
+    if (b) {
+        return boost::optional<T> {std::forward<T>(value)};
+    } else {
+        return boost::optional<T> {};
+    }
+}
+
 auto transform_low_quality_matches_to_reference(AlignedRead::NucleotideSequence read_sequence,
                                                 const AlignedRead::BaseQualityVector& base_qualities,
                                                 const AlignedRead::NucleotideSequence& reference_sequence,
@@ -175,30 +185,36 @@ auto transform_low_quality_matches_to_reference(AlignedRead::NucleotideSequence 
 {
     auto ref_itr   = std::cbegin(reference_sequence);
     auto cigar_itr = find_first_sequence_op(cigar);
+    bool has_masked {false};
     std::transform(std::cbegin(read_sequence), std::cend(read_sequence), std::cbegin(base_qualities),
                    std::begin(read_sequence), [&] (const auto read_base, const auto base_quality) {
-                       using Flag = CigarOperation::Flag;
-                       const auto op = *cigar_itr++;
-                       if (!is_match(op)) {
-                           if (op != Flag::insertion) ++ref_itr;
-                           // Deletions are excess reference sequence so we need to move the
-                           // reference iterator to the next nondeleted read base
-                           while (cigar_itr != std::cend(cigar) && *cigar_itr == Flag::deletion) {
-                               ++cigar_itr;
-                               ++ref_itr;
-                           }
-                           return read_base;
-                       }
-                       const auto ref_base = *ref_itr++; // Don't forget to increment ref_itr!
-                       return base_quality >= min_quality ? read_base : ref_base;
-                   });
-    return read_sequence;
+        using Flag = CigarOperation::Flag;
+        // Deletions are excess reference sequence so we need to move the
+        // reference iterator to the next non-deleted read base
+        while (cigar_itr != std::cend(cigar) && *cigar_itr == Flag::deletion) {
+            ++cigar_itr;
+            ++ref_itr;
+        }
+        const auto op = *cigar_itr++;
+        if (is_match(op)) {
+            const auto ref_base = *ref_itr++; // Don't forget to increment ref_itr!
+            if (base_quality >= min_quality) {
+                return read_base;
+            } else {
+                has_masked = true;
+                return ref_base;
+            }
+        } else {
+            if (op != Flag::insertion) ++ref_itr;
+            return read_base;
+        }
+    });
+    return make_optional(has_masked, std::move(read_sequence));
 }
 
-AlignedRead::NucleotideSequence
-transform_low_quality_matches_to_reference(const AlignedRead& read,
-                                           const AlignedRead::BaseQuality min_quality,
-                                           const ReferenceGenome& reference)
+auto transform_low_quality_matches_to_reference(const AlignedRead& read,
+                                                const AlignedRead::BaseQuality min_quality,
+                                                const ReferenceGenome& reference)
 {
     return transform_low_quality_matches_to_reference(read.sequence(), read.qualities(),
                                                       reference.fetch_sequence(mapped_region(read)),
@@ -206,7 +222,6 @@ transform_low_quality_matches_to_reference(const AlignedRead& read,
 }
 
 } // namespace
-
 
 template <typename Container, typename M>
 auto overlapped_bins(Container& bins, const M& mappable)
@@ -219,15 +234,17 @@ void LocalReassembler::do_add_read(const AlignedRead& read)
     prepare_bins_to_insert(read);
     auto active_bins = overlapped_bins(bins_, read);
     assert(!active_bins.empty());
-    if (!has_low_quality_match(read, mask_threshold_)) {
-        for (auto& bin : active_bins) bin.insert(read);
-    } else {
+    if (has_low_quality_match(read, mask_threshold_)) {
         auto masked_sequence = transform_low_quality_matches_to_reference(read, mask_threshold_, reference_);
-        masked_sequence_buffer_.emplace_back(std::move(masked_sequence));
-        for (auto& bin : active_bins) {
-            bin.insert(std::cref(masked_sequence_buffer_.back()));
+        if (masked_sequence) {
+            masked_sequence_buffer_.emplace_back(std::move(*masked_sequence));
+            for (auto& bin : active_bins) {
+                bin.insert(std::cref(masked_sequence_buffer_.back()));
+            }
+            return;
         }
     }
+    for (auto& bin : active_bins) bin.insert(read);
 }
 
 void LocalReassembler::do_add_reads(VectorIterator first, VectorIterator last)
