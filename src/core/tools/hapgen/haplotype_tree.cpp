@@ -517,17 +517,15 @@ HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const ContigAllele& new_a
 Haplotype HaplotypeTree::extract_haplotype(Vertex leaf, const GenomicRegion& region) const
 {
     Haplotype::Builder result {region, reference_};
-    
     const auto& contig_region = region.contig_region();
-    
-    while (leaf != root_ && !overlaps(tree_[leaf], contig_region)) {
+    using octopus::contains;
+    while (leaf != root_ && !contains(contig_region, tree_[leaf])) {
         leaf = get_previous_allele(leaf);
     }
-    while (leaf != root_ && overlaps(tree_[leaf], contig_region)) {
+    while (leaf != root_ && contains(contig_region, tree_[leaf])) {
         result.push_front(tree_[leaf]);
         leaf = get_previous_allele(leaf);
     }
-    
     return result.build();
 }
 
