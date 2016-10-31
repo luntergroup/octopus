@@ -824,15 +824,19 @@ auto make_variant_generator_builder(const OptionMap& options)
     }
     if (allow_assembler_generation(options)) {
         LocalReassembler::Options reassembler_options {};
-        const auto kmer_sizes = options.at("kmer-size").as<std::vector<int>>();
+        const auto kmer_sizes = options.at("kmer-sizes").as<std::vector<int>>();
         reassembler_options.kmer_sizes.assign(std::cbegin(kmer_sizes), std::cend(kmer_sizes));
         if (options.count("assembler-mask-base-quality") == 1) {
             reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
         }
-        reassembler_options.num_fallbacks = as_unsigned("num-assembler-fallbacks", options);
-        reassembler_options.fallback_interval_size = as_unsigned("assembler-fallback-interval", options);
-        reassembler_options.bin_size = as_unsigned("assembler-bin-size", options);
-        reassembler_options.min_supporting_reads = as_unsigned("min-prune", options);
+        reassembler_options.num_fallbacks = as_unsigned("num-fallback-kmers", options);
+        reassembler_options.fallback_interval_size = as_unsigned("fallback-kmer-gap", options);
+        reassembler_options.bin_size = as_unsigned("max-region-to-assemble", options);
+        reassembler_options.bin_overlap = as_unsigned("max-assemble-region-overlap", options);
+        reassembler_options.min_kmer_observations = as_unsigned("min-kmer-support", options);
+        reassembler_options.min_mean_bubble_weight = options.at("min-bubble-weight").as<double>();
+        reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
+        reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (options.count("generate-candidates-from-source") == 1) {

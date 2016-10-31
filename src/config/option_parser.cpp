@@ -291,31 +291,47 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(2000),
      "Maximum candidate variant size to consider (in region space)")
     
-    ("kmer-size",
+    ("kmer-sizes",
      po::value<std::vector<int>>()->multitoken()
-     ->default_value(std::vector<int> {10, 25}, "10 25")->composing(),
-     "K-mer sizes to use for local re-assembly")
-
-    ("assembler-bin-size",
-     po::value<int>()->default_value(1000),
-     "How many reference positions to assemble")
+     ->default_value(std::vector<int> {10, 15, 20}, "10 15 20")->composing(),
+     "Kmer sizes to use for local assembly")
     
-    ("num-assembler-fallbacks",
-     po::value<int>()->default_value(6),
-     "How many fallback k-mer sizes to use if the default sizes fail")
+    ("num-fallback-kmers",
+     po::value<int>()->default_value(7),
+     "How many local assembly fallback kmer sizes to use if the default sizes fail")
     
-    ("assembler-fallback-interval",
+    ("fallback-kmer-gap",
      po::value<int>()->default_value(10),
-     "The interval size used to generate fallback kmer sizes")
+     "The gap size used to generate local assembly fallback kmers")
+    
+    ("max-region-to-assemble",
+     po::value<int>()->default_value(1000),
+     "The maximum region size that can be used for local assembly")
+    
+    ("max-assemble-region-overlap",
+     po::value<int>()->default_value(100),
+     "The maximum number of bases allowed to overlap assembly regions")
+    
+    ("force-assemble",
+     po::bool_switch()->default_value(false),
+     "Forces all regions to be assembled")
     
     ("assembler-mask-base-quality",
-     po::value<int>()->implicit_value(10),
-     "Matching alignment bases with quality less than this will be reference masked before."
-     " Ff no value is specified then min-base-quality is used")
+     po::value<int>()->default_value(15),
+     "Alignmened bases with quality less than this will be converted to reference before "
+     "being inserted into the De Buijn graph")
     
-    ("min-prune",
-     po::value<int>()->default_value(2),
-     "Minimum number of observations to keep a path in the assembly graph")
+    ("min-kmer-support",
+     po::value<int>()->default_value(1),
+     "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
+    
+    ("min-bubble-weight",
+     po::value<double>()->default_value(2.0),
+     "Minimum mean graph bubble weight that is extracted from the assembly graph")
+    
+    ("max-bubbles",
+     po::value<int>()->default_value(10),
+     "Maximum number of bubbles to extract from the assembly graph")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");
@@ -810,11 +826,12 @@ void validate(const OptionMap& vm)
         "threads", "mask-tails", "mask-soft-clipped-boundries",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
-        "num-assembler-fallbacks", "assembler-mask-base-quality", "min-prune", "max-holdout-depth"
+        "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
+        "min-kmer-support", "max-bubbles", "max-holdout-depth"
     };
     const std::vector<std::string> strictly_positive_int_options {
-        "max-open-read-files", "downsample-above", "downsample-target", "assembler-bin-size",
-        "assembler-fallback-interval", "organism-ploidy",
+        "max-open-read-files", "downsample-above", "downsample-target",
+        "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
