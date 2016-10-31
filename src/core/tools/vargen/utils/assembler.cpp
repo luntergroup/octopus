@@ -1313,11 +1313,12 @@ Assembler::extract_k_highest_scoring_bubble_paths(const double min_mean_bubble_w
             const auto ref_before_bubble = predecessors.at(alt_path.front());
             auto ref_seq = make_reference(ref_before_bubble, ref);
             alt_path.push_front(ref_before_bubble);
+            const auto alt_path_score = weight(alt_path);
             auto alt_seq = make_sequence(alt_path);
             alt_path.pop_front();
             rhs_kmer_count += count_kmers(ref_seq, k_);
             const auto pos = reference_head_position_ + reference_size() - sequence_length(rhs_kmer_count, k_);
-            if (static_cast<double>(weight(alt_path)) / alt_path.size() >= min_mean_bubble_weight) {
+            if (static_cast<double>(alt_path_score) / alt_path.size() >= min_mean_bubble_weight) {
                 result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
             }
             --rhs_kmer_count; // because we padded one reference kmer to make ref_seq
