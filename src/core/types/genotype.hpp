@@ -477,14 +477,11 @@ template <typename Container>
 auto generate_all_haploid_genotypes(const Container& elements)
 {
     using ResultType = std::vector<GenotypeType<Container>>;
-    
     ResultType result {};
     result.reserve(elements.size());
-    
     for (const auto& element : elements) {
         result.emplace_back(1, element);
     }
-    
     return result;
 }
 
@@ -551,11 +548,9 @@ template <typename Container>
 auto generate_genotype(const Container& elements, const std::vector<unsigned>& element_indicies)
 {
     GenotypeType<Container> result {static_cast<unsigned>(element_indicies.size())};
-    
     for (const auto i : element_indicies) {
         result.emplace(elements[i]);
     }
-    
     return result;
 }
 
@@ -565,18 +560,14 @@ auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy)
     using GenotypeTp = GenotypeType<Container>;
     using ResultType = std::vector<GenotypeTp>;
     
+    // Optimise simple cases
     if (ploidy == 0 || elements.empty()) {
         return ResultType {};
     }
-    
     const auto num_elements = static_cast<unsigned>(elements.size());
-    
-    // optimise simple cases
-    
     if (num_elements == 1) {
         return ResultType {GenotypeTp {ploidy, elements.front()}};
     }
-    
     if (ploidy == 2) {
         switch(num_elements) {
             case 2: return detail::generate_all_diploid_biallelic_genotypes(elements);
@@ -584,37 +575,27 @@ auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy)
             case 4: return detail::generate_all_diploid_tetraallelic_genotypes(elements);
         }
     }
-    
     if (ploidy == 1) {
         return detail::generate_all_haploid_genotypes(elements);
     }
-    
     if (ploidy == 3 && num_elements == 2) {
         return detail::generate_all_triploid_biallelic_genotypes(elements);
     }
     
-    // otherwise resort to general algorithm
-    
+    // Otherwise resort to general algorithm
     ResultType result {};
     result.reserve(num_genotypes(num_elements, ploidy));
-    
     std::vector<unsigned> element_indicies(ploidy, 0);
     
     while (true) {
         if (element_indicies[0] == num_elements) {
             unsigned i {0};
-            
             while (++i < ploidy && element_indicies[i] == num_elements - 1);
-            
             if (i == ploidy) break;
-            
             ++element_indicies[i];
-            
             std::fill_n(std::begin(element_indicies), i + 1, element_indicies[i]);
         }
-        
         result.push_back(detail::generate_genotype(elements, element_indicies));
-        
         ++element_indicies[0];
     }
     
@@ -629,12 +610,10 @@ auto generate_all_genotypes(const std::vector<MappableType>& elements, const uns
                             std::true_type)
 {
     std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
-    
     std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
                    [] (const auto& element) {
                        return std::make_shared<MappableType>(element);
                    });
-    
     return do_generate_all_genotypes(temp_pointers, ploidy);
 }
 
@@ -644,12 +623,10 @@ auto generate_all_genotypes(const std::vector<std::reference_wrapper<const Mappa
                             std::true_type)
 {
     std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
-    
     std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
                    [] (const auto& element) {
                        return std::make_shared<MappableType>(element.get());
                    });
-    
     return do_generate_all_genotypes(temp_pointers, ploidy);
 }
 
