@@ -18,7 +18,7 @@ namespace csr  {
 
 class QualityByDepth : public Measure
 {
-    virtual double operator()(const VcfRecord &call) const override;
+    virtual double operator()(const VcfRecord& call) const override;
     virtual std::string name() const override;
 };
 
