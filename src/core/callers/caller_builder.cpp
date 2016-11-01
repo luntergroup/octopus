@@ -261,8 +261,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.indel_heterozygosity},
                                                       {params_.somatic_mutation_rate},
                                                       params_.min_somatic_frequency,
-                                                      params_.credible_mass,
-                                                      50'000
+                                                      params_.credible_mass
                                                   });
         }},
         {"trio", [this, general_parameters = std::move(general_parameters)] () {
