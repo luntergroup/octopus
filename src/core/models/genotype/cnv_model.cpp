@@ -63,18 +63,16 @@ CNVModel::infer_latents(std::vector<Genotype<Haplotype>> genotypes,
                         const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
-    
+    assert(ploidy_ < 4);
     const VariationalBayesParameters vb_params {parameters_.epsilon, parameters_.max_iterations};
-    
-    assert(ploidy_ < 3);
-    
-    if (ploidy_ == 1) {
-        return run_variational_bayes<1>(samples_, std::move(genotypes), priors_,
-                                        haplotype_likelihoods, vb_params);
+    switch (ploidy_) {
+        case 1: return run_variational_bayes<1>(samples_, std::move(genotypes), priors_,
+                                                haplotype_likelihoods, vb_params);
+        case 2: return run_variational_bayes<2>(samples_, std::move(genotypes), priors_,
+                                                haplotype_likelihoods, vb_params);
+        default: return run_variational_bayes<3>(samples_, std::move(genotypes), priors_,
+                                                 haplotype_likelihoods, vb_params);
     }
-    
-    return run_variational_bayes<2>(samples_, std::move(genotypes), priors_,
-                                    haplotype_likelihoods, vb_params);
 }
 
 namespace {
