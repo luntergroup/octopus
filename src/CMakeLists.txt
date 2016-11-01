@@ -204,6 +204,8 @@ set(CORE_SOURCES
     core/csr/filters/variant_call_filter.cpp
     
     core/csr/measures/measure.hpp
+    core/csr/measures/qual.hpp
+    core/csr/measures/qual.cpp
     core/csr/measures/quality_by_depth.hpp
     core/csr/measures/quality_by_depth.cpp
     
