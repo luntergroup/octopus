@@ -1009,6 +1009,20 @@ bool is_multithreaded(const GenomeCallingComponents& components)
     return !components.num_threads() || *components.num_threads() > 1;
 }
 
+void run_calling(GenomeCallingComponents& components)
+{
+    if (is_multithreaded(components)) {
+        if (DEBUG_MODE) {
+            logging::WarningLogger warn_log {};
+            warn_log << "Running in parallel mode can make debug log difficult to interpret";
+        }
+        run_octopus_multi_threaded(components);
+    } else {
+        run_octopus_single_threaded(components);
+    }
+    components.output().close();
+}
+
 auto make_filter_read_pipe(const GenomeCallingComponents& components)
 {
     using std::make_unique;
@@ -1050,9 +1064,29 @@ auto add_identifier(const boost::filesystem::path& base, const std::string& iden
     return base.parent_path() / new_stem;
 }
 
+void run_filtering(const GenomeCallingComponents& components)
+{
+    auto filter = components.call_filter();
+    if (filter) {
+        // TODO
+    }
+}
+
 auto get_legacy_path(const boost::filesystem::path& native)
 {
     return add_identifier(native, "legacy");
+}
+
+void run_reporting(const GenomeCallingComponents& components)
+{
+    if (components.legacy()) {
+        auto output_path = components.output().path();
+        if (output_path) {
+            const VcfReader native {*output_path};
+            VcfWriter legacy {get_legacy_path(native.path())};
+            convert_to_legacy(native, legacy);
+        }
+    }
 }
 
 void log_run_start(const GenomeCallingComponents& components)
@@ -1068,32 +1102,13 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
     logging::InfoLogger info_log {};
     using utils::TimeInterval;
     
-    log_run_start(components);
-    write_caller_output_header(components, command);
-    
     const auto start = std::chrono::system_clock::now();
-    
     try {
-        if (is_multithreaded(components)) {
-            if (DEBUG_MODE) {
-                logging::WarningLogger warn_log {};
-                warn_log << "Running in parallel mode can make debug log difficult to interpret";
-            }
-            run_octopus_multi_threaded(components);
-        } else {
-            run_octopus_single_threaded(components);
-        }
-        
-        components.output().close();
-        
-        if (components.legacy()) {
-            auto output_path = components.output().path();
-            if (output_path) {
-                const VcfReader native {*output_path};
-                VcfWriter legacy {get_legacy_path(native.path())};
-                convert_to_legacy(native, legacy);
-            }
-        }
+        log_run_start(components);
+        write_caller_output_header(components, command);
+        run_calling(components);
+        run_filtering(components);
+        run_reporting(components);
     } catch (const std::exception& e) {
         try {
             if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
@@ -1101,13 +1116,11 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
         } catch (...) {}
         throw;
     }
-    
     const auto end = std::chrono::system_clock::now();
     const auto search_size = sum_region_sizes(components.search_regions());
     stream(info_log) << "Finished calling "
                      << utils::format_with_commas(search_size) << "bp, total runtime "
                      << TimeInterval {start, end};
-    
     cleanup(components);
 }
 } // namespace octopus
