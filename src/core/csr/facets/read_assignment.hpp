@@ -35,4 +35,4 @@ AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
 
 } // namespace octopus
 
-#endif /* read_assignment_hpp */
+#endif

@@ -10,7 +10,7 @@ namespace octopus {
 
 class VcfHeader;
 
-namespace csr  {
+namespace csr {
 
 class ThresholdVariantCallFilter : public VariantCallFilter
 {
