@@ -14,7 +14,7 @@ namespace octopus {
 
 class VcfRecord;
 
-namespace csr  {
+namespace csr {
 
 class Qual : public Measure
 {
