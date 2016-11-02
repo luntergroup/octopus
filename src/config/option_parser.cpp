@@ -424,7 +424,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Mass of the posterior density to use for evaluating allele frequencies")
     
     ("min-somatic-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
+     po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
      "Minimum somatic mutation call posterior probability (phred scale)")
     
     ("somatics-only",
