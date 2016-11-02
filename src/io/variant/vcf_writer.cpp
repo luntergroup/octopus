@@ -55,13 +55,13 @@ VcfWriter::VcfWriter(Path file_path)
 VcfWriter::VcfWriter(const VcfHeader& header)
 : VcfWriter {}
 {
-    this->write(std::move(header));
+    write(std::move(header));
 }
 
 VcfWriter::VcfWriter(Path file_path, const VcfHeader& header)
 : VcfWriter {std::move(file_path)}
 {
-    this->write(std::move(header));
+    write(std::move(header));
 }
 
 VcfWriter::VcfWriter(VcfWriter&& other)
@@ -75,8 +75,8 @@ VcfWriter::VcfWriter(VcfWriter&& other)
 VcfWriter::~VcfWriter()
 {
     try {
-        this->close();
-        if (file_path_ && is_indexable(*file_path_) && boost::filesystem::exists(*file_path_)) {
+        close();
+        if (can_write_index()) {
             index_vcf(*file_path_);
         }
     } catch(...) {
@@ -146,6 +146,12 @@ void VcfWriter::write(const VcfRecord& record)
     } else {
         throw std::runtime_error {"VcfWriter::write: cannot write record as header has not been written"};
     }
+}
+
+bool VcfWriter::can_write_index() const noexcept
+{
+    return file_path_ && is_header_written_
+           && is_indexable(*file_path_) && boost::filesystem::exists(*file_path_);
 }
 
 // non member methods
