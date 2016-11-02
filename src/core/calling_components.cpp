@@ -100,6 +100,11 @@ const CallerFactory& GenomeCallingComponents::caller_factory() const noexcept
     return components_.caller_factory;
 }
 
+std::unique_ptr<csr::VariantCallFilter> GenomeCallingComponents::call_filter() const noexcept
+{
+    return components_.call_filter_factory.make();
+}
+
 ProgressMeter& GenomeCallingComponents::progress_meter() noexcept
 {
     return components_.progress_meter;
@@ -261,6 +266,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
 , read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options)}
+, call_filter_factory {options::make_call_filter_factory(this->reference, this->read_pipe, options)}
 , output {std::move(output)}
 , num_threads {options::get_num_threads(options)}
 , read_buffer_size {}
@@ -344,17 +350,13 @@ GenomeCallingComponents collate_genome_calling_components(const options::OptionM
 {
     auto reference    = options::make_reference(options);
     auto read_manager = options::make_read_manager(options);
-    
     if (!reads_map_to_matched_reference(read_manager, reference)) {
         throw UnmatchedReference {reference};
     }
-    
-    auto output = options::make_output_vcf_writer(options);
-    
     return GenomeCallingComponents {
         std::move(reference),
         std::move(read_manager),
-        std::move(output),
+        options::make_output_vcf_writer(options),
         options
     };
 }

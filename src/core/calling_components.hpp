@@ -20,6 +20,8 @@
 #include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/callers/caller_factory.hpp"
+#include "core/csr/utils/variant_call_filter_factory.hpp"
+#include "core/csr/filters/variant_call_filter.hpp"
 #include "logging/progress_meter.hpp"
 
 namespace octopus {
@@ -53,6 +55,7 @@ public:
     const boost::optional<boost::filesystem::path>& temp_directory() const noexcept;
     boost::optional<unsigned> num_threads() const noexcept;
     const CallerFactory& caller_factory() const noexcept;
+    std::unique_ptr<csr::VariantCallFilter> call_filter() const noexcept;
     ProgressMeter& progress_meter() noexcept;
     bool sites_only() const noexcept;
     bool legacy() const noexcept;
@@ -79,6 +82,7 @@ private:
         std::vector<GenomicRegion::ContigName> contigs;
         ReadPipe read_pipe;
         CallerFactory caller_factory;
+        VariantCallFilterFactory call_filter_factory;
         VcfWriter output;
         boost::optional<unsigned> num_threads;
         std::size_t read_buffer_size;
