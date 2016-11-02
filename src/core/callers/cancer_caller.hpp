@@ -45,7 +45,7 @@ public:
         double cnv_normal_alpha = 50.0, cnv_tumour_alpha = 0.75;
         double somatic_normal_germline_alpha = 50.0, somatic_normal_somatic_alpha = 0.01;
         double somatic_tumour_germline_alpha = 5.0, somatic_tumour_somatic_alpha = 0.8;
-        double germline_weight = 100, cnv_weight = 5, somatic_weight = 1;
+        double germline_weight = 90, cnv_weight = 5, somatic_weight = 1;
     };
     
     CancerCaller() = delete;
