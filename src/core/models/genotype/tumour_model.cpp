@@ -700,9 +700,9 @@ expand(const std::vector<SampleName>& samples, std::vector<CancerGenotype<Haplot
     return TumourModel::InferredLatents {std::move(posterior_latents), evidence};
 }
 
-auto calculate_log_posteriors_with_germline_model(const SampleName& sample,
-                                                  const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                                  const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+auto compute_germline_log_posteriors(const SampleName& sample,
+                                     const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
 {
     assert(!genotypes.empty());
     haplotype_log_likelihoods.prime(sample);
@@ -716,10 +716,10 @@ auto calculate_log_posteriors_with_germline_model(const SampleName& sample,
     return result;
 }
 
-auto calculate_log_posteriors_with_germline_model(const SampleName& sample,
-                                                  const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                                  const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                                                  const SomaticMutationModel& genotype_prior_model)
+auto compute_germline_log_posteriors(const SampleName& sample,
+                                     const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                                     const SomaticMutationModel& genotype_prior_model)
 {
     assert(!genotypes.empty());
     haplotype_log_likelihoods.prime(sample);
@@ -728,7 +728,23 @@ auto calculate_log_posteriors_with_germline_model(const SampleName& sample,
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&] (const auto& genotype) {
                        return genotype_prior_model.evaluate(genotype)
-                            + likelihood_model.evaluate(genotype.germline_genotype());
+                              + likelihood_model.evaluate(genotype.germline_genotype());
+                   });
+    maths::normalise_logs(result);
+    return result;
+}
+
+auto compute_log_posteriors_with_germline_model(const SampleName& sample,
+                                                const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                                const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+{
+    assert(!genotypes.empty());
+    haplotype_log_likelihoods.prime(sample);
+    const GermlineLikelihoodModel likelihood_model {haplotype_log_likelihoods};
+    std::vector<double> result(genotypes.size());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                   [&] (const auto& genotype) {
+                       return likelihood_model.evaluate(convert(genotype));
                    });
     maths::normalise_logs(result);
     return result;
@@ -746,15 +762,14 @@ auto generate_seeds(const std::vector<SampleName>& samples,
                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
 {
     std::vector<LogProbabilityVector> result {};
-    result.reserve(2 + samples.size());
+    result.reserve(2 + 3 * samples.size());
     result.emplace_back(genotype_log_priors);
     result.emplace_back(log_uniform_dist(genotypes.size()));
     for (const auto& sample : samples) {
-        result.emplace_back(calculate_log_posteriors_with_germline_model(sample, genotypes,
-                                                                         haplotype_log_likelihoods));
-        result.emplace_back(calculate_log_posteriors_with_germline_model(sample, genotypes,
-                                                                         haplotype_log_likelihoods,
-                                                                         priors.genotype_prior_model));
+        result.emplace_back(compute_germline_log_posteriors(sample, genotypes, haplotype_log_likelihoods));
+        result.emplace_back(compute_germline_log_posteriors(sample, genotypes, haplotype_log_likelihoods,
+                                                            priors.genotype_prior_model));
+        result.emplace_back(compute_log_posteriors_with_germline_model(sample, genotypes, haplotype_log_likelihoods));
     }
     return result;
 }
