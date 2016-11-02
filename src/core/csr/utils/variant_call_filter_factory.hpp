@@ -4,17 +4,31 @@
 #ifndef variant_call_filter_factory_hpp
 #define variant_call_filter_factory_hpp
 
-namespace octopus { namespace csr  {
+#include <memory>
+
+#include "../filters/variant_call_filter.hpp"
+
+namespace octopus { namespace csr {
 
 class VariantCallFilterFactory
 {
 public:
-
-private:
-
+    VariantCallFilterFactory() = default;
+    
+    VariantCallFilterFactory(const VariantCallFilterFactory&)            = default;
+    VariantCallFilterFactory& operator=(const VariantCallFilterFactory&) = default;
+    VariantCallFilterFactory(VariantCallFilterFactory&&)                 = default;
+    VariantCallFilterFactory& operator=(VariantCallFilterFactory&&)      = default;
+    
+    ~VariantCallFilterFactory() = default;
+    
+    std::unique_ptr<VariantCallFilter> make() const;
 };
 
 } // namespace csr
+
+using csr::VariantCallFilterFactory;
+
 } // namespace octopus
 
 #endif /* variant_call_filter_factory_hpp */

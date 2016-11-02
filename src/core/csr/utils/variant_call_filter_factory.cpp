@@ -5,7 +5,10 @@
 
 namespace octopus { namespace csr {
 
-
+std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make() const
+{
+    return nullptr;
+}
 
 } // namespace csr
 } // namespace octopus
