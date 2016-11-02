@@ -16,6 +16,7 @@
 #include "core/types/variant.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/variant/vcf_record.hpp"
+#include "../facets/facet.hpp"
 #include "../measures/measure.hpp"
 
 namespace octopus {
@@ -63,6 +64,7 @@ protected:
     std::vector<MeasureWrapper> measures_;
     
 private:
+    using FacetSet = std::vector<Facet>;
 //    const ReferenceGenome& reference_;
 //    const ReadPipe& read_pipe_;
 //
@@ -75,31 +77,17 @@ private:
     virtual void train() {};
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
     
-    void annotate(VcfRecord::Builder& call) const;
+    FacetSet compute_facets(const VcfRecord& call) const;
     MeasureVector measure(const VcfRecord& call) const;
+    void annotate(VcfRecord::Builder& call, Classification status) const;
     void pass(VcfRecord::Builder& call) const;
     void fail(VcfRecord::Builder& call) const;
 };
 
-class VariantCallFilterWrapper
-{
-public:
-    VariantCallFilterWrapper() = delete;
-    
-    VariantCallFilterWrapper(std::unique_ptr<VariantCallFilter> filter);
-    
-    ~VariantCallFilterWrapper() = default;
-    
-    bool is_supervised() const noexcept;
-    
-    void register_truth(const VcfReader& calls);
-    
-    void filter(const VcfReader& source, VcfWriter& dest) const;
-private:
-    std::unique_ptr<VariantCallFilter> filter_;
-};
-
 } // namespace csr
+
+using csr::VariantCallFilter;
+
 } // namespace octopus
 
 #endif /* variant_call_filter_hpp */

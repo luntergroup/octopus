@@ -56,41 +56,37 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
 {
     if (!dest.is_header_written()) {
         auto header = source.fetch_header();
-        this->annotate(header);
+        annotate(header);
         dest << header;
     }
-    
-//    if (this->is_supervised()) {
-//        for (const auto& p : training_sets_) {
-//            
-//        }
-//        
-//        this->train();
-//    }
-    
+    if (is_supervised()) {
+        train();
+    }
     auto p = source.iterate();
     std::for_each(std::move(p.first), std::move(p.second), [this, &dest] (const VcfRecord& call) {
-        auto classification = this->classify(measure(call));
-        
         VcfRecord::Builder filtered_call {call};
-        
-        if (classification.category != Classification::Category::filtered) {
-            pass(filtered_call);
-        } else {
-            fail(filtered_call);
-        }
-        
+        annotate(filtered_call, classify(measure(call)));
         dest.write(filtered_call.build_once());
     });
 }
 
-void VariantCallFilter::annotate(VcfRecord::Builder& call) const
+void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification status) const
 {
-    
+    if (status.category != Classification::Category::filtered) {
+        pass(call);
+    } else {
+        fail(call);
+    }
+}
+
+VariantCallFilter::FacetSet VariantCallFilter::compute_facets(const VcfRecord& call) const
+{
+    return {};
 }
 
 VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& call) const
 {
+    //const auto facets = compute_facets(call);
     return {};
 }
 
