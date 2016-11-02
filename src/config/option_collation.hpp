@@ -19,6 +19,7 @@
 #include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe.hpp"
 #include "core/callers/caller_factory.hpp"
+#include "core/csr/utils/variant_call_filter_factory.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -53,6 +54,9 @@ bool call_sites_only(const OptionMap& options);
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options);
+
+VariantCallFilterFactory make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
+                                                  const OptionMap& options);
 
 VcfWriter make_output_vcf_writer(const OptionMap& options);
 
