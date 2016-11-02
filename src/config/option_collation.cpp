@@ -1295,6 +1295,12 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     return CallerFactory {std::move(vc_builder)};
 }
 
+VariantCallFilterFactory make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
+                                                  const OptionMap& options)
+{
+    return VariantCallFilterFactory {};
+}
+
 boost::optional<fs::path> get_final_output_path(const OptionMap& options)
 {
     if (options.count("output") == 1) {
