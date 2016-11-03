@@ -123,27 +123,33 @@ struct GenotypePairLess
     {
         return GenotypeReferenceLess{}(lhs.genotype, rhs);
     }
+    bool operator()(const GenotypeProbabilityPair& lhs, const GenotypeProbabilityPair rhs) const
+    {
+        return GenotypeReferenceLess{}(lhs.genotype, rhs.genotype);
+    }
 };
 
 // genotypes is required to be sorted
 void fill_missing_genotypes(std::vector<GenotypeProbabilityPair>& posteriors,
                             const std::vector<Genotype<Haplotype>>& genotypes)
 {
-    std::sort(std::begin(posteriors), std::end(posteriors),
-              [] (const auto& lhs, const auto& rhs) {
-                  return GenotypeReferenceLess{}(lhs.genotype, rhs.genotype);
-              });
+    std::sort(std::begin(posteriors), std::end(posteriors), GenotypePairLess {});
     std::vector<GenotypeReference> missing {};
-    missing.reserve(genotypes.size());
+    missing.reserve(genotypes.size() - posteriors.size());
     std::set_difference(std::cbegin(genotypes), std::cend(genotypes),
                         std::cbegin(posteriors), std::cend(posteriors),
                         std::back_inserter(missing), GenotypePairLess {});
+    posteriors.reserve(genotypes.size());
+    const auto old_size = posteriors.size();
     std::transform(std::cbegin(missing), std::cend(missing),
                    std::back_inserter(posteriors),
                    [] (auto genotype) -> GenotypeProbabilityPair {
                        return {genotype, 0.0};
                    });
-    posteriors.shrink_to_fit();
+    std::inplace_merge(std::begin(posteriors),
+                       std::next(std::begin(posteriors), old_size),
+                       std::end(posteriors),
+                       GenotypePairLess {});
 }
 
 auto sort_copy(std::vector<Genotype<Haplotype>> genotypes)
