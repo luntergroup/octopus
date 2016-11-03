@@ -48,7 +48,7 @@ auto make_reader(const boost::filesystem::path& file_path)
 {
     const auto file_type = file_path.extension().string();
     
-    if (file_type != ".bam" && file_path != ".cram") {
+    if (file_type != ".bam" && file_type != ".cram") {
         throw UnknownReadFileFormat {file_path};
     }
     
