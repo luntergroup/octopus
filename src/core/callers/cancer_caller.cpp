@@ -780,6 +780,10 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
             for (const auto& p : credible_regions) {
                 if (p.second.back().first >= parameters_.min_somatic_frequency) {
                     somatic_samples.push_back(p.first);
+                    if (has_normal_sample() && p.first == normal_sample()) {
+                        somatic_samples.clear();
+                        break;
+                    }
                 }
             }
             if (somatic_samples.empty()) {
