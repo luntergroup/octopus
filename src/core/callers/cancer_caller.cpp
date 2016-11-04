@@ -633,6 +633,13 @@ auto compute_marginal_credible_intervals(const M& alphas, const double mass)
     return result;
 }
 
+template <typename T>
+auto compute_somatic_cdf(const T& alphas, const double c = 0.05)
+{
+    const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
+    return maths::beta_cdf(alphas.back(), a0 - alphas.back(), c);
+}
+
 template <typename M, typename T>
 auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
                             const std::vector<GenomicRegion>& called_somatic_regions,
@@ -779,10 +786,12 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
         if (!somatic_variant_calls.empty()) {
             for (const auto& p : credible_regions) {
                 if (p.second.back().first >= parameters_.min_somatic_frequency) {
-                    somatic_samples.push_back(p.first);
                     if (has_normal_sample() && p.first == normal_sample()) {
                         somatic_samples.clear();
                         break;
+                    }
+                    if (compute_somatic_cdf(somatic_alphas.at(p.first)) < 0.1) {
+                        somatic_samples.push_back(p.first);
                     }
                 }
             }
