@@ -651,7 +651,9 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         }
     }
     
-    calls.front()->decorate(result);
+    for (const auto& call : calls) {
+        call->decorate(result);
+    }
     
     return result.build_once();
 }
