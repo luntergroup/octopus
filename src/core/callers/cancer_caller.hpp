@@ -125,6 +125,7 @@ private:
     
     CNVModel::Priors get_cnv_model_priors(const CoalescentModel& prior_model) const;
     TumourModel::Priors get_somatic_model_priors(const SomaticMutationModel& prior_model) const;
+    CNVModel::Priors get_noise_model_priors(const CoalescentModel& prior_model) const;
     ModelPriors get_model_priors() const;
     ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
     GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& inferences,
