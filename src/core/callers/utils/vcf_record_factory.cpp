@@ -599,7 +599,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     it = std::unique(std::begin(alt_alleles), std::end(alt_alleles));
     alt_alleles.erase(it, std::end(alt_alleles));
     result.set_alt(std::move(alt_alleles));
-    auto q = std::max_element(std::cbegin(calls), std::cend(calls),
+    auto q = std::min_element(std::cbegin(calls), std::cend(calls),
                               [] (const auto& lhs, const auto& rhs) {
                                   return lhs->quality() < rhs->quality();
                               });
