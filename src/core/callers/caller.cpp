@@ -484,7 +484,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                                                                   *caller_latents);
                         if (mp) {
                             for (auto& call : variant_calls) {
-                                call->set_model_posterior(*mp);
+                                call->set_model_posterior(probability_to_phred(1 - *mp));
                             }
                         }
                     }
@@ -545,7 +545,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                                                                   *caller_latents);
                         if (mp) {
                             for (auto& call : variant_calls) {
-                                call->set_model_posterior(*mp);
+                                call->set_model_posterior(probability_to_phred(1 - *mp));
                             }
                         }
                     }
