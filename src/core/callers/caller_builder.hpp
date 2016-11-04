@@ -59,8 +59,9 @@ public:
     // cancer
     CallerBuilder& set_normal_sample(SampleName normal_sample);
     CallerBuilder& set_somatic_mutation_rate(double rate) noexcept;
+    CallerBuilder& set_min_expected_somatic_frequency(double frequency) noexcept;
     CallerBuilder& set_credible_mass(double mass) noexcept;
-    CallerBuilder& set_min_somatic_frequency(double frequency) noexcept;
+    CallerBuilder& set_min_credible_somatic_frequency(double frequency) noexcept;
     CallerBuilder& set_min_somatic_posterior(Phred<double> posterior) noexcept;
     
     // trio
@@ -101,8 +102,9 @@ private:
         // cancer
         boost::optional<SampleName> normal_sample;
         double somatic_mutation_rate;
-        double min_somatic_frequency;
+        double min_expected_somatic_frequency;
         double credible_mass;
+        double min_credible_somatic_frequency;
         Phred<double> min_somatic_posterior;
         bool call_somatics_only;
         

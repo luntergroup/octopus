@@ -40,7 +40,7 @@ public:
         boost::optional<SampleName> normal_sample;
         CoalescentModel::Parameters germline_prior_model_params;
         SomaticMutationModel::Parameters somatic_mutation_model_params;
-        double min_somatic_frequency, credible_mass;
+        double min_expected_somatic_frequency, credible_mass, min_credible_somatic_frequency;
         unsigned max_genotypes = 30000;
         double cnv_normal_alpha = 50.0, cnv_tumour_alpha = 0.75;
         double somatic_normal_germline_alpha = 50.0, somatic_normal_somatic_alpha = 0.01;

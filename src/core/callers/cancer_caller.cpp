@@ -785,14 +785,12 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
         
         if (!somatic_variant_calls.empty()) {
             for (const auto& p : credible_regions) {
-                if (p.second.back().first >= parameters_.min_somatic_frequency) {
+                if (p.second.back().first >= parameters_.min_credible_somatic_frequency) {
                     if (has_normal_sample() && p.first == normal_sample()) {
                         somatic_samples.clear();
                         break;
                     }
-                    if (compute_somatic_cdf(somatic_alphas.at(p.first)) < 0.1) {
-                        somatic_samples.push_back(p.first);
-                    }
+                    somatic_samples.push_back(p.first);
                 }
             }
             if (somatic_samples.empty()) {
@@ -913,7 +911,7 @@ CancerCaller::calculate_probability_samples_not_somatic(const Latents& inference
                        const auto a0 = std::accumulate(std::cbegin(p.second),
                                                        std::prev(std::cend(p.second)),
                                                        0.0);
-                       return maths::beta_cdf(p.second.back(), a0, parameters_.min_somatic_frequency);
+                       return maths::beta_cdf(p.second.back(), a0, parameters_.min_expected_somatic_frequency);
                    });
     
     return result;
