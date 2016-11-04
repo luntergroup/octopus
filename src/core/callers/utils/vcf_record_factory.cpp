@@ -520,7 +520,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
         
         for (const auto& sample : samples_) {
             const auto& genotype_call = call->get_genotype_call(sample);
-            auto gq = std::min(99, static_cast<int>(std::round(genotype_call.posterior.score())));
+            auto gq = std::min(999, static_cast<int>(std::round(genotype_call.posterior.score())));
             
             set_vcf_genotype(sample, genotype_call, result);
             result.set_format(sample, "GQ", std::to_string(gq));
@@ -635,7 +635,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         auto sample_itr = std::begin(resolved_genotypes);
         for (const auto& sample : samples_) {
             const auto posterior = calls.front()->get_genotype_call(sample).posterior;
-            auto gq = std::min(99, static_cast<int>(std::round(posterior.score())));
+            auto gq = std::min(999, static_cast<int>(std::round(posterior.score())));
             
             result.set_genotype(sample, *sample_itr++, VcfRecord::Builder::Phasing::phased);
             result.set_format(sample, "GQ", std::to_string(gq));
