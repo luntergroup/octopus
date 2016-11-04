@@ -656,7 +656,7 @@ auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
                                                    [&spliced_genotype] (const double curr, const auto& p) {
                                                        return curr + (contains(p.first, spliced_genotype) ? 0.0 : p.second);
                                                    });
-        result.emplace_back(std::move(spliced_genotype), Phred<double> {inv_posterior});
+        result.emplace_back(std::move(spliced_genotype), probability_to_phred(inv_posterior));
         result.back().credible_regions = credible_regions;
     }
     
@@ -828,9 +828,9 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
         if (called_somatic_haplotype) {
             germline_genotype_calls.emplace_back(std::move(spliced_genotype),
                                                  splice<Allele>(*called_somatic_haplotype, region),
-                                                 Phred<double> {inv_posterior});
+                                                 probability_to_phred(inv_posterior));
         } else {
-            germline_genotype_calls.emplace_back(std::move(spliced_genotype), Phred<double> {inv_posterior});
+            germline_genotype_calls.emplace_back(std::move(spliced_genotype), probability_to_phred(inv_posterior));
         }
     }
     
