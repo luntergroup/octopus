@@ -415,9 +415,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<float>()->default_value(1e-05, "1e-05"),
      "Expected somatic mutation rate, per megabase pair, for this sample")
     
-    ("min-somatic-frequency",
+    ("min-expected-somatic-frequency",
+     po::value<float>()->default_value(0.05, "0.05"),
+     "Minimum expected somatic allele frequency in the sample")
+    
+    ("min-credible-somatic-frequency",
      po::value<float>()->default_value(0.01, "0.01"),
-     "minimum allele frequency that can be considered as a viable somatic mutation")
+     "Minimum credible somatic allele frequency that will be reported")
     
     ("credible-mass",
      po::value<float>()->default_value(0.99, "0.99"),

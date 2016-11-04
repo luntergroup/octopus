@@ -161,15 +161,21 @@ CallerBuilder& CallerBuilder::set_somatic_mutation_rate(double rate) noexcept
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_min_somatic_frequency(double frequency) noexcept
+CallerBuilder& CallerBuilder::set_min_expected_somatic_frequency(double frequency) noexcept
 {
-    params_.min_somatic_frequency = frequency;
+    params_.min_expected_somatic_frequency = frequency;
     return *this;
 }
 
 CallerBuilder& CallerBuilder::set_credible_mass(double mass) noexcept
 {
     params_.credible_mass = mass;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_min_credible_somatic_frequency(double frequency) noexcept
+{
+    params_.min_credible_somatic_frequency = frequency;
     return *this;
 }
 
@@ -260,8 +266,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       {params_.snp_heterozygosity,
                                                       params_.indel_heterozygosity},
                                                       {params_.somatic_mutation_rate},
-                                                      params_.min_somatic_frequency,
-                                                      params_.credible_mass
+                                                      params_.min_expected_somatic_frequency,
+                                                      params_.credible_mass,
+                                                      params_.min_credible_somatic_frequency
                                                   });
         }},
         {"trio", [this, general_parameters = std::move(general_parameters)] () {
