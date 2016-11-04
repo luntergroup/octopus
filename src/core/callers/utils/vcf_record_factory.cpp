@@ -509,7 +509,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_info("MQ0", count_mapq_zero(call_reads));
     
     if (call->model_posterior()) {
-        result.set_info("DMP",  maths::round(call->model_posterior()->score(), 2));
+        result.set_info("MP",  maths::round(call->model_posterior()->score(), 2));
     }
     if (!sites_only_) {
         if (call->all_phased()) {
@@ -623,7 +623,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         }
     }
     if (mp) {
-        result.set_info("DMP", maths::round(*mp, 2));
+        result.set_info("MP", maths::round(*mp, 2));
     }
     if (!sites_only_) {
         if (calls.front()->all_phased()) {
