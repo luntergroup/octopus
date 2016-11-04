@@ -89,16 +89,16 @@ public:
     
     virtual void decorate(VcfRecord::Builder& record) const = 0;
     
-    void set_model_posterior(double p) noexcept;
+    void set_model_posterior(Phred<double> p) noexcept;
     
-    boost::optional<double> model_posterior() const noexcept;
+    boost::optional<Phred<double>> model_posterior() const noexcept;
     
 protected:
     std::unordered_map<SampleName, GenotypeCall> genotype_calls_;
     
     Phred<double> quality_;
     
-    boost::optional<double> model_posterior_;
+    boost::optional<Phred<double>> model_posterior_;
     
 private:
     virtual void replace_called_alleles(const char old_base, const char replacement_base) = 0;
