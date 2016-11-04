@@ -302,6 +302,19 @@ static double calculate_model_posterior(const double normal_germline_model_log_e
     return std::exp(normal_model_ljp - norm);
 }
 
+static double calculate_model_posterior(const double germline_model_log_evidence,
+                                        const double dummy_model_log_evidence,
+                                        const double noise_model_log_evidence)
+{
+    constexpr double normalModelPrior {0.99};
+    constexpr double dummyModelPrior {1.0 - normalModelPrior};
+    const auto normal_model_ljp = std::log(normalModelPrior) + germline_model_log_evidence;
+    const auto dummy_model_ljp  = std::log(dummyModelPrior) + dummy_model_log_evidence;
+    const auto noise_model_ljp  = std::log(dummyModelPrior) + noise_model_log_evidence;
+    const auto norm = maths::log_sum_exp(normal_model_ljp, std::max(dummy_model_ljp, noise_model_ljp));
+    return std::exp(normal_model_ljp - norm);
+}
+
 boost::optional<double>
 CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
                                         const HaplotypeLikelihoodCache& haplotype_likelihoods,
@@ -319,8 +332,13 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
         const auto dummy_genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
         const auto dummy_inferences = germline_model.infer_latents(dummy_genotypes,
                                                                    haplotype_likelihoods);
+        auto noise_model_priors = get_noise_model_priors(prior_model);
+        const CNVModel noise_model {{normal_sample()}, parameters_.ploidy, std::move(noise_model_priors)};
+        auto noise_inferences = noise_model.infer_latents(latents.germline_genotypes_, haplotype_likelihoods);
+        
         return octopus::calculate_model_posterior(normal_inferences.log_evidence,
-                                                  dummy_inferences.log_evidence);
+                                                  dummy_inferences.log_evidence,
+                                                  noise_inferences.approx_log_evidence);
     }
     
     // TODO
@@ -364,6 +382,19 @@ CancerCaller::get_somatic_model_priors(const SomaticMutationModel& prior_model) 
         }
     }
     return Priors {prior_model, std::move(alphas)};
+}
+
+CancerCaller::CNVModel::Priors
+CancerCaller::get_noise_model_priors(const CoalescentModel& prior_model) const
+{
+    using Priors = CNVModel::Priors;
+    Priors::GenotypeMixturesDirichletAlphaMap cnv_alphas {};
+    cnv_alphas.reserve(samples_.size());
+    if (has_normal_sample()) {
+        Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy, parameters_.cnv_tumour_alpha);
+        cnv_alphas.emplace(normal_sample(), std::move(sample_alphas));
+    }
+    return Priors {prior_model, std::move(cnv_alphas)};
 }
 
 std::vector<std::unique_ptr<VariantCall>>
