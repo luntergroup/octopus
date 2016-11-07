@@ -373,7 +373,7 @@ CancerCaller::get_somatic_model_priors(const SomaticMutationModel& prior_model) 
     for (const auto& sample : samples_) {
         if (has_normal_sample() && sample == normal_sample()) {
             Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy + 1, parameters_.somatic_normal_germline_alpha);
-            sample_alphas.back() = parameters_.somatic_tumour_somatic_alpha;
+            sample_alphas.back() = parameters_.somatic_normal_somatic_alpha;
             alphas.emplace(sample, std::move(sample_alphas));
         } else {
             Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy + 1, parameters_.somatic_tumour_germline_alpha);
