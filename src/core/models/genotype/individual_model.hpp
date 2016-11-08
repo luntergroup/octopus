@@ -34,7 +34,8 @@ public:
     IndividualModel() = delete;
     
     IndividualModel(const CoalescentModel& genotype_prior_model,
-                    boost::optional<logging::DebugLogger> debug_log = boost::none);
+                    boost::optional<logging::DebugLogger> debug_log = boost::none,
+                    boost::optional<logging::TraceLogger> trace_log = boost::none);
     
     IndividualModel(const IndividualModel&)            = delete;
     IndividualModel& operator=(const IndividualModel&) = delete;
@@ -50,6 +51,7 @@ private:
     const CoalescentModel& genotype_prior_model_;
     
     mutable boost::optional<logging::DebugLogger> debug_log_;
+    mutable boost::optional<logging::TraceLogger> trace_log_;
 };
 
 } // namesapce model
