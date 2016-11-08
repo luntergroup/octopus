@@ -95,13 +95,15 @@ CancerCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
                                CNVModel::InferredLatents&& cnv,
                                TumourModel::InferredLatents&& somatic,
                                const std::vector<SampleName>& samples,
-                               boost::optional<std::reference_wrapper<const SampleName>> normal_sample)
+                               boost::optional<std::reference_wrapper<const SampleName>> normal_sample,
+                               boost::optional<TumourModel::InferredLatents>&& noise_inferences)
 : germline_genotypes_ {std::move(germline_genotypes)}
 , somatic_genotypes_ {std::move(somatic_genotypes)}
 , model_priors_ {model_priors}
 , germline_model_inferences_ {std::move(germline)}
 , cnv_model_inferences_ {std::move(cnv)}
 , somatic_model_inferences_ {std::move(somatic)}
+, noise_model_inferences_ {std::move(noise_inferences)}
 , haplotypes_ {haplotypes}
 , samples_ {samples}
 , normal_sample_ {normal_sample}
@@ -187,6 +189,18 @@ const SampleName& CancerCaller::normal_sample() const
     return *parameters_.normal_sample;
 }
 
+auto get_high_posterior_genotypes(const model::TumourModel::Latents::GenotypeProbabilityMap& posteriors)
+{
+    std::vector<CancerGenotype<Haplotype>> result {};
+    result.reserve(posteriors.size());
+    for (const auto& p : posteriors) {
+        if (p.second >= 1e-3) {
+            result.push_back(p.first);
+        }
+    }
+    return result;
+}
+
 std::unique_ptr<CancerCaller::Caller::Latents>
 CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const
@@ -223,6 +237,14 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     reduce(cancer_genotypes, germline_genotypes, germline_model, haplotype_likelihoods);
     auto somatic_inferences = somatic_model.infer_latents(cancer_genotypes, haplotype_likelihoods);
     
+    boost::optional<TumourModel::InferredLatents> noise_inferences {};
+    if (has_normal_sample()) {
+        auto noise_model_priors = get_noise_model_priors(somatic_prior_model);
+        const TumourModel noise_model {samples_, parameters_.ploidy, std::move(noise_model_priors)};
+        const auto noise_genotypes = get_high_posterior_genotypes(somatic_inferences.posteriors.genotype_probabilities);
+        noise_inferences = noise_model.infer_latents(noise_genotypes, haplotype_likelihoods);
+    }
+    
     boost::optional<std::reference_wrapper<const SampleName>> normal {};
     if (has_normal_sample()) normal = std::cref(normal_sample());
     return std::make_unique<Latents>(haplotypes,
@@ -230,7 +252,7 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                      std::move(germline_genotypes), std::move(cancer_genotypes),
                                      std::move(germline_inferences), std::move(cnv_inferences),
                                      std::move(somatic_inferences), std::cref(samples_),
-                                     normal);
+                                     normal, std::move(noise_inferences));
 }
 
 auto make_posterior_map(const std::vector<Genotype<Haplotype>>& genotypes,
@@ -332,7 +354,7 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
         const auto dummy_genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
         const auto dummy_inferences = germline_model.infer_latents(dummy_genotypes,
                                                                    haplotype_likelihoods);
-        auto noise_model_priors = get_noise_model_priors(prior_model);
+        auto noise_model_priors = get_normal_noise_model_priors(prior_model);
         const CNVModel noise_model {{normal_sample()}, parameters_.ploidy, std::move(noise_model_priors)};
         auto noise_inferences = noise_model.infer_latents(latents.germline_genotypes_, haplotype_likelihoods);
         
@@ -384,14 +406,27 @@ CancerCaller::get_somatic_model_priors(const SomaticMutationModel& prior_model) 
     return Priors {prior_model, std::move(alphas)};
 }
 
+CancerCaller::TumourModel::Priors
+CancerCaller::get_noise_model_priors(const SomaticMutationModel& prior_model) const
+{
+    using Priors = TumourModel::Priors;
+    Priors::GenotypeMixturesDirichletAlphaMap alphas {};
+    alphas.reserve(samples_.size());
+    for (const auto& sample : samples_) {
+        Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy + 1, 2.0);
+        sample_alphas.back() = 1.0;
+        alphas.emplace(sample, std::move(sample_alphas));
+    }
+    return Priors {prior_model, std::move(alphas)};
+}
+
 CancerCaller::CNVModel::Priors
-CancerCaller::get_noise_model_priors(const CoalescentModel& prior_model) const
+CancerCaller::get_normal_noise_model_priors(const CoalescentModel& prior_model) const
 {
     using Priors = CNVModel::Priors;
     Priors::GenotypeMixturesDirichletAlphaMap cnv_alphas {};
-    cnv_alphas.reserve(samples_.size());
     if (has_normal_sample()) {
-        Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy, parameters_.cnv_tumour_alpha);
+        Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy, 0.5);
         cnv_alphas.emplace(normal_sample(), std::move(sample_alphas));
     }
     return Priors {prior_model, std::move(cnv_alphas)};
@@ -634,10 +669,10 @@ auto compute_marginal_credible_intervals(const M& alphas, const double mass)
 }
 
 template <typename T>
-auto compute_somatic_cdf(const T& alphas, const double c = 0.05)
+auto compute_somatic_mass(const T& alphas, const double c = 0.05)
 {
     const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
-    return maths::beta_cdf(alphas.back(), a0 - alphas.back(), c);
+    return maths::beta_cdf_complement(alphas.back(), a0 - alphas.back(), c);
 }
 
 template <typename M, typename T>
@@ -791,6 +826,14 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                         break;
                     }
                     somatic_samples.push_back(p.first);
+                }
+            }
+            if (has_normal_sample()) {
+                const auto& noisy_alphas = latents.noise_model_inferences_->posteriors.alphas.at(normal_sample());
+                const auto noise_credible_region = compute_marginal_credible_interval(noisy_alphas, parameters_.credible_mass).back();
+                const auto somatic_mass = compute_somatic_mass(noisy_alphas, parameters_.min_expected_somatic_frequency);
+                if (noise_credible_region.first >= parameters_.min_credible_somatic_frequency || somatic_mass > 0.5) {
+                    somatic_samples.clear();
                 }
             }
             if (somatic_samples.empty()) {

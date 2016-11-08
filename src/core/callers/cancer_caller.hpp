@@ -125,7 +125,8 @@ private:
     
     CNVModel::Priors get_cnv_model_priors(const CoalescentModel& prior_model) const;
     TumourModel::Priors get_somatic_model_priors(const SomaticMutationModel& prior_model) const;
-    CNVModel::Priors get_noise_model_priors(const CoalescentModel& prior_model) const;
+    TumourModel::Priors get_noise_model_priors(const SomaticMutationModel& prior_model) const;
+    CNVModel::Priors get_normal_noise_model_priors(const CoalescentModel& prior_model) const;
     ModelPriors get_model_priors() const;
     ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
     GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& inferences,
@@ -150,7 +151,8 @@ public:
             GermlineModel::InferredLatents&&, CNVModel::InferredLatents&&,
             TumourModel::InferredLatents&&,
             const std::vector<SampleName>& samples,
-            boost::optional<std::reference_wrapper<const SampleName>> normal_sample);
+            boost::optional<std::reference_wrapper<const SampleName>> normal_sample,
+            boost::optional<TumourModel::InferredLatents>&&);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const override;
@@ -164,6 +166,7 @@ private:
     GermlineModel::InferredLatents germline_model_inferences_;
     CNVModel::InferredLatents cnv_model_inferences_;
     TumourModel::InferredLatents somatic_model_inferences_;
+    boost::optional<TumourModel::InferredLatents> noise_model_inferences_;
     
     std::reference_wrapper<const std::vector<Haplotype>> haplotypes_;
     
