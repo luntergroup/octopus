@@ -799,7 +799,7 @@ auto get_default_match_predicate() noexcept
 
 bool allow_assembler_generation(const OptionMap& options)
 {
-    return !(is_fast_mode(options) || options.at("assembly-candidate-generator").as<bool>());
+    return options.at("assembly-candidate-generator").as<bool>() && !is_fast_mode(options);
 }
 
 class MissingSourceVariantFile : public MissingFileError
