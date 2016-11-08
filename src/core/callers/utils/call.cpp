@@ -74,12 +74,12 @@ void Call::replace(const char old_base, const char replacement_base)
     }
 }
 
-void Call::set_model_posterior(double p) noexcept
+void Call::set_model_posterior(Phred<double> p) noexcept
 {
     model_posterior_ = p;
 }
 
-boost::optional<double> Call::model_posterior() const noexcept
+boost::optional<Phred<double>> Call::model_posterior() const noexcept
 {
     return model_posterior_;
 }

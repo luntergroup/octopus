@@ -63,18 +63,16 @@ CNVModel::infer_latents(std::vector<Genotype<Haplotype>> genotypes,
                         const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
-    
+    assert(ploidy_ < 4);
     const VariationalBayesParameters vb_params {parameters_.epsilon, parameters_.max_iterations};
-    
-    assert(ploidy_ < 3);
-    
-    if (ploidy_ == 1) {
-        return run_variational_bayes<1>(samples_, std::move(genotypes), priors_,
-                                        haplotype_likelihoods, vb_params);
+    switch (ploidy_) {
+        case 1: return run_variational_bayes<1>(samples_, std::move(genotypes), priors_,
+                                                haplotype_likelihoods, vb_params);
+        case 2: return run_variational_bayes<2>(samples_, std::move(genotypes), priors_,
+                                                haplotype_likelihoods, vb_params);
+        default: return run_variational_bayes<3>(samples_, std::move(genotypes), priors_,
+                                                 haplotype_likelihoods, vb_params);
     }
-    
-    return run_variational_bayes<2>(samples_, std::move(genotypes), priors_,
-                                    haplotype_likelihoods, vb_params);
 }
 
 namespace {
@@ -246,7 +244,7 @@ double expectation(const ProbabilityVector& distribution,
                    const unsigned k, const std::size_t n)
 {
     return std::inner_product(std::cbegin(distribution), std::cend(distribution),
-                              std::cbegin(likelihoods), 0.0, std::plus<void> {},
+                              std::cbegin(likelihoods), 0.0, std::plus<> {},
                               [k, n] (const auto p, const auto& haplotype_likelihoods) {
                                   return p * haplotype_likelihoods[k][n];
                               });
@@ -260,39 +258,30 @@ init_responsabilities(const CompressedAlphas<K>& prior_alphas,
 {
     assert(!read_likelihoods.empty());
     assert(prior_alphas.size() == read_likelihoods.size());
-    
     // notation follows documentation
     const auto S = read_likelihoods.size(); // num samples
     ResponsabilityVectors<K> result {};
     result.reserve(S);
-    
     for (std::size_t s {0}; s < S; ++s) {
         std::array<double, K> al; // no need to keep recomputing this
         const auto a0 = sum(prior_alphas[s]);
-        
         for (unsigned k {0}; k < K; ++k) {
             al[k] = digamma_diff(prior_alphas[s][k], a0);
         }
-        
         const auto N = read_likelihoods[s][0][0].size(); // num reads in sample s
         ResponsabilityVector<K> read_responsabilities(N);
         std::array<double, K> ln_rho;
-        
         for (std::size_t n {0}; n < N; ++n) {
             for (unsigned k {0}; k < K; ++k) {
                 ln_rho[k] = al[k] + expectation(genotype_pobabilities, read_likelihoods[s], k, n);
             }
-            
             const auto ln_rho_norm = maths::log_sum_exp(ln_rho);
-            
             for (unsigned k {0}; k < K; ++k) {
                 read_responsabilities[n][k] = std::exp(ln_rho[k] - ln_rho_norm);
             }
         }
-        
         result.emplace_back(std::move(read_responsabilities));
     }
-    
     return result;
 }
 
@@ -304,19 +293,14 @@ void update_responsabilities(ResponsabilityVectors<K>& result,
                              const CompressedReadLikelihoods<K>& read_likelihoods)
 {
     const auto S = read_likelihoods.size();
-    
     for (std::size_t s {0}; s < S; ++s) {
         std::array<double, K> al;
-        
         const auto a0 = sum(posterior_alphas[s]);
-        
         for (unsigned k {0}; k < K; ++k) {
             al[k] = digamma_diff(posterior_alphas[s][k], a0);
         }
-        
         const auto N = read_likelihoods[s][0][0].size();
         std::array<double, K> ln_rho;
-        
         for (std::size_t n {0}; n < N; ++n) {
             for (unsigned k {0}; k < K; ++k) {
                 ln_rho[k] = al[k] + expectation(genotype_pobabilities, read_likelihoods[s], k, n);
@@ -364,25 +348,19 @@ double marginalise(const ResponsabilityVectors<K>& responsabilities,
                    const std::size_t g)
 {
     double result {0};
-    
     const auto S = read_likelihoods.size(); // num samples
-    
     assert(S == responsabilities.size());
-    
     for (std::size_t s {0}; s < S; ++s) {
         const auto N = read_likelihoods[s][0][0].size(); // num reads in sample s
-        
         assert(responsabilities[s].size() == N);
         assert(responsabilities[s][0].size() == K);
         assert(read_likelihoods[s][g].size() == K);
-        
         for (unsigned k {0}; k < K; ++k) {
             for (std::size_t n {0}; n < N; ++n) {
                 result += responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
             }
         }
     }
-    
     return result;
 }
 
@@ -395,7 +373,6 @@ void update_genotype_log_posteriors(LogProbabilityVector& result,
     for (std::size_t g {0}; g < result.size(); ++g) {
         result[g] = genotype_log_priors[g] + marginalise(responsabilities, read_likelihoods, g);
     }
-    
     maths::normalise_logs(result);
 }
 
@@ -403,12 +380,10 @@ template <std::size_t K>
 auto max_change(const CompressedAlpha<K>& lhs, const CompressedAlpha<K>& rhs)
 {
     double result {0};
-    
     for (std::size_t k {0}; k < K; ++k) {
         const auto curr = std::abs(lhs[k] - rhs[k]);
         if (curr > result) result = curr;
     }
-    
     return result;
 }
 
@@ -422,14 +397,11 @@ auto max_change(const CompressedAlphas<K>& prior_alphas,
                 const CompressedAlphas<K>& posterior_alphas)
 {
     assert(prior_alphas.size() == posterior_alphas.size());
-    
     double result {0};
-    
     for (std::size_t s {0}; s < prior_alphas.size(); ++s) {
         const auto curr = max_change(prior_alphas[s], posterior_alphas[s]);
         if (curr > result) result = curr;
     }
-    
     return result;
 }
 
@@ -458,7 +430,7 @@ double dirichlet_expectation(const CompressedAlpha<K>& priors, const CompressedA
     using boost::math::digamma;
     const auto da0 = digamma(sum(posteriors));
     return std::inner_product(std::cbegin(priors), std::cend(priors), std::cbegin(posteriors),
-                              0.0, std::plus<void> {},
+                              0.0, std::plus<> {},
                               [da0] (const auto& prior, const auto& post) {
                                   return (prior - 1) * (digamma(post) - da0);
                               }) - maths::log_beta(priors);
@@ -468,7 +440,7 @@ template <std::size_t K>
 double expectation(const CompressedAlphas<K>& priors, const CompressedAlphas<K>& posteriors)
 {
     return std::inner_product(std::cbegin(priors), std::cend(priors), std::cbegin(posteriors),
-                              0.0, std::plus<void> {},
+                              0.0, std::plus<> {},
                               [] (const auto& prior, const auto& post) {
                                   return dirichlet_expectation(prior, post);
                               });
@@ -479,7 +451,6 @@ template <std::size_t K>
 double expectation(const ResponsabilityVector<K>& taus, const CompressedAlpha<K>& alpha)
 {
     using boost::math::digamma;
-    
     const auto das = digamma(sum(alpha));
     double result {0};
     for (unsigned k {0}; k < K; ++k) {
@@ -493,7 +464,7 @@ template <std::size_t K>
 double expectation(const ResponsabilityVectors<K>& taus, const CompressedAlphas<K>& alphas)
 {
     return std::inner_product(std::cbegin(taus), std::cend(taus), std::cbegin(alphas),
-                              0.0, std::plus<void> {},
+                              0.0, std::plus<> {},
                               [] (const auto& tau, const auto& alpha) {
                                   return expectation(tau, alpha);
                               });
@@ -589,7 +560,6 @@ double calculate_lower_bound(const CompressedAlphas<K>& prior_alphas,
     const auto& taus = latents.responsabilities;
     
     double result {0};
-    
     result += expectation(genotype_posteriors, genotype_log_priors);
     result += expectation(prior_alphas, posterior_alphas);
     result += expectation(taus, posterior_alphas);
@@ -597,7 +567,6 @@ double calculate_lower_bound(const CompressedAlphas<K>& prior_alphas,
     result -= expectation(genotype_posteriors, genotype_log_posteriors);
     result -= expectation(posterior_alphas);
     result -= q_expectation(taus);
-    
     return result;
 }
 
@@ -627,8 +596,6 @@ run_variational_bayes(const CompressedAlphas<K>& prior_alphas,
     
     bool is_converged {false};
     double max_change {0};
-    
-    // main loop
     for (unsigned i {0}; i < params.max_iterations; ++i) {
         update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors,
                                        responsabilities, log_likelihoods);
@@ -656,28 +623,23 @@ run_variational_bayes(const CompressedAlphas<K>& prior_alphas,
                       std::vector<LogProbabilityVector> seeds)
 {
     // Try the main algorithm from the seeds to check local optimum
-    
-    std::vector<CompressedLatents<K>> results;
-    results.reserve(seeds.size());
-    
+    std::vector<CompressedLatents<K>> seed_latents;
+    seed_latents.reserve(seeds.size());
     for (auto& seed : seeds) {
-        results.emplace_back(run_variational_bayes(prior_alphas, genotype_log_priors,
-                                                   log_likelihoods,
-                                                   std::move(seed),
-                                                   params));
+        seed_latents.push_back(run_variational_bayes(prior_alphas, genotype_log_priors,
+                                                     log_likelihoods, std::move(seed),
+                                                     params));
     }
-    
-    std::vector<double> result_evidences(results.size());
-    
-    std::transform(std::cbegin(results), std::cend(results), std::begin(result_evidences),
+    std::vector<double> seed_evidences(seed_latents.size());
+    std::transform(std::cbegin(seed_latents), std::cend(seed_latents),
+                   std::begin(seed_evidences),
                    [&] (const auto& latents) {
                        return calculate_lower_bound(prior_alphas, genotype_log_priors,
                                                     log_likelihoods, latents);
                    });
-    
-    const auto it = std::max_element(std::cbegin(result_evidences), std::cend(result_evidences));
-    const auto idx = std::distance(std::cbegin(result_evidences), it);
-    return std::make_pair(std::move(results[idx]), *it);
+    const auto itr = std::max_element(std::cbegin(seed_evidences), std::cend(seed_evidences));
+    const auto idx = std::distance(std::cbegin(seed_evidences), itr);
+    return std::make_pair(std::move(seed_latents[idx]), *itr);
 }
 
 // Helpers
@@ -744,25 +706,19 @@ auto generate_seeds(const std::vector<SampleName>& samples,
                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
 {
     std::vector<LogProbabilityVector> result {};
-    
-    result.emplace_back(genotype_log_priors);
-    result.emplace_back(log_uniform_dist(genotypes.size()));
-    
+    result.reserve(2 + 2 * samples.size());
+    result.push_back(genotype_log_priors);
+    result.push_back(log_uniform_dist(genotypes.size()));
     model::IndividualModel germline_model {priors.genotype_prior_model};
-    
     for (const auto& sample : samples) {
         haplotype_log_likelihoods.prime(sample);
-        
         const auto latents = germline_model.infer_latents(genotypes, haplotype_log_likelihoods);
-        
-        result.emplace_back(latents.posteriors.genotype_probabilities);
+        result.push_back(latents.posteriors.genotype_probabilities);
         maths::log_each(result.back());
-        
-        result.emplace_back(latents.posteriors.genotype_probabilities);
+        result.push_back(latents.posteriors.genotype_probabilities);
         for (auto& p : result.back()) p = 1.0 - p;
         maths::log_each(result.back());
     }
-    
     return result;
 }
 

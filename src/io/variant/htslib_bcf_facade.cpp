@@ -24,7 +24,6 @@
 #include "vcf_record.hpp"
 
 #include <iostream> // TEST
-#include <vcf.h>
 
 namespace octopus {
 

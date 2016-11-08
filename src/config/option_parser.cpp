@@ -100,7 +100,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("reads,I",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-seperated list of BAM/CRAM files to be analysed."
+     "Space-separated list of BAM/CRAM files to be analysed."
      " May be specified multiple times")
     
     ("reads-file,i",
@@ -113,7 +113,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("regions,T",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-seperated list of regions (chrom:begin-end) to be analysed."
+     "Space-separated list of regions (chrom:begin-end) to be analysed."
      " May be specified multiple times")
     
     ("regions-file,t",
@@ -122,7 +122,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("skip-regions,K",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-seperated list of regions (chrom:begin-end) to skip"
+     "Space-separated list of regions (chrom:begin-end) to skip"
      " May be specified multiple times")
     
     ("skip-regions-file,k",
@@ -131,7 +131,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("samples,S",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-seperated list of sample names to analyse")
+     "Space-separated list of sample names to analyse")
     
     ("samples-file,s",
      po::value<fs::path>(),
@@ -158,13 +158,13 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description transforms("Read transformations");
     transforms.add_options()
-    ("disable-read-transforms",
-     po::bool_switch()->default_value(false),
-     "Disables all read transformations")
+    ("read-transforms",
+     po::value<bool>()->default_value(true),
+     "Enable all read transformations")
     
-    ("disable-soft-clip-masking",
-     po::bool_switch()->default_value(false),
-     "Disables soft clipped masking, thus allowing all soft clipped bases to be used"
+    ("soft-clip-masking",
+     po::value<bool>()->default_value(true),
+     "Enable soft clipped masking, thus allowing all soft clipped bases to be used"
      " for candidate generation")
     
     ("mask-tails",
@@ -175,20 +175,20 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(2),
      "Masks this number of adjacent non soft clipped bases when soft clipped bases are present")
     
-    ("disable-adapter-masking",
-     po::bool_switch()->default_value(false),
-     "Disables adapter detection and masking")
+    ("adapter-masking",
+     po::value<bool>()->default_value(true),
+     "Enable adapter detection and masking")
     
-    ("disable-overlap-masking",
-     po::bool_switch()->default_value(false),
-     "Disables read segment overlap masking")
+    ("overlap-masking",
+     po::value<bool>()->default_value(true),
+     "Enable read segment overlap masking")
     ;
     
     po::options_description filters("Read filtering");
     filters.add_options()
-    ("disable-read-filtering",
-     po::bool_switch()->default_value(false),
-     "Disables all read filters")
+    ("read-filtering",
+     po::value<bool>()->default_value(true),
+     "Enable all read filters")
     
     ("consider-unmapped-reads",
      po::bool_switch()->default_value(false),
@@ -234,7 +234,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Filters reads marked as secondary alignments")
     
-    ("no-supplementary-alignmenets",
+    ("no-supplementary-alignments",
      po::bool_switch()->default_value(false),
      "Filters reads marked as supplementary alignments")
     
@@ -252,28 +252,28 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("disable-downsampling",
      po::bool_switch()->default_value(false),
-     "Diables all downsampling")
+     "Disables downsampling")
     
     ("downsample-above",
-     po::value<int>()->default_value(500),
+     po::value<int>()->default_value(1000),
      "Downsample reads in regions where coverage is over this")
     
     ("downsample-target",
-     po::value<int>()->default_value(400),
+     po::value<int>()->default_value(500),
      "The target coverage for the downsampler")
     ;
     
     po::options_description variant_generation("Candidate variant generation");
     variant_generation.add_options()
-    ("disable-raw-cigar-candidate-generator,g",
-     po::bool_switch()->default_value(false),
-     "Disables candidate generation from raw read alignments (CIGAR strings)")
+    ("raw-cigar-candidate-generator,g",
+     po::value<bool>()->default_value(true),
+     "Enable candidate generation from raw read alignments (CIGAR strings)")
     
-    ("disable-assembly-candidate-generator,a",
-     po::bool_switch()->default_value(false),
-     "Disables candidate generation using local re-assembly")
+    ("assembly-candidate-generator,a",
+     po::value<bool>()->default_value(true),
+     "Enable candidate generation using local re-assembly")
     
-    ("generate-candidates-from-source",
+    ("source-candidates",
      po::value<fs::path>(),
      "Variant file path containing known variants. These variants will automatically become"
      " candidates")
@@ -289,29 +289,49 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("max-variant-size",
      po::value<int>()->default_value(2000),
-     "Maximum candidate varaint size to consider (in region space)")
+     "Maximum candidate variant size to consider (in region space)")
     
-    ("kmer-size",
+    ("kmer-sizes",
      po::value<std::vector<int>>()->multitoken()
-     ->default_value(std::vector<int> {10, 25}, "10 25")->composing(),
-     "K-mer sizes to use for local re-assembly")
-
-    ("assembler-bin-size",
-     po::value<int>()->default_value(1000),
-     "How many reference positions to assemble")
+     ->default_value(std::vector<int> {10, 15, 20}, "10 15 20")->composing(),
+     "Kmer sizes to use for local assembly")
     
-    ("num-assembler-fallbacks",
-     po::value<int>()->default_value(6),
-     "How many fallback k-mer sizes to use if the default sizes fail")
+    ("num-fallback-kmers",
+     po::value<int>()->default_value(7),
+     "How many local assembly fallback kmer sizes to use if the default sizes fail")
     
-    ("assembler-fallback-interval",
+    ("fallback-kmer-gap",
      po::value<int>()->default_value(10),
-     "The interval size used to generate fallback kmer sizes")
+     "The gap size used to generate local assembly fallback kmers")
+    
+    ("max-region-to-assemble",
+     po::value<int>()->default_value(500),
+     "The maximum region size that can be used for local assembly")
+    
+    ("max-assemble-region-overlap",
+     po::value<int>()->default_value(100),
+     "The maximum number of bases allowed to overlap assembly regions")
+    
+    ("force-assemble",
+     po::bool_switch()->default_value(false),
+     "Forces all regions to be assembled")
     
     ("assembler-mask-base-quality",
-     po::value<int>()->implicit_value(10),
-     "Matching alignment bases with quality less than this will be reference masked before."
-     " Ff no value is specified then min-base-quality is used")
+     po::value<int>()->default_value(15),
+     "Aligned bases with quality less than this will be converted to reference before "
+     "being inserted into the De Bruijn graph")
+    
+    ("min-kmer-support",
+     po::value<int>()->default_value(1),
+     "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
+    
+    ("min-bubble-weight",
+     po::value<double>()->default_value(2.0),
+     "Minimum mean graph bubble weight that is extracted from the assembly graph")
+    
+    ("max-bubbles",
+     po::value<int>()->default_value(10),
+     "Maximum number of bubbles to extract from the assembly graph")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");
@@ -351,7 +371,7 @@ OptionMap parse_options(const int argc, const char** argv)
      ->default_value(std::vector<ContigPloidy> {
         {boost::none, "Y", 1}, {boost::none, "MT", 1}}, "Y=1 MT=1")
      ->composing(),
-     "Space-seperated list of contig (contig=ploidy) or sample contig"
+     "Space-separated list of contig (contig=ploidy) or sample contig"
      " (sample:contig=ploidy) ploidies")
     
     ("contig-ploidies-file",
@@ -395,16 +415,20 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<float>()->default_value(1e-05, "1e-05"),
      "Expected somatic mutation rate, per megabase pair, for this sample")
     
-    ("min-somatic-frequency",
+    ("min-expected-somatic-frequency",
+     po::value<float>()->default_value(0.05, "0.05"),
+     "Minimum expected somatic allele frequency in the sample")
+    
+    ("min-credible-somatic-frequency",
      po::value<float>()->default_value(0.01, "0.01"),
-     "minimum allele frequency that can be considered as a viable somatic mutation")
+     "Minimum credible somatic allele frequency that will be reported")
     
     ("credible-mass",
      po::value<float>()->default_value(0.99, "0.99"),
      "Mass of the posterior density to use for evaluating allele frequencies")
     
     ("min-somatic-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
+     po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
      "Minimum somatic mutation call posterior probability (phred scale)")
     
     ("somatics-only",
@@ -457,21 +481,21 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
      "Haplotypes with posterior probability less than this can be filtered before extension")
     
-    ("disable-inactive-flank-scoring",
-     po::bool_switch()->default_value(false),
+    ("inactive-flank-scoring",
+     po::value<bool>()->default_value(true),
      "Disables additional calculation to adjust alignment score when there are inactive"
      " candidates in haplotype flanking regions")
     ;
     
     po::options_description call_filtering("Callset filtering");
     call_filtering.add_options()
-    ("disable-call-filtering",
-     po::bool_switch()->default_value(false),
-     "Disables all callset filtering")
+    ("call-filtering",
+     po::value<bool>()->default_value(false),
+     "Enable all variant call filtering")
     
-    ("disable-model-filtering",
-     po::bool_switch()->default_value(false),
-     "Disables model based filtering of variant calls")
+    ("model-filtering",
+     po::value<bool>(),
+     "Enable model based filtering of variant calls")
     ;
     
     po::options_description all("octopus options");
@@ -710,6 +734,16 @@ void check_positive(const std::string& option, const OptionMap& vm)
     }
 }
 
+void check_strictly_positive(const std::string& option, const OptionMap& vm)
+{
+    if (vm.count(option) == 1) {
+        const auto value = vm.at(option).as<int>();
+        if (value < 1) {
+            throw InvalidCommandLineOptionValue {option, value, "must be greater than zero" };
+        }
+    }
+}
+
 void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2)
 {
     if (vm.count(opt1) == 1 && !vm[opt1].defaulted() && vm.count(opt2) == 1 && !vm[opt2].defaulted()) {
@@ -793,17 +827,24 @@ po::parsed_options run(po::command_line_parser& parser)
 void validate(const OptionMap& vm)
 {
     const std::vector<std::string> positive_int_options {
-        "threads", "max-open-read-files", "mask-tails", "mask-soft-clipped-boundries",
+        "threads", "mask-tails", "mask-soft-clipped-boundries",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
-        "max-read-length", "downsample-above", "downsample-target", "min-base-quality"
-        "min-supporting-reads", "max-variant-size", "assembler-bin-size", "num-assembler-fallbacks",
-        "assembler-fallback-interval", "assembler-mask-base-quality", "organism-ploidy",
-        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow", "max-holdout-depth"
+        "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
+        "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
+        "min-kmer-support", "max-bubbles", "max-holdout-depth"
+    };
+    const std::vector<std::string> strictly_positive_int_options {
+        "max-open-read-files", "downsample-above", "downsample-target",
+        "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
+        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");
     for (const auto& option : positive_int_options) {
         check_positive(option, vm);
+    }
+    for (const auto& option : strictly_positive_int_options) {
+        check_strictly_positive(option, vm);
     }
     check_reads_present(vm);
     check_region_files_consistent(vm);

@@ -44,18 +44,36 @@ public:
 
 namespace {
 
+auto get_extension(const boost::filesystem::path& file_path)
+{
+    auto result = file_path.extension().string();
+    if (!result.empty() && result.front() == '.') {
+        result.erase(std::cbegin(result));
+    }
+    return result;
+}
+
+template <typename Container>
+bool includes(const Container& values, const typename Container::value_type& value)
+{
+    return std::find(std::cbegin(values), std::cend(values), value) != std::cend(values);
+}
+
+bool is_valid_read_file_type(const boost::filesystem::path& file_path)
+{
+    static const std::vector<std::string> validReadFileExtensions {"bam", "cram"};
+    return includes(validReadFileExtensions, get_extension(file_path));
+}
+
 auto make_reader(const boost::filesystem::path& file_path)
 {
-    const auto file_type = file_path.extension().string();
-    
-    if (file_type != ".bam" && file_path != ".cram") {
+    if (!is_valid_read_file_type(file_path)) {
         throw UnknownReadFileFormat {file_path};
     }
-    
     return std::make_unique<HtslibSamFacade>(file_path);
 }
 
-}
+} //namespace
 
 ReadReader::ReadReader(const boost::filesystem::path& file_path)
 : file_path_ {file_path}

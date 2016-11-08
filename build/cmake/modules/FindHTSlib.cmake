@@ -73,20 +73,18 @@ libfind_package(HTSlib ZLIB)
 
 # Include dir
 find_path(HTSlib_INCLUDE_DIR
-    NAMES ${HTSLIB_ADDITIONAL_HEADERS} sam.h
+    NAMES ${HTSLIB_ADDITIONAL_HEADERS} htslib/sam.h
     PATHS ${HTSLIB_SEARCH_DIRS}
     PATH_SUFFIXES 
-        include include/htslib htslib/${_htslib_ver_path}/htslib
-    HINTS ENV HTSLIB_ROOT
+        include htslib/${_htslib_ver_path}
 )
 
 # Finally the library itself
 find_library(HTSlib_LIBRARY
-    NAMES hts libhts.a hts.a
+    NAMES libhts.a hts.a hts
     PATHS ${HTSlib_INCLUDE_DIR} ${HTSLIB_SEARCH_DIRS}
     NO_DEFAULT_PATH
     PATH_SUFFIXES lib lib64 ${_htslib_ver_path}
-    HINTS ENV HTSLIB_ROOT
 )
 
 # Set the include dir variables and the libraries and let libfind_process do the rest.

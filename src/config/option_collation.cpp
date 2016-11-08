@@ -543,6 +543,24 @@ ReadManager make_read_manager(const OptionMap& options)
     return ReadManager {std::move(read_paths), max_open_files};
 }
 
+auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
+{
+    // TODO: could think about getting rid of the 'caller' option and just
+    // deduce the caller type directly from the options.
+    // Will need to report an error if conflicting caller options are given anyway.
+    auto result = options.at("caller").as<std::string>();
+    if (result == "population" && samples.size() == 1) {
+        result = "individual";
+    }
+    if (options.count("maternal-sample") == 1 || options.count("paternal-sample") == 1) {
+        result = "trio";
+    }
+    if (options.count("normal-sample") == 1) {
+        result = "cancer";
+    }
+    return result;
+}
+
 auto make_read_transformer(const OptionMap& options)
 {
     using namespace octopus::readpipe;
@@ -550,7 +568,7 @@ auto make_read_transformer(const OptionMap& options)
     result.register_transform(CapitaliseBases {});
     result.register_transform(CapBaseQualities {125});
     
-    if (options.at("disable-read-transforms").as<bool>()) {
+    if (!options.at("read-transforms").as<bool>()) {
         return result;
     }
     if (options.count("mask-tails")) {
@@ -559,7 +577,7 @@ auto make_read_transformer(const OptionMap& options)
             result.register_transform(MaskTail {tail_mask_size});
         }
     }
-    if (!options.at("disable-soft-clip-masking").as<bool>()) {
+    if (options.at("soft-clip-masking").as<bool>()) {
         const auto soft_clipped_mask_size = as_unsigned("mask-soft-clipped-boundries", options);
         if (soft_clipped_mask_size > 0) {
             result.register_transform(MaskSoftClippedBoundries {soft_clipped_mask_size});
@@ -567,10 +585,10 @@ auto make_read_transformer(const OptionMap& options)
             result.register_transform(MaskSoftClipped {});
         }
     }
-    if (!options.at("disable-adapter-masking").as<bool>()) {
+    if (options.at("adapter-masking").as<bool>()) {
         result.register_transform(MaskAdapters {});
     }
-    if (!options.at("disable-overlap-masking").as<bool>()) {
+    if (options.at("overlap-masking").as<bool>()) {
         result.register_transform(MaskOverlappedSegment {});
     }
     
@@ -581,7 +599,7 @@ auto make_read_transformer(const OptionMap& options)
 
 bool is_read_filtering_enabled(const OptionMap& options)
 {
-    return !options.at("disable-read-filtering").as<bool>();
+    return options.at("read-filtering").as<bool>();
 }
 
 auto make_read_filterer(const OptionMap& options)
@@ -635,7 +653,7 @@ auto make_read_filterer(const OptionMap& options)
     if (options.at("no-secondary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSecondaryAlignment>());
     }
-    if (options.at("no-supplementary-alignmenets").as<bool>()) {
+    if (options.at("no-supplementary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSupplementaryAlignment>());
     }
     if (!options.at("consider-reads-with-unmapped-segments").as<bool>()) {
@@ -781,8 +799,18 @@ auto get_default_match_predicate() noexcept
 
 bool allow_assembler_generation(const OptionMap& options)
 {
-    return !(is_fast_mode(options) || options.at("disable-assembly-candidate-generator").as<bool>());
+    return options.at("assembly-candidate-generator").as<bool>() && !is_fast_mode(options);
 }
+
+class MissingSourceVariantFile : public MissingFileError
+{
+    std::string do_where() const override
+    {
+        return "make_variant_generator_builder";
+    }
+public:
+    MissingSourceVariantFile(fs::path p) : MissingFileError {std::move(p), "source variant"} {};
+};
 
 auto make_variant_generator_builder(const OptionMap& options)
 {
@@ -793,7 +821,7 @@ auto make_variant_generator_builder(const OptionMap& options)
     
     VariantGeneratorBuilder result {};
     
-    if (!options.at("disable-raw-cigar-candidate-generator").as<bool>()) {
+    if (options.at("raw-cigar-candidate-generator").as<bool>()) {
         if (options.count("min-supporting-reads") == 1) {
             CigarScanner::Options scanner_options {};
             scanner_options.min_base_quality = as_unsigned("min-base-quality", options);
@@ -814,29 +842,33 @@ auto make_variant_generator_builder(const OptionMap& options)
     }
     if (allow_assembler_generation(options)) {
         LocalReassembler::Options reassembler_options {};
-        const auto kmer_sizes = options.at("kmer-size").as<std::vector<int>>();
+        const auto kmer_sizes = options.at("kmer-sizes").as<std::vector<int>>();
         reassembler_options.kmer_sizes.assign(std::cbegin(kmer_sizes), std::cend(kmer_sizes));
         if (options.count("assembler-mask-base-quality") == 1) {
             reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
         }
-        reassembler_options.num_fallbacks = as_unsigned("num-assembler-fallbacks", options);
-        reassembler_options.fallback_interval_size = as_unsigned("assembler-fallback-interval", options);
-        reassembler_options.bin_size = as_unsigned("assembler-bin-size", options);
+        reassembler_options.num_fallbacks = as_unsigned("num-fallback-kmers", options);
+        reassembler_options.fallback_interval_size = as_unsigned("fallback-kmer-gap", options);
+        reassembler_options.bin_size = as_unsigned("max-region-to-assemble", options);
+        reassembler_options.bin_overlap = as_unsigned("max-assemble-region-overlap", options);
+        reassembler_options.min_kmer_observations = as_unsigned("min-kmer-support", options);
+        reassembler_options.min_mean_bubble_weight = options.at("min-bubble-weight").as<double>();
+        reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
+        reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
-    if (options.count("generate-candidates-from-source") == 1) {
-        const auto input_path = options.at("generate-candidates-from-source").as<fs::path>();
+    if (options.count("source-candidates") == 1) {
+        const auto input_path = options.at("source-candidates").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
         if (!fs::exists(resolved_path)) {
-            stream(log) << "The path " << input_path
-                         << " given in the input option (--generate-candidates-from-source) does not exist";
+            throw MissingSourceVariantFile {input_path};
         }
         result.add_vcf_extractor(std::move(resolved_path));
     }
     if (options.count("regenotype") == 1) {
         auto regenotype_path = options.at("regenotype").as<fs::path>();
-        if (options.count("generate-candidates-from-source") == 1) {
-            fs::path input_path {options.at("generate-candidates-from-source").as<std::string>()};
+        if (options.count("source-candidates") == 1) {
+            fs::path input_path {options.at("source-candidates").as<std::string>()};
             if (regenotype_path != input_path) {
                 warning_log << "Running in regenotype mode but given a different source variant file";
             }
@@ -844,8 +876,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         auto resolved_path = resolve_path(regenotype_path, options);
         if (!fs::exists(resolved_path)) {
-            stream(log) << "The path " << regenotype_path
-                        << " given in the input option (--generate-candidates-from-source) does not exist";
+            throw MissingSourceVariantFile {resolved_path};
         }
         result.add_vcf_extractor(std::move(resolved_path));
     }
@@ -951,9 +982,8 @@ class MissingPloidyFile : public MissingFileError
         return "get_ploidy_map";
     }
 public:
-    MissingPloidyFile(fs::path p) : MissingFileError {std::move(p), "read path"} {};
+    MissingPloidyFile(fs::path p) : MissingFileError {std::move(p), "ploidy"} {};
 };
-
 
 PloidyMap get_ploidy_map(const OptionMap& options)
 {
@@ -1026,24 +1056,6 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     return HaplotypeGenerator::Builder()
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
-}
-
-auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
-{
-    // TODO: could think about getting rid of the 'caller' option and just
-    // deduce the caller type directly from the options.
-    // Will need to report an error if conflicting caller options are given anyway.
-    auto result = options.at("caller").as<std::string>();
-    if (result == "population" && samples.size() == 1) {
-        result = "individual";
-    }
-    if (options.count("maternal-sample") == 1 || options.count("paternal-sample") == 1) {
-        result = "trio";
-    }
-    if (options.count("normal-sample") == 1) {
-        result = "cancer";
-    }
-    return result;
 }
 
 class BadTrioSampleSet : public UserError
@@ -1196,7 +1208,7 @@ public:
 
 bool allow_flank_scoring(const OptionMap& options)
 {
-    return !(is_fast_mode(options) || options.at("disable-inactive-flank-scoring").as<bool>());
+    return !(is_fast_mode(options) || options.at("inactive-flank-scoring").as<bool>());
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
@@ -1252,8 +1264,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
         }
         vc_builder.set_somatic_mutation_rate(options.at("somatic-mutation-rate").as<float>());
-        vc_builder.set_min_somatic_frequency(options.at("min-somatic-frequency").as<float>());
+        vc_builder.set_min_expected_somatic_frequency(options.at("min-expected-somatic-frequency").as<float>());
         vc_builder.set_credible_mass(options.at("credible-mass").as<float>());
+        vc_builder.set_min_credible_somatic_frequency(options.at("min-credible-somatic-frequency").as<float>());
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
     } else if (caller == "trio") {
@@ -1261,9 +1274,11 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_denovo_mutation_rate(options.at("denovo-mutation-rate").as<float>());
     }
     
-    vc_builder.set_model_filtering(false); // TODO: turn back on when variant filtering is implemented
-//    vc_builder.set_model_filtering(!(options.at("disable-call-filtering").as<bool>()
-//                                     || options.at("disable-model-filtering").as<bool>()));
+    if (options.count("model-filtering") == 1) {
+        vc_builder.set_model_filtering(options.at("model-filtering").as<bool>());
+    } else {
+        vc_builder.set_model_filtering(caller == "cancer");
+    }
     
     if (call_sites_only(options)) {
         vc_builder.set_sites_only();

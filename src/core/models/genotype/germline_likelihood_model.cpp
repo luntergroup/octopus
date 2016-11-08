@@ -89,7 +89,6 @@ double GermlineLikelihoodModel::evaluate_diploid(const Genotype<Haplotype>& geno
 double GermlineLikelihoodModel::evaluate_triploid(const Genotype<Haplotype>& genotype) const
 {
     using std::cbegin; using std::cend;
-    //static constexpr auto ln2 = ln<>(2);
     
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
     if (genotype.is_homozygous()) {

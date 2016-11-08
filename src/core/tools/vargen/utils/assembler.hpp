@@ -76,7 +76,7 @@ public:
     
     void clear();
     
-    std::deque<Variant> extract_variants(unsigned max = 100);
+    std::deque<Variant> extract_variants(double min_mean_bubble_weight = 2.0, unsigned max_bubbles = 100);
     
     friend void debug::print(const Assembler& assembler);
     
@@ -230,8 +230,12 @@ private:
     bool is_on_path(Edge e, const Path& path) const;
     bool connects_to_path(Edge e, const Path& path) const;
     bool is_dependent_on_path(Edge e, const Path& path) const;
+    GraphEdge::WeightType weight(const Path& path) const;
     
     void remove_trivial_nonreference_cycles();
+    GraphEdge::WeightType sum_source_in_edge_weight(Edge e) const;
+    GraphEdge::WeightType sum_target_out_edge_weight(Edge e) const;
+    bool is_low_weight(Edge e, unsigned min_weight) const;
     void remove_low_weight_edges(unsigned min_weight);
     void remove_disconnected_vertices();
     std::unordered_set<Vertex> find_reachable_kmers(Vertex from) const;
@@ -266,7 +270,7 @@ private:
     backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const;
     Path extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const;
     
-    std::deque<Variant> extract_k_highest_scoring_bubble_paths(unsigned k);
+    std::deque<Variant> extract_k_highest_scoring_bubble_paths(double min_mean_bubble_weight, unsigned k);
     
     // for debug
     friend std::ostream& operator<<(std::ostream& os, const Kmer& kmer);

@@ -53,12 +53,11 @@ public:
     
 private:
     boost::optional<Path> file_path_;
-    
     std::unique_ptr<HtslibBcfFacade> writer_;
-    
     bool is_header_written_;
-    
     mutable std::mutex mutex_;
+    
+    bool can_write_index() const noexcept;
 };
 
 VcfWriter& operator<<(VcfWriter& dst, const VcfHeader& header);
