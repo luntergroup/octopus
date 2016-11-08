@@ -1,6 +1,6 @@
 ![Octopus Logo](logo.png)
 
-[![Build Status](https://travis-ci.org/luntergroup/octopus.svg?branch=develop)](https://travis-ci.org/luntergroup/octopus)
+[![Build Status](https://travis-ci.org/luntergroup/octopus.svg?branch=master)](https://travis-ci.org/luntergroup/octopus)
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
 [![Gitter](https://badges.gitter.im/octopus-caller/Lobby.svg)](https://gitter.im/octopus-caller/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
