@@ -64,7 +64,7 @@ double SomaticMutationModel::ln_probability_of_somatic(const Haplotype& somatic,
 {
     // TODO: implement a proper model for this (snv/indel).
     const auto variants = difference(somatic, germline);
-    return variants.size() * params_.somatic_mutation_rate;
+    return variants.size() * std::log(params_.somatic_mutation_rate);
 }
 
 } // namespace octopus

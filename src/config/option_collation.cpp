@@ -1264,8 +1264,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
         }
         vc_builder.set_somatic_mutation_rate(options.at("somatic-mutation-rate").as<float>());
-        vc_builder.set_min_somatic_frequency(options.at("min-somatic-frequency").as<float>());
+        vc_builder.set_min_expected_somatic_frequency(options.at("min-expected-somatic-frequency").as<float>());
         vc_builder.set_credible_mass(options.at("credible-mass").as<float>());
+        vc_builder.set_min_credible_somatic_frequency(options.at("min-credible-somatic-frequency").as<float>());
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
     } else if (caller == "trio") {

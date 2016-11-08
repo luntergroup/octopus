@@ -40,10 +40,8 @@ public:
         if (error < Q {0}) {
             throw std::domain_error {"Phred: negative error probability " + std::to_string(error)};
         }
-        
         static const Q minProbability = std::nextafter(Q {0}, Q {1});
-        
-        score_ = Q {-10} * std::log10(std::max(std::min(error.value, Q {1}), minProbability));
+        score_ = std::abs(Q {-10} * std::log10(std::max(std::min(error.value, Q {1}), minProbability)));
     }
     
     Phred(const Phred&)            = default;

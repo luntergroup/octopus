@@ -509,7 +509,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_info("MQ0", count_mapq_zero(call_reads));
     
     if (call->model_posterior()) {
-        result.set_info("DMP", *call->model_posterior());
+        result.set_info("MP",  maths::round(call->model_posterior()->score(), 2));
     }
     if (!sites_only_) {
         if (call->all_phased()) {
@@ -520,7 +520,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
         
         for (const auto& sample : samples_) {
             const auto& genotype_call = call->get_genotype_call(sample);
-            auto gq = std::min(99, static_cast<int>(std::round(genotype_call.posterior.score())));
+            auto gq = std::min(999, static_cast<int>(std::round(genotype_call.posterior.score())));
             
             set_vcf_genotype(sample, genotype_call, result);
             result.set_format(sample, "GQ", std::to_string(gq));
@@ -599,7 +599,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     it = std::unique(std::begin(alt_alleles), std::end(alt_alleles));
     alt_alleles.erase(it, std::end(alt_alleles));
     result.set_alt(std::move(alt_alleles));
-    auto q = std::max_element(std::cbegin(calls), std::cend(calls),
+    auto q = std::min_element(std::cbegin(calls), std::cend(calls),
                               [] (const auto& lhs, const auto& rhs) {
                                   return lhs->quality() < rhs->quality();
                               });
@@ -611,19 +611,19 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
     result.set_info("MQ0", count_mapq_zero(reads_, region));
     
-    boost::optional<double> dmp {};
+    boost::optional<double> mp {};
     for (const auto& call : calls) {
-        const auto call_dmp = call->model_posterior();
-        if (call_dmp) {
-            if (dmp) {
-                if (*dmp < *call_dmp) dmp = *call_dmp;
+        const auto call_mp = call->model_posterior();
+        if (call_mp) {
+            if (mp) {
+                if (*mp < call_mp->score()) mp = call_mp->score();
             } else {
-                dmp = *call_dmp;
+                mp = call_mp->score();
             }
         }
     }
-    if (dmp) {
-        result.set_info("DMP", *dmp);
+    if (mp) {
+        result.set_info("MP", maths::round(*mp, 2));
     }
     if (!sites_only_) {
         if (calls.front()->all_phased()) {
@@ -635,7 +635,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         auto sample_itr = std::begin(resolved_genotypes);
         for (const auto& sample : samples_) {
             const auto posterior = calls.front()->get_genotype_call(sample).posterior;
-            auto gq = std::min(99, static_cast<int>(std::round(posterior.score())));
+            auto gq = std::min(999, static_cast<int>(std::round(posterior.score())));
             
             result.set_genotype(sample, *sample_itr++, VcfRecord::Builder::Phasing::phased);
             result.set_format(sample, "GQ", std::to_string(gq));
@@ -651,7 +651,9 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         }
     }
     
-    calls.front()->decorate(result);
+    for (const auto& call : calls) {
+        call->decorate(result);
+    }
     
     return result.build_once();
 }
