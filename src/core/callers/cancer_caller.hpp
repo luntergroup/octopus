@@ -42,8 +42,8 @@ public:
         SomaticMutationModel::Parameters somatic_mutation_model_params;
         double min_expected_somatic_frequency, credible_mass, min_credible_somatic_frequency;
         unsigned max_genotypes = 30000;
-        double cnv_normal_alpha = 50.0, cnv_tumour_alpha = 0.75;
-        double somatic_normal_germline_alpha = 50.0, somatic_normal_somatic_alpha = 0.01;
+        double cnv_normal_alpha = 10.0, cnv_tumour_alpha = 0.75;
+        double somatic_normal_germline_alpha = 10.0, somatic_normal_somatic_alpha = 0.08;
         double somatic_tumour_germline_alpha = 5.0, somatic_tumour_somatic_alpha = 0.8;
         double germline_weight = 90, cnv_weight = 5, somatic_weight = 1;
     };
