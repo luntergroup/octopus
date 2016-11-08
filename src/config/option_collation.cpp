@@ -543,6 +543,24 @@ ReadManager make_read_manager(const OptionMap& options)
     return ReadManager {std::move(read_paths), max_open_files};
 }
 
+auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
+{
+    // TODO: could think about getting rid of the 'caller' option and just
+    // deduce the caller type directly from the options.
+    // Will need to report an error if conflicting caller options are given anyway.
+    auto result = options.at("caller").as<std::string>();
+    if (result == "population" && samples.size() == 1) {
+        result = "individual";
+    }
+    if (options.count("maternal-sample") == 1 || options.count("paternal-sample") == 1) {
+        result = "trio";
+    }
+    if (options.count("normal-sample") == 1) {
+        result = "cancer";
+    }
+    return result;
+}
+
 auto make_read_transformer(const OptionMap& options)
 {
     using namespace octopus::readpipe;
@@ -550,7 +568,7 @@ auto make_read_transformer(const OptionMap& options)
     result.register_transform(CapitaliseBases {});
     result.register_transform(CapBaseQualities {125});
     
-    if (options.at("disable-read-transforms").as<bool>()) {
+    if (!options.at("read-transforms").as<bool>()) {
         return result;
     }
     if (options.count("mask-tails")) {
@@ -559,7 +577,7 @@ auto make_read_transformer(const OptionMap& options)
             result.register_transform(MaskTail {tail_mask_size});
         }
     }
-    if (!options.at("disable-soft-clip-masking").as<bool>()) {
+    if (options.at("soft-clip-masking").as<bool>()) {
         const auto soft_clipped_mask_size = as_unsigned("mask-soft-clipped-boundries", options);
         if (soft_clipped_mask_size > 0) {
             result.register_transform(MaskSoftClippedBoundries {soft_clipped_mask_size});
@@ -567,10 +585,10 @@ auto make_read_transformer(const OptionMap& options)
             result.register_transform(MaskSoftClipped {});
         }
     }
-    if (!options.at("disable-adapter-masking").as<bool>()) {
+    if (options.at("adapter-masking").as<bool>()) {
         result.register_transform(MaskAdapters {});
     }
-    if (!options.at("disable-overlap-masking").as<bool>()) {
+    if (options.at("overlap-masking").as<bool>()) {
         result.register_transform(MaskOverlappedSegment {});
     }
     
@@ -581,7 +599,7 @@ auto make_read_transformer(const OptionMap& options)
 
 bool is_read_filtering_enabled(const OptionMap& options)
 {
-    return !options.at("disable-read-filtering").as<bool>();
+    return options.at("read-filtering").as<bool>();
 }
 
 auto make_read_filterer(const OptionMap& options)
@@ -781,7 +799,7 @@ auto get_default_match_predicate() noexcept
 
 bool allow_assembler_generation(const OptionMap& options)
 {
-    return !(is_fast_mode(options) || options.at("disable-assembly-candidate-generator").as<bool>());
+    return !(is_fast_mode(options) || options.at("assembly-candidate-generator").as<bool>());
 }
 
 class MissingSourceVariantFile : public MissingFileError
@@ -803,7 +821,7 @@ auto make_variant_generator_builder(const OptionMap& options)
     
     VariantGeneratorBuilder result {};
     
-    if (!options.at("disable-raw-cigar-candidate-generator").as<bool>()) {
+    if (options.at("raw-cigar-candidate-generator").as<bool>()) {
         if (options.count("min-supporting-reads") == 1) {
             CigarScanner::Options scanner_options {};
             scanner_options.min_base_quality = as_unsigned("min-base-quality", options);
@@ -839,8 +857,8 @@ auto make_variant_generator_builder(const OptionMap& options)
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
-    if (options.count("generate-candidates-from-source") == 1) {
-        const auto input_path = options.at("generate-candidates-from-source").as<fs::path>();
+    if (options.count("source-candidates") == 1) {
+        const auto input_path = options.at("source-candidates").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
         if (!fs::exists(resolved_path)) {
             throw MissingSourceVariantFile {input_path};
@@ -849,8 +867,8 @@ auto make_variant_generator_builder(const OptionMap& options)
     }
     if (options.count("regenotype") == 1) {
         auto regenotype_path = options.at("regenotype").as<fs::path>();
-        if (options.count("generate-candidates-from-source") == 1) {
-            fs::path input_path {options.at("generate-candidates-from-source").as<std::string>()};
+        if (options.count("source-candidates") == 1) {
+            fs::path input_path {options.at("source-candidates").as<std::string>()};
             if (regenotype_path != input_path) {
                 warning_log << "Running in regenotype mode but given a different source variant file";
             }
@@ -1040,24 +1058,6 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
 }
 
-auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
-{
-    // TODO: could think about getting rid of the 'caller' option and just
-    // deduce the caller type directly from the options.
-    // Will need to report an error if conflicting caller options are given anyway.
-    auto result = options.at("caller").as<std::string>();
-    if (result == "population" && samples.size() == 1) {
-        result = "individual";
-    }
-    if (options.count("maternal-sample") == 1 || options.count("paternal-sample") == 1) {
-        result = "trio";
-    }
-    if (options.count("normal-sample") == 1) {
-        result = "cancer";
-    }
-    return result;
-}
-
 class BadTrioSampleSet : public UserError
 {
     std::string do_where() const override
@@ -1208,7 +1208,7 @@ public:
 
 bool allow_flank_scoring(const OptionMap& options)
 {
-    return !(is_fast_mode(options) || options.at("disable-inactive-flank-scoring").as<bool>());
+    return !(is_fast_mode(options) || options.at("inactive-flank-scoring").as<bool>());
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
@@ -1273,9 +1273,11 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_denovo_mutation_rate(options.at("denovo-mutation-rate").as<float>());
     }
     
-    vc_builder.set_model_filtering(false); // TODO: turn back on when variant filtering is implemented
-//    vc_builder.set_model_filtering(!(options.at("disable-call-filtering").as<bool>()
-//                                     || options.at("disable-model-filtering").as<bool>()));
+    if (options.count("model-filtering") == 1) {
+        vc_builder.set_model_filtering(options.at("model-filtering").as<bool>());
+    } else {
+        vc_builder.set_model_filtering(caller == "cancer");
+    }
     
     if (call_sites_only(options)) {
         vc_builder.set_sites_only();

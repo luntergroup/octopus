@@ -158,13 +158,13 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description transforms("Read transformations");
     transforms.add_options()
-    ("disable-read-transforms",
-     po::bool_switch()->default_value(false),
-     "Disables all read transformations")
+    ("read-transforms",
+     po::value<bool>()->default_value(true),
+     "Enable all read transformations")
     
-    ("disable-soft-clip-masking",
-     po::bool_switch()->default_value(false),
-     "Disables soft clipped masking, thus allowing all soft clipped bases to be used"
+    ("soft-clip-masking",
+     po::value<bool>()->default_value(true),
+     "Enable soft clipped masking, thus allowing all soft clipped bases to be used"
      " for candidate generation")
     
     ("mask-tails",
@@ -175,20 +175,20 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(2),
      "Masks this number of adjacent non soft clipped bases when soft clipped bases are present")
     
-    ("disable-adapter-masking",
-     po::bool_switch()->default_value(false),
-     "Disables adapter detection and masking")
+    ("adapter-masking",
+     po::value<bool>()->default_value(true),
+     "Enable adapter detection and masking")
     
-    ("disable-overlap-masking",
-     po::bool_switch()->default_value(false),
-     "Disables read segment overlap masking")
+    ("overlap-masking",
+     po::value<bool>()->default_value(true),
+     "Enable read segment overlap masking")
     ;
     
     po::options_description filters("Read filtering");
     filters.add_options()
-    ("disable-read-filtering",
-     po::bool_switch()->default_value(false),
-     "Disables all read filters")
+    ("read-filtering",
+     po::value<bool>()->default_value(true),
+     "Enable all read filters")
     
     ("consider-unmapped-reads",
      po::bool_switch()->default_value(false),
@@ -265,15 +265,15 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description variant_generation("Candidate variant generation");
     variant_generation.add_options()
-    ("disable-raw-cigar-candidate-generator,g",
-     po::bool_switch()->default_value(false),
-     "Disables candidate generation from raw read alignments (CIGAR strings)")
+    ("raw-cigar-candidate-generator,g",
+     po::value<bool>()->default_value(true),
+     "Enable candidate generation from raw read alignments (CIGAR strings)")
     
-    ("disable-assembly-candidate-generator,a",
-     po::bool_switch()->default_value(false),
-     "Disables candidate generation using local re-assembly")
+    ("assembly-candidate-generator,a",
+     po::value<bool>()->default_value(true),
+     "Enable candidate generation using local re-assembly")
     
-    ("generate-candidates-from-source",
+    ("source-candidates",
      po::value<fs::path>(),
      "Variant file path containing known variants. These variants will automatically become"
      " candidates")
@@ -318,8 +318,8 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("assembler-mask-base-quality",
      po::value<int>()->default_value(15),
-     "Alignmened bases with quality less than this will be converted to reference before "
-     "being inserted into the De Buijn graph")
+     "Aligned bases with quality less than this will be converted to reference before "
+     "being inserted into the De Bruijn graph")
     
     ("min-kmer-support",
      po::value<int>()->default_value(1),
@@ -371,7 +371,7 @@ OptionMap parse_options(const int argc, const char** argv)
      ->default_value(std::vector<ContigPloidy> {
         {boost::none, "Y", 1}, {boost::none, "MT", 1}}, "Y=1 MT=1")
      ->composing(),
-     "Space-seperated list of contig (contig=ploidy) or sample contig"
+     "Space-separated list of contig (contig=ploidy) or sample contig"
      " (sample:contig=ploidy) ploidies")
     
     ("contig-ploidies-file",
@@ -477,21 +477,21 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
      "Haplotypes with posterior probability less than this can be filtered before extension")
     
-    ("disable-inactive-flank-scoring",
-     po::bool_switch()->default_value(false),
+    ("inactive-flank-scoring",
+     po::value<bool>()->default_value(true),
      "Disables additional calculation to adjust alignment score when there are inactive"
      " candidates in haplotype flanking regions")
     ;
     
     po::options_description call_filtering("Callset filtering");
     call_filtering.add_options()
-    ("disable-call-filtering",
-     po::bool_switch()->default_value(false),
-     "Disables all variant call filtering")
+    ("call-filtering",
+     po::value<bool>()->default_value(false),
+     "Enable all variant call filtering")
     
-    ("disable-model-filtering",
-     po::bool_switch()->default_value(false),
-     "Disables model based filtering of variant calls")
+    ("model-filtering",
+     po::value<bool>(),
+     "Enable model based filtering of variant calls")
     ;
     
     po::options_description all("octopus options");
