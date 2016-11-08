@@ -248,7 +248,7 @@ double expectation(const ProbabilityVector& distribution,
                    const unsigned k, const std::size_t n)
 {
     return std::inner_product(std::cbegin(distribution), std::cend(distribution),
-                              std::cbegin(likelihoods), 0.0, std::plus<void> {},
+                              std::cbegin(likelihoods), 0.0, std::plus<> {},
                               [k, n] (const auto p, const auto& haplotype_likelihoods) {
                                   return p * haplotype_likelihoods[k][n];
                               });
