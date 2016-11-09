@@ -8,6 +8,8 @@
 #include <numeric>
 #include <stdexcept>
 
+#include "utils/mappable_algorithms.hpp"
+
 namespace octopus {
 
 SomaticMutationModel::SomaticMutationModel(const CoalescentModel& germline_model,
@@ -63,8 +65,9 @@ double SomaticMutationModel::ln_probability_of_somatic(const Haplotype& somatic,
 double SomaticMutationModel::ln_probability_of_somatic(const Haplotype& somatic, const Haplotype& germline) const
 {
     // TODO: implement a proper model for this (snv/indel).
-    const auto variants = difference(somatic, germline);
-    return variants.size() * std::log(params_.somatic_mutation_rate);
+    const auto mutations = difference(somatic, germline);
+    const auto num_mutation_sites = count_mutually_exclusive_regions(mutations);
+    return num_mutation_sites * std::log(params_.somatic_mutation_rate);
 }
 
 } // namespace octopus
