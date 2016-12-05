@@ -35,7 +35,7 @@ public:
     struct Parameters
     {
         unsigned ploidy;
-        CoalescentModel::Parameters prior_model_params;
+        boost::optional<CoalescentModel::Parameters> prior_model_params;
         Phred<double> min_variant_posterior, min_refcall_posterior;
     };
     

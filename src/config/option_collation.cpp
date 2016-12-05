@@ -1260,8 +1260,10 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_haplotype_extension_threshold(options.at("haplotype-extension-threshold").as<Phred<double>>());
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
-    vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
-    vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
+    if (!options.at("use-uniform-genotype-priors").as<bool>()) {
+        vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
+        vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
+    }
     
     if (caller == "cancer") {
         if (options.count("normal-sample") == 1) {

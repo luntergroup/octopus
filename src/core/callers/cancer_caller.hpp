@@ -40,7 +40,7 @@ public:
         Phred<double> min_variant_posterior, min_somatic_posterior, min_refcall_posterior;
         unsigned ploidy;
         boost::optional<SampleName> normal_sample;
-        CoalescentModel::Parameters germline_prior_model_params;
+        boost::optional<CoalescentModel::Parameters> germline_prior_model_params;
         SomaticMutationModel::Parameters somatic_mutation_model_params;
         double min_expected_somatic_frequency, credible_mass, min_credible_somatic_frequency;
         unsigned max_genotypes = 30000;

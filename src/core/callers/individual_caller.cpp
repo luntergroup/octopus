@@ -435,10 +435,14 @@ const SampleName& IndividualCaller::sample() const noexcept
 
 std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
 {
-    return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
+    if (parameters_.prior_model_params) {
+        return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
         Haplotype {mapped_region(haplotypes.front()), reference_},
-        parameters_.prior_model_params
-    });
+        *parameters_.prior_model_params
+        });
+    } else {
+        return std::make_unique<UniformGenotypePriorModel>();
+    }
 }
 
 namespace debug {

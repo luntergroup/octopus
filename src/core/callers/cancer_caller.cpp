@@ -970,10 +970,14 @@ CancerCaller::call_reference(const std::vector<Allele>& alleles,
 
 std::unique_ptr<GenotypePriorModel> CancerCaller::make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const
 {
-    return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
-    Haplotype {octopus::mapped_region(haplotypes.front()), reference_},
-    parameters_.germline_prior_model_params
-    });
+    if (parameters_.germline_prior_model_params) {
+        return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
+        Haplotype {octopus::mapped_region(haplotypes.front()), reference_},
+        *parameters_.germline_prior_model_params
+        });
+    } else {
+        return std::make_unique<UniformGenotypePriorModel>();
+    }
 }
 
 } // namespace octopus

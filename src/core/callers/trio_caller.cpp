@@ -616,10 +616,14 @@ TrioCaller::call_reference(const std::vector<Allele>& alleles, const Latents& la
 
 std::unique_ptr<PopulationPriorModel> TrioCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
 {
-    return std::make_unique<CoalescentPopulationPriorModel>(CoalescentModel {
-    Haplotype {mapped_region(haplotypes.front()), reference_},
-    parameters_.germline_prior_model_params
-    });
+    if (parameters_.germline_prior_model_params) {
+        return std::make_unique<CoalescentPopulationPriorModel>(CoalescentModel {
+        Haplotype {mapped_region(haplotypes.front()), reference_},
+        *parameters_.germline_prior_model_params
+        });
+    } else {
+        return std::make_unique<UniformPopulationPriorModel>();
+    }
 }
 
 } // namespace octopus

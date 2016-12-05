@@ -95,8 +95,7 @@ private:
         Phred<double> haplotype_extension_threshold;
         bool allow_flank_scoring;
         bool allow_model_filtering;
-        double snp_heterozygosity;
-        double indel_heterozygosity;
+        boost::optional<double> snp_heterozygosity, indel_heterozygosity;
         Phred<double> min_phase_score;
         
         // cancer
