@@ -758,8 +758,12 @@ auto get_default_inclusion_predicate()
                 partial_sort(observed_qualities, 2);
                 return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
             } else {
-                return (num_observations > 2 && static_cast<double>(num_observations) / depth > 0.1)
-                       || static_cast<double>(sum(observed_qualities)) / alt_sequence_size(v) > 20;
+                if (num_observations == 1) return false;
+                if (static_cast<double>(num_observations) / depth > 0.35) return true;
+                erase_low(observed_qualities, 20);
+                if (observed_qualities.size() <= 1) return false;
+                if (observed_qualities.size() > 3) return true;
+                return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
             }
         } else {
             return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.05;
