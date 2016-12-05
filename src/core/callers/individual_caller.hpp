@@ -15,6 +15,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
+#include "core/models/genotype/genotype_prior_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
 #include "caller.hpp"
 
@@ -89,7 +90,7 @@ private:
     
     const SampleName& sample() const noexcept;
     
-    CoalescentModel make_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    std::unique_ptr<GenotypePriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
 
 class IndividualCaller::Latents : public Caller::Latents

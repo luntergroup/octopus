@@ -22,6 +22,9 @@
 #include "utils/map_utils.hpp"
 #include "utils/mappable_algorithms.hpp"
 
+#include "core/models/genotype/uniform_population_prior_model.hpp"
+#include "core/models/genotype/coalescent_population_prior_model.hpp"
+
 namespace octopus {
 
 TrioCaller::TrioCaller(Caller::Components&& components,
@@ -229,13 +232,10 @@ std::unique_ptr<Caller::Latents>
 TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    const CoalescentModel germline_prior_model {
-        Haplotype {mapped_region(haplotypes.front()), reference_},
-        parameters_.germline_prior_model_params
-    };
+    const auto germline_prior_model = make_prior_model(haplotypes);
     const DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size()};
     const model::TrioModel model {
-        parameters_.trio, germline_prior_model, denovo_model,
+        parameters_.trio, *germline_prior_model, denovo_model,
         TrioModel::Options {100, 500, 1e-20}, debug_log_
     };
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy);
@@ -612,6 +612,14 @@ TrioCaller::call_reference(const std::vector<Allele>& alleles, const Latents& la
                             const ReadMap& reads) const
 {
     return {};
+}
+
+std::unique_ptr<PopulationPriorModel> TrioCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
+{
+    return std::make_unique<CoalescentPopulationPriorModel>(CoalescentModel {
+    Haplotype {mapped_region(haplotypes.front()), reference_},
+    parameters_.germline_prior_model_params
+    });
 }
 
 } // namespace octopus

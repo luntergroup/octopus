@@ -12,7 +12,7 @@
 
 #include "core/types/trio.hpp"
 #include "core/types/haplotype.hpp"
-#include "core/models/mutation/coalescent_model.hpp"
+#include "population_prior_model.hpp"
 #include "core/models/mutation/denovo_model.hpp"
 #include "core/models/haplotype_likelihood_cache.hpp"
 #include "core/types/genotype.hpp"
@@ -51,7 +51,7 @@ public:
     TrioModel() = delete;
     
     TrioModel(const Trio& trio,
-              const CoalescentModel& genotype_prior_model,
+              const PopulationPriorModel& genotype_prior_model,
               const DeNovoModel& mutation_model,
               Options options,
               boost::optional<logging::DebugLogger> debug_log = boost::none);
@@ -70,7 +70,7 @@ public:
 
 private:
     const Trio& trio_;
-    const CoalescentModel& genotype_prior_model_;
+    const PopulationPriorModel& genotype_prior_model_;
     const DeNovoModel& mutation_model_;
     Options options_;
     mutable boost::optional<logging::DebugLogger> debug_log_;

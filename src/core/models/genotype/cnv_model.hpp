@@ -11,7 +11,7 @@
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
-#include "core/models/mutation/coalescent_model.hpp"
+#include "genotype_prior_model.hpp"
 #include "core/models/haplotype_likelihood_cache.hpp"
 
 namespace octopus { namespace model {
@@ -31,7 +31,7 @@ public:
         using GenotypeMixturesDirichletAlphas   = std::vector<double>;
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
         
-        CoalescentModel genotype_prior_model;
+        const GenotypePriorModel& genotype_prior_model;
         GenotypeMixturesDirichletAlphaMap alphas;
     };
     

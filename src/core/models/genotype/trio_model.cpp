@@ -18,7 +18,7 @@
 namespace octopus { namespace model {
 
 TrioModel::TrioModel(const Trio& trio,
-                     const CoalescentModel& genotype_prior_model,
+                     const PopulationPriorModel& genotype_prior_model,
                      const DeNovoModel& mutation_model,
                      Options options,
                      boost::optional<logging::DebugLogger> debug_log)
@@ -190,7 +190,7 @@ auto reduce(std::vector<T>& zipped, const TrioModel::Options& options)
 
 double probability_of_parents(const Genotype<Haplotype>& mother,
                               const Genotype<Haplotype>& father,
-                              const CoalescentModel& model)
+                              const PopulationPriorModel& model)
 {
     thread_local std::vector<std::reference_wrapper<const Haplotype>> parental_haplotypes;
     parental_haplotypes.reserve(mother.ploidy() + father.ploidy());
@@ -201,7 +201,7 @@ double probability_of_parents(const Genotype<Haplotype>& mother,
 
 auto join(const std::vector<GenotypeRefProbabilityPair>& maternal,
           const std::vector<GenotypeRefProbabilityPair>& paternal,
-          const CoalescentModel& model)
+          const PopulationPriorModel& model)
 {
     std::vector<ParentsProbabilityPair> result {};
     result.reserve(maternal.size() * paternal.size());

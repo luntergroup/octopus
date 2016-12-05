@@ -644,6 +644,18 @@ run_variational_bayes(const CompressedAlphas<K>& prior_alphas,
 
 // Helpers
 
+template <typename Container>
+std::vector<double> calculate_log_priors(const Container& genotypes, const GenotypePriorModel& model)
+{
+    std::vector<double> result(genotypes.size());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                   [&model](const auto& genotype) {
+                       return model.evaluate(genotype);
+                   });
+    maths::normalise_logs(result);
+    return result;
+}
+
 CNVModel::Latents::GenotypeProbabilityMap
 expand(std::vector<Genotype<Haplotype>>&& genotypes, LogProbabilityVector&& genotype_log_posteriors)
 {

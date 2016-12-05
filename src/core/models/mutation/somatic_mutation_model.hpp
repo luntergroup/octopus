@@ -25,41 +25,21 @@ public:
     
     SomaticMutationModel() = delete;
     
-    SomaticMutationModel(const CoalescentModel& germline_model,
-                         Parameters params);
+    SomaticMutationModel(Parameters params);
     
-    SomaticMutationModel(const SomaticMutationModel&) = default;
+    SomaticMutationModel(const SomaticMutationModel&)            = default;
     SomaticMutationModel& operator=(const SomaticMutationModel&) = default;
-    SomaticMutationModel(SomaticMutationModel&&) = default;
+    SomaticMutationModel(SomaticMutationModel&&)                 = default;
     SomaticMutationModel& operator=(SomaticMutationModel&&)      = default;
     
     ~SomaticMutationModel() = default;
     
-    double evaluate(const CancerGenotype<Haplotype>& genotype) const;
+    // ln p(somatic | germline)
+    double evaluate(const Haplotype& somatic, const Haplotype& germline) const;
 
 private:
-    std::reference_wrapper<const CoalescentModel> germline_model_;
     Parameters params_;
-    
-    // p(somatic | germline)
-    double ln_probability_of_somatic(const Haplotype& somatic, const Genotype<Haplotype>& germline) const;
-    double ln_probability_of_somatic(const Haplotype& somatic, const Haplotype& germline) const;
 };
-
-template <typename Container>
-std::vector<double> calculate_log_priors(const Container& genotypes,
-                                         const SomaticMutationModel& model)
-{
-    static_assert(std::is_same<typename Container::value_type, CancerGenotype<Haplotype>>::value,
-                  "genotypes must contain CancerGenotype<Haplotype>'s");
-    std::vector<double> result(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&model](const auto& genotype) {
-                       return model.evaluate(genotype);
-                   });
-    maths::normalise_logs(result);
-    return result;
-}
 
 } // namespace octopus
 

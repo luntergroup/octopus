@@ -12,6 +12,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
+#include "core/models/genotype/population_prior_model.hpp"
 #include "core/models/mutation/denovo_model.hpp"
 #include "core/models/genotype/trio_model.hpp"
 
@@ -82,6 +83,8 @@ private:
     std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Latents& latents,
                    const ReadMap& reads) const;
+    
+    std::unique_ptr<PopulationPriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
 
 class TrioCaller::Latents : public Caller::Latents

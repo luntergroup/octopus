@@ -13,6 +13,8 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
+#include "core/models/genotype/cancer_genotype_prior_model.hpp"
+#include "core/models/genotype/genotype_prior_model.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/mutation/somatic_mutation_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
@@ -123,10 +125,11 @@ private:
     using GermlineGenotypeProbabilityMap = std::unordered_map<GermlineGenotypeReference, double>;
     using ProbabilityVector = std::vector<double>;
     
-    CNVModel::Priors get_cnv_model_priors(const CoalescentModel& prior_model) const;
-    TumourModel::Priors get_somatic_model_priors(const SomaticMutationModel& prior_model) const;
-    TumourModel::Priors get_noise_model_priors(const SomaticMutationModel& prior_model) const;
-    CNVModel::Priors get_normal_noise_model_priors(const CoalescentModel& prior_model) const;
+    std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    CNVModel::Priors get_cnv_model_priors(const GenotypePriorModel& prior_model) const;
+    TumourModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model) const;
+    TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const;
+    CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
     ModelPriors get_model_priors() const;
     ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
     GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& inferences,
