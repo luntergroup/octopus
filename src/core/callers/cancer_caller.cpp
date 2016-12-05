@@ -24,6 +24,8 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/cancer_genotype.hpp"
+#include "core/models/genotype/uniform_genotype_prior_model.hpp"
+#include "core/models/genotype/coalescent_genotype_prior_model.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/sequence_utils.hpp"
 #include "utils/merge_transform.hpp"
@@ -49,22 +51,18 @@ CancerCaller::CancerCaller(Caller::Components&& components,
     if (parameters_.ploidy == 0) {
         throw std::logic_error {"CancerCaller: ploidy must be > 0"};
     }
-    
     if (parameters_.max_genotypes == 0) {
         throw std::logic_error {"CancerCaller: max genotypes must be > 0"};
     }
-    
     if (has_normal_sample()) {
         if (std::find(std::cbegin(samples_), std::cend(samples_), normal_sample()) == std::cend(samples_)) {
             throw std::invalid_argument {"CancerCaller: normal sample is not a valid sample"};
         }
     }
-    
     if (parameters_.min_variant_posterior == Phred<double> {0}) {
         logging::WarningLogger wlog {};
         wlog << "Having no germline variant posterior threshold means no somatic variants will be called";
     }
-    
     if (debug_log_) {
         if (has_normal_sample()) {
             stream(*debug_log_) << "Normal sample is " << *parameters_.normal_sample;
@@ -214,24 +212,19 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         stream(*debug_log_) << "There are " << cancer_genotypes.size() << " candidate cancer genotypes";
     }
     
-    const CoalescentModel germline_prior_model {
-        Haplotype {octopus::mapped_region(haplotypes.front()), reference_},
-        parameters_.germline_prior_model_params
-    };
-    const GermlineModel germline_model {germline_prior_model};
+    const auto germline_prior_model = make_germline_prior_model(haplotypes);
+    const GermlineModel germline_model {*germline_prior_model};
     static const SampleName pool {"pool"};
     const auto pooled_likelihoods = merge_samples(samples_, pool, haplotypes, haplotype_likelihoods);
     pooled_likelihoods.prime(pool);
     auto germline_inferences = germline_model.infer_latents(germline_genotypes, pooled_likelihoods);
     
-    auto cnv_model_priors = get_cnv_model_priors(germline_prior_model);
+    auto cnv_model_priors = get_cnv_model_priors(*germline_prior_model);
     const CNVModel cnv_model {samples_, parameters_.ploidy, std::move(cnv_model_priors)};
     auto cnv_inferences = cnv_model.infer_latents(germline_genotypes, haplotype_likelihoods);
     
-    const SomaticMutationModel somatic_prior_model {
-        germline_prior_model,
-        parameters_.somatic_mutation_model_params
-    };
+    const SomaticMutationModel mutation_model {parameters_.somatic_mutation_model_params};
+    const CancerGenotypePriorModel somatic_prior_model {*germline_prior_model, mutation_model};
     auto somatic_model_priors = get_somatic_model_priors(somatic_prior_model);
     const TumourModel somatic_model {samples_, parameters_.ploidy, std::move(somatic_model_priors)};
     reduce(cancer_genotypes, germline_genotypes, germline_model, haplotype_likelihoods);
@@ -343,18 +336,15 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
                                         const Latents& latents) const
 {
     if (has_normal_sample()) {
-        const CoalescentModel prior_model {
-            Haplotype {octopus::mapped_region(haplotypes.front()), reference_},
-            parameters_.germline_prior_model_params
-        };
-        const GermlineModel germline_model {prior_model};
+        const auto prior_model = make_germline_prior_model(haplotypes);
+        const GermlineModel germline_model {*prior_model};
         haplotype_likelihoods.prime(normal_sample());
         const auto normal_inferences = germline_model.infer_latents(latents.germline_genotypes_,
                                                                     haplotype_likelihoods);
         const auto dummy_genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
         const auto dummy_inferences = germline_model.infer_latents(dummy_genotypes,
                                                                    haplotype_likelihoods);
-        auto noise_model_priors = get_normal_noise_model_priors(prior_model);
+        auto noise_model_priors = get_normal_noise_model_priors(*prior_model);
         const CNVModel noise_model {{normal_sample()}, parameters_.ploidy, std::move(noise_model_priors)};
         auto noise_inferences = noise_model.infer_latents(latents.germline_genotypes_, haplotype_likelihoods);
         
@@ -369,7 +359,7 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
 }
 
 CancerCaller::CNVModel::Priors
-CancerCaller::get_cnv_model_priors(const CoalescentModel& prior_model) const
+CancerCaller::get_cnv_model_priors(const GenotypePriorModel& prior_model) const
 {
     using Priors = CNVModel::Priors;
     Priors::GenotypeMixturesDirichletAlphaMap cnv_alphas {};
@@ -387,7 +377,7 @@ CancerCaller::get_cnv_model_priors(const CoalescentModel& prior_model) const
 }
 
 CancerCaller::TumourModel::Priors
-CancerCaller::get_somatic_model_priors(const SomaticMutationModel& prior_model) const
+CancerCaller::get_somatic_model_priors(const CancerGenotypePriorModel& prior_model) const
 {
     using Priors = TumourModel::Priors;
     Priors::GenotypeMixturesDirichletAlphaMap alphas {};
@@ -407,7 +397,7 @@ CancerCaller::get_somatic_model_priors(const SomaticMutationModel& prior_model) 
 }
 
 CancerCaller::TumourModel::Priors
-CancerCaller::get_noise_model_priors(const SomaticMutationModel& prior_model) const
+CancerCaller::get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const
 {
     using Priors = TumourModel::Priors;
     Priors::GenotypeMixturesDirichletAlphaMap alphas {};
@@ -421,7 +411,7 @@ CancerCaller::get_noise_model_priors(const SomaticMutationModel& prior_model) co
 }
 
 CancerCaller::CNVModel::Priors
-CancerCaller::get_normal_noise_model_priors(const CoalescentModel& prior_model) const
+CancerCaller::get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const
 {
     using Priors = CNVModel::Priors;
     Priors::GenotypeMixturesDirichletAlphaMap cnv_alphas {};
@@ -976,6 +966,18 @@ CancerCaller::call_reference(const std::vector<Allele>& alleles,
                              const ReadMap& reads) const
 {
     return {};
+}
+
+std::unique_ptr<GenotypePriorModel> CancerCaller::make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const
+{
+    if (parameters_.germline_prior_model_params) {
+        return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
+        Haplotype {octopus::mapped_region(haplotypes.front()), reference_},
+        *parameters_.germline_prior_model_params
+        });
+    } else {
+        return std::make_unique<UniformGenotypePriorModel>();
+    }
 }
 
 } // namespace octopus

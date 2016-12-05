@@ -247,22 +247,6 @@ CoalescentModel::count_segregating_sites(const Container& haplotypes) const
                            static_cast<unsigned>(detail::size(haplotypes) + 1));
 }
 
-// non-member methods
-
-template <typename Container>
-std::vector<double> calculate_log_priors(const Container& genotypes, const CoalescentModel& model)
-{
-    std::vector<double> result(genotypes.size());
-    
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&model](const auto& genotype) {
-                       return model.evaluate(genotype);
-                   });
-    maths::normalise_logs(result);
-    
-    return result;
-}
-
 } // namespace octopus
 
 #endif

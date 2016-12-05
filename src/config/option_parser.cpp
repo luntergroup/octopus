@@ -403,6 +403,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("indel-heterozygosity",
      po::value<float>()->default_value(0.0001, "0.0001"),
      "The germline indel heterozygosity used to calculate genotype priors")
+    
+    ("use-uniform-genotype-priors",
+    po::bool_switch()->default_value(false),
+    "Use a uniform prior model when calculating genotype posteriors")
     ;
     
     po::options_description cancer("Caller (cancer)");

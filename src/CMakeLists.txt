@@ -232,7 +232,15 @@ set(CORE_SOURCES
     core/models/genotype/variational_bayes_mixture_model.hpp
     core/models/genotype/trio_model.hpp
     core/models/genotype/trio_model.cpp
-    
+    core/models/genotype/genotype_prior_model.hpp
+    core/models/genotype/uniform_genotype_prior_model.hpp
+    core/models/genotype/coalescent_genotype_prior_model.hpp
+    core/models/genotype/cancer_genotype_prior_model.hpp
+    core/models/genotype/cancer_genotype_prior_model.cpp
+    core/models/genotype/population_prior_model.hpp
+    core/models/genotype/uniform_population_prior_model.hpp
+    core/models/genotype/coalescent_population_prior_model.hpp
+
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
     core/models/pairhmm/simd_pair_hmm.hpp

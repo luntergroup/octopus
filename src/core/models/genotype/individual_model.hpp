@@ -8,8 +8,8 @@
 
 #include <boost/optional.hpp>
 
+#include "genotype_prior_model.hpp"
 #include "core/types/haplotype.hpp"
-#include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/haplotype_likelihood_cache.hpp"
 #include "core/types/genotype.hpp"
 #include "logging/logging.hpp"
@@ -33,7 +33,7 @@ public:
     
     IndividualModel() = delete;
     
-    IndividualModel(const CoalescentModel& genotype_prior_model,
+    IndividualModel(const GenotypePriorModel& genotype_prior_model,
                     boost::optional<logging::DebugLogger> debug_log = boost::none,
                     boost::optional<logging::TraceLogger> trace_log = boost::none);
     
@@ -48,7 +48,7 @@ public:
                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
-    const CoalescentModel& genotype_prior_model_;
+    const GenotypePriorModel& genotype_prior_model_;
     
     mutable boost::optional<logging::DebugLogger> debug_log_;
     mutable boost::optional<logging::TraceLogger> trace_log_;

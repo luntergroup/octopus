@@ -16,7 +16,7 @@
 
 namespace octopus { namespace model {
 
-IndividualModel::IndividualModel(const CoalescentModel& genotype_prior_model,
+IndividualModel::IndividualModel(const GenotypePriorModel& genotype_prior_model,
                                  boost::optional<logging::DebugLogger> debug_log,
                                  boost::optional<logging::TraceLogger> trace_log)
 : genotype_prior_model_ {genotype_prior_model}
@@ -62,7 +62,7 @@ auto compute_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
 
 void add_priors(const std::vector<Genotype<Haplotype>>& genotypes,
                 ProbabilityVector& genotype_likelihoods,
-                const CoalescentModel& genotype_prior_model)
+                const GenotypePriorModel& genotype_prior_model)
 {
     std::transform(std::cbegin(genotypes), std::cend(genotypes),
                    std::cbegin(genotype_likelihoods), std::begin(genotype_likelihoods),
