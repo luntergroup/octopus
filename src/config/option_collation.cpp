@@ -1208,7 +1208,7 @@ public:
 
 bool allow_flank_scoring(const OptionMap& options)
 {
-    return !(is_fast_mode(options) || options.at("inactive-flank-scoring").as<bool>());
+    return options.at("inactive-flank-scoring").as<bool>() && !is_fast_mode(options);
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
