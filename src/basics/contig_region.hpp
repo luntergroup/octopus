@@ -206,8 +206,8 @@ inline ContigRegion next_position(const ContigRegion& region)
 inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::Distance n)
 {
     using P = ContigRegion::Position;
-    if (n < 0 && static_cast<P>(std::abs(n)) > region.begin()) {
-        throw std::out_of_range {"ContigRegion: compressed past contig start"};
+    if (n > 0 && static_cast<P>(n) > region.begin()) {
+        throw std::out_of_range {"ContigRegion: expanded past contig start"};
     }
     return ContigRegion {
         static_cast<P>(region.begin() - n),
@@ -217,9 +217,13 @@ inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::D
 
 inline ContigRegion expand_rhs(const ContigRegion& region, const ContigRegion::Distance n)
 {
+    using P = ContigRegion::Position;
+    if (n < 0 && static_cast<P>(std::abs(n)) > region.end()) {
+        throw std::out_of_range {"ContigRegion: compressed past contig start"};
+    }
     return ContigRegion {
         region.begin(),
-        static_cast<ContigRegion::Position>(region.end() + n)
+        static_cast<P>(region.end() + n)
     };
 }
 
