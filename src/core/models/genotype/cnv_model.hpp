@@ -66,8 +66,8 @@ public:
     
     ~CNVModel() = default;
     
-    InferredLatents infer_latents(std::vector<Genotype<Haplotype>> genotypes,
-                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    InferredLatents evaluate(std::vector<Genotype<Haplotype>> genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
     std::vector<SampleName> samples_;

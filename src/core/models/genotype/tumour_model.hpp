@@ -67,8 +67,8 @@ public:
     TumourModel(TumourModel&&)                 = default;
     TumourModel& operator=(TumourModel&&)      = default;
     
-    InferredLatents infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
-                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    InferredLatents evaluate(std::vector<CancerGenotype<Haplotype>> genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
     std::vector<SampleName> samples_;

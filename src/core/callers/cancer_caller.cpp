@@ -217,25 +217,25 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     static const SampleName pool {"pool"};
     const auto pooled_likelihoods = merge_samples(samples_, pool, haplotypes, haplotype_likelihoods);
     pooled_likelihoods.prime(pool);
-    auto germline_inferences = germline_model.infer_latents(germline_genotypes, pooled_likelihoods);
     
+    auto germline_inferences = germline_model.evaluate(germline_genotypes, pooled_likelihoods);
     auto cnv_model_priors = get_cnv_model_priors(*germline_prior_model);
     const CNVModel cnv_model {samples_, parameters_.ploidy, std::move(cnv_model_priors)};
-    auto cnv_inferences = cnv_model.infer_latents(germline_genotypes, haplotype_likelihoods);
     
+    auto cnv_inferences = cnv_model.evaluate(germline_genotypes, haplotype_likelihoods);
     const SomaticMutationModel mutation_model {parameters_.somatic_mutation_model_params};
     const CancerGenotypePriorModel somatic_prior_model {*germline_prior_model, mutation_model};
     auto somatic_model_priors = get_somatic_model_priors(somatic_prior_model);
     const TumourModel somatic_model {samples_, parameters_.ploidy, std::move(somatic_model_priors)};
     reduce(cancer_genotypes, germline_genotypes, germline_model, haplotype_likelihoods);
-    auto somatic_inferences = somatic_model.infer_latents(cancer_genotypes, haplotype_likelihoods);
     
+    auto somatic_inferences = somatic_model.evaluate(cancer_genotypes, haplotype_likelihoods);
     boost::optional<TumourModel::InferredLatents> noise_inferences {};
     if (has_normal_sample()) {
         auto noise_model_priors = get_noise_model_priors(somatic_prior_model);
         const TumourModel noise_model {samples_, parameters_.ploidy, std::move(noise_model_priors)};
         const auto noise_genotypes = get_high_posterior_genotypes(somatic_inferences.posteriors.genotype_probabilities);
-        noise_inferences = noise_model.infer_latents(noise_genotypes, haplotype_likelihoods);
+        noise_inferences = noise_model.evaluate(noise_genotypes, haplotype_likelihoods);
     }
     
     boost::optional<std::reference_wrapper<const SampleName>> normal {};
@@ -252,7 +252,7 @@ auto make_posterior_map(const std::vector<Genotype<Haplotype>>& genotypes,
                         const model::IndividualModel& model,
                         const HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
-    const auto latents = model.infer_latents(genotypes, haplotype_likelihoods);
+    const auto latents = model.evaluate(genotypes, haplotype_likelihoods);
     using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
     auto hash = std::hash<GenotypeReference>();
     const auto cmp = [] (const auto& lhs, const auto& rhs) { return lhs.get() == rhs.get(); };
@@ -339,15 +339,12 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
         const auto prior_model = make_germline_prior_model(haplotypes);
         const GermlineModel germline_model {*prior_model};
         haplotype_likelihoods.prime(normal_sample());
-        const auto normal_inferences = germline_model.infer_latents(latents.germline_genotypes_,
-                                                                    haplotype_likelihoods);
+        const auto normal_inferences = germline_model.evaluate(latents.germline_genotypes_, haplotype_likelihoods);
         const auto dummy_genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
-        const auto dummy_inferences = germline_model.infer_latents(dummy_genotypes,
-                                                                   haplotype_likelihoods);
+        const auto dummy_inferences = germline_model.evaluate(dummy_genotypes, haplotype_likelihoods);
         auto noise_model_priors = get_normal_noise_model_priors(*prior_model);
         const CNVModel noise_model {{normal_sample()}, parameters_.ploidy, std::move(noise_model_priors)};
-        auto noise_inferences = noise_model.infer_latents(latents.germline_genotypes_, haplotype_likelihoods);
-        
+        auto noise_inferences = noise_model.evaluate(latents.germline_genotypes_, haplotype_likelihoods);
         return octopus::calculate_model_posterior(normal_inferences.log_evidence,
                                                   dummy_inferences.log_evidence,
                                                   noise_inferences.approx_log_evidence);

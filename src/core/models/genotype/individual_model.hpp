@@ -44,8 +44,8 @@ public:
     
     ~IndividualModel() = default;
     
-    InferredLatents infer_latents(const std::vector<Genotype<Haplotype>>& genotypes,
-                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    InferredLatents evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
     const GenotypePriorModel& genotype_prior_model_;

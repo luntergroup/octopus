@@ -59,8 +59,8 @@ namespace {
 // CNV public
 
 CNVModel::InferredLatents
-CNVModel::infer_latents(std::vector<Genotype<Haplotype>> genotypes,
-                        const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+CNVModel::evaluate(std::vector<Genotype<Haplotype>> genotypes,
+                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     assert(ploidy_ < 4);
@@ -724,7 +724,7 @@ auto generate_seeds(const std::vector<SampleName>& samples,
     model::IndividualModel germline_model {priors.genotype_prior_model};
     for (const auto& sample : samples) {
         haplotype_log_likelihoods.prime(sample);
-        const auto latents = germline_model.infer_latents(genotypes, haplotype_log_likelihoods);
+        const auto latents = germline_model.evaluate(genotypes, haplotype_log_likelihoods);
         result.push_back(latents.posteriors.genotype_probabilities);
         maths::log_each(result.back());
         result.push_back(latents.posteriors.genotype_probabilities);

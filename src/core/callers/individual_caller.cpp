@@ -112,7 +112,7 @@ IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     const auto prior_model = make_prior_model(haplotypes);
     const model::IndividualModel model {*prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
-    auto inferences = model.infer_latents(genotypes, haplotype_likelihoods);
+    auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
     return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
 }
 
@@ -144,7 +144,7 @@ IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplot
     const auto prior_model = make_prior_model(haplotypes);
     const model::IndividualModel model {*prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
-    const auto inferences = model.infer_latents(genotypes, haplotype_likelihoods);
+    const auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
     return octopus::calculate_model_posterior(latents.model_log_evidence_, inferences.log_evidence);
 }
 
@@ -319,7 +319,7 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
-    
+
 namespace debug {
     void log(const GenotypeProbabilityMap& genotype_posteriors,
              boost::optional<logging::DebugLogger>& debug_log,

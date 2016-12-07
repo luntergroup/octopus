@@ -74,8 +74,8 @@ void add_priors(const std::vector<Genotype<Haplotype>>& genotypes,
 } // namespace
 
 IndividualModel::InferredLatents
-IndividualModel::infer_latents(const std::vector<Genotype<Haplotype>>& genotypes,
-                               const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     auto result = compute_likelihoods(genotypes, haplotype_likelihoods);

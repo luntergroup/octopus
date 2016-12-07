@@ -59,8 +59,8 @@ run_variational_bayes(const std::vector<SampleName>& samples,
 // Cancer public
 
 TumourModel::InferredLatents
-TumourModel::infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
-                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+TumourModel::evaluate(std::vector<CancerGenotype<Haplotype>> genotypes,
+                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     
