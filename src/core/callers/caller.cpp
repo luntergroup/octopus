@@ -388,8 +388,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             break;
         }
         
-        remove_passed_candidates(candidates, candidate_region, haplotype_region(haplotypes));
-        
         const auto active_reads = copy_overlapped(reads, active_region);
         
         if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " initial haplotypes";
