@@ -18,12 +18,12 @@
 namespace octopus { namespace model {
 
 TrioModel::TrioModel(const Trio& trio,
-                     const PopulationPriorModel& genotype_prior_model,
+                     const PopulationPriorModel& prior_model,
                      const DeNovoModel& mutation_model,
                      Options options,
                      boost::optional<logging::DebugLogger> debug_log)
 : trio_ {trio}
-, genotype_prior_model_ {genotype_prior_model}
+, prior_model_ {prior_model}
 , mutation_model_ {mutation_model}
 , options_ {options}
 , debug_log_ {debug_log}
@@ -224,11 +224,11 @@ bool all_diploid(const Genotype<Haplotype>& child,
 
 double probability_of_child_given_parent(const Haplotype& child,
                                          const Genotype<Haplotype>& parent,
-                                         const DeNovoModel& model)
+                                         const DeNovoModel& mutation_model)
 {
     static const double ln2 {std::log(2)};
-    const auto p1 = model.evaluate(child, parent[0]);
-    const auto p2 = model.evaluate(child, parent[1]);
+    const auto p1 = mutation_model.evaluate(child, parent[0]);
+    const auto p2 = mutation_model.evaluate(child, parent[1]);
     return maths::log_sum_exp(p1, p2) - ln2;
 }
 
@@ -236,21 +236,21 @@ double probability_of_child_given_parents(const Haplotype& child_from_mother,
                                           const Haplotype& child_from_father,
                                           const Genotype<Haplotype>& mother,
                                           const Genotype<Haplotype>& father,
-                                          const DeNovoModel& model)
+                                          const DeNovoModel& mutation_model)
 {
-    return probability_of_child_given_parent(child_from_mother, mother, model)
-            + probability_of_child_given_parent(child_from_father, father, model);
+    return probability_of_child_given_parent(child_from_mother, mother, mutation_model)
+            + probability_of_child_given_parent(child_from_father, father, mutation_model);
 }
 
 double probability_of_child_given_parents(const Genotype<Haplotype>& child,
                                           const Genotype<Haplotype>& mother,
                                           const Genotype<Haplotype>& father,
-                                          const DeNovoModel& model)
+                                          const DeNovoModel& mutation_model)
 {
     if (all_diploid(child, mother, father)) {
         static const double ln2 {std::log(2)};
-        const auto p1 = probability_of_child_given_parents(child[0], child[1], mother, father, model);
-        const auto p2 = probability_of_child_given_parents(child[1], child[0], mother, father, model);
+        const auto p1 = probability_of_child_given_parents(child[0], child[1], mother, father, mutation_model);
+        const auto p2 = probability_of_child_given_parents(child[1], child[0], mother, father, mutation_model);
         return maths::log_sum_exp(p1, p2) - ln2;
     }
     return 0; // TODO
@@ -260,22 +260,21 @@ using JointProbability = TrioModel::Latents::JointProbability;
 
 auto joint_probability(const ParentsProbabilityPair& parents,
                        const GenotypeRefProbabilityPair& child,
-                       const DeNovoModel& model)
+                       const DeNovoModel& mutation_model)
 {
     return parents.probability + child.probability
-           + probability_of_child_given_parents(child.genotype, parents.maternal, parents.paternal, model);
+           + probability_of_child_given_parents(child.genotype, parents.maternal, parents.paternal, mutation_model);
 }
 
 auto join(const std::vector<ParentsProbabilityPair>& parents,
           const std::vector<GenotypeRefProbabilityPair>& child,
-          const DeNovoModel& model)
+          const DeNovoModel& mutation_model)
 {
     std::vector<JointProbability> result {};
     result.reserve(parents.size() * child.size());
     for (const auto& p : parents) {
         for (const auto& c : child) {
-            result.push_back({p.maternal, p.paternal, c.genotype,
-                              joint_probability(p, c, model)});
+            result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, mutation_model)});
         }
     }
     return result;
@@ -337,7 +336,7 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
         debug::print(stream(*debug_log_), "maternal", maternal_likelihoods);
         debug::print(stream(*debug_log_), "paternal", paternal_likelihoods);
     }
-    auto parents_joint_likelihoods = join(maternal_likelihoods, paternal_likelihoods, genotype_prior_model_);
+    auto parents_joint_likelihoods = join(maternal_likelihoods, paternal_likelihoods, prior_model_);
     overflowed |= reduce(parents_joint_likelihoods, options_);
     assert(!parents_joint_likelihoods.empty());
     clear(maternal_likelihoods);

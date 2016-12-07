@@ -29,10 +29,12 @@ public:
     {
         struct JointProbability
         {
-            std::reference_wrapper<const Genotype<Haplotype>> maternal, paternal, child;
+            using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+            GenotypeReference maternal, paternal, child;
             double probability;
         };
-        std::vector<JointProbability> joint_genotype_probabilities;
+        using JointProbabilityVector = std::vector<JointProbability>;
+        JointProbabilityVector joint_genotype_probabilities;
     };
     
     struct InferredLatents
@@ -51,7 +53,7 @@ public:
     TrioModel() = delete;
     
     TrioModel(const Trio& trio,
-              const PopulationPriorModel& genotype_prior_model,
+              const PopulationPriorModel& prior_model,
               const DeNovoModel& mutation_model,
               Options options,
               boost::optional<logging::DebugLogger> debug_log = boost::none);
@@ -70,7 +72,7 @@ public:
 
 private:
     const Trio& trio_;
-    const PopulationPriorModel& genotype_prior_model_;
+    const PopulationPriorModel& prior_model_;
     const DeNovoModel& mutation_model_;
     Options options_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
