@@ -129,18 +129,19 @@ std::unique_ptr<PopulationCaller::Caller::Latents>
 PopulationCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                 const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}, CoalescentModel::Parameters {}};
-    
-    model::PopulationModel model {prior_model};
-    
-    auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
-    
-    if (DEBUG_MODE) {
-        logging::DebugLogger log {};
-        stream(log) << "There are " << genotypes.size() << " candidate genotypes";
-    }
-    
-    auto inferences = model.infer_latents(samples_, genotypes, haplotypes, haplotype_likelihoods);
+    return nullptr;
+//    CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}, CoalescentModel::Parameters {}};
+//
+//    model::PopulationModel model {prior_model};
+//
+//    auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
+//
+//    if (DEBUG_MODE) {
+//        logging::DebugLogger log {};
+//        stream(log) << "There are " << genotypes.size() << " candidate genotypes";
+//    }
+//
+//    auto inferences = model.evaluate(samples_, genotypes, haplotypes, haplotype_likelihoods);
     
 //    // TEST
 //    model::Population dummy_model {ploidy_ + 1, prior_model};
@@ -153,7 +154,7 @@ PopulationCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 //                                     std::move(dummy_inferences));
 //    // END TEST
     
-    return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
+//    return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
 }
 
 namespace {

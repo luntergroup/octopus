@@ -14,13 +14,13 @@
 
 namespace octopus { namespace model {
 
-PopulationModel::PopulationModel(const CoalescentModel& genotype_prior_model)
-:
-genotype_prior_model_ {genotype_prior_model}
+PopulationModel::PopulationModel(const PopulationPriorModel& prior_model,
+                                 boost::optional<logging::DebugLogger> debug_log)
+: prior_model_ {prior_model}
+, debug_log_ {debug_log}
 {}
 
-namespace
-{
+namespace {
 
 using GenotypeLogLikelihoodVector  = std::vector<double>;
 using SampleGenotypeLogLikelihoods = std::vector<GenotypeLogLikelihoodVector>;
@@ -128,8 +128,7 @@ namespace debug {
 
 // non member methods
 
-namespace
-{
+namespace {
 
 HaplotypeFrequencyMap
 init_haplotype_frequencies(const ModelConstants& constants)
@@ -524,9 +523,9 @@ make_latents(const std::vector<Haplotype>& haplotypes,
 } // namespace
 
 PopulationModel::InferredLatents
-PopulationModel::infer_latents(const std::vector<SampleName>& samples, const GenotypeVector& genotypes,
-                               const std::vector<Haplotype>& haplotypes,
-                               const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+PopulationModel::evaluate(const SampleVector& samples,
+                          const GenotypeVector& genotypes,
+                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     
@@ -534,8 +533,8 @@ PopulationModel::infer_latents(const std::vector<SampleName>& samples, const Gen
 //        return make_single_genotype_latents(samples, genotypes.front());
 //    }
     
-    const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(samples, genotypes,
-                                                                          haplotype_likelihoods);
+//    const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(samples, genotypes,
+//                                                                          haplotype_likelihoods);
     
 //    if (TRACE_MODE) {
 //        logging::TraceLogger trace_log {};
@@ -563,9 +562,18 @@ PopulationModel::infer_latents(const std::vector<SampleName>& samples, const Gen
     return InferredLatents {};
 }
 
+PopulationModel::InferredLatents
+PopulationModel::evaluate(const SampleVector& samples,
+                          const std::unordered_map<SampleName, GenotypeVectorReference>& genotypes,
+                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    return InferredLatents {};
+}
+
 namespace debug {
     
 } // namespace debug
+
 } // namespace model
 } // namespace octopus
 
