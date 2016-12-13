@@ -503,22 +503,22 @@ auto calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
     return result;
 }
 
-PopulationModel::InferredLatents
-make_latents(const std::vector<Haplotype>& haplotypes,
-             const std::vector<Genotype<Haplotype>>& genotypes,
-             SampleGenotypePosteriors&& genotype_posteriors,
-             const ModelConstants& constants)
-{
-    auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, genotypes,
-                                                               genotype_posteriors,
-                                                               constants.genotypes_containing_haplotypes);
-    
-    return PopulationModel::InferredLatents {
-        std::move(genotype_posteriors),
-        std::move(haplotype_posteriors),
-        1.0 // TODO
-    };
-}
+//PopulationModel::InferredLatents
+//make_latents(const std::vector<Haplotype>& haplotypes,
+//             const std::vector<Genotype<Haplotype>>& genotypes,
+//             SampleGenotypePosteriors&& genotype_posteriors,
+//             const ModelConstants& constants)
+//{
+//    auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, genotypes,
+//                                                               genotype_posteriors,
+//                                                               constants.genotypes_containing_haplotypes);
+//
+//    return PopulationModel::InferredLatents {
+//        std::move(genotype_posteriors),
+//        std::move(haplotype_posteriors),
+//        1.0 // TODO
+//    };
+//}
 
 } // namespace
 
