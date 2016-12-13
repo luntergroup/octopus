@@ -16,7 +16,7 @@
 #include "utils/read_stats.hpp"
 #include "utils/maths.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
-#include "utils/haplotype_filter.hpp"
+#include "core/tools/haplotype_filter.hpp"
 #include "utils/call.hpp"
 #include "utils/variant_call.hpp"
 #include "utils/reference_call.hpp"

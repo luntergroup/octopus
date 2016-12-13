@@ -179,8 +179,6 @@ set(CORE_SOURCES
     core/callers/utils/call.cpp
     core/callers/utils/germline_variant_call.hpp
     core/callers/utils/germline_variant_call.cpp
-    core/callers/utils/haplotype_filter.hpp
-    core/callers/utils/haplotype_filter.cpp
     core/callers/utils/reference_call.hpp
     core/callers/utils/reference_call.cpp
     core/callers/utils/somatic_call.hpp
@@ -260,7 +258,9 @@ set(CORE_SOURCES
     core/models/mutation/denovo_model.cpp
     
     core/tools/coretools.hpp
-    
+    core/tools/haplotype_filter.hpp
+    core/tools/haplotype_filter.cpp
+
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp
     core/tools/hapgen/haplotype_generator.hpp
