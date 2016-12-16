@@ -8,6 +8,7 @@
 #include <functional>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/genotype.hpp"
 
 namespace octopus {
 
@@ -23,12 +24,12 @@ public:
     
     virtual ~PopulationPriorModel() = default;
     
-    double evaluate(const std::vector<Haplotype>& haplotypes) const { return do_evaluate(haplotypes); }
-    double evaluate(const std::vector<std::reference_wrapper<const Haplotype>>& haplotypes) const { return do_evaluate(haplotypes); }
+    double evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const { return do_evaluate(genotypes); }
+    double evaluate(const std::vector<std::reference_wrapper<const Genotype<Haplotype>>>& genotypes) const { return do_evaluate(genotypes); }
 
 private:
-    virtual double do_evaluate(const std::vector<Haplotype>& haplotypes) const = 0;
-    virtual double do_evaluate(const std::vector<std::reference_wrapper<const Haplotype>>& haplotypes) const = 0;
+    virtual double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const = 0;
+    virtual double do_evaluate(const std::vector<std::reference_wrapper<const Genotype<Haplotype>>>& genotypes) const = 0;
 };
 
 } // namespace octopus

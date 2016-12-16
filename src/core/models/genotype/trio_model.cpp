@@ -192,11 +192,17 @@ double probability_of_parents(const Genotype<Haplotype>& mother,
                               const Genotype<Haplotype>& father,
                               const PopulationPriorModel& model)
 {
-    thread_local std::vector<std::reference_wrapper<const Haplotype>> parental_haplotypes;
-    parental_haplotypes.reserve(mother.ploidy() + father.ploidy());
-    parental_haplotypes.assign(std::cbegin(mother), std::cend(mother));
-    parental_haplotypes.insert(std::cend(parental_haplotypes), std::cbegin(father), std::cend(father));
-    return model.evaluate(parental_haplotypes);
+    thread_local std::vector<std::reference_wrapper<const Genotype<Haplotype>>> parental_genotypes {};
+    if (parental_genotypes.empty()) {
+        parental_genotypes.reserve(2);
+        parental_genotypes.emplace_back(mother);
+        parental_genotypes.emplace_back(father);
+    } else {
+        assert(parental_genotypes.size() == 2);
+        parental_genotypes.front() = mother;
+        parental_genotypes.back()  = father;
+    }
+    return model.evaluate(parental_genotypes);
 }
 
 auto join(const std::vector<GenotypeRefProbabilityPair>& maternal,
