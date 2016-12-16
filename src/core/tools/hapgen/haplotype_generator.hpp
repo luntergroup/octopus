@@ -137,6 +137,7 @@ private:
     
     void progress(GenomicRegion to);
     
+    void populate_tree();
     bool in_holdout_mode() const noexcept;
     bool can_extract_holdouts(const GenomicRegion& region) const noexcept;
     void extract_holdouts(GenomicRegion region);
