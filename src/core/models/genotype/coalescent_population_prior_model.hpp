@@ -6,6 +6,9 @@
 
 #include <vector>
 #include <utility>
+#include <iterator>
+#include <algorithm>
+#include <functional>
 
 #include "population_prior_model.hpp"
 #include "../mutation/coalescent_model.hpp"
@@ -29,12 +32,22 @@ public:
 private:
     CoalescentModel model_;
     
-    virtual double do_evaluate(const std::vector<Haplotype>& haplotypes) const override
+    virtual double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
     {
+        thread_local std::vector<std::reference_wrapper<const Haplotype>> haplotypes {};
+        haplotypes.clear();
+        for (const auto& genotype : genotypes) {
+            std::copy(std::cbegin(genotype), std::cend(genotype), std::back_inserter(haplotypes));
+        }
         return model_.evaluate(haplotypes);
     }
-    virtual double do_evaluate(const std::vector<std::reference_wrapper<const Haplotype>>& haplotypes) const override
+    virtual double do_evaluate(const std::vector<std::reference_wrapper<const Genotype<Haplotype>>>& genotypes) const override
     {
+        thread_local std::vector<std::reference_wrapper<const Haplotype>> haplotypes {};
+        haplotypes.clear();
+        for (const auto& genotype : genotypes) {
+            std::copy(std::cbegin(genotype.get()), std::cend(genotype.get()), std::back_inserter(haplotypes));
+        }
         return model_.evaluate(haplotypes);
     }
 };

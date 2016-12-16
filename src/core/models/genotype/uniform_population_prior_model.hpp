@@ -25,11 +25,11 @@ public:
     virtual ~UniformPopulationPriorModel() = default;
 
 private:
-    virtual double do_evaluate(const std::vector<Haplotype>& haplotypes) const override
+    virtual double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
     {
         return 1.0;
     }
-    virtual double do_evaluate(const std::vector<std::reference_wrapper<const Haplotype>>& haplotypes) const override
+    virtual double do_evaluate(const std::vector<std::reference_wrapper<const Genotype<Haplotype>>>& genotypes) const override
     {
         return 1.0;
     }
