@@ -25,9 +25,9 @@ class PopulationModel
 public:
     struct Latents
     {
-        using GenotypeProbabilityVector       = std::vector<double>;
-        using SampleGenotypeProbabilityVector = std::vector<GenotypeProbabilityVector>;
-        SampleGenotypeProbabilityVector genotype_probabilities;
+        std::vector<std::vector<std::size_t>> genotype_combinations;
+        using GenotypeProbabilityVector = std::vector<double>;
+        GenotypeProbabilityVector joint_genotype_probabilities;
     };
     
     struct InferredLatents

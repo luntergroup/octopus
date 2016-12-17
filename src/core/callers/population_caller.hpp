@@ -11,6 +11,7 @@
 
 #include "config/common.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
+#include "core/models/genotype/population_prior_model.hpp"
 #include "core/models/genotype/population_model.hpp"
 #include "basics/phred.hpp"
 #include "caller.hpp"
@@ -30,10 +31,9 @@ public:
     
     struct Parameters
     {
-        Phred<double> min_variant_posterior;
-        Phred<double> min_refcall_posterior;
+        Phred<double> min_variant_posterior, min_refcall_posterior;
         unsigned ploidy;
-        CoalescentModel::Parameters prior_model_params;
+        boost::optional<CoalescentModel::Parameters> prior_model_params;
     };
     
     PopulationCaller() = delete;
@@ -50,39 +50,7 @@ public:
     ~PopulationCaller() = default;
     
 private:
-    class Latents : public Caller::Latents
-    {
-    public:
-        using ModelInferences = model::PopulationModel::InferredLatents;
-        
-        using Caller::Latents::HaplotypeProbabilityMap;
-        using Caller::Latents::GenotypeProbabilityMap;
-        
-        friend PopulationCaller;
-        
-        Latents(const std::vector<SampleName>& samples,
-                const std::vector<Haplotype>&,
-                std::vector<Genotype<Haplotype>>&& genotypes,
-                ModelInferences&&);
-        Latents(const std::vector<SampleName>& samples,
-                const std::vector<Haplotype>&,
-                std::vector<Genotype<Haplotype>>&& genotypes,
-                ModelInferences&&, ModelInferences&&);
-        
-        std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
-        std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
-        
-    private:
-        std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
-        std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
-        
-        boost::optional<ModelInferences> dummy_latents_;
-        
-        //double model_log_evidence_;
-        
-        HaplotypeProbabilityMap
-        calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
-    };
+    class Latents;
     
     Parameters parameters_;
     
@@ -102,7 +70,35 @@ private:
     std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
                    const ReadMap& reads) const override;
+    
+    std::unique_ptr<PopulationPriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
+
+class PopulationCaller::Latents : public Caller::Latents
+{
+public:
+    using ModelInferences = model::PopulationModel::InferredLatents;
+    
+    using Caller::Latents::HaplotypeProbabilityMap;
+    using Caller::Latents::GenotypeProbabilityMap;
+    
+    friend PopulationCaller;
+    
+    Latents(const std::vector<SampleName>& samples,
+            const std::vector<Haplotype>&,
+            std::vector<Genotype<Haplotype>>&& genotypes,
+            ModelInferences&&);
+    
+    std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
+    std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
+
+private:
+    std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
+    std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
+    boost::optional<ModelInferences> dummy_latents_;
+    //double model_log_evidence_;
+};
+
 } // namespace octopus
 
 #endif
