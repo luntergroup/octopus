@@ -108,10 +108,12 @@ public:
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
     
 private:
+    Trio trio;
     std::vector<Genotype<Haplotype>> maternal_genotypes;
     boost::optional<std::vector<Genotype<Haplotype>>> paternal_genotypes;
     ModelInferences model_latents;
-    std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
+    std::vector<double> marginal_maternal_posteriors, marginal_paternal_posteriors, marginal_child_posteriors;
+    mutable std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
     std::shared_ptr<HaplotypeProbabilityMap> marginal_haplotype_posteriors;
     
     void set_genotype_posteriors(const Trio& trio);
