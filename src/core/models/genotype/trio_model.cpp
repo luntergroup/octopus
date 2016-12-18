@@ -193,15 +193,7 @@ double probability_of_parents(const Genotype<Haplotype>& mother,
                               const PopulationPriorModel& model)
 {
     thread_local std::vector<std::reference_wrapper<const Genotype<Haplotype>>> parental_genotypes {};
-    if (parental_genotypes.empty()) {
-        parental_genotypes.reserve(2);
-        parental_genotypes.emplace_back(mother);
-        parental_genotypes.emplace_back(father);
-    } else {
-        assert(parental_genotypes.size() == 2);
-        parental_genotypes.front() = mother;
-        parental_genotypes.back()  = father;
-    }
+    parental_genotypes.assign({mother, father});
     return model.evaluate(parental_genotypes);
 }
 
@@ -214,8 +206,8 @@ auto join(const std::vector<GenotypeRefProbabilityPair>& maternal,
     for (const auto& m : maternal) {
         for (const auto& p : paternal) {
             result.push_back({m.genotype, p.genotype,
-                                m.probability + p.probability
-                                + probability_of_parents(m.genotype, p.genotype, model)});
+                              m.probability + p.probability
+                                  + probability_of_parents(m.genotype, p.genotype, model)});
         }
     }
     return result;
@@ -331,32 +323,42 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
     bool overflowed {false};
     haplotype_likelihoods.prime(trio_.mother());
+    resume(misc_timer[2]);
     auto maternal_likelihoods = compute_likelihoods(maternal_genotypes, likelihood_model);
     overflowed |= reduce(maternal_likelihoods, options_);
+    pause(misc_timer[2]);
     assert(!maternal_likelihoods.empty());
     haplotype_likelihoods.prime(trio_.father());
+    resume(misc_timer[3]);
     auto paternal_likelihoods = compute_likelihoods(paternal_genotypes, likelihood_model);
     overflowed |= reduce(paternal_likelihoods, options_);
+    pause(misc_timer[3]);
     assert(!paternal_likelihoods.empty());
     if (debug_log_) {
         debug::print(stream(*debug_log_), "maternal", maternal_likelihoods);
         debug::print(stream(*debug_log_), "paternal", paternal_likelihoods);
     }
+    resume(misc_timer[4]);
     auto parents_joint_likelihoods = join(maternal_likelihoods, paternal_likelihoods, prior_model_);
     overflowed |= reduce(parents_joint_likelihoods, options_);
+    pause(misc_timer[4]);
     assert(!parents_joint_likelihoods.empty());
     clear(maternal_likelihoods);
     clear(paternal_likelihoods);
     if (debug_log_) debug::print(stream(*debug_log_), parents_joint_likelihoods);
     haplotype_likelihoods.prime(trio_.child());
+    resume(misc_timer[5]);
     auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
     overflowed |= reduce(child_likelihoods, options_);
+    pause(misc_timer[5]);
     assert(!child_likelihoods.empty());
     if (debug_log_) debug::print(stream(*debug_log_), "child", child_likelihoods);
+    resume(misc_timer[6]);
     auto joint_likelihoods = join(parents_joint_likelihoods, child_likelihoods, mutation_model_);
     clear(parents_joint_likelihoods);
     clear(child_likelihoods);
     const auto evidence = normalise_exp(joint_likelihoods);
+    pause(misc_timer[6]);
     if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
     return {std::move(joint_likelihoods), evidence, overflowed};
 }
