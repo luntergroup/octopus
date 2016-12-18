@@ -231,6 +231,17 @@ auto make_individual_prior_model(boost::optional<double> snp_heterozygosity,
     }
 }
 
+auto make_population_prior_model(boost::optional<double> snp_heterozygosity,
+                                 boost::optional<double> indel_heterozygosity)
+{
+    using T = decltype(PopulationCaller::Parameters::prior_model_params);
+    if (snp_heterozygosity && indel_heterozygosity) {
+        return T {T::value_type {*snp_heterozygosity, *indel_heterozygosity}};
+    } else {
+        return T {};
+    }
+}
+
 auto make_cancer_prior_model(boost::optional<double> snp_heterozygosity,
                              boost::optional<double> indel_heterozygosity)
 {
@@ -282,8 +293,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
                                                           params_.ploidies(samples.front(), *requested_contig_),
-                                                          {*params_.snp_heterozygosity,
-                                                           *params_.indel_heterozygosity}
+                                                          make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                       });
         }},
         {"cancer", [this, general_parameters = std::move(general_parameters), &samples] () {
