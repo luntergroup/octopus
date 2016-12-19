@@ -352,25 +352,30 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     auto haplotype_generator   = make_haplotype_generator(candidates, reads);
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
     const auto record_factory  = make_record_factory(reads);
-    std::vector<Haplotype> haplotypes;
+    std::vector<Haplotype> haplotypes {}, next_haplotypes {};
     GenomicRegion active_region;
+    boost::optional<GenomicRegion> next_active_region {};
     auto completed_region = head_region(call_region);
     
     pause(init_timer);
     
     while (true) {
-        try {
-            resume(haplotype_generation_timer);
-            std::tie(haplotypes, active_region) = haplotype_generator.generate();
-            pause(haplotype_generation_timer);
-        } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
-            // TODO: we could try to eliminate some more haplotypes and recall the region
-            logging::WarningLogger wlog {};
-            stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
-            haplotype_generator.clear_progress();
-            haplotype_likelihoods.clear();
-            progress_meter.log_completed(active_region);
-            continue;
+        if (next_active_region) {
+            haplotypes = std::move(next_haplotypes);
+            active_region = std::move(*next_active_region);
+        } else {
+            try {
+                resume(haplotype_generation_timer);
+                std::tie(haplotypes, active_region, std::ignore) = haplotype_generator.generate();
+                pause(haplotype_generation_timer);
+            } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
+                logging::WarningLogger wlog {};
+                stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
+                haplotype_generator.clear_progress();
+                haplotype_likelihoods.clear();
+                progress_meter.log_completed(e.region());
+                continue;
+            }
         }
         
         if (debug_log_) stream(*debug_log_) << "Active region is " << active_region;
@@ -522,13 +527,22 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         if (!parameters_.allow_model_filtering) {
             haplotype_likelihoods.clear();
         }
-    
+        
         resume(haplotype_generation_timer);
-        const auto next_active_region = haplotype_generator.peek_next_active_region();
+        bool last_pass;
+        try {
+            resume(haplotype_generation_timer);
+            std::tie(next_haplotypes, next_active_region, last_pass) = haplotype_generator.generate();
+            pause(haplotype_generation_timer);
+        } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
+            logging::WarningLogger wlog {};
+            stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
+            haplotype_generator.clear_progress();
+            next_active_region = tail_region(e.region());
+        }
         pause(haplotype_generation_timer);
         
-        if (next_active_region && begins_before(active_region, *next_active_region)
-            && overlaps(active_region, call_region)) {
+        if (last_pass && begins_before(active_region, *next_active_region) && overlaps(active_region, call_region)) {
             auto passed_region   = left_overhang_region(active_region, *next_active_region);
             auto uncalled_region = *overlapped_region(active_region, passed_region);
             
