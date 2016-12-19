@@ -46,7 +46,7 @@ public:
     
     struct Options
     {
-        std::size_t min_to_keep = 50, max_to_keep = 500;
+        std::size_t min_combinations = 50, max_combinations = 500;
         double max_removal_posterior_mass = 1e-20;
     };
     
