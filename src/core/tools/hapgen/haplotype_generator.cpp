@@ -756,21 +756,21 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_target_limit(const
 {
     policies_.haplotype_limits.target = n;
     if (policies_.haplotype_limits.holdout >= n) {
-        policies_.haplotype_limits.holdout  = n + 1;
-        policies_.haplotype_limits.overflow = n + 1;
+        policies_.haplotype_limits.holdout = policies_.haplotype_limits.holdout + 1;
+        policies_.haplotype_limits.overflow = policies_.haplotype_limits.holdout + 1;
     }
     return *this;
 }
 
 HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_holdout_limit(const unsigned n) noexcept
 {
-    policies_.haplotype_limits.holdout = n;
+    policies_.haplotype_limits.holdout = std::max(n, policies_.haplotype_limits.target + 1);
     return *this;
 }
 
 HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_overflow_limit(const unsigned n) noexcept
 {
-    policies_.haplotype_limits.overflow = n;
+    policies_.haplotype_limits.overflow = std::max(n, policies_.haplotype_limits.holdout);
     return *this;
 }
 
