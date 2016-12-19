@@ -522,7 +522,7 @@ bool HaplotypeGenerator::in_holdout_mode() const noexcept
 
 bool HaplotypeGenerator::can_extract_holdouts(const GenomicRegion& region) const noexcept
 {
-    return active_holdouts_.size() < policies_.max_holdout_depth;
+    return active_holdouts_.size() < policies_.max_holdout_depth && has_overlapped(alleles_, region);
 }
 
 namespace debug {
