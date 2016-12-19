@@ -416,6 +416,11 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
                 pop_front(mutually_exclusive_novel_regions);
             }
             if (!in_holdout_mode()) {
+                const auto novel_overlap_region = encompassing_region(novel_alleles);
+                while (!mutually_exclusive_indicator_regions.empty()
+                       && overlaps(mutually_exclusive_indicator_regions.back(), novel_overlap_region)) {
+                    mutually_exclusive_indicator_regions.pop_back();
+                }
                 prune_indicators(test_tree, mutually_exclusive_indicator_regions,
                                  policies_.haplotype_limits.target);
             }
@@ -426,14 +431,14 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
             assert(num_novel_regions_added > 0);
             next_active_region_ = test_tree.encompassing_region();
         } else {
-            next_active_region_ = novel_region; // revert to non-lagged behaviour
+            next_active_region_ = encompassing_region(novel_alleles); // revert to non-lagged behaviour
         }
         if (*next_active_region_ == active_region_) {
             next_active_region_ = default_walker_.walk(active_region_, reads_, alleles_);
         }
     }
 }
-    
+
 void HaplotypeGenerator::progress(GenomicRegion to)
 {
     if (to == active_region_) return;
