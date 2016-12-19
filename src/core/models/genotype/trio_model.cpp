@@ -184,7 +184,7 @@ bool reduce(std::vector<T>& zipped, const std::size_t min_to_keep,
 template <typename T>
 auto reduce(std::vector<T>& zipped, const TrioModel::Options& options)
 {
-    return reduce(zipped, options.min_to_keep, options.max_to_keep,
+    return reduce(zipped, options.min_combinations, options.max_combinations,
                   options.max_removal_posterior_mass);
 }
 
