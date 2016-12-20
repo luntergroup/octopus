@@ -27,6 +27,8 @@ double GermlineLikelihoodModel::evaluate(const Genotype<Haplotype>& genotype) co
     assert(likelihoods_.is_primed());
     // These cases are just for optimisation
     switch (genotype.ploidy()) {
+        case 0:
+            return 0.0;
         case 1:
             return evaluate_haploid(genotype);
         case 2:

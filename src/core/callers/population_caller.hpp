@@ -10,10 +10,11 @@
 #include <typeindex>
 
 #include "config/common.hpp"
+#include "basics/ploidy_map.hpp"
+#include "basics/phred.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/genotype/population_prior_model.hpp"
 #include "core/models/genotype/population_model.hpp"
-#include "basics/phred.hpp"
 #include "caller.hpp"
 
 namespace octopus {
@@ -32,7 +33,7 @@ public:
     struct Parameters
     {
         Phred<double> min_variant_posterior, min_refcall_posterior;
-        unsigned ploidy;
+        std::vector<unsigned> ploidies;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
     };
     

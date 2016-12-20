@@ -44,7 +44,7 @@ public:
     class HaplotypeOverflow;
     class Builder;
     
-    using HaplotypePacket = std::pair<std::vector<Haplotype>, GenomicRegion>;
+    using HaplotypePacket = std::tuple<std::vector<Haplotype>, GenomicRegion, bool>;
     
     HaplotypeGenerator() = delete;
     
@@ -169,11 +169,9 @@ template <typename Container>
 void HaplotypeGenerator::collapse(const Container& haplotypes)
 {
     reset_next_active_region();
-    
     if (!is_active_region_lagged() || tree_.num_haplotypes() == haplotypes.size()) {
         return;
     }
-    
     prune_unique(haplotypes, tree_);
 }
 
@@ -181,9 +179,7 @@ template <typename Container>
 void HaplotypeGenerator::remove(const Container& haplotypes)
 {
     if (haplotypes.empty()) return;
-    
     reset_next_active_region();
-    
     if (!is_active_region_lagged() || haplotypes.size() == tree_.num_haplotypes()) {
         tree_.clear();
         if (!in_holdout_mode()) {

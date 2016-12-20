@@ -18,18 +18,18 @@ void PloidyMap::set(const ContigName& contig, unsigned ploidy)
 
 void PloidyMap::set(const SampleName& sample, const ContigName& contig, unsigned ploidy)
 {
-    sample_contigs_[sample].emplace(contig, ploidy);
+    allosomes_[sample].emplace(contig, ploidy);
 }
 
-unsigned PloidyMap::organism() const noexcept
+bool PloidyMap::is_autosome(const ContigName& contig) const noexcept
 {
-    return organism_;
+    return allosomes_.count(contig) == 0;
 }
     
-unsigned PloidyMap::operator()(const SampleName& sample, const ContigName& contig) const noexcept
+unsigned PloidyMap::of(const SampleName& sample, const ContigName& contig) const noexcept
 {
-    const auto sample_itr = sample_contigs_.find(sample);
-    if (sample_itr != std::cend(sample_contigs_)) {
+    const auto sample_itr = allosomes_.find(sample);
+    if (sample_itr != std::cend(allosomes_)) {
         const auto contig_itr = sample_itr->second.find(contig);
         if (contig_itr != std::cend(sample_itr->second)) {
             return contig_itr->second;
@@ -41,6 +41,20 @@ unsigned PloidyMap::operator()(const SampleName& sample, const ContigName& conti
         }
     }
     return organism_;
+}
+
+std::vector<unsigned> get_ploidies(const std::vector<SampleName>& samples, const ContigName& contig, const PloidyMap& ploidies)
+{
+    std::vector<unsigned> result {};
+    if (ploidies.is_autosome(contig)) {
+        const auto ploidy = ploidies.of(samples.front(), contig);
+        result.assign(samples.size(), ploidy);
+    } else {
+        result.reserve(samples.size());
+        std::transform(std::cbegin(samples), std::cend(samples), std::back_inserter(result),
+                       [&] (const auto& sample) { return ploidies.of(sample, contig); });
+    }
+    return result;
 }
 
 } // namespace octopus
