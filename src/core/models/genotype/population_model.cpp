@@ -3,6 +3,7 @@
 
 #include "population_model.hpp"
 
+#include <unordered_map>
 #include <utility>
 #include <algorithm>
 #include <cmath>
@@ -424,7 +425,7 @@ PopulationModel::evaluate(const SampleVector& samples,
 
 PopulationModel::InferredLatents
 PopulationModel::evaluate(const SampleVector& samples,
-                          const std::unordered_map<SampleName, GenotypeVectorReference>& genotypes,
+                          const std::vector<GenotypeVectorReference>& genotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     return InferredLatents {};

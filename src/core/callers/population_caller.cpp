@@ -31,12 +31,22 @@
 
 namespace octopus {
 
+template <typename Container>
+bool all_equal(const Container& c)
+{
+    return std::adjacent_find(std::cbegin(c), std::cend(c), std::not_equal_to<typename Container::value_type> {}) == std::cend(c);
+}
+
 PopulationCaller::PopulationCaller(Caller::Components&& components,
                                    Caller::Parameters general_parameters,
                                    Parameters specific_parameters)
 : Caller {std::move(components), std::move(general_parameters)}
 , parameters_ {specific_parameters}
-{}
+{
+    if (all_equal(parameters_.ploidies)) {
+        parameters_.ploidies.resize(1);
+    }
+}
 
 std::string PopulationCaller::do_name() const
 {
@@ -153,6 +163,14 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
     genotype_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
 }
 
+PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
+                                   const std::vector<Haplotype>& haplotypes,
+                                   std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>>&& genotypes,
+                                   ModelInferences&& inferences)
+{
+    
+}
+
 std::shared_ptr<PopulationCaller::Latents::HaplotypeProbabilityMap>
 PopulationCaller::Latents::haplotype_posteriors() const noexcept
 {
@@ -165,16 +183,48 @@ PopulationCaller::Latents::genotype_posteriors() const noexcept
     return genotype_posteriors_;
 }
 
+using GenotypesMap = std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>>;
+
+auto generate_unique_genotypes(const std::vector<Haplotype>& haplotypes, std::vector<unsigned> ploidies)
+{
+    std::sort(std::begin(ploidies), std::end(ploidies));
+    ploidies.erase(std::unique(std::begin(ploidies), std::end(ploidies)), std::end(ploidies));
+    GenotypesMap result {ploidies.size()};
+    for (auto ploidy : ploidies) {
+        result.emplace(ploidy, generate_all_genotypes(haplotypes, ploidy));
+    }
+    return result;
+}
+
+using GenotypeVectorReference = std::reference_wrapper<const std::vector<Genotype<Haplotype>>>;
+
+auto assign_samples_to_genotypes(std::vector<unsigned> ploidies, const GenotypesMap& genotypes)
+{
+    std::vector<GenotypeVectorReference> result {};
+    result.reserve(ploidies.size());
+    for (auto ploidy : ploidies) {
+        result.emplace_back(genotypes.at(ploidy));
+    }
+    return result;
+}
+
 std::unique_ptr<PopulationCaller::Caller::Latents>
 PopulationCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                 const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
-    if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     const auto prior_model = make_prior_model(haplotypes);
     const model::PopulationModel model {*prior_model, debug_log_};
-    auto inferences = model.evaluate(samples_, genotypes, haplotype_likelihoods);
-    return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
+    if (parameters_.ploidies.size() == 1) {
+        auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidies.front());
+        if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
+        auto inferences = model.evaluate(samples_, genotypes, haplotype_likelihoods);
+        return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
+    } else {
+        auto unique_genotypes = generate_unique_genotypes(haplotypes, parameters_.ploidies);
+        auto sample_genotypes = assign_samples_to_genotypes(parameters_.ploidies, unique_genotypes);
+        auto inferences = model.evaluate(samples_, sample_genotypes, haplotype_likelihoods);
+        return std::make_unique<Latents>(samples_, haplotypes, std::move(unique_genotypes), std::move(inferences));
+    }
 }
 
 namespace {

@@ -5,7 +5,6 @@
 #define population_model_hpp
 
 #include <vector>
-#include <unordered_map>
 #include <functional>
 
 #include <boost/optional.hpp>
@@ -66,7 +65,7 @@ public:
     
     // Samples have different ploidy
     InferredLatents evaluate(const SampleVector& samples,
-                             const std::unordered_map<SampleName, GenotypeVectorReference>& genotypes,
+                             const std::vector<GenotypeVectorReference>& genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:

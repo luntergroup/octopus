@@ -90,6 +90,11 @@ public:
             std::vector<Genotype<Haplotype>>&& genotypes,
             ModelInferences&&);
     
+    Latents(const std::vector<SampleName>& samples,
+            const std::vector<Haplotype>&,
+            std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>>&& genotypes,
+            ModelInferences&&);
+    
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
