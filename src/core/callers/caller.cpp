@@ -363,6 +363,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         if (next_active_region) {
             haplotypes = std::move(next_haplotypes);
             active_region = std::move(*next_active_region);
+            next_active_region = boost::none;
         } else {
             try {
                 resume(haplotype_generation_timer);
