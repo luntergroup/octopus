@@ -99,10 +99,11 @@ public:
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
 private:
+    std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>> genotypes_;
+    ModelInferences model_latents_;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
     boost::optional<ModelInferences> dummy_latents_;
-    //double model_log_evidence_;
 };
 
 } // namespace octopus
