@@ -292,8 +292,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       PopulationCaller::Parameters {
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
-                                                          make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           get_ploidies(samples, *requested_contig_, params_.ploidies),
+                                                          make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity)
                                                       });
         }},
         {"cancer", [this, general_parameters = std::move(general_parameters), &samples] () {
