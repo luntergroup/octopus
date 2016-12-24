@@ -97,15 +97,27 @@ public:
             std::vector<Genotype<Haplotype>>&& genotypes,
             ModelInferences&& latents,
             const Trio& trio);
+    Latents(const std::vector<Haplotype>& haplotypes,
+            std::vector<Genotype<Haplotype>>&& maternal_genotypes,
+            std::vector<Genotype<Haplotype>>&& paternal_genotypes,
+            unsigned child_ploidy,
+            ModelInferences&& latents,
+            const Trio& trio);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
     
 private:
-    std::vector<Genotype<Haplotype>> maternal, paternal, child;
+    Trio trio;
+    std::vector<Genotype<Haplotype>> maternal_genotypes;
+    boost::optional<std::vector<Genotype<Haplotype>>> paternal_genotypes;
     ModelInferences model_latents;
-    std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
+    std::vector<double> marginal_maternal_posteriors, marginal_paternal_posteriors, marginal_child_posteriors;
+    mutable std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
     std::shared_ptr<HaplotypeProbabilityMap> marginal_haplotype_posteriors;
+    
+    void set_genotype_posteriors(const Trio& trio);
+    void set_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
 };
 
 } // namespace octopus
