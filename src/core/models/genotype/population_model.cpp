@@ -21,6 +21,14 @@ PopulationModel::PopulationModel(const PopulationPriorModel& prior_model,
 , debug_log_ {debug_log}
 {}
 
+PopulationModel::PopulationModel(const PopulationPriorModel& prior_model,
+                                 Options options,
+                                 boost::optional<logging::DebugLogger> debug_log)
+: options_ {options}
+, prior_model_ {prior_model}
+, debug_log_ {debug_log}
+{}
+
 namespace {
 
 using GenotypeLogLikelihoodVector  = std::vector<double>;
@@ -34,7 +42,7 @@ struct GenotypeLogProbability
 using GenotypeLogMarginalVector = std::vector<GenotypeLogProbability>;
 
 using GenotypeMarginalPosteriorVector  = std::vector<double>;
-using GenotypeMarginalPosteriorMatrix  = std::vector<GenotypeMarginalPosteriorVector>;
+using GenotypeMarginalPosteriorMatrix  = std::vector<GenotypeMarginalPosteriorVector>; // for each sample
 
 using InverseGenotypeTable = std::vector<std::vector<std::size_t>>;
 
@@ -72,6 +80,12 @@ double calculate_frequency_update_norm(const std::size_t num_samples, const unsi
 {
     return static_cast<double>(num_samples) * ploidy;
 }
+
+struct EmOptions
+{
+    unsigned max_iterations;
+    double epsilon;
+};
 
 struct ModelConstants
 {
@@ -301,38 +315,44 @@ double do_em_iteration(GenotypeMarginalPosteriorMatrix& genotype_posteriors,
 void run_em(GenotypeMarginalPosteriorMatrix& genotype_posteriors,
             HaplotypeFrequencyMap& haplotype_frequencies,
             GenotypeLogMarginalVector& genotype_log_marginals,
-            const ModelConstants& constants,
-            const unsigned max_iterations, const double epsilon,
+            const ModelConstants& constants, const EmOptions options,
             boost::optional<logging::TraceLogger> trace_log = boost::none)
 {
-    for (unsigned n {1}; n <= max_iterations; ++n) {
+    for (unsigned n {1}; n <= options.max_iterations; ++n) {
         const auto max_change = do_em_iteration(genotype_posteriors, haplotype_frequencies,
                                                 genotype_log_marginals,constants);
-        if (max_change <= epsilon) break;
+        if (max_change <= options.epsilon) break;
     }
 }
 
 auto compute_approx_genotype_marginal_posteriors(const std::vector<Genotype<Haplotype>>& genotypes,
-                                                 const GenotypeLogLikelihoodMatrix& genotype_likelihoods)
+                                                 const GenotypeLogLikelihoodMatrix& genotype_likelihoods,
+                                                 const EmOptions options)
 {
     const auto haplotypes = extract_all_elements(genotypes);
     const ModelConstants constants {haplotypes, genotypes, genotype_likelihoods};
     auto haplotype_frequencies = init_haplotype_frequencies(constants);
     auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
     auto result = init_genotype_posteriors(genotype_log_marginals, genotype_likelihoods);
-    run_em(result, haplotype_frequencies, genotype_log_marginals, constants, 100, 0.001);
+    run_em(result, haplotype_frequencies, genotype_log_marginals, constants, options);
     return result;
 }
 
 using GenotypeCombinationVector = std::vector<std::size_t>;
 using GenotypeCombinationMatrix = std::vector<GenotypeCombinationVector>;
 
-auto get_genotype_combinations(const std::size_t num_genotypes, const std::size_t num_samples)
+auto num_combinations(const std::size_t num_genotypes, const std::size_t num_samples)
+{
+    return std::pow(num_genotypes, num_samples);
+}
+
+auto get_all_genotype_combinations(const std::size_t num_genotypes, const std::size_t num_samples)
 {
     GenotypeCombinationMatrix result {};
+    result.reserve(num_combinations(num_genotypes, num_samples));
     GenotypeCombinationVector tmp(num_samples);
     std::vector<bool> v(num_genotypes * num_samples);
-    std::fill(v.begin(), v.begin() + num_samples, true);
+    std::fill(std::begin(v), std::next(std::begin(v), num_samples), true);
     do {
         bool good {true};
         for (std::size_t i {0}, k {0}; k < num_samples; ++i) {
@@ -346,20 +366,134 @@ auto get_genotype_combinations(const std::size_t num_genotypes, const std::size_
             }
         }
         if (good) result.push_back(tmp);
-    } while (std::prev_permutation(v.begin(), v.end()));
+    } while (std::prev_permutation(std::begin(v), std::end(v)));
     return result;
+}
+
+template <typename T>
+auto index(const std::vector<T>& values)
+{
+    std::vector<std::pair<T, std::size_t>> result(values.size());
+    for (std::size_t i {0}; i < values.size(); ++i) {
+        result[i] = std::make_pair(values[i], i);
+    }
+    return result;
+}
+
+auto index_and_sort(const GenotypeMarginalPosteriorVector& genotype_posteriors, const std::size_t k)
+{
+    auto result = index(genotype_posteriors);
+    const auto middle = std::next(std::begin(result), std::min(k, result.size()));
+    std::partial_sort(std::begin(result), middle, std::end(result), std::greater<> {});
+    std::for_each(std::begin(result), middle, [] (auto& p) { p.first = std::log(p.first); });
+    result.erase(middle, std::end(result));
+    return result;
+}
+
+using IndexedProbability = std::pair<double, std::size_t>;
+using IndexedProbabilityVector = std::vector<IndexedProbability>;
+
+struct CombinationProbabilityRow
+{
+    std::vector<std::size_t> combination;
+    double log_probability;
+};
+
+using CombinationProbabilityMatrix = std::vector<CombinationProbabilityRow>;
+
+auto get_differences(const IndexedProbabilityVector& genotype_posteriors)
+{
+    std::vector<double> result(genotype_posteriors.size());
+    std::transform(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), std::begin(result),
+                   [] (const auto& p) { return p.first; });
+    std::adjacent_difference(std::cbegin(result), std::cend(result), std::begin(result));
+    return result;
+}
+
+auto get_differences(const CombinationProbabilityMatrix& matrix)
+{
+    std::vector<double> result(matrix.size());
+    std::transform(std::cbegin(matrix), std::cend(matrix), std::begin(result),
+                   [] (const auto& p) { return p.log_probability; });
+    std::adjacent_difference(std::cbegin(result), std::cend(result), std::begin(result));
+    return result;
+}
+
+void join(const IndexedProbabilityVector& genotype_posteriors,
+          CombinationProbabilityMatrix& result,
+          const std::size_t k)
+{
+    const auto n = std::min(k, genotype_posteriors.size());
+    if (result.empty()) {
+        std::transform(std::cbegin(genotype_posteriors), std::next(std::cbegin(genotype_posteriors), n),
+                       std::back_inserter(result), [=] (const auto& p) -> CombinationProbabilityRow {
+                           return {{p.second}, p.first};
+                       });
+    } else {
+        const auto m = result.size();
+//        const auto differences1 = get_differences(result);
+//        const auto differences2 = get_differences(genotype_posteriors);
+        const auto K = std::min(k, n * m);
+        CombinationProbabilityMatrix tmp {};
+        tmp.reserve(n * m);
+        for (std::size_t i {0}; i < m; ++i) {
+            for (std::size_t j {0}; j < n; ++j) {
+                tmp.push_back(result[i]);
+                tmp.back().combination.push_back(genotype_posteriors[j].second);
+                tmp.back().log_probability += genotype_posteriors[j].first;
+            }
+        }
+        const auto middle = std::next(std::begin(tmp), K);
+        std::partial_sort(std::begin(tmp), middle, std::end(tmp),
+                          [] (const auto& lhs, const auto& rhs) {
+                              return lhs.log_probability > rhs.log_probability;
+                          });
+        tmp.erase(middle, std::end(tmp));
+//        tmp.reserve(K);
+//        for (std::size_t i {0}, j {0}, t {0}; t < K; ++t) {
+//            assert(i < m && j < n);
+//            std::cout << i << " " << j << std::endl;
+//            tmp.push_back(result[i]);
+//            tmp.back().combination.push_back(genotype_posteriors[j].second);
+//            tmp.back().log_probability += genotype_posteriors[j].first;
+//            const auto prev_score = tmp.back().log_probability;
+//            if (j < n - 1 && (i == m - 1 || differences1[i + 1] < differences2[j + 1])) {
+//                ++j;
+//                while (i > 0 && result[i - 1].log_probability + genotype_posteriors[j].first < prev_score) {
+//                    --i;
+//                }
+//            } else {
+//                ++i;
+//                while (j > 0 && result[i].log_probability + genotype_posteriors[j - 1].first < prev_score) {
+//                    --j;
+//                }
+//            }
+//        }
+        result = std::move(tmp);
+    }
 }
 
 auto get_genotype_combinations(const std::vector<Genotype<Haplotype>>& genotypes,
                                const GenotypeMarginalPosteriorMatrix& genotype_posteriors,
                                const std::size_t max_combinations)
 {
-    return get_genotype_combinations(genotypes.size(), genotype_posteriors.size());
-//    GenotypeCombinationMatrix result {};
-//    result.reserve(max_combinations);
-//    GenotypeCombinationVector tmp(genotype_posteriors.size());
-//
-//    return result;
+    const auto num_samples = genotype_posteriors.size();
+    assert(max_combinations >= num_samples);
+    const auto num_possible_combinations = num_combinations(genotypes.size(), num_samples);
+    if (num_possible_combinations <= max_combinations) {
+        return get_all_genotype_combinations(genotypes.size(), num_samples);
+    }
+    CombinationProbabilityMatrix combinations {};
+    combinations.reserve(max_combinations);
+    for (const auto& sample : genotype_posteriors) {
+        join(index_and_sort(sample, max_combinations), combinations, max_combinations);
+    }
+    GenotypeCombinationMatrix result {};
+    result.reserve(max_combinations);
+    for (auto&& row : combinations) {
+        result.push_back(std::move(row.combination));
+    }
+    return result;
 }
 
 template <typename Container>
@@ -410,17 +544,17 @@ auto calculate_posteriors(const std::vector<Genotype<Haplotype>>& genotypes,
 } // namespace
 
 PopulationModel::InferredLatents
-PopulationModel::evaluate(const SampleVector& samples,
-                          const GenotypeVector& genotypes,
+PopulationModel::evaluate(const SampleVector& samples, const GenotypeVector& genotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     const auto genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
-    const auto approx_genotype_posteriors = compute_approx_genotype_marginal_posteriors(genotypes, genotype_log_likelihoods);
-    const auto max_combinations = genotypes.size() * samples.size();
+    const auto approx_genotype_posteriors = compute_approx_genotype_marginal_posteriors(genotypes, genotype_log_likelihoods,
+                                                                                        {options_.max_em_iterations, 0.0001});
+    const auto max_combinations = options_.max_combinations_per_sample * samples.size();
     auto genotype_combinations = get_genotype_combinations(genotypes, approx_genotype_posteriors, max_combinations);
     auto p = calculate_posteriors(genotypes, genotype_combinations, genotype_log_likelihoods, prior_model_);
-    return {{std::move(genotype_combinations), std::move(p.first)}, p.second, false};
+    return {{std::move(genotype_combinations), std::move(p.first)}, p.second};
 }
 
 PopulationModel::InferredLatents

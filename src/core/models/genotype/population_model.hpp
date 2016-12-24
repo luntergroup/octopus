@@ -33,13 +33,12 @@ public:
     {
         Latents posteriors;
         double log_evidence;
-        bool overflowed = false;
     };
     
     struct Options
     {
-        std::size_t min_to_keep = 50, max_to_keep = 500;
-        double max_removal_posterior_mass = 1e-20;
+        unsigned max_em_iterations = 100;
+        std::size_t max_combinations_per_sample = 200;
     };
     
     using SampleVector            = std::vector<SampleName>;
@@ -49,6 +48,9 @@ public:
     PopulationModel() = delete;
     
     PopulationModel(const PopulationPriorModel& prior_model,
+                    boost::optional<logging::DebugLogger> debug_log = boost::none);
+    PopulationModel(const PopulationPriorModel& prior_model,
+                    Options options,
                     boost::optional<logging::DebugLogger> debug_log = boost::none);
     
     PopulationModel(const PopulationModel&)            = delete;
@@ -69,6 +71,7 @@ public:
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
+    Options options_;
     const PopulationPriorModel& prior_model_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
 };
