@@ -489,6 +489,11 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Disables additional calculation to adjust alignment score when there are inactive"
      " candidates in haplotype flanking regions")
+    
+    ("max-genotypes-per-sample",
+     po::value<unsigned>()->default_value(200),
+     "The maximum number of genotype combinations to consider per sample when computing joint"
+     " genotype posterior probabilities")
     ;
     
     po::options_description call_filtering("Callset filtering");

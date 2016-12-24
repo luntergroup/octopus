@@ -55,6 +55,7 @@ public:
     CallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
     CallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
+    CallerBuilder& set_max_genotypes_per_sample(unsigned max) noexcept;
     
     // cancer
     CallerBuilder& set_normal_sample(SampleName normal_sample);
@@ -97,6 +98,7 @@ private:
         bool allow_model_filtering;
         boost::optional<double> snp_heterozygosity, indel_heterozygosity;
         Phred<double> min_phase_score;
+        unsigned max_genotypes_per_sample;
         
         // cancer
         boost::optional<SampleName> normal_sample;

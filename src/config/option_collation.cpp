@@ -1290,6 +1290,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_sites_only();
     }
     vc_builder.set_flank_scoring(allow_flank_scoring(options));
+    vc_builder.set_max_genotypes_per_sample(options.at("max-genotypes-per-sample").as<unsigned>());
     
     return CallerFactory {std::move(vc_builder)};
 }

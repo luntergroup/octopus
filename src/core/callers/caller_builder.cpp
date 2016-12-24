@@ -148,7 +148,14 @@ CallerBuilder& CallerBuilder::set_indel_heterozygosity(double heterozygosity) no
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_max_genotypes_per_sample(unsigned max) noexcept
+{
+    params_.max_genotypes_per_sample = max;
+    return *this;
+}
+
 // cancer
+
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
 {
     params_.normal_sample = std::move(normal_sample);
@@ -293,7 +300,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
                                                           get_ploidies(samples, *requested_contig_, params_.ploidies),
-                                                          make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity)
+                                                          make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
+                                                          params_.max_genotypes_per_sample
                                                       });
         }},
         {"cancer", [this, general_parameters = std::move(general_parameters), &samples] () {
@@ -324,6 +332,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     {*params_.denovo_mutation_rate},
                                                     params_.min_variant_posterior,
                                                     params_.min_refcall_posterior,
+                                                    params_.max_genotypes_per_sample
                                                 });
         }}
     };

@@ -35,6 +35,7 @@ public:
         Phred<double> min_variant_posterior, min_refcall_posterior;
         std::vector<unsigned> ploidies;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
+        unsigned max_genotypes_per_sample;
     };
     
     PopulationCaller() = delete;

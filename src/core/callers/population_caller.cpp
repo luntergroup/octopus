@@ -214,7 +214,7 @@ PopulationCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                 const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     const auto prior_model = make_prior_model(haplotypes);
-    const model::PopulationModel model {*prior_model, debug_log_};
+    const model::PopulationModel model {*prior_model, {parameters_.max_genotypes_per_sample}, debug_log_};
     if (parameters_.ploidies.size() == 1) {
         auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidies.front());
         if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";

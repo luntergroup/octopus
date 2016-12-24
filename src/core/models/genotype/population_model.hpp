@@ -37,8 +37,8 @@ public:
     
     struct Options
     {
-        unsigned max_em_iterations = 100;
         std::size_t max_combinations_per_sample = 200;
+        unsigned max_em_iterations = 100;
     };
     
     using SampleVector            = std::vector<SampleName>;
