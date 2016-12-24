@@ -156,6 +156,7 @@ set(UTILS_SOURCES
     utils/kmer_mapper.cpp
     utils/memory_footprint.hpp
     utils/memory_footprint.cpp
+    utils/emplace_iterator.hpp
 )
 
 set(CORE_SOURCES

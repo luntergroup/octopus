@@ -5,7 +5,6 @@
 #define population_model_hpp
 
 #include <vector>
-#include <unordered_map>
 #include <functional>
 
 #include <boost/optional.hpp>
@@ -25,22 +24,21 @@ class PopulationModel
 public:
     struct Latents
     {
-        using GenotypeProbabilityVector       = std::vector<double>;
-        using SampleGenotypeProbabilityVector = std::vector<GenotypeProbabilityVector>;
-        SampleGenotypeProbabilityVector genotype_probabilities;
+        std::vector<std::vector<std::size_t>> genotype_combinations;
+        using GenotypeProbabilityVector = std::vector<double>;
+        GenotypeProbabilityVector joint_genotype_probabilities;
     };
     
     struct InferredLatents
     {
         Latents posteriors;
         double log_evidence;
-        bool overflowed = false;
     };
     
     struct Options
     {
-        std::size_t min_to_keep = 50, max_to_keep = 500;
-        double max_removal_posterior_mass = 1e-20;
+        unsigned max_em_iterations = 100;
+        std::size_t max_combinations_per_sample = 200;
     };
     
     using SampleVector            = std::vector<SampleName>;
@@ -50,6 +48,9 @@ public:
     PopulationModel() = delete;
     
     PopulationModel(const PopulationPriorModel& prior_model,
+                    boost::optional<logging::DebugLogger> debug_log = boost::none);
+    PopulationModel(const PopulationPriorModel& prior_model,
+                    Options options,
                     boost::optional<logging::DebugLogger> debug_log = boost::none);
     
     PopulationModel(const PopulationModel&)            = delete;
@@ -66,10 +67,11 @@ public:
     
     // Samples have different ploidy
     InferredLatents evaluate(const SampleVector& samples,
-                             const std::unordered_map<SampleName, GenotypeVectorReference>& genotypes,
+                             const std::vector<GenotypeVectorReference>& genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
+    Options options_;
     const PopulationPriorModel& prior_model_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
 };

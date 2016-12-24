@@ -1226,9 +1226,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     };
     
     const auto caller = get_caller_type(options, read_pipe.samples());
-    if (caller == "population") {
-        throw UnimplementedCaller {caller};
-    }
+//    if (caller == "population") {
+//        throw UnimplementedCaller {caller};
+//    }
     vc_builder.set_caller(caller);
     
     if (options.count("refcall") == 1) {
