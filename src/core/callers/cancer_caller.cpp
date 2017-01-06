@@ -400,8 +400,8 @@ CancerCaller::get_noise_model_priors(const CancerGenotypePriorModel& prior_model
     Priors::GenotypeMixturesDirichletAlphaMap alphas {};
     alphas.reserve(samples_.size());
     for (const auto& sample : samples_) {
-        Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy + 1, 2.0);
-        sample_alphas.back() = 1.0;
+        Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy + 1, parameters_.somatic_tumour_germline_alpha);
+        sample_alphas.back() = parameters_.somatic_tumour_somatic_alpha;
         alphas.emplace(sample, std::move(sample_alphas));
     }
     return Priors {prior_model, std::move(alphas)};
@@ -819,7 +819,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                 const auto& noisy_alphas = latents.noise_model_inferences_->posteriors.alphas.at(normal_sample());
                 const auto noise_credible_region = compute_marginal_credible_interval(noisy_alphas, parameters_.credible_mass).back();
                 const auto somatic_mass = compute_somatic_mass(noisy_alphas, parameters_.min_expected_somatic_frequency);
-                if (noise_credible_region.first >= parameters_.min_credible_somatic_frequency || somatic_mass > 0.5) {
+                if (noise_credible_region.first >= parameters_.min_credible_somatic_frequency || somatic_mass > 0.35) {
                     somatic_samples.clear();
                 }
             }
