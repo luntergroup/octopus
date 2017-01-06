@@ -922,9 +922,6 @@ Caller::generate_candidate_reference_alleles(const GenomicRegion& region,
             }
         }
     }
-    
-    result.shrink_to_fit();
-    
     return result;
 }
 
