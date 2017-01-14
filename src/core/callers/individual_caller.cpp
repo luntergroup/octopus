@@ -233,13 +233,11 @@ VariantCalls call_candidates(const VariantPosteriorVector& candidate_posteriors,
 {
     VariantCalls result {};
     result.reserve(candidate_posteriors.size());
-    
     std::copy_if(std::cbegin(candidate_posteriors), std::cend(candidate_posteriors),
                  std::back_inserter(result),
                  [&genotype_call, min_posterior] (const auto& p) {
                      return p.second >= min_posterior && contains_alt(genotype_call, p.first);
                  });
-    
     return result;
 }
 
@@ -379,65 +377,47 @@ namespace {
 
 // reference genotype calling
 
-struct RefCall : public Mappable<RefCall>
+struct RefCall
 {
-    RefCall() = default;
-    
-    template <typename A>
-    RefCall(A&& reference_allele, double posterior)
-    : reference_allele {std::forward<A>(reference_allele)}
-    , posterior {posterior}
-    {}
-    
-    const GenomicRegion& mapped_region() const noexcept { return reference_allele.mapped_region(); }
-    
     Allele reference_allele;
-    double posterior;
+    Phred<double> posterior;
 };
 
-using RefCalls = std::vector<RefCall>;
+auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
+{
+    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
+                             [&] (const auto curr, const auto& p) {
+                                 return curr + (is_homozygous(p.first, allele) ? 0.0 : p.second);
+                             });
+    return probability_to_phred(p);
+}
 
-//    double marginalise_reference_genotype(const Allele& reference_allele,
-//                                          const GenotypeProbabilityMap& sample_genotype_posteriors)
-//    {
-//        double result {0};
-//        
-//        for (const auto& genotype_posterior : sample_genotype_posteriors) {
-//            if (is_homozygous(genotype_posterior.first, reference_allele)) {
-//                result += genotype_posterior.second;
-//            }
-//        }
-//        
-//        return result;
-//    }
+auto compute_homozygous_posterior(const Allele& allele,
+                                  const GenotypeProbabilityMap& genotype_posteriors,
+                                  const ReadMap::mapped_type& reads)
+{
+    if (has_coverage(reads, mapped_region(allele))) {
+        return marginalise_homozygous(allele, genotype_posteriors);
+    } else {
+        const auto coverage = mean_coverage(reads, mapped_region(allele));
+        return Phred<double> {2 * static_cast<double>(coverage)};
+    }
+}
 
-//    RefCalls call_reference(const GenotypeProbabilityMap& genotype_posteriors,
-//                            const std::vector<Allele>& reference_alleles,
-//                            const ReadMap::mapped_type& reads, const double min_call_posterior)
-//    {
-//        RefCalls result {};
-//        
-//        if (reference_alleles.empty()) return result;
-//        
-//        result.reserve(reference_alleles.size());
-//        
-//        for (const auto& reference_allele : reference_alleles) {
-//            double posterior {0};
-//            
-//            if (has_coverage(reads, mapped_region(reference_allele))) {
-//                posterior = marginalise_reference_genotype(reference_allele,
-//                                                           genotype_posteriors);
-//            }
-//            
-//            if (posterior >= min_call_posterior) {
-//                result.emplace_back(reference_allele, posterior);
-//            }
-//        }
-//        
-//        result.shrink_to_fit();
-//        
-//        return result;
-//    }
+auto call_reference(const std::vector<Allele>& reference_alleles,
+                    const GenotypeProbabilityMap& genotype_posteriors,
+                    const ReadMap::mapped_type& reads,
+                    const Phred<double> min_call_posterior)
+{
+    std::vector<RefCall> result {};
+    for (const auto& allele : reference_alleles) {
+        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, reads);
+        if (posterior >= min_call_posterior) {
+            result.push_back({allele, posterior});
+        }
+    }
+    return result;
+}
 
 } // namespace
 
@@ -450,9 +430,13 @@ IndividualCaller::call_reference(const std::vector<Allele>& alleles,
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
-IndividualCaller::call_reference(const std::vector<Allele>& alleles, const Latents& latents,
+IndividualCaller::call_reference(const std::vector<Allele>& alleles,
+                                 const Latents& latents,
                                  const ReadMap& reads) const
 {
+    const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
+    auto calls = octopus::call_reference(alleles, genotype_posteriors, reads.at(sample()),
+                                         parameters_.min_refcall_posterior);
     return {};
 }
 
