@@ -430,7 +430,7 @@ namespace {
 
 using VariantReference  = std::reference_wrapper<const Variant>;
 
-using VariantPosteriors = std::vector<std::pair<VariantReference, Phred<double>>>;
+using VariantPosteriorVector = std::vector<std::pair<VariantReference, Phred<double>>>;
 
 struct GermlineVariantCall : Mappable<GermlineVariantCall>
 {
@@ -526,10 +526,10 @@ Phred<double> marginalise(const Allele& allele, const M& genotype_posteriors)
 }
 
 template <typename M>
-VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candidates,
+VariantPosteriorVector compute_candidate_posteriors(const std::vector<Variant>& candidates,
                                                const M& genotype_posteriors)
 {
-    VariantPosteriors result {};
+    VariantPosteriorVector result {};
     result.reserve(candidates.size());
     
     for (const auto& candidate : candidates) {
@@ -546,7 +546,7 @@ bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReferen
     return includes(genotype_call, candidate.get().alt_allele());
 }
 
-auto call_candidates(const VariantPosteriors& candidate_posteriors,
+auto call_candidates(const VariantPosteriorVector& candidate_posteriors,
                      const Genotype<Haplotype>& genotype_call,
                      const Phred<double> min_posterior)
 {
@@ -588,7 +588,7 @@ auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& can
                                         const double somatic_posterior,
                                         const double somatic_model_posterior)
 {
-    VariantPosteriors result {};
+    VariantPosteriorVector result {};
     result.reserve(candidates.size());
     
     for (const auto& candidate : candidates) {
@@ -609,7 +609,7 @@ auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& can
     return result;
 }
 
-auto call_somatic_variants(const VariantPosteriors& somatic_variant_posteriors,
+auto call_somatic_variants(const VariantPosteriorVector& somatic_variant_posteriors,
                            const CancerGenotype<Haplotype>& called_genotype,
                            const Phred<double> min_posterior)
 {
