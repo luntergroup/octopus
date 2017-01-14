@@ -269,8 +269,8 @@ namespace {
 using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
 using PopulationGenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>;
 
-using VariantReference  = std::reference_wrapper<const Variant>;
-using VariantPosteriors = std::vector<std::pair<VariantReference, std::vector<Phred<double>>>>;
+using VariantReference = std::reference_wrapper<const Variant>;
+using VariantPosteriorVector = std::vector<std::pair<VariantReference, std::vector<Phred<double>>>>;
 
 struct VariantCall : Mappable<VariantCall>
 {
@@ -306,13 +306,13 @@ using GenotypeCalls = std::vector<std::vector<GenotypeCall>>;
 // allele posterior calculations
 
 using AlleleBools          = std::deque<bool>; // using std::deque because std::vector<bool> is evil
-using GenotypeContainments = std::vector<AlleleBools>;
+using GenotypePropertyBools = std::vector<AlleleBools>;
 
 auto marginalise(const GenotypeProbabilityMap& genotype_posteriors,
                  const AlleleBools& contained_alleles)
 {
     auto p = std::inner_product(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                                std::cbegin(contained_alleles), 0.0, std::plus<void> {},
+                                std::cbegin(contained_alleles), 0.0, std::plus<> {},
                                 [] (const auto& p, const bool is_contained) {
                                     return is_contained ? 0.0 : p.second;
                                 });
@@ -320,7 +320,7 @@ auto marginalise(const GenotypeProbabilityMap& genotype_posteriors,
 }
 
 auto compute_sample_allele_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
-                                      const GenotypeContainments& contained_alleles)
+                                      const GenotypePropertyBools& contained_alleles)
 {
     std::vector<Phred<double>> result {};
     result.reserve(contained_alleles.size());
@@ -330,11 +330,11 @@ auto compute_sample_allele_posteriors(const GenotypeProbabilityMap& genotype_pos
     return result;
 }
 
-auto get_contained_alleles(const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors,
+auto get_contained_alleles(const PopulationGenotypeProbabilityMap& genotype_posteriors,
                            const std::vector<Allele>& alleles)
 {
     const auto num_genotypes = genotype_posteriors.size2();
-    GenotypeContainments result {};
+    GenotypePropertyBools result {};
     if (num_genotypes == 0 || genotype_posteriors.empty1() || alleles.empty()) {
         return result;
     }
@@ -354,7 +354,7 @@ auto get_contained_alleles(const ProbabilityMatrix<Genotype<Haplotype>>& genotyp
 
 auto compute_posteriors(const std::vector<SampleName>& samples,
                         const std::vector<Allele>& alleles,
-                        const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors)
+                        const PopulationGenotypeProbabilityMap& genotype_posteriors)
 {
     const auto contained_alleles = get_contained_alleles(genotype_posteriors, alleles);
     std::vector<std::vector<Phred<double>>> result {};
@@ -362,6 +362,15 @@ auto compute_posteriors(const std::vector<SampleName>& samples,
     for (const auto& sample : samples) {
         result.emplace_back(compute_sample_allele_posteriors(genotype_posteriors[sample], contained_alleles));
     }
+    return result;
+}
+
+auto extract_ref_alleles(const std::vector<Variant>& variants)
+{
+    std::vector<Allele> result {};
+    result.reserve(variants.size());
+    std::transform(std::cbegin(variants), std::cend(variants), std::back_inserter(result),
+                   [] (const auto& variant) { return variant.ref_allele(); });
     return result;
 }
 
@@ -376,10 +385,10 @@ auto extract_alt_alleles(const std::vector<Variant>& variants)
 
 auto compute_posteriors(const std::vector<SampleName>& samples,
                         const std::vector<Variant>& variants,
-                        const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors)
+                        const PopulationGenotypeProbabilityMap& genotype_posteriors)
 {
     const auto allele_posteriors = compute_posteriors(samples, extract_alt_alleles(variants), genotype_posteriors);
-    VariantPosteriors result {};
+    VariantPosteriorVector result {};
     result.reserve(variants.size());
     for (std::size_t i {0}; i < variants.size(); ++i) {
         std::vector<Phred<double>> sample_posteriors(samples.size());
@@ -426,7 +435,7 @@ bool contains_alt(const std::vector<Genotype<Haplotype>>& genotype_calls, const 
                        [&] (const auto& genotype) { return contains_alt(genotype, candidate); });
 }
 
-VariantCalls call_candidates(const VariantPosteriors& candidate_posteriors,
+VariantCalls call_candidates(const VariantPosteriorVector& candidate_posteriors,
                              const std::vector<Genotype<Haplotype>>& genotype_calls,
                              const Phred<double> min_posterior)
 {
@@ -438,6 +447,73 @@ VariantCalls call_candidates(const VariantPosteriors& candidate_posteriors,
                      return has_above(p.second, min_posterior) && contains_alt(genotype_calls, p.first);
                  });
     return result;
+}
+
+// polymorphism calculations
+
+auto get_homozygous_alleles(const PopulationGenotypeProbabilityMap& genotype_posteriors,
+                            const std::vector<Allele>& alleles)
+{
+    const auto num_genotypes = genotype_posteriors.size2();
+    GenotypePropertyBools result {};
+    if (num_genotypes == 0 || genotype_posteriors.empty1() || alleles.empty()) {
+        return result;
+    }
+    result.reserve(alleles.size());
+    const auto& test_sample   = genotype_posteriors.begin()->first;
+    const auto genotype_begin = genotype_posteriors.begin(test_sample);
+    const auto genotype_end   = genotype_posteriors.end(test_sample);
+    for (const auto& allele : alleles) {
+        result.emplace_back(num_genotypes);
+        std::transform(genotype_begin, genotype_end, std::begin(result.back()),
+                       [&] (const auto& p) {
+                           return is_homozygous(p.first, allele);
+                       });
+    }
+    return result;
+}
+
+auto marginalise_homozygous(const GenotypeProbabilityMap& genotype_posteriors,
+                            const AlleleBools& homozygotes)
+{
+    return std::inner_product(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                              std::cbegin(homozygotes), 0.0, std::plus<> {},
+                              [] (const auto& p, const bool is_homozygous) {
+                                  return is_homozygous ? p.second : 0.0;
+                              });
+}
+
+auto marginalise_homozygous(const std::vector<SampleName>& samples,
+                            const PopulationGenotypeProbabilityMap& genotype_posteriors,
+                            const AlleleBools& homozygotes)
+{
+    std::vector<double> ps(samples.size());
+    std::transform(std::cbegin(samples), std::cend(samples), std::begin(ps),
+                   [&] (const auto& sample) {
+                       return std::log(marginalise_homozygous(genotype_posteriors[sample], homozygotes));
+                   });
+    const auto p = std::accumulate(std::cbegin(ps), std::cend(ps), 0.0);
+    return probability_to_phred(std::exp(p));
+}
+
+auto compute_homozygous_posteriors(const std::vector<Allele>& alleles,
+                                   const std::vector<SampleName>& samples,
+                                   const PopulationGenotypeProbabilityMap& genotype_posteriors)
+{
+    const auto homozygous_alleles = get_homozygous_alleles(genotype_posteriors, alleles);
+    std::vector<Phred<double>> result(alleles.size());
+    std::transform(std::cbegin(alleles), std::cend(alleles), std::cbegin(homozygous_alleles), std::begin(result),
+                   [&] (const auto& allele, const auto& homozygotes) {
+                       return marginalise_homozygous(samples, genotype_posteriors, homozygotes);
+                   });
+    return result;
+}
+
+auto compute_polymorphism_posteriors(const std::vector<Variant>& variants,
+                                     const std::vector<SampleName>& samples,
+                                     const PopulationGenotypeProbabilityMap& genotype_posteriors)
+{
+    return compute_homozygous_posteriors(extract_ref_alleles(variants), samples, genotype_posteriors);
 }
 
 // allele genotype calling
@@ -453,7 +529,7 @@ auto marginalise(const Genotype<Allele>& genotype, const GenotypeProbabilityMap&
 
 auto call_genotypes(const std::vector<SampleName>& samples,
                     const std::vector<Genotype<Haplotype>>& genotype_calls,
-                    const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors,
+                    const PopulationGenotypeProbabilityMap& genotype_posteriors,
                     const std::vector<GenomicRegion>& variant_regions)
 {
     GenotypeCalls result {};
