@@ -335,6 +335,7 @@ std::vector<std::unique_ptr<octopus::VariantCall>>
 IndividualCaller::call_variants(const std::vector<Variant>& candidates,
                                 const Latents& latents) const
 {
+    if (parameters_.ploidy == 0) return {};
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
     debug::log(genotype_posteriors, debug_log_, trace_log_);
     const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
