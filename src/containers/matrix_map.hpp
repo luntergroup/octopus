@@ -495,6 +495,7 @@ public:
         ZipIterator cbegin() const { return begin_; }
         ZipIterator cend() const { return end_; }
         
+        bool empty() const noexcept  { return key2_indices_.get().empty(); }
         IndexSizeType size() const noexcept { return key2_indices_.get().size(); }
         
         //        T& operator[](const Key2& key)
