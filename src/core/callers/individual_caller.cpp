@@ -383,6 +383,22 @@ struct RefCall
     Phred<double> posterior;
 };
 
+const GenomicRegion& mapped_region(const GenotypeProbabilityMap& genotype_posteriors)
+{
+    return mapped_region(std::cbegin(genotype_posteriors)->first);
+}
+
+bool has_variation(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
+{
+    if (!genotype_posteriors.empty() && !contains(mapped_region(genotype_posteriors), allele)) {
+        return false;
+    }
+    return std::any_of(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                       [&allele] (const auto& p) {
+                           return !is_homozygous(p.first, allele);
+                       });
+}
+
 auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
 {
     auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
@@ -396,7 +412,7 @@ auto compute_homozygous_posterior(const Allele& allele,
                                   const GenotypeProbabilityMap& genotype_posteriors,
                                   const ReadMap::mapped_type& reads)
 {
-    if (has_coverage(reads, mapped_region(allele))) {
+    if (has_variation(allele, genotype_posteriors)) {
         return marginalise_homozygous(allele, genotype_posteriors);
     } else {
         const auto coverage = mean_coverage(reads, mapped_region(allele));
@@ -419,6 +435,19 @@ auto call_reference(const std::vector<Allele>& reference_alleles,
     return result;
 }
 
+auto transform_calls(std::vector<RefCall>&& calls, const SampleName& sample, const unsigned ploidy)
+{
+    std::vector<std::unique_ptr<ReferenceCall>> result {};
+    result.reserve(calls.size());
+    std::transform(std::make_move_iterator(std::begin(calls)), std::make_move_iterator(std::end(calls)),
+                   std::back_inserter(result),
+                   [&] (auto&& call) {
+                       std::map<SampleName, ReferenceCall::GenotypeCall> genotype {{sample, {ploidy, call.posterior}}};
+                       return std::make_unique<ReferenceCall>(std::move(call.reference_allele), call.posterior, std::move(genotype));
+                   });
+    return result;
+}
+
 } // namespace
 
 std::vector<std::unique_ptr<ReferenceCall>>
@@ -437,7 +466,7 @@ IndividualCaller::call_reference(const std::vector<Allele>& alleles,
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
     auto calls = octopus::call_reference(alleles, genotype_posteriors, reads.at(sample()),
                                          parameters_.min_refcall_posterior);
-    return {};
+    return transform_calls(std::move(calls), sample(), parameters_.ploidy);
 }
 
 const SampleName& IndividualCaller::sample() const noexcept
