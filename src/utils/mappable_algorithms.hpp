@@ -1408,7 +1408,7 @@ auto count_overlapping_regions(ForwardIt first, const ForwardIt last, Compare cm
     }
     ++result;
     return result;
-};
+}
 
 } // namespace detail
 
