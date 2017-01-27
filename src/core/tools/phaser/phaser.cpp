@@ -36,13 +36,10 @@ struct PhaseComplementHash
     auto operator()(const GenotypeReference& genotype) const
     {
         using boost::hash_combine;
-        
         std::size_t result {0};
-        
         std::for_each(first_, last_, [&] (const auto& region) {
             hash_combine(result, std::hash<Genotype<Haplotype>>()(splice<Haplotype>(genotype.get(), region)));
         });
-        
         return result;
     }
 private:
@@ -85,13 +82,13 @@ auto make_phase_completement_set_map(const Container& genotypes,
 
 void insert(const Genotype<Haplotype>& genotype, PhaseComplementSetMap& curr_result)
 {
-    const auto it = curr_result.find(genotype);
-    if (it == std::end(curr_result)) {
+    const auto itr = curr_result.find(genotype);
+    if (itr == std::end(curr_result)) {
         curr_result.emplace(std::piecewise_construct,
                             std::forward_as_tuple(genotype),
                             std::forward_as_tuple(1, genotype));
     } else {
-        it->second.emplace_back(genotype);
+        itr->second.emplace_back(genotype);
     }
 }
 
@@ -101,21 +98,16 @@ generate_phase_complement_sets(const Container& genotypes,
                                PartitionIterator first, PartitionIterator last)
 {
     auto complement_sets = make_phase_completement_set_map(genotypes, first, last);
-    
     complement_sets.emplace(std::piecewise_construct,
                             std::forward_as_tuple(genotypes.front()),
                             std::forward_as_tuple(1, genotypes.front()));
-    
     std::for_each(std::next(std::cbegin(genotypes)), std::cend(genotypes),
                   [&] (const auto& genotype) { insert(genotype, complement_sets); });
-    
     PhaseComplementSets result {};
     result.reserve(complement_sets.size());
-    
     for (auto&& p : complement_sets) {
         result.emplace_back(std::move(p.second));
     }
-    
     return result;
 }
 
@@ -183,17 +175,13 @@ auto splice_and_marginalise(const Container& genotypes,
                             const GenomicRegion& region)
 {
     auto splices = splice_all<Haplotype>(genotypes, region);
-    
     GenotypeSplicePosteriorMap splice_posteriors {splices.size()};
-    
     for (const auto& splice : splices) {
         splice_posteriors.emplace(splice, 0.0);
     }
-    
     for (const auto& p : genotype_posteriors) {
         splice_posteriors.at(splice<Haplotype>(p.first, region)) += p.second;
     }
-    
     return std::make_pair(std::move(splices), std::move(splice_posteriors));
 }
 } // namespace
@@ -216,32 +204,20 @@ force_phase_sample(const GenomicRegion& region,
 {
     auto first_partition = std::cbegin(partitions);
     auto last_partition  = std::cend(partitions);
-    
     auto phase_set = generate_phase_complement_sets(genotypes, first_partition, last_partition);
-    
     auto phase_score = calculate_phase_score(phase_set, genotype_posteriors);
-    
     if (phase_score >= min_phase_score) {
         return {Phaser::PhaseSet::PhaseRegion {region, phase_score}};
     }
-    
     Phaser::PhaseSet::SamplePhaseRegions result {};
-    
     --last_partition;
-    
     std::vector<Genotype<Haplotype>> splices;
     GenotypeSplicePosteriorMap splice_posteriors;
-    
     while (first_partition != std::cend(partitions)) {
         auto curr_region = encompassing_region(first_partition, last_partition);
-        
-        std::tie(splices, splice_posteriors) = splice_and_marginalise(genotypes, genotype_posteriors,
-                                                                      curr_region);
-        
+        std::tie(splices, splice_posteriors) = splice_and_marginalise(genotypes, genotype_posteriors, curr_region);
         phase_set = generate_phase_complement_sets(splices, first_partition, last_partition);
-        
         phase_score = calculate_phase_score(phase_set, splice_posteriors);
-        
         if (phase_score >= min_phase_score || std::distance(first_partition, last_partition) == 1) {
             result.emplace_back(encompassing_region(first_partition, last_partition), phase_score);
             first_partition = last_partition;
@@ -250,7 +226,6 @@ force_phase_sample(const GenomicRegion& region,
             --last_partition;
         }
     }
-    
     return result;
 }
 
@@ -262,16 +237,11 @@ Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
     assert(!haplotypes.empty());
     assert(!genotype_posteriors.empty1());
     assert(!genotype_posteriors.empty2());
-    
     const auto& haplotype_region = haplotypes.front().mapped_region();
-    
     const auto genotypes = extract_genotypes(genotype_posteriors);
-    
     const auto partitions = extract_covered_regions(candidates);
-    
     PhaseSet result {haplotype_region};
     result.phase_regions.reserve(genotype_posteriors.size1());
-    
     if (genotypes.front().get().ploidy() == 1 || partitions.size() == 1) {
         for (const auto& p : genotype_posteriors) {
             static const Phred<double> maxPosterior {Phred<double>::Probability {0.0}};
@@ -279,13 +249,11 @@ Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
         }
         return result;
     }
-    
     for (const auto& p : genotype_posteriors) {
         result.phase_regions.emplace(p.first, force_phase_sample(haplotype_region, partitions,
                                                                  genotypes, p.second,
                                                                  min_phase_score_));
     }
-    
     return result;
 }
 
