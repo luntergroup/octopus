@@ -127,27 +127,22 @@ namespace debug {
                                     const ReferenceGenome& reference);
 }
 
+bool is_boundry_insertion(const Variant& variant, const GenomicRegion& region)
+{
+    return is_empty_region(variant) && ends_equal(variant, region);
+}
+
 auto copy_contained_to_vector(const MappableFlatSet<Variant>& candidates,
                               const GenomicRegion& region,
                               const bool remove_rhs_boundry_insertions = false)
 {
-    const auto contained = contained_range(candidates, region);
-    
-    std::vector<Variant> result {std::cbegin(contained), std::cend(contained)};
-    
-    if (!result.empty() && remove_rhs_boundry_insertions && is_empty_region(result.back())) {
-        const auto adjacent_candidates = overlap_range(candidates, shift(tail_region(region), 1));
-        
-        if (!adjacent_candidates.empty()) {
-            auto it = std::find_if_not(std::rbegin(result), std::rend(result),
-                                       [&adjacent_candidates] (const auto& candidate) {
-                                           return overlaps(candidate, adjacent_candidates.front());
-                                       }).base();
-            result.erase(it, std::end(result));
+    auto contained = contained_range(candidates, region);
+    if (remove_rhs_boundry_insertions) {
+        while (!empty(contained) && is_boundry_insertion(contained.back(), region)) {
+            contained.advance_end(-1);
         }
     }
-    
-    return result;
+    return std::vector<Variant> {std::cbegin(contained), std::cend(contained)};
 }
 
 const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
@@ -343,7 +338,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         progress_meter.log_completed(call_region);
         return result;
     }
-    
     if (!candidate_generator_.requires_reads()) {
         // as we didn't fetch them earlier
         reads = read_pipe_.get().fetch_reads(extract_regions(candidates));
@@ -486,7 +480,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             
             if (!active_candidates.empty()) {
                 auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
-                
                 if (!variant_calls.empty()) {
                     if (parameters_.allow_model_filtering) {
                         const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods,
@@ -509,7 +502,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             if (has_removal_impact) { // if there was no impact before then there can't be now either
                 has_removal_impact = haplotype_generator.removal_has_impact();
             }
-            
             if (has_removal_impact) {
                 const auto max_to_remove = haplotype_generator.max_removal_impact();
                 auto removable_haplotypes = get_removable_haplotypes(haplotypes,
@@ -565,8 +557,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                 
                 if (!variant_calls.empty()) {
                     if (parameters_.allow_model_filtering) {
-                        const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods,
-                                                                  *caller_latents);
+                        const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods, *caller_latents);
                         if (mp) {
                             for (auto& call : variant_calls) {
                                 call->set_model_posterior(probability_to_phred(1 - *mp));
@@ -591,8 +582,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             }
             
             if (refcalls_requested()) {
-                auto alleles = generate_candidate_reference_alleles(uncalled_region, active_candidates,
-                                                                    called_regions);
+                auto alleles = generate_candidate_reference_alleles(uncalled_region, active_candidates, called_regions);
                 auto reference_calls = wrap(this->call_reference(alleles, *caller_latents, reads));
                 merge(std::move(reference_calls), result, record_factory, call_region);
             }
