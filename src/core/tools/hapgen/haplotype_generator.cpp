@@ -376,10 +376,8 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         next_active_region_ = shift(tail_region(rightmost_allele_), 2); // Nothing more to do
         return;
     }
-    
     const auto max_lagged_region = find_max_lagged_region();
     assert(has_contained(alleles_, max_lagged_region));
-    
     if (!overlaps(active_region_, max_lagged_region)) {
         next_active_region_ = std::move(max_lagged_region);
     } else {
@@ -441,7 +439,6 @@ void HaplotypeGenerator::progress(GenomicRegion to)
         if (begins_before(active_region_, *next_active_region_)) {
             auto passed_region = left_overhang_region(active_region_, *next_active_region_);
             const auto passed_alleles = overlap_range(alleles_, passed_region);
-            
             if (passed_alleles.empty()) return;
             if (can_remove_entire_passed_region(active_region_, *next_active_region_, passed_alleles)) {
                 alleles_.erase_overlapped(passed_region);
@@ -552,10 +549,8 @@ auto extract_unique_regions(const MappableFlatSet<Allele>& alleles)
 auto get_interaction_counts(const MappableFlatSet<Allele>& alleles)
 {
     const auto allele_regions = extract_unique_regions(alleles);
-    
     std::vector<std::pair<GenomicRegion, unsigned>> result {};
     result.reserve(result.size());
-    
     std::transform(std::cbegin(allele_regions), std::cend(allele_regions), std::back_inserter(result),
                    [&alleles] (const auto& region) {
                        return std::make_pair(region, count_overlapped(alleles, region));
@@ -578,15 +573,12 @@ HoldoutRange get_holdout_range(const MappableFlatSet<Allele>& alleles, const Gen
 {
     // It is safe to take base iterators as alleles with the same region must be adjacent
     const auto contained = bases(contained_range(alleles, holdout_region));
-    
     const auto is_holdout = [&holdout_region] (const auto& allele) {
         return is_same_region(allele, holdout_region);
     };
-    
     const auto first_holdout = std::find_if(std::cbegin(contained), std::cend(contained), is_holdout);
     assert(first_holdout != std::cend(contained));
     const auto last_holdout = std::find_if_not(std::next(first_holdout), std::cend(contained), is_holdout);
-    
     return boost::make_iterator_range(first_holdout, last_holdout);
 }
 

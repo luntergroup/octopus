@@ -68,7 +68,6 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
     auto previous_alleles = bases(overlap_range(alleles, previous_region));
     auto first_previous_itr = cbegin(previous_alleles);
     auto included_itr       = cend(previous_alleles);
-    
     if (included_itr == last_allele_itr) {
         return shift(tail_region(previous_region), 2);
     }
@@ -79,7 +78,6 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
             return previous_region;
         }
     }
-    
     unsigned num_indicators {0};
     switch (indicator_policy_) {
         case IndicatorPolicy::includeNone: break;
@@ -112,7 +110,6 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
             num_indicators = static_cast<unsigned>(distance(first_previous_itr, included_itr));
             break;
     }
-    
     auto first_included_itr = prev(included_itr, num_indicators);
     auto num_remaining_alleles = static_cast<unsigned>(distance(included_itr, last_allele_itr));
     unsigned num_excluded_alleles {0};
@@ -135,14 +132,9 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
                }
                ++included_itr;
            }
-    
-    // first_excluded_itr = find_first_after(included_itr, last_allele_itr, rightmost
-    first_excluded_itr = next(included_itr);
-    const auto& rightmost = *rightmost_mappable(first_included_itr, first_excluded_itr);
-    auto num_remaining = static_cast<size_t>(distance(first_excluded_itr, last_allele_itr));
-    auto num_overlapped = alleles.count_overlapped(first_excluded_itr, last_allele_itr, rightmost);
-    advance(included_itr, min(num_remaining, num_overlapped));
-    return encompassing_region(first_included_itr, included_itr);
+    const auto rightmost = rightmost_mappable(first_included_itr, next(included_itr));
+    const auto first_exclusive = find_next_mutually_exclusive(rightmost, last_allele_itr);
+    return encompassing_region(first_included_itr, first_exclusive);
 }
 
 } // namespace coretools

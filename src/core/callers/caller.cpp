@@ -429,16 +429,22 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         if (haplotypes.capacity() > 2 * haplotypes.size()) {
             haplotypes.shrink_to_fit();
         }
-    
+        
         resume(haplotype_likelihood_timer);
         haplotype_likelihoods.erase(removed_haplotypes);
         pause(haplotype_likelihood_timer);
-    
+        
         resume(haplotype_generation_timer);
         auto has_removal_impact = haplotype_generator.removal_has_impact();
         if (has_removal_impact) {
-            haplotype_generator.remove(removed_haplotypes);
-            haplotype_generator.collapse(haplotypes);
+            try {
+                haplotype_generator.remove(removed_haplotypes);
+                haplotype_generator.collapse(haplotypes);
+            } catch (const std::runtime_error& e) {
+                std::cout << "Exception: " << e.what() << ". Encountered in active region "
+                          << active_region << " whilst calling " << call_region << std::endl;
+                throw;
+            }
         } else {
             haplotype_generator.clear_progress();
         }
@@ -447,7 +453,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         removed_haplotypes.shrink_to_fit();
         
         if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " final haplotypes";
-    
+        
         resume(latent_timer);
         const auto caller_latents = this->infer_latents(haplotypes, haplotype_likelihoods);
         pause(latent_timer);
@@ -457,7 +463,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         } else if (debug_log_) {
             debug::print_haplotype_posteriors(stream(*debug_log_), *caller_latents->haplotype_posteriors());
         }
-    
+        
         resume(phasing_timer);
         const auto phase_set = phaser_.try_phase(haplotypes, *caller_latents->genotype_posteriors(),
                                                  copy_contained_to_vector(candidates, haplotype_region(haplotypes)));
