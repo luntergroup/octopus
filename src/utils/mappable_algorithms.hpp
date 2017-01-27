@@ -388,6 +388,26 @@ auto find_first_after(const Container& mappables, const MappableTp& mappable)
     return find_first_after(std::cbegin(mappables), std::cend(mappables), mappable);
 }
 
+// find_next_mutually_exclusive
+
+/**
+ Returns the next mappable after first that is mutually exclusive from first, or last.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIt>
+auto find_next_mutually_exclusive(ForwardIt first, ForwardIt last)
+{
+    auto rightmost = first++;
+    for (; first != last; ++first) {
+        if (!overlaps(*first, *rightmost)) break;
+        if (ends_before(*rightmost, *first)) {
+            rightmost = first;
+        }
+    }
+    return first;
+}
+
 // overlap_range
 
 /**
