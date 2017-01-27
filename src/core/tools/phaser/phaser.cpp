@@ -24,9 +24,7 @@ Phaser::Phaser(Phred<double> min_phase_score) : min_phase_score_ {min_phase_scor
 namespace
 {
 using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-
 using PhaseComplementSet = std::deque<GenotypeReference>;
-
 using PartitionIterator = std::vector<GenomicRegion>::const_iterator;
 
 struct PhaseComplementHash
@@ -67,7 +65,6 @@ private:
 using PhaseComplementSetMap = std::unordered_map<GenotypeReference, PhaseComplementSet,
                                                     PhaseComplementHash,
                                                     PhaseComplementEqual>;
-
 using PhaseComplementSets = std::vector<PhaseComplementSet>;
 
 template <typename Container>
@@ -161,8 +158,7 @@ Phred<double> calculate_phase_score(const PhaseComplementSets& phase_sets, const
     }};
 }
 
-std::vector<GenotypeReference>
-extract_genotypes(const Phaser::GenotypePosteriorMap& genotype_posteriors)
+std::vector<GenotypeReference> extract_genotypes(const Phaser::GenotypePosteriorMap& genotype_posteriors)
 {
     return extract_key_refs(genotype_posteriors);
 }
@@ -174,16 +170,19 @@ auto splice_and_marginalise(const Container& genotypes,
                             const Phaser::SampleGenotypePosteriorMap& genotype_posteriors,
                             const GenomicRegion& region)
 {
-    auto splices = splice_all<Haplotype>(genotypes, region);
-    GenotypeSplicePosteriorMap splice_posteriors {splices.size()};
-    for (const auto& splice : splices) {
-        splice_posteriors.emplace(splice, 0.0);
-    }
+    GenotypeSplicePosteriorMap splice_posteriors {genotypes.size()};
+    std::vector<Genotype<Haplotype>> splices {};
+    splices.reserve(genotypes.size());
     for (const auto& p : genotype_posteriors) {
-        splice_posteriors.at(splice<Haplotype>(p.first, region)) += p.second;
+        auto splice_genotype = splice<Haplotype>(p.first, region);
+        splice_posteriors[splice_genotype] += p.second;
+        splices.push_back(std::move(splice_genotype));
     }
+    std::sort(std::begin(splices), std::end(splices), GenotypeLess {});
+    splices.erase(std::unique(std::begin(splices), std::end(splices)), std::end(splices));
     return std::make_pair(std::move(splices), std::move(splice_posteriors));
 }
+
 } // namespace
 
 boost::optional<Phaser::PhaseSet>
