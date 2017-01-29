@@ -650,33 +650,26 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
 {
     auto lhs_flank = left_overhang_region(haplotype_region, active_region);
     auto rhs_flank = right_overhang_region(haplotype_region, active_region);
-    
     const auto active_candidates = contained_range(candidates, active_region);
-    
     assert(!active_candidates.empty());
-    
     if (is_empty_region(*leftmost_mappable(active_candidates)) && !is_empty(lhs_flank)) {
-        lhs_flank = expand_rhs(lhs_flank, -1); // stops boundry insertions being inactive
+        lhs_flank = expand_rhs(lhs_flank, -1); // stops boundary insertions being inactive
     }
-    
     const auto lhs_inactive_candidates = contained_range(candidates, lhs_flank);
     if (lhs_inactive_candidates.empty()) {
         lhs_flank = head_region(lhs_flank);
     } else {
         lhs_flank = closed_region(lhs_flank, rightmost_region(lhs_inactive_candidates));
     }
-    
     if (is_empty_region(*rightmost_mappable(active_candidates)) && !is_empty(rhs_flank)) {
-        rhs_flank = expand_lhs(rhs_flank, -1); // stops boundry insertions being inactive
+        rhs_flank = expand_lhs(rhs_flank, -1); // stops boundary insertions being inactive
     }
-    
     const auto rhs_inactive_candidates = contained_range(candidates, rhs_flank);
     if (rhs_inactive_candidates.empty()) {
         rhs_flank = tail_region(rhs_flank);
     } else {
         rhs_flank = closed_region(leftmost_region(rhs_inactive_candidates), rhs_flank);
     }
-    
     return std::make_pair(std::move(lhs_flank), std::move(rhs_flank));
 }
 
@@ -684,8 +677,7 @@ auto calculate_flank_state(const std::vector<Haplotype>& haplotypes,
                             const GenomicRegion& active_region,
                             const MappableFlatSet<Variant>& candidates)
 {
-    const auto flank_regions = calculate_flank_regions(haplotype_region(haplotypes), active_region,
-                                                       candidates);
+    const auto flank_regions = calculate_flank_regions(haplotype_region(haplotypes), active_region, candidates);
     return HaplotypeLikelihoodCache::FlankState {
         size(flank_regions.first), size(flank_regions.second)
     };
@@ -698,15 +690,12 @@ void Caller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
                       const ReadMap& active_reads) const
 {
     assert(haplotype_likelihoods.is_empty());
-    
     boost::optional<HaplotypeLikelihoodCache::FlankState> flank_state {};
-    
     if (debug_log_) {
         stream(*debug_log_) << "Calculating likelihoods for " << haplotypes.size() << " haplotypes";
         debug::print_active_candidates(stream(*debug_log_), candidates, active_region);
         stream(*debug_log_) << "Haplotype region is " << haplotype_region(haplotypes);
     }
-    
     if (parameters_.allow_inactive_flank_scoring) {
         flank_state = calculate_flank_state(haplotypes, active_region, candidates);
         if (debug_log_) {
@@ -714,9 +703,7 @@ void Caller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
                                                       haplotype_region(haplotypes));
         }
     }
-    
     haplotype_likelihoods.populate(active_reads, haplotypes, std::move(flank_state));
-    
     if (trace_log_) {
         debug::print_read_haplotype_likelihoods(stream(*trace_log_), haplotypes, active_reads,
                                                haplotype_likelihoods, -1);
@@ -728,7 +715,6 @@ Caller::filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCach
 {
     auto removed_haplotypes = filter_to_n(haplotypes, samples_, haplotype_likelihoods,
                                           parameters_.max_haplotypes);
-    
     if (debug_log_) {
         if (haplotypes.empty()) {
             *debug_log_ << "Filtered all haplotypes";
@@ -741,7 +727,6 @@ Caller::filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCach
         debug::print_haplotypes(stream(*trace_log_), removed_haplotypes,
                                 debug::Resolution::variantAlleles);
     }
-    
     return removed_haplotypes;
 }
 
@@ -764,11 +749,8 @@ std::vector<Allele>
 Caller::generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates) const
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::back_inserter;
-    
     auto overlapped_candidates = copy_overlapped(candidates, region);
-    
     if (is_empty(region) && overlapped_candidates.empty()) return {};
-    
     if (overlapped_candidates.empty()) {
         switch (parameters_.refcall_type) {
             case RefCallType::positional:
@@ -779,16 +761,11 @@ Caller::generate_callable_alleles(const GenomicRegion& region, const std::vector
                 return {};
         }
     }
-    
     auto variant_alleles = decompose(overlapped_candidates);
-    
     if (parameters_.refcall_type == RefCallType::none) return variant_alleles;
-    
     auto covered_regions   = extract_covered_regions(overlapped_candidates);
     auto uncovered_regions = extract_intervening_regions(covered_regions, region);
-    
     std::vector<Allele> result {};
-    
     if (parameters_.refcall_type == Caller::RefCallType::blocked) {
         auto reference_alleles = make_reference_alleles(uncovered_regions, reference_);
         result.reserve(reference_alleles.size() + variant_alleles.size());
@@ -799,10 +776,8 @@ Caller::generate_callable_alleles(const GenomicRegion& region, const std::vector
                    back_inserter(result));
     } else {
         result.reserve(variant_alleles.size() + sum_region_sizes(uncovered_regions));
-        
         auto uncovered_itr = begin(uncovered_regions);
         auto uncovered_end = end(uncovered_regions);
-        
         for (auto&& variant_allele : variant_alleles) {
             if (uncovered_itr != uncovered_end && begins_before(*uncovered_itr, variant_allele)) {
                 auto alleles = make_positional_reference_alleles(*uncovered_itr, reference_);
@@ -813,7 +788,6 @@ Caller::generate_callable_alleles(const GenomicRegion& region, const std::vector
             }
             result.push_back(std::move(variant_allele));
         }
-        
         if (uncovered_itr != uncovered_end) {
             auto alleles = make_positional_reference_alleles(*uncovered_itr, reference_);
             result.insert(end(result),
@@ -821,7 +795,6 @@ Caller::generate_callable_alleles(const GenomicRegion& region, const std::vector
                           make_move_iterator(end(alleles)));
         }
     }
-    
     return result;
 }
 
@@ -854,22 +827,17 @@ Caller::generate_candidate_reference_alleles(const GenomicRegion& region,
                                              const std::vector<GenomicRegion>& called_regions) const
 {
     using std::cbegin; using std::cend;
-    
     auto callable_alleles = generate_callable_alleles(region, candidates);
-    
     if (callable_alleles.empty() || parameters_.refcall_type == RefCallType::none) return {};
     if (candidates.empty()) return callable_alleles;
-    
     auto allele_itr        = cbegin(callable_alleles);
     auto allele_end_itr    = cend(callable_alleles);
     auto called_itr        = cbegin(called_regions);
     auto called_end_itr    = cend(called_regions);
     auto candidate_itr     = cbegin(candidates);
     auto candidate_end_itr = cend(candidates);
-    
     std::vector<Allele> result {};
     result.reserve(callable_alleles.size());
-    
     while (allele_itr != allele_end_itr) {
         if (candidate_itr == candidate_end_itr) {
             append_allele(result, *allele_itr, parameters_.refcall_type);
@@ -922,293 +890,262 @@ Caller::generate_candidate_reference_alleles(const GenomicRegion& region,
 }
 
 namespace debug {
-    template <typename S>
-    void print_left_aligned_candidates(S&& stream, const std::vector<Variant>& raw_candidates,
-                                       const ReferenceGenome& reference)
-    {
-        std::deque<std::pair<Variant, Variant>> left_aligned {};
-        
-        for (const auto& raw_candidate : raw_candidates) {
-            auto left_aligned_candidate = left_align(raw_candidate, reference);
-            
-            if (left_aligned_candidate != raw_candidate) {
-                left_aligned.emplace_back(raw_candidate, std::move(left_aligned_candidate));
-            }
+
+template <typename S>
+void print_left_aligned_candidates(S&& stream, const std::vector<Variant>& raw_candidates,
+                                   const ReferenceGenome& reference)
+{
+    std::deque<std::pair<Variant, Variant>> left_aligned {};
+    for (const auto& raw_candidate : raw_candidates) {
+        auto left_aligned_candidate = left_align(raw_candidate, reference);
+        if (left_aligned_candidate != raw_candidate) {
+            left_aligned.emplace_back(raw_candidate, std::move(left_aligned_candidate));
         }
-        
-        if (left_aligned.empty()) {
-            stream << "No candidates were left aligned" << '\n';
+    }
+    if (left_aligned.empty()) {
+        stream << "No candidates were left aligned" << '\n';
+    } else {
+        if (left_aligned.size() == 1) {
+            stream << "1 candidate was left aligned:" << '\n';
         } else {
-            if (left_aligned.size() == 1) {
-                stream << "1 candidate was left aligned:" << '\n';
-            } else {
-                stream << left_aligned.size() << " candidates were left aligned:" << '\n';
-            }
-            for (const auto& p : left_aligned) {
-                stream << p.first << " to " << p.second << '\n';
-            }
+            stream << left_aligned.size() << " candidates were left aligned:" << '\n';
+        }
+        for (const auto& p : left_aligned) {
+            stream << p.first << " to " << p.second << '\n';
         }
     }
-    
-    void print_left_aligned_candidates(const std::vector<Variant>& raw_candidates,
-                                       const ReferenceGenome& reference)
-    {
-        print_left_aligned_candidates(std::cout, raw_candidates, reference);
-    }
-    
-    template <typename S>
-    void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidates, bool number_only)
-    {
-        if (candidates.empty()) {
-            stream << "There are no final candidates" << '\n';
+}
+
+void print_left_aligned_candidates(const std::vector<Variant>& raw_candidates,
+                                   const ReferenceGenome& reference)
+{
+    print_left_aligned_candidates(std::cout, raw_candidates, reference);
+}
+
+template <typename S>
+void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidates, bool number_only)
+{
+    if (candidates.empty()) {
+        stream << "There are no final candidates" << '\n';
+    } else {
+        if (candidates.size() == 1) {
+            stream << "There is 1 final candidate:" << '\n';
         } else {
-            if (candidates.size() == 1) {
-                stream << "There is 1 final candidate:" << '\n';
-            } else {
-                stream << "There are " << candidates.size() << " final candidates:" << '\n';
-            }
-            
-            if (!number_only) {
-                for (const auto& c : candidates) stream << c << '\n';
-            }
+            stream << "There are " << candidates.size() << " final candidates:" << '\n';
+        }
+        if (!number_only) {
+            for (const auto& c : candidates) stream << c << '\n';
         }
     }
-    
-    void print_final_candidates(const MappableFlatSet<Variant>& candidates, bool number_only)
-    {
-        print_final_candidates(std::cout, candidates, number_only);
-    }
-    
-    template <typename S>
-    void print_active_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
-                                 const GenomicRegion& active_region, bool number_only)
-    {
-        const auto active_candidates = contained_range(candidates, active_region);
-        
-        if (active_candidates.empty()) {
-            stream << "There are no active candidates" << '\n';
+}
+
+void print_final_candidates(const MappableFlatSet<Variant>& candidates, bool number_only)
+{
+    print_final_candidates(std::cout, candidates, number_only);
+}
+
+template <typename S>
+void print_active_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
+                             const GenomicRegion& active_region, bool number_only)
+{
+    const auto active_candidates = contained_range(candidates, active_region);
+    if (active_candidates.empty()) {
+        stream << "There are no active candidates" << '\n';
+    } else {
+        const auto num_active = size(active_candidates);
+        if (num_active == 1) {
+            stream << "There is 1 active candidate:" << '\n';
         } else {
-            const auto num_active = size(active_candidates);
-            
-            if (num_active == 1) {
-                stream << "There is 1 active candidate:" << '\n';
-            } else {
-                stream << "There are " << num_active << " active candidates:" << '\n';
-            }
-            
-            if (!number_only) {
-                for (const auto& c : active_candidates) stream << c << '\n';
-            }
+            stream << "There are " << num_active << " active candidates:" << '\n';
+        }
+        if (!number_only) {
+            for (const auto& c : active_candidates) stream << c << '\n';
         }
     }
-    
-    void print_active_candidates(const MappableFlatSet<Variant>& candidates,
-                                 const GenomicRegion& active_region, bool number_only)
-    {
-        print_active_candidates(std::cout, candidates, active_region, number_only);
-    }
-    
-    template <typename S>
-    void print_inactive_flanking_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
-                                            const GenomicRegion& active_region,
-                                            const GenomicRegion& haplotype_region,
-                                            bool number_only)
-    {
-        const auto flanks = calculate_flank_regions(haplotype_region, active_region, candidates);
-        
-        stream << "Haplotype flank regions are " << flanks.first << " and " << flanks.second << '\n';
-        
-        const auto lhs_inactive_candidates = contained_range(candidates, flanks.first);
-        const auto rhs_inactive_candidates = contained_range(candidates, flanks.second);
-        
-        const auto num_lhs_inactives = size(lhs_inactive_candidates);
-        const auto num_rhs_inactives = size(rhs_inactive_candidates);
-        
-        if (lhs_inactive_candidates.empty()) {
-            if (rhs_inactive_candidates.empty()) {
-                stream << "There are no inactive flanking candidates" << '\n';
-                return;
-            }
-            
-            stream << "There are no lhs inactive flanking candidates" << '\n';
-            
-            if (num_rhs_inactives == 1) {
-                stream << "There is 1 possible rhs inactive flanking candidates: " << '\n';
-            } else {
-                stream << "There are " << num_rhs_inactives << " possible rhs inactive flanking candidates: " << '\n';
-            }
-            
-            if (!number_only) {
-                for (const auto& c : rhs_inactive_candidates) stream << c << '\n';
-            }
-            
+}
+
+void print_active_candidates(const MappableFlatSet<Variant>& candidates,
+                             const GenomicRegion& active_region, bool number_only)
+{
+    print_active_candidates(std::cout, candidates, active_region, number_only);
+}
+
+template <typename S>
+void print_inactive_flanking_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
+                                        const GenomicRegion& active_region,
+                                        const GenomicRegion& haplotype_region,
+                                        bool number_only)
+{
+    const auto flanks = calculate_flank_regions(haplotype_region, active_region, candidates);
+    stream << "Haplotype flank regions are " << flanks.first << " and " << flanks.second << '\n';
+    const auto lhs_inactive_candidates = contained_range(candidates, flanks.first);
+    const auto rhs_inactive_candidates = contained_range(candidates, flanks.second);
+    const auto num_lhs_inactives = size(lhs_inactive_candidates);
+    const auto num_rhs_inactives = size(rhs_inactive_candidates);
+    if (lhs_inactive_candidates.empty()) {
+        if (rhs_inactive_candidates.empty()) {
+            stream << "There are no inactive flanking candidates" << '\n';
             return;
         }
-        
-        if (num_lhs_inactives == 1) {
-            stream << "There is 1 possible lhs inactive flanking candidates: " << '\n';
+        stream << "There are no lhs inactive flanking candidates" << '\n';
+        if (num_rhs_inactives == 1) {
+            stream << "There is 1 possible rhs inactive flanking candidates: " << '\n';
         } else {
-            stream << "There are " << num_lhs_inactives << " possible lhs inactive flanking candidates: " << '\n';
+            stream << "There are " << num_rhs_inactives << " possible rhs inactive flanking candidates: " << '\n';
         }
-        
         if (!number_only) {
-            for (const auto& c : lhs_inactive_candidates) stream << c << '\n';
+            for (const auto& c : rhs_inactive_candidates) stream << c << '\n';
         }
-        
-        if (rhs_inactive_candidates.empty()) {
-            stream << "There are no rhs inactive flanking candidates" << '\n';
+        return;
+    }
+    if (num_lhs_inactives == 1) {
+        stream << "There is 1 possible lhs inactive flanking candidates: " << '\n';
+    } else {
+        stream << "There are " << num_lhs_inactives << " possible lhs inactive flanking candidates: " << '\n';
+    }
+    if (!number_only) {
+        for (const auto& c : lhs_inactive_candidates) stream << c << '\n';
+    }
+    if (rhs_inactive_candidates.empty()) {
+        stream << "There are no rhs inactive flanking candidates" << '\n';
+    } else {
+        if (num_rhs_inactives == 1) {
+            stream << "There is 1 possible rhs inactive flanking candidates: " << '\n';
         } else {
-            if (num_rhs_inactives == 1) {
-                stream << "There is 1 possible rhs inactive flanking candidates: " << '\n';
-            } else {
-                stream << "There are " << num_rhs_inactives << " possible rhs inactive flanking candidates: " << '\n';
-            }
-            
-            if (!number_only) {
-                for (const auto& c : rhs_inactive_candidates) stream << c << '\n';
-            }
+            stream << "There are " << num_rhs_inactives << " possible rhs inactive flanking candidates: " << '\n';
+        }
+        if (!number_only) {
+            for (const auto& c : rhs_inactive_candidates) stream << c << '\n';
         }
     }
-    
-    void print_inactive_flanking_candidates(const MappableFlatSet<Variant>& candidates,
-                                            const GenomicRegion& active_region,
-                                            const GenomicRegion& haplotype_region,
-                                            bool number_only)
-    {
-        print_inactive_flanking_candidates(std::cout, candidates, active_region, haplotype_region,
-                                           number_only);
-    }
-    
-    template <typename S>
-    void print_haplotypes(S&& stream, const std::vector<Haplotype>& haplotypes,
-                          Resolution resolution)
-    {
-        stream << "Printing " << haplotypes.size() << " haplotypes" << '\n';
-        
-        for (const auto& haplotype : haplotypes) {
-            if (resolution == Resolution::sequence || resolution == Resolution::sequenceAndAlleles
-                || resolution == Resolution::SequenceAndVariantAlleles) {
-                stream << haplotype << '\n';
-            }
-            if (resolution == Resolution::alleles || resolution == Resolution::sequenceAndAlleles) {
-                debug::print_alleles(stream, haplotype); stream << '\n';
-            } else if (resolution != Resolution::sequence) {
-                debug::print_variant_alleles(stream, haplotype);
-                stream << '\n';
-            }
+}
+
+void print_inactive_flanking_candidates(const MappableFlatSet<Variant>& candidates,
+                                        const GenomicRegion& active_region,
+                                        const GenomicRegion& haplotype_region,
+                                        bool number_only)
+{
+    print_inactive_flanking_candidates(std::cout, candidates, active_region, haplotype_region,
+                                       number_only);
+}
+
+template <typename S>
+void print_haplotypes(S&& stream, const std::vector<Haplotype>& haplotypes,
+                      Resolution resolution)
+{
+    stream << "Printing " << haplotypes.size() << " haplotypes" << '\n';
+    for (const auto& haplotype : haplotypes) {
+        if (resolution == Resolution::sequence || resolution == Resolution::sequenceAndAlleles
+            || resolution == Resolution::SequenceAndVariantAlleles) {
+            stream << haplotype << '\n';
+        }
+        if (resolution == Resolution::alleles || resolution == Resolution::sequenceAndAlleles) {
+            debug::print_alleles(stream, haplotype); stream << '\n';
+        } else if (resolution != Resolution::sequence) {
+            debug::print_variant_alleles(stream, haplotype);
+            stream << '\n';
         }
     }
-    
-    void print_haplotypes(const std::vector<Haplotype>& haplotypes, const Resolution resolution)
-    {
-        print_haplotypes(std::cout, haplotypes, resolution);
+}
+
+void print_haplotypes(const std::vector<Haplotype>& haplotypes, const Resolution resolution)
+{
+    print_haplotypes(std::cout, haplotypes, resolution);
+}
+
+template <typename S, typename Map>
+void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n)
+{
+    const auto m = std::min(haplotype_posteriors.size(), n);
+    if (m == haplotype_posteriors.size()) {
+        stream << "Printing all haplotype posteriors" << '\n';
+    } else {
+        stream << "Printing top " << m << " haplotype posteriors" << '\n';
     }
-    
-    template <typename S, typename Map>
-    void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n)
-    {
-        const auto m = std::min(haplotype_posteriors.size(), n);
-        
-        if (m == haplotype_posteriors.size()) {
-            stream << "Printing all haplotype posteriors" << '\n';
-        } else {
-            stream << "Printing top " << m << " haplotype posteriors" << '\n';
-        }
-        
-        std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> v {};
-        v.reserve(haplotype_posteriors.size());
-        
-        std::copy(std::cbegin(haplotype_posteriors), std::cend(haplotype_posteriors),
-                  std::back_inserter(v));
-        
-        const auto mth = std::next(std::begin(v), m);
-        
-        std::partial_sort(std::begin(v), mth, std::end(v),
-                          [] (const auto& lhs, const auto& rhs) {
-                              return lhs.second > rhs.second;
-                          });
-        
-        std::for_each(std::begin(v), mth,
-                      [&] (const auto& p) {
-                          debug::print_variant_alleles(stream, p.first);
-                          stream << " " << p.second << '\n';
+    std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> v {};
+    v.reserve(haplotype_posteriors.size());
+    std::copy(std::cbegin(haplotype_posteriors), std::cend(haplotype_posteriors),
+              std::back_inserter(v));
+    const auto mth = std::next(std::begin(v), m);
+    std::partial_sort(std::begin(v), mth, std::end(v),
+                      [] (const auto& lhs, const auto& rhs) {
+                          return lhs.second > rhs.second;
                       });
+    std::for_each(std::begin(v), mth,
+                  [&] (const auto& p) {
+                      debug::print_variant_alleles(stream, p.first);
+                      stream << " " << p.second << '\n';
+                  });
+}
+
+template <typename Map>
+void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n)
+{
+    print_haplotype_posteriors(std::cout, haplotype_posteriors, n);
+}
+
+auto find_read(const std::string& region, const std::string& cigar_str,
+               const ReadContainer& reads)
+{
+    const auto cigar = parse_cigar(cigar_str);
+    return std::find_if(std::cbegin(reads), std::cend(reads),
+                        [&] (const AlignedRead& read) {
+                            return read.cigar() == cigar
+                            && to_string(mapped_region(read)) == region;
+                        });
+}
+
+auto find_read(const SampleName& sample, const std::string& region,
+               const std::string& cigar_str, const ReadMap& reads)
+{
+    return find_read(region, cigar_str, reads.at(sample));
+}
+
+auto find_first_read(const std::string& region, const std::string& cigar_str,
+                     const ReadMap& reads)
+{
+    for (const auto& p : reads) {
+        const auto it = find_read(region, cigar_str, p.second);
+        if (it != std::cend(p.second)) return it;
     }
-    
-    template <typename Map>
-    void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n)
-    {
-        print_haplotype_posteriors(std::cout, haplotype_posteriors, n);
-    }
-    
-    auto find_read(const std::string& region, const std::string& cigar_str,
-                   const ReadContainer& reads)
-    {
-        const auto cigar = parse_cigar(cigar_str);
-        return std::find_if(std::cbegin(reads), std::cend(reads),
-                            [&] (const AlignedRead& read) {
-                                return read.cigar() == cigar
-                                && to_string(mapped_region(read)) == region;
-                            });
-    }
-    
-    auto find_read(const SampleName& sample, const std::string& region,
-                   const std::string& cigar_str, const ReadMap& reads)
-    {
-        return find_read(region, cigar_str, reads.at(sample));
-    }
-    
-    auto find_first_read(const std::string& region, const std::string& cigar_str,
-                         const ReadMap& reads)
-    {
-        for (const auto& p : reads) {
-            const auto it = find_read(region, cigar_str, p.second);
-            if (it != std::cend(p.second)) return it;
-        }
-        return std::cend(std::cbegin(reads)->second);
-    }
-    
-    double calculate_likelihood(const Haplotype& haplotype, const AlignedRead& read,
-                                HaplotypeLikelihoodModel::FlankState flank_state)
-    {
-        SampleName test_sample {"*test-sample*"};
-        HaplotypeLikelihoodCache cache {1, {test_sample}};
-        ReadContainer sample_reads {};
-        sample_reads.emplace(read);
-        ReadMap reads {};
-        reads.emplace(test_sample, sample_reads);
-        cache.populate(reads, {haplotype}, std::move(flank_state));
-        return cache(test_sample, haplotype).front();
-    }
-    
-    void run_likelihood_calculation(const std::string& haplotype_str,
-                                    const std::string& haplotype_region_str,
-                                    const std::string& active_region_str,
-                                    const std::string& read_region_str,
-                                    const std::string& cigar_str,
-                                    const ReadMap& reads,
-                                    const MappableFlatSet<Variant>& candidates,
-                                    const ReferenceGenome& reference)
-    {
-//        auto haplotype = debug::make_haplotype(haplotype_str, haplotype_region_str, reference);
-//        
-//        std::cout << "Haplotype: " << haplotype << std::endl;
-//        debug::print_variant_alleles(haplotype);
-//        std::cout << std::endl;
-//        
-//        const auto active_region = parse_region(active_region_str, reference);
-//        
-//        auto flank_state = calculate_flank_state({haplotype}, active_region, candidates);
-//        
-//        std::cout << "Flank sizes: " << flank_state.lhs_flank << " " << flank_state.rhs_flank << std::endl;
-//        
-//        auto read = *find_first_read(read_region_str, cigar_str, reads);
-//        
-//        std::cout << "Read: " << read << std::endl;
-//        
-//        auto likelihood = calculate_likelihood(haplotype, read, flank_state);
-//        
-//        std::cout << "Likelihood = " << likelihood << std::endl;
-    }
+    return std::cend(std::cbegin(reads)->second);
+}
+
+double calculate_likelihood(const Haplotype& haplotype, const AlignedRead& read,
+                            HaplotypeLikelihoodModel::FlankState flank_state)
+{
+    SampleName test_sample {"*test-sample*"};
+    HaplotypeLikelihoodCache cache {1, {test_sample}};
+    ReadContainer sample_reads {};
+    sample_reads.emplace(read);
+    ReadMap reads {};
+    reads.emplace(test_sample, sample_reads);
+    cache.populate(reads, {haplotype}, std::move(flank_state));
+    return cache(test_sample, haplotype).front();
+}
+
+void run_likelihood_calculation(const std::string& haplotype_str,
+                                const std::string& haplotype_region_str,
+                                const std::string& active_region_str,
+                                const std::string& read_region_str,
+                                const std::string& cigar_str,
+                                const ReadMap& reads,
+                                const MappableFlatSet<Variant>& candidates,
+                                const ReferenceGenome& reference)
+{
+//    auto haplotype = make_haplotype(haplotype_str, haplotype_region_str, reference);
+//    std::cout << "Haplotype: " << haplotype << std::endl;
+//    debug::print_variant_alleles(haplotype);
+//    std::cout << std::endl;
+//    const auto active_region = io::parse_region(active_region_str, reference);
+//    auto flank_state = calculate_flank_state({haplotype}, active_region, candidates);
+//    std::cout << "Flank sizes: " << flank_state.lhs_flank << " " << flank_state.rhs_flank << std::endl;
+//    auto read = *find_first_read(read_region_str, cigar_str, reads);
+//    std::cout << "Read: " << read << std::endl;
+//    auto likelihood = calculate_likelihood(haplotype, read, flank_state);
+//    std::cout << "Likelihood = " << likelihood << std::endl;
+}
+
 } // namespace debug
+
 } // namespace octopus
