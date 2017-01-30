@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <functional>
+#include <memory>
 #include <stdexcept>
 
 #include <boost/optional.hpp>
@@ -45,9 +46,11 @@ public:
     
     HaplotypeLikelihoodModel();
     
-    HaplotypeLikelihoodModel(SnvErrorModel snv_model, IndelErrorModel indel_model);
+    HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
+                             std::unique_ptr<IndelErrorModel> indel_model);
     
-    HaplotypeLikelihoodModel(SnvErrorModel snv_model, IndelErrorModel indel_model,
+    HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
+                             std::unique_ptr<IndelErrorModel> indel_model,
                              const Haplotype& haplotype,
                              boost::optional<FlankState> flank_state = boost::none);
     
@@ -72,8 +75,8 @@ public:
                     MappingPositionItr last_mapping_position) const;
     
 private:
-    SnvErrorModel snv_error_model_;
-    IndelErrorModel indel_error_model_;
+    std::unique_ptr<SnvErrorModel> snv_error_model_;
+    std::unique_ptr<IndelErrorModel> indel_error_model_;
     
     const Haplotype* haplotype_;
     

@@ -4,16 +4,14 @@
 #include "haplotype_likelihood_model.hpp"
 
 #include <utility>
-#include <memory>
 #include <cmath>
 #include <limits>
 #include <cassert>
 
+#include "mutation/error_model_factory.hpp"
 #include "concepts/mappable.hpp"
 #include "basics/aligned_read.hpp"
 #include "utils/maths.hpp"
-
-#include <iostream> // TEST
 
 namespace octopus {
 
@@ -46,10 +44,10 @@ void HaplotypeLikelihoodModel::reset(const Haplotype& haplotype, boost::optional
 {
     haplotype_ = std::addressof(haplotype);
     haplotype_flank_state_ = std::move(flank_state);
-    snv_error_model_.evaluate(haplotype,
-                              haplotype_snv_forward_mask_, haplotype_snv_forward_priors_,
-                              haplotype_snv_reverse_mask_, haplotype_snv_reverse_priors_);
-    haplotype_gap_extension_penalty_ = indel_error_model_.evaluate(haplotype, haplotype_gap_open_penalities_);
+    snv_error_model_->evaluate(haplotype,
+                               haplotype_snv_forward_mask_, haplotype_snv_forward_priors_,
+                               haplotype_snv_reverse_mask_, haplotype_snv_reverse_priors_);
+    haplotype_gap_extension_penalty_ = indel_error_model_->evaluate(haplotype, haplotype_gap_open_penalities_);
 }
 
 void HaplotypeLikelihoodModel::clear() noexcept
@@ -59,10 +57,11 @@ void HaplotypeLikelihoodModel::clear() noexcept
 }
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel()
-: HaplotypeLikelihoodModel {SnvErrorModel {}, IndelErrorModel {}}
+: HaplotypeLikelihoodModel {make_snv_error_model("hiseq4000"), make_indel_error_model("hiseq4000")}
 {}
 
-HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model, IndelErrorModel indel_model)
+HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
+                                                   std::unique_ptr<IndelErrorModel> indel_model)
 : snv_error_model_ {std::move(snv_model)}
 , indel_error_model_ {std::move(indel_model)}
 , haplotype_ {nullptr}
@@ -71,8 +70,8 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model, Inde
 , haplotype_gap_extension_penalty_ {}
 {}
 
-HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(SnvErrorModel snv_model,
-                                                   IndelErrorModel indel_model,
+HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
+                                                   std::unique_ptr<IndelErrorModel> indel_model,
                                                    const Haplotype& haplotype,
                                                    boost::optional<FlankState> flank_state)
 : HaplotypeLikelihoodModel {std::move(snv_model), std::move(indel_model)}
