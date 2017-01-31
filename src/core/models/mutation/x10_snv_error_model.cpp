@@ -30,7 +30,7 @@ OutputIt count_runs(ForwardIt first, ForwardIt last, OutputIt result,
     if (first == last) return result;
     auto prev = *first;
     auto count = (prev > 0) ? 1 : 0;
-    unsigned gap{0};
+    unsigned gap {0};
     *result++ = 0;
     return std::transform(std::next(first), last, result,
                           [&count, &gap, &prev, max_gap](const auto x) -> ValueType {
@@ -113,7 +113,7 @@ void X10SnvErrorModel::do_evaluate(const Haplotype& haplotype,
                                    MutationVector& reverse_snv_mask, PenaltyVector& reverse_snv_priors) const
 {
     using std::cbegin; using std::cend; using std::crbegin; using std::crend;
-    using std::begin; using std::rbegin; using std::next;
+    using std::begin; using std::end; using std::rbegin; using std::next;
     constexpr auto Max_period = maxQualities_.size();
     const auto repeats = extract_repeats(haplotype, Max_period);
     const auto num_bases = sequence_size(haplotype);
@@ -126,8 +126,17 @@ void X10SnvErrorModel::do_evaluate(const Haplotype& haplotype,
     forward_snv_priors.assign(num_bases, maxQualities_.front().front());
     reverse_snv_priors.assign(num_bases, maxQualities_.front().front());
     std::vector<unsigned> runs(num_bases);
-    for (unsigned i {0}; i < Max_period; ++i) {
-        const auto max_gap = i + 2;
+    constexpr unsigned Max_homopolymer_gap {3};
+    for (std::int8_t i {1}; i < 5; ++i) {
+        auto homopolymers = repeat_masks[0];
+        std::replace_if(begin(homopolymers), end(homopolymers), [=] (auto x) { return x != i; }, 0);
+        count_runs(cbegin(homopolymers), cend(homopolymers), begin(runs), Max_homopolymer_gap);
+        set_priors(runs, forward_snv_priors, maxQualities_.front());
+        count_runs(crbegin(homopolymers), crend(homopolymers), rbegin(runs), Max_homopolymer_gap);
+        set_priors(runs, reverse_snv_priors, maxQualities_.front());
+    }
+    for (std::size_t i {1}; i < Max_period; ++i) {
+        const auto max_gap = Max_homopolymer_gap + i;
         const auto& repeat_mask = repeat_masks[i];
         count_runs(cbegin(repeat_mask), cend(repeat_mask), begin(runs), max_gap);
         set_priors(runs, forward_snv_priors, maxQualities_[i]);
@@ -140,5 +149,5 @@ void X10SnvErrorModel::do_evaluate(const Haplotype& haplotype,
     reverse_snv_mask.resize(num_bases);
     std::rotate_copy(cbegin(sequence), next(cbegin(sequence)), cend(sequence), begin(reverse_snv_mask));
 }
-    
+
 } // namespace octopus
