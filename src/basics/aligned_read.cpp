@@ -85,6 +85,15 @@ const CigarString& AlignedRead::cigar() const noexcept
     return cigar_;
 }
 
+AlignedRead::Direction AlignedRead::direction() const noexcept
+{
+    if (is_marked_reverse_mapped()) {
+        return Direction::reverse;
+    } else {
+        return Direction::forward;
+    }
+}
+
 bool AlignedRead::has_other_segment() const noexcept
 {
     return static_cast<bool>(next_segment_);
