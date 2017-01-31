@@ -713,8 +713,16 @@ void Caller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
 std::vector<Haplotype>
 Caller::filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    auto removed_haplotypes = filter_to_n(haplotypes, samples_, haplotype_likelihoods,
-                                          parameters_.max_haplotypes);
+    auto removed_haplotypes = filter_to_n(haplotypes, samples_, haplotype_likelihoods, parameters_.max_haplotypes);
+    const auto reference_itr = std::find_if(std::begin(removed_haplotypes), std::end(removed_haplotypes),
+                                            [] (const auto& haplotype) { return is_reference(haplotype); });
+    if (reference_itr != std::end(removed_haplotypes)) {
+        if (debug_log_) {
+            stream(*debug_log_) << "Putting back filtered reference haplotype";
+        }
+        haplotypes.push_back(std::move(*reference_itr));
+        removed_haplotypes.erase(reference_itr);
+    }
     if (debug_log_) {
         if (haplotypes.empty()) {
             *debug_log_ << "Filtered all haplotypes";
