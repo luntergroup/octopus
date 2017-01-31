@@ -247,6 +247,8 @@ set(CORE_SOURCES
 
     core/models/mutation/hiseq_indel_error_model.hpp
     core/models/mutation/hiseq_indel_error_model.cpp
+    core/models/mutation/x10_indel_error_model.hpp
+    core/models/mutation/x10_indel_error_model.cpp
     core/models/mutation/indel_error_model.hpp
     core/models/mutation/indel_error_model.cpp
     core/models/mutation/snv_error_model.hpp
