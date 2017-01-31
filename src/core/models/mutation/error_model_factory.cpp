@@ -9,6 +9,16 @@
 
 namespace octopus {
 
+std::unique_ptr<SnvErrorModel> make_snv_error_model()
+{
+    return std::make_unique<HiSeqSnvErrorModel>();
+}
+
+std::unique_ptr<IndelErrorModel> make_indel_error_model()
+{
+    return std::make_unique<HiSeqIndelErrorModel>();
+}
+
 std::unique_ptr<SnvErrorModel> make_snv_error_model(const std::string& sequencer)
 {
     if (sequencer == "x10") {
