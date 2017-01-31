@@ -24,6 +24,7 @@
 
 #include "core/models/genotype/uniform_population_prior_model.hpp"
 #include "core/models/genotype/coalescent_population_prior_model.hpp"
+#include "core/models/genotype/population_model.hpp"
 
 #include "timers.hpp"
 
@@ -275,12 +276,32 @@ TrioCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
     return calculate_model_posterior(haplotypes, haplotype_likelihoods, dynamic_cast<const Latents&>(latents));
 }
 
+namespace {
+
+static auto calculate_model_posterior(const double normal_model_log_evidence,
+                                      const double dummy_model_log_evidence)
+{
+    constexpr double normalModelPrior {0.9999999};
+    constexpr double dummyModelPrior {1.0 - normalModelPrior};
+    const auto normal_model_ljp = std::log(normalModelPrior) + normal_model_log_evidence;
+    const auto dummy_model_ljp  = std::log(dummyModelPrior) + dummy_model_log_evidence;
+    const auto norm = maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
+    return std::exp(normal_model_ljp - norm);
+}
+
+} // namespace
+
 boost::optional<double>
 TrioCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
                                       const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                       const Latents& latents) const
 {
-    return boost::none;
+    const auto max_ploidy = std::max({parameters_.maternal_ploidy, parameters_.paternal_ploidy, parameters_.child_ploidy});
+    const auto genotypes = generate_all_genotypes(haplotypes, max_ploidy + 1);
+    const auto prior_model = make_prior_model(haplotypes);
+    const model::PopulationModel dummy_model {*prior_model, debug_log_};
+    const auto inferences = dummy_model.evaluate(samples_, genotypes, haplotype_likelihoods);
+    return octopus::calculate_model_posterior(latents.model_latents.log_evidence, inferences.log_evidence);
 }
 
 std::vector<std::unique_ptr<VariantCall>>
