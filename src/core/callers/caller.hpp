@@ -108,6 +108,7 @@ public:
         Phred<double> haplotype_extension_threshold;
         bool allow_inactive_flank_scoring;
         bool allow_model_filtering;
+        boost::optional<std::string> sequencer;
     };
     
 private:

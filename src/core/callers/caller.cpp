@@ -635,7 +635,12 @@ HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Varian
 
 HaplotypeLikelihoodCache Caller::make_haplotype_likelihood_cache() const
 {
-    return HaplotypeLikelihoodCache {parameters_.max_haplotypes, samples_};
+    if (parameters_.sequencer) {
+        return HaplotypeLikelihoodCache {make_haplotype_likelihood_model(*parameters_.sequencer),
+                                         parameters_.max_haplotypes, samples_};
+    } else {
+        return HaplotypeLikelihoodCache {parameters_.max_haplotypes, samples_};
+    }
 }
 
 VcfRecordFactory Caller::make_record_factory(const ReadMap& reads) const

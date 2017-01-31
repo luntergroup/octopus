@@ -504,6 +504,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
      "The maximum probability mass that can be ignored from each sample when"
      " calculating joint genotype probability distributions")
+    
+    ("sequence-error-model",
+     po::value<std::string>()->default_value("hiseq"),
+     "The sequencer error model to use.")
     ;
     
     po::options_description call_filtering("Callset filtering");
