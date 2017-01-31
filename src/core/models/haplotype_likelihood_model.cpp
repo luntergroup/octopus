@@ -57,7 +57,7 @@ void HaplotypeLikelihoodModel::clear() noexcept
 }
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel()
-: HaplotypeLikelihoodModel {make_snv_error_model("hiseq4000"), make_indel_error_model("hiseq4000")}
+: HaplotypeLikelihoodModel {make_snv_error_model(), make_indel_error_model()}
 {}
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
@@ -184,6 +184,11 @@ double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
     const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
     const auto result = maths::log_sum_exp(ln_prob_mapped + ln_prob_given_mapped, ln_prob_missmapped);
     return result > -1e-15 ? 0.0 : result;
+}
+
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string sequencer)
+{
+    return HaplotypeLikelihoodModel {make_snv_error_model(sequencer), make_indel_error_model(sequencer)};
 }
 
 } // namespace octopus

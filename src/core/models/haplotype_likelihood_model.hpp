@@ -54,8 +54,8 @@ public:
                              const Haplotype& haplotype,
                              boost::optional<FlankState> flank_state = boost::none);
     
-    HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = default;
-    HaplotypeLikelihoodModel& operator=(const HaplotypeLikelihoodModel&) = default;
+    HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = delete;
+    HaplotypeLikelihoodModel& operator=(const HaplotypeLikelihoodModel&) = delete;
     HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)                 = default;
     HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
     
@@ -107,6 +107,8 @@ private:
     
     Length required_extension_;
 };
+
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string sequencer);
 
 } // namespace octopus
 
