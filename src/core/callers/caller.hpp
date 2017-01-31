@@ -127,7 +127,7 @@ private:
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
     
-    //virtual Genotype<Haplotype> call_genotype(const Latents& latents) const = 0;
+    virtual Genotype<Haplotype> call_genotype(const Latents& latents, const SampleName& sample) const;
     
     virtual boost::optional<double>
     calculate_model_posterior(const std::vector<Haplotype>& haplotypes,

@@ -650,6 +650,16 @@ std::vector<VcfRecord> Caller::regenotype(const std::vector<Variant>& variants, 
 
 // private methods
 
+Genotype<Haplotype> Caller::call_genotype(const Latents& latents, const SampleName& sample) const
+{
+    const auto& genotype_posteriors = (*latents.genotype_posteriors())[sample];
+    const auto itr = std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                                      [] (const auto& lhs, const auto& rhs) {
+                                          return lhs.second < rhs.second;
+                                      });
+    return itr->first;
+}
+
 bool Caller::refcalls_requested() const noexcept
 {
     return parameters_.refcall_type != RefCallType::none;
