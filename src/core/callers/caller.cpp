@@ -188,6 +188,12 @@ bool has_passed(const GenomicRegion& next_active_region, const GenomicRegion& ac
     return is_after(next_active_region, active_region) && active_region != next_active_region;
 }
 
+auto get_phase_regions(const MappableFlatSet<Variant>& candidates,
+                       const GenomicRegion& active_region)
+{
+    return extract_regions(contained_range(candidates, active_region));
+}
+
 // Wrap the pointer so can use mappable algorithms
 struct CallWrapper : public Mappable<CallWrapper>
 {
@@ -271,12 +277,14 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
 }
 
 namespace {
-    auto mapped_region(const VcfRecord& record)
-    {
-        using SizeType = GenomicRegion::Size;
-        const auto begin = record.pos() - 1;
-        return GenomicRegion {record.chrom(), begin, begin + static_cast<SizeType>(record.ref().size())};
-    }
+
+auto mapped_region(const VcfRecord& record)
+{
+    using SizeType = GenomicRegion::Size;
+    const auto begin = record.pos() - 1;
+    return GenomicRegion {record.chrom(), begin, begin + static_cast<SizeType>(record.ref().size())};
+}
+
 } // namespace
 
 void erase_calls_outside_region(std::vector<VcfRecord>& calls, const GenomicRegion& region)
@@ -411,8 +419,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                 stream(*debug_log_) << "Skipping " << active_region << " as a haplotype was too short by "
                                     << e.required_extension() << "bp";
             }
-            // TODO: we could force HaplotypeGenerator to extend the current set of haplotypes
-            // and retry
+            // TODO: we could force HaplotypeGenerator to extend the current set of haplotypes and retry
             haplotype_generator.clear_progress();
             haplotype_likelihoods.clear();
             continue;
@@ -466,7 +473,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         
         resume(phasing_timer);
         const auto phase_set = phaser_.try_phase(haplotypes, *caller_latents->genotype_posteriors(),
-                                                 copy_contained_to_vector(candidates, haplotype_region(haplotypes)));
+                                                 get_phase_regions(candidates, active_region));
         pause(phasing_timer);
         
         if (debug_log_) {
@@ -476,20 +483,15 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                 *debug_log_ << "No partial phasings found";
             }
         }
-        
         if (phase_set && overlaps(active_region, call_region)) {
             assert(!is_empty(phase_set->region));
-            
             if (debug_log_) stream(*debug_log_) << "Phased region is " << phase_set->region;
-            
             const auto active_candidates = copy_contained_to_vector(candidates, phase_set->region);
-            
             if (!active_candidates.empty()) {
                 auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
                 if (!variant_calls.empty()) {
                     if (parameters_.allow_model_filtering) {
-                        const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods,
-                                                                  *caller_latents);
+                        const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods, *caller_latents);
                         if (mp) {
                             for (auto& call : variant_calls) {
                                 call->set_model_posterior(probability_to_phred(1 - *mp));
@@ -500,7 +502,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                     merge(std::move(variant_calls), result, record_factory, call_region);
                 }
             }
-            
             active_region = right_overhang_region(active_region, phase_set->region);
             haplotype_generator.jump(active_region);
         } else {
@@ -510,23 +511,20 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             }
             if (has_removal_impact) {
                 const auto max_to_remove = haplotype_generator.max_removal_impact();
-                auto removable_haplotypes = get_removable_haplotypes(haplotypes,
-                                                                     haplotype_likelihoods,
+                auto removable_haplotypes = get_removable_haplotypes(haplotypes, haplotype_likelihoods,
                                                                      *caller_latents->haplotype_posteriors(),
                                                                      max_to_remove);
                 if (debug_log_) {
                     stream(*debug_log_) << "Discarding " << removable_haplotypes.size()
-                                    << " haplotypes with low posterior support";
+                                        << " haplotypes with low posterior support";
                 }
                 haplotype_generator.remove(removable_haplotypes);
             }
             pause(haplotype_generation_timer);
         }
-        
         if (!parameters_.allow_model_filtering) {
             haplotype_likelihoods.clear();
         }
-        
         resume(haplotype_generation_timer);
         bool last_pass;
         try {
@@ -544,19 +542,15 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         if (last_pass && begins_before(active_region, *next_active_region) && overlaps(active_region, call_region)) {
             auto passed_region   = left_overhang_region(active_region, *next_active_region);
             auto uncalled_region = *overlapped_region(active_region, passed_region);
-            
             if (phase_set && ends_before(phase_set->region, passed_region)) {
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);
             }
-            
             auto active_candidates = copy_contained_to_vector(candidates, uncalled_region,
                                                               are_adjacent(uncalled_region, *next_active_region));
-            
             std::vector<GenomicRegion> called_regions;
-            
             if (!active_candidates.empty()) {
                 if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
-    
+                
                 resume(calling_timer);
                 auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
                 pause(calling_timer);
@@ -571,15 +565,14 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                         }
                     }
                     called_regions = extract_covered_regions(variant_calls);
-    
+                    
                     resume(phasing_timer);
-                    const auto phase = phaser_.force_phase(haplotypes,
-                                                           *caller_latents->genotype_posteriors(),
-                                                           active_candidates);
+                    const auto phase = phaser_.force_phase(haplotypes, *caller_latents->genotype_posteriors(),
+                                                           extract_regions(variant_calls));
                     pause(phasing_timer);
                     
                     if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phase);
-    
+                    
                     resume(misc_timer[3]);
                     set_phasing(variant_calls, phase, call_region);
                     merge(std::move(variant_calls), result, record_factory, call_region);
@@ -592,10 +585,8 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                 auto reference_calls = wrap(this->call_reference(alleles, *caller_latents, reads));
                 merge(std::move(reference_calls), result, record_factory, call_region);
             }
-            
             completed_region = encompassing_region(completed_region, passed_region);
         }
-        
         haplotype_likelihoods.clear();
         progress_meter.log_completed(completed_region);
     }
