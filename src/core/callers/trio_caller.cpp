@@ -236,7 +236,7 @@ TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 {
     resume(misc_timer[0]);
     const auto germline_prior_model = make_prior_model(haplotypes);
-    const DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size()};
+    DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
     const model::TrioModel model {
         parameters_.trio, *germline_prior_model, denovo_model,
         TrioModel::Options {100, 3 * parameters_.max_genotypes_per_sample, 1e-20}, debug_log_
@@ -666,7 +666,8 @@ std::unique_ptr<PopulationPriorModel> TrioCaller::make_prior_model(const std::ve
     if (parameters_.germline_prior_model_params) {
         return std::make_unique<CoalescentPopulationPriorModel>(CoalescentModel {
         Haplotype {mapped_region(haplotypes.front()), reference_},
-        *parameters_.germline_prior_model_params
+        *parameters_.germline_prior_model_params,
+        haplotypes.size(), CoalescentModel::CachingStrategy::address
         });
     } else {
         return std::make_unique<UniformPopulationPriorModel>();
