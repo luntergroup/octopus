@@ -21,11 +21,11 @@ namespace octopus {
 
 Phaser::Phaser(Phred<double> min_phase_score) : min_phase_score_ {min_phase_score} {}
 
-namespace
-{
-using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+namespace {
+
+using GenotypeReference  = std::reference_wrapper<const Genotype<Haplotype>>;
 using PhaseComplementSet = std::deque<GenotypeReference>;
-using PartitionIterator = std::vector<GenomicRegion>::const_iterator;
+using PartitionIterator  = std::vector<GenomicRegion>::const_iterator;
 
 struct PhaseComplementHash
 {
@@ -149,7 +149,6 @@ auto calculate_phase_score(const PhaseComplementSet& phase_set, const Map& genot
 template <typename Map>
 Phred<double> calculate_phase_score(const PhaseComplementSets& phase_sets, const Map& genotype_posteriors)
 {
-    
     return Phred<double> { Phred<double>::Probability {
         std::max(0.0, 1.0 - std::accumulate(std::cbegin(phase_sets), std::cend(phase_sets), 0.0,
                                            [&] (const auto curr, const auto& phase_set) {
@@ -188,7 +187,7 @@ auto splice_and_marginalise(const Container& genotypes,
 boost::optional<Phaser::PhaseSet>
 Phaser::try_phase(const std::vector<Haplotype>& haplotypes,
                   const GenotypePosteriorMap& genotype_posteriors,
-                  const std::vector<Variant>& candidates) const
+                  const std::vector<GenomicRegion>& regions) const
 {
     // TODO
     return boost::none;
@@ -231,14 +230,15 @@ force_phase_sample(const GenomicRegion& region,
 Phaser::PhaseSet
 Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
                     const GenotypePosteriorMap& genotype_posteriors,
-                    const std::vector<Variant>& candidates) const
+                    const std::vector<GenomicRegion>& regions) const
 {
     assert(!haplotypes.empty());
     assert(!genotype_posteriors.empty1());
     assert(!genotype_posteriors.empty2());
+    assert(std::is_sorted(std::cbegin(regions), std::cend(regions)));
     const auto& haplotype_region = haplotypes.front().mapped_region();
     const auto genotypes = extract_genotypes(genotype_posteriors);
-    const auto partitions = extract_covered_regions(candidates);
+    const auto partitions = extract_covered_regions(regions);
     PhaseSet result {haplotype_region};
     result.phase_regions.reserve(genotype_posteriors.size1());
     if (genotypes.front().get().ploidy() == 1 || partitions.size() == 1) {
@@ -265,9 +265,12 @@ bool is_split_phasing(const Phaser::PhaseSet& phase)
 }
     
 namespace debug {
-    void print_phase_sets(const Phaser::PhaseSet& phasings)
-    {
-        print_phase_sets(std::cout, phasings);
-    }
+
+void print_phase_sets(const Phaser::PhaseSet& phasings)
+{
+    print_phase_sets(std::cout, phasings);
+}
+
 } // namespace debug
+
 } // namespace Ocotpus
