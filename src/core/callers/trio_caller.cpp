@@ -736,6 +736,12 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors);
     pause(misc_timer[8]);
     auto called_denovos = call_denovos(denovo_posteriors, called_trio.child, parameters_.min_variant_posterior);
+    if (!called_denovos.empty() && latents.model_latents.overflowed) {
+        const auto denovo_region = encompassing_region(called_denovos);
+        logging::WarningLogger warn_log {};
+        stream(warn_log) << "Flushing called de novo mutations in " << denovo_region << " due to model overflow";
+        called_denovos.clear();
+    }
     auto denovo_genotypes = call_genotypes(parameters_.trio, called_trio,
                                            *latents.genotype_posteriors(),
                                            extract_regions(called_denovos));
