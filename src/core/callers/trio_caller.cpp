@@ -337,13 +337,87 @@ bool contains(const JointProbability& trio, const Allele& allele)
            || contains(trio.child, allele);
 }
 
-auto compute_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+using HaplotypePtrBoolMap = std::unordered_map<const Haplotype*, bool>;
+using GenotypePtrBoolMap  = std::unordered_map<const Genotype<Haplotype>*, bool>;
+
+bool contains(const Haplotype& haplotype, const Allele& allele,
+              HaplotypePtrBoolMap& cache)
+{
+    const auto itr = cache.find(std::addressof(haplotype));
+    if (itr == std::cend(cache)) {
+        const auto result = haplotype.contains(allele);
+        cache.emplace(std::piecewise_construct,
+                      std::forward_as_tuple(std::addressof(haplotype)),
+                      std::forward_as_tuple(result));
+        return result;
+    } else {
+        return itr->second;
+    }
+}
+
+bool contains(const Genotype<Haplotype>& genotype, const Allele& allele,
+              HaplotypePtrBoolMap& cache)
+{
+    return std::any_of(std::cbegin(genotype), std::cend(genotype),
+                      [&] (const auto& haplotype) {
+                          return contains(haplotype, allele, cache);
+                      });
+}
+
+bool contains(const Genotype<Haplotype>& genotype, const Allele& allele,
+              HaplotypePtrBoolMap& haplotype_cache,
+              GenotypePtrBoolMap& genotype_cache)
+{
+    const auto itr = genotype_cache.find(std::addressof(genotype));
+    if (itr == std::cend(genotype_cache)) {
+        const auto result = contains(genotype, allele, haplotype_cache);
+        genotype_cache.emplace(std::piecewise_construct,
+                               std::forward_as_tuple(std::addressof(genotype)),
+                               std::forward_as_tuple(result));
+        return result;
+    } else {
+        return itr->second;
+    }
+}
+
+bool contains(const JointProbability& trio, const Allele& allele,
+              HaplotypePtrBoolMap& haplotype_cache,
+              GenotypePtrBoolMap& genotype_cache)
+{
+    return contains(trio.maternal, allele, haplotype_cache, genotype_cache)
+           || contains(trio.paternal, allele, haplotype_cache, genotype_cache)
+           || contains(trio.child, allele, haplotype_cache, genotype_cache);
+}
+
+auto compute_posterior_uncached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
 {
     auto p = std::accumulate(std::cbegin(trio_posteriors), std::cend(trio_posteriors),
-                             0.0, [&allele] (const auto curr, const auto& p) {
+                             0.0, [&] (const auto curr, const auto& p) {
         return curr + (contains(p, allele) ? 0.0 : p.probability);
     });
     return probability_to_phred(p);
+}
+
+auto compute_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+{
+    HaplotypePtrBoolMap haplotype_cache {};
+    haplotype_cache.reserve(trio_posteriors.size());
+    GenotypePtrBoolMap genotype_cache {};
+    genotype_cache.reserve(trio_posteriors.size());
+    auto p = std::accumulate(std::cbegin(trio_posteriors), std::cend(trio_posteriors),
+                             0.0, [&] (const auto curr, const auto& p) {
+        return curr + (contains(p, allele, haplotype_cache, genotype_cache) ? 0.0 : p.probability);
+    });
+    return probability_to_phred(p);
+}
+
+auto compute_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+{
+    if (trio_posteriors.size() >= 500) {
+        return compute_posterior_cached(allele, trio_posteriors);
+    } else {
+        return compute_posterior_uncached(allele, trio_posteriors);
+    }
 }
 
 using AllelePosteriorMap = std::map<Allele, Phred<double>>;
@@ -382,13 +456,44 @@ bool is_denovo(const Allele& allele, const JointProbability& trio)
     return contains(trio.child, allele) && !(contains(trio.maternal, allele) || contains(trio.paternal, allele));
 }
 
-auto compute_denovo_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+bool is_denovo(const Allele& allele, const JointProbability& trio,
+               HaplotypePtrBoolMap& haplotype_cache,
+               GenotypePtrBoolMap& genotype_cache)
+{
+    return contains(trio.child, allele, haplotype_cache, genotype_cache)
+           && !(contains(trio.maternal, allele, haplotype_cache, genotype_cache)
+                || contains(trio.paternal, allele, haplotype_cache, genotype_cache));
+}
+
+auto compute_denovo_posterior_uncached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
 {
     auto p = std::accumulate(std::cbegin(trio_posteriors), std::cend(trio_posteriors),
                              0.0, [&allele] (const auto curr, const auto& p) {
-                return curr + (is_denovo(allele, p) ? 0.0 : p.probability);
+        return curr + (is_denovo(allele, p) ? 0.0 : p.probability);
     });
     return probability_to_phred(p);
+}
+
+auto compute_denovo_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+{
+    HaplotypePtrBoolMap haplotype_cache {};
+    haplotype_cache.reserve(trio_posteriors.size());
+    GenotypePtrBoolMap genotype_cache {};
+    genotype_cache.reserve(trio_posteriors.size());
+    auto p = std::accumulate(std::cbegin(trio_posteriors), std::cend(trio_posteriors),
+                             0.0, [&] (const auto curr, const auto& p) {
+        return curr + (is_denovo(allele, p, haplotype_cache, genotype_cache) ? 0.0 : p.probability);
+    });
+    return probability_to_phred(p);
+}
+
+auto compute_denovo_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+{
+    if (trio_posteriors.size() >= 500) {
+        return compute_denovo_posterior_cached(allele, trio_posteriors);
+    } else {
+        return compute_denovo_posterior_uncached(allele, trio_posteriors);
+    }
 }
 
 auto compute_denovo_posteriors(const AllelePosteriorMap& called_alleles,
