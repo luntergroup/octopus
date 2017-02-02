@@ -183,9 +183,28 @@ auto calculate_candidate_region(const GenomicRegion& call_region, const ReadMap&
     return all_empty(reads) ? call_region : encompassing_region(reads);
 }
 
-bool has_passed(const GenomicRegion& next_active_region, const GenomicRegion& active_region)
+bool have_callable_region(const GenomicRegion& active_region,
+                          const boost::optional<GenomicRegion>& next_active_region,
+                          const boost::optional<GenomicRegion>& backtrack_region,
+                          const GenomicRegion& call_region)
 {
-    return is_after(next_active_region, active_region) && active_region != next_active_region;
+    return (!backtrack_region || begins_before(active_region, *backtrack_region))
+           && (!next_active_region || begins_before(active_region, *next_active_region))
+           && overlaps(active_region, call_region);
+}
+
+auto get_passed_region(const GenomicRegion& active_region,
+                       const boost::optional<GenomicRegion>& next_active_region,
+                       const boost::optional<GenomicRegion>& backtrack_region)
+{
+    auto result = active_region;
+    if (next_active_region) {
+        result = left_overhang_region(result, *next_active_region);
+    }
+    if (backtrack_region) {
+        result = left_overhang_region(result, *backtrack_region);
+    }
+    return result;
 }
 
 auto get_phase_regions(const MappableFlatSet<Variant>& candidates,
@@ -535,17 +554,11 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             logging::WarningLogger wlog {};
             stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
             haplotype_generator.clear_progress();
-            next_active_region = tail_region(e.region());
         }
         pause(haplotype_generation_timer);
         
-        if ((!backtrack_region || begins_before(active_region, *backtrack_region))
-            && begins_before(active_region, *next_active_region)
-            && overlaps(active_region, call_region)) {
-            auto passed_region   = left_overhang_region(active_region, *next_active_region);
-            if (backtrack_region) {
-                passed_region = left_overhang_region(passed_region, *backtrack_region);
-            }
+        if (have_callable_region(active_region, next_active_region, backtrack_region, call_region)) {
+            const auto passed_region = get_passed_region(active_region, next_active_region, backtrack_region);
             auto uncalled_region = *overlapped_region(active_region, passed_region);
             if (phase_set && ends_before(phase_set->region, passed_region)) {
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);
@@ -584,7 +597,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                     pause(misc_timer[3]);
                 }
             }
-            
             if (refcalls_requested()) {
                 auto alleles = generate_candidate_reference_alleles(uncalled_region, active_candidates, called_regions);
                 auto reference_calls = wrap(this->call_reference(alleles, *caller_latents, reads));
