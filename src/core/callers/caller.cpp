@@ -127,37 +127,20 @@ namespace debug {
                                     const ReferenceGenome& reference);
 }
 
-bool is_boundry_insertion(const Variant& variant, const GenomicRegion& region)
+bool is_lhs_boundry_insertion(const Variant& variant, const GenomicRegion& region)
 {
-    return is_empty_region(variant) && ends_equal(variant, region);
+    return is_empty_region(variant) && begins_equal(variant, region);
 }
 
-auto copy_contained_to_vector(const MappableFlatSet<Variant>& candidates,
-                              const GenomicRegion& region,
-                              const bool remove_rhs_boundry_insertions = false)
+auto copy_contained_to_vector(const MappableFlatSet<Variant>& candidates, const GenomicRegion& region)
 {
     auto contained = contained_range(candidates, region);
-    if (remove_rhs_boundry_insertions) {
-        while (!empty(contained) && is_boundry_insertion(contained.back(), region)) {
-            contained.advance_end(-1);
-        }
-    }
     return std::vector<Variant> {std::cbegin(contained), std::cend(contained)};
 }
 
 const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
 {
     return mapped_region(haplotypes.front());
-}
-
-void remove_passed_candidates(MappableFlatSet<Variant>& candidates,
-                              const GenomicRegion& candidate_region,
-                              const GenomicRegion& haplotype_region)
-{
-    if (begins_before(candidate_region, haplotype_region)) {
-        const auto passed_region = left_overhang_region(candidate_region, haplotype_region);
-        candidates.erase_overlapped(passed_region);
-    }
 }
 
 template <typename Container>
@@ -205,6 +188,25 @@ auto get_passed_region(const GenomicRegion& active_region,
         result = left_overhang_region(result, *backtrack_region);
     }
     return result;
+}
+
+bool remove_lhs_boundry_insertions(const GenomicRegion& uncalled_active_region,
+                                   const GenomicRegion& completed_region) noexcept
+{
+    return are_adjacent(completed_region, uncalled_active_region);
+}
+
+auto extract_callable_variants(const MappableFlatSet<Variant>& candidates,
+                               const GenomicRegion& uncalled_active_region,
+                               const GenomicRegion& completed_region)
+{
+    auto contained = contained_range(candidates, uncalled_active_region);
+    if (remove_lhs_boundry_insertions(uncalled_active_region, completed_region)) {
+        while (!empty(contained) && is_lhs_boundry_insertion(contained.front(), uncalled_active_region)) {
+            contained.advance_begin(1);
+        }
+    }
+    return std::vector<Variant> {std::cbegin(contained), std::cend(contained)};
 }
 
 auto get_phase_regions(const MappableFlatSet<Variant>& candidates,
@@ -563,8 +565,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             if (phase_set && ends_before(phase_set->region, passed_region)) {
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);
             }
-            auto active_candidates = copy_contained_to_vector(candidates, uncalled_region,
-                                                              are_adjacent(uncalled_region, *next_active_region));
+            auto active_candidates = extract_callable_variants(candidates, uncalled_region, completed_region);
             std::vector<GenomicRegion> called_regions;
             if (!active_candidates.empty()) {
                 if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
