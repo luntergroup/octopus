@@ -191,17 +191,17 @@ auto get_passed_region(const GenomicRegion& active_region,
 }
 
 bool remove_lhs_boundry_insertions(const GenomicRegion& uncalled_active_region,
-                                   const GenomicRegion& completed_region) noexcept
+                                   const boost::optional<GenomicRegion>& prev_called_region) noexcept
 {
-    return are_adjacent(completed_region, uncalled_active_region);
+    return prev_called_region && are_adjacent(*prev_called_region, uncalled_active_region);
 }
 
 auto extract_callable_variants(const MappableFlatSet<Variant>& candidates,
                                const GenomicRegion& uncalled_active_region,
-                               const GenomicRegion& completed_region)
+                               const boost::optional<GenomicRegion>& prev_called_region)
 {
     auto contained = contained_range(candidates, uncalled_active_region);
-    if (remove_lhs_boundry_insertions(uncalled_active_region, completed_region)) {
+    if (remove_lhs_boundry_insertions(uncalled_active_region, prev_called_region)) {
         while (!empty(contained) && is_lhs_boundry_insertion(contained.front(), uncalled_active_region)) {
             contained.advance_begin(1);
         }
@@ -377,7 +377,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     const auto record_factory  = make_record_factory(reads);
     std::vector<Haplotype> haplotypes {}, next_haplotypes {};
     GenomicRegion active_region;
-    boost::optional<GenomicRegion> next_active_region {};
+    boost::optional<GenomicRegion> next_active_region {}, prev_called_region {};
     auto completed_region = head_region(call_region);
     
     pause(init_timer);
@@ -565,7 +565,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             if (phase_set && ends_before(phase_set->region, passed_region)) {
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);
             }
-            auto active_candidates = extract_callable_variants(candidates, uncalled_region, completed_region);
+            auto active_candidates = extract_callable_variants(candidates, uncalled_region, prev_called_region);
             std::vector<GenomicRegion> called_regions;
             if (!active_candidates.empty()) {
                 if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
@@ -584,6 +584,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                         }
                     }
                     called_regions = extract_covered_regions(variant_calls);
+                    prev_called_region = encompassing_region(called_regions);
                     
                     resume(phasing_timer);
                     const auto phase = phaser_.force_phase(haplotypes, *caller_latents->genotype_posteriors(),
