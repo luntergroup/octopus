@@ -239,7 +239,11 @@ TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
     const model::TrioModel model {
         parameters_.trio, *germline_prior_model, denovo_model,
-        TrioModel::Options {100, 3 * parameters_.max_genotypes_per_sample, 1e-20}, debug_log_
+        TrioModel::Options {
+            parameters_.min_genotype_combinations,
+            parameters_.max_genotype_combinations,
+            parameters_.max_reduction_mass.probability_false()},
+        debug_log_
     };
     auto maternal_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy);
     pause(misc_timer[0]);
