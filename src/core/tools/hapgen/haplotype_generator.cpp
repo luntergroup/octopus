@@ -125,7 +125,7 @@ catch (...) {
 HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
 {
     if (alleles_.empty()) {
-        return std::make_tuple(std::vector<Haplotype> {}, active_region_, true);
+        return std::make_tuple(std::vector<Haplotype> {}, active_region_, boost::none);
     }
     if (in_holdout_mode() && can_reintroduce_holdouts()) {
         reintroduce_holdouts();
@@ -137,7 +137,7 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
     } else {
         update_next_active_region();
         if (is_after(*next_active_region_, rightmost_allele_)) {
-            return std::make_tuple(std::vector<Haplotype> {}, *next_active_region_, true); // We are done
+            return std::make_tuple(std::vector<Haplotype> {}, *next_active_region_, boost::none);
         }
         progress(*next_active_region_);
         populate_tree();
@@ -146,7 +146,7 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
     assert(contains(haplotype_region, active_region_));
     auto haplotypes = tree_.extract_haplotypes(haplotype_region);
     if (!(is_lagging_enabled() || in_holdout_mode())) tree_.clear();
-    return std::make_tuple(std::move(haplotypes), active_region_, !in_holdout_mode());
+    return std::make_tuple(std::move(haplotypes), active_region_, holdout_region_);
 }
 
 boost::optional<GenomicRegion> HaplotypeGenerator::peek_next_active_region() const

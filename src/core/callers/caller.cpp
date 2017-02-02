@@ -526,10 +526,10 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
             haplotype_likelihoods.clear();
         }
         resume(haplotype_generation_timer);
-        bool last_pass;
+        boost::optional<GenomicRegion> backtrack_region;
         try {
             resume(haplotype_generation_timer);
-            std::tie(next_haplotypes, next_active_region, last_pass) = haplotype_generator.generate();
+            std::tie(next_haplotypes, next_active_region, backtrack_region) = haplotype_generator.generate();
             pause(haplotype_generation_timer);
         } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
             logging::WarningLogger wlog {};
@@ -539,8 +539,13 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         }
         pause(haplotype_generation_timer);
         
-        if (last_pass && begins_before(active_region, *next_active_region) && overlaps(active_region, call_region)) {
+        if ((!backtrack_region || begins_before(active_region, *backtrack_region))
+            && begins_before(active_region, *next_active_region)
+            && overlaps(active_region, call_region)) {
             auto passed_region   = left_overhang_region(active_region, *next_active_region);
+            if (backtrack_region) {
+                passed_region = left_overhang_region(passed_region, *backtrack_region);
+            }
             auto uncalled_region = *overlapped_region(active_region, passed_region);
             if (phase_set && ends_before(phase_set->region, passed_region)) {
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);
