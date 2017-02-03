@@ -15,8 +15,6 @@
 #include "core/types/variant.hpp"
 //#include "../pairhmm/pair_hmm.hpp"
 
-#include <iostream>
-
 namespace octopus {
 
 DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint, CachingStrategy caching)
@@ -27,7 +25,7 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 , address_cache_ {}
 {
     if (caching_ == CachingStrategy::address) {
-        address_cache_.reserve(num_haplotypes_hint_);
+        address_cache_.reserve(num_haplotypes_hint_ * num_haplotypes_hint_);
     } else if (caching == CachingStrategy::value) {
         value_cache_.reserve(num_haplotypes_hint_);
     }
@@ -61,12 +59,10 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 
 double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) const
 {
-    if (caching_ == CachingStrategy::address) {
-        return evaluate_address_cache(target, given);
-    } else if (caching_ == CachingStrategy::value) {
-        return evaluate_basic_cache(target, given);
-    } else {
-        return evaluate_uncached(target, given);
+    switch (caching_) {
+    case CachingStrategy::address: return evaluate_address_cache(target, given);
+    case CachingStrategy::value: return evaluate_basic_cache(target, given);
+    case CachingStrategy::none: return evaluate_uncached(target, given);
     }
 }
 
@@ -114,24 +110,17 @@ double DeNovoModel::evaluate_basic_cache(const Haplotype& target, const Haplotyp
 
 double DeNovoModel::evaluate_address_cache(const Haplotype& target, const Haplotype& given) const
 {
-    const auto target_iter = address_cache_.find(std::addressof(target));
-    if (target_iter != std::cend(address_cache_)) {
-        const auto given_iter = target_iter->second.find(std::addressof(given));
-        if (given_iter != std::cend(target_iter->second)) {
-            return given_iter->second;
-        }
-    }
-    const auto result = evaluate_uncached(target, given);
-    if (target_iter != std::cend(address_cache_)) {
-        target_iter->second.emplace(std::addressof(given), result);
+    const auto p = std::make_pair(std::addressof(target), std::addressof(given));
+    const auto itr = address_cache_.find(p);
+    if (itr == std::cend(address_cache_)) {
+        const auto result = evaluate_uncached(target, given);
+        address_cache_.emplace(std::piecewise_construct,
+                               std::forward_as_tuple(p),
+                               std::forward_as_tuple(result));
+        return result;
     } else {
-        auto p = address_cache_.emplace(std::piecewise_construct,
-                                        std::forward_as_tuple(std::addressof(target)),
-                                        std::forward_as_tuple(num_haplotypes_hint_));
-        assert(p.second);
-        p.first->second.emplace(std::addressof(given), result);
+        return itr->second;
     }
-    return result;
 }
 
 } // namespace octopus
