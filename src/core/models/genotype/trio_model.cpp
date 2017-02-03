@@ -181,11 +181,49 @@ bool reduce(std::vector<T>& zipped, const std::size_t min_to_keep,
     return hit_max_bound;
 }
 
+unsigned get_sample_reduction_count(const std::size_t n)
+{
+    return static_cast<unsigned>(std::sqrt(n));
+}
+
 template <typename T>
 auto reduce(std::vector<T>& zipped, const TrioModel::Options& options)
 {
-    return reduce(zipped, options.min_combinations, options.max_combinations,
+    return reduce(zipped,
+                  get_sample_reduction_count(options.min_combinations),
+                  get_sample_reduction_count(options.max_combinations),
                   options.max_removal_posterior_mass);
+}
+
+bool are_same_ploidy(const std::vector<GenotypeRefProbabilityPair>& maternal,
+                     const std::vector<GenotypeRefProbabilityPair>& paternal)
+{
+    assert(!maternal.empty() && !paternal.empty());
+    return maternal.front().genotype.get().ploidy() == paternal.front().genotype.get().ploidy();
+}
+
+auto reduce(std::vector<GenotypeRefProbabilityPair>& maternal,
+            std::vector<GenotypeRefProbabilityPair>& paternal,
+            const TrioModel::Options& options)
+{
+    return reduce(maternal, options) || reduce(paternal, options);
+}
+
+auto reduce(std::vector<ParentsProbabilityPair>& parental,
+            std::vector<GenotypeRefProbabilityPair>& child,
+            const TrioModel::Options& options)
+{
+    auto result = reduce(child, options);
+    const auto max_reduction_count = get_sample_reduction_count(options.max_combinations);
+    if (child.size() < max_reduction_count) {
+        const auto child_leftover = max_reduction_count - child.size();
+        return reduce(parental,
+                      get_sample_reduction_count(options.min_combinations),
+                      max_reduction_count + child_leftover,
+                      options.max_removal_posterior_mass) || result;
+    } else {
+        return reduce(parental, options) || result;
+    }
 }
 
 double probability_of_parents(const Genotype<Haplotype>& mother,
@@ -323,42 +361,34 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
     bool overflowed {false};
     haplotype_likelihoods.prime(trio_.mother());
-    resume(misc_timer[2]);
     auto maternal_likelihoods = compute_likelihoods(maternal_genotypes, likelihood_model);
-    overflowed |= reduce(maternal_likelihoods, options_);
-    pause(misc_timer[2]);
     assert(!maternal_likelihoods.empty());
     haplotype_likelihoods.prime(trio_.father());
-    resume(misc_timer[3]);
     auto paternal_likelihoods = compute_likelihoods(paternal_genotypes, likelihood_model);
-    overflowed |= reduce(paternal_likelihoods, options_);
-    pause(misc_timer[3]);
+    overflowed |= reduce(paternal_likelihoods, maternal_likelihoods, options_);
     assert(!paternal_likelihoods.empty());
     if (debug_log_) {
         debug::print(stream(*debug_log_), "maternal", maternal_likelihoods);
         debug::print(stream(*debug_log_), "paternal", paternal_likelihoods);
     }
-    resume(misc_timer[4]);
+    resume(misc_timer[2]);
     auto parents_joint_likelihoods = join(maternal_likelihoods, paternal_likelihoods, prior_model_);
-    overflowed |= reduce(parents_joint_likelihoods, options_);
-    pause(misc_timer[4]);
+    pause(misc_timer[2]);
     assert(!parents_joint_likelihoods.empty());
     clear(maternal_likelihoods);
     clear(paternal_likelihoods);
     if (debug_log_) debug::print(stream(*debug_log_), parents_joint_likelihoods);
     haplotype_likelihoods.prime(trio_.child());
-    resume(misc_timer[5]);
     auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
-    overflowed |= reduce(child_likelihoods, options_);
-    pause(misc_timer[5]);
+    overflowed |= reduce(parents_joint_likelihoods, child_likelihoods, options_);
     assert(!child_likelihoods.empty());
     if (debug_log_) debug::print(stream(*debug_log_), "child", child_likelihoods);
-    resume(misc_timer[6]);
+    resume(misc_timer[3]);
     auto joint_likelihoods = join(parents_joint_likelihoods, child_likelihoods, mutation_model_);
     clear(parents_joint_likelihoods);
     clear(child_likelihoods);
     const auto evidence = normalise_exp(joint_likelihoods);
-    pause(misc_timer[6]);
+    pause(misc_timer[3]);
     if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
     return {std::move(joint_likelihoods), evidence, overflowed};
 }

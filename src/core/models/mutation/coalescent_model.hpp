@@ -37,11 +37,14 @@ public:
         double indel_heterozygosity = 0.0001;
     };
     
+    enum class CachingStrategy { none, value, address };
+    
     CoalescentModel() = delete;
     
     CoalescentModel(Haplotype reference,
                     Parameters parameters,
-                    std::size_t num_haplotyes_hint = 1024);
+                    std::size_t num_haplotyes_hint = 1024,
+                    CachingStrategy caching = CachingStrategy::value);
     
     CoalescentModel(const CoalescentModel&)            = default;
     CoalescentModel& operator=(const CoalescentModel&) = default;
@@ -69,13 +72,16 @@ private:
     Haplotype reference_;
     std::vector<double> reference_base_indel_heterozygosities_;
     Parameters params_;
-    
+    CachingStrategy caching_;
     mutable std::vector<std::reference_wrapper<const Variant>> site_buffer1_, site_buffer2_;
-    mutable std::unordered_map<Haplotype, std::vector<Variant>> difference_cache_;
+    mutable std::unordered_map<Haplotype, std::vector<Variant>> difference_value_cache_;
+    mutable std::unordered_map<const Haplotype*, std::vector<Variant>> difference_address_cache_;
     mutable std::unordered_map<SiteCountTuple, double, SiteCountTupleHash> result_cache_;
     
     template <typename Container>
     void fill_site_buffer(const Container& haplotypes) const;
+    void fill_site_buffer_from_value_cache(const Haplotype& haplotype) const;
+    void fill_site_buffer_from_address_cache(const Haplotype& haplotype) const;
     
     template <typename Container>
     SiteCountTuple count_segregating_sites(const Container& haplotypes) const;
@@ -208,15 +214,11 @@ void CoalescentModel::fill_site_buffer(const Container& haplotypes) const
     assert(site_buffer2_.empty());
     site_buffer1_.clear();
     for (const Haplotype& haplotype : haplotypes) {
-        auto itr = difference_cache_.find(haplotype);
-        if (itr == std::cend(difference_cache_)) {
-            itr = difference_cache_.emplace(std::piecewise_construct,
-                                            std::forward_as_tuple(haplotype),
-                                            std::forward_as_tuple(haplotype.difference(reference_))).first;
+        if (caching_ == CachingStrategy::address) {
+            fill_site_buffer_from_address_cache(haplotype);
+        } else {
+            fill_site_buffer_from_value_cache(haplotype);
         }
-        std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
-                       std::cbegin(itr->second), std::cend(itr->second),
-                       std::back_inserter(site_buffer2_));
         std::swap(site_buffer1_, site_buffer2_);
         site_buffer2_.clear();
     }

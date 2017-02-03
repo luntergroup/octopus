@@ -6,6 +6,10 @@
 
 #include <cstddef>
 #include <unordered_map>
+#include <utility>
+
+#include <boost/optional.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "core/types/haplotype.hpp"
 
@@ -19,8 +23,13 @@ public:
         double mutation_rate;
     };
     
+    enum class CachingStrategy { none, value, address };
+    
     DeNovoModel() = delete;
-    DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint = 1000);
+    
+    DeNovoModel(Parameters parameters,
+                std::size_t num_haplotypes_hint = 1000,
+                CachingStrategy caching = CachingStrategy::value);
     
     DeNovoModel(const DeNovoModel&)            = default;
     DeNovoModel& operator=(const DeNovoModel&) = default;
@@ -33,9 +42,25 @@ public:
     double evaluate(const Haplotype& target, const Haplotype& given) const;
     
 private:
+    struct AddressPairHash
+    {
+        std::size_t operator()(const std::pair<const Haplotype*, const Haplotype*>& p) const noexcept
+        {
+            auto result = boost::hash_value(p.first);
+            boost::hash_combine(result, p.second);
+            return result;
+        }
+    };
+    
     Parameters parameters_;
     std::size_t num_haplotypes_hint_;
-    mutable std::unordered_map<Haplotype, std::unordered_map<Haplotype, double>> cache_;
+    CachingStrategy caching_;
+    mutable std::unordered_map<Haplotype, std::unordered_map<Haplotype, double>> value_cache_;
+    mutable std::unordered_map<std::pair<const Haplotype*, const Haplotype*>, double, AddressPairHash> address_cache_;
+    
+    double evaluate_uncached(const Haplotype& target, const Haplotype& given) const;
+    double evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const;
+    double evaluate_address_cache(const Haplotype& target, const Haplotype& given) const;
 };
 
 } // namespace octopus

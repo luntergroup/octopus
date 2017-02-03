@@ -1290,7 +1290,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_sites_only();
     }
     vc_builder.set_flank_scoring(allow_flank_scoring(options));
-    vc_builder.set_max_genotypes_per_sample(options.at("max-genotypes-per-sample").as<unsigned>());
+    vc_builder.set_min_genotype_combinations(options.at("min-genotype-combinations").as<unsigned>());
+    vc_builder.set_max_genotype_combinations(options.at("max-genotype-combinations").as<unsigned>());
+    vc_builder.set_max_reduction_mass(options.at("max-reduction-probability-mass").as<Phred<double>>());
     
     return CallerFactory {std::move(vc_builder)};
 }
