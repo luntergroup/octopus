@@ -496,12 +496,12 @@ OptionMap parse_options(const int argc, const char** argv)
      " genotype posterior probabilities")
     
     ("max-genotype-combinations",
-     po::value<unsigned>()->default_value(40000),
+     po::value<unsigned>()->default_value(100000),
      "The maximum number of genotype combinations to consider when computing joint"
      " genotype posterior probabilities")
     
     ("max-reduction-probability-mass",
-     po::value<Phred<double>>()->default_value(Phred<double> {200.0}, "200"),
+     po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
      "The maximum probability mass that can be ignored from each sample when"
      " calculating joint genotype probability distributions")
     ;
