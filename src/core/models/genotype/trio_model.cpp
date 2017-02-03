@@ -213,7 +213,17 @@ auto reduce(std::vector<ParentsProbabilityPair>& parental,
             std::vector<GenotypeRefProbabilityPair>& child,
             const TrioModel::Options& options)
 {
-    return reduce(parental, options) || reduce(child, options);
+    auto result = reduce(child, options);
+    const auto max_reduction_count = get_sample_reduction_count(options.max_combinations);
+    if (child.size() < max_reduction_count) {
+        const auto child_leftover = max_reduction_count - child.size();
+        return reduce(parental,
+                      get_sample_reduction_count(options.min_combinations),
+                      max_reduction_count + child_leftover,
+                      options.max_removal_posterior_mass) || result;
+    } else {
+        return reduce(parental, options) || result;
+    }
 }
 
 double probability_of_parents(const Genotype<Haplotype>& mother,
