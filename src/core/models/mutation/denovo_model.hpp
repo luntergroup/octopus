@@ -44,7 +44,7 @@ public:
 private:
     struct AddressPairHash
     {
-        auto operator()(const std::pair<const Haplotype*, const Haplotype*>& p) const noexcept
+        std::size_t operator()(const std::pair<const Haplotype*, const Haplotype*>& p) const noexcept
         {
             auto result = boost::hash_value(p.first);
             boost::hash_combine(result, p.second);
