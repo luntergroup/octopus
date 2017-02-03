@@ -234,7 +234,6 @@ std::unique_ptr<Caller::Latents>
 TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    resume(misc_timer[0]);
     const auto germline_prior_model = make_prior_model(haplotypes);
     DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
     const model::TrioModel model {
@@ -246,12 +245,9 @@ TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         debug_log_
     };
     auto maternal_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy);
-    pause(misc_timer[0]);
-    resume(misc_timer[1]);
     if (parameters_.maternal_ploidy == parameters_.paternal_ploidy) {
         auto latents = model.evaluate(maternal_genotypes, maternal_genotypes,
                                       maternal_genotypes, haplotype_likelihoods);
-        pause(misc_timer[1]);
         return std::make_unique<Latents>(haplotypes, std::move(maternal_genotypes),
                                          std::move(latents), parameters_.trio);
     } else {
@@ -259,13 +255,11 @@ TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         if (parameters_.maternal_ploidy == parameters_.child_ploidy) {
             auto latents = model.evaluate(maternal_genotypes, paternal_genotypes,
                                           maternal_genotypes, haplotype_likelihoods);
-            pause(misc_timer[1]);
             return std::make_unique<Latents>(haplotypes, std::move(maternal_genotypes),
                                              std::move(latents), parameters_.trio);
         } else {
             auto latents = model.evaluate(maternal_genotypes, paternal_genotypes,
                                           paternal_genotypes, haplotype_likelihoods);
-            pause(misc_timer[1]);
             return std::make_unique<Latents>(haplotypes, std::move(maternal_genotypes),
                                              std::move(latents), parameters_.trio);
         }
