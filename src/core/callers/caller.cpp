@@ -15,6 +15,7 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/maths.hpp"
+#include "utils/append.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
 #include "core/tools/haplotype_filter.hpp"
 #include "utils/call.hpp"
@@ -234,21 +235,18 @@ auto wrap(std::vector<std::unique_ptr<T>>&& calls)
     };
 }
 
-auto unwrap(std::vector<CallWrapper>&& calls)
+auto unwrap(std::deque<CallWrapper>&& calls)
 {
     std::vector<std::unique_ptr<Call>> result {};
     result.reserve(calls.size());
-    
     std::transform(std::make_move_iterator(std::begin(calls)),
                    std::make_move_iterator(std::end(calls)),
                    std::back_inserter(result),
                    [] (CallWrapper&& wrapped_call) -> std::unique_ptr<Call> {
                        return std::move(wrapped_call.call);
                    });
-    
     calls.clear();
     calls.shrink_to_fit();
-    
     return result;
 }
 
@@ -317,27 +315,16 @@ void erase_calls_outside_region(std::vector<VcfRecord>& calls, const GenomicRegi
     calls.erase(it, std::end(calls));
 }
 
-void merge(std::vector<CallWrapper>&& src, std::deque<VcfRecord>& dst,
-           const VcfRecordFactory& factory, const GenomicRegion& call_region)
+void merge_to_vcf(std::deque<CallWrapper>&& src, std::deque<VcfRecord>& dst,
+                  const VcfRecordFactory& factory, const GenomicRegion& call_region)
 {
-    using std::begin; using std::end;
-    if (src.empty()) return;
     auto new_records = factory.make(unwrap(std::move(src)));
     erase_calls_outside_region(new_records, call_region);
-    const auto it = dst.insert(end(dst),
-                               std::make_move_iterator(begin(new_records)),
-                               std::make_move_iterator(end(new_records)));
-    std::inplace_merge(begin(dst), it, end(dst),
+    const auto itr = utils::append(std::move(new_records), dst);
+    std::inplace_merge(std::begin(dst), itr, std::end(dst),
                        [] (const auto& lhs, const auto& rhs) {
                            return mapped_region(lhs) < mapped_region(rhs);
                        });
-    // sometimes duplicates are called on active region boundries
-    const auto it2 = std::unique(begin(dst), end(dst),
-                                 [] (const auto& lhs, const auto& rhs) {
-                                     return lhs.pos() == rhs.pos() && lhs.ref() == rhs.ref()
-                                            && lhs.alt() == rhs.alt();
-                                 });
-    dst.erase(it2, end(dst));
 }
 
 std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
@@ -374,7 +361,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     
     auto haplotype_generator   = make_haplotype_generator(candidates, reads);
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
-    const auto record_factory  = make_record_factory(reads);
+    std::deque<CallWrapper> calls {};
     std::vector<Haplotype> haplotypes {}, next_haplotypes {};
     GenomicRegion active_region;
     boost::optional<GenomicRegion> next_active_region {}, prev_called_region {};
@@ -520,7 +507,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                         }
                     }
                     set_phasing(variant_calls, *phase_set, call_region);
-                    merge(std::move(variant_calls), result, record_factory, call_region);
+                    utils::append(std::move(variant_calls), calls);
                 }
             }
             active_region = right_overhang_region(active_region, phase_set->region);
@@ -595,21 +582,23 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                     
                     resume(misc_timer[3]);
                     set_phasing(variant_calls, phase, call_region);
-                    merge(std::move(variant_calls), result, record_factory, call_region);
+                    utils::append(std::move(variant_calls), calls);
+                    //merge(std::move(variant_calls), result, record_factory, call_region);
                     pause(misc_timer[3]);
                 }
             }
             if (refcalls_requested()) {
                 auto alleles = generate_candidate_reference_alleles(uncalled_region, active_candidates, called_regions);
                 auto reference_calls = wrap(this->call_reference(alleles, *caller_latents, reads));
-                merge(std::move(reference_calls), result, record_factory, call_region);
+                utils::append(std::move(reference_calls), calls);
             }
             completed_region = encompassing_region(completed_region, passed_region);
         }
         haplotype_likelihoods.clear();
         progress_meter.log_completed(completed_region);
     }
-    
+    const auto record_factory = make_record_factory(reads);
+    merge_to_vcf(std::move(calls), result, record_factory, call_region);
     return result;
 }
     
