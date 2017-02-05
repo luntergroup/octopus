@@ -49,12 +49,35 @@ unsigned HaplotypeGenerator::HaplotypeOverflow::size() const noexcept
 
 // HaplotypeGenerator
 
+namespace {
+
 auto max_included(const unsigned max_haplotypes)
 {
     return 2 * static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes))) - 1;
 }
 
-namespace {
+auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy)
+{
+    using HGP = HaplotypeGenerator::Policies::Extension;
+    using GWP = GenomeWalker::ExtensionPolicy;
+    switch (policy) {
+    case HGP::conservative: return GWP::includeIfWithinReadLengthOfFirstIncluded;
+    case HGP::normal: return GWP::includeIfAllSamplesSharedWithFrontier;
+    case HGP::optimistic: return GWP::includeIfAnySampleSharedWithFrontier;
+    case HGP::aggressive: return GWP::noLimit;
+    }
+}
+
+auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy)
+{
+    using HGP = HaplotypeGenerator::Policies::Lagging ;
+    using GWP = GenomeWalker::IndicatorPolicy;
+    switch (policy) {
+    case HGP::none: return GWP::includeNone;
+    case HGP::conservative: return GWP::includeIfSharedWithNovelRegion;
+    case HGP::aggressive: return GWP::includeIfLinkableToNovelRegion;
+    }
+}
 
 auto decompose(const MappableFlatSet<Variant>& variants)
 {
@@ -88,10 +111,15 @@ try
 : policies_ {std::move(policies)}
 , min_flank_pad_ {min_flank_pad}
 , tree_ {contig_name(candidates.front()), reference}
-, default_walker_ {max_included(policies_.haplotype_limits.target)}
+, default_walker_ {
+    max_included(policies_.haplotype_limits.target),
+    GenomeWalker::IndicatorPolicy::includeNone,
+    get_walker_policy(policies.extension)
+}
 , holdout_walker_ {
     max_included(policies_.haplotype_limits.target),
-    GenomeWalker::IndicatorPolicy::includeAll
+    GenomeWalker::IndicatorPolicy::includeAll,
+    get_walker_policy(policies.extension)
   }
 , lagged_walker_ {}
 , alleles_ {decompose(candidates)}
@@ -105,14 +133,12 @@ try
     if (active_region_.begin() != 0) {
         active_region_ = shift(active_region_, -1);
     }
-    if (policies_.lagging != Policies::Lagging::none) {
-        GenomeWalker::IndicatorPolicy walker_policy;
-        if (policies_.lagging == Policies::Lagging::conservative) {
-            walker_policy = GenomeWalker::IndicatorPolicy::includeIfSharedWithNovelRegion;
-        } else {
-            walker_policy = GenomeWalker::IndicatorPolicy::includeIfLinkableToNovelRegion;
-        }
-        lagged_walker_ = GenomeWalker {max_included(policies_.haplotype_limits.target), walker_policy};
+    if (policies.lagging != Policies::Lagging::none) {
+        lagged_walker_ = GenomeWalker {
+            max_included(policies_.haplotype_limits.target),
+            get_walker_policy(policies_.lagging),
+            get_walker_policy(policies_.extension)
+        };
     }
 }
 catch (...) {
@@ -726,6 +752,12 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
 HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_lagging_policy(const Policies::Lagging policy) noexcept
 {
     policies_.lagging = policy;
+    return *this;
+}
+
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_extension_policy(Policies::Extension policy) noexcept
+{
+    policies_.extension = policy;
     return *this;
 }
 
