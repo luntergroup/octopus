@@ -7,7 +7,7 @@
 
 namespace octopus { namespace config {
 
-const VersionNumber Version {0, 1, 5, boost::optional<std::string> {"alpha"}};
+const VersionNumber Version {0, 1, 6, boost::optional<std::string> {"alpha"}};
 
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version)
 {
