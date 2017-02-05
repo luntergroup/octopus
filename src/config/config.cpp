@@ -7,7 +7,7 @@
 
 namespace octopus { namespace config {
 
-const VersionNumber Version {0, 1, 5, boost::optional<std::string> {"alpha"}};
+const VersionNumber Version {0, 1, 6, boost::optional<std::string> {"alpha"}};
 
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version)
 {
@@ -23,7 +23,7 @@ const std::string BugReport {"https://github.com/luntergroup/octopus/issues"};
 
 const std::vector<std::string> Authors {"Daniel Cooke"};
 
-const std::string CopyrightNotice {"Copyright (c) 2016 University of Oxford"};
+const std::string CopyrightNotice {"Copyright (c) 2017 University of Oxford"};
 
 const unsigned CommandLineWidth {72};
 
