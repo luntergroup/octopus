@@ -12,6 +12,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
+#include "core/models/genotype/population_prior_model.hpp"
 #include "core/models/mutation/denovo_model.hpp"
 #include "core/models/genotype/trio_model.hpp"
 
@@ -29,9 +30,11 @@ public:
     {
         Trio trio;
         unsigned maternal_ploidy, paternal_ploidy, child_ploidy;
-        CoalescentModel::Parameters germline_prior_model_params;
+        boost::optional<CoalescentModel::Parameters> germline_prior_model_params;
         DeNovoModel::Parameters denovo_model_params;
         Phred<double> min_variant_posterior, min_refcall_posterior;
+        unsigned min_genotype_combinations, max_genotype_combinations;
+        Phred<double> max_reduction_mass;
     };
     
     TrioCaller() = delete;
@@ -82,6 +85,8 @@ private:
     std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Latents& latents,
                    const ReadMap& reads) const;
+    
+    std::unique_ptr<PopulationPriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
 
 class TrioCaller::Latents : public Caller::Latents
@@ -94,15 +99,27 @@ public:
             std::vector<Genotype<Haplotype>>&& genotypes,
             ModelInferences&& latents,
             const Trio& trio);
+    Latents(const std::vector<Haplotype>& haplotypes,
+            std::vector<Genotype<Haplotype>>&& maternal_genotypes,
+            std::vector<Genotype<Haplotype>>&& paternal_genotypes,
+            unsigned child_ploidy,
+            ModelInferences&& latents,
+            const Trio& trio);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
     
 private:
-    std::vector<Genotype<Haplotype>> maternal, paternal, child;
+    Trio trio;
+    std::vector<Genotype<Haplotype>> maternal_genotypes;
+    boost::optional<std::vector<Genotype<Haplotype>>> paternal_genotypes;
     ModelInferences model_latents;
-    std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
+    std::vector<double> marginal_maternal_posteriors, marginal_paternal_posteriors, marginal_child_posteriors;
+    mutable std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
     std::shared_ptr<HaplotypeProbabilityMap> marginal_haplotype_posteriors;
+    
+    void set_genotype_posteriors(const Trio& trio);
+    void set_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
 };
 
 } // namespace octopus

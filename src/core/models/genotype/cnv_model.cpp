@@ -59,8 +59,8 @@ namespace {
 // CNV public
 
 CNVModel::InferredLatents
-CNVModel::infer_latents(std::vector<Genotype<Haplotype>> genotypes,
-                        const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+CNVModel::evaluate(std::vector<Genotype<Haplotype>> genotypes,
+                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     assert(ploidy_ < 4);
@@ -644,6 +644,18 @@ run_variational_bayes(const CompressedAlphas<K>& prior_alphas,
 
 // Helpers
 
+template <typename Container>
+std::vector<double> calculate_log_priors(const Container& genotypes, const GenotypePriorModel& model)
+{
+    std::vector<double> result(genotypes.size());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                   [&model](const auto& genotype) {
+                       return model.evaluate(genotype);
+                   });
+    maths::normalise_logs(result);
+    return result;
+}
+
 CNVModel::Latents::GenotypeProbabilityMap
 expand(std::vector<Genotype<Haplotype>>&& genotypes, LogProbabilityVector&& genotype_log_posteriors)
 {
@@ -712,7 +724,7 @@ auto generate_seeds(const std::vector<SampleName>& samples,
     model::IndividualModel germline_model {priors.genotype_prior_model};
     for (const auto& sample : samples) {
         haplotype_log_likelihoods.prime(sample);
-        const auto latents = germline_model.infer_latents(genotypes, haplotype_log_likelihoods);
+        const auto latents = germline_model.evaluate(genotypes, haplotype_log_likelihoods);
         result.push_back(latents.posteriors.genotype_probabilities);
         maths::log_each(result.back());
         result.push_back(latents.posteriors.genotype_probabilities);

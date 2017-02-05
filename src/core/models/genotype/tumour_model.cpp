@@ -59,8 +59,8 @@ run_variational_bayes(const std::vector<SampleName>& samples,
 // Cancer public
 
 TumourModel::InferredLatents
-TumourModel::infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
-                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+TumourModel::evaluate(std::vector<CancerGenotype<Haplotype>> genotypes,
+                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     
@@ -719,7 +719,7 @@ auto compute_germline_log_posteriors(const SampleName& sample,
 auto compute_germline_log_posteriors(const SampleName& sample,
                                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                                     const SomaticMutationModel& genotype_prior_model)
+                                     const CancerGenotypePriorModel& genotype_prior_model)
 {
     assert(!genotypes.empty());
     haplotype_log_likelihoods.prime(sample);

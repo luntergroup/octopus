@@ -156,6 +156,7 @@ set(UTILS_SOURCES
     utils/kmer_mapper.cpp
     utils/memory_footprint.hpp
     utils/memory_footprint.cpp
+    utils/emplace_iterator.hpp
 )
 
 set(CORE_SOURCES
@@ -179,8 +180,6 @@ set(CORE_SOURCES
     core/callers/utils/call.cpp
     core/callers/utils/germline_variant_call.hpp
     core/callers/utils/germline_variant_call.cpp
-    core/callers/utils/haplotype_filter.hpp
-    core/callers/utils/haplotype_filter.cpp
     core/callers/utils/reference_call.hpp
     core/callers/utils/reference_call.cpp
     core/callers/utils/somatic_call.hpp
@@ -232,7 +231,15 @@ set(CORE_SOURCES
     core/models/genotype/variational_bayes_mixture_model.hpp
     core/models/genotype/trio_model.hpp
     core/models/genotype/trio_model.cpp
-    
+    core/models/genotype/genotype_prior_model.hpp
+    core/models/genotype/uniform_genotype_prior_model.hpp
+    core/models/genotype/coalescent_genotype_prior_model.hpp
+    core/models/genotype/cancer_genotype_prior_model.hpp
+    core/models/genotype/cancer_genotype_prior_model.cpp
+    core/models/genotype/population_prior_model.hpp
+    core/models/genotype/uniform_population_prior_model.hpp
+    core/models/genotype/coalescent_population_prior_model.hpp
+
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
     core/models/pairhmm/simd_pair_hmm.hpp
@@ -252,7 +259,9 @@ set(CORE_SOURCES
     core/models/mutation/denovo_model.cpp
     
     core/tools/coretools.hpp
-    
+    core/tools/haplotype_filter.hpp
+    core/tools/haplotype_filter.cpp
+
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp
     core/tools/hapgen/haplotype_generator.hpp

@@ -18,12 +18,12 @@
 namespace octopus { namespace model {
 
 TrioModel::TrioModel(const Trio& trio,
-                     const CoalescentModel& genotype_prior_model,
+                     const PopulationPriorModel& prior_model,
                      const DeNovoModel& mutation_model,
                      Options options,
                      boost::optional<logging::DebugLogger> debug_log)
 : trio_ {trio}
-, genotype_prior_model_ {genotype_prior_model}
+, prior_model_ {prior_model}
 , mutation_model_ {mutation_model}
 , options_ {options}
 , debug_log_ {debug_log}
@@ -181,35 +181,71 @@ bool reduce(std::vector<T>& zipped, const std::size_t min_to_keep,
     return hit_max_bound;
 }
 
+unsigned get_sample_reduction_count(const std::size_t n)
+{
+    return static_cast<unsigned>(std::sqrt(n));
+}
+
 template <typename T>
 auto reduce(std::vector<T>& zipped, const TrioModel::Options& options)
 {
-    return reduce(zipped, options.min_to_keep, options.max_to_keep,
+    return reduce(zipped,
+                  get_sample_reduction_count(options.min_combinations),
+                  get_sample_reduction_count(options.max_combinations),
                   options.max_removal_posterior_mass);
+}
+
+bool are_same_ploidy(const std::vector<GenotypeRefProbabilityPair>& maternal,
+                     const std::vector<GenotypeRefProbabilityPair>& paternal)
+{
+    assert(!maternal.empty() && !paternal.empty());
+    return maternal.front().genotype.get().ploidy() == paternal.front().genotype.get().ploidy();
+}
+
+auto reduce(std::vector<GenotypeRefProbabilityPair>& maternal,
+            std::vector<GenotypeRefProbabilityPair>& paternal,
+            const TrioModel::Options& options)
+{
+    return reduce(maternal, options) || reduce(paternal, options);
+}
+
+auto reduce(std::vector<ParentsProbabilityPair>& parental,
+            std::vector<GenotypeRefProbabilityPair>& child,
+            const TrioModel::Options& options)
+{
+    auto result = reduce(child, options);
+    const auto max_reduction_count = get_sample_reduction_count(options.max_combinations);
+    if (child.size() < max_reduction_count) {
+        const auto child_leftover = max_reduction_count - child.size();
+        return reduce(parental,
+                      get_sample_reduction_count(options.min_combinations),
+                      max_reduction_count + child_leftover,
+                      options.max_removal_posterior_mass) || result;
+    } else {
+        return reduce(parental, options) || result;
+    }
 }
 
 double probability_of_parents(const Genotype<Haplotype>& mother,
                               const Genotype<Haplotype>& father,
-                              const CoalescentModel& model)
+                              const PopulationPriorModel& model)
 {
-    thread_local std::vector<std::reference_wrapper<const Haplotype>> parental_haplotypes;
-    parental_haplotypes.reserve(mother.ploidy() + father.ploidy());
-    parental_haplotypes.assign(std::cbegin(mother), std::cend(mother));
-    parental_haplotypes.insert(std::cend(parental_haplotypes), std::cbegin(father), std::cend(father));
-    return model.evaluate(parental_haplotypes);
+    thread_local std::vector<std::reference_wrapper<const Genotype<Haplotype>>> parental_genotypes {};
+    parental_genotypes.assign({mother, father});
+    return model.evaluate(parental_genotypes);
 }
 
 auto join(const std::vector<GenotypeRefProbabilityPair>& maternal,
           const std::vector<GenotypeRefProbabilityPair>& paternal,
-          const CoalescentModel& model)
+          const PopulationPriorModel& model)
 {
     std::vector<ParentsProbabilityPair> result {};
     result.reserve(maternal.size() * paternal.size());
     for (const auto& m : maternal) {
         for (const auto& p : paternal) {
             result.push_back({m.genotype, p.genotype,
-                                m.probability + p.probability
-                                + probability_of_parents(m.genotype, p.genotype, model)});
+                              m.probability + p.probability
+                                  + probability_of_parents(m.genotype, p.genotype, model)});
         }
     }
     return result;
@@ -224,11 +260,11 @@ bool all_diploid(const Genotype<Haplotype>& child,
 
 double probability_of_child_given_parent(const Haplotype& child,
                                          const Genotype<Haplotype>& parent,
-                                         const DeNovoModel& model)
+                                         const DeNovoModel& mutation_model)
 {
     static const double ln2 {std::log(2)};
-    const auto p1 = model.evaluate(child, parent[0]);
-    const auto p2 = model.evaluate(child, parent[1]);
+    const auto p1 = mutation_model.evaluate(child, parent[0]);
+    const auto p2 = mutation_model.evaluate(child, parent[1]);
     return maths::log_sum_exp(p1, p2) - ln2;
 }
 
@@ -236,21 +272,21 @@ double probability_of_child_given_parents(const Haplotype& child_from_mother,
                                           const Haplotype& child_from_father,
                                           const Genotype<Haplotype>& mother,
                                           const Genotype<Haplotype>& father,
-                                          const DeNovoModel& model)
+                                          const DeNovoModel& mutation_model)
 {
-    return probability_of_child_given_parent(child_from_mother, mother, model)
-            + probability_of_child_given_parent(child_from_father, father, model);
+    return probability_of_child_given_parent(child_from_mother, mother, mutation_model)
+            + probability_of_child_given_parent(child_from_father, father, mutation_model);
 }
 
 double probability_of_child_given_parents(const Genotype<Haplotype>& child,
                                           const Genotype<Haplotype>& mother,
                                           const Genotype<Haplotype>& father,
-                                          const DeNovoModel& model)
+                                          const DeNovoModel& mutation_model)
 {
     if (all_diploid(child, mother, father)) {
         static const double ln2 {std::log(2)};
-        const auto p1 = probability_of_child_given_parents(child[0], child[1], mother, father, model);
-        const auto p2 = probability_of_child_given_parents(child[1], child[0], mother, father, model);
+        const auto p1 = probability_of_child_given_parents(child[0], child[1], mother, father, mutation_model);
+        const auto p2 = probability_of_child_given_parents(child[1], child[0], mother, father, mutation_model);
         return maths::log_sum_exp(p1, p2) - ln2;
     }
     return 0; // TODO
@@ -260,22 +296,21 @@ using JointProbability = TrioModel::Latents::JointProbability;
 
 auto joint_probability(const ParentsProbabilityPair& parents,
                        const GenotypeRefProbabilityPair& child,
-                       const DeNovoModel& model)
+                       const DeNovoModel& mutation_model)
 {
     return parents.probability + child.probability
-           + probability_of_child_given_parents(child.genotype, parents.maternal, parents.paternal, model);
+           + probability_of_child_given_parents(child.genotype, parents.maternal, parents.paternal, mutation_model);
 }
 
 auto join(const std::vector<ParentsProbabilityPair>& parents,
           const std::vector<GenotypeRefProbabilityPair>& child,
-          const DeNovoModel& model)
+          const DeNovoModel& mutation_model)
 {
     std::vector<JointProbability> result {};
     result.reserve(parents.size() * child.size());
     for (const auto& p : parents) {
         for (const auto& c : child) {
-            result.push_back({p.maternal, p.paternal, c.genotype,
-                              joint_probability(p, c, model)});
+            result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, mutation_model)});
         }
     }
     return result;
@@ -327,31 +362,33 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
     bool overflowed {false};
     haplotype_likelihoods.prime(trio_.mother());
     auto maternal_likelihoods = compute_likelihoods(maternal_genotypes, likelihood_model);
-    overflowed |= reduce(maternal_likelihoods, options_);
     assert(!maternal_likelihoods.empty());
     haplotype_likelihoods.prime(trio_.father());
     auto paternal_likelihoods = compute_likelihoods(paternal_genotypes, likelihood_model);
-    overflowed |= reduce(paternal_likelihoods, options_);
+    overflowed |= reduce(paternal_likelihoods, maternal_likelihoods, options_);
     assert(!paternal_likelihoods.empty());
     if (debug_log_) {
         debug::print(stream(*debug_log_), "maternal", maternal_likelihoods);
         debug::print(stream(*debug_log_), "paternal", paternal_likelihoods);
     }
-    auto parents_joint_likelihoods = join(maternal_likelihoods, paternal_likelihoods, genotype_prior_model_);
-    overflowed |= reduce(parents_joint_likelihoods, options_);
+    resume(misc_timer[2]);
+    auto parents_joint_likelihoods = join(maternal_likelihoods, paternal_likelihoods, prior_model_);
+    pause(misc_timer[2]);
     assert(!parents_joint_likelihoods.empty());
     clear(maternal_likelihoods);
     clear(paternal_likelihoods);
     if (debug_log_) debug::print(stream(*debug_log_), parents_joint_likelihoods);
     haplotype_likelihoods.prime(trio_.child());
     auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
-    overflowed |= reduce(child_likelihoods, options_);
+    overflowed |= reduce(parents_joint_likelihoods, child_likelihoods, options_);
     assert(!child_likelihoods.empty());
     if (debug_log_) debug::print(stream(*debug_log_), "child", child_likelihoods);
+    resume(misc_timer[3]);
     auto joint_likelihoods = join(parents_joint_likelihoods, child_likelihoods, mutation_model_);
     clear(parents_joint_likelihoods);
     clear(child_likelihoods);
     const auto evidence = normalise_exp(joint_likelihoods);
+    pause(misc_timer[3]);
     if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
     return {std::move(joint_likelihoods), evidence, overflowed};
 }

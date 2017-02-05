@@ -354,6 +354,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(3),
      "Maximum number of holdout attempts the haplotype generator can make before the region"
      " is skipped")
+
+    ("extension-level",
+     po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
+     "Level of haplotype extension. Possible values are: conservative, normal, optimistic, aggressive")
     ;
     
     po::options_description caller("Caller (general)");
@@ -403,6 +407,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("indel-heterozygosity",
      po::value<float>()->default_value(0.0001, "0.0001"),
      "The germline indel heterozygosity used to calculate genotype priors")
+    
+    ("use-uniform-genotype-priors",
+    po::bool_switch()->default_value(false),
+    "Use a uniform prior model when calculating genotype posteriors")
     ;
     
     po::options_description cancer("Caller (cancer)");
@@ -485,6 +493,21 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Disables additional calculation to adjust alignment score when there are inactive"
      " candidates in haplotype flanking regions")
+    
+    ("min-genotype-combinations",
+     po::value<unsigned>()->default_value(2500),
+     "The minimum number of genotype combinations to consider when computing joint"
+     " genotype posterior probabilities")
+    
+    ("max-genotype-combinations",
+     po::value<unsigned>()->default_value(100000),
+     "The maximum number of genotype combinations to consider when computing joint"
+     " genotype posterior probabilities")
+    
+    ("max-reduction-probability-mass",
+     po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
+     "The maximum probability mass that can be ignored from each sample when"
+     " calculating joint genotype probability distributions")
     ;
     
     po::options_description call_filtering("Callset filtering");
@@ -958,6 +981,42 @@ std::ostream& operator<<(std::ostream& out, const ContigOutputOrder& order)
     return out;
 }
 
+std::istream& operator>>(std::istream& in, ExtensionLevel& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "conservative")
+        result = ExtensionLevel::conservative;
+    else if (token == "normal")
+        result = ExtensionLevel::normal;
+    else if (token == "optimistic")
+        result = ExtensionLevel::optimistic;
+    else if (token == "aggressive")
+        result = ExtensionLevel::aggressive;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
+                                     "extension-level"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const ExtensionLevel& level)
+{
+    switch (level) {
+    case ExtensionLevel::conservative:
+        out << "conservative";
+        break;
+    case ExtensionLevel::normal:
+        out << "normal";
+        break;
+    case ExtensionLevel::optimistic:
+        out << "optimistic";
+        break;
+    case ExtensionLevel::aggressive:
+        out << "aggressive";
+        break;
+    }
+    return out;
+}
+
 std::istream& operator>>(std::istream& in, PhasingLevel& result)
 {
     std::string token;
@@ -988,5 +1047,6 @@ std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
     }
     return out;
 }
+
 } // namespace options
 } // namespace octopus

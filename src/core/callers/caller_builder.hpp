@@ -55,6 +55,9 @@ public:
     CallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
     CallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
+    CallerBuilder& set_min_genotype_combinations(unsigned min) noexcept;
+    CallerBuilder& set_max_genotype_combinations(unsigned max) noexcept;
+    CallerBuilder& set_max_reduction_mass(Phred<double> mass) noexcept;
     
     // cancer
     CallerBuilder& set_normal_sample(SampleName normal_sample);
@@ -95,9 +98,10 @@ private:
         Phred<double> haplotype_extension_threshold;
         bool allow_flank_scoring;
         bool allow_model_filtering;
-        double snp_heterozygosity;
-        double indel_heterozygosity;
+        boost::optional<double> snp_heterozygosity, indel_heterozygosity;
         Phred<double> min_phase_score;
+        unsigned min_genotype_combinations, max_genotype_combinations;
+        Phred<double> max_reduction_mass;
         
         // cancer
         boost::optional<SampleName> normal_sample;

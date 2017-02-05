@@ -227,7 +227,7 @@ $ octopus -R hs37d5.fa -I tumour1.bam tumour2.bam -C cancer
 
 Note without a normal sample classification power is significantly reduced.
 
-####*Joint variant calling (NOT YET IMPLEMENTED!)*
+####*Joint variant calling*
 
 Octopus uses different calling models for populations and individuals. Briefly, the individual model is exact whilst the population model uses approximations. However, it is recommended to use the population model to call *germline variants* in multiple samples from the same population as the model can leverage information between individuals:
 

@@ -37,6 +37,7 @@ public:
     struct Policies
     {
         enum class Lagging { none, conservative, aggressive } lagging = Lagging::none;
+        enum class Extension { conservative, normal, optimistic, aggressive } extension = Extension::normal;
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         unsigned max_holdout_depth = 2;
     };
@@ -44,7 +45,7 @@ public:
     class HaplotypeOverflow;
     class Builder;
     
-    using HaplotypePacket = std::pair<std::vector<Haplotype>, GenomicRegion>;
+    using HaplotypePacket = std::tuple<std::vector<Haplotype>, GenomicRegion, boost::optional<GenomicRegion>>;
     
     HaplotypeGenerator() = delete;
     
@@ -137,6 +138,7 @@ private:
     
     void progress(GenomicRegion to);
     
+    void populate_tree();
     bool in_holdout_mode() const noexcept;
     bool can_extract_holdouts(const GenomicRegion& region) const noexcept;
     void extract_holdouts(GenomicRegion region);
@@ -168,11 +170,9 @@ template <typename Container>
 void HaplotypeGenerator::collapse(const Container& haplotypes)
 {
     reset_next_active_region();
-    
     if (!is_active_region_lagged() || tree_.num_haplotypes() == haplotypes.size()) {
         return;
     }
-    
     prune_unique(haplotypes, tree_);
 }
 
@@ -180,9 +180,7 @@ template <typename Container>
 void HaplotypeGenerator::remove(const Container& haplotypes)
 {
     if (haplotypes.empty()) return;
-    
     reset_next_active_region();
-    
     if (!is_active_region_lagged() || haplotypes.size() == tree_.num_haplotypes()) {
         tree_.clear();
         if (!in_holdout_mode()) {
@@ -212,6 +210,7 @@ public:
     ~Builder() = default;
     
     Builder& set_lagging_policy(Policies::Lagging policy) noexcept;
+    Builder& set_extension_policy(Policies::Extension policy) noexcept;
     
     Builder& set_target_limit(unsigned n) noexcept;
     Builder& set_holdout_limit(unsigned n) noexcept;

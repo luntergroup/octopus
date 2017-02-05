@@ -33,12 +33,10 @@ template <std::size_t N>
 constexpr auto make_phred_to_ln_prob_lookup() noexcept
 {
     std::array<double, N> result {};
-    
     for (std::size_t i {0}; i < N; ++i) {
         // This const_cast mess is because std::array::operator[] is not marked constexpr (until C++17)
         const_cast<double&>(static_cast<std::array<double, N> const&>(result)[i]) = -ln10Div10<> * i;
     }
-    
     return result;
 }
 
@@ -58,26 +56,20 @@ bool is_target_in_truth_flank(const std::string& truth, const std::string& targe
 auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2)
 {
     assert(!align1.empty());
-    
     CigarString result {};
     result.reserve(align1.size());
-    
     auto it1 = std::cbegin(align1);
     auto it2 = std::cbegin(align2);
     const auto last1 = std::find_if_not(std::crbegin(align1), std::crend(align1),
                                         [] (const auto x) { return x == 0; }).base();
     const auto last2 = std::next(it1, std::distance(it1, last1));
-    
     while (it1 != last1) {
         const auto p = std::mismatch(it1, last1, it2);
-        
         if (p.first != it1) {
             result.emplace_back(std::distance(it1, p.first), CigarOperation::Flag::sequenceMatch);
             if (p.first == last1) break;
         }
-        
         const static auto is_gap = [] (const auto b) { return b == '-'; };
-        
         if (*p.first == '-') {
             const auto it3 = std::find_if_not(std::next(p.first), last1, is_gap);
             const auto n = std::distance(p.first, it3);
@@ -91,29 +83,28 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
             it1 = std::next(p.first, n);
             it2 = it3;
         } else {
-            const auto p2 = std::mismatch(std::next(p.first), last1, std::next(p.second),
-                                          std::not_equal_to<> {});
+            const auto p2 = std::mismatch(std::next(p.first), last1, std::next(p.second), std::not_equal_to<> {});
             result.emplace_back(std::distance(p.first, p2.first), CigarOperation::Flag::substitution);
             std::tie(it1, it2) = p2;
         }
     }
-    
     result.shrink_to_fit();
-    
     return result;
 }
 
 namespace debug {
-    void print_alignment(const std::vector<char>& align1, const std::vector<char>& align2)
-    {
-        const auto isnt_null = [] (const char c) { return c != '\0'; };
-        std::copy_if(std::cbegin(align1), std::cend(align1), std::ostreambuf_iterator<char>(std::cout),
-                     isnt_null);
-        std::cout << '\n';
-        std::copy_if(std::cbegin(align2), std::cend(align2), std::ostreambuf_iterator<char>(std::cout),
-                     isnt_null);
-        std::cout << '\n';
-    }
+
+void print_alignment(const std::vector<char>& align1, const std::vector<char>& align2)
+{
+    const auto isnt_null = [] (const char c) { return c != '\0'; };
+    std::copy_if(std::cbegin(align1), std::cend(align1), std::ostreambuf_iterator<char>(std::cout),
+                 isnt_null);
+    std::cout << '\n';
+    std::copy_if(std::cbegin(align2), std::cend(align2), std::ostreambuf_iterator<char>(std::cout),
+                 isnt_null);
+    std::cout << '\n';
+}
+
 } // namespace debug
 
 auto simd_align(const std::string& truth, const std::string& target,
@@ -122,18 +113,14 @@ auto simd_align(const std::string& truth, const std::string& target,
                 const MutationModel& model)
 {
     constexpr auto pad = simd::min_flank_pad();
-    
     const auto truth_size  = static_cast<int>(truth.size());
     const auto target_size = static_cast<int>(target.size());
     const auto truth_alignment_size = static_cast<int>(target_size + 2 * pad - 1);
     const auto alignment_offset = std::max(0, static_cast<int>(target_offset) - pad);
-    
     if (alignment_offset + truth_alignment_size > truth_size) {
         return std::numeric_limits<double>::lowest();
     }
-    
     const auto qualities = reinterpret_cast<const std::int8_t*>(target_qualities.data());
-    
     if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
         const auto score = simd::align(truth.data() + alignment_offset,
                                        target.data(),
@@ -146,13 +133,10 @@ auto simd_align(const std::string& truth, const std::string& target,
                                        model.gap_extend, model.nuc_prior);
         return -ln10Div10<> * static_cast<double>(score);
     }
-    
     thread_local std::vector<char> align1 {}, align2 {};
-    
     const auto max_alignment_size = 2 * (target.size() + pad);
     align1.assign(max_alignment_size + 1, 0);
     align2.assign(max_alignment_size + 1, 0);
-    
     int first_pos;
     const auto score = simd::align(truth.data() + alignment_offset,
                                    target.data(),
@@ -164,7 +148,6 @@ auto simd_align(const std::string& truth, const std::string& target,
                                    model.gap_open_penalties.data() + alignment_offset,
                                    model.gap_extend, model.nuc_prior,
                                    align1.data(), align2.data(), first_pos);
-    
     auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
     if (lhs_flank_size < alignment_offset) {
         lhs_flank_size = 0;
@@ -178,10 +161,8 @@ auto simd_align(const std::string& truth, const std::string& target,
         rhs_flank_size += alignment_offset + truth_alignment_size;
         rhs_flank_size -= truth_size;
     }
-    
     assert(lhs_flank_size >= 0 && rhs_flank_size >= 0);
     assert(align1.back() == 0); // required by calculate_flank_score
-    
     const auto flank_score = simd::calculate_flank_score(truth_alignment_size,
                                                          lhs_flank_size, rhs_flank_size,
                                                          target.data(), qualities,
@@ -225,11 +206,8 @@ double evaluate(const std::string& target, const std::string& truth,
                 const MutationModel& model)
 {
     using std::cbegin; using std::cend; using std::next; using std::distance;
-    
     static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
-    
     validate(truth, target, target_qualities, target_offset, model);
-    
     const auto offsetted_truth_begin_itr = next(cbegin(truth), target_offset);
     const auto m1 = std::mismatch(cbegin(target), cend(target), offsetted_truth_begin_itr);
     if (m1.first == cend(target)) {
@@ -254,7 +232,6 @@ double evaluate(const std::string& target, const std::string& truth,
         }
         return lnProbability[model.gap_open_penalties[truth_index]];
     }
-    
     // TODO: we should be able to optimise the alignment based of the first mismatch postition
     return simd_align(truth, target, target_qualities, target_offset, model);
 }
@@ -265,18 +242,13 @@ double evaluate(const std::string& target, const std::string& truth,
     if (truth.size() != target.size() + 2 * min_flank_pad()) {
         return -ln10Div10<> * std::max(target.size(), truth.size()) * model.mutation;
     }
-    
     using std::cbegin; using std::cend; using std::next; using std::distance;
-    
     static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
-    
     const auto truth_begin = next(cbegin(truth), min_flank_pad());
-    
     const auto m1 = std::mismatch(cbegin(target), cend(target), truth_begin);
     if (m1.first == cend(target)) {
         return 0; // sequences are equal, can't do better than this
     }
-    
     const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
     if (m2.first == cend(target)) {
         // then there is only a single base difference between the sequences, can optimise
@@ -285,12 +257,10 @@ double evaluate(const std::string& target, const std::string& truth,
         }
         return lnProbability[model.mutation];
     }
-    
     thread_local std::vector<std::int8_t> dummy_qualities;
     thread_local std::vector<std::int8_t> dummy_gap_open_penalities;
     dummy_qualities.assign(truth.size(), model.mutation);
     dummy_gap_open_penalities.assign(truth.size(), model.gap_open);
-    
     auto score = simd::align(truth.c_str(),
                              target.c_str(),
                              dummy_qualities.data(),

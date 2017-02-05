@@ -8,8 +8,8 @@
 
 #include <boost/optional.hpp>
 
+#include "genotype_prior_model.hpp"
 #include "core/types/haplotype.hpp"
-#include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/haplotype_likelihood_cache.hpp"
 #include "core/types/genotype.hpp"
 #include "logging/logging.hpp"
@@ -33,8 +33,9 @@ public:
     
     IndividualModel() = delete;
     
-    IndividualModel(const CoalescentModel& genotype_prior_model,
-                    boost::optional<logging::DebugLogger> debug_log = boost::none);
+    IndividualModel(const GenotypePriorModel& genotype_prior_model,
+                    boost::optional<logging::DebugLogger> debug_log = boost::none,
+                    boost::optional<logging::TraceLogger> trace_log = boost::none);
     
     IndividualModel(const IndividualModel&)            = delete;
     IndividualModel& operator=(const IndividualModel&) = delete;
@@ -43,13 +44,14 @@ public:
     
     ~IndividualModel() = default;
     
-    InferredLatents infer_latents(const std::vector<Genotype<Haplotype>>& genotypes,
-                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    InferredLatents evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
-    const CoalescentModel& genotype_prior_model_;
+    const GenotypePriorModel& genotype_prior_model_;
     
     mutable boost::optional<logging::DebugLogger> debug_log_;
+    mutable boost::optional<logging::TraceLogger> trace_log_;
 };
 
 } // namesapce model

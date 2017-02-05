@@ -5,6 +5,7 @@
 #define ploidy_map_hpp
 
 #include <unordered_map>
+#include <vector>
 
 #include "config/common.hpp"
 
@@ -25,16 +26,19 @@ public:
     void set(const SampleName& sample, const ContigName& contig, unsigned ploidy);
     void set(const ContigName& contig, unsigned ploidy);
     
-    unsigned organism() const noexcept;
-    unsigned operator()(const SampleName& sample, const ContigName& contig) const noexcept;
+    bool is_autosome(const ContigName& contig) const noexcept;
+    
+    unsigned of(const SampleName& sample, const ContigName& contig) const noexcept;
     
 private:
     using ContigPloidyMap = std::unordered_map<ContigName, unsigned>;
     
     unsigned organism_;
     ContigPloidyMap contigs_;
-    std::unordered_map<SampleName, ContigPloidyMap> sample_contigs_;
+    std::unordered_map<SampleName, ContigPloidyMap> allosomes_;
 };
+
+std::vector<unsigned> get_ploidies(const std::vector<SampleName>& samples, const ContigName& contig, const PloidyMap& ploidies);
 
 } // namespace octopus
 

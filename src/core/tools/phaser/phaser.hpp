@@ -18,7 +18,6 @@
 #include "concepts/mappable.hpp"
 #include "concepts/mappable_range.hpp"
 #include "utils/mappable_algorithms.hpp"
-#include "core/types/variant.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "basics/phred.hpp"
@@ -46,11 +45,11 @@ public:
     
     boost::optional<PhaseSet> try_phase(const std::vector<Haplotype>& haplotypes,
                                         const GenotypePosteriorMap& genotype_posteriors,
-                                        const std::vector<Variant>& candidates) const;
+                                        const std::vector<GenomicRegion>& regions) const;
     
     PhaseSet force_phase(const std::vector<Haplotype>& haplotypes,
                          const GenotypePosteriorMap& genotype_posteriors,
-                         const std::vector<Variant>& candidates) const;
+                         const std::vector<GenomicRegion>& regions) const;
     
 private:
     Phred<double> min_phase_score_;
@@ -107,34 +106,33 @@ boost::optional<std::reference_wrapper<const Phaser::PhaseSet::PhaseRegion>>
 find_phase_region(const Phaser::PhaseSet::SamplePhaseRegions& phasings, const T& mappable)
 {
     const auto overlapped = overlap_range(phasings, mappable, BidirectionallySortedTag {});
-    
     if (!overlapped.empty()) {
         assert(size(overlapped, BidirectionallySortedTag {}) == 1);
         return std::cref(overlapped.front());
     }
-    
     return boost::none;
 }
 
 bool is_split_phasing(const Phaser::PhaseSet& phase);
 
 namespace debug {
-    template <typename S>
-    void print_phase_sets(S&& stream, const Phaser::PhaseSet& phasings)
-    {
-        stream << "Phased region is " << phasings.region << '\n';
-        
-        for (const auto& p : phasings.phase_regions) {
-            if (p.second.size() > 1) {
-                stream << "Phase regions for sample " << p.first << '\n';
-                for (const auto& r : p.second) {
-                    stream << "\t* " << r.region << " " << r.score << '\n';
-                }
+
+template <typename S>
+void print_phase_sets(S&& stream, const Phaser::PhaseSet& phasings)
+{
+    stream << "Phased region is " << phasings.region << '\n';
+    for (const auto& p : phasings.phase_regions) {
+        if (p.second.size() > 1) {
+            stream << "Phase regions for sample " << p.first << '\n';
+            for (const auto& r : p.second) {
+                stream << "\t* " << r.region << " " << r.score << '\n';
             }
         }
     }
-    
-    void print_phase_sets(const Phaser::PhaseSet& phasings);
+}
+
+void print_phase_sets(const Phaser::PhaseSet& phasings);
+
 } // namespace debug
 
 } // namespace octopus

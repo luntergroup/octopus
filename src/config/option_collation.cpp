@@ -758,8 +758,12 @@ auto get_default_inclusion_predicate()
                 partial_sort(observed_qualities, 2);
                 return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
             } else {
-                return (num_observations > 2 && static_cast<double>(num_observations) / depth > 0.1)
-                       || static_cast<double>(sum(observed_qualities)) / alt_sequence_size(v) > 20;
+                if (num_observations == 1) return false;
+                if (static_cast<double>(num_observations) / depth > 0.35) return true;
+                erase_low(observed_qualities, 20);
+                if (observed_qualities.size() <= 1) return false;
+                if (observed_qualities.size() > 3) return true;
+                return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
             }
         } else {
             return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.05;
@@ -1026,6 +1030,17 @@ bool call_sites_only(const OptionMap& options)
     return options.at("sites-only").as<bool>();
 }
 
+auto get_extension_policy(const OptionMap& options)
+{
+    using ExtensionPolicy = HaplotypeGenerator::Builder::Policies::Extension;
+    switch (options.at("extension-level").as<ExtensionLevel>()) {
+    case ExtensionLevel::conservative: return ExtensionPolicy::conservative;
+    case ExtensionLevel::normal: return ExtensionPolicy::normal;
+    case ExtensionLevel::optimistic: return ExtensionPolicy::optimistic;
+    case ExtensionLevel::aggressive: return ExtensionPolicy::aggressive;
+    }
+}
+
 auto get_lagging_policy(const OptionMap& options)
 {
     using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
@@ -1053,7 +1068,7 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     const auto holdout_limit     = as_unsigned("haplotype-holdout-threshold", options);
     const auto overflow_limit    = as_unsigned("haplotype-overflow", options);
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
-    return HaplotypeGenerator::Builder()
+    return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options))
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
 }
@@ -1208,7 +1223,7 @@ public:
 
 bool allow_flank_scoring(const OptionMap& options)
 {
-    return !(is_fast_mode(options) || options.at("inactive-flank-scoring").as<bool>());
+    return options.at("inactive-flank-scoring").as<bool>() && !is_fast_mode(options);
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
@@ -1222,9 +1237,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     };
     
     const auto caller = get_caller_type(options, read_pipe.samples());
-    if (caller == "population") {
-        throw UnimplementedCaller {caller};
-    }
+//    if (caller == "population") {
+//        throw UnimplementedCaller {caller};
+//    }
     vc_builder.set_caller(caller);
     
     if (options.count("refcall") == 1) {
@@ -1256,8 +1271,10 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_haplotype_extension_threshold(options.at("haplotype-extension-threshold").as<Phred<double>>());
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
-    vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
-    vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
+    if (!options.at("use-uniform-genotype-priors").as<bool>()) {
+        vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
+        vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
+    }
     
     if (caller == "cancer") {
         if (options.count("normal-sample") == 1) {
@@ -1284,6 +1301,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_sites_only();
     }
     vc_builder.set_flank_scoring(allow_flank_scoring(options));
+    vc_builder.set_min_genotype_combinations(options.at("min-genotype-combinations").as<unsigned>());
+    vc_builder.set_max_genotype_combinations(options.at("max-genotype-combinations").as<unsigned>());
+    vc_builder.set_max_reduction_mass(options.at("max-reduction-probability-mass").as<Phred<double>>());
     
     return CallerFactory {std::move(vc_builder)};
 }

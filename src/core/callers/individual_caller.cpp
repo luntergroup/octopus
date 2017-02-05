@@ -25,6 +25,9 @@
 #include "utils/germline_variant_call.hpp"
 #include "utils/reference_call.hpp"
 
+#include "core/models/genotype/uniform_genotype_prior_model.hpp"
+#include "core/models/genotype/coalescent_genotype_prior_model.hpp"
+
 #include "timers.hpp"
 
 namespace octopus {
@@ -107,9 +110,9 @@ IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     const auto prior_model = make_prior_model(haplotypes);
-    const model::IndividualModel model {prior_model, debug_log_};
+    const model::IndividualModel model {*prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
-    auto inferences = model.infer_latents(genotypes, haplotype_likelihoods);
+    auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
     return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
 }
 
@@ -139,9 +142,9 @@ IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplot
 {
     const auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
     const auto prior_model = make_prior_model(haplotypes);
-    const model::IndividualModel model {prior_model, debug_log_};
+    const model::IndividualModel model {*prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
-    const auto inferences = model.infer_latents(genotypes, haplotype_likelihoods);
+    const auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
     return octopus::calculate_model_posterior(latents.model_log_evidence_, inferences.log_evidence);
 }
 
@@ -316,7 +319,7 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
-    
+
 namespace debug {
     void log(const GenotypeProbabilityMap& genotype_posteriors,
              boost::optional<logging::DebugLogger>& debug_log,
@@ -332,6 +335,7 @@ std::vector<std::unique_ptr<octopus::VariantCall>>
 IndividualCaller::call_variants(const std::vector<Variant>& candidates,
                                 const Latents& latents) const
 {
+    if (parameters_.ploidy == 0) return {};
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
     debug::log(genotype_posteriors, debug_log_, trace_log_);
     const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
@@ -430,12 +434,16 @@ const SampleName& IndividualCaller::sample() const noexcept
     return samples_.front();
 }
 
-CoalescentModel IndividualCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
+std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
 {
-    return CoalescentModel {
+    if (parameters_.prior_model_params) {
+        return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
         Haplotype {mapped_region(haplotypes.front()), reference_},
-        parameters_.prior_model_params
-    };
+        *parameters_.prior_model_params
+        });
+    } else {
+        return std::make_unique<UniformGenotypePriorModel>();
+    }
 }
 
 namespace debug {

@@ -4,7 +4,7 @@
 #ifndef timers_h
 #define timers_h
 
-//#define BENCHMARK
+#define BENCHMARK
 
 #include <array>
 
@@ -24,14 +24,14 @@ using TimerArray = std::array<boost::timer::cpu_timer, 12>;
 
 extern TimerArray misc_timer;
 
-inline void resume_timer(boost::timer::cpu_timer& timer)
+inline void resume(boost::timer::cpu_timer& timer)
 {
     #ifdef BENCHMARK
     timer.resume();
     #endif
 }
 
-inline void pause_timer(boost::timer::cpu_timer& timer)
+inline void pause(boost::timer::cpu_timer& timer)
 {
     #ifdef BENCHMARK
     timer.stop();

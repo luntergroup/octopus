@@ -12,7 +12,7 @@
 
 #include "core/types/trio.hpp"
 #include "core/types/haplotype.hpp"
-#include "core/models/mutation/coalescent_model.hpp"
+#include "population_prior_model.hpp"
 #include "core/models/mutation/denovo_model.hpp"
 #include "core/models/haplotype_likelihood_cache.hpp"
 #include "core/types/genotype.hpp"
@@ -29,10 +29,12 @@ public:
     {
         struct JointProbability
         {
-            std::reference_wrapper<const Genotype<Haplotype>> maternal, paternal, child;
+            using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+            GenotypeReference maternal, paternal, child;
             double probability;
         };
-        std::vector<JointProbability> joint_genotype_probabilities;
+        using JointProbabilityVector = std::vector<JointProbability>;
+        JointProbabilityVector joint_genotype_probabilities;
     };
     
     struct InferredLatents
@@ -44,14 +46,14 @@ public:
     
     struct Options
     {
-        std::size_t min_to_keep = 50, max_to_keep = 500;
+        std::size_t min_combinations = 50, max_combinations = 500;
         double max_removal_posterior_mass = 1e-20;
     };
     
     TrioModel() = delete;
     
     TrioModel(const Trio& trio,
-              const CoalescentModel& genotype_prior_model,
+              const PopulationPriorModel& prior_model,
               const DeNovoModel& mutation_model,
               Options options,
               boost::optional<logging::DebugLogger> debug_log = boost::none);
@@ -70,7 +72,7 @@ public:
 
 private:
     const Trio& trio_;
-    const CoalescentModel& genotype_prior_model_;
+    const PopulationPriorModel& prior_model_;
     const DeNovoModel& mutation_model_;
     Options options_;
     mutable boost::optional<logging::DebugLogger> debug_log_;

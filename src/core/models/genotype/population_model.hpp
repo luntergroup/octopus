@@ -5,14 +5,15 @@
 #define population_model_hpp
 
 #include <vector>
-#include <unordered_map>
 #include <functional>
+
+#include <boost/optional.hpp>
 
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
-#include "core/models/mutation/coalescent_model.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
 #include "core/types/genotype.hpp"
+#include "population_prior_model.hpp"
+#include "core/models/haplotype_likelihood_cache.hpp"
 #include "containers/probability_matrix.hpp"
 #include "logging/logging.hpp"
 
@@ -23,27 +24,34 @@ class PopulationModel
 public:
     struct Latents
     {
-        using GenotypeProbabilityVector       = std::vector<double>;
-        using SampleGenotypeProbabilityVector = std::vector<GenotypeProbabilityVector>;
-        
-        SampleGenotypeProbabilityVector genotype_probabilities;
+        std::vector<std::vector<std::size_t>> genotype_combinations;
+        using GenotypeProbabilityVector = std::vector<double>;
+        GenotypeProbabilityVector joint_genotype_probabilities;
     };
     
     struct InferredLatents
     {
-        using HaplotypeReference    = std::reference_wrapper<const Haplotype>;
-        using HaplotypePosteriorMap = std::unordered_map<HaplotypeReference, double>;
-        
         Latents posteriors;
-        HaplotypePosteriorMap haplotype_posteriors;
         double log_evidence;
     };
     
-    using GenotypeVector = std::vector<Genotype<Haplotype>>;
+    struct Options
+    {
+        std::size_t max_combinations_per_sample = 200;
+        unsigned max_em_iterations = 100;
+    };
+    
+    using SampleVector            = std::vector<SampleName>;
+    using GenotypeVector          = std::vector<Genotype<Haplotype>>;
+    using GenotypeVectorReference = std::reference_wrapper<const GenotypeVector>;
     
     PopulationModel() = delete;
     
-    PopulationModel(const CoalescentModel& genotype_prior_model);
+    PopulationModel(const PopulationPriorModel& prior_model,
+                    boost::optional<logging::DebugLogger> debug_log = boost::none);
+    PopulationModel(const PopulationPriorModel& prior_model,
+                    Options options,
+                    boost::optional<logging::DebugLogger> debug_log = boost::none);
     
     PopulationModel(const PopulationModel&)            = delete;
     PopulationModel& operator=(const PopulationModel&) = delete;
@@ -52,13 +60,20 @@ public:
     
     ~PopulationModel() = default;
     
-    InferredLatents infer_latents(const std::vector<SampleName>& samples,
-                                  const GenotypeVector& genotypes,
-                                  const std::vector<Haplotype>& haplotypes,
-                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    // All samples have same ploidy
+    InferredLatents evaluate(const SampleVector& samples,
+                             const GenotypeVector& genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    
+    // Samples have different ploidy
+    InferredLatents evaluate(const SampleVector& samples,
+                             const std::vector<GenotypeVectorReference>& genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
-    std::reference_wrapper<const CoalescentModel> genotype_prior_model_;
+    Options options_;
+    const PopulationPriorModel& prior_model_;
+    mutable boost::optional<logging::DebugLogger> debug_log_;
 };
 
 } // namesapce model

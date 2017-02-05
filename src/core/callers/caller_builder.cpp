@@ -148,7 +148,26 @@ CallerBuilder& CallerBuilder::set_indel_heterozygosity(double heterozygosity) no
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_min_genotype_combinations(unsigned min) noexcept
+{
+    params_.min_genotype_combinations = min;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_max_genotype_combinations(unsigned max) noexcept
+{
+    params_.max_genotype_combinations = max;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_max_reduction_mass(Phred<double> mass) noexcept
+{
+    params_.max_reduction_mass = mass;
+    return *this;
+}
+
 // cancer
+
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
 {
     params_.normal_sample = std::move(normal_sample);
@@ -220,6 +239,50 @@ Caller::Components CallerBuilder::make_components() const
     };
 }
 
+auto make_individual_prior_model(boost::optional<double> snp_heterozygosity,
+                                 boost::optional<double> indel_heterozygosity)
+{
+    using T = decltype(IndividualCaller::Parameters::prior_model_params);
+    if (snp_heterozygosity && indel_heterozygosity) {
+        return T {T::value_type {*snp_heterozygosity, *indel_heterozygosity}};
+    } else {
+        return T {};
+    }
+}
+
+auto make_population_prior_model(boost::optional<double> snp_heterozygosity,
+                                 boost::optional<double> indel_heterozygosity)
+{
+    using T = decltype(PopulationCaller::Parameters::prior_model_params);
+    if (snp_heterozygosity && indel_heterozygosity) {
+        return T {T::value_type {*snp_heterozygosity, *indel_heterozygosity}};
+    } else {
+        return T {};
+    }
+}
+
+auto make_cancer_prior_model(boost::optional<double> snp_heterozygosity,
+                             boost::optional<double> indel_heterozygosity)
+{
+    using T = decltype(CancerCaller::Parameters::germline_prior_model_params);
+    if (snp_heterozygosity && indel_heterozygosity) {
+        return T {T::value_type {*snp_heterozygosity, *indel_heterozygosity}};
+    } else {
+        return T {};
+    }
+}
+
+auto make_trio_prior_model(boost::optional<double> snp_heterozygosity,
+                           boost::optional<double> indel_heterozygosity)
+{
+    using T = decltype(TrioCaller::Parameters::germline_prior_model_params);
+    if (snp_heterozygosity && indel_heterozygosity) {
+        return T {T::value_type {*snp_heterozygosity, *indel_heterozygosity}};
+    } else {
+        return T {};
+    }
+}
+
 CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
 {
     Caller::Parameters general_parameters {
@@ -236,9 +299,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
             return std::make_unique<IndividualCaller>(make_components(),
                                                       std::move(general_parameters),
                                                       IndividualCaller::Parameters {
-                                                          params_.ploidies(samples.front(), *requested_contig_),
-                                                          {params_.snp_heterozygosity,
-                                                           params_.indel_heterozygosity},
+                                                          params_.ploidies.of(samples.front(), *requested_contig_),
+                                                          make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior
                                                       });
@@ -249,9 +311,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       PopulationCaller::Parameters {
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
-                                                          params_.ploidies(samples.front(), *requested_contig_),
-                                                          {params_.snp_heterozygosity,
-                                                           params_.indel_heterozygosity}
+                                                          get_ploidies(samples, *requested_contig_, params_.ploidies),
+                                                          make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
+                                                          params_.max_genotype_combinations,
                                                       });
         }},
         {"cancer", [this, general_parameters = std::move(general_parameters), &samples] () {
@@ -261,10 +323,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.min_variant_posterior,
                                                       params_.min_somatic_posterior,
                                                       params_.min_refcall_posterior,
-                                                      params_.ploidies(samples.front(), *requested_contig_),
+                                                      params_.ploidies.of(samples.front(), *requested_contig_),
                                                       params_.normal_sample,
-                                                      {params_.snp_heterozygosity,
-                                                      params_.indel_heterozygosity},
+                                                      make_cancer_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                       {params_.somatic_mutation_rate},
                                                       params_.min_expected_somatic_frequency,
                                                       params_.credible_mass,
@@ -276,14 +337,16 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                 std::move(general_parameters),
                                                 TrioCaller::Parameters {
                                                     *params_.trio,
-                                                    params_.ploidies(params_.trio->mother(), *requested_contig_),
-                                                    params_.ploidies(params_.trio->father(), *requested_contig_),
-                                                    params_.ploidies(params_.trio->child(), *requested_contig_),
-                                                    {params_.snp_heterozygosity,
-                                                     params_.indel_heterozygosity},
+                                                    params_.ploidies.of(params_.trio->mother(), *requested_contig_),
+                                                    params_.ploidies.of(params_.trio->father(), *requested_contig_),
+                                                    params_.ploidies.of(params_.trio->child(), *requested_contig_),
+                                                    make_trio_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                     {*params_.denovo_mutation_rate},
                                                     params_.min_variant_posterior,
                                                     params_.min_refcall_posterior,
+                                                    params_.min_genotype_combinations,
+                                                    params_.max_genotype_combinations,
+                                                    params_.max_reduction_mass
                                                 });
         }}
     };

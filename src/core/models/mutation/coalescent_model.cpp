@@ -3,6 +3,7 @@
 
 #include "coalescent_model.hpp"
 
+#include <memory>
 #include <stdexcept>
 
 #include "tandem/tandem.hpp"
@@ -12,17 +13,13 @@ namespace octopus {
 auto percent_of_bases_in_repeat(const Haplotype& haplotype)
 {
     const auto repeats = tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 6);
-    
     if (repeats.empty()) return 0.0;
-    
     std::vector<unsigned> repeat_counts(sequence_size(haplotype), 0);
-    
     for (const auto& repeat : repeats) {
-        const auto it1 = std::next(std::begin(repeat_counts), repeat.pos);
-        const auto it2 = std::next(it1, repeat.length);
-        std::transform(it1, it2, it1, [] (const auto c) { return c + 1; });
+        const auto itr1 = std::next(std::begin(repeat_counts), repeat.pos);
+        const auto itr2 = std::next(itr1, repeat.length);
+        std::transform(itr1, itr2, itr1, [] (const auto c) { return c + 1; });
     }
-    
     const auto c = std::count_if(std::cbegin(repeat_counts), std::cend(repeat_counts),
                                  [] (const auto c) { return c > 0; });
     return static_cast<double>(c) / repeat_counts.size();
@@ -32,50 +29,81 @@ auto calculate_base_indel_heterozygosities(const Haplotype& haplotype,
                                            const double base_indel_heterozygosity)
 {
     std::vector<double> result(sequence_size(haplotype), base_indel_heterozygosity);
-    
     const auto repeats = tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 3);
-    
     for (const auto& repeat : repeats) {
-        const auto it1 = std::next(std::begin(result), repeat.pos);
-        const auto it2 = std::next(it1, repeat.length);
+        const auto itr1 = std::next(std::begin(result), repeat.pos);
+        const auto itr2 = std::next(itr1, repeat.length);
         const auto n = repeat.length / repeat.period;
         // TODO: implement a proper model for this
         const auto t = std::min(base_indel_heterozygosity * std::pow(n, 2.6), 1.0);
-        std::transform(it1, it2, it1, [t] (const auto h) { return std::max(h, t); });
+        std::transform(itr1, itr2, itr1, [t] (const auto h) { return std::max(h, t); });
     }
-    
     return result;
 }
 
 CoalescentModel::CoalescentModel(Haplotype reference,
                                  Parameters params,
-                                 std::size_t num_haplotyes_hint)
+                                 std::size_t num_haplotyes_hint,
+                                 CachingStrategy caching)
 : reference_ {std::move(reference)}
 , reference_base_indel_heterozygosities_ {}
 , params_ {params}
+, caching_ {caching}
 {
     if (params_.snp_heterozygosity <= 0 || params_.indel_heterozygosity <= 0) {
         throw std::domain_error {"CoalescentModel: snp and indel heterozygosity must be > 0"};
     }
-    
     reference_base_indel_heterozygosities_ = calculate_base_indel_heterozygosities(reference_, params_.indel_heterozygosity);
-    
     site_buffer1_.reserve(128);
     site_buffer2_.reserve(128);
-    difference_cache_.reserve(num_haplotyes_hint);
-    difference_cache_.emplace(std::piecewise_construct,
-                              std::forward_as_tuple(reference_),
-                              std::forward_as_tuple());
+    if (caching == CachingStrategy::address) {
+        difference_address_cache_.reserve(num_haplotyes_hint);
+    } else if (caching_ == CachingStrategy::value) {
+        difference_value_cache_.reserve(num_haplotyes_hint);
+        difference_value_cache_.emplace(std::piecewise_construct,
+                                        std::forward_as_tuple(reference_),
+                                        std::forward_as_tuple());
+    }
     result_cache_.reserve(num_haplotyes_hint);
 }
 
 void CoalescentModel::set_reference(Haplotype reference)
 {
     reference_ = std::move(reference);
-    difference_cache_.clear();
-    difference_cache_.emplace(std::piecewise_construct,
-                              std::forward_as_tuple(reference_),
-                              std::forward_as_tuple());
+    if (caching_ == CachingStrategy::address) {
+        difference_address_cache_.clear();
+    } else if (caching_ == CachingStrategy::value) {
+        difference_value_cache_.clear();
+        difference_value_cache_.emplace(std::piecewise_construct,
+                                        std::forward_as_tuple(reference_),
+                                        std::forward_as_tuple());
+    }
+}
+
+void CoalescentModel::fill_site_buffer_from_value_cache(const Haplotype& haplotype) const
+{
+    auto itr = difference_value_cache_.find(haplotype);
+    if (itr == std::cend(difference_value_cache_)) {
+        itr = difference_value_cache_.emplace(std::piecewise_construct,
+                                              std::forward_as_tuple(haplotype),
+                                              std::forward_as_tuple(haplotype.difference(reference_))).first;
+    }
+    std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
+                   std::cbegin(itr->second), std::cend(itr->second),
+                   std::back_inserter(site_buffer2_));
+}
+
+void CoalescentModel::fill_site_buffer_from_address_cache(const Haplotype& haplotype) const
+{
+    auto itr = difference_address_cache_.find(std::addressof(haplotype));
+    if (itr == std::cend(difference_address_cache_)) {
+        itr = difference_address_cache_.emplace(std::piecewise_construct,
+                                                std::forward_as_tuple(std::addressof(haplotype)),
+                                                std::forward_as_tuple(haplotype.difference(reference_))).first;
+    }
+    std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
+                   std::cbegin(itr->second), std::cend(itr->second),
+                   std::back_inserter(site_buffer2_));
 }
 
 } // namespace octopus

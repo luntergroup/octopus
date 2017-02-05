@@ -388,6 +388,26 @@ auto find_first_after(const Container& mappables, const MappableTp& mappable)
     return find_first_after(std::cbegin(mappables), std::cend(mappables), mappable);
 }
 
+// find_next_mutually_exclusive
+
+/**
+ Returns the next mappable after first that is mutually exclusive from first, or last.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIt>
+auto find_next_mutually_exclusive(ForwardIt first, ForwardIt last)
+{
+    auto rightmost = first++;
+    for (; first != last; ++first) {
+        if (!overlaps(*first, *rightmost)) break;
+        if (ends_before(*rightmost, *first)) {
+            rightmost = first;
+        }
+    }
+    return first;
+}
+
 // overlap_range
 
 /**
@@ -1354,7 +1374,7 @@ auto encompassing_region(const Container& mappables)
     return encompassing_region(leftmost_region(mappables), rightmost_region(mappables));
 }
 
-// extract_*_regions
+// extract/count_*_regions
 
 namespace detail {
 
@@ -1384,9 +1404,35 @@ auto extract_overlapping_regions(ForwardIt first, const ForwardIt last, Compare 
     return result;
 }
 
+template <typename ForwardIt, typename Compare>
+auto count_overlapping_regions(ForwardIt first, const ForwardIt last, Compare cmp)
+{
+    using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
+    static_assert(is_region_or_mappable<MappableTp>, "Mappable required");
+    std::size_t result {0};
+    if (first == last) return result;
+    auto prev_region_end = mapped_end(*first);
+    auto first_overlapped = first;
+    auto rightmost        = first;
+    for (; first != last; ++first) {
+        if (cmp(mapped_begin(*first), mapped_end(*rightmost))) {
+            if (result == 0 || prev_region_end != mapped_end(*rightmost)) {
+                ++result;
+                prev_region_end = mapped_end(*rightmost);
+            }
+            rightmost        = first;
+            first_overlapped = first;
+        } else if (ends_before(*rightmost, *first)) {
+            rightmost = first;
+        }
+    }
+    ++result;
+    return result;
+}
+
 } // namespace detail
 
-// extract_covered_regions
+// extract/count_covered_regions
 
 /**
  Returns the minimal range of non-overlapping regions such that each element in the range [first, last)
@@ -1407,6 +1453,21 @@ template <typename Container>
 auto extract_covered_regions(const Container& mappables)
 {
     return extract_covered_regions(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename ForwardIt>
+auto count_covered_regions(ForwardIt first, ForwardIt last)
+{
+    return detail::count_overlapping_regions(first, last,
+                                             [] (const auto& a, const auto b) {
+                                                 return a > b;
+                                             });
+}
+
+template <typename Container>
+auto count_covered_regions(const Container& mappables)
+{
+    return count_covered_regions(std::cbegin(mappables), std::cend(mappables));
 }
 
 // extract_mutually_exclusive_regions
@@ -1431,6 +1492,21 @@ template <typename Container>
 auto extract_mutually_exclusive_regions(const Container& mappables)
 {
     return extract_mutually_exclusive_regions(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename ForwardIt>
+auto count_mutually_exclusive_regions(ForwardIt first, const ForwardIt last)
+{
+    return detail::count_overlapping_regions(first, last,
+                                             [] (const auto& a, const auto b) {
+                                                 return a >= b;
+                                             });
+}
+
+template <typename Container>
+auto count_mutually_exclusive_regions(const Container& mappables)
+{
+    return count_mutually_exclusive_regions(std::cbegin(mappables), std::cend(mappables));
 }
 
 // extract_intervening_regions

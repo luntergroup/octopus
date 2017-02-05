@@ -8,11 +8,11 @@
 #include <unordered_map>
 #include <utility>
 
+#include "cancer_genotype_prior_model.hpp"
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/models/haplotype_likelihood_cache.hpp"
 #include "core/types/cancer_genotype.hpp"
-#include "core/models/mutation/somatic_mutation_model.hpp"
 
 namespace octopus { namespace model
 {
@@ -32,7 +32,7 @@ public:
         using GenotypeMixturesDirichletAlphas   = std::vector<double>;
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
         
-        SomaticMutationModel genotype_prior_model;
+        CancerGenotypePriorModel genotype_prior_model;
         GenotypeMixturesDirichletAlphaMap alphas;
     };
     
@@ -67,8 +67,8 @@ public:
     TumourModel(TumourModel&&)                 = default;
     TumourModel& operator=(TumourModel&&)      = default;
     
-    InferredLatents infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
-                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    InferredLatents evaluate(std::vector<CancerGenotype<Haplotype>> genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
     std::vector<SampleName> samples_;
