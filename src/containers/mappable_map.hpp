@@ -135,6 +135,16 @@ count_contained(const MappableMap<KeyType, typename Container::value_type, Conta
 }
 
 template <typename KeyType, typename Container, typename MappableType2, typename MappableType3>
+bool all_shared(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                const MappableType2& mappable1, const MappableType3& mappable2)
+{
+    return std::all_of(std::cbegin(mappables), std::cend(mappables),
+                       [&mappable1, &mappable2] (const auto& p) {
+                           return p.second.has_shared(mappable1, mappable2);
+                       });
+}
+
+template <typename KeyType, typename Container, typename MappableType2, typename MappableType3>
 bool has_shared(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
                 const MappableType2& mappable1, const MappableType3& mappable2)
 {

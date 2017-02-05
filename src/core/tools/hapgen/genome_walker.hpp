@@ -15,7 +15,7 @@ namespace octopus {
 
 class GenomicRegion;
 class Variant;
-    
+
 namespace coretools {
 
 class GenomeWalker
@@ -26,14 +26,15 @@ public:
     enum class IndicatorPolicy
     {
         includeNone,
-        includeIfLinkableToNovelRegion,
         includeIfSharedWithNovelRegion,
+        includeIfLinkableToNovelRegion,
         includeAll
     };
     enum class ExtensionPolicy
     {
         includeIfWithinReadLengthOfFirstIncluded,
-        includeIfSharedWithFrontier,
+        includeIfAllSamplesSharedWithFrontier,
+        includeIfAnySampleSharedWithFrontier,
         noLimit
     };
     
@@ -41,7 +42,7 @@ public:
     
     GenomeWalker(unsigned max_included,
                  IndicatorPolicy indicator_policy = IndicatorPolicy::includeNone,
-                 ExtensionPolicy extension_policy = ExtensionPolicy::includeIfSharedWithFrontier);
+                 ExtensionPolicy extension_policy = ExtensionPolicy::includeIfAnySampleSharedWithFrontier);
     
     GenomeWalker(const GenomeWalker&)            = default;
     GenomeWalker& operator=(const GenomeWalker&) = default;

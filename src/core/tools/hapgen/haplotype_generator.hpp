@@ -37,6 +37,7 @@ public:
     struct Policies
     {
         enum class Lagging { none, conservative, aggressive } lagging = Lagging::none;
+        enum class Extension { conservative, normal, optimistic, aggressive } extension = Extension::normal;
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         unsigned max_holdout_depth = 2;
     };
@@ -209,6 +210,7 @@ public:
     ~Builder() = default;
     
     Builder& set_lagging_policy(Policies::Lagging policy) noexcept;
+    Builder& set_extension_policy(Policies::Extension policy) noexcept;
     
     Builder& set_target_limit(unsigned n) noexcept;
     Builder& set_holdout_limit(unsigned n) noexcept;

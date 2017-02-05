@@ -123,15 +123,17 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
     }
     assert(num_included > 0);
     auto first_excluded_itr = next(included_itr, num_included);
-    while (--num_included > 0 &&
-           is_optimal_to_extend(first_included_itr, next(included_itr), first_excluded_itr,
-                                last_allele_itr, reads, num_included + num_excluded_alleles)) {
-               if (extension_policy_ == ExtensionPolicy::includeIfSharedWithFrontier
-                   && !has_shared(reads, *included_itr, *next(included_itr))) {
-                   break;
-               }
-               ++included_itr;
-           }
+    while (--num_included > 0 && is_optimal_to_extend(first_included_itr, next(included_itr), first_excluded_itr,
+                                                      last_allele_itr, reads, num_included + num_excluded_alleles)) {
+        if (extension_policy_ == ExtensionPolicy::includeIfAllSamplesSharedWithFrontier
+            && !all_shared(reads, *included_itr, *next(included_itr))) {
+            break;
+        } else if (extension_policy_ == ExtensionPolicy::includeIfAnySampleSharedWithFrontier
+            && !has_shared(reads, *included_itr, *next(included_itr))) {
+            break;
+        }
+        ++included_itr;
+    }
     const auto rightmost = rightmost_mappable(first_included_itr, next(included_itr));
     const auto first_exclusive = find_next_mutually_exclusive(rightmost, last_allele_itr);
     return encompassing_region(first_included_itr, first_exclusive);

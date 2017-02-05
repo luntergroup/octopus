@@ -1030,6 +1030,17 @@ bool call_sites_only(const OptionMap& options)
     return options.at("sites-only").as<bool>();
 }
 
+auto get_extension_policy(const OptionMap& options)
+{
+    using ExtensionPolicy = HaplotypeGenerator::Builder::Policies::Extension;
+    switch (options.at("extension-level").as<ExtensionLevel>()) {
+    case ExtensionLevel::conservative: return ExtensionPolicy::conservative;
+    case ExtensionLevel::normal: return ExtensionPolicy::normal;
+    case ExtensionLevel::optimistic: return ExtensionPolicy::optimistic;
+    case ExtensionLevel::aggressive: return ExtensionPolicy::aggressive;
+    }
+}
+
 auto get_lagging_policy(const OptionMap& options)
 {
     using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
@@ -1057,7 +1068,7 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     const auto holdout_limit     = as_unsigned("haplotype-holdout-threshold", options);
     const auto overflow_limit    = as_unsigned("haplotype-overflow", options);
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
-    return HaplotypeGenerator::Builder()
+    return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options))
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
 }
