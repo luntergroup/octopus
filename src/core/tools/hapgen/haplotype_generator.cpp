@@ -70,7 +70,7 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy)
 
 auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy)
 {
-    using HGP = HaplotypeGenerator::Policies::Lagging ;
+    using HGP = HaplotypeGenerator::Policies::Lagging;
     using GWP = GenomeWalker::IndicatorPolicy;
     switch (policy) {
     case HGP::none: return GWP::includeNone;
