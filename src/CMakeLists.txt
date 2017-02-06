@@ -247,10 +247,18 @@ set(CORE_SOURCES
 
     core/models/mutation/hiseq_indel_error_model.hpp
     core/models/mutation/hiseq_indel_error_model.cpp
+    core/models/mutation/x10_indel_error_model.hpp
+    core/models/mutation/x10_indel_error_model.cpp
     core/models/mutation/indel_error_model.hpp
     core/models/mutation/indel_error_model.cpp
     core/models/mutation/snv_error_model.hpp
     core/models/mutation/snv_error_model.cpp
+    core/models/mutation/hiseq_snv_error_model.hpp
+    core/models/mutation/hiseq_snv_error_model.cpp
+    core/models/mutation/x10_snv_error_model.hpp
+    core/models/mutation/x10_snv_error_model.cpp
+    core/models/mutation/error_model_factory.hpp
+    core/models/mutation/error_model_factory.cpp
     core/models/mutation/somatic_mutation_model.hpp
     core/models/mutation/somatic_mutation_model.cpp
     core/models/mutation/coalescent_model.hpp
