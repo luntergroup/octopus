@@ -401,7 +401,7 @@ auto find_next_mutually_exclusive(ForwardIt first, ForwardIt last)
     auto rightmost = first++;
     for (; first != last; ++first) {
         if (!overlaps(*first, *rightmost)) break;
-        if (ends_before(*rightmost, *first)) {
+        if (!ends_before(*first, *rightmost)) {
             rightmost = first;
         }
     }
@@ -1389,13 +1389,13 @@ auto extract_overlapping_regions(ForwardIt first, const ForwardIt last, Compare 
     auto first_overlapped = first;
     auto rightmost        = first;
     for (; first != last; ++first) {
-        if (cmp(mapped_begin(*first), mapped_end(*rightmost))) {
+        if (cmp(*first, *rightmost)) {
             if (result.empty() || !ends_equal(result.back(), *rightmost)) {
                 result.push_back(closed_region(*first_overlapped, *rightmost));
             }
             rightmost        = first;
             first_overlapped = first;
-        } else if (ends_before(*rightmost, *first)) {
+        } else if (!ends_before(*first, *rightmost)) {
             rightmost = first;
         }
     }
@@ -1415,20 +1415,23 @@ auto count_overlapping_regions(ForwardIt first, const ForwardIt last, Compare cm
     auto first_overlapped = first;
     auto rightmost        = first;
     for (; first != last; ++first) {
-        if (cmp(mapped_begin(*first), mapped_end(*rightmost))) {
+        if (cmp(*first, *rightmost)) {
             if (result == 0 || prev_region_end != mapped_end(*rightmost)) {
                 ++result;
                 prev_region_end = mapped_end(*rightmost);
             }
             rightmost        = first;
             first_overlapped = first;
-        } else if (ends_before(*rightmost, *first)) {
+        } else if (!ends_before(*first, *rightmost)) {
             rightmost = first;
         }
     }
     ++result;
     return result;
 }
+
+const auto is_new_covered_region = [] (const auto& a, const auto& b) { return mapped_begin(a) > mapped_end(b); };
+const auto is_new_mutually_exclusive_region = [] (const auto& a, const auto& b) { return !overlaps(a, b); };
 
 } // namespace detail
 
@@ -1443,10 +1446,7 @@ auto count_overlapping_regions(ForwardIt first, const ForwardIt last, Compare cm
 template <typename ForwardIt>
 auto extract_covered_regions(ForwardIt first, ForwardIt last)
 {
-    return detail::extract_overlapping_regions(first, last,
-                                               [] (const auto& a, const auto b) {
-                                                   return a > b;
-                                               });
+    return detail::extract_overlapping_regions(first, last, detail::is_new_covered_region);
 }
 
 template <typename Container>
@@ -1458,10 +1458,7 @@ auto extract_covered_regions(const Container& mappables)
 template <typename ForwardIt>
 auto count_covered_regions(ForwardIt first, ForwardIt last)
 {
-    return detail::count_overlapping_regions(first, last,
-                                             [] (const auto& a, const auto b) {
-                                                 return a > b;
-                                             });
+    return detail::count_overlapping_regions(first, last, detail::is_new_covered_region);
 }
 
 template <typename Container>
@@ -1482,10 +1479,7 @@ auto count_covered_regions(const Container& mappables)
 template <typename ForwardIt>
 auto extract_mutually_exclusive_regions(ForwardIt first, const ForwardIt last)
 {
-    return detail::extract_overlapping_regions(first, last,
-                                               [] (const auto& a, const auto b) {
-                                                   return a >= b;
-                                               });
+    return detail::extract_overlapping_regions(first, last, detail::is_new_mutually_exclusive_region);
 }
 
 template <typename Container>
@@ -1497,10 +1491,7 @@ auto extract_mutually_exclusive_regions(const Container& mappables)
 template <typename ForwardIt>
 auto count_mutually_exclusive_regions(ForwardIt first, const ForwardIt last)
 {
-    return detail::count_overlapping_regions(first, last,
-                                             [] (const auto& a, const auto b) {
-                                                 return a >= b;
-                                             });
+    return detail::count_overlapping_regions(first, last, detail::is_new_mutually_exclusive_region);
 }
 
 template <typename Container>
