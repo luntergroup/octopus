@@ -178,23 +178,21 @@ auto get_passed_region(const GenomicRegion& active_region,
 {
     auto result = active_region;
     if (next_active_region) {
-        result = *overlapped_region(result, left_overhang_region(result, *next_active_region));
+        result = left_overhang_region(result, *next_active_region);
     }
     if (backtrack_region) {
-        result = *overlapped_region(result, left_overhang_region(result, *backtrack_region));
+        result = left_overhang_region(result, *backtrack_region);
     }
     return result;
 }
 
 auto get_uncalled_region(const GenomicRegion& active_region,
                          const GenomicRegion& passed_region,
-                         const boost::optional<GenomicRegion>& prev_called_region,
+                         const GenomicRegion& completed_region,
                          const boost::optional<Phaser::PhaseSet>& phase_set)
 {
     auto result = *overlapped_region(active_region, passed_region);
-    if (prev_called_region) {
-        result = *overlapped_region(result, right_overhang_region(result, *prev_called_region));
-    }
+    result = *overlapped_region(result, right_overhang_region(result, completed_region));
     if (phase_set && ends_before(phase_set->region, passed_region)) {
         result = *overlapped_region(result, right_overhang_region(passed_region, phase_set->region));
     }
@@ -621,9 +619,8 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         
         if (have_callable_region(active_region, next_active_region, backtrack_region, call_region)) {
             const auto passed_region = get_passed_region(active_region, next_active_region, backtrack_region);
-            const auto uncalled_region = get_uncalled_region(active_region, passed_region, prev_called_region, phase_set);
-            auto active_candidates = extract_callable_variants(candidates, uncalled_region, prev_called_region,
-                                                               next_active_region);
+            const auto uncalled_region = get_uncalled_region(active_region, passed_region, completed_region, phase_set);
+            auto active_candidates = extract_callable_variants(candidates, uncalled_region, prev_called_region, next_active_region);
             std::vector<GenomicRegion> called_regions;
             if (!active_candidates.empty()) {
                 if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
