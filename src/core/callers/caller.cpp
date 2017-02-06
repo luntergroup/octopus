@@ -229,7 +229,15 @@ bool is_rhs_boundry_insertion(const Variant& variant, const GenomicRegion& regio
 bool has_interacting_insertion(const GenomicRegion& insertion_region,
                                const MappableFlatSet<Variant>& candidates)
 {
-    const auto overlapped = overlap_range(candidates, insertion_region);
+    auto overlapped = overlap_range(candidates, insertion_region);
+    // Overlapped non-insertions to the left of insertion_region can be safely ignored
+    // as active region boundary alleles are guaranteed not to have interacting callable alleles
+    // on *both* sides. However, this does not mean there are no such candidates; there may be
+    // candidate alleles on the lhs that have been removed via haplotype reduction. These must be
+    // ignored.
+    while (!empty(overlapped) && begins_before(overlapped.front(), insertion_region)) {
+        overlapped.advance_begin(1);
+    }
     return !empty(overlapped) && is_empty_region(overlapped.front()) && !is_empty_region(overlapped.back());
 }
 
