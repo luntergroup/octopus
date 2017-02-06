@@ -186,6 +186,37 @@ auto get_passed_region(const GenomicRegion& active_region,
     return result;
 }
 
+auto get_uncalled_region(const GenomicRegion& active_region,
+                         const GenomicRegion& passed_region,
+                         const boost::optional<GenomicRegion>& prev_called_region)
+{
+    auto result = *overlapped_region(active_region, passed_region);
+    if (prev_called_region) {
+        result = right_overhang_region(result, *prev_called_region);
+    }
+    return result;
+}
+
+bool is_lhs_boundry_insertion(const Variant& variant, const GenomicRegion& region)
+{
+    return is_empty_region(variant) && begins_equal(variant, region);
+}
+
+bool has_noninteracting_insertion(const GenomicRegion& insertion_region,
+                                  const MappableFlatSet<Variant>& candidates)
+{
+    const auto overlapped = overlap_range(candidates, insertion_region);
+    return !empty(overlapped) && is_empty_region(overlapped.front()) && is_empty_region(overlapped.back());
+}
+
+bool can_remove_lhs_boundary_insertions(const GenomicRegion& uncalled_active_region,
+                                        const boost::optional<GenomicRegion>& prev_called_region,
+                                        const MappableFlatSet<Variant>& candidates)
+{
+    return prev_called_region && are_adjacent(*prev_called_region, uncalled_active_region)
+           && has_noninteracting_insertion(head_region(uncalled_active_region), candidates);
+}
+
 bool is_rhs_boundry_insertion(const Variant& variant, const GenomicRegion& region)
 {
     return is_empty_region(variant) && ends_equal(variant, region);
@@ -198,23 +229,12 @@ bool has_interacting_insertion(const GenomicRegion& insertion_region,
     return !empty(overlapped) && is_empty_region(overlapped.front()) && !is_empty_region(overlapped.back());
 }
 
-bool remove_rhs_boundary_insertions(const GenomicRegion& uncalled_active_region,
-                                    const boost::optional<GenomicRegion>& next_active_region,
-                                    const MappableFlatSet<Variant>& candidates)
+bool can_remove_rhs_boundary_insertions(const GenomicRegion& uncalled_active_region,
+                                        const boost::optional<GenomicRegion>& next_active_region,
+                                        const MappableFlatSet<Variant>& candidates)
 {
     return next_active_region && are_adjacent(uncalled_active_region, *next_active_region)
            && has_interacting_insertion(tail_region(uncalled_active_region), candidates);
-}
-
-bool is_lhs_boundry_insertion(const Variant& variant, const GenomicRegion& region)
-{
-    return is_empty_region(variant) && begins_equal(variant, region);
-}
-
-bool remove_lhs_boundary_insertions(const GenomicRegion& uncalled_active_region,
-                                    const boost::optional<GenomicRegion>& prev_called_region) noexcept
-{
-    return prev_called_region && are_adjacent(*prev_called_region, uncalled_active_region);
 }
 
 template <typename R>
@@ -228,13 +248,14 @@ void remove_duplicate_boundary_insertions(R& contained, const MappableFlatSet<Va
     // It is usually better to keep those at the back as they have better posterior resolution, but
     // if there are other (non insertion) candidates overlapping with the insertion, then we must
     // keep front insertions as they must be called in phase with the interacting non-insertion.
-    if (remove_rhs_boundary_insertions(uncalled_active_region, next_active_region, candidates)) {
-        while (!empty(contained) && is_rhs_boundry_insertion(contained.back(), uncalled_active_region)) {
-            contained.advance_end(-1);
-        }
-    } else if (remove_lhs_boundary_insertions(uncalled_active_region, prev_called_region)) {
+    if (can_remove_lhs_boundary_insertions(uncalled_active_region, prev_called_region, candidates)) {
         while (!empty(contained) && is_lhs_boundry_insertion(contained.front(), uncalled_active_region)) {
             contained.advance_begin(1);
+        }
+    }
+    if (can_remove_rhs_boundary_insertions(uncalled_active_region, next_active_region, candidates)) {
+        while (!empty(contained) && is_rhs_boundry_insertion(contained.back(), uncalled_active_region)) {
+            contained.advance_end(-1);
         }
     }
 }
@@ -588,7 +609,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         
         if (have_callable_region(active_region, next_active_region, backtrack_region, call_region)) {
             const auto passed_region = get_passed_region(active_region, next_active_region, backtrack_region);
-            auto uncalled_region = *overlapped_region(active_region, passed_region);
+            auto uncalled_region = get_uncalled_region(active_region, passed_region, prev_called_region);
             if (phase_set && ends_before(phase_set->region, passed_region)) {
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);
             }
