@@ -32,11 +32,33 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion::ContigName& contig,
     return walk(GenomicRegion {contig, 0, 0}, reads, alleles);
 }
 
+namespace {
+
+template <typename BidirIt>
+bool is_sandwich_allele(BidirIt allele_itr)
+{
+    return overlaps(*std::prev(allele_itr), *allele_itr) && overlaps(*allele_itr, *std::next(allele_itr));
+}
+
+template <typename BidirIt>
+auto get_first_included(const BidirIt first_previous_itr, const BidirIt first_included,
+                        const unsigned num_indicators)
+{
+    auto result = first_included;
+    if (num_indicators > 0) {
+        result = std::prev(result, num_indicators);
+        if (result != first_previous_itr && is_sandwich_allele(result)) {
+            result = find_next_mutually_exclusive(result, first_included);
+        }
+    }
+    return result;
+}
+
 template <typename BidirIt>
 bool is_close(const BidirIt proposed_included, const BidirIt first_excluded)
 {
     return inner_distance(*std::prev(proposed_included), *proposed_included)
-                <= inner_distance(*proposed_included, *first_excluded);
+           <= inner_distance(*proposed_included, *first_excluded);
 }
 
 template <typename BidirIt>
@@ -54,7 +76,9 @@ bool is_optimal_to_extend(const BidirIt first_included, const BidirIt proposed_i
     if (proposed_included == last) return false;
     if (first_excluded == last) return true;
     return !increases_density(proposed_included, last, reads, max_density_increase)
-            || is_close(proposed_included, first_excluded);
+           || is_close(proposed_included, first_excluded);
+}
+
 }
 
 GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
@@ -110,7 +134,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
             num_indicators = static_cast<unsigned>(distance(first_previous_itr, included_itr));
             break;
     }
-    auto first_included_itr = prev(included_itr, num_indicators);
+    auto first_included_itr = get_first_included(first_previous_itr, included_itr, num_indicators);
     auto num_remaining_alleles = static_cast<unsigned>(distance(included_itr, last_allele_itr));
     unsigned num_excluded_alleles {0};
     auto num_included = max_included_;
