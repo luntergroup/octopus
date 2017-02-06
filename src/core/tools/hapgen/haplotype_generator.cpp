@@ -371,31 +371,6 @@ unsigned extend_novel(HaplotypeTree& tree, const std::vector<GenomicRegion>& nov
     return num_novel_regions_added;
 }
 
-template <typename ForwardIt, typename BinaryPredicate>
-ForwardIt remove_pairwise(ForwardIt first, ForwardIt last, BinaryPredicate pred)
-{
-    first = std::adjacent_find(first, last, pred);
-    if (first != last) {
-        auto itr = first;
-        for (auto next = std::next(itr); next != last; ++itr, ++next) {
-            if (!pred(*itr, *next)) {
-                *first++ = std::move(*itr);
-            }
-        }
-        *first++ = std::move(*itr);
-    }
-    return first;
-}
-
-void remove_edge_insertions(std::vector<GenomicRegion>& regions)
-{
-    auto itr = remove_pairwise(std::begin(regions), std::end(regions),
-                               [] (const auto& lhs, const auto& rhs) {
-                                   return is_empty(lhs) && are_adjacent(lhs, rhs);
-                               });
-    regions.erase(itr, std::end(regions));
-}
-
 void HaplotypeGenerator::update_lagged_next_active_region() const
 {
     if (contains(active_region_, rightmost_allele_)) {
@@ -428,7 +403,6 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         const auto indicator_alleles = contained_range(alleles_, indicator_region);
         if (!indicator_alleles.empty()) {
             auto mutually_exclusive_indicator_regions = extract_mutually_exclusive_regions(indicator_alleles);
-            remove_edge_insertions(mutually_exclusive_indicator_regions);
             if (mutually_exclusive_indicator_regions.back() == mutually_exclusive_novel_regions.front()) {
                 assert(is_empty(mutually_exclusive_novel_regions.front()));
                 pop_front(mutually_exclusive_novel_regions);
