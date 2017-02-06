@@ -178,21 +178,25 @@ auto get_passed_region(const GenomicRegion& active_region,
 {
     auto result = active_region;
     if (next_active_region) {
-        result = left_overhang_region(result, *next_active_region);
+        result = *overlapped_region(result, left_overhang_region(result, *next_active_region));
     }
     if (backtrack_region) {
-        result = left_overhang_region(result, *backtrack_region);
+        result = *overlapped_region(result, left_overhang_region(result, *backtrack_region));
     }
     return result;
 }
 
 auto get_uncalled_region(const GenomicRegion& active_region,
                          const GenomicRegion& passed_region,
-                         const boost::optional<GenomicRegion>& prev_called_region)
+                         const boost::optional<GenomicRegion>& prev_called_region,
+                         const boost::optional<Phaser::PhaseSet>& phase_set)
 {
     auto result = *overlapped_region(active_region, passed_region);
     if (prev_called_region) {
-        result = right_overhang_region(result, *prev_called_region);
+        result = *overlapped_region(result, right_overhang_region(result, *prev_called_region));
+    }
+    if (phase_set && ends_before(phase_set->region, passed_region)) {
+        result = *overlapped_region(result, right_overhang_region(passed_region, phase_set->region));
     }
     return result;
 }
@@ -609,10 +613,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         
         if (have_callable_region(active_region, next_active_region, backtrack_region, call_region)) {
             const auto passed_region = get_passed_region(active_region, next_active_region, backtrack_region);
-            auto uncalled_region = get_uncalled_region(active_region, passed_region, prev_called_region);
-            if (phase_set && ends_before(phase_set->region, passed_region)) {
-                uncalled_region = right_overhang_region(passed_region, phase_set->region);
-            }
+            const auto uncalled_region = get_uncalled_region(active_region, passed_region, prev_called_region, phase_set);
             auto active_candidates = extract_callable_variants(candidates, uncalled_region, prev_called_region,
                                                                next_active_region);
             std::vector<GenomicRegion> called_regions;
@@ -633,7 +634,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                         }
                     }
                     called_regions = extract_covered_regions(variant_calls);
-                    prev_called_region = encompassing_region(called_regions);
                     
                     resume(phasing_timer);
                     const auto phase = phaser_.force_phase(haplotypes, *caller_latents->genotype_posteriors(),
@@ -649,6 +649,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                     pause(misc_timer[3]);
                 }
             }
+            prev_called_region = uncalled_region;
             if (refcalls_requested()) {
                 auto alleles = generate_candidate_reference_alleles(uncalled_region, active_candidates, called_regions);
                 auto reference_calls = wrap(this->call_reference(alleles, *caller_latents, reads));
