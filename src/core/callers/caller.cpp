@@ -42,7 +42,6 @@ Caller::Caller(Components&& components, Parameters parameters)
     if (parameters_.max_haplotypes == 0) {
         throw std::logic_error {"Caller: max haplotypes must be > 0"};
     }
-    
     if (DEBUG_MODE) {
         debug_log_ = logging::DebugLogger {};
     }
@@ -62,71 +61,73 @@ Caller::CallTypeSet Caller::call_types() const
 }
 
 namespace debug {
-    template <typename S>
-    void print_left_aligned_candidates(S&& stream, const std::vector<Variant>& raw_candidates,
-                                       const ReferenceGenome& reference);
-    void print_left_aligned_candidates(const std::vector<Variant>& raw_candidates,
-                                       const ReferenceGenome& reference);
-    
-    template <typename S>
-    void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
-                                bool number_only = false);
-    void print_final_candidates(const MappableFlatSet<Variant>& candidates,
-                                bool number_only = false);
-    
-    template <typename S>
-    void print_active_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
-                                 const GenomicRegion& active_region, bool number_only = false);
-    void print_active_candidates(const MappableFlatSet<Variant>& candidates,
-                                 const GenomicRegion& active_region, bool number_only = false);
-    
-    template <typename S>
-    void print_inactive_flanking_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
-                                            const GenomicRegion& active_region,
-                                            const GenomicRegion& haplotype_region,
-                                            bool number_only = false);
-    void print_inactive_flanking_candidates(const MappableFlatSet<Variant>& candidates,
-                                            const GenomicRegion& active_region,
-                                            const GenomicRegion& haplotype_region,
-                                            bool number_only = false);
-    
-    enum class Resolution {
-        sequence, alleles, variantAlleles,
-        sequenceAndAlleles, SequenceAndVariantAlleles
-    };
-    
-    template <typename S>
-    void print_haplotypes(S&& stream, const std::vector<Haplotype>& haplotypes,
-                          Resolution resolution = Resolution::sequenceAndAlleles);
-    void print_haplotypes(const std::vector<Haplotype>& haplotypes,
-                          Resolution resolution = Resolution::sequenceAndAlleles);
-    
-    template <typename S, typename Map>
-    void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n = 5);
-    template <typename Map>
-    void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 5);
-    
-    auto find_read(const std::string& region, const std::string& cigar_str,
-                   const ReadContainer& reads);
-    
-    auto find_read(const SampleName& sample, const std::string& region,
-                   const std::string& cigar_str, const ReadMap& reads);
-    
-    auto find_first_read(const std::string& region, const std::string& cigar_str,
-                         const ReadMap& reads);
-    
-    double calculate_likelihood(const Haplotype& haplotype, const AlignedRead& read,
-                                const HaplotypeLikelihoodModel::FlankState flank_state);
-    
-    void run_likelihood_calculation(const std::string& haplotype_str,
-                                    const std::string& haplotype_region,
-                                    const std::string& active_region,
-                                    const std::string& read_region,
-                                    const std::string& cigar_str,
-                                    const ReadMap& reads,
-                                    const MappableFlatSet<Variant>& candidates,
-                                    const ReferenceGenome& reference);
-}
+
+template <typename S>
+void print_left_aligned_candidates(S&& stream, const std::vector<Variant>& raw_candidates,
+                                   const ReferenceGenome& reference);
+void print_left_aligned_candidates(const std::vector<Variant>& raw_candidates,
+                                   const ReferenceGenome& reference);
+
+template <typename S>
+void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
+                            bool number_only = false);
+void print_final_candidates(const MappableFlatSet<Variant>& candidates,
+                            bool number_only = false);
+
+template <typename S>
+void print_active_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
+                             const GenomicRegion& active_region, bool number_only = false);
+void print_active_candidates(const MappableFlatSet<Variant>& candidates,
+                             const GenomicRegion& active_region, bool number_only = false);
+
+template <typename S>
+void print_inactive_flanking_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
+                                        const GenomicRegion& active_region,
+                                        const GenomicRegion& haplotype_region,
+                                        bool number_only = false);
+void print_inactive_flanking_candidates(const MappableFlatSet<Variant>& candidates,
+                                        const GenomicRegion& active_region,
+                                        const GenomicRegion& haplotype_region,
+                                        bool number_only = false);
+
+enum class Resolution {
+    sequence, alleles, variantAlleles,
+    sequenceAndAlleles, SequenceAndVariantAlleles
+};
+
+template <typename S>
+void print_haplotypes(S&& stream, const std::vector<Haplotype>& haplotypes,
+                      Resolution resolution = Resolution::sequenceAndAlleles);
+void print_haplotypes(const std::vector<Haplotype>& haplotypes,
+                      Resolution resolution = Resolution::sequenceAndAlleles);
+
+template <typename S, typename Map>
+void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n = 5);
+template <typename Map>
+void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 5);
+
+auto find_read(const std::string& region, const std::string& cigar_str,
+               const ReadContainer& reads);
+
+auto find_read(const SampleName& sample, const std::string& region,
+               const std::string& cigar_str, const ReadMap& reads);
+
+auto find_first_read(const std::string& region, const std::string& cigar_str,
+                     const ReadMap& reads);
+
+double calculate_likelihood(const Haplotype& haplotype, const AlignedRead& read,
+                            const HaplotypeLikelihoodModel::FlankState flank_state);
+
+void run_likelihood_calculation(const std::string& haplotype_str,
+                                const std::string& haplotype_region,
+                                const std::string& active_region,
+                                const std::string& read_region,
+                                const std::string& cigar_str,
+                                const ReadMap& reads,
+                                const MappableFlatSet<Variant>& candidates,
+                                const ReferenceGenome& reference);
+
+} // namespace debug
 
 auto copy_contained_to_vector(const MappableFlatSet<Variant>& candidates, const GenomicRegion& region)
 {
@@ -328,9 +329,7 @@ auto unwrap(std::deque<CallWrapper>&& calls)
 void set_phase(const SampleName& sample, const Phaser::PhaseSet::PhaseRegion& phase,
                const std::vector<GenomicRegion>& call_regions, CallWrapper& call)
 {
-    const auto overlapped = overlap_range(call_regions, phase.mapped_region(),
-                                          BidirectionallySortedTag {});
-    
+    const auto overlapped = overlap_range(call_regions, phase.mapped_region(), BidirectionallySortedTag {});
     if (!overlapped.empty()) {
         call->set_phase(sample, Call::PhaseCall {encompassing_region(overlapped.front(), call), phase.score});
     } else {
@@ -345,15 +344,12 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
         const auto call_regions = extract_regions(calls);
         for (auto& call : calls) {
             const auto& call_region = mapped_region(call);
-            
             for (const auto& p : phase_set.phase_regions) {
                 const auto phase = find_phase_region(p.second, call_region);
-                
                 if (phase && overlaps(calling_region, phase->get().region)) {
                     if (begins_before(phase->get().region, calling_region)) {
                         const auto output_call_region = *overlapped_region(calling_region, phase->get().region);
                         const auto output_calls = overlap_range(call_regions, output_call_region);
-                        
                         if (!output_calls.empty()) {
                             const Phaser::PhaseSet::PhaseRegion clipped_phase {
                                 expand_lhs(phase->get().region, begin_distance(output_calls.front(), phase->get().region)),
@@ -383,11 +379,9 @@ auto mapped_region(const VcfRecord& record)
 
 void erase_calls_outside_region(std::vector<VcfRecord>& calls, const GenomicRegion& region)
 {
-    auto it = std::remove_if(std::begin(calls), std::end(calls),
-                             [&region] (const auto& call) {
-                                 return !overlaps(mapped_region(call), region);
-                             });
-    calls.erase(it, std::end(calls));
+    const auto overlapped = overlap_range(calls, region);
+    calls.erase(overlapped.end().base(), std::cend(calls));
+    calls.erase(std::cbegin(calls), overlapped.begin().base());
 }
 
 void merge_to_vcf(std::deque<CallWrapper>&& src, std::deque<VcfRecord>& dst,
