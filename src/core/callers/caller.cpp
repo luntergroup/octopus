@@ -623,7 +623,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                     resume(misc_timer[3]);
                     set_phasing(variant_calls, phase, call_region);
                     utils::append(std::move(variant_calls), calls);
-                    //merge(std::move(variant_calls), result, record_factory, call_region);
                     pause(misc_timer[3]);
                 }
             }
