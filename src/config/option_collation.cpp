@@ -1305,6 +1305,10 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_max_genotype_combinations(options.at("max-genotype-combinations").as<unsigned>());
     vc_builder.set_max_reduction_mass(options.at("max-reduction-probability-mass").as<Phred<double>>());
     
+    if (options.count("sequence-error-model") == 1) {
+        vc_builder.set_sequencer(options.at("sequence-error-model").as<std::string>());
+    }
+    
     return CallerFactory {std::move(vc_builder)};
 }
 

@@ -166,6 +166,12 @@ CallerBuilder& CallerBuilder::set_max_reduction_mass(Phred<double> mass) noexcep
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_sequencer(std::string sequencer) noexcept
+{
+    params_.sequencer = std::move(sequencer);
+    return *this;
+}
+
 // cancer
 
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
@@ -235,7 +241,6 @@ Caller::Components CallerBuilder::make_components() const
         components_.variant_generator_builder.build(components_.reference),
         components_.haplotype_generator_builder,
         Phaser {params_.min_phase_score}
-
     };
 }
 
@@ -291,7 +296,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
         params_.max_haplotypes,
         params_.haplotype_extension_threshold,
         params_.allow_flank_scoring,
-        params_.allow_model_filtering
+        params_.allow_model_filtering,
+        params_.sequencer
     };
     const auto& samples = components_.read_pipe.get().samples();
     return CallerFactoryMap {

@@ -11,6 +11,7 @@
 #include "io/reference/reference_genome.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "call.hpp"
+#include "call_wrapper.hpp"
 
 namespace octopus {
 
@@ -29,7 +30,7 @@ public:
     
     ~VcfRecordFactory() = default;
     
-    std::vector<VcfRecord> make(std::vector<std::unique_ptr<Call>>&& calls) const;
+    std::vector<VcfRecord> make(std::vector<CallWrapper>&& calls) const;
     
 private:
     const ReferenceGenome& reference_;
