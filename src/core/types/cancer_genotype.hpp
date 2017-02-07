@@ -185,7 +185,7 @@ std::pair<std::vector<CancerGenotype<Haplotype>>, std::vector<Genotype<Haplotype
 generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const unsigned ploidy);
 
 template <typename MappableType>
-Genotype<MappableType> convert(const CancerGenotype<MappableType>& genotype)
+Genotype<MappableType> demote(const CancerGenotype<MappableType>& genotype)
 {
     Genotype<MappableType> result {genotype.ploidy() + 1};
     
