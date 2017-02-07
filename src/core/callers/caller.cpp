@@ -19,6 +19,7 @@
 #include "core/models/haplotype_likelihood_model.hpp"
 #include "core/tools/haplotype_filter.hpp"
 #include "utils/call.hpp"
+#include "utils/call_wrapper.hpp"
 #include "utils/variant_call.hpp"
 #include "utils/reference_call.hpp"
 
@@ -292,40 +293,6 @@ auto get_phase_regions(const MappableFlatSet<Variant>& candidates,
     return extract_regions(contained_range(candidates, active_region));
 }
 
-// Wrap the pointer so can use mappable algorithms
-struct CallWrapper : public Mappable<CallWrapper>
-{
-    CallWrapper(std::unique_ptr<Call> call) : call {std::move(call) } {}
-    operator const std::unique_ptr<Call>&() const noexcept { return call; }
-    operator std::unique_ptr<Call>&() noexcept { return call; }
-    std::unique_ptr<Call>::pointer operator->() const noexcept { return call.get(); };
-    std::unique_ptr<Call> call;
-    const GenomicRegion& mapped_region() const noexcept { return call->mapped_region(); }
-};
-
-template <typename T>
-auto wrap(std::vector<std::unique_ptr<T>>&& calls)
-{
-    return std::vector<CallWrapper> {
-        std::make_move_iterator(std::begin(calls)), std::make_move_iterator(std::end(calls))
-    };
-}
-
-auto unwrap(std::deque<CallWrapper>&& calls)
-{
-    std::vector<std::unique_ptr<Call>> result {};
-    result.reserve(calls.size());
-    std::transform(std::make_move_iterator(std::begin(calls)),
-                   std::make_move_iterator(std::end(calls)),
-                   std::back_inserter(result),
-                   [] (CallWrapper&& wrapped_call) -> std::unique_ptr<Call> {
-                       return std::move(wrapped_call.call);
-                   });
-    calls.clear();
-    calls.shrink_to_fit();
-    return result;
-}
-
 void set_phase(const SampleName& sample, const Phaser::PhaseSet::PhaseRegion& phase,
                const std::vector<GenomicRegion>& call_regions, CallWrapper& call)
 {
@@ -384,10 +351,17 @@ void erase_calls_outside_region(std::vector<VcfRecord>& calls, const GenomicRegi
     calls.erase(std::cbegin(calls), overlapped.begin().base());
 }
 
+template <typename T>
+auto to_vector(std::deque<T>&& values)
+{
+    using std::make_move_iterator;
+    return std::vector<T> {make_move_iterator(std::begin(values)), make_move_iterator(std::end(values))};
+}
+
 void merge_to_vcf(std::deque<CallWrapper>&& src, std::deque<VcfRecord>& dst,
                   const VcfRecordFactory& factory, const GenomicRegion& call_region)
 {
-    auto new_records = factory.make(unwrap(std::move(src)));
+    auto new_records = factory.make(to_vector(std::move(src)));
     erase_calls_outside_region(new_records, call_region);
     const auto itr = utils::append(std::move(new_records), dst);
     std::inplace_merge(std::begin(dst), itr, std::end(dst),
@@ -666,6 +640,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     }
     const auto record_factory = make_record_factory(reads);
     merge_to_vcf(std::move(calls), result, record_factory, call_region);
+    progress_meter.log_completed(call_region);
     return result;
 }
     

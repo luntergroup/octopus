@@ -15,16 +15,15 @@
 #include <boost/optional.hpp>
 
 #include "concepts/equitable.hpp"
-#include "basics/genomic_region.hpp"
 #include "concepts/mappable.hpp"
+#include "basics/genomic_region.hpp"
+#include "basics/mappable_reference_wrapper.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "core/types/allele.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/maths.hpp"
 #include "variant_call.hpp"
-
-#include "timers.hpp"
 
 namespace octopus {
 
@@ -38,74 +37,35 @@ VcfRecordFactory::VcfRecordFactory(const ReferenceGenome& reference, const ReadM
 
 namespace {
 
-struct CallWrapper : public Equitable<CallWrapper>, public Mappable<CallWrapper>
-{
-    CallWrapper(std::unique_ptr<Call> call) : call {std::move(call) } {}
-    
-    CallWrapper(const CallWrapper&)            = delete;
-    CallWrapper& operator=(const CallWrapper&) = delete;
-    CallWrapper(CallWrapper&&)                 = default;
-    CallWrapper& operator=(CallWrapper&&)      = default;
-    
-    operator const std::unique_ptr<Call>&() const noexcept { return call; }
-    operator std::unique_ptr<Call>&() noexcept { return call; }
-    std::unique_ptr<Call>::pointer operator->() const noexcept { return call.get(); };
-    const GenomicRegion& mapped_region() const noexcept { return call->mapped_region(); }
-    
-    std::unique_ptr<Call> call;
-};
-
-bool operator==(const CallWrapper& lhs, const CallWrapper& rhs)
-{
-    return *lhs.call == *rhs.call;
-}
-
-template <typename T>
-auto wrap(std::vector<std::unique_ptr<T>>&& calls)
-{
-    return std::vector<CallWrapper> {
-        std::make_move_iterator(std::begin(calls)),
-        std::make_move_iterator(std::end(calls))
-    };
-}
-
-struct CallWrapperReference : public Mappable<CallWrapperReference>
-{
-    std::reference_wrapper<const CallWrapper> call;
-    
-    template <typename T> CallWrapperReference(T&& call) : call {std::forward<T>(call)} {}
-    const GenomicRegion& mapped_region() const noexcept { return call.get()->mapped_region(); }
-    decltype(auto) get() const noexcept { return call.get(); }
-};
-
-} // namespace
+using CallWrapperReference = MappableReferenceWrapper<CallWrapper>;
 
 bool are_in_phase(const Call::GenotypeCall& lhs, const Call::GenotypeCall& rhs)
 {
     return lhs.phase && overlaps(lhs.phase->region(), rhs.genotype);
 }
 
-std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>&& calls) const
+} // namespace
+
+std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) const
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
     using std::prev; using std::for_each; using std::transform; using std::move;
     // TODO: refactor this!!!
-    auto wrapped_calls = wrap(move(calls));
-    assert(std::is_sorted(std::cbegin(wrapped_calls), std::cend(wrapped_calls)));
+    assert(std::is_sorted(std::cbegin(calls), std::cend(calls)));
     calls.clear();
     calls.shrink_to_fit();
-    for (auto it = begin(wrapped_calls); it != end(wrapped_calls);) {
+    for (auto it = begin(calls); it != end(calls);) {
         if (is_empty(it->mapped_region())) {
-            auto it2 = std::find_if_not(next(it), end(wrapped_calls),
+            auto it2 = std::find_if_not(next(it), end(calls),
                                         [it] (const auto& call) {
                                             return call->mapped_region() == it->mapped_region();
                                         });
-            if (it2 == end(wrapped_calls)) break;
+            if (it2 == end(calls)) break;
             if (!overlaps(*it, *it2)) {
                 it = it2;
                 continue;
             }
-            auto it3 = find_first_after(next(it2), end(wrapped_calls), *it);
+            auto it3 = find_first_after(next(it2), end(calls), *it);
             // Now everything between it and it2 is an insertion, anything between
             // it2 and it3 is another call which will have inserted sequence we want to remove.
             // Note the genotype calls of all insertions must be the same as they are in the
@@ -140,12 +100,12 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>
             ++it;
         }
     }
-    const auto first_modified = std::stable_partition(begin(wrapped_calls), end(wrapped_calls),
+    const auto first_modified = std::stable_partition(begin(calls), end(calls),
                                                       [] (const auto& call) {
                                                           return !call->parsimonise('#');
                                                       });
-    if (first_modified != end(wrapped_calls)) {
-        const auto last = end(wrapped_calls);
+    if (first_modified != end(calls)) {
+        const auto last = end(calls);
         const auto first_phase_adjusted = std::partition(first_modified, last,
                                         [this] (const auto& call) {
                                             return std::none_of(begin(samples_), cend(samples_),
@@ -167,7 +127,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>
                              }
                          }
                      });
-            for_each(begin(wrapped_calls), first_phase_adjusted,
+            for_each(begin(calls), first_phase_adjusted,
                      [this, first_phase_adjusted, last] (auto& call) {
                          for (const auto& sample : samples_) {
                              const auto& phase = call->get_genotype_call(sample).phase;
@@ -193,12 +153,12 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>
         }
         std::sort(first_modified, first_phase_adjusted);
         std::inplace_merge(first_modified, first_phase_adjusted, last);
-        std::inplace_merge(begin(wrapped_calls), first_modified, last);
+        std::inplace_merge(begin(calls), first_modified, last);
     }
     std::vector<VcfRecord> result {};
     result.reserve(calls.size());
-    for (auto it = begin(wrapped_calls); it != end(wrapped_calls);) {
-        const auto it2 = adjacent_overlap_find(it, end(wrapped_calls));
+    for (auto it = begin(calls); it != end(calls);) {
+        const auto it2 = adjacent_overlap_find(it, end(calls));
         transform(std::make_move_iterator(it), std::make_move_iterator(it2),
                   std::back_inserter(result),
                   [this] (CallWrapper&& call) {
@@ -208,8 +168,8 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>
                       call->replace_uncalled_genotype_alleles(Allele {call->mapped_region(), "."}, 'N');
                       return this->make(move(call.call));
                   });
-        if (it2 == end(wrapped_calls)) break;
-        auto it3 = std::find_if_not(next(it2), end(wrapped_calls),
+        if (it2 == end(calls)) break;
+        auto it3 = std::find_if_not(next(it2), end(calls),
                                     [it2] (const auto& call) {
                                         return begins_equal(call, *it2);
                                     });
@@ -281,11 +241,11 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>
                 }
             }
         }
-        if (it3 != end(wrapped_calls) && overlaps(*prev(it3), *it3)) {
-            it = find_first_after(next(it3), end(wrapped_calls), *prev(it3));
-            while (it != end(wrapped_calls)) {
+        if (it3 != end(calls) && overlaps(*prev(it3), *it3)) {
+            it = find_first_after(next(it3), end(calls), *prev(it3));
+            while (it != end(calls)) {
                 if (overlaps(*it, *prev(it))) {
-                    it = find_first_after(next(it), end(wrapped_calls), *it);
+                    it = find_first_after(next(it), end(calls), *it);
                 } else {
                     break;
                 }

@@ -188,6 +188,8 @@ set(CORE_SOURCES
     core/callers/utils/variant_call.cpp
     core/callers/utils/denovo_call.hpp
     core/callers/utils/denovo_call.cpp
+    core/callers/utils/call_wrapper.hpp
+    core/callers/utils/call_wrapper.cpp
     core/callers/utils/vcf_header_factory.hpp
     core/callers/utils/vcf_header_factory.cpp
     core/callers/utils/vcf_record_factory.hpp
