@@ -52,8 +52,6 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
     using std::prev; using std::for_each; using std::transform; using std::move;
     // TODO: refactor this!!!
     assert(std::is_sorted(std::cbegin(calls), std::cend(calls)));
-    calls.clear();
-    calls.shrink_to_fit();
     for (auto it = begin(calls); it != end(calls);) {
         if (is_empty(it->mapped_region())) {
             auto it2 = std::find_if_not(next(it), end(calls),
