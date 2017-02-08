@@ -209,7 +209,10 @@ bool is_lhs_boundry_insertion(const Variant& variant, const GenomicRegion& regio
 bool has_noninteracting_insertion(const GenomicRegion& insertion_region,
                                   const MappableFlatSet<Variant>& candidates)
 {
-    const auto overlapped = overlap_range(candidates, insertion_region);
+    auto overlapped = overlap_range(candidates, insertion_region);
+    while (!empty(overlapped) && begins_before(overlapped.front(), insertion_region)) {
+        overlapped.advance_begin(1);
+    }
     return !empty(overlapped) && is_empty_region(overlapped.front()) && is_empty_region(overlapped.back());
 }
 
