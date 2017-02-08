@@ -126,17 +126,8 @@ void HiSeqSnvErrorModel::do_evaluate(const Haplotype& haplotype,
     forward_snv_priors.assign(num_bases, maxQualities_.front().front());
     reverse_snv_priors.assign(num_bases, maxQualities_.front().front());
     std::vector<unsigned> runs(num_bases);
-    constexpr unsigned Max_homopolymer_gap {3};
-    for (std::int8_t i {1}; i < 5; ++i) {
-        auto homopolymers = repeat_masks[0];
-        std::replace_if(begin(homopolymers), end(homopolymers), [=] (auto x) { return x != i; }, 0);
-        count_runs(cbegin(homopolymers), cend(homopolymers), begin(runs), Max_homopolymer_gap);
-        set_priors(runs, forward_snv_priors, maxQualities_.front());
-        count_runs(crbegin(homopolymers), crend(homopolymers), rbegin(runs), Max_homopolymer_gap);
-        set_priors(runs, reverse_snv_priors, maxQualities_.front());
-    }
-    for (std::size_t i {1}; i < Max_period; ++i) {
-        const auto max_gap = Max_homopolymer_gap + i;
+    for (unsigned i{0}; i < Max_period; ++i) {
+        const auto max_gap = i + 2;
         const auto& repeat_mask = repeat_masks[i];
         count_runs(cbegin(repeat_mask), cend(repeat_mask), begin(runs), max_gap);
         set_priors(runs, forward_snv_priors, maxQualities_[i]);
