@@ -113,6 +113,8 @@ public:
     };
     
 private:
+    enum class GeneratorStatus { good, skipped, done };
+    
     using GenotypeCallMap = Phaser::GenotypeCallMap;
     
     std::reference_wrapper<const ReadPipe> read_pipe_;
@@ -149,38 +151,50 @@ private:
     std::deque<CallWrapper>
     call_variants(const GenomicRegion& call_region,  const MappableFlatSet<Variant>& candidates,
                   const ReadMap& reads, ProgressMeter& progress_meter) const;
-    
     bool refcalls_requested() const noexcept;
-    
     MappableFlatSet<Variant> generate_candidate_variants(const GenomicRegion& region) const;
     HaplotypeGenerator make_haplotype_generator(const MappableFlatSet<Variant>& candidates, const ReadMap& reads) const;
     HaplotypeLikelihoodCache make_haplotype_likelihood_cache() const;
     VcfRecordFactory make_record_factory(const ReadMap& reads) const;
-    
-    std::vector<Haplotype> filter(std::vector<Haplotype>& haplotypes,
-                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    
-    void populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
-                  const GenomicRegion& active_region,
+    std::vector<Haplotype>
+    filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    bool populate(HaplotypeLikelihoodCache& haplotype_likelihoods, const GenomicRegion& active_region,
                   const std::vector<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
                   const ReadMap& active_reads) const;
-    
     std::vector<std::reference_wrapper<const Haplotype>>
-    get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                             const Latents::HaplotypeProbabilityMap& haplotype_posteriors,
-                             unsigned max_to_remove) const;
-    
+    get_removable_haplotypes(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                             const Latents::HaplotypeProbabilityMap& haplotype_posteriors, unsigned max_to_remove) const;
+    GeneratorStatus
+    generate_active_haplotypes(const GenomicRegion& call_region, HaplotypeGenerator& haplotype_generator,
+                               GenomicRegion& active_region, boost::optional<GenomicRegion>& next_active_region,
+                               std::vector<Haplotype>& haplotypes, std::vector<Haplotype>& next_haplotypes) const;
+    boost::optional<GenomicRegion>
+    generate_next_active_haplotypes(std::vector<Haplotype>& next_haplotypes,
+                                    boost::optional<GenomicRegion>& next_active_region,
+                                    HaplotypeGenerator& haplotype_generator) const;
+    bool filter_haplotypes(std::vector<Haplotype>& haplotypes, HaplotypeGenerator& haplotype_generator,
+                           HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void filter_haplotypes(bool prefilter_had_removal_impact, const std::vector<Haplotype>& haplotypes,
+                           HaplotypeGenerator& haplotype_generator, const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                           const Latents& latents) const;
+    void call_variants(const GenomicRegion& active_region, const GenomicRegion& call_region,
+                       const boost::optional<GenomicRegion>& next_active_region,
+                       const boost::optional<GenomicRegion>& backtrack_region,
+                       const MappableFlatSet<Variant>& candidates, const std::vector<Haplotype>& haplotypes,
+                       const HaplotypeLikelihoodCache& haplotype_likelihoods, const ReadMap& reads,
+                       const Latents& latents, std::deque<CallWrapper>& result,
+                       boost::optional<GenomicRegion>& prev_called_region, GenomicRegion& completed_region) const;
     GenotypeCallMap get_genotype_calls(const Latents& latents) const;
-    
+    void set_model_posteriors(std::vector<CallWrapper>& calls, const Latents& latents,
+                              const std::vector<Haplotype>& haplotypes,
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void set_phasing(std::vector<CallWrapper>& calls, const Latents& latents,
+                     const std::vector<Haplotype>& haplotypes, const GenomicRegion& call_region) const;
     bool done_calling(const GenomicRegion& region) const noexcept;
-    
     std::vector<Allele>
     generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates) const;
-    
     std::vector<Allele>
-    generate_candidate_reference_alleles(const GenomicRegion& region,
-                                         const std::vector<Variant>& candidates,
+    generate_candidate_reference_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates,
                                          const std::vector<GenomicRegion>& called_regions) const;
 };
 
