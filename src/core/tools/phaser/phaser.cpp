@@ -164,7 +164,7 @@ auto min_phase_score(const double p, const std::size_t num_genotypes)
     } else {
         const auto s = p * std::log2(p) + (1.0 - p) * std::log2((1.0 - p) / (num_genotypes - 1));
         const auto y = 1.0 + s / maximum_entropy(2);
-        return Phred<double> {Phred<double>::Probability {y}};
+        return Phred<double> {Phred<double>::Probability {std::max(y, 0.0)}};
     }
 }
 
