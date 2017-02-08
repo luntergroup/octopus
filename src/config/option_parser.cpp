@@ -99,7 +99,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " will be extracted from the reference index if not provded explicitly")
     
     ("reads,I",
-     po::value<std::vector<std::string>>()->multitoken(),
+     po::value<std::vector<fs::path>>()->multitoken(),
      "Space-separated list of BAM/CRAM files to be analysed."
      " May be specified multiple times")
     

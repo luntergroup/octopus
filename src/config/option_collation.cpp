@@ -494,7 +494,7 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
     std::vector<fs::path> result {};
     
     if (options.count("reads") == 1) {
-        auto resolved_paths = resolve_paths(options.at("reads").as<std::vector<std::string>>(), options);
+        auto resolved_paths = resolve_paths(options.at("reads").as<std::vector<fs::path>>(), options);
         append(std::move(resolved_paths), result);
     }
     
