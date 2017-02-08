@@ -476,10 +476,6 @@ OptionMap parse_options(const int argc, const char** argv)
     ("use-unconditional-phase-score",
      po::bool_switch()->default_value(false),
      "Computes unconditional phase scores rather than conditioning on called genotypes")
-    
-    ("disable-read-guided-phasing",
-     po::bool_switch()->default_value(false),
-     "Restricts phase score computation to use only genotype posteriors")
     ;
     
     po::options_description advanced("Advanced calling algorithm");
