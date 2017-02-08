@@ -32,6 +32,7 @@
 namespace octopus {
 
 class Call;
+struct CallWrapper;
 class VariantCall;
 class ReferenceCall;
 
@@ -144,6 +145,10 @@ private:
                    const ReadMap& reads) const = 0;
     
     // helper methods
+    
+    std::deque<CallWrapper>
+    call_variants(const GenomicRegion& call_region,  const MappableFlatSet<Variant>& candidates,
+                  const ReadMap& reads, ProgressMeter& progress_meter) const;
     
     bool refcalls_requested() const noexcept;
     
