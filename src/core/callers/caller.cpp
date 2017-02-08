@@ -491,14 +491,8 @@ Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<V
         haplotype_likelihoods.erase(removed_haplotypes);
         auto has_removal_impact = haplotype_generator.removal_has_impact();
         if (has_removal_impact) {
-            try {
-                haplotype_generator.remove(removed_haplotypes);
-                haplotype_generator.collapse(haplotypes);
-            } catch (const std::runtime_error& e) {
-                std::cout << "Exception: " << e.what() << ". Encountered in active region "
-                          << active_region << " whilst calling " << call_region << std::endl;
-                throw;
-            }
+            haplotype_generator.remove(removed_haplotypes);
+            haplotype_generator.collapse(haplotypes);
         } else {
             haplotype_generator.clear_progress();
         }
