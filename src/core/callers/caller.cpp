@@ -433,9 +433,7 @@ Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<V
             next_active_region = boost::none;
         } else {
             try {
-                resume(haplotype_generation_timer);
                 std::tie(haplotypes, active_region, std::ignore) = haplotype_generator.generate();
-                pause(haplotype_generation_timer);
             } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
                 logging::WarningLogger wlog {};
                 stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
@@ -491,7 +489,6 @@ Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<V
         }
         haplotypes.shrink_to_fit();
         haplotype_likelihoods.erase(removed_haplotypes);
-        resume(haplotype_generation_timer);
         auto has_removal_impact = haplotype_generator.removal_has_impact();
         if (has_removal_impact) {
             try {
@@ -505,7 +502,6 @@ Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<V
         } else {
             haplotype_generator.clear_progress();
         }
-        pause(haplotype_generation_timer);
         removed_haplotypes.clear();
         removed_haplotypes.shrink_to_fit();
         if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " final haplotypes";
@@ -550,7 +546,6 @@ Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<V
             active_region = right_overhang_region(active_region, phase_set->region);
             haplotype_generator.jump(active_region);
         } else {
-            resume(haplotype_generation_timer);
             if (has_removal_impact) { // if there was no impact before then there can't be now either
                 has_removal_impact = haplotype_generator.removal_has_impact();
             }
@@ -565,23 +560,18 @@ Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<V
                 }
                 haplotype_generator.remove(removable_haplotypes);
             }
-            pause(haplotype_generation_timer);
         }
         if (!parameters_.allow_model_filtering) {
             haplotype_likelihoods.clear();
         }
-        resume(haplotype_generation_timer);
         boost::optional<GenomicRegion> backtrack_region;
         try {
-            resume(haplotype_generation_timer);
             std::tie(next_haplotypes, next_active_region, backtrack_region) = haplotype_generator.generate();
-            pause(haplotype_generation_timer);
         } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
             logging::WarningLogger wlog {};
             stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
             haplotype_generator.clear_progress();
         }
-        pause(haplotype_generation_timer);
         if (have_callable_region(active_region, next_active_region, backtrack_region, call_region)) {
             const auto passed_region = get_passed_region(active_region, next_active_region, backtrack_region);
             const auto uncalled_region = get_uncalled_region(active_region, passed_region, completed_region, phase_set);
