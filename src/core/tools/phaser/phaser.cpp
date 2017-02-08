@@ -14,6 +14,7 @@
 #include <boost/functional/hash.hpp>
 
 #include "utils/mappable_algorithms.hpp"
+#include "utils/maths.hpp"
 
 #include "timers.hpp"
 
@@ -62,9 +63,7 @@ private:
     PartitionIterator first_, last_;
 };
 
-using PhaseComplementSetMap = std::unordered_map<GenotypeReference, PhaseComplementSet,
-                                                    PhaseComplementHash,
-                                                    PhaseComplementEqual>;
+using PhaseComplementSetMap = std::unordered_map<GenotypeReference, PhaseComplementSet, PhaseComplementHash, PhaseComplementEqual>;
 using PhaseComplementSets = std::vector<PhaseComplementSet>;
 
 template <typename Container>
@@ -157,6 +156,23 @@ Phred<double> calculate_phase_score(const PhaseComplementSets& phase_sets, const
     }};
 }
 
+auto min_phase_score(const double p, const std::size_t num_genotypes)
+{
+    if (maths::almost_one(p) || num_genotypes == 1) {
+        static const Phred<double> max_possible_score {Phred<double>::Probability {0.0}};
+        return max_possible_score;
+    } else {
+        const auto s = p * std::log2(p) + (1.0 - p) * std::log2((1.0 - p) / (num_genotypes - 1));
+        const auto y = 1.0 + s / maximum_entropy(2);
+        return Phred<double> {Phred<double>::Probability {std::max(y, 0.0)}};
+    }
+}
+
+auto min_phase_score(const Genotype<Haplotype>& called_genotype, const Phaser::SampleGenotypePosteriorMap& genotype_posteriors)
+{
+    return min_phase_score(genotype_posteriors[called_genotype], genotype_posteriors.size());
+}
+
 std::vector<GenotypeReference> extract_genotypes(const Phaser::GenotypePosteriorMap& genotype_posteriors)
 {
     return extract_key_refs(genotype_posteriors);
@@ -230,7 +246,8 @@ force_phase_sample(const GenomicRegion& region,
 Phaser::PhaseSet
 Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
                     const GenotypePosteriorMap& genotype_posteriors,
-                    const std::vector<GenomicRegion>& regions) const
+                    const std::vector<GenomicRegion>& regions,
+                    boost::optional<GenotypeCallMap> genotype_calls) const
 {
     assert(!haplotypes.empty());
     assert(!genotype_posteriors.empty1());
@@ -243,15 +260,25 @@ Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
     result.phase_regions.reserve(genotype_posteriors.size1());
     if (genotypes.front().get().ploidy() == 1 || partitions.size() == 1) {
         for (const auto& p : genotype_posteriors) {
-            static const Phred<double> maxPosterior {Phred<double>::Probability {0.0}};
-            result.phase_regions[p.first].emplace_back(haplotype_region, maxPosterior);
+            if (max_phase_score_) {
+                result.phase_regions[p.first].emplace_back(haplotype_region, *max_phase_score_);
+            } else {
+                static const Phred<double> max_possible_score {Phred<double>::Probability {0.0}};
+                result.phase_regions[p.first].emplace_back(haplotype_region, max_possible_score);
+            }
         }
         return result;
     }
     for (const auto& p : genotype_posteriors) {
-        result.phase_regions.emplace(p.first, force_phase_sample(haplotype_region, partitions,
-                                                                 genotypes, p.second,
-                                                                 min_phase_score_));
+        if (genotype_calls && max_phase_score_ && min_phase_score(genotype_calls->at(p.first), p.second) >= *max_phase_score_) {
+            result.phase_regions[p.first].emplace_back(haplotype_region, *max_phase_score_);
+        } else {
+            auto phases = force_phase_sample(haplotype_region, partitions, genotypes, p.second, min_phase_score_);
+            if (max_phase_score_) {
+                for (auto& phase : phases) phase.score = std::min(phase.score, *max_phase_score_);
+            }
+            result.phase_regions.emplace(p.first, std::move(phases));
+        }
     }
     return result;
 }
