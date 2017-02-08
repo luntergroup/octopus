@@ -267,15 +267,10 @@ auto get_passed_region(const GenomicRegion& active_region,
 
 auto get_uncalled_region(const GenomicRegion& active_region,
                          const GenomicRegion& passed_region,
-                         const GenomicRegion& completed_region,
-                         const boost::optional<Phaser::PhaseSet>& phase_set)
+                         const GenomicRegion& completed_region)
 {
     auto result = *overlapped_region(active_region, passed_region);
-    result = *overlapped_region(result, right_overhang_region(result, completed_region));
-    if (phase_set && ends_before(phase_set->region, passed_region)) {
-        result = *overlapped_region(result, right_overhang_region(passed_region, phase_set->region));
-    }
-    return result;
+    return *overlapped_region(result, right_overhang_region(result, completed_region));
 }
 
 bool is_lhs_boundry_insertion(const Variant& variant, const GenomicRegion& region)
@@ -433,9 +428,7 @@ Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<V
             next_active_region = boost::none;
         } else {
             try {
-                resume(haplotype_generation_timer);
                 std::tie(haplotypes, active_region, std::ignore) = haplotype_generator.generate();
-                pause(haplotype_generation_timer);
             } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
                 logging::WarningLogger wlog {};
                 stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
@@ -491,21 +484,13 @@ Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<V
         }
         haplotypes.shrink_to_fit();
         haplotype_likelihoods.erase(removed_haplotypes);
-        resume(haplotype_generation_timer);
         auto has_removal_impact = haplotype_generator.removal_has_impact();
         if (has_removal_impact) {
-            try {
-                haplotype_generator.remove(removed_haplotypes);
-                haplotype_generator.collapse(haplotypes);
-            } catch (const std::runtime_error& e) {
-                std::cout << "Exception: " << e.what() << ". Encountered in active region "
-                          << active_region << " whilst calling " << call_region << std::endl;
-                throw;
-            }
+            haplotype_generator.remove(removed_haplotypes);
+            haplotype_generator.collapse(haplotypes);
         } else {
             haplotype_generator.clear_progress();
         }
-        pause(haplotype_generation_timer);
         removed_haplotypes.clear();
         removed_haplotypes.shrink_to_fit();
         if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " final haplotypes";
@@ -517,71 +502,31 @@ Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<V
         } else if (debug_log_) {
             debug::print_haplotype_posteriors(stream(*debug_log_), *caller_latents->haplotype_posteriors());
         }
-        resume(phasing_timer);
-        const auto phase_set = phaser_.try_phase(haplotypes, *caller_latents->genotype_posteriors(),
-                                                 get_phase_regions(candidates, active_region));
-        pause(phasing_timer);
-        if (debug_log_) {
-            if (phase_set) {
-                debug::print_phase_sets(stream(*debug_log_), *phase_set);
-            } else {
-                *debug_log_ << "No partial phasings found";
-            }
+        if (has_removal_impact) { // if there was no impact before then there can't be now either
+            has_removal_impact = haplotype_generator.removal_has_impact();
         }
-        if (phase_set && overlaps(active_region, call_region)) {
-            assert(!is_empty(phase_set->region));
-            if (debug_log_) stream(*debug_log_) << "Phased region is " << phase_set->region;
-            const auto active_candidates = copy_contained_to_vector(candidates, phase_set->region);
-            if (!active_candidates.empty()) {
-                auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
-                if (!variant_calls.empty()) {
-                    if (parameters_.allow_model_filtering) {
-                        const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods, *caller_latents);
-                        if (mp) {
-                            for (auto& call : variant_calls) {
-                                call->set_model_posterior(probability_to_phred(1 - *mp));
-                            }
-                        }
-                    }
-                    set_phasing(variant_calls, *phase_set, call_region);
-                    utils::append(std::move(variant_calls), calls);
-                }
+        if (has_removal_impact) {
+            const auto max_to_remove = haplotype_generator.max_removal_impact();
+            auto removable_haplotypes = get_removable_haplotypes(haplotypes, haplotype_likelihoods,
+                                                                 *caller_latents->haplotype_posteriors(),
+                                                                 max_to_remove);
+            if (debug_log_) {
+                stream(*debug_log_) << "Discarding " << removable_haplotypes.size()
+                                    << " haplotypes with low posterior support";
             }
-            active_region = right_overhang_region(active_region, phase_set->region);
-            haplotype_generator.jump(active_region);
-        } else {
-            resume(haplotype_generation_timer);
-            if (has_removal_impact) { // if there was no impact before then there can't be now either
-                has_removal_impact = haplotype_generator.removal_has_impact();
-            }
-            if (has_removal_impact) {
-                const auto max_to_remove = haplotype_generator.max_removal_impact();
-                auto removable_haplotypes = get_removable_haplotypes(haplotypes, haplotype_likelihoods,
-                                                                     *caller_latents->haplotype_posteriors(),
-                                                                     max_to_remove);
-                if (debug_log_) {
-                    stream(*debug_log_) << "Discarding " << removable_haplotypes.size()
-                                        << " haplotypes with low posterior support";
-                }
-                haplotype_generator.remove(removable_haplotypes);
-            }
-            pause(haplotype_generation_timer);
+            haplotype_generator.remove(removable_haplotypes);
         }
         if (!parameters_.allow_model_filtering) {
             haplotype_likelihoods.clear();
         }
-        resume(haplotype_generation_timer);
         boost::optional<GenomicRegion> backtrack_region;
         try {
-            resume(haplotype_generation_timer);
             std::tie(next_haplotypes, next_active_region, backtrack_region) = haplotype_generator.generate();
-            pause(haplotype_generation_timer);
         } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
             logging::WarningLogger wlog {};
             stream(wlog) << "Skipping region " << e.region() << " as there are too many haplotypes";
             haplotype_generator.clear_progress();
         }
-        pause(haplotype_generation_timer);
         if (have_callable_region(active_region, next_active_region, backtrack_region, call_region)) {
             const auto passed_region = get_passed_region(active_region, next_active_region, backtrack_region);
             const auto uncalled_region = get_uncalled_region(active_region, passed_region, completed_region, phase_set);
