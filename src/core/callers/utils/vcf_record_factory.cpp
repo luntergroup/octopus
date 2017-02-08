@@ -50,10 +50,40 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
     using std::prev; using std::for_each; using std::transform; using std::move;
+    using std::make_reverse_iterator;
     // TODO: refactor this!!!
     assert(std::is_sorted(std::cbegin(calls), std::cend(calls)));
     for (auto it = begin(calls); it != end(calls);) {
         if (is_empty(it->mapped_region())) {
+            const auto rit = std::find_if_not(make_reverse_iterator(it), make_reverse_iterator(begin(calls)),
+                                              [it] (const auto& call) { return are_adjacent(call, *it); });
+            // Now everything between rit and it is adjacent to the insertion at it, and will have inserted sequence
+            // we want to remove.
+            for_each(rit.base(), it, [this, it] (auto& call) {
+                for (const auto& sample : samples_) {
+                    const auto& insertion_genotype = (*it)->get_genotype_call(sample).genotype;
+                    auto& sample_genotype = call->get_genotype_call(sample).genotype;
+                    std::vector<Allele::NucleotideSequence> resolved_alleles {};
+                    resolved_alleles.reserve(sample_genotype.ploidy());
+                    transform(cbegin(sample_genotype), cend(sample_genotype),
+                              cbegin(insertion_genotype), std::back_inserter(resolved_alleles),
+                              [] (const Allele& allele1, const Allele& allele2) {
+                                  if (is_insertion(allele2)) {
+                                      const auto& old_sequence = allele1.sequence();
+                                      assert(old_sequence.size() > sequence_size(allele2));
+                                      return Allele::NucleotideSequence {
+                                      cbegin(old_sequence), prev(cend(old_sequence), sequence_size(allele2))
+                                      };
+                                  }
+                                  return allele1.sequence();
+                              });
+                    Genotype<Allele> new_genotype {sample_genotype.ploidy()};
+                    for (auto& sequence : resolved_alleles) {
+                        new_genotype.emplace(Allele {mapped_region(sample_genotype), move(sequence)});
+                    }
+                    sample_genotype = move(new_genotype);
+                }
+            });
             auto it2 = std::find_if_not(next(it), end(calls),
                                         [it] (const auto& call) {
                                             return call->mapped_region() == it->mapped_region();
@@ -212,8 +242,8 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
             }
         });
         if (std::distance(it2, it3) > 1) {
-            auto rit3 = next(std::make_reverse_iterator(it3));
-            const auto rit2 = std::make_reverse_iterator(it2);
+            auto rit3 = next(make_reverse_iterator(it3));
+            const auto rit2 = make_reverse_iterator(it2);
             for (; rit3 != rit2; ++rit3) {
                 auto& curr_call = *rit3;
                 for (const auto& sample : samples_) {
