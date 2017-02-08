@@ -273,10 +273,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Enable candidate generation using local re-assembly")
     
-    ("source-candidates",
-     po::value<fs::path>(),
-     "Variant file path containing known variants. These variants will automatically become"
-     " candidates")
+    ("source-candidates,c",
+     po::value<std::vector<fs::path>>()->multitoken(),
+     "Variant file paths containing known variants. These variants will automatically become candidates")
     
     ("min-base-quality",
      po::value<int>()->default_value(20),

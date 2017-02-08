@@ -862,12 +862,14 @@ auto make_variant_generator_builder(const OptionMap& options)
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (options.count("source-candidates") == 1) {
-        const auto input_path = options.at("source-candidates").as<fs::path>();
-        auto resolved_path = resolve_path(input_path, options);
-        if (!fs::exists(resolved_path)) {
-            throw MissingSourceVariantFile {input_path};
+        const auto input_paths = options.at("source-candidates").as<std::vector<fs::path>>();
+        for (const auto& input_path : input_paths) {
+            auto resolved_path = resolve_path(input_path, options);
+            if (!fs::exists(resolved_path)) {
+                throw MissingSourceVariantFile {input_path};
+            }
+            result.add_vcf_extractor(std::move(resolved_path));
         }
-        result.add_vcf_extractor(std::move(resolved_path));
     }
     if (options.count("regenotype") == 1) {
         auto regenotype_path = options.at("regenotype").as<fs::path>();
