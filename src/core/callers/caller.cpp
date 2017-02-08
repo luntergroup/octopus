@@ -615,7 +615,8 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
                     
                     resume(phasing_timer);
                     const auto phase = phaser_.force_phase(haplotypes, *caller_latents->genotype_posteriors(),
-                                                           extract_regions(variant_calls));
+                                                           extract_regions(variant_calls),
+                                                           get_genotype_calls(*caller_latents));
                     pause(phasing_timer);
                     
                     if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phase);
@@ -801,6 +802,15 @@ Caller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
 {
     return extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
                              max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
+}
+
+Caller::GenotypeCallMap Caller::get_genotype_calls(const Latents& latents) const
+{
+    GenotypeCallMap result {samples_.size()};
+    for (const auto& sample : samples_) {
+        result.emplace(sample, call_genotype(latents, sample));
+    }
+    return result;
 }
 
 bool Caller::done_calling(const GenomicRegion& region) const noexcept

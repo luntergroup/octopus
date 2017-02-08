@@ -112,6 +112,8 @@ public:
     };
     
 private:
+    using GenotypeCallMap = Phaser::GenotypeCallMap;
+    
     std::reference_wrapper<const ReadPipe> read_pipe_;
     mutable VariantGenerator candidate_generator_;
     HaplotypeGenerator::Builder haplotype_generator_builder_;
@@ -146,9 +148,7 @@ private:
     bool refcalls_requested() const noexcept;
     
     MappableFlatSet<Variant> generate_candidate_variants(const GenomicRegion& region) const;
-    
-    HaplotypeGenerator make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
-                                                const ReadMap& reads) const;
+    HaplotypeGenerator make_haplotype_generator(const MappableFlatSet<Variant>& candidates, const ReadMap& reads) const;
     HaplotypeLikelihoodCache make_haplotype_likelihood_cache() const;
     VcfRecordFactory make_record_factory(const ReadMap& reads) const;
     
@@ -165,6 +165,8 @@ private:
                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
                              const Latents::HaplotypeProbabilityMap& haplotype_posteriors,
                              unsigned max_to_remove) const;
+    
+    GenotypeCallMap get_genotype_calls(const Latents& latents) const;
     
     bool done_calling(const GenomicRegion& region) const noexcept;
     

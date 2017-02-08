@@ -29,6 +29,7 @@ class Phaser
 public:
     using GenotypePosteriorMap       = ProbabilityMatrix<Genotype<Haplotype>>;
     using SampleGenotypePosteriorMap = GenotypePosteriorMap::InnerMap;
+    using GenotypeCallMap            = std::unordered_map<SampleName, Genotype<Haplotype>>;
     
     struct PhaseSet;
     
@@ -49,10 +50,12 @@ public:
     
     PhaseSet force_phase(const std::vector<Haplotype>& haplotypes,
                          const GenotypePosteriorMap& genotype_posteriors,
-                         const std::vector<GenomicRegion>& regions) const;
+                         const std::vector<GenomicRegion>& regions,
+                         boost::optional<GenotypeCallMap> genotype_calls = boost::none) const;
     
 private:
     Phred<double> min_phase_score_;
+    boost::optional<Phred<double>> max_phase_score_ = Phred<double> {100};
 };
 
 struct Phaser::PhaseSet
