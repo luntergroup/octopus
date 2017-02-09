@@ -480,7 +480,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description advanced("Advanced calling algorithm");
     advanced.add_options()
-    ("haplotype-extension-threshold",
+    ("haplotype-extension-threshold,e",
      po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
      "Haplotypes with posterior probability less than this can be filtered before extension")
     
