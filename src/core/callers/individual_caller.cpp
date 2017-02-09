@@ -340,7 +340,7 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
     debug::log(genotype_posteriors, debug_log_, trace_log_);
     const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
     debug::log(candidate_posteriors, debug_log_, trace_log_);
-    const auto genotype_call = call_genotype(genotype_posteriors);
+    const auto genotype_call = octopus::call_genotype(genotype_posteriors);
     auto variant_calls = call_candidates(candidate_posteriors, genotype_call,
                                          parameters_.min_variant_posterior);
     const auto called_regions = extract_regions(variant_calls);

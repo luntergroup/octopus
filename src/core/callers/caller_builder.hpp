@@ -58,6 +58,7 @@ public:
     CallerBuilder& set_min_genotype_combinations(unsigned min) noexcept;
     CallerBuilder& set_max_genotype_combinations(unsigned max) noexcept;
     CallerBuilder& set_max_reduction_mass(Phred<double> mass) noexcept;
+    CallerBuilder& set_sequencer(std::string sequencer) noexcept;
     
     // cancer
     CallerBuilder& set_normal_sample(SampleName normal_sample);
@@ -102,6 +103,7 @@ private:
         Phred<double> min_phase_score;
         unsigned min_genotype_combinations, max_genotype_combinations;
         Phred<double> max_reduction_mass;
+        boost::optional<std::string> sequencer;
         
         // cancer
         boost::optional<SampleName> normal_sample;

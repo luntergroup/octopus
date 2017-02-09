@@ -139,7 +139,7 @@ auto compute_first_removable(const std::vector<T>& zipped, const double max_remo
                      std::rbegin(likelihoods));
     const auto iter = std::upper_bound(std::crbegin(likelihoods), std::crend(likelihoods),
                                        max_removed_mass);
-    const auto num_to_keep = std::distance(iter, std::crend(likelihoods));
+    const auto num_to_keep = static_cast<std::size_t>(std::distance(iter, std::crend(likelihoods)));
     assert(num_to_keep <= zipped.size());
     return std::next(std::cbegin(zipped), num_to_keep);
 }

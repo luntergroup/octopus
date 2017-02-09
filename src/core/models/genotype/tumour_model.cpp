@@ -744,7 +744,7 @@ auto compute_log_posteriors_with_germline_model(const SampleName& sample,
     std::vector<double> result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&] (const auto& genotype) {
-                       return likelihood_model.evaluate(convert(genotype));
+                       return likelihood_model.evaluate(demote(genotype));
                    });
     maths::normalise_logs(result);
     return result;

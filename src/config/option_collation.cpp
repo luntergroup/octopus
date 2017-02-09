@@ -494,7 +494,7 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
     std::vector<fs::path> result {};
     
     if (options.count("reads") == 1) {
-        auto resolved_paths = resolve_paths(options.at("reads").as<std::vector<std::string>>(), options);
+        auto resolved_paths = resolve_paths(options.at("reads").as<std::vector<fs::path>>(), options);
         append(std::move(resolved_paths), result);
     }
     
@@ -862,12 +862,14 @@ auto make_variant_generator_builder(const OptionMap& options)
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (options.count("source-candidates") == 1) {
-        const auto input_path = options.at("source-candidates").as<fs::path>();
-        auto resolved_path = resolve_path(input_path, options);
-        if (!fs::exists(resolved_path)) {
-            throw MissingSourceVariantFile {input_path};
+        const auto input_paths = options.at("source-candidates").as<std::vector<fs::path>>();
+        for (const auto& input_path : input_paths) {
+            auto resolved_path = resolve_path(input_path, options);
+            if (!fs::exists(resolved_path)) {
+                throw MissingSourceVariantFile {input_path};
+            }
+            result.add_vcf_extractor(std::move(resolved_path));
         }
-        result.add_vcf_extractor(std::move(resolved_path));
     }
     if (options.count("regenotype") == 1) {
         auto regenotype_path = options.at("regenotype").as<fs::path>();
@@ -1304,6 +1306,10 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_min_genotype_combinations(options.at("min-genotype-combinations").as<unsigned>());
     vc_builder.set_max_genotype_combinations(options.at("max-genotype-combinations").as<unsigned>());
     vc_builder.set_max_reduction_mass(options.at("max-reduction-probability-mass").as<Phred<double>>());
+    
+    if (options.count("sequence-error-model") == 1) {
+        vc_builder.set_sequencer(options.at("sequence-error-model").as<std::string>());
+    }
     
     return CallerFactory {std::move(vc_builder)};
 }

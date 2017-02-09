@@ -126,89 +126,79 @@ HaplotypeLikelihoodCache merge_samples(const std::vector<SampleName>& samples,
                                        const HaplotypeLikelihoodCache& haplotype_likelihoods);
 
 namespace debug {
-    std::vector<std::reference_wrapper<const Haplotype>>
-    rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
-                    const HaplotypeLikelihoodCache& haplotype_likelihoods);
-    
-    template <typename S>
-    void print_read_haplotype_likelihoods(S&& stream,
-                                         const std::vector<Haplotype>& haplotypes,
-                                         const ReadMap& reads,
-                                         const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                         const std::size_t n = 5)
-    {
-        if (n == static_cast<std::size_t>(-1)) {
-            stream << "Printing all read likelihoods for each haplotype in ";
-        } else {
-            stream << "Printing top " << n << " read likelihoods for each haplotype in ";
+
+std::vector<std::reference_wrapper<const Haplotype>>
+rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
+                const HaplotypeLikelihoodCache& haplotype_likelihoods);
+
+template <typename S>
+void print_read_haplotype_likelihoods(S&& stream,
+                                     const std::vector<Haplotype>& haplotypes,
+                                     const ReadMap& reads,
+                                     const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                     const std::size_t n = 5)
+{
+    if (n == static_cast<std::size_t>(-1)) {
+        stream << "Printing all read likelihoods for each haplotype in ";
+    } else {
+        stream << "Printing top " << n << " read likelihoods for each haplotype in ";
+    }
+    const bool is_single_sample {reads.size() == 1};
+    if (is_single_sample) {
+        stream << "sample " << std::cbegin(reads)->first;
+    } else {
+        stream << "each sample";
+    }
+    stream << '\n';
+    using ReadReference = std::reference_wrapper<const AlignedRead>;
+    for (const auto& sample_reads : reads) {
+        const auto& sample = sample_reads.first;
+        if (!is_single_sample) {
+            stream << "Sample: " << sample << ":" << '\n';
         }
-        
-        const bool is_single_sample {reads.size() == 1};
-        
-        if (is_single_sample) {
-            stream << "sample " << std::cbegin(reads)->first;
-        } else {
-            stream << "each sample";
-        }
-        stream << '\n';
-        
-        using ReadReference = std::reference_wrapper<const AlignedRead>;
-        
-        for (const auto& sample_reads : reads) {
-            const auto& sample = sample_reads.first;
-            
+        const auto ranked_haplotypes = rank_haplotypes(haplotypes, sample, haplotype_likelihoods);
+        const auto m = std::min(n, sample_reads.second.size());
+        for (const auto& haplotype : ranked_haplotypes) {
             if (!is_single_sample) {
-                stream << "Sample: " << sample << ":" << '\n';
+                stream << "\t";
             }
-            
-            const auto ranked_haplotypes = rank_haplotypes(haplotypes, sample, haplotype_likelihoods);
-            
-            const auto m = std::min(n, sample_reads.second.size());
-            
-            for (const auto& haplotype : ranked_haplotypes) {
-                if (!is_single_sample) {
-                    stream << "\t";
-                }
-                debug::print_variant_alleles(stream, haplotype);
-                stream << '\n';
-                
-                std::vector<std::pair<ReadReference, double>> likelihoods {};
-                likelihoods.reserve(sample_reads.second.size());
-                
-                std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
-                               std::cbegin(haplotype_likelihoods(sample, haplotype)),
-                               std::back_inserter(likelihoods),
-                               [] (const AlignedRead& read, const double likelihood) {
-                                   return std::make_pair(std::cref(read), likelihood);
-                               });
-                
-                const auto mth = std::next(std::begin(likelihoods), m);
-                
-                std::partial_sort(std::begin(likelihoods), mth, std::end(likelihoods),
-                                  [] (const auto& lhs, const auto& rhs) {
-                                      return lhs.second > rhs.second;
-                                  });
-                
-                std::for_each(std::begin(likelihoods), mth,
-                              [&] (const auto& p) {
-                                  if (is_single_sample) {
-                                      stream << "\t";
-                                  } else {
-                                      stream << "\t\t";
-                                  }
-                                  stream << p.first.get().mapped_region()
-                                  << " " << p.first.get().cigar() << ": ";
-                                  stream << p.second << '\n';
+            debug::print_variant_alleles(stream, haplotype);
+            stream << '\n';
+            std::vector<std::pair<ReadReference, double>> likelihoods {};
+            likelihoods.reserve(sample_reads.second.size());
+            std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
+                           std::cbegin(haplotype_likelihoods(sample, haplotype)),
+                           std::back_inserter(likelihoods),
+                           [] (const AlignedRead& read, const double likelihood) {
+                               return std::make_pair(std::cref(read), likelihood);
+                           });
+            const auto mth = std::next(std::begin(likelihoods), m);
+            std::partial_sort(std::begin(likelihoods), mth, std::end(likelihoods),
+                              [] (const auto& lhs, const auto& rhs) {
+                                  return lhs.second > rhs.second;
                               });
-            }
+            std::for_each(std::begin(likelihoods), mth,
+                          [&] (const auto& p) {
+                              if (is_single_sample) {
+                                  stream << "\t";
+                              } else {
+                                  stream << "\t\t";
+                              }
+                              stream << p.first.get().mapped_region()
+                              << " " << p.first.get().cigar() << ": ";
+                              stream << p.second << '\n';
+                          });
         }
     }
-    
-    void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
-                                          const ReadMap& reads,
-                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                          std::size_t n = 5);
+}
+
+void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
+                                      const ReadMap& reads,
+                                      const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                      std::size_t n = 5);
+
 } // namespace debug
+
 } // namespace octopus
 
 #endif

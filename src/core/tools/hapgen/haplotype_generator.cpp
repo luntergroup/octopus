@@ -70,7 +70,7 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy)
 
 auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy)
 {
-    using HGP = HaplotypeGenerator::Policies::Lagging ;
+    using HGP = HaplotypeGenerator::Policies::Lagging;
     using GWP = GenomeWalker::IndicatorPolicy;
     switch (policy) {
     case HGP::none: return GWP::includeNone;
@@ -298,19 +298,21 @@ GenomicRegion HaplotypeGenerator::find_max_lagged_region() const
     }
 }
 
+namespace {
+
 bool try_extend_tree_without_removal(HaplotypeTree& tree, const GenomicRegion& active_region,
                                      const MappableFlatSet<Allele>& alleles,
                                      const GenomicRegion& max_lagged_region,
                                      const unsigned haplotype_limit)
 {
-    const auto novel_region  = right_overhang_region(max_lagged_region, active_region);
+    const auto novel_region = right_overhang_region(max_lagged_region, active_region);
     const auto novel_alleles = overlap_range(alleles, novel_region);
     const auto last_added = extend_tree_until(novel_alleles, tree, haplotype_limit);
     if (last_added == std::cend(novel_alleles)) {
         return true;
     } else {
         tree.clear(novel_region); // undo previous extension
-        const auto passed_region  = left_overhang_region(active_region, max_lagged_region);
+        const auto passed_region = left_overhang_region(active_region, max_lagged_region);
         const auto passed_alleles = overlap_range(alleles, passed_region);
         if (can_remove_entire_passed_region(active_region, max_lagged_region, passed_alleles)) {
             tree.clear(passed_region);
@@ -329,13 +331,13 @@ void prune_indicators(HaplotypeTree& tree, std::vector<GenomicRegion>& indicator
                       const unsigned target_tree_size)
 {
     auto itr = std::find_if(std::cbegin(indicator_regions), std::cend(indicator_regions),
-                           [&tree, target_tree_size] (const auto& region) {
-                               if (tree.num_haplotypes() < target_tree_size) {
-                                   return true;
-                               }
-                               tree.clear(region);
-                               return false;
-                           });
+                            [&tree, target_tree_size](const auto& region) {
+                                if (tree.num_haplotypes() < target_tree_size) {
+                                    return true;
+                                }
+                                tree.clear(region);
+                                return false;
+                            });
     indicator_regions.erase(std::cbegin(indicator_regions), itr);
 }
 
@@ -371,30 +373,21 @@ unsigned extend_novel(HaplotypeTree& tree, const std::vector<GenomicRegion>& nov
     return num_novel_regions_added;
 }
 
-template <typename ForwardIt, typename BinaryPredicate>
-ForwardIt remove_pairwise(ForwardIt first, ForwardIt last, BinaryPredicate pred)
+bool has_duplicate_insertion(const std::vector<GenomicRegion>& indicator_regions,
+                             const std::vector<GenomicRegion>& novel_regions)
 {
-    first = std::adjacent_find(first, last, pred);
-    if (first != last) {
-        auto itr = first;
-        for (auto next = std::next(itr); next != last; ++itr, ++next) {
-            if (!pred(*itr, *next)) {
-                *first++ = std::move(*itr);
-            }
-        }
-        *first++ = std::move(*itr);
-    }
-    return first;
+    return is_empty(novel_regions.front()) && are_adjacent(indicator_regions.back(), novel_regions.front());
 }
 
-void remove_edge_insertions(std::vector<GenomicRegion>& regions)
+void remove_duplicate_novels(const std::vector<GenomicRegion>& indicator_regions,
+                             std::vector<GenomicRegion>& novel_regions)
 {
-    auto itr = remove_pairwise(std::begin(regions), std::end(regions),
-                               [] (const auto& lhs, const auto& rhs) {
-                                   return is_empty(lhs) && are_adjacent(lhs, rhs);
-                               });
-    regions.erase(itr, std::end(regions));
+    if (has_duplicate_insertion(indicator_regions, novel_regions)) {
+        pop_front(novel_regions);
+    }
 }
+
+} // namespace
 
 void HaplotypeGenerator::update_lagged_next_active_region() const
 {
@@ -408,10 +401,8 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         next_active_region_ = std::move(max_lagged_region);
     } else {
         HaplotypeTree test_tree {tree_}; // use a temporary tree to see how much we can lag
-        
         if (begins_before(active_region_, max_lagged_region)
-            && try_extend_tree_without_removal(test_tree, active_region_, alleles_,
-                                               max_lagged_region,
+            && try_extend_tree_without_removal(test_tree, active_region_, alleles_,  max_lagged_region,
                                                policies_.haplotype_limits.target)) {
             next_active_region_ = test_tree.encompassing_region();
             return;
@@ -428,11 +419,9 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         const auto indicator_alleles = contained_range(alleles_, indicator_region);
         if (!indicator_alleles.empty()) {
             auto mutually_exclusive_indicator_regions = extract_mutually_exclusive_regions(indicator_alleles);
-            remove_edge_insertions(mutually_exclusive_indicator_regions);
-            if (mutually_exclusive_indicator_regions.back() == mutually_exclusive_novel_regions.front()) {
-                assert(is_empty(mutually_exclusive_novel_regions.front()));
-                pop_front(mutually_exclusive_novel_regions);
-            }
+            // Although HaplotypeTree can handle duplicate extension, if the tree is not in a complete
+            // state (i.e. it has been pruned) then adding duplicates will corrupt the tree.
+            remove_duplicate_novels(mutually_exclusive_indicator_regions, mutually_exclusive_novel_regions);
             if (!in_holdout_mode()) {
                 const auto novel_overlap_region = encompassing_region(novel_alleles);
                 while (!mutually_exclusive_indicator_regions.empty()
