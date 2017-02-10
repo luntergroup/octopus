@@ -84,6 +84,9 @@ set(IO_SOURCES
     io/region/region_parser.hpp
     io/region/region_parser.cpp
 
+    io/pedigree/pedigree_reader.hpp
+    io/pedigree/pedigree_reader.cpp
+
     io/read/htslib_sam_facade.hpp
     io/read/htslib_sam_facade.cpp
     io/read/read_manager.hpp
