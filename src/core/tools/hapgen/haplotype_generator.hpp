@@ -98,6 +98,18 @@ public:
     template <typename Container> void collapse(const Container& haplotypes);
     
 private:
+    struct HoldoutSet
+    {
+        std::vector<Allele> alleles;
+        GenomicRegion region;
+        
+        template <typename InputIt>
+        HoldoutSet(InputIt first, InputIt last, GenomicRegion region)
+        : alleles {first, last}
+        , region {std::move(region)}
+        {}
+    };
+    
     Policies policies_;
     Haplotype::MappingDomain::Size min_flank_pad_;
     
@@ -111,18 +123,6 @@ private:
     GenomicRegion active_region_;
     mutable boost::optional<GenomicRegion> next_active_region_;
     
-    struct HoldoutSet
-    {
-        std::vector<Allele> alleles;
-        GenomicRegion region;
-        
-        template <typename InputIt>
-        HoldoutSet(InputIt first, InputIt last, GenomicRegion region)
-        : alleles {first, last}
-        , region {std::move(region)}
-        {}
-    };
-    
     mutable std::stack<HoldoutSet> active_holdouts_;
     mutable boost::optional<GenomicRegion> holdout_region_;
     
@@ -130,14 +130,11 @@ private:
     
     bool is_lagging_enabled() const noexcept;
     bool is_active_region_lagged() const;
-    
     void reset_next_active_region() const noexcept;
     GenomicRegion find_max_lagged_region() const;
     void update_next_active_region() const;
     void update_lagged_next_active_region() const;
-    
     void progress(GenomicRegion to);
-    
     void populate_tree();
     bool in_holdout_mode() const noexcept;
     bool can_extract_holdouts(const GenomicRegion& region) const noexcept;
@@ -145,7 +142,7 @@ private:
     bool can_reintroduce_holdouts() const noexcept;
     void reintroduce_holdouts();
     void clear_holdouts() noexcept;
-    
+    void resolve_sandwich_inseertion();
     GenomicRegion calculate_haplotype_region() const;
 };
 
