@@ -148,6 +148,17 @@ catch (...) {
     throw;
 }
 
+namespace {
+
+bool has_rhs_sandwich_insertion(const MappableFlatSet<Allele>& alleles, const GenomicRegion& active_region) {
+    const auto insertion_region = tail_region(active_region);
+    const auto active_tails = overlap_range(alleles, insertion_region);
+    return !empty(active_tails) && begins_before(active_tails.front(), insertion_region)
+           && ends_before(insertion_region, active_tails.back());
+}
+    
+} // namespace
+
 HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
 {
     if (alleles_.empty()) {
@@ -159,6 +170,9 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
             throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
         }
         active_region_ = tree_.encompassing_region();
+        if (!in_holdout_mode() && has_rhs_sandwich_insertion(alleles_, active_region_)) {
+            resolve_sandwich_inseertion();
+        }
         reset_next_active_region();
     } else {
         update_next_active_region();
@@ -642,8 +656,8 @@ void HaplotypeGenerator::extract_holdouts(GenomicRegion next_active_region)
 
 bool HaplotypeGenerator::can_reintroduce_holdouts() const noexcept
 {
-    return !in_holdout_mode() || !ends_before(active_region_, *holdout_region_)
-        || !has_overlapped(alleles_, right_overhang_region(*holdout_region_, active_region_));
+    return !ends_before(active_region_, *holdout_region_)
+           || !has_overlapped(alleles_, right_overhang_region(*holdout_region_, active_region_));
 }
 
 namespace debug {
@@ -681,6 +695,18 @@ void HaplotypeGenerator::clear_holdouts() noexcept
 {
     active_holdouts_ = decltype(active_holdouts_) {};
     holdout_region_ = boost::none;
+}
+
+void HaplotypeGenerator::resolve_sandwich_inseertion()
+{
+    const auto active_alleles = bases(contained_range(alleles_, active_region_));
+    auto first_required = std::cend(active_alleles);
+    const auto last_required = find_next_mutually_exclusive(first_required, std::cend(alleles_));
+    first_required = extend_tree_until(first_required, last_required, tree_, policies_.haplotype_limits.overflow);
+    if (first_required != last_required) {
+        throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
+    }
+    active_region_ = tree_.encompassing_region();
 }
 
 template <typename Range>
