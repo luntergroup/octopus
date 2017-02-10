@@ -37,7 +37,6 @@ set(CONCEPTS_SOURCES
 set(BASICS_SOURCES
     basics/contig_region.hpp
     basics/genomic_region.hpp
-
     basics/phred.hpp
     basics/cigar_string.hpp
     basics/cigar_string.cpp
@@ -45,7 +44,12 @@ set(BASICS_SOURCES
     basics/aligned_read.cpp
     basics/mappable_reference_wrapper.hpp
     basics/ploidy_map.hpp
-    basics/ploidy_map.cpp)
+    basics/ploidy_map.cpp
+    basics/pedigree.hpp
+    basics/pedigree.cpp
+    basics/trio.hpp
+    basics/trio.cpp
+)
 
 set(CONTAINERS_SOURCES
     containers/mappable_flat_multi_set.hpp
@@ -312,10 +316,6 @@ set(CORE_SOURCES
     core/types/genotype.cpp
     core/types/haplotype.hpp
     core/types/haplotype.cpp
-    core/types/pedigree.hpp
-    core/types/pedigree.cpp
-    core/types/trio.hpp
-    core/types/trio.cpp
     core/types/variant.hpp
     core/types/variant.cpp
 

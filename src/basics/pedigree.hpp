@@ -36,11 +36,11 @@ public:
     unsigned num_children(Member parent) const;
     std::vector<Member> get_children(Member parent) const;
     std::vector<Member> get_descendants(Member parent) const;
-    
+
 private:
     using Tree = boost::adjacency_list<
-                    boost::listS, boost::listS, boost::bidirectionalS, Member, boost::no_property
-                >;
+    boost::listS, boost::listS, boost::bidirectionalS, Member, boost::no_property
+    >;
     
     using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;

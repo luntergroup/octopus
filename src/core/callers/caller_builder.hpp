@@ -15,8 +15,8 @@
 #include "basics/ploidy_map.hpp"
 #include "readpipe/read_pipe.hpp"
 #include "core/tools/coretools.hpp"
-#include "core/types/trio.hpp"
-#include "core/types/pedigree.hpp"
+#include "basics/trio.hpp"
+#include "basics/pedigree.hpp"
 #include "caller.hpp"
 
 namespace octopus {
