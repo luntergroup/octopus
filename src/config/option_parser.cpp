@@ -137,6 +137,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "File of sample names to analyse, one per line, which must be a subset of the samples"
      " that appear in the read files")
+
+    ("pedigree",
+     po::value<fs::path>(),
+     "PED file containing sample pedigree")
     
     ("output,o",
      po::value<fs::path>(),

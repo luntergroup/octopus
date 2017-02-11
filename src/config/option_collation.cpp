@@ -30,11 +30,14 @@
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
 #include "basics/ploidy_map.hpp"
+#include "basics/trio.hpp"
+#include "basics/pedigree.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/tools/coretools.hpp"
 #include "core/callers/caller_builder.hpp"
 #include "logging/logging.hpp"
 #include "io/region/region_parser.hpp"
+#include "io/pedigree/pedigree_reader.hpp"
 #include "io/variant/vcf_reader.hpp"
 #include "io/variant/vcf_writer.hpp"
 #include "exceptions/user_error.hpp"
@@ -541,24 +544,6 @@ ReadManager make_read_manager(const OptionMap& options)
     auto read_paths = get_read_paths(options);
     const auto max_open_files = as_unsigned("max-open-read-files", options);
     return ReadManager {std::move(read_paths), max_open_files};
-}
-
-auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
-{
-    // TODO: could think about getting rid of the 'caller' option and just
-    // deduce the caller type directly from the options.
-    // Will need to report an error if conflicting caller options are given anyway.
-    auto result = options.at("caller").as<std::string>();
-    if (result == "population" && samples.size() == 1) {
-        result = "individual";
-    }
-    if (options.count("maternal-sample") == 1 || options.count("paternal-sample") == 1) {
-        result = "trio";
-    }
-    if (options.count("normal-sample") == 1) {
-        result = "cancer";
-    }
-    return result;
 }
 
 auto make_read_transformer(const OptionMap& options)
@@ -1075,6 +1060,16 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
 }
 
+boost::optional<Pedigree> get_pedigree(const OptionMap& options)
+{
+	if (options.count("pedigree") == 1) {
+		const auto ped_file = resolve_path(options.at("pedigree").as<fs::path>(), options);
+		return io::read_pedigree(ped_file);
+	} else {
+		return boost::none;
+	}
+}
+
 class BadTrioSampleSet : public UserError
 {
     std::string do_where() const override
@@ -1167,8 +1162,74 @@ public:
     {}
 };
 
-Trio make_trio(std::vector<SampleName> samples, const OptionMap& options)
+bool all_members(const std::vector<SampleName>& samples, const Pedigree& pedigree)
 {
+	return std::all_of(std::cbegin(samples), std::cend(samples),
+					   [&] (const auto& sample) { return pedigree.is_member(sample); });
+}
+
+bool is_parent_of(const SampleName& parent, const SampleName& offspring, const Pedigree& pedigree)
+{
+	const auto mother = pedigree.mother_of(offspring);
+	if (mother && *mother == parent) return true;
+	const auto father = pedigree.father_of(offspring);
+	return father && *father == parent;
+}
+
+bool is_trio(const std::vector<SampleName>& samples, const Pedigree& pedigree)
+{
+	if (samples.size() == 3 && all_members(samples, pedigree)) {
+		if (pedigree.size() == 3) return true;
+		if (is_parent_of(samples[0], samples[2], pedigree)) {
+			return is_parent_of(samples[1], samples[2], pedigree);
+		} else if (is_parent_of(samples[0], samples[1], pedigree)) {
+			return is_parent_of(samples[2], samples[1], pedigree);
+		} else {
+			return is_parent_of(samples[1], samples[0], pedigree)
+				 && is_parent_of(samples[2], samples[0], pedigree);
+		}
+	} else {
+		return false;
+	}
+}
+
+auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples,
+	 				 const boost::optional<Pedigree>& pedigree)
+{
+    // TODO: could think about getting rid of the 'caller' option and just
+    // deduce the caller type directly from the options.
+    // Will need to report an error if conflicting caller options are given anyway.
+    auto result = options.at("caller").as<std::string>();
+    if (result == "population" && samples.size() == 1) {
+        result = "individual";
+    }
+    if (options.count("maternal-sample") == 1 || options.count("paternal-sample") == 1
+		|| (pedigree && is_trio(samples, *pedigree))) {
+        result = "trio";
+    }
+    if (options.count("normal-sample") == 1) {
+        result = "cancer";
+    }
+    return result;
+}
+
+auto get_child(std::vector<SampleName> samples, const Pedigree& pedigree)
+{
+	if (is_parent_of(samples[0], samples[1], pedigree)) return samples[1];
+	return is_parent_of(samples[1], samples[0], pedigree) ? samples[0] : samples[2];
+}
+
+Trio make_trio(std::vector<SampleName> samples, const Pedigree& pedigree)
+{
+	return *make_trio(get_child(samples, pedigree), pedigree);
+}
+
+Trio make_trio(std::vector<SampleName> samples, const OptionMap& options,
+			   const boost::optional<Pedigree>& pedigree)
+{
+	if (pedigree && is_trio(samples, *pedigree)) {
+		return make_trio(samples, *pedigree);
+	}
     if (samples.size() != 3) {
         throw BadTrioSampleSet {samples.size()};
     }
@@ -1238,10 +1299,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         make_haplotype_generator_builder(options)
     };
     
-    const auto caller = get_caller_type(options, read_pipe.samples());
-//    if (caller == "population") {
-//        throw UnimplementedCaller {caller};
-//    }
+	const auto pedigree = get_pedigree(options);
+    std::cout << pedigree->size() << std::endl;
+    const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
     vc_builder.set_caller(caller);
     
     if (options.count("refcall") == 1) {
@@ -1289,7 +1349,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
     } else if (caller == "trio") {
-        vc_builder.set_trio(make_trio(read_pipe.samples(), options));
+        vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_denovo_mutation_rate(options.at("denovo-mutation-rate").as<float>());
     }
     
