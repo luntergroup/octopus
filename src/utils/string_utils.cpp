@@ -3,7 +3,9 @@
 
 #include "string_utils.hpp"
 
+#include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/classification.hpp>
 
 namespace octopus { namespace utils {
 
@@ -15,6 +17,13 @@ std::vector<std::string> split(const std::string& str, const char delim) {
     while (std::getline(ss, item, delim)) {
         elems.push_back(item);
     }
+    return elems;
+}
+
+std::vector<std::string> split(const std::string& str, const std::string delims)
+{
+    std::vector<std::string> elems;
+    boost::split(elems, str, boost::is_any_of(delims));
     return elems;
 }
 
