@@ -4,10 +4,15 @@
 #ifndef pedigree_reader_hpp
 #define pedigree_reader_hpp
 
+#include <boost/filesystem/path.hpp>
 
-class pedigree_reader {
-    
-};
+#include "basics/pedigree.hpp"
 
+namespace octopus {namespace io {
+
+Pedigree read_pedigree(const boost::filesystem::path& ped_file);
+
+} // namespace io
+} // namespace octopus
 
 #endif
