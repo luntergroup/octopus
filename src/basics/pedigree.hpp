@@ -12,7 +12,7 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
-#import "trio.hpp"
+#include "trio.hpp"
 
 namespace octopus {
 
@@ -23,25 +23,26 @@ public:
     {
         enum class Sex { male, female };
         SampleName name;
-        Sex gender;
+        Sex sex;
     };
     
     Pedigree() = default;
+    Pedigree(std::size_t pedigree_size_hint);
     
-    Pedigree(const Pedigree&)            = default;
-    Pedigree& operator=(const Pedigree&) = default;
-    Pedigree(Pedigree&&)                 = default;
-    Pedigree& operator=(Pedigree&&)      = default;
+    Pedigree(const Pedigree&);
+    Pedigree& operator=(const Pedigree&);
+    Pedigree(Pedigree&&);
+    Pedigree& operator=(Pedigree&&);
     
     ~Pedigree() = default;
     
-    void add_relationship(Member parent, Member child);
-    
-    boost::optional<const SampleName&> mother_of(const SampleName& child) const;
-    boost::optional<const SampleName&> father_of(const SampleName& child) const;
-    std::vector<Member> children_of(const Member& parent) const;
+    void add_founder(Member parent);
+    void add_descendant(Member offspring, const SampleName& mother, const SampleName& father);
     
     bool is_member(const SampleName& member) const noexcept;
+    boost::optional<const SampleName&> mother_of(const SampleName& child) const;
+    boost::optional<const SampleName&> father_of(const SampleName& child) const;
+    std::vector<Member> offspring_of(const Member& parent) const;
     
     bool is_empty() const noexcept;
     std::size_t size() const noexcept;
@@ -55,8 +56,8 @@ private:
     Tree tree_;
     std::unordered_map<SampleName, Vertex> members_;
     
-    Vertex add_new_member(const Member& member);
-    Vertex get_member_vertex(const Member& member);
+    Vertex add_new_member(Member member);
+    Vertex get_vertex(const SampleName& member) const;
     boost::optional<const SampleName&> parent_of(const SampleName& child, Member::Sex parent_gender) const;
 };
 

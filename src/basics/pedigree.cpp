@@ -3,18 +3,99 @@
 
 #include "pedigree.hpp"
 
+#include <utility>
 #include <algorithm>
 #include <iterator>
+#include <cassert>
+
+#include <boost/property_map/property_map.hpp>
+#include <boost/graph/copy.hpp>
 
 namespace octopus {
 
 // public methods
 
-void Pedigree::add_relationship(Member parent, Member child)
+Pedigree::Pedigree(std::size_t pedigree_size_hint)
 {
-    const auto parent_vertex = get_member_vertex(parent);
-    const auto child_vertex  = get_member_vertex(child);
-    boost::add_edge(parent_vertex, child_vertex, tree_);
+    members_.reserve(pedigree_size_hint);
+}
+
+namespace {
+
+template <typename Graph>
+auto copy_graph(const Graph& src, Graph& dst)
+{
+    assert(boost::num_vertices(dst) == 0);
+    using Vertex = typename boost::graph_traits<Graph>::vertex_descriptor;
+    std::unordered_map<Vertex, std::size_t> index_map {};
+    index_map.reserve(boost::num_vertices(src));
+    const auto p = boost::vertices(src);
+    std::size_t i {0};
+    std::for_each(p.first, p.second, [&i, &index_map] (Vertex v) { index_map.emplace(v, i++); });
+    std::unordered_map<Vertex, Vertex> vertex_copy_map {};
+    vertex_copy_map.reserve(boost::num_vertices(src));
+    boost::copy_graph(src, dst,
+                      boost::vertex_index_map(boost::make_assoc_property_map(index_map))
+                      .orig_to_copy(boost::make_assoc_property_map(vertex_copy_map)));
+    assert(vertex_copy_map.size() == boost::num_vertices(src));
+    return vertex_copy_map;
+}
+
+template <typename Map1, typename Map2>
+void copy_members(const Map1& src, Map1& dst, const Map2& vertex_copy_map)
+{
+    assert(dst.empty());
+    dst.reserve(src.size());
+    std::transform(std::cbegin(src), std::cend(src), std::inserter(dst, std::begin(dst)),
+                   [&vertex_copy_map] (const auto& p) {
+                       return std::make_pair(p.first, vertex_copy_map.at(p.second));
+                   });
+}
+
+} // namespace
+
+Pedigree::Pedigree(const Pedigree& other)
+: tree_ {}
+{
+    const auto vertex_copy_map = copy_graph(other.tree_, tree_);
+    copy_members(other.members_, members_, vertex_copy_map);
+}
+
+Pedigree& Pedigree::operator=(const Pedigree& other)
+{
+    if (&other == this) return *this;
+    tree_.clear();
+    members_.clear();
+    const auto vertex_copy_map = copy_graph(other.tree_, tree_);
+    copy_members(other.members_, members_, vertex_copy_map);
+    return *this;
+}
+
+Pedigree::Pedigree(Pedigree&& other) : Pedigree {other} {}
+
+Pedigree& Pedigree::operator=(Pedigree&& other)
+{
+    *this = other;
+    return *this;
+}
+
+void Pedigree::add_founder(Member parent)
+{
+     add_new_member(std::move(parent));
+}
+
+void Pedigree::add_descendant(Member offspring, const SampleName& mother, const SampleName& father)
+{
+    const auto offspring_vertex = add_new_member(std::move(offspring));
+    const auto mother_vertex  = get_vertex(mother);
+    const auto father_vertex  = get_vertex(father);
+    boost::add_edge(mother_vertex, offspring_vertex, tree_);
+    boost::add_edge(father_vertex, offspring_vertex, tree_);
+}
+
+bool Pedigree::is_member(const SampleName& member) const noexcept
+{
+    return members_.count(member) == 1;
 }
 
 boost::optional<const SampleName&> Pedigree::mother_of(const SampleName& child) const
@@ -27,19 +108,14 @@ boost::optional<const SampleName&> Pedigree::father_of(const SampleName& child) 
     return parent_of(child, Member::Sex::male);
 }
 
-std::vector<Pedigree::Member> Pedigree::children_of(const Member& parent) const
+std::vector<Pedigree::Member> Pedigree::offspring_of(const Member& parent) const
 {
-    const auto children = boost::adjacent_vertices(members_.at(parent.name), tree_);
+    const auto offspring = boost::adjacent_vertices(get_vertex(parent.name), tree_);
     std::vector<Member> result {};
-    result.reserve(std::distance(children.first, children.second));
-    std::transform(children.first, children.second, std::back_inserter(result),
+    result.reserve(std::distance(offspring.first, offspring.second));
+    std::transform(offspring.first, offspring.second, std::back_inserter(result),
                    [this] (const Vertex& v) { return tree_[v]; });
     return result;
-}
-
-bool Pedigree::is_member(const SampleName& member) const noexcept
-{
-    return members_.count(member) == 1;
 }
 
 bool Pedigree::is_empty() const noexcept
@@ -60,27 +136,22 @@ void Pedigree::clear() noexcept
 
 // private methods
 
-Pedigree::Vertex Pedigree::add_new_member(const Member& member)
+Pedigree::Vertex Pedigree::add_new_member(Member member)
 {
     const auto result = boost::add_vertex(member, tree_);
-    members_.insert(std::make_pair(member.name, result));
+    members_.insert(std::make_pair(std::move(member.name), result));
     return result;
 }
 
-Pedigree::Vertex Pedigree::get_member_vertex(const Member& member)
+Pedigree::Vertex Pedigree::get_vertex(const SampleName& member) const
 {
-    if (!is_member(member.name)) {
-        return add_new_member(member);
-    } else {
-        return members_.at(member.name);
-    }
+    return members_.at(member);
 }
 
-boost::optional<const SampleName&> Pedigree::parent_of(const SampleName& child, Member::Sex parent_gender) const
+boost::optional<const SampleName&> Pedigree::parent_of(const SampleName& child, const Member::Sex parent_sex) const
 {
-    const auto parents = boost::inv_adjacent_vertices(members_.at(child), tree_);
-    const auto itr = std::find_if(parents.first, parents.second,
-                                  [&] (const Vertex& v) { return tree_[v].gender == parent_gender; });
+    const auto parents = boost::inv_adjacent_vertices(get_vertex(child), tree_);
+    const auto itr = std::find_if(parents.first, parents.second, [&] (Vertex v) { return tree_[v].sex == parent_sex; });
     if (itr == parents.second) {
         return boost::none;
     } else {
