@@ -1300,7 +1300,6 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     };
     
 	const auto pedigree = get_pedigree(options);
-    std::cout << pedigree->size() << std::endl;
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
     vc_builder.set_caller(caller);
     

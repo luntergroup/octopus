@@ -85,7 +85,6 @@ Pedigree read_pedigree(const boost::filesystem::path& ped_file)
                   [&result] (PedRecord& record) {
                       result.add_descendant({record.sample, to_pedigree_sex(record.sex)}, record.mother, record.father);
                   });
-    std::cout << result.size() << std::endl;
     return result;
 }
     
