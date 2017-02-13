@@ -64,7 +64,7 @@ struct PedRecord
 
 bool is_valid_ped_record(const std::vector<std::string>& fields)
 {
-    return fields.size() >= 5 && (fields[4] == "0" || fields[4] == "1");
+    return fields.size() >= 5 && (fields[4] == "1" || fields[4] == "2");
 }
 
 PedRecord parse_ped_line(const std::string& line)
@@ -85,7 +85,7 @@ bool is_founder(const PedRecord& record)
 Pedigree::Member::Sex to_pedigree_sex(const std::string& ped_sex)
 {
     using Sex = Pedigree::Member::Sex;
-    if (ped_sex == "0") {
+    if (ped_sex == "1") {
         return Sex::male;
     } else {
         return Sex::female;
