@@ -60,9 +60,10 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) const
 {
     switch (caching_) {
-    case CachingStrategy::address: return evaluate_address_cache(target, given);
-    case CachingStrategy::value: return evaluate_basic_cache(target, given);
-    case CachingStrategy::none: return evaluate_uncached(target, given);
+        case CachingStrategy::address: return evaluate_address_cache(target, given);
+        case CachingStrategy::value: return evaluate_basic_cache(target, given);
+        case CachingStrategy::none: return evaluate_uncached(target, given);
+        default: return evaluate_uncached(target, given); // to prevent compiler warning
     }
 }
 

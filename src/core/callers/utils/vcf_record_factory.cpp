@@ -513,6 +513,25 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     return result.build_once();
 }
 
+namespace {
+
+boost::optional<double> get_model_posterior(const std::vector<std::unique_ptr<Call>>& calls)
+{
+    std::vector<double> model_posteriors {};
+    model_posteriors.reserve(calls.size());
+    for (const auto& call : calls) {
+        const auto call_model_posterior = call->model_posterior();
+        if (call_model_posterior) model_posteriors.push_back(call_model_posterior->score());
+    }
+    if (model_posteriors.empty()) {
+        return boost::none;
+    } else {
+        return *std::max_element(std::cbegin(model_posteriors), std::cend(model_posteriors));
+    }
+}
+
+} // namespace
+
 VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& calls) const
 {
     assert(!calls.empty());
@@ -583,17 +602,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
     result.set_info("MQ0", count_mapq_zero(reads_, region));
     
-    boost::optional<double> mp {};
-    for (const auto& call : calls) {
-        const auto call_mp = call->model_posterior();
-        if (call_mp) {
-            if (mp) {
-                if (*mp < call_mp->score()) mp = call_mp->score();
-            } else {
-                mp = call_mp->score();
-            }
-        }
-    }
+    const auto mp = get_model_posterior(calls);
     if (mp) {
         result.set_info("MP", maths::round(*mp, 2));
     }

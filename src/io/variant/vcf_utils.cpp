@@ -463,10 +463,10 @@ void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
     }
     
     static const std::string missing {vcfspec::missingValue};
-    static const auto has_deleted = [] (const auto& allele) noexcept {
+    const auto has_deleted = [] (const auto& allele) noexcept {
         return std::find(std::cbegin(allele), std::cend(allele), vcfspec::deletedBase) != std::cend(allele);
     };
-    static const auto is_missing_or_has_deleted = [] (const auto& allele) noexcept {
+    const auto is_missing_or_has_deleted = [&] (const auto& allele) noexcept {
         return allele == missing || has_deleted(allele);
     };
     

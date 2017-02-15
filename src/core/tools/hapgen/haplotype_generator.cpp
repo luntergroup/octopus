@@ -63,10 +63,11 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy)
     using HGP = HaplotypeGenerator::Policies::Extension;
     using GWP = GenomeWalker::ExtensionPolicy;
     switch (policy) {
-    case HGP::conservative: return GWP::includeIfWithinReadLengthOfFirstIncluded;
-    case HGP::normal: return GWP::includeIfAllSamplesSharedWithFrontier;
-    case HGP::optimistic: return GWP::includeIfAnySampleSharedWithFrontier;
-    case HGP::aggressive: return GWP::noLimit;
+        case HGP::conservative: return GWP::includeIfWithinReadLengthOfFirstIncluded;
+        case HGP::normal: return GWP::includeIfAllSamplesSharedWithFrontier;
+        case HGP::optimistic: return GWP::includeIfAnySampleSharedWithFrontier;
+        case HGP::aggressive: return GWP::noLimit;
+        default: return GWP::includeIfAllSamplesSharedWithFrontier; // prevents compiler warning
     }
 }
 
@@ -75,9 +76,10 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy)
     using HGP = HaplotypeGenerator::Policies::Lagging;
     using GWP = GenomeWalker::IndicatorPolicy;
     switch (policy) {
-    case HGP::none: return GWP::includeNone;
-    case HGP::conservative: return GWP::includeIfSharedWithNovelRegion;
-    case HGP::aggressive: return GWP::includeIfLinkableToNovelRegion;
+        case HGP::none: return GWP::includeNone;
+        case HGP::conservative: return GWP::includeIfSharedWithNovelRegion;
+        case HGP::aggressive: return GWP::includeIfLinkableToNovelRegion;
+        default: return GWP::includeIfSharedWithNovelRegion; // prevents compiler warning
     }
 }
 
