@@ -1021,10 +1021,11 @@ auto get_extension_policy(const OptionMap& options)
 {
     using ExtensionPolicy = HaplotypeGenerator::Builder::Policies::Extension;
     switch (options.at("extension-level").as<ExtensionLevel>()) {
-    case ExtensionLevel::conservative: return ExtensionPolicy::conservative;
-    case ExtensionLevel::normal: return ExtensionPolicy::normal;
-    case ExtensionLevel::optimistic: return ExtensionPolicy::optimistic;
-    case ExtensionLevel::aggressive: return ExtensionPolicy::aggressive;
+        case ExtensionLevel::conservative: return ExtensionPolicy::conservative;
+        case ExtensionLevel::normal: return ExtensionPolicy::normal;
+        case ExtensionLevel::optimistic: return ExtensionPolicy::optimistic;
+        case ExtensionLevel::aggressive: return ExtensionPolicy::aggressive;
+        default: return ExtensionPolicy::normal; // to stop GCC warning
     }
 }
 
