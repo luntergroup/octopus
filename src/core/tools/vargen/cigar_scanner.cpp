@@ -87,7 +87,7 @@ bool is_surrounded_by_good_bases(Iterator base_quality_itr, const std::size_t re
 
 } // namespace
 
-void CigarScanner::do_add_read(const AlignedRead& read)
+void CigarScanner::add_read(const AlignedRead& read)
 {
     using std::cbegin; using std::next; using std::move;
     using Flag = CigarOperation::Flag;
@@ -168,14 +168,19 @@ void CigarScanner::do_add_read(const AlignedRead& read)
     }
 }
 
-void CigarScanner::do_add_reads(VectorIterator first, VectorIterator last)
+void CigarScanner::do_add_read(const SampleName& sample, const AlignedRead& read)
 {
-    std::for_each(first, last, [this] (const AlignedRead& read ) { do_add_read(read); });
+    add_read(read);
 }
 
-void CigarScanner::do_add_reads(FlatSetIterator first, FlatSetIterator last)
+void CigarScanner::do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last)
 {
-    std::for_each(first, last, [this] (const AlignedRead& read ) { do_add_read(read); });
+    std::for_each(first, last, [this] (const AlignedRead& read) { add_read(read); });
+}
+
+void CigarScanner::do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last)
+{
+    std::for_each(first, last, [this] (const AlignedRead& read) { add_read(read); });
 }
 
 template <typename ForwardIt, typename Container>

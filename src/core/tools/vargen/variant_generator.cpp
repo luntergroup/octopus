@@ -90,9 +90,9 @@ bool VariantGenerator::requires_reads() const noexcept
                        [] (const auto& generator) { return generator->do_requires_reads(); });
 }
 
-void VariantGenerator::add_read(const AlignedRead& read)
+void VariantGenerator::add_read(const SampleName& sample, const AlignedRead& read)
 {
-    for (auto& generator : generators_) generator->do_add_read(read);
+    for (auto& generator : generators_) generator->do_add_read(sample, read);
 }
 
 void VariantGenerator::clear() noexcept
