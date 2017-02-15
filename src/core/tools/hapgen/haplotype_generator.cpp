@@ -21,6 +21,8 @@
 #include <iostream> // DEBUG
 #include "timers.hpp"
 
+#define _unused(x) ((void)(x))
+
 namespace octopus { namespace coretools {
 
 // HaplotypeOverflow
@@ -450,6 +452,7 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
                                                           novel_alleles, policies_.haplotype_limits);
         if (!test_tree.is_empty()) {
             assert(num_novel_regions_added > 0);
+            _unused(num_novel_regions_added); // make production build happy
             next_active_region_ = test_tree.encompassing_region();
         } else {
             next_active_region_ = encompassing_region(novel_alleles); // revert to non-lagged behaviour
