@@ -14,6 +14,7 @@
 
 #include <boost/optional.hpp>
 
+#include "config/common.hpp"
 #include "logging/logging.hpp"
 #include "basics/aligned_read.hpp"
 #include "core/types/variant.hpp"
@@ -47,10 +48,10 @@ public:
     
     bool requires_reads() const noexcept;
     
-    void add_read(const AlignedRead& read);
+    void add_read(const SampleName& sample, const AlignedRead& read);
     
     template <typename InputIt>
-    void add_reads(InputIt first, InputIt last);
+    void add_reads(const SampleName& sample, InputIt first, InputIt last);
     
     void clear() noexcept;
     
@@ -70,16 +71,16 @@ private:
     
     virtual bool do_requires_reads() const noexcept { return false; };
     
-    virtual void do_add_read(const AlignedRead& read) {};
+    virtual void do_add_read(const SampleName& sample, const AlignedRead& read) {};
     
     // add_reads is not strictly necessary as the effect of calling add_reads must be the same as
-    // calling add_read for each read. However, there may be performance benifits
+    // calling add_read for each read. However, there may be performance benefits
     // to having an add_reads method to avoid many virtual dispatches.
-    // Ideally add_reads would be templated to accept any InputIterator, but it is not possible
+    // Ideally add_reads would be a template to accept any InputIterator, but it is not possible
     // to have template virtual methods. The best solution is therefore to just overload add_reads
     // for common container iterators, more can easily be added if needed.
-    virtual void do_add_reads(VectorIterator first, VectorIterator last) {};
-    virtual void do_add_reads(FlatSetIterator first, FlatSetIterator last) {};
+    virtual void do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last) {};
+    virtual void do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last) {};
     
     virtual void do_clear() noexcept {};
     
@@ -87,9 +88,9 @@ private:
 };
 
 template <typename InputIt>
-void VariantGenerator::add_reads(InputIt first, InputIt last)
+void VariantGenerator::add_reads(const SampleName& sample, InputIt first, InputIt last)
 {
-    for (auto& generator : generators_) generator->do_add_reads(first, last);
+    for (auto& generator : generators_) generator->do_add_reads(sample, first, last);
 }
 
 // non-member methods
@@ -99,14 +100,14 @@ namespace detail {
 template <typename Container, typename G>
 void add_reads(const Container& reads, G& generator, std::true_type)
 {
-    generator.add_reads(std::cbegin(reads), std::cend(reads));
+    generator.add_reads("octopus-sample", std::cbegin(reads), std::cend(reads));
 }
 
 template <typename ReadMap, typename G>
 void add_reads(const ReadMap& reads, G& generator, std::false_type)
 {
     for (const auto& p : reads) {
-        generator.add_reads(std::cbegin(p.second), std::cend(p.second));
+        generator.add_reads(p.first, std::cbegin(p.second), std::cend(p.second));
     }
 }
 

@@ -49,7 +49,7 @@ Sequence splice(const Sequence& sequence, const P pos, const S size)
 
 } // namespace
 
-void DynamicCigarScanner::do_add_read(const AlignedRead& read)
+void DynamicCigarScanner::add_read(const AlignedRead& read)
 {
     using std::cbegin; using std::next; using std::move;
     using Flag = CigarOperation::Flag;
@@ -128,14 +128,19 @@ void DynamicCigarScanner::do_add_read(const AlignedRead& read)
     }
 }
 
-void DynamicCigarScanner::do_add_reads(VectorIterator first, VectorIterator last)
+void DynamicCigarScanner::do_add_read(const SampleName& sample, const AlignedRead& read)
 {
-    std::for_each(first, last, [this] (const AlignedRead& read ) { do_add_read(read); });
+    add_read(read);
 }
 
-void DynamicCigarScanner::do_add_reads(FlatSetIterator first, FlatSetIterator last)
+void DynamicCigarScanner::do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last)
 {
-    std::for_each(first, last, [this] (const AlignedRead& read ) { do_add_read(read); });
+    std::for_each(first, last, [this] (const AlignedRead& read) { add_read(read); });
+}
+
+void DynamicCigarScanner::do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last)
+{
+    std::for_each(first, last, [this] (const AlignedRead& read) { add_read(read); });
 }
 
 unsigned get_min_depth(const Variant& v, const CoverageTracker& tracker)

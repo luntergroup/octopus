@@ -58,9 +58,9 @@ private:
     
     bool do_requires_reads() const noexcept override;
     
-    void do_add_read(const AlignedRead& read) override;
-    void do_add_reads(VectorIterator first, VectorIterator last) override;
-    void do_add_reads(FlatSetIterator first, FlatSetIterator last) override;
+    void do_add_read(const SampleName& sample, const AlignedRead& read) override;
+    void do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last) override;
+    void do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last) override;
     
     std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
     

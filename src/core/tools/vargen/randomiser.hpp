@@ -45,8 +45,8 @@ private:
     
     std::unique_ptr<VariantGenerator> do_clone() const override;
     
-    void do_add_reads(VectorIterator first, VectorIterator last) override;
-    void do_add_reads(FlatSetIterator first, FlatSetIterator last) override;
+    void do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last) override;
+    void do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last) override;
     
     std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
     
