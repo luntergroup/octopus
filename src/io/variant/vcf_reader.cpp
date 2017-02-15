@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <sstream>
+#include <typeinfo>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -44,9 +45,15 @@ std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path
 
 // VcfReader::Iterator
 
+template <typename T>
+static decltype(auto) element_typeid(const std::unique_ptr<T>& ptr) noexcept
+{
+    return typeid(*ptr);
+}
+
 VcfReader::RecordIterator::RecordIterator(IVcfReaderImpl::RecordIteratorPtr itr)
 : itr_ {std::move(itr)}
-, type_ {typeid(*itr_)}
+, type_ {element_typeid(itr_)}
 {}
 
 VcfReader::RecordIterator::RecordIterator(const RecordIterator& other)
