@@ -32,7 +32,7 @@ class MalformedPED : public MalformedFileError
     std::string do_where() const override { return "read_pedigree"; }
     std::string do_help() const override { return "refer to the latest PED specification"; }
 public:
-    MalformedPED(boost::filesystem::path file) : MalformedFileError {std::move(file)} {}
+    MalformedPED(boost::filesystem::path file) : MalformedFileError {std::move(file), "ped"} {}
 };
 
 namespace {
