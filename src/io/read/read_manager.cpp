@@ -8,6 +8,7 @@
 #include <utility>
 #include <deque>
 #include <numeric>
+#include <cassert>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -208,54 +209,41 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
         for_each(it, end(reader_paths),
                  [this, &samples, &region, &result, &position_coverage, max_reads] (const auto& reader_path) {
                      auto p = open_readers_.at(reader_path).find_covered_subregion(samples, region, max_reads);
-                     
                      if (is_empty(result) || is_before(p.first, result)) {
                          position_coverage.assign(begin(p.second), end(p.second));
                          result = std::move(p.first);
                          return;
                      }
-                     
                      if (is_after(p.first, result)) return;
-                     
                      auto overlap_begin = make_pair(begin(position_coverage), begin(p.second));
                      if (begins_before(p.first, result)) {
                          overlap_begin.second = next(begin(p.second), begin_distance(p.first, result));
-                         overlap_begin.first = position_coverage.insert(begin(position_coverage),
-                                                                        begin(p.second), overlap_begin.second);
+                         overlap_begin.first = position_coverage.insert(begin(position_coverage), begin(p.second),
+                                                                        overlap_begin.second);
                          result = expand_lhs(result, begin_distance(p.first, result));
                      }
-                     
                      auto overlap_end = end(position_coverage);
                      if (ends_before(p.first, result)) {
                          overlap_end = std::prev(end(position_coverage), end_distance(p.first, result));
                          overlap_end = position_coverage.erase(overlap_end, end(position_coverage));
                          result = expand_rhs(result, -end_distance(p.first, result));
                      }
-                     
-                     std::transform(overlap_begin.first, overlap_end, overlap_begin.second,
-                                    overlap_begin.first,
-                                    [] (const auto curr, const auto x) {
-                                        return curr + x;
-                                    });
+                     assert(overlap_begin.first <= overlap_end);
+                     std::transform(overlap_begin.first, overlap_end, overlap_begin.second, overlap_begin.first,
+                                    [] (const auto curr, const auto x) {  return curr + x; });
                  });
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
-    
     if (result == region) return region;
-    
     const auto result_begin = std::max(result.begin(), region.begin());
-    
     std::partial_sum(begin(position_coverage), end(position_coverage), begin(position_coverage));
-    
     const auto limit = std::lower_bound(begin(position_coverage), end(position_coverage), max_reads);
     using SizeType = GenomicRegion::Position;
     auto result_size = static_cast<SizeType>(std::distance(begin(position_coverage), limit));
-    
     if (begins_before(result, region)) {
         result_size -= std::min(result_size, static_cast<SizeType>(begin_distance(result, region)));
     }
-    
     const auto result_end = std::min(result_begin + result_size, region.end());
     return GenomicRegion {region.contig_name(), result_begin, result_end};
 }

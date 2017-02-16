@@ -9,6 +9,7 @@
 #include <iterator>
 #include <stdexcept>
 #include <sstream>
+#include <cassert>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -424,28 +425,27 @@ HtslibSamFacade::CoveragePair
 HtslibSamFacade::find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage) const
 {
     HtslibIterator it {*this, region};
-    
     if (max_coverage == 0 || !++it) {
         return std::make_pair(head_region(region), std::vector<unsigned> {});
     }
-    
     --max_coverage;
-    auto first_begin = it.begin();
+    auto first_read_begin = it.begin();
+    auto curr_read_begin  = first_read_begin;
     std::vector<unsigned> position_counts(max_coverage, 0);
-    ++position_counts[0];
-    auto read_begin = first_begin;
-    
-    while (++it && --max_coverage > 0) {
-        read_begin = it.begin();
-        const auto offset = read_begin - first_begin;
-        if (offset >= position_counts.size()) {
-            position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
-        } else {
-            ++position_counts[offset];
+    if (max_coverage > 0) {
+        ++position_counts[0];
+        while (++it && --max_coverage > 0) {
+            curr_read_begin = it.begin();
+            assert(curr_read_begin >= first_read_begin);
+            const auto offset = curr_read_begin - first_read_begin;
+            if (offset >= position_counts.size()) {
+                position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
+            } else {
+                ++position_counts[offset];
+            }
         }
     }
-    
-    auto result_region = expand_subregion(region, max_coverage, first_begin, read_begin, position_counts);
+    auto result_region = expand_subregion(region, max_coverage, first_read_begin, curr_read_begin, position_counts);
     return std::make_pair(std::move(result_region), std::move(position_counts));
 }
 
@@ -463,9 +463,7 @@ HtslibSamFacade::find_covered_subregion(const SampleName& sample,
     if (!contains(samples_, sample)) {
         return std::make_pair(head_region(region), std::vector<unsigned> {});
     }
-    
     HtslibIterator it {*this, region};
-    
     if (max_coverage == 0 || !++it) {
         return std::make_pair(head_region(region), std::vector<unsigned> {});
     }
@@ -474,37 +472,37 @@ HtslibSamFacade::find_covered_subregion(const SampleName& sample,
             if (!++it) return std::make_pair(head_region(region), std::vector<unsigned> {});
         };
     }
-    
     --max_coverage;
-    const auto first_begin = it.begin();
+    const auto first_read_begin = it.begin();
+    auto curr_read_begin = first_read_begin;
     std::vector<unsigned> position_counts(max_coverage, 0);
-    ++position_counts[0];
-    auto read_begin = first_begin;
-    
-    if (samples_.size() == 1) {
-        while (++it && --max_coverage > 0) {
-            read_begin = it.begin();
-            const auto offset = read_begin - first_begin;
-            if (offset >= position_counts.size()) {
-                position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
-            } else {
-                ++position_counts[offset];
+    if (max_coverage > 0) {
+        ++position_counts[0];
+        if (samples_.size() == 1) {
+            while (++it && --max_coverage > 0) {
+                curr_read_begin = it.begin();
+                assert(curr_read_begin >= first_read_begin);
+                const auto offset = curr_read_begin - first_read_begin;
+                if (offset >= position_counts.size()) {
+                    position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
+                } else {
+                    ++position_counts[offset];
+                }
             }
-        }
-    } else {
-        while (++it && sample == sample_names_.at(it.read_group()) && --max_coverage > 0) {
-            read_begin = it.begin();
-            const auto offset = read_begin - first_begin;
-            if (offset >= position_counts.size()) {
-                position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
-            } else {
-                ++position_counts[offset];
+        } else {
+            while (++it && sample == sample_names_.at(it.read_group()) && --max_coverage > 0) {
+                curr_read_begin = it.begin();
+                assert(curr_read_begin >= first_read_begin);
+                const auto offset = curr_read_begin - first_read_begin;
+                if (offset >= position_counts.size()) {
+                    position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
+                } else {
+                    ++position_counts[offset];
+                }
             }
         }
     }
-    
-    auto result_region = expand_subregion(region, max_coverage, first_begin, read_begin, position_counts);
-    
+    auto result_region = expand_subregion(region, max_coverage, first_read_begin, curr_read_begin, position_counts);
     return std::make_pair(std::move(result_region), std::move(position_counts));
 }
 
@@ -520,34 +518,31 @@ HtslibSamFacade::find_covered_subregion(const std::vector<SampleName>& samples,
     if (is_subset(samples, samples_)) {
         return find_covered_subregion(region, max_coverage);
     }
-    
     HtslibIterator it {*this, region};
-    
     if (max_coverage == 0 || !++it) {
         return std::make_pair(head_region(region), std::vector<unsigned> {});
     }
-    
     while (!contains(samples, sample_names_.at(it.read_group()))) {
         if (!++it) return std::make_pair(head_region(region), std::vector<unsigned> {});
     };
-    
     --max_coverage;
-    auto first_begin = it.begin();
+    auto first_read_begin = it.begin();
+    auto curr_read_begin = first_read_begin;
     std::vector<unsigned> position_counts(max_coverage, 0);
-    ++position_counts[0];
-    auto read_begin = first_begin;
-    
-    while (++it && !contains(samples, sample_names_.at(it.read_group())) && --max_coverage > 0) {
-        read_begin = it.begin();
-        const auto offset = read_begin - first_begin;
-        if (offset >= position_counts.size()) {
-            position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
-        } else {
-            ++position_counts[offset];
+    if (max_coverage > 0) {
+        ++position_counts[0];
+        while (++it && !contains(samples, sample_names_.at(it.read_group())) && --max_coverage > 0) {
+            curr_read_begin = it.begin();
+            assert(curr_read_begin >= first_read_begin);
+            const auto offset = curr_read_begin - first_read_begin;
+            if (offset >= position_counts.size()) {
+                position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
+            } else {
+                ++position_counts[offset];
+            }
         }
     }
-    
-    auto result_region = expand_subregion(region, max_coverage, first_begin, read_begin, position_counts);
+    auto result_region = expand_subregion(region, max_coverage, first_read_begin, curr_read_begin, position_counts);
     return std::make_pair(std::move(result_region), std::move(position_counts));
 }
 
