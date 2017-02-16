@@ -160,7 +160,8 @@ private:
     HaplotypeLikelihoodCache make_haplotype_likelihood_cache() const;
     VcfRecordFactory make_record_factory(const ReadMap& reads) const;
     std::vector<Haplotype>
-    filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods,
+           const std::deque<Haplotype>& protected_haplotypes) const;
     bool populate(HaplotypeLikelihoodCache& haplotype_likelihoods, const GenomicRegion& active_region,
                   const std::vector<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
                   const ReadMap& active_reads) const;
@@ -178,7 +179,8 @@ private:
                                     HaplotypeGenerator& haplotype_generator) const;
     void remove_duplicates(std::vector<Haplotype>& haplotypes) const;
     bool filter_haplotypes(std::vector<Haplotype>& haplotypes, HaplotypeGenerator& haplotype_generator,
-                           HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                           HaplotypeLikelihoodCache& haplotype_likelihoods,
+                           const std::deque<Haplotype>& protected_haplotypes) const;
     void filter_haplotypes(bool prefilter_had_removal_impact, const std::vector<Haplotype>& haplotypes,
                            HaplotypeGenerator& haplotype_generator, const HaplotypeLikelihoodCache& haplotype_likelihoods,
                            const Latents& latents, const std::deque<Haplotype>& protected_haplotypes) const;
