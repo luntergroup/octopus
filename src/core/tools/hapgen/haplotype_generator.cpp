@@ -563,7 +563,7 @@ void HaplotypeGenerator::populate_tree_with_holdouts()
     }
     active_region_ = tree_.encompassing_region();
     if (!in_holdout_mode() && has_rhs_sandwich_insertion(alleles_, active_region_)) {
-        resolve_sandwich_inseertion();
+        resolve_sandwich_insertion();
     }
     reset_next_active_region();
 }
