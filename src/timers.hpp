@@ -4,7 +4,7 @@
 #ifndef timers_hpp
 #define timers_hpp
 
-#define BENCHMARK
+//#define BENCHMARK
 
 #include <array>
 
