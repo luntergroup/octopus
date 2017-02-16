@@ -154,13 +154,30 @@ catch (...) {
 
 namespace {
 
+template <typename ForwardIt, typename MappableTp>
+auto find_first_exact_overlap(ForwardIt first, ForwardIt last, const MappableTp& mappable)
+{
+    return std::find_if(first, last, [&] (const auto& m) { return is_same_region(m, mappable); });
+}
+
+template <typename Container, typename MappableTp>
+auto find_first_exact_overlap(const Container& container, const MappableTp& mappable)
+{
+    return find_first_exact_overlap(std::cbegin(container), std::cend(container), mappable);
+}
+
 bool has_rhs_sandwich_insertion(const MappableFlatSet<Allele>& alleles, const GenomicRegion& active_region) {
     const auto insertion_region = tail_region(active_region);
     const auto active_tails = overlap_range(alleles, insertion_region);
-    return !empty(active_tails) && begins_before(active_tails.front(), insertion_region)
-           && ends_before(insertion_region, active_tails.back());
+    if (empty(active_tails)) return false;
+    const auto insertion_itr = find_first_exact_overlap(active_tails, insertion_region);
+    if (insertion_itr != std::cend(active_tails)) {
+        return begins_before(active_tails.front(), insertion_region) && ends_before(insertion_region, active_tails.back());
+    } else {
+        return false;
+    }
 }
-    
+
 } // namespace
 
 HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
@@ -175,7 +192,7 @@ HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
         }
         active_region_ = tree_.encompassing_region();
         if (!in_holdout_mode() && has_rhs_sandwich_insertion(alleles_, active_region_)) {
-            resolve_sandwich_inseertion();
+            resolve_sandwich_insertion();
         }
         reset_next_active_region();
     } else {
@@ -666,21 +683,23 @@ bool HaplotypeGenerator::can_reintroduce_holdouts() const noexcept
 }
 
 namespace debug {
-    template <typename S, typename Contianer>
-    void print_old_holdouts(S&& stream, const Contianer& alleles)
-    {
-        stream << "Reintroducing " << alleles.size() << " holdout alleles:" << '\n';
-        for (const auto& allele : alleles) {
-            stream << allele << '\n';
-        }
+
+template <typename S, typename Contianer>
+void print_old_holdouts(S&& stream, const Contianer& alleles)
+{
+    stream << "Reintroducing " << alleles.size() << " holdout alleles:" << '\n';
+    for (const auto& allele : alleles) {
+        stream << allele << '\n';
     }
 }
+
+} // namespace debug
 
 void HaplotypeGenerator::reintroduce_holdouts()
 {
     assert(!active_holdouts_.empty());
     if (DEBUG_MODE) {
-        logging::DebugLogger log{};
+        logging::DebugLogger log {};
         debug::print_old_holdouts(stream(log), active_holdouts_.top().alleles);
     }
     splice(active_holdouts_.top().alleles, tree_);
@@ -702,7 +721,7 @@ void HaplotypeGenerator::clear_holdouts() noexcept
     holdout_region_ = boost::none;
 }
 
-void HaplotypeGenerator::resolve_sandwich_inseertion()
+void HaplotypeGenerator::resolve_sandwich_insertion()
 {
     const auto active_alleles = bases(contained_range(alleles_, active_region_));
     auto first_required = std::cend(active_alleles);

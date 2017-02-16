@@ -142,7 +142,7 @@ private:
     bool can_reintroduce_holdouts() const noexcept;
     void reintroduce_holdouts();
     void clear_holdouts() noexcept;
-    void resolve_sandwich_inseertion();
+    void resolve_sandwich_insertion();
     GenomicRegion calculate_haplotype_region() const;
 };
 
