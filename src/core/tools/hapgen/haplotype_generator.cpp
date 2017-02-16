@@ -16,6 +16,7 @@
 #include "core/types/haplotype.hpp"
 #include "concepts/mappable.hpp"
 #include "utils/mappable_algorithms.hpp"
+#include "utils/append.hpp"
 #include "logging/logging.hpp"
 
 #include <iostream> // DEBUG
@@ -131,6 +132,7 @@ try
 , next_active_region_ {}
 , active_holdouts_ {}
 , holdout_region_ {}
+, previous_holdout_regions_ {}
 {
     rightmost_allele_ = alleles_.rightmost();
     active_region_ = head_region(alleles_.leftmost());
@@ -182,27 +184,8 @@ bool has_rhs_sandwich_insertion(const MappableFlatSet<Allele>& alleles, const Ge
 
 HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
 {
-    if (alleles_.empty()) {
-        return std::make_tuple(std::vector<Haplotype> {}, active_region_, boost::none);
-    }
-    if (in_holdout_mode() && can_reintroduce_holdouts()) {
-        reintroduce_holdouts();
-        if (tree_.num_haplotypes() > policies_.haplotype_limits.overflow) {
-            throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
-        }
-        active_region_ = tree_.encompassing_region();
-        if (!in_holdout_mode() && has_rhs_sandwich_insertion(alleles_, active_region_)) {
-            resolve_sandwich_insertion();
-        }
-        reset_next_active_region();
-    } else {
-        update_next_active_region();
-        if (is_after(*next_active_region_, rightmost_allele_)) {
-            return std::make_tuple(std::vector<Haplotype> {}, *next_active_region_, boost::none);
-        }
-        progress(*next_active_region_);
-        populate_tree();
-    }
+    if (alleles_.empty()) return std::make_tuple(std::vector<Haplotype> {}, active_region_, boost::none);
+    populate_tree();
     const auto haplotype_region = calculate_haplotype_region();
     assert(contains(haplotype_region, active_region_));
     auto haplotypes = tree_.extract_haplotypes(haplotype_region);
@@ -524,6 +507,23 @@ void HaplotypeGenerator::progress(GenomicRegion to)
 
 void HaplotypeGenerator::populate_tree()
 {
+    if (in_holdout_mode() && can_reintroduce_holdouts()) {
+        populate_tree_with_holdouts();
+    } else {
+        populate_tree_with_novel_alleles();
+    }
+}
+
+void HaplotypeGenerator::populate_tree_with_novel_alleles()
+{
+    update_next_active_region();
+    if (is_after(*next_active_region_, rightmost_allele_)) {
+        // We are done
+        tree_.clear();
+        active_region_ = *next_active_region_;
+        return;
+    }
+    progress(*next_active_region_);
     auto novel_active_region = *next_active_region_;
     if (!tree_.is_empty()) {
         novel_active_region = right_overhang_region(*next_active_region_, active_region_);
@@ -532,8 +532,8 @@ void HaplotypeGenerator::populate_tree()
     auto last_added_novel_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
     if (last_added_novel_itr != std::cend(novel_active_alleles)) {
         reset_next_active_region();
-        while (last_added_novel_itr != std::cend(novel_active_alleles) && can_extract_holdouts(novel_active_region)) {
-            extract_holdouts(novel_active_region);
+        while (last_added_novel_itr != std::cend(novel_active_alleles) && can_try_extracting_holdouts(novel_active_region)) {
+            if (!try_extract_holdouts(novel_active_region)) break;
             tree_.clear(novel_active_region);
             update_next_active_region();
             active_region_ = *std::move(next_active_region_);
@@ -555,26 +555,42 @@ void HaplotypeGenerator::populate_tree()
     }
 }
 
+void HaplotypeGenerator::populate_tree_with_holdouts()
+{
+    reintroduce_holdouts();
+    if (tree_.num_haplotypes() > policies_.haplotype_limits.overflow) {
+        throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
+    }
+    active_region_ = tree_.encompassing_region();
+    if (!in_holdout_mode() && has_rhs_sandwich_insertion(alleles_, active_region_)) {
+        resolve_sandwich_inseertion();
+    }
+    reset_next_active_region();
+}
+
 bool HaplotypeGenerator::in_holdout_mode() const noexcept
 {
+    assert((holdout_region_ && !active_holdouts_.empty()) || ((!holdout_region_ && active_holdouts_.empty())));
     return !active_holdouts_.empty();
 }
 
-bool HaplotypeGenerator::can_extract_holdouts(const GenomicRegion& region) const noexcept
+bool HaplotypeGenerator::can_try_extracting_holdouts(const GenomicRegion& region) const noexcept
 {
     return active_holdouts_.size() < policies_.max_holdout_depth && has_overlapped(alleles_, region);
 }
 
 namespace debug {
-    template <typename S, typename Contianer>
-    void print_new_holdouts(S&& stream, const Contianer& alleles)
-    {
-        stream << "Adding " << alleles.size() << " alleles to the holdout stack:" << '\n';
-        for (const auto& allele : alleles) {
-            stream << allele << '\n';
-        }
+
+template <typename S, typename Contianer>
+void print_new_holdouts(S&& stream, const Contianer& alleles)
+{
+    stream << "Adding " << alleles.size() << " alleles to the holdout stack:" << '\n';
+    for (const auto& allele : alleles) {
+        stream << allele << '\n';
     }
 }
+
+} // namespace debug
 
 template <typename Range>
 unsigned estimate_num_haplotype(const Range& alleles, const GenomicRegion& next_active_region)
@@ -639,6 +655,18 @@ void remove_move(MappableFlatSet<Allele>& src, const HoldoutRange& holdouts, std
     src.erase(std::cbegin(holdouts), std::cend(holdouts));
 }
 
+auto demote_all(const std::vector<GenomicRegion>& regions)
+{
+    std::vector<ContigRegion> result(regions.size());
+    std::transform(std::cbegin(regions), std::cend(regions), std::begin(result),
+                   [] (const auto& region) { return region.contig_region(); });
+    return result;
+}
+
+} // namespace
+
+namespace debug {
+
 void log_new_holdouts(const std::deque<Allele>& holdouts)
 {
     if (DEBUG_MODE) {
@@ -647,33 +675,55 @@ void log_new_holdouts(const std::deque<Allele>& holdouts)
     }
 }
 
-} // namespace
+} // namespace debug
 
-void HaplotypeGenerator::extract_holdouts(GenomicRegion next_active_region)
+bool HaplotypeGenerator::try_extract_holdouts(GenomicRegion region)
 {
-    assert(can_extract_holdouts(next_active_region));
-    auto active_alleles = copy_contained(alleles_, next_active_region);
+    auto new_holdout_sets = propose_new_holdout_sets(std::move(region));
+    std::deque<Allele> new_holdout_alleles {};
+    for (auto& set : new_holdout_sets) {
+        auto new_holdout_regions = demote_all(extract_mutually_exclusive_regions(set.alleles));
+        if (previous_holdout_regions_.count(new_holdout_regions) == 0) {
+            utils::append(set.alleles, new_holdout_alleles);
+            active_holdouts_.push(std::move(set));
+            previous_holdout_regions_.insert(std::move(new_holdout_regions));
+        }
+    }
+    if (!new_holdout_alleles.empty()) {
+        std::sort(std::begin(new_holdout_alleles), std::end(new_holdout_alleles));
+        debug::log_new_holdouts(new_holdout_alleles);
+        auto new_holdout_region = encompassing_region(new_holdout_alleles);
+        if (holdout_region_) {
+            holdout_region_ = encompassing_region(*holdout_region_, new_holdout_region);
+        } else {
+            holdout_region_ = std::move(new_holdout_region);
+        }
+        alleles_.erase_all(std::cbegin(new_holdout_alleles), std::cend(new_holdout_alleles));
+        return true;
+    } else {
+        return false;
+    }
+}
+
+std::deque<HaplotypeGenerator::HoldoutSet> HaplotypeGenerator::propose_new_holdout_sets(GenomicRegion region) const
+{
+    assert(can_try_extracting_holdouts(region));
+    auto active_alleles = copy_contained(alleles_, region);
     assert(!active_alleles.empty());
     auto interaction_counts = get_interaction_counts(active_alleles);
+    std::deque<HoldoutSet> result {};
     std::deque<Allele> new_holdouts {};
     do {
         assert(!interaction_counts.empty());
         const auto& holdout_region = interaction_counts.back().first;
         const auto holdouts = get_holdout_range(active_alleles, holdout_region);
         assert(!holdouts.empty());
-        active_holdouts_.emplace(std::cbegin(holdouts), std::cend(holdouts), holdout_region);
+        result.emplace_back(std::cbegin(holdouts), std::cend(holdouts), holdout_region);
         remove_move(active_alleles, holdouts, new_holdouts);
-        next_active_region = default_walker_.walk(head_region(next_active_region), reads_, active_alleles);
+        region = default_walker_.walk(head_region(region), reads_, active_alleles);
         interaction_counts.pop_back();
-    } while (require_more_holdouts(active_alleles, next_active_region, policies_.haplotype_limits.holdout));
-    std::sort(std::begin(new_holdouts), std::end(new_holdouts));
-    log_new_holdouts(new_holdouts);
-    if (holdout_region_) {
-        holdout_region_ = encompassing_region(*holdout_region_, encompassing_region(new_holdouts));
-    } else {
-        holdout_region_ = encompassing_region(new_holdouts);
-    }
-    alleles_.erase_all(std::cbegin(new_holdouts), std::cend(new_holdouts));
+    } while (require_more_holdouts(active_alleles, region, policies_.haplotype_limits.holdout));
+    return result;
 }
 
 bool HaplotypeGenerator::can_reintroduce_holdouts() const noexcept
