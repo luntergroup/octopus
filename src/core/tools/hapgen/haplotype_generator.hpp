@@ -142,24 +142,24 @@ private:
     bool can_reintroduce_holdouts() const noexcept;
     void reintroduce_holdouts();
     void clear_holdouts() noexcept;
-    void resolve_sandwich_inseertion();
+    void resolve_sandwich_insertion();
     GenomicRegion calculate_haplotype_region() const;
 };
 
 class HaplotypeGenerator::HaplotypeOverflow : public std::runtime_error
 {
 public:
-    HaplotypeOverflow(GenomicRegion region, unsigned size);
+    HaplotypeOverflow(GenomicRegion region, std::size_t size);
     
     virtual ~HaplotypeOverflow() noexcept = default;
     
     virtual const char* what() const noexcept override;
     const GenomicRegion& region() const noexcept;
-    unsigned size() const noexcept;
+    std::size_t size() const noexcept;
     
 private:
     GenomicRegion region_;
-    unsigned size_;
+    std::size_t size_;
     std::string message_;
 };
 
