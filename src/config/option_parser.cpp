@@ -336,7 +336,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum mean graph bubble weight that is extracted from the assembly graph")
     
     ("max-bubbles",
-     po::value<int>()->default_value(10),
+     po::value<int>()->default_value(20),
      "Maximum number of bubbles to extract from the assembly graph")
     ;
     
