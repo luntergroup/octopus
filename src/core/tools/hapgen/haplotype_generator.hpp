@@ -149,17 +149,17 @@ private:
 class HaplotypeGenerator::HaplotypeOverflow : public std::runtime_error
 {
 public:
-    HaplotypeOverflow(GenomicRegion region, unsigned size);
+    HaplotypeOverflow(GenomicRegion region, std::size_t size);
     
     virtual ~HaplotypeOverflow() noexcept = default;
     
     virtual const char* what() const noexcept override;
     const GenomicRegion& region() const noexcept;
-    unsigned size() const noexcept;
+    std::size_t size() const noexcept;
     
 private:
     GenomicRegion region_;
-    unsigned size_;
+    std::size_t size_;
     std::string message_;
 };
 

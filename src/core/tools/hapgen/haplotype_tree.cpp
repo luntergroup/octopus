@@ -116,9 +116,9 @@ bool HaplotypeTree::is_empty() const noexcept
     return haplotype_leafs_.front() == root_;
 }
 
-unsigned HaplotypeTree::num_haplotypes() const noexcept
+std::size_t HaplotypeTree::num_haplotypes() const noexcept
 {
-    return (is_empty()) ? 0 : static_cast<unsigned>(haplotype_leafs_.size());
+    return (is_empty()) ? 0 : haplotype_leafs_.size();
 }
 
 bool HaplotypeTree::contains(const Haplotype& haplotype) const

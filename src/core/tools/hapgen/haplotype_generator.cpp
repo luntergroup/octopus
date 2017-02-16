@@ -27,7 +27,7 @@ namespace octopus { namespace coretools {
 
 // HaplotypeOverflow
 
-HaplotypeGenerator::HaplotypeOverflow::HaplotypeOverflow(GenomicRegion region, unsigned size)
+HaplotypeGenerator::HaplotypeOverflow::HaplotypeOverflow(GenomicRegion region, std::size_t size)
 : runtime_error {"HaplotypeOverflowError"}
 , region_ {std::move(region)}
 , size_ {size}
@@ -44,7 +44,7 @@ const GenomicRegion& HaplotypeGenerator::HaplotypeOverflow::region() const noexc
     return region_;
 }
 
-unsigned HaplotypeGenerator::HaplotypeOverflow::size() const noexcept
+std::size_t HaplotypeGenerator::HaplotypeOverflow::size() const noexcept
 {
     return size_;
 }
