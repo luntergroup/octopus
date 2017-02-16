@@ -242,6 +242,14 @@ void merge_unique(std::deque<T>&& src, std::deque<T>& dst)
     dst.erase(std::unique(std::begin(dst), std::end(dst)), std::end(dst));
 }
 
+template <typename T>
+void merge_unique(std::vector<T>&& src, std::vector<T>& dst)
+{
+    const auto itr = utils::append(std::move(src), dst);
+    std::inplace_merge(std::begin(dst), itr, std::end(dst));
+    dst.erase(std::unique(std::begin(dst), std::end(dst)), std::end(dst));
+}
+
 } // namespace
 
 std::deque<CallWrapper>
@@ -280,7 +288,11 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
             haplotype_likelihoods.clear();
             continue;
         }
-        auto has_removal_impact = filter_haplotypes(haplotypes, haplotype_generator, haplotype_likelihoods);
+        if (!protected_haplotypes.empty()) {
+            std::sort(std::begin(haplotypes), std::end(haplotypes));
+            remap_each(protected_haplotypes, haplotype_region(haplotypes));
+        }
+        auto has_removal_impact = filter_haplotypes(haplotypes, haplotype_generator, haplotype_likelihoods, protected_haplotypes);
         if (haplotypes.empty()) continue;
         resume(latent_timer);
         const auto caller_latents = infer_latents(haplotypes, haplotype_likelihoods);
@@ -289,10 +301,6 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
             debug::print_haplotype_posteriors(stream(*trace_log_), *caller_latents->haplotype_posteriors(), -1);
         } else if (debug_log_) {
             debug::print_haplotype_posteriors(stream(*debug_log_), *caller_latents->haplotype_posteriors());
-        }
-        if (!protected_haplotypes.empty()) {
-            std::sort(std::begin(haplotypes), std::end(haplotypes));
-            remap_each(protected_haplotypes, haplotype_region(haplotypes));
         }
         filter_haplotypes(has_removal_impact, haplotypes, haplotype_generator,
                           haplotype_likelihoods, *caller_latents, protected_haplotypes);
@@ -385,10 +393,11 @@ void Caller::remove_duplicates(std::vector<Haplotype>& haplotypes) const
 
 bool Caller::filter_haplotypes(std::vector<Haplotype>& haplotypes,
                                HaplotypeGenerator& haplotype_generator,
-                               HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                               HaplotypeLikelihoodCache& haplotype_likelihoods,
+                               const std::deque<Haplotype>& protected_haplotypes) const
 {
     bool has_removal_impact {false};
-    auto removed_haplotypes = filter(haplotypes, haplotype_likelihoods);
+    auto removed_haplotypes = filter(haplotypes, haplotype_likelihoods, protected_haplotypes);
     if (haplotypes.empty()) {
         // This can only happen if all haplotypes have equal likelihood
         haplotype_generator.clear_progress();
@@ -839,9 +848,27 @@ bool Caller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
 }
 
 std::vector<Haplotype>
-Caller::filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+Caller::filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods,
+               const std::deque<Haplotype>& protected_haplotypes) const
 {
-    auto removed_haplotypes = filter_to_n(haplotypes, samples_, haplotype_likelihoods, parameters_.max_haplotypes);
+    std::vector<Haplotype> removed_haplotypes {};
+    if (protected_haplotypes.empty()) {
+        removed_haplotypes = filter_to_n(haplotypes, samples_, haplotype_likelihoods, parameters_.max_haplotypes);
+    } else {
+        std::vector<Haplotype> removable_haplotypes {}, protected_copies {};
+        removable_haplotypes.reserve(haplotypes.size());
+        protected_copies.reserve(protected_haplotypes.size());
+        std::set_difference(std::cbegin(haplotypes), std::cend(haplotypes),
+                            std::cbegin(protected_haplotypes), std::cend(protected_haplotypes),
+                            std::back_inserter(removable_haplotypes));
+        std::set_intersection(std::cbegin(haplotypes), std::cend(haplotypes),
+                              std::cbegin(protected_haplotypes), std::cend(protected_haplotypes),
+                              std::back_inserter(protected_copies));
+        removed_haplotypes = filter_to_n(removable_haplotypes, samples_, haplotype_likelihoods, parameters_.max_haplotypes);
+        haplotypes = std::move(removable_haplotypes);
+        std::sort(std::begin(haplotypes), std::end(haplotypes));
+        merge_unique(std::move(protected_copies), haplotypes);
+    }
     const auto reference_itr = std::find_if(std::begin(removed_haplotypes), std::end(removed_haplotypes),
                                             [] (const auto& haplotype) { return is_reference(haplotype); });
     if (reference_itr != std::end(removed_haplotypes)) {
