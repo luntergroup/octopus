@@ -83,7 +83,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Maximum memory footprint for cached reference sequence")
     
     ("target-read-buffer-footprint,B",
-     po::value<MemoryFootprint>()->default_value(*parse_footprint("2GB"), "2GB"),
+     po::value<MemoryFootprint>()->default_value(*parse_footprint("4GB"), "4GB"),
      "None binding request to limit the memory footprint of buffered read data")
     
     ("max-open-read-files",
