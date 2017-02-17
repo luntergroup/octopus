@@ -140,9 +140,9 @@ void TrioCaller::Latents::set_genotype_posteriors(const Trio& trio)
     marginal_paternal_posteriors = marginalise_father(maternal_genotypes, trio_posteriors);
     marginal_child_posteriors    = marginalise_child(maternal_genotypes, trio_posteriors);
     GenotypeProbabilityMap genotype_posteriors {std::begin(maternal_genotypes), std::end(maternal_genotypes)};
-    insert_sample(trio.child(), marginal_maternal_posteriors, genotype_posteriors);
-    insert_sample(trio.mother(), marginal_paternal_posteriors, genotype_posteriors);
-    insert_sample(trio.father(), marginal_child_posteriors, genotype_posteriors);
+    insert_sample(trio.mother(), marginal_maternal_posteriors, genotype_posteriors);
+    insert_sample(trio.father(), marginal_paternal_posteriors, genotype_posteriors);
+    insert_sample(trio.child(), marginal_child_posteriors, genotype_posteriors);
     marginal_genotype_posteriors = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
 }
 
