@@ -116,9 +116,9 @@ bool HaplotypeTree::is_empty() const noexcept
     return haplotype_leafs_.front() == root_;
 }
 
-unsigned HaplotypeTree::num_haplotypes() const noexcept
+std::size_t HaplotypeTree::num_haplotypes() const noexcept
 {
-    return (is_empty()) ? 0 : static_cast<unsigned>(haplotype_leafs_.size());
+    return (is_empty()) ? 0 : haplotype_leafs_.size();
 }
 
 bool HaplotypeTree::contains(const Haplotype& haplotype) const
@@ -218,18 +218,23 @@ auto make_splicer(const ContigAllele& allele, std::stack<V>& candidate_splice_si
     return Splicer<Container, V> {allele, candidate_splice_sites, splice_sites, root};
 }
 
+bool can_add_to_branch(const ContigAllele& new_allele, const ContigAllele& leaf)
+{
+    return !are_adjacent(leaf, new_allele)
+            || !((is_insertion(leaf) && is_deletion(new_allele))
+            || (is_deletion(leaf) && is_insertion(new_allele)));
+}
+
 void HaplotypeTree::splice(const ContigAllele& allele)
 {
     if (is_empty()) {
         extend(allele);
         return;
     }
-    
     std::unordered_map<Vertex, boost::default_color_type> colours {};
     colours.reserve(boost::num_vertices(tree_));
     std::deque<Vertex> splice_sites {};
     std::stack<Vertex> candidate_splice_sites {};
-    
     boost::depth_first_visit(tree_, root_,
                              make_splicer(allele, candidate_splice_sites, splice_sites, root_),
                              boost::make_assoc_property_map(colours),
@@ -244,11 +249,12 @@ void HaplotypeTree::splice(const ContigAllele& allele)
                                  return false;
                              });
     assert(candidate_splice_sites.empty());
-    
     for (const auto v : splice_sites) {
-        const auto spliced = boost::add_vertex(allele, tree_);
-        boost::add_edge(v, spliced, tree_);
-        haplotype_leafs_.push_back(spliced);
+        if (can_add_to_branch(allele, tree_[v])) {
+            const auto spliced = boost::add_vertex(allele, tree_);
+            boost::add_edge(v, spliced, tree_);
+            haplotype_leafs_.push_back(spliced);
+        }
     }
 }
 
@@ -473,13 +479,6 @@ HaplotypeTree::Vertex HaplotypeTree::find_allele_before(Vertex v, const ContigAl
         v = get_previous_allele(v);
     }
     return v;
-}
-
-bool can_add_to_branch(const ContigAllele& new_allele, const ContigAllele& leaf)
-{
-    return !are_adjacent(leaf, new_allele)
-            || !((is_insertion(leaf) && is_deletion(new_allele))
-            || (is_deletion(leaf) && is_insertion(new_allele)));
 }
 
 HaplotypeTree::LeafIterator

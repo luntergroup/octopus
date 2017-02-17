@@ -27,6 +27,8 @@
 
 #include "timers.hpp"
 
+#define _unused(x) ((void)(x))
+
 namespace octopus { namespace coretools {
 
 namespace {
@@ -488,6 +490,7 @@ void Assembler::remove_vertex(const Vertex v)
 {
     const auto c = vertex_cache_.erase(kmer_of(v));
     assert(c == 1);
+    _unused(c); // make production build happy
     boost::remove_vertex(v, graph_);
 }
 
@@ -495,6 +498,7 @@ void Assembler::clear_and_remove_vertex(const Vertex v)
 {
     const auto c = vertex_cache_.erase(kmer_of(v));
     assert(c == 1);
+    _unused(c); // make production build happy
     boost::clear_vertex(v, graph_);
     boost::remove_vertex(v, graph_);
 }

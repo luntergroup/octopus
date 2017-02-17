@@ -20,6 +20,7 @@
 namespace octopus { namespace utils {
 
 std::vector<std::string> split(const std::string& str, const char delim);
+std::vector<std::string> split(const std::string& str, const std::string delims);
 
 std::string join(const std::vector<std::string>& strings, const std::string delim = "");
 std::string join(const std::vector<std::string>& strings, const char delim);

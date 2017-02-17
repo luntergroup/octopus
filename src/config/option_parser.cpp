@@ -83,7 +83,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Maximum memory footprint for cached reference sequence")
     
     ("target-read-buffer-footprint,B",
-     po::value<MemoryFootprint>()->default_value(*parse_footprint("2GB"), "2GB"),
+     po::value<MemoryFootprint>()->default_value(*parse_footprint("4GB"), "4GB"),
      "None binding request to limit the memory footprint of buffered read data")
     
     ("max-open-read-files",
@@ -137,6 +137,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "File of sample names to analyse, one per line, which must be a subset of the samples"
      " that appear in the read files")
+
+    ("pedigree",
+     po::value<fs::path>(),
+     "PED file containing sample pedigree")
     
     ("output,o",
      po::value<fs::path>(),

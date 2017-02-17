@@ -1,9 +1,12 @@
-# - Try to find htslib 
+# - Try to find htslib
 # Once done, this will define
 #
 #  htslib_FOUND - system has htslib
 #  htslib_INCLUDE_DIRS - the htslib include directories
 #  htslib_LIBRARIES - link these to use htslib
+#
+# This code was modified from https://github.com/genome/build-common/blob/master/cmake/FindHTSlib.cmake
+#
 
 macro (libfind_package PREFIX)
   set (LIBFIND_PACKAGE_ARGS ${ARGN})
@@ -61,7 +64,6 @@ endmacro (libfind_process)
 set(HTSLIB_SEARCH_DIRS
     ${HTSLIB_SEARCH_DIRS}
     $ENV{HTSLIB_ROOT}
-    /gsc/pkg/bio/htslib
     /usr
     /usr/local
 )

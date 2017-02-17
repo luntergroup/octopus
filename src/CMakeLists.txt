@@ -37,7 +37,6 @@ set(CONCEPTS_SOURCES
 set(BASICS_SOURCES
     basics/contig_region.hpp
     basics/genomic_region.hpp
-
     basics/phred.hpp
     basics/cigar_string.hpp
     basics/cigar_string.cpp
@@ -45,7 +44,12 @@ set(BASICS_SOURCES
     basics/aligned_read.cpp
     basics/mappable_reference_wrapper.hpp
     basics/ploidy_map.hpp
-    basics/ploidy_map.cpp)
+    basics/ploidy_map.cpp
+    basics/pedigree.hpp
+    basics/pedigree.cpp
+    basics/trio.hpp
+    basics/trio.cpp
+)
 
 set(CONTAINERS_SOURCES
     containers/mappable_flat_multi_set.hpp
@@ -79,6 +83,9 @@ set(IO_SOURCES
 
     io/region/region_parser.hpp
     io/region/region_parser.cpp
+
+    io/pedigree/pedigree_reader.hpp
+    io/pedigree/pedigree_reader.cpp
 
     io/read/htslib_sam_facade.hpp
     io/read/htslib_sam_facade.cpp
@@ -312,10 +319,6 @@ set(CORE_SOURCES
     core/types/genotype.cpp
     core/types/haplotype.hpp
     core/types/haplotype.cpp
-    core/types/pedigree.hpp
-    core/types/pedigree.cpp
-    core/types/trio.hpp
-    core/types/trio.cpp
     core/types/variant.hpp
     core/types/variant.cpp
 
@@ -403,7 +406,13 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
    endif()
     target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus-debug tandem)
-    target_compile_definitions(octopus-debug PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    if (USE_STATIC_BOOST)
+        message(STATUS "Linking against boost static libraries")
+        set(Boost_USE_STATIC_LIBS ON)
+    else()
+        message(STATUS "Linking against boost dynamic libraries")
+        target_compile_definitions(octopus-debug PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    endif()
     find_package (Boost 1.58 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (octopus-debug PUBLIC ${Boost_INCLUDE_DIR})
@@ -423,11 +432,17 @@ else()
     if (CMAKE_COMPILER_IS_GNUCXX)
         target_compile_options(octopus PRIVATE -Wall -Wextra -pedantic ${WarningIgnores} -ffast-math -fno-tree-slp-vectorize)
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(octopus PRIVATE -Wall -Wextra ${WarningIgnores} -ffast-math)
+        target_compile_options(octopus PRIVATE -Wall -Wextra ${WarningIgnores} -Werror -ffast-math)
     endif()
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus tandem)
-    target_compile_definitions(octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    if (USE_STATIC_BOOST)
+        message(STATUS "Linking against boost static libraries")
+        set(Boost_USE_STATIC_LIBS ON)
+    else()
+        message(STATUS "Linking against boost dynamic libraries")
+        target_compile_definitions(octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    endif()
     find_package (Boost 1.58 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (octopus PUBLIC ${Boost_INCLUDE_DIR})

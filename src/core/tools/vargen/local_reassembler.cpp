@@ -229,7 +229,7 @@ auto overlapped_bins(Container& bins, const M& mappable)
     return bases(overlap_range(std::begin(bins), std::end(bins), mappable, BidirectionallySortedTag {}));
 }
 
-void LocalReassembler::do_add_read(const AlignedRead& read)
+void LocalReassembler::do_add_read(const SampleName& sample, const AlignedRead& read)
 {
     prepare_bins_to_insert(read);
     auto active_bins = overlapped_bins(bins_, read);
@@ -247,14 +247,14 @@ void LocalReassembler::do_add_read(const AlignedRead& read)
     for (auto& bin : active_bins) bin.insert(read);
 }
 
-void LocalReassembler::do_add_reads(VectorIterator first, VectorIterator last)
+void LocalReassembler::do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last)
 {
-    std::for_each(first, last, [this] (const AlignedRead& read ) { do_add_read(read); });
+    std::for_each(first, last, [&] (const AlignedRead& read) { do_add_read(sample, read); });
 }
 
-void LocalReassembler::do_add_reads(FlatSetIterator first, FlatSetIterator last)
+void LocalReassembler::do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last)
 {
-    std::for_each(first, last, [this] (const AlignedRead& read ) { do_add_read(read); });
+    std::for_each(first, last, [&] (const AlignedRead& read) { do_add_read(sample, read); });
 }
 
 template <typename Container>

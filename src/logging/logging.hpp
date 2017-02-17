@@ -4,8 +4,6 @@
 #ifndef logging_hpp
 #define logging_hpp
 
-#define BOOST_LOG_DYN_LINK 1
-
 #include <iostream>
 #include <functional>
 #include <sstream>

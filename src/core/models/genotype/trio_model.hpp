@@ -10,7 +10,7 @@
 
 #include <boost/optional.hpp>
 
-#include "core/types/trio.hpp"
+#include "basics/trio.hpp"
 #include "core/types/haplotype.hpp"
 #include "population_prior_model.hpp"
 #include "core/models/mutation/denovo_model.hpp"

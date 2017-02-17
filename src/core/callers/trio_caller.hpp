@@ -8,7 +8,7 @@
 #include <string>
 
 #include "caller.hpp"
-#include "core/types/trio.hpp"
+#include "basics/trio.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/models/mutation/coalescent_model.hpp"

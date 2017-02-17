@@ -9,6 +9,7 @@
 #include <functional>
 #include <utility>
 #include <stack>
+#include <set>
 #include <stdexcept>
 
 #include <boost/optional.hpp>
@@ -123,8 +124,9 @@ private:
     GenomicRegion active_region_;
     mutable boost::optional<GenomicRegion> next_active_region_;
     
-    mutable std::stack<HoldoutSet> active_holdouts_;
-    mutable boost::optional<GenomicRegion> holdout_region_;
+    std::stack<HoldoutSet> active_holdouts_;
+    boost::optional<GenomicRegion> holdout_region_;
+    std::set<std::vector<ContigRegion>> previous_holdout_regions_;
     
     Allele rightmost_allele_;
     
@@ -136,30 +138,33 @@ private:
     void update_lagged_next_active_region() const;
     void progress(GenomicRegion to);
     void populate_tree();
+    void populate_tree_with_novel_alleles();
+    void populate_tree_with_holdouts();
     bool in_holdout_mode() const noexcept;
-    bool can_extract_holdouts(const GenomicRegion& region) const noexcept;
-    void extract_holdouts(GenomicRegion region);
+    bool can_try_extracting_holdouts(const GenomicRegion& region) const noexcept;
+    bool try_extract_holdouts(GenomicRegion region);
+    std::deque<HoldoutSet> propose_new_holdout_sets(GenomicRegion region) const;
     bool can_reintroduce_holdouts() const noexcept;
     void reintroduce_holdouts();
     void clear_holdouts() noexcept;
-    void resolve_sandwich_inseertion();
+    void resolve_sandwich_insertion();
     GenomicRegion calculate_haplotype_region() const;
 };
 
 class HaplotypeGenerator::HaplotypeOverflow : public std::runtime_error
 {
 public:
-    HaplotypeOverflow(GenomicRegion region, unsigned size);
+    HaplotypeOverflow(GenomicRegion region, std::size_t size);
     
     virtual ~HaplotypeOverflow() noexcept = default;
     
     virtual const char* what() const noexcept override;
     const GenomicRegion& region() const noexcept;
-    unsigned size() const noexcept;
+    std::size_t size() const noexcept;
     
 private:
     GenomicRegion region_;
-    unsigned size_;
+    std::size_t size_;
     std::string message_;
 };
 
