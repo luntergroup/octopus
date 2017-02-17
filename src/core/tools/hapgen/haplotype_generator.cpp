@@ -532,9 +532,11 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
     auto last_added_novel_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
     if (last_added_novel_itr != std::cend(novel_active_alleles)) {
         reset_next_active_region();
+        const auto active_region_before_holdout = active_region_;
         while (last_added_novel_itr != std::cend(novel_active_alleles) && can_try_extracting_holdouts(novel_active_region)) {
             if (!try_extract_holdouts(novel_active_region)) break;
             tree_.clear(novel_active_region);
+            active_region_ = active_region_before_holdout;
             update_next_active_region();
             active_region_ = *std::move(next_active_region_);
             reset_next_active_region();
