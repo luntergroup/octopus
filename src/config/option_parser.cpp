@@ -471,7 +471,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("phasing-level,l",
      po::value<PhasingLevel>()->default_value(PhasingLevel::normal),
      "Level of phasing - longer range phasing can improve calling accuracy at the cost"
-     " of runtime speed. Possible values are: minimal, conservative, aggressive")
+     " of runtime speed. Possible values are: minimal, conservative, moderate, normal, aggressive")
     
     ("min-phase-score",
      po::value<Phred<double>>()->default_value(Phred<double> {20.0}),
