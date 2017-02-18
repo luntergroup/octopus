@@ -357,7 +357,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(3),
      "Maximum number of holdout attempts the haplotype generator can make before the region"
      " is skipped")
-
+    
     ("extension-level",
      po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
      "Level of haplotype extension. Possible values are: conservative, normal, optimistic, aggressive")
@@ -469,7 +469,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description phasing("Phasing");
     phasing.add_options()
     ("phasing-level,l",
-     po::value<PhasingLevel>()->default_value(PhasingLevel::conservative),
+     po::value<PhasingLevel>()->default_value(PhasingLevel::normal),
      "Level of phasing - longer range phasing can improve calling accuracy at the cost"
      " of runtime speed. Possible values are: minimal, conservative, aggressive")
     
@@ -915,8 +915,7 @@ std::istream& operator>>(std::istream& in, RefCallType& result)
         result = RefCallType::positional;
     else if (token == "blocked")
         result = RefCallType::blocked;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "refcalls"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "refcalls"};
     return in;
 }
 
@@ -951,8 +950,7 @@ std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
         result = ContigOutputOrder::asInReferenceIndexReversed;
     else if (token == "unspecified")
         result = ContigOutputOrder::unspecified;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "contig-output-order"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "contig-output-order"};
     return in;
 }
 
@@ -996,8 +994,7 @@ std::istream& operator>>(std::istream& in, ExtensionLevel& result)
         result = ExtensionLevel::optimistic;
     else if (token == "aggressive")
         result = ExtensionLevel::aggressive;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-                                     "extension-level"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "extension-level"};
     return in;
 }
 
@@ -1028,10 +1025,13 @@ std::istream& operator>>(std::istream& in, PhasingLevel& result)
         result = PhasingLevel::minimal;
     else if (token == "conservative")
         result = PhasingLevel::conservative;
+    else if (token == "moderate")
+        result = PhasingLevel::moderate;
+    else if (token == "normal")
+        result = PhasingLevel::normal;
     else if (token == "aggressive")
         result = PhasingLevel::aggressive;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "phasing-level"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "phasing-level"};
     return in;
 }
 
@@ -1043,6 +1043,12 @@ std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
             break;
         case PhasingLevel::conservative:
             out << "conservative";
+            break;
+        case PhasingLevel::moderate:
+            out << "moderate";
+            break;
+        case PhasingLevel::normal:
+            out << "normal";
             break;
         case PhasingLevel::aggressive:
             out << "aggressive";

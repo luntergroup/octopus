@@ -54,12 +54,12 @@ std::size_t HaplotypeGenerator::HaplotypeOverflow::size() const noexcept
 
 namespace {
 
-auto max_included(const unsigned max_haplotypes)
+auto max_included(const unsigned max_haplotypes) noexcept
 {
-    return 2 * static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes))) - 1;
+    return 2 * static_cast<unsigned>(std::max(1.0, std::log2(std::max(max_haplotypes, 1u)))) - 1;
 }
 
-auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy)
+auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy) noexcept
 {
     using HGP = HaplotypeGenerator::Policies::Extension;
     using GWP = GenomeWalker::ExtensionPolicy;
@@ -72,13 +72,15 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy)
     }
 }
 
-auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy)
+auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy) noexcept
 {
     using HGP = HaplotypeGenerator::Policies::Lagging;
     using GWP = GenomeWalker::IndicatorPolicy;
     switch (policy) {
         case HGP::none: return GWP::includeNone;
-        case HGP::conservative: return GWP::includeIfSharedWithNovelRegion;
+        case HGP::conservative:
+        case HGP::moderate:
+        case HGP::normal: return GWP::includeIfSharedWithNovelRegion;
         case HGP::aggressive: return GWP::includeIfLinkableToNovelRegion;
         default: return GWP::includeIfSharedWithNovelRegion; // prevents compiler warning
     }
@@ -406,9 +408,23 @@ void remove_duplicate_novels(const std::vector<GenomicRegion>& indicator_regions
     }
 }
 
+std::size_t get_reduction_factor(HaplotypeGenerator::Policies::Lagging policy) noexcept
+{
+    using HGP = HaplotypeGenerator::Policies::Lagging;
+    switch (policy) {
+        case HGP::none:
+        case HGP::conservative: return 0;
+        case HGP::moderate: return 1;
+        case HGP::normal: return 3;
+        case HGP::aggressive: return 4;
+        default: return 3; // prevents compiler warning
+    }
+}
+
 std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::size_t target_tree_size,
                                  const std::size_t num_mutually_exclusive_indicator_regions,
-                                 const std::size_t num_mutually_exclusive_novel_regions)
+                                 const std::size_t num_mutually_exclusive_novel_regions,
+                                 const std::size_t reduction_factor)
 {
     if (curr_tree_size == 0) return 0;
     const auto effective_log_space = static_cast<std::size_t>(std::log2(std::max(target_tree_size / curr_tree_size, std::size_t {1})));
@@ -416,10 +432,20 @@ std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::si
         return curr_tree_size;
     } else {
         const auto exponent = std::min({num_mutually_exclusive_indicator_regions,
-                                        (std::max(num_mutually_exclusive_novel_regions, std::size_t {2}) / 2) - 1,
-                                        std::size_t {2}});
+                                        (std::max(num_mutually_exclusive_novel_regions, reduction_factor) / std::max(reduction_factor, std::size_t {1})) - 1,
+                                        reduction_factor});
         return std::min(static_cast<std::size_t>(target_tree_size / std::pow(2, exponent)), curr_tree_size);
     }
+}
+
+std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::size_t target_tree_size,
+                                 const std::size_t num_mutually_exclusive_indicator_regions,
+                                 const std::size_t num_mutually_exclusive_novel_regions,
+                                 HaplotypeGenerator::Policies::Lagging policy)
+{
+    const auto reduction_factor = get_reduction_factor(policy);
+    return get_target_tree_size(curr_tree_size, target_tree_size, num_mutually_exclusive_indicator_regions,
+                                num_mutually_exclusive_novel_regions, reduction_factor);
 }
 
 } // namespace
@@ -466,7 +492,8 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
                 auto target_tree_size = get_target_tree_size(test_tree.num_haplotypes(),
                                                              policies_.haplotype_limits.target,
                                                              mutually_exclusive_indicator_regions.size(),
-                                                             mutually_exclusive_novel_regions.size());
+                                                             mutually_exclusive_novel_regions.size(),
+                                                             policies_.lagging);
                 prune_indicators(test_tree, mutually_exclusive_indicator_regions, target_tree_size);
             }
         }
