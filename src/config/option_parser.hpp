@@ -33,7 +33,7 @@ struct ContigPloidy
 
 enum class RefCallType { positional, blocked };
 enum class ExtensionLevel { conservative, normal, optimistic, aggressive };
-enum class PhasingLevel { minimal, conservative, aggressive };
+enum class PhasingLevel { minimal, conservative, moderate, normal, aggressive };
 
 std::istream& operator>>(std::istream& in, ContigOutputOrder& coo);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& coo);
