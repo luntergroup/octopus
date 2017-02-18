@@ -406,16 +406,18 @@ void remove_duplicate_novels(const std::vector<GenomicRegion>& indicator_regions
     }
 }
 
-std::size_t reduction_factor(const std::size_t num_mutually_exclusive_indicator_regions,
-                             const std::size_t num_mutually_exclusive_novel_regions)
+std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::size_t target_tree_size,
+                                 const std::size_t num_mutually_exclusive_indicator_regions,
+                                 const std::size_t num_mutually_exclusive_novel_regions)
 {
-    if (num_mutually_exclusive_novel_regions < 4) {
-        return 2;
+    const auto effective_log_space = static_cast<std::size_t>(std::log2(target_tree_size / curr_tree_size));
+    if (effective_log_space >= num_mutually_exclusive_novel_regions) {
+        return curr_tree_size;
     } else {
         const auto exponent = std::min({num_mutually_exclusive_indicator_regions,
-                                        num_mutually_exclusive_novel_regions - 1,
+                                        (std::max(num_mutually_exclusive_novel_regions, std::size_t {2}) / 2) - 1,
                                         std::size_t {2}});
-        return std::pow(2, exponent);
+        return std::min(static_cast<std::size_t>(target_tree_size / std::pow(2, exponent)), curr_tree_size);
     }
 }
 
@@ -460,9 +462,10 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
                        && overlaps(mutually_exclusive_indicator_regions.back(), novel_overlap_region)) {
                     mutually_exclusive_indicator_regions.pop_back();
                 }
-                const auto target_tree_size = policies_.haplotype_limits.target
-                                              / reduction_factor(mutually_exclusive_indicator_regions.size(),
-                                                                 mutually_exclusive_novel_regions.size());
+                auto target_tree_size = get_target_tree_size(test_tree.num_haplotypes(),
+                                                             policies_.haplotype_limits.target,
+                                                             mutually_exclusive_indicator_regions.size(),
+                                                             mutually_exclusive_novel_regions.size());
                 prune_indicators(test_tree, mutually_exclusive_indicator_regions, target_tree_size);
             }
         }
