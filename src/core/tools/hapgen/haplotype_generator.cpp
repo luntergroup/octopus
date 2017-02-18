@@ -410,7 +410,8 @@ std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::si
                                  const std::size_t num_mutually_exclusive_indicator_regions,
                                  const std::size_t num_mutually_exclusive_novel_regions)
 {
-    const auto effective_log_space = static_cast<std::size_t>(std::log2(target_tree_size / curr_tree_size));
+    if (curr_tree_size == 0) return 0;
+    const auto effective_log_space = static_cast<std::size_t>(std::log2(std::max(target_tree_size / curr_tree_size, std::size_t {1})));
     if (effective_log_space >= num_mutually_exclusive_novel_regions) {
         return curr_tree_size;
     } else {
