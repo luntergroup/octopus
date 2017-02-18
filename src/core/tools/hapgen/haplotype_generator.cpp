@@ -414,7 +414,7 @@ std::size_t get_reduction_factor(HaplotypeGenerator::Policies::Lagging policy) n
     switch (policy) {
         case HGP::none:
         case HGP::conservative: return 0;
-        case HGP::moderate: return 1;
+        case HGP::moderate: return 2;
         case HGP::normal: return 3;
         case HGP::aggressive: return 4;
         default: return 3; // prevents compiler warning
@@ -431,9 +431,9 @@ std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::si
     if (effective_log_space >= num_mutually_exclusive_novel_regions) {
         return curr_tree_size;
     } else {
-        const auto exponent = std::min({num_mutually_exclusive_indicator_regions,
-                                        (std::max(num_mutually_exclusive_novel_regions, reduction_factor) / std::max(reduction_factor, std::size_t {1})) - 1,
-                                        reduction_factor});
+        const auto exponent = std::min(num_mutually_exclusive_indicator_regions,
+                                        (std::max(num_mutually_exclusive_novel_regions, reduction_factor)
+                                         / std::max(reduction_factor, std::size_t {1})) - 1);
         return std::min(static_cast<std::size_t>(target_tree_size / std::pow(2, exponent)), curr_tree_size);
     }
 }
