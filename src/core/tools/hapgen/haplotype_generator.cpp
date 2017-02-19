@@ -54,12 +54,12 @@ std::size_t HaplotypeGenerator::HaplotypeOverflow::size() const noexcept
 
 namespace {
 
-auto max_included(const unsigned max_haplotypes)
+auto max_included(const unsigned max_haplotypes) noexcept
 {
-    return 2 * static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes))) - 1;
+    return 2 * static_cast<unsigned>(std::max(1.0, std::log2(std::max(max_haplotypes, 1u)))) - 1;
 }
 
-auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy)
+auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy) noexcept
 {
     using HGP = HaplotypeGenerator::Policies::Extension;
     using GWP = GenomeWalker::ExtensionPolicy;
@@ -72,13 +72,15 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy)
     }
 }
 
-auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy)
+auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy) noexcept
 {
     using HGP = HaplotypeGenerator::Policies::Lagging;
     using GWP = GenomeWalker::IndicatorPolicy;
     switch (policy) {
         case HGP::none: return GWP::includeNone;
-        case HGP::conservative: return GWP::includeIfSharedWithNovelRegion;
+        case HGP::conservative:
+        case HGP::moderate:
+        case HGP::normal: return GWP::includeIfSharedWithNovelRegion;
         case HGP::aggressive: return GWP::includeIfLinkableToNovelRegion;
         default: return GWP::includeIfSharedWithNovelRegion; // prevents compiler warning
     }
@@ -346,15 +348,16 @@ bool try_extend_tree_without_removal(HaplotypeTree& tree, const GenomicRegion& a
 }
 
 void prune_indicators(HaplotypeTree& tree, std::vector<GenomicRegion>& indicator_regions,
-                      const unsigned target_tree_size)
+                      const std::size_t target_tree_size)
 {
     auto itr = std::find_if(std::cbegin(indicator_regions), std::cend(indicator_regions),
                             [&tree, target_tree_size](const auto& region) {
-                                if (tree.num_haplotypes() < target_tree_size) {
+                                if (tree.num_haplotypes() > target_tree_size) {
+                                    tree.clear(region);
+                                    return false;
+                                } else {
                                     return true;
                                 }
-                                tree.clear(region);
-                                return false;
                             });
     indicator_regions.erase(std::cbegin(indicator_regions), itr);
 }
@@ -405,6 +408,46 @@ void remove_duplicate_novels(const std::vector<GenomicRegion>& indicator_regions
     }
 }
 
+std::size_t get_reduction_factor(HaplotypeGenerator::Policies::Lagging policy) noexcept
+{
+    using HGP = HaplotypeGenerator::Policies::Lagging;
+    switch (policy) {
+        case HGP::none:
+        case HGP::conservative: return 0;
+        case HGP::moderate: return 2;
+        case HGP::normal: return 3;
+        case HGP::aggressive: return 4;
+        default: return 3; // prevents compiler warning
+    }
+}
+
+std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::size_t target_tree_size,
+                                 const std::size_t num_mutually_exclusive_indicator_regions,
+                                 const std::size_t num_mutually_exclusive_novel_regions,
+                                 const std::size_t reduction_factor)
+{
+    if (curr_tree_size == 0) return 0;
+    const auto effective_log_space = static_cast<std::size_t>(std::log2(std::max(target_tree_size / curr_tree_size, std::size_t {1})));
+    if (effective_log_space >= num_mutually_exclusive_novel_regions) {
+        return curr_tree_size;
+    } else {
+        const auto exponent = std::min(num_mutually_exclusive_indicator_regions,
+                                        (std::max(num_mutually_exclusive_novel_regions, reduction_factor)
+                                         / std::max(reduction_factor, std::size_t {1})) - 1);
+        return std::min(static_cast<std::size_t>(target_tree_size / std::pow(2, exponent)), curr_tree_size);
+    }
+}
+
+std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::size_t target_tree_size,
+                                 const std::size_t num_mutually_exclusive_indicator_regions,
+                                 const std::size_t num_mutually_exclusive_novel_regions,
+                                 HaplotypeGenerator::Policies::Lagging policy)
+{
+    const auto reduction_factor = get_reduction_factor(policy);
+    return get_target_tree_size(curr_tree_size, target_tree_size, num_mutually_exclusive_indicator_regions,
+                                num_mutually_exclusive_novel_regions, reduction_factor);
+}
+
 } // namespace
 
 void HaplotypeGenerator::update_lagged_next_active_region() const
@@ -446,8 +489,12 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
                        && overlaps(mutually_exclusive_indicator_regions.back(), novel_overlap_region)) {
                     mutually_exclusive_indicator_regions.pop_back();
                 }
-                prune_indicators(test_tree, mutually_exclusive_indicator_regions,
-                                 policies_.haplotype_limits.target);
+                auto target_tree_size = get_target_tree_size(test_tree.num_haplotypes(),
+                                                             policies_.haplotype_limits.target,
+                                                             mutually_exclusive_indicator_regions.size(),
+                                                             mutually_exclusive_novel_regions.size(),
+                                                             policies_.lagging);
+                prune_indicators(test_tree, mutually_exclusive_indicator_regions, target_tree_size);
             }
         }
         const auto num_novel_regions_added = extend_novel(test_tree, mutually_exclusive_novel_regions,
