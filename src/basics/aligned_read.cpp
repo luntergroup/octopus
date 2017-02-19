@@ -61,7 +61,17 @@ const AlignedRead::NucleotideSequence& AlignedRead::sequence() const noexcept
     return sequence_;
 }
 
+AlignedRead::NucleotideSequence& AlignedRead::sequence() noexcept
+{
+    return sequence_;
+}
+
 const AlignedRead::BaseQualityVector& AlignedRead::qualities() const noexcept
+{
+    return qualities_;
+}
+
+AlignedRead::BaseQualityVector& AlignedRead::qualities() noexcept
 {
     return qualities_;
 }
@@ -135,27 +145,6 @@ bool AlignedRead::is_marked_supplementary_alignment() const noexcept
     return flags_[7];
 }
 
-void AlignedRead::capitalise_bases() noexcept
-{
-    utils::capitalise(sequence_);
-}
-
-void AlignedRead::cap_qualities(const BaseQuality max) noexcept
-{
-    std::transform(std::cbegin(qualities_), std::cend(qualities_), std::begin(qualities_),
-                   [max] (const auto q) { return std::min(q, max); });
-}
-
-void AlignedRead::cap_front_qualities(const std::size_t num_bases, const BaseQuality max) noexcept
-{
-    std::fill_n(std::begin(qualities_), std::min(num_bases, sequence_.size()), max);
-}
-
-void AlignedRead::cap_back_qualities(const std::size_t num_bases, const BaseQuality max) noexcept
-{
-    std::fill_n(std::rbegin(qualities_), std::min(num_bases, sequence_.size()), max);
-}
-
 // private methods
 
 AlignedRead::FlagBits AlignedRead::compress(const Flags& flags) const noexcept
@@ -202,6 +191,30 @@ std::size_t ReadHash::operator()(const octopus::AlignedRead &read) const
 }
 
 // Non-member methods
+
+void capitalise_bases(AlignedRead& read) noexcept
+{
+    utils::capitalise(read.sequence());
+}
+
+void cap_qualities(AlignedRead& read, const AlignedRead::BaseQuality max) noexcept
+{
+    auto& qualities = read.qualities();
+    std::transform(std::cbegin(qualities), std::cend(qualities), std::begin(qualities),
+                   [max] (const auto q) { return std::min(q, max); });
+}
+
+void set_front_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality max) noexcept
+{
+    auto& qualities = read.qualities();
+    std::fill_n(std::begin(qualities), std::min(num_bases, qualities.size()), max);
+}
+
+void set_back_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality max) noexcept
+{
+    auto& qualities = read.qualities();
+    std::fill_n(std::rbegin(qualities), std::min(num_bases, qualities.size()), max);
+}
 
 bool is_sequence_empty(const AlignedRead& read) noexcept
 {

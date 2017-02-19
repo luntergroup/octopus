@@ -4,6 +4,7 @@
 #include "read_transform.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <numeric>
 #include <tuple>
 
@@ -12,14 +13,14 @@ namespace octopus { namespace readpipe
 
 void CapitaliseBases::operator()(AlignedRead& read) const noexcept
 {
-    read.capitalise_bases();
+    capitalise_bases(read);
 }
 
 CapBaseQualities::CapBaseQualities(BaseQuality max) : max_ {max} {}
 
 void CapBaseQualities::operator()(AlignedRead& read) const noexcept
 {
-    read.cap_qualities(max_);
+    cap_qualities(read, max_);
 }
 
 void MaskOverlappedSegment::operator()(AlignedRead& read) const noexcept
@@ -31,7 +32,7 @@ void MaskOverlappedSegment::operator()(AlignedRead& read) const noexcept
         
         if (next_segment_begin < mapped_end(read)) {
             const auto overlapped_size = mapped_end(read) - next_segment_begin;
-            read.cap_back_qualities(overlapped_size);
+            set_back_qualities(read, overlapped_size);
         }
     }
 }
@@ -47,9 +48,9 @@ void MaskAdapters::operator()(AlignedRead& read) const noexcept
             const auto num_adapter_bases = read_size - insert_size;
             
             if (read.is_marked_reverse_mapped()) {
-                read.cap_front_qualities(num_adapter_bases);
+                set_front_qualities(read, num_adapter_bases);
             } else {
-                read.cap_back_qualities(num_adapter_bases);
+                set_back_qualities(read, num_adapter_bases);
             }
         }
     }
@@ -60,9 +61,9 @@ MaskTail::MaskTail(Length num_bases) : num_bases_ {num_bases} {}
 void MaskTail::operator()(AlignedRead& read) const noexcept
 {
     if (read.is_marked_reverse_mapped()) {
-        read.cap_front_qualities(num_bases_);
+        set_front_qualities(read, num_bases_);
     } else {
-        read.cap_back_qualities(num_bases_);
+        set_back_qualities(read, num_bases_);
     }
 }
 
@@ -70,8 +71,8 @@ void MaskSoftClipped::operator()(AlignedRead& read) const noexcept
 {
     if (is_soft_clipped(read)) {
         const auto p = get_soft_clipped_sizes(read);
-        read.cap_front_qualities(p.first);
-        read.cap_back_qualities(p.second);
+        set_front_qualities(read, p.first);
+        set_back_qualities(read, p.second);
     }
 }
 
@@ -84,10 +85,10 @@ void MaskSoftClippedBoundries::operator()(AlignedRead& read) const noexcept
         std::tie(num_front_bases, num_back_bases) = get_soft_clipped_sizes(read);
         
         if (num_front_bases > 0) {
-            read.cap_front_qualities(num_front_bases + num_bases_);
+            set_front_qualities(read, num_front_bases + num_bases_);
         }
         if (num_back_bases > 0) {
-            read.cap_back_qualities(num_back_bases + num_bases_);
+            set_back_qualities(read, num_back_bases + num_bases_);
         }
     }
 }
@@ -110,7 +111,7 @@ void QualityAdjustedSoftClippedMasker::operator()(AlignedRead& read) const noexc
             const auto mean = static_cast<Q>(sum / num_front_bases);
             const auto min_quality = *min_element(cbegin(qualities), next(cbegin(qualities)));
             const auto mask_size = num_front_bases + min(static_cast<S>(mean - min_quality), num_front_bases);
-            read.cap_front_qualities(mask_size);
+            set_front_qualities(read, mask_size);
         }
         
         if (num_back_bases > 0) {
@@ -118,7 +119,7 @@ void QualityAdjustedSoftClippedMasker::operator()(AlignedRead& read) const noexc
             const auto mean = static_cast<Q>(sum / num_back_bases);
             const auto min_quality = *min_element(cbegin(qualities), next(cbegin(qualities)));
             const auto mask_size = num_back_bases + min(static_cast<S>(mean - min_quality), num_back_bases);
-            read.cap_back_qualities(mask_size);
+            set_back_qualities(read, mask_size);
         }
     }
 }
