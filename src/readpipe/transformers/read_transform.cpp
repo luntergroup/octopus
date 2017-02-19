@@ -76,9 +76,9 @@ void MaskSoftClipped::operator()(AlignedRead& read) const noexcept
     }
 }
 
-MaskSoftClippedBoundries::MaskSoftClippedBoundries(Length num_bases) : num_bases_ {num_bases} {}
+MaskSoftClippedBoundraryBases::MaskSoftClippedBoundraryBases(Length num_bases) : num_bases_ {num_bases} {}
 
-void MaskSoftClippedBoundries::operator()(AlignedRead& read) const noexcept
+void MaskSoftClippedBoundraryBases::operator()(AlignedRead& read) const noexcept
 {
     if (is_soft_clipped(read)) {
         Length num_front_bases, num_back_bases;
@@ -102,46 +102,46 @@ void zero_if_less_than(InputIterator first, InputIterator last,
                        typename std::iterator_traits<InputIterator>::value_type value) noexcept {
     std::transform(first, last, first, [value](auto v) { return v < value ? 0 : value; });
 }
-    
+
+void mask_low_quality_front_bases(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality min_quality) noexcept
+{
+    auto& sequence = read.sequence();
+    zero_if_less_than(std::begin(sequence), std::next(std::begin(sequence), num_bases), min_quality);
+}
+
+void mask_low_quality_back_bases(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality min_quality) noexcept
+{
+    auto& qualities = read.qualities();
+    zero_if_less_than(std::rbegin(qualities), std::next(std::rbegin(qualities), num_bases), min_quality);
+}
+
+
 }
 
 void MaskLowQualitySoftClippedBases::operator()(AlignedRead& read) const noexcept
 {
     if (is_soft_clipped(read)) {
         const auto p = get_soft_clipped_sizes(read);
-        auto& qualities = read.qualities();
-        zero_if_less_than(std::begin(qualities), std::next(std::begin(qualities), p.first), max_);
-        zero_if_less_than(std::rbegin(qualities), std::next(std::rbegin(qualities), p.second), max_);
+        mask_low_quality_front_bases(read, p.first, max_);
+        mask_low_quality_back_bases(read, p.second, max_);
     }
 }
 
-void QualityAdjustedSoftClippedMasker::operator()(AlignedRead& read) const noexcept
+MaskLowQualitySoftClippedBoundaryBases::MaskLowQualitySoftClippedBoundaryBases(Length num_bases, BaseQuality max)
+: num_bases_ {num_bases}
+, max_ {max}
+{}
+
+void MaskLowQualitySoftClippedBoundaryBases::operator()(AlignedRead& read) const noexcept
 {
     if (is_soft_clipped(read)) {
-        using std::cbegin; using std::crbegin; using std::next;
-        using std::accumulate; using std::min_element; using std::min;
-        
-        using S = AlignedRead::NucleotideSequence::size_type;
-        S num_front_bases, num_back_bases;
+        Length num_front_bases, num_back_bases;
         std::tie(num_front_bases, num_back_bases) = get_soft_clipped_sizes(read);
-        const auto& qualities = read.qualities();
-        
-        using Q = AlignedRead::BaseQuality;
-        
         if (num_front_bases > 0) {
-            const auto sum = accumulate(cbegin(qualities), next(cbegin(qualities), num_front_bases), 0.0);
-            const auto mean = static_cast<Q>(sum / num_front_bases);
-            const auto min_quality = *min_element(cbegin(qualities), next(cbegin(qualities)));
-            const auto mask_size = num_front_bases + min(static_cast<S>(mean - min_quality), num_front_bases);
-            set_front_qualities(read, mask_size);
+            mask_low_quality_front_bases(read, num_front_bases + num_bases_, max_);
         }
-        
         if (num_back_bases > 0) {
-            const auto sum = accumulate(crbegin(qualities), next(crbegin(qualities), num_back_bases), 0.0);
-            const auto mean = static_cast<Q>(sum / num_back_bases);
-            const auto min_quality = *min_element(cbegin(qualities), next(cbegin(qualities)));
-            const auto mask_size = num_back_bases + min(static_cast<S>(mean - min_quality), num_back_bases);
-            set_back_qualities(read, mask_size);
+            mask_low_quality_back_bases(read, num_back_bases + num_bases_, max_);
         }
     }
 }
