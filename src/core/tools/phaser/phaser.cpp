@@ -144,21 +144,20 @@ Phred<double> calculate_phase_score(const PhaseComplementSets& phase_sets, const
     }};
 }
 
-auto min_phase_score(const double p, const std::size_t num_genotypes)
+auto min_phase_score(const double p)
 {
-    if (maths::almost_one(p) || num_genotypes == 1) {
+    if (maths::almost_one(p)) {
         static const Phred<double> max_possible_score {Phred<double>::Probability {0.0}};
         return max_possible_score;
     } else {
-        const auto s = p * std::log2(p) + (1.0 - p) * std::log2((1.0 - p) / (num_genotypes - 1));
-        const auto y = 1.0 + s / maximum_entropy(2);
-        return Phred<double> {Phred<double>::Probability {std::max(y, 0.0)}};
+        const auto e = -(p * std::log2(p) + (1.0 - p) * std::log2(1.0 - p)) / maximum_entropy(2);
+        return Phred<double> {Phred<double>::Probability {std::max(e, 0.0)}};
     }
 }
 
 auto min_phase_score(const Genotype<Haplotype>& called_genotype, const Phaser::SampleGenotypePosteriorMap& genotype_posteriors)
 {
-    return min_phase_score(genotype_posteriors[called_genotype], genotype_posteriors.size());
+    return min_phase_score(genotype_posteriors[called_genotype]);
 }
 
 std::vector<GenotypeReference> extract_genotypes(const Phaser::GenotypePosteriorMap& genotype_posteriors)
