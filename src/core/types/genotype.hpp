@@ -397,7 +397,7 @@ auto splice_each_cached(const Container& genotypes, const GenomicRegion& region,
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::back_inserter(result),
                    [&] (const auto& genotype) { return splice<MappableType>(genotype, region, cache); });
     return result;
-};
+}
 
 template <typename MappableType>
 struct ShareMemory : public std::is_same<MappableType, Haplotype> {};
