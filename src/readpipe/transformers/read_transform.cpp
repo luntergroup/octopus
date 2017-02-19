@@ -93,6 +93,28 @@ void MaskSoftClippedBoundries::operator()(AlignedRead& read) const noexcept
     }
 }
 
+MaskLowQualitySoftClippedBases::MaskLowQualitySoftClippedBases(BaseQuality max) : max_ {max} {}
+
+namespace {
+
+template<typename InputIterator>
+void zero_if_less_than(InputIterator first, InputIterator last,
+                       typename std::iterator_traits<InputIterator>::value_type value) noexcept {
+    std::transform(first, last, first, [value](auto v) { return v < value ? 0 : value; });
+}
+    
+}
+
+void MaskLowQualitySoftClippedBases::operator()(AlignedRead& read) const noexcept
+{
+    if (is_soft_clipped(read)) {
+        const auto p = get_soft_clipped_sizes(read);
+        auto& qualities = read.qualities();
+        zero_if_less_than(std::begin(qualities), std::next(std::begin(qualities), p.first), max_);
+        zero_if_less_than(std::rbegin(qualities), std::next(std::rbegin(qualities), p.second), max_);
+    }
+}
+
 void QualityAdjustedSoftClippedMasker::operator()(AlignedRead& read) const noexcept
 {
     if (is_soft_clipped(read)) {
