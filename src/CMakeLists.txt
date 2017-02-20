@@ -310,6 +310,8 @@ set(CORE_SOURCES
     core/tools/vargen/utils/assembler.cpp
     core/tools/vargen/utils/global_aligner.hpp
     core/tools/vargen/utils/global_aligner.cpp
+    core/tools/vargen/utils/assembler_active_region_generator.hpp
+    core/tools/vargen/utils/assembler_active_region_generator.cpp
     
     core/types/allele.hpp
     core/types/allele.cpp
