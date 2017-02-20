@@ -565,7 +565,7 @@ auto make_read_transformer(const OptionMap& options)
     if (options.at("soft-clip-masking").as<bool>()) {
         const auto soft_clipped_mask_size = as_unsigned("mask-soft-clipped-boundries", options);
         if (soft_clipped_mask_size > 0) {
-            result.register_transform(MaskSoftClippedBoundries {soft_clipped_mask_size});
+            result.register_transform(MaskSoftClippedBoundraryBases {soft_clipped_mask_size});
         } else {
             result.register_transform(MaskSoftClipped {});
         }
