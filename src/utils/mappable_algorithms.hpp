@@ -1760,6 +1760,46 @@ auto calculate_positional_coverage(const Container& mappables, const RegionTp& r
     return calculate_positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
 }
 
+template <typename ForwardIt, typename RegionTp,
+          typename = EnableIfRegionOrMappable<typename std::iterator_traits<ForwardIt>::value_type>>
+auto calculate_positional_seeds(ForwardIt first, ForwardIt last, const RegionTp& region)
+{
+    using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
+    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
+                  "RegionType mismatch");
+    std::vector<unsigned> result(region_size(region) + 1, 0); // + 1 for empty mappables at last position
+    for (const auto& mappable : contained_range(first, last, region)) {
+        ++result[begin_distance(region, mappable)];
+    }
+    result.pop_back();
+    return result;
+}
+
+template <typename ForwardIt,
+          typename = EnableIfRegionOrMappable<typename std::iterator_traits<ForwardIt>::value_type>>
+auto calculate_positional_seeds(ForwardIt first, ForwardIt last)
+{
+    return calculate_positional_seeds(first, last, encompassing_region(first, last));
+}
+
+template <typename Container,
+          typename = EnableIfMappable<typename Container::value_type>>
+auto calculate_positional_seeds(const Container& mappables)
+{
+    return calculate_positional_seeds(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename Container, typename RegionTp,
+          typename = EnableIfRegionOrMappable<typename Container::value_type>>
+auto calculate_positional_seeds(const Container& mappables, const RegionTp& region)
+{
+    using MappableTp = typename Container::value_type;
+    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
+                  "RegionType mismatch");
+    const auto overlapped = overlap_range(mappables, region);
+    return calculate_positional_seeds(std::cbegin(overlapped), std::cend(overlapped), region);
+}
+
 template <typename Container, typename RegionTp,
           typename = enable_if_not_map<Container>,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
