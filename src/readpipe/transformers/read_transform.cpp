@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <iterator>
-#include <numeric>
 #include <tuple>
 
 namespace octopus { namespace readpipe {
@@ -108,7 +107,7 @@ namespace {
 template<typename InputIterator>
 void zero_if_less_than(InputIterator first, InputIterator last,
                        typename std::iterator_traits<InputIterator>::value_type value) noexcept {
-    std::transform(first, last, first, [value] (auto v) { return v < value ? 0 : value; });
+    std::transform(first, last, first, [value] (auto v) noexcept { return v < value ? 0 : value; });
 }
 
 void mask_low_quality_front_bases(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality min_quality) noexcept
@@ -122,7 +121,7 @@ void mask_low_quality_back_bases(AlignedRead& read, std::size_t num_bases, Align
     auto& qualities = read.qualities();
     zero_if_less_than(std::rbegin(qualities), std::next(std::rbegin(qualities), num_bases), min_quality);
 }
-    
+
 } // namespace
 
 MaskLowQualitySoftClippedBases::MaskLowQualitySoftClippedBases(BaseQuality max) : max_ {max} {}
