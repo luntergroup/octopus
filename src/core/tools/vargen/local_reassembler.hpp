@@ -9,12 +9,18 @@
 #include <functional>
 #include <memory>
 
+#include <boost/optional.hpp>
+
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/mappable_reference_wrapper.hpp"
 #include "concepts/mappable.hpp"
+#include "containers/mappable_flat_multi_set.hpp"
 #include "core/types/variant.hpp"
 #include "variant_generator.hpp"
 #include "utils/assembler.hpp"
+
+#include "utils/assembler_active_region_generator.hpp"
 
 namespace octopus {
 
@@ -49,7 +55,7 @@ public:
     LocalReassembler& operator=(LocalReassembler&&)      = default;
     
     ~LocalReassembler() override = default;
-    
+
 private:
     using VariantGenerator::VectorIterator;
     using VariantGenerator::FlatSetIterator;
@@ -76,20 +82,23 @@ private:
         
         const GenomicRegion& mapped_region() const noexcept;
         
-        void insert(const AlignedRead& read);
-        void insert(const NucleotideSequence& sequence);
+        void add(const AlignedRead& read);
+        void add(const GenomicRegion& read_region, const NucleotideSequence& read_sequence);
         
         void clear() noexcept;
         bool empty() const noexcept;
         
         GenomicRegion region;
+        boost::optional<ContigRegion> read_region;
         std::deque<std::reference_wrapper<const NucleotideSequence>> read_sequences;
     };
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     
     std::vector<unsigned> default_kmer_sizes_, fallback_kmer_sizes_;
-        
+    
+    MappableFlatMultiSet<MappableReferenceWrapper<const AlignedRead>> read_buffer_;
+    
     GenomicRegion::Size bin_size_, bin_overlap_;
     std::deque<Bin> bins_;
     std::deque<NucleotideSequence> masked_sequence_buffer_;
@@ -100,8 +109,11 @@ private:
     unsigned max_bubbles_;
     Variant::MappingDomain::Size max_variant_size_;
     
+    AssemblerActiveRegionGenerator active_region_generator_;
+    
     void prepare_bins_to_insert(const AlignedRead& read);
     bool should_assemble_bin(const Bin& bin) const;
+    void finalise_bins();
     unsigned try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result);
     void try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result);
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;
