@@ -173,7 +173,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("mask-tails",
      po::value<int>()->implicit_value(3),
-     "Masks this number of bases of the tail of all reads")
+     "Masks read tail bases with base quality less than this")
     
     ("mask-soft-clipped-boundries",
      po::value<int>()->default_value(2),

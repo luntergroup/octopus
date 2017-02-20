@@ -557,10 +557,8 @@ auto make_read_transformer(const OptionMap& options)
         return result;
     }
     if (options.count("mask-tails")) {
-        const auto tail_mask_size = as_unsigned("mask-tails", options);
-        if (tail_mask_size > 0) {
-            result.register_transform(MaskTail {tail_mask_size});
-        }
+        const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-tails", options));
+        result.register_transform(MaskLowQualityTails {threshold});
     }
     if (options.at("soft-clip-masking").as<bool>()) {
         const auto soft_clipped_mask_size = as_unsigned("mask-soft-clipped-boundries", options);
