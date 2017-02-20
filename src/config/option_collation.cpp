@@ -546,6 +546,11 @@ ReadManager make_read_manager(const OptionMap& options)
     return ReadManager {std::move(read_paths), max_open_files};
 }
 
+bool allow_assembler_generation(const OptionMap& options)
+{
+    return options.at("assembly-candidate-generator").as<bool>() && !is_fast_mode(options);
+}
+
 auto make_read_transformer(const OptionMap& options)
 {
     using namespace octopus::readpipe;
@@ -556,16 +561,30 @@ auto make_read_transformer(const OptionMap& options)
     if (!options.at("read-transforms").as<bool>()) {
         return result;
     }
-    if (options.count("mask-tails")) {
-        const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-tails", options));
+    if (options.count("mask-low-quality-tails") == 1) {
+        const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-low-quality-tails", options));
         result.register_transform(MaskLowQualityTails {threshold});
     }
     if (options.at("soft-clip-masking").as<bool>()) {
-        const auto soft_clipped_mask_size = as_unsigned("mask-soft-clipped-boundary-bases", options);
-        if (soft_clipped_mask_size > 0) {
-            result.register_transform(MaskSoftClippedBoundraryBases {soft_clipped_mask_size});
+        const auto boundary_size = as_unsigned("mask-soft-clipped-boundary-bases", options);
+        if (boundary_size > 0) {
+            if (options.count("soft-clip-mask-threshold") == 1) {
+                const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
+                result.register_transform(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
+            } else if (allow_assembler_generation(options)) {
+                result.register_transform(MaskLowQualitySoftClippedBoundaryBases {boundary_size, 3});
+            } else {
+                result.register_transform(MaskSoftClippedBoundraryBases {boundary_size});
+            }
         } else {
-            result.register_transform(MaskSoftClipped {});
+            if (options.count("soft-clip-mask-threshold") == 1) {
+                const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
+                result.register_transform(MaskLowQualitySoftClippedBases {threshold});
+            } else if (allow_assembler_generation(options)) {
+                result.register_transform(MaskLowQualitySoftClippedBases {3});
+            } else {
+                result.register_transform(MaskSoftClipped {});
+            }
         }
     }
     if (options.at("adapter-masking").as<bool>()) {
@@ -782,11 +801,6 @@ auto get_default_match_predicate() noexcept
         }
         return overlaps(lhs, rhs);
     };
-}
-
-bool allow_assembler_generation(const OptionMap& options)
-{
-    return options.at("assembly-candidate-generator").as<bool>() && !is_fast_mode(options);
 }
 
 class MissingSourceVariantFile : public MissingFileError
