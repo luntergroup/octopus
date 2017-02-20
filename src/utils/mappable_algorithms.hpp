@@ -1873,6 +1873,29 @@ unsigned max_coverage(const Container& mappables)
     return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
 }
 
+template <typename ForwardIt>
+auto join(ForwardIt first, const ForwardIt last, const GenomicRegion::Distance n)
+{
+    std::vector<GenomicRegion> result {};
+    if (first == last) return result;
+    result.reserve(std::distance(first, last));
+    auto prev = first++, leftmost = prev;
+    for (; first != last; ++first, ++prev) {
+        if (inner_distance(*prev, *first) > n) {
+            result.push_back(closed_region(*leftmost, *prev));
+            leftmost = first;
+        }
+    }
+    result.push_back(closed_region(*leftmost, *prev));
+    return result;
+}
+
+template <typename Container>
+auto join(const Container& regions, const GenomicRegion::Distance n)
+{
+    return join(std::cbegin(regions), std::cend(regions), n);
+}
+    
 } // namespace octopus
 
 #endif
