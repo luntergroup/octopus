@@ -112,14 +112,14 @@ void zero_if_less_than(InputIterator first, InputIterator last,
 
 void mask_low_quality_front_bases(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality min_quality) noexcept
 {
-    auto& sequence = read.qualities();
-    zero_if_less_than(std::begin(sequence), std::next(std::begin(sequence), num_bases), min_quality);
+    auto& qualities = read.qualities();
+    zero_if_less_than(std::begin(qualities), std::next(std::begin(qualities), std::min(num_bases, sequence_size(read))), min_quality);
 }
 
 void mask_low_quality_back_bases(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality min_quality) noexcept
 {
     auto& qualities = read.qualities();
-    zero_if_less_than(std::rbegin(qualities), std::next(std::rbegin(qualities), num_bases), min_quality);
+    zero_if_less_than(std::rbegin(qualities), std::next(std::rbegin(qualities), std::min(num_bases, sequence_size(read))), min_quality);
 }
 
 } // namespace
