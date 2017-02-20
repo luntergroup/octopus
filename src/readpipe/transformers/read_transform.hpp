@@ -52,6 +52,20 @@ private:
     const Length num_bases_;
 };
 
+struct MaskLowQualityTails
+{
+    using BaseQuality = AlignedRead::BaseQuality;
+    
+    MaskLowQualityTails() = default;
+    
+    explicit MaskLowQualityTails(BaseQuality threshold);
+    
+    void operator()(AlignedRead& read) const noexcept;
+
+private:
+    const BaseQuality threshold_;
+};
+
 struct MaskSoftClipped
 {
     void operator()(AlignedRead& read) const noexcept;

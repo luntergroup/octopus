@@ -8,8 +8,7 @@
 #include <numeric>
 #include <tuple>
 
-namespace octopus { namespace readpipe
-{
+namespace octopus { namespace readpipe {
 
 void CapitaliseBases::operator()(AlignedRead& read) const noexcept
 {
@@ -29,7 +28,6 @@ void MaskOverlappedSegment::operator()(AlignedRead& read) const noexcept
     if (read.has_other_segment() && contig_name(read) == read.next_segment().contig_name()
         && !read.next_segment().is_marked_unmapped() && !read.is_marked_reverse_mapped()) {
         const auto next_segment_begin = read.next_segment().begin();
-        
         if (next_segment_begin < mapped_end(read)) {
             const auto overlapped_size = mapped_end(read) - next_segment_begin;
             set_back_qualities(read, overlapped_size);
@@ -43,10 +41,8 @@ void MaskAdapters::operator()(AlignedRead& read) const noexcept
         && contig_name(read) == read.next_segment().contig_name()) {
         const auto insert_size = read.next_segment().inferred_template_length();
         const auto read_size   = sequence_size(read);
-        
         if (insert_size < read_size) {
             const auto num_adapter_bases = read_size - insert_size;
-            
             if (read.is_marked_reverse_mapped()) {
                 set_front_qualities(read, num_adapter_bases);
             } else {
@@ -64,6 +60,21 @@ void MaskTail::operator()(AlignedRead& read) const noexcept
         set_front_qualities(read, num_bases_);
     } else {
         set_back_qualities(read, num_bases_);
+    }
+}
+
+MaskLowQualityTails::MaskLowQualityTails(BaseQuality threshold) : threshold_ {threshold} {}
+
+void MaskLowQualityTails::operator()(AlignedRead& read) const noexcept
+{
+    auto& qualities = read.qualities();
+    const auto is_low_quality = [this] (BaseQuality q) noexcept { return q < threshold_; };
+    if (read.is_marked_reverse_mapped()) {
+        const auto first_high_quality = std::find_if_not(std::begin(qualities), std::end(qualities), is_low_quality);
+        std::fill(std::begin(qualities), first_high_quality, 0);
+    } else {
+        const auto first_high_quality = std::find_if_not(std::rbegin(qualities), std::rend(qualities), is_low_quality);
+        std::fill(std::rbegin(qualities), first_high_quality, 0);
     }
 }
 
