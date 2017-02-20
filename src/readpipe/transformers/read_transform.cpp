@@ -83,7 +83,6 @@ void MaskSoftClippedBoundraryBases::operator()(AlignedRead& read) const noexcept
     if (is_soft_clipped(read)) {
         Length num_front_bases, num_back_bases;
         std::tie(num_front_bases, num_back_bases) = get_soft_clipped_sizes(read);
-        
         if (num_front_bases > 0) {
             set_front_qualities(read, num_front_bases + num_bases_);
         }
@@ -93,19 +92,17 @@ void MaskSoftClippedBoundraryBases::operator()(AlignedRead& read) const noexcept
     }
 }
 
-MaskLowQualitySoftClippedBases::MaskLowQualitySoftClippedBases(BaseQuality max) : max_ {max} {}
-
 namespace {
 
 template<typename InputIterator>
 void zero_if_less_than(InputIterator first, InputIterator last,
                        typename std::iterator_traits<InputIterator>::value_type value) noexcept {
-    std::transform(first, last, first, [value](auto v) { return v < value ? 0 : value; });
+    std::transform(first, last, first, [value] (auto v) { return v < value ? 0 : value; });
 }
 
 void mask_low_quality_front_bases(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality min_quality) noexcept
 {
-    auto& sequence = read.sequence();
+    auto& sequence = read.qualities();
     zero_if_less_than(std::begin(sequence), std::next(std::begin(sequence), num_bases), min_quality);
 }
 
@@ -114,9 +111,10 @@ void mask_low_quality_back_bases(AlignedRead& read, std::size_t num_bases, Align
     auto& qualities = read.qualities();
     zero_if_less_than(std::rbegin(qualities), std::next(std::rbegin(qualities), num_bases), min_quality);
 }
+    
+} // namespace
 
-
-}
+MaskLowQualitySoftClippedBases::MaskLowQualitySoftClippedBases(BaseQuality max) : max_ {max} {}
 
 void MaskLowQualitySoftClippedBases::operator()(AlignedRead& read) const noexcept
 {
