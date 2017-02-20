@@ -15,6 +15,8 @@ namespace octopus {
 class PopulationPriorModel
 {
 public:
+    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+    
     PopulationPriorModel() = default;
     
     PopulationPriorModel(const PopulationPriorModel&)            = delete;
@@ -25,11 +27,11 @@ public:
     virtual ~PopulationPriorModel() = default;
     
     double evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const { return do_evaluate(genotypes); }
-    double evaluate(const std::vector<std::reference_wrapper<const Genotype<Haplotype>>>& genotypes) const { return do_evaluate(genotypes); }
+    double evaluate(const std::vector<GenotypeReference>& genotypes) const { return do_evaluate(genotypes); }
 
 private:
     virtual double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const = 0;
-    virtual double do_evaluate(const std::vector<std::reference_wrapper<const Genotype<Haplotype>>>& genotypes) const = 0;
+    virtual double do_evaluate(const std::vector<GenotypeReference>& genotypes) const = 0;
 };
 
 } // namespace octopus

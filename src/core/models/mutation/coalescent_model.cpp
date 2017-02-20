@@ -4,9 +4,15 @@
 #include "coalescent_model.hpp"
 
 #include <memory>
+#include <cmath>
+#include <complex>
+#include <numeric>
 #include <stdexcept>
 
+#include <boost/math/special_functions/binomial.hpp>
+
 #include "tandem/tandem.hpp"
+#include "utils/maths.hpp"
 
 namespace octopus {
 
@@ -78,6 +84,115 @@ void CoalescentModel::set_reference(Haplotype reference)
                                         std::forward_as_tuple(reference_),
                                         std::forward_as_tuple());
     }
+}
+
+namespace {
+
+auto powm1(const unsigned i) noexcept // std::pow(-1, i)
+{
+    return (i % 2 == 0) ? 1 : -1;
+}
+
+auto binom(const unsigned n, const unsigned k)
+{
+    return boost::math::binomial_coefficient<double>(n, k);
+}
+
+auto log_binom(const unsigned n, const unsigned k)
+{
+    using maths::log_factorial;
+    return log_factorial<double>(n) - (log_factorial<double>(k) + log_factorial<double>(n - k));
+}
+
+auto coalescent_real_space(const unsigned n, const unsigned k, const double theta)
+{
+    double result {0};
+    for (unsigned i {2}; i <= n; ++i) {
+        result += powm1(i) * binom(n - 1, i - 1) * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
+    }
+    return std::log(result);
+}
+
+template <typename ForwardIt>
+auto complex_log_sum_exp(ForwardIt first, ForwardIt last)
+{
+    using ComplexType = typename std::iterator_traits<ForwardIt>::value_type;
+    const auto l = [](const auto& lhs, const auto& rhs) { return lhs.real() < rhs.real(); };
+    const auto max = *std::max_element(first, last, l);
+    return max + std::log(std::accumulate(first, last, ComplexType {},
+                                          [max](const auto curr, const auto x) {
+                                              return curr + std::exp(x - max);
+                                          }));
+}
+
+template <typename Container>
+auto complex_log_sum_exp(const Container& logs)
+{
+    return complex_log_sum_exp(std::cbegin(logs), std::cend(logs));
+}
+
+auto coalescent_log_space(const unsigned n, const unsigned k, const double theta)
+{
+    std::vector<std::complex<double>> tmp(n - 1, std::log(std::complex<double> {-1}));
+    for (unsigned i {2}; i <= n; ++i) {
+        auto& cur = tmp[i - 2];
+        cur *= i;
+        cur += log_binom(n - 1, i - 1);
+        cur += std::log((i - 1) / (theta + i - 1));
+        cur += k * std::log(theta / (theta + i - 1));
+    }
+    return complex_log_sum_exp(tmp).real();
+}
+
+auto coalescent(const unsigned n, const unsigned k, const double theta)
+{
+    if (k <= 80) {
+        return coalescent_real_space(n, k, theta);
+    } else {
+        return coalescent_log_space(n, k, theta);
+    }
+}
+
+auto coalescent(const unsigned n, const unsigned k_snp, const unsigned k_indel,
+                const double theta_snp, const double theta_indel)
+{
+    const auto theta = theta_snp + theta_indel;
+    const auto k_tot = k_snp + k_indel;
+    auto result = coalescent(n, k_tot, theta);
+    result += k_snp * std::log(theta_snp / theta);
+    result += k_indel * std::log(theta_indel / theta);
+    result += log_binom(k_tot, k_snp);
+    return result;
+}
+
+} // namespace
+
+double CoalescentModel::evaluate(const SiteCountTuple& t) const
+{
+    unsigned k_snp, k_indel, n;
+    std::tie(k_snp, k_indel, n) = t;
+    if (k_indel == 0) {
+        // indel heterozygosity is default in this case
+        const auto itr = result_cache_.find(t);
+        if (itr != std::cend(result_cache_)) return itr->second;
+    }
+    auto indel_heterozygosity = params_.indel_heterozygosity;
+    if (k_indel > 0) {
+        for (const auto& site : site_buffer1_) {
+            if (is_indel(site)) {
+                const auto offset = begin_distance(reference_, site.get());
+                auto itr = std::next(std::cbegin(reference_base_indel_heterozygosities_), offset);
+                using S = Variant::MappingDomain::Size;
+                itr = std::max_element(itr, std::next(itr, std::max(S {1}, region_size(site.get()))));
+                indel_heterozygosity = std::max(*itr, indel_heterozygosity);
+            }
+        }
+    }
+    const auto result = coalescent(n, k_snp, k_indel, params_.snp_heterozygosity, indel_heterozygosity);
+    if (k_indel > 0) {
+        result_cache_.emplace(t, result);
+    }
+    return result;
 }
 
 void CoalescentModel::fill_site_buffer_from_value_cache(const Haplotype& haplotype) const
