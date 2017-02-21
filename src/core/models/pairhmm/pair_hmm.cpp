@@ -184,7 +184,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                                                        align1.data(), align2.data(),
                                                        target_mask_size);
         const auto num_explained_bases = target_size - target_mask_size;
-        constexpr int min_explained_bases {4};
+        constexpr int min_explained_bases {2};
         if (num_explained_bases < min_explained_bases) flank_score = 0;
         assert(flank_score <= score);
         return -ln10Div10<> * static_cast<double>(score - flank_score);
