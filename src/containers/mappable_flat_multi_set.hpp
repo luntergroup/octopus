@@ -428,10 +428,10 @@ MappableFlatMultiSet<MappableType, Allocator>::insert(InputIterator first, Input
 {
     if (first != last) {
         max_element_size_ = std::max(max_element_size_, region_size(*largest_mappable(first, last)));
-    }
-    elements_.insert(first, last);
-    if (is_bidirectionally_sorted_) {
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+        elements_.insert(first, last);
+        if (is_bidirectionally_sorted_) {
+            is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+        }
     }
 }
 
@@ -442,10 +442,11 @@ MappableFlatMultiSet<MappableType, Allocator>::insert(std::initializer_list<Mapp
     if (!il.empty()) {
         max_element_size_ = std::max(max_element_size_, region_size(*largest_element(il)));
     }
-    return elements_.insert(std::move(il));
-    if (is_bidirectionally_sorted_) {
+    const auto result = elements_.insert(std::move(il));
+    if (is_bidirectionally_sorted_ && !il.empty() ) {
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
     }
+    return result;
 }
 
 template <typename MappableType, typename Allocator>
