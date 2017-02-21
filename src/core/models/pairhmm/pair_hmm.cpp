@@ -49,7 +49,9 @@ constexpr auto make_phred_to_ln_prob_lookup() noexcept
 bool target_overlaps_truth_flank(const std::string& truth, const std::string& target, const std::size_t target_offset,
                                  const MutationModel& model) noexcept
 {
-    return target_offset < model.lhs_flank_size || (target_offset + target.size()) > (truth.size() - model.rhs_flank_size);
+    constexpr auto pad = simd::min_flank_pad();
+    return target_offset < (model.lhs_flank_size + pad)
+           || (target_offset + target.size() + pad) > (truth.size() - model.rhs_flank_size);
 }
 
 bool use_adjusted_alignment_score(const std::string& truth, const std::string& target, const std::size_t target_offset,
