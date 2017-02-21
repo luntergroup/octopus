@@ -161,6 +161,7 @@ private:
     HtsTid get_htslib_target(const GenomicRegion::ContigName& contig) const;
     const GenomicRegion::ContigName& get_contig_name(HtsTid target) const;
     std::uint64_t get_num_mapped_reads(const GenomicRegion::ContigName& contig) const;
+    ReadContainer fetch_all_reads(const GenomicRegion& region) const;
 };
 
 } // namespace io
