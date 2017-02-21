@@ -590,7 +590,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
     HtslibIterator it {*this, region};
     SampleReadMap result {samples.size()};
     for (const auto& sample : samples) {
-        if (std::find(std::cbegin(samples_), std::cend(samples_), sample) != std::cend(samples_)) {
+        if (contains(samples_, sample)) {
             auto p = result.emplace(std::piecewise_construct,
                                     std::forward_as_tuple(sample),
                                     std::forward_as_tuple());
