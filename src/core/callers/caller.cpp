@@ -128,7 +128,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     resume(init_timer);
     ReadMap reads;
     if (candidate_generator_.requires_reads()) {
-        reads = read_pipe_.get().fetch_reads(call_region);
+        reads = read_pipe_.get().fetch_reads(expand(call_region, 100));
         add_reads(reads, candidate_generator_);
         if (!refcalls_requested() && all_empty(reads)) {
             if (debug_log_) stream(*debug_log_) << "Stopping early as no reads found in call region";
