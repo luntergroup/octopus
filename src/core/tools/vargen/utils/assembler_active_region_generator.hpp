@@ -37,7 +37,7 @@ public:
 
 private:
     std::reference_wrapper<const ReferenceGenome> reference_;
-    CoverageTracker coverage_tracker_, interesting_read_coverages_;
+    CoverageTracker coverage_tracker_, interesting_read_coverages_, clipped_coverage_tracker_;
     
     bool is_interesting(const AlignedRead& read) const;
 };

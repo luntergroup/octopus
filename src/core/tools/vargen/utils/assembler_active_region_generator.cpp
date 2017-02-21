@@ -25,6 +25,7 @@ AssemblerActiveRegionGenerator::AssemblerActiveRegionGenerator(const ReferenceGe
 : reference_ {reference}
 , coverage_tracker_ {}
 , interesting_read_coverages_ {}
+, clipped_coverage_tracker_ {}
 {}
 
 void AssemblerActiveRegionGenerator::add(const AlignedRead& read)
@@ -32,6 +33,11 @@ void AssemblerActiveRegionGenerator::add(const AlignedRead& read)
     coverage_tracker_.add(read);
     if (is_interesting(read)) {
         interesting_read_coverages_.add(read);
+    }
+    if (is_soft_clipped(read)) {
+        clipped_coverage_tracker_.add(clipped_mapped_region(read));
+    } else {
+        clipped_coverage_tracker_.add(read);
     }
 }
 
@@ -80,7 +86,7 @@ auto compute_base_deletion_probabilities(const std::vector<unsigned>& coverages,
     constexpr std::array<double, num_states> end_probabilities {1 - 2e-10, 1e-10, 1e-10};
     std::array<HiddenStateParameters, num_states> state_params {{{mean_coverage, stdev_coverage},
                                                                 {mean_coverage + 3 * stdev_coverage, stdev_coverage},
-                                                                {std::max(mean_coverage - 3 * stdev_coverage, 0.0), stdev_coverage / 2}}};
+                                                                {std::max(mean_coverage - 2 * stdev_coverage, 0.0), stdev_coverage / 2}}};
     const auto num_observations = coverages.size();
     // convert to log space
     const auto a_0 = to_logs(begin_probabilities);
@@ -150,6 +156,16 @@ auto get_regions(const std::vector<bool>& good_bases, const GenomicRegion& regio
     return result;
 }
 
+template <typename Container>
+auto expand_each(const Container& regions, const GenomicRegion::Distance n)
+{
+    std::vector<GenomicRegion> result {};
+    result.reserve(regions.size());
+    std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(result),
+                   [n] (const auto& region) { return expand(region, n); });
+    return result;
+}
+
 auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker& tracker)
 {
     const auto coverages = tracker.coverage(region);
@@ -159,7 +175,7 @@ auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker& t
     std::vector<bool> deletion_bases(deletion_base_probs.size());
     std::transform(std::cbegin(deletion_base_probs), std::cend(deletion_base_probs), std::begin(deletion_bases),
                    [] (const auto p) {  return p > 0.5; });
-    return get_regions(deletion_bases, region);
+    return extract_covered_regions(expand_each(get_regions(deletion_bases, region), 50));
 }
 
 auto get_interesting_hotspots(const GenomicRegion& region, const CoverageTracker& interesting_read_tracker,
@@ -185,7 +201,7 @@ void merge(std::vector<GenomicRegion>&& src, std::vector<GenomicRegion>& dst)
 std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const GenomicRegion& region) const
 {
     auto interesting_regions = get_interesting_hotspots(region, interesting_read_coverages_, coverage_tracker_);
-    auto deletion_regions = get_deletion_hotspots(region, coverage_tracker_);
+    auto deletion_regions = get_deletion_hotspots(region, clipped_coverage_tracker_);
     merge(std::move(deletion_regions), interesting_regions);
     return join(extract_covered_regions(interesting_regions), 30);
 }
