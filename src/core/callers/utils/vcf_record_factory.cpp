@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <functional>
+#include <sstream>
 #include <iostream>
 
 #include <boost/optional.hpp>
@@ -23,6 +24,7 @@
 #include "utils/read_stats.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/maths.hpp"
+#include "exceptions/program_error.hpp"
 #include "variant_call.hpp"
 
 namespace octopus {
@@ -46,6 +48,30 @@ bool are_in_phase(const Call::GenotypeCall& lhs, const Call::GenotypeCall& rhs)
 
 } // namespace
 
+class InconsistentCallError : public ProgramError
+{
+public:
+    InconsistentCallError(SampleName sample, Allele first, Allele second)
+    : sample_ {std::move(sample)}
+    , first_ {std::move(first)}
+    , second_ {std::move(second)}
+    {}
+private:
+    SampleName sample_;
+    Allele first_, second_;
+        
+    std::string do_where() const override
+    {
+        return "VcfRecordFactory::make";
+    }
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "In sample " << sample_ << ", alleles " << first_ << " & " << second_ << " were both called";
+        return ss.str();
+    }
+};
+
 std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) const
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
@@ -67,10 +93,12 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     resolved_alleles.reserve(sample_genotype.ploidy());
                     transform(cbegin(sample_genotype), cend(sample_genotype),
                               cbegin(insertion_genotype), std::back_inserter(resolved_alleles),
-                              [] (const Allele& allele1, const Allele& allele2) {
+                              [&sample] (const Allele& allele1, const Allele& allele2) {
                                   if (is_insertion(allele2)) {
                                       const auto& old_sequence = allele1.sequence();
-                                      assert(old_sequence.size() > sequence_size(allele2));
+                                      if (old_sequence.size() <= sequence_size(allele2)) {
+                                          throw InconsistentCallError {sample, allele1, allele2};
+                                      }
                                       return Allele::NucleotideSequence {
                                       cbegin(old_sequence), prev(cend(old_sequence), sequence_size(allele2))
                                       };
@@ -106,10 +134,12 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     resolved_alleles.reserve(sample_genotype.ploidy());
                     transform(cbegin(sample_genotype), cend(sample_genotype),
                               cbegin(insertion_genotype), std::back_inserter(resolved_alleles),
-                              [] (const Allele& allele1, const Allele& allele2) {
+                              [&sample] (const Allele& allele1, const Allele& allele2) {
                                   if (is_insertion(allele2)) {
                                       const auto& old_sequence = allele1.sequence();
-                                      assert(old_sequence.size() > sequence_size(allele2));
+                                      if (old_sequence.size() <= sequence_size(allele2)) {
+                                          throw InconsistentCallError {sample, allele1, allele2};
+                                      }
                                       return Allele::NucleotideSequence {
                                           next(cbegin(old_sequence), sequence_size(allele2)), cend(old_sequence)
                                       };
