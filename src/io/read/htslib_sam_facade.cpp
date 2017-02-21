@@ -535,22 +535,16 @@ HtslibSamFacade::find_covered_subregion(const std::vector<SampleName>& samples,
 HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion& region) const
 {
     SampleReadMap result {samples_.size()};
-    
     if (samples_.size() == 1) {
-        auto reads = fetch_reads(samples_.front(), region);
-        result.emplace(samples_.front(), std::move(reads));
-        return result;
+        return {{samples_.front(), fetch_reads(samples_.front(), region)}};
     }
-    
     HtslibIterator it {*this, region};
-    
     for (const auto& sample : samples_) {
         auto p = result.emplace(std::piecewise_construct,
                                 std::forward_as_tuple(sample),
                                 std::forward_as_tuple());
         p.first->second.reserve(defaultReserve_);
     }
-    
     while (++it) {
         try {
             result.at(sample_names_.at(it.read_group())).emplace_back(*it);
@@ -561,25 +555,19 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
             throw;
         }
     }
-    
     return result;
 }
 
 HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleName& sample,
                                                             const GenomicRegion& region) const
 {
+    if (!contains(samples_, sample)) return {};
+    if (samples_.size() == 1) return fetch_all_reads(region);
     HtslibIterator it {*this, region};
-    
     ReadContainer result {};
-    
-    if (std::find(std::cbegin(samples_), std::cend(samples_), sample) == std::cend(samples_)) {
-        return result;
-    }
-    
     result.reserve(defaultReserve_);
-    
-    if (samples_.size() == 1) {
-        while (++it) {
+    while (++it) {
+        if (sample_names_.at(it.read_group()) == sample) {
             try {
                 result.emplace_back(*it);
             } catch (InvalidBamRecord& e) {
@@ -588,31 +576,19 @@ HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleName& sa
                 throw;
             }
         }
-    } else {
-        while (++it) {
-            if (sample_names_.at(it.read_group()) == sample) {
-                try {
-                    result.emplace_back(*it);
-                } catch (InvalidBamRecord& e) {
-                    // TODO
-                } catch (...) {
-                    throw;
-                }
-            }
-        }
     }
-    
     return result;
 }
 
 HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<SampleName>& samples,
                                                             const GenomicRegion& region) const
 {
+    if (samples.size() == 1) {
+        return {{samples.front(), fetch_reads(samples.front(), region)}};
+    }
     if (is_subset(samples_, samples)) return fetch_reads(region);
-    
     HtslibIterator it {*this, region};
     SampleReadMap result {samples.size()};
-    
     for (const auto& sample : samples) {
         if (std::find(std::cbegin(samples_), std::cend(samples_), sample) != std::cend(samples_)) {
             auto p = result.emplace(std::piecewise_construct,
@@ -621,9 +597,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
             p.first->second.reserve(defaultReserve_);
         }
     }
-    
     if (result.empty()) return result; // no matching samples
-    
     while (++it) {
         const auto& sample = sample_names_.at(it.read_group());
         if (result.count(sample) == 1) {
@@ -636,7 +610,6 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
             }
         }
     }
-    
     return result;
 }
 
@@ -666,6 +639,23 @@ boost::optional<std::vector<GenomicRegion::ContigName>> HtslibSamFacade::mapped_
 }
 
 // private methods
+
+HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_all_reads(const GenomicRegion& region) const
+{
+    HtslibIterator it {*this, region};
+    ReadContainer result {};
+    result.reserve(defaultReserve_);
+    while (++it) {
+        try {
+            result.emplace_back(*it);
+        } catch (InvalidBamRecord& e) {
+            // TODO
+        } catch (...) {
+            throw;
+        }
+    }
+    return result;
+}
 
 bool is_tag_type(const std::string& header_line, const std::string& tag)
 {
@@ -985,6 +975,6 @@ std::size_t HtslibSamFacade::HtslibIterator::begin() const noexcept
 {
     return hts_bam1_->core.pos;
 }
-    
+
 } // namespace io
 } // namespace octopus
