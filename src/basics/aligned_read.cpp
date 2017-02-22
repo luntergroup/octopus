@@ -203,16 +203,26 @@ void cap_qualities(AlignedRead& read, const AlignedRead::BaseQuality max) noexce
                    [max] (const auto q) { return std::min(q, max); });
 }
 
-void set_front_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality max) noexcept
+void set_front_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality value) noexcept
 {
     auto& qualities = read.qualities();
-    std::fill_n(std::begin(qualities), std::min(num_bases, qualities.size()), max);
+    std::fill_n(std::begin(qualities), std::min(num_bases, qualities.size()), value);
 }
 
-void set_back_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality max) noexcept
+void zero_front_qualities(AlignedRead& read, std::size_t num_bases) noexcept
+{
+    set_front_qualities(read, num_bases, 0);
+}
+
+void set_back_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality value) noexcept
 {
     auto& qualities = read.qualities();
-    std::fill_n(std::rbegin(qualities), std::min(num_bases, qualities.size()), max);
+    std::fill_n(std::rbegin(qualities), std::min(num_bases, qualities.size()), value);
+}
+
+void zero_back_qualities(AlignedRead& read, std::size_t num_bases) noexcept
+{
+    set_back_qualities(read, num_bases, 0);
 }
 
 bool is_sequence_empty(const AlignedRead& read) noexcept
