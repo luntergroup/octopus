@@ -310,9 +310,6 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
     static auto debug_log = get_debug_log();
     
     assert(!components.regions.empty());
-    #ifdef BENCHMARK
-    init_timers();
-    #endif
     
     std::deque<VcfRecord> calls;
     std::vector<VcfRecord> connecting_calls {};
@@ -352,19 +349,21 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
         }
         subregion = std::move(next_subregion);
     }
-    
-    #ifdef BENCHMARK
-    print_all_timers();
-    #endif
 }
 
 void run_octopus_single_threaded(GenomeCallingComponents& components)
 {
+    #ifdef BENCHMARK
+    init_timers();
+    #endif
     components.progress_meter().start();
     for (const auto& contig : components.contigs()) {
         run_octopus_on_contig(ContigCallingComponents {contig, components});
     }
     components.progress_meter().stop();
+    #ifdef BENCHMARK
+        print_all_timers();
+    #endif
 }
 
 VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
