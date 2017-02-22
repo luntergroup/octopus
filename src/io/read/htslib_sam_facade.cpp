@@ -914,6 +914,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
     
     if (has_multiple_segments(info)) {
         return AlignedRead {
+            extract_read_name(hts_bam1_.get()),
             GenomicRegion {
                 contig_name,
                 read_begin,
@@ -931,6 +932,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         };
     } else {
         return AlignedRead {
+            extract_read_name(hts_bam1_.get()),
             GenomicRegion {
                 contig_name,
                 read_begin,

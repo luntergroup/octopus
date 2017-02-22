@@ -42,8 +42,7 @@ bool AlignedRead::Segment::is_marked_reverse_mapped() const
 
 const std::string& AlignedRead::name() const noexcept
 {
-    static const std::string todo {};
-    return todo;
+    return name_;
 }
 
 const std::string& AlignedRead::read_group() const noexcept
@@ -288,6 +287,7 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
                                                           sequence_offset + sequence_length)};
     
     return AlignedRead {
+        read.name(),
         splice_region,
         std::move(sequence_splice),
         std::move(qualities_splice),
