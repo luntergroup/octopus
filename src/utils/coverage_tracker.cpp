@@ -80,10 +80,17 @@ double CoverageTracker::median_coverage(const GenomicRegion& region) const
 
 std::vector<unsigned> CoverageTracker::coverage(const GenomicRegion& region) const
 {
+    if (coverage_.empty()) return std::vector<unsigned>(size(region), 0);
     const auto p = range(region);
+    if (!contains(encompassing_region(), region)) {
+        std::vector<unsigned> result(size(region), 0);
+        const auto d = std::max(begin_distance(region, encompassing_region()), GenomicRegion::Distance {0});
+        std::copy(p.first, p.second, std::next(std::begin(result), d));
+        return result;
+    }
     return std::vector<unsigned> {p.first, p.second};
 }
-    
+
 GenomicRegion CoverageTracker::encompassing_region() const
 {
     return encompassing_region_;

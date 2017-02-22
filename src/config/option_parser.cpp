@@ -165,17 +165,20 @@ OptionMap parse_options(const int argc, const char** argv)
     ("read-transforms",
      po::value<bool>()->default_value(true),
      "Enable all read transformations")
+
+    ("mask-low-quality-tails",
+     po::value<int>()->implicit_value(3),
+     "Masks read tail bases with base quality less than this")
     
     ("soft-clip-masking",
      po::value<bool>()->default_value(true),
-     "Enable soft clipped masking, thus allowing all soft clipped bases to be used"
-     " for candidate generation")
-    
-    ("mask-tails",
+     "Turn on or off soft clip base recalibration")
+
+    ("soft-clip-mask-threshold",
      po::value<int>()->implicit_value(3),
-     "Masks this number of bases of the tail of all reads")
+     "Only soft clipped bases with quality less than this will be recalibrated, rather than all bases")
     
-    ("mask-soft-clipped-boundries",
+    ("mask-soft-clipped-boundary-bases",
      po::value<int>()->default_value(2),
      "Masks this number of adjacent non soft clipped bases when soft clipped bases are present")
     
@@ -357,7 +360,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(3),
      "Maximum number of holdout attempts the haplotype generator can make before the region"
      " is skipped")
-
+    
     ("extension-level",
      po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
      "Level of haplotype extension. Possible values are: conservative, normal, optimistic, aggressive")
@@ -469,9 +472,9 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description phasing("Phasing");
     phasing.add_options()
     ("phasing-level,l",
-     po::value<PhasingLevel>()->default_value(PhasingLevel::conservative),
+     po::value<PhasingLevel>()->default_value(PhasingLevel::normal),
      "Level of phasing - longer range phasing can improve calling accuracy at the cost"
-     " of runtime speed. Possible values are: minimal, conservative, aggressive")
+     " of runtime speed. Possible values are: minimal, conservative, moderate, normal, aggressive")
     
     ("min-phase-score",
      po::value<Phred<double>>()->default_value(Phred<double> {20.0}),
@@ -853,7 +856,7 @@ po::parsed_options run(po::command_line_parser& parser)
 void validate(const OptionMap& vm)
 {
     const std::vector<std::string> positive_int_options {
-        "threads", "mask-tails", "mask-soft-clipped-boundries",
+        "threads", "mask-low-quality-tails", "soft-clip-mask-threshold", "mask-soft-clipped-boundary-bases",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
@@ -915,8 +918,7 @@ std::istream& operator>>(std::istream& in, RefCallType& result)
         result = RefCallType::positional;
     else if (token == "blocked")
         result = RefCallType::blocked;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "refcalls"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "refcalls"};
     return in;
 }
 
@@ -951,8 +953,7 @@ std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
         result = ContigOutputOrder::asInReferenceIndexReversed;
     else if (token == "unspecified")
         result = ContigOutputOrder::unspecified;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "contig-output-order"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "contig-output-order"};
     return in;
 }
 
@@ -996,8 +997,7 @@ std::istream& operator>>(std::istream& in, ExtensionLevel& result)
         result = ExtensionLevel::optimistic;
     else if (token == "aggressive")
         result = ExtensionLevel::aggressive;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-                                     "extension-level"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "extension-level"};
     return in;
 }
 
@@ -1028,10 +1028,13 @@ std::istream& operator>>(std::istream& in, PhasingLevel& result)
         result = PhasingLevel::minimal;
     else if (token == "conservative")
         result = PhasingLevel::conservative;
+    else if (token == "moderate")
+        result = PhasingLevel::moderate;
+    else if (token == "normal")
+        result = PhasingLevel::normal;
     else if (token == "aggressive")
         result = PhasingLevel::aggressive;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "phasing-level"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "phasing-level"};
     return in;
 }
 
@@ -1043,6 +1046,12 @@ std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
             break;
         case PhasingLevel::conservative:
             out << "conservative";
+            break;
+        case PhasingLevel::moderate:
+            out << "moderate";
+            break;
+        case PhasingLevel::normal:
+            out << "normal";
             break;
         case PhasingLevel::aggressive:
             out << "aggressive";

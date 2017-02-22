@@ -763,17 +763,17 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 int calculate_flank_score(const int truth_len, const int lhs_flank_len, const int rhs_flank_len,
                           const std::int8_t* quals, const std::int8_t* gap_open,
                           const short gap_extend, const short nuc_prior,
-                          const int first_pos, const char* aln1, const char* aln2)
+                          const int first_pos, const char* aln1, const char* aln2,
+                          int& target_mask_size)
 {
     static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
     
     auto prev_state = match;
-    
     int x {first_pos}; // index into haplotype
     int y {0};         // index into read
     int i {0};         // index into alignment
-    
     int result {0}; // alignment score (within flank)
+    target_mask_size = 0;
     
     while (aln1[i]) {
         auto new_state = match;
@@ -784,12 +784,15 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
         switch (new_state) {
             case match:
             {
-                if ((aln1[i] != aln2[i]) && (x < lhs_flank_len || x >= (truth_len - rhs_flank_len))) {
-                    if (aln1[i] != 'N') {
-                        result += quals[y];
-                    } else {
-                        result += nScore >> 2;
+                if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                    if (aln1[i] != aln2[i]) {
+                        if (aln1[i] != 'N') {
+                            result += quals[y];
+                        } else {
+                            result += nScore >> 2;
+                        }
                     }
+                    ++target_mask_size;
                 }
                 ++x;
                 ++y;
@@ -805,6 +808,7 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                         // hence the -1
                         result += gap_open[x - 1] + nuc_prior;
                     }
+                    ++target_mask_size;
                 }
                 ++y;
                 break;
@@ -834,17 +838,18 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                           const char* target, const std::int8_t* quals,
                           const char* snv_mask, const std::int8_t* snv_prior,
                           const std::int8_t* gap_open, const short gap_extend, const short nuc_prior,
-                          const int first_pos, const char* aln1, const char* aln2)
+                          const int first_pos, const char* aln1, const char* aln2,
+                          int& target_mask_size)
 {
     static constexpr char Match {'M'}, Insertion {'I'}, Deletion {'D'};
     
     auto prev_state = Match;
-    
     int x {first_pos}; // index into truth
     int y {0};         // index into target
     int i {0};         // index into alignment
     int result {0};    // alignment score (within flank)
     const auto rhs_flank_begin = truth_len - rhs_flank_len;
+    target_mask_size = 0;
     
     while (aln1[i]) {
         auto new_state = Match;
@@ -855,12 +860,15 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
         switch (new_state) {
             case Match:
             {
-                if ((aln1[i] != aln2[i]) && (x < lhs_flank_len || x >= rhs_flank_begin)) {
-                    if (aln1[i] != 'N') {
-                        result += (snv_mask[x] == target[y]) ? std::min(quals[y], snv_prior[x]) : quals[y];
-                    } else {
-                        result += nScore >> 2;
+                if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                    if (aln1[i] != aln2[i]) {
+                        if (aln1[i] != 'N') {
+                            result += (snv_mask[x] == target[y]) ? std::min(quals[y], snv_prior[x]) : quals[y];
+                        } else {
+                            result += nScore >> 2;
+                        }
                     }
+                    ++target_mask_size;
                 }
                 ++x;
                 ++y;
@@ -876,6 +884,7 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                         // hence the -1
                         result += gap_open[x - 1] + nuc_prior;
                     }
+                    ++target_mask_size;
                 }
                 ++y;
                 break;

@@ -21,6 +21,7 @@
 #include "utils/reference_call.hpp"
 #include "utils/map_utils.hpp"
 #include "utils/mappable_algorithms.hpp"
+#include "utils/maths.hpp"
 
 #include "core/models/genotype/uniform_population_prior_model.hpp"
 #include "core/models/genotype/coalescent_population_prior_model.hpp"
@@ -722,13 +723,9 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     const auto alleles = decompose(candidates);
     const auto& trio_posteriors = latents.model_latents.posteriors.joint_genotype_probabilities;
     const auto called_trio = call_trio(trio_posteriors);
-    resume(misc_timer[7]);
     const auto allele_posteriors = compute_posteriors(alleles, trio_posteriors);
-    pause(misc_timer[7]);
     const auto called_alleles = call_alleles(allele_posteriors, called_trio, parameters_.min_variant_posterior);
-    resume(misc_timer[8]);
     const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors);
-    pause(misc_timer[8]);
     auto called_denovos = call_denovos(denovo_posteriors, called_trio.child, parameters_.min_variant_posterior);
     auto denovo_genotypes = call_genotypes(parameters_.trio, called_trio,
                                            *latents.genotype_posteriors(),

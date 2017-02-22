@@ -25,7 +25,7 @@ struct CapBaseQualities
     void operator()(AlignedRead& read) const noexcept;
     
 private:
-    BaseQuality max_;
+    const BaseQuality max_;
 };
 
 struct MaskOverlappedSegment
@@ -52,18 +52,32 @@ private:
     const Length num_bases_;
 };
 
+struct MaskLowQualityTails
+{
+    using BaseQuality = AlignedRead::BaseQuality;
+    
+    MaskLowQualityTails() = default;
+    
+    explicit MaskLowQualityTails(BaseQuality threshold);
+    
+    void operator()(AlignedRead& read) const noexcept;
+
+private:
+    const BaseQuality threshold_;
+};
+
 struct MaskSoftClipped
 {
     void operator()(AlignedRead& read) const noexcept;
 };
 
-struct MaskSoftClippedBoundries
+struct MaskSoftClippedBoundraryBases
 {
     using Length = AlignedRead::NucleotideSequence::size_type;
     
-    MaskSoftClippedBoundries() = default;
+    MaskSoftClippedBoundraryBases() = default;
     
-    explicit MaskSoftClippedBoundries(Length num_bases);
+    explicit MaskSoftClippedBoundraryBases(Length num_bases);
     
     void operator()(AlignedRead& read) const noexcept;
     
@@ -71,9 +85,34 @@ private:
     const Length num_bases_;
 };
 
-struct QualityAdjustedSoftClippedMasker
+struct MaskLowQualitySoftClippedBases
 {
+    using BaseQuality = AlignedRead::BaseQuality;
+    
+    MaskLowQualitySoftClippedBases() = default;
+    
+    explicit MaskLowQualitySoftClippedBases(BaseQuality max);
+    
     void operator()(AlignedRead& read) const noexcept;
+
+private:
+    const BaseQuality max_;
+};
+
+struct MaskLowQualitySoftClippedBoundaryBases
+{
+    using Length = AlignedRead::NucleotideSequence::size_type;
+    using BaseQuality = AlignedRead::BaseQuality;
+    
+    MaskLowQualitySoftClippedBoundaryBases() = default;
+    
+    explicit MaskLowQualitySoftClippedBoundaryBases(Length num_bases, BaseQuality max);
+    
+    void operator()(AlignedRead& read) const noexcept;
+
+private:
+    const Length num_bases_;
+    const BaseQuality max_;
 };
 
 } // namespace readpipe

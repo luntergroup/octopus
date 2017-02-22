@@ -104,7 +104,9 @@ public:
     const std::string& read_group() const noexcept;
     const GenomicRegion& mapped_region() const noexcept;
     const NucleotideSequence& sequence() const noexcept;
+    NucleotideSequence& sequence() noexcept;
     const BaseQualityVector& qualities() const noexcept;
+    BaseQualityVector& qualities() noexcept;
     MappingQuality mapping_quality() const noexcept;
     const CigarString& cigar() const noexcept;
     bool has_other_segment() const noexcept;
@@ -119,11 +121,6 @@ public:
     bool is_marked_qc_fail() const noexcept;
     bool is_marked_duplicate() const noexcept;
     bool is_marked_supplementary_alignment() const noexcept;
-    
-    void capitalise_bases() noexcept;
-    void cap_qualities(BaseQuality max = 0) noexcept;
-    void cap_front_qualities(std::size_t num_bases, BaseQuality max = 0) noexcept;
-    void cap_back_qualities(std::size_t num_bases, BaseQuality max = 0) noexcept;
     
 private:
     static constexpr std::size_t numFlags_ = 8;
@@ -209,6 +206,14 @@ AlignedRead::Segment::Segment(String_&& contig_name, GenomicRegion::Position beg
 {}
 
 // Non-member methods
+
+void capitalise_bases(AlignedRead& read) noexcept;
+
+void cap_qualities(AlignedRead& read, AlignedRead::BaseQuality max = 0) noexcept;
+
+void set_front_qualities(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality max = 0) noexcept;
+
+void set_back_qualities(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality max = 0) noexcept;
 
 bool is_sequence_empty(const AlignedRead& read) noexcept;
 

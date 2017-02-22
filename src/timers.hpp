@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef timers_h
-#define timers_h
+#ifndef timers_hpp
+#define timers_hpp
 
 //#define BENCHMARK
 
@@ -12,9 +12,7 @@
 
 // variant caller timers
 extern boost::timer::cpu_timer init_timer;
-extern boost::timer::cpu_timer haplotype_generation_timer;
 extern boost::timer::cpu_timer haplotype_likelihood_timer;
-extern boost::timer::cpu_timer haplotype_fitler_timer;
 extern boost::timer::cpu_timer latent_timer;
 extern boost::timer::cpu_timer calling_timer;
 extern boost::timer::cpu_timer phasing_timer;
@@ -42,4 +40,4 @@ void init_timers();
 
 void print_all_timers();
 
-#endif /* timers_h */
+#endif
