@@ -25,7 +25,7 @@ public:
     // Where did the error occur (for debugging)? May not be a stacktrace but should give a hint.
     std::string where() const;
     
-    // A detailed explanation of *why* the error happend.
+    // A detailed explanation of *why* the error happened.
     std::string why() const;
     
     // What can be done to resolve the error?
