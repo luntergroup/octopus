@@ -159,12 +159,12 @@ void MaskLowQualitySoftClippedBoundaryBases::operator()(AlignedRead& read) const
 void mask_adapter_contamination(AlignedRead& first, AlignedRead& second) noexcept
 {
     if (begins_before(second, first)) {
-        const auto num_adapter_bases = begin_distance(second, first);
-        zero_front_qualities(second, num_adapter_bases);
+        const auto adapter_region = left_overhang_region(second, first);
+        zero_front_qualities(second, sequence_size(second, adapter_region));
     }
     if (ends_before(second, first)) {
-        const auto num_adapter_bases = end_distance(second, first);
-        zero_back_qualities(first, num_adapter_bases);
+        const auto adapter_region = right_overhang_region(first, second);
+        zero_back_qualities(first, sequence_size(first, adapter_region));
     }
 }
 
@@ -188,15 +188,17 @@ void mask_duplicated_bases(AlignedRead& first, AlignedRead& second, const Genomi
 {
     auto first_qual_itr = std::rbegin(first.qualities());
     if (ends_before(second, first)) {
-        first_qual_itr += end_distance(duplicated_region, first);
+        const auto adapter_region = right_overhang_region(first, second);
+        first_qual_itr += sequence_size(first, adapter_region);
     }
     auto second_qual_itr = std::begin(second.qualities());
     if (begins_before(second, first)) {
-        second_qual_itr += begin_distance(second, duplicated_region);
+        const auto adapter_region = left_overhang_region(first, second);
+        second_qual_itr += sequence_size(second, adapter_region);
     }
-    auto num_duplicate_bases = static_cast<int>(size(duplicated_region));
+    auto num__duplicate_bases = std::min(sequence_size(first, duplicated_region), sequence_size(second, duplicated_region));
     bool select_first {true};
-    for (; num_duplicate_bases > 0; --num_duplicate_bases) {
+    for (; num__duplicate_bases > 0; --num__duplicate_bases) {
         if (*first_qual_itr == *second_qual_itr) {
             if (select_first) {
                 *second_qual_itr++ = 0;
