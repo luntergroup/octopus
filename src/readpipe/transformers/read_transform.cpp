@@ -193,7 +193,7 @@ void mask_duplicated_bases(AlignedRead& first, AlignedRead& second, const Genomi
     }
     auto second_qual_itr = std::begin(second.qualities());
     if (begins_before(second, first)) {
-        const auto adapter_region = left_overhang_region(first, second);
+        const auto adapter_region = left_overhang_region(second, first);
         second_qual_itr += sequence_size(second, adapter_region);
     }
     auto num__duplicate_bases = std::min(sequence_size(first, duplicated_region), sequence_size(second, duplicated_region));
