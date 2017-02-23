@@ -551,53 +551,50 @@ bool allow_assembler_generation(const OptionMap& options)
     return options.at("assembly-candidate-generator").as<bool>() && !is_fast_mode(options);
 }
 
-auto make_read_transformer(const OptionMap& options)
+auto make_read_transformers(const OptionMap& options)
 {
     using namespace octopus::readpipe;
-    ReadTransformer result {};
-    result.add(CapitaliseBases {});
-    result.add(CapBaseQualities {125});
-    
-    if (!options.at("read-transforms").as<bool>()) {
-        return result;
-    }
-    if (options.count("mask-low-quality-tails") == 1) {
-        const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-low-quality-tails", options));
-        result.add(MaskLowQualityTails {threshold});
-    }
-    if (options.at("soft-clip-masking").as<bool>()) {
-        const auto boundary_size = as_unsigned("mask-soft-clipped-boundary-bases", options);
-        if (boundary_size > 0) {
-            if (options.count("soft-clip-mask-threshold") == 1) {
-                const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
-                result.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
-            } else if (allow_assembler_generation(options)) {
-                result.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, 3});
+    ReadTransformer prefilter_transformer {}, postfilter_transformer {};
+    prefilter_transformer.add(CapitaliseBases {});
+    prefilter_transformer.add(CapBaseQualities {125});
+    if (options.at("read-transforms").as<bool>()) {
+        if (options.count("mask-low-quality-tails") == 1) {
+            const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-low-quality-tails", options));
+            prefilter_transformer.add(MaskLowQualityTails {threshold});
+        }
+        if (options.at("soft-clip-masking").as<bool>()) {
+            const auto boundary_size = as_unsigned("mask-soft-clipped-boundary-bases", options);
+            if (boundary_size > 0) {
+                if (options.count("soft-clip-mask-threshold") == 1) {
+                    const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
+                    prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
+                } else if (allow_assembler_generation(options)) {
+                    prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, 3});
+                } else {
+                    prefilter_transformer.add(MaskSoftClippedBoundraryBases {boundary_size});
+                }
             } else {
-                result.add(MaskSoftClippedBoundraryBases {boundary_size});
-            }
-        } else {
-            if (options.count("soft-clip-mask-threshold") == 1) {
-                const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
-                result.add(MaskLowQualitySoftClippedBases {threshold});
-            } else if (allow_assembler_generation(options)) {
-                result.add(MaskLowQualitySoftClippedBases {3});
-            } else {
-                result.add(MaskSoftClipped {});
+                if (options.count("soft-clip-mask-threshold") == 1) {
+                    const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
+                    prefilter_transformer.add(MaskLowQualitySoftClippedBases {threshold});
+                } else if (allow_assembler_generation(options)) {
+                    prefilter_transformer.add(MaskLowQualitySoftClippedBases {3});
+                } else {
+                    prefilter_transformer.add(MaskSoftClipped {});
+                }
             }
         }
+        if (options.at("adapter-masking").as<bool>()) {
+            prefilter_transformer.add(MaskAdapters {});
+            postfilter_transformer.add(MaskTemplateAdapters {});
+        }
+        if (options.at("overlap-masking").as<bool>()) {
+            postfilter_transformer.add(MaskDuplicatedBases {});
+        }
+        prefilter_transformer.shrink_to_fit();
+        postfilter_transformer.shrink_to_fit();
     }
-    if (options.at("adapter-masking").as<bool>()) {
-        result.add(MaskAdapters {});
-        result.add(MaskTemplateAdapters {});
-    }
-    if (options.at("overlap-masking").as<bool>()) {
-        result.add(MaskDuplicatedBases {});
-    }
-    
-    result.shrink_to_fit();
-    
-    return result;
+    return std::make_pair(std::move(prefilter_transformer), std::move(postfilter_transformer));
 }
 
 bool is_read_filtering_enabled(const OptionMap& options)
@@ -691,16 +688,16 @@ boost::optional<readpipe::Downsampler> make_downsampler(const OptionMap& options
     return boost::none;
 }
 
-ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
-                        const OptionMap& options)
+ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options)
 {
-    return ReadPipe {
-        read_manager,
-        make_read_transformer(options),
-        make_read_filterer(options),
-        make_downsampler(options),
-        std::move(samples)
-    };
+    auto transformers = make_read_transformers(options);
+    if (transformers.second.num_transforms() > 0) {
+        return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
+                         std::move(transformers.second), make_downsampler(options), std::move(samples)};
+    } else {
+        return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
+                         make_downsampler(options), std::move(samples)};
+    }
 }
 
 auto get_default_inclusion_predicate()

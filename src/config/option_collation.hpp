@@ -46,8 +46,7 @@ boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& optio
 
 ReadManager make_read_manager(const OptionMap& options);
 
-ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
-                        const OptionMap& options);
+ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options);
 
 bool call_sites_only(const OptionMap& options);
 
