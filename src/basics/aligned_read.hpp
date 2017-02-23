@@ -216,6 +216,7 @@ void zero_back_qualities(AlignedRead& read, std::size_t num_bases) noexcept;
 bool is_sequence_empty(const AlignedRead& read) noexcept;
 
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read) noexcept;
+AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read, const GenomicRegion& region);
 
 bool is_soft_clipped(const AlignedRead& read);
 
@@ -225,8 +226,6 @@ GenomicRegion clipped_mapped_region(const AlignedRead& read);
 
 // Returns the part of the read cigar string contained by the region
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region);
-
-ContigRegion::Size count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region);
     
 // Returns the part of the read (cigar, sequence, qualities) contained by the region
 AlignedRead splice(const AlignedRead& read, const GenomicRegion& region);
