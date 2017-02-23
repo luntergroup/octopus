@@ -70,7 +70,9 @@ auto ReadTransformer::make_references(ForwardIt first, ForwardIt last) const
 template <typename ForwardIt>
 void ReadTransformer::transform_reads(ForwardIt first, ForwardIt last) const
 {
-    std::for_each(first, last, [this] (AlignedRead& read) { transform_read(read); });
+    if (!read_transforms_.empty()) {
+        std::for_each(first, last, [this] (AlignedRead& read) { transform_read(read); });
+    }
     if (!template_transforms_.empty()) {
         auto read_references = make_references(first, last);
         transform(read_references);
