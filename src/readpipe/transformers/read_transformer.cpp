@@ -37,7 +37,7 @@ void ReadTransformer::transform_read(AlignedRead& read) const
     }
 }
 
-struct ReadTemplateSorter
+struct ReadTemplateLess
 {
     bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
     {
@@ -48,7 +48,7 @@ struct ReadTemplateSorter
 template <typename Container>
 void group_templates(Container& reads)
 {
-    std::sort(std::begin(reads), std::end(reads), ReadTemplateSorter {});
+    std::sort(std::begin(reads), std::end(reads), ReadTemplateLess {});
 }
 
 void ReadTransformer::transform_template(ReadTemplate& read_template) const
