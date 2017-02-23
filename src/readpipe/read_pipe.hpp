@@ -48,6 +48,11 @@ public:
              ReadFilterer filterer, boost::optional<Downsampler> downsampler,
              std::vector<SampleName> samples);
     
+    ReadPipe(const ReadManager& manager, ReadTransformer prefilter_transformer,
+             ReadFilterer filterer, ReadTransformer postfilter_transformer,
+             boost::optional<Downsampler> downsampler,
+             std::vector<SampleName> samples);
+    
     ReadPipe(const ReadPipe&)            = delete;
     ReadPipe& operator=(const ReadPipe&) = delete;
     ReadPipe(ReadPipe&&)                 = default;
@@ -67,8 +72,9 @@ public:
     
 private:
     std::reference_wrapper<const ReadManager> manager_;
-    ReadTransformer transformer_;
+    ReadTransformer prefilter_transformer_;
     ReadFilterer filterer_;
+    boost::optional<ReadTransformer> postfilter_transformer_;
     boost::optional<Downsampler> downsampler_;
     std::vector<SampleName> samples_;
     mutable boost::optional<logging::DebugLogger> debug_log_;

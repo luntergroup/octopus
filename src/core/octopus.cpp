@@ -1015,7 +1015,7 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
     using namespace readpipe;
     
     ReadTransformer transformer {};
-    transformer.register_transform(MaskSoftClipped {});
+    transformer.add(MaskSoftClipped {});
     
     using ReadFilterer = ReadPipe::ReadFilterer;
     ReadFilterer filterer {};

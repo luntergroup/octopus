@@ -4,10 +4,12 @@
 #ifndef read_transform_hpp
 #define read_transform_hpp
 
+#include <functional>
+#include <vector>
+
 #include "basics/aligned_read.hpp"
 
-namespace octopus { namespace readpipe
-{
+namespace octopus { namespace readpipe {
 
 struct CapitaliseBases
 {
@@ -113,6 +115,18 @@ struct MaskLowQualitySoftClippedBoundaryBases
 private:
     const Length num_bases_;
     const BaseQuality max_;
+};
+
+using ReadReferenceVector = std::vector<std::reference_wrapper<AlignedRead>>;
+
+struct MaskTemplateAdapters
+{
+    void operator()(ReadReferenceVector& read_template) const;
+};
+
+struct MaskDuplicatedBases
+{
+    void operator()(ReadReferenceVector& read_template) const;
 };
 
 } // namespace readpipe

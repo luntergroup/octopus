@@ -167,7 +167,7 @@ namespace detail
         const auto overlapped = overlap_range(reads, region);
         return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), std::size_t {0},
                                [&region] (const auto curr, const auto& read) {
-                                   return curr + count_overlapped_bases(read, region);
+                                   return curr + sequence_size(read, region);
                                });
     }
     
@@ -188,7 +188,7 @@ namespace detail
         const auto overlapped = overlap_range(reads, region);
         return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), std::size_t {0},
                                [&region] (const auto curr, const auto& read) {
-                                   return curr + ((IsForward()(read)) ? static_cast<std::size_t>(num_overlapped_bases(read, region)) : 0);
+                                   return curr + ((IsForward()(read)) ? static_cast<std::size_t>(sequence_size(read, region)) : 0);
                                });
     }
     
@@ -209,7 +209,7 @@ namespace detail
         const auto overlapped = overlap_range(reads, region);
         return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), std::size_t {0},
                                [&region] (const auto curr, const auto& read) {
-                                   return curr + ((IsReverse()(read)) ? static_cast<std::size_t>(num_overlapped_bases(read, region)) : 0);
+                                   return curr + ((IsReverse()(read)) ? static_cast<std::size_t>(sequence_size(read, region)) : 0);
                                });
     }
     

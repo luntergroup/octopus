@@ -42,8 +42,7 @@ bool AlignedRead::Segment::is_marked_reverse_mapped() const
 
 const std::string& AlignedRead::name() const noexcept
 {
-    static const std::string todo {};
-    return todo;
+    return name_;
 }
 
 const std::string& AlignedRead::read_group() const noexcept
@@ -204,16 +203,26 @@ void cap_qualities(AlignedRead& read, const AlignedRead::BaseQuality max) noexce
                    [max] (const auto q) { return std::min(q, max); });
 }
 
-void set_front_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality max) noexcept
+void set_front_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality value) noexcept
 {
     auto& qualities = read.qualities();
-    std::fill_n(std::begin(qualities), std::min(num_bases, qualities.size()), max);
+    std::fill_n(std::begin(qualities), std::min(num_bases, qualities.size()), value);
 }
 
-void set_back_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality max) noexcept
+void zero_front_qualities(AlignedRead& read, std::size_t num_bases) noexcept
+{
+    set_front_qualities(read, num_bases, 0);
+}
+
+void set_back_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality value) noexcept
 {
     auto& qualities = read.qualities();
-    std::fill_n(std::rbegin(qualities), std::min(num_bases, qualities.size()), max);
+    std::fill_n(std::rbegin(qualities), std::min(num_bases, qualities.size()), value);
+}
+
+void zero_back_qualities(AlignedRead& read, std::size_t num_bases) noexcept
+{
+    set_back_qualities(read, num_bases, 0);
 }
 
 bool is_sequence_empty(const AlignedRead& read) noexcept
@@ -224,6 +233,16 @@ bool is_sequence_empty(const AlignedRead& read) noexcept
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read) noexcept
 {
     return read.sequence().size();
+}
+
+AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read, const GenomicRegion& region)
+{
+    if (contig_name(region) != contig_name(read)) return 0;
+    if (contains(region, read) || sequence_size(read.cigar()) == region_size(region)) return sequence_size(read);
+    const auto splice_region = *overlapped_region(read, region);
+    const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
+    const auto contained_cigar_splice = splice_reference(read.cigar(), reference_offset, region_size(splice_region));
+    return sequence_size(contained_cigar_splice);
 }
 
 bool is_soft_clipped(const AlignedRead& read)
@@ -251,15 +270,6 @@ CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
     return splice(read.cigar(), offset, size(region));
 }
 
-ContigRegion::Size count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region)
-{
-    if (contains(region, read)) {
-        return static_cast<ContigRegion::Size>(sequence_size(read));
-    }
-    // TODO: not quite right as doesn't account for indels
-    return static_cast<ContigRegion::Size>(std::max(GenomicRegion::Distance {0}, overlap_size(read, region)));
-}
-
 AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
 {
     using std::cbegin; using std::next;
@@ -274,8 +284,7 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
     
     const auto uncontained_cigar_splice = splice_reference(read.cigar(), 0, reference_offset);
-    auto contained_cigar_splice = splice_reference(read.cigar(), reference_offset,
-                                                   region_size(splice_region));
+    auto contained_cigar_splice = splice_reference(read.cigar(), reference_offset, region_size(splice_region));
     
     const auto sequence_offset = sequence_size(uncontained_cigar_splice);
     const auto sequence_length = sequence_size(contained_cigar_splice);
@@ -288,6 +297,7 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
                                                           sequence_offset + sequence_length)};
     
     return AlignedRead {
+        read.name(),
         splice_region,
         std::move(sequence_splice),
         std::move(qualities_splice),
