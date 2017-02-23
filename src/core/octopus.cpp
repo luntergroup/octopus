@@ -45,6 +45,7 @@
 #include "core/callers/utils/vcf_header_factory.hpp"
 #include "io/variant/vcf.hpp"
 #include "utils/timing.hpp"
+#include "exceptions/program_error.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -1061,6 +1062,16 @@ void log_run_start(const GenomeCallingComponents& components)
     if (debug_log) print_input_regions(stream(*debug_log), components.search_regions());
 }
 
+class CallingBug : public ProgramError
+{
+    std::string do_where() const override { return "run_octopus"; }
+    std::string do_why() const override
+    {
+        return "Encountered an unknown error during calling. This probably means there is a bug"
+        " and your results are untrustworthy.";
+    }
+};
+
 void run_octopus(GenomeCallingComponents& components, std::string command)
 {
     static auto debug_log = get_debug_log();
@@ -1082,9 +1093,23 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
         } else {
             run_octopus_single_threaded(components);
         }
-        
-        components.output().close();
-        
+    } catch (const ProgramError& e) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw;
+    } catch (...) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {};
+    }
+    
+    components.output().close();
+    
+    try {
         if (components.legacy()) {
             auto output_path = components.output().path();
             if (output_path) {
@@ -1093,13 +1118,7 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
                 convert_to_legacy(native, legacy);
             }
         }
-    } catch (const std::exception& e) {
-        try {
-            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
-            cleanup(components);
-        } catch (...) {}
-        throw;
-    }
+    } catch (...) {}
     
     const auto end = std::chrono::system_clock::now();
     const auto search_size = sum_region_sizes(components.search_regions());
