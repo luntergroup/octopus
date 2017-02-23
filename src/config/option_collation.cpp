@@ -665,7 +665,7 @@ auto make_read_filterer(const OptionMap& options)
     if (!options.at("consider-reads-with-distant-segments").as<bool>()) {
         result.add(make_unique<IsLocalTemplate>());
     }
-    if (!options.at("allow-adapter-contaminated-reads").as<bool>()) {
+    if (options.at("no-adapter-contaminated-reads").as<bool>()) {
         result.add(make_unique<IsNotContaminated>());
     }
     
