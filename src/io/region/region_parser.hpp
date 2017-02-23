@@ -17,8 +17,11 @@ namespace octopus { namespace io {
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
 GenomicRegion parse_region(std::string region, const ReferenceGenome& reference);
 
+enum class NonreferenceContigPolicy { exception, ignore };
+
 std::deque<GenomicRegion> extract_regions(const boost::filesystem::path& file_path,
-                                          const ReferenceGenome& reference);
+                                          const ReferenceGenome& reference,
+                                          NonreferenceContigPolicy policy = NonreferenceContigPolicy::exception);
 
 } // namespace io
 } // namespace octopus
