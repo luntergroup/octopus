@@ -21,7 +21,7 @@ void ReadTransformer::add(TemplateTransform transform)
 
 unsigned ReadTransformer::num_transforms() const noexcept
 {
-    return static_cast<unsigned>(read_transforms_.size());
+    return static_cast<unsigned>(read_transforms_.size() + template_transforms_.size());
 }
 
 void ReadTransformer::shrink_to_fit() noexcept
