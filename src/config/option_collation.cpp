@@ -555,43 +555,44 @@ auto make_read_transformer(const OptionMap& options)
 {
     using namespace octopus::readpipe;
     ReadTransformer result {};
-    result.register_transform(CapitaliseBases {});
-    result.register_transform(CapBaseQualities {125});
+    result.add(CapitaliseBases {});
+    result.add(CapBaseQualities {125});
     
     if (!options.at("read-transforms").as<bool>()) {
         return result;
     }
     if (options.count("mask-low-quality-tails") == 1) {
         const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-low-quality-tails", options));
-        result.register_transform(MaskLowQualityTails {threshold});
+        result.add(MaskLowQualityTails {threshold});
     }
     if (options.at("soft-clip-masking").as<bool>()) {
         const auto boundary_size = as_unsigned("mask-soft-clipped-boundary-bases", options);
         if (boundary_size > 0) {
             if (options.count("soft-clip-mask-threshold") == 1) {
                 const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
-                result.register_transform(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
+                result.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
             } else if (allow_assembler_generation(options)) {
-                result.register_transform(MaskLowQualitySoftClippedBoundaryBases {boundary_size, 3});
+                result.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, 3});
             } else {
-                result.register_transform(MaskSoftClippedBoundraryBases {boundary_size});
+                result.add(MaskSoftClippedBoundraryBases {boundary_size});
             }
         } else {
             if (options.count("soft-clip-mask-threshold") == 1) {
                 const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
-                result.register_transform(MaskLowQualitySoftClippedBases {threshold});
+                result.add(MaskLowQualitySoftClippedBases {threshold});
             } else if (allow_assembler_generation(options)) {
-                result.register_transform(MaskLowQualitySoftClippedBases {3});
+                result.add(MaskLowQualitySoftClippedBases {3});
             } else {
-                result.register_transform(MaskSoftClipped {});
+                result.add(MaskSoftClipped {});
             }
         }
     }
     if (options.at("adapter-masking").as<bool>()) {
-        result.register_transform(MaskAdapters {});
+        result.add(MaskAdapters {});
+        result.add(MaskTemplateAdapters {});
     }
     if (options.at("overlap-masking").as<bool>()) {
-        result.register_transform(MaskOverlappedSegment {});
+        result.add(MaskDuplicatedBases {});
     }
     
     result.shrink_to_fit();

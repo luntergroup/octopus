@@ -154,5 +154,88 @@ void MaskLowQualitySoftClippedBoundaryBases::operator()(AlignedRead& read) const
     }
 }
 
+// template transforms
+
+void mask_adapter_contamination(AlignedRead& first, AlignedRead& second) noexcept
+{
+    if (begins_before(second, first)) {
+        const auto num_adapter_bases = begin_distance(second, first);
+        zero_front_qualities(second, num_adapter_bases);
+    }
+    if (ends_before(second, first)) {
+        const auto num_adapter_bases = end_distance(second, first);
+        zero_back_qualities(first, num_adapter_bases);
+    }
+}
+
+void MaskTemplateAdapters::operator()(ReadReferenceVector& read_template) const
+{
+    const auto template_size = read_template.size();
+    if (template_size < 2) {
+        return;
+    } else if (template_size == 2) {
+        if (read_template.front().get().is_marked_reverse_mapped()) {
+            mask_adapter_contamination(read_template.back(), read_template.front());
+        } else {
+            mask_adapter_contamination(read_template.front(), read_template.back());
+        }
+    } else {
+        // TODO
+    }
+}
+
+void mask_duplicated_bases(AlignedRead& first, AlignedRead& second, const GenomicRegion& duplicated_region)
+{
+    auto first_qual_itr = std::rbegin(first.qualities());
+    if (ends_before(second, first)) {
+        first_qual_itr += end_distance(duplicated_region, first);
+    }
+    auto second_qual_itr = std::begin(second.qualities());
+    if (begins_before(second, first)) {
+        second_qual_itr += begin_distance(second, duplicated_region);
+    }
+    auto num_duplicate_bases = static_cast<int>(size(duplicated_region));
+    bool select_first {true};
+    for (; num_duplicate_bases > 0; --num_duplicate_bases) {
+        if (*first_qual_itr == *second_qual_itr) {
+            if (select_first) {
+                *second_qual_itr++ = 0;
+                select_first = false;
+            } else {
+                *first_qual_itr++ = 0;
+                select_first = true;
+            }
+        } else if (*first_qual_itr < *second_qual_itr) {
+            *first_qual_itr++ = 0;
+        } else {
+            *second_qual_itr++ = 0;
+        }
+    }
+}
+
+void mask_duplicated_bases(AlignedRead& first, AlignedRead& second)
+{
+    const auto duplicated_region = overlapped_region(first, second);
+    if (duplicated_region) {
+        mask_duplicated_bases(first, second, *duplicated_region);
+    }
+}
+
+void MaskDuplicatedBases::operator()(ReadReferenceVector& read_template) const
+{
+    const auto template_size = read_template.size();
+    if (template_size < 2) {
+        return;
+    } else if (template_size == 2) {
+        if (read_template.front().get().is_marked_reverse_mapped()) {
+            mask_duplicated_bases(read_template.back(), read_template.front());
+        } else {
+            mask_duplicated_bases(read_template.front(), read_template.back());
+        }
+    } else {
+        // TODO
+    }
+}
+
 } // namespace readpipe
 } // namespace octopus
