@@ -411,7 +411,7 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
             throw e;
         }
         
-        auto regions = io::extract_regions(resolved_path, reference);
+        auto regions = io::extract_regions(resolved_path, reference, io::NonreferenceContigPolicy::ignore);
         
         if (regions.empty()) {
             logging::WarningLogger log {};
