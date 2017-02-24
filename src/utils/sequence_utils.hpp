@@ -137,21 +137,24 @@ bool has_mixed_case(SequenceType& sequence)
 }
 
 namespace detail {
-    struct CapitaliseBase
+
+struct CapitaliseBase
+{
+    auto operator()(const char base) const noexcept
     {
-        auto operator()(const char base) const noexcept
-        {
-            switch (base) {
-                case 'a': return 'A';
-                case 'c': return 'C';
-                case 'g': return 'G';
-                case 't': return 'T';
-                case 'u': return 'U';
-                default : return base;
-            }
+        switch (base) {
+            case 'a': return 'A';
+            case 'c': return 'C';
+            case 'g': return 'G';
+            case 't': return 'T';
+            case 'u': return 'U';
+            case 'n': return 'N';
+            default : return base;
         }
-    };
-}
+    }
+};
+
+} // namespace detail
 
 template <typename SequenceType>
 void capitalise(SequenceType& sequence)
