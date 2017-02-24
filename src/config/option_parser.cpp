@@ -253,9 +253,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Allows reads with template segmenets that are on different contigs")
     
-    ("allow-adapter-contaminated-reads",
+    ("no-adapter-contaminated-reads",
      po::bool_switch()->default_value(false),
-     "Allows reads with possible adapter contamination")
+     "Filter reads with possible adapter contamination")
     
     ("disable-downsampling",
      po::bool_switch()->default_value(false),
@@ -277,7 +277,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Enable candidate generation from raw read alignments (CIGAR strings)")
     
     ("assembly-candidate-generator,a",
-     po::value<bool>()->default_value(true),
+     po::value<bool>()->default_value(false),
      "Enable candidate generation using local re-assembly")
     
     ("source-candidates,c",

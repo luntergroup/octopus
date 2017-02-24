@@ -22,8 +22,23 @@ ReadPipe::ReadPipe(const ReadManager& manager, std::vector<SampleName> samples)
 ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer transformer, ReadFilterer filterer,
                    boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
 : manager_ {manager}
-, transformer_ {std::move(transformer)}
+, prefilter_transformer_ {std::move(transformer)}
 , filterer_ {std::move(filterer)}
+, postfilter_transformer_ {}
+, downsampler_ {std::move(downsampler)}
+, samples_ {std::move(samples)}
+, debug_log_ {}
+{
+    if (DEBUG_MODE) debug_log_ = logging::DebugLogger {};
+}
+
+ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer prefilter_transformer,
+                   ReadFilterer filterer, ReadTransformer postfilter_transformer,
+                   boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
+: manager_ {manager}
+, prefilter_transformer_ {std::move(prefilter_transformer)}
+, filterer_ {std::move(filterer)}
+, postfilter_transformer_ {std::move(postfilter_transformer)}
 , downsampler_ {std::move(downsampler)}
 , samples_ {std::move(samples)}
 , debug_log_ {}
@@ -34,9 +49,7 @@ ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer transformer, Read
 std::vector<std::vector<SampleName>> batch_samples(std::vector<SampleName> samples)
 {
     std::vector<std::vector<SampleName>> result {};
-    
     result.emplace_back(std::move(samples)); // TODO: find a better strategy for this
-    
     return result;
 }
 
@@ -110,9 +123,8 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
         if (debug_log_) {
             stream(*debug_log_) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
         }
-        
-        // transforms should be done first as they may affect which reads are filtered
-        transform_reads(batch_reads, transformer_);
+    
+        transform_reads(batch_reads, prefilter_transformer_);
         
         if (debug_log_) {
             SampleFilterCountMap<SampleName, decltype(filterer_)> filter_counts {};
@@ -135,6 +147,10 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
             }
         } else {
             erase_filtered_reads(batch_reads, filter(batch_reads, filterer_));
+        }
+        
+        if (postfilter_transformer_) {
+            transform_reads(batch_reads, *postfilter_transformer_);
         }
         
         if (debug_log_) {

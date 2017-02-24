@@ -79,16 +79,14 @@ public:
     
     AlignedRead() = default;
     
-    template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
-    AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                Qualities_&& qualities, CigarString_&& cigar,
-                MappingQuality mapping_quality, const Flags& flags);
+    template <typename String_, typename GenomicRegion_, typename Seq_, typename Qualities_, typename CigarString_>
+    AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq_&& sequence, Qualities_&& qualities,
+                CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags);
     
-    template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
+    template <typename String1_, typename GenomicRegion_, typename Seq_, typename Qualities_, typename CigarString_,
               typename String2_>
-    AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                Qualities_&& qualities, CigarString_&& cigar,
-                MappingQuality mapping_quality, Flags flags,
+    AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq_&& sequence, Qualities_&& qualities,
+                CigarString_&& cigar, MappingQuality mapping_quality, Flags flags,
                 String2_&& next_segment_contig_name, MappingDomain::Position next_segment_begin,
                 MappingDomain::Size inferred_template_length,
                 const Segment::Flags& next_segment_flags);
@@ -128,6 +126,7 @@ private:
     
     // should be ordered by sizeof
     GenomicRegion region_;
+    std::string name_;
     NucleotideSequence sequence_;
     BaseQualityVector qualities_;
     CigarString cigar_;
@@ -160,12 +159,12 @@ struct AlignedRead::Flags
     bool last_template_segment;
 };
 
-template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
-AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                         Qualities_&& qualities, CigarString_&& cigar,
-                         MappingQuality mapping_quality, const Flags& flags)
+template <typename String_, typename GenomicRegion_, typename Seq, typename Qualities_, typename CigarString_>
+AlignedRead::AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq&& sequence, Qualities_&& qualities,
+                         CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags)
 : region_ {std::forward<GenomicRegion_>(reference_region)}
-, sequence_ {std::forward<String1_>(sequence)}
+, name_ {std::forward<String_>(name)}
+, sequence_ {std::forward<Seq>(sequence)}
 , qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
 , read_group_ {}
@@ -174,17 +173,15 @@ AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
 , mapping_quality_ {mapping_quality}
 {}
 
-template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
+template <typename String1_, typename GenomicRegion_, typename Seq, typename Qualities_, typename CigarString_,
           typename String2_>
-AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                         Qualities_&& qualities, CigarString_&& cigar,
-                         MappingQuality mapping_quality, Flags flags,
-                         String2_&& next_segment_contig_name,
-                         MappingDomain::Position next_segment_begin,
-                         MappingDomain::Size inferred_template_length,
-                         const Segment::Flags& next_segment_flags)
+AlignedRead::AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq&& sequence, Qualities_&& qualities,
+                         CigarString_&& cigar, MappingQuality mapping_quality, Flags flags,
+                         String2_&& next_segment_contig_name, MappingDomain::Position next_segment_begin,
+                         MappingDomain::Size inferred_template_length, const Segment::Flags& next_segment_flags)
 : region_ {std::forward<GenomicRegion_>(reference_region)}
-, sequence_ {std::forward<String1_>(sequence)}
+, name_ {std::forward<String1_>(name)}
+, sequence_ {std::forward<Seq>(sequence)}
 , qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
 , read_group_ {}
@@ -198,7 +195,7 @@ AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
 
 template <typename String_>
 AlignedRead::Segment::Segment(String_&& contig_name, GenomicRegion::Position begin,
-                                      GenomicRegion::Size inferred_template_length, Flags data)
+                              GenomicRegion::Size inferred_template_length, Flags data)
 : contig_name_ {std::forward<String_>(contig_name)}
 , begin_ {begin}
 , inferred_template_length_ {inferred_template_length}
@@ -211,13 +208,15 @@ void capitalise_bases(AlignedRead& read) noexcept;
 
 void cap_qualities(AlignedRead& read, AlignedRead::BaseQuality max = 0) noexcept;
 
-void set_front_qualities(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality max = 0) noexcept;
-
-void set_back_qualities(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality max = 0) noexcept;
+void set_front_qualities(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality value) noexcept;
+void zero_front_qualities(AlignedRead& read, std::size_t num_bases) noexcept;
+void set_back_qualities(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality value) noexcept;
+void zero_back_qualities(AlignedRead& read, std::size_t num_bases) noexcept;
 
 bool is_sequence_empty(const AlignedRead& read) noexcept;
 
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read) noexcept;
+AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read, const GenomicRegion& region);
 
 bool is_soft_clipped(const AlignedRead& read);
 
@@ -227,8 +226,6 @@ GenomicRegion clipped_mapped_region(const AlignedRead& read);
 
 // Returns the part of the read cigar string contained by the region
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region);
-
-ContigRegion::Size count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region);
     
 // Returns the part of the read (cigar, sequence, qualities) contained by the region
 AlignedRead splice(const AlignedRead& read, const GenomicRegion& region);

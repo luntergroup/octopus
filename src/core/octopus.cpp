@@ -45,6 +45,7 @@
 #include "core/callers/utils/vcf_header_factory.hpp"
 #include "io/variant/vcf.hpp"
 #include "utils/timing.hpp"
+#include "exceptions/program_error.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -310,9 +311,6 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
     static auto debug_log = get_debug_log();
     
     assert(!components.regions.empty());
-    #ifdef BENCHMARK
-    init_timers();
-    #endif
     
     std::deque<VcfRecord> calls;
     std::vector<VcfRecord> connecting_calls {};
@@ -352,19 +350,21 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
         }
         subregion = std::move(next_subregion);
     }
-    
-    #ifdef BENCHMARK
-    print_all_timers();
-    #endif
 }
 
 void run_octopus_single_threaded(GenomeCallingComponents& components)
 {
+    #ifdef BENCHMARK
+    init_timers();
+    #endif
     components.progress_meter().start();
     for (const auto& contig : components.contigs()) {
         run_octopus_on_contig(ContigCallingComponents {contig, components});
     }
     components.progress_meter().stop();
+    #ifdef BENCHMARK
+        print_all_timers();
+    #endif
 }
 
 VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
@@ -1015,7 +1015,7 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
     using namespace readpipe;
     
     ReadTransformer transformer {};
-    transformer.register_transform(MaskSoftClipped {});
+    transformer.add(MaskSoftClipped {});
     
     using ReadFilterer = ReadPipe::ReadFilterer;
     ReadFilterer filterer {};
@@ -1062,6 +1062,16 @@ void log_run_start(const GenomeCallingComponents& components)
     if (debug_log) print_input_regions(stream(*debug_log), components.search_regions());
 }
 
+class CallingBug : public ProgramError
+{
+    std::string do_where() const override { return "run_octopus"; }
+    std::string do_why() const override
+    {
+        return "Encountered an unknown error during calling. This probably means there is a bug"
+        " and your results are untrustworthy.";
+    }
+};
+
 void run_octopus(GenomeCallingComponents& components, std::string command)
 {
     static auto debug_log = get_debug_log();
@@ -1083,9 +1093,23 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
         } else {
             run_octopus_single_threaded(components);
         }
-        
-        components.output().close();
-        
+    } catch (const ProgramError& e) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw;
+    } catch (...) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {};
+    }
+    
+    components.output().close();
+    
+    try {
         if (components.legacy()) {
             auto output_path = components.output().path();
             if (output_path) {
@@ -1094,13 +1118,7 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
                 convert_to_legacy(native, legacy);
             }
         }
-    } catch (const std::exception& e) {
-        try {
-            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
-            cleanup(components);
-        } catch (...) {}
-        throw;
-    }
+    } catch (...) {}
     
     const auto end = std::chrono::system_clock::now();
     const auto search_size = sum_region_sizes(components.search_regions());
