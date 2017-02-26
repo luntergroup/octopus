@@ -28,6 +28,27 @@ AssemblerActiveRegionGenerator::AssemblerActiveRegionGenerator(const ReferenceGe
 , clipped_coverage_tracker_ {}
 {}
 
+namespace {
+
+template <typename Container>
+bool contains(const Container& values, const typename Container::value_type& value)
+{
+    return std::find(std::cbegin(values), std::cend(values), value) != std::cend(values);
+}
+
+} // namespace
+
+AssemblerActiveRegionGenerator::AssemblerActiveRegionGenerator(const ReferenceGenome& reference, std::vector<TriggerType> trigger_types)
+: reference_ {reference}
+, coverage_tracker_ {}
+, interesting_read_coverages_ {}
+, clipped_coverage_tracker_ {}
+{
+    snvs_interesting_ = contains(trigger_types, TriggerType::snv);
+    indels_interesting_ = contains(trigger_types, TriggerType::indel);
+    structual_interesting_ = contains(trigger_types, TriggerType::structual);
+}
+
 void AssemblerActiveRegionGenerator::add(const AlignedRead& read)
 {
     coverage_tracker_.add(read);
@@ -187,8 +208,10 @@ auto get_interesting_hotspots(const GenomicRegion& region, const CoverageTracker
     std::transform(std::cbegin(coverages), std::cend(coverages), std::cbegin(interesting_coverages),
                    std::begin(interesting_bases),
                    [] (const auto coverage, const auto interesting_coverage) {
-                       if (coverage <= 30) {
-                           return interesting_coverage >= 2;
+                       if (coverage < 10) {
+                           return interesting_coverage > 0;
+                       } else if (coverage <= 30) {
+                           return interesting_coverage > 1;
                        } else {
                            return 5 * interesting_coverage >= coverage;
                        }
@@ -205,8 +228,10 @@ void merge(std::vector<GenomicRegion>&& src, std::vector<GenomicRegion>& dst)
 std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const GenomicRegion& region) const
 {
     auto interesting_regions = get_interesting_hotspots(region, interesting_read_coverages_, coverage_tracker_);
-//    auto deletion_regions = get_deletion_hotspots(region, clipped_coverage_tracker_);
-//    merge(std::move(deletion_regions), interesting_regions);
+    if (structual_interesting_) {
+        auto deletion_regions = get_deletion_hotspots(region, clipped_coverage_tracker_);
+        merge(std::move(deletion_regions), interesting_regions);
+    }
     return join(extract_covered_regions(interesting_regions), 30);
 }
 
@@ -219,7 +244,7 @@ using BaseQualityVectorIterator = AlignedRead::BaseQualityVector::const_iterator
 
 bool has_snv_in_match_range(const NucleotideSequenceIterator first_ref, const NucleotideSequenceIterator last_ref,
                             const NucleotideSequenceIterator first_base, const BaseQualityVectorIterator first_quality,
-                            const AlignedRead::BaseQuality trigger = 20)
+                            const AlignedRead::BaseQuality trigger)
 {
     using boost::make_zip_iterator;
     using Tuple = boost::tuple<char, char, AlignedRead::BaseQuality>;
@@ -260,20 +285,22 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
     constexpr AlignedRead::BaseQuality trigger_quality {20};
-    constexpr CigarOperation::Size trigger_clip_size {5};
+    constexpr CigarOperation::Size trigger_clip_size {3};
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
         switch (cigar_operation.flag()) {
             case Flag::alignmentMatch:
             {
-//                const GenomicRegion region{contig_name(read), ref_index, ref_index + op_size};
-//                const auto ref_segment = reference_.get().fetch_sequence(region);
-//                if (has_snv_in_match_range(std::cbegin(ref_segment), std::cend(ref_segment),
-//                                           next(sequence_itr, read_index),
-//                                           next(base_quality_itr, read_index),
-//                                           trigger_quality)) {
-//                    return true;
-//                }
+                if (snvs_interesting_) {
+                    const GenomicRegion region{contig_name(read), ref_index, ref_index + op_size};
+                    const auto ref_segment = reference_.get().fetch_sequence(region);
+                    if (has_snv_in_match_range(std::cbegin(ref_segment), std::cend(ref_segment),
+                                               next(sequence_itr, read_index),
+                                               next(base_quality_itr, read_index),
+                                               trigger_quality)) {
+                        return true;
+                    }
+                }
                 read_index += op_size;
                 ref_index += op_size;
                 break;
@@ -284,11 +311,13 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
                 break;
             case Flag::substitution:
             {
-//                GenomicRegion {contig_name(read), ref_index, ref_index + op_size};
-//                if (std::any_of(next(base_quality_itr, read_index), next(base_quality_itr, read_index + op_size),
-//                                [trigger_quality] (const auto quality) { return quality >= trigger_quality; })) {
-//                    return true;
-//                }
+                if (snvs_interesting_) {
+                    GenomicRegion {contig_name(read), ref_index, ref_index + op_size};
+                    if (std::any_of(next(base_quality_itr, read_index), next(base_quality_itr, read_index + op_size),
+                                    [trigger_quality] (const auto quality) { return quality >= trigger_quality; })) {
+                        return true;
+                    }
+                }
                 read_index += op_size;
                 ref_index += op_size;
                 break;
@@ -297,9 +326,11 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
             case Flag::deletion: return true;
             case Flag::softClipped:
             {
-                if (is_good_clip(next(sequence_itr, read_index), next(sequence_itr, read_index + op_size),
-                                 next(base_quality_itr, read_index), trigger_quality, trigger_clip_size)) {
-                    return true;
+                if (indels_interesting_ || structual_interesting_) {
+                    if (is_good_clip(next(sequence_itr, read_index), next(sequence_itr, read_index + op_size),
+                                     next(base_quality_itr, read_index), trigger_quality, trigger_clip_size)) {
+                        return true;
+                    }
                 }
                 read_index += op_size;
                 ref_index += op_size;
