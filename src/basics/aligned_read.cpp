@@ -238,7 +238,7 @@ AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read, const GenomicRegion& region)
 {
     if (contig_name(region) != contig_name(read)) return 0;
-    if (contains(region, read) || sequence_size(read.cigar()) == region_size(region)) return sequence_size(read);
+    if (contains(region, read)) return sequence_size(read);
     const auto splice_region = *overlapped_region(read, region);
     const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
     const auto contained_cigar_splice = splice_reference(read.cigar(), reference_offset, region_size(splice_region));
