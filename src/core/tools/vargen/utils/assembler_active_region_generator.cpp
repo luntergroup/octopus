@@ -187,7 +187,11 @@ auto get_interesting_hotspots(const GenomicRegion& region, const CoverageTracker
     std::transform(std::cbegin(coverages), std::cend(coverages), std::cbegin(interesting_coverages),
                    std::begin(interesting_bases),
                    [] (const auto coverage, const auto interesting_coverage) {
-                       return interesting_coverage >= coverage / 3;
+                       if (coverage <= 30) {
+                           return interesting_coverage >= 2;
+                       } else {
+                           return 5 * interesting_coverage >= coverage;
+                       }
                    });
     return get_regions(interesting_bases, region);
 }
@@ -201,8 +205,8 @@ void merge(std::vector<GenomicRegion>&& src, std::vector<GenomicRegion>& dst)
 std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const GenomicRegion& region) const
 {
     auto interesting_regions = get_interesting_hotspots(region, interesting_read_coverages_, coverage_tracker_);
-    auto deletion_regions = get_deletion_hotspots(region, clipped_coverage_tracker_);
-    merge(std::move(deletion_regions), interesting_regions);
+//    auto deletion_regions = get_deletion_hotspots(region, clipped_coverage_tracker_);
+//    merge(std::move(deletion_regions), interesting_regions);
     return join(extract_covered_regions(interesting_regions), 30);
 }
 
@@ -243,7 +247,7 @@ bool is_good_clip(const NucleotideSequenceIterator first_base, const NucleotideS
                                                       return t.get<0>() != 'N' && t.get<1>() >= good_base_trigger;
                                                   })) >= min_good_bases;
 }
-    
+
 } // namespace
 
 bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) const
