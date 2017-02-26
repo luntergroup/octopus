@@ -174,6 +174,8 @@ private:
     KmerGraph graph_;
     
     std::unordered_map<Kmer, Vertex, KmerHash> vertex_cache_;
+    std::deque<Vertex> reference_vertices_;
+    std::deque<Edge> reference_edges_;
     
     // methods
     
@@ -192,8 +194,8 @@ private:
     void remove_vertex(Vertex v);
     void clear_and_remove_vertex(Vertex v);
     void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
-    void add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, bool is_reference = false);
-    void add_reference_edge(Vertex u, Vertex v);
+    Edge add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, bool is_reference = false);
+    Edge add_reference_edge(Vertex u, Vertex v);
     void remove_edge(Vertex u, Vertex v);
     void remove_edge(Edge e);
     void increment_weight(Edge e);
@@ -243,6 +245,8 @@ private:
     void remove_vertices_that_cant_reach(Vertex v);
     void remove_vertices_past(Vertex v);
     bool can_prune_reference_flanks() const;
+    void pop_reference_head();
+    void pop_reference_tail();
     void prune_reference_flanks();
     
     std::pair<Vertex, unsigned> find_bifurcation(Vertex from, Vertex to) const;

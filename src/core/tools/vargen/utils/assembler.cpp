@@ -63,12 +63,14 @@ Assembler::Assembler(const unsigned kmer_size)
 : k_ {kmer_size}
 , reference_kmers_ {}
 , reference_head_position_ {0}
+, reference_vertices_ {}
 {}
 
 Assembler::Assembler(const unsigned kmer_size, const NucleotideSequence& reference)
 : k_ {kmer_size}
 , reference_kmers_ {}
 , reference_head_position_ {0}
+, reference_vertices_ {}
 {
     insert_reference_into_empty_graph(reference);
 }
@@ -80,54 +82,123 @@ unsigned Assembler::kmer_size() const noexcept
 
 void Assembler::insert_reference(const NucleotideSequence& sequence)
 {
-    if (is_empty()) {
-        insert_reference_into_empty_graph(sequence);
+    if (sequence.size() >= k_) {
+        if (is_empty()) {
+            insert_reference_into_empty_graph(sequence);
+        } else if (reference_kmers_.empty()) {
+            insert_reference_into_populated_graph(sequence);
+        } else {
+            throw std::runtime_error {"Assembler: only one reference sequence can be inserted into the graph"};
+        }
     } else {
-        insert_reference_into_populated_graph(sequence);
+        throw std::runtime_error {"Assembler:: reference length must >= kmer_size"};
     }
 }
 
 void Assembler::insert_read(const NucleotideSequence& sequence)
 {
-    if (sequence.size() < k_) return;
-    
-    auto kmer_begin = std::cbegin(sequence);
-    auto kmer_end   = std::next(kmer_begin, k_);
-    Kmer prev_kmer {kmer_begin, kmer_end};
-    bool prev_kmer_good {true};
-    if (!contains_kmer(prev_kmer)) {
-        const auto u = add_vertex(prev_kmer);
-        if (!u) prev_kmer_good = false;
-    }
-    ++kmer_begin;
-    ++kmer_end;
-    for (; kmer_end <= std::cend(sequence); ++kmer_begin, ++kmer_end) {
-        Kmer kmer {kmer_begin, kmer_end};
-        if (!contains_kmer(kmer)) {
-            const auto v = add_vertex(kmer);
-            if (v) {
-                if (prev_kmer_good) {
-                    const auto u = vertex_cache_.at(prev_kmer);
-                    add_edge(u, *v, 1);
+    if (sequence.size() >= k_) {
+        auto kmer_begin = std::cbegin(sequence);
+        auto kmer_end   = std::next(kmer_begin, k_);
+        Kmer prev_kmer {kmer_begin, kmer_end};
+        bool prev_kmer_good {true};
+        auto vertex_itr = vertex_cache_.find(prev_kmer);
+        auto ref_kmer_itr = std::cbegin(reference_kmers_);
+        if (vertex_itr == std::cend(vertex_cache_)) {
+            const auto u = add_vertex(prev_kmer);
+            if (!u) prev_kmer_good = false;
+        } else if (is_reference(vertex_itr->second)) {
+            ref_kmer_itr = std::find(std::cbegin(reference_kmers_), std::cend(reference_kmers_), prev_kmer);
+            assert(ref_kmer_itr != std::cend(reference_kmers_));
+            auto next_kmer_begin = std::next(kmer_begin);
+            auto next_kmer_end   = std::next(kmer_end);
+            const auto ref_offset = std::distance(std::cbegin(reference_kmers_), ref_kmer_itr);
+            auto ref_vertex_itr = std::next(std::cbegin(reference_vertices_), ref_offset);
+            auto ref_edge_itr = std::next(std::cbegin(reference_edges_), ref_offset);
+            ++ref_kmer_itr;
+            for (; next_kmer_end <= std::cend(sequence) && ref_kmer_itr < std::cend(reference_kmers_);
+                   ++next_kmer_begin, ++next_kmer_end, ++ref_kmer_itr, ++ref_vertex_itr, ++ref_edge_itr) {
+                if (std::equal(next_kmer_begin, next_kmer_end, std::cbegin(*ref_kmer_itr))) {
+                    assert(ref_edge_itr != std::cend(reference_edges_));
+                    increment_weight(*ref_edge_itr);
+                } else {
+                    break;
                 }
-                prev_kmer_good = true;
-            } else {
-                prev_kmer_good = false;
             }
-        } else if (prev_kmer_good) {
-            const auto u = vertex_cache_.at(prev_kmer);
-            const auto v = vertex_cache_.at(kmer);
-            Edge e; bool e_in_graph;
-            std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
-            if (e_in_graph) {
-                increment_weight(e);
-            } else {
-                add_edge(u, v, 1);
+            if (next_kmer_end > std::cend(sequence)) {
+                return;
+            }
+            if (next_kmer_begin != std::next(kmer_begin)) {
+                kmer_begin = std::prev(next_kmer_begin);
+                kmer_end   = std::prev(next_kmer_end);
+                if (kmer_end <= std::cend(sequence)) {
+                    prev_kmer = Kmer {kmer_begin, kmer_end};
+                }
             }
         } else {
-            prev_kmer_good = true;
+            ++kmer_begin;
+            ++kmer_end;
         }
-        prev_kmer = kmer;
+        for (; kmer_end <= std::cend(sequence); ++kmer_begin, ++kmer_end) {
+            Kmer kmer {kmer_begin, kmer_end};
+            const auto kmer_itr = vertex_cache_.find(kmer);
+            if (kmer_itr == std::cend(vertex_cache_)) {
+                const auto v = add_vertex(kmer);
+                if (v) {
+                    if (prev_kmer_good) {
+                        const auto u = vertex_cache_.at(prev_kmer);
+                        add_edge(u, *v, 1);
+                    }
+                    prev_kmer_good = true;
+                } else {
+                    prev_kmer_good = false;
+                }
+            } else {
+                if (prev_kmer_good) {
+                    const auto u = vertex_cache_.at(prev_kmer);
+                    const auto v = kmer_itr->second;
+                    Edge e; bool e_in_graph;
+                    std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
+                    if (e_in_graph) {
+                        increment_weight(e);
+                    } else {
+                        add_edge(u, v, 1);
+                    }
+                } else {
+                    if (is_reference(kmer_itr->second)) {
+                        ref_kmer_itr = std::find(ref_kmer_itr, std::cend(reference_kmers_), kmer);
+                        assert(ref_kmer_itr != std::cend(reference_kmers_));
+                        auto next_kmer_begin = std::next(kmer_begin);
+                        auto next_kmer_end   = std::next(kmer_end);
+                        const auto ref_offset = std::distance(std::cbegin(reference_kmers_), ref_kmer_itr);
+                        auto ref_vertex_itr = std::next(std::cbegin(reference_vertices_), ref_offset);
+                        auto ref_edge_itr = std::next(std::cbegin(reference_edges_), ref_offset);
+                        ++ref_kmer_itr;
+                        for (; next_kmer_end <= std::cend(sequence) && ref_kmer_itr < std::cend(reference_kmers_);
+                               ++next_kmer_begin, ++next_kmer_end, ++ref_kmer_itr, ++ref_vertex_itr, ++ref_edge_itr) {
+                            if (std::equal(next_kmer_begin, next_kmer_end, std::cbegin(*ref_kmer_itr))) {
+                                assert(ref_edge_itr != std::cend(reference_edges_));
+                                increment_weight(*ref_edge_itr);
+                            } else {
+                                break;
+                            }
+                        }
+                        if (next_kmer_end > std::cend(sequence)) {
+                            return;
+                        }
+                        if (next_kmer_begin != std::next(kmer_begin)) {
+                            kmer_begin = std::prev(next_kmer_begin);
+                            kmer_end   = std::prev(next_kmer_end);
+                            if (kmer_end <= std::cend(sequence)) {
+                                kmer = Kmer {kmer_begin, kmer_end};
+                            }
+                        }
+                    }
+                    prev_kmer_good = true;
+                }
+            }
+            prev_kmer = kmer;
+        }
     }
 }
 
@@ -262,6 +333,10 @@ void Assembler::clear()
     vertex_cache_.clear();
     reference_kmers_.clear();
     reference_kmers_.shrink_to_fit();
+    reference_vertices_.clear();
+    reference_kmers_.shrink_to_fit();
+    reference_edges_.clear();
+    reference_edges_.shrink_to_fit();
 }
 
 bool operator<(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noexcept
@@ -343,10 +418,7 @@ bool operator<(const Assembler::Kmer& lhs, const Assembler::Kmer& rhs) noexcept
 //
 void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequence)
 {
-    if (sequence.size() < k_) {
-        throw std::runtime_error {"Assembler:: reference length must >= kmer_size"};
-    }
-    
+    assert(sequence.size() >= k_);
     vertex_cache_.reserve(sequence.size() + std::pow(4, 5));
     auto kmer_begin = std::cbegin(sequence);
     auto kmer_end   = std::next(kmer_begin, k_);
@@ -356,6 +428,9 @@ void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequ
         if (!u) {
             throw BadReferenceSequence {sequence};
         }
+        reference_vertices_.push_back(*u);
+    } else {
+        reference_vertices_.push_back(vertex_cache_.at(reference_kmers_.back()));
     }
     ++kmer_begin;
     ++kmer_end;
@@ -365,29 +440,30 @@ void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequ
         if (!contains_kmer(kmer)) {
             const auto v = add_vertex(kmer, true);
             if (v) {
+                reference_vertices_.push_back(*v);
                 const auto u = vertex_cache_.at(std::crbegin(reference_kmers_)[1]);
-                add_reference_edge(u, *v);
+                const auto e = add_reference_edge(u, *v);
+                reference_edges_.push_back(e);
             } else {
                 throw BadReferenceSequence {sequence};
             }
         } else {
             const auto u = vertex_cache_.at(std::crbegin(reference_kmers_)[1]);
             const auto v = vertex_cache_.at(kmer);
-            add_reference_edge(u, v);
+            reference_vertices_.push_back(v);
+            const auto e = add_reference_edge(u, v);
+            reference_edges_.push_back(e);
         }
     }
     reference_kmers_.shrink_to_fit();
+    reference_vertices_.shrink_to_fit();
+    reference_edges_.shrink_to_fit();
 }
 
 void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& sequence)
 {
-    if (!reference_kmers_.empty()) {
-        throw std::runtime_error {"Assembler: only one reference sequence can be inserted into the graph"};
-    }
-    if (sequence.size() < k_) {
-        throw std::runtime_error {"Assembler:: reference length must >= kmer_size"};
-    }
-    
+    assert(sequence.size() >= k_);
+    assert(reference_kmers_.empty());
     vertex_cache_.reserve(vertex_cache_.size() + sequence.size() + std::pow(4, 5));
     auto kmer_begin = std::cbegin(sequence);
     auto kmer_end   = std::next(kmer_begin, k_);
@@ -397,8 +473,10 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
         if (!u) {
             throw BadReferenceSequence {sequence};
         }
+        reference_vertices_.push_back(*u);
     } else {
         set_vertex_reference(reference_kmers_.back());
+        reference_vertices_.push_back(vertex_cache_.at(reference_kmers_.back()));
     }
     ++kmer_begin;
     ++kmer_end;
@@ -407,33 +485,39 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
         if (!contains_kmer(reference_kmers_.back())) {
             const auto v = add_vertex(reference_kmers_.back(), true);
             if (v) {
+                reference_vertices_.push_back(*v);
                 const auto u = vertex_cache_.at(std::crbegin(reference_kmers_)[1]);
-                add_reference_edge(u, *v);
+                const auto e = add_reference_edge(u, *v);
+                reference_edges_.push_back(e);
             } else {
                 throw BadReferenceSequence {sequence};
             }
         } else {
             const auto u = vertex_cache_.at(std::crbegin(reference_kmers_)[1]);
             const auto v = vertex_cache_.at(reference_kmers_.back());
+            reference_vertices_.push_back(v);
             set_vertex_reference(v);
             Edge e; bool e_in_graph;
             std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
             if (e_in_graph) {
                 set_edge_reference(e);
             } else {
-                add_reference_edge(u, v);
+                e = add_reference_edge(u, v);
             }
+            reference_edges_.push_back(e);
         }
     }
     vertex_cache_.rehash(vertex_cache_.size());
     reference_kmers_.shrink_to_fit();
+    reference_vertices_.shrink_to_fit();
+    reference_edges_.shrink_to_fit();
     regenerate_vertex_indices();
     reference_head_position_ = 0;
 }
 
 bool Assembler::contains_kmer(const Kmer& kmer) const noexcept
 {
-    return vertex_cache_.count(kmer) > 0;
+    return vertex_cache_.count(kmer) == 1;
 }
 
 std::size_t Assembler::count_kmer(const Kmer& kmer) const noexcept
@@ -510,16 +594,16 @@ void Assembler::clear_and_remove_all(const std::unordered_set<Vertex>& vertices)
     }
 }
 
-void Assembler::add_edge(const Vertex u, const Vertex v,
-                         const GraphEdge::WeightType weight,
-                         const bool is_reference)
+Assembler::Edge Assembler::add_edge(const Vertex u, const Vertex v,
+                                    const GraphEdge::WeightType weight,
+                                    const bool is_reference)
 {
-    boost::add_edge(u, v, GraphEdge {weight, is_reference}, graph_);
+    return boost::add_edge(u, v, GraphEdge {weight, is_reference}, graph_).first;
 }
 
-void Assembler::add_reference_edge(const Vertex u, const Vertex v)
+Assembler::Edge Assembler::add_reference_edge(const Vertex u, const Vertex v)
 {
-    add_edge(u, v, 0, true);
+    return add_edge(u, v, 0, true);
 }
 
 void Assembler::remove_edge(const Vertex u, const Vertex v)
@@ -941,6 +1025,25 @@ bool Assembler::can_prune_reference_flanks() const
     return boost::out_degree(reference_head(), graph_) == 1 || boost::in_degree(reference_tail(), graph_) == 1;
 }
 
+void Assembler::pop_reference_head()
+{
+    reference_kmers_.pop_front();
+    reference_vertices_.pop_front();
+    if (!reference_edges_.empty()) {
+        reference_edges_.pop_front();
+    }
+    ++reference_head_position_;
+}
+
+void Assembler::pop_reference_tail()
+{
+    reference_kmers_.pop_back();
+    if (!reference_edges_.empty()) {
+        reference_vertices_.pop_back();
+    }
+    reference_edges_.pop_back();
+}
+
 void Assembler::prune_reference_flanks()
 {
     if (is_reference_empty()) return;
@@ -963,8 +1066,7 @@ void Assembler::prune_reference_flanks()
                   [this] (const Vertex u) {
                       remove_edge(u, *boost::adjacent_vertices(u, graph_).first);
                       remove_vertex(u);
-                      reference_kmers_.pop_front();
-                      ++reference_head_position_;
+                      pop_reference_head();
                   });
     
     const auto it2 = std::find_if_not(std::crbegin(sorted_vertices), std::make_reverse_iterator(it),
@@ -976,7 +1078,7 @@ void Assembler::prune_reference_flanks()
                   [this] (const Vertex u) {
                       remove_edge(*boost::inv_adjacent_vertices(u, graph_).first, u);
                       remove_vertex(u);
-                      reference_kmers_.pop_back();
+                      pop_reference_tail();
                   });
 }
 
