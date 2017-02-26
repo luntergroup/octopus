@@ -125,6 +125,9 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
                     break;
                 }
             }
+            if (next_kmer_end > std::cend(sequence)) {
+                return;
+            }
             if (next_kmer_begin != std::next(kmer_begin)) {
                 kmer_begin = std::prev(next_kmer_begin);
                 kmer_end   = std::prev(next_kmer_end);
@@ -179,6 +182,9 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
                             } else {
                                 break;
                             }
+                        }
+                        if (next_kmer_end > std::cend(sequence)) {
+                            return;
                         }
                         if (next_kmer_begin != std::next(kmer_begin)) {
                             kmer_begin = std::prev(next_kmer_begin);
