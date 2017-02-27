@@ -110,6 +110,7 @@ public:
         bool allow_inactive_flank_scoring;
         bool allow_model_filtering;
         boost::optional<std::string> sequencer;
+        bool model_mapping_quality;
     };
     
 private:

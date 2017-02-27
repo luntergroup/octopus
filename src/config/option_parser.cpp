@@ -342,7 +342,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description haplotype_generation("Haplotype generation");
     haplotype_generation.add_options()
-    ("max-haplotypes",
+    ("max-haplotypes,x",
      po::value<int>()->default_value(128),
      "Maximum number of candidate haplotypes the caller may consider. If a region contains"
      " more candidate haplotypes than this then filtering is applied")
@@ -495,6 +495,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Disables additional calculation to adjust alignment score when there are inactive"
      " candidates in haplotype flanking regions")
+
+    ("model-mapping-quality",
+     po::value<bool>()->default_value(true),
+     "Include the read mapping quality in the haplotype likelihood calculation")
     
     ("min-genotype-combinations",
      po::value<unsigned>()->default_value(2500),

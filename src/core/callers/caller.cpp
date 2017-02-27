@@ -679,11 +679,12 @@ HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Varian
 
 HaplotypeLikelihoodCache Caller::make_haplotype_likelihood_cache() const
 {
-    if (parameters_.sequencer) {
-        return HaplotypeLikelihoodCache {make_haplotype_likelihood_model(*parameters_.sequencer),
+    if (parameters_.sequencer ) {
+        return HaplotypeLikelihoodCache {make_haplotype_likelihood_model(*parameters_.sequencer, parameters_.model_mapping_quality),
                                          parameters_.max_haplotypes, samples_};
     } else {
-        return HaplotypeLikelihoodCache {parameters_.max_haplotypes, samples_};
+        return HaplotypeLikelihoodCache {HaplotypeLikelihoodModel {parameters_.model_mapping_quality},
+                                         parameters_.max_haplotypes, samples_};
     }
 }
 

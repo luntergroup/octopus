@@ -172,6 +172,12 @@ CallerBuilder& CallerBuilder::set_sequencer(std::string sequencer) noexcept
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_model_mapping_quality(bool b) noexcept
+{
+    params_.model_mapping_quality = b;
+    return *this;
+}
+
 // cancer
 
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
@@ -297,7 +303,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
         params_.haplotype_extension_threshold,
         params_.allow_flank_scoring,
         params_.allow_model_filtering,
-        params_.sequencer
+        params_.sequencer,
+        params_.model_mapping_quality
     };
     const auto& samples = components_.read_pipe.get().samples();
     return CallerFactoryMap {
