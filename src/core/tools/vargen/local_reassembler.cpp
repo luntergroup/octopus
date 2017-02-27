@@ -242,7 +242,7 @@ auto overlapped_bins(Container& bins, const M& mappable)
 
 void LocalReassembler::do_add_read(const SampleName& sample, const AlignedRead& read)
 {
-    active_region_generator_.add(read);
+    active_region_generator_.add(sample, read);
     read_buffer_.insert(read);
 }
 

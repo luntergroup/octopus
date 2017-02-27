@@ -6,13 +6,13 @@
 #include <iterator>
 #include <algorithm>
 #include <cmath>
+#include <cassert>
 
 #include <boost/iterator/zip_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
 
 #include "basics/genomic_region.hpp"
 #include "basics/cigar_string.hpp"
-#include "basics/aligned_read.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
@@ -38,27 +38,31 @@ bool contains(const Container& values, const typename Container::value_type& val
 
 } // namespace
 
-AssemblerActiveRegionGenerator::AssemblerActiveRegionGenerator(const ReferenceGenome& reference, std::vector<TriggerType> trigger_types)
+AssemblerActiveRegionGenerator::AssemblerActiveRegionGenerator(const ReferenceGenome& reference, Options options)
 : reference_ {reference}
 , coverage_tracker_ {}
 , interesting_read_coverages_ {}
 , clipped_coverage_tracker_ {}
 {
-    snvs_interesting_ = contains(trigger_types, TriggerType::snv);
-    indels_interesting_ = contains(trigger_types, TriggerType::indel);
-    structual_interesting_ = contains(trigger_types, TriggerType::structual);
+    snvs_interesting_ = contains(options.trigger_types, Options::TriggerType::snv);
+    indels_interesting_ = contains(options.trigger_types, Options::TriggerType::indel);
+    structual_interesting_ = contains(options.trigger_types, Options::TriggerType::structual);
+    trigger_quality_ = options.trigger_quality;
+    trigger_clip_size_ = options.trigger_clip_size;
 }
 
-void AssemblerActiveRegionGenerator::add(const AlignedRead& read)
+void AssemblerActiveRegionGenerator::add(const SampleName& sample, const AlignedRead& read)
 {
-    coverage_tracker_.add(read);
+    coverage_tracker_[sample].add(read);
     if (is_interesting(read)) {
-        interesting_read_coverages_.add(read);
+        interesting_read_coverages_[sample].add(read);
     }
-    if (is_soft_clipped(read)) {
-        clipped_coverage_tracker_.add(clipped_mapped_region(read));
-    } else {
-        clipped_coverage_tracker_.add(read);
+    if (structual_interesting_) {
+        if (is_soft_clipped(read)) {
+            clipped_coverage_tracker_[sample].add(clipped_mapped_region(read));
+        } else {
+            clipped_coverage_tracker_[sample].add(read);
+        }
     }
 }
 
@@ -199,11 +203,9 @@ auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker& t
     return extract_covered_regions(expand_each(get_regions(deletion_bases, region), 50));
 }
 
-auto get_interesting_hotspots(const GenomicRegion& region, const CoverageTracker& interesting_read_tracker,
-                              const CoverageTracker& tracker)
+auto get_interesting_hotspots(const GenomicRegion& region, const std::vector<unsigned>& interesting_coverages,
+                              const std::vector<unsigned>& coverages)
 {
-    const auto coverages = tracker.coverage(region);
-    const auto interesting_coverages = interesting_read_tracker.coverage(region);
     std::vector<bool> interesting_bases(interesting_coverages.size());
     std::transform(std::cbegin(coverages), std::cend(coverages), std::cbegin(interesting_coverages),
                    std::begin(interesting_bases),
@@ -219,6 +221,39 @@ auto get_interesting_hotspots(const GenomicRegion& region, const CoverageTracker
     return get_regions(interesting_bases, region);
 }
 
+auto get_interesting_hotspots(const GenomicRegion& region, const CoverageTracker& interesting_read_tracker,
+                              const CoverageTracker& tracker)
+{
+    const auto interesting_coverages = interesting_read_tracker.coverage(region);
+    const auto coverages = tracker.coverage(region);
+    return get_interesting_hotspots(region, interesting_coverages, coverages);
+}
+
+auto get_interesting_hotspots(const GenomicRegion& region,
+                              const std::unordered_map<SampleName, CoverageTracker>& interesting_read_tracker,
+                              const std::unordered_map<SampleName, CoverageTracker>& tracker)
+{
+    if (tracker.size() == 1) {
+        const auto itr = std::cbegin(tracker);
+        return get_interesting_hotspots(region, interesting_read_tracker.at(itr->first), itr->second);
+    }
+    const auto n = size(region);
+    std::vector<unsigned> total_interesting_coverage(n), total_coverage(n);
+    for (const auto& p : interesting_read_tracker) {
+        const auto sample_coverage = tracker.at(p.first).coverage(region);
+        const auto sample_interesting_coverage = p.second.coverage(region);
+        assert(sample_coverage.size() == n);
+        assert(sample_interesting_coverage.size() == n);
+        for (std::size_t i {0}; i < sample_coverage.size(); ++i) {
+            if (sample_interesting_coverage[i] > 0) {
+                total_interesting_coverage[i] += sample_interesting_coverage[i];
+                total_coverage[i] += sample_coverage[i];
+            }
+        }
+    }
+    return get_interesting_hotspots(region, total_interesting_coverage, total_coverage);
+}
+
 void merge(std::vector<GenomicRegion>&& src, std::vector<GenomicRegion>& dst)
 {
     const auto itr = utils::append(std::move(src), dst);
@@ -229,8 +264,10 @@ std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const Genomi
 {
     auto interesting_regions = get_interesting_hotspots(region, interesting_read_coverages_, coverage_tracker_);
     if (structual_interesting_) {
-        auto deletion_regions = get_deletion_hotspots(region, clipped_coverage_tracker_);
-        merge(std::move(deletion_regions), interesting_regions);
+        for (const auto& p : clipped_coverage_tracker_) {
+            auto deletion_regions = get_deletion_hotspots(region, p.second);
+            merge(std::move(deletion_regions), interesting_regions);
+        }
     }
     return join(extract_covered_regions(interesting_regions), 30);
 }
@@ -284,8 +321,6 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
     auto base_quality_itr = cbegin(read.qualities());
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
-    constexpr AlignedRead::BaseQuality trigger_quality {20};
-    constexpr CigarOperation::Size trigger_clip_size {3};
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
         switch (cigar_operation.flag()) {
@@ -297,7 +332,7 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
                     if (has_snv_in_match_range(std::cbegin(ref_segment), std::cend(ref_segment),
                                                next(sequence_itr, read_index),
                                                next(base_quality_itr, read_index),
-                                               trigger_quality)) {
+                                               trigger_quality_)) {
                         return true;
                     }
                 }
@@ -314,7 +349,7 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
                 if (snvs_interesting_) {
                     GenomicRegion {contig_name(read), ref_index, ref_index + op_size};
                     if (std::any_of(next(base_quality_itr, read_index), next(base_quality_itr, read_index + op_size),
-                                    [trigger_quality] (const auto quality) { return quality >= trigger_quality; })) {
+                                    [this] (const AlignedRead::BaseQuality quality) { return quality >= trigger_quality_; })) {
                         return true;
                     }
                 }
@@ -328,7 +363,7 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
             {
                 if (indels_interesting_ || structual_interesting_) {
                     if (is_good_clip(next(sequence_itr, read_index), next(sequence_itr, read_index + op_size),
-                                     next(base_quality_itr, read_index), trigger_quality, trigger_clip_size)) {
+                                     next(base_quality_itr, read_index), trigger_quality_, trigger_clip_size_)) {
                         return true;
                     }
                 }

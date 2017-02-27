@@ -5,27 +5,35 @@
 #define assembler_active_region_generator_hpp
 
 #include <vector>
+#include <unordered_map>
 #include <functional>
 
+#include "config/common.hpp"
+#include "basics/aligned_read.hpp"
 #include "utils/coverage_tracker.hpp"
 #include "io/reference/reference_genome.hpp"
 
 namespace octopus {
 
 class GenomicRegion;
-class AlignedRead;
 
 namespace coretools {
 
 class AssemblerActiveRegionGenerator
 {
 public:
-    enum class TriggerType { snv, indel, structual };
+    struct Options
+    {
+        enum class TriggerType { snv, indel, structual };
+        std::vector<TriggerType> trigger_types;
+        AlignedRead::BaseQuality trigger_quality;
+        AlignedRead::MappingDomain::Size trigger_clip_size;
+    };
     
     AssemblerActiveRegionGenerator() = delete;
     
     AssemblerActiveRegionGenerator(const ReferenceGenome& reference);
-    AssemblerActiveRegionGenerator(const ReferenceGenome& reference, std::vector<TriggerType> trigger_types);
+    AssemblerActiveRegionGenerator(const ReferenceGenome& reference, Options options);
     
     AssemblerActiveRegionGenerator(const AssemblerActiveRegionGenerator&)            = default;
     AssemblerActiveRegionGenerator& operator=(const AssemblerActiveRegionGenerator&) = default;
@@ -34,14 +42,16 @@ public:
     
     ~AssemblerActiveRegionGenerator() = default;
     
-    void add(const AlignedRead& read);
+    void add(const SampleName& sample, const AlignedRead& read);
     
     std::vector<GenomicRegion> generate(const GenomicRegion& region) const;
 
 private:
     std::reference_wrapper<const ReferenceGenome> reference_;
     bool snvs_interesting_ = false, indels_interesting_ = true, structual_interesting_ = false;
-    CoverageTracker coverage_tracker_, interesting_read_coverages_, clipped_coverage_tracker_;
+    AlignedRead::BaseQuality trigger_quality_ = 10;
+    AlignedRead::MappingDomain::Size trigger_clip_size_ = 3;
+    std::unordered_map<SampleName, CoverageTracker> coverage_tracker_, interesting_read_coverages_, clipped_coverage_tracker_;
     
     bool is_interesting(const AlignedRead& read) const;
 };
