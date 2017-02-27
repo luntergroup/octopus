@@ -232,10 +232,12 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                                         return begins_equal(call, *it2);
                                     });
         boost::optional<decltype(it3)> base;
+        assert(!(*it2)->reference().sequence().empty());
         if ((*it2)->reference().sequence().front() != '#') {
             base = it2;
         }
         for_each(base ? next(it2) : it2, it3, [this, base] (auto& call) {
+            assert(!call->reference().sequence().empty());
             if (call->reference().sequence().front() == '#') {
                 const auto actual_reference_base = reference_.fetch_sequence(head_position(call)).front();
                 auto new_sequence = call->reference().sequence();
@@ -249,6 +251,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     const auto ploidy = old_genotype.ploidy();
                     Genotype<Allele> new_genotype {ploidy};
                     for (unsigned i {0}; i < ploidy; ++i) {
+                        assert(!old_genotype[i].sequence().empty());
                         if (old_genotype[i].sequence().front() == '#') {
                             auto new_sequence = old_genotype[i].sequence();
                             if (base) {
@@ -314,6 +317,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
         for (; it3 != it; ++it3) {
             auto& curr_call = *it3;
             std::unordered_map<Allele, Allele> replacements {};
+            assert(!curr_call->reference().sequence().empty());
             if (curr_call->reference().sequence().front() == '#') {
                 const auto actual_reference_base = reference_.fetch_sequence(head_position(curr_call)).front();
                 auto new_sequence = curr_call->reference().sequence();

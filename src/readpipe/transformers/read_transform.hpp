@@ -117,6 +117,22 @@ private:
     const BaseQuality max_;
 };
 
+struct MaskLowAverageQualitySoftClippedTails
+{
+    using BaseQuality = AlignedRead::BaseQuality;
+    using Length = AlignedRead::NucleotideSequence::size_type;
+    
+    MaskLowAverageQualitySoftClippedTails() = default;
+    
+    explicit MaskLowAverageQualitySoftClippedTails(BaseQuality threshold, Length min_tail_length = 1);
+    
+    void operator()(AlignedRead& read) const noexcept;
+
+private:
+    const BaseQuality threshold_;
+    const Length min_tail_length_;
+};
+
 using ReadReferenceVector = std::vector<std::reference_wrapper<AlignedRead>>;
 
 struct MaskTemplateAdapters

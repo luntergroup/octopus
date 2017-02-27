@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <iterator>
 #include <tuple>
+#include <cassert>
+
+#include "utils/maths.hpp"
 
 namespace octopus { namespace readpipe {
 
@@ -107,7 +110,7 @@ namespace {
 template<typename InputIterator>
 void zero_if_less_than(InputIterator first, InputIterator last,
                        typename std::iterator_traits<InputIterator>::value_type value) noexcept {
-    std::transform(first, last, first, [value] (auto v) noexcept { return v < value ? 0 : value; });
+    std::transform(first, last, first, [value] (auto v) noexcept { return v < value ? 0 : v; });
 }
 
 void mask_low_quality_front_bases(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality min_quality) noexcept
@@ -154,17 +157,79 @@ void MaskLowQualitySoftClippedBoundaryBases::operator()(AlignedRead& read) const
     }
 }
 
+MaskLowAverageQualitySoftClippedTails::MaskLowAverageQualitySoftClippedTails(BaseQuality threshold, Length min_tail_length)
+: threshold_ {threshold}
+, min_tail_length_ {min_tail_length}
+{}
+
+namespace {
+
+auto get_soft_clip_tail_size(const AlignedRead& read) noexcept
+{
+    CigarOperation::Size front_size, back_size;
+    std::tie(front_size, back_size) = get_soft_clipped_sizes(read);
+    if (read.is_marked_reverse_mapped()) {
+        return front_size;
+    } else {
+        return back_size;
+    }
+}
+
+template <typename ForwardIt>
+auto mean_quality(const ForwardIt first, const std::size_t num_bases) noexcept
+{
+    const auto last = std::next(first, num_bases);
+    const auto first_good = std::find_if(first, last, [] (auto q) noexcept { return q > 2; });
+    if (first_good != last) {
+        return maths::mean(first_good, last);
+    } else {
+        return maths::mean(first, last);
+    }
+}
+
+auto mean_tail_quality(const AlignedRead& read, const std::size_t num_bases) noexcept
+{
+    assert(num_bases > 0);
+    if (read.is_marked_reverse_mapped()) {
+        return mean_quality(std::cbegin(read.qualities()), num_bases);
+    } else {
+        return mean_quality(std::crbegin(read.qualities()), num_bases);
+    }
+}
+
+void zero_tail_base_qualities(AlignedRead& read, const std::size_t num_bases) noexcept
+{
+    if (read.is_marked_reverse_mapped()) {
+        zero_front_qualities(read, num_bases);
+    } else {
+        zero_back_qualities(read, num_bases);
+    }
+}
+
+} // namespace
+
+void MaskLowAverageQualitySoftClippedTails::operator()(AlignedRead& read) const noexcept
+{
+    const auto tail_clip_size = get_soft_clip_tail_size(read);
+    if (tail_clip_size >= min_tail_length_) {
+        const auto mean_quality = mean_tail_quality(read, tail_clip_size);
+        if (mean_quality < threshold_) {
+            zero_tail_base_qualities(read, tail_clip_size);
+        }
+    }
+}
+
 // template transforms
 
-void mask_adapter_contamination(AlignedRead& first, AlignedRead& second) noexcept
+void mask_adapter_contamination(AlignedRead& forward, AlignedRead& reverse) noexcept
 {
-    if (begins_before(second, first)) {
-        const auto adapter_region = left_overhang_region(second, first);
-        zero_front_qualities(second, sequence_size(second, adapter_region));
+    if (begins_before(reverse, forward)) {
+        const auto adapter_region = left_overhang_region(reverse, forward);
+        zero_front_qualities(reverse, sequence_size(reverse, adapter_region));
     }
-    if (ends_before(second, first)) {
-        const auto adapter_region = right_overhang_region(first, second);
-        zero_back_qualities(first, sequence_size(first, adapter_region));
+    if (ends_before(reverse, forward)) {
+        const auto adapter_region = right_overhang_region(forward, reverse);
+        zero_back_qualities(forward, sequence_size(forward, adapter_region));
     }
 }
 
@@ -184,42 +249,48 @@ void MaskTemplateAdapters::operator()(ReadReferenceVector& read_template) const
     }
 }
 
-void mask_duplicated_bases(AlignedRead& first, AlignedRead& second, const GenomicRegion& duplicated_region)
+void mask_duplicated_bases(AlignedRead& forward, AlignedRead& reverse, const GenomicRegion& duplicated_region)
 {
-    auto first_qual_itr = std::rbegin(first.qualities());
-    if (ends_before(second, first)) {
-        const auto adapter_region = right_overhang_region(first, second);
-        first_qual_itr += sequence_size(first, adapter_region);
+    auto forward_qual_itr = std::rbegin(forward.qualities());
+    if (ends_before(reverse, forward)) {
+        const auto adapter_region = right_overhang_region(forward, reverse);
+        const auto num_adapter_bps = sequence_size(forward, adapter_region);
+        forward_qual_itr += num_adapter_bps;
     }
-    auto second_qual_itr = std::begin(second.qualities());
-    if (begins_before(second, first)) {
-        const auto adapter_region = left_overhang_region(second, first);
-        second_qual_itr += sequence_size(second, adapter_region);
+    auto reverse_qual_itr = std::begin(reverse.qualities());
+    if (begins_before(reverse, forward)) {
+        const auto adapter_region = left_overhang_region(reverse, forward);
+        const auto num_adapter_bps = sequence_size(reverse, adapter_region);
+        reverse_qual_itr += num_adapter_bps;
     }
-    auto num__duplicate_bases = std::min(sequence_size(first, duplicated_region), sequence_size(second, duplicated_region));
+    const auto num_forward_duplicate_bps = sequence_size(forward, duplicated_region);
+    const auto num_reverse_duplicate_bps = sequence_size(reverse, duplicated_region);
+    auto num_duplicate_bps = std::min(num_forward_duplicate_bps, num_reverse_duplicate_bps);
     bool select_first {true};
-    for (; num__duplicate_bases > 0; --num__duplicate_bases) {
-        if (*first_qual_itr == *second_qual_itr) {
+    for (; num_duplicate_bps > 0; --num_duplicate_bps) {
+        assert(forward_qual_itr < std::rend(forward.qualities()));
+        assert(reverse_qual_itr < std::end(reverse.qualities()));
+        if (*forward_qual_itr == *reverse_qual_itr) {
             if (select_first) {
-                *second_qual_itr++ = 0;
+                *reverse_qual_itr++ = 0;
                 select_first = false;
             } else {
-                *first_qual_itr++ = 0;
+                *forward_qual_itr++ = 0;
                 select_first = true;
             }
-        } else if (*first_qual_itr < *second_qual_itr) {
-            *first_qual_itr++ = 0;
+        } else if (*forward_qual_itr < *reverse_qual_itr) {
+            *forward_qual_itr++ = 0;
         } else {
-            *second_qual_itr++ = 0;
+            *reverse_qual_itr++ = 0;
         }
     }
 }
 
-void mask_duplicated_bases(AlignedRead& first, AlignedRead& second)
+void mask_duplicated_bases(AlignedRead& forward, AlignedRead& reverse)
 {
-    const auto duplicated_region = overlapped_region(first, second);
+    const auto duplicated_region = overlapped_region(forward, reverse);
     if (duplicated_region) {
-        mask_duplicated_bases(first, second, *duplicated_region);
+        mask_duplicated_bases(forward, reverse, *duplicated_region);
     }
 }
 
