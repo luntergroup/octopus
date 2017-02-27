@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <iterator>
 #include <tuple>
+#include <cassert>
+
+#include "utils/maths.hpp"
 
 namespace octopus { namespace readpipe {
 
@@ -150,6 +153,68 @@ void MaskLowQualitySoftClippedBoundaryBases::operator()(AlignedRead& read) const
         }
         if (num_back_bases > 0) {
             mask_low_quality_back_bases(read, num_back_bases + num_bases_, max_);
+        }
+    }
+}
+
+MaskLowAverageQualitySoftClippedTails::MaskLowAverageQualitySoftClippedTails(BaseQuality threshold, Length min_tail_length)
+: threshold_ {threshold}
+, min_tail_length_ {min_tail_length}
+{}
+
+namespace {
+
+auto get_soft_clip_tail_size(const AlignedRead& read) noexcept
+{
+    CigarOperation::Size front_size, back_size;
+    std::tie(front_size, back_size) = get_soft_clipped_sizes(read);
+    if (read.is_marked_reverse_mapped()) {
+        return front_size;
+    } else {
+        return back_size;
+    }
+}
+
+template <typename ForwardIt>
+auto mean_quality(const ForwardIt first, const std::size_t num_bases) noexcept
+{
+    const auto last = std::next(first, num_bases);
+    const auto first_good = std::find_if(first, last, [] (auto q) noexcept { return q > 2; });
+    if (first_good != last) {
+        return maths::mean(first_good, last);
+    } else {
+        return maths::mean(first, last);
+    }
+}
+
+auto mean_tail_quality(const AlignedRead& read, const std::size_t num_bases) noexcept
+{
+    assert(num_bases > 0);
+    if (read.is_marked_reverse_mapped()) {
+        return mean_quality(std::cbegin(read.qualities()), num_bases);
+    } else {
+        return mean_quality(std::crbegin(read.qualities()), num_bases);
+    }
+}
+
+void zero_tail_base_qualities(AlignedRead& read, const std::size_t num_bases) noexcept
+{
+    if (read.is_marked_reverse_mapped()) {
+        zero_front_qualities(read, num_bases);
+    } else {
+        zero_back_qualities(read, num_bases);
+    }
+}
+
+} // namespace
+
+void MaskLowAverageQualitySoftClippedTails::operator()(AlignedRead& read) const noexcept
+{
+    const auto tail_clip_size = get_soft_clip_tail_size(read);
+    if (tail_clip_size >= min_tail_length_) {
+        const auto mean_quality = mean_tail_quality(read, tail_clip_size);
+        if (mean_quality < threshold_) {
+            zero_tail_base_qualities(read, tail_clip_size);
         }
     }
 }
