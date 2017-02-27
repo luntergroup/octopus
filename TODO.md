@@ -10,12 +10,11 @@ Here is a non-exhaustive list of things that need doing. In general, the individ
 ## Calling accuracy improvements
 
 - The HMM can go over its band limit and give crazy alignments - we should try to catch these cases and fallback to a slower routine.
-- The MaskOverlappedSegment read transformation should mask segments equally rather than masking just one.
 - Model filtering needs to be more selective - filters some TP when haplotypes get long.
+- When aggressively phasing, periodically check that phase remains intact, otherwise the number of good haplotypes increases exponentially.
 
 ## Runtime performance improvements
 
-- Selectively assemble regions: the assembler is slow and many regions don't need assembly, rather than assembling all regions, try to determine regions likely to contain variation and only assemble these.
 - Extend pair HMM for AVX.
 - Implement SSE log_exp_calculation.
 - Allow Callers to parallelise algorithms if in multithreaded mode.
@@ -26,7 +25,6 @@ Here is a non-exhaustive list of things that need doing. In general, the individ
 ## Cosmetic
 
 - VcfRecordFactory is horrible and needs refactoring. The entire design are the Call family needs looking at.
-- Caller::call needs refactoring into smaller methods.
 
 ## To consider
 
