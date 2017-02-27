@@ -570,6 +570,7 @@ auto make_read_transformers(const OptionMap& options)
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
                 } else if (allow_assembler_generation(options)) {
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, 3});
+                    prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {15, 5});
                 } else {
                     prefilter_transformer.add(MaskSoftClippedBoundraryBases {boundary_size});
                 }
@@ -579,6 +580,7 @@ auto make_read_transformers(const OptionMap& options)
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {threshold});
                 } else if (allow_assembler_generation(options)) {
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {3});
+                    prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {15, 5});
                 } else {
                     prefilter_transformer.add(MaskSoftClipped {});
                 }
