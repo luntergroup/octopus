@@ -73,6 +73,22 @@ bool operator>(const GenotypeRefProbabilityPair& lhs, const GenotypeRefProbabili
     return lhs.probability > rhs.probability;
 }
 
+struct GenotypeRefProbabilityPairGenotypeEqual
+{
+    bool operator()(const GenotypeRefProbabilityPair& lhs, const GenotypeRefProbabilityPair& rhs) const
+    {
+        return lhs.genotype == rhs.genotype;
+    }
+};
+
+struct GenotypeRefProbabilityPairGenotypeLess
+{
+    bool operator()(const GenotypeRefProbabilityPair& lhs, const GenotypeRefProbabilityPair& rhs) const
+    {
+        return lhs.genotype < rhs.genotype;
+    }
+};
+
 struct ParentsProbabilityPair
 {
     GenotypeReference maternal, paternal;
@@ -108,6 +124,24 @@ auto compute_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
     return result;
 }
 
+auto compute_posteriors(const std::vector<GenotypeRefProbabilityPair>& likelihoods,
+                        const PopulationPriorModel& prior_model)
+{
+    std::vector<double> posteriors(likelihoods.size());
+    std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::begin(posteriors),
+                   [&] (const auto& p) {
+                       return p.probability + prior_model.evaluate(std::vector<GenotypeReference> {p.genotype});
+                   });
+    maths::normalise_exp(posteriors);
+    std::vector<GenotypeRefProbabilityPair> result {};
+    result.reserve(posteriors.size());
+    std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::cbegin(posteriors), std::back_inserter(result),
+                   [] (const auto& p, const auto posterior) noexcept {
+                       return GenotypeRefProbabilityPair {p.genotype, posterior};
+                   });
+    return result;
+}
+
 template <typename T>
 bool all_equal(const std::vector<T>& v)
 {
@@ -119,8 +153,7 @@ double compute_removed_posterior_mass(Iterator first, Iterator first_removed, It
 {
     thread_local std::vector<double> likelihoods {};
     likelihoods.resize(std::distance(first, last));
-    std::transform(first, last, std::begin(likelihoods),
-                   [] (const auto& p) { return p.probability; });
+    std::transform(first, last, std::begin(likelihoods), [] (const auto& p) { return p.probability; });
     maths::normalise_exp(likelihoods);
     return std::accumulate(std::next(std::cbegin(likelihoods), std::distance(first, first_removed)),
                            std::cend(likelihoods), 0.0);
@@ -135,10 +168,8 @@ auto compute_first_removable(const std::vector<T>& zipped, const double max_remo
                    [] (const auto& p) { return p.probability; });
     maths::normalise_exp(likelihoods);
     // Do things in reverse order as floating points have better precision near zero
-    std::partial_sum(std::crbegin(likelihoods), std::crend(likelihoods),
-                     std::rbegin(likelihoods));
-    const auto iter = std::upper_bound(std::crbegin(likelihoods), std::crend(likelihoods),
-                                       max_removed_mass);
+    std::partial_sum(std::crbegin(likelihoods), std::crend(likelihoods), std::rbegin(likelihoods));
+    const auto iter = std::upper_bound(std::crbegin(likelihoods), std::crend(likelihoods), max_removed_mass);
     const auto num_to_keep = static_cast<std::size_t>(std::distance(iter, std::crend(likelihoods)));
     assert(num_to_keep <= zipped.size());
     return std::next(std::cbegin(zipped), num_to_keep);
@@ -202,12 +233,44 @@ bool are_same_ploidy(const std::vector<GenotypeRefProbabilityPair>& maternal,
     return maternal.front().genotype.get().ploidy() == paternal.front().genotype.get().ploidy();
 }
 
+auto reduce(std::vector<GenotypeRefProbabilityPair>& likelihoods,
+            const PopulationPriorModel& prior_model,
+            const TrioModel::Options& options)
+{
+    if (likelihoods.size() <= get_sample_reduction_count(options.min_combinations)) return false;
+    auto likelihoods_copy = likelihoods;
+    auto result = reduce(likelihoods, options);
+    if (result) {
+        auto posteriors = compute_posteriors(likelihoods_copy, prior_model);
+        result = reduce(posteriors, options);
+        std::sort(std::begin(likelihoods_copy), std::end(likelihoods_copy), GenotypeRefProbabilityPairGenotypeLess {});
+        std::sort(std::begin(posteriors), std::end(posteriors), GenotypeRefProbabilityPairGenotypeLess {});
+        std::vector<GenotypeRefProbabilityPair> kept {};
+        kept.reserve(posteriors.size());
+        std::set_intersection(std::cbegin(likelihoods_copy), std::cend(likelihoods_copy),
+                              std::cbegin(posteriors), std::cend(posteriors),
+                              std::back_inserter(kept),
+                              GenotypeRefProbabilityPairGenotypeLess {});
+        likelihoods = std::move(kept);
+    }
+    return result;
+}
+
 auto reduce(std::vector<GenotypeRefProbabilityPair>& maternal,
             std::vector<GenotypeRefProbabilityPair>& paternal,
             const TrioModel::Options& options)
 {
     const auto maternal_overflowed = reduce(maternal, options);
     return reduce(paternal, options) || maternal_overflowed;
+}
+
+auto reduce(std::vector<GenotypeRefProbabilityPair>& maternal,
+            std::vector<GenotypeRefProbabilityPair>& paternal,
+            const PopulationPriorModel& prior_model,
+            const TrioModel::Options& options)
+{
+    const auto maternal_overflowed = reduce(maternal, prior_model, options);
+    return reduce(paternal, prior_model, options) || maternal_overflowed;
 }
 
 auto reduce(std::vector<ParentsProbabilityPair>& parental,
@@ -364,7 +427,7 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
     assert(!maternal_likelihoods.empty());
     haplotype_likelihoods.prime(trio_.father());
     auto paternal_likelihoods = compute_likelihoods(paternal_genotypes, likelihood_model);
-    overflowed |= reduce(paternal_likelihoods, maternal_likelihoods, options_);
+    overflowed |= reduce(paternal_likelihoods, maternal_likelihoods, prior_model_, options_);
     assert(!paternal_likelihoods.empty());
     if (debug_log_) {
         debug::print(stream(*debug_log_), "maternal", maternal_likelihoods);
