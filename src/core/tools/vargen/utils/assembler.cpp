@@ -351,11 +351,11 @@ bool operator<(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noe
 }
 
 std::deque<Assembler::Variant>
-Assembler::extract_variants(const double min_mean_bubble_weight, const unsigned max_bubbles)
+Assembler::extract_variants(const unsigned max_bubbles, const double min_bubble_score)
 {
     if (is_empty() || is_all_reference()) return {};
     set_all_edge_transition_scores_from(reference_head());
-    auto result = extract_k_highest_scoring_bubble_paths(min_mean_bubble_weight, max_bubbles);
+    auto result = extract_bubble_paths(max_bubbles, min_bubble_score);
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
@@ -870,6 +870,49 @@ Assembler::GraphEdge::WeightType Assembler::weight(const Path& path) const
                               });
 }
 
+unsigned Assembler::count_low_weights(const Path& path, const unsigned low_weight) const
+{
+    if (path.size() < 2) return 0;
+    return std::inner_product(std::cbegin(path), std::prev(std::cend(path)), std::next(std::cbegin(path)), 0u, std::plus<> {},
+                              [this, low_weight] (const auto& u, const auto& v) {
+                                  Edge e; bool good;
+                                  std::tie(e, good) = boost::edge(u, v, graph_);
+                                  assert(good);
+                                  return graph_[e].weight <= low_weight ? 1 : 0;
+                              });
+}
+
+bool Assembler::has_low_weight_flanks(const Path& path, const unsigned low_weight) const
+{
+    if (path.size() < 2) return false;
+    Edge e; bool good;
+    std::tie(e, good) = boost::edge(path[0], path[1], graph_);
+    assert(good);
+    if (graph_[e].weight <= low_weight) return true;
+    std::tie(e, good) = boost::edge(std::crbegin(path)[1], std::crbegin(path)[0], graph_);
+    assert(good);
+    return graph_[e].weight <= low_weight;
+}
+
+unsigned Assembler::count_low_weight_flanks(const Path& path, unsigned low_weight) const
+{
+    if (path.size() < 2) return 0;
+    const auto is_low_weight = [this, low_weight] (const auto& u, const auto& v) {
+        Edge e; bool good;
+        std::tie(e, good) = boost::edge(u, v, graph_);
+        assert(good);
+        return graph_[e].weight > low_weight ? 1 : 0;
+    };
+    const auto first_head_high_weight = std::adjacent_find(std::cbegin(path), std::cend(path), is_low_weight);
+    const auto first_tail_high_weight = std::adjacent_find(std::crbegin(path), std::make_reverse_iterator(first_head_high_weight),
+                                                           [&] (const auto& u, const auto& v) {
+                                                               return is_low_weight(v, u);
+                                                           });
+    const auto num_head_low_weight = std::distance(std::cbegin(path), first_head_high_weight);
+    const auto num_tail_low_weight = std::distance(std::crbegin(path), first_tail_high_weight);
+    return static_cast<unsigned>(num_head_low_weight + num_tail_low_weight);
+}
+
 void Assembler::remove_trivial_nonreference_cycles()
 {
     boost::remove_edge_if([this] (const Edge e) {
@@ -1366,11 +1409,20 @@ bool is_dominated_by_path(const V& vertex, const BidirectionalIt first, const Bi
     return std::find(rfirst, rlast, dominator) != rlast;
 }
 
+double Assembler::bubble_score(const Path& path) const
+{
+    const auto path_weight = weight(path);
+    const auto num_low_weights = count_low_weights(path, 1);
+    const auto num_low_weight_flanks = count_low_weight_flanks(path, 1);
+    auto score = static_cast<double>(path_weight) / path.size();
+    score /= std::max((num_low_weights - num_low_weight_flanks) + 2 * num_low_weight_flanks, 1u);
+    return score;
+}
+
 std::deque<Assembler::Variant>
-Assembler::extract_k_highest_scoring_bubble_paths(const double min_mean_bubble_weight, unsigned k)
+Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
 {
     // TODO: should implement Eppstein's algorithm here
-    
     auto dominator_tree = build_dominator_tree(reference_head());
     auto num_remaining_alt_kmers = num_kmers() - num_reference_kmers();
     
@@ -1419,12 +1471,12 @@ Assembler::extract_k_highest_scoring_bubble_paths(const double min_mean_bubble_w
             const auto ref_before_bubble = predecessors.at(alt_path.front());
             auto ref_seq = make_reference(ref_before_bubble, ref);
             alt_path.push_front(ref_before_bubble);
-            const auto alt_path_score = weight(alt_path);
+            const auto extractable = bubble_score(alt_path) >= min_bubble_score;
             auto alt_seq = make_sequence(alt_path);
             alt_path.pop_front();
             rhs_kmer_count += count_kmers(ref_seq, k_);
             const auto pos = reference_head_position_ + reference_size() - sequence_length(rhs_kmer_count, k_);
-            if (static_cast<double>(alt_path_score) / alt_path.size() >= min_mean_bubble_weight) {
+            if (extractable) {
                 result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
             }
             --rhs_kmer_count; // because we padded one reference kmer to make ref_seq

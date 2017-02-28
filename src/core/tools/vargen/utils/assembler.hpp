@@ -76,7 +76,7 @@ public:
     
     void clear();
     
-    std::deque<Variant> extract_variants(double min_mean_bubble_weight = 2.0, unsigned max_bubbles = 100);
+    std::deque<Variant> extract_variants(unsigned max_bubbles, double min_bubble_score);
     
     friend void debug::print(const Assembler& assembler);
     
@@ -233,6 +233,9 @@ private:
     bool connects_to_path(Edge e, const Path& path) const;
     bool is_dependent_on_path(Edge e, const Path& path) const;
     GraphEdge::WeightType weight(const Path& path) const;
+    unsigned count_low_weights(const Path& path, unsigned low_weight) const;
+    bool has_low_weight_flanks(const Path& path, unsigned low_weight) const;
+    unsigned count_low_weight_flanks(const Path& path, unsigned low_weight) const;
     
     void remove_trivial_nonreference_cycles();
     GraphEdge::WeightType sum_source_in_edge_weight(Edge e) const;
@@ -274,7 +277,8 @@ private:
     backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const;
     Path extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const;
     
-    std::deque<Variant> extract_k_highest_scoring_bubble_paths(double min_mean_bubble_weight, unsigned k);
+    double bubble_score(const Path& path) const;
+    std::deque<Variant> extract_bubble_paths(unsigned max_bubbles, double min_bubble_score);
     
     // for debug
     friend std::ostream& operator<<(std::ostream& os, const Kmer& kmer);

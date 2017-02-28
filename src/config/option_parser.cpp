@@ -324,20 +324,20 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("assembler-mask-base-quality",
      po::value<int>()->default_value(5),
-     "Aligned bases with quality less than this will be converted to reference before "
-     "being inserted into the De Bruijn graph")
+     "Aligned bases with quality less than this will be converted to reference before"
+     " being inserted into the De Bruijn graph")
     
-    ("min-kmer-support",
+    ("min-kmer-prune",
      po::value<int>()->default_value(1),
      "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
-    
-    ("min-bubble-weight",
-     po::value<double>()->default_value(2.0),
-     "Minimum mean graph bubble weight that is extracted from the assembly graph")
-    
+
     ("max-bubbles",
      po::value<int>()->default_value(10),
      "Maximum number of bubbles to extract from the assembly graph")
+    
+    ("min-bubble-score",
+     po::value<double>()->default_value(2.0),
+     "Minimum bubble score that will be extracted from the assembly graph")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");
@@ -864,7 +864,7 @@ void validate(const OptionMap& vm)
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
-        "min-kmer-support", "max-bubbles", "max-holdout-depth"
+        "min-kmer-prune", "max-bubbles", "max-holdout-depth"
     };
     const std::vector<std::string> strictly_positive_int_options {
         "max-open-read-files", "downsample-above", "downsample-target",

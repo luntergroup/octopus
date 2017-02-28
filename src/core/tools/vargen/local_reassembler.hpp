@@ -34,8 +34,8 @@ public:
         GenomicRegion::Size bin_overlap               = 0;
         AlignedRead::BaseQuality mask_threshold       = 0;
         unsigned min_kmer_observations                = 1;
-        double min_mean_bubble_weight                 = 2.0;
         unsigned max_bubbles                          = 10;
+        double min_bubble_score                       = 2.0;
         Variant::MappingDomain::Size max_variant_size = 5000;
     };
     
@@ -96,8 +96,8 @@ private:
     
     AlignedRead::BaseQuality mask_threshold_;
     unsigned min_kmer_observations_;
-    double min_mean_bubble_weight_;
     unsigned max_bubbles_;
+    double min_bubble_score_;
     Variant::MappingDomain::Size max_variant_size_;
     
     void prepare_bins_to_insert(const AlignedRead& read);
