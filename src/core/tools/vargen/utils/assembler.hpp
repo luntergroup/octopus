@@ -283,6 +283,7 @@ private:
     void print_reference_tail() const;
     void print(Edge e) const;
     void print(const Path& path) const;
+    void print_weighted(const Path& path) const;
     void print_dominator_tree() const;
     
     friend struct boost::property_map<KmerGraph, boost::vertex_index_t>;

@@ -1534,6 +1534,20 @@ void Assembler::print(const Path& path) const
     std::cout << kmer_of(path.back());
 }
 
+void Assembler::print_weighted(const Path& path) const
+{
+    if (path.size() < 2) return;
+    std::transform(std::cbegin(path), std::prev(std::cend(path)), std::next(std::cbegin(path)),
+                   std::ostream_iterator<std::string> {std::cout, "->"},
+                   [this] (const auto& u, const auto& v) {
+                       Edge e; bool good;
+                       std::tie(e, good) = boost::edge(u, v, graph_);
+                       assert(good);
+                       return static_cast<std::string>(kmer_of(v)) + "(" + std::to_string(graph_[e].weight) + ")";
+                   });
+    std::cout << kmer_of(path.back());
+}
+
 void Assembler::print_dominator_tree() const
 {
     const auto dom_tree = build_dominator_tree(reference_head());
@@ -1550,32 +1564,34 @@ bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs) no
 }
 
 namespace debug {
-    void print(const Assembler& assembler)
-    {
-        for (auto ep = boost::edges(assembler.graph_); ep.first != ep.second; ++ep.first) {
-            const auto e = *ep.first;
-            assembler.print(e);
-            std::cout << " weight = " << assembler.graph_[e].weight << " ";
-            if (assembler.is_reference(e)) {
-                std::cout << "ref";
-            } else {
-                std::cout << "alt";
-            }
-            std::cout << " (";
-            if (assembler.is_source_reference(e)) {
-                std::cout << "ref";
-            } else {
-                std::cout << "alt";
-            }
-            std::cout << ",";
-            if (assembler.is_target_reference(e)) {
-                std::cout << "ref";
-            } else {
-                std::cout << "alt";
-            }
-            std::cout << ")" << '\n';
+
+void print(const Assembler& assembler)
+{
+    for (auto ep = boost::edges(assembler.graph_); ep.first != ep.second; ++ep.first) {
+        const auto e = *ep.first;
+        assembler.print(e);
+        std::cout << " weight = " << assembler.graph_[e].weight << " ";
+        if (assembler.is_reference(e)) {
+            std::cout << "ref";
+        } else {
+            std::cout << "alt";
         }
+        std::cout << " (";
+        if (assembler.is_source_reference(e)) {
+            std::cout << "ref";
+        } else {
+            std::cout << "alt";
+        }
+        std::cout << ",";
+        if (assembler.is_target_reference(e)) {
+            std::cout << "ref";
+        } else {
+            std::cout << "alt";
+        }
+        std::cout << ")" << '\n';
     }
+}
+
 }
 
 } // namespace coretools
