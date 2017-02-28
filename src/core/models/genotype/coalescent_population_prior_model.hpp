@@ -59,11 +59,22 @@ void append(const Genotype<Haplotype>& genotype, Container& haplotypes)
     std::copy(std::cbegin(genotype), std::cend(genotype), std::back_inserter(haplotypes));
 }
 
+inline const Genotype<Haplotype>& get(const Genotype<Haplotype>& genotype) noexcept
+{
+    return genotype;
+}
+
+inline const Genotype<Haplotype>& get(const CoalescentPopulationPriorModel::GenotypeReference & genotype) noexcept
+{
+    return genotype.get();
+}
+
 } // namespace detail
 
 template <typename Container>
 double CoalescentPopulationPriorModel::do_evaluate_helper(const Container& genotypes) const
 {
+    if (genotypes.size() == 1) return model_.evaluate(detail::get(genotypes.front()));
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;
     std::vector<HaplotypeReference> haplotypes {};
     haplotypes.reserve(genotypes.size() * 10);
