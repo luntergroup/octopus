@@ -506,7 +506,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " genotype posterior probabilities")
     
     ("max-genotype-combinations",
-     po::value<unsigned>()->default_value(100000),
+     po::value<unsigned>()->default_value(250000),
      "The maximum number of genotype combinations to consider when computing joint"
      " genotype posterior probabilities")
     
