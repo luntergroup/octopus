@@ -351,6 +351,8 @@ set(OCTOPUS_SOURCES
 set(INCLUDE_SOURCES
     ${octopus_SOURCE_DIR}/lib/bioio.hpp
     ${octopus_SOURCE_DIR}/lib/tandem/tandem.hpp
+    ${octopus_SOURCE_DIR}//lib/ksp/custom_dijkstra_call.hpp
+    ${octopus_SOURCE_DIR}//lib/ksp/yen_ksp.hpp
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
