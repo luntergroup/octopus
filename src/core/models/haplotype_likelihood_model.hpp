@@ -46,13 +46,17 @@ public:
     
     HaplotypeLikelihoodModel();
     
+    HaplotypeLikelihoodModel(bool use_mapping_quality);
+    
     HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
-                             std::unique_ptr<IndelErrorModel> indel_model);
+                             std::unique_ptr<IndelErrorModel> indel_model,
+                             bool use_mapping_quality = true);
     
     HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
                              std::unique_ptr<IndelErrorModel> indel_model,
                              const Haplotype& haplotype,
-                             boost::optional<FlankState> flank_state = boost::none);
+                             boost::optional<FlankState> flank_state = boost::none,
+                             bool use_mapping_quality = true);
     
     HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = delete;
     HaplotypeLikelihoodModel& operator=(const HaplotypeLikelihoodModel&) = delete;
@@ -87,6 +91,7 @@ private:
     
     std::vector<Penalty> haplotype_gap_open_penalities_;
     Penalty haplotype_gap_extension_penalty_;
+    bool use_mapping_quality_ = true;
 };
 
 class HaplotypeLikelihoodModel::ShortHaplotypeError : public std::runtime_error
@@ -108,7 +113,7 @@ private:
     Length required_extension_;
 };
 
-HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string sequencer);
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string sequencer, bool use_mapping_quality = true);
 
 } // namespace octopus
 

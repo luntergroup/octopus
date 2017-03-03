@@ -60,21 +60,28 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel()
 : HaplotypeLikelihoodModel {make_snv_error_model(), make_indel_error_model()}
 {}
 
+HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(bool use_mapping_quality)
+: HaplotypeLikelihoodModel {make_snv_error_model(), make_indel_error_model(), use_mapping_quality}
+{}
+
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
-                                                   std::unique_ptr<IndelErrorModel> indel_model)
+                                                   std::unique_ptr<IndelErrorModel> indel_model,
+                                                   bool use_mapping_quality)
 : snv_error_model_ {std::move(snv_model)}
 , indel_error_model_ {std::move(indel_model)}
 , haplotype_ {nullptr}
 , haplotype_flank_state_ {}
 , haplotype_gap_open_penalities_ {}
 , haplotype_gap_extension_penalty_ {}
+, use_mapping_quality_ {use_mapping_quality}
 {}
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
                                                    std::unique_ptr<IndelErrorModel> indel_model,
                                                    const Haplotype& haplotype,
-                                                   boost::optional<FlankState> flank_state)
-: HaplotypeLikelihoodModel {std::move(snv_model), std::move(indel_model)}
+                                                   boost::optional<FlankState> flank_state,
+                                                   bool use_mapping_quality)
+: HaplotypeLikelihoodModel {std::move(snv_model), std::move(indel_model), use_mapping_quality}
 {
     this->reset(haplotype, std::move(flank_state));
 }
@@ -172,23 +179,27 @@ double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
         model.lhs_flank_size = 0;
         model.rhs_flank_size = 0;
     }
-    // This calculation is approximately
-    // p(read | hap) = p(read missmapped) p(read | hap, missmapped)
-    //                  + p(read correctly mapped) p(read | hap, correctly mapped)
-    // = p(read correctly mapped) p(read | hap, correctly mapped)
-    //      + p(read missmapped)
-    // assuming p(read | hap, missmapped) = 1
     const auto ln_prob_given_mapped = max_score(read, *haplotype_, first_mapping_position, last_mapping_position, model);
-    using octopus::maths::constants::ln10Div10;
-    const auto ln_prob_missmapped = -ln10Div10<> * read.mapping_quality();
-    const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
-    const auto result = maths::log_sum_exp(ln_prob_mapped + ln_prob_given_mapped, ln_prob_missmapped);
-    return result > -1e-15 ? 0.0 : result;
+    if (use_mapping_quality_) {
+        // This calculation is approximately
+        // p(read | hap) = p(read missmapped) p(read | hap, missmapped)
+        //                  + p(read correctly mapped) p(read | hap, correctly mapped)
+        // = p(read correctly mapped) p(read | hap, correctly mapped)
+        //      + p(read missmapped)
+        // assuming p(read | hap, missmapped) = 1
+        using octopus::maths::constants::ln10Div10;
+        const auto ln_prob_missmapped = -ln10Div10<> * read.mapping_quality();
+        const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
+        const auto result = maths::log_sum_exp(ln_prob_mapped + ln_prob_given_mapped, ln_prob_missmapped);
+        return result > -1e-15 ? 0.0 : result;
+    } else {
+        return ln_prob_given_mapped  > -1e-15 ? 0.0 : ln_prob_given_mapped;
+    }
 }
 
-HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string sequencer)
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string sequencer, bool use_mapping_quality)
 {
-    return HaplotypeLikelihoodModel {make_snv_error_model(sequencer), make_indel_error_model(sequencer)};
+    return HaplotypeLikelihoodModel {make_snv_error_model(sequencer), make_indel_error_model(sequencer), use_mapping_quality};
 }
 
 } // namespace octopus

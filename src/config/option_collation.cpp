@@ -852,9 +852,9 @@ auto make_variant_generator_builder(const OptionMap& options)
         reassembler_options.fallback_interval_size = as_unsigned("fallback-kmer-gap", options);
         reassembler_options.bin_size = as_unsigned("max-region-to-assemble", options);
         reassembler_options.bin_overlap = as_unsigned("max-assemble-region-overlap", options);
-        reassembler_options.min_kmer_observations = as_unsigned("min-kmer-support", options);
-        reassembler_options.min_mean_bubble_weight = options.at("min-bubble-weight").as<double>();
+        reassembler_options.min_kmer_observations = as_unsigned("min-kmer-prune", options);
         reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
+        reassembler_options.min_bubble_score = options.at("min-bubble-score").as<double>();
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
@@ -1377,6 +1377,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_sites_only();
     }
     vc_builder.set_flank_scoring(allow_flank_scoring(options));
+    vc_builder.set_model_mapping_quality(options.at("model-mapping-quality").as<bool>());
     vc_builder.set_min_genotype_combinations(options.at("min-genotype-combinations").as<unsigned>());
     vc_builder.set_max_genotype_combinations(options.at("max-genotype-combinations").as<unsigned>());
     vc_builder.set_max_reduction_mass(options.at("max-reduction-probability-mass").as<Phred<double>>());

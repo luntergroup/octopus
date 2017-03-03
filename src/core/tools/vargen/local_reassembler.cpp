@@ -53,8 +53,8 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , bins_ {}
 , mask_threshold_ {options.mask_threshold}
 , min_kmer_observations_ {options.min_kmer_observations}
-, min_mean_bubble_weight_ {options.min_mean_bubble_weight}
 , max_bubbles_ {options.max_bubbles}
+, min_bubble_score_ {options.min_bubble_score}
 , max_variant_size_ {options.max_variant_size}
 , active_region_generator_ {reference}
 {
@@ -731,7 +731,7 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
 {
     if (!assembler.prune(min_kmer_observations_)) return false;
     if (assembler.is_empty() || assembler.is_all_reference() || !assembler.is_acyclic()) return false;
-    auto variants = assembler.extract_variants(min_mean_bubble_weight_, max_bubbles_);
+    auto variants = assembler.extract_variants(max_bubbles_, min_bubble_score_);
     assembler.clear();
     if (variants.empty()) return true;
     trim_reference(variants);

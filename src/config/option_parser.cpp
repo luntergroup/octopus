@@ -324,25 +324,25 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("assembler-mask-base-quality",
      po::value<int>()->default_value(5),
-     "Aligned bases with quality less than this will be converted to reference before "
-     "being inserted into the De Bruijn graph")
+     "Aligned bases with quality less than this will be converted to reference before"
+     " being inserted into the De Bruijn graph")
     
-    ("min-kmer-support",
+    ("min-kmer-prune",
      po::value<int>()->default_value(1),
      "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
-    
-    ("min-bubble-weight",
-     po::value<double>()->default_value(2.0),
-     "Minimum mean graph bubble weight that is extracted from the assembly graph")
-    
+
     ("max-bubbles",
      po::value<int>()->default_value(20),
      "Maximum number of bubbles to extract from the assembly graph")
+    
+    ("min-bubble-score",
+     po::value<double>()->default_value(2.0),
+     "Minimum bubble score that will be extracted from the assembly graph")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");
     haplotype_generation.add_options()
-    ("max-haplotypes",
+    ("max-haplotypes,x",
      po::value<int>()->default_value(128),
      "Maximum number of candidate haplotypes the caller may consider. If a region contains"
      " more candidate haplotypes than this then filtering is applied")
@@ -495,6 +495,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Disables additional calculation to adjust alignment score when there are inactive"
      " candidates in haplotype flanking regions")
+
+    ("model-mapping-quality",
+     po::value<bool>()->default_value(true),
+     "Include the read mapping quality in the haplotype likelihood calculation")
     
     ("min-genotype-combinations",
      po::value<unsigned>()->default_value(2500),
@@ -860,7 +864,7 @@ void validate(const OptionMap& vm)
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
-        "min-kmer-support", "max-bubbles", "max-holdout-depth"
+        "min-kmer-prune", "max-bubbles", "max-holdout-depth"
     };
     const std::vector<std::string> strictly_positive_int_options {
         "max-open-read-files", "downsample-above", "downsample-target",
