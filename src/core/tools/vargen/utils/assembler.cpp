@@ -1201,15 +1201,17 @@ auto count_out_weight(const V& v, const G& g)
 }
 
 template <typename R, typename T>
-auto compute_transition_score(const T edge_weight, const T total_out_weight, const R max_score = 100)
+auto compute_transition_score(const T edge_weight, const T total_out_weight, const R max_score = 100) noexcept
 {
-    if (total_out_weight == 0) {
-        return R {0};
-    }
     if (edge_weight == 0) {
+        return R {0};
+    } else if (edge_weight == 0) {
         return max_score;
+    } else if (edge_weight == total_out_weight) {
+        return R {1} / edge_weight;
+    } else {
+        return -10 * std::log10(static_cast<R>(edge_weight) / total_out_weight);
     }
-    return std::abs(std::log(static_cast<R>(edge_weight) / total_out_weight));
 }
 
 void Assembler::set_out_edge_transition_scores(const Vertex v)
