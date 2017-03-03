@@ -162,9 +162,8 @@ private:
     using DominatorMap = std::unordered_map<Vertex, Vertex>;
     
     using Path = std::deque<Vertex>;
+    using EdgePath = std::vector<Edge>;
     using PredecessorMap = std::unordered_map<Vertex, Vertex>;
-    
-    static constexpr GraphEdge::ScoreType blockedScore = 1000;
     
     unsigned k_;
     
@@ -221,6 +220,7 @@ private:
     NucleotideSequence make_reference(Vertex from, Vertex to) const;
     void remove_path(const Path& path);
     bool is_bridge(Vertex v) const;
+    bool is_reference_bridge(Vertex v) const;
     Path::const_iterator is_bridge_until(Path::const_iterator first, Path::const_iterator last) const;
     Path::const_iterator is_bridge_until(const Path& path) const;
     bool is_bridge(Path::const_iterator first, Path::const_iterator last) const;
@@ -261,12 +261,6 @@ private:
     void set_out_edge_transition_scores(Vertex v);
     void set_all_edge_transition_scores_from(Vertex src);
     void set_all_in_edge_transition_scores(Vertex v, GraphEdge::ScoreType score);
-    bool is_blocked(Edge e) const;
-    void block_edge(Edge e);
-    void block_all_in_edges(Vertex v);
-    bool all_in_edges_are_blocked(Vertex v) const;
-    void block_all_vertices(const std::deque<Vertex>& vertices);
-    bool all_vertices_are_blocked(const std::deque<Vertex>& vertices) const;
     
     PredecessorMap find_shortest_scoring_paths(Vertex from) const;
     
@@ -277,14 +271,17 @@ private:
     backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const;
     Path extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const;
     
+    std::vector<EdgePath> extract_k_shortest_paths(Vertex src, Vertex dst, unsigned k) const;
     double bubble_score(const Path& path) const;
     std::deque<Variant> extract_bubble_paths(unsigned max_bubbles, double min_bubble_score);
+    std::deque<Variant> extract_bubble_paths_with_ksp(unsigned k, double min_bubble_score);
     
     // for debug
     friend std::ostream& operator<<(std::ostream& os, const Kmer& kmer);
     
     void print_reference_head() const;
     void print_reference_tail() const;
+    void print_reference_path() const;
     void print(Edge e) const;
     void print(const Path& path) const;
     void print_weighted(const Path& path) const;

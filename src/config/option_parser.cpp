@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_parser.hpp"
@@ -332,7 +332,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
 
     ("max-bubbles",
-     po::value<int>()->default_value(20),
+     po::value<int>()->default_value(10),
+     po::value<int>()->default_value(30),
      "Maximum number of bubbles to extract from the assembly graph")
     
     ("min-bubble-score",
