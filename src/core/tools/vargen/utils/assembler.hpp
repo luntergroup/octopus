@@ -78,6 +78,8 @@ public:
     
     std::deque<Variant> extract_variants(unsigned max_bubbles, double min_bubble_score);
     
+    void write_dot(std::ostream& out) const;
+    
     friend void debug::print(const Assembler& assembler);
     
 private:

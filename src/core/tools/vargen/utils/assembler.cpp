@@ -22,6 +22,7 @@
 #include <boost/graph/topological_sort.hpp>
 #include <boost/graph/graph_utility.hpp>
 #include <boost/graph/exception.hpp>
+#include <boost/graph/graphviz.hpp>
 
 #include "ksp/yen_ksp.hpp"
 
@@ -362,6 +363,30 @@ Assembler::extract_variants(const unsigned max_bubbles, const double min_bubble_
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
+}
+
+void Assembler::write_dot(std::ostream& out) const
+{
+    const auto vertex_writer = [this] (std::ostream& out, Vertex v) {
+        if (is_reference(v)) {
+            out << " [color=blue]" << std::endl;
+        } else {
+            out << " [color=red]" << std::endl;
+        }
+        out << " [label=\"" << kmer_of(v) << "\"]" << std::endl;
+    };
+    const auto edge_writer = [this] (std::ostream& out, Edge e) {
+        if (is_reference(e)) {
+            out << " [color=blue]" << std::endl;
+        } else {
+            out << " [color=red]" << std::endl;
+        }
+        out << " [label=\"" << graph_[e].weight << "\"]" << std::endl;
+    };
+    const auto graph_writer = [] (std::ostream& out) {
+        out << "rankdir=LR" << std::endl;
+    };
+    boost::write_graphviz(out, graph_, vertex_writer, edge_writer, graph_writer);
 }
 
 // Assembler private types
@@ -716,7 +741,7 @@ Assembler::Vertex Assembler::prev_reference(const Vertex v) const
     assert(itr != p.second);
     return boost::source(*itr, graph_);
 }
- 
+
 std::size_t Assembler::num_reference_kmers() const
 {
     const auto p = boost::vertices(graph_);
