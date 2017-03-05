@@ -328,11 +328,10 @@ OptionMap parse_options(const int argc, const char** argv)
      " being inserted into the De Bruijn graph")
     
     ("min-kmer-prune",
-     po::value<int>()->default_value(1),
+     po::value<int>()->default_value(2),
      "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
 
     ("max-bubbles",
-     po::value<int>()->default_value(10),
      po::value<int>()->default_value(30),
      "Maximum number of bubbles to extract from the assembly graph")
     
