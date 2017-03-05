@@ -247,6 +247,19 @@ bool Assembler::is_all_reference() const
     return std::all_of(p.first, p.second, [this] (const Edge& e) { return is_reference(e); });
 }
 
+void Assembler::try_recover_dangling_branches()
+{
+    const auto p = boost::vertices(graph_);
+    std::for_each(p.first, p.second, [this] (const Vertex& v) {
+        if (is_dangling_branch(v)) {
+            const auto joining_kmer = find_joining_kmer(v);
+            if (joining_kmer) {
+                add_edge(v, *joining_kmer, 1);
+            }
+        }
+    });
+}
+
 bool Assembler::prune(const unsigned min_weight)
 {
     if (!is_reference_unique_path()) {
@@ -255,7 +268,6 @@ bool Assembler::prune(const unsigned min_weight)
     }
     auto old_size = boost::num_vertices(graph_);
     if (old_size < 2) return true;
-    
     remove_trivial_nonreference_cycles();
     auto new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
@@ -325,7 +337,6 @@ bool Assembler::prune(const unsigned min_weight)
     assert(is_reference_unique_path());
     if (new_size != old_size) {
         regenerate_vertex_indices();
-        old_size = new_size;
     }
     
     return true;
@@ -338,7 +349,7 @@ void Assembler::clear()
     reference_kmers_.clear();
     reference_kmers_.shrink_to_fit();
     reference_vertices_.clear();
-    reference_kmers_.shrink_to_fit();
+    reference_vertices_.shrink_to_fit();
     reference_edges_.clear();
     reference_edges_.shrink_to_fit();
 }
@@ -746,6 +757,28 @@ std::size_t Assembler::num_reference_kmers() const
 {
     const auto p = boost::vertices(graph_);
     return std::count_if(p.first, p.second, [this] (const Vertex& v) { return is_reference(v); });
+}
+
+bool Assembler::is_dangling_branch(const Vertex v) const
+{
+    return !is_reference(v) && boost::in_degree(v, graph_) > 0 && boost::out_degree(v, graph_) == 0;
+}
+
+boost::optional<Assembler::Vertex> Assembler::find_joining_kmer(const Vertex v) const
+{
+    const auto& kmer = kmer_of(v);
+    NucleotideSequence adjacent_kmer {std::next(std::cbegin(kmer)), std::cend(kmer)};
+    adjacent_kmer.resize(k_);
+    constexpr std::array<NucleotideSequence::value_type, 4> bases {'A', 'C', 'G', 'T'};
+    for (const auto base : bases) {
+        adjacent_kmer.back() = base;
+        const Kmer k {std::cbegin(adjacent_kmer), std::cend(adjacent_kmer)};
+        const auto itr = vertex_cache_.find(k);
+        if (itr != std::cend(vertex_cache_)) {
+            return itr->second;
+        }
+    }
+    return boost::none;
 }
 
 Assembler::NucleotideSequence Assembler::make_sequence(const Path& path) const

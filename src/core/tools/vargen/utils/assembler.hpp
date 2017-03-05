@@ -71,6 +71,8 @@ public:
     // Returns true if all the kmers in the graph are in the reference sequence
     bool is_all_reference() const;
     
+    void try_recover_dangling_branches();
+    
     // Removes edges between kmers with weight less than the given value
     bool prune(unsigned min_weight);
     
@@ -217,6 +219,8 @@ private:
     Vertex reference_tail() const;
     Vertex next_reference(Vertex u) const;
     Vertex prev_reference(Vertex v) const;
+    bool is_dangling_branch(Vertex v) const;
+    boost::optional<Vertex> find_joining_kmer(Vertex v) const;
     std::size_t num_reference_kmers() const;
     NucleotideSequence make_sequence(const Path& path) const;
     NucleotideSequence make_reference(Vertex from, Vertex to) const;

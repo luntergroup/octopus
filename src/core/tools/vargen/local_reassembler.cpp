@@ -729,7 +729,10 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
                                            const GenomicRegion& assemble_region,
                                            std::deque<Variant>& result) const
 {
-    if (!assembler.prune(min_kmer_observations_)) return false;
+    assembler.try_recover_dangling_branches();
+    if (!assembler.prune(min_kmer_observations_)) {
+        return false;
+    }
     if (assembler.is_empty() || assembler.is_all_reference() || !assembler.is_acyclic()) return false;
     auto variants = assembler.extract_variants(max_bubbles_, min_bubble_score_);
     assembler.clear();
