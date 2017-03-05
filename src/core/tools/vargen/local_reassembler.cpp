@@ -548,7 +548,7 @@ bool is_complex(const Assembler::Variant& v) noexcept
 
 bool is_mnp(const Assembler::Variant& v) noexcept
 {
-    return v.ref.size() > 1 && v.ref.size() == v.alt.size();
+    return v.ref.size() == 2 && v.ref.size() == v.alt.size();
 }
 
 auto split_mnp(Assembler::Variant&& v)
