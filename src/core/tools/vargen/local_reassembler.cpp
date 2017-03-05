@@ -640,7 +640,8 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
 
 auto align(const Assembler::Variant& v)
 {
-    return align(v.ref, v.alt).cigar;
+    constexpr Model model {2, -3, -4, -1};
+    return align(v.ref, v.alt, model).cigar;
 }
 
 auto decompose_complex_indel(Assembler::Variant&& v)
