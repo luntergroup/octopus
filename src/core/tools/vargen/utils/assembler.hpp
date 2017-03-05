@@ -169,6 +169,12 @@ private:
     using EdgePath = std::vector<Edge>;
     using PredecessorMap = std::unordered_map<Vertex, Vertex>;
     
+    struct SubGraph
+    {
+        Vertex head, tail;
+        std::size_t reference_offset;
+    };
+    
     unsigned k_;
     
     std::deque<Kmer> reference_kmers_;
@@ -177,21 +183,18 @@ private:
     KmerGraph graph_;
     
     std::unordered_map<Kmer, Vertex, KmerHash> vertex_cache_;
-    std::deque<Vertex> reference_vertices_;
+    Path reference_vertices_;
     std::deque<Edge> reference_edges_;
     
     // methods
     
     void insert_reference_into_empty_graph(const NucleotideSequence& reference);
     void insert_reference_into_populated_graph(const NucleotideSequence& reference);
-    
     bool contains_kmer(const Kmer& kmer) const noexcept;
     std::size_t count_kmer(const Kmer& kmer) const noexcept;
     std::size_t reference_size() const noexcept;
-    
     void regenerate_vertex_indices();
     bool is_reference_unique_path() const;
-    
     Vertex null_vertex() const;
     boost::optional<Vertex> add_vertex(const Kmer& kmer, bool is_reference = false);
     void remove_vertex(Vertex v);
@@ -231,7 +234,9 @@ private:
     Path::const_iterator is_bridge_until(const Path& path) const;
     bool is_bridge(Path::const_iterator first, Path::const_iterator last) const;
     bool is_bridge(const Path& path) const;
+    std::pair<bool, Vertex> is_bridge_to_reference(Vertex from) const;
     bool joins_reference_only(Vertex v) const;
+    bool joins_reference_only(Path::const_iterator first, Path::const_iterator last) const;
     bool is_trivial_cycle(Edge e) const;
     bool graph_has_trivial_cycle() const;
     bool is_simple_deletion(Edge e) const;
@@ -242,7 +247,6 @@ private:
     unsigned count_low_weights(const Path& path, unsigned low_weight) const;
     bool has_low_weight_flanks(const Path& path, unsigned low_weight) const;
     unsigned count_low_weight_flanks(const Path& path, unsigned low_weight) const;
-    
     void remove_trivial_nonreference_cycles();
     GraphEdge::WeightType sum_source_in_edge_weight(Edge e) const;
     GraphEdge::WeightType sum_target_out_edge_weight(Edge e) const;
@@ -257,34 +261,30 @@ private:
     void pop_reference_head();
     void pop_reference_tail();
     void prune_reference_flanks();
-    
     std::pair<Vertex, unsigned> find_bifurcation(Vertex from, Vertex to) const;
-    
     DominatorMap build_dominator_tree(Vertex from) const;
     std::unordered_set<Vertex> extract_nondominants(Vertex from) const;
     std::deque<Vertex> extract_nondominant_reference(const DominatorMap&) const;
-    
     void set_out_edge_transition_scores(Vertex v);
     void set_all_edge_transition_scores_from(Vertex src);
     void set_all_in_edge_transition_scores(Vertex v, GraphEdge::ScoreType score);
-    
-    PredecessorMap find_shortest_scoring_paths(Vertex from) const;
-    
+    void block_all_in_edges(Vertex v);
+    PredecessorMap find_shortest_scoring_paths(Vertex from, bool use_weights = false) const;
     bool is_on_path(Vertex v, const PredecessorMap& predecessors, Vertex from) const;
     bool is_on_path(Edge e, const PredecessorMap& predecessors, Vertex from) const;
     Path extract_full_path(const PredecessorMap& predecessors, Vertex from) const;
     std::tuple<Assembler::Vertex, Assembler::Vertex, unsigned>
     backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const;
     Path extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const;
-    
     std::vector<EdgePath> extract_k_shortest_paths(Vertex src, Vertex dst, unsigned k) const;
     double bubble_score(const Path& path) const;
     std::deque<Variant> extract_bubble_paths(unsigned max_bubbles, double min_bubble_score);
+    std::deque<SubGraph> find_independent_subgraphs() const;
     std::deque<Variant> extract_bubble_paths_with_ksp(unsigned k, double min_bubble_score);
     
     // for debug
-    friend std::ostream& operator<<(std::ostream& os, const Kmer& kmer);
     
+    friend std::ostream& operator<<(std::ostream& os, const Kmer& kmer);
     void print_reference_head() const;
     void print_reference_tail() const;
     void print_reference_path() const;

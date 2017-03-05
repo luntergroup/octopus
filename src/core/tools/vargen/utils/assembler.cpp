@@ -5,6 +5,7 @@
 
 #include <iterator>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <numeric>
 #include <limits>
@@ -874,12 +875,26 @@ bool Assembler::is_bridge(const Path& path) const
     return is_bridge(std::cbegin(path), std::cend(path));
 }
 
+std::pair<bool, Assembler::Vertex> Assembler::is_bridge_to_reference(Vertex from) const
+{
+    while (is_bridge(from)) {
+        from = *boost::adjacent_vertices(from, graph_).first;
+        if (is_reference(from)) {
+            return std::make_pair(true, from);
+        }
+    }
+    return std::make_pair(false, null_vertex());
+}
+
 bool Assembler::joins_reference_only(const Vertex v) const
 {
-    if (boost::out_degree(v, graph_) != 1) {
-        return false;
-    }
-    return is_reference(*boost::out_edges(v, graph_).first);
+    return boost::out_degree(v, graph_) == 1 && is_reference(*boost::out_edges(v, graph_).first);
+}
+
+bool Assembler::joins_reference_only(Path::const_iterator first, Path::const_iterator last) const
+{
+    const auto itr = std::find_if(first, last, [this] (Vertex v) { return is_reference(v) || boost::out_degree(v, graph_) != 1; });
+    return itr == last || is_reference(*itr);
 }
 
 bool Assembler::is_trivial_cycle(const Edge e) const
@@ -915,8 +930,7 @@ bool Assembler::is_on_path(const Edge e, const Path& path) const
 
 bool Assembler::connects_to_path(Edge e, const Path& path) const
 {
-    return e == *boost::in_edges(path.front(), graph_).first
-           ||  e == *boost::out_edges(path.back(), graph_).first;
+    return e == *boost::in_edges(path.front(), graph_).first || e == *boost::out_edges(path.back(), graph_).first;
 }
 
 bool Assembler::is_dependent_on_path(Edge e, const Path& path) const
@@ -983,9 +997,7 @@ unsigned Assembler::count_low_weight_flanks(const Path& path, unsigned low_weigh
 
 void Assembler::remove_trivial_nonreference_cycles()
 {
-    boost::remove_edge_if([this] (const Edge e) {
-        return !is_reference(e) && is_trivial_cycle(e);
-    }, graph_);
+    boost::remove_edge_if([this] (const Edge e) { return !is_reference(e) && is_trivial_cycle(e); }, graph_);
 }
 
 Assembler::GraphEdge::WeightType Assembler::sum_source_in_edge_weight(const Edge e) const
@@ -1046,8 +1058,7 @@ std::unordered_set<Assembler::Vertex> Assembler::find_reachable_kmers(const Vert
                                                              std::inserter(result, std::begin(result)),
                                                              boost::on_discover_vertex()));
     boost::breadth_first_search(graph_, from,
-                                boost::visitor(vis)
-                                .vertex_index_map(boost::get(&GraphNode::index, graph_)));
+                                boost::visitor(vis).vertex_index_map(boost::get(&GraphNode::index, graph_)));
     return result;
 }
 
@@ -1153,7 +1164,6 @@ void Assembler::pop_reference_tail()
     if (!reference_edges_.empty()) {
         reference_edges_.pop_back();
     }
-    reference_edges_.pop_back();
 }
 
 void Assembler::prune_reference_flanks()
@@ -1259,12 +1269,12 @@ auto count_out_weight(const V& v, const G& g)
 }
 
 template <typename R, typename T>
-auto compute_transition_score(const T edge_weight, const T total_out_weight, const R max_score = 100) noexcept
+auto compute_transition_score(const T edge_weight, const T total_out_weight) noexcept
 {
-    if (edge_weight == 0) {
+    if (total_out_weight == 0) {
         return R {0};
     } else if (edge_weight == 0) {
-        return max_score;
+        return -10 * std::log10(R {1} / total_out_weight);
     } else if (edge_weight == total_out_weight) {
         return R {1} / edge_weight;
     } else {
@@ -1320,15 +1330,28 @@ void Assembler::set_all_in_edge_transition_scores(const Vertex v, const GraphEdg
     });
 }
 
-Assembler::PredecessorMap Assembler::find_shortest_scoring_paths(const Vertex from) const
+void Assembler::block_all_in_edges(const Vertex v)
+{
+    const auto total_out_weight = count_out_weight(v, graph_);
+    set_all_in_edge_transition_scores(v, compute_transition_score<GraphEdge::ScoreType>(0u, total_out_weight));
+}
+
+Assembler::PredecessorMap Assembler::find_shortest_scoring_paths(const Vertex from, const bool use_weights) const
 {
     assert(from != null_vertex());
     std::unordered_map<Vertex, Vertex> result {};
     result.reserve(boost::num_vertices(graph_));
-    boost::dag_shortest_paths(graph_, from,
-                              boost::weight_map(boost::get(&GraphEdge::transition_score, graph_))
-                              .predecessor_map(boost::make_assoc_property_map(result))
-                              .vertex_index_map(boost::get(&GraphNode::index, graph_)));
+    if (use_weights) {
+        boost::dag_shortest_paths(graph_, from,
+                                  boost::weight_map(boost::get(&GraphEdge::weight, graph_))
+                                  .predecessor_map(boost::make_assoc_property_map(result))
+                                  .vertex_index_map(boost::get(&GraphNode::index, graph_)));
+    } else {
+        boost::dag_shortest_paths(graph_, from,
+                                  boost::weight_map(boost::get(&GraphEdge::transition_score, graph_))
+                                  .predecessor_map(boost::make_assoc_property_map(result))
+                                  .vertex_index_map(boost::get(&GraphNode::index, graph_)));
+    }
     return result;
 }
 
@@ -1454,22 +1477,58 @@ std::vector<Assembler::EdgePath> Assembler::extract_k_shortest_paths(Vertex src,
     return result;
 }
 
+struct BfsSearcherSuccess {};
+
+template <typename Vertex>
+struct BfsSearcher : public boost::default_bfs_visitor
+{
+    BfsSearcher(Vertex v) : v_ {v} {}
+    
+    template <typename Graph>
+    void discover_vertex(Vertex v, const Graph& g) const
+    {
+        if (v == v_) throw BfsSearcherSuccess {};
+    }
+private:
+    Vertex v_;
+};
+
+template <typename Vertex>
+auto make_bfs_searcher(Vertex v)
+{
+    return BfsSearcher<Vertex> {v};
+}
+
 std::deque<Assembler::Variant>
 Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
 {
     auto num_remaining_alt_kmers = num_kmers() - num_reference_kmers();
     std::deque<Variant> result {};
+    boost::optional<DominatorMap> dominator_tree {};
+    bool use_weights {false};
     while (k > 0 && num_remaining_alt_kmers > 0) {
-        auto predecessors = find_shortest_scoring_paths(reference_head());
+        auto predecessors = find_shortest_scoring_paths(reference_head(), use_weights);
         assert(count_unreachables(predecessors) == 1);
-        
         Vertex ref, alt; unsigned rhs_kmer_count;
         std::tie(alt, ref, rhs_kmer_count) = backtrack_until_nonreference(predecessors, reference_tail());
-        
         if (alt == reference_head()) {
             // complete reference path is shortest path
-            utils::append(extract_bubble_paths_with_ksp(k, min_bubble_score), result);
-            return result;
+            if (dominator_tree) {
+                if (use_weights) {
+                    utils::append(extract_bubble_paths_with_ksp(k, min_bubble_score), result);
+                    return result;
+                } else {
+                    use_weights = true;
+                    continue;
+                }
+            } else {
+                dominator_tree = build_dominator_tree(reference_head());
+                const auto nondominant_reference = extract_nondominant_reference(*dominator_tree);
+                for (Vertex v : nondominant_reference) {
+                    block_all_in_edges(v);
+                }
+                continue;
+            }
         }
         bool removed_bubble {false};
         while (alt != reference_head()) {
@@ -1488,7 +1547,6 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
                 result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
             }
             --rhs_kmer_count; // because we padded one reference kmer to make ref_seq
-            
             Edge edge_to_alt; bool good;
             std::tie(edge_to_alt, good) = boost::edge(alt, ref, graph_);
             assert(good);
@@ -1498,31 +1556,124 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
             } else {
                 auto vertex_before_bridge = ref_before_bubble;
                 assert(is_reference(vertex_before_bridge));
-                const auto bifurication_point = is_bridge_until(alt_path);
-                if (bifurication_point == std::cend(alt_path)) {
+                const auto bifurication_point_itr = is_bridge_until(alt_path);
+                if (bifurication_point_itr == std::cend(alt_path)) {
+                    //
+                    //      -> ref -> ref -> ->
+                    //     /                    \
+                    //  ref                     ref*
+                    //     \                    /
+                    //      -> alt -> alt -> alt
+                    //
+                    // The entire alt path can be removed as it never needs to be explored again;
+                    // the reference path can always be taken.
                     remove_path(alt_path);
                     regenerate_vertex_indices();
                     set_out_edge_transition_scores(vertex_before_bridge);
                     num_remaining_alt_kmers -= alt_path.size();
                     alt_path.clear();
                     removed_bubble = true;
-                } else if (joins_reference_only(*bifurication_point)) {
-                    alt_path.erase(bifurication_point, std::cend(alt_path));
-                    remove_path(alt_path);
+                } else if (joins_reference_only(bifurication_point_itr, std::cend(alt_path))) {
+                    //
+                    //      -> ref -> ref -> ref -> ref ->
+                    //     /                              \
+                    //  ref -> alt -> -> alt              ref
+                    //     \                 \            /
+                    //      -> alt -> alt -> alt* -> alt ->
+                    //
+                    // The alt path can be removed up until the bifurication point as one of the other
+                    // alt paths can be taken in future paths.
+                    if (bifurication_point_itr == std::cbegin(alt_path)) {
+                        remove_edge(ref_before_bubble, alt_path.front());
+                        alt_path.clear();
+                    } else {
+                        alt_path.erase(bifurication_point_itr, std::cend(alt_path));
+                        remove_path(alt_path);
+                    }
                     regenerate_vertex_indices();
                     set_out_edge_transition_scores(vertex_before_bridge);
                     num_remaining_alt_kmers -= alt_path.size();
                     removed_bubble = true;
+                } else if (boost::in_degree(*bifurication_point_itr, graph_) == 1) {
+                    const auto next_bifurication_point_itr = is_bridge_until(std::next(bifurication_point_itr), std::cend(alt_path));
+                    if (next_bifurication_point_itr != std::cend(alt_path)) {
+                        if (boost::out_degree(*next_bifurication_point_itr, graph_) == 1) {
+                            if (joins_reference_only(next_bifurication_point_itr, std::cend(alt_path))) {
+                                const auto p = boost::adjacent_vertices(*bifurication_point_itr, graph_);
+                                auto is_simple_bubble = std::all_of(p.first, p.second, [&] (Vertex v) {
+                                    if (v == *std::next(bifurication_point_itr)) {
+                                        return true;
+                                    } else {
+                                        try {
+                                            boost::breadth_first_search(graph_, v,
+                                                                        boost::visitor(make_bfs_searcher(*next_bifurication_point_itr)).
+                                                                        vertex_index_map(boost::get(&GraphNode::index, graph_)));
+                                        } catch (const BfsSearcherSuccess&) {
+                                            return true;
+                                        }
+                                        return false;
+                                    }
+                                });
+                                if (is_simple_bubble) {
+                                    //
+                                    //      -> ref -> ref -> ref -> ref ->
+                                    //     /                               \
+                                    //  ref         -> alt -> -> alt        ref
+                                    //     \      /                  \     /
+                                    //      -> alt* -> alt -> alt -> alt ->
+                                    //
+                                    const auto bifurication_point = *bifurication_point_itr;
+                                    if (std::next(bifurication_point_itr) == next_bifurication_point_itr) {
+                                        remove_edge(*bifurication_point_itr, *std::next(bifurication_point_itr));
+                                        alt_path.clear();
+                                    } else {
+                                        alt_path.erase(std::cbegin(alt_path), std::next(bifurication_point_itr));
+                                        alt_path.erase(next_bifurication_point_itr, std::cend(alt_path));
+                                        remove_path(alt_path);
+                                    }
+                                    regenerate_vertex_indices();
+                                    set_all_edge_transition_scores_from(bifurication_point);
+                                    num_remaining_alt_kmers -= alt_path.size();
+                                    removed_bubble = true;
+                                }
+                            }
+                        }
+                    } else {
+                        //
+                        //      -> ref -> ref -> ref -> ref ->
+                        //     /                        /      \
+                        //  ref         -> alt -> -> alt        ref
+                        //     \      /                        /
+                        //      -> alt* -> alt -> alt -> alt ->
+                        //
+                        const auto bifurication_point = *bifurication_point_itr;
+                        alt_path.erase(std::cbegin(alt_path), std::next(bifurication_point_itr));
+                        if (alt_path.empty()) {
+                            remove_edge(bifurication_point, ref);
+                        } else {
+                            remove_path(alt_path);
+                        }
+                        regenerate_vertex_indices();
+                        set_all_edge_transition_scores_from(bifurication_point);
+                        num_remaining_alt_kmers -= alt_path.size();
+                        removed_bubble = true;
+                    }
                 }
             }
             unsigned kmer_count_to_alt;
             std::tie(alt, ref, kmer_count_to_alt) = backtrack_until_nonreference(predecessors, ref_before_bubble);
             rhs_kmer_count += kmer_count_to_alt;
-            if (k > 0) --k;
+            if (!use_weights && k > 0) --k;
         }
-        if (!removed_bubble) {
+        if (!removed_bubble && use_weights) {
+            if (can_prune_reference_flanks()) {
+                prune_reference_flanks();
+                regenerate_vertex_indices();
+            }
             utils::append(extract_bubble_paths_with_ksp(k, min_bubble_score), result);
             return result;
+        } else if (!removed_bubble) {
+            use_weights = true;
         }
         assert(boost::out_degree(reference_head(), graph_) > 0);
         assert(boost::in_degree(reference_tail(), graph_) > 0);
@@ -1534,37 +1685,70 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
     return result;
 }
 
+std::deque<Assembler::SubGraph> Assembler::find_independent_subgraphs() const
+{
+    assert(!reference_vertices_.empty());
+    const auto diverges  = [this] (const Vertex& v) { return boost::out_degree(v, graph_) > 1; };
+    const auto coalesces = [this] (const Vertex& v) { return boost::in_degree(v, graph_) > 1; };
+    auto subgraph_head_itr = std::find_if(std::cbegin(reference_vertices_), std::cend(reference_vertices_), diverges);
+    if (subgraph_head_itr == std::cend(reference_vertices_)) {
+        return {{reference_head(), reference_tail(), 0}};
+    }
+    auto candidate_subgraph_tail_itr = std::find_if(subgraph_head_itr, std::cend(reference_vertices_), coalesces);
+    if (candidate_subgraph_tail_itr == std::cend(reference_vertices_)) {
+        return {{reference_head(), reference_tail(), 0}};
+    } else {
+        std::deque<Vertex> coalescent_points {*candidate_subgraph_tail_itr};
+        std::copy_if(std::next(candidate_subgraph_tail_itr), std::cend(reference_vertices_),
+                     std::front_inserter(coalescent_points), coalesces);
+        const auto dominator = build_dominator_tree(reference_head());
+        std::deque<SubGraph> result {};
+        while (subgraph_head_itr != std::cend(reference_vertices_)) {
+            auto subbgraph_end = std::find_if(std::cbegin(coalescent_points), std::cend(coalescent_points),
+                                              [&] (const Vertex& v) { return dominator.at(v) == *subgraph_head_itr; });
+            assert(subbgraph_end != std::cend(coalescent_points));
+            auto subgraph_offset = static_cast<std::size_t>(std::distance(std::cbegin(reference_vertices_), subgraph_head_itr));
+            result.push_back({*subgraph_head_itr, *subbgraph_end, subgraph_offset});
+            subgraph_head_itr = std::find_if(std::find(subgraph_head_itr, std::cend(reference_vertices_), *subbgraph_end),
+                                             std::cend(reference_vertices_), diverges);
+            coalescent_points.erase(subbgraph_end, std::cend(coalescent_points));
+        }
+        return result;
+    }
+}
+
 std::deque<Assembler::Variant> Assembler::extract_bubble_paths_with_ksp(const unsigned k, const double min_bubble_score)
 {
-    auto shortest_paths = extract_k_shortest_paths(reference_head(), reference_tail(), k);
+    const auto subgraphs = find_independent_subgraphs();
     std::deque<Variant> result {};
-    for (const auto& path : shortest_paths) {
-        assert(!path.empty());
-        assert(boost::source(path.front(), graph_) == reference_head());
-        assert(boost::target(path.back(), graph_) == reference_tail());
-        const auto is_alt_edge = [this] (const Edge e) { return !is_reference(e); };
-        auto alt_head_itr = std::find_if(std::cbegin(path), std::cend(path), is_alt_edge);
-        auto lhs_kmer_count = std::distance(std::cbegin(path), alt_head_itr);
-        while (alt_head_itr != std::cend(path)) {
-            const auto ref_before_bubble = boost::source(*alt_head_itr, graph_);
-            assert(is_reference(ref_before_bubble));
-            const auto alt_tail_itr = std::find_if(alt_head_itr, std::cend(path), [this] (Edge e) { return is_target_reference(e); });
-            assert(alt_tail_itr != std::cend(path));
-            const auto ref_after_bubble = boost::target(*alt_tail_itr, graph_);
-            assert(!is_reference(*alt_tail_itr));
-            assert(is_reference(ref_after_bubble));
-            auto ref_seq = make_reference(ref_before_bubble, ref_after_bubble);
-            Path alt_path {};
-            std::transform(alt_head_itr, std::next(alt_tail_itr), std::back_inserter(alt_path),
-                           [this] (Edge e) { return boost::source(e, graph_); });
-            const auto num_ref_kmers = count_kmers(ref_seq, k_);
-            if (bubble_score(alt_path) >= min_bubble_score) {
-                auto alt_seq = make_sequence(alt_path);
-                const auto pos = reference_head_position_ + lhs_kmer_count;
-                result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
+    for (const auto& subgraph : subgraphs) {
+        auto shortest_paths = extract_k_shortest_paths(subgraph.head, subgraph.tail, k);
+        for (const auto& path : shortest_paths) {
+            assert(!path.empty());
+            const auto is_alt_edge = [this] (const Edge e) { return !is_reference(e); };
+            auto alt_head_itr = std::find_if(std::cbegin(path), std::cend(path), is_alt_edge);
+            auto lhs_kmer_count = std::distance(std::cbegin(path), alt_head_itr);
+            while (alt_head_itr != std::cend(path)) {
+                const auto ref_before_bubble = boost::source(*alt_head_itr, graph_);
+                assert(is_reference(ref_before_bubble));
+                const auto alt_tail_itr = std::find_if(alt_head_itr, std::cend(path), [this] (Edge e) { return is_target_reference(e); });
+                assert(alt_tail_itr != std::cend(path));
+                const auto ref_after_bubble = boost::target(*alt_tail_itr, graph_);
+                assert(!is_reference(*alt_tail_itr));
+                assert(is_reference(ref_after_bubble));
+                auto ref_seq = make_reference(ref_before_bubble, ref_after_bubble);
+                Path alt_path {};
+                std::transform(alt_head_itr, std::next(alt_tail_itr), std::back_inserter(alt_path),
+                               [this] (Edge e) { return boost::source(e, graph_); });
+                const auto num_ref_kmers = count_kmers(ref_seq, k_);
+                if (bubble_score(alt_path) >= min_bubble_score) {
+                    auto alt_seq = make_sequence(alt_path);
+                    const auto pos = reference_head_position_ + subgraph.reference_offset + lhs_kmer_count;
+                    result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
+                }
+                alt_head_itr = std::find_if(std::next(alt_tail_itr), std::cend(path), is_alt_edge);
+                lhs_kmer_count += num_ref_kmers + std::distance(alt_tail_itr, alt_head_itr) - 1;
             }
-            alt_head_itr = std::find_if(std::next(alt_tail_itr), std::cend(path), is_alt_edge);
-            lhs_kmer_count += num_ref_kmers + std::distance(alt_tail_itr, alt_head_itr) - 1;
         }
     }
     return result;
