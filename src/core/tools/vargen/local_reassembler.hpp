@@ -9,12 +9,18 @@
 #include <functional>
 #include <memory>
 
+#include <boost/optional.hpp>
+
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/mappable_reference_wrapper.hpp"
 #include "concepts/mappable.hpp"
+#include "containers/mappable_flat_multi_set.hpp"
 #include "core/types/variant.hpp"
 #include "variant_generator.hpp"
 #include "utils/assembler.hpp"
+
+#include "utils/assembler_active_region_generator.hpp"
 
 namespace octopus {
 
@@ -34,8 +40,8 @@ public:
         GenomicRegion::Size bin_overlap               = 0;
         AlignedRead::BaseQuality mask_threshold       = 0;
         unsigned min_kmer_observations                = 1;
-        double min_mean_bubble_weight                 = 2.0;
         unsigned max_bubbles                          = 10;
+        double min_bubble_score                       = 2.0;
         Variant::MappingDomain::Size max_variant_size = 5000;
     };
     
@@ -49,7 +55,7 @@ public:
     LocalReassembler& operator=(LocalReassembler&&)      = default;
     
     ~LocalReassembler() override = default;
-    
+
 private:
     using VariantGenerator::VectorIterator;
     using VariantGenerator::FlatSetIterator;
@@ -76,32 +82,38 @@ private:
         
         const GenomicRegion& mapped_region() const noexcept;
         
-        void insert(const AlignedRead& read);
-        void insert(const NucleotideSequence& sequence);
+        void add(const AlignedRead& read);
+        void add(const GenomicRegion& read_region, const NucleotideSequence& read_sequence);
         
         void clear() noexcept;
         bool empty() const noexcept;
         
         GenomicRegion region;
+        boost::optional<ContigRegion> read_region;
         std::deque<std::reference_wrapper<const NucleotideSequence>> read_sequences;
     };
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     
     std::vector<unsigned> default_kmer_sizes_, fallback_kmer_sizes_;
-        
+    
+    MappableFlatMultiSet<MappableReferenceWrapper<const AlignedRead>> read_buffer_;
+    
     GenomicRegion::Size bin_size_, bin_overlap_;
     std::deque<Bin> bins_;
     std::deque<NucleotideSequence> masked_sequence_buffer_;
     
     AlignedRead::BaseQuality mask_threshold_;
     unsigned min_kmer_observations_;
-    double min_mean_bubble_weight_;
     unsigned max_bubbles_;
+    double min_bubble_score_;
     Variant::MappingDomain::Size max_variant_size_;
+    
+    AssemblerActiveRegionGenerator active_region_generator_;
     
     void prepare_bins_to_insert(const AlignedRead& read);
     bool should_assemble_bin(const Bin& bin) const;
+    void finalise_bins();
     unsigned try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result);
     void try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result);
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;

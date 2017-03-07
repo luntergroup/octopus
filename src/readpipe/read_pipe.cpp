@@ -173,35 +173,12 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
     return result;
 }
 
-std::vector<GenomicRegion> join_close_regions(const std::vector<GenomicRegion>& regions,
-                                              const GenomicRegion::Size max_distance)
-{
-    std::vector<GenomicRegion> result {};
-    if (regions.empty()) return result;
-    result.reserve(regions.size());
-    auto tmp = regions.front();
-    
-    std::for_each(std::next(std::cbegin(regions)), std::cend(regions),
-                  [&tmp, &result, max_distance] (const auto& region) {
-                      if (static_cast<GenomicRegion::Size>(inner_distance(tmp, region)) <= max_distance) {
-                          tmp = encompassing_region(tmp, region);
-                      } else {
-                          result.push_back(tmp);
-                          tmp = region;
-                      }
-                  });
-    
-    result.push_back(std::move(tmp));
-    assert(contains(encompassing_region(result), encompassing_region(regions)));
-    return result;
-}
-
 ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
 {
     assert(std::is_sorted(std::cbegin(regions), std::cend(regions)));
     
     const auto covered_regions = extract_covered_regions(regions);
-    const auto fetch_regions = join_close_regions(covered_regions, 10000);
+    const auto fetch_regions = join(covered_regions, 10000);
     
     ReadMap result {samples_.size()};
     const auto total_fetch_bp = sum_region_sizes(fetch_regions);

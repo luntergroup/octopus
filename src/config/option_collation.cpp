@@ -852,9 +852,9 @@ auto make_variant_generator_builder(const OptionMap& options)
         reassembler_options.fallback_interval_size = as_unsigned("fallback-kmer-gap", options);
         reassembler_options.bin_size = as_unsigned("max-region-to-assemble", options);
         reassembler_options.bin_overlap = as_unsigned("max-assemble-region-overlap", options);
-        reassembler_options.min_kmer_observations = as_unsigned("min-kmer-support", options);
-        reassembler_options.min_mean_bubble_weight = options.at("min-bubble-weight").as<double>();
+        reassembler_options.min_kmer_observations = as_unsigned("min-kmer-prune", options);
         reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
+        reassembler_options.min_bubble_score = options.at("min-bubble-score").as<double>();
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
