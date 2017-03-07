@@ -1632,7 +1632,7 @@ auto segment_by_begin_copy(const Container& mappables)
 template <typename Container>
 auto segment_by_begin_move(Container& mappables)
 {
-    return segment_by_begin_move(std::make_move_iterator(std::begin(mappables)),
+    return segment_by_begin_copy(std::make_move_iterator(std::begin(mappables)),
                                  std::make_move_iterator(std::end(mappables)));
 }
 
