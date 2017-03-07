@@ -29,6 +29,9 @@ public:
     virtual ~DenovoCall() = default;
     
     virtual void decorate(VcfRecord::Builder& record) const override;
+    
+private:
+    virtual std::unique_ptr<Call> do_clone() const override;
 };
 
 template <typename V, typename T>

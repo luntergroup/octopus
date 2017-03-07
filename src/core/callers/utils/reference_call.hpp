@@ -37,6 +37,7 @@ public:
 private:
     Allele reference_;
     
+    virtual std::unique_ptr<Call> do_clone() const override;
     void replace_called_alleles(char old_base, char replacement_base) override;
 };
 

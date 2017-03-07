@@ -47,4 +47,9 @@ void ReferenceCall::decorate(VcfRecord::Builder& record) const
     
 }
 
+std::unique_ptr<Call> ReferenceCall::do_clone() const
+{
+    return std::make_unique<ReferenceCall>(*this);
+}
+
 } // namespace octopus
