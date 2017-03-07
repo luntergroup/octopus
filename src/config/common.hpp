@@ -32,6 +32,8 @@ using InputRegionMap = MappableSetMap<ContigName, GenomicRegion>;
 using ReadContainer = MappableFlatMultiSet<AlignedRead>;
 using ReadMap       = MappableMap<SampleName, AlignedRead>;
 
+enum class ExecutionPolicy { seq, par, par_vec }; // To match Parallelism TS
+
 namespace logging {
     boost::optional<DebugLogger> get_debug_log();
     boost::optional<TraceLogger> get_trace_log();
