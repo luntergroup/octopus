@@ -66,6 +66,8 @@ public:
     
     virtual ~Call() = default;
     
+    std::unique_ptr<Call> clone() const;
+    
     Phred<double> quality() const noexcept;
     
     GenotypeCall& get_genotype_call(const SampleName& sample);
@@ -101,6 +103,7 @@ protected:
     boost::optional<Phred<double>> model_posterior_;
     
 private:
+    virtual std::unique_ptr<Call> do_clone() const = 0;
     virtual void replace_called_alleles(const char old_base, const char replacement_base) = 0;
 };
 

@@ -48,6 +48,8 @@ public:
     
 protected:
     std::unordered_map<SampleName, GenotypeCredibleRegions> credible_regions_;
+private:
+    virtual std::unique_ptr<Call> do_clone() const override;
 };
 
 template <typename V, typename C>

@@ -35,4 +35,9 @@ bool operator==(const CallWrapper& lhs, const CallWrapper& rhs)
     return lhs.call == rhs.call;
 }
 
+CallWrapper clone(const CallWrapper& call)
+{
+    return CallWrapper {call->clone()};
+}
+
 } // namespace octopus

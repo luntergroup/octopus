@@ -25,4 +25,9 @@ void SomaticCall::decorate(VcfRecord::Builder& record) const
     }
 }
 
+std::unique_ptr<Call> SomaticCall::do_clone() const
+{
+    return std::make_unique<SomaticCall>(*this);
+}
+
 } // namespace octopus
