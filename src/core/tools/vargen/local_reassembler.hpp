@@ -11,6 +11,7 @@
 
 #include <boost/optional.hpp>
 
+#include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
 #include "basics/mappable_reference_wrapper.hpp"
@@ -33,6 +34,7 @@ class LocalReassembler : public VariantGenerator
 public:
     struct Options
     {
+        ExecutionPolicy execution_policy              = ExecutionPolicy::seq;
         std::vector<unsigned> kmer_sizes              = {10, 25, 35};
         unsigned num_fallbacks                        = 6;
         unsigned fallback_interval_size               = 10;
@@ -92,6 +94,8 @@ private:
         boost::optional<ContigRegion> read_region;
         std::deque<std::reference_wrapper<const NucleotideSequence>> read_sequences;
     };
+    
+    ExecutionPolicy execution_policy_;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     

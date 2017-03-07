@@ -861,6 +861,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         if (options.count("assembler-mask-base-quality") == 1) {
             reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
         }
+        reassembler_options.execution_policy = get_thread_execution_policy(options);
         reassembler_options.num_fallbacks = as_unsigned("num-fallback-kmers", options);
         reassembler_options.fallback_interval_size = as_unsigned("fallback-kmer-gap", options);
         reassembler_options.bin_size = as_unsigned("max-region-to-assemble", options);
