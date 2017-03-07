@@ -250,7 +250,13 @@ private:
     void remove_trivial_nonreference_cycles();
     GraphEdge::WeightType sum_source_in_edge_weight(Edge e) const;
     GraphEdge::WeightType sum_target_out_edge_weight(Edge e) const;
-    bool is_low_weight(Edge e, unsigned min_weight) const;
+    bool all_in_edges_low_weight(Vertex v, unsigned min_weight) const;
+    bool all_out_edges_low_weight(Vertex v, unsigned min_weight) const;
+    std::size_t low_weight_out_degree(Vertex v, unsigned min_weight) const;
+    std::size_t low_weight_in_degree(Vertex v, unsigned min_weight) const;
+    bool is_low_weight_source(Vertex v, unsigned min_weight) const;
+    bool is_low_weight_sink(Vertex v, unsigned min_weight) const;
+    bool is_low_weight(Vertex v, unsigned min_weight) const;
     void remove_low_weight_edges(unsigned min_weight);
     void remove_disconnected_vertices();
     std::unordered_set<Vertex> find_reachable_kmers(Vertex from) const;

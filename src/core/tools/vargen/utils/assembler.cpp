@@ -1020,22 +1020,160 @@ Assembler::GraphEdge::WeightType Assembler::sum_target_out_edge_weight(const Edg
                            });
 }
 
-bool Assembler::is_low_weight(const Edge e, const unsigned min_weight) const
+bool Assembler::all_in_edges_low_weight(Vertex v, unsigned min_weight) const
 {
-    if (is_reference(e)) return false;
-    const auto edge_weight = graph_[e].weight;
-    if (edge_weight >= min_weight) return false;
-    const auto source_weight = sum_source_in_edge_weight(e);
-    if (source_weight < min_weight) return true;
-    const auto target_weight = sum_target_out_edge_weight(e);
-    return (source_weight + edge_weight + target_weight) < 3 * min_weight;
+    const auto p = boost::in_edges(v, graph_);
+    return std::all_of(p.first, p.second, [this, min_weight] (Edge e) { return graph_[e].weight < min_weight; });
 }
+
+bool Assembler::all_out_edges_low_weight(Vertex v, unsigned min_weight) const
+{
+    const auto p = boost::out_edges(v, graph_);
+    return std::all_of(p.first, p.second, [this, min_weight] (Edge e) { return graph_[e].weight < min_weight; });
+}
+
+bool Assembler::is_low_weight(const Vertex v, const unsigned min_weight) const
+{
+    return !is_reference(v) && all_in_edges_low_weight(v, min_weight) && all_out_edges_low_weight(v, min_weight);
+}
+
+std::size_t Assembler::low_weight_out_degree(Vertex v, unsigned min_weight) const
+{
+    const auto p = boost::out_edges(v, graph_);
+    const auto d = std::count_if(p.first, p.second, [this, min_weight] (Edge e) { return graph_[e].weight < min_weight; });
+    return static_cast<std::size_t>(d);
+}
+
+std::size_t Assembler::low_weight_in_degree(Vertex v, unsigned min_weight) const
+{
+    const auto p = boost::in_edges(v, graph_);
+    const auto d = std::count_if(p.first, p.second, [this, min_weight] (Edge e) { return graph_[e].weight < min_weight; });
+    return static_cast<std::size_t>(d);
+}
+
+bool Assembler::is_low_weight_source(Vertex v, unsigned min_weight) const
+{
+    const auto num_low_weight = low_weight_out_degree(v, min_weight);
+    return num_low_weight > 0 && num_low_weight < boost::out_degree(v, graph_);
+}
+
+bool Assembler::is_low_weight_sink(Vertex v, unsigned min_weight) const
+{
+    const auto num_low_weight = low_weight_in_degree(v, min_weight);
+    return num_low_weight > 0 && num_low_weight < boost::in_degree(v, graph_);
+}
+
+namespace {
+
+template <typename Iterator, typename Set>
+bool all_in(Iterator first, Iterator last, const Set& values)
+{
+    return std::all_of(first, last, [&] (const auto& value) { return values.count(value) == 1; });
+}
+
+} // namespace
 
 void Assembler::remove_low_weight_edges(const unsigned min_weight)
 {
     boost::remove_edge_if([this, min_weight] (const Edge& e) {
-        return is_low_weight(e, min_weight);
+        return !is_reference(e) &&  graph_[e].weight < min_weight
+               && sum_source_in_edge_weight(e) < min_weight
+               && sum_target_out_edge_weight(e) < min_weight;
     }, graph_);
+//    resume(misc_timer[9]);
+//    std::set<Edge> low_weight_edges {};
+//    //low_weight_edges.reserve(boost::num_edges(graph_));
+//    const auto p_edges = boost::edges(graph_);
+//    std::copy_if(p_edges.first, p_edges.second, std::inserter(low_weight_edges, std::begin(low_weight_edges)),
+//                 [this, min_weight] (const Edge& e) { return !is_reference(e) && graph_[e].weight < min_weight; });
+//    pause(misc_timer[9]);
+//    if (low_weight_edges.empty()) {
+//        return;
+//    }
+//    resume(misc_timer[10]);
+//    std::unordered_set<Vertex> low_weight_vertices {}, low_weight_sources {}, low_weight_sinks {};
+//    low_weight_vertices.reserve(boost::num_vertices(graph_));
+//    low_weight_sources.reserve(boost::num_vertices(graph_));
+//    low_weight_sinks.reserve(boost::num_vertices(graph_));
+//    for (Edge e : low_weight_edges) {
+//        if (!is_reference(e)) {
+//            const auto source = boost::source(e, graph_);
+//            if (is_low_weight(source, min_weight)) {
+//                low_weight_vertices.insert(source);
+//            } else if (is_low_weight_source(source, min_weight)) {
+//                low_weight_sources.insert(source);
+//            }
+//            const auto target = boost::target(e, graph_);
+//            if (is_low_weight(target, min_weight)) {
+//                low_weight_vertices.insert(target);
+//            } else if (is_low_weight_sink(target, min_weight)) {
+//                low_weight_sinks.insert(target);
+//            }
+//        }
+//    }
+//    pause(misc_timer[10]);
+//    auto num_low_weight_edges = low_weight_edges.size();
+//    auto num_low_weight_vertices = low_weight_vertices.size();
+//    while (num_low_weight_edges > 0 && num_low_weight_vertices > 0) {
+//        // Relax low weight edges
+//        resume(misc_timer[11]);
+//        for (auto itr = std::cbegin(low_weight_edges); itr != std::cend(low_weight_edges); ) {
+//            const auto u = boost::source(*itr, graph_);
+//            const auto v = boost::target(*itr, graph_);
+//            if (is_reference(u)) {
+//                if (low_weight_vertices.count(v) == 1) {
+//                    ++itr;
+//                } else {
+//                    itr = low_weight_edges.erase(itr);
+//                }
+//            } else if (is_reference(v)) {
+//                if (low_weight_vertices.count(u) == 1) {
+//                    ++itr;
+//                } else {
+//                    itr = low_weight_edges.erase(itr);
+//                }
+//            } else {
+//                if ((low_weight_vertices.count(u) == 1 || low_weight_sources.count(u) == 1)
+//                    && (low_weight_vertices.count(v) == 1 || low_weight_sinks.count(v) == 1)) {
+//                    ++itr;
+//                } else {
+//                    itr = low_weight_edges.erase(itr);
+//                }
+//            }
+//        }
+//        pause(misc_timer[11]);
+//        if (low_weight_edges.size() == num_low_weight_edges) {
+//            break;
+//        } else {
+//            num_low_weight_edges = low_weight_edges.size();
+//        }
+//        // Relax low weight vertices
+//        resume(misc_timer[4]);
+//        for (auto itr = std::cbegin(low_weight_vertices); itr != std::cend(low_weight_vertices); ) {
+//            const auto in_edges = boost::in_edges(*itr, graph_);
+//            if (all_in(in_edges.first, in_edges.second, low_weight_edges)) {
+//                const auto out_edges = boost::out_edges(*itr, graph_);
+//                if (all_in(out_edges.first, out_edges.second, low_weight_edges)) {
+//                    ++itr;
+//                } else {
+//                    itr = low_weight_vertices.erase(itr);
+//                }
+//            } else {
+//                itr = low_weight_vertices.erase(itr);
+//            }
+//        }
+//        if (low_weight_vertices.size() == num_low_weight_vertices) {
+//            break;
+//        } else {
+//            num_low_weight_vertices = low_weight_vertices.size();
+//        }
+//        pause(misc_timer[4]);
+//    }
+//    resume(misc_timer[3]);
+//    for (const Edge& e : low_weight_edges) {
+//        remove_edge(e);
+//    }
+//    pause(misc_timer[3]);
 }
 
 void Assembler::remove_disconnected_vertices()
