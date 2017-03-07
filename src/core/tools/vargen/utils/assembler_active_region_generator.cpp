@@ -229,29 +229,36 @@ auto get_interesting_hotspots(const GenomicRegion& region, const CoverageTracker
     return get_interesting_hotspots(region, interesting_coverages, coverages);
 }
 
-auto get_interesting_hotspots(const GenomicRegion& region,
-                              const std::unordered_map<SampleName, CoverageTracker>& interesting_read_tracker,
-                              const std::unordered_map<SampleName, CoverageTracker>& tracker)
+std::vector<GenomicRegion>
+get_interesting_hotspots(const GenomicRegion& region,
+                         const std::unordered_map<SampleName, CoverageTracker>& interesting_read_tracker,
+                         const std::unordered_map<SampleName, CoverageTracker>& tracker)
 {
-    if (tracker.size() == 1) {
-        const auto itr = std::cbegin(tracker);
-        return get_interesting_hotspots(region, interesting_read_tracker.at(itr->first), itr->second);
-    }
-    const auto n = size(region);
-    std::vector<unsigned> total_interesting_coverage(n), total_coverage(n);
-    for (const auto& p : interesting_read_tracker) {
-        const auto sample_coverage = tracker.at(p.first).coverage(region);
-        const auto sample_interesting_coverage = p.second.coverage(region);
-        assert(sample_coverage.size() == n);
-        assert(sample_interesting_coverage.size() == n);
-        for (std::size_t i {0}; i < sample_coverage.size(); ++i) {
-            if (sample_interesting_coverage[i] > 0) {
-                total_interesting_coverage[i] += sample_interesting_coverage[i];
-                total_coverage[i] += sample_coverage[i];
+    if (interesting_read_tracker.empty()) {
+        return {};
+    } else if (interesting_read_tracker.size() == 1) {
+        assert(!tracker.empty());
+        const auto itr = std::cbegin(interesting_read_tracker);
+        assert(tracker.count(itr->first) == 1);
+        return get_interesting_hotspots(region, itr->second, tracker.at(itr->first));
+    } else {
+        const auto n = size(region);
+        std::vector<unsigned> total_interesting_coverage(n), total_coverage(n);
+        for (const auto& p : interesting_read_tracker) {
+            assert(tracker.count(p.first) == 1);
+            const auto sample_coverage = tracker.at(p.first).coverage(region);
+            const auto sample_interesting_coverage = p.second.coverage(region);
+            assert(sample_coverage.size() == n);
+            assert(sample_interesting_coverage.size() == n);
+            for (std::size_t i {0}; i < sample_coverage.size(); ++i) {
+                if (sample_interesting_coverage[i] > 0) {
+                    total_interesting_coverage[i] += sample_interesting_coverage[i];
+                    total_coverage[i] += sample_coverage[i];
+                }
             }
         }
+        return get_interesting_hotspots(region, total_interesting_coverage, total_coverage);
     }
-    return get_interesting_hotspots(region, total_interesting_coverage, total_coverage);
 }
 
 void merge(std::vector<GenomicRegion>&& src, std::vector<GenomicRegion>& dst)
