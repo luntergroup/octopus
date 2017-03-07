@@ -199,6 +199,19 @@ boost::optional<unsigned> get_num_threads(const OptionMap& options)
     return boost::none;
 }
 
+ExecutionPolicy get_thread_execution_policy(const OptionMap& options)
+{
+    if (options.count("threads") == 1) {
+        if (options.at("threads").as<int>() == 0) {
+            return ExecutionPolicy::par;
+        } else {
+            return ExecutionPolicy::seq;
+        }
+    } else {
+        return ExecutionPolicy::seq;
+    }
+}
+
 MemoryFootprint get_target_read_buffer_size(const OptionMap& options)
 {
     return options.at("target-read-buffer-footprint").as<MemoryFootprint>();
