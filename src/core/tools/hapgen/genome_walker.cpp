@@ -35,9 +35,55 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion::ContigName& contig,
 namespace {
 
 template <typename BidirIt>
-bool is_sandwich_allele(BidirIt allele_itr)
+bool is_sandwich_allele(BidirIt first, BidirIt allele, BidirIt last)
 {
-    return overlaps(*std::prev(allele_itr), *allele_itr) && overlaps(*allele_itr, *std::next(allele_itr));
+    if (allele != first && allele != last && std::next(allele) != last) {
+        return overlaps(*std::prev(allele), *allele) && overlaps(*allele, *std::next(allele));
+    } else {
+        return false;
+    }
+}
+
+template <typename BidirIt>
+bool is_indel_boundary(BidirIt first, BidirIt allele, BidirIt last)
+{
+    if (allele != first && allele != last && std::next(allele) != last && is_indel(*allele)) {
+        auto lhs_itr = std::find_if(std::make_reverse_iterator(std::prev(allele)), std::make_reverse_iterator(first),
+                                    [&] (const auto& a) { return !overlaps(a, *allele) || is_indel(a); });
+        if (lhs_itr != std::make_reverse_iterator(first) && overlaps(*lhs_itr, *allele) && is_indel(*lhs_itr)) {
+            return true;
+        }
+        auto rhs_itr = std::find_if(std::next(allele), last, [&] (const auto& a) { return !overlaps(a, *allele) || is_indel(a); });
+        return rhs_itr != last && overlaps(*rhs_itr, *allele) && is_indel(*rhs_itr);
+    } else {
+        return false;
+    }
+}
+
+template <typename BidirIt>
+bool is_good_indicator_begin(BidirIt first_possible, BidirIt allele_itr, BidirIt last_possible)
+{
+    return !(is_sandwich_allele(first_possible, allele_itr, last_possible)
+             || is_indel_boundary(first_possible, allele_itr, last_possible));
+}
+
+template <typename BidirIt>
+BidirIt find_indicator_begin(BidirIt first_possible, BidirIt ideal, BidirIt last_possible)
+{
+    if (first_possible != ideal && ideal != last_possible) {
+        auto passed_region = encompassing_region(first_possible, ideal);
+        auto indicator_region = encompassing_region(ideal, last_possible);
+        while (overlaps(passed_region, indicator_region)) {
+            ideal = find_first_after(ideal, last_possible, passed_region);
+            if (ideal == last_possible) return last_possible;
+            passed_region = encompassing_region(first_possible, ideal);
+            indicator_region = encompassing_region(ideal, last_possible);
+        }
+        while (ideal != last_possible && !is_good_indicator_begin(first_possible, ideal, last_possible)) {
+            ideal = find_next_mutually_exclusive(ideal, last_possible);
+        }
+    }
+    return ideal;
 }
 
 template <typename BidirIt>
@@ -46,10 +92,8 @@ auto get_first_included(const BidirIt first_previous_itr, const BidirIt first_in
 {
     auto result = first_included;
     if (num_indicators > 0) {
-        result = std::prev(result, num_indicators);
-        if (result != first_previous_itr && is_sandwich_allele(result)) {
-            result = find_next_mutually_exclusive(result, first_included);
-        }
+        assert(num_indicators <= std::distance(first_previous_itr, first_included));
+        result = find_indicator_begin(first_previous_itr, std::prev(result, num_indicators), first_included);
     }
     return result;
 }

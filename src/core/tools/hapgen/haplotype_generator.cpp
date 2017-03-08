@@ -332,18 +332,23 @@ bool try_extend_tree_without_removal(HaplotypeTree& tree, const GenomicRegion& a
         return true;
     } else {
         tree.clear(novel_region); // undo previous extension
-        const auto passed_region = left_overhang_region(active_region, max_lagged_region);
-        const auto passed_alleles = overlap_range(alleles, passed_region);
-        if (can_remove_entire_passed_region(active_region, max_lagged_region, passed_alleles)) {
-            tree.clear(passed_region);
-        } else if (requires_staged_removal(passed_alleles)) {
-            const auto first_removal_region = expand_rhs(passed_region, -1);
-            tree.clear(first_removal_region);
-            tree.clear(tail_region(first_removal_region));
-        } else {
-            tree.clear(expand_rhs(passed_region, -1));
-        }
         return false;
+    }
+}
+
+void safe_clear_passed(HaplotypeTree& tree, const GenomicRegion& active_region,
+                       const MappableFlatSet<Allele>& alleles, const GenomicRegion& max_lagged_region)
+{
+    const auto passed_region = left_overhang_region(active_region, max_lagged_region);
+    const auto passed_alleles = overlap_range(alleles, passed_region);
+    if (can_remove_entire_passed_region(active_region, max_lagged_region, passed_alleles)) {
+        tree.clear(passed_region);
+    } else if (requires_staged_removal(passed_alleles)) {
+        const auto first_removal_region = expand_rhs(passed_region, -1);
+        tree.clear(first_removal_region);
+        tree.clear(tail_region(first_removal_region));
+    } else {
+        tree.clear(expand_rhs(passed_region, -1));
     }
 }
 
@@ -462,11 +467,14 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         next_active_region_ = std::move(max_lagged_region);
     } else {
         HaplotypeTree test_tree {tree_}; // use a temporary tree to see how much we can lag
-        if (begins_before(active_region_, max_lagged_region)
-            && try_extend_tree_without_removal(test_tree, active_region_, alleles_,  max_lagged_region,
-                                               policies_.haplotype_limits.target)) {
-            next_active_region_ = test_tree.encompassing_region();
-            return;
+        if (begins_before(active_region_, max_lagged_region)) {
+            if (try_extend_tree_without_removal(test_tree, active_region_, alleles_,  max_lagged_region,
+                                                policies_.haplotype_limits.target)) {
+                next_active_region_ = test_tree.encompassing_region();
+                return;
+            } else {
+                safe_clear_passed(test_tree, active_region_, alleles_,  max_lagged_region);
+            }
         }
         // overlap_range is required for novel alleles as any holdout alleles
         // just reintroduced may overlap with the indicator and novel region.
