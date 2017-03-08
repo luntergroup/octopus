@@ -310,23 +310,29 @@ void MaskStrandOfDuplicatedBases::operator()(ReadReferenceVector& read_template)
 
 namespace {
 
-boost::optional<GenomicRegion>
+std::pair<boost::optional<GenomicRegion>, boost::optional<GenomicRegion>>
 duplicated_clipped_region(const AlignedRead& first, const AlignedRead& second, const GenomicRegion& duplicated_region)
 {
-    if (is_front_soft_clipped(first) && is_front_soft_clipped(second)) {
-        const auto first_clipping  = splice_cigar(first, duplicated_region).front();
-        const auto second_clipping = splice_cigar(second, duplicated_region).front();
-        assert(is_clipping(first_clipping) && is_clipping(second_clipping));
-        const auto num_duplicate_clipped_bases = std::min(first_clipping.size(), second_clipping.size());
-        return expand_rhs(head_region(duplicated_region), num_duplicate_clipped_bases);
-    } else if (is_back_soft_clipped(first) && is_back_soft_clipped(second)) {
-        const auto first_clipping  = splice_cigar(first, duplicated_region).back();
-        const auto second_clipping = splice_cigar(second, duplicated_region).back();
-        assert(is_clipping(first_clipping) && is_clipping(second_clipping));
-        const auto num_duplicate_clipped_bases = std::min(first_clipping.size(), second_clipping.size());
-        return expand_lhs(tail_region(duplicated_region), num_duplicate_clipped_bases);
+    if (is_soft_clipped(first) && is_soft_clipped(second)) {
+        const auto first_clipping  = splice_cigar(first, duplicated_region);
+        const auto second_clipping = splice_cigar(second, duplicated_region);
+        if (first_clipping.empty() || second_clipping.empty()) {
+            return {boost::none, boost::none};
+        } else {
+            boost::optional<GenomicRegion> lhs_clip {}, rhs_clip;
+            if (is_front_soft_clipped(first_clipping) && is_front_soft_clipped(second_clipping)) {
+                const auto num_duplicate_clipped_bases = std::min(first_clipping.front().size(), second_clipping.front().size());
+                lhs_clip = expand_rhs(head_region(duplicated_region), num_duplicate_clipped_bases);
+            }
+            if (first_clipping.size() > 1 && second_clipping.size() > 1
+                && is_back_soft_clipped(first_clipping) && is_back_soft_clipped(second_clipping)) {
+                const auto num_duplicate_clipped_bases = std::min(first_clipping.back().size(), second_clipping.back().size());
+                rhs_clip = expand_lhs(tail_region(duplicated_region), num_duplicate_clipped_bases);
+            }
+            return {std::move(lhs_clip), std::move(rhs_clip)};
+        }
     } else {
-        return boost::none;
+        return {boost::none, boost::none};
     }
 }
 
@@ -367,9 +373,12 @@ void mask_both_strands_of_clipped_duplicated_bases(AlignedRead& forward, Aligned
 {
     const auto duplicated_region = overlapped_region(forward, reverse);
     if (duplicated_region) {
-        const auto mask_region = duplicated_clipped_region(forward, reverse, *duplicated_region);
-        if (mask_region) {
-            mask_both_strands(forward, reverse, *mask_region);
+        const auto mask_regions = duplicated_clipped_region(forward, reverse, *duplicated_region);
+        if (mask_regions.first) {
+            mask_both_strands(forward, reverse, *mask_regions.first);
+        }
+        if (mask_regions.second) {
+            mask_both_strands(forward, reverse, *mask_regions.second);
         }
     }
 }
