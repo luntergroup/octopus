@@ -118,8 +118,8 @@ private:
     void prepare_bins_to_insert(const AlignedRead& read);
     bool should_assemble_bin(const Bin& bin) const;
     void finalise_bins();
-    unsigned try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result);
-    void try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result);
+    unsigned try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result) const;
+    void try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result) const;
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;
     bool assemble_bin(unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const;
     bool try_assemble_region(Assembler& assembler,

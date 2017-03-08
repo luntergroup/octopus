@@ -484,7 +484,7 @@ void log_failure(L& log, const char* type, const unsigned k)
 
 } // namespace
 
-unsigned LocalReassembler::try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result)
+unsigned LocalReassembler::try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result) const
 {
     unsigned num_failures {0};
     for (const auto k : default_kmer_sizes_) {
@@ -499,7 +499,7 @@ unsigned LocalReassembler::try_assemble_with_defaults(const Bin& bin, std::deque
     return num_failures;
 }
 
-void LocalReassembler::try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result)
+void LocalReassembler::try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result) const
 {
     for (const auto k : fallback_kmer_sizes_) {
         const auto success = assemble_bin(k, bin, result);
@@ -533,8 +533,7 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
     }
 }
 
-bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin,
-                                    std::deque<Variant>& result) const
+bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const
 {
     if (bin.empty()) return true;
     const auto assemble_region = propose_assembler_region(bin.region, kmer_size);
