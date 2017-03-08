@@ -134,13 +134,13 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
         }
         if (is_in_range(position, read, haplotype)) {
             has_in_range_mapping_position = true;
-            auto p = hmm::evaluate(read.sequence(), haplotype.sequence(), read.qualities(), position, model);
+            auto p = hmm::evaluate(read.sequence(), haplotype.sequence(), read.base_qualities(), position, model);
             max_log_probability = std::max(p, max_log_probability);
         }
     });
     if (!is_original_position_mapped && is_in_range(original_mapping_position, read, haplotype)) {
         has_in_range_mapping_position = true;
-        auto p = hmm::evaluate(read.sequence(), haplotype.sequence(), read.qualities(),
+        auto p = hmm::evaluate(read.sequence(), haplotype.sequence(), read.base_qualities(),
                                original_mapping_position, model);
         max_log_probability = std::max(p, max_log_probability);
     }
@@ -151,7 +151,7 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
             throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, required_extension};
         }
         const auto final_mapping_position = original_mapping_position - min_shift;
-        max_log_probability = hmm::evaluate(read.sequence(), haplotype.sequence(), read.qualities(),
+        max_log_probability = hmm::evaluate(read.sequence(), haplotype.sequence(), read.base_qualities(),
                                             final_mapping_position, model);
     }
     assert(max_log_probability > std::numeric_limits<double>::lowest() && max_log_probability <= 0);

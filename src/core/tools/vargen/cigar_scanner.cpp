@@ -95,7 +95,7 @@ void CigarScanner::add_read(const AlignedRead& read)
     const auto& read_contig   = contig_name(read);
     const auto& read_sequence = read.sequence();
     auto sequence_itr     = cbegin(read_sequence);
-    auto base_quality_itr = cbegin(read.qualities());
+    auto base_quality_itr = cbegin(read.base_qualities());
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
     GenomicRegion region;
@@ -131,7 +131,7 @@ void CigarScanner::add_read(const AlignedRead& read)
             }
             case Flag::insertion:
             {
-                if (count_bad_qualities(read.qualities(), read_index, op_size, options_.min_base_quality)
+                if (count_bad_qualities(read.base_qualities(), read_index, op_size, options_.min_base_quality)
                         <= options_.max_poor_quality_insertion_bases) {
                     auto added_sequence = splice(read_sequence, read_index, op_size);
                     if (is_good_sequence(added_sequence)) {

@@ -130,7 +130,7 @@ namespace {
 bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuality good_quality) noexcept
 {
     if (good_quality == 0) return false;
-    auto quality_itr = std::cbegin(read.qualities());
+    auto quality_itr = std::cbegin(read.base_qualities());
     return std::any_of(std::cbegin(read.cigar()), std::cend(read.cigar()),
                        [&] (const auto& op) {
                            if (is_match(op)) {
@@ -229,7 +229,7 @@ auto transform_low_quality_matches_to_reference(const AlignedRead& read,
                                                 const AlignedRead::BaseQuality min_quality,
                                                 const ReferenceGenome& reference)
 {
-    return transform_low_quality_matches_to_reference(read.sequence(), read.qualities(),
+    return transform_low_quality_matches_to_reference(read.sequence(), read.base_qualities(),
                                                       reference.fetch_sequence(mapped_region(read)),
                                                       expand_cigar(read), min_quality);
 }

@@ -57,7 +57,7 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
     const auto& read_contig   = contig_name(read);
     const auto& read_sequence = read.sequence();
     auto sequence_iter     = cbegin(read_sequence);
-    auto base_quality_iter = cbegin(read.qualities());
+    auto base_quality_iter = cbegin(read.base_qualities());
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
     GenomicRegion region;

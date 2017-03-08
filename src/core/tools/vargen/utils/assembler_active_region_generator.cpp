@@ -325,7 +325,7 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
     using Flag = CigarOperation::Flag;
     const auto& read_sequence = read.sequence();
     auto sequence_itr = cbegin(read_sequence);
-    auto base_quality_itr = cbegin(read.qualities());
+    auto base_quality_itr = cbegin(read.base_qualities());
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
     for (const auto& cigar_operation : read.cigar()) {

@@ -69,7 +69,7 @@ MaskLowQualityTails::MaskLowQualityTails(BaseQuality threshold) : threshold_ {th
 
 void MaskLowQualityTails::operator()(AlignedRead& read) const noexcept
 {
-    auto& qualities = read.qualities();
+    auto& qualities = read.base_qualities();
     const auto is_low_quality = [this] (BaseQuality q) noexcept { return q < threshold_; };
     if (read.is_marked_reverse_mapped()) {
         const auto first_high_quality = std::find_if_not(std::begin(qualities), std::end(qualities), is_low_quality);
@@ -115,13 +115,13 @@ void zero_if_less_than(InputIterator first, InputIterator last,
 
 void mask_low_quality_front_bases(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality min_quality) noexcept
 {
-    auto& qualities = read.qualities();
+    auto& qualities = read.base_qualities();
     zero_if_less_than(std::begin(qualities), std::next(std::begin(qualities), std::min(num_bases, sequence_size(read))), min_quality);
 }
 
 void mask_low_quality_back_bases(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality min_quality) noexcept
 {
-    auto& qualities = read.qualities();
+    auto& qualities = read.base_qualities();
     zero_if_less_than(std::rbegin(qualities), std::next(std::rbegin(qualities), std::min(num_bases, sequence_size(read))), min_quality);
 }
 
@@ -179,21 +179,16 @@ template <typename ForwardIt>
 auto mean_quality(const ForwardIt first, const std::size_t num_bases) noexcept
 {
     const auto last = std::next(first, num_bases);
-    const auto first_good = std::find_if(first, last, [] (auto q) noexcept { return q > 2; });
-    if (first_good != last) {
-        return maths::mean(first_good, last);
-    } else {
-        return maths::mean(first, last);
-    }
+    return maths::mean(first, last);
 }
 
 auto mean_tail_quality(const AlignedRead& read, const std::size_t num_bases) noexcept
 {
     assert(num_bases > 0);
     if (read.is_marked_reverse_mapped()) {
-        return mean_quality(std::cbegin(read.qualities()), num_bases);
+        return mean_quality(std::cbegin(read.base_qualities()), num_bases);
     } else {
-        return mean_quality(std::crbegin(read.qualities()), num_bases);
+        return mean_quality(std::crbegin(read.base_qualities()), num_bases);
     }
 }
 
@@ -249,15 +244,17 @@ void MaskTemplateAdapters::operator()(ReadReferenceVector& read_template) const
     }
 }
 
-void mask_duplicated_bases(AlignedRead& forward, AlignedRead& reverse, const GenomicRegion& duplicated_region)
-{
-    auto forward_qual_itr = std::rbegin(forward.qualities());
+namespace {
+
+void
+mask_strand_of_duplicated_bases(AlignedRead& forward, AlignedRead& reverse, const GenomicRegion& duplicated_region) {
+    auto forward_qual_itr = std::rbegin(forward.base_qualities());
     if (ends_before(reverse, forward)) {
         const auto adapter_region = right_overhang_region(forward, reverse);
         const auto num_adapter_bps = sequence_size(forward, adapter_region);
         forward_qual_itr += num_adapter_bps;
     }
-    auto reverse_qual_itr = std::begin(reverse.qualities());
+    auto reverse_qual_itr = std::begin(reverse.base_qualities());
     if (begins_before(reverse, forward)) {
         const auto adapter_region = left_overhang_region(reverse, forward);
         const auto num_adapter_bps = sequence_size(reverse, adapter_region);
@@ -266,10 +263,10 @@ void mask_duplicated_bases(AlignedRead& forward, AlignedRead& reverse, const Gen
     const auto num_forward_duplicate_bps = sequence_size(forward, duplicated_region);
     const auto num_reverse_duplicate_bps = sequence_size(reverse, duplicated_region);
     auto num_duplicate_bps = std::min(num_forward_duplicate_bps, num_reverse_duplicate_bps);
-    bool select_first {true};
+    bool select_first{true};
     for (; num_duplicate_bps > 0; --num_duplicate_bps) {
-        assert(forward_qual_itr < std::rend(forward.qualities()));
-        assert(reverse_qual_itr < std::end(reverse.qualities()));
+        assert(forward_qual_itr < std::rend(forward.base_qualities()));
+        assert(reverse_qual_itr < std::end(reverse.base_qualities()));
         if (*forward_qual_itr == *reverse_qual_itr) {
             if (select_first) {
                 *reverse_qual_itr++ = 0;
@@ -286,24 +283,109 @@ void mask_duplicated_bases(AlignedRead& forward, AlignedRead& reverse, const Gen
     }
 }
 
-void mask_duplicated_bases(AlignedRead& forward, AlignedRead& reverse)
-{
+void mask_strand_of_duplicated_bases(AlignedRead& forward, AlignedRead& reverse) {
     const auto duplicated_region = overlapped_region(forward, reverse);
     if (duplicated_region) {
-        mask_duplicated_bases(forward, reverse, *duplicated_region);
+        mask_strand_of_duplicated_bases(forward, reverse, *duplicated_region);
     }
 }
 
-void MaskDuplicatedBases::operator()(ReadReferenceVector& read_template) const
+} // namespace
+
+void MaskStrandOfDuplicatedBases::operator()(ReadReferenceVector& read_template) const
 {
     const auto template_size = read_template.size();
     if (template_size < 2) {
         return;
     } else if (template_size == 2) {
         if (read_template.front().get().is_marked_reverse_mapped()) {
-            mask_duplicated_bases(read_template.back(), read_template.front());
+            mask_strand_of_duplicated_bases(read_template.back(), read_template.front());
         } else {
-            mask_duplicated_bases(read_template.front(), read_template.back());
+            mask_strand_of_duplicated_bases(read_template.front(), read_template.back());
+        }
+    } else {
+        // TODO
+    }
+}
+
+namespace {
+
+boost::optional<GenomicRegion>
+duplicated_clipped_region(const AlignedRead& first, const AlignedRead& second, const GenomicRegion& duplicated_region)
+{
+    if (is_front_soft_clipped(first) && is_front_soft_clipped(second)) {
+        const auto first_clipping  = splice_cigar(first, duplicated_region).front();
+        const auto second_clipping = splice_cigar(second, duplicated_region).front();
+        assert(is_clipping(first_clipping) && is_clipping(second_clipping));
+        const auto num_duplicate_clipped_bases = std::min(first_clipping.size(), second_clipping.size());
+        return expand_rhs(head_region(duplicated_region), num_duplicate_clipped_bases);
+    } else if (is_back_soft_clipped(first) && is_back_soft_clipped(second)) {
+        const auto first_clipping  = splice_cigar(first, duplicated_region).back();
+        const auto second_clipping = splice_cigar(second, duplicated_region).back();
+        assert(is_clipping(first_clipping) && is_clipping(second_clipping));
+        const auto num_duplicate_clipped_bases = std::min(first_clipping.size(), second_clipping.size());
+        return expand_lhs(tail_region(duplicated_region), num_duplicate_clipped_bases);
+    } else {
+        return boost::none;
+    }
+}
+
+void mask(AlignedRead& read, const GenomicRegion& region)
+{
+    if (!is_empty(region) && overlaps(read, region)) {
+        auto& base_qualities = read.base_qualities();
+        if (contains(region, read)) {
+            std::fill(std::begin(base_qualities), std::end(base_qualities), 0);
+        } else if (begins_equal(read, region)) {
+            const auto num_mask_bases = sequence_size(read, region);
+            std::fill_n(std::begin(base_qualities), num_mask_bases, 0);
+        } else if (ends_equal(read, region)) {
+            const auto num_mask_bases = sequence_size(read, region);
+            std::fill_n(std::rbegin(base_qualities), num_mask_bases, 0);
+        } else {
+            // Take the shortest side for optimisation only
+            if (begin_distance(read, region) < end_distance(region, read)) {
+                const auto num_lhs_mask_bases = sequence_size(read, left_overhang_region(read, region));
+                const auto num_mask_bases = sequence_size(read, region);
+                std::fill_n(std::next(std::begin(base_qualities), num_lhs_mask_bases), num_mask_bases, 0);
+            } else {
+                const auto num_rhs_mask_bases = sequence_size(read, right_overhang_region(read, region));
+                const auto num_mask_bases = sequence_size(read, region);
+                std::fill_n(std::next(std::rbegin(base_qualities), num_rhs_mask_bases), num_mask_bases, 0);
+            }
+        }
+    }
+}
+
+void mask_both_strands(AlignedRead& forward, AlignedRead& reverse, const GenomicRegion& region)
+{
+    mask(forward, region);
+    mask(reverse, region);
+}
+
+void mask_both_strands_of_clipped_duplicated_bases(AlignedRead& forward, AlignedRead& reverse)
+{
+    const auto duplicated_region = overlapped_region(forward, reverse);
+    if (duplicated_region) {
+        const auto mask_region = duplicated_clipped_region(forward, reverse, *duplicated_region);
+        if (mask_region) {
+            mask_both_strands(forward, reverse, *mask_region);
+        }
+    }
+}
+
+} // namespace
+
+void MaskClippedDuplicatedBases::operator()(ReadReferenceVector& read_template) const
+{
+    const auto template_size = read_template.size();
+    if (template_size < 2) {
+        return;
+    } else if (template_size == 2) {
+        if (read_template.front().get().is_marked_reverse_mapped()) {
+            mask_both_strands_of_clipped_duplicated_bases(read_template.back(), read_template.front());
+        } else {
+            mask_both_strands_of_clipped_duplicated_bases(read_template.front(), read_template.back());
         }
     } else {
         // TODO

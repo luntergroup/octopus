@@ -140,7 +140,12 @@ struct MaskTemplateAdapters
     void operator()(ReadReferenceVector& read_template) const;
 };
 
-struct MaskDuplicatedBases
+struct MaskStrandOfDuplicatedBases
+{
+    void operator()(ReadReferenceVector& read_template) const;
+};
+
+struct MaskClippedDuplicatedBases
 {
     void operator()(ReadReferenceVector& read_template) const;
 };

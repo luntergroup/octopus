@@ -265,7 +265,7 @@ namespace detail
         qualities.reserve(count_base_pairs(reads, NonMapTag {}));
         
         for (const auto& read : reads) {
-            for (const auto quality : read.qualities()) {
+            for (const auto quality : read.base_qualities()) {
                 qualities.push_back(static_cast<double>(quality));
             }
         }
@@ -283,7 +283,7 @@ namespace detail
         qualities.reserve(count_base_pairs(reads, region, NonMapTag {}));
         
         std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&qualities] (const auto& read) {
-            for (const auto quality : read.qualities()) {
+            for (const auto quality : read.base_qualities()) {
                 qualities.push_back(static_cast<double>(quality));
             }
         });
@@ -594,7 +594,7 @@ namespace detail
         
         for (const auto& sample_reads : reads) {
             for (const auto& read : sample_reads.second) {
-                for (const auto quality : read.qualities()) {
+                for (const auto quality : read.base_qualities()) {
                     qualities.push_back(static_cast<double>(quality));
                 }
             }
@@ -614,7 +614,7 @@ namespace detail
             
             std::for_each(std::cbegin(overlapped), std::cend(overlapped),
                           [&qualities] (const auto& read) {
-                              for (const auto quality : read.qualities()) {
+                              for (const auto quality : read.base_qualities()) {
                                   qualities.push_back(static_cast<double>(quality));
                               }
                           });

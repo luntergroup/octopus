@@ -30,7 +30,7 @@ class DynamicCigarScanner : public VariantGenerator
 public:
     struct Options
     {
-        // Signature is (Variant, depth, observed qualities). For insertions, observed qualities is the sum.
+        // Signature is (Variant, depth, observed base_qualities). For insertions, observed base_qualities is the sum.
         using InclusionPredicate = std::function<bool(const Variant&, unsigned, std::vector<unsigned>&)>;
         using MatchPredicate = std::function<bool(const Variant&, const Variant&)>;
         InclusionPredicate include;
