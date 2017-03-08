@@ -30,8 +30,6 @@ namespace boost {
 
 namespace octopus { namespace coretools {
 
-namespace debug { void print(const Assembler& assembler); }
-
 class Assembler
 {
 public:
@@ -81,8 +79,6 @@ public:
     std::deque<Variant> extract_variants(unsigned max_bubbles, double min_bubble_score);
     
     void write_dot(std::ostream& out) const;
-    
-    friend void debug::print(const Assembler& assembler);
     
 private:
     class Kmer : public Comparable<Kmer>

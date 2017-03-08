@@ -1957,36 +1957,5 @@ bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs) no
     return lhs.begin_pos == rhs.begin_pos && lhs.alt == rhs.alt;
 }
 
-namespace debug {
-
-void print(const Assembler& assembler)
-{
-    for (auto ep = boost::edges(assembler.graph_); ep.first != ep.second; ++ep.first) {
-        const auto e = *ep.first;
-        assembler.print(e);
-        std::cout << " weight = " << assembler.graph_[e].weight << " ";
-        if (assembler.is_reference(e)) {
-            std::cout << "ref";
-        } else {
-            std::cout << "alt";
-        }
-        std::cout << " (";
-        if (assembler.is_source_reference(e)) {
-            std::cout << "ref";
-        } else {
-            std::cout << "alt";
-        }
-        std::cout << ",";
-        if (assembler.is_target_reference(e)) {
-            std::cout << "ref";
-        } else {
-            std::cout << "alt";
-        }
-        std::cout << ")" << '\n';
-    }
-}
-
-}
-
 } // namespace coretools
 } // namespace octopus
