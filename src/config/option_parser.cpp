@@ -802,11 +802,10 @@ void check_reads_present(const OptionMap& vm)
 void check_region_files_consistent(const OptionMap& vm)
 {
     if (vm.count("regions-file") == 1 && vm.count("skip-regions-file") == 1) {
-        const auto regions_file = vm.at("regions-file").as<std::string>();
-        const auto skip_regions_file = vm.at("skip-regions-file").as<std::string>();
+        const auto regions_file = vm.at("regions-file").as<fs::path>();
+        const auto skip_regions_file = vm.at("skip-regions-file").as<fs::path>();
         if (regions_file == skip_regions_file) {
-            throw std::invalid_argument {"options 'regions-file' and 'skip-regions-file' must"
-                " have unique values"};
+            throw std::invalid_argument {"options 'regions-file' and 'skip-regions-file' must be unique"};
         }
     }
 }
