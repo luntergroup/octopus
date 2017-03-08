@@ -337,9 +337,10 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
     read_buffer_.shrink_to_fit();
     finalise_bins();
     if (bins_.empty()) return {};
+    const auto active_bins = overlapped_bins(bins_, region);
     std::deque<Variant> candidates {};
     if (execution_policy_ == ExecutionPolicy::seq) {
-        for (auto& bin : overlapped_bins(bins_, region)) {
+        for (auto& bin : active_bins) {
             if (debug_log_) {
                 stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
                                     << " reads in bin " << mapped_region(bin);
@@ -351,29 +352,27 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
             bin.clear();
         }
     } else {
-        const auto bins = overlapped_bins(bins_, region);
         const std::size_t num_threads {2 * (std::thread::hardware_concurrency() + 1)};
         std::vector<std::future<std::deque<Variant>>> bin_futures(num_threads);
-        for (auto first_bin = std::begin(bins), last_bin = std::end(bins); first_bin != last_bin; ) {
+        for (auto first_bin = std::begin(active_bins), last_bin = std::end(active_bins); first_bin != last_bin; ) {
             const auto batch_size = std::min(num_threads, static_cast<std::size_t>(std::distance(first_bin, last_bin)));
             const auto next_bin = std::next(first_bin, batch_size);
-            std::transform(first_bin, next_bin, std::begin(bin_futures), [&] (Bin& bin) {
-                               if (debug_log_) {
-                                   stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
-                                                       << " reads in bin " << mapped_region(bin);
-                               }
-                               return std::async([&] () -> std::deque<Variant> {
-                                   std::deque<Variant> result {};
-                                   const auto num_default_failures = try_assemble_with_defaults(bin, result);
-                                   if (num_default_failures == default_kmer_sizes_.size()) {
-                                       try_assemble_with_fallbacks(bin, result);
-                                   }
-                                   bin.clear();
-                                   return result;
-                               });
-                           });
-            std::for_each(std::begin(bin_futures), std::next(std::begin(bin_futures), batch_size),
-                          [&] (auto& f) { utils::append(f.get(), candidates); });
+            auto last_future = std::transform(first_bin, next_bin, std::begin(bin_futures), [&] (Bin& bin) {
+                if (debug_log_) {
+                    stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
+                                            << " reads in bin " << mapped_region(bin);
+                }
+                return std::async([&] () {
+                    std::deque<Variant> result {};
+                    const auto num_default_failures = try_assemble_with_defaults(bin, result);
+                    if (num_default_failures == default_kmer_sizes_.size()) {
+                        try_assemble_with_fallbacks(bin, result);
+                    }
+                    bin.clear();
+                    return result;
+                });
+            });
+            std::for_each(std::begin(bin_futures), last_future, [&] (auto& f) { utils::append(f.get(), candidates); });
             first_bin = next_bin;
         }
     }
