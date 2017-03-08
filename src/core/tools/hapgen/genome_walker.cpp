@@ -48,13 +48,9 @@ template <typename BidirIt>
 bool is_indel_boundary(BidirIt first, BidirIt allele, BidirIt last)
 {
     if (allele != first && allele != last && std::next(allele) != last && is_indel(*allele)) {
-        auto lhs_itr = std::find_if(std::make_reverse_iterator(std::prev(allele)), std::make_reverse_iterator(first),
-                                    [&] (const auto& a) { return !overlaps(a, *allele) || is_indel(a); });
-        if (lhs_itr != std::make_reverse_iterator(first) && overlaps(*lhs_itr, *allele) && is_indel(*lhs_itr)) {
-            return true;
-        }
-        auto rhs_itr = std::find_if(std::next(allele), last, [&] (const auto& a) { return !overlaps(a, *allele) || is_indel(a); });
-        return rhs_itr != last && overlaps(*rhs_itr, *allele) && is_indel(*rhs_itr);
+        auto itr = std::find_if(std::make_reverse_iterator(std::prev(allele)), std::make_reverse_iterator(first),
+                                [&] (const auto& a) { return !overlaps(a, *allele) || is_indel(a); });
+        return itr != std::make_reverse_iterator(first) && overlaps(*itr, *allele) && is_indel(*itr);
     } else {
         return false;
     }
