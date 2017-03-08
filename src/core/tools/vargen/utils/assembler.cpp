@@ -169,10 +169,10 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
                     } else {
                         add_edge(u, v, 1);
                     }
-                } else {
-                    if (is_reference(kmer_itr->second)) {
-                        ref_kmer_itr = std::find(ref_kmer_itr, std::cend(reference_kmers_), kmer);
-                        assert(ref_kmer_itr != std::cend(reference_kmers_));
+                }
+                if (is_reference(kmer_itr->second)) {
+                    ref_kmer_itr = std::find(ref_kmer_itr, std::cend(reference_kmers_), kmer);
+                    if (ref_kmer_itr != std::cend(reference_kmers_)) {
                         auto next_kmer_begin = std::next(kmer_begin);
                         auto next_kmer_end   = std::next(kmer_end);
                         const auto ref_offset = std::distance(std::cbegin(reference_kmers_), ref_kmer_itr);
@@ -199,8 +199,8 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
                             }
                         }
                     }
-                    prev_kmer_good = true;
                 }
+                prev_kmer_good = true;
             }
             prev_kmer = kmer;
         }
@@ -217,12 +217,11 @@ bool Assembler::is_empty() const noexcept
     return vertex_cache_.empty();
 }
 
-template <typename G>
 struct CycleDetector : public boost::default_dfs_visitor
 {
-    using Edge = typename boost::graph_traits<G>::edge_descriptor;
     CycleDetector(bool& is_acyclic) : is_acyclic_ {is_acyclic} {}
-    void back_edge(Edge e, const G& g)
+    template <typename Graph>
+    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
     {
         if (boost::source(e, g) != boost::target(e, g)) {
             is_acyclic_ = false;
@@ -236,7 +235,7 @@ bool Assembler::is_acyclic() const
 {
     if (graph_has_trivial_cycle()) return false;
     bool is_acyclic {true};
-    CycleDetector<KmerGraph> vis {is_acyclic};
+    CycleDetector vis {is_acyclic};
     const auto index_map = boost::get(&GraphNode::index, graph_);
     boost::depth_first_search(graph_, boost::visitor(vis).vertex_index_map(index_map));
     return is_acyclic;
