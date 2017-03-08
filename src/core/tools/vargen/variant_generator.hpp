@@ -59,8 +59,8 @@ protected:
     using VectorIterator  = std::vector<AlignedRead>::const_iterator;
     using FlatSetIterator = MappableFlatMultiSet<AlignedRead>::const_iterator;
     
-    boost::optional<logging::DebugLogger> debug_log_;
-    boost::optional<logging::TraceLogger> trace_log_;
+    mutable boost::optional<logging::DebugLogger> debug_log_;
+    mutable boost::optional<logging::TraceLogger> trace_log_;
     
 private:
     std::vector<std::unique_ptr<VariantGenerator>> generators_;
