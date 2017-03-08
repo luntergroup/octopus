@@ -270,10 +270,8 @@ void remove_nonoverlapping(Container& candidates, const GenomicRegion& region)
 
 auto extract_unique(std::deque<Variant>&& variants)
 {
-    std::vector<Variant> result {
-    std::make_move_iterator(std::begin(variants)),
-    std::make_move_iterator(std::end(variants))
-    };
+    using std::make_move_iterator;
+    std::vector<Variant> result {make_move_iterator(std::begin(variants)), make_move_iterator(std::end(variants))};
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
