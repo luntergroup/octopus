@@ -254,7 +254,7 @@ void Assembler::try_recover_dangling_branches()
         if (is_dangling_branch(v)) {
             const auto joining_kmer = find_joining_kmer(v);
             if (joining_kmer) {
-                add_edge(v, *joining_kmer, 1);
+                add_edge(v, *joining_kmer, 1, false, false);
             }
         }
     });
@@ -389,6 +389,8 @@ void Assembler::write_dot(std::ostream& out) const
     const auto edge_writer = [this] (std::ostream& out, Edge e) {
         if (is_reference(e)) {
             out << " [color=blue]" << std::endl;
+        } else if (is_artificial(e)) {
+            out << " [style=dotted,color=grey]" << std::endl;
         } else {
             out << " [color=red]" << std::endl;
         }
@@ -399,12 +401,6 @@ void Assembler::write_dot(std::ostream& out) const
     };
     boost::write_graphviz(out, graph_, vertex_writer, edge_writer, graph_writer);
 }
-
-// Assembler private types
-Assembler::GraphEdge::GraphEdge(const GraphEdge::WeightType weight, const bool is_reference)
-: weight {weight}
-, is_reference {is_reference}
-{}
 
 // Kmer
 Assembler::Kmer::Kmer(SequenceIterator first, SequenceIterator last) noexcept
@@ -606,7 +602,7 @@ Assembler::Vertex Assembler::null_vertex() const
 boost::optional<Assembler::Vertex> Assembler::add_vertex(const Kmer& kmer, const bool is_reference)
 {
     if (!utils::is_canonical_dna(kmer)) return boost::none;
-    const auto u = boost::add_vertex(GraphNode {boost::num_vertices(graph_), kmer, is_reference}, graph_);
+    const auto u = boost::add_vertex({boost::num_vertices(graph_), kmer, is_reference}, graph_);
     vertex_cache_.emplace(kmer, u);
     return u;
 }
@@ -637,9 +633,9 @@ void Assembler::clear_and_remove_all(const std::unordered_set<Vertex>& vertices)
 
 Assembler::Edge Assembler::add_edge(const Vertex u, const Vertex v,
                                     const GraphEdge::WeightType weight,
-                                    const bool is_reference)
+                                    const bool is_reference, const bool is_artificial)
 {
-    return boost::add_edge(u, v, GraphEdge {weight, is_reference}, graph_).first;
+    return boost::add_edge(u, v, {weight, is_reference, is_artificial}, graph_).first;
 }
 
 Assembler::Edge Assembler::add_reference_edge(const Vertex u, const Vertex v)
@@ -720,6 +716,11 @@ bool Assembler::is_target_reference(const Edge e) const
 bool Assembler::is_reference(const Edge e) const
 {
     return graph_[e].is_reference;
+}
+
+bool Assembler::is_artificial(const Edge e) const
+{
+    return graph_[e].is_artificial;
 }
 
 bool Assembler::is_reference_empty() const noexcept
@@ -1953,7 +1954,7 @@ void Assembler::print_dominator_tree() const
 
 bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noexcept
 {
-    return lhs.begin_pos == rhs.begin_pos && lhs.alt == rhs.alt;
+    return lhs.begin_pos == rhs.begin_pos && lhs.ref.size() == rhs.ref.size() && lhs.alt == rhs.alt;
 }
 
 } // namespace coretools

@@ -24,9 +24,11 @@
 namespace octopus { namespace coretools { class Assembler; }}
 
 namespace boost {
-    template <typename G> static decltype(auto) get(vertex_index_t, G& g);
-    template <typename G> static decltype(auto) get(vertex_index_t, const G& g);
-}
+
+template <typename G> static decltype(auto) get(vertex_index_t, G& g);
+template <typename G> static decltype(auto) get(vertex_index_t, const G& g);
+
+} // namespace boost
 
 namespace octopus { namespace coretools {
 
@@ -126,29 +128,15 @@ private:
     {
         using WeightType = unsigned;
         using ScoreType  = double;
-        
-        GraphEdge() = default;
-        
-        explicit GraphEdge(WeightType weight, bool is_reference = false);
-        
         WeightType weight;
-        ScoreType transition_score;
-        bool is_reference;
+        bool is_reference = false, is_artificial = false;
+        ScoreType transition_score = 0;
     };
-    
     struct GraphNode
     {
-        GraphNode() = default;
-        template <typename T>
-        explicit GraphNode(std::size_t index, T&& kmer, bool is_reference = false)
-        : index {index}
-        , kmer {std::forward<T>(kmer)}
-        , is_reference {is_reference}
-        {}
-        
         std::size_t index;
         Kmer kmer;
-        bool is_reference;
+        bool is_reference = false;
     };
     
     using KmerGraph = boost::adjacency_list<boost::listS, boost::listS, boost::bidirectionalS, GraphNode, GraphEdge>;
@@ -196,7 +184,7 @@ private:
     void remove_vertex(Vertex v);
     void clear_and_remove_vertex(Vertex v);
     void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
-    Edge add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, bool is_reference = false);
+    Edge add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, bool is_reference = false, bool is_artificial = false);
     Edge add_reference_edge(Vertex u, Vertex v);
     void remove_edge(Vertex u, Vertex v);
     void remove_edge(Edge e);
@@ -213,6 +201,7 @@ private:
     bool is_source_reference(Edge e) const;
     bool is_target_reference(Edge e) const;
     bool is_reference(Edge e) const;
+    bool is_artificial(Edge e) const;
     bool is_reference_empty() const noexcept;
     Vertex reference_head() const;
     Vertex reference_tail() const;
@@ -335,26 +324,28 @@ bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs) no
 
 // Hack to make some older boost algorithms work with bundled properties
 namespace boost {
-    using Assembler = octopus::coretools::Assembler;
-    
-    template <>
-    struct property_map<Assembler::KmerGraph, vertex_index_t>
-    {
-        using type       = property_map<Assembler::KmerGraph, std::size_t Assembler::GraphNode::*>::type;
-        using const_type = property_map<Assembler::KmerGraph, std::size_t Assembler::GraphNode::*>::const_type;
-    };
-    
-    template <typename G>
-    static decltype(auto) get(vertex_index_t, G& g)
-    {
-        return get(&Assembler::GraphNode::index, g);
-    }
-    template <typename G>
-    static decltype(auto)
-    get(vertex_index_t, G const & g)
-    {
-        return get(&Assembler::GraphNode::index, g);
-    }
+
+using Assembler = octopus::coretools::Assembler;
+
+template <>
+struct property_map<Assembler::KmerGraph, vertex_index_t>
+{
+    using type       = property_map<Assembler::KmerGraph, std::size_t Assembler::GraphNode::*>::type;
+    using const_type = property_map<Assembler::KmerGraph, std::size_t Assembler::GraphNode::*>::const_type;
+};
+
+template <typename G>
+static decltype(auto) get(vertex_index_t, G& g)
+{
+    return get(&Assembler::GraphNode::index, g);
+}
+template <typename G>
+static decltype(auto)
+get(vertex_index_t, G const & g)
+{
+    return get(&Assembler::GraphNode::index, g);
+}
+
 } // namespace boost
 
 #endif
