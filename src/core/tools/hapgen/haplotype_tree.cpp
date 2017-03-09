@@ -285,21 +285,20 @@ GenomicRegion HaplotypeTree::encompassing_region() const
 
 std::vector<Haplotype> HaplotypeTree::extract_haplotypes() const
 {
-    if (is_empty()) return std::vector<Haplotype> {};
-    return extract_haplotypes(encompassing_region());
+    if (is_empty()) {
+        return {};
+    } else {
+        return extract_haplotypes(encompassing_region());
+    }
 }
 
 std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& region) const
 {
     haplotype_leaf_cache_.clear();
     haplotype_leaf_cache_.reserve(num_haplotypes());
-    
     std::vector<Haplotype> result {};
-    
     if (is_empty() || !overlaps(region, encompassing_region())) return result;
-    
     result.reserve(num_haplotypes());
-    
     for (const auto leaf : haplotype_leafs_) {
         auto haplotype = extract_haplotype(leaf, region);
         // recently retreived haplotypes are added to the cache as it is likely these
@@ -307,7 +306,24 @@ std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& re
         haplotype_leaf_cache_.emplace(haplotype, leaf);
         result.push_back(std::move(haplotype));
     }
-    
+    return result;
+}
+
+std::vector<HaplotypeTree::HaplotypeLength> HaplotypeTree::extract_haplotype_lengths() const
+{
+    if (is_empty()) {
+        return {};
+    } else {
+        return extract_haplotype_lengths(encompassing_region());
+    }
+}
+
+std::vector<HaplotypeTree::HaplotypeLength> HaplotypeTree::extract_haplotype_lengths(const GenomicRegion& region) const
+{
+    if (is_empty() || !overlaps(region, encompassing_region())) return {};
+    std::vector<HaplotypeLength> result(num_haplotypes());
+    std::transform(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_), std::begin(result),
+                   [this, &region] (const Vertex leaf) { return extract_haplotype_length(leaf, region); });
     return result;
 }
 
@@ -515,12 +531,12 @@ HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const ContigAllele& new_a
 
 Haplotype HaplotypeTree::extract_haplotype(Vertex leaf, const GenomicRegion& region) const
 {
-    Haplotype::Builder result {region, reference_};
     const auto& contig_region = region.contig_region();
     using octopus::contains;
     while (leaf != root_ && !contains(contig_region, tree_[leaf])) {
         leaf = get_previous_allele(leaf);
     }
+    Haplotype::Builder result {region, reference_};
     while (leaf != root_ && contains(contig_region, tree_[leaf])) {
         result.push_front(tree_[leaf]);
         leaf = get_previous_allele(leaf);
@@ -528,16 +544,40 @@ Haplotype HaplotypeTree::extract_haplotype(Vertex leaf, const GenomicRegion& reg
     return result.build();
 }
 
+HaplotypeTree::HaplotypeLength HaplotypeTree::extract_haplotype_length(Vertex leaf, const GenomicRegion& region) const
+{
+    const auto& contig_region = region.contig_region();
+    using octopus::contains;
+    while (leaf != root_ && !contains(contig_region, tree_[leaf])) {
+        leaf = get_previous_allele(leaf);
+    }
+    if (leaf == root_) {
+        return size(contig_region);
+    }
+    HaplotypeLength result {right_overhang_size(contig_region, tree_[leaf])};
+    auto prev_node = leaf;
+    while (true) {
+        result += sequence_size(tree_[leaf]);
+        prev_node = leaf;
+        leaf = get_previous_allele(leaf);
+        if (leaf != root_ && contains(contig_region, tree_[leaf])) {
+            result += inner_distance(tree_[leaf], tree_[prev_node]);
+        } else {
+            break;
+        }
+    }
+    result += left_overhang_size(contig_region, tree_[prev_node]);
+    return result;
+}
+
 bool HaplotypeTree::define_same_haplotype(Vertex leaf1, Vertex leaf2) const
 {
     if (leaf1 == leaf2) return true;
-    
     while (leaf1 != root_) {
         if (leaf2 == root_ || tree_[leaf1] != tree_[leaf2]) return false;
         leaf1 = get_previous_allele(leaf1);
         leaf2 = get_previous_allele(leaf2);
     }
-    
     return leaf2 == root_;
 }
 
@@ -546,13 +586,11 @@ bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& hapl
     if (leaf == root_ || !overlaps(tree_[leaf], contig_region(haplotype))) {
         return false;
     }
-    
     while (leaf != root_) {
         if (!haplotype.includes(tree_[leaf]))
             return false;
         leaf = get_previous_allele(leaf);
     }
-    
     return true;
 }
 
@@ -693,6 +731,72 @@ HaplotypeTree::clear_internal(const Vertex leaf, const ContigRegion& region)
         }
         boost::remove_vertex(allele_to_move, tree_);
         return std::make_pair(allele_to_move_to, false);
+    }
+}
+
+HaplotypeTree::HaplotypeLength min_haplotype_length(const HaplotypeTree& tree)
+{
+    const auto lengths = tree.extract_haplotype_lengths();
+    if (lengths.empty()) {
+        return HaplotypeTree::HaplotypeLength {0};
+    } else {
+        return *std::min_element(std::cbegin(lengths), std::cend(lengths));
+    }
+}
+
+HaplotypeTree::HaplotypeLength min_haplotype_length(const HaplotypeTree& tree, const GenomicRegion& region)
+{
+    const auto lengths = tree.extract_haplotype_lengths(region);
+    if (lengths.empty()) {
+        return HaplotypeTree::HaplotypeLength {0};
+    } else {
+        return *std::max_element(std::cbegin(lengths), std::cend(lengths));
+    }
+}
+
+HaplotypeTree::HaplotypeLength max_haplotype_length(const HaplotypeTree& tree)
+{
+    const auto lengths = tree.extract_haplotype_lengths();
+    if (lengths.empty()) {
+        return HaplotypeTree::HaplotypeLength {0};
+    } else {
+        return *std::max_element(std::cbegin(lengths), std::cend(lengths));
+    }
+}
+
+HaplotypeTree::HaplotypeLength max_haplotype_length(const HaplotypeTree& tree, const GenomicRegion& region)
+{
+    const auto lengths = tree.extract_haplotype_lengths(region);
+    if (lengths.empty()) {
+        return HaplotypeTree::HaplotypeLength {0};
+    } else {
+        return *std::min_element(std::cbegin(lengths), std::cend(lengths));
+    }
+}
+
+std::pair<HaplotypeTree::HaplotypeLength, HaplotypeTree::HaplotypeLength>
+minmax_haplotype_lengths(const HaplotypeTree& tree)
+{
+    const auto lengths = tree.extract_haplotype_lengths();
+    if (lengths.empty()) {
+        constexpr HaplotypeTree::HaplotypeLength zero {0};
+        return std::make_pair(zero, zero);
+    } else {
+        const auto p = std::minmax_element(std::cbegin(lengths), std::cend(lengths));
+        return std::make_pair(*p.first, *p.second);
+    }
+}
+
+std::pair<HaplotypeTree::HaplotypeLength, HaplotypeTree::HaplotypeLength>
+minmax_haplotype_lengths(const HaplotypeTree& tree, const GenomicRegion& region)
+{
+    const auto lengths = tree.extract_haplotype_lengths(region);
+    if (lengths.empty()) {
+        constexpr HaplotypeTree::HaplotypeLength zero {0};
+        return std::make_pair(zero, zero);
+    } else {
+        const auto p = std::minmax_element(std::cbegin(lengths), std::cend(lengths));
+        return std::make_pair(*p.first, *p.second);
     }
 }
 
