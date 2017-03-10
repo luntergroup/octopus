@@ -313,23 +313,11 @@ bool Assembler::prune(const unsigned min_weight)
         old_size = new_size;
     }
     assert(is_reference_unique_path());
-    try {
-        if (can_prune_reference_flanks()) {
-            prune_reference_flanks();
-        }
-    } catch (const boost::not_a_dag& e) {
-        clear();
-        return false;
-    }
+    prune_reference_flanks();
     assert(is_reference_unique_path());
     if (is_reference_empty()) {
         clear();
         return true;
-    }
-    if (can_prune_reference_flanks()) {
-        // something is wrong, have seen cases, bug?
-        clear();
-        return false;
     }
     new_size = boost::num_vertices(graph_);
     assert(new_size != 0);
@@ -338,7 +326,6 @@ bool Assembler::prune(const unsigned min_weight)
     if (new_size != old_size) {
         regenerate_vertex_indices();
     }
-    
     return true;
 }
 
@@ -576,22 +563,24 @@ void Assembler::regenerate_vertex_indices()
 
 bool Assembler::is_reference_unique_path() const
 {
-    auto u = reference_head();
-    const auto tail = reference_tail();
-    const auto is_reference_edge = [this] (const Edge e) { return is_reference(e); };
-    
-    while (u != tail) {
-        const auto p = boost::out_edges(u, graph_);
-        const auto it = std::find_if(p.first, p.second, is_reference_edge);
-        assert(it != p.second);
-        if (std::any_of(boost::next(it), p.second, is_reference_edge)) {
-            return false;
+    if (is_reference_empty()) {
+        return true;
+    } else {
+        auto u = reference_head();
+        const auto tail = reference_tail();
+        const auto is_reference_edge = [this] (const Edge e) { return is_reference(e); };
+        while (u != tail) {
+            const auto p = boost::out_edges(u, graph_);
+            const auto itr = std::find_if(p.first, p.second, is_reference_edge);
+            assert(itr != p.second);
+            if (std::any_of(boost::next(itr), p.second, is_reference_edge)) {
+                return false;
+            }
+            u = boost::target(*itr, graph_);
         }
-        u = boost::target(*it, graph_);
+        const auto p = boost::out_edges(tail, graph_);
+        return std::none_of(p.first, p.second, is_reference_edge);
     }
-    
-    const auto p = boost::out_edges(tail, graph_);
-    return std::none_of(p.first, p.second, is_reference_edge);
 }
 
 Assembler::Vertex Assembler::null_vertex() const
@@ -725,7 +714,7 @@ bool Assembler::is_artificial(const Edge e) const
 
 bool Assembler::is_reference_empty() const noexcept
 {
-    return reference_kmers_.empty();
+    return reference_vertices_.empty();
 }
 
 Assembler::Vertex Assembler::reference_head() const
@@ -1080,100 +1069,6 @@ void Assembler::remove_low_weight_edges(const unsigned min_weight)
                && sum_source_in_edge_weight(e) < min_weight
                && sum_target_out_edge_weight(e) < min_weight;
     }, graph_);
-//    resume(misc_timer[9]);
-//    std::set<Edge> low_weight_edges {};
-//    //low_weight_edges.reserve(boost::num_edges(graph_));
-//    const auto p_edges = boost::edges(graph_);
-//    std::copy_if(p_edges.first, p_edges.second, std::inserter(low_weight_edges, std::begin(low_weight_edges)),
-//                 [this, min_weight] (const Edge& e) { return !is_reference(e) && graph_[e].weight < min_weight; });
-//    pause(misc_timer[9]);
-//    if (low_weight_edges.empty()) {
-//        return;
-//    }
-//    resume(misc_timer[10]);
-//    std::unordered_set<Vertex> low_weight_vertices {}, low_weight_sources {}, low_weight_sinks {};
-//    low_weight_vertices.reserve(boost::num_vertices(graph_));
-//    low_weight_sources.reserve(boost::num_vertices(graph_));
-//    low_weight_sinks.reserve(boost::num_vertices(graph_));
-//    for (Edge e : low_weight_edges) {
-//        if (!is_reference(e)) {
-//            const auto source = boost::source(e, graph_);
-//            if (is_low_weight(source, min_weight)) {
-//                low_weight_vertices.insert(source);
-//            } else if (is_low_weight_source(source, min_weight)) {
-//                low_weight_sources.insert(source);
-//            }
-//            const auto target = boost::target(e, graph_);
-//            if (is_low_weight(target, min_weight)) {
-//                low_weight_vertices.insert(target);
-//            } else if (is_low_weight_sink(target, min_weight)) {
-//                low_weight_sinks.insert(target);
-//            }
-//        }
-//    }
-//    pause(misc_timer[10]);
-//    auto num_low_weight_edges = low_weight_edges.size();
-//    auto num_low_weight_vertices = low_weight_vertices.size();
-//    while (num_low_weight_edges > 0 && num_low_weight_vertices > 0) {
-//        // Relax low weight edges
-//        resume(misc_timer[11]);
-//        for (auto itr = std::cbegin(low_weight_edges); itr != std::cend(low_weight_edges); ) {
-//            const auto u = boost::source(*itr, graph_);
-//            const auto v = boost::target(*itr, graph_);
-//            if (is_reference(u)) {
-//                if (low_weight_vertices.count(v) == 1) {
-//                    ++itr;
-//                } else {
-//                    itr = low_weight_edges.erase(itr);
-//                }
-//            } else if (is_reference(v)) {
-//                if (low_weight_vertices.count(u) == 1) {
-//                    ++itr;
-//                } else {
-//                    itr = low_weight_edges.erase(itr);
-//                }
-//            } else {
-//                if ((low_weight_vertices.count(u) == 1 || low_weight_sources.count(u) == 1)
-//                    && (low_weight_vertices.count(v) == 1 || low_weight_sinks.count(v) == 1)) {
-//                    ++itr;
-//                } else {
-//                    itr = low_weight_edges.erase(itr);
-//                }
-//            }
-//        }
-//        pause(misc_timer[11]);
-//        if (low_weight_edges.size() == num_low_weight_edges) {
-//            break;
-//        } else {
-//            num_low_weight_edges = low_weight_edges.size();
-//        }
-//        // Relax low weight vertices
-//        resume(misc_timer[4]);
-//        for (auto itr = std::cbegin(low_weight_vertices); itr != std::cend(low_weight_vertices); ) {
-//            const auto in_edges = boost::in_edges(*itr, graph_);
-//            if (all_in(in_edges.first, in_edges.second, low_weight_edges)) {
-//                const auto out_edges = boost::out_edges(*itr, graph_);
-//                if (all_in(out_edges.first, out_edges.second, low_weight_edges)) {
-//                    ++itr;
-//                } else {
-//                    itr = low_weight_vertices.erase(itr);
-//                }
-//            } else {
-//                itr = low_weight_vertices.erase(itr);
-//            }
-//        }
-//        if (low_weight_vertices.size() == num_low_weight_vertices) {
-//            break;
-//        } else {
-//            num_low_weight_vertices = low_weight_vertices.size();
-//        }
-//        pause(misc_timer[4]);
-//    }
-//    resume(misc_timer[3]);
-//    for (const Edge& e : low_weight_edges) {
-//        remove_edge(e);
-//    }
-//    pause(misc_timer[3]);
 }
 
 void Assembler::remove_disconnected_vertices()
@@ -1218,21 +1113,21 @@ std::deque<Assembler::Vertex> Assembler::remove_vertices_that_cant_be_reached_fr
 
 void Assembler::remove_vertices_that_cant_reach(const Vertex v)
 {
-    if (is_reference_empty()) return;
-    
-    const auto transpose = boost::make_reverse_graph(graph_);
-    const auto index_map = boost::get(&GraphNode::index, transpose);
-    std::unordered_set<Vertex> reachables {};
-    auto vis = boost::make_bfs_visitor(boost::write_property(boost::typed_identity_property_map<Vertex>(),
-                                                             std::inserter(reachables, std::begin(reachables)),
-                                                             boost::on_discover_vertex()));
-    boost::breadth_first_search(transpose, v, boost::visitor(vis).vertex_index_map(index_map));
-    VertexIterator vi, vi_end, vi_next;
-    std::tie(vi, vi_end) = boost::vertices(graph_);
-    for (vi_next = vi; vi != vi_end; vi = vi_next) {
-        ++vi_next;
-        if (reachables.count(*vi) == 0) {
-            clear_and_remove_vertex(*vi);
+    if (!is_reference_empty()) {
+        const auto transpose = boost::make_reverse_graph(graph_);
+        const auto index_map = boost::get(&GraphNode::index, transpose);
+        std::unordered_set<Vertex> reachables {};
+        auto vis = boost::make_bfs_visitor(boost::write_property(boost::typed_identity_property_map<Vertex>(),
+                                                                 std::inserter(reachables, std::begin(reachables)),
+                                                                 boost::on_discover_vertex()));
+        boost::breadth_first_search(transpose, v, boost::visitor(vis).vertex_index_map(index_map));
+        VertexIterator vi, vi_end, vi_next;
+        std::tie(vi, vi_end) = boost::vertices(graph_);
+        for (vi_next = vi; vi != vi_end; vi = vi_next) {
+            ++vi_next;
+            if (reachables.count(*vi) == 0) {
+                clear_and_remove_vertex(*vi);
+            }
         }
     }
 }
@@ -1306,26 +1201,28 @@ void Assembler::pop_reference_tail()
 
 void Assembler::prune_reference_flanks()
 {
-    if (is_reference_empty()) return;
-    auto new_head_itr = std::cbegin(reference_vertices_);
-    const auto is_bridge_vertex = [this] (const Vertex v) { return is_bridge(v); };
-    if (boost::out_degree(reference_head(), graph_) == 1) {
-        new_head_itr = std::find_if_not(std::next(new_head_itr), std::cend(reference_vertices_), is_bridge_vertex);
-        std::for_each(std::cbegin(reference_vertices_), new_head_itr, [this] (const Vertex u) {
-            remove_edge(u, *boost::adjacent_vertices(u, graph_).first);
-            remove_vertex(u);
-            pop_reference_head();
-        });
-    }
-    if (new_head_itr != std::cend(reference_vertices_) && boost::in_degree(reference_tail(), graph_) == 1) {
-        const auto new_tail_itr = std::find_if_not(std::next(std::crbegin(reference_vertices_)),
-                                                   std::make_reverse_iterator(new_head_itr),
-                                                   is_bridge_vertex);
-        std::for_each(std::crbegin(reference_vertices_), new_tail_itr, [this] (const Vertex u) {
-            remove_edge(*boost::inv_adjacent_vertices(u, graph_).first, u);
-            remove_vertex(u);
-            pop_reference_tail();
-        });
+    if (!is_reference_empty()) {
+        assert(is_acyclic());
+        auto new_head_itr = std::cbegin(reference_vertices_);
+        const auto is_bridge_vertex = [this] (const Vertex v) { return is_bridge(v); };
+        if (boost::out_degree(reference_head(), graph_) == 1) {
+            new_head_itr = std::find_if_not(std::next(new_head_itr), std::cend(reference_vertices_), is_bridge_vertex);
+            std::for_each(std::cbegin(reference_vertices_), new_head_itr, [this] (const Vertex u) {
+                remove_edge(u, *boost::adjacent_vertices(u, graph_).first);
+                remove_vertex(u);
+                pop_reference_head();
+            });
+        }
+        if (new_head_itr != std::cend(reference_vertices_) && boost::in_degree(reference_tail(), graph_) == 1) {
+            const auto new_tail_itr = std::find_if_not(std::next(std::crbegin(reference_vertices_)),
+                                                       std::make_reverse_iterator(new_head_itr),
+                                                       is_bridge_vertex);
+            std::for_each(std::crbegin(reference_vertices_), new_tail_itr, [this] (const Vertex u) {
+                remove_edge(*boost::inv_adjacent_vertices(u, graph_).first, u);
+                remove_vertex(u);
+                pop_reference_tail();
+            });
+        }
     }
 }
 
