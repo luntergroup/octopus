@@ -67,6 +67,7 @@ public:
     bool is_empty() const noexcept;
     
     bool is_acyclic() const;
+    bool remove_cycles();
     
     // Returns true if all the kmers in the graph are in the reference sequence
     bool is_all_reference() const;
@@ -74,7 +75,9 @@ public:
     void try_recover_dangling_branches();
     
     // Removes edges between kmers with weight less than the given value
-    bool prune(unsigned min_weight);
+    void prune(unsigned min_weight);
+    
+    bool cleanup();
     
     void clear();
     

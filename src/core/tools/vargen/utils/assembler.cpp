@@ -217,28 +217,66 @@ bool Assembler::is_empty() const noexcept
     return vertex_cache_.empty();
 }
 
+namespace {
+
 struct CycleDetector : public boost::default_dfs_visitor
 {
-    CycleDetector(bool& is_acyclic) : is_acyclic_ {is_acyclic} {}
+    struct CycleDetectedException {};
     template <typename Graph>
     void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
     {
-        if (boost::source(e, g) != boost::target(e, g)) {
-            is_acyclic_ = false;
-        }
+        throw CycleDetectedException {};
+    }
+};
+
+template <typename Container>
+struct CyclicEdgeDetector : public boost::default_dfs_visitor
+{
+    CyclicEdgeDetector(Container& result) : result_ {result} {}
+    template <typename Graph>
+    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
+    {
+        result_.push_back(e);
     }
 protected:
-    bool& is_acyclic_;
+    Container& result_;
 };
+
+} // namespace
 
 bool Assembler::is_acyclic() const
 {
-    if (graph_has_trivial_cycle()) return false;
-    bool is_acyclic {true};
-    CycleDetector vis {is_acyclic};
+    if (graph_has_trivial_cycle()) {
+        return false;
+    } else if (is_empty() || is_all_reference()) {
+        return true;
+    } else {
+        const auto index_map = boost::get(&GraphNode::index, graph_);
+        try {
+            boost::depth_first_search(graph_, boost::visitor(CycleDetector {}).vertex_index_map(index_map));
+            return true;
+        } catch (const CycleDetector::CycleDetectedException&) {
+            return false;
+        }
+    }
+}
+
+bool Assembler::remove_cycles()
+{
+    remove_trivial_nonreference_cycles();
     const auto index_map = boost::get(&GraphNode::index, graph_);
+    std::deque<Edge> cyclic_edges {};
+    CyclicEdgeDetector<decltype(cyclic_edges)> vis {cyclic_edges};
     boost::depth_first_search(graph_, boost::visitor(vis).vertex_index_map(index_map));
-    return is_acyclic;
+    if (cyclic_edges.empty()) {
+        return false;
+    } else {
+        for (const Edge& e : cyclic_edges) {
+            remove_edge(e);
+        }
+        assert(is_acyclic());
+        return true;
+    }
 }
 
 bool Assembler::is_all_reference() const
@@ -260,7 +298,12 @@ void Assembler::try_recover_dangling_branches()
     });
 }
 
-bool Assembler::prune(const unsigned min_weight)
+void Assembler::prune(const unsigned min_weight)
+{
+    remove_low_weight_edges(min_weight);
+}
+
+bool Assembler::cleanup()
 {
     if (!is_reference_unique_path()) {
         clear();
@@ -268,7 +311,8 @@ bool Assembler::prune(const unsigned min_weight)
     }
     auto old_size = boost::num_vertices(graph_);
     if (old_size < 2) return true;
-    remove_trivial_nonreference_cycles();
+    assert(is_reference_unique_path());
+    remove_disconnected_vertices();
     auto new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
@@ -277,16 +321,8 @@ bool Assembler::prune(const unsigned min_weight)
         }
         old_size = new_size;
     }
-    assert(is_reference_unique_path());
-    remove_low_weight_edges(min_weight);
-    remove_disconnected_vertices();
-    new_size = boost::num_vertices(graph_);
-    if (new_size != old_size) {
-        regenerate_vertex_indices();
-        if (new_size < 2) {
-            return true;
-        }
-        old_size = new_size;
+    if (!is_acyclic()) {
+        return false;
     }
     assert(is_reference_unique_path());
     remove_vertices_that_cant_be_reached_from(reference_head());

@@ -757,19 +757,26 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
                                            std::deque<Variant>& result) const
 {
     assembler.try_recover_dangling_branches();
-    if (!assembler.prune(min_kmer_observations_)) {
+    assembler.prune(min_kmer_observations_);
+    auto good = assembler.cleanup();
+    if (!good && !assembler.is_acyclic()) {
+        assembler.remove_cycles();
+        assembler.cleanup();
+    } else {
+        return good;
+    }
+    if (assembler.is_empty() || assembler.is_all_reference()) {
         return false;
     }
-    if (assembler.is_empty() || assembler.is_all_reference() || !assembler.is_acyclic()) return false;
     auto variants = assembler.extract_variants(max_bubbles_, min_bubble_score_);
     assembler.clear();
-    if (variants.empty()) return true;
+    if (variants.empty()) return good;
     trim_reference(variants);
     std::sort(std::begin(variants), std::end(variants), VariantLess {});
     variants.erase(std::unique(std::begin(variants), std::end(variants)), std::end(variants));
     decompose_complex(variants);
     add_to_mapped_variants(std::move(variants), result, assemble_region);
-    return true;
+    return good;
 }
 
 } // namespace coretools
