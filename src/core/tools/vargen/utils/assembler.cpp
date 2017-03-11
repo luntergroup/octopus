@@ -261,7 +261,7 @@ bool Assembler::is_acyclic() const
     }
 }
 
-bool Assembler::remove_cycles()
+bool Assembler::remove_nonreference_cycles()
 {
     remove_trivial_nonreference_cycles();
     const auto index_map = boost::get(&GraphNode::index, graph_);
@@ -272,9 +272,10 @@ bool Assembler::remove_cycles()
         return false;
     } else {
         for (const Edge& e : cyclic_edges) {
-            remove_edge(e);
+            if (!is_reference(e)) {
+                remove_edge(e);
+            }
         }
-        assert(is_acyclic());
         return true;
     }
 }
