@@ -67,7 +67,7 @@ public:
     bool is_empty() const noexcept;
     
     bool is_acyclic() const;
-    bool remove_cycles();
+    bool remove_nonreference_cycles();
     
     // Returns true if all the kmers in the graph are in the reference sequence
     bool is_all_reference() const;
