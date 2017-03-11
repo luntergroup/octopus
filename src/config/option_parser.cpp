@@ -343,21 +343,21 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description haplotype_generation("Haplotype generation");
     haplotype_generation.add_options()
     ("max-haplotypes,x",
-     po::value<int>()->default_value(128),
+     po::value<int>()->default_value(200),
      "Maximum number of candidate haplotypes the caller may consider. If a region contains"
      " more candidate haplotypes than this then filtering is applied")
     
     ("haplotype-holdout-threshold",
-     po::value<int>()->default_value(2048),
+     po::value<int>()->default_value(2500),
      "Forces the haplotype generator to temporarily hold out some alleles if the number"
      " of haplotypes in a region exceeds this threshold")
     
     ("haplotype-overflow",
-     po::value<int>()->default_value(16384),
+     po::value<int>()->default_value(18000),
      "Regions with more haplotypes than this will be skipped")
     
     ("max-holdout-depth",
-     po::value<int>()->default_value(3),
+     po::value<int>()->default_value(5),
      "Maximum number of holdout attempts the haplotype generator can make before the region"
      " is skipped")
     
