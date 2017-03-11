@@ -853,8 +853,13 @@ boost::optional<HaplotypeGenerator::HoldoutSet> HaplotypeGenerator::propose_new_
 bool HaplotypeGenerator::can_reintroduce_holdouts() const noexcept
 {
     assert(in_holdout_mode());
-    return !ends_before(active_region_, top_holdout_region())
-           || !has_overlapped(alleles_, right_overhang_region(top_holdout_region(), active_region_));
+    if (!ends_before(active_region_, top_holdout_region())) {
+        return true;
+    } else {
+        const auto remaining_holdout_region = right_overhang_region(top_holdout_region(), active_region_);
+        const auto remaining_holdout_alleles = overlap_range(alleles_, remaining_holdout_region);
+        return empty(remaining_holdout_alleles) || mapped_end(remaining_holdout_alleles.back()) == remaining_holdout_region.begin();
+    }
 }
 
 namespace debug {
