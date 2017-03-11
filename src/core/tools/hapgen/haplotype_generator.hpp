@@ -145,9 +145,10 @@ private:
     void populate_tree_with_novel_alleles();
     void populate_tree_with_holdouts();
     bool in_holdout_mode() const noexcept;
+    const GenomicRegion& top_holdout_region() const;
     bool can_try_extracting_holdouts(const GenomicRegion& region) const noexcept;
     bool try_extract_holdouts(GenomicRegion region);
-    std::deque<HoldoutSet> propose_new_holdout_sets(GenomicRegion region) const;
+    boost::optional<HoldoutSet> propose_new_holdout_set(GenomicRegion region) const;
     bool can_reintroduce_holdouts() const noexcept;
     void reintroduce_holdouts();
     void clear_holdouts() noexcept;
