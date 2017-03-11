@@ -44,6 +44,7 @@
 #include "exceptions/program_error.hpp"
 #include "exceptions/system_error.hpp"
 #include "exceptions/missing_file_error.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 
 namespace octopus { namespace options {
 
@@ -1079,6 +1080,16 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
+auto get_exclusion_threshold() noexcept
+{
+    return HaplotypeLikelihoodModel{}.pad_requirement();
+}
+
+auto get_min_flank_pad() noexcept
+{
+    return 2 * (2 * HaplotypeLikelihoodModel{}.pad_requirement() - 1);
+}
+
 auto make_haplotype_generator_builder(const OptionMap& options)
 {
     const auto lagging_policy    = get_lagging_policy(options);
@@ -1088,7 +1099,8 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
     return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options))
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
-    .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
+    .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
+    .set_exclusion_threshold(get_exclusion_threshold()).set_min_flank_pad(get_min_flank_pad());
 }
 
 boost::optional<Pedigree> get_pedigree(const OptionMap& options)
