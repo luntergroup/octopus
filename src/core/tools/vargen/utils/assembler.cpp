@@ -1246,7 +1246,7 @@ void Assembler::prune_reference_flanks()
     if (!is_reference_empty()) {
         auto new_head_itr = std::cbegin(reference_vertices_);
         const auto is_bridge_vertex = [this] (const Vertex v) { return is_bridge(v); };
-        if (boost::out_degree(reference_head(), graph_) == 1) {
+        if (boost::in_degree(reference_head(), graph_) == 0 && boost::out_degree(reference_head(), graph_) == 1) {
             new_head_itr = std::find_if_not(std::next(new_head_itr), std::cend(reference_vertices_), is_bridge_vertex);
             std::for_each(std::cbegin(reference_vertices_), new_head_itr, [this] (const Vertex u) {
                 remove_edge(u, *boost::adjacent_vertices(u, graph_).first);
@@ -1254,7 +1254,8 @@ void Assembler::prune_reference_flanks()
                 pop_reference_head();
             });
         }
-        if (new_head_itr != std::cend(reference_vertices_) && boost::in_degree(reference_tail(), graph_) == 1) {
+        if (new_head_itr != std::cend(reference_vertices_) && boost::in_degree(reference_tail(), graph_) == 1
+            && boost::out_degree(reference_tail(), graph_) == 0) {
             const auto new_tail_itr = std::find_if_not(std::next(std::crbegin(reference_vertices_)),
                                                        std::make_reverse_iterator(new_head_itr),
                                                        is_bridge_vertex);
