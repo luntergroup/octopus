@@ -474,6 +474,12 @@ void log_success(L& log, const char* type, const unsigned k)
 }
 
 template <typename L>
+void log_partial_success(L& log, const char* type, const unsigned k)
+{
+    if (log) stream(*log, 8) << type << " assembler with kmer size " << k << " partially completed";
+}
+
+template <typename L>
 void log_failure(L& log, const char* type, const unsigned k)
 {
     if (log) stream(*log, 8) << type << " assembler with kmer size " << k << " failed";
@@ -485,12 +491,18 @@ unsigned LocalReassembler::try_assemble_with_defaults(const Bin& bin, std::deque
 {
     unsigned num_failures {0};
     for (const auto k : default_kmer_sizes_) {
-        const auto success = assemble_bin(k, bin, result);
-        if (success) {
-            log_success(debug_log_, "Default", k);
-        } else {
-            log_failure(debug_log_, "Default", k);
-            ++num_failures;
+        const auto status = assemble_bin(k, bin, result);
+        switch (status) {
+            case AssemblerStatus::success:
+                log_success(debug_log_, "Default", k);
+                break;
+            case AssemblerStatus::partial_success:
+                log_partial_success(debug_log_, "Default", k);
+                ++num_failures;
+                break;
+            default:
+                log_failure(debug_log_, "Default", k);
+                ++num_failures;
         }
     }
     return num_failures;
@@ -499,12 +511,16 @@ unsigned LocalReassembler::try_assemble_with_defaults(const Bin& bin, std::deque
 void LocalReassembler::try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result) const
 {
     for (const auto k : fallback_kmer_sizes_) {
-        const auto success = assemble_bin(k, bin, result);
-        if (success) {
-            log_success(debug_log_, "Fallback", k);
-            break;
-        } else {
-            log_failure(debug_log_, "Fallback", k);
+        const auto status = assemble_bin(k, bin, result);
+        switch (status) {
+            case AssemblerStatus::success:
+                log_success(debug_log_, "Fallback", k);
+                return;
+            case AssemblerStatus::partial_success:
+                log_partial_success(debug_log_, "Fallback", k);
+                break;
+            default:
+                log_failure(debug_log_, "Fallback", k);
         }
     }
 }
@@ -530,18 +546,23 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
     }
 }
 
-bool LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const
+LocalReassembler::AssemblerStatus
+LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const
 {
-    if (bin.empty()) return true;
+    if (bin.empty()) return AssemblerStatus::success;
     const auto assemble_region = propose_assembler_region(bin.region, kmer_size);
-    if (size(assemble_region) < kmer_size) return false;
+    if (size(assemble_region) < kmer_size) return AssemblerStatus::failed;
     const auto reference_sequence = reference_.get().fetch_sequence(assemble_region);
-    if (!utils::is_canonical_dna(reference_sequence)) return false;
+    if (!utils::is_canonical_dna(reference_sequence)) return AssemblerStatus::failed;
     Assembler assembler {kmer_size, reference_sequence};
-    for (const auto& sequence : bin.read_sequences) {
-        assembler.insert_read(sequence);
+    if (assembler.is_unique_reference()) {
+        for (const auto& sequence : bin.read_sequences) {
+            assembler.insert_read(sequence);
+        }
+        return try_assemble_region(assembler, reference_sequence, assemble_region, result);
+    } else {
+        return AssemblerStatus::failed;
     }
-    return try_assemble_region(assembler, reference_sequence, assemble_region, result);
 }
 
 auto partition_complex(std::deque<Assembler::Variant>& variants)
@@ -751,23 +772,23 @@ void add_to_mapped_variants(std::deque<Assembler::Variant>&& variants, std::dequ
     }
 }
 
-bool LocalReassembler::try_assemble_region(Assembler& assembler,
-                                           const NucleotideSequence& reference_sequence,
-                                           const GenomicRegion& assemble_region,
-                                           std::deque<Variant>& result) const
+LocalReassembler::AssemblerStatus
+LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequence& reference_sequence,
+                                      const GenomicRegion& assemble_region, std::deque<Variant>& result) const
 {
+    assert(assembler.is_unique_reference());
+    assembler.remove_nonreference_cycles(true);
     assembler.try_recover_dangling_branches();
     assembler.prune(min_kmer_observations_);
-    auto good = assembler.cleanup();
-    if (!good && !assembler.is_acyclic()) {
+    assembler.cleanup();
+    auto status = AssemblerStatus::success;
+    if (!assembler.is_acyclic()) {
         assembler.remove_nonreference_cycles();
-        if (!assembler.is_acyclic()) {
-            return false;
-        }
         assembler.cleanup();
+        status = AssemblerStatus::partial_success;
     }
     if (assembler.is_empty() || assembler.is_all_reference()) {
-        return good;
+        return status;
     }
     auto variants = assembler.extract_variants(max_bubbles_, min_bubble_score_);
     assembler.clear();
@@ -778,7 +799,7 @@ bool LocalReassembler::try_assemble_region(Assembler& assembler,
         decompose_complex(variants);
         add_to_mapped_variants(std::move(variants), result, assemble_region);
     }
-    return good;
+    return status;
 }
 
 } // namespace coretools
