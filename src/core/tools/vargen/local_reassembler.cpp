@@ -254,19 +254,20 @@ auto transform_low_quality_matches_to_reference(const AlignedRead& read,
 
 auto get_removable_flank_sizes(const AlignedRead& read, const AlignedRead::BaseQuality min_quality) noexcept
 {
-    const auto p = get_soft_clipped_sizes(read);
+    CigarOperation::Size front_clip, back_clip;
+    std::tie(front_clip, back_clip) = get_soft_clipped_sizes(read);
     AlignedRead::NucleotideSequence::size_type front {0}, back {0};
     const auto is_low_quality = [min_quality] (auto q) { return q < min_quality; };
     const auto& base_qualities = read.base_qualities();
-    if (p.first > 0) {
+    if (front_clip > 0) {
         const auto begin = std::cbegin(base_qualities);
-        const auto itr = std::find_if_not(begin, std::next(begin, p.first), is_low_quality);
-        front = std::distance(begin, itr);
+        const auto first_good = std::find_if_not(begin, std::next(begin, front_clip), is_low_quality);
+        front = std::distance(begin, first_good);
     }
-    if (p.second > 0) {
+    if (back_clip > 0) {
         const auto begin = std::crbegin(base_qualities);
-        const auto itr = std::find_if_not(begin, std::next(begin, p.first), is_low_quality);
-        back = std::distance(begin, itr);
+        const auto first_good = std::find_if_not(begin, std::next(begin, back_clip), is_low_quality);
+        back = std::distance(begin, first_good);
     }
     return std::make_pair(front, back);
 }
