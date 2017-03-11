@@ -780,13 +780,12 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
     assembler.remove_nonreference_cycles(true);
     assembler.try_recover_dangling_branches();
     assembler.prune(min_kmer_observations_);
-    assembler.cleanup();
     auto status = AssemblerStatus::success;
     if (!assembler.is_acyclic()) {
         assembler.remove_nonreference_cycles();
-        assembler.cleanup();
         status = AssemblerStatus::partial_success;
     }
+    assembler.cleanup();
     if (assembler.is_empty() || assembler.is_all_reference()) {
         return status;
     }
