@@ -601,7 +601,7 @@ void HaplotypeGenerator::progress(GenomicRegion to)
                 alleles_.erase_overlapped(second_removal_region);
                 
                 if (is_after(*next_active_region_, active_region_)) {
-                    assert(contains(active_region_, tree_.encompassing_region()));
+                    assert(tree_.is_empty() || contains(active_region_, tree_.encompassing_region()));
                     tree_.clear();
                 } else {
                     tree_.clear(first_removal_region);
@@ -611,6 +611,9 @@ void HaplotypeGenerator::progress(GenomicRegion to)
                 const auto removal_region = expand_rhs(passed_region, -1);
                 alleles_.erase_overlapped(removal_region);
                 tree_.clear(removal_region);
+            }
+            if (overlaps(passed_region, rightmost_allele_) && !alleles_.empty()) {
+                rightmost_allele_ = alleles_.rightmost();
             }
         }
     }
