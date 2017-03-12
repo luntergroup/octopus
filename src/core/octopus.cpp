@@ -1055,9 +1055,19 @@ class CallingBug : public ProgramError
     std::string do_where() const override { return "run_octopus"; }
     std::string do_why() const override
     {
-        return "Encountered an unknown error during calling. This probably means there is a bug"
-        " and your results are untrustworthy.";
+        if (what_) {
+            return "Encountered an exception during calling '" + *what_ + "'. This means there is a bug"
+            " and your results are untrustworthy.";
+        } else {
+            return "Encountered an unknown error during calling. This means there is a bug"
+            " and your results are untrustworthy.";
+        }
     }
+    
+    boost::optional<std::string> what_;
+public:
+    CallingBug() = default;
+    CallingBug(const std::exception& e) : what_ {e.what()} {}
 };
 
 void run_octopus(GenomeCallingComponents& components, std::string command)
@@ -1087,6 +1097,12 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
             cleanup(components);
         } catch (...) {}
         throw;
+    } catch (const std::exception& e) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {e};
     } catch (...) {
         try {
             if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
