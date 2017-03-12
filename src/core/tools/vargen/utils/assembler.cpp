@@ -923,7 +923,7 @@ bool Assembler::graph_has_nontrivial_cycle() const
 
 void Assembler::remove_trivial_nonreference_cycles()
 {
-    boost::remove_edge_if([this] (const Edge e) { return !is_reference(e) && is_trivial_cycle(e) && !is_simple_deletion(e); }, graph_);
+    boost::remove_edge_if([this] (const Edge e) { return !is_reference(e) && is_trivial_cycle(e); }, graph_);
 }
 
 void Assembler::remove_nontrivial_nonreference_cycles()
@@ -939,7 +939,7 @@ void Assembler::remove_nontrivial_nonreference_cycles()
     }
 }
 
-void Assembler::remove_all_nonreference_cycles(bool break_chains)
+void Assembler::remove_all_nonreference_cycles(const bool break_chains)
 {
     const auto index_map = boost::get(&GraphNode::index, graph_);
     std::deque<Edge> cyclic_edges {};
@@ -950,7 +950,7 @@ void Assembler::remove_all_nonreference_cycles(bool break_chains)
         bad_kmers.reserve(num_kmers());
     }
     for (const Edge& e : cyclic_edges) {
-        if (!(is_reference(e) || is_simple_deletion(e))) {
+        if (!is_reference(e)) {
             if (break_chains) {
                 if (!is_source_reference(e)) {
                     bad_kmers.insert(boost::source(e, graph_));
