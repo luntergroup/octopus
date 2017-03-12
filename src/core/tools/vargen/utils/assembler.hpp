@@ -68,7 +68,7 @@ public:
     bool is_empty() const noexcept;
     
     bool is_acyclic() const;
-    void remove_nonreference_cycles(bool trivial_only = false);
+    void remove_nonreference_cycles(bool break_chains = true);
     
     // Returns true if all the kmers in the graph are in the reference sequence
     bool is_all_reference() const;
@@ -232,6 +232,7 @@ private:
     bool graph_has_nontrivial_cycle() const;
     void remove_trivial_nonreference_cycles();
     void remove_nontrivial_nonreference_cycles();
+    void remove_all_nonreference_cycles(bool break_chains);
     bool is_simple_deletion(Edge e) const;
     bool is_on_path(Edge e, const Path& path) const;
     bool connects_to_path(Edge e, const Path& path) const;

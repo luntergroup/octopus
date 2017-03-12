@@ -210,55 +210,14 @@ bool Assembler::is_empty() const noexcept
     return vertex_cache_.empty();
 }
 
-namespace {
-
-struct CycleDetector : public boost::default_dfs_visitor
-{
-    struct CycleDetectedException {};
-    explicit CycleDetector(bool allow_self_edges = true) : allow_self_edges_ {allow_self_edges} {}
-    
-    template <typename Graph>
-    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
-    {
-        if (boost::source(e, g) != boost::target(e, g) || !allow_self_edges_) {
-            throw CycleDetectedException {};
-        }
-    }
-protected:
-    const bool allow_self_edges_;
-};
-
-template <typename Container>
-struct CyclicEdgeDetector : public boost::default_dfs_visitor
-{
-    CyclicEdgeDetector(Container& result, bool include_self_edges = true)
-    : include_self_edges_ {include_self_edges}, result_ {result} {}
-    
-    template <typename Graph>
-    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
-    {
-        if (boost::source(e, g) != boost::target(e, g) || include_self_edges_) {
-            result_.push_back(e);
-        }
-    }
-protected:
-    const bool include_self_edges_;
-    Container& result_;
-};
-
-} // namespace
-
 bool Assembler::is_acyclic() const
 {
     return !(graph_has_trivial_cycle() || graph_has_nontrivial_cycle());
 }
 
-void Assembler::remove_nonreference_cycles(bool trivial_only)
+void Assembler::remove_nonreference_cycles(bool break_chains)
 {
-    remove_trivial_nonreference_cycles();
-    if (!trivial_only) {
-        remove_nontrivial_nonreference_cycles();
-    }
+    remove_all_nonreference_cycles(break_chains);
 }
 
 bool Assembler::is_all_reference() const
@@ -902,6 +861,44 @@ bool Assembler::joins_reference_only(Path::const_iterator first, Path::const_ite
     return itr == last || is_reference(*itr);
 }
 
+namespace {
+
+struct CycleDetector : public boost::default_dfs_visitor
+{
+    struct CycleDetectedException {};
+    explicit CycleDetector(bool allow_self_edges = true) : allow_self_edges_ {allow_self_edges} {}
+    
+    template <typename Graph>
+    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
+    {
+        if (boost::source(e, g) != boost::target(e, g) || !allow_self_edges_) {
+            throw CycleDetectedException {};
+        }
+    }
+protected:
+    const bool allow_self_edges_;
+};
+
+template <typename Container>
+struct CyclicEdgeDetector : public boost::default_dfs_visitor
+{
+    CyclicEdgeDetector(Container& result, bool include_self_edges = true)
+    : include_self_edges_ {include_self_edges}, result_ {result} {}
+    
+    template <typename Graph>
+    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
+    {
+        if (boost::source(e, g) != boost::target(e, g) || include_self_edges_) {
+            result_.push_back(e);
+        }
+    }
+protected:
+    const bool include_self_edges_;
+    Container& result_;
+};
+    
+} // namespace
+
 bool Assembler::is_trivial_cycle(const Edge e) const
 {
     return boost::source(e, graph_) == boost::target(e, graph_);
@@ -926,7 +923,7 @@ bool Assembler::graph_has_nontrivial_cycle() const
 
 void Assembler::remove_trivial_nonreference_cycles()
 {
-    boost::remove_edge_if([this] (const Edge e) { return !is_reference(e) && is_trivial_cycle(e); }, graph_);
+    boost::remove_edge_if([this] (const Edge e) { return !is_reference(e) && is_trivial_cycle(e) && !is_simple_deletion(e); }, graph_);
 }
 
 void Assembler::remove_nontrivial_nonreference_cycles()
@@ -936,10 +933,36 @@ void Assembler::remove_nontrivial_nonreference_cycles()
     CyclicEdgeDetector<decltype(cyclic_edges)> vis {cyclic_edges, false};
     boost::depth_first_search(graph_, boost::visitor(vis).root_vertex(reference_head()).vertex_index_map(index_map));
     for (const Edge& e : cyclic_edges) {
-        if (!is_reference(e)) {
+        if (!(is_reference(e) || is_simple_deletion(e))) {
             remove_edge(e);
         }
     }
+}
+
+void Assembler::remove_all_nonreference_cycles(bool break_chains)
+{
+    const auto index_map = boost::get(&GraphNode::index, graph_);
+    std::deque<Edge> cyclic_edges {};
+    CyclicEdgeDetector<decltype(cyclic_edges)> vis {cyclic_edges};
+    boost::depth_first_search(graph_, boost::visitor(vis).root_vertex(reference_head()).vertex_index_map(index_map));
+    std::unordered_set<Vertex> bad_kmers {};
+    if (break_chains) {
+        bad_kmers.reserve(num_kmers());
+    }
+    for (const Edge& e : cyclic_edges) {
+        if (!(is_reference(e) || is_simple_deletion(e))) {
+            if (break_chains) {
+                if (!is_source_reference(e)) {
+                    bad_kmers.insert(boost::source(e, graph_));
+                }
+                if (!is_target_reference(e)) {
+                    bad_kmers.insert(boost::target(e, graph_));
+                }
+            }
+            remove_edge(e);
+        }
+    }
+    clear_and_remove_all(bad_kmers);
 }
 
 bool Assembler::is_simple_deletion(Edge e) const

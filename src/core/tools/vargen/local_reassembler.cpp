@@ -777,7 +777,6 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
                                       const GenomicRegion& assemble_region, std::deque<Variant>& result) const
 {
     assert(assembler.is_unique_reference());
-    assembler.remove_nonreference_cycles(true);
     assembler.try_recover_dangling_branches();
     assembler.prune(min_kmer_observations_);
     auto status = AssemblerStatus::success;
