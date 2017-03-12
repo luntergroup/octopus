@@ -35,8 +35,10 @@ HaplotypeTree::HaplotypeTree(const GenomicRegion::ContigName& contig, const Refe
 }
 
 namespace debug {
+
 template <typename G, typename V, typename Container>
 bool is_tree(const G& graph, const V& root, const Container& leafs);
+
 } // namespace debug
 
 namespace {
@@ -51,25 +53,18 @@ template <typename Graph>
 auto copy_graph(const Graph& src, Graph& dst)
 {
     assert(is_empty(dst));
-    
     using Vertex = typename boost::graph_traits<Graph>::vertex_descriptor;
-    
     std::unordered_map<Vertex, std::size_t> index_map {};
     index_map.reserve(boost::num_vertices(src));
-    
     const auto p = boost::vertices(src);
     std::size_t i {0};
     std::for_each(p.first, p.second, [&i, &index_map] (const Vertex& v) { index_map.emplace(v, i++); });
-    
     std::unordered_map<Vertex, Vertex> vertex_copy_map {};
     vertex_copy_map.reserve(boost::num_vertices(src));
-    
     boost::copy_graph(src, dst,
                       boost::vertex_index_map(boost::make_assoc_property_map(index_map))
                       .orig_to_copy(boost::make_assoc_property_map(vertex_copy_map)));
-    
     assert(vertex_copy_map.size() == boost::num_vertices(src));
-    
     return vertex_copy_map;
 }
 
@@ -146,7 +141,6 @@ bool HaplotypeTree::is_unique(const Haplotype& haplotype) const
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
         return haplotype_leaf_cache_.count(haplotype) == 1;
     }
-    
     bool haplotype_seen {false};
     for (const Vertex& leaf : haplotype_leafs_) {
         if (is_branch_equal_haplotype(leaf, haplotype)) {
@@ -157,7 +151,6 @@ bool HaplotypeTree::is_unique(const Haplotype& haplotype) const
             }
         }
     }
-    
     return haplotype_seen;
 }
 
@@ -221,8 +214,7 @@ auto make_splicer(const ContigAllele& allele, std::stack<V>& candidate_splice_si
 bool can_add_to_branch(const ContigAllele& new_allele, const ContigAllele& leaf)
 {
     return !are_adjacent(leaf, new_allele)
-            || !((is_insertion(leaf) && is_deletion(new_allele))
-            || (is_deletion(leaf) && is_insertion(new_allele)));
+            || !((is_insertion(leaf) && is_deletion(new_allele)) || (is_deletion(leaf) && is_insertion(new_allele)));
 }
 
 void HaplotypeTree::splice(const ContigAllele& allele)
@@ -330,15 +322,12 @@ std::vector<HaplotypeTree::HaplotypeLength> HaplotypeTree::extract_haplotype_len
 void HaplotypeTree::prune_all(const Haplotype& haplotype)
 {
     using std::cbegin; using std::cend; using std::for_each; using std::find;
-    
     if (is_empty() || contig_name(haplotype) != contig_) return;
-    
     // If any of the haplotypes in cache match the query haplotype then the cache must contain
     // all possible leaves corrosponding to that haplotype. So we don't need to look through
     // the list of all leaves. Win.
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
         const auto possible_leafs = haplotype_leaf_cache_.equal_range(haplotype);
-        
         for_each(possible_leafs.first, possible_leafs.second,
                  [this, &haplotype] (const HaplotypeVertexMultiMap::value_type& leaf_pair) {
                      const auto p = clear(leaf_pair.second, contig_region(haplotype));
@@ -352,7 +341,6 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
         haplotype_leaf_cache_.erase(haplotype);
     } else {
         auto leaf_itr = cbegin(haplotype_leafs_);
-        
         while (true) {
             leaf_itr = find_equal_haplotype_leaf(leaf_itr, cend(haplotype_leafs_), haplotype);
             if (leaf_itr == cend(haplotype_leafs_)) return;
@@ -368,20 +356,17 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
 void HaplotypeTree::prune_unique(const Haplotype& haplotype)
 {
     using std::cbegin; using std::cend; using std::for_each;
-    
     if (is_empty()) return;
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
         const auto possible_leafs = haplotype_leaf_cache_.equal_range(haplotype);
-        const auto it = std::find_if(possible_leafs.first, possible_leafs.second,
-                                     [this, &haplotype] (const HaplotypeVertexMultiMap::value_type& leaf_pair) {
-                                         return is_branch_exact_haplotype(leaf_pair.second, haplotype);
-                                     });
-        
-        if (it == possible_leafs.second) {
+        const auto match_itr = std::find_if(possible_leafs.first, possible_leafs.second,
+                                            [this, &haplotype] (const HaplotypeVertexMultiMap::value_type& leaf_pair) {
+                                                return is_branch_exact_haplotype(leaf_pair.second, haplotype);
+                                            });
+        if (match_itr == possible_leafs.second) {
             throw std::runtime_error {"HaplotypeTree::prune_unique called with matching Haplotype not in tree"};
         }
-        
-        const auto leaf_to_keep_itr = it->second;
+        const auto leaf_to_keep_itr = match_itr->second;
         std::for_each(possible_leafs.first, possible_leafs.second,
                       [this, &haplotype, leaf_to_keep_itr] (HaplotypeVertexMultiMap::value_type& leaf_pair) {
                           if (leaf_pair.second != leaf_to_keep_itr) {
@@ -416,21 +401,16 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
 void HaplotypeTree::clear(const GenomicRegion& region)
 {
     if (is_empty()) return;
-    
     const auto tree_region = encompassing_region();
-    
     if (octopus::contains(region, tree_region)) {
         clear();
     } else if (overlaps(region, tree_region)) {
         haplotype_leaf_cache_.clear();
-        
         std::list<Vertex> new_leafs {};
-        
         for (const Vertex leaf : haplotype_leafs_) {
             const auto p = clear(leaf, contig_region(region));
             if (p.second) new_leafs.push_back(p.first);
         }
-        
         haplotype_leafs_ = new_leafs;
     }
 }
@@ -506,26 +486,23 @@ HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const ContigAllele& new_a
         leaf_itr = haplotype_leafs_.erase(leaf_itr);
         return haplotype_leafs_.insert(leaf_itr, new_leaf);
     }
-    
     const auto& leaf_allele = tree_[*leaf_itr];
-    
-    if (!can_add_to_branch(new_allele, leaf_allele)) return leaf_itr;
-    
-    if (is_after(new_allele, leaf_allele)) {
-        const auto new_leaf = boost::add_vertex(new_allele, tree_);
-        boost::add_edge(*leaf_itr, new_leaf, tree_);
-        leaf_itr = haplotype_leafs_.erase(leaf_itr);
-        leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
-    } else if (overlaps(new_allele, tree_[*leaf_itr])) {
-        const auto branch_point = find_allele_before(*leaf_itr, new_allele);
-        if ((branch_point == root_ || can_add_to_branch(new_allele, tree_[branch_point]))
-            && !allele_exists(branch_point, new_allele)) {
+    if (can_add_to_branch(new_allele, leaf_allele)) {
+        if (is_after(new_allele, leaf_allele)) {
             const auto new_leaf = boost::add_vertex(new_allele, tree_);
-            boost::add_edge(branch_point, new_leaf, tree_);
-            haplotype_leafs_.insert(leaf_itr, new_leaf);
+            boost::add_edge(*leaf_itr, new_leaf, tree_);
+            leaf_itr = haplotype_leafs_.erase(leaf_itr);
+            leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
+        } else if (overlaps(new_allele, tree_[*leaf_itr])) {
+            const auto branch_point = find_allele_before(*leaf_itr, new_allele);
+            if ((branch_point == root_ || can_add_to_branch(new_allele, tree_[branch_point]))
+                && !allele_exists(branch_point, new_allele)) {
+                const auto new_leaf = boost::add_vertex(new_allele, tree_);
+                boost::add_edge(branch_point, new_leaf, tree_);
+                haplotype_leafs_.insert(leaf_itr, new_leaf);
+            }
         }
     }
-    
     return leaf_itr;
 }
 
@@ -572,7 +549,9 @@ HaplotypeTree::HaplotypeLength HaplotypeTree::extract_haplotype_length(Vertex le
 
 bool HaplotypeTree::define_same_haplotype(Vertex leaf1, Vertex leaf2) const
 {
-    if (leaf1 == leaf2) return true;
+    if (leaf1 == leaf2) {
+        return true;
+    }
     while (leaf1 != root_) {
         if (leaf2 == root_ || tree_[leaf1] != tree_[leaf2]) return false;
         leaf1 = get_previous_allele(leaf1);
@@ -587,8 +566,9 @@ bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& hapl
         return false;
     }
     while (leaf != root_) {
-        if (!haplotype.includes(tree_[leaf]))
+        if (!haplotype.includes(tree_[leaf])) {
             return false;
+        }
         leaf = get_previous_allele(leaf);
     }
     return true;
@@ -624,10 +604,10 @@ HaplotypeTree::find_equal_haplotype_leaf(const LeafIterator first, const LeafIte
 std::pair<HaplotypeTree::Vertex, bool>
 HaplotypeTree::clear(const Vertex leaf, const ContigRegion& region)
 {
-    if (ends_before(region, tree_[leaf])) {
-        return clear_internal(leaf, region);
-    } else {
+    if (overlaps(region, tree_[leaf])) {
         return clear_external(leaf, region);
+    } else {
+        return clear_internal(leaf, region);
     }
 }
 
@@ -635,7 +615,6 @@ std::pair<HaplotypeTree::Vertex, bool>
 HaplotypeTree::clear_external(Vertex leaf, const ContigRegion& region)
 {
     assert(boost::out_degree(leaf, tree_) == 0);
-    
     while (leaf != root_) {
         if (boost::out_degree(leaf, tree_) > 0) {
             return std::make_pair(leaf, false);
@@ -645,7 +624,6 @@ HaplotypeTree::clear_external(Vertex leaf, const ContigRegion& region)
             leaf = remove_backward(leaf);
         }
     }
-    
     // the root should only be indicated as a leaf node if there are no other nodes in the tree
     return std::make_pair(leaf, boost::num_vertices(tree_) == 1);
 }
@@ -654,15 +632,12 @@ std::pair<HaplotypeTree::Vertex, bool>
 HaplotypeTree::clear_internal(const Vertex leaf, const ContigRegion& region)
 {
     // TODO: we can optimise this for cases where region overlaps the leftmost alleles in the tree
-    
     if (leaf == root_ || is_after(region, tree_[leaf])) {
         return std::make_pair(leaf, true);
     }
-    
     Vertex current_allele {leaf}, allele_to_move {leaf};
     std::deque<Vertex> alleles_to_copy {};
     bool is_bifurcating_branch {false};
-    
     while (true) {
         current_allele = get_previous_allele(current_allele);
         if (current_allele == root_ || overlaps(tree_[current_allele], region)) {
@@ -675,14 +650,12 @@ HaplotypeTree::clear_internal(const Vertex leaf, const ContigRegion& region)
             alleles_to_copy.push_front(current_allele);
         }
     }
-    
     if (alleles_to_copy.empty()) {
         boost::remove_edge(current_allele, allele_to_move, tree_);
     } else {
         assert(alleles_to_copy.back() != allele_to_move);
         boost::remove_edge(alleles_to_copy.back(), allele_to_move, tree_);
     }
-    
     while (current_allele != root_ && overlaps(region, tree_[current_allele])) {
         const auto previous_allele = get_previous_allele(current_allele);
         is_bifurcating_branch = is_bifurcating_branch || boost::out_degree(current_allele, tree_) > 0;
@@ -693,7 +666,6 @@ HaplotypeTree::clear_internal(const Vertex leaf, const ContigRegion& region)
         }
         current_allele = previous_allele;
     }
-    
     // Simpler to prepend onto the movable branch and then call that moveable than treat each separately
     std::for_each(std::crbegin(alleles_to_copy), std::crend(alleles_to_copy),
                   [this, &allele_to_move] (const Vertex allele) {
@@ -701,12 +673,9 @@ HaplotypeTree::clear_internal(const Vertex leaf, const ContigRegion& region)
                       boost::add_edge(v, allele_to_move, tree_);
                       allele_to_move = v;
                   });
-    
     alleles_to_copy.clear();
     alleles_to_copy.shrink_to_fit();
-    
     auto allele_to_move_to = current_allele;
-    
     // Now avoid duplicate branches
     while (true) {
         const auto vertex_range = boost::adjacent_vertices(allele_to_move_to, tree_);
@@ -720,7 +689,6 @@ HaplotypeTree::clear_internal(const Vertex leaf, const ContigRegion& region)
         // Safe to remove forward as we made this branch earlier via copies
         allele_to_move = remove_forward(allele_to_move);
     }
-    
     if (allele_to_move_to == root_ || tree_[allele_to_move_to] != tree_[allele_to_move]) {
         boost::add_edge(allele_to_move_to, allele_to_move, tree_);
         return std::make_pair(leaf, true);
@@ -808,29 +776,23 @@ bool is_tree(const G& graph, const V& root, const Container& leafs)
     if (boost::num_vertices(graph) == 1) {
         return *boost::vertices(graph).first == root;
     }
-    
     std::unordered_set<V> visited_vertices {};
     visited_vertices.reserve(boost::num_vertices(graph));
-    
     auto vis = boost::make_bfs_visitor(boost::write_property(boost::typed_identity_property_map<V>(),
                                                              std::inserter(visited_vertices,
                                                                            std::begin(visited_vertices)),
                                                              boost::on_discover_vertex()));
-    
     std::unordered_map<V, std::size_t> index_map {};
     index_map.reserve(boost::num_vertices(graph));
     const auto p = boost::vertices(graph);
     std::size_t i {0};
     std::for_each(p.first, p.second, [&i, &index_map] (const auto& v) { index_map.emplace(v, i++); });
-    
     boost::breadth_first_search(graph, root,
                                 boost::visitor(vis)
                                 .vertex_index_map(boost::make_assoc_property_map(index_map)));
-    
     if (visited_vertices.size() != boost::num_vertices(graph) || visited_vertices.count(root) == 0) {
         return false;
     }
-    
     return std::all_of(std::cbegin(leafs), std::cend(leafs),
                        [&graph, &root] (auto v) {
                            if (boost::out_degree(v, graph) != 0) return false;

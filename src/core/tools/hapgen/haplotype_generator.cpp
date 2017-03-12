@@ -595,20 +595,23 @@ void HaplotypeGenerator::progress(GenomicRegion to)
                 // the single base alleles adjacent with next_active_region_.
                 const auto first_removal_region = expand_rhs(passed_region, -1);
                 alleles_.erase_overlapped(first_removal_region);
-                tree_.clear(first_removal_region);
-                
                 // This will erase the remaining single base alleles in passed_region, but not the
                 // insertions in next_active_region_.
                 const auto second_removal_region = tail_region(first_removal_region);
                 alleles_.erase_overlapped(second_removal_region);
-                tree_.clear(second_removal_region);
+                
+                if (is_after(*next_active_region_, active_region_)) {
+                    assert(contains(active_region_, tree_.encompassing_region()));
+                    tree_.clear();
+                } else {
+                    tree_.clear(first_removal_region);
+                    tree_.clear(second_removal_region);
+                }
             } else {
                 const auto removal_region = expand_rhs(passed_region, -1);
                 alleles_.erase_overlapped(removal_region);
                 tree_.clear(removal_region);
             }
-        } else if (is_after(*next_active_region_, active_region_)) {
-            tree_.clear();
         }
     }
 }
