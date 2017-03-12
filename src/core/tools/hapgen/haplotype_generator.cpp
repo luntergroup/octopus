@@ -555,8 +555,9 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
                 }
             }
         }
-        if (in_holdout_mode()) {
-            mutually_exclusive_novel_regions = copy_overlapped(mutually_exclusive_novel_regions, top_holdout_region());
+        if (in_holdout_mode() && ends_before(top_holdout_region(), novel_region)) {
+            const auto holdout_novel_region = closed_region(novel_region, top_holdout_region());
+            mutually_exclusive_novel_regions = copy_overlapped(mutually_exclusive_novel_regions, holdout_novel_region);
         }
         const auto num_novel_regions_added = extend_novel(test_tree, mutually_exclusive_novel_regions,
                                                           novel_alleles, policies_.haplotype_limits);
