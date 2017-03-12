@@ -947,7 +947,7 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
     boost::depth_first_search(graph_, boost::visitor(vis).root_vertex(reference_head()).vertex_index_map(index_map));
     std::unordered_set<Vertex> bad_kmers {};
     if (break_chains) {
-        bad_kmers.reserve(num_kmers());
+        bad_kmers.reserve(std::min(2 * cyclic_edges.size(), num_kmers()));
     }
     for (const Edge& e : cyclic_edges) {
         if (!is_reference(e)) {
@@ -962,7 +962,10 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
             remove_edge(e);
         }
     }
-    clear_and_remove_all(bad_kmers);
+    if (!bad_kmers.empty()) {
+        clear_and_remove_all(bad_kmers);
+        regenerate_vertex_indices();
+    }
 }
 
 bool Assembler::is_simple_deletion(Edge e) const
@@ -1128,7 +1131,7 @@ bool all_in(Iterator first, Iterator last, const Set& values)
 void Assembler::remove_low_weight_edges(const unsigned min_weight)
 {
     boost::remove_edge_if([this, min_weight] (const Edge& e) {
-        return !is_reference(e) &&  graph_[e].weight < min_weight
+        return !is_reference(e) && graph_[e].weight < min_weight
                && sum_source_in_edge_weight(e) < min_weight
                && sum_target_out_edge_weight(e) < min_weight;
     }, graph_);
