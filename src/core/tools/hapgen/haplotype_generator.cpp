@@ -865,7 +865,9 @@ bool HaplotypeGenerator::can_reintroduce_holdouts() const noexcept
     } else {
         const auto remaining_holdout_region = right_overhang_region(top_holdout_region(), active_region_);
         const auto remaining_holdout_alleles = overlap_range(alleles_, remaining_holdout_region);
-        return empty(remaining_holdout_alleles) || mapped_end(remaining_holdout_alleles.back()) == remaining_holdout_region.begin();
+        return empty(remaining_holdout_alleles)
+               || mapped_begin(remaining_holdout_alleles.front()) == remaining_holdout_region.end()
+               || mapped_end(remaining_holdout_alleles.back()) == remaining_holdout_region.begin();
     }
 }
 
