@@ -250,7 +250,7 @@ protected:
 
 bool Assembler::is_acyclic() const
 {
-    return graph_has_trivial_cycle() || graph_has_nontrivial_cycle();
+    return !(graph_has_trivial_cycle() || graph_has_nontrivial_cycle());
 }
 
 void Assembler::remove_nonreference_cycles(bool trivial_only)
@@ -917,10 +917,28 @@ bool Assembler::graph_has_nontrivial_cycle() const
 {
     const auto index_map = boost::get(&GraphNode::index, graph_);
     try {
-        boost::depth_first_search(graph_, boost::visitor(CycleDetector {}).vertex_index_map(index_map));
-        return true;
-    } catch (const CycleDetector::CycleDetectedException&) {
+        boost::depth_first_search(graph_, boost::visitor(CycleDetector {}).root_vertex(reference_head()).vertex_index_map(index_map));
         return false;
+    } catch (const CycleDetector::CycleDetectedException&) {
+        return true;
+    }
+}
+
+void Assembler::remove_trivial_nonreference_cycles()
+{
+    boost::remove_edge_if([this] (const Edge e) { return !is_reference(e) && is_trivial_cycle(e); }, graph_);
+}
+
+void Assembler::remove_nontrivial_nonreference_cycles()
+{
+    const auto index_map = boost::get(&GraphNode::index, graph_);
+    std::deque<Edge> cyclic_edges {};
+    CyclicEdgeDetector<decltype(cyclic_edges)> vis {cyclic_edges, false};
+    boost::depth_first_search(graph_, boost::visitor(vis).root_vertex(reference_head()).vertex_index_map(index_map));
+    for (const Edge& e : cyclic_edges) {
+        if (!is_reference(e)) {
+            remove_edge(e);
+        }
     }
 }
 
@@ -1009,26 +1027,6 @@ unsigned Assembler::count_low_weight_flanks(const Path& path, unsigned low_weigh
     const auto num_head_low_weight = std::distance(std::cbegin(path), first_head_high_weight);
     const auto num_tail_low_weight = std::distance(std::crbegin(path), first_tail_high_weight);
     return static_cast<unsigned>(num_head_low_weight + num_tail_low_weight);
-}
-
-void Assembler::remove_trivial_nonreference_cycles()
-{
-    boost::remove_edge_if([this] (const Edge e) { return !is_reference(e) && is_trivial_cycle(e); }, graph_);
-}
-
-void Assembler::remove_nontrivial_nonreference_cycles()
-{
-    const auto index_map = boost::get(&GraphNode::index, graph_);
-    std::deque<Edge> cyclic_edges {};
-    CyclicEdgeDetector<decltype(cyclic_edges)> vis {cyclic_edges, false};
-    boost::depth_first_search(graph_, boost::visitor(vis).vertex_index_map(index_map));
-    if (!cyclic_edges.empty()) {
-        for (const Edge& e : cyclic_edges) {
-            if (!is_reference(e)) {
-                remove_edge(e);
-            }
-        }
-    }
 }
 
 Assembler::GraphEdge::WeightType Assembler::sum_source_in_edge_weight(const Edge e) const

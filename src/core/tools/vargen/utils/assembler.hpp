@@ -230,6 +230,8 @@ private:
     bool is_trivial_cycle(Edge e) const;
     bool graph_has_trivial_cycle() const;
     bool graph_has_nontrivial_cycle() const;
+    void remove_trivial_nonreference_cycles();
+    void remove_nontrivial_nonreference_cycles();
     bool is_simple_deletion(Edge e) const;
     bool is_on_path(Edge e, const Path& path) const;
     bool connects_to_path(Edge e, const Path& path) const;
@@ -238,8 +240,6 @@ private:
     unsigned count_low_weights(const Path& path, unsigned low_weight) const;
     bool has_low_weight_flanks(const Path& path, unsigned low_weight) const;
     unsigned count_low_weight_flanks(const Path& path, unsigned low_weight) const;
-    void remove_trivial_nonreference_cycles();
-    void remove_nontrivial_nonreference_cycles();
     GraphEdge::WeightType sum_source_in_edge_weight(Edge e) const;
     GraphEdge::WeightType sum_target_out_edge_weight(Edge e) const;
     bool all_in_edges_low_weight(Vertex v, unsigned min_weight) const;
