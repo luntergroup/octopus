@@ -863,6 +863,29 @@ boost::optional<HaplotypeGenerator::HoldoutSet> HaplotypeGenerator::propose_new_
     }
 }
 
+namespace {
+
+template <typename Container, typename Mappable>
+auto count_fully_contained(const Container& mappables, const Mappable& mappable)
+{
+    auto contained = contained_range(mappables, mappable);
+    while (!empty(contained) && mapped_end(contained.front()) == mapped_begin(mappable)) {
+        contained.advance_begin(1);
+    }
+    while (!empty(contained) && mapped_begin(contained.back()) == mapped_end(mappable)) {
+        contained.advance_end(-1);
+    }
+    return size(contained);
+}
+
+template <typename Container, typename Mappable>
+bool has_fully_contained(const Container& mappables, const Mappable& mappable)
+{
+    return count_fully_contained(mappables, mappable) > 0;
+}
+
+} // namespace
+
 bool HaplotypeGenerator::can_reintroduce_holdouts() const noexcept
 {
     assert(in_holdout_mode());
@@ -870,10 +893,7 @@ bool HaplotypeGenerator::can_reintroduce_holdouts() const noexcept
         return true;
     } else {
         const auto remaining_holdout_region = right_overhang_region(top_holdout_region(), active_region_);
-        const auto remaining_holdout_alleles = overlap_range(alleles_, remaining_holdout_region);
-        return empty(remaining_holdout_alleles)
-               || mapped_begin(remaining_holdout_alleles.front()) == remaining_holdout_region.end()
-               || mapped_end(remaining_holdout_alleles.back()) == remaining_holdout_region.begin();
+        return !has_fully_contained(alleles_, remaining_holdout_region);
     }
 }
 
