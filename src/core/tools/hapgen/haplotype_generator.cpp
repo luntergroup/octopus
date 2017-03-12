@@ -373,7 +373,6 @@ unsigned extend_novel(HaplotypeTree& tree, const std::vector<GenomicRegion>& nov
         const auto interacting_alleles = contained_range(novel_alleles, region);
         const auto last_added = extend_tree_until(interacting_alleles, tree, limits.overflow);
         if (last_added != std::cend(interacting_alleles)) {
-            tree.clear();
             break;
         }
         ++num_novel_regions_added;
@@ -561,12 +560,15 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         }
         const auto num_novel_regions_added = extend_novel(test_tree, mutually_exclusive_novel_regions,
                                                           novel_alleles, policies_.haplotype_limits);
-        if (!test_tree.is_empty()) {
-            assert(num_novel_regions_added > 0);
-            _unused(num_novel_regions_added); // make production build happy
+        if (num_novel_regions_added > 0) {
             next_active_region_ = test_tree.encompassing_region();
         } else {
-            next_active_region_ = encompassing_region(novel_alleles); // revert to non-lagged behaviour
+            assert(!mutually_exclusive_novel_regions.empty());
+            if (test_tree.is_empty()) {
+                next_active_region_ = mutually_exclusive_novel_regions.front();
+            } else {
+                next_active_region_ = closed_region(test_tree.encompassing_region(), mutually_exclusive_novel_regions.front());
+            }
         }
         if (*next_active_region_ == active_region_) {
             next_active_region_ = default_walker_.walk(active_region_, reads_, alleles_);
@@ -661,7 +663,7 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
             novel_active_region = right_overhang_region(active_region_, active_region_before_holdout);
             novel_active_alleles = overlap_range(alleles_, novel_active_region);
             last_added_novel_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.overflow);
-            next_holdout_region = top_holdout_region();
+            next_holdout_region = *overlapped_region(active_region_, top_holdout_region());
         }
         if (last_added_novel_itr != std::cend(novel_active_alleles)) {
             last_added_novel_itr = extend_tree_until(last_added_novel_itr, std::cend(novel_active_alleles), tree_,
