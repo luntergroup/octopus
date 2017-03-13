@@ -7,6 +7,10 @@
 
 namespace octopus {
 
+Call::Call(Phred<double> quality)
+: quality_ {quality}
+{}
+
 std::unique_ptr<Call> Call::clone() const
 {
     return do_clone();
