@@ -263,10 +263,22 @@ std::deque<CallWrapper>
 Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Variant>& candidates,
                       const ReadMap& reads, ProgressMeter& progress_meter) const
 {
-    auto haplotype_generator   = make_haplotype_generator(candidates, reads);
-    auto haplotype_likelihoods = make_haplotype_likelihood_cache();
-    GeneratorStatus status;
     std::deque<CallWrapper> result {};
+    auto haplotype_likelihoods = make_haplotype_likelihood_cache();
+    if (candidates.empty()) {
+        if (refcalls_requested()) {
+            const std::vector<Haplotype> haplotypes {{call_region, reference_}};
+            haplotype_likelihoods.populate(reads, haplotypes);
+            const auto latents = infer_latents(haplotypes, haplotype_likelihoods);
+            const auto alleles = generate_candidate_reference_alleles(call_region, {}, {});
+            auto reference_calls = wrap(call_reference(alleles, *latents, reads));
+            utils::append(std::move(reference_calls), result);
+        }
+        progress_meter.log_completed(call_region);
+        return result;
+    }
+    auto haplotype_generator   = make_haplotype_generator(candidates, reads);
+    GeneratorStatus status;
     std::vector<Haplotype> haplotypes {}, next_haplotypes {};
     GenomicRegion active_region;
     boost::optional<GenomicRegion> next_active_region {}, prev_called_region {};
