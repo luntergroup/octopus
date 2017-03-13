@@ -17,6 +17,7 @@
 #include <cstddef>
 
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/optional.hpp>
 
 #include "basics/genomic_region.hpp"
 #include "core/types/allele.hpp"
@@ -101,6 +102,7 @@ private:
     GenomicRegion::ContigName contig_;
     
     mutable HaplotypeVertexMultiMap haplotype_leaf_cache_;
+    mutable boost::optional<GenomicRegion> tree_region_;
     
     using LeafIterator  = decltype(haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;

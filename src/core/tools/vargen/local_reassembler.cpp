@@ -127,6 +127,19 @@ bool LocalReassembler::do_requires_reads() const noexcept
 
 namespace {
 
+bool has_low_quality_flank(const AlignedRead& read, const AlignedRead::BaseQuality good_quality) noexcept
+{
+    if (is_soft_clipped(read)) {
+        if (is_front_soft_clipped(read) && read.base_qualities().front() < good_quality) {
+            return true;
+        } else {
+            return is_back_soft_clipped(read) && read.base_qualities().back() < good_quality;
+        }
+    } else {
+        return false;
+    }
+}
+
 bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuality good_quality) noexcept
 {
     if (good_quality == 0) return false;
@@ -143,6 +156,11 @@ bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuali
                            }
                            return false;
                        });
+}
+
+bool requires_masking(const AlignedRead& read, const AlignedRead::BaseQuality good_quality) noexcept
+{
+    return has_low_quality_flank(read, good_quality) || has_low_quality_match(read, good_quality);
 }
 
 using ExpandedCigarString = std::vector<CigarOperation::Flag>;
@@ -234,6 +252,38 @@ auto transform_low_quality_matches_to_reference(const AlignedRead& read,
                                                       expand_cigar(read), min_quality);
 }
 
+auto get_removable_flank_sizes(const AlignedRead& read, const AlignedRead::BaseQuality min_quality) noexcept
+{
+    CigarOperation::Size front_clip, back_clip;
+    std::tie(front_clip, back_clip) = get_soft_clipped_sizes(read);
+    AlignedRead::NucleotideSequence::size_type front {0}, back {0};
+    const auto is_low_quality = [min_quality] (auto q) { return q < min_quality; };
+    const auto& base_qualities = read.base_qualities();
+    if (front_clip > 0) {
+        const auto begin = std::cbegin(base_qualities);
+        const auto first_good = std::find_if_not(begin, std::next(begin, front_clip), is_low_quality);
+        front = std::distance(begin, first_good);
+    }
+    if (back_clip > 0) {
+        const auto begin = std::crbegin(base_qualities);
+        const auto first_good = std::find_if_not(begin, std::next(begin, back_clip), is_low_quality);
+        back = std::distance(begin, first_good);
+    }
+    return std::make_pair(front, back);
+}
+
+auto mask(const AlignedRead& read, const AlignedRead::BaseQuality min_quality, const ReferenceGenome& reference)
+{
+    auto result = transform_low_quality_matches_to_reference(read, min_quality, reference);
+    if (result && has_low_quality_flank(read, min_quality)) {
+        const auto p = get_removable_flank_sizes(read, min_quality);
+        assert(p.first + p.second < sequence_size(read));
+        result->erase(std::prev(std::cend(*result), p.second), std::cend(*result));
+        result->erase(std::cbegin(*result), std::next(std::cbegin(*result), p.first));
+    }
+    return result;
+}
+
 } // namespace
 
 template <typename Container, typename M>
@@ -318,8 +368,8 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
             prepare_bins_to_insert(read);
             auto active_bins = overlapped_bins(bins_, read);
             assert(!active_bins.empty());
-            if (has_low_quality_match(read, mask_threshold_)) {
-                auto masked_sequence = transform_low_quality_matches_to_reference(read, mask_threshold_, reference_);
+            if (requires_masking(read, mask_threshold_)) {
+                auto masked_sequence = mask(read, mask_threshold_, reference_);
                 if (masked_sequence) {
                     masked_sequence_buffer_.emplace_back(std::move(*masked_sequence));
                     for (auto& bin : active_bins) {
