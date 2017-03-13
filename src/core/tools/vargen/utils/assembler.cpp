@@ -54,12 +54,12 @@ std::size_t count_kmers(const T& sequence, const unsigned kmer_size) noexcept
 
 // public methods
 
-Assembler::BadReferenceSequence::BadReferenceSequence(NucleotideSequence reference_sequence)
+Assembler::NonCanonicalReferenceSequence::NonCanonicalReferenceSequence(NucleotideSequence reference_sequence)
 : std::invalid_argument {"bad reference sequence"}
 , reference_sequence_ {std::move(reference_sequence)}
 {}
 
-const char* Assembler::BadReferenceSequence::what() const noexcept
+const char* Assembler::NonCanonicalReferenceSequence::what() const noexcept
 {
     return std::invalid_argument::what();
 }
@@ -133,17 +133,13 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
             if (next_kmer_end > std::cend(sequence)) {
                 return;
             }
-            if (next_kmer_begin != std::next(kmer_begin)) {
-                kmer_begin = std::prev(next_kmer_begin);
-                kmer_end   = std::prev(next_kmer_end);
-                if (kmer_end <= std::cend(sequence)) {
-                    prev_kmer = Kmer {kmer_begin, kmer_end};
-                }
-            }
-        } else {
-            ++kmer_begin;
-            ++kmer_end;
+            kmer_begin = std::prev(next_kmer_begin);
+            kmer_end   = std::prev(next_kmer_end);
+            assert(kmer_end <= std::cend(sequence));
+            prev_kmer = Kmer {kmer_begin, kmer_end};
         }
+        ++kmer_begin;
+        ++kmer_end;
         for (; kmer_end <= std::cend(sequence); ++kmer_begin, ++kmer_end) {
             Kmer kmer {kmer_begin, kmer_end};
             const auto kmer_itr = vertex_cache_.find(kmer);
@@ -191,13 +187,10 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
                         if (next_kmer_end > std::cend(sequence)) {
                             return;
                         }
-                        if (next_kmer_begin != std::next(kmer_begin)) {
-                            kmer_begin = std::prev(next_kmer_begin);
-                            kmer_end   = std::prev(next_kmer_end);
-                            if (kmer_end <= std::cend(sequence)) {
-                                kmer = Kmer {kmer_begin, kmer_end};
-                            }
-                        }
+                        kmer_begin = std::prev(next_kmer_begin);
+                        kmer_end   = std::prev(next_kmer_end);
+                        assert(kmer_end <= std::cend(sequence));
+                        kmer = Kmer {kmer_begin, kmer_end};
                     }
                 }
                 prev_kmer_good = true;
@@ -217,73 +210,25 @@ bool Assembler::is_empty() const noexcept
     return vertex_cache_.empty();
 }
 
-namespace {
-
-struct CycleDetector : public boost::default_dfs_visitor
-{
-    struct CycleDetectedException {};
-    template <typename Graph>
-    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
-    {
-        throw CycleDetectedException {};
-    }
-};
-
-template <typename Container>
-struct CyclicEdgeDetector : public boost::default_dfs_visitor
-{
-    CyclicEdgeDetector(Container& result) : result_ {result} {}
-    template <typename Graph>
-    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
-    {
-        result_.push_back(e);
-    }
-protected:
-    Container& result_;
-};
-
-} // namespace
-
 bool Assembler::is_acyclic() const
 {
-    if (graph_has_trivial_cycle()) {
-        return false;
-    } else if (is_empty() || is_all_reference()) {
-        return true;
-    } else {
-        const auto index_map = boost::get(&GraphNode::index, graph_);
-        try {
-            boost::depth_first_search(graph_, boost::visitor(CycleDetector {}).vertex_index_map(index_map));
-            return true;
-        } catch (const CycleDetector::CycleDetectedException&) {
-            return false;
-        }
-    }
+    return !(graph_has_trivial_cycle() || graph_has_nontrivial_cycle());
 }
 
-bool Assembler::remove_nonreference_cycles()
+void Assembler::remove_nonreference_cycles(bool break_chains)
 {
-    remove_trivial_nonreference_cycles();
-    const auto index_map = boost::get(&GraphNode::index, graph_);
-    std::deque<Edge> cyclic_edges {};
-    CyclicEdgeDetector<decltype(cyclic_edges)> vis {cyclic_edges};
-    boost::depth_first_search(graph_, boost::visitor(vis).vertex_index_map(index_map));
-    if (cyclic_edges.empty()) {
-        return false;
-    } else {
-        for (const Edge& e : cyclic_edges) {
-            if (!is_reference(e)) {
-                remove_edge(e);
-            }
-        }
-        return true;
-    }
+    remove_all_nonreference_cycles(break_chains);
 }
 
 bool Assembler::is_all_reference() const
 {
     const auto p = boost::edges(graph_);
     return std::all_of(p.first, p.second, [this] (const Edge& e) { return is_reference(e); });
+}
+
+bool Assembler::is_unique_reference() const
+{
+    return is_reference_unique_path();
 }
 
 void Assembler::try_recover_dangling_branches()
@@ -304,33 +249,27 @@ void Assembler::prune(const unsigned min_weight)
     remove_low_weight_edges(min_weight);
 }
 
-bool Assembler::cleanup()
+void Assembler::cleanup()
 {
     if (!is_reference_unique_path()) {
-        clear();
-        return false;
+        throw NonUniqueReferenceSequence {};
     }
     auto old_size = boost::num_vertices(graph_);
-    if (old_size < 2) return true;
+    if (old_size < 2) return;
     assert(is_reference_unique_path());
     remove_disconnected_vertices();
     auto new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
-        if (new_size < 2) {
-            return true;
-        }
+        if (new_size < 2) return;
         old_size = new_size;
-    }
-    if (!is_acyclic()) {
-        return false;
     }
     assert(is_reference_unique_path());
     remove_vertices_that_cant_be_reached_from(reference_head());
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
-        if (new_size < 2) return true;
+        if (new_size < 2) return;
         old_size = new_size;
     }
     assert(is_reference_unique_path());
@@ -338,7 +277,7 @@ bool Assembler::cleanup()
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
-        if (new_size < 2) return true;
+        if (new_size < 2) return;
         old_size = new_size;
     }
     assert(is_reference_unique_path());
@@ -346,7 +285,7 @@ bool Assembler::cleanup()
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
         regenerate_vertex_indices();
-        if (new_size < 2) return true;
+        if (new_size < 2) return;
         old_size = new_size;
     }
     assert(is_reference_unique_path());
@@ -354,7 +293,7 @@ bool Assembler::cleanup()
     assert(is_reference_unique_path());
     if (is_reference_empty()) {
         clear();
-        return true;
+        return;
     }
     new_size = boost::num_vertices(graph_);
     assert(new_size != 0);
@@ -363,7 +302,6 @@ bool Assembler::cleanup()
     if (new_size != old_size) {
         regenerate_vertex_indices();
     }
-    return true;
 }
 
 void Assembler::clear()
@@ -404,9 +342,9 @@ void Assembler::write_dot(std::ostream& out) const
 {
     const auto vertex_writer = [this] (std::ostream& out, Vertex v) {
         if (is_reference(v)) {
-            out << " [color=blue]" << std::endl;
+            out << " [shape=box,color=blue]" << std::endl;
         } else {
-            out << " [color=red]" << std::endl;
+            out << " [shape=box,color=red]" << std::endl;
         }
         out << " [label=\"" << kmer_of(v) << "\"]" << std::endl;
     };
@@ -485,7 +423,7 @@ void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequ
     if (!contains_kmer(reference_kmers_.back())) {
         const auto u = add_vertex(reference_kmers_.back(), true);
         if (!u) {
-            throw BadReferenceSequence {sequence};
+            throw NonCanonicalReferenceSequence {sequence};
         }
         reference_vertices_.push_back(*u);
     } else {
@@ -504,7 +442,7 @@ void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequ
                 const auto e = add_reference_edge(u, *v);
                 reference_edges_.push_back(e);
             } else {
-                throw BadReferenceSequence {sequence};
+                throw NonCanonicalReferenceSequence {sequence};
             }
         } else {
             const auto u = vertex_cache_.at(std::crbegin(reference_kmers_)[1]);
@@ -532,7 +470,7 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
     if (!contains_kmer(reference_kmers_.back())) {
         const auto u = add_vertex(reference_kmers_.back(), true);
         if (!u) {
-            throw BadReferenceSequence {sequence};
+            throw NonCanonicalReferenceSequence {sequence};
         }
         reference_vertices_.push_back(*u);
     } else {
@@ -551,7 +489,7 @@ void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& 
                 const auto e = add_reference_edge(u, *v);
                 reference_edges_.push_back(e);
             } else {
-                throw BadReferenceSequence {sequence};
+                throw NonCanonicalReferenceSequence {sequence};
             }
         } else {
             const auto u = vertex_cache_.at(std::crbegin(reference_kmers_)[1]);
@@ -923,6 +861,44 @@ bool Assembler::joins_reference_only(Path::const_iterator first, Path::const_ite
     return itr == last || is_reference(*itr);
 }
 
+namespace {
+
+struct CycleDetector : public boost::default_dfs_visitor
+{
+    struct CycleDetectedException {};
+    explicit CycleDetector(bool allow_self_edges = true) : allow_self_edges_ {allow_self_edges} {}
+    
+    template <typename Graph>
+    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
+    {
+        if (boost::source(e, g) != boost::target(e, g) || !allow_self_edges_) {
+            throw CycleDetectedException {};
+        }
+    }
+protected:
+    const bool allow_self_edges_;
+};
+
+template <typename Container>
+struct CyclicEdgeDetector : public boost::default_dfs_visitor
+{
+    CyclicEdgeDetector(Container& result, bool include_self_edges = true)
+    : include_self_edges_ {include_self_edges}, result_ {result} {}
+    
+    template <typename Graph>
+    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
+    {
+        if (boost::source(e, g) != boost::target(e, g) || include_self_edges_) {
+            result_.push_back(e);
+        }
+    }
+protected:
+    const bool include_self_edges_;
+    Container& result_;
+};
+    
+} // namespace
+
 bool Assembler::is_trivial_cycle(const Edge e) const
 {
     return boost::source(e, graph_) == boost::target(e, graph_);
@@ -932,6 +908,64 @@ bool Assembler::graph_has_trivial_cycle() const
 {
     const auto p = boost::edges(graph_);
     return std::any_of(p.first, p.second, [this] (const Edge& e) { return is_trivial_cycle(e); });
+}
+
+bool Assembler::graph_has_nontrivial_cycle() const
+{
+    const auto index_map = boost::get(&GraphNode::index, graph_);
+    try {
+        boost::depth_first_search(graph_, boost::visitor(CycleDetector {}).root_vertex(reference_head()).vertex_index_map(index_map));
+        return false;
+    } catch (const CycleDetector::CycleDetectedException&) {
+        return true;
+    }
+}
+
+void Assembler::remove_trivial_nonreference_cycles()
+{
+    boost::remove_edge_if([this] (const Edge e) { return !is_reference(e) && is_trivial_cycle(e); }, graph_);
+}
+
+void Assembler::remove_nontrivial_nonreference_cycles()
+{
+    const auto index_map = boost::get(&GraphNode::index, graph_);
+    std::deque<Edge> cyclic_edges {};
+    CyclicEdgeDetector<decltype(cyclic_edges)> vis {cyclic_edges, false};
+    boost::depth_first_search(graph_, boost::visitor(vis).root_vertex(reference_head()).vertex_index_map(index_map));
+    for (const Edge& e : cyclic_edges) {
+        if (!(is_reference(e) || is_simple_deletion(e))) {
+            remove_edge(e);
+        }
+    }
+}
+
+void Assembler::remove_all_nonreference_cycles(const bool break_chains)
+{
+    const auto index_map = boost::get(&GraphNode::index, graph_);
+    std::deque<Edge> cyclic_edges {};
+    CyclicEdgeDetector<decltype(cyclic_edges)> vis {cyclic_edges};
+    boost::depth_first_search(graph_, boost::visitor(vis).root_vertex(reference_head()).vertex_index_map(index_map));
+    std::unordered_set<Vertex> bad_kmers {};
+    if (break_chains) {
+        bad_kmers.reserve(std::min(2 * cyclic_edges.size(), num_kmers()));
+    }
+    for (const Edge& e : cyclic_edges) {
+        if (!is_reference(e)) {
+            if (break_chains) {
+                if (!is_source_reference(e)) {
+                    bad_kmers.insert(boost::source(e, graph_));
+                }
+                if (!is_target_reference(e)) {
+                    bad_kmers.insert(boost::target(e, graph_));
+                }
+            }
+            remove_edge(e);
+        }
+    }
+    if (!bad_kmers.empty()) {
+        clear_and_remove_all(bad_kmers);
+        regenerate_vertex_indices();
+    }
 }
 
 bool Assembler::is_simple_deletion(Edge e) const
@@ -1021,11 +1055,6 @@ unsigned Assembler::count_low_weight_flanks(const Path& path, unsigned low_weigh
     return static_cast<unsigned>(num_head_low_weight + num_tail_low_weight);
 }
 
-void Assembler::remove_trivial_nonreference_cycles()
-{
-    boost::remove_edge_if([this] (const Edge e) { return !is_reference(e) && is_trivial_cycle(e); }, graph_);
-}
-
 Assembler::GraphEdge::WeightType Assembler::sum_source_in_edge_weight(const Edge e) const
 {
     const auto p = boost::in_edges(boost::source(e, graph_), graph_);
@@ -1102,7 +1131,7 @@ bool all_in(Iterator first, Iterator last, const Set& values)
 void Assembler::remove_low_weight_edges(const unsigned min_weight)
 {
     boost::remove_edge_if([this, min_weight] (const Edge& e) {
-        return !is_reference(e) &&  graph_[e].weight < min_weight
+        return !is_reference(e) && graph_[e].weight < min_weight
                && sum_source_in_edge_weight(e) < min_weight
                && sum_target_out_edge_weight(e) < min_weight;
     }, graph_);
@@ -1239,10 +1268,9 @@ void Assembler::pop_reference_tail()
 void Assembler::prune_reference_flanks()
 {
     if (!is_reference_empty()) {
-        assert(is_acyclic());
         auto new_head_itr = std::cbegin(reference_vertices_);
         const auto is_bridge_vertex = [this] (const Vertex v) { return is_bridge(v); };
-        if (boost::out_degree(reference_head(), graph_) == 1) {
+        if (boost::in_degree(reference_head(), graph_) == 0 && boost::out_degree(reference_head(), graph_) == 1) {
             new_head_itr = std::find_if_not(std::next(new_head_itr), std::cend(reference_vertices_), is_bridge_vertex);
             std::for_each(std::cbegin(reference_vertices_), new_head_itr, [this] (const Vertex u) {
                 remove_edge(u, *boost::adjacent_vertices(u, graph_).first);
@@ -1250,7 +1278,8 @@ void Assembler::prune_reference_flanks()
                 pop_reference_head();
             });
         }
-        if (new_head_itr != std::cend(reference_vertices_) && boost::in_degree(reference_tail(), graph_) == 1) {
+        if (new_head_itr != std::cend(reference_vertices_) && boost::in_degree(reference_tail(), graph_) == 1
+            && boost::out_degree(reference_tail(), graph_) == 0) {
             const auto new_tail_itr = std::find_if_not(std::next(std::crbegin(reference_vertices_)),
                                                        std::make_reverse_iterator(new_head_itr),
                                                        is_bridge_vertex);

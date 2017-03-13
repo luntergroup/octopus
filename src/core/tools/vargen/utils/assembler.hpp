@@ -38,7 +38,8 @@ public:
     using NucleotideSequence = std::string;
     
     struct Variant;
-    class BadReferenceSequence;
+    class NonCanonicalReferenceSequence;
+    class NonUniqueReferenceSequence {};
     
     Assembler() = delete;
     
@@ -67,17 +68,18 @@ public:
     bool is_empty() const noexcept;
     
     bool is_acyclic() const;
-    bool remove_nonreference_cycles();
+    void remove_nonreference_cycles(bool break_chains = true);
     
     // Returns true if all the kmers in the graph are in the reference sequence
     bool is_all_reference() const;
+    bool is_unique_reference() const;
     
     void try_recover_dangling_branches();
     
     // Removes edges between kmers with weight less than the given value
     void prune(unsigned min_weight);
     
-    bool cleanup();
+    void cleanup();
     
     void clear();
     
@@ -227,6 +229,10 @@ private:
     bool joins_reference_only(Path::const_iterator first, Path::const_iterator last) const;
     bool is_trivial_cycle(Edge e) const;
     bool graph_has_trivial_cycle() const;
+    bool graph_has_nontrivial_cycle() const;
+    void remove_trivial_nonreference_cycles();
+    void remove_nontrivial_nonreference_cycles();
+    void remove_all_nonreference_cycles(bool break_chains);
     bool is_simple_deletion(Edge e) const;
     bool is_on_path(Edge e, const Path& path) const;
     bool connects_to_path(Edge e, const Path& path) const;
@@ -235,7 +241,6 @@ private:
     unsigned count_low_weights(const Path& path, unsigned low_weight) const;
     bool has_low_weight_flanks(const Path& path, unsigned low_weight) const;
     unsigned count_low_weight_flanks(const Path& path, unsigned low_weight) const;
-    void remove_trivial_nonreference_cycles();
     GraphEdge::WeightType sum_source_in_edge_weight(Edge e) const;
     GraphEdge::WeightType sum_target_out_edge_weight(Edge e) const;
     bool all_in_edges_low_weight(Vertex v, unsigned min_weight) const;
@@ -303,11 +308,11 @@ struct Assembler::Variant : public Equitable<Variant>
     std::size_t begin_pos;
 };
 
-class Assembler::BadReferenceSequence : public std::invalid_argument
+class Assembler::NonCanonicalReferenceSequence : public std::invalid_argument
 {
 public:
-    BadReferenceSequence(NucleotideSequence reference_sequence);
-    ~BadReferenceSequence() noexcept = default;
+    NonCanonicalReferenceSequence(NucleotideSequence reference_sequence);
+    ~NonCanonicalReferenceSequence() noexcept = default;
     const char* what() const noexcept override;
 private:
     NucleotideSequence reference_sequence_;
