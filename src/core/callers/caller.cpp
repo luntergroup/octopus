@@ -649,7 +649,8 @@ void Caller::call_variants(const GenomicRegion& active_region,
         }
         prev_called_region = uncalled_region;
         if (refcalls_requested()) {
-            auto alleles = generate_candidate_reference_alleles(uncalled_region, active_candidates, called_regions);
+            const auto refcall_region = encompassing_region(passed_region, uncalled_region);
+            auto alleles = generate_candidate_reference_alleles(refcall_region, active_candidates, called_regions);
             auto reference_calls = wrap(call_reference(alleles, latents, reads));
             utils::append(std::move(reference_calls), result);
         }
