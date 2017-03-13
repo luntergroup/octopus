@@ -281,18 +281,13 @@ const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
 {
     return mapped_region(haplotypes.front());
 }
-
-template <typename Container>
-void remove_duplicates(Container& haplotypes, const ReferenceGenome& reference)
-{
-    const auto n = unique_least_complex(haplotypes, Haplotype {haplotype_region(haplotypes), reference});
-    if (DEBUG_MODE) {
-        logging::DebugLogger log {};
-        stream(log) << n << " duplicate haplotypes were removed";
-    }
-}
     
 } // namespace
+
+std::size_t Caller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+{
+    return unique_least_complex(haplotypes, Haplotype {haplotype_region(haplotypes), reference_.get()});
+}
 
 Caller::GeneratorStatus
 Caller::generate_active_haplotypes(const GenomicRegion& call_region,
@@ -329,9 +324,21 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
         }
         return GeneratorStatus::done;
     }
-    remove_duplicates(haplotypes, reference_);
-    if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " initial haplotypes";
+    remove_duplicates(haplotypes);
+    if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " unfiltered haplotypes";
     return GeneratorStatus::good;
+}
+
+void Caller::remove_duplicates(std::vector<Haplotype>& haplotypes) const
+{
+    const auto num_removed = do_remove_duplicates(haplotypes);
+    if (debug_log_) {
+        if (num_removed > 0) {
+            stream(*debug_log_) << num_removed << " duplicate haplotypes were removed";
+        } else {
+            stream(*debug_log_) << "There are no duplicate haplotypes";
+        }
+    }
 }
 
 bool Caller::filter_haplotypes(std::vector<Haplotype>& haplotypes,
@@ -356,7 +363,7 @@ bool Caller::filter_haplotypes(std::vector<Haplotype>& haplotypes,
         }
         removed_haplotypes.clear();
         removed_haplotypes.shrink_to_fit();
-        if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " final haplotypes";
+        if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " haplotypes after filtering";
     }
     return has_removal_impact;
 }
@@ -391,7 +398,7 @@ void Caller::filter_haplotypes(bool prefilter_had_removal_impact,
         auto removable_haplotypes = get_removable_haplotypes(haplotypes, haplotype_likelihoods,
                                                              *latents.haplotype_posteriors(),
                                                              max_to_remove);
-        if (debug_log_) {
+        if (debug_log_ && !removable_haplotypes.empty()) {
             stream(*debug_log_) << "Discarding " << removable_haplotypes.size()
                                 << " haplotypes with low posterior support";
         }

@@ -129,6 +129,8 @@ private:
     virtual std::string do_name() const = 0;
     virtual CallTypeSet do_call_types() const = 0;
     
+    virtual std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const;
+    
     virtual std::unique_ptr<Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
@@ -173,6 +175,7 @@ private:
     generate_next_active_haplotypes(std::vector<Haplotype>& next_haplotypes,
                                     boost::optional<GenomicRegion>& next_active_region,
                                     HaplotypeGenerator& haplotype_generator) const;
+    void remove_duplicates(std::vector<Haplotype>& haplotypes) const;
     bool filter_haplotypes(std::vector<Haplotype>& haplotypes, HaplotypeGenerator& haplotype_generator,
                            HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void filter_haplotypes(bool prefilter_had_removal_impact, const std::vector<Haplotype>& haplotypes,
