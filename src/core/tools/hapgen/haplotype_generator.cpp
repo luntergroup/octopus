@@ -85,6 +85,15 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy) noexc
     }
 }
 
+auto get_contig(const MappableFlatSet<Variant>& candidates)
+{
+    if (!candidates.empty()) {
+        return contig_name(candidates.front());
+    } else {
+        throw std::runtime_error {"HaplotypeGenerator: not supplied with any candidates"};
+    }
+}
+
 auto decompose(const MappableFlatSet<Variant>& variants)
 {
     std::vector<Allele> alleles {};
@@ -99,20 +108,23 @@ auto decompose(const MappableFlatSet<Variant>& variants)
     };
 }
 
+auto make_lagged_walker(const HaplotypeGenerator::Policies& policies)
+{
+    return GenomeWalker {
+        max_included(policies.haplotype_limits.target),
+        get_walker_policy(policies.lagging),
+        get_walker_policy(policies.extension)
+    };
 }
 
-namespace debug {
-    template <typename Range>
-    void print_active_alleles(const Range& alleles, const GenomicRegion& active_region);
-} // namespace debug
+} // namespace
 
 // public members
 
 HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference, const MappableFlatSet<Variant>& candidates,
                                        const ReadMap& reads, Policies policies)
-try
 : policies_ {std::move(policies)}
-, tree_ {contig_name(candidates.front()), reference}
+, tree_ {get_contig(candidates), reference}
 , default_walker_ {
     max_included(policies_.haplotype_limits.target),
     GenomeWalker::IndicatorPolicy::includeNone,
@@ -133,24 +145,15 @@ try
 , debug_log_ {logging::get_debug_log()}
 , trace_log_ {logging::get_trace_log()}
 {
+    assert(!alleles_.empty());
     rightmost_allele_ = alleles_.rightmost();
     active_region_ = head_region(alleles_.leftmost());
     if (active_region_.begin() != 0) {
         active_region_ = shift(active_region_, -1);
     }
     if (policies.lagging != Policies::Lagging::none) {
-        lagged_walker_ = GenomeWalker {
-            max_included(policies_.haplotype_limits.target),
-            get_walker_policy(policies_.lagging),
-            get_walker_policy(policies_.extension)
-        };
+        lagged_walker_ = make_lagged_walker(policies);
     }
-}
-catch (...) {
-    if (candidates.empty()) {
-        throw std::runtime_error {"HaplotypeGenerator: not supplied with any candidates"};
-    }
-    throw;
 }
 
 namespace {
