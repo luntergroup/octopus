@@ -277,7 +277,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         progress_meter.log_completed(call_region);
         return result;
     }
-    auto haplotype_generator   = make_haplotype_generator(candidates, reads);
+    auto haplotype_generator = make_haplotype_generator(candidates, reads);
     GeneratorStatus status;
     std::vector<Haplotype> haplotypes {}, next_haplotypes {};
     GenomicRegion active_region;
@@ -635,6 +635,7 @@ void Caller::call_variants(const GenomicRegion& active_region,
         auto active_candidates = extract_callable_variants(candidates, uncalled_region, prev_called_region,
                                                            next_active_region, backtrack_region);
         std::vector<GenomicRegion> called_regions;
+        auto last_result_itr = std::end(result);
         if (!active_candidates.empty()) {
             if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
             resume(calling_timer);
@@ -644,16 +645,17 @@ void Caller::call_variants(const GenomicRegion& active_region,
                 set_model_posteriors(variant_calls, latents, haplotypes, haplotype_likelihoods);
                 called_regions = extract_covered_regions(variant_calls);
                 set_phasing(variant_calls, latents, haplotypes, call_region);
-                utils::append(std::move(variant_calls), result);
+                last_result_itr = utils::append(std::move(variant_calls), result);
             }
         }
-        prev_called_region = uncalled_region;
         if (refcalls_requested()) {
             const auto refcall_region = encompassing_region(passed_region, uncalled_region);
             auto alleles = generate_candidate_reference_alleles(refcall_region, active_candidates, called_regions);
             auto reference_calls = wrap(call_reference(alleles, latents, reads));
-            utils::append(std::move(reference_calls), result);
+            const auto itr = utils::append(std::move(reference_calls), result);
+            std::inplace_merge(last_result_itr, itr, std::end(result));
         }
+        prev_called_region = uncalled_region;
         completed_region = encompassing_region(completed_region, passed_region);
     }
 }
