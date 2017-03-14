@@ -773,26 +773,22 @@ inline std::size_t estimate_num_elements(const std::size_t num_genotypes)
     return num_genotypes;
 }
 
-}
+} // namespace detail
 
 template <typename MappableType>
 auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes)
 {
     std::unordered_set<std::reference_wrapper<const MappableType>> unique_elements {};
     unique_elements.reserve(detail::estimate_num_elements(genotypes.size()));
-    
     for (const auto& genotype : genotypes) {
         for (const auto& element : genotype) {
             unique_elements.emplace(element);
         }
     }
-    
     std::vector<MappableType> result {};
     result.reserve(unique_elements.size());
-    
     std::transform(std::cbegin(unique_elements), std::cend(unique_elements), std::back_inserter(result),
                    [] (const auto& element_ref) { return element_ref.get(); });
-    
     return result;
 }
 
@@ -801,18 +797,14 @@ auto extract_all_element_refs(const std::vector<Genotype<MappableType>>& genotyp
 {
     std::unordered_set<std::reference_wrapper<const MappableType>> unique_elements {};
     unique_elements.reserve();
-    
     for (const auto& genotype : genotypes) {
         for (const auto& element : genotype) {
             unique_elements.emplace(element);
         }
     }
-    
     std::vector<std::reference_wrapper<const MappableType>> result {};
     result.reserve(unique_elements.size());
-    
     std::copy(std::cbegin(unique_elements), std::cend(unique_elements), std::back_inserter(result));
-    
     return result;
 }
 
@@ -821,11 +813,9 @@ auto make_element_count_map(const Genotype<MappableType>& genotype)
 {
     std::unordered_map<MappableType, unsigned> result {};
     result.reserve(genotype.zygosity());
-    
     for (unsigned i {0}; i < genotype.ploidy(); ++i) {
         ++result[genotype[i]];
     }
-    
     return result;
 }
 
@@ -834,29 +824,23 @@ auto make_element_ref_count_map(const Genotype<MappableType>& genotype)
 {
     std::unordered_map<std::reference_wrapper<const MappableType>, unsigned> result {};
     result.reserve(genotype.zygosity());
-    
     for (unsigned i {0}; i < genotype.ploidy(); ++i) {
         ++result[genotype.at(i)];
     }
-    
     return result;
 }
 
 template <typename MappableType2, typename Container,
           typename = std::enable_if_t<!std::is_same<typename Container::value_type, Haplotype>::value>>
-auto copy_all(const Container& genotypes, const GenomicRegion& region)
+auto copy_unique(const Container& genotypes, const GenomicRegion& region)
 {
     std::vector<Genotype<MappableType2>> result {};
     result.reserve(genotypes.size());
-    
     for (const auto& genotype : genotypes) {
         result.push_back(copy<MappableType2>(genotype, region));
     }
-    
     std::sort(std::begin(result), std::end(result), GenotypeLess {});
-    
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    
     return result;
 }
 
