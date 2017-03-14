@@ -345,7 +345,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                                     Allele new_allele {call_region, move(new_sequence)};
                                     new_genotype.emplace(move(new_allele));
                                 } else if (old_genotype[i].sequence().front() == '#') {
-                                    if (splice(prev_genotype[i], head_position(curr_call)).sequence().front() == actual_reference_base) {
+                                    if (copy(prev_genotype[i], head_position(curr_call)).sequence().front() == actual_reference_base) {
                                         auto new_sequence = old_genotype[i].sequence();
                                         new_sequence.front() = actual_reference_base;
                                         Allele new_allele {call_region, move(new_sequence)};

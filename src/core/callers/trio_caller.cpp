@@ -623,11 +623,11 @@ auto call_genotypes(const Trio& trio, const TrioCall& called_trio,
     result.reserve(regions.size());
     
     for (const auto& region : regions) {
-        auto mother_genotype = splice<Allele>(called_trio.mother, region);
+        auto mother_genotype = copy<Allele>(called_trio.mother, region);
         auto mother_posterior = compute_posterior(mother_genotype, trio_posteriors[trio.mother()]);
-        auto father_genotype = splice<Allele>(called_trio.father, region);
+        auto father_genotype = copy<Allele>(called_trio.father, region);
         auto father_posterior = compute_posterior(father_genotype, trio_posteriors[trio.father()]);
-        auto child_genotype = splice<Allele>(called_trio.child, region);
+        auto child_genotype = copy<Allele>(called_trio.child, region);
         auto child_posterior = compute_posterior(child_genotype, trio_posteriors[trio.child()]);
         result.push_back({{std::move(mother_genotype), mother_posterior},
                           {std::move(father_genotype), father_posterior},

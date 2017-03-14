@@ -152,8 +152,7 @@ get_soft_clipped_sizes(const CigarString& cigar) noexcept
 // non-member functions
 
 template <typename Predicate>
-CigarString splice(const CigarString& cigar, CigarOperation::Size offset,
-                   CigarOperation::Size size, Predicate pred)
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size, Predicate pred)
 {
     CigarString result {};
     result.reserve(cigar.size());
@@ -190,22 +189,19 @@ CigarString splice(const CigarString& cigar, CigarOperation::Size offset,
     return result;
 }
 
-CigarString splice(const CigarString& cigar, const CigarOperation::Size offset,
-                   const CigarOperation::Size size)
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
-    return splice(cigar, offset, size, [] (const auto& op) { return true; });
+    return copy(cigar, offset, size, [](const auto& op) { return true; });
 }
 
-CigarString splice_reference(const CigarString& cigar, const CigarOperation::Size offset,
-                             const CigarOperation::Size size)
+CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
-    return splice(cigar, offset, size, [] (const auto& op) { return op.advances_reference(); });
+    return copy(cigar, offset, size, [](const auto& op) { return op.advances_reference(); });
 }
 
-CigarString splice_sequence(const CigarString& cigar, const CigarOperation::Size offset,
-                            const CigarOperation::Size size)
+CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
-    return splice(cigar, offset, size, [] (const auto& op) { return op.advances_sequence(); });
+    return copy(cigar, offset, size, [](const auto& op) { return op.advances_sequence(); });
 }
 
 bool operator==(const CigarOperation& lhs, const CigarOperation& rhs) noexcept

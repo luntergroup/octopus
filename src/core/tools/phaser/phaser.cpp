@@ -28,41 +28,42 @@ using GenotypeReference    = std::reference_wrapper<const Genotype<Haplotype>>;
 using PhaseComplementSet   = std::deque<GenotypeReference>;
 using PhaseComplementSets  = std::vector<PhaseComplementSet>;
 using PartitionIterator    = std::vector<GenomicRegion>::const_iterator;
-using GenotypeSpliceVector = std::vector<Genotype<Haplotype>>;
+using GenotypeChunkVector = std::vector<Genotype<Haplotype>>;
 
-struct GenotypePartitionSplices
+struct GenotypeChunkPartitions
 {
     GenotypeReference genotype;
-    GenotypeSpliceVector splices;
+    GenotypeChunkVector chunks;
 };
 
-using SpliceTable = std::vector<GenotypePartitionSplices>;
+using GenotypeChunkTable = std::vector<GenotypeChunkPartitions>;
 
 template <typename Container>
-SpliceTable make_splice_table(const Container& genotypes, PartitionIterator first_parition, PartitionIterator last_partition)
+GenotypeChunkTable
+make_chunk_table(const Container& genotypes, PartitionIterator first_parition, PartitionIterator last_partition)
 {
     const auto num_partitions = std::distance(first_parition, last_partition);
-    SpliceTable result {};
+    GenotypeChunkTable result {};
     result.reserve(genotypes.size());
     for (const auto& genotype : genotypes) {
-        result.push_back({std::cref(genotype), GenotypeSpliceVector {}});
-        result.back().splices.reserve(num_partitions);
+        result.push_back({std::cref(genotype), GenotypeChunkVector {}});
+        result.back().chunks.reserve(num_partitions);
     }
     std::for_each(first_parition, last_partition, [&] (const auto& region) {
-        auto splices = splice_each<Haplotype>(genotypes, region);
+        auto chunks = copy_each<Haplotype>(genotypes, region);
         for (std::size_t i {0}; i < genotypes.size(); ++i) {
-            result[i].splices.push_back(std::move(splices[i]));
+            result[i].chunks.push_back(std::move(chunks[i]));
         }
     });
     return result;
 }
 
-struct GenotypeSpliceVectorHash
+struct GenotypeChunkVectorHash
 {
-    auto operator()(const GenotypeSpliceVector& splices) const noexcept
+    auto operator()(const GenotypeChunkVector& chunks) const noexcept
     {
         std::size_t result {};
-        for (const auto& genotype : splices) {
+        for (const auto& genotype : chunks) {
             using boost::hash_combine;
             hash_combine(result, std::hash<Genotype<Haplotype>>{}(genotype));
         }
@@ -70,14 +71,14 @@ struct GenotypeSpliceVectorHash
     }
 };
 
-using PhaseSetMap = std::unordered_map<GenotypeSpliceVector, PhaseComplementSet, GenotypeSpliceVectorHash>;
+using PhaseSetMap = std::unordered_map<GenotypeChunkVector, PhaseComplementSet, GenotypeChunkVectorHash>;
 
-PhaseComplementSets make_phase_sets(const SpliceTable& splice_table)
+PhaseComplementSets make_phase_sets(const GenotypeChunkTable& table)
 {
     PhaseSetMap phase_sets {};
-    phase_sets.reserve(splice_table.size());
-    for (const auto& row : splice_table) {
-        phase_sets[row.splices].push_back(row.genotype);
+    phase_sets.reserve(table.size());
+    for (const auto& row : table) {
+        phase_sets[row.chunks].push_back(row.genotype);
     }
     PhaseComplementSets result {};
     result.reserve(phase_sets.size());
@@ -91,8 +92,8 @@ template <typename Container>
 PhaseComplementSets
 generate_phase_complement_sets(const Container& genotypes, PartitionIterator first_parition, PartitionIterator last_partition)
 {
-    const auto splice_table = make_splice_table(genotypes, first_parition, last_partition);
-    return make_phase_sets(splice_table);
+    const auto table = make_chunk_table(genotypes, first_parition, last_partition);
+    return make_phase_sets(table);
 }
 
 template <typename Map>
@@ -165,22 +166,22 @@ std::vector<GenotypeReference> extract_genotypes(const Phaser::GenotypePosterior
     return extract_key_refs(genotype_posteriors);
 }
 
-using GenotypeSplicePosteriorMap = std::unordered_map<Genotype<Haplotype>, double>;
+using GenotypeChunkPosteriorMap = std::unordered_map<Genotype<Haplotype>, double>;
 
 template <typename Container>
-auto splice_and_marginalise(const Container& genotypes,
-                            const Phaser::SampleGenotypePosteriorMap& genotype_posteriors,
-                            const GenomicRegion& region)
+auto copy_and_marginalise(const Container& genotypes,
+                          const Phaser::SampleGenotypePosteriorMap& genotype_posteriors,
+                          const GenomicRegion& region)
 {
-    auto splices = splice_each<Haplotype>(genotypes, region);
-    GenotypeSplicePosteriorMap splice_posteriors {genotypes.size()};
-    auto splice_itr = std::cbegin(splices);
+    auto chunks = copy_each<Haplotype>(genotypes, region);
+    GenotypeChunkPosteriorMap chunk_posteriors {genotypes.size()};
+    auto chunk_posteriors_itr = std::cbegin(chunks);
     for (const auto& genotype : genotypes) {
-        splice_posteriors[*splice_itr++] += genotype_posteriors[genotype];
+        chunk_posteriors[*chunk_posteriors_itr++] += genotype_posteriors[genotype];
     }
-    std::sort(std::begin(splices), std::end(splices), GenotypeLess {});
-    splices.erase(std::unique(std::begin(splices), std::end(splices)), std::end(splices));
-    return std::make_pair(std::move(splices), std::move(splice_posteriors));
+    std::sort(std::begin(chunks), std::end(chunks), GenotypeLess {});
+    chunks.erase(std::unique(std::begin(chunks), std::end(chunks)), std::end(chunks));
+    return std::make_pair(std::move(chunks), std::move(chunk_posteriors));
 }
 
 } // namespace
@@ -210,13 +211,13 @@ force_phase_sample(const GenomicRegion& region,
     }
     Phaser::PhaseSet::SamplePhaseRegions result {};
     --last_partition;
-    std::vector<Genotype<Haplotype>> splices;
-    GenotypeSplicePosteriorMap splice_posteriors;
+    std::vector<Genotype<Haplotype>> chunks;
+    GenotypeChunkPosteriorMap chunk_posteriors;
     while (first_partition != std::cend(partitions)) {
         auto curr_region = encompassing_region(first_partition, last_partition);
-        std::tie(splices, splice_posteriors) = splice_and_marginalise(genotypes, genotype_posteriors, curr_region);
-        phase_set = generate_phase_complement_sets(splices, first_partition, last_partition);
-        phase_score = calculate_phase_score(phase_set, splice_posteriors);
+        std::tie(chunks, chunk_posteriors) = copy_and_marginalise(genotypes, genotype_posteriors, curr_region);
+        phase_set = generate_phase_complement_sets(chunks, first_partition, last_partition);
+        phase_score = calculate_phase_score(phase_set, chunk_posteriors);
         if (phase_score >= min_phase_score || std::distance(first_partition, last_partition) == 1) {
             result.emplace_back(encompassing_region(first_partition, last_partition), phase_score);
             first_partition = last_partition;

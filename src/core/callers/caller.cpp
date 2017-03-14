@@ -951,7 +951,7 @@ Caller::generate_candidate_reference_alleles(const GenomicRegion& region,
                     ++allele_itr;
                 } else {
                     if (begins_before(*allele_itr, *called_itr)) { // when variant has been left padded
-                        append_allele(result, splice(*allele_itr, left_overhang_region(*allele_itr, *called_itr)),
+                        append_allele(result, copy(*allele_itr, left_overhang_region(*allele_itr, *called_itr)),
                                       parameters_.refcall_type);
                     }
                     // skip contained alleles and candidates as they include called variants

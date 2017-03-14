@@ -227,10 +227,10 @@ std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(con
 GenomicRegion clipped_mapped_region(const AlignedRead& read);
 
 // Returns the part of the read cigar string contained by the region
-CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region);
+CigarString copy_cigar(const AlignedRead& read, const GenomicRegion& region);
     
 // Returns the part of the read (cigar, sequence, base_qualities) contained by the region
-AlignedRead splice(const AlignedRead& read, const GenomicRegion& region);
+AlignedRead copy(const AlignedRead& read, const GenomicRegion& region);
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs);
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs);

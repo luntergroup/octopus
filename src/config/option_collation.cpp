@@ -288,31 +288,27 @@ InputRegionMap extract_search_regions(const ReferenceGenome& reference)
 auto cut(const MappableFlatSet<GenomicRegion>& mappables, const MappableFlatSet<GenomicRegion>& regions)
 {
     if (mappables.empty()) return regions;
-    
     MappableFlatSet<GenomicRegion> result {};
-    
     for (const auto& region : regions) {
         auto overlapped = mappables.overlap_range(region);
         if (empty(overlapped)) {
             result.emplace(region);
         } else if (!is_same_region(region, overlapped.front())) {
-            auto spliced = region;
-            if (begins_before(overlapped.front(), spliced)) {
-                spliced = right_overhang_region(spliced, overlapped.front());
+            auto chunk = region;
+            if (begins_before(overlapped.front(), chunk)) {
+                chunk = right_overhang_region(chunk, overlapped.front());
                 overlapped.advance_begin(1);
             }
             std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&] (const auto& region) {
-                result.emplace(left_overhang_region(spliced, region));
-                spliced = expand_lhs(spliced, -begin_distance(spliced, region));
+                result.emplace(left_overhang_region(chunk, region));
+                chunk = expand_lhs(chunk, -begin_distance(chunk, region));
             });
-            if (ends_before(overlapped.back(), spliced)) {
-                result.emplace(right_overhang_region(spliced, overlapped.back()));
+            if (ends_before(overlapped.back(), chunk)) {
+                result.emplace(right_overhang_region(chunk, overlapped.back()));
             }
         }
     }
-    
     result.shrink_to_fit();
-    
     return result;
 }
 
@@ -322,7 +318,6 @@ InputRegionMap extract_search_regions(const std::vector<GenomicRegion>& regions,
     auto input_regions = make_search_regions(regions);
     const auto skipped = make_search_regions(skip_regions);
     InputRegionMap result {input_regions.size()};
-    
     for (auto& p : input_regions) {
         if (skipped.count(p.first) == 1) {
             result.emplace(p.first, cut(skipped.at(p.first), std::move(p.second)));
@@ -330,7 +325,6 @@ InputRegionMap extract_search_regions(const std::vector<GenomicRegion>& regions,
             result.emplace(p.first, std::move(p.second));
         }
     }
-    
     for (auto it = std::begin(result); it != std::end(result); ) {
         if (it->second.empty()) {
             it = result.erase(it);
@@ -338,11 +332,9 @@ InputRegionMap extract_search_regions(const std::vector<GenomicRegion>& regions,
             ++it;
         }
     }
-    
     for (auto& p : result) {
         p.second.shrink_to_fit();
     }
-    
     return result;
 }
 

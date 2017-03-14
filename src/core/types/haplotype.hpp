@@ -38,8 +38,8 @@ namespace debug {
 }
 
 namespace detail {
-    Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
-    Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::false_type);
+    Haplotype do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    Allele do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::false_type);
 }
 
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
@@ -92,7 +92,7 @@ public:
     friend struct IsLessComplex;
     
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
-    friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     friend bool is_reference(const Haplotype& haplotype);
     friend Haplotype expand(const Haplotype& haplotype, MappingDomain::Position n);
     
@@ -210,8 +210,8 @@ public:
     
     Haplotype build();
     
-    friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region,
-                                       std::true_type);
+    friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region,
+                                     std::true_type);
     
 private:
     GenomicRegion region_;
@@ -235,22 +235,22 @@ bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);
 
 template <typename MappableType>
-MappableType splice(const Haplotype& haplotype, const GenomicRegion& region)
+MappableType copy(const Haplotype& haplotype, const GenomicRegion& region)
 {
-    return detail::do_splice(haplotype, region, std::is_same<Haplotype, std::decay_t<MappableType>> {});
+    return detail::do_copy(haplotype, region, std::is_same<Haplotype, std::decay_t<MappableType>> {});
 }
 
-ContigAllele splice(const Haplotype& haplotype, const ContigRegion& region);
+ContigAllele copy(const Haplotype& haplotype, const ContigRegion& region);
 
 template <typename MappableType, typename Container,
           typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
-std::vector<MappableType> splice_all(const Container& haplotypes, const GenomicRegion& region)
+std::vector<MappableType> copy_all(const Container& haplotypes, const GenomicRegion& region)
 {
     std::vector<MappableType> result {};
     result.reserve(haplotypes.size());
     
     std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(result),
-                   [&region] (const auto& haplotype) { return splice<MappableType>(haplotype, region); });
+                   [&region] (const auto& haplotype) { return copy<MappableType>(haplotype, region); });
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     
@@ -259,13 +259,13 @@ std::vector<MappableType> splice_all(const Container& haplotypes, const GenomicR
 
 template <typename Container,
           typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
-std::vector<ContigAllele> splice_all(const Container& haplotypes, const ContigRegion& region)
+std::vector<ContigAllele> copy_all(const Container& haplotypes, const ContigRegion& region)
 {
     std::vector<ContigAllele> result {};
     result.reserve(haplotypes.size());
     
     for (const auto& haplotype : haplotypes) {
-        result.emplace_back(splice(haplotype, region));
+        result.emplace_back(copy(haplotype, region));
     }
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));

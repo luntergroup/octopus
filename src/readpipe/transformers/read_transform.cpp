@@ -314,8 +314,8 @@ std::pair<boost::optional<GenomicRegion>, boost::optional<GenomicRegion>>
 duplicated_clipped_region(const AlignedRead& first, const AlignedRead& second, const GenomicRegion& duplicated_region)
 {
     if (is_soft_clipped(first) && is_soft_clipped(second)) {
-        const auto first_clipping  = splice_cigar(first, duplicated_region);
-        const auto second_clipping = splice_cigar(second, duplicated_region);
+        const auto first_clipping  = copy_cigar(first, duplicated_region);
+        const auto second_clipping = copy_cigar(second, duplicated_region);
         if (first_clipping.empty() || second_clipping.empty()) {
             return {boost::none, boost::none};
         } else {

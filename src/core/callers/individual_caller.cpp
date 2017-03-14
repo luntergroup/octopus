@@ -266,9 +266,9 @@ GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
     result.reserve(variant_regions.size());
     
     for (const auto& region : variant_regions) {
-        auto spliced_genotype = splice<Allele>(genotype_call, region);
-        const auto posterior = compute_posterior(spliced_genotype, genotype_posteriors);
-        result.emplace_back(std::move(spliced_genotype), posterior);
+        auto genotype_chunk = copy<Allele>(genotype_call, region);
+        const auto posterior = compute_posterior(genotype_chunk, genotype_posteriors);
+        result.emplace_back(std::move(genotype_chunk), posterior);
     }
     
     return result;
