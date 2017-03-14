@@ -56,6 +56,7 @@ public:
     const RegionTp& mapped_region() const noexcept;
     
     const NucleotideSequence& sequence() const noexcept;
+    NucleotideSequence& sequence() noexcept;
     
     friend BasicAllele<ContigRegion> demote(BasicAllele<GenomicRegion>&&);
     
@@ -112,6 +113,12 @@ const typename BasicAllele<RegionTp>::NucleotideSequence& BasicAllele<RegionTp>:
     return sequence_;
 }
 
+template <typename RegionTp>
+typename BasicAllele<RegionTp>::NucleotideSequence& BasicAllele<RegionTp>::sequence() noexcept
+{
+    return sequence_;
+}
+
 // template base non-member methods
 
 ContigAllele demote(const Allele& allele);
@@ -139,7 +146,7 @@ bool is_subsequence(const Sequence& lhs, const Sequence& rhs)
 }
 
 template <typename RegionTp>
-auto copy_subsequence(const BasicAllele<RegionTp>& allele, const RegionTp& region)
+auto copy_sequence(const BasicAllele<RegionTp>& allele, const RegionTp& region)
 {
     using NucleotideSequence = typename BasicAllele<RegionTp>::NucleotideSequence;
     assert(contains(allele, region));
@@ -169,7 +176,49 @@ auto copy_subsequence(const BasicAllele<RegionTp>& allele, const RegionTp& regio
     assert(first_base_itr >= std::cbegin(sequence));
     assert(last_base_itr <= std::cend(sequence));
     return NucleotideSequence {first_base_itr, last_base_itr};
+}
+
+template <typename RegionTp>
+auto copy_sequence(BasicAllele<RegionTp>&& allele, const RegionTp& region)
+{
+    assert(contains(allele, region));
+    auto sequence = std::move(allele.sequence());
+    if (mapped_region(allele) == region) return sequence;
+    const auto region_offset = static_cast<std::size_t>(begin_distance(allele, region));
+    auto first_base_itr = std::cbegin(sequence), last_base_itr = std::cend(sequence);
+    const auto region_size = static_cast<std::size_t>(size(region));
+    if (is_deletion(allele)) {
+        if (!is_sequence_empty(allele)) {
+            const auto base_offset = std::min(region_offset, sequence_size(allele));
+            first_base_itr = std::next(std::cbegin(allele.sequence()), base_offset);
+            const auto num_remaining_bases = std::min(region_size, sequence_size(allele) - base_offset);
+            last_base_itr = std::next(first_base_itr, num_remaining_bases);
+        }
+    } else {
+        first_base_itr = std::next(std::cbegin(allele.sequence()), region_offset);
+        if (is_insertion(allele)) {
+            const auto num_trailing_bases = static_cast<std::size_t>(end_distance(region, allele));
+            const auto num_subsequence_bases = sequence_size(allele) - region_offset - num_trailing_bases;
+            last_base_itr = std::next(first_base_itr, num_subsequence_bases);
+        } else {
+            last_base_itr = std::next(first_base_itr, region_size);
+        }
     }
+    assert(first_base_itr <= last_base_itr);
+    assert(first_base_itr >= std::cbegin(sequence));
+    assert(last_base_itr <= std::cend(sequence));
+    if (first_base_itr == last_base_itr) {
+        sequence.clear();
+    } else {
+        if (last_base_itr != std::cend(sequence)) {
+            sequence.erase(std::next(last_base_itr), std::cend(sequence));
+        }
+        if (first_base_itr != std::cbegin(sequence)) {
+            sequence.erase(std::cbegin(sequence), first_base_itr);
+        }
+    }
+    return sequence;
+}
 
 } // namespace detail
 
@@ -186,17 +235,25 @@ bool contains(const BasicAllele<RegionTp>& lhs, const BasicAllele<RegionTp>& rhs
         // is required to be non-empty otherwise it would be a subsequence of everything.
         return !rhs.sequence().empty() && detail::is_subsequence(lhs.sequence(), rhs.sequence());
     }
-    return detail::copy_subsequence(lhs, rhs.mapped_region()) == rhs.sequence();
+    return detail::copy_sequence(lhs, rhs.mapped_region()) == rhs.sequence();
 }
 
-// TODO: add explanatio
 template <typename RegionTp>
 BasicAllele<RegionTp> copy(const BasicAllele<RegionTp>& allele, const RegionTp& region)
 {
     if (!contains(allele, region)) {
         throw std::logic_error {"Allele: trying to copy an uncontained region"};
     }
-    return BasicAllele<RegionTp> {region, detail::copy_subsequence(allele, region)};
+    return BasicAllele<RegionTp> {region, detail::copy_sequence(allele, region)};
+}
+
+template <typename RegionTp>
+BasicAllele<RegionTp> copy(BasicAllele<RegionTp>&& allele, const RegionTp& region)
+{
+    if (!contains(allele, region)) {
+        throw std::logic_error {"Allele: trying to copy an uncontained region"};
+    }
+    return BasicAllele<RegionTp> {region, detail::copy_sequence(std::move(allele), region)};
 }
 
 template <typename RegionTp>
