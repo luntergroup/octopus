@@ -744,6 +744,25 @@ bool require_more_holdouts(const Range& alleles, const GenomicRegion& next_activ
 
 namespace {
 
+template <typename Container, typename Mappable>
+auto count_fully_contained(const Container& mappables, const Mappable& mappable)
+{
+    auto contained = contained_range(mappables, mappable);
+    while (!empty(contained) && mapped_end(contained.front()) == mapped_begin(mappable)) {
+        contained.advance_begin(1);
+    }
+    while (!empty(contained) && mapped_begin(contained.back()) == mapped_end(mappable)) {
+        contained.advance_end(-1);
+    }
+    return size(contained);
+}
+
+template <typename Container, typename Mappable>
+bool has_fully_contained(const Container& mappables, const Mappable& mappable)
+{
+    return count_fully_contained(mappables, mappable) > 0;
+}
+
 auto extract_unique_regions(const MappableFlatSet<Allele>& alleles)
 {
     auto result = extract_regions(alleles);
@@ -751,20 +770,20 @@ auto extract_unique_regions(const MappableFlatSet<Allele>& alleles)
     return result;
 }
 
-struct InteractionCount
+struct ContainmentCount
 {
     GenomicRegion region;
     std::size_t count;
 };
 
-auto get_interaction_counts(const MappableFlatSet<Allele>& alleles)
+auto get_containment_counts(const MappableFlatSet<Allele>& alleles)
 {
     const auto allele_regions = extract_unique_regions(alleles);
-    std::vector<InteractionCount> result {};
+    std::vector<ContainmentCount> result {};
     result.reserve(result.size());
     std::transform(std::cbegin(allele_regions), std::cend(allele_regions), std::back_inserter(result),
-                   [&alleles] (const auto& region) -> InteractionCount {
-                       return {region, count_overlapped(alleles, region)};
+                   [&alleles] (const auto& region) -> ContainmentCount {
+                       return {region, count_fully_contained(alleles, region)};
                    });
     std::sort(std::begin(result), std::end(result),
               [] (const auto& lhs, const auto& rhs) {
@@ -852,12 +871,14 @@ bool HaplotypeGenerator::try_extract_holdouts(GenomicRegion region)
 boost::optional<HaplotypeGenerator::HoldoutSet> HaplotypeGenerator::propose_new_holdout_set(GenomicRegion region) const
 {
     assert(can_try_extracting_holdouts(region));
-    auto active_alleles = copy_overlapped(alleles_, region);
+    const auto active_alleles = copy_overlapped(alleles_, region);
     assert(!active_alleles.empty());
-    auto interaction_counts = get_interaction_counts(active_alleles);
-    const auto holdout_itr = std::find_if(std::cbegin(interaction_counts), std::cend(interaction_counts),
-                                          [] (const auto& count) { return size(count.region) > 1; });
-    if (holdout_itr != std::cend(interaction_counts)) {
+    const auto containment_counts = get_containment_counts(active_alleles);
+    const auto holdout_itr = std::find_if(std::cbegin(containment_counts), std::cend(containment_counts),
+                                          [] (const auto& cc) {
+                                              return size(cc.region) > 1 && cc.count > 2;
+                                          });
+    if (holdout_itr != std::cend(containment_counts)) {
         const auto holdouts = get_holdout_range(active_alleles, holdout_itr->region);
         assert(!holdouts.empty());
         return HoldoutSet {std::cbegin(holdouts), std::cend(holdouts), holdout_itr->region};
@@ -865,29 +886,6 @@ boost::optional<HaplotypeGenerator::HoldoutSet> HaplotypeGenerator::propose_new_
         return boost::none;
     }
 }
-
-namespace {
-
-template <typename Container, typename Mappable>
-auto count_fully_contained(const Container& mappables, const Mappable& mappable)
-{
-    auto contained = contained_range(mappables, mappable);
-    while (!empty(contained) && mapped_end(contained.front()) == mapped_begin(mappable)) {
-        contained.advance_begin(1);
-    }
-    while (!empty(contained) && mapped_begin(contained.back()) == mapped_end(mappable)) {
-        contained.advance_end(-1);
-    }
-    return size(contained);
-}
-
-template <typename Container, typename Mappable>
-bool has_fully_contained(const Container& mappables, const Mappable& mappable)
-{
-    return count_fully_contained(mappables, mappable) > 0;
-}
-
-} // namespace
 
 bool HaplotypeGenerator::can_reintroduce_holdouts() const noexcept
 {
