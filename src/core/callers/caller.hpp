@@ -27,7 +27,7 @@
 #include "logging/progress_meter.hpp"
 #include "logging/logging.hpp"
 #include "io/variant/vcf_record.hpp"
-#include "utils/vcf_record_factory.hpp"
+#include "core/tools/vcf_record_factory.hpp"
 
 namespace octopus {
 

@@ -181,26 +181,26 @@ set(CORE_SOURCES
     core/callers/population_caller.cpp
     core/callers/trio_caller.hpp
     core/callers/trio_caller.cpp
-    
-    core/callers/utils/call_types.hpp
-    core/callers/utils/call.hpp
-    core/callers/utils/call.cpp
-    core/callers/utils/germline_variant_call.hpp
-    core/callers/utils/germline_variant_call.cpp
-    core/callers/utils/reference_call.hpp
-    core/callers/utils/reference_call.cpp
-    core/callers/utils/somatic_call.hpp
-    core/callers/utils/somatic_call.cpp
-    core/callers/utils/variant_call.hpp
-    core/callers/utils/variant_call.cpp
-    core/callers/utils/denovo_call.hpp
-    core/callers/utils/denovo_call.cpp
-    core/callers/utils/call_wrapper.hpp
-    core/callers/utils/call_wrapper.cpp
-    core/callers/utils/vcf_header_factory.hpp
-    core/callers/utils/vcf_header_factory.cpp
-    core/callers/utils/vcf_record_factory.hpp
-    core/callers/utils/vcf_record_factory.cpp
+
+    core/types/calls/call_types.hpp
+    core/types/calls/call.hpp
+    core/types/calls/call.cpp
+    core/types/calls/germline_variant_call.hpp
+    core/types/calls/germline_variant_call.cpp
+    core/types/calls/reference_call.hpp
+    core/types/calls/reference_call.cpp
+    core/types/calls/somatic_call.hpp
+    core/types/calls/somatic_call.cpp
+    core/types/calls/variant_call.hpp
+    core/types/calls/variant_call.cpp
+    core/types/calls/denovo_call.hpp
+    core/types/calls/denovo_call.cpp
+    core/types/calls/call_wrapper.hpp
+    core/types/calls/call_wrapper.cpp
+    core/tools/vcf_header_factory.hpp
+    core/tools/vcf_header_factory.cpp
+    core/tools/vcf_record_factory.hpp
+    core/tools/vcf_record_factory.cpp
     
     core/csr/facets/read_assignment.hpp
     core/csr/facets/read_assignment.cpp

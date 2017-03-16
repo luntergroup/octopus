@@ -7,7 +7,7 @@
 #include <string>
 
 #include "exceptions/program_error.hpp"
-#include "call_types.hpp"
+#include "core/types/calls/call_types.hpp"
 
 namespace octopus {
 

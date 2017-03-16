@@ -26,8 +26,8 @@
 #include "core/models/genotype/uniform_population_prior_model.hpp"
 #include "core/models/genotype/coalescent_population_prior_model.hpp"
 #include "logging/logging.hpp"
-#include "utils/germline_variant_call.hpp"
-#include "utils/reference_call.hpp"
+#include "core/types/calls/germline_variant_call.hpp"
+#include "core/types/calls/reference_call.hpp"
 
 namespace octopus {
 

@@ -32,9 +32,9 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/maths.hpp"
 #include "logging/logging.hpp"
-#include "utils/germline_variant_call.hpp"
-#include "utils/reference_call.hpp"
-#include "utils/somatic_call.hpp"
+#include "core/types/calls/germline_variant_call.hpp"
+#include "core/types/calls/reference_call.hpp"
+#include "core/types/calls/somatic_call.hpp"
 
 #include "timers.hpp"
 

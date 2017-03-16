@@ -18,10 +18,10 @@
 #include "utils/append.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
 #include "core/tools/haplotype_filter.hpp"
-#include "utils/call.hpp"
-#include "utils/call_wrapper.hpp"
-#include "utils/variant_call.hpp"
-#include "utils/reference_call.hpp"
+#include "core/types/calls/call.hpp"
+#include "core/types/calls/call_wrapper.hpp"
+#include "core/types/calls/variant_call.hpp"
+#include "core/types/calls/reference_call.hpp"
 
 #include "timers.hpp"
 

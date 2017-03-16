@@ -27,7 +27,7 @@
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
 #include "exceptions/program_error.hpp"
-#include "variant_call.hpp"
+#include "core/types/calls/variant_call.hpp"
 
 namespace octopus {
 

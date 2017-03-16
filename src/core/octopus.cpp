@@ -42,7 +42,7 @@
 #include "utils/maths.hpp"
 #include "logging/progress_meter.hpp"
 #include "logging/logging.hpp"
-#include "core/callers/utils/vcf_header_factory.hpp"
+#include "core/tools/vcf_header_factory.hpp"
 #include "io/variant/vcf.hpp"
 #include "utils/timing.hpp"
 #include "exceptions/program_error.hpp"

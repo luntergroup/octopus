@@ -10,8 +10,8 @@
 #include "config/common.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/variant/vcf_record.hpp"
-#include "call.hpp"
-#include "call_wrapper.hpp"
+#include "core/types/calls/call.hpp"
+#include "core/types/calls/call_wrapper.hpp"
 
 namespace octopus {
 
