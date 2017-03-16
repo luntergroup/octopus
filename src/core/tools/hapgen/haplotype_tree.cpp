@@ -233,14 +233,19 @@ void HaplotypeTree::splice(const ContigAllele& allele)
                              make_splicer(allele, candidate_splice_sites, splice_sites, root_),
                              boost::make_assoc_property_map(colours),
                              [&] (const Vertex v, const Tree& tree) -> bool {
-                                 if (v != root_ && begins_before(allele, tree[v])) {
-                                     const auto u = *boost::inv_adjacent_vertices(v, tree).first;
-                                     if (candidate_splice_sites.empty() || candidate_splice_sites.top() != u) {
-                                         candidate_splice_sites.push(u);
+                                 if (v != root_ && (begins_before(allele, tree[v])
+                                                    || (begins_equal(allele, tree[v]) && !is_empty_region(tree[v])))) {
+                                     const auto p = boost::inv_adjacent_vertices(v, tree);
+                                     if (p.first != p.second) {
+                                         const auto u = *p.first;
+                                         if (candidate_splice_sites.empty() || candidate_splice_sites.top() != u) {
+                                             candidate_splice_sites.push(u);
+                                         }
                                      }
                                      return true;
+                                 } else {
+                                     return false;
                                  }
-                                 return false;
                              });
     assert(candidate_splice_sites.empty());
     for (const auto v : splice_sites) {
