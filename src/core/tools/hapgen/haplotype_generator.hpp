@@ -43,7 +43,7 @@ public:
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         unsigned max_holdout_depth = 2;
         Haplotype::MappingDomain::Size min_flank_pad = 30;
-        Haplotype::NucleotideSequence::size_type exclusion_threshold = 8;
+        boost::optional<Haplotype::NucleotideSequence::size_type> exclusion_threshold = boost::none;
     };
     
     class HaplotypeOverflow;

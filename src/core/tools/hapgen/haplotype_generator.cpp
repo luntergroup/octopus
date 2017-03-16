@@ -371,7 +371,7 @@ template <typename Range>
 unsigned extend_novel(HaplotypeTree& tree, const std::vector<GenomicRegion>& novel_regions,
                       const Range& novel_alleles, const HaplotypeGenerator::Policies::HaplotypeLimits& limits)
 {
-    unsigned num_novel_regions_added {0};
+    unsigned num_novel_regions_added{0};
     for (const auto& region : novel_regions) {
         const auto interacting_alleles = contained_range(novel_alleles, region);
         const auto last_added = extend_tree_until(interacting_alleles, tree, limits.overflow);
@@ -413,11 +413,16 @@ std::size_t get_reduction_factor(HaplotypeGenerator::Policies::Lagging policy) n
     using HGP = HaplotypeGenerator::Policies::Lagging;
     switch (policy) {
         case HGP::none:
-        case HGP::conservative: return 0;
-        case HGP::moderate: return 2;
-        case HGP::normal: return 3;
-        case HGP::aggressive: return 4;
-        default: return 3; // prevents compiler warning
+        case HGP::conservative:
+            return 0;
+        case HGP::moderate:
+            return 2;
+        case HGP::normal:
+            return 3;
+        case HGP::aggressive:
+            return 4;
+        default:
+            return 3; // prevents compiler warning
     }
 }
 
@@ -427,13 +432,14 @@ std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::si
                                  const std::size_t reduction_factor)
 {
     if (curr_tree_size == 0) return 0;
-    const auto effective_log_space = static_cast<std::size_t>(std::log2(std::max(target_tree_size / curr_tree_size, std::size_t {1})));
+    const auto effective_log_space = static_cast<std::size_t>(std::log2(
+    std::max(target_tree_size / curr_tree_size, std::size_t {1})));
     if (effective_log_space >= num_mutually_exclusive_novel_regions) {
         return curr_tree_size;
     } else {
         const auto exponent = std::min(num_mutually_exclusive_indicator_regions,
-                                        (std::max(num_mutually_exclusive_novel_regions, reduction_factor)
-                                         / std::max(reduction_factor, std::size_t {1})) - 1);
+                                       (std::max(num_mutually_exclusive_novel_regions, reduction_factor)
+                                        / std::max(reduction_factor, std::size_t {1})) - 1);
         return std::min(static_cast<std::size_t>(target_tree_size / std::pow(2, exponent)), curr_tree_size);
     }
 }
@@ -480,6 +486,49 @@ get_exclusion_zone(const GenomicRegion& passed_region, const HaplotypeTree& tree
 {
     if (requires_exclusion_zone(passed_region, tree, min_flank_pad)) {
         return encompassing_overlap_region(reads, passed_region);
+    } else {
+        return boost::none;
+    }
+}
+
+boost::optional<GenomicRegion>
+get_exclusion_zone(const HaplotypeTree& tree, const GenomicRegion& active_region,
+                   const std::vector<GenomicRegion>& indicator_regions,
+                   const MappableFlatSet<Allele>& alleles, const ReadMap& reads,
+                   const Haplotype::MappingDomain::Size min_flank_pad)
+{
+    const auto new_passed_region = left_overhang_region(active_region, indicator_regions.front());
+    auto passed_alleles = contained_range(alleles, new_passed_region);
+    while (!empty(passed_alleles) && overlaps(passed_alleles.back(), indicator_regions.front())) {
+        passed_alleles.advance_end(-1);
+    }
+    if (!empty(passed_alleles)) {
+        auto passed_allele_region = encompassing_region(passed_alleles);
+        auto exclusion_zone = get_exclusion_zone(passed_allele_region, tree, min_flank_pad, reads);
+        if (exclusion_zone) {
+            if (!indicator_regions.empty()) {
+                auto indicator_region = closed_region(indicator_regions.front(), indicator_regions.back());
+                while (overlaps(indicator_region, *exclusion_zone) && !contains(*exclusion_zone, indicator_region)) {
+                    const auto excluded_indicator_regions = overlap_range(indicator_regions, *exclusion_zone,
+                                                                          BidirectionallySortedTag {});
+                    assert(!empty(excluded_indicator_regions));
+                    const auto excluded_indicator_region = closed_region(excluded_indicator_regions.front(),
+                                                                         excluded_indicator_regions.back());
+                    const auto excluded_indicator_region_exclusion_zone = get_exclusion_zone(excluded_indicator_region, tree,
+                                                                                             min_flank_pad, reads);
+                    if (!excluded_indicator_region_exclusion_zone) {
+                        exclusion_zone = closed_region(*exclusion_zone, excluded_indicator_region);
+                        break;
+                    }
+                    exclusion_zone = closed_region(*exclusion_zone, *excluded_indicator_region_exclusion_zone);
+                    indicator_region = right_overhang_region(indicator_region, *exclusion_zone);
+                }
+                if (contains(*exclusion_zone, indicator_region)) {
+                    exclusion_zone = get_exclusion_zone(*exclusion_zone, tree, min_flank_pad, reads);
+                }
+            }
+        }
+        return exclusion_zone;
     } else {
         return boost::none;
     }
@@ -535,22 +584,15 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
                                                              mutually_exclusive_novel_regions.size(),
                                                              policies_.lagging);
                 prune_indicators(test_tree, mutually_exclusive_indicator_regions, target_tree_size);
-                if (!mutually_exclusive_indicator_regions.empty()) {
-                    const auto new_passed_region = left_overhang_region(active_region_, mutually_exclusive_indicator_regions.front());
-                    auto passed_alleles = contained_range(alleles_, new_passed_region);
-                    while (!empty(passed_alleles) && overlaps(passed_alleles.back(), mutually_exclusive_indicator_regions.front())) {
-                        passed_alleles.advance_end(-1);
-                    }
-                    if (!empty(passed_alleles)) {
-                        const auto passed_allele_region = encompassing_region(passed_alleles);
-                        const auto exclusion_zone = get_exclusion_zone(passed_allele_region, tree_,
-                                                                       policies_.exclusion_threshold, reads_);
-                        if (exclusion_zone) {
-                            if (debug_log_) {
-                                const auto new_indicator_region = encompassing_region(mutually_exclusive_indicator_regions);
-                                stream(*debug_log_) << "Encountered indicator exclusion zone " << *exclusion_zone
-                                                    << " while trying to use indicator region " << new_indicator_region;
-                            }
+                if (policies_.exclusion_threshold) {
+                    const auto exclusion_zone = get_exclusion_zone(test_tree, active_region_,
+                                                                   mutually_exclusive_indicator_regions,
+                                                                   alleles_, reads_,
+                                                                   *policies_.exclusion_threshold);
+                    if (exclusion_zone) {
+                        if (contains(*exclusion_zone, indicator_region)) {
+                            test_tree = tree_;
+                        } else {
                             test_tree.clear(*exclusion_zone);
                         }
                     }
