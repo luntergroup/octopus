@@ -30,6 +30,8 @@ public:
     
     virtual void decorate(VcfRecord::Builder& record) const override;
     
+    virtual bool requires_model_evaluation() const noexcept override { return true; }
+    
 private:
     virtual std::unique_ptr<Call> do_clone() const override;
 };

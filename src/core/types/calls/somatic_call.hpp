@@ -46,6 +46,8 @@ public:
     
     virtual void decorate(VcfRecord::Builder& record) const override;
     
+    virtual bool requires_model_evaluation() const noexcept override { return true; }
+    
 protected:
     std::unordered_map<SampleName, GenotypeCredibleRegions> credible_regions_;
 private:
