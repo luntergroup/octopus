@@ -210,30 +210,6 @@ void CoalescentModel::fill_site_buffer_from_value_cache(const Haplotype& haploty
 
 void CoalescentModel::fill_site_buffer_from_address_cache(const Haplotype& haplotype) const
 {
-    if (first_haplotype_) {
-        fill_site_buffer_from_flat_address_cache(haplotype);
-    } else {
-        fill_site_buffer_from_sparse_address_cache(haplotype);
-    }
-}
-
-void CoalescentModel::fill_site_buffer_from_flat_address_cache(const Haplotype& haplotype) const noexcept
-{
-    assert(first_haplotype_);
-    assert(*first_haplotype_ <= std::addressof(haplotype) && std::addressof(haplotype) <= *last_haplotype_);
-    const auto haplotype_index = static_cast<std::size_t>(std::distance(*first_haplotype_, std::addressof(haplotype)));
-    assert(haplotype_index < flat_address_cache_.size());
-    auto& difference = flat_address_cache_[haplotype_index];
-    if (!difference) {
-        difference = haplotype.difference(reference_);
-    }
-    std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
-                   std::cbegin(*difference), std::cend(*difference),
-                   std::back_inserter(site_buffer2_));
-}
-
-void CoalescentModel::fill_site_buffer_from_sparse_address_cache(const Haplotype& haplotype) const
-{
     auto itr = difference_address_cache_.find(std::addressof(haplotype));
     if (itr == std::cend(difference_address_cache_)) {
         itr = difference_address_cache_.emplace(std::piecewise_construct,
@@ -243,27 +219,6 @@ void CoalescentModel::fill_site_buffer_from_sparse_address_cache(const Haplotype
     std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
                    std::cbegin(itr->second), std::cend(itr->second),
                    std::back_inserter(site_buffer2_));
-}
-
-void CoalescentModel::do_prime(const std::vector<const Haplotype*>& addresses) const
-{
-    if (!addresses.empty()) {
-        const auto p = std::minmax_element(std::cbegin(addresses), std::cend(addresses));
-        const auto num_spaces = static_cast<std::size_t>(std::distance(*p.first, *p.second)) + 1;
-        if (num_spaces <= max_flat_spaces_) {
-            first_haplotype_ = *p.first;
-            last_haplotype_  = *p.second;
-            flat_address_cache_.assign(num_spaces, boost::none);
-        }
-    }
-}
-
-void CoalescentModel::unprime() const noexcept
-{
-    first_haplotype_ = boost::none;
-    last_haplotype_  = boost::none;
-    flat_address_cache_.clear();
-    flat_address_cache_.shrink_to_fit();
 }
 
 } // namespace octopus

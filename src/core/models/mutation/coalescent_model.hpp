@@ -49,9 +49,6 @@ public:
     
     void set_reference(Haplotype reference);
     
-    template <typename Container> void prime(const Container& haplotypes) const;
-    void unprime() const noexcept;
-    
     template <typename Container>
     double evaluate(const Container& haplotypes) const;
 
@@ -70,14 +67,10 @@ private:
     std::vector<double> reference_base_indel_heterozygosities_;
     Parameters params_;
     CachingStrategy caching_;
-    std::size_t max_flat_spaces_ = 1'00'000;
-    
     mutable std::vector<std::reference_wrapper<const Variant>> site_buffer1_, site_buffer2_;
     mutable std::unordered_map<Haplotype, std::vector<Variant>> difference_value_cache_;
     mutable std::unordered_map<const Haplotype*, std::vector<Variant>> difference_address_cache_;
     mutable std::unordered_map<SiteCountTuple, double, SiteCountTupleHash> result_cache_;
-    mutable boost::optional<const Haplotype*> first_haplotype_ = boost::none, last_haplotype_ = boost::none;
-    mutable std::vector<boost::optional<std::vector<Variant>>> flat_address_cache_ = {};
     
     double evaluate(const SiteCountTuple& t) const;
     
@@ -85,13 +78,9 @@ private:
     void fill_site_buffer(const Container& haplotypes) const;
     void fill_site_buffer_from_value_cache(const Haplotype& haplotype) const;
     void fill_site_buffer_from_address_cache(const Haplotype& haplotype) const;
-    void fill_site_buffer_from_flat_address_cache(const Haplotype& haplotype) const noexcept;
-    void fill_site_buffer_from_sparse_address_cache(const Haplotype& haplotype) const;
     
     template <typename Container>
     SiteCountTuple count_segregating_sites(const Container& haplotypes) const;
-    
-    void do_prime(const std::vector<const Haplotype*>& addresses) const;
 };
 
 template <typename Container>
@@ -99,15 +88,6 @@ double CoalescentModel::evaluate(const Container& haplotypes) const
 {
     const auto t = count_segregating_sites(haplotypes);
     return evaluate(t);
-}
-
-template <typename Container>
-void CoalescentModel::prime(const Container& haplotypes) const
-{
-    std::vector<const Haplotype*> addresses(haplotypes.size());
-    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(addresses),
-                   [] (const Haplotype& haplotype) { return std::addressof(haplotype); });
-    do_prime(addresses);
 }
 
 // private methods

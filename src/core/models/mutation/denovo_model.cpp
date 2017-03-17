@@ -111,31 +111,6 @@ double DeNovoModel::evaluate_basic_cache(const Haplotype& target, const Haplotyp
 
 double DeNovoModel::evaluate_address_cache(const Haplotype& target, const Haplotype& given) const
 {
-    if (first_haplotype_) {
-        return evaluate_flat_address_cache(target, given);
-    } else {
-        return evaluate_sparse_address_cache(target, given);
-    }
-}
-
-double DeNovoModel::evaluate_flat_address_cache(const Haplotype& target, const Haplotype& given) const noexcept
-{
-    assert(first_haplotype_);
-    assert(*first_haplotype_ <= std::addressof(target) && std::addressof(target) <= *last_haplotype_);
-    assert(*first_haplotype_ <= std::addressof(given) && std::addressof(given) <= *last_haplotype_);
-    const auto target_index = static_cast<std::size_t>(std::distance(*first_haplotype_, std::addressof(target)));
-    const auto given_index  = static_cast<std::size_t>(std::distance(*first_haplotype_, std::addressof(given)));
-    assert(target_index < flat_address_cache_.size());
-    assert(given_index < flat_address_cache_.size());
-    auto& result = flat_address_cache_[target_index][given_index];
-    if (!result) {
-        result = evaluate_uncached(target, given);
-    }
-    return *result;
-}
-
-double DeNovoModel::evaluate_sparse_address_cache(const Haplotype& target, const Haplotype& given) const
-{
     const auto p = std::make_pair(std::addressof(target), std::addressof(given));
     const auto itr = address_cache_.find(p);
     if (itr == std::cend(address_cache_)) {
@@ -147,27 +122,6 @@ double DeNovoModel::evaluate_sparse_address_cache(const Haplotype& target, const
     } else {
         return itr->second;
     }
-}
-
-void DeNovoModel::do_prime(const std::vector<const Haplotype*>& addresses) const
-{
-    if (!addresses.empty()) {
-        const auto p = std::minmax_element(std::cbegin(addresses), std::cend(addresses));
-        const auto num_spaces = static_cast<std::size_t>(std::distance(*p.first, *p.second)) + 1;
-        if (num_spaces <= max_flat_spaces_) {
-            first_haplotype_ = *p.first;
-            last_haplotype_  = *p.second;
-            flat_address_cache_.assign(num_spaces, std::vector<boost::optional<double>>(num_spaces, boost::none));
-        }
-    }
-}
-
-void DeNovoModel::unprime() const noexcept
-{
-    first_haplotype_ = boost::none;
-    last_haplotype_  = boost::none;
-    flat_address_cache_.clear();
-    flat_address_cache_.shrink_to_fit();
 }
 
 } // namespace octopus
