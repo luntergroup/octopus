@@ -151,8 +151,7 @@ namespace {
 
 using JointProbability      = TrioModel::Latents::JointProbability;
 using TrioProbabilityVector = std::vector<JointProbability>;
-
-using InverseGenotypeTable = std::vector<std::vector<std::size_t>>;
+using InverseGenotypeTable  = std::vector<std::vector<std::size_t>>;
 
 auto make_inverse_genotype_table(const std::vector<Haplotype>& haplotypes,
                                  const std::vector<Genotype<Haplotype>>& genotypes)
@@ -239,16 +238,12 @@ TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
     const model::TrioModel model {
         parameters_.trio, *germline_prior_model, denovo_model,
-        TrioModel::Options {
-            parameters_.min_genotype_combinations,
-            parameters_.max_genotype_combinations,
-            parameters_.max_reduction_mass.probability_false()},
+        TrioModel::Options {parameters_.max_joint_genotypes},
         debug_log_
     };
     auto maternal_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy);
     if (parameters_.maternal_ploidy == parameters_.paternal_ploidy) {
-        auto latents = model.evaluate(maternal_genotypes, maternal_genotypes,
-                                      maternal_genotypes, haplotype_likelihoods);
+        auto latents = model.evaluate(maternal_genotypes, haplotype_likelihoods);
         return std::make_unique<Latents>(haplotypes, std::move(maternal_genotypes),
                                          std::move(latents), parameters_.trio);
     } else {
@@ -327,9 +322,7 @@ auto call_trio(const TrioProbabilityVector& trio_posteriors)
 
 bool contains(const JointProbability& trio, const Allele& allele)
 {
-    return contains(trio.maternal, allele)
-           || contains(trio.paternal, allele)
-           || contains(trio.child, allele);
+    return contains(trio.maternal, allele) || contains(trio.paternal, allele) || contains(trio.child, allele);
 }
 
 using HaplotypePtrBoolMap = std::unordered_map<const Haplotype*, bool>;
@@ -428,9 +421,7 @@ auto compute_posteriors(const std::vector<Allele>& alleles, const TrioProbabilit
 
 bool includes(const TrioCall& trio, const Allele& allele)
 {
-    return includes(trio.mother, allele)
-           || includes(trio.father, allele)
-           || includes(trio.child, allele);
+    return includes(trio.mother, allele) || includes(trio.father, allele) || includes(trio.child, allele);
 }
 
 auto call_alleles(const AllelePosteriorMap& allele_posteriors,
@@ -731,12 +722,6 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
                                            *latents.genotype_posteriors(),
                                            extract_regions(called_denovos));
     const auto germline_alleles = get_germline_alleles(called_alleles, called_denovos);
-    if (!called_denovos.empty() && latents.model_latents.overflowed) {
-        const auto denovo_region = encompassing_region(called_denovos);
-        logging::WarningLogger warn_log {};
-        stream(warn_log) << "Flushing called de novo mutations in " << denovo_region << " due to model overflow";
-        called_denovos.clear();
-    }
     auto germline_variants = call_germline_variants(germline_alleles, candidates,
                                                     called_trio, parameters_.min_variant_posterior);
     auto germline_genotypes = call_genotypes(parameters_.trio, called_trio,

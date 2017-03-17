@@ -149,67 +149,55 @@ bool all_equal(const std::vector<T>& v)
 }
 
 template <typename Iterator>
-double compute_removed_posterior_mass(Iterator first, Iterator first_removed, Iterator last)
+double compute_lost_posterior_mass(Iterator first, Iterator first_removed, Iterator last)
 {
     thread_local std::vector<double> likelihoods {};
     likelihoods.resize(std::distance(first, last));
     std::transform(first, last, std::begin(likelihoods), [] (const auto& p) { return p.probability; });
     maths::normalise_exp(likelihoods);
-    return std::accumulate(std::next(std::cbegin(likelihoods), std::distance(first, first_removed)),
-                           std::cend(likelihoods), 0.0);
+    return std::accumulate(std::cbegin(likelihoods), std::next(std::cbegin(likelihoods), std::distance(first, first_removed)), 0.0);
 }
 
 template <typename T>
-auto compute_first_removable(const std::vector<T>& zipped, const double max_removed_mass)
+auto compute_min_joint(const std::vector<T>& zipped, const double max_mass_loss)
 {
-    thread_local std::vector<double> likelihoods {};
-    likelihoods.resize(zipped.size());
-    std::transform(std::cbegin(zipped), std::cend(zipped), std::begin(likelihoods),
+    assert(!zipped.empty());
+    std::vector<double> posteriors {};
+    posteriors.resize(zipped.size());
+    std::transform(std::cbegin(zipped), std::cend(zipped), std::begin(posteriors),
                    [] (const auto& p) { return p.probability; });
-    maths::normalise_exp(likelihoods);
+    maths::normalise_exp(posteriors);
     // Do things in reverse order as floating points have better precision near zero
-    std::partial_sum(std::crbegin(likelihoods), std::crend(likelihoods), std::rbegin(likelihoods));
-    const auto iter = std::upper_bound(std::crbegin(likelihoods), std::crend(likelihoods), max_removed_mass);
-    const auto num_to_keep = static_cast<std::size_t>(std::distance(iter, std::crend(likelihoods)));
+    std::partial_sum(std::crbegin(posteriors), std::crend(posteriors), std::rbegin(posteriors));
+    const auto iter = std::upper_bound(std::crbegin(posteriors), std::crend(posteriors), max_mass_loss);
+    const auto num_to_keep = static_cast<std::size_t>(std::distance(iter, std::crend(posteriors)));
     assert(num_to_keep <= zipped.size());
-    return std::next(std::cbegin(zipped), num_to_keep);
+    return std::max(num_to_keep, std::size_t {1});
 }
 
 template <typename T>
-bool reduce(std::vector<T>& zipped, const std::size_t min_to_keep,
-            const std::size_t max_to_keep, const double max_removed_mass)
+typename std::vector<T>::iterator
+reduce(std::vector<T>& zipped, std::size_t max_joint, const double max_mass_loss)
 {
-    assert(min_to_keep <= max_to_keep);
-    assert(0.0 <= max_removed_mass && max_removed_mass <= 1.0);
-    bool hit_max_bound {false};
-    if (zipped.size() <= min_to_keep) return hit_max_bound;
+    max_joint = std::min(max_joint, zipped.size());
     if (all_equal(zipped)) {
         static std::default_random_engine gen {};
         std::shuffle(std::begin(zipped), std::end(zipped), gen);
-        const auto min_can_keep = static_cast<std::size_t>(std::floor(zipped.size() * max_removed_mass));
-        auto num_to_keep = std::max(min_to_keep, min_can_keep);
-        if (num_to_keep > max_to_keep) {
-            num_to_keep = max_to_keep;
-            hit_max_bound = true;
-        }
-        assert(num_to_keep <= zipped.size());
-        zipped.erase(std::next(std::cbegin(zipped), num_to_keep), std::cend(zipped));
+        const auto min_joint = static_cast<std::size_t>(std::floor(zipped.size() * (1 - max_mass_loss)));
+        return std::next(std::begin(zipped), std::min(max_joint, min_joint));
     } else {
-        const auto first_removed = std::next(std::begin(zipped), std::min(zipped.size(), min_to_keep));
-        std::partial_sort(std::begin(zipped), first_removed, std::end(zipped), std::greater<> {});
-        const auto removed_mass = compute_removed_posterior_mass(std::begin(zipped), first_removed, std::end(zipped));
-        if (removed_mass > max_removed_mass) {
-            std::sort(first_removed, std::end(zipped), std::greater<> {});
-            zipped.erase(compute_first_removable(zipped, max_removed_mass), std::cend(zipped));
-            if (zipped.size() > max_to_keep) {
-                zipped.erase(std::next(std::cbegin(zipped), max_to_keep), std::cend(zipped));
-                hit_max_bound = true;
+        auto result = std::next(std::begin(zipped), max_joint);
+        std::partial_sort(std::begin(zipped), result, std::end(zipped), std::greater<> {});
+        const auto lost_mass = compute_lost_posterior_mass(std::begin(zipped), result, std::end(zipped));
+        if (lost_mass > max_mass_loss) {
+            const auto min_joint = compute_min_joint(zipped, max_mass_loss);
+            if (min_joint < max_joint) {
+                result = std::next(std::begin(zipped), min_joint);
             }
-        } else {
-            zipped.erase(first_removed, std::end(zipped));
         }
+        assert(result <= std::end(zipped));
+        return result;
     }
-    return hit_max_bound;
 }
 
 unsigned get_sample_reduction_count(const std::size_t n)
@@ -218,12 +206,39 @@ unsigned get_sample_reduction_count(const std::size_t n)
 }
 
 template <typename T>
+struct ReducedVectorMap
+{
+    using Iterator = typename std::vector<T>::const_iterator;
+    Iterator first, last_to_partially_join, last_to_join, last;
+};
+
+template <typename T>
+auto make_reduction_map(const std::vector<T>& elements,
+                        const typename std::vector<T>::const_iterator last_to_combine,
+                        const TrioModel::Options& options)
+{
+    if (std::distance(std::cbegin(elements), last_to_combine) > 3) {
+        return ReducedVectorMap<T> {std::cbegin(elements), std::next(std::cbegin(elements), 3), last_to_combine, std::cend(elements)};
+    } else {
+        return ReducedVectorMap<T> {std::cbegin(elements), last_to_combine, last_to_combine, std::cend(elements)};
+    }
+}
+
+template <typename T>
 auto reduce(std::vector<T>& zipped, const TrioModel::Options& options)
 {
-    return reduce(zipped,
-                  get_sample_reduction_count(options.min_combinations),
-                  get_sample_reduction_count(options.max_combinations),
-                  options.max_removal_posterior_mass);
+    auto last_to_join = reduce(zipped,
+                               get_sample_reduction_count(options.max_joint_genotypes),
+                               options.max_mass_loss);
+    return make_reduction_map(zipped, last_to_join, options);
+}
+
+auto reduce(std::vector<ParentsProbabilityPair>& zipped, const TrioModel::Options& options)
+{
+    auto last_to_join = reduce(zipped,
+                               get_sample_reduction_count(options.max_joint_genotypes),
+                               std::pow(options.max_mass_loss, 2));
+    return make_reduction_map(zipped, last_to_join, options);
 }
 
 bool are_same_ploidy(const std::vector<GenotypeRefProbabilityPair>& maternal,
@@ -237,56 +252,28 @@ auto reduce(std::vector<GenotypeRefProbabilityPair>& likelihoods,
             const PopulationPriorModel& prior_model,
             const TrioModel::Options& options)
 {
-    if (likelihoods.size() <= get_sample_reduction_count(options.min_combinations)) return false;
-    auto likelihoods_copy = likelihoods;
-    auto result = reduce(likelihoods, options);
-    if (result) {
-        auto posteriors = compute_posteriors(likelihoods_copy, prior_model);
-        result = reduce(posteriors, options);
-        std::sort(std::begin(likelihoods_copy), std::end(likelihoods_copy), GenotypeRefProbabilityPairGenotypeLess {});
-        std::sort(std::begin(posteriors), std::end(posteriors), GenotypeRefProbabilityPairGenotypeLess {});
-        std::vector<GenotypeRefProbabilityPair> kept {};
-        kept.reserve(posteriors.size());
-        std::set_intersection(std::cbegin(likelihoods_copy), std::cend(likelihoods_copy),
-                              std::cbegin(posteriors), std::cend(posteriors),
-                              std::back_inserter(kept),
+    auto posteriors = compute_posteriors(likelihoods, prior_model);
+    const auto last_posterior_join = reduce(posteriors, get_sample_reduction_count(options.max_joint_genotypes),
+                                            options.max_mass_loss);
+    assert(last_posterior_join <= std::end(posteriors));
+    if (last_posterior_join != std::end(posteriors)) {
+        std::sort(std::begin(likelihoods), std::end(likelihoods), GenotypeRefProbabilityPairGenotypeLess {});
+        std::sort(std::begin(posteriors), last_posterior_join, GenotypeRefProbabilityPairGenotypeLess {});
+        std::vector<GenotypeRefProbabilityPair> reordered_likelihoods {};
+        reordered_likelihoods.reserve(posteriors.size());
+        std::set_intersection(std::cbegin(likelihoods), std::cend(likelihoods),
+                              std::begin(posteriors), last_posterior_join,
+                              std::back_inserter(reordered_likelihoods),
                               GenotypeRefProbabilityPairGenotypeLess {});
-        likelihoods = std::move(kept);
-    }
-    return result;
-}
-
-auto reduce(std::vector<GenotypeRefProbabilityPair>& maternal,
-            std::vector<GenotypeRefProbabilityPair>& paternal,
-            const TrioModel::Options& options)
-{
-    const auto maternal_overflowed = reduce(maternal, options);
-    return reduce(paternal, options) || maternal_overflowed;
-}
-
-auto reduce(std::vector<GenotypeRefProbabilityPair>& maternal,
-            std::vector<GenotypeRefProbabilityPair>& paternal,
-            const PopulationPriorModel& prior_model,
-            const TrioModel::Options& options)
-{
-    const auto maternal_overflowed = reduce(maternal, prior_model, options);
-    return reduce(paternal, prior_model, options) || maternal_overflowed;
-}
-
-auto reduce(std::vector<ParentsProbabilityPair>& parental,
-            std::vector<GenotypeRefProbabilityPair>& child,
-            const TrioModel::Options& options)
-{
-    const auto child_overflowed = reduce(child, options);
-    const auto max_reduction_count = get_sample_reduction_count(options.max_combinations);
-    if (child.size() < max_reduction_count) {
-        const auto child_leftover = max_reduction_count - child.size();
-        return reduce(parental,
-                      get_sample_reduction_count(options.min_combinations),
-                      max_reduction_count + child_leftover,
-                      options.max_removal_posterior_mass) || child_overflowed;
+        std::set_intersection(std::cbegin(likelihoods), std::cend(likelihoods),
+                              last_posterior_join, std::end(posteriors),
+                              std::back_inserter(reordered_likelihoods),
+                              GenotypeRefProbabilityPairGenotypeLess {});
+        likelihoods = std::move(reordered_likelihoods);
+        auto last_join = std::next(std::cbegin(likelihoods), std::distance(std::begin(posteriors), last_posterior_join));
+        return make_reduction_map(likelihoods, last_join, options);
     } else {
-        return reduce(parental, options) || child_overflowed;
+        return make_reduction_map(likelihoods, std::cend(likelihoods), options);
     }
 }
 
@@ -298,18 +285,36 @@ double probability_of_parents(const Genotype<Haplotype>& mother,
     return model.evaluate(parental_genotypes);
 }
 
-auto join(const std::vector<GenotypeRefProbabilityPair>& maternal,
-          const std::vector<GenotypeRefProbabilityPair>& paternal,
+template <typename T>
+auto size(const ReducedVectorMap<T>& map) noexcept
+{
+    return static_cast<std::size_t>(std::distance(map.first, map.last));
+}
+
+auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& maternal,
+          const ReducedVectorMap<GenotypeRefProbabilityPair>& paternal,
           const PopulationPriorModel& model)
 {
     std::vector<ParentsProbabilityPair> result {};
-    result.reserve(maternal.size() * paternal.size());
-    for (const auto& m : maternal) {
-        for (const auto& p : paternal) {
+    result.reserve(size(maternal) * size(paternal));
+    std::for_each(maternal.first, maternal.last_to_join, [&] (const auto& m) {
+        std::for_each(paternal.first, paternal.last_to_join, [&] (const auto& p) {
             result.push_back({m.genotype, p.genotype,
                               m.probability + p.probability + probability_of_parents(m.genotype, p.genotype, model)});
-        }
-    }
+        });
+    });
+    std::for_each(maternal.last_to_join, maternal.last, [&] (const auto& m) {
+        std::for_each(paternal.first, paternal.last_to_partially_join, [&] (const auto& p) {
+            result.push_back({m.genotype, p.genotype,
+                              m.probability + p.probability + probability_of_parents(m.genotype, p.genotype, model)});
+        });
+    });
+    std::for_each(paternal.last_to_join, paternal.last, [&] (const auto& p) {
+        std::for_each(maternal.first, maternal.last_to_partially_join, [&] (const auto& m) {
+            result.push_back({m.genotype, p.genotype,
+                              m.probability + p.probability + probability_of_parents(m.genotype, p.genotype, model)});
+        });
+    });
     return result;
 }
 
@@ -364,17 +369,27 @@ auto joint_probability(const ParentsProbabilityPair& parents,
            + probability_of_child_given_parents(child.genotype, parents.maternal, parents.paternal, mutation_model);
 }
 
-auto join(const std::vector<ParentsProbabilityPair>& parents,
-          const std::vector<GenotypeRefProbabilityPair>& child,
+auto join(const ReducedVectorMap<ParentsProbabilityPair>& parents,
+          const ReducedVectorMap<GenotypeRefProbabilityPair>& child,
           const DeNovoModel& mutation_model)
 {
     std::vector<JointProbability> result {};
-    result.reserve(parents.size() * child.size());
-    for (const auto& p : parents) {
-        for (const auto& c : child) {
+    result.reserve(size(parents) * size(child));
+    std::for_each(parents.first, parents.last_to_join, [&] (const auto& p) {
+        std::for_each(child.first, child.last_to_join, [&] (const auto& c) {
             result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, mutation_model)});
-        }
-    }
+        });
+    });
+    std::for_each(parents.last_to_join, parents.last, [&] (const auto& p) {
+        std::for_each(child.first, child.last_to_partially_join, [&] (const auto& c) {
+            result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, mutation_model)});
+        });
+    });
+    std::for_each(child.last_to_join, child.last, [&] (const auto& c) {
+        std::for_each(parents.first, parents.last_to_partially_join, [&] (const auto& p) {
+            result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, mutation_model)});
+        });
+    });
     return result;
 }
 
@@ -421,38 +436,31 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
 {
     assert(!maternal_genotypes.empty() && !paternal_genotypes.empty() && !child_genotypes.empty());
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
-    bool overflowed {false};
     haplotype_likelihoods.prime(trio_.mother());
     auto maternal_likelihoods = compute_likelihoods(maternal_genotypes, likelihood_model);
-    assert(!maternal_likelihoods.empty());
     haplotype_likelihoods.prime(trio_.father());
     auto paternal_likelihoods = compute_likelihoods(paternal_genotypes, likelihood_model);
-    overflowed |= reduce(paternal_likelihoods, maternal_likelihoods, prior_model_, options_);
-    assert(!paternal_likelihoods.empty());
     if (debug_log_) {
         debug::print(stream(*debug_log_), "maternal", maternal_likelihoods);
         debug::print(stream(*debug_log_), "paternal", paternal_likelihoods);
     }
-    resume(misc_timer[0]);
-    auto parents_joint_likelihoods = join(maternal_likelihoods, paternal_likelihoods, prior_model_);
-    pause(misc_timer[0]);
-    assert(!parents_joint_likelihoods.empty());
+    const auto reduced_maternal_likelihoods = reduce(maternal_likelihoods, prior_model_, options_);
+    const auto reduced_paternal_likelihoods = reduce(paternal_likelihoods, prior_model_, options_);
+    auto parental_likelihoods = join(reduced_maternal_likelihoods, reduced_paternal_likelihoods, prior_model_);
     clear(maternal_likelihoods);
     clear(paternal_likelihoods);
-    if (debug_log_) debug::print(stream(*debug_log_), parents_joint_likelihoods);
+    if (debug_log_) debug::print(stream(*debug_log_), parental_likelihoods);
+    const auto reduced_parental_likelihoods = reduce(parental_likelihoods, options_);
     haplotype_likelihoods.prime(trio_.child());
     auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
-    overflowed |= reduce(parents_joint_likelihoods, child_likelihoods, options_);
-    assert(!child_likelihoods.empty());
     if (debug_log_) debug::print(stream(*debug_log_), "child", child_likelihoods);
-    resume(misc_timer[1]);
-    auto joint_likelihoods = join(parents_joint_likelihoods, child_likelihoods, mutation_model_);
-    pause(misc_timer[1]);
-    clear(parents_joint_likelihoods);
+    const auto reduced_child_likelihoods = reduce(child_likelihoods, prior_model_, options_);
+    auto joint_likelihoods = join(reduced_parental_likelihoods, reduced_child_likelihoods, mutation_model_);
+    clear(parental_likelihoods);
     clear(child_likelihoods);
     const auto evidence = normalise_exp(joint_likelihoods);
     if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
-    return {std::move(joint_likelihoods), evidence, overflowed};
+    return {std::move(joint_likelihoods), evidence};
 }
 
 namespace debug {

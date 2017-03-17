@@ -500,20 +500,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Include the read mapping quality in the haplotype likelihood calculation")
     
-    ("min-genotype-combinations",
-     po::value<unsigned>()->default_value(2500),
-     "The minimum number of genotype combinations to consider when computing joint"
+    ("max-joint-genotypes",
+     po::value<int>()->default_value(200000),
+     "The maximum number of joint genotype vectors to consider when computing joint"
      " genotype posterior probabilities")
-    
-    ("max-genotype-combinations",
-     po::value<unsigned>()->default_value(250000),
-     "The maximum number of genotype combinations to consider when computing joint"
-     " genotype posterior probabilities")
-    
-    ("max-reduction-probability-mass",
-     po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
-     "The maximum probability mass that can be ignored from each sample when"
-     " calculating joint genotype probability distributions")
     
     ("sequence-error-model",
      po::value<std::string>()->default_value("hiseq"),
@@ -868,7 +858,8 @@ void validate(const OptionMap& vm)
     const std::vector<std::string> strictly_positive_int_options {
         "max-open-read-files", "downsample-above", "downsample-target",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
-        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow"
+        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
+        "max-joint-genotypes"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");

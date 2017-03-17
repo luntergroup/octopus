@@ -148,21 +148,9 @@ CallerBuilder& CallerBuilder::set_indel_heterozygosity(double heterozygosity) no
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_min_genotype_combinations(unsigned min) noexcept
+CallerBuilder& CallerBuilder::set_max_joint_genotypes(unsigned max) noexcept
 {
-    params_.min_genotype_combinations = min;
-    return *this;
-}
-
-CallerBuilder& CallerBuilder::set_max_genotype_combinations(unsigned max) noexcept
-{
-    params_.max_genotype_combinations = max;
-    return *this;
-}
-
-CallerBuilder& CallerBuilder::set_max_reduction_mass(Phred<double> mass) noexcept
-{
-    params_.max_reduction_mass = mass;
+    params_.max_joint_genotypes = max;
     return *this;
 }
 
@@ -326,7 +314,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.min_refcall_posterior,
                                                           get_ploidies(samples, *requested_contig_, params_.ploidies),
                                                           make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                                                          params_.max_genotype_combinations,
+                                                          params_.max_joint_genotypes,
                                                       });
         }},
         {"cancer", [this, general_parameters = std::move(general_parameters), &samples] () {
@@ -357,9 +345,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     {*params_.denovo_mutation_rate},
                                                     params_.min_variant_posterior,
                                                     params_.min_refcall_posterior,
-                                                    params_.min_genotype_combinations,
-                                                    params_.max_genotype_combinations,
-                                                    params_.max_reduction_mass
+                                                    params_.max_joint_genotypes
                                                 });
         }}
     };
