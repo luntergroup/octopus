@@ -463,6 +463,16 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
     return {std::move(joint_likelihoods), evidence};
 }
 
+TrioModel::InferredLatents
+TrioModel::evaluate(const GenotypeVector& genotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    const auto haplotypes = extract_unique_element_refs(genotypes);
+    mutation_model_.prime(haplotypes);
+    auto result = evaluate(genotypes, genotypes, genotypes, haplotype_likelihoods);
+    mutation_model_.unprime();
+    return result;
+}
+
 namespace debug {
 
 template <typename S>

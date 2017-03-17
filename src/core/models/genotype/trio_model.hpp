@@ -68,7 +68,11 @@ public:
                              const GenotypeVector& paternal_genotypes,
                              const GenotypeVector& child_genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-
+    
+    // Use if all samples have same ploidy
+    InferredLatents evaluate(const GenotypeVector& genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    
 private:
     const Trio& trio_;
     const PopulationPriorModel& prior_model_;
