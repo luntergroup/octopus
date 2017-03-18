@@ -710,6 +710,15 @@ auto make_calls(std::vector<CalledGermlineVariant>&& variants,
 
 } // namespace
 
+namespace debug {
+
+void log(const AllelePosteriorMap& posteriors,
+         boost::optional<logging::DebugLogger>& debug_log,
+         boost::optional<logging::TraceLogger>& trace_log,
+         bool denovo = false);
+
+} // namespace debug
+
 std::vector<std::unique_ptr<VariantCall>>
 TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
@@ -717,8 +726,10 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     const auto& trio_posteriors = latents.model_latents.posteriors.joint_genotype_probabilities;
     const auto called_trio = call_trio(trio_posteriors);
     const auto allele_posteriors = compute_posteriors(alleles, trio_posteriors);
+    debug::log(allele_posteriors, debug_log_, trace_log_);
     const auto called_alleles = call_alleles(allele_posteriors, called_trio, parameters_.min_variant_posterior);
     const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors);
+    debug::log(denovo_posteriors, debug_log_, trace_log_, true);
     auto called_denovos = call_denovos(denovo_posteriors, called_trio.child, parameters_.min_variant_posterior);
     auto denovo_genotypes = call_genotypes(parameters_.trio, called_trio,
                                            *latents.genotype_posteriors(),
@@ -760,5 +771,47 @@ std::unique_ptr<PopulationPriorModel> TrioCaller::make_prior_model(const std::ve
         return std::make_unique<UniformPopulationPriorModel>();
     }
 }
+
+namespace debug {
+
+template <typename S>
+void print_allele_posteriors(S&& stream, const AllelePosteriorMap& posteriors, const std::size_t n,
+                             const std::string& type = "allele")
+{
+    const auto m = std::min(n, posteriors.size());
+    if (m == posteriors.size()) {
+        stream << "Printing all " << type << " posteriors" << '\n';
+    } else {
+        stream << "Printing top " << m << " " << type << " posteriors" << '\n';
+    }
+    std::vector<std::pair<Allele, Phred<double>>> v {};
+    v.reserve(posteriors.size());
+    std::copy(std::cbegin(posteriors), std::cend(posteriors), std::back_inserter(v));
+    const auto mth = std::next(std::begin(v), m);
+    std::partial_sort(std::begin(v), mth, std::end(v),
+                      [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+    std::for_each(std::begin(v), mth,
+                  [&] (const auto& p) {
+                      stream << p.first << " " << p.second.probability_true() << '\n';
+                  });
+}
+
+void log(const AllelePosteriorMap& posteriors,
+         boost::optional<logging::DebugLogger>& debug_log,
+         boost::optional<logging::TraceLogger>& trace_log,
+         const bool denovo)
+{
+    if (!denovo || !posteriors.empty()) {
+        const std::string type {denovo ? "denovo allele" : "allele"};
+        if (trace_log) {
+            print_allele_posteriors(stream(*trace_log), posteriors, -1, type);
+        }
+        if (debug_log) {
+            print_allele_posteriors(stream(*debug_log), posteriors, 10, type);
+        }
+    }
+}
+    
+} // namespace debug
 
 } // namespace octopus
