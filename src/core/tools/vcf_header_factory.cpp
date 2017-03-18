@@ -20,10 +20,12 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
         hb.add_info("MP", "1", "Float", "Model posterior");
     }},
     {std::type_index(typeid(SomaticCall)), [] (auto& hb) {
+        hb.add_info("SOMATIC", "0", "Flag", "Indicates that the record is a somatic mutation, for cancer genomics");
         hb.add_format("SCR", "2", "Float", "99% credible region of the somatic allele frequency");
         hb.add_info("MP", "1", "Float", "Model posterior");
     }},
     {std::type_index(typeid(DenovoCall)), [] (auto& hb) {
+        hb.add_info("DENOVO", "0", "Flag", "Indicates that the record is a de novo mutation");
         hb.add_info("MP", "1", "Float", "Model posterior");
     }}
 };
