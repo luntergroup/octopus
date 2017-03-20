@@ -217,8 +217,8 @@ auto make_reduction_map(const std::vector<T>& elements,
                         const typename std::vector<T>::const_iterator last_to_combine,
                         const TrioModel::Options& options)
 {
-    if (std::distance(std::cbegin(elements), last_to_combine) > 3) {
-        return ReducedVectorMap<T> {std::cbegin(elements), std::next(std::cbegin(elements), 3), last_to_combine, std::cend(elements)};
+    if (std::distance(std::cbegin(elements), last_to_combine) > 1) {
+        return ReducedVectorMap<T> {std::cbegin(elements), std::next(std::cbegin(elements), 1), last_to_combine, std::cend(elements)};
     } else {
         return ReducedVectorMap<T> {std::cbegin(elements), last_to_combine, last_to_combine, std::cend(elements)};
     }
