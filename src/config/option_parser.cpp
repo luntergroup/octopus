@@ -499,13 +499,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Disables additional calculation to adjust alignment score when there are inactive"
      " candidates in haplotype flanking regions")
-
+    
     ("model-mapping-quality",
      po::value<bool>()->default_value(true),
      "Include the read mapping quality in the haplotype likelihood calculation")
     
     ("max-joint-genotypes",
-     po::value<int>()->default_value(200000),
+     po::value<int>()->default_value(100000),
      "The maximum number of joint genotype vectors to consider when computing joint"
      " genotype posterior probabilities")
     
