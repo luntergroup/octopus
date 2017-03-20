@@ -464,6 +464,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<float>()->default_value(1e-8, "1e-8"),
      "Expected de novo mutation rate, per megabase pair, for this sample")
     
+    ("min-denovo-posterior",
+     po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
+     "Minimum posterior probability (phred scale) to emit a de novo mutation call")
+    
     ("denovos-only,d",
      po::bool_switch()->default_value(false),
      "Only report de novo variant calls (i.e. alleles unique to the child)")

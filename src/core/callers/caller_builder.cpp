@@ -210,6 +210,12 @@ CallerBuilder& CallerBuilder::set_trio(Trio trio)
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_min_denovo_posterior(Phred<double> posterior) noexcept
+{
+    params_.min_denovo_posterior = posterior;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_denovo_mutation_rate(double rate) noexcept
 {
     params_.denovo_mutation_rate = rate;
@@ -344,6 +350,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     make_trio_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                     {*params_.denovo_mutation_rate},
                                                     params_.min_variant_posterior,
+                                                    params_.min_denovo_posterior,
                                                     params_.min_refcall_posterior,
                                                     params_.max_joint_genotypes
                                                 });

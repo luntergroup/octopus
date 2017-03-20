@@ -69,6 +69,7 @@ public:
     
     // trio
     CallerBuilder& set_trio(Trio trio);
+    CallerBuilder& set_min_denovo_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_denovo_mutation_rate(double rate) noexcept;
     
     // pedigree
@@ -115,6 +116,7 @@ private:
         
         // trio
         boost::optional<Trio> trio;
+        Phred<double> min_denovo_posterior;
         boost::optional<double> denovo_mutation_rate;
         
         // pedigree

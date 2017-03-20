@@ -1385,6 +1385,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_denovo_mutation_rate(options.at("denovo-mutation-rate").as<float>());
+        vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     }
     
     if (options.count("model-filtering") == 1) {

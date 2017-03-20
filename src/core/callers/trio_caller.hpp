@@ -32,7 +32,7 @@ public:
         unsigned maternal_ploidy, paternal_ploidy, child_ploidy;
         boost::optional<CoalescentModel::Parameters> germline_prior_model_params;
         DeNovoModel::Parameters denovo_model_params;
-        Phred<double> min_variant_posterior, min_refcall_posterior;
+        Phred<double> min_variant_posterior, min_denovo_posterior, min_refcall_posterior;
         unsigned max_joint_genotypes;
     };
     
