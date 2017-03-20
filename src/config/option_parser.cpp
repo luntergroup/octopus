@@ -443,7 +443,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("min-somatic-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
-     "Minimum somatic mutation call posterior probability (phred scale)")
+     "Minimum posterior probability (phred scale) to emit a somatic mutation call")
     
     ("somatics-only",
      po::bool_switch()->default_value(false),
@@ -488,7 +488,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description advanced("Advanced calling algorithm");
     advanced.add_options()
     ("haplotype-extension-threshold,e",
-     po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
+     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
      "Haplotypes with posterior probability less than this can be filtered before extension")
     
     ("inactive-flank-scoring",
