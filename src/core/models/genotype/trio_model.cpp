@@ -285,10 +285,15 @@ double probability_of_parents(const Genotype<Haplotype>& mother,
     return model.evaluate(parental_genotypes);
 }
 
-template <typename T>
-auto size(const ReducedVectorMap<T>& map) noexcept
+template <typename T1, typename T2>
+auto join_size(const ReducedVectorMap<T1>& first, const ReducedVectorMap<T2>& second) noexcept
 {
-    return static_cast<std::size_t>(std::distance(map.first, map.last));
+    using std::distance;
+    std::size_t result {0};
+    result += distance(first.first, first.last_to_join) * distance(second.first, second.last_to_join);
+    result += distance(first.last_to_join, first.last) * distance(second.first, second.last_to_partially_join);
+    result += distance(second.last_to_join, second.last) * distance(first.first, first.last_to_partially_join);
+    return result;
 }
 
 auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& maternal,
@@ -296,7 +301,7 @@ auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& maternal,
           const PopulationPriorModel& model)
 {
     std::vector<ParentsProbabilityPair> result {};
-    result.reserve(size(maternal) * size(paternal));
+    result.reserve(join_size(maternal, paternal));
     std::for_each(maternal.first, maternal.last_to_join, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_join, [&] (const auto& p) {
             result.push_back({m.genotype, p.genotype,
@@ -374,7 +379,7 @@ auto join(const ReducedVectorMap<ParentsProbabilityPair>& parents,
           const DeNovoModel& mutation_model)
 {
     std::vector<JointProbability> result {};
-    result.reserve(size(parents) * size(child));
+    result.reserve(join_size(parents, child));
     std::for_each(parents.first, parents.last_to_join, [&] (const auto& p) {
         std::for_each(child.first, child.last_to_join, [&] (const auto& c) {
             result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, mutation_model)});
