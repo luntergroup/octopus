@@ -35,7 +35,7 @@ public:
     using SampleName      = IReadReaderImpl::SampleName;
     using ReadContainer   = IReadReaderImpl::ReadContainer;
     using SampleReadMap   = IReadReaderImpl::SampleReadMap;
-    using CoveragePair    = IReadReaderImpl::CoveragePair;
+    using PositionList    = IReadReaderImpl::PositionList;
     
     ReadReader() = default;
     
@@ -77,12 +77,12 @@ public:
     std::size_t count_reads(const std::vector<SampleName>& samples,
                             const GenomicRegion& region) const;
     
-    CoveragePair find_covered_subregion(const GenomicRegion& region,
+    PositionList extract_read_positions(const GenomicRegion& region,
                                         std::size_t max_coverage) const;
-    CoveragePair find_covered_subregion(const SampleName& sample,
+    PositionList extract_read_positions(const SampleName& sample,
                                         const GenomicRegion& region,
                                         std::size_t max_coverage) const;
-    CoveragePair find_covered_subregion(const std::vector<SampleName>& samples,
+    PositionList extract_read_positions(const std::vector<SampleName>& samples,
                                         const GenomicRegion& region,
                                         std::size_t max_coverage) const;
     
