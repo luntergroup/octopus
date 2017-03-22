@@ -151,7 +151,7 @@ bool all_equal(const std::vector<T>& v)
 template <typename Iterator>
 double compute_lost_posterior_mass(Iterator first, Iterator first_removed, Iterator last)
 {
-    thread_local std::vector<double> likelihoods {};
+    std::vector<double> likelihoods {};
     likelihoods.resize(std::distance(first, last));
     std::transform(first, last, std::begin(likelihoods), [] (const auto& p) { return p.probability; });
     maths::normalise_exp(likelihoods);
