@@ -277,9 +277,8 @@ auto reduce(std::vector<GenotypeRefProbabilityPair>& likelihoods,
     }
 }
 
-double probability_of_parents(const Genotype<Haplotype>& mother,
-                              const Genotype<Haplotype>& father,
-                              const PopulationPriorModel& model)
+double joint_probability(const Genotype<Haplotype>& mother, const Genotype<Haplotype>& father,
+                         const PopulationPriorModel& model)
 {
     const std::vector<std::reference_wrapper<const Genotype<Haplotype>>> parental_genotypes {mother, father};
     return model.evaluate(parental_genotypes);
@@ -305,19 +304,19 @@ auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& maternal,
     std::for_each(maternal.first, maternal.last_to_join, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_join, [&] (const auto& p) {
             result.push_back({m.genotype, p.genotype,
-                              m.probability + p.probability + probability_of_parents(m.genotype, p.genotype, model)});
+                              m.probability + p.probability + joint_probability(m.genotype, p.genotype, model)});
         });
     });
     std::for_each(maternal.last_to_join, maternal.last, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_partially_join, [&] (const auto& p) {
             result.push_back({m.genotype, p.genotype,
-                              m.probability + p.probability + probability_of_parents(m.genotype, p.genotype, model)});
+                              m.probability + p.probability + joint_probability(m.genotype, p.genotype, model)});
         });
     });
     std::for_each(paternal.last_to_join, paternal.last, [&] (const auto& p) {
         std::for_each(maternal.first, maternal.last_to_partially_join, [&] (const auto& m) {
             result.push_back({m.genotype, p.genotype,
-                              m.probability + p.probability + probability_of_parents(m.genotype, p.genotype, model)});
+                              m.probability + p.probability + joint_probability(m.genotype, p.genotype, model)});
         });
     });
     return result;
