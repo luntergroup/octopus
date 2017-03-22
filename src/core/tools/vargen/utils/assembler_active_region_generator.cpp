@@ -191,7 +191,7 @@ auto expand_each(const Container& regions, const GenomicRegion::Distance n)
     return result;
 }
 
-auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker& tracker)
+auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<GenomicRegion>& tracker)
 {
     const auto coverages = tracker.coverage(region);
     const auto mean_coverage = tracker.mean_coverage(region);
@@ -221,8 +221,9 @@ auto get_interesting_hotspots(const GenomicRegion& region, const std::vector<uns
     return get_regions(interesting_bases, region);
 }
 
-auto get_interesting_hotspots(const GenomicRegion& region, const CoverageTracker& interesting_read_tracker,
-                              const CoverageTracker& tracker)
+auto get_interesting_hotspots(const GenomicRegion& region,
+                              const CoverageTracker<GenomicRegion>& interesting_read_tracker,
+                              const CoverageTracker<GenomicRegion>& tracker)
 {
     const auto interesting_coverages = interesting_read_tracker.coverage(region);
     const auto coverages = tracker.coverage(region);
@@ -231,8 +232,8 @@ auto get_interesting_hotspots(const GenomicRegion& region, const CoverageTracker
 
 std::vector<GenomicRegion>
 get_interesting_hotspots(const GenomicRegion& region,
-                         const std::unordered_map<SampleName, CoverageTracker>& interesting_read_tracker,
-                         const std::unordered_map<SampleName, CoverageTracker>& tracker)
+                         const std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>& interesting_read_tracker,
+                         const std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>& tracker)
 {
     if (interesting_read_tracker.empty()) {
         return {};

@@ -47,11 +47,13 @@ public:
     std::vector<GenomicRegion> generate(const GenomicRegion& region) const;
 
 private:
+    using CoverageTrackerMap = std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>;
+    
     std::reference_wrapper<const ReferenceGenome> reference_;
     bool snvs_interesting_ = false, indels_interesting_ = true, structual_interesting_ = false;
     AlignedRead::BaseQuality trigger_quality_ = 10;
     AlignedRead::MappingDomain::Size trigger_clip_size_ = 3;
-    std::unordered_map<SampleName, CoverageTracker> coverage_tracker_, interesting_read_coverages_, clipped_coverage_tracker_;
+    CoverageTrackerMap coverage_tracker_, interesting_read_coverages_, clipped_coverage_tracker_;
     
     bool is_interesting(const AlignedRead& read) const;
 };
