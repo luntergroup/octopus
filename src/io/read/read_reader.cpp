@@ -193,27 +193,27 @@ std::size_t ReadReader::count_reads(const std::vector<SampleName>& samples, cons
     return impl_->count_reads(samples, region);
 }
 
-ReadReader::CoveragePair
-ReadReader::find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage) const
+ReadReader::PositionList
+ReadReader::extract_read_positions(const GenomicRegion& region, std::size_t max_coverage) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return impl_->find_covered_subregion(region, max_coverage);
+    return impl_->extract_read_positions(region, max_coverage);
 }
 
-ReadReader::CoveragePair
-ReadReader::find_covered_subregion(const SampleName& sample, const GenomicRegion& region,
+ReadReader::PositionList
+ReadReader::extract_read_positions(const SampleName& sample, const GenomicRegion& region,
                                    std::size_t max_coverage) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return impl_->find_covered_subregion(sample, region, max_coverage);
+    return impl_->extract_read_positions(sample, region, max_coverage);
 }
 
-ReadReader::CoveragePair
-ReadReader::find_covered_subregion(const std::vector<SampleName>& samples,
+ReadReader::PositionList
+ReadReader::extract_read_positions(const std::vector<SampleName>& samples,
                                    const GenomicRegion& region, std::size_t max_coverage) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return impl_->find_covered_subregion(samples, region, max_coverage);
+    return impl_->extract_read_positions(samples, region, max_coverage);
 }
 
 ReadReader::SampleReadMap ReadReader::fetch_reads(const GenomicRegion& region) const
