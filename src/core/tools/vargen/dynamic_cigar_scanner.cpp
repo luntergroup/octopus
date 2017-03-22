@@ -143,7 +143,7 @@ void DynamicCigarScanner::do_add_reads(const SampleName& sample, FlatSetIterator
     std::for_each(first, last, [this] (const AlignedRead& read) { add_read(read); });
 }
 
-unsigned get_min_depth(const Variant& v, const CoverageTracker& tracker)
+unsigned get_min_depth(const Variant& v, const CoverageTracker<GenomicRegion>& tracker)
 {
     if (is_insertion(v)) {
         const auto& region = mapped_region(v);
