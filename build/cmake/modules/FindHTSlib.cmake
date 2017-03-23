@@ -75,7 +75,7 @@ set(HTSLIB_SEARCH_DIRS
     $ENV{HTSLIB_ROOT}
     /usr
     /usr/local
-)
+    )
 
 set(_htslib_ver_path "htslib-${htslib_FIND_VERSION}")
 
@@ -85,6 +85,10 @@ libfind_package(HTSlib BZip2)
 libfind_package(HTSlib LibLZMA)
 libfind_package(HTSlib CURL)
 
+if (NOT APPLE)
+  libfind_package(HTSlib OpenSSL)
+endif()
+
 # Use pkg-config to get hints about paths
 libfind_pkg_check_modules(HTSLIB_PKGCONF htslib)
 
@@ -92,9 +96,9 @@ libfind_pkg_check_modules(HTSLIB_PKGCONF htslib)
 find_path(HTSlib_INCLUDE_DIR
     NAMES ${HTSLIB_ADDITIONAL_HEADERS} htslib/sam.h
     PATHS ${HTSLIB_SEARCH_DIRS} ${HTSLIB_PKGCONF_INCLUDE_DIRS}
-    PATH_SUFFIXES 
-        include htslib/${_htslib_ver_path}
-)
+    PATH_SUFFIXES
+    include htslib/${_htslib_ver_path}
+    )
 
 # Finally the library itself
 find_library(HTSlib_LIBRARY
@@ -102,7 +106,7 @@ find_library(HTSlib_LIBRARY
     PATHS ${HTSlib_INCLUDE_DIR} ${HTSLIB_SEARCH_DIRS} ${HTSLIB_PKGCONF_LIBRARY_DIRS}
     NO_DEFAULT_PATH
     PATH_SUFFIXES lib lib64 ${_htslib_ver_path}
-)
+    )
 
 # Set the include dir variables and the libraries and let libfind_process do the rest.
 # NOTE: Singular variables for this library, plural for libraries this lib depends on.
@@ -110,12 +114,20 @@ set(HTSlib_PROCESS_INCLUDES HTSlib_INCLUDE_DIR
     ZLIB_INCLUDE_DIR
     BZIP2_INCLUDE_DIR
     LIBLZMA_INCLUDE_DIRS
-    CURL_INCLUDE_DIRS)
+    CURL_INCLUDE_DIRS
+    )
 set(HTSlib_PROCESS_LIBS HTSlib_LIBRARY
     ZLIB_LIBRARIES
     BZIP2_LIBRARIES
     LIBLZMA_LIBRARIES
-    CURL_LIBRARIES)
+    CURL_LIBRARIES
+    )
+if (NOT APPLE)
+  set(HTSlib_PROCESS_INCLUDES ${HTSlib_PROCESS_INCLUDES} OPENSSL_INCLUDE_DIR)
+  set(HTSlib_PROCESS_LIBS ${HTSlib_PROCESS_LIBS} OPENSSL_LIBRARIES)
+endif()
+
 libfind_process(HTSlib)
+
 message(STATUS "   HTSlib include dirs: ${HTSlib_INCLUDE_DIRS}")
 message(STATUS "   HTSlib libraries: ${HTSlib_LIBRARIES}")
