@@ -17,7 +17,7 @@ Octopus is a mapping-based variant caller that implements several calling models
 * A C++14 standard library implementation
 * Git 2.5 or greater
 * Boost 1.58 or greater
-* htslib 1.31.1 or greater
+* htslib 1.4 or greater
 * CMake 3.5 or greater
 * Optional:
     * Python3 or greater
