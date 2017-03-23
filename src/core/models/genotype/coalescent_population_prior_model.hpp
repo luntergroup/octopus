@@ -5,12 +5,11 @@
 #define coalescent_population_prior_model_hpp
 
 #include <vector>
+#include <array>
 #include <utility>
 #include <iterator>
 #include <algorithm>
 #include <functional>
-
-#include <boost/container/small_vector.hpp>
 
 #include "population_prior_model.hpp"
 #include "../mutation/coalescent_model.hpp"
@@ -36,8 +35,10 @@ public:
     virtual ~CoalescentPopulationPriorModel() = default;
 
 private:
-    CoalescentModel model_;
+    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
     
+    CoalescentModel model_;
+        
     virtual double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
     {
         return do_evaluate_helper(genotypes);
@@ -49,6 +50,7 @@ private:
     
     template <typename Container>
     double do_evaluate_helper(const Container& genotypes) const;
+    
 };
 
 namespace detail {
@@ -64,9 +66,24 @@ inline const Genotype<Haplotype>& get(const Genotype<Haplotype>& genotype) noexc
     return genotype;
 }
 
-inline const Genotype<Haplotype>& get(const CoalescentPopulationPriorModel::GenotypeReference & genotype) noexcept
+inline const Genotype<Haplotype>& get(const CoalescentPopulationPriorModel::GenotypeReference& genotype) noexcept
 {
     return genotype.get();
+}
+
+inline const Haplotype& get(const Genotype<Haplotype>& genotype, const unsigned i) noexcept
+{
+    return genotype[i];
+}
+
+inline const Haplotype& get(const CoalescentPopulationPriorModel::GenotypeReference& genotype, const unsigned i) noexcept
+{
+    return genotype.get()[i];
+}
+
+inline auto ploidy(const Genotype<Haplotype>& genotype) noexcept
+{
+    return genotype.ploidy();
 }
 
 } // namespace detail
@@ -75,9 +92,24 @@ template <typename Container>
 double CoalescentPopulationPriorModel::do_evaluate_helper(const Container& genotypes) const
 {
     if (genotypes.size() == 1) return model_.evaluate(detail::get(genotypes.front()));
-    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
+    if (genotypes.size() == 2) {
+        const auto ploidy1 = detail::ploidy(genotypes[0]);
+        const auto ploidy2 = detail::ploidy(genotypes[1]);
+        if (ploidy1 == ploidy2) {
+            if (ploidy1 == 1) {
+                using detail::get;
+                const std::array<HaplotypeReference, 2> haplotypes {get(genotypes[0], 0), get(genotypes[0], 0)};
+                return  model_.evaluate(haplotypes);
+            } else if (ploidy1 == 2) {
+                using detail::get;
+                const std::array<HaplotypeReference, 4> haplotypes {get(genotypes[0], 0), get(genotypes[0], 1),
+                                                                    get(genotypes[1], 0), get(genotypes[1], 1)};
+                return model_.evaluate(haplotypes);
+            }
+        }
+    }
     std::vector<HaplotypeReference> haplotypes {};
-    haplotypes.reserve(genotypes.size() * 10);
+    haplotypes.reserve(10 * genotypes.size());
     for (const auto& genotype : genotypes) {
         detail::append(genotype, haplotypes);
     }
