@@ -1385,6 +1385,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_denovo_mutation_rate(options.at("denovo-mutation-rate").as<float>());
+        vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     }
     
     if (options.count("model-filtering") == 1) {
@@ -1398,9 +1399,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     }
     vc_builder.set_flank_scoring(allow_flank_scoring(options));
     vc_builder.set_model_mapping_quality(options.at("model-mapping-quality").as<bool>());
-    vc_builder.set_min_genotype_combinations(options.at("min-genotype-combinations").as<unsigned>());
-    vc_builder.set_max_genotype_combinations(options.at("max-genotype-combinations").as<unsigned>());
-    vc_builder.set_max_reduction_mass(options.at("max-reduction-probability-mass").as<Phred<double>>());
+    vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
     
     if (options.count("sequence-error-model") == 1) {
         vc_builder.set_sequencer(options.at("sequence-error-model").as<std::string>());

@@ -91,6 +91,8 @@ public:
     
     virtual void decorate(VcfRecord::Builder& record) const = 0;
     
+    virtual bool requires_model_evaluation() const noexcept { return false; };
+    
     void set_model_posterior(Phred<double> p) noexcept;
     
     boost::optional<Phred<double>> model_posterior() const noexcept;

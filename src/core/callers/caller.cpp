@@ -582,11 +582,17 @@ Genotype<Haplotype> Caller::call_genotype(const Latents& latents, const SampleNa
     return itr->first;
 }
 
+bool requires_model_evaluation(const std::vector<CallWrapper>& calls)
+{
+    return std::any_of(std::cbegin(calls), std::cend(calls),
+                       [] (const auto& call) { return call->requires_model_evaluation(); });
+}
+
 void Caller::set_model_posteriors(std::vector<CallWrapper>& calls, const Latents& latents,
                                   const std::vector<Haplotype>& haplotypes,
                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    if (parameters_.allow_model_filtering) {
+    if (parameters_.allow_model_filtering || requires_model_evaluation(calls)) {
         resume(latent_timer);
         const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods, latents);
         pause(latent_timer);

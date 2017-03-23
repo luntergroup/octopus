@@ -329,7 +329,7 @@ auto compute_approx_genotype_marginal_posteriors(const std::vector<Genotype<Hapl
                                                  const GenotypeLogLikelihoodMatrix& genotype_likelihoods,
                                                  const EmOptions options)
 {
-    const auto haplotypes = extract_all_elements(genotypes);
+    const auto haplotypes = extract_unique_elements(genotypes);
     const ModelConstants constants {haplotypes, genotypes, genotype_likelihoods};
     auto haplotype_frequencies = init_haplotype_frequencies(constants);
     auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);

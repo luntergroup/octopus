@@ -227,13 +227,13 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                   });
         if (it2 == end(calls)) break;
         auto it3 = std::find_if_not(next(it2), end(calls), [it2] (const auto& call) { return begins_equal(call, *it2); });
+        const auto alt_itr = std::find_if_not(it2, it3, [] (const auto& call) { return call->reference().sequence().front() == '#'; });
         boost::optional<decltype(it3)> base;
-        assert(!(*it2)->reference().sequence().empty());
-        if ((*it2)->reference().sequence().front() != '#') {
-            base = it2;
+        if (alt_itr != it3) {
+            base = alt_itr;
         }
         std::deque<CallWrapper> duplicates {};
-        for_each(base ? next(it2) : it2, it3, [this, base, &duplicates] (auto& call) {
+        for_each(it2, it3, [this, base, &duplicates] (auto& call) {
             assert(!call->reference().sequence().empty());
             if (call->reference().sequence().front() == '#') {
                 const auto actual_reference_base = reference_.fetch_sequence(head_position(call)).front();
@@ -267,13 +267,13 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     old_genotype = move(new_genotype);
                 }
                 for (auto& p : replacements) {
-                    call->replace(p.first, *std::cbegin(p.second));
                     std::transform(std::next(std::cbegin(p.second)), std::cend(p.second), std::back_inserter(duplicates),
                                    [&] (const Allele& replacement) {
                                        auto duplicate = clone(call);
                                        duplicate->replace(p.first, replacement);
                                        return duplicate;
                                    });
+                    call->replace(p.first, *std::cbegin(p.second));
                 }
             }
         });
@@ -606,7 +606,8 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
                            std::cbegin(resolved_sample_genotype), std::begin(resolved_sample_genotype),
                            [&ref] (const Allele& allele, const auto& curr) {
                                const auto& seq = allele.sequence();
-                               if (!seq.empty() && (seq.front() == '.' || seq.front() == '*' || seq == ref)) {
+                               if (seq.size() < curr.size()
+                                   || (!seq.empty() && (seq.front() == '.' || seq.front() == '*' || seq == ref))) {
                                    return curr;
                                }
                                return seq;

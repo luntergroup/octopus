@@ -55,9 +55,7 @@ public:
     CallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
     CallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
-    CallerBuilder& set_min_genotype_combinations(unsigned min) noexcept;
-    CallerBuilder& set_max_genotype_combinations(unsigned max) noexcept;
-    CallerBuilder& set_max_reduction_mass(Phred<double> mass) noexcept;
+    CallerBuilder& set_max_joint_genotypes(unsigned max) noexcept;
     CallerBuilder& set_sequencer(std::string sequencer) noexcept;
     CallerBuilder& set_model_mapping_quality(bool b) noexcept;
     
@@ -71,6 +69,7 @@ public:
     
     // trio
     CallerBuilder& set_trio(Trio trio);
+    CallerBuilder& set_min_denovo_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_denovo_mutation_rate(double rate) noexcept;
     
     // pedigree
@@ -102,8 +101,7 @@ private:
         bool allow_model_filtering;
         boost::optional<double> snp_heterozygosity, indel_heterozygosity;
         Phred<double> min_phase_score;
-        unsigned min_genotype_combinations, max_genotype_combinations;
-        Phred<double> max_reduction_mass;
+        unsigned max_joint_genotypes;
         boost::optional<std::string> sequencer;
         bool model_mapping_quality = true;
         
@@ -118,6 +116,7 @@ private:
         
         // trio
         boost::optional<Trio> trio;
+        Phred<double> min_denovo_posterior;
         boost::optional<double> denovo_mutation_rate;
         
         // pedigree

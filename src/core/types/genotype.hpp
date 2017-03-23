@@ -776,7 +776,7 @@ inline std::size_t estimate_num_elements(const std::size_t num_genotypes)
 } // namespace detail
 
 template <typename MappableType>
-auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes)
+auto extract_unique_elements(const std::vector<Genotype<MappableType>>& genotypes)
 {
     std::unordered_set<std::reference_wrapper<const MappableType>> unique_elements {};
     unique_elements.reserve(detail::estimate_num_elements(genotypes.size()));
@@ -793,10 +793,10 @@ auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes)
 }
 
 template <typename MappableType>
-auto extract_all_element_refs(const std::vector<Genotype<MappableType>>& genotypes)
+auto extract_unique_element_refs(const std::vector<Genotype<MappableType>>& genotypes)
 {
     std::unordered_set<std::reference_wrapper<const MappableType>> unique_elements {};
-    unique_elements.reserve();
+    unique_elements.reserve(genotypes.size());
     for (const auto& genotype : genotypes) {
         for (const auto& element : genotype) {
             unique_elements.emplace(element);

@@ -41,13 +41,12 @@ public:
     {
         Latents posteriors;
         double log_evidence;
-        bool overflowed = false;
     };
     
     struct Options
     {
-        std::size_t min_combinations = 50, max_combinations = 500;
-        double max_removal_posterior_mass = 1e-20;
+        std::size_t max_joint_genotypes;
+        double max_mass_loss = 1e-100;
     };
     
     TrioModel() = delete;
@@ -69,7 +68,11 @@ public:
                              const GenotypeVector& paternal_genotypes,
                              const GenotypeVector& child_genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-
+    
+    // Use if all samples have same ploidy
+    InferredLatents evaluate(const GenotypeVector& genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    
 private:
     const Trio& trio_;
     const PopulationPriorModel& prior_model_;
