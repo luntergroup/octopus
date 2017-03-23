@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_parser.hpp"
@@ -311,11 +311,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "The gap size used to generate local assembly fallback kmers")
     
     ("max-region-to-assemble",
-     po::value<int>()->default_value(500),
+     po::value<int>()->default_value(400),
      "The maximum region size that can be used for local assembly")
     
     ("max-assemble-region-overlap",
-     po::value<int>()->default_value(100),
+     po::value<int>()->default_value(50),
      "The maximum number of bases allowed to overlap assembly regions")
     
     ("force-assemble",
@@ -323,41 +323,41 @@ OptionMap parse_options(const int argc, const char** argv)
      "Forces all regions to be assembled")
     
     ("assembler-mask-base-quality",
-     po::value<int>()->default_value(5),
-     "Aligned bases with quality less than this will be converted to reference before "
-     "being inserted into the De Bruijn graph")
-    
-    ("min-kmer-support",
-     po::value<int>()->default_value(1),
-     "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
-    
-    ("min-bubble-weight",
-     po::value<double>()->default_value(2.0),
-     "Minimum mean graph bubble weight that is extracted from the assembly graph")
-    
-    ("max-bubbles",
      po::value<int>()->default_value(10),
+     "Aligned bases with quality less than this will be converted to reference before"
+     " being inserted into the De Bruijn graph")
+    
+    ("min-kmer-prune",
+     po::value<int>()->default_value(2),
+     "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
+
+    ("max-bubbles",
+     po::value<int>()->default_value(30),
      "Maximum number of bubbles to extract from the assembly graph")
+    
+    ("min-bubble-score",
+     po::value<double>()->default_value(2.0),
+     "Minimum bubble score that will be extracted from the assembly graph")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");
     haplotype_generation.add_options()
-    ("max-haplotypes",
-     po::value<int>()->default_value(128),
+    ("max-haplotypes,x",
+     po::value<int>()->default_value(200),
      "Maximum number of candidate haplotypes the caller may consider. If a region contains"
      " more candidate haplotypes than this then filtering is applied")
     
     ("haplotype-holdout-threshold",
-     po::value<int>()->default_value(2048),
+     po::value<int>()->default_value(2500),
      "Forces the haplotype generator to temporarily hold out some alleles if the number"
      " of haplotypes in a region exceeds this threshold")
     
     ("haplotype-overflow",
-     po::value<int>()->default_value(16384),
+     po::value<int>()->default_value(18000),
      "Regions with more haplotypes than this will be skipped")
     
     ("max-holdout-depth",
-     po::value<int>()->default_value(3),
+     po::value<int>()->default_value(5),
      "Maximum number of holdout attempts the haplotype generator can make before the region"
      " is skipped")
     
@@ -443,7 +443,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("min-somatic-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
-     "Minimum somatic mutation call posterior probability (phred scale)")
+     "Minimum posterior probability (phred scale) to emit a somatic mutation call")
     
     ("somatics-only",
      po::bool_switch()->default_value(false),
@@ -463,6 +463,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("denovo-mutation-rate",
      po::value<float>()->default_value(1e-8, "1e-8"),
      "Expected de novo mutation rate, per megabase pair, for this sample")
+    
+    ("min-denovo-posterior",
+     po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
+     "Minimum posterior probability (phred scale) to emit a de novo mutation call")
     
     ("denovos-only,d",
      po::bool_switch()->default_value(false),
@@ -488,7 +492,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description advanced("Advanced calling algorithm");
     advanced.add_options()
     ("haplotype-extension-threshold,e",
-     po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
+     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
      "Haplotypes with posterior probability less than this can be filtered before extension")
     
     ("inactive-flank-scoring",
@@ -496,20 +500,14 @@ OptionMap parse_options(const int argc, const char** argv)
      "Disables additional calculation to adjust alignment score when there are inactive"
      " candidates in haplotype flanking regions")
     
-    ("min-genotype-combinations",
-     po::value<unsigned>()->default_value(2500),
-     "The minimum number of genotype combinations to consider when computing joint"
-     " genotype posterior probabilities")
+    ("model-mapping-quality",
+     po::value<bool>()->default_value(true),
+     "Include the read mapping quality in the haplotype likelihood calculation")
     
-    ("max-genotype-combinations",
-     po::value<unsigned>()->default_value(100000),
-     "The maximum number of genotype combinations to consider when computing joint"
+    ("max-joint-genotypes",
+     po::value<int>()->default_value(100000),
+     "The maximum number of joint genotype vectors to consider when computing joint"
      " genotype posterior probabilities")
-    
-    ("max-reduction-probability-mass",
-     po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
-     "The maximum probability mass that can be ignored from each sample when"
-     " calculating joint genotype probability distributions")
     
     ("sequence-error-model",
      po::value<std::string>()->default_value("hiseq"),
@@ -798,11 +796,10 @@ void check_reads_present(const OptionMap& vm)
 void check_region_files_consistent(const OptionMap& vm)
 {
     if (vm.count("regions-file") == 1 && vm.count("skip-regions-file") == 1) {
-        const auto regions_file = vm.at("regions-file").as<std::string>();
-        const auto skip_regions_file = vm.at("skip-regions-file").as<std::string>();
+        const auto regions_file = vm.at("regions-file").as<fs::path>();
+        const auto skip_regions_file = vm.at("skip-regions-file").as<fs::path>();
         if (regions_file == skip_regions_file) {
-            throw std::invalid_argument {"options 'regions-file' and 'skip-regions-file' must"
-                " have unique values"};
+            throw std::invalid_argument {"options 'regions-file' and 'skip-regions-file' must be unique"};
         }
     }
 }
@@ -860,12 +857,13 @@ void validate(const OptionMap& vm)
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
-        "min-kmer-support", "max-bubbles", "max-holdout-depth"
+        "min-kmer-prune", "max-bubbles", "max-holdout-depth"
     };
     const std::vector<std::string> strictly_positive_int_options {
         "max-open-read-files", "downsample-above", "downsample-target",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
-        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow"
+        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
+        "max-joint-genotypes"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");

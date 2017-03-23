@@ -57,9 +57,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
         std::vector<KmerPerfectHashes> sample_read_hashes {};
         sample_read_hashes.reserve(t.num_reads);
         std::transform(t.first, t.last, std::back_inserter(sample_read_hashes),
-                       [] (const AlignedRead& read) {
-                           return compute_kmer_hashes<mapperKmerSize>(read.sequence());
-                       });
+                       [] (const AlignedRead& read) { return compute_kmer_hashes<mapperKmerSize>(read.sequence()); });
         read_hashes.emplace_back(std::move(sample_read_hashes));
     }
     auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
@@ -76,15 +74,12 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
             *itr = std::vector<double>(t.num_reads);
             std::transform(t.first, t.last, std::cbegin(*read_hash_itr), std::begin(*itr),
                            [&] (const AlignedRead& read, const auto& read_hashes) {
-                               const auto last_mapping_position = map_query_to_target(read_hashes,
-                                                                                      haplotype_hashes,
+                               const auto last_mapping_position = map_query_to_target(read_hashes, haplotype_hashes,
                                                                                       haplotype_mapping_counts,
                                                                                       first_mapping_position,
                                                                                       maxMappingPositions);
                                reset_mapping_counts(haplotype_mapping_counts);
-                               return likelihood_model_.evaluate(read,
-                                                                 first_mapping_position,
-                                                                 last_mapping_position);
+                               return likelihood_model_.evaluate(read, first_mapping_position, last_mapping_position);
                            });
             ++read_hash_itr;
             ++itr;

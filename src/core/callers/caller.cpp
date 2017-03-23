@@ -18,10 +18,10 @@
 #include "utils/append.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
 #include "core/tools/haplotype_filter.hpp"
-#include "utils/call.hpp"
-#include "utils/call_wrapper.hpp"
-#include "utils/variant_call.hpp"
-#include "utils/reference_call.hpp"
+#include "core/types/calls/call.hpp"
+#include "core/types/calls/call_wrapper.hpp"
+#include "core/types/calls/variant_call.hpp"
+#include "core/types/calls/reference_call.hpp"
 
 #include "timers.hpp"
 
@@ -128,7 +128,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     resume(init_timer);
     ReadMap reads;
     if (candidate_generator_.requires_reads()) {
-        reads = read_pipe_.get().fetch_reads(call_region);
+        reads = read_pipe_.get().fetch_reads(expand(call_region, 100));
         add_reads(reads, candidate_generator_);
         if (!refcalls_requested() && all_empty(reads)) {
             if (debug_log_) stream(*debug_log_) << "Stopping early as no reads found in call region";
@@ -281,18 +281,13 @@ const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
 {
     return mapped_region(haplotypes.front());
 }
-
-template <typename Container>
-void remove_duplicates(Container& haplotypes, const ReferenceGenome& reference)
-{
-    const auto n = unique_least_complex(haplotypes, Haplotype {haplotype_region(haplotypes), reference});
-    if (DEBUG_MODE) {
-        logging::DebugLogger log {};
-        stream(log) << n << " duplicate haplotypes were removed";
-    }
-}
     
 } // namespace
+
+std::size_t Caller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+{
+    return unique_least_complex(haplotypes, Haplotype {haplotype_region(haplotypes), reference_.get()});
+}
 
 Caller::GeneratorStatus
 Caller::generate_active_haplotypes(const GenomicRegion& call_region,
@@ -329,9 +324,21 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
         }
         return GeneratorStatus::done;
     }
-    remove_duplicates(haplotypes, reference_);
-    if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " initial haplotypes";
+    remove_duplicates(haplotypes);
+    if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " unfiltered haplotypes";
     return GeneratorStatus::good;
+}
+
+void Caller::remove_duplicates(std::vector<Haplotype>& haplotypes) const
+{
+    const auto num_removed = do_remove_duplicates(haplotypes);
+    if (debug_log_) {
+        if (num_removed > 0) {
+            stream(*debug_log_) << num_removed << " duplicate haplotypes were removed";
+        } else {
+            stream(*debug_log_) << "There are no duplicate haplotypes";
+        }
+    }
 }
 
 bool Caller::filter_haplotypes(std::vector<Haplotype>& haplotypes,
@@ -356,7 +363,7 @@ bool Caller::filter_haplotypes(std::vector<Haplotype>& haplotypes,
         }
         removed_haplotypes.clear();
         removed_haplotypes.shrink_to_fit();
-        if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " final haplotypes";
+        if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " haplotypes after filtering";
     }
     return has_removal_impact;
 }
@@ -391,7 +398,7 @@ void Caller::filter_haplotypes(bool prefilter_had_removal_impact,
         auto removable_haplotypes = get_removable_haplotypes(haplotypes, haplotype_likelihoods,
                                                              *latents.haplotype_posteriors(),
                                                              max_to_remove);
-        if (debug_log_) {
+        if (debug_log_ && !removable_haplotypes.empty()) {
             stream(*debug_log_) << "Discarding " << removable_haplotypes.size()
                                 << " haplotypes with low posterior support";
         }
@@ -575,11 +582,17 @@ Genotype<Haplotype> Caller::call_genotype(const Latents& latents, const SampleNa
     return itr->first;
 }
 
+bool requires_model_evaluation(const std::vector<CallWrapper>& calls)
+{
+    return std::any_of(std::cbegin(calls), std::cend(calls),
+                       [] (const auto& call) { return call->requires_model_evaluation(); });
+}
+
 void Caller::set_model_posteriors(std::vector<CallWrapper>& calls, const Latents& latents,
                                   const std::vector<Haplotype>& haplotypes,
                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    if (parameters_.allow_model_filtering) {
+    if (parameters_.allow_model_filtering || requires_model_evaluation(calls)) {
         resume(latent_timer);
         const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods, latents);
         pause(latent_timer);
@@ -679,11 +692,12 @@ HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Varian
 
 HaplotypeLikelihoodCache Caller::make_haplotype_likelihood_cache() const
 {
-    if (parameters_.sequencer) {
-        return HaplotypeLikelihoodCache {make_haplotype_likelihood_model(*parameters_.sequencer),
+    if (parameters_.sequencer ) {
+        return HaplotypeLikelihoodCache {make_haplotype_likelihood_model(*parameters_.sequencer, parameters_.model_mapping_quality),
                                          parameters_.max_haplotypes, samples_};
     } else {
-        return HaplotypeLikelihoodCache {parameters_.max_haplotypes, samples_};
+        return HaplotypeLikelihoodCache {HaplotypeLikelihoodModel {parameters_.model_mapping_quality},
+                                         parameters_.max_haplotypes, samples_};
     }
 }
 
@@ -943,7 +957,7 @@ Caller::generate_candidate_reference_alleles(const GenomicRegion& region,
                     ++allele_itr;
                 } else {
                     if (begins_before(*allele_itr, *called_itr)) { // when variant has been left padded
-                        append_allele(result, splice(*allele_itr, left_overhang_region(*allele_itr, *called_itr)),
+                        append_allele(result, copy(*allele_itr, left_overhang_region(*allele_itr, *called_itr)),
                                       parameters_.refcall_type);
                     }
                     // skip contained alleles and candidates as they include called variants

@@ -15,6 +15,7 @@
 
 #include "mappable_flat_set.hpp"
 #include "mappable_flat_multi_set.hpp"
+#include "utils/mappable_algorithms.hpp"
 
 namespace octopus {
 
@@ -59,25 +60,38 @@ auto encompassing_region(const MappableMap<KeyType, typename Container::value_ty
     if (mappables.empty()) {
         throw std::runtime_error {"encompassing_region called with empty MappableMap"};
     }
-    
     RegionType<typename Container::value_type> result;
-    
     const auto it = std::find_if_not(std::cbegin(mappables), std::cend(mappables),
                                      [] (const auto& p) { return p.second.empty(); });
-    
     if (it == std::cend(mappables)) {
         throw std::runtime_error {"encompassing_region called with map of empty mappables"};
     }
-    
     result = encompassing_region(it->second);
-    
     std::for_each(std::next(it), std::cend(mappables),
                   [&result] (const auto& p) {
                       if (!p.second.empty()) {
                           result = encompassing_region(result, encompassing_region(p.second));
                       }
                   });
-    
+    return result;
+}
+
+template <typename KeyType, typename Container, typename MappableType>
+auto encompassing_overlap_region(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                                 const MappableType& mappable)
+{
+    boost::optional<RegionType<typename Container::value_type>> result {};
+    for (const auto& p : mappables) {
+        const auto overlapped = overlap_range(p.second, mappable);
+        if (!empty(overlapped)) {
+            auto encompassing = encompassing_region(overlapped);
+            if (result) {
+                result = encompassing_region(*result, encompassing);
+            } else {
+                result = std::move(encompassing);
+            }
+        }
+    }
     return result;
 }
 

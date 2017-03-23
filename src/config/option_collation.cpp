@@ -44,6 +44,7 @@
 #include "exceptions/program_error.hpp"
 #include "exceptions/system_error.hpp"
 #include "exceptions/missing_file_error.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 
 namespace octopus { namespace options {
 
@@ -199,6 +200,19 @@ boost::optional<unsigned> get_num_threads(const OptionMap& options)
     return boost::none;
 }
 
+ExecutionPolicy get_thread_execution_policy(const OptionMap& options)
+{
+    if (options.count("threads") == 1) {
+        if (options.at("threads").as<int>() == 0) {
+            return ExecutionPolicy::par;
+        } else {
+            return ExecutionPolicy::seq;
+        }
+    } else {
+        return ExecutionPolicy::seq;
+    }
+}
+
 MemoryFootprint get_target_read_buffer_size(const OptionMap& options)
 {
     return options.at("target-read-buffer-footprint").as<MemoryFootprint>();
@@ -274,31 +288,27 @@ InputRegionMap extract_search_regions(const ReferenceGenome& reference)
 auto cut(const MappableFlatSet<GenomicRegion>& mappables, const MappableFlatSet<GenomicRegion>& regions)
 {
     if (mappables.empty()) return regions;
-    
     MappableFlatSet<GenomicRegion> result {};
-    
     for (const auto& region : regions) {
         auto overlapped = mappables.overlap_range(region);
         if (empty(overlapped)) {
             result.emplace(region);
         } else if (!is_same_region(region, overlapped.front())) {
-            auto spliced = region;
-            if (begins_before(overlapped.front(), spliced)) {
-                spliced = right_overhang_region(spliced, overlapped.front());
+            auto chunk = region;
+            if (begins_before(overlapped.front(), chunk)) {
+                chunk = right_overhang_region(chunk, overlapped.front());
                 overlapped.advance_begin(1);
             }
             std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&] (const auto& region) {
-                result.emplace(left_overhang_region(spliced, region));
-                spliced = expand_lhs(spliced, -begin_distance(spliced, region));
+                result.emplace(left_overhang_region(chunk, region));
+                chunk = expand_lhs(chunk, -begin_distance(chunk, region));
             });
-            if (ends_before(overlapped.back(), spliced)) {
-                result.emplace(right_overhang_region(spliced, overlapped.back()));
+            if (ends_before(overlapped.back(), chunk)) {
+                result.emplace(right_overhang_region(chunk, overlapped.back()));
             }
         }
     }
-    
     result.shrink_to_fit();
-    
     return result;
 }
 
@@ -308,7 +318,6 @@ InputRegionMap extract_search_regions(const std::vector<GenomicRegion>& regions,
     auto input_regions = make_search_regions(regions);
     const auto skipped = make_search_regions(skip_regions);
     InputRegionMap result {input_regions.size()};
-    
     for (auto& p : input_regions) {
         if (skipped.count(p.first) == 1) {
             result.emplace(p.first, cut(skipped.at(p.first), std::move(p.second)));
@@ -316,7 +325,6 @@ InputRegionMap extract_search_regions(const std::vector<GenomicRegion>& regions,
             result.emplace(p.first, std::move(p.second));
         }
     }
-    
     for (auto it = std::begin(result); it != std::end(result); ) {
         if (it->second.empty()) {
             it = result.erase(it);
@@ -324,11 +332,9 @@ InputRegionMap extract_search_regions(const std::vector<GenomicRegion>& regions,
             ++it;
         }
     }
-    
     for (auto& p : result) {
         p.second.shrink_to_fit();
     }
-    
     return result;
 }
 
@@ -570,7 +576,8 @@ auto make_read_transformers(const OptionMap& options)
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
                 } else if (allow_assembler_generation(options)) {
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, 3});
-                    prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {15, 5});
+                    prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {10, 5});
+                    prefilter_transformer.add(MaskClippedDuplicatedBases {});
                 } else {
                     prefilter_transformer.add(MaskSoftClippedBoundraryBases {boundary_size});
                 }
@@ -580,7 +587,8 @@ auto make_read_transformers(const OptionMap& options)
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {threshold});
                 } else if (allow_assembler_generation(options)) {
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {3});
-                    prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {15, 5});
+                    prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {10, 5});
+                    prefilter_transformer.add(MaskClippedDuplicatedBases {});
                 } else {
                     prefilter_transformer.add(MaskSoftClipped {});
                 }
@@ -591,7 +599,7 @@ auto make_read_transformers(const OptionMap& options)
             postfilter_transformer.add(MaskTemplateAdapters {});
         }
         if (options.at("overlap-masking").as<bool>()) {
-            postfilter_transformer.add(MaskDuplicatedBases {});
+            postfilter_transformer.add(MaskStrandOfDuplicatedBases {});
         }
         prefilter_transformer.shrink_to_fit();
         postfilter_transformer.shrink_to_fit();
@@ -848,13 +856,14 @@ auto make_variant_generator_builder(const OptionMap& options)
         if (options.count("assembler-mask-base-quality") == 1) {
             reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
         }
+        reassembler_options.execution_policy = get_thread_execution_policy(options);
         reassembler_options.num_fallbacks = as_unsigned("num-fallback-kmers", options);
         reassembler_options.fallback_interval_size = as_unsigned("fallback-kmer-gap", options);
         reassembler_options.bin_size = as_unsigned("max-region-to-assemble", options);
         reassembler_options.bin_overlap = as_unsigned("max-assemble-region-overlap", options);
-        reassembler_options.min_kmer_observations = as_unsigned("min-kmer-support", options);
-        reassembler_options.min_mean_bubble_weight = options.at("min-bubble-weight").as<double>();
+        reassembler_options.min_kmer_observations = as_unsigned("min-kmer-prune", options);
         reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
+        reassembler_options.min_bubble_score = options.at("min-bubble-score").as<double>();
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
@@ -1063,6 +1072,16 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
+auto get_exclusion_threshold() noexcept
+{
+    return HaplotypeLikelihoodModel{}.pad_requirement();
+}
+
+auto get_min_flank_pad() noexcept
+{
+    return 2 * (2 * HaplotypeLikelihoodModel{}.pad_requirement() - 1);
+}
+
 auto make_haplotype_generator_builder(const OptionMap& options)
 {
     const auto lagging_policy    = get_lagging_policy(options);
@@ -1072,7 +1091,8 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
     return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options))
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
-    .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth);
+    .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
+    .set_exclusion_threshold(get_exclusion_threshold()).set_min_flank_pad(get_min_flank_pad());
 }
 
 boost::optional<Pedigree> get_pedigree(const OptionMap& options)
@@ -1365,6 +1385,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_denovo_mutation_rate(options.at("denovo-mutation-rate").as<float>());
+        vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     }
     
     if (options.count("model-filtering") == 1) {
@@ -1377,9 +1398,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_sites_only();
     }
     vc_builder.set_flank_scoring(allow_flank_scoring(options));
-    vc_builder.set_min_genotype_combinations(options.at("min-genotype-combinations").as<unsigned>());
-    vc_builder.set_max_genotype_combinations(options.at("max-genotype-combinations").as<unsigned>());
-    vc_builder.set_max_reduction_mass(options.at("max-reduction-probability-mass").as<Phred<double>>());
+    vc_builder.set_model_mapping_quality(options.at("model-mapping-quality").as<bool>());
+    vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
     
     if (options.count("sequence-error-model") == 1) {
         vc_builder.set_sequencer(options.at("sequence-error-model").as<std::string>());

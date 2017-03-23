@@ -1632,7 +1632,7 @@ auto segment_by_begin_copy(const Container& mappables)
 template <typename Container>
 auto segment_by_begin_move(Container& mappables)
 {
-    return segment_by_begin_move(std::make_move_iterator(std::begin(mappables)),
+    return segment_by_begin_copy(std::make_move_iterator(std::begin(mappables)),
                                  std::make_move_iterator(std::end(mappables)));
 }
 
@@ -1760,6 +1760,46 @@ auto calculate_positional_coverage(const Container& mappables, const RegionTp& r
     return calculate_positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
 }
 
+template <typename ForwardIt, typename RegionTp,
+          typename = EnableIfRegionOrMappable<typename std::iterator_traits<ForwardIt>::value_type>>
+auto calculate_positional_seeds(ForwardIt first, ForwardIt last, const RegionTp& region)
+{
+    using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
+    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
+                  "RegionType mismatch");
+    std::vector<unsigned> result(region_size(region) + 1, 0); // + 1 for empty mappables at last position
+    for (const auto& mappable : contained_range(first, last, region)) {
+        ++result[begin_distance(region, mappable)];
+    }
+    result.pop_back();
+    return result;
+}
+
+template <typename ForwardIt,
+          typename = EnableIfRegionOrMappable<typename std::iterator_traits<ForwardIt>::value_type>>
+auto calculate_positional_seeds(ForwardIt first, ForwardIt last)
+{
+    return calculate_positional_seeds(first, last, encompassing_region(first, last));
+}
+
+template <typename Container,
+          typename = EnableIfMappable<typename Container::value_type>>
+auto calculate_positional_seeds(const Container& mappables)
+{
+    return calculate_positional_seeds(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename Container, typename RegionTp,
+          typename = EnableIfRegionOrMappable<typename Container::value_type>>
+auto calculate_positional_seeds(const Container& mappables, const RegionTp& region)
+{
+    using MappableTp = typename Container::value_type;
+    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
+                  "RegionType mismatch");
+    const auto overlapped = overlap_range(mappables, region);
+    return calculate_positional_seeds(std::cbegin(overlapped), std::cend(overlapped), region);
+}
+
 template <typename Container, typename RegionTp,
           typename = enable_if_not_map<Container>,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
@@ -1833,6 +1873,29 @@ unsigned max_coverage(const Container& mappables)
     return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
 }
 
+template <typename ForwardIt>
+auto join(ForwardIt first, const ForwardIt last, const GenomicRegion::Distance n)
+{
+    std::vector<GenomicRegion> result {};
+    if (first == last) return result;
+    result.reserve(std::distance(first, last));
+    auto prev = first++, leftmost = prev;
+    for (; first != last; ++first, ++prev) {
+        if (inner_distance(*prev, *first) > n) {
+            result.push_back(closed_region(*leftmost, *prev));
+            leftmost = first;
+        }
+    }
+    result.push_back(closed_region(*leftmost, *prev));
+    return result;
+}
+
+template <typename Container>
+auto join(const Container& regions, const GenomicRegion::Distance n)
+{
+    return join(std::cbegin(regions), std::cend(regions), n);
+}
+    
 } // namespace octopus
 
 #endif

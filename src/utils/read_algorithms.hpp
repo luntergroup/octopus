@@ -130,34 +130,33 @@ std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads)
 namespace detail {
 
 inline MappableFlatMultiSet<AlignedRead>
-splice_all(const MappableFlatMultiSet<AlignedRead>& reads,
-           const GenomicRegion& region, NonMapTag)
+copy_each(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
 {
     MappableFlatMultiSet<AlignedRead> result {};
     result.reserve(reads.size());
     for (const auto& read : reads) {
-        result.emplace(splice(read, region));
+        result.emplace(copy(read, region));
     }
     return result;
 }
 
 template <typename T>
-T splice_all(const T& reads, const GenomicRegion& region, NonMapTag)
+T copy_each(const T& reads, const GenomicRegion& region, NonMapTag)
 {
     T result {};
     result.reserve(reads.size());
     std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(result),
-                   [&region] (const auto& read) { return splice(read, region); });
+                   [&region] (const auto& read) { return copy(read, region); });
     return result;
 }
 
 template <typename T>
-T splice_all(const T& reads, const GenomicRegion& region, MapTag)
+T copy_each(const T& reads, const GenomicRegion& region, MapTag)
 {
     T result {};
     result.reserve(reads.size());
     for (const auto& p : reads) {
-        result.emplace(p.first, splice_all(p.second, region, NonMapTag {}));
+        result.emplace(p.first, copy_each(p.second, region, NonMapTag {}));
     }
     return result;
 }
@@ -165,9 +164,9 @@ T splice_all(const T& reads, const GenomicRegion& region, MapTag)
 } // namespace detail
 
 template <typename T>
-T splice_all(const T& reads, const GenomicRegion& region)
+T copy_each(const T& reads, const GenomicRegion& region)
 {
-    return detail::splice_all(reads, region, MapTagType<T> {});
+    return detail::copy_each(reads, region, MapTagType<T> {});
 }
 
 } // namespace octopus

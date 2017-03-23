@@ -421,113 +421,58 @@ GenomicRegion expand_subregion(const GenomicRegion& region, const std::size_t re
     };
 }
 
-HtslibSamFacade::CoveragePair
-HtslibSamFacade::find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage) const
+HtslibSamFacade::PositionList
+HtslibSamFacade::extract_read_positions(const GenomicRegion& region, std::size_t max_coverage) const
 {
-    HtslibIterator it {*this, region};
-    if (max_coverage == 0 || !++it) {
-        return std::make_pair(head_region(region), std::vector<unsigned> {});
+    PositionList result {};
+    result.reserve(max_coverage);
+    for (HtslibIterator it {*this, region} ; max_coverage > 0 && ++it; --max_coverage) {
+        result.push_back(it.begin());
     }
-    --max_coverage;
-    auto first_read_begin = it.begin();
-    auto curr_read_begin  = first_read_begin;
-    std::vector<unsigned> position_counts(max_coverage, 0);
-    if (max_coverage > 0) {
-        ++position_counts[0];
-        while (++it && --max_coverage > 0) {
-            curr_read_begin = it.begin();
-            assert(curr_read_begin >= first_read_begin);
-            const auto offset = curr_read_begin - first_read_begin;
-            if (offset >= position_counts.size()) {
-                position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
-            } else {
-                ++position_counts[offset];
-            }
-        }
-    }
-    auto result_region = expand_subregion(region, max_coverage, first_read_begin, curr_read_begin, position_counts);
-    return std::make_pair(std::move(result_region), std::move(position_counts));
+    return result;
 }
 
 bool contains(const std::vector<HtslibSamFacade::SampleName>& samples,
-              const HtslibSamFacade::SampleName& sample)
+              const HtslibSamFacade::SampleName& sample) noexcept
 {
     return std::find(std::cbegin(samples), std::cend(samples), sample) != std::cend(samples);
 }
 
-HtslibSamFacade::CoveragePair
-HtslibSamFacade::find_covered_subregion(const SampleName& sample,
+HtslibSamFacade::PositionList
+HtslibSamFacade::extract_read_positions(const SampleName& sample,
                                         const GenomicRegion& region,
                                         std::size_t max_coverage) const
 {
-    if (!contains(samples_, sample)) {
-        return std::make_pair(head_region(region), std::vector<unsigned> {});
-    }
-    if (samples_.size() == 1) {
-        return find_covered_subregion(region, max_coverage);
-    }
-    HtslibIterator it {*this, region};
-    if (max_coverage == 0 || !++it) {
-        return std::make_pair(head_region(region), std::vector<unsigned> {});
-    }
-    while (sample != sample_names_.at(it.read_group())) {
-        if (!++it) return std::make_pair(head_region(region), std::vector<unsigned> {});
-    };
-    --max_coverage;
-    const auto first_read_begin = it.begin();
-    auto curr_read_begin = first_read_begin;
-    std::vector<unsigned> position_counts(max_coverage, 0);
-    if (max_coverage > 0) {
-        ++position_counts[0];
-        while (++it && sample == sample_names_.at(it.read_group()) && --max_coverage > 0) {
-            curr_read_begin = it.begin();
-            assert(curr_read_begin >= first_read_begin);
-            const auto offset = curr_read_begin - first_read_begin;
-            if (offset >= position_counts.size()) {
-                position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
-            } else {
-                ++position_counts[offset];
-            }
+    if (!contains(samples_, sample)) return {};
+    if (samples_.size() == 1) return extract_read_positions(region, max_coverage);
+    PositionList result {};
+    result.reserve(max_coverage);
+    for (HtslibIterator it {*this, region} ; max_coverage > 0 && ++it;) {
+        if (sample == sample_names_.at(it.read_group())) {
+            result.push_back(it.begin());
+            --max_coverage;
         }
     }
-    auto result_region = expand_subregion(region, max_coverage, first_read_begin, curr_read_begin, position_counts);
-    return std::make_pair(std::move(result_region), std::move(position_counts));
+    return result;
 }
 
-HtslibSamFacade::CoveragePair
-HtslibSamFacade::find_covered_subregion(const std::vector<SampleName>& samples,
+HtslibSamFacade::PositionList
+HtslibSamFacade::extract_read_positions(const std::vector<SampleName>& samples,
                                         const GenomicRegion& region,
                                         std::size_t max_coverage) const
 {
-    if (samples.empty()) return {head_region(region), {}};
-    if (samples.size() == 1) return find_covered_subregion(samples.front(), region, max_coverage);
-    if (is_subset(samples, samples_)) return find_covered_subregion(region, max_coverage);
-    HtslibIterator it {*this, region};
-    if (max_coverage == 0 || !++it) {
-        return std::make_pair(head_region(region), std::vector<unsigned> {});
-    }
-    while (!contains(samples, sample_names_.at(it.read_group()))) {
-        if (!++it) return std::make_pair(head_region(region), std::vector<unsigned> {});
-    };
-    --max_coverage;
-    auto first_read_begin = it.begin();
-    auto curr_read_begin = first_read_begin;
-    std::vector<unsigned> position_counts(max_coverage, 0);
-    if (max_coverage > 0) {
-        ++position_counts[0];
-        while (++it && !contains(samples, sample_names_.at(it.read_group())) && --max_coverage > 0) {
-            curr_read_begin = it.begin();
-            assert(curr_read_begin >= first_read_begin);
-            const auto offset = curr_read_begin - first_read_begin;
-            if (offset >= position_counts.size()) {
-                position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
-            } else {
-                ++position_counts[offset];
-            }
+    if (samples.empty()) return {};
+    if (samples.size() == 1) return extract_read_positions(samples.front(), region, max_coverage);
+    if (is_subset(samples, samples_)) return extract_read_positions(region, max_coverage);
+    PositionList result {};
+    result.reserve(max_coverage);
+    for (HtslibIterator it {*this, region} ; max_coverage > 0 && ++it;) {
+        if (contains(samples, sample_names_.at(it.read_group()))) {
+            result.push_back(it.begin());
+            --max_coverage;
         }
     }
-    auto result_region = expand_subregion(region, max_coverage, first_read_begin, curr_read_begin, position_counts);
-    return std::make_pair(std::move(result_region), std::move(position_counts));
+    return result;
 }
 
 // fetch_reads
@@ -894,7 +839,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
     auto sequence = extract_sequence(hts_bam1_.get());
     
     if (read_begin_tmp < 0) {
-        // Then the read hangs off the left of the contig, and we must remove bases, qualities, and
+        // Then the read hangs off the left of the contig, and we must remove bases, base_qualities, and
         // adjust the cigar string as we cannot have a negative begin position
         const auto overhang_size = static_cast<unsigned>(std::abs(read_begin_tmp));
         sequence.erase(begin(sequence), next(begin(sequence), overhang_size));

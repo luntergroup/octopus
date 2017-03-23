@@ -103,8 +103,8 @@ public:
     const GenomicRegion& mapped_region() const noexcept;
     const NucleotideSequence& sequence() const noexcept;
     NucleotideSequence& sequence() noexcept;
-    const BaseQualityVector& qualities() const noexcept;
-    BaseQualityVector& qualities() noexcept;
+    const BaseQualityVector& base_qualities() const noexcept;
+    BaseQualityVector& base_qualities() noexcept;
     MappingQuality mapping_quality() const noexcept;
     const CigarString& cigar() const noexcept;
     bool has_other_segment() const noexcept;
@@ -128,7 +128,7 @@ private:
     GenomicRegion region_;
     std::string name_;
     NucleotideSequence sequence_;
-    BaseQualityVector qualities_;
+    BaseQualityVector base_qualities_;
     CigarString cigar_;
     std::string read_group_;
     boost::optional<Segment> next_segment_;
@@ -165,7 +165,7 @@ AlignedRead::AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq&
 : region_ {std::forward<GenomicRegion_>(reference_region)}
 , name_ {std::forward<String_>(name)}
 , sequence_ {std::forward<Seq>(sequence)}
-, qualities_ {std::forward<Qualities_>(qualities)}
+, base_qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
 , read_group_ {}
 , next_segment_ {}
@@ -182,7 +182,7 @@ AlignedRead::AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq
 : region_ {std::forward<GenomicRegion_>(reference_region)}
 , name_ {std::forward<String1_>(name)}
 , sequence_ {std::forward<Seq>(sequence)}
-, qualities_ {std::forward<Qualities_>(qualities)}
+, base_qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
 , read_group_ {}
 , next_segment_ {
@@ -218,17 +218,19 @@ bool is_sequence_empty(const AlignedRead& read) noexcept;
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read) noexcept;
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read, const GenomicRegion& region);
 
-bool is_soft_clipped(const AlignedRead& read);
+bool is_soft_clipped(const AlignedRead& read) noexcept;
+bool is_front_soft_clipped(const AlignedRead& read) noexcept;
+bool is_back_soft_clipped(const AlignedRead& read) noexcept;
 
-std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const AlignedRead& read);
+std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const AlignedRead& read) noexcept;
 
 GenomicRegion clipped_mapped_region(const AlignedRead& read);
 
 // Returns the part of the read cigar string contained by the region
-CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region);
+CigarString copy_cigar(const AlignedRead& read, const GenomicRegion& region);
     
-// Returns the part of the read (cigar, sequence, qualities) contained by the region
-AlignedRead splice(const AlignedRead& read, const GenomicRegion& region);
+// Returns the part of the read (cigar, sequence, base_qualities) contained by the region
+AlignedRead copy(const AlignedRead& read, const GenomicRegion& region);
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs);
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs);

@@ -17,6 +17,7 @@
 #include <cstddef>
 
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/optional.hpp>
 
 #include "basics/genomic_region.hpp"
 #include "core/types/allele.hpp"
@@ -32,6 +33,8 @@ namespace coretools {
 class HaplotypeTree
 {
 public:
+    using HaplotypeLength = Haplotype::NucleotideSequence::size_type;
+    
     HaplotypeTree() = delete;
     
     HaplotypeTree(const GenomicRegion::ContigName& contig, const ReferenceGenome& reference);
@@ -69,6 +72,9 @@ public:
     std::vector<Haplotype> extract_haplotypes() const;
     std::vector<Haplotype> extract_haplotypes(const GenomicRegion& region) const;
     
+    std::vector<HaplotypeLength> extract_haplotype_lengths() const;
+    std::vector<HaplotypeLength> extract_haplotype_lengths(const GenomicRegion& region) const;
+    
     // Using Haplotype::operator== logic
     void prune_all(const Haplotype& haplotype);
     
@@ -96,6 +102,7 @@ private:
     GenomicRegion::ContigName contig_;
     
     mutable HaplotypeVertexMultiMap haplotype_leaf_cache_;
+    mutable boost::optional<GenomicRegion> tree_region_;
     
     using LeafIterator  = decltype(haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;
@@ -108,6 +115,7 @@ private:
     bool allele_exists(Vertex leaf, const ContigAllele& allele) const;
     LeafIterator extend_haplotype(LeafIterator leaf, const ContigAllele& new_allele);
     Haplotype extract_haplotype(Vertex leaf, const GenomicRegion& region) const;
+    HaplotypeLength extract_haplotype_length(Vertex leaf, const GenomicRegion& region) const;
     bool define_same_haplotype(Vertex leaf1, Vertex leaf2) const;
     bool is_branch_exact_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
     bool is_branch_equal_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
@@ -295,6 +303,15 @@ auto generate_all_haplotypes(const Container& elements, const ReferenceGenome& r
 {
     return generate_all_haplotypes(std::cbegin(elements), std::cend(elements), reference);
 }
+
+HaplotypeTree::HaplotypeLength min_haplotype_length(const HaplotypeTree& tree);
+HaplotypeTree::HaplotypeLength min_haplotype_length(const HaplotypeTree& tree, const GenomicRegion& region);
+HaplotypeTree::HaplotypeLength max_haplotype_length(const HaplotypeTree& tree);
+HaplotypeTree::HaplotypeLength max_haplotype_length(const HaplotypeTree& tree, const GenomicRegion& region);
+std::pair<HaplotypeTree::HaplotypeLength, HaplotypeTree::HaplotypeLength>
+minmax_haplotype_lengths(const HaplotypeTree& tree);
+std::pair<HaplotypeTree::HaplotypeLength, HaplotypeTree::HaplotypeLength>
+minmax_haplotype_lengths(const HaplotypeTree& tree, const GenomicRegion& region);
 
 } // namespace coretools
 } // namespace octopus

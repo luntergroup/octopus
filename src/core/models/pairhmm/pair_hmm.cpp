@@ -202,7 +202,7 @@ void validate(const std::string& truth, const std::string& target,
               const MutationModel& model)
 {
     if (target.size() != target_qualities.size()) {
-        throw std::invalid_argument {"PairHMM::align: target size not equal to target qualities length"};
+        throw std::invalid_argument {"PairHMM::align: target size not equal to target base_qualities length"};
     }
     if (truth.size() != model.snv_priors.size()) {
         throw std::invalid_argument {"PairHMM::align: truth size not equal to snv priors length"};

@@ -65,14 +65,14 @@ AlignedRead::NucleotideSequence& AlignedRead::sequence() noexcept
     return sequence_;
 }
 
-const AlignedRead::BaseQualityVector& AlignedRead::qualities() const noexcept
+const AlignedRead::BaseQualityVector& AlignedRead::base_qualities() const noexcept
 {
-    return qualities_;
+    return base_qualities_;
 }
 
-AlignedRead::BaseQualityVector& AlignedRead::qualities() noexcept
+AlignedRead::BaseQualityVector& AlignedRead::base_qualities() noexcept
 {
-    return qualities_;
+    return base_qualities_;
 }
 
 AlignedRead::MappingQuality AlignedRead::mapping_quality() const noexcept
@@ -183,7 +183,7 @@ std::size_t ReadHash::operator()(const octopus::AlignedRead &read) const
     using boost::hash_combine;
     hash_combine(result, std::hash<GenomicRegion>()(read.mapped_region()));
     hash_combine(result, std::hash<CigarString>()(read.cigar()));
-    hash_combine(result, boost::hash_range(std::cbegin(read.qualities()), std::cend(read.qualities())));
+    hash_combine(result, boost::hash_range(std::cbegin(read.base_qualities()), std::cend(read.base_qualities())));
     hash_combine(result, read.mapping_quality());
     
     return result;
@@ -198,14 +198,14 @@ void capitalise_bases(AlignedRead& read) noexcept
 
 void cap_qualities(AlignedRead& read, const AlignedRead::BaseQuality max) noexcept
 {
-    auto& qualities = read.qualities();
+    auto& qualities = read.base_qualities();
     std::transform(std::cbegin(qualities), std::cend(qualities), std::begin(qualities),
                    [max] (const auto q) { return std::min(q, max); });
 }
 
 void set_front_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality value) noexcept
 {
-    auto& qualities = read.qualities();
+    auto& qualities = read.base_qualities();
     std::fill_n(std::begin(qualities), std::min(num_bases, qualities.size()), value);
 }
 
@@ -216,7 +216,7 @@ void zero_front_qualities(AlignedRead& read, std::size_t num_bases) noexcept
 
 void set_back_qualities(AlignedRead& read, std::size_t num_bases, const AlignedRead::BaseQuality value) noexcept
 {
-    auto& qualities = read.qualities();
+    auto& qualities = read.base_qualities();
     std::fill_n(std::rbegin(qualities), std::min(num_bases, qualities.size()), value);
 }
 
@@ -239,18 +239,28 @@ AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read
 {
     if (contig_name(region) != contig_name(read)) return 0;
     if (contains(region, read)) return sequence_size(read);
-    const auto splice_region = *overlapped_region(read, region);
-    const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
-    const auto contained_cigar_splice = splice_reference(read.cigar(), reference_offset, region_size(splice_region));
-    return sequence_size(contained_cigar_splice);
+    const auto copy_region = *overlapped_region(read, region);
+    const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, copy_region));
+    const auto contained_cigar_copy = copy_reference(read.cigar(), reference_offset, region_size(copy_region));
+    return sequence_size(contained_cigar_copy);
 }
 
-bool is_soft_clipped(const AlignedRead& read)
+bool is_soft_clipped(const AlignedRead& read) noexcept
 {
     return is_soft_clipped(read.cigar());
 }
 
-std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const AlignedRead& read)
+bool is_front_soft_clipped(const AlignedRead& read) noexcept
+{
+    return is_front_soft_clipped(read.cigar());
+}
+
+bool is_back_soft_clipped(const AlignedRead& read) noexcept
+{
+    return is_back_soft_clipped(read.cigar());
+}
+
+std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const AlignedRead& read) noexcept
 {
     return get_soft_clipped_sizes(read.cigar());
 }
@@ -262,46 +272,44 @@ GenomicRegion clipped_mapped_region(const AlignedRead& read)
     return expand(mapped_region(read), -static_cast<D>(std::min(p.first, mapped_begin(read))), -static_cast<D>(p.second));
 }
 
-CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
+CigarString copy_cigar(const AlignedRead& read, const GenomicRegion& region)
 {
     if (contains(region, read)) return read.cigar();
-    const auto splice_region = *overlapped_region(read, region);
-    const auto offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
-    return splice(read.cigar(), offset, size(region));
+    const auto copy_region = *overlapped_region(read, region);
+    const auto offset = static_cast<CigarOperation::Size>(begin_distance(read, copy_region));
+    return copy(read.cigar(), offset, size(region));
 }
 
-AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
+AlignedRead copy(const AlignedRead& read, const GenomicRegion& region)
 {
     using std::cbegin; using std::next;
     
     if (!overlaps(read, region)) {
-        throw std::logic_error {"AlignedRead: trying to splice non-overlapping region"};
+        throw std::logic_error {"AlignedRead: trying to copy non-overlapping region"};
     }
     
     if (contains(region, read)) return read;
     
-    const auto splice_region = *overlapped_region(read, region);
-    const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, splice_region));
+    const auto copy_region = *overlapped_region(read, region);
+    const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, copy_region));
     
-    const auto uncontained_cigar_splice = splice_reference(read.cigar(), 0, reference_offset);
-    auto contained_cigar_splice = splice_reference(read.cigar(), reference_offset, region_size(splice_region));
+    const auto uncontained_cigar_copy = copy_reference(read.cigar(), 0, reference_offset);
+    auto contained_cigar_copy = copy_reference(read.cigar(), reference_offset, region_size(copy_region));
     
-    const auto sequence_offset = sequence_size(uncontained_cigar_splice);
-    const auto sequence_length = sequence_size(contained_cigar_splice);
+    const auto sequence_offset = sequence_size(uncontained_cigar_copy);
+    const auto sequence_length = sequence_size(contained_cigar_copy);
     
-    AlignedRead::NucleotideSequence sequence_splice {next(cbegin(read.sequence()), sequence_offset),
-                                                     next(cbegin(read.sequence()),
-                                                          sequence_offset + sequence_length)};
-    AlignedRead::BaseQualityVector qualities_splice {next(cbegin(read.qualities()), sequence_offset),
-                                                     next(cbegin(read.qualities()),
-                                                          sequence_offset + sequence_length)};
+    AlignedRead::NucleotideSequence sub_sequence {next(cbegin(read.sequence()), sequence_offset),
+                                                  next(cbegin(read.sequence()), sequence_offset + sequence_length)};
+    AlignedRead::BaseQualityVector sub_qualities {next(cbegin(read.base_qualities()), sequence_offset),
+                                                  next(cbegin(read.base_qualities()), sequence_offset + sequence_length)};
     
     return AlignedRead {
         read.name(),
-        splice_region,
-        std::move(sequence_splice),
-        std::move(qualities_splice),
-        std::move(contained_cigar_splice),
+        copy_region,
+        std::move(sub_sequence),
+        std::move(sub_qualities),
+        std::move(contained_cigar_copy),
         read.mapping_quality(),
         read.flags()
     };
@@ -313,7 +321,7 @@ bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
         && lhs.mapped_region()   == rhs.mapped_region()
         && lhs.cigar()           == rhs.cigar()
         && lhs.sequence()        == rhs.sequence()
-        && lhs.qualities()       == rhs.qualities();
+        && lhs.base_qualities()       == rhs.base_qualities();
 }
 
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
@@ -322,7 +330,7 @@ bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
         if (lhs.mapping_quality() == rhs.mapping_quality()) {
             if (lhs.cigar() == rhs.cigar()) {
                 if (lhs.sequence() == rhs.sequence()) {
-                    return lhs.qualities() < rhs.qualities();
+                    return lhs.base_qualities() < rhs.base_qualities();
                 } else {
                     return lhs.sequence() < rhs.sequence();
                 }
@@ -373,7 +381,7 @@ std::ostream& operator<<(std::ostream& os, const AlignedRead& read)
 {
     os << read.mapped_region() << ' ';
     os << read.sequence() << ' ';
-    os << read.qualities() << ' ';
+    os << read.base_qualities() << ' ';
     os << read.cigar() << ' ';
     os << static_cast<unsigned>(read.mapping_quality()) << ' ';
     if (read.has_other_segment()) {

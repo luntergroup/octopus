@@ -12,6 +12,7 @@
 #include <memory>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/optional.hpp>
 
 #include "vcf_reader_impl.hpp"
 #include "vcf_header.hpp"
@@ -87,6 +88,8 @@ public:
     RecordIterator() = default;
     
     RecordIterator(const VcfParser& vcf, UnpackPolicy unpack);
+    RecordIterator(const VcfParser& vcf, UnpackPolicy unpack, std::string contig);
+    RecordIterator(const VcfParser& vcf, UnpackPolicy unpack, GenomicRegion region);
     
     RecordIterator(const RecordIterator&);
     RecordIterator& operator=(RecordIterator);
@@ -113,6 +116,8 @@ private:
     UnpackPolicy unpack_;
     mutable std::ifstream local_;
     mutable std::string line_;
+    boost::optional<std::string> contig_;
+    boost::optional<GenomicRegion> region_;
 };
 
 bool operator!=(const VcfParser::RecordIterator& lhs, const VcfParser::RecordIterator& rhs);

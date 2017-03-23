@@ -7,6 +7,11 @@
 
 namespace octopus {
 
+std::unique_ptr<Call> Call::clone() const
+{
+    return do_clone();
+}
+
 Phred<double> Call::quality() const noexcept
 {
     return quality_;
@@ -83,4 +88,5 @@ boost::optional<Phred<double>> Call::model_posterior() const noexcept
 {
     return model_posterior_;
 }
+
 } // namespace octopus

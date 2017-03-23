@@ -15,6 +15,7 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
+#include "logging/logging.hpp"
 #include "basics/genomic_region.hpp"
 #include "containers/mappable_flat_set.hpp"
 #include "core/types/allele.hpp"
@@ -41,6 +42,8 @@ public:
         enum class Extension { conservative, normal, optimistic, aggressive } extension = Extension::normal;
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         unsigned max_holdout_depth = 2;
+        Haplotype::MappingDomain::Size min_flank_pad = 30;
+        boost::optional<Haplotype::NucleotideSequence::size_type> exclusion_threshold = boost::none;
     };
     
     class HaplotypeOverflow;
@@ -53,8 +56,7 @@ public:
     HaplotypeGenerator(const ReferenceGenome& reference,
                        const MappableFlatSet<Variant>& candidates,
                        const ReadMap& reads,
-                       Policies policies,
-                       Haplotype::MappingDomain::Size min_flank_pad = 30);
+                       Policies policies);
     
     HaplotypeGenerator(const HaplotypeGenerator&)            = default;
     HaplotypeGenerator& operator=(const HaplotypeGenerator&) = default;
@@ -112,7 +114,6 @@ private:
     };
     
     Policies policies_;
-    Haplotype::MappingDomain::Size min_flank_pad_;
     
     HaplotypeTree tree_;
     GenomeWalker default_walker_, holdout_walker_;
@@ -130,6 +131,9 @@ private:
     
     Allele rightmost_allele_;
     
+    mutable boost::optional<logging::DebugLogger> debug_log_;
+    mutable boost::optional<logging::TraceLogger> trace_log_;
+    
     bool is_lagging_enabled() const noexcept;
     bool is_active_region_lagged() const;
     void reset_next_active_region() const noexcept;
@@ -141,9 +145,10 @@ private:
     void populate_tree_with_novel_alleles();
     void populate_tree_with_holdouts();
     bool in_holdout_mode() const noexcept;
+    const GenomicRegion& top_holdout_region() const;
     bool can_try_extracting_holdouts(const GenomicRegion& region) const noexcept;
     bool try_extract_holdouts(GenomicRegion region);
-    std::deque<HoldoutSet> propose_new_holdout_sets(GenomicRegion region) const;
+    boost::optional<HoldoutSet> propose_new_holdout_set(GenomicRegion region) const;
     bool can_reintroduce_holdouts() const noexcept;
     void reintroduce_holdouts();
     void clear_holdouts() noexcept;
@@ -222,13 +227,14 @@ public:
     
     Builder& set_min_flank_pad(Haplotype::MappingDomain::Size n) noexcept;
     
+    Builder& set_exclusion_threshold(Haplotype::NucleotideSequence::size_type n) noexcept;
+    
     HaplotypeGenerator build(const ReferenceGenome& reference,
                              const MappableFlatSet<Variant>& candidates,
                              const ReadMap& reads) const;
     
 private:
     Policies policies_;
-    Haplotype::MappingDomain::Size min_flank_pad_ = 30;
 };
 
 } // namespace coretools

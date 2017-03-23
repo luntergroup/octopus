@@ -202,7 +202,7 @@ bool includes(const Genotype<Haplotype>& genotype, const Allele& allele)
 
 bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
 {
-    return splice<Allele>(genotype, mapped_region(allele)).count(allele) == genotype.ploidy();
+    return copy<Allele>(genotype, mapped_region(allele)).count(allele) == genotype.ploidy();
 }
 
 std::size_t num_genotypes(const unsigned num_elements, const unsigned ploidy)

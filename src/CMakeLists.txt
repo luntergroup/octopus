@@ -181,26 +181,26 @@ set(CORE_SOURCES
     core/callers/population_caller.cpp
     core/callers/trio_caller.hpp
     core/callers/trio_caller.cpp
-    
-    core/callers/utils/call_types.hpp
-    core/callers/utils/call.hpp
-    core/callers/utils/call.cpp
-    core/callers/utils/germline_variant_call.hpp
-    core/callers/utils/germline_variant_call.cpp
-    core/callers/utils/reference_call.hpp
-    core/callers/utils/reference_call.cpp
-    core/callers/utils/somatic_call.hpp
-    core/callers/utils/somatic_call.cpp
-    core/callers/utils/variant_call.hpp
-    core/callers/utils/variant_call.cpp
-    core/callers/utils/denovo_call.hpp
-    core/callers/utils/denovo_call.cpp
-    core/callers/utils/call_wrapper.hpp
-    core/callers/utils/call_wrapper.cpp
-    core/callers/utils/vcf_header_factory.hpp
-    core/callers/utils/vcf_header_factory.cpp
-    core/callers/utils/vcf_record_factory.hpp
-    core/callers/utils/vcf_record_factory.cpp
+
+    core/types/calls/call_types.hpp
+    core/types/calls/call.hpp
+    core/types/calls/call.cpp
+    core/types/calls/germline_variant_call.hpp
+    core/types/calls/germline_variant_call.cpp
+    core/types/calls/reference_call.hpp
+    core/types/calls/reference_call.cpp
+    core/types/calls/somatic_call.hpp
+    core/types/calls/somatic_call.cpp
+    core/types/calls/variant_call.hpp
+    core/types/calls/variant_call.cpp
+    core/types/calls/denovo_call.hpp
+    core/types/calls/denovo_call.cpp
+    core/types/calls/call_wrapper.hpp
+    core/types/calls/call_wrapper.cpp
+    core/tools/vcf_header_factory.hpp
+    core/tools/vcf_header_factory.cpp
+    core/tools/vcf_record_factory.hpp
+    core/tools/vcf_record_factory.cpp
     
     core/csr/facets/read_assignment.hpp
     core/csr/facets/read_assignment.cpp
@@ -310,6 +310,8 @@ set(CORE_SOURCES
     core/tools/vargen/utils/assembler.cpp
     core/tools/vargen/utils/global_aligner.hpp
     core/tools/vargen/utils/global_aligner.cpp
+    core/tools/vargen/utils/assembler_active_region_generator.hpp
+    core/tools/vargen/utils/assembler_active_region_generator.cpp
     
     core/types/allele.hpp
     core/types/allele.cpp
@@ -351,6 +353,8 @@ set(OCTOPUS_SOURCES
 set(INCLUDE_SOURCES
     ${octopus_SOURCE_DIR}/lib/bioio.hpp
     ${octopus_SOURCE_DIR}/lib/tandem/tandem.hpp
+    ${octopus_SOURCE_DIR}//lib/ksp/custom_dijkstra_call.hpp
+    ${octopus_SOURCE_DIR}//lib/ksp/yen_ksp.hpp
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
@@ -391,7 +395,7 @@ if (BUILD_TESTING)
         target_link_libraries (Octopus ${Boost_LIBRARIES})
     endif (Boost_FOUND)
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
-    find_package (HTSlib 1.3.1 REQUIRED)
+    find_package (HTSlib 1.4 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (Octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (Octopus ${HTSlib_LIBRARIES})
@@ -419,7 +423,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
         target_link_libraries (octopus-debug ${Boost_LIBRARIES})
     endif (Boost_FOUND)
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
-    find_package (HTSlib 1.3.1 REQUIRED)
+    find_package (HTSlib 1.4 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (octopus-debug PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
@@ -449,7 +453,7 @@ else()
         target_link_libraries (octopus ${Boost_LIBRARIES})
     endif (Boost_FOUND)
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
-    find_package (HTSlib 1.3.1 REQUIRED)
+    find_package (HTSlib 1.4 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (octopus ${HTSlib_LIBRARIES})

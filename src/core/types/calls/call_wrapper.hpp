@@ -38,6 +38,8 @@ std::vector<std::unique_ptr<Call>> unwrap(std::deque<CallWrapper>&& calls);
 
 bool operator==(const CallWrapper& lhs, const CallWrapper& rhs);
 
+CallWrapper clone(const CallWrapper& call);
+
 } // namespace octopus
 
 #endif

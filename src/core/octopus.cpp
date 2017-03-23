@@ -42,7 +42,7 @@
 #include "utils/maths.hpp"
 #include "logging/progress_meter.hpp"
 #include "logging/logging.hpp"
-#include "core/callers/utils/vcf_header_factory.hpp"
+#include "core/tools/vcf_header_factory.hpp"
 #include "io/variant/vcf.hpp"
 #include "utils/timing.hpp"
 #include "exceptions/program_error.hpp"
@@ -123,8 +123,7 @@ auto get_call_types(const GenomeCallingComponents& components, const std::vector
     return result;
 }
 
-void write_caller_output_header(GenomeCallingComponents& components,
-                                const std::string& command)
+void write_caller_output_header(GenomeCallingComponents& components, const std::string& command)
 {
     const auto call_types = get_call_types(components, components.contigs());
     if (components.sites_only()) {
@@ -188,21 +187,17 @@ auto find_max_window(const ContigCallingComponents& components,
                      const GenomicRegion& remaining_call_region)
 {
     const auto& rm = components.read_manager.get();
-    
     if (!rm.has_reads(components.samples.get(), remaining_call_region)) {
         return remaining_call_region;
     }
-    
     auto result = rm.find_covered_subregion(components.samples, remaining_call_region,
                                             components.read_buffer_size);
-    
     if (ends_before(result, remaining_call_region)) {
         auto rest = right_overhang_region(remaining_call_region, result);
         if (!rm.has_reads(components.samples.get(), rest)) {
             result = remaining_call_region;
         }
     }
-    
     return result;
 }
 
@@ -406,8 +401,6 @@ TempVcfWriterMap make_temp_vcf_writers(const GenomeCallingComponents& components
 
 struct Task : public Mappable<Task>
 {
-    enum class ExecutionPolicy { seq, par, par_vec }; // To match Parallelism TS
-    
     GenomicRegion region;
     ExecutionPolicy policy;
     
@@ -451,15 +444,11 @@ private:
 using TaskQueue = std::queue<Task>;
 using TaskMap   = std::map<ContigName, TaskQueue, ContigOrder>;
 
-TaskQueue divide_work_into_tasks(const ContigCallingComponents& components,
-                                 const Task::ExecutionPolicy policy)
+TaskQueue divide_work_into_tasks(const ContigCallingComponents& components, const ExecutionPolicy policy)
 {
     TaskQueue result {};
-    
     if (components.regions.empty()) return result;
-    
     static constexpr GenomicRegion::Size minTaskSize {1000};
-    
     for (const auto& region : components.regions) {
         auto subregion = propose_call_subregion(components, region, minTaskSize);
         do {
@@ -467,16 +456,15 @@ TaskQueue divide_work_into_tasks(const ContigCallingComponents& components,
             subregion = propose_call_subregion(components, subregion, region, minTaskSize);
         } while (!is_after(subregion, region));
     }
-    
     return result;
 }
 
-Task::ExecutionPolicy make_execution_policy(const GenomeCallingComponents& components)
+ExecutionPolicy make_execution_policy(const GenomeCallingComponents& components)
 {
     if (components.num_threads()) {
-        return Task::ExecutionPolicy::seq;
+        return ExecutionPolicy::seq;
     }
-    return Task::ExecutionPolicy::par;
+    return ExecutionPolicy::par;
 }
 
 struct TaskMakerSyncPacket
@@ -495,7 +483,7 @@ auto make_contig_components(const ContigName& contig, GenomeCallingComponents& c
 }
 
 void make_remaining_tasks(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCallingComponents& components,
-                          const unsigned num_threads, Task::ExecutionPolicy policy, TaskMakerSyncPacket& sync)
+                          const unsigned num_threads, ExecutionPolicy policy, TaskMakerSyncPacket& sync)
 {
     assert(!contigs.empty());
     std::unique_lock<std::mutex> lk {sync.mutex, std::defer_lock};
@@ -1067,9 +1055,19 @@ class CallingBug : public ProgramError
     std::string do_where() const override { return "run_octopus"; }
     std::string do_why() const override
     {
-        return "Encountered an unknown error during calling. This probably means there is a bug"
-        " and your results are untrustworthy.";
+        if (what_) {
+            return "Encountered an exception during calling '" + *what_ + "'. This means there is a bug"
+            " and your results are untrustworthy.";
+        } else {
+            return "Encountered an unknown error during calling. This means there is a bug"
+            " and your results are untrustworthy.";
+        }
     }
+    
+    boost::optional<std::string> what_;
+public:
+    CallingBug() = default;
+    CallingBug(const std::exception& e) : what_ {e.what()} {}
 };
 
 void run_octopus(GenomeCallingComponents& components, std::string command)
@@ -1099,6 +1097,12 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
             cleanup(components);
         } catch (...) {}
         throw;
+    } catch (const std::exception& e) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {e};
     } catch (...) {
         try {
             if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";

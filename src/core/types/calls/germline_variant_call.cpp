@@ -10,4 +10,9 @@ void GermlineVariantCall::decorate(VcfRecord::Builder& record) const
     
 }
 
+std::unique_ptr<Call> GermlineVariantCall::do_clone() const
+{
+    return std::make_unique<GermlineVariantCall>(*this);
+}
+
 } // namespace octopus

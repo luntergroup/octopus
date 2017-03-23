@@ -33,14 +33,18 @@ class Variant;
 class Haplotype;
 
 namespace debug {
-    template <typename S> void print_alleles(S&& stream, const Haplotype& haplotype);
-    template <typename S> void print_variant_alleles(S&& stream, const Haplotype& haplotype);
-}
+
+template <typename S> void print_alleles(S&& stream, const Haplotype& haplotype);
+template <typename S> void print_variant_alleles(S&& stream, const Haplotype& haplotype);
+
+} // namespace debug
 
 namespace detail {
-    Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
-    Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::false_type);
-}
+
+Haplotype do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+Allele do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::false_type);
+
+} // namespace detail
 
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
 {
@@ -92,7 +96,7 @@ public:
     friend struct IsLessComplex;
     
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
-    friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     friend bool is_reference(const Haplotype& haplotype);
     friend Haplotype expand(const Haplotype& haplotype, MappingDomain::Position n);
     
@@ -210,14 +214,12 @@ public:
     
     Haplotype build();
     
-    friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region,
-                                       std::true_type);
+    friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region,
+                                     std::true_type);
     
 private:
     GenomicRegion region_;
-    
     std::deque<ContigAllele> explicit_alleles_;
-    
     std::reference_wrapper<const ReferenceGenome> reference_;
     
     ContigAllele get_intervening_reference_allele(const ContigAllele& lhs, const ContigAllele& rhs) const;
@@ -235,41 +237,37 @@ bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);
 
 template <typename MappableType>
-MappableType splice(const Haplotype& haplotype, const GenomicRegion& region)
+MappableType copy(const Haplotype& haplotype, const GenomicRegion& region)
 {
-    return detail::do_splice(haplotype, region, std::is_same<Haplotype, std::decay_t<MappableType>> {});
+    return detail::do_copy(haplotype, region, std::is_same<Haplotype, std::decay_t<MappableType>> {});
 }
 
-ContigAllele splice(const Haplotype& haplotype, const ContigRegion& region);
+ContigAllele copy(const Haplotype& haplotype, const ContigRegion& region);
 
 template <typename MappableType, typename Container,
           typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
-std::vector<MappableType> splice_all(const Container& haplotypes, const GenomicRegion& region)
+std::vector<MappableType> copy_unique(const Container& haplotypes, const GenomicRegion& region)
 {
     std::vector<MappableType> result {};
     result.reserve(haplotypes.size());
-    
     std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(result),
-                   [&region] (const auto& haplotype) { return splice<MappableType>(haplotype, region); });
+                   [&region] (const auto& haplotype) { return copy<MappableType>(haplotype, region); });
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    
     return result;
 }
 
 template <typename Container,
           typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
-std::vector<ContigAllele> splice_all(const Container& haplotypes, const ContigRegion& region)
+std::vector<ContigAllele> copy_unique(const Container& haplotypes, const ContigRegion& region)
 {
     std::vector<ContigAllele> result {};
     result.reserve(haplotypes.size());
-    
     for (const auto& haplotype : haplotypes) {
-        result.emplace_back(splice(haplotype, region));
+        result.emplace_back(copy(haplotype, region));
     }
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    
     return result;
 }
 
@@ -350,31 +348,35 @@ void print_variant_alleles(const Haplotype& haplotype);
 } // namespace octopus
 
 namespace std {
-    template <> struct hash<octopus::Haplotype>
+
+template <> struct hash<octopus::Haplotype>
+{
+    size_t operator()(const octopus::Haplotype& haplotype) const
     {
-        size_t operator()(const octopus::Haplotype& haplotype) const
-        {
-            return octopus::HaplotypeHash()(haplotype);
-        }
-    };
-    
-    template <> struct hash<reference_wrapper<const octopus::Haplotype>>
+        return octopus::HaplotypeHash()(haplotype);
+    }
+};
+
+template <> struct hash<reference_wrapper<const octopus::Haplotype>>
+{
+    size_t operator()(const reference_wrapper<const octopus::Haplotype> haplotype) const
     {
-        size_t operator()(const reference_wrapper<const octopus::Haplotype> haplotype) const
-        {
-            return hash<octopus::Haplotype>()(haplotype);
-        }
-    };
+        return hash<octopus::Haplotype>()(haplotype);
+    }
+};
+
 } // namespace std
 
 namespace boost {
-    template <> struct hash<octopus::Haplotype> : std::unary_function<octopus::Haplotype, std::size_t>
+
+template <> struct hash<octopus::Haplotype> : std::unary_function<octopus::Haplotype, std::size_t>
+{
+    std::size_t operator()(const octopus::Haplotype& h) const
     {
-        std::size_t operator()(const octopus::Haplotype& h) const
-        {
-            return std::hash<octopus::Haplotype>()(h);
-        }
-    };
+        return std::hash<octopus::Haplotype>()(h);
+    }
+};
+
 } // namespace boost
 
 #endif

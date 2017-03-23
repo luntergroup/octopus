@@ -44,7 +44,6 @@ public:
     
 protected:
     Variant variant_;
-    
     bool all_genotypes_are_self_contained() const;
     
 private:

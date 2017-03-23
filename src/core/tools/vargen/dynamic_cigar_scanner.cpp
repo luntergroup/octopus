@@ -41,7 +41,7 @@ bool DynamicCigarScanner::do_requires_reads() const noexcept
 namespace {
 
 template <typename Sequence, typename P, typename S>
-Sequence splice(const Sequence& sequence, const P pos, const S size)
+Sequence copy(const Sequence& sequence, const P pos, const S size)
 {
     const auto it = std::next(std::cbegin(sequence), pos);
     return Sequence {it, std::next(it, size)};
@@ -57,7 +57,7 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
     const auto& read_contig   = contig_name(read);
     const auto& read_sequence = read.sequence();
     auto sequence_iter     = cbegin(read_sequence);
-    auto base_quality_iter = cbegin(read.qualities());
+    auto base_quality_iter = cbegin(read.base_qualities());
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
     GenomicRegion region;
@@ -82,7 +82,7 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
             region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
             add_candidate(region,
                           reference_.get().fetch_sequence(region),
-                          splice(read_sequence, read_index, op_size),
+                          copy(read_sequence, read_index, op_size),
                           next(base_quality_iter, read_index));
             read_index += op_size;
             ref_index  += op_size;
@@ -92,7 +92,7 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
         {
             add_candidate(GenomicRegion {read_contig, ref_index, ref_index},
                           "",
-                          splice(read_sequence, read_index, op_size),
+                          copy(read_sequence, read_index, op_size),
                           next(base_quality_iter, read_index));
             read_index += op_size;
             break;
@@ -143,7 +143,7 @@ void DynamicCigarScanner::do_add_reads(const SampleName& sample, FlatSetIterator
     std::for_each(first, last, [this] (const AlignedRead& read) { add_read(read); });
 }
 
-unsigned get_min_depth(const Variant& v, const CoverageTracker& tracker)
+unsigned get_min_depth(const Variant& v, const CoverageTracker<GenomicRegion>& tracker)
 {
     if (is_insertion(v)) {
         const auto& region = mapped_region(v);

@@ -30,7 +30,7 @@ class DynamicCigarScanner : public VariantGenerator
 public:
     struct Options
     {
-        // Signature is (Variant, depth, observed qualities). For insertions, observed qualities is the sum.
+        // Signature is (Variant, depth, observed base_qualities). For insertions, observed base_qualities is the sum.
         using InclusionPredicate = std::function<bool(const Variant&, unsigned, std::vector<unsigned>&)>;
         using MatchPredicate = std::function<bool(const Variant&, const Variant&)>;
         InclusionPredicate include;
@@ -82,7 +82,7 @@ private:
     Options options_;
     std::deque<Candidate> candidates_;
     Variant::MappingDomain::Size max_seen_candidate_size_;
-    CoverageTracker read_coverage_tracker_;
+    CoverageTracker<GenomicRegion> read_coverage_tracker_;
     
     template <typename T1, typename T2, typename T3>
     void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
