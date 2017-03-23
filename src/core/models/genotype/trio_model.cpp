@@ -322,6 +322,20 @@ auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& maternal,
     return result;
 }
 
+bool all_haploid(const Genotype<Haplotype>& child,
+                 const Genotype<Haplotype>& mother,
+                 const Genotype<Haplotype>& father)
+{
+    return is_haploid(child) && is_haploid(mother) && is_haploid(father);
+}
+
+double probability_of_child_given_haploid_parent(const Haplotype& child,
+                                                 const Genotype<Haplotype>& parent,
+                                                 const DeNovoModel& mutation_model)
+{
+    return mutation_model.evaluate(child, parent[0]);
+}
+
 bool all_diploid(const Genotype<Haplotype>& child,
                  const Genotype<Haplotype>& mother,
                  const Genotype<Haplotype>& father)
@@ -329,9 +343,16 @@ bool all_diploid(const Genotype<Haplotype>& child,
     return is_diploid(child) && is_diploid(mother) && is_diploid(father);
 }
 
-double probability_of_child_given_parent(const Haplotype& child,
-                                         const Genotype<Haplotype>& parent,
-                                         const DeNovoModel& mutation_model)
+bool all_triploid(const Genotype<Haplotype>& child,
+                  const Genotype<Haplotype>& mother,
+                  const Genotype<Haplotype>& father)
+{
+    return is_triploid(child) && is_triploid(mother) && is_triploid(father);
+}
+
+double probability_of_child_given_diploid_parent(const Haplotype& child,
+                                                 const Genotype<Haplotype>& parent,
+                                                 const DeNovoModel& mutation_model)
 {
     static const double ln2 {std::log(2)};
     const auto p1 = mutation_model.evaluate(child, parent[0]);
@@ -339,14 +360,37 @@ double probability_of_child_given_parent(const Haplotype& child,
     return maths::log_sum_exp(p1, p2) - ln2;
 }
 
-double probability_of_child_given_parents(const Haplotype& child_from_mother,
-                                          const Haplotype& child_from_father,
-                                          const Genotype<Haplotype>& mother,
-                                          const Genotype<Haplotype>& father,
-                                          const DeNovoModel& mutation_model)
+double probability_of_child_given_diploid_parents(const Haplotype& child_from_mother,
+                                                  const Haplotype& child_from_father,
+                                                  const Genotype<Haplotype>& mother,
+                                                  const Genotype<Haplotype>& father,
+                                                  const DeNovoModel& mutation_model)
 {
-    return probability_of_child_given_parent(child_from_mother, mother, mutation_model)
-            + probability_of_child_given_parent(child_from_father, father, mutation_model);
+    return probability_of_child_given_diploid_parent(child_from_mother, mother, mutation_model)
+            + probability_of_child_given_diploid_parent(child_from_father, father, mutation_model);
+}
+
+double probability_of_child_given_triploid_parent(const Haplotype& child,
+                                                  const Genotype<Haplotype>& parent,
+                                                  const DeNovoModel& mutation_model)
+{
+    static const double ln3 {std::log(3)};
+    const auto p1 = mutation_model.evaluate(child, parent[0]);
+    const auto p2 = mutation_model.evaluate(child, parent[1]);
+    const auto p3 = mutation_model.evaluate(child, parent[2]);
+    return maths::log_sum_exp(p1, p2, p3) - ln3;
+}
+
+double probability_of_child_given_triploid_parents(const Haplotype& child1_from_mother,
+                                                   const Haplotype& child2_from_mother,
+                                                   const Haplotype& child_from_father,
+                                                   const Genotype<Haplotype>& mother,
+                                                   const Genotype<Haplotype>& father,
+                                                   const DeNovoModel& mutation_model)
+{
+    return probability_of_child_given_triploid_parent(child1_from_mother, mother, mutation_model)
+           + probability_of_child_given_triploid_parent(child2_from_mother, mother, mutation_model)
+           + probability_of_child_given_triploid_parent(child_from_father, father, mutation_model);
 }
 
 double probability_of_child_given_parents(const Genotype<Haplotype>& child,
@@ -356,9 +400,32 @@ double probability_of_child_given_parents(const Genotype<Haplotype>& child,
 {
     if (all_diploid(child, mother, father)) {
         static const double ln2 {std::log(2)};
-        const auto p1 = probability_of_child_given_parents(child[0], child[1], mother, father, mutation_model);
-        const auto p2 = probability_of_child_given_parents(child[1], child[0], mother, father, mutation_model);
+        const auto p1 = probability_of_child_given_diploid_parents(child[0], child[1], mother, father, mutation_model);
+        const auto p2 = probability_of_child_given_diploid_parents(child[1], child[0], mother, father, mutation_model);
         return maths::log_sum_exp(p1, p2) - ln2;
+    }
+    if (all_triploid(child, mother, father)) {
+        static const double ln6 {std::log(6)};
+        const auto p1 = probability_of_child_given_triploid_parents(child[0], child[1], child[2], mother, father, mutation_model);
+        const auto p2 = probability_of_child_given_triploid_parents(child[0], child[2], child[1], mother, father, mutation_model);
+        const auto p3 = probability_of_child_given_triploid_parents(child[1], child[0], child[2], mother, father, mutation_model);
+        const auto p4 = probability_of_child_given_triploid_parents(child[1], child[2], child[0], mother, father, mutation_model);
+        const auto p5 = probability_of_child_given_triploid_parents(child[2], child[0], child[1], mother, father, mutation_model);
+        const auto p6 = probability_of_child_given_triploid_parents(child[2], child[1], child[0], mother, father, mutation_model);
+        return maths::log_sum_exp({p1, p2, p3, p4, p5, p6}) - ln6;
+    }
+    if (is_diploid(mother) && is_haploid(father)) {
+        if (is_diploid(child)) {
+            static const double ln2 {std::log(2)};
+            const auto p1 = probability_of_child_given_diploid_parent(child[0], mother, mutation_model);
+            const auto p2 = probability_of_child_given_diploid_parent(child[1], mother, mutation_model);
+            const auto p3 = probability_of_child_given_haploid_parent(child[0], father, mutation_model);
+            const auto p4 = probability_of_child_given_haploid_parent(child[1], father, mutation_model);
+            return maths::log_sum_exp(p1 + p4, p2 + p3) - ln2;
+        }
+        if (is_haploid(child)) {
+            return probability_of_child_given_haploid_parent(child[0], father, mutation_model);
+        }
     }
     return 0; // TODO
 }
@@ -438,6 +505,14 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
                     const GenotypeVector& child_genotypes,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
+    if (maternal_genotypes.empty()) {
+        haplotype_likelihoods.prime(trio_.father());
+        return evaluate_allosome(paternal_genotypes, child_genotypes, haplotype_likelihoods);
+    }
+    if (paternal_genotypes.empty()) {
+        haplotype_likelihoods.prime(trio_.mother());
+        return evaluate_allosome(maternal_genotypes, child_genotypes, haplotype_likelihoods);
+    }
     assert(!maternal_genotypes.empty() && !paternal_genotypes.empty() && !child_genotypes.empty());
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
     haplotype_likelihoods.prime(trio_.mother());
@@ -462,8 +537,8 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
     auto joint_likelihoods = join(reduced_parental_likelihoods, reduced_child_likelihoods, mutation_model_);
     clear(parental_likelihoods);
     clear(child_likelihoods);
-    const auto evidence = normalise_exp(joint_likelihoods);
     if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
+    const auto evidence = normalise_exp(joint_likelihoods);
     return {std::move(joint_likelihoods), evidence};
 }
 
@@ -471,6 +546,71 @@ TrioModel::InferredLatents
 TrioModel::evaluate(const GenotypeVector& genotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     return evaluate(genotypes, genotypes, genotypes, haplotype_likelihoods);
+}
+
+double probability_of_child_given_parent(const Genotype<Haplotype>& child,
+                                         const Genotype<Haplotype>& parent,
+                                         const DeNovoModel& mutation_model)
+{
+    if (is_haploid(child) && is_haploid(parent)) {
+        return mutation_model.evaluate(child[0], parent[0]);
+    }
+    return 0; // TODO
+}
+
+auto joint_probability(const GenotypeRefProbabilityPair& parent,
+                       const GenotypeRefProbabilityPair& child,
+                       const DeNovoModel& mutation_model)
+{
+    return parent.probability + child.probability
+           + probability_of_child_given_parent(child.genotype, parent.genotype, mutation_model);
+}
+
+auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& parent,
+          const ReducedVectorMap<GenotypeRefProbabilityPair>& child,
+          const DeNovoModel& mutation_model)
+{
+    std::vector<JointProbability> result {};
+    result.reserve(join_size(parent, child));
+    std::for_each(parent.first, parent.last_to_join, [&] (const auto& p) {
+        std::for_each(child.first, child.last_to_join, [&] (const auto& c) {
+            result.push_back({p.genotype, p.genotype, c.genotype, joint_probability(p, c, mutation_model)});
+        });
+    });
+    std::for_each(parent.last_to_join, parent.last, [&] (const auto& p) {
+        std::for_each(child.first, child.last_to_partially_join, [&] (const auto& c) {
+            result.push_back({p.genotype, p.genotype, c.genotype, joint_probability(p, c, mutation_model)});
+        });
+    });
+    std::for_each(child.last_to_join, child.last, [&] (const auto& c) {
+        std::for_each(parent.first, parent.last_to_partially_join, [&] (const auto& p) {
+            result.push_back({p.genotype, p.genotype, c.genotype, joint_probability(p, c, mutation_model)});
+        });
+    });
+    return result;
+}
+
+TrioModel::InferredLatents
+TrioModel::evaluate_allosome(const GenotypeVector& parent_genotypes,
+                             const GenotypeVector& child_genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    assert(!parent_genotypes.empty() && child_genotypes.empty());
+    const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
+    assert(haplotype_likelihoods.is_primed());
+    auto parent_likelihoods = compute_likelihoods(parent_genotypes, likelihood_model);
+    if (debug_log_) debug::print(stream(*debug_log_), "parent", parent_likelihoods);
+    const auto reduced_parent_likelihoods = reduce(parent_likelihoods, prior_model_, options_);
+    haplotype_likelihoods.prime(trio_.child());
+    auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
+    if (debug_log_) debug::print(stream(*debug_log_), "child", child_likelihoods);
+    const auto reduced_child_likelihoods = reduce(child_likelihoods, prior_model_, options_);
+    auto joint_likelihoods = join(reduced_parent_likelihoods, reduced_child_likelihoods, mutation_model_);
+    clear(parent_likelihoods);
+    clear(child_likelihoods);
+    const auto evidence = normalise_exp(joint_likelihoods);
+    if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
+    return {std::move(joint_likelihoods), evidence};
 }
 
 namespace debug {
