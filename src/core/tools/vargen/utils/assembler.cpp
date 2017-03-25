@@ -945,25 +945,51 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
     std::deque<Edge> cyclic_edges {};
     CyclicEdgeDetector<decltype(cyclic_edges)> vis {cyclic_edges};
     boost::depth_first_search(graph_, boost::visitor(vis).root_vertex(reference_head()).vertex_index_map(index_map));
-    std::unordered_set<Vertex> bad_kmers {};
+    if (cyclic_edges.empty()) return;
+    std::unordered_set<Vertex> bad_kmers {}, reference_origins {}, reference_sinks {};
     if (break_chains) {
         bad_kmers.reserve(std::min(2 * cyclic_edges.size(), num_kmers()));
+        reference_origins.reserve(num_reference_kmers());
     }
     for (const Edge& e : cyclic_edges) {
         if (!is_reference(e)) {
             if (break_chains) {
-                if (!is_source_reference(e)) {
-                    bad_kmers.insert(boost::source(e, graph_));
+                Vertex cycle_origin {boost::source(e, graph_)};
+                while (!is_reference(cycle_origin) && is_bridge(cycle_origin)) {
+                    cycle_origin = *boost::inv_adjacent_vertices(cycle_origin, graph_).first;
                 }
-                if (!is_target_reference(e)) {
-                    bad_kmers.insert(boost::target(e, graph_));
+                if (is_reference(cycle_origin)) {
+                    reference_origins.insert(cycle_origin);
+                } else {
+                    bad_kmers.insert(cycle_origin);
+                }
+                Vertex cycle_sink {boost::target(e, graph_)};
+                while (!is_reference(cycle_sink) && is_bridge(cycle_sink)) {
+                    cycle_sink = *boost::adjacent_vertices(cycle_sink, graph_).first;
+                }
+                if (is_reference(cycle_sink)) {
+                    reference_sinks.insert(cycle_sink);
+                } else {
+                    bad_kmers.insert(cycle_sink);
                 }
             }
             remove_edge(e);
         }
     }
+    bool regenerate_indices {false};
+    for (Vertex v : reference_origins) {
+        boost::remove_in_edge_if(v, [this] (Edge e) { return !is_reference(e); }, graph_);
+        regenerate_indices = true;
+    }
+    for (Vertex v : reference_sinks) {
+        boost::remove_out_edge_if(v, [this] (Edge e) { return !is_reference(e); }, graph_);
+        regenerate_indices = true;
+    }
     if (!bad_kmers.empty()) {
         clear_and_remove_all(bad_kmers);
+        regenerate_indices = true;
+    }
+    if (regenerate_indices) {
         regenerate_vertex_indices();
     }
 }
