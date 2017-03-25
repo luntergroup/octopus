@@ -148,7 +148,21 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
         case IndicatorPolicy::includeIfSharedWithNovelRegion:
         {
             if (distance(first_previous_itr, included_itr) > 0) {
-                const auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
+                auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
+                if (it != included_itr) {
+                    auto expanded_leftmost = mapped_region(*it);
+                    std::for_each(it, included_itr, [&] (const auto& allele) {
+                        const auto ref_dist = reference_distance(allele);
+                        if (ref_dist > 1) {
+                            const auto max_expansion = std::min(mapped_begin(allele), 2 * ref_dist);
+                            auto expanded_allele_begin = mapped_begin(allele) - max_expansion;
+                            if (expanded_allele_begin < mapped_begin(expanded_leftmost)) {
+                                expanded_leftmost = expand_lhs(mapped_region(allele), max_expansion);
+                            }
+                        }
+                    });
+                    for (; it != first_previous_itr && overlaps(*it, expanded_leftmost); --it);
+                }
                 num_indicators = static_cast<unsigned>(distance(it, included_itr));
             }
             break;
