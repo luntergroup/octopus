@@ -408,130 +408,146 @@ void remove_duplicate_novels(const std::vector<GenomicRegion>& indicator_regions
     }
 }
 
-std::size_t get_reduction_factor(HaplotypeGenerator::Policies::Lagging policy) noexcept
+double get_reduction_factor(HaplotypeGenerator::Policies::Lagging policy) noexcept
 {
     using HGP = HaplotypeGenerator::Policies::Lagging;
     switch (policy) {
         case HGP::none:
         case HGP::conservative:
-            return 0;
+            return 1.5;
         case HGP::moderate:
             return 2;
         case HGP::normal:
             return 3;
         case HGP::aggressive:
-            return 4;
+            return 5;
         default:
-            return 3; // prevents compiler warning
+            return 1; // prevents compiler warning
     }
 }
 
+auto to_log2s(const std::vector<unsigned>& values)
+{
+    std::vector<double> result(values.size());
+    std::transform(std::cbegin(values), std::cend(values), std::begin(result),
+                   [] (auto value) { return std::log2(value); });
+    return result;
+}
+
+auto extract_overlap_counts(const std::vector<GenomicRegion>& regions, const MappableFlatSet<Allele>& alleles)
+{
+    std::vector<unsigned> result(regions.size());
+    std::transform(std::cbegin(regions), std::cend(regions), std::begin(result),
+                   [&] (const auto& region) { return count_overlapped(alleles, region); });
+    return result;
+}
+
+auto get_partial_overlap_factors(const std::vector<GenomicRegion>& regions, const MappableFlatSet<Allele>& alleles)
+{
+    auto factors = to_log2s(extract_overlap_counts(regions, alleles));
+    std::partial_sum(std::cbegin(factors), std::cend(factors), std::begin(factors));
+    std::vector<std::size_t> result(factors.size());
+    std::transform(std::cbegin(factors), std::cend(factors), std::begin(result),
+                   [] (auto f) { return static_cast<std::size_t>(std::ceil(f)); });
+    return result;
+}
+
 std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::size_t target_tree_size,
-                                 const std::size_t num_mutually_exclusive_indicator_regions,
-                                 const std::size_t num_mutually_exclusive_novel_regions,
-                                 const std::size_t reduction_factor)
+                                 const std::vector<GenomicRegion>& indicator_blocks,
+                                 const std::vector<GenomicRegion>& novel_blocks,
+                                 const MappableFlatSet<Allele>& alleles,
+                                 const HaplotypeGenerator::Policies::Lagging policy)
 {
     if (curr_tree_size == 0) return 0;
-    const auto effective_log_space = static_cast<std::size_t>(std::log2(
-    std::max(target_tree_size / curr_tree_size, std::size_t {1})));
-    if (effective_log_space >= num_mutually_exclusive_novel_regions) {
+    if (novel_blocks.empty() || indicator_blocks.empty()) return curr_tree_size;
+    const auto novel_factors = get_partial_overlap_factors(novel_blocks, alleles);
+    const auto effective_log_space = static_cast<std::size_t>(std::log2(std::max(target_tree_size / curr_tree_size, std::size_t {1})));
+    if (effective_log_space >= novel_factors.back()) {
         return curr_tree_size;
     } else {
-        const auto exponent = std::min(num_mutually_exclusive_indicator_regions,
-                                       (std::max(num_mutually_exclusive_novel_regions, reduction_factor)
-                                        / std::max(reduction_factor, std::size_t {1})) - 1);
-        return std::min(static_cast<std::size_t>(target_tree_size / std::pow(2, exponent)), curr_tree_size);
+        const auto reduction_factor = get_reduction_factor(policy);
+        const auto num_novels_required = static_cast<std::size_t>(novel_factors.size() / reduction_factor);
+        const auto required_novel_factor = novel_factors[num_novels_required];
+        const auto tree_reduction_denom = static_cast<std::size_t>(std::pow(2, required_novel_factor));
+        return std::min(target_tree_size / tree_reduction_denom, curr_tree_size);
     }
 }
 
-std::size_t get_target_tree_size(const std::size_t curr_tree_size, const std::size_t target_tree_size,
-                                 const std::size_t num_mutually_exclusive_indicator_regions,
-                                 const std::size_t num_mutually_exclusive_novel_regions,
-                                 HaplotypeGenerator::Policies::Lagging policy)
+auto max_ref_distance(const GenomicRegion& region, const MappableFlatSet<Allele>& alleles)
 {
-    const auto reduction_factor = get_reduction_factor(policy);
-    return get_target_tree_size(curr_tree_size, target_tree_size, num_mutually_exclusive_indicator_regions,
-                                num_mutually_exclusive_novel_regions, reduction_factor);
+    const auto contained = contained_range(alleles, region);
+    auto itr = std::max_element(std::cbegin(contained), std::cend(contained),
+                                [] (const auto& lhs, const auto& rhs) {
+                                    return reference_distance(lhs) < reference_distance(rhs);
+                                });
+    return reference_distance(*itr);
 }
 
-auto max_ref_distance(const GenomicRegion& passed_region, const HaplotypeTree& tree)
+auto max_ref_distance(const GenomicRegion& region, const HaplotypeTree& tree)
 {
     HaplotypeTree::HaplotypeLength min_length, max_length;
-    std::tie(min_length, max_length) = minmax_haplotype_lengths(tree, passed_region);
+    std::tie(min_length, max_length) = minmax_haplotype_lengths(tree, region);
     if (min_length == max_length) {
         return HaplotypeTree::HaplotypeLength {0};
     } else {
-        if (min_length <= size(passed_region) && size(passed_region) <= max_length) {
-            return std::max(max_length - size(passed_region), size(passed_region) - min_length);
-        } else if (min_length <= size(passed_region)) {
-            return size(passed_region) - min_length;
-        } else if (size(passed_region) <= max_length) {
-            return max_length - size(passed_region);
+        if (min_length <= size(region) && size(region) <= max_length) {
+            return std::max(max_length - size(region), size(region) - min_length);
+        } else if (min_length <= size(region)) {
+            return size(region) - min_length;
+        } else if (size(region) <= max_length) {
+            return max_length - size(region);
         } else {
             return HaplotypeTree::HaplotypeLength {0};
         }
     }
 }
 
-bool requires_exclusion_zone(const GenomicRegion& passed_region, const HaplotypeTree& tree,
-                             const Haplotype::MappingDomain::Size min_flank_pad)
+bool requires_exclusion_zone(const GenomicRegion& region, const MappableFlatSet<Allele>& alleles,
+                             const HaplotypeTree& tree, const Haplotype::NucleotideSequence::size_type ref_distance_join_threshold)
 {
-    return max_ref_distance(passed_region, tree) >= min_flank_pad;
+    return max_ref_distance(region, alleles) > ref_distance_join_threshold
+           && max_ref_distance(region, tree) > ref_distance_join_threshold;
 }
 
 boost::optional<GenomicRegion>
-get_exclusion_zone(const GenomicRegion& passed_region, const HaplotypeTree& tree,
-                   const Haplotype::MappingDomain::Size min_flank_pad,
-                   const ReadMap& reads)
+get_exclusion_zone(const GenomicRegion& region, const MappableFlatSet<Allele>& alleles,
+                   const HaplotypeTree& tree, const Haplotype::NucleotideSequence::size_type ref_distance_join_threshold)
 {
-    if (requires_exclusion_zone(passed_region, tree, min_flank_pad)) {
-        return encompassing_overlap_region(reads, passed_region);
+    if (requires_exclusion_zone(region, alleles, tree, ref_distance_join_threshold)) {
+        return expand(region, 2 * ref_distance_join_threshold);
     } else {
         return boost::none;
     }
 }
 
-boost::optional<GenomicRegion>
-get_exclusion_zone(const HaplotypeTree& tree, const GenomicRegion& active_region,
-                   const std::vector<GenomicRegion>& indicator_regions,
-                   const MappableFlatSet<Allele>& alleles, const ReadMap& reads,
-                   const Haplotype::MappingDomain::Size min_flank_pad)
+template <typename Range>
+auto extract_indicator_alleles(const Range& indicator_alleles, const MappableFlatSet<Allele>& alleles,
+                               const HaplotypeTree& tree,
+                               const boost::optional<Haplotype::NucleotideSequence::size_type> ref_distance_join_threshold)
 {
-    const auto new_passed_region = left_overhang_region(active_region, indicator_regions.front());
-    auto passed_alleles = contained_range(alleles, new_passed_region);
-    while (!empty(passed_alleles) && overlaps(passed_alleles.back(), indicator_regions.front())) {
-        passed_alleles.advance_end(-1);
+    auto indicator_blocks = extract_mutually_exclusive_regions(indicator_alleles);
+    if (!ref_distance_join_threshold) return indicator_blocks;
+    std::vector<GenomicRegion> exclusion_zones {};
+    exclusion_zones.reserve(indicator_blocks.size());
+    for (const auto& block : indicator_blocks) {
+        auto exclusion_zone = get_exclusion_zone(block, alleles, tree, *ref_distance_join_threshold);
+        if (exclusion_zone) exclusion_zones.push_back(std::move(*exclusion_zone));
     }
-    if (!empty(passed_alleles)) {
-        auto passed_allele_region = encompassing_region(passed_alleles);
-        auto exclusion_zone = get_exclusion_zone(passed_allele_region, tree, min_flank_pad, reads);
-        if (exclusion_zone) {
-            if (!indicator_regions.empty()) {
-                auto indicator_region = closed_region(indicator_regions.front(), indicator_regions.back());
-                while (overlaps(indicator_region, *exclusion_zone) && !contains(*exclusion_zone, indicator_region)) {
-                    const auto excluded_indicator_regions = overlap_range(indicator_regions, *exclusion_zone,
-                                                                          BidirectionallySortedTag {});
-                    assert(!empty(excluded_indicator_regions));
-                    const auto excluded_indicator_region = closed_region(excluded_indicator_regions.front(),
-                                                                         excluded_indicator_regions.back());
-                    const auto excluded_indicator_region_exclusion_zone = get_exclusion_zone(excluded_indicator_region, tree,
-                                                                                             min_flank_pad, reads);
-                    if (!excluded_indicator_region_exclusion_zone) {
-                        exclusion_zone = closed_region(*exclusion_zone, excluded_indicator_region);
-                        break;
-                    }
-                    exclusion_zone = closed_region(*exclusion_zone, *excluded_indicator_region_exclusion_zone);
-                    indicator_region = right_overhang_region(indicator_region, *exclusion_zone);
-                }
-                if (contains(*exclusion_zone, indicator_region)) {
-                    exclusion_zone = get_exclusion_zone(*exclusion_zone, tree, min_flank_pad, reads);
-                }
-            }
-        }
-        return exclusion_zone;
-    } else {
-        return boost::none;
+    if (exclusion_zones.empty()) return indicator_blocks;
+    if (exclusion_zones.size() > 1) {
+        exclusion_zones = extract_mutually_exclusive_regions(exclusion_zones);
     }
+    std::vector<GenomicRegion> result {};
+    result.reserve(indicator_blocks.size());
+    auto last_block = std::cbegin(indicator_blocks);
+    for (auto&& exclusion_zone : exclusion_zones) {
+        auto interacting = bases(overlap_range(last_block, std::cend(indicator_blocks), exclusion_zone, BidirectionallySortedTag {}));
+        result.insert(std::cend(result), last_block, std::begin(interacting));
+        result.push_back(std::move(exclusion_zone));
+        last_block = std::end(interacting);
+    }
+    result.insert(std::cend(result), last_block, std::cend(indicator_blocks));
+    return result;
 }
 
 } // namespace
@@ -562,57 +578,39 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         const auto novel_region  = right_overhang_region(max_lagged_region, active_region_);
         const auto novel_alleles = overlap_range(alleles_, novel_region);
         assert(!novel_alleles.empty());
-        auto mutually_exclusive_novel_regions = extract_mutually_exclusive_regions(novel_alleles);
+        auto novel_blocks = extract_mutually_exclusive_regions(novel_alleles);
         // contained_range is required for indicators as previous active alleles must be contained
         // within the reported active region.
-        const auto indicator_region  = *overlapped_region(active_region_, max_lagged_region);
-        const auto indicator_alleles = contained_range(alleles_, indicator_region);
-        if (!indicator_alleles.empty()) {
-            auto mutually_exclusive_indicator_regions = extract_mutually_exclusive_regions(indicator_alleles);
+        const auto indicator_region = *overlapped_region(active_region_, max_lagged_region);
+        if (has_contained(alleles_, indicator_region)) {
+            const auto indicator_alleles = contained_range(alleles_, indicator_region);
+            auto indicator_blocks = extract_indicator_alleles(indicator_alleles, alleles_, tree_, policies_.exclusion_threshold);
             // Although HaplotypeTree can handle duplicate extension, if the tree is not in a complete
             // state (i.e. it has been pruned) then adding duplicates will corrupt the tree.
-            remove_duplicate_novels(mutually_exclusive_indicator_regions, mutually_exclusive_novel_regions);
+            remove_duplicate_novels(indicator_blocks, novel_blocks);
             if (!in_holdout_mode()) {
                 const auto novel_overlap_region = encompassing_region(novel_alleles);
-                while (!mutually_exclusive_indicator_regions.empty()
-                       && overlaps(mutually_exclusive_indicator_regions.back(), novel_overlap_region)) {
-                    mutually_exclusive_indicator_regions.pop_back();
+                while (!indicator_blocks.empty() && overlaps(indicator_blocks.back(), novel_overlap_region)) {
+                    indicator_blocks.pop_back();
                 }
-                auto target_tree_size = get_target_tree_size(test_tree.num_haplotypes(),
-                                                             policies_.haplotype_limits.target,
-                                                             mutually_exclusive_indicator_regions.size(),
-                                                             mutually_exclusive_novel_regions.size(),
-                                                             policies_.lagging);
-                prune_indicators(test_tree, mutually_exclusive_indicator_regions, target_tree_size);
-                if (policies_.exclusion_threshold) {
-                    const auto exclusion_zone = get_exclusion_zone(test_tree, active_region_,
-                                                                   mutually_exclusive_indicator_regions,
-                                                                   alleles_, reads_,
-                                                                   *policies_.exclusion_threshold);
-                    if (exclusion_zone) {
-                        if (contains(*exclusion_zone, indicator_region)) {
-                            test_tree = tree_;
-                        } else {
-                            test_tree.clear(*exclusion_zone);
-                        }
-                    }
-                }
+                auto target_tree_size = get_target_tree_size(test_tree.num_haplotypes(), policies_.haplotype_limits.target,
+                                                             indicator_blocks, novel_blocks, alleles_, policies_.lagging);
+                prune_indicators(test_tree, indicator_blocks, target_tree_size);
             }
         }
         if (in_holdout_mode() && ends_before(top_holdout_region(), novel_region)) {
             const auto holdout_novel_region = closed_region(novel_region, top_holdout_region());
-            mutually_exclusive_novel_regions = copy_overlapped(mutually_exclusive_novel_regions, holdout_novel_region);
+            novel_blocks = copy_overlapped(novel_blocks, holdout_novel_region);
         }
-        const auto num_novel_regions_added = extend_novel(test_tree, mutually_exclusive_novel_regions,
-                                                          novel_alleles, policies_.haplotype_limits);
+        const auto num_novel_regions_added = extend_novel(test_tree, novel_blocks, novel_alleles, policies_.haplotype_limits);
         if (num_novel_regions_added > 0) {
             next_active_region_ = test_tree.encompassing_region();
         } else {
-            assert(!mutually_exclusive_novel_regions.empty());
+            assert(!novel_blocks.empty());
             if (test_tree.is_empty()) {
-                next_active_region_ = mutually_exclusive_novel_regions.front();
+                next_active_region_ = novel_blocks.front();
             } else {
-                next_active_region_ = closed_region(test_tree.encompassing_region(), mutually_exclusive_novel_regions.front());
+                next_active_region_ = closed_region(test_tree.encompassing_region(), novel_blocks.front());
             }
         }
         if (*next_active_region_ == active_region_) {
@@ -707,7 +705,7 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
             reset_next_active_region();
             novel_active_region = right_overhang_region(active_region_, active_region_before_holdout);
             novel_active_alleles = overlap_range(alleles_, novel_active_region);
-            last_added_novel_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.overflow);
+            last_added_novel_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
             if (overlaps(active_region_, top_holdout_region())) {
                 next_holdout_region = *overlapped_region(active_region_, top_holdout_region());
             } else {
