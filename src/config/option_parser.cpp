@@ -357,7 +357,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Regions with more haplotypes than this will be skipped")
     
     ("max-holdout-depth",
-     po::value<int>()->default_value(5),
+     po::value<int>()->default_value(20),
      "Maximum number of holdout attempts the haplotype generator can make before the region"
      " is skipped")
     
