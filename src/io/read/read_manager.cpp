@@ -190,7 +190,7 @@ auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker, cons
 {
     const auto tracker_region = position_tracker.encompassing_region();
     if (tracker_region) {
-        if (ends_before(region.contig_region(), *tracker_region)) {
+        if (is_before(*tracker_region, region.contig_region()) || ends_before(region.contig_region(), *tracker_region)) {
             return region;
         } else {
             return GenomicRegion {region.contig_name(), closed_region(region.contig_region(), *tracker_region)};
@@ -203,6 +203,7 @@ auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker, cons
 auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker,
                      const GenomicRegion& region, const std::size_t max_coverage)
 {
+    if (position_tracker.is_empty()) return region;
     const auto max_region = max_head_region(position_tracker, region);
     if (position_tracker.total_coverage(max_region.contig_region()) <= max_coverage) return max_region;
     auto position_coverage = position_tracker.coverage(max_region.contig_region());
