@@ -955,7 +955,8 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
         if (!is_reference(e)) {
             if (break_chains) {
                 Vertex cycle_origin {boost::source(e, graph_)};
-                while (!is_reference(cycle_origin) && is_bridge(cycle_origin)) {
+                while (!is_reference(cycle_origin) && is_bridge(cycle_origin) && bad_kmers.count(cycle_origin) == 0) {
+                    bad_kmers.insert(cycle_origin);
                     cycle_origin = *boost::inv_adjacent_vertices(cycle_origin, graph_).first;
                 }
                 if (is_reference(cycle_origin)) {
@@ -964,7 +965,8 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
                     bad_kmers.insert(cycle_origin);
                 }
                 Vertex cycle_sink {boost::target(e, graph_)};
-                while (!is_reference(cycle_sink) && is_bridge(cycle_sink)) {
+                while (!is_reference(cycle_sink) && is_bridge(cycle_sink) && bad_kmers.count(cycle_sink) == 0) {
+                    bad_kmers.insert(cycle_origin);
                     cycle_sink = *boost::adjacent_vertices(cycle_sink, graph_).first;
                 }
                 if (is_reference(cycle_sink)) {
