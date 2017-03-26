@@ -14,6 +14,8 @@
 #include <stdexcept>
 #include <cassert>
 
+#include <boost/optional.hpp>
+
 #include "concepts/mappable.hpp"
 #include "maths.hpp"
 
@@ -58,7 +60,7 @@ public:
     
     std::vector<unsigned> coverage(const Region& region) const;
     
-    Region encompassing_region() const;
+    boost::optional<Region> encompassing_region() const;
     
     void clear() noexcept;
     
@@ -176,9 +178,9 @@ std::vector<unsigned> CoverageTracker<Region>::coverage(const Region& region) co
 {
     if (coverage_.empty()) return std::vector<unsigned>(size(region), 0);
     const auto p = range(region);
-    if (!contains(encompassing_region(), region)) {
+    if (!contains(encompassing_region_, region)) {
         std::vector<unsigned> result(size(region), 0);
-        const auto d = std::max(begin_distance(region, encompassing_region()), GenomicRegion::Distance {0});
+        const auto d = std::max(begin_distance(region, encompassing_region_), GenomicRegion::Distance {0});
         std::copy(p.first, p.second, std::next(std::begin(result), d));
         return result;
     }
@@ -186,9 +188,13 @@ std::vector<unsigned> CoverageTracker<Region>::coverage(const Region& region) co
 }
 
 template <typename Region>
-Region CoverageTracker<Region>::encompassing_region() const
+boost::optional<Region> CoverageTracker<Region>::encompassing_region() const
 {
-    return encompassing_region_;
+    if (num_mappables_added_ > 0) {
+        return encompassing_region_;
+    } else {
+        return boost::none;
+    }
 }
 
 template <typename Region>
@@ -251,10 +257,11 @@ std::pair<typename CoverageTracker<Region>::Iterator, typename CoverageTracker<R
 CoverageTracker<Region>::range(const Region& region) const
 {
     auto first = std::begin(coverage_);
+    if (coverage_.empty()) return {first, first};
     if (begins_before(encompassing_region_, region)) {
         std::advance(first, begin_distance(encompassing_region_, region));
     }
-    return std::make_pair(first, std::next(first, overlap_size(region, encompassing_region_)));
+    return {first, std::next(first, overlap_size(region, encompassing_region_))};
 }
 
 } // namespace octopus

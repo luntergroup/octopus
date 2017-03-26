@@ -6,12 +6,14 @@
 
 #include <cstddef>
 #include <unordered_map>
+#include <string>
 #include <utility>
 
 #include <boost/optional.hpp>
 #include <boost/functional/hash.hpp>
 
 #include "core/types/haplotype.hpp"
+#include "../pairhmm/pair_hmm.hpp"
 
 namespace octopus {
 
@@ -52,11 +54,12 @@ private:
         }
     };
     
-    Parameters parameters_;
+    hmm::BasicMutationModel mutation_model_;
     std::size_t num_haplotypes_hint_;
     CachingStrategy caching_;
     mutable std::unordered_map<Haplotype, std::unordered_map<Haplotype, double>> value_cache_;
     mutable std::unordered_map<std::pair<const Haplotype*, const Haplotype*>, double, AddressPairHash> address_cache_;
+    mutable std::string padded_given_;
     
     double evaluate_uncached(const Haplotype& target, const Haplotype& given) const;
     double evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const;

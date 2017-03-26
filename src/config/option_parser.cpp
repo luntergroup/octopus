@@ -315,7 +315,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "The maximum region size that can be used for local assembly")
     
     ("max-assemble-region-overlap",
-     po::value<int>()->default_value(50),
+     po::value<int>()->default_value(200),
      "The maximum number of bases allowed to overlap assembly regions")
     
     ("force-assemble",

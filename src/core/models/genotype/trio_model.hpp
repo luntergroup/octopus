@@ -79,6 +79,10 @@ private:
     const DeNovoModel& mutation_model_;
     Options options_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
+    
+    InferredLatents evaluate_allosome(const GenotypeVector& parent_genotypes,
+                                      const GenotypeVector& child_genotypes,
+                                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
 };
     
 } // namespace model

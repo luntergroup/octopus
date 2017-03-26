@@ -189,10 +189,14 @@ void add(GenomicRegion::Position p, CoverageTracker<ContigRegion>& position_trac
 auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker, const GenomicRegion& region)
 {
     const auto tracker_region = position_tracker.encompassing_region();
-    if (ends_before(region.contig_region(), tracker_region)) {
-        return region;
+    if (tracker_region) {
+        if (ends_before(region.contig_region(), *tracker_region)) {
+            return region;
+        } else {
+            return GenomicRegion {region.contig_name(), closed_region(region.contig_region(), *tracker_region)};
+        }
     } else {
-        return GenomicRegion {region.contig_name(), closed_region(region.contig_region(), tracker_region)};
+        return region;
     }
 }
 

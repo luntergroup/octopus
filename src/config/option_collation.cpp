@@ -1190,10 +1190,9 @@ class BadTrioSamples : public UserError
     boost::optional<SampleName> mother_, father_;
     
 public:
-    BadTrioSamples(boost::optional<SampleName> mother,
-                   boost::optional<SampleName> father)
-    : mother_ {mother}
-    , father_ {father}
+    BadTrioSamples(boost::optional<SampleName> mother, boost::optional<SampleName> father)
+    : mother_ {std::move(mother)}
+    , father_ {std::move(father)}
     {}
 };
 
@@ -1282,12 +1281,14 @@ Trio make_trio(std::vector<SampleName> samples, const OptionMap& options,
                         std::cbegin(parents), std::cend(parents),
                         std::back_inserter(children));
     if (children.size() != 1) {
-        const auto iter1 = std::find(std::cbegin(children), std::cend(children), mother);
-        const auto iter2 = std::find(std::cbegin(children), std::cend(children), father);
-        boost::optional<SampleName> mother, father;
-        if (iter1 != std::cend(children)) mother = *iter1;
-        if (iter2 != std::cend(children)) father = *iter2;
-        throw BadTrioSamples {mother, father};
+        boost::optional<SampleName> bad_mother, bad_father;
+        if (!std::binary_search(std::cbegin(samples), std::cend(samples), mother)) {
+            bad_mother = std::move(mother);
+        }
+        if (!std::binary_search(std::cbegin(samples), std::cend(samples), father)) {
+            bad_father = std::move(father);
+        }
+        throw BadTrioSamples {std::move(bad_mother), std::move(bad_father)};
     }
     return Trio {
         Trio::Mother {std::move(mother)},
