@@ -208,7 +208,7 @@ auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker,
     if (position_tracker.total_coverage(max_region.contig_region()) <= max_coverage) return max_region;
     auto position_coverage = position_tracker.coverage(max_region.contig_region());
     std::partial_sum(std::begin(position_coverage), std::end(position_coverage), std::begin(position_coverage));
-    const auto last_position = std::lower_bound(std::cbegin(position_coverage), std::cend(position_coverage), max_coverage);
+    const auto last_position = std::upper_bound(std::cbegin(position_coverage), std::cend(position_coverage), max_coverage);
     return expand_rhs(max_region, std::distance(std::cbegin(position_coverage), last_position));
 }
 
@@ -224,10 +224,16 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
     auto reader_itr = partition_open(reader_paths);
     CoverageTracker<ContigRegion> position_tracker {};
     while (!reader_paths.empty()) {
+        bool added_tail_position {false};
         std::for_each(reader_itr, end(reader_paths), [&] (const auto& reader_path) {
-            const auto positions = open_readers_.at(reader_path).extract_read_positions(samples, region, max_reads);
+            // Request one more than the max so we can determine if the entire request region can be included
+            const auto positions = open_readers_.at(reader_path).extract_read_positions(samples, region, max_reads + 1);
             for (auto position : positions) {
                 add(position, position_tracker);
+            }
+            if (positions.size() <= max_reads && !added_tail_position) {
+                position_tracker.add(tail_position(region).contig_region());
+                added_tail_position = true;
             }
         });
         reader_paths.erase(reader_itr, end(reader_paths));
