@@ -122,6 +122,8 @@ private:
     MappableFlatSet<Allele> alleles_;
     std::reference_wrapper<const ReadMap> reads_;
     
+    MappableFlatSet<GenomicRegion> lagging_exclusion_zones_;
+    
     GenomicRegion active_region_;
     mutable boost::optional<GenomicRegion> next_active_region_;
     
@@ -135,6 +137,7 @@ private:
     mutable boost::optional<logging::TraceLogger> trace_log_;
     
     bool is_lagging_enabled() const noexcept;
+    bool is_lagging_enabled(const GenomicRegion& region) const;
     bool is_active_region_lagged() const;
     void reset_next_active_region() const noexcept;
     GenomicRegion find_max_lagged_region() const;
