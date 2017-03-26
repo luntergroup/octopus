@@ -223,7 +223,7 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference, const M
     }
     if (is_lagging_enabled()) {
         lagging_exclusion_zones_ = find_lagging_exclusion_zones(alleles_, reads_);
-        if (debug_log_) {
+        if (!lagging_exclusion_zones_.empty() && debug_log_) {
             auto log = stream(*debug_log_);
             log << "Found lagging exclusion zones: ";
             for (const auto& zone : lagging_exclusion_zones_) log << zone << " ";
