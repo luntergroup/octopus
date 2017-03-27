@@ -106,6 +106,7 @@ private:
     void open_initial_files();
     
     ReadReader make_reader(const Path& reader_path) const;
+    bool all_readers_are_open() const noexcept;
     bool is_open(const Path& reader_path) const noexcept;
     std::vector<Path>::iterator partition_open(std::vector<Path>& reader_paths) const;
     unsigned num_open_readers() const noexcept;
