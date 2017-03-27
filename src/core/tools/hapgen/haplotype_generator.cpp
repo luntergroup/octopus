@@ -140,7 +140,7 @@ auto sum_block_counts(const Range& block_range) noexcept
 }
 
 auto find_lagging_exclusion_zones(const MappableFlatSet<Allele>& alleles, const ReadMap& reads,
-                                  const unsigned seed_threshold = 20, const unsigned exclusion_threshold = 70)
+                                  const unsigned seed_threshold = 25, const unsigned exclusion_threshold = 70)
 {
     const auto initial_blocks = extract_covered_regions(alleles);
     MappableFlatSet<AlleleBlock> blocks {};
