@@ -408,89 +408,6 @@ void remove_duplicate_novels(const std::vector<GenomicRegion>& indicator_regions
     }
 }
 
-double get_required_novel_fraction(HaplotypeGenerator::Policies::Lagging policy) noexcept
-{
-    using HGP = HaplotypeGenerator::Policies::Lagging;
-    switch (policy) {
-        case HGP::none:
-        case HGP::conservative:
-            return 1.5;
-        case HGP::moderate:
-            return 2;
-        case HGP::normal:
-            return 4;
-        case HGP::aggressive:
-            return 6;
-        default:
-            return 1; // prevents compiler warning
-    }
-}
-
-auto to_log2s(const std::vector<unsigned>& values)
-{
-    std::vector<double> result(values.size());
-    std::transform(std::cbegin(values), std::cend(values), std::begin(result),
-                   [] (auto value) { return std::log2(value); });
-    return result;
-}
-
-auto extract_overlap_counts(const std::vector<GenomicRegion>& regions, const MappableFlatSet<Allele>& alleles)
-{
-    std::vector<unsigned> result(regions.size());
-    std::transform(std::cbegin(regions), std::cend(regions), std::begin(result),
-                   [&] (const auto& region) { return count_overlapped(alleles, region); });
-    return result;
-}
-
-auto get_partial_overlap_factors(const std::vector<GenomicRegion>& regions, const MappableFlatSet<Allele>& alleles)
-{
-    auto factors = to_log2s(extract_overlap_counts(regions, alleles));
-    std::partial_sum(std::cbegin(factors), std::cend(factors), std::begin(factors));
-    std::vector<std::size_t> result(factors.size());
-    std::transform(std::cbegin(factors), std::cend(factors), std::begin(result),
-                   [] (auto f) { return static_cast<std::size_t>(std::round(f)); });
-    return result;
-}
-
-unsigned lagging_level(const HaplotypeGenerator::Policies::Lagging& policy) noexcept
-{
-    using HGP = HaplotypeGenerator::Policies::Lagging;
-    switch (policy) {
-        case HGP::none: return 0;
-        case HGP::conservative: return 1;
-        case HGP::moderate: return 2;
-        case HGP::normal: return 3;
-        case HGP::aggressive: return 4;
-        default:
-            return 0; // prevents compiler warning
-    }
-}
-
-std::size_t get_target_tree_size(const std::size_t curr_tree_size,
-                                 const std::vector<GenomicRegion>& indicator_blocks,
-                                 const std::vector<GenomicRegion>& novel_blocks,
-                                 const MappableFlatSet<Allele>& alleles,
-                                 const HaplotypeGenerator::Policies policies)
-{
-    if (curr_tree_size == 0) return 0;
-    if (novel_blocks.empty() || indicator_blocks.empty()) return curr_tree_size;
-    const auto novel_factors = get_partial_overlap_factors(novel_blocks, alleles);
-    auto target_tree_size = policies.haplotype_limits.target;
-    const auto effective_log_space = static_cast<std::size_t>(std::log2(std::max(target_tree_size / curr_tree_size, std::size_t {1})));
-    if (effective_log_space >= novel_factors.back()) {
-        return curr_tree_size;
-    } else {
-        const auto novel_fraction = get_required_novel_fraction(policies.lagging);
-        const auto num_novels_required = static_cast<std::size_t>(novel_factors.size() / novel_fraction);
-        auto required_novel_factor = novel_factors[num_novels_required > 0 ? num_novels_required - 1 : 0];
-        if (novel_blocks.size() == 1 && lagging_level(policies.lagging) > 1) {
-            target_tree_size = policies.haplotype_limits.holdout;
-        }
-        const auto tree_reduction_denom = static_cast<std::size_t>(std::pow(2, required_novel_factor));
-        return std::min(target_tree_size / tree_reduction_denom, curr_tree_size);
-    }
-}
-
 auto max_ref_distance(const GenomicRegion& region, const MappableFlatSet<Allele>& alleles)
 {
     const auto contained = contained_range(alleles, region);
@@ -635,6 +552,129 @@ auto extract_indicator_alleles(const Range& indicator_alleles, const MappableFla
     }
 }
 
+double get_required_novel_fraction(HaplotypeGenerator::Policies::Lagging policy) noexcept
+{
+    using HGP = HaplotypeGenerator::Policies::Lagging;
+    switch (policy) {
+        case HGP::none:
+        case HGP::conservative:
+            return 1.5;
+        case HGP::moderate:
+            return 2;
+        case HGP::normal:
+            return 4;
+        case HGP::aggressive:
+            return 6;
+        default:
+            return 1; // prevents compiler warning
+    }
+}
+
+auto to_log2s(const std::vector<unsigned>& values)
+{
+    std::vector<double> result(values.size());
+    std::transform(std::cbegin(values), std::cend(values), std::begin(result),
+                   [] (auto value) { return std::log2(value); });
+    return result;
+}
+
+auto extract_overlap_counts(const std::vector<GenomicRegion>& regions, const MappableFlatSet<Allele>& alleles)
+{
+    std::vector<unsigned> result(regions.size());
+    std::transform(std::cbegin(regions), std::cend(regions), std::begin(result),
+                   [&] (const auto& region) { return count_overlapped(alleles, region); });
+    return result;
+}
+
+auto get_partial_overlap_factors(const std::vector<GenomicRegion>& regions, const MappableFlatSet<Allele>& alleles)
+{
+    auto factors = to_log2s(extract_overlap_counts(regions, alleles));
+    std::partial_sum(std::cbegin(factors), std::cend(factors), std::begin(factors));
+    std::vector<std::size_t> result(factors.size());
+    std::transform(std::cbegin(factors), std::cend(factors), std::begin(result),
+                   [] (auto f) { return static_cast<std::size_t>(std::round(f)); });
+    return result;
+}
+
+unsigned lagging_level(const HaplotypeGenerator::Policies::Lagging& policy) noexcept
+{
+    using HGP = HaplotypeGenerator::Policies::Lagging;
+    switch (policy) {
+        case HGP::none: return 0;
+        case HGP::conservative: return 1;
+        case HGP::moderate: return 2;
+        case HGP::normal: return 3;
+        case HGP::aggressive: return 4;
+        default:
+            return 0; // prevents compiler warning
+    }
+}
+
+std::size_t get_target_tree_size(const HaplotypeTree curr_tree,
+                                 const std::vector<GenomicRegion>& indicator_blocks,
+                                 const std::vector<GenomicRegion>& novel_blocks,
+                                 const MappableFlatSet<Allele>& alleles,
+                                 const HaplotypeGenerator::Policies policies)
+{
+    const auto curr_tree_size = curr_tree.num_haplotypes();
+    if (curr_tree_size == 0) return 0;
+    if (novel_blocks.empty() || indicator_blocks.empty()) return curr_tree_size;
+    const auto novel_factors = get_partial_overlap_factors(novel_blocks, alleles);
+    auto target_tree_size = policies.haplotype_limits.target;
+    const auto effective_log_space = static_cast<std::size_t>(std::log2(std::max(target_tree_size / curr_tree_size, std::size_t {1})));
+    if (effective_log_space >= novel_factors.back()) {
+        return curr_tree_size;
+    } else {
+        const auto novel_fraction = get_required_novel_fraction(policies.lagging);
+        const auto num_novels_required = static_cast<std::size_t>(novel_factors.size() / novel_fraction);
+        auto required_novel_factor = novel_factors[num_novels_required > 0 ? num_novels_required - 1 : 0];
+        if (novel_blocks.size() == 1 && lagging_level(policies.lagging) > 1) {
+            target_tree_size = policies.haplotype_limits.holdout;
+        }
+        const auto tree_reduction_denom = static_cast<std::size_t>(std::pow(2, required_novel_factor));
+        return std::min(target_tree_size / tree_reduction_denom, curr_tree_size);
+    }
+}
+
+auto expand_lhs_by_max_ref_dist(const GenomicRegion& region, const HaplotypeTree tree, const MappableFlatSet<Allele>& alleles)
+{
+    const auto max_ref_dist = max_ref_distance(region, alleles, tree);
+    return expand_lhs(region, std::min(max_ref_dist, region.begin()));
+}
+
+auto get_leftmost_expanded(const std::vector<GenomicRegion>& blocks,
+                           const HaplotypeTree tree, const MappableFlatSet<Allele>& alleles)
+{
+    assert(!blocks.empty());
+    auto result = expand_lhs_by_max_ref_dist(blocks.front(), tree, alleles);
+    std::for_each(std::next(std::cbegin(blocks)), std::cend(blocks), [&] (const auto& block) {
+        auto expanded_block = expand_lhs_by_max_ref_dist(block, tree, alleles);
+        if (begins_before(expanded_block, result)) {
+            result = std::move(expanded_block);
+        }
+    });
+    return result;
+}
+
+boost::optional<GenomicRegion>
+pop_interacting_indicator_tail(std::vector<GenomicRegion>& indicator_blocks,
+                               const std::vector<GenomicRegion>& novel_blocks,
+                               const HaplotypeTree tree, const MappableFlatSet<Allele>& alleles)
+{
+    if (!indicator_blocks.empty()) {
+        const auto& indicator_tail = indicator_blocks.back();
+        const auto indicator_tail_max_ref_dist = max_ref_distance(indicator_tail, alleles, tree);
+        const auto expanded_indicator_tail = expand_rhs(indicator_tail, indicator_tail_max_ref_dist);
+        const auto leftmost_novel = get_leftmost_expanded(novel_blocks, tree, alleles);
+        if (overlaps(expanded_indicator_tail, leftmost_novel)) {
+            auto result = std::move(indicator_blocks.back());
+            indicator_blocks.pop_back();
+            return result;
+        }
+    }
+    return boost::none;
+}
+
 } // namespace
 
 void HaplotypeGenerator::update_lagged_next_active_region() const
@@ -667,6 +707,7 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         // contained_range is required for indicators as previous active alleles must be contained
         // within the reported active region.
         const auto indicator_region = *overlapped_region(active_region_, max_lagged_region);
+        boost::optional<GenomicRegion> protected_indicator {};
         if (has_contained(alleles_, indicator_region)) {
             const auto indicator_alleles = contained_range(alleles_, indicator_region);
             auto indicator_blocks = extract_indicator_alleles(indicator_alleles, alleles_, tree_, policies_.exclusion_threshold);
@@ -678,8 +719,11 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
                 while (!indicator_blocks.empty() && overlaps(indicator_blocks.back(), novel_overlap_region)) {
                     indicator_blocks.pop_back();
                 }
-                auto target_tree_size = get_target_tree_size(test_tree.num_haplotypes(), indicator_blocks, novel_blocks,
+                auto target_tree_size = get_target_tree_size(test_tree, indicator_blocks, novel_blocks,
                                                              alleles_, policies_);
+                // Only need to worry about protecting the last indicator block as indicator blocks are
+                // already arranged into 'good' groups.
+                protected_indicator = pop_interacting_indicator_tail(indicator_blocks, novel_blocks, tree_, alleles_);
                 prune_indicators(test_tree, indicator_blocks, target_tree_size);
             }
         }
@@ -687,7 +731,11 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
             const auto holdout_novel_region = closed_region(novel_region, top_holdout_region());
             novel_blocks = copy_overlapped(novel_blocks, holdout_novel_region);
         }
-        const auto num_novel_regions_added = extend_novel(test_tree, novel_blocks, novel_alleles, policies_.haplotype_limits);
+        auto num_novel_regions_added = extend_novel(test_tree, novel_blocks, novel_alleles, policies_.haplotype_limits);
+        if (num_novel_regions_added == 0 && protected_indicator) {
+            test_tree.clear(*protected_indicator);
+            num_novel_regions_added = extend_novel(test_tree, novel_blocks, novel_alleles, policies_.haplotype_limits);
+        }
         if (num_novel_regions_added > 0) {
             next_active_region_ = test_tree.encompassing_region();
         } else {
