@@ -229,7 +229,7 @@ auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker,
     auto position_coverage = position_tracker.coverage(max_region.contig_region());
     std::partial_sum(std::begin(position_coverage), std::end(position_coverage), std::begin(position_coverage));
     const auto last_position = std::upper_bound(std::cbegin(position_coverage), std::cend(position_coverage), max_coverage);
-    return expand_rhs(max_region, std::distance(std::cbegin(position_coverage), last_position));
+    return expand_rhs(head_region(region), std::distance(std::cbegin(position_coverage), last_position));
 }
 
 } // namespace
