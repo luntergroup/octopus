@@ -537,7 +537,7 @@ auto max_ref_distance(const GenomicRegion& region, const HaplotypeTree& tree)
     }
 }
 
-unsigned max_ref_distance(const GenomicRegion& region, const MappableFlatSet<Allele>& alleles, const HaplotypeTree& tree)
+GenomicRegion::Size max_ref_distance(const GenomicRegion& region, const MappableFlatSet<Allele>& alleles, const HaplotypeTree& tree)
 {
     if (max_ref_distance(region, alleles) > 0) {
         return max_ref_distance(region, tree);
@@ -736,19 +736,18 @@ std::size_t get_target_tree_size(const HaplotypeTree curr_tree,
     }
 }
 
-auto expand_lhs_by_max_ref_dist(const GenomicRegion& region, const HaplotypeTree tree, const MappableFlatSet<Allele>& alleles)
+auto expand_lhs_by_max_ref_dist(const GenomicRegion& region, const MappableFlatSet<Allele>& alleles, const HaplotypeTree tree)
 {
     const auto max_ref_dist = max_ref_distance(region, alleles, tree);
-    return expand_lhs(region, std::min(max_ref_dist, region.begin()));
+    return expand_lhs(region, std::min(max_ref_dist, static_cast<decltype(max_ref_dist)>(region.begin())));
 }
 
-auto get_leftmost_expanded(const std::vector<GenomicRegion>& blocks,
-                           const HaplotypeTree tree, const MappableFlatSet<Allele>& alleles)
+auto get_leftmost_expanded(const std::vector<GenomicRegion>& blocks, const MappableFlatSet<Allele>& alleles, const HaplotypeTree tree)
 {
     assert(!blocks.empty());
-    auto result = expand_lhs_by_max_ref_dist(blocks.front(), tree, alleles);
+    auto result = expand_lhs_by_max_ref_dist(blocks.front(), alleles, tree);
     std::for_each(std::next(std::cbegin(blocks)), std::cend(blocks), [&] (const auto& block) {
-        auto expanded_block = expand_lhs_by_max_ref_dist(block, tree, alleles);
+        auto expanded_block = expand_lhs_by_max_ref_dist(block, alleles, tree);
         if (begins_before(expanded_block, result)) {
             result = std::move(expanded_block);
         }
@@ -759,13 +758,13 @@ auto get_leftmost_expanded(const std::vector<GenomicRegion>& blocks,
 boost::optional<GenomicRegion>
 pop_interacting_indicator_tail(std::vector<GenomicRegion>& indicator_blocks,
                                const std::vector<GenomicRegion>& novel_blocks,
-                               const HaplotypeTree tree, const MappableFlatSet<Allele>& alleles)
+                               const MappableFlatSet<Allele>& alleles, const HaplotypeTree tree)
 {
     if (!indicator_blocks.empty()) {
         const auto& indicator_tail = indicator_blocks.back();
         const auto indicator_tail_max_ref_dist = max_ref_distance(indicator_tail, alleles, tree);
         const auto expanded_indicator_tail = expand_rhs(indicator_tail, indicator_tail_max_ref_dist);
-        const auto leftmost_novel = get_leftmost_expanded(novel_blocks, tree, alleles);
+        const auto leftmost_novel = get_leftmost_expanded(novel_blocks, alleles, tree);
         if (overlaps(expanded_indicator_tail, leftmost_novel)) {
             auto result = std::move(indicator_blocks.back());
             indicator_blocks.pop_back();
@@ -823,7 +822,7 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
                                                              alleles_, policies_);
                 // Only need to worry about protecting the last indicator block as indicator blocks are
                 // already arranged into 'good' groups.
-                protected_indicator = pop_interacting_indicator_tail(indicator_blocks, novel_blocks, tree_, alleles_);
+                protected_indicator = pop_interacting_indicator_tail(indicator_blocks, novel_blocks, alleles_, tree_);
                 prune_indicators(test_tree, indicator_blocks, target_tree_size);
             }
         }
