@@ -43,7 +43,8 @@ public:
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         unsigned max_holdout_depth = 2;
         Haplotype::MappingDomain::Size min_flank_pad = 30;
-        boost::optional<Haplotype::NucleotideSequence::size_type> exclusion_threshold = boost::none;
+        boost::optional<Haplotype::NucleotideSequence::size_type> max_indicator_join_distance = boost::none;
+        boost::optional<double> max_expected_log_allele_count_per_base = boost::none;
     };
     
     class HaplotypeOverflow;
@@ -122,6 +123,8 @@ private:
     MappableFlatSet<Allele> alleles_;
     std::reference_wrapper<const ReadMap> reads_;
     
+    MappableFlatSet<GenomicRegion> lagging_exclusion_zones_;
+    
     GenomicRegion active_region_;
     mutable boost::optional<GenomicRegion> next_active_region_;
     
@@ -135,6 +138,7 @@ private:
     mutable boost::optional<logging::TraceLogger> trace_log_;
     
     bool is_lagging_enabled() const noexcept;
+    bool is_lagging_enabled(const GenomicRegion& region) const;
     bool is_active_region_lagged() const;
     void reset_next_active_region() const noexcept;
     GenomicRegion find_max_lagged_region() const;
@@ -227,7 +231,9 @@ public:
     
     Builder& set_min_flank_pad(Haplotype::MappingDomain::Size n) noexcept;
     
-    Builder& set_exclusion_threshold(Haplotype::NucleotideSequence::size_type n) noexcept;
+    Builder& set_max_indicator_join_distance(Haplotype::NucleotideSequence::size_type n) noexcept;
+    
+    Builder& set_max_expected_log_allele_count_per_base(double v) noexcept;
     
     HaplotypeGenerator build(const ReferenceGenome& reference,
                              const MappableFlatSet<Variant>& candidates,

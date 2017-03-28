@@ -1072,7 +1072,16 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
-auto get_exclusion_threshold() noexcept
+auto get_max_expected_log_allele_count_per_base(const OptionMap& options)
+{
+    const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
+    const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
+    const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
+    const auto max_log_allele_count_per_base = 3 * std::sqrt(heterozygosity) + heterozygosity;
+    return max_log_allele_count_per_base;
+}
+
+auto get_max_indicator_join_distance() noexcept
 {
     return HaplotypeLikelihoodModel{}.pad_requirement();
 }
@@ -1092,7 +1101,9 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options))
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
-    .set_exclusion_threshold(get_exclusion_threshold()).set_min_flank_pad(get_min_flank_pad());
+    .set_max_indicator_join_distance(get_max_indicator_join_distance())
+    .set_max_expected_log_allele_count_per_base(get_max_expected_log_allele_count_per_base(options))
+    .set_min_flank_pad(get_min_flank_pad());
 }
 
 boost::optional<Pedigree> get_pedigree(const OptionMap& options)
