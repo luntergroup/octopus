@@ -505,7 +505,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Include the read mapping quality in the haplotype likelihood calculation")
     
     ("max-joint-genotypes",
-     po::value<int>()->default_value(100000),
+     po::value<int>()->default_value(200000),
      "The maximum number of joint genotype vectors to consider when computing joint"
      " genotype posterior probabilities")
     
