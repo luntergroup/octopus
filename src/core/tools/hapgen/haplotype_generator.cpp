@@ -144,15 +144,15 @@ bool all_empty(const ReadMap& reads) noexcept
     return std::all_of(std::cbegin(reads), std::cend(reads), [] (const auto& p) noexcept { return p.second.empty(); });
 }
 
-auto max_mapped_region_size(const ReadMap& reads) noexcept
+auto mean_mapped_region_size(const ReadMap& reads) noexcept
 {
-    unsigned result {0};
+    double total_read_size {0};
+    std::size_t num_reads {0};
     for (const auto& p : reads) {
-        for (const auto& read : p.second) {
-            if (region_size(read) > result) result = region_size(read);
-        }
+        total_read_size += sum_region_sizes(p.second);
+        num_reads += p.second.size();
     }
-    return result;
+    return total_read_size / num_reads;
 }
 
 auto find_lagging_exclusion_zones(const MappableFlatSet<Allele>& alleles, const ReadMap& reads,
@@ -240,9 +240,9 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference, const M
         lagged_walker_ = make_lagged_walker(policies);
     }
     if (is_lagging_enabled() && policies.max_expected_log_allele_count_per_base && !all_empty(reads_)) {
-        const auto max_read_size = max_mapped_region_size(reads_);
-        const auto dense_zone_log_count_threshold = *policies.max_expected_log_allele_count_per_base * max_read_size;
-        lagging_exclusion_zones_ = find_lagging_exclusion_zones(alleles_, reads_, dense_zone_log_count_threshold, 2.5);
+        const auto mean_read_size = mean_mapped_region_size(reads_);
+        const auto dense_zone_log_count_threshold = *policies.max_expected_log_allele_count_per_base * mean_read_size;
+        lagging_exclusion_zones_ = find_lagging_exclusion_zones(alleles_, reads_, dense_zone_log_count_threshold, 3.0);
         if (!lagging_exclusion_zones_.empty() && debug_log_) {
             auto log = stream(*debug_log_);
             log << "Found lagging exclusion zones: ";
