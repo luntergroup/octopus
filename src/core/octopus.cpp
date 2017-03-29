@@ -587,6 +587,8 @@ Task pop(TaskMap& tasks, TaskMakerSyncPacket& sync)
     const auto result = std::move(contig_task_itr->second.front());
     contig_task_itr->second.pop();
     if (sync.finished.at(contig_task_itr->first) && contig_task_itr->second.empty()) {
+        static auto debug_log = get_debug_log();
+        if (debug_log) stream(*debug_log) << "Finished calling contig " << contig_task_itr->first;
         tasks.erase(contig_task_itr);
     }
     --sync.num_tasks;
