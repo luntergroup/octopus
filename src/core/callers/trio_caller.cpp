@@ -805,7 +805,7 @@ void log(const TrioProbabilityVector& posteriors,
 void log(const AllelePosteriorMap& posteriors,
          boost::optional<logging::DebugLogger>& debug_log,
          boost::optional<logging::TraceLogger>& trace_log,
-         bool denovo = false);
+         Phred<double> min_posterior, bool denovo = false);
 
 } // namespace debug
 
@@ -816,10 +816,10 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     const auto& trio_posteriors = latents.model_latents.posteriors.joint_genotype_probabilities;
     debug::log(trio_posteriors, debug_log_, trace_log_);
     const auto allele_posteriors = compute_posteriors(alleles, trio_posteriors);
-    debug::log(allele_posteriors, debug_log_, trace_log_);
+    debug::log(allele_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
     const auto called_alleles = call_alleles(allele_posteriors, parameters_.min_variant_posterior);
     const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors);
-    debug::log(denovo_posteriors, debug_log_, trace_log_, true);
+    debug::log(denovo_posteriors, debug_log_, trace_log_, parameters_.min_denovo_posterior, true);
     auto denovos = call_denovos(denovo_posteriors, parameters_.min_denovo_posterior);
     const auto germline_alleles = get_germline_alleles(called_alleles, denovos);
     auto germline_variants = call_germline_variants(germline_alleles, candidates, parameters_.min_variant_posterior);
@@ -927,7 +927,7 @@ void print(S&& stream, const AllelePosteriorMap& posteriors, const std::size_t n
 void log(const AllelePosteriorMap& posteriors,
          boost::optional<logging::DebugLogger>& debug_log,
          boost::optional<logging::TraceLogger>& trace_log,
-         const bool denovo)
+         Phred<double> min_posterior, const bool denovo)
 {
     if (!denovo || !posteriors.empty()) {
         const std::string type {denovo ? "denovo allele" : "allele"};
@@ -935,7 +935,9 @@ void log(const AllelePosteriorMap& posteriors,
             print(stream(*trace_log), posteriors, -1, type);
         }
         if (debug_log) {
-            print(stream(*debug_log), posteriors, 10, type);
+            const auto n = std::count_if(std::cbegin(posteriors), std::cend(posteriors),
+                                         [=] (const auto& p) { return p.second >= min_posterior; });
+            print(stream(*debug_log), posteriors, std::max(n, decltype(n) {10}), type);
         }
     }
 }
