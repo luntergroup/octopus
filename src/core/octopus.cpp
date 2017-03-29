@@ -931,7 +931,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     }
     components.progress_meter().start();
     
-    while (!task_maker_sync.all_done) {
+    while (!task_maker_sync.all_done || task_maker_sync.num_tasks > 0) {
         pending_task_lock.lock();
         assert(count_tasks(pending_tasks) == task_maker_sync.num_tasks);
         if (!task_maker_sync.all_done && task_maker_sync.num_tasks == 0) {
