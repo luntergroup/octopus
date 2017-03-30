@@ -486,8 +486,7 @@ void make_region_tasks(const GenomicRegion& region, const ContigCallingComponent
         batch.push_back(subregion);
         bool done {false};
         while (true) {
-            const auto batch_size = std::max(sync.batch_size_hint.load(), 1u);
-            while (batch.size() < batch_size || !sync.waiting) {
+            while (batch.size() < std::max(sync.batch_size_hint.load(), 1u) || !sync.waiting) {
                 subregion = propose_call_subregion(components, subregion, region, minTaskSize);
                 batch.push_back(subregion);
                 assert(!ends_before(region, subregion));
@@ -987,7 +986,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     TaskMap pending_tasks {components.contigs()};
     TaskMakerSyncPacket task_maker_sync {};
-    task_maker_sync.batch_size_hint = num_task_threads;
+    task_maker_sync.batch_size_hint = 2 * num_task_threads;
     std::unique_lock<std::mutex> pending_task_lock {task_maker_sync.mutex, std::defer_lock};
     auto maker_thread = make_tasks(pending_tasks, components, num_task_threads, task_maker_sync);
     if (maker_thread.joinable()) maker_thread.detach();
@@ -1019,13 +1018,15 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
         task_maker_sync.cv.wait(pending_task_lock, tasks_available);
         pending_task_lock.unlock();
     }
+    task_maker_sync.batch_size_hint = num_task_threads / 2;
+    
     components.progress_meter().start();
     
     while (!task_maker_sync.all_done || task_maker_sync.num_tasks > 0) {
         pending_task_lock.lock();
         assert(count_tasks(pending_tasks) == task_maker_sync.num_tasks);
         if (!task_maker_sync.all_done && task_maker_sync.num_tasks == 0) {
-            task_maker_sync.batch_size_hint = num_idle_futures;
+            task_maker_sync.batch_size_hint = std::max(num_idle_futures, num_task_threads / 2);
             if (num_idle_futures < futures.size()) {
                 // If there are running futures then it's good periodically check to see if
                 // any have finished and process them while we wait for the task maker.
