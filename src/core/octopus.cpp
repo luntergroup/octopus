@@ -453,10 +453,11 @@ auto count_tasks(const TaskMap& tasks) noexcept
 
 struct TaskMakerSyncPacket
 {
-    TaskMakerSyncPacket() : waiting {true}, num_tasks {0}, finished {}, all_done {false} {}
+    TaskMakerSyncPacket() : batch_size_hint {1}, waiting {true}, num_tasks {0}, finished {}, all_done {false} {}
     std::condition_variable cv;
     std::mutex mutex;
     bool ready = true;
+    std::atomic_uint batch_size_hint; // Only read by task maker
     std::atomic_bool waiting; // Only read by task maker
     std::atomic_uint num_tasks;
     std::unordered_map<ContigName, bool> finished;
@@ -464,10 +465,8 @@ struct TaskMakerSyncPacket
 };
 
 void make_region_tasks(const GenomicRegion& region, const ContigCallingComponents& components, const ExecutionPolicy policy,
-                       TaskQueue& result, TaskMakerSyncPacket& sync, const unsigned max_batch_size,
-                       const bool last_region_in_contig, const bool last_contig)
+                       TaskQueue& result, TaskMakerSyncPacket& sync, const bool last_region_in_contig, const bool last_contig)
 {
-    assert(max_batch_size > 0);
     static constexpr GenomicRegion::Size minTaskSize {1000};
     std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
     auto subregion = propose_call_subregion(components, region, minTaskSize);
@@ -487,7 +486,8 @@ void make_region_tasks(const GenomicRegion& region, const ContigCallingComponent
         batch.push_back(subregion);
         bool done {false};
         while (true) {
-            while (batch.size() < max_batch_size || !sync.waiting) {
+            const auto batch_size = std::max(sync.batch_size_hint.load(), 1u);
+            while (batch.size() < batch_size || !sync.waiting) {
                 subregion = propose_call_subregion(components, subregion, region, minTaskSize);
                 batch.push_back(subregion);
                 assert(!ends_before(region, subregion));
@@ -522,14 +522,13 @@ void make_region_tasks(const GenomicRegion& region, const ContigCallingComponent
 }
 
 void make_contig_tasks(const ContigCallingComponents& components, const ExecutionPolicy policy,
-                       TaskQueue& result, TaskMakerSyncPacket& sync, const unsigned max_batch_size,
-                       const bool last_contig)
+                       TaskQueue& result, TaskMakerSyncPacket& sync, const bool last_contig)
 {
     if (components.regions.empty()) return;
     std::for_each(std::cbegin(components.regions), std::prev(std::cend(components.regions)), [&] (const auto& region) {
-        make_region_tasks(region, components, policy, result, sync, max_batch_size, false, last_contig);
+        make_region_tasks(region, components, policy, result, sync, false, last_contig);
     });
-    make_region_tasks(components.regions.back(), components, policy, result, sync, max_batch_size, true, last_contig);
+    make_region_tasks(components.regions.back(), components, policy, result, sync, true, last_contig);
 }
 
 ExecutionPolicy make_execution_policy(const GenomeCallingComponents& components)
@@ -550,14 +549,13 @@ auto make_contig_components(const ContigName& contig, GenomeCallingComponents& c
 void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCallingComponents& components,
                        const unsigned num_threads, ExecutionPolicy execution_policy, TaskMakerSyncPacket& sync)
 {
-    const unsigned max_batch_size {2 * num_threads};
     assert(!contigs.empty());
     std::for_each(std::cbegin(contigs), std::prev(std::cend(contigs)), [&] (const auto& contig) {
         auto contig_components = make_contig_components(contig, components, num_threads);
-        make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, max_batch_size, false);
+        make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, false);
     });
     auto contig_components = make_contig_components(contigs.back(), components, num_threads);
-    make_contig_tasks(contig_components, execution_policy, tasks[contigs.back()], sync, max_batch_size, true);
+    make_contig_tasks(contig_components, execution_policy, tasks[contigs.back()], sync, true);
 }
 
 std::thread make_tasks(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
@@ -989,6 +987,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     
     TaskMap pending_tasks {components.contigs()};
     TaskMakerSyncPacket task_maker_sync {};
+    task_maker_sync.batch_size_hint = num_task_threads;
     std::unique_lock<std::mutex> pending_task_lock {task_maker_sync.mutex, std::defer_lock};
     auto maker_thread = make_tasks(pending_tasks, components, num_task_threads, task_maker_sync);
     if (maker_thread.joinable()) maker_thread.detach();
@@ -1026,6 +1025,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
         pending_task_lock.lock();
         assert(count_tasks(pending_tasks) == task_maker_sync.num_tasks);
         if (!task_maker_sync.all_done && task_maker_sync.num_tasks == 0) {
+            task_maker_sync.batch_size_hint = num_idle_futures;
             if (num_idle_futures < futures.size()) {
                 // If there are running futures then it's good periodically check to see if
                 // any have finished and process them while we wait for the task maker.
