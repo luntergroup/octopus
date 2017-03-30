@@ -736,6 +736,13 @@ void prune_indicators(HaplotypeTree& tree, std::vector<GenomicRegion>& indicator
     indicator_regions.erase(std::cbegin(indicator_regions), itr);
 }
 
+void remove_blocks_after(std::vector<GenomicRegion>& blocks, const GenomicRegion& region)
+{
+    auto itr = std::find_if_not(std::crbegin(blocks), std::crend(blocks),
+                                [&] (const auto& block) { return is_after(block, region); });
+    blocks.erase(itr.base(), std::cend(blocks));
+}
+
 unsigned get_num_ideal_new_novel_blocks(const std::vector<GenomicRegion>& novel_blocks,
                                         const GenomicRegion& indicator_region,
                                         const MappableFlatSet<Allele>& alleles)
@@ -784,7 +791,6 @@ unsigned extend_novel(HaplotypeTree& tree, const std::vector<GenomicRegion>& nov
     }
     return num_novel_blocks_added;
 }
-
 
 } // namespace
 
@@ -845,8 +851,7 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
             }
         }
         if (in_holdout_mode() && ends_before(top_holdout_region(), novel_region)) {
-            const auto holdout_novel_region = closed_region(novel_region, top_holdout_region());
-            novel_blocks = copy_overlapped(novel_blocks, holdout_novel_region);
+            remove_blocks_after(novel_blocks, top_holdout_region());
         }
         const auto ideal_num_new_novel_blocks = get_num_ideal_new_novel_blocks(novel_blocks, indicator_region, alleles_);
         auto num_novel_blocks_added = extend_novel(test_tree, novel_blocks, novel_alleles, ideal_num_new_novel_blocks,
@@ -945,7 +950,7 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
             novel_active_alleles.advance_begin(1);
             assert(!empty(novel_active_alleles));
         }
-        novel_active_region = closed_region(novel_active_alleles.front(), novel_active_alleles.back());
+        novel_active_region = encompassing_region(novel_active_alleles);
     }
     auto last_added_novel_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
     if (last_added_novel_itr != std::cend(novel_active_alleles)) {
