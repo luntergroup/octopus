@@ -33,8 +33,12 @@ std::size_t length(const std::string& str);
 
 bool find(const std::string& lhs, const std::string& rhs);
 
+std::string& capitalise(std::string& str) noexcept;
+std::string capitalise(const std::string& str);
 std::string& capitalise_front(std::string& str) noexcept;
 std::string capitalise_front(const std::string& str);
+std::string& to_lower(std::string& str) noexcept;
+std::string to_lower(const std::string& str);
 
 bool is_vowel(const char c);
 bool begins_with_vowel(const std::string& str);
