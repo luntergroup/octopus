@@ -300,12 +300,14 @@ void LocalReassembler::do_add_read(const SampleName& sample, const AlignedRead& 
 
 void LocalReassembler::do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last)
 {
-    std::for_each(first, last, [&] (const AlignedRead& read) { do_add_read(sample, read); });
+    active_region_generator_.add(sample, first, last);
+    read_buffer_.insert(first, last);
 }
 
 void LocalReassembler::do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last)
 {
-    std::for_each(first, last, [&] (const AlignedRead& read) { do_add_read(sample, read); });
+    active_region_generator_.add(sample, first, last);
+    read_buffer_.insert(first, last);
 }
 
 template <typename Container>
