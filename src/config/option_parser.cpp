@@ -64,7 +64,12 @@ OptionMap parse_options(const int argc, const char** argv)
 
     ("fast",
      po::bool_switch()->default_value(false),
-     "Turns off certain features to improve runtime, at the cost of decreased callings accuracy")
+     "Turns off some features to improve runtime, at the cost of decreased calling accuracy."
+     " Equivalent to '-a off -l minimal x 50`")
+
+    ("very-fast",
+     po::bool_switch()->default_value(false),
+     "The same as fast but also disables inactive flank scoring")
     ;
     
     po::options_description backend("Backend");

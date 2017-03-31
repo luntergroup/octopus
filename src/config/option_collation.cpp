@@ -238,7 +238,12 @@ boost::optional<fs::path> get_trace_log_file_name(const OptionMap& options)
 
 bool is_fast_mode(const OptionMap& options)
 {
-    return options.at("fast").as<bool>();
+    return options.at("fast").as<bool>() || options.at("very-fast").as<bool>();
+}
+
+bool is_very_fast_mode(const OptionMap& options)
+{
+    return options.at("very-fast").as<bool>();
 }
 
 ReferenceGenome make_reference(const OptionMap& options)
@@ -1333,7 +1338,7 @@ public:
 
 bool allow_flank_scoring(const OptionMap& options)
 {
-    return options.at("inactive-flank-scoring").as<bool>() && !is_fast_mode(options);
+    return options.at("inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
