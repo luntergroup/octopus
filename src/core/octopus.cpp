@@ -147,7 +147,6 @@ std::string get_caller_name(const GenomeCallingComponents& components)
 void log_startup_info(const GenomeCallingComponents& components)
 {
     logging::InfoLogger log {};
-    stream(log) << "Invoked calling model: " << get_caller_name(components);
     std::ostringstream ss {};
     if (!components.samples().empty()) {
         const auto num_samples = components.samples().size();
@@ -165,6 +164,18 @@ void log_startup_info(const GenomeCallingComponents& components)
     auto str = ss.str();
     str.pop_back(); // the extra whitespace
     log << str;
+    stream(log) << "Invoked calling model: " << get_caller_name(components);
+    const auto search_size = utils::format_with_commas(sum_region_sizes(components.search_regions()));
+    const auto num_threads = components.num_threads();
+    if (num_threads) {
+        if (*num_threads == 1) {
+            stream(log) << "Processing " << search_size << "bp with a single thread";
+        } else {
+            stream(log) << "Processing " << search_size << "bp with " << *num_threads << " threads";
+        }
+    } else {
+        stream(log) << "Processing " << search_size << "bp with automatic thread management";
+    }
     auto sl = stream(log);
     sl << "Writing calls to ";
     const auto output_path = components.output().path();
