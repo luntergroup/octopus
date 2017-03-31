@@ -45,8 +45,7 @@ struct BasicMutationModel
 //
 // Warning: The target must be contained by the truth by exactly
 // min_flank_pad() on either side.
-double evaluate(const std::string& target, const std::string& truth,
-                const BasicMutationModel& model);
+double evaluate(const std::string& target, const std::string& truth, const BasicMutationModel& model) noexcept;
 
 } // namespace hmm
 } // namespace octopus

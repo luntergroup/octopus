@@ -117,7 +117,7 @@ void print_alignment(const std::vector<char>& align1, const std::vector<char>& a
 auto simd_align(const std::string& truth, const std::string& target,
                 const std::vector<std::uint8_t>& target_qualities,
                 const std::size_t target_offset,
-                const MutationModel& model)
+                const MutationModel& model) noexcept
 {
     constexpr auto pad = simd::min_flank_pad();
     const auto truth_size  = static_cast<int>(truth.size());
@@ -251,8 +251,7 @@ double evaluate(const std::string& target, const std::string& truth,
     return simd_align(truth, target, target_qualities, target_offset, model);
 }
 
-double evaluate(const std::string& target, const std::string& truth,
-                const BasicMutationModel& model)
+double evaluate(const std::string& target, const std::string& truth, const BasicMutationModel& model) noexcept
 {
     using std::cbegin; using std::cend; using std::next; using std::distance;
     static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
