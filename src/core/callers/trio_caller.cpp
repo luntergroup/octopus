@@ -241,9 +241,11 @@ TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         TrioModel::Options {parameters_.max_joint_genotypes},
         debug_log_
     };
-    auto maternal_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy);
+    std::vector<std::vector<unsigned>> genotype_indices {};
+    auto maternal_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy, genotype_indices);
     if (parameters_.maternal_ploidy == parameters_.paternal_ploidy) {
-        auto latents = model.evaluate(maternal_genotypes, haplotype_likelihoods);
+        denovo_model.prime(haplotypes);
+        auto latents = model.evaluate(maternal_genotypes, genotype_indices, haplotype_likelihoods);
         return std::make_unique<Latents>(haplotypes, std::move(maternal_genotypes),
                                          std::move(latents), parameters_.trio);
     } else {
