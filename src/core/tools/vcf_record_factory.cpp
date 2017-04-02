@@ -369,7 +369,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                                 if (are_in_phase(genotype_call, prev_represented_genotype)) {
                                     const auto& prev_allele = prev_represented_genotype.genotype[i];
                                     const auto overlap = overlapped_region(prev_allele, curr_call);
-                                    if (overlap) {
+                                    if (overlap && prev_allele != prev_represented[s][i]->reference()) {
                                         auto new_sequence = old_genotype[i].sequence();
                                         const auto overlap_size = static_cast<std::size_t>(region_size(*overlap));
                                         std::fill_n(std::begin(new_sequence), std::min(overlap_size, new_sequence.size()), '*');
