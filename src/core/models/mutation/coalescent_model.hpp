@@ -61,10 +61,11 @@ public:
     
 private:
     using SiteCountTuple = std::tuple<unsigned, unsigned, unsigned>;
+    using SiteCountIndelTuple = std::tuple<unsigned, unsigned, unsigned, int>;
     
     struct SiteCountTupleHash
     {
-        std::size_t operator()(const SiteCountTuple& t) const noexcept
+        std::size_t operator()(const SiteCountIndelTuple& t) const noexcept
         {
             return boost::hash_value(t);
         }
@@ -81,8 +82,12 @@ private:
     mutable std::unordered_map<const Haplotype*, std::vector<Variant>> difference_address_cache_;
     mutable std::vector<boost::optional<std::vector<Variant>>> index_cache_;
     mutable std::vector<bool> index_flag_buffer_;
+    mutable std::vector<std::vector<boost::optional<double>>> k_indel_zero_result_cache_;
+    mutable std::unordered_map<SiteCountIndelTuple, double, SiteCountTupleHash> k_indel_pos_result_cache_;
     
     double evaluate(const SiteCountTuple& t) const;
+    double evaluate(unsigned k_snp, unsigned n) const;
+    double evaluate(unsigned k_snp, unsigned k_indel, unsigned n) const;
     
     template <typename Container>
     void fill_site_buffer(const Container& haplotypes) const;

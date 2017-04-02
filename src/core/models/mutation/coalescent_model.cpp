@@ -58,6 +58,7 @@ CoalescentModel::CoalescentModel(Haplotype reference,
 , caching_ {caching}
 , index_cache_ {}
 , index_flag_buffer_ {}
+, k_indel_zero_result_cache_ {2 * num_haplotyes_hint, std::vector<boost::optional<double>> {}}
 {
     if (params_.snp_heterozygosity <= 0 || params_.indel_heterozygosity <= 0) {
         throw std::domain_error {"CoalescentModel: snp and indel heterozygosity must be > 0"};
@@ -73,7 +74,7 @@ CoalescentModel::CoalescentModel(Haplotype reference,
                                         std::forward_as_tuple(reference_),
                                         std::forward_as_tuple());
     }
-    result_cache_.reserve(num_haplotyes_hint);
+    k_indel_pos_result_cache_.reserve(2 * num_haplotyes_hint);
 }
 
 void CoalescentModel::set_reference(Haplotype reference)
@@ -203,26 +204,56 @@ double CoalescentModel::evaluate(const SiteCountTuple& t) const
     unsigned k_snp, k_indel, n;
     std::tie(k_snp, k_indel, n) = t;
     if (k_indel == 0) {
-        // indel heterozygosity is default in this case
-        const auto itr = result_cache_.find(t);
-        if (itr != std::cend(result_cache_)) return itr->second;
+        return evaluate(k_snp, n);
+    } else {
+        return evaluate(k_snp, k_indel, n);
     }
+}
+
+double CoalescentModel::evaluate(const unsigned k_snp, const unsigned n) const
+{
+    if (k_indel_zero_result_cache_.size() > n) {
+        if (k_indel_zero_result_cache_[n].size() > k_snp) {
+            auto& result = k_indel_zero_result_cache_[n][k_snp];
+            if (!result) {
+                result = coalescent(n, k_snp, 0, params_.snp_heterozygosity, params_.indel_heterozygosity);
+            }
+            return *result;
+        } else {
+            k_indel_zero_result_cache_[n].resize(k_snp + 1, boost::none);
+        }
+    } else {
+        k_indel_zero_result_cache_.resize(n + 1);
+        k_indel_zero_result_cache_[n].assign(k_snp + 1, boost::none);
+    }
+    const auto result = coalescent(n, k_snp, 0, params_.snp_heterozygosity, params_.indel_heterozygosity);
+    k_indel_zero_result_cache_[n][k_snp] = result;
+    return result;
+}
+
+double CoalescentModel::evaluate(const unsigned k_snp, const unsigned k_indel, const unsigned n) const
+{
     auto indel_heterozygosity = params_.indel_heterozygosity;
-    if (k_indel > 0) {
-        for (const auto& site : site_buffer1_) {
-            if (is_indel(site)) {
-                const auto offset = begin_distance(reference_, site.get());
-                auto itr = std::next(std::cbegin(reference_base_indel_heterozygosities_), offset);
-                using S = Variant::MappingDomain::Size;
-                itr = std::max_element(itr, std::next(itr, std::max(S {1}, region_size(site.get()))));
-                indel_heterozygosity = std::max(*itr, indel_heterozygosity);
+    int max_offset {-1};
+    for (const auto& site : site_buffer1_) {
+        if (is_indel(site)) {
+            const auto offset = begin_distance(reference_, site.get());
+            auto itr = std::next(std::cbegin(reference_base_indel_heterozygosities_), offset);
+            using S = Variant::MappingDomain::Size;
+            itr = std::max_element(itr, std::next(itr, std::max(S {1}, region_size(site.get()))));
+            if (*itr > indel_heterozygosity) {
+                indel_heterozygosity = *itr;
+                max_offset = offset;
             }
         }
     }
-    const auto result = coalescent(n, k_snp, k_indel, params_.snp_heterozygosity, indel_heterozygosity);
-    if (k_indel > 0) {
-        result_cache_.emplace(t, result);
+    const auto t = std::make_tuple(k_snp, k_indel, n, max_offset);
+    auto itr = k_indel_pos_result_cache_.find(t);
+    if (itr != std::cend(k_indel_pos_result_cache_)) {
+        return itr->second;
     }
+    const auto result = coalescent(n, k_snp, k_indel, params_.snp_heterozygosity, indel_heterozygosity);
+    k_indel_pos_result_cache_.emplace(t, result);
     return result;
 }
 
