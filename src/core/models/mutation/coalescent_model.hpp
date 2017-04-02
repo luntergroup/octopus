@@ -119,7 +119,7 @@ void CoalescentModel::fill_site_buffer(const Container& haplotypes) const
         } else {
             fill_site_buffer_from_value_cache(haplotype);
         }
-        std::swap(site_buffer1_, site_buffer2_);
+        site_buffer1_ = std::move(site_buffer2_);
         site_buffer2_.clear();
     }
 }

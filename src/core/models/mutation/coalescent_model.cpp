@@ -259,6 +259,8 @@ double CoalescentModel::evaluate(const unsigned k_snp, const unsigned k_indel, c
 
 void CoalescentModel::fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const
 {
+    assert(site_buffer2_.empty());
+    site_buffer1_.clear();
     std::fill(std::begin(index_flag_buffer_), std::end(index_flag_buffer_), false);
     for (auto index : haplotype_indices) {
         if (!index_flag_buffer_[index]) {
@@ -270,6 +272,8 @@ void CoalescentModel::fill_site_buffer(const std::vector<unsigned>& haplotype_in
                            std::cbegin(*variants), std::cend(*variants),
                            std::back_inserter(site_buffer2_));
             index_flag_buffer_[index] = true;
+            site_buffer1_ = std::move(site_buffer2_);
+            site_buffer2_.clear();
         }
     }
 }
