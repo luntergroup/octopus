@@ -234,16 +234,19 @@ std::unique_ptr<Caller::Latents>
 TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    const auto germline_prior_model = make_prior_model(haplotypes);
+    auto germline_prior_model = make_prior_model(haplotypes);
     DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
     const model::TrioModel model {
         parameters_.trio, *germline_prior_model, denovo_model,
         TrioModel::Options {parameters_.max_joint_genotypes},
         debug_log_
     };
-    auto maternal_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy);
+    std::vector<std::vector<unsigned>> genotype_indices {};
+    auto maternal_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy, genotype_indices);
     if (parameters_.maternal_ploidy == parameters_.paternal_ploidy) {
-        auto latents = model.evaluate(maternal_genotypes, haplotype_likelihoods);
+        germline_prior_model->prime(haplotypes);
+        denovo_model.prime(haplotypes);
+        auto latents = model.evaluate(maternal_genotypes, genotype_indices, haplotype_likelihoods);
         return std::make_unique<Latents>(haplotypes, std::move(maternal_genotypes),
                                          std::move(latents), parameters_.trio);
     } else {

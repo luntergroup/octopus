@@ -40,8 +40,14 @@ public:
     
     ~DeNovoModel() = default;
     
+    void prime(std::vector<Haplotype> haplotypes);
+    void unprime() noexcept;
+    bool is_primed() const noexcept;
+    
     // ln p(target | given)
     double evaluate(const Haplotype& target, const Haplotype& given) const;
+    
+    double evaluate(unsigned target, unsigned given) const noexcept;
     
 private:
     struct AddressPairHash
@@ -56,10 +62,14 @@ private:
     
     hmm::BasicMutationModel mutation_model_;
     std::size_t num_haplotypes_hint_;
+    std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;
     mutable std::unordered_map<Haplotype, std::unordered_map<Haplotype, double>> value_cache_;
     mutable std::unordered_map<std::pair<const Haplotype*, const Haplotype*>, double, AddressPairHash> address_cache_;
+    mutable std::vector<std::vector<boost::optional<double>>> guarded_index_cache_;
+    mutable std::vector<std::vector<double>> unguarded_index_cache_;
     mutable std::string padded_given_;
+    mutable bool use_unguarded_;
     
     double evaluate_uncached(const Haplotype& target, const Haplotype& given) const;
     double evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const;
