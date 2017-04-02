@@ -54,7 +54,10 @@ CoalescentModel::CoalescentModel(Haplotype reference,
 : reference_ {std::move(reference)}
 , reference_base_indel_heterozygosities_ {}
 , params_ {params}
+, haplotypes_ {}
 , caching_ {caching}
+, index_cache_ {}
+, index_flag_buffer_ {}
 {
     if (params_.snp_heterozygosity <= 0 || params_.indel_heterozygosity <= 0) {
         throw std::domain_error {"CoalescentModel: snp and indel heterozygosity must be > 0"};
@@ -84,6 +87,34 @@ void CoalescentModel::set_reference(Haplotype reference)
                                         std::forward_as_tuple(reference_),
                                         std::forward_as_tuple());
     }
+}
+
+void CoalescentModel::prime(std::vector<Haplotype> haplotypes)
+{
+    haplotypes_ = std::move(haplotypes);
+    index_cache_.assign(haplotypes_.size(), boost::none);
+    index_flag_buffer_.assign(haplotypes_.size(), false);
+}
+
+void CoalescentModel::unprime() noexcept
+{
+    haplotypes_.clear();
+    haplotypes_.shrink_to_fit();
+    index_cache_.clear();
+    index_cache_.shrink_to_fit();
+    index_flag_buffer_.clear();
+    index_flag_buffer_.shrink_to_fit();
+}
+
+bool CoalescentModel::is_primed() const noexcept
+{
+    return !index_cache_.empty();
+}
+
+double CoalescentModel::evaluate(const std::vector<unsigned>& haplotype_indices) const
+{
+    const auto t = count_segregating_sites(haplotype_indices);
+    return evaluate(t);
 }
 
 namespace {
@@ -193,6 +224,23 @@ double CoalescentModel::evaluate(const SiteCountTuple& t) const
         result_cache_.emplace(t, result);
     }
     return result;
+}
+
+void CoalescentModel::fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const
+{
+    std::fill(std::begin(index_flag_buffer_), std::end(index_flag_buffer_), false);
+    for (auto index : haplotype_indices) {
+        if (!index_flag_buffer_[index]) {
+            auto& variants = index_cache_[index];
+            if (!variants) {
+                variants = haplotypes_[index].difference(reference_);
+            }
+            std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
+                           std::cbegin(*variants), std::cend(*variants),
+                           std::back_inserter(site_buffer2_));
+            index_flag_buffer_[index] = true;
+        }
+    }
 }
 
 void CoalescentModel::fill_site_buffer_from_value_cache(const Haplotype& haplotype) const
