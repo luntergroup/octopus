@@ -16,6 +16,7 @@
 #include <cassert>
 
 #include <boost/functional/hash.hpp>
+#include <boost/optional.hpp>
 
 #include "core/types/haplotype.hpp"
 #include "core/types/variant.hpp"
@@ -49,10 +50,17 @@ public:
     
     void set_reference(Haplotype reference);
     
+    void prime(std::vector<Haplotype> haplotypes);
+    void unprime() noexcept;
+    bool is_primed() const noexcept;
+    
     template <typename Container>
     double evaluate(const Container& haplotypes) const;
-
+    
+    double evaluate(const std::vector<unsigned>& haplotype_indices) const;
+    
 private:
+    using VariantReference = std::reference_wrapper<const Variant>;
     using SiteCountTuple = std::tuple<unsigned, unsigned, unsigned>;
     using SiteCountIndelTuple = std::tuple<unsigned, unsigned, unsigned, int>;
     
@@ -67,8 +75,10 @@ private:
     Haplotype reference_;
     std::vector<double> reference_base_indel_heterozygosities_;
     Parameters params_;
+    std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;
-    mutable std::vector<std::reference_wrapper<const Variant>> site_buffer1_, site_buffer2_;
+    
+    mutable std::vector<VariantReference> site_buffer1_, site_buffer2_;
     mutable std::unordered_map<Haplotype, std::vector<Variant>> difference_value_cache_;
     mutable std::unordered_map<const Haplotype*, std::vector<Variant>> difference_address_cache_;
     mutable std::vector<boost::optional<std::vector<Variant>>> index_cache_;
@@ -82,6 +92,7 @@ private:
     
     template <typename Container>
     void fill_site_buffer(const Container& haplotypes) const;
+    void fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const;
     void fill_site_buffer_from_value_cache(const Haplotype& haplotype) const;
     void fill_site_buffer_from_address_cache(const Haplotype& haplotype) const;
     
@@ -109,7 +120,7 @@ void CoalescentModel::fill_site_buffer(const Container& haplotypes) const
         } else {
             fill_site_buffer_from_value_cache(haplotype);
         }
-        std::swap(site_buffer1_, site_buffer2_);
+        site_buffer1_ = std::move(site_buffer2_);
         site_buffer2_.clear();
     }
 }

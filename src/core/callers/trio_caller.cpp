@@ -234,16 +234,19 @@ std::unique_ptr<Caller::Latents>
 TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    const auto germline_prior_model = make_prior_model(haplotypes);
+    auto germline_prior_model = make_prior_model(haplotypes);
     DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
     const model::TrioModel model {
         parameters_.trio, *germline_prior_model, denovo_model,
         TrioModel::Options {parameters_.max_joint_genotypes},
         debug_log_
     };
-    auto maternal_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy);
+    std::vector<std::vector<unsigned>> genotype_indices {};
+    auto maternal_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy, genotype_indices);
     if (parameters_.maternal_ploidy == parameters_.paternal_ploidy) {
-        auto latents = model.evaluate(maternal_genotypes, haplotype_likelihoods);
+        germline_prior_model->prime(haplotypes);
+        denovo_model.prime(haplotypes);
+        auto latents = model.evaluate(maternal_genotypes, genotype_indices, haplotype_likelihoods);
         return std::make_unique<Latents>(haplotypes, std::move(maternal_genotypes),
                                          std::move(latents), parameters_.trio);
     } else {
@@ -805,7 +808,7 @@ void log(const TrioProbabilityVector& posteriors,
 void log(const AllelePosteriorMap& posteriors,
          boost::optional<logging::DebugLogger>& debug_log,
          boost::optional<logging::TraceLogger>& trace_log,
-         bool denovo = false);
+         Phred<double> min_posterior, bool denovo = false);
 
 } // namespace debug
 
@@ -816,10 +819,10 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     const auto& trio_posteriors = latents.model_latents.posteriors.joint_genotype_probabilities;
     debug::log(trio_posteriors, debug_log_, trace_log_);
     const auto allele_posteriors = compute_posteriors(alleles, trio_posteriors);
-    debug::log(allele_posteriors, debug_log_, trace_log_);
+    debug::log(allele_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
     const auto called_alleles = call_alleles(allele_posteriors, parameters_.min_variant_posterior);
     const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors);
-    debug::log(denovo_posteriors, debug_log_, trace_log_, true);
+    debug::log(denovo_posteriors, debug_log_, trace_log_, parameters_.min_denovo_posterior, true);
     auto denovos = call_denovos(denovo_posteriors, parameters_.min_denovo_posterior);
     const auto germline_alleles = get_germline_alleles(called_alleles, denovos);
     auto germline_variants = call_germline_variants(germline_alleles, candidates, parameters_.min_variant_posterior);
@@ -927,7 +930,7 @@ void print(S&& stream, const AllelePosteriorMap& posteriors, const std::size_t n
 void log(const AllelePosteriorMap& posteriors,
          boost::optional<logging::DebugLogger>& debug_log,
          boost::optional<logging::TraceLogger>& trace_log,
-         const bool denovo)
+         Phred<double> min_posterior, const bool denovo)
 {
     if (!denovo || !posteriors.empty()) {
         const std::string type {denovo ? "denovo allele" : "allele"};
@@ -935,7 +938,9 @@ void log(const AllelePosteriorMap& posteriors,
             print(stream(*trace_log), posteriors, -1, type);
         }
         if (debug_log) {
-            print(stream(*debug_log), posteriors, 10, type);
+            const auto n = std::count_if(std::cbegin(posteriors), std::cend(posteriors),
+                                         [=] (const auto& p) { return p.second >= min_posterior; });
+            print(stream(*debug_log), posteriors, std::max(n, decltype(n) {10}), type);
         }
     }
 }

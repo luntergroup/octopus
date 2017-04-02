@@ -54,6 +54,7 @@ CoalescentModel::CoalescentModel(Haplotype reference,
 : reference_ {std::move(reference)}
 , reference_base_indel_heterozygosities_ {}
 , params_ {params}
+, haplotypes_ {}
 , caching_ {caching}
 , index_cache_ {}
 , index_flag_buffer_ {}
@@ -87,6 +88,33 @@ void CoalescentModel::set_reference(Haplotype reference)
                                         std::forward_as_tuple(reference_),
                                         std::forward_as_tuple());
     }
+}
+
+void CoalescentModel::prime(std::vector<Haplotype> haplotypes)
+{
+    haplotypes_ = std::move(haplotypes);
+    index_cache_.assign(haplotypes_.size(), boost::none);
+    index_flag_buffer_.assign(haplotypes_.size(), false);
+}
+
+void CoalescentModel::unprime() noexcept
+{
+    haplotypes_.clear();
+    haplotypes_.shrink_to_fit();
+    index_cache_.clear();
+    index_cache_.shrink_to_fit();
+    index_flag_buffer_.clear();
+    index_flag_buffer_.shrink_to_fit();
+}
+
+bool CoalescentModel::is_primed() const noexcept
+{
+    return !index_cache_.empty();
+}
+
+double CoalescentModel::evaluate(const std::vector<unsigned>& haplotype_indices) const
+{
+    return evaluate(count_segregating_sites(haplotype_indices));
 }
 
 namespace {
@@ -226,6 +254,37 @@ double CoalescentModel::evaluate(const unsigned k_snp, const unsigned k_indel, c
     const auto result = coalescent(n, k_snp, k_indel, params_.snp_heterozygosity, indel_heterozygosity);
     k_indel_pos_result_cache_.emplace(t, result);
     return result;
+}
+
+void CoalescentModel::fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const
+{
+    site_buffer1_.clear();
+    std::fill(std::begin(index_flag_buffer_), std::end(index_flag_buffer_), false);
+    unsigned num_unique_nonempty_indices {0};
+    auto middle = std::begin(site_buffer1_);
+    for (auto index : haplotype_indices) {
+        if (!index_flag_buffer_[index]) {
+            auto& variants = index_cache_[index];
+            if (!variants) {
+                variants = haplotypes_[index].difference(reference_);
+            }
+            if (!variants->empty()) {
+                middle = site_buffer1_.insert(std::cend(site_buffer1_), std::cbegin(*variants), std::cend(*variants));
+                ++num_unique_nonempty_indices;
+            }
+            index_flag_buffer_[index] = true;
+        }
+    }
+    if (num_unique_nonempty_indices == 2) {
+        assert(site_buffer2_.empty());
+        std::merge(std::begin(site_buffer1_), middle, middle, std::end(site_buffer1_), std::back_inserter(site_buffer2_));
+        site_buffer2_.erase(std::unique(std::begin(site_buffer2_), std::end(site_buffer2_)), std::end(site_buffer2_));
+        site_buffer1_ = std::move(site_buffer2_);
+        site_buffer2_.clear();
+    } else if (num_unique_nonempty_indices > 2) {
+        std::sort(std::begin(site_buffer1_), std::end(site_buffer1_));
+        site_buffer1_.erase(std::unique(std::begin(site_buffer1_), std::end(site_buffer1_)), std::end(site_buffer1_));
+    }
 }
 
 void CoalescentModel::fill_site_buffer_from_value_cache(const Haplotype& haplotype) const
