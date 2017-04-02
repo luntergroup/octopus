@@ -642,32 +642,24 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
     }
     assert(!maternal_genotypes.empty() && !paternal_genotypes.empty() && !child_genotypes.empty());
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
-    resume(misc_timer[0]);
     haplotype_likelihoods.prime(trio_.mother());
     auto maternal_likelihoods = compute_likelihoods(maternal_genotypes, likelihood_model);
     haplotype_likelihoods.prime(trio_.father());
     auto paternal_likelihoods = compute_likelihoods(paternal_genotypes, likelihood_model);
     haplotype_likelihoods.prime(trio_.child());
     auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
-    pause(misc_timer[0]);
     if (debug_log_) {
         debug::print(stream(*debug_log_), "maternal", maternal_likelihoods);
         debug::print(stream(*debug_log_), "paternal", paternal_likelihoods);
         debug::print(stream(*debug_log_), "child", child_likelihoods);
     }
-    resume(misc_timer[1]);
     const auto reduced_maternal_likelihoods = reduce(maternal_likelihoods, prior_model_, options_);
     const auto reduced_paternal_likelihoods = reduce(paternal_likelihoods, prior_model_, options_);
     const auto reduced_child_likelihoods    = reduce(child_likelihoods, prior_model_, options_);
-    pause(misc_timer[1]);
-    resume(misc_timer[2]);
     auto parental_likelihoods = join(reduced_maternal_likelihoods, reduced_paternal_likelihoods, prior_model_);
-    pause(misc_timer[2]);
     if (debug_log_) debug::print(stream(*debug_log_), parental_likelihoods);
     const auto reduced_parental_likelihoods = reduce(parental_likelihoods, options_);
-    resume(misc_timer[3]);
     auto joint_likelihoods = join(reduced_parental_likelihoods, reduced_child_likelihoods, mutation_model_);
-    pause(misc_timer[3]);
     if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
     const auto evidence = normalise_exp(joint_likelihoods);
     return {std::move(joint_likelihoods), evidence};
@@ -685,7 +677,6 @@ TrioModel::evaluate(const GenotypeVector& genotypes, std::vector<std::vector<uns
 {
     assert(prior_model_.is_primed() && mutation_model_.is_primed());
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
-    resume(misc_timer[0]);
     haplotype_likelihoods.prime(trio_.mother());
     auto maternal_likelihoods = compute_likelihoods(genotypes, likelihood_model);
     haplotype_likelihoods.prime(trio_.father());
@@ -697,25 +688,18 @@ TrioModel::evaluate(const GenotypeVector& genotypes, std::vector<std::vector<uns
         paternal_likelihoods[i].indices = &genotype_indices[i];
         child_likelihoods[i].indices    = &genotype_indices[i];
     }
-    pause(misc_timer[0]);
     if (debug_log_) {
         debug::print(stream(*debug_log_), "maternal", maternal_likelihoods);
         debug::print(stream(*debug_log_), "paternal", paternal_likelihoods);
         debug::print(stream(*debug_log_), "child", child_likelihoods);
     }
-    resume(misc_timer[1]);
     const auto reduced_maternal_likelihoods = reduce(maternal_likelihoods, prior_model_, options_);
     const auto reduced_paternal_likelihoods = reduce(paternal_likelihoods, prior_model_, options_);
     const auto reduced_child_likelihoods    = reduce(child_likelihoods, prior_model_, options_);
-    pause(misc_timer[1]);
-    resume(misc_timer[2]);
     auto parental_likelihoods = join(reduced_maternal_likelihoods, reduced_paternal_likelihoods, prior_model_);
-    pause(misc_timer[2]);
     if (debug_log_) debug::print(stream(*debug_log_), parental_likelihoods);
     const auto reduced_parental_likelihoods = reduce(parental_likelihoods, options_);
-    resume(misc_timer[3]);
     auto joint_likelihoods = join(reduced_parental_likelihoods, reduced_child_likelihoods, mutation_model_);
-    pause(misc_timer[3]);
     if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
     const auto evidence = normalise_exp(joint_likelihoods);
     return {std::move(joint_likelihoods), evidence};
