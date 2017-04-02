@@ -439,7 +439,7 @@ std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const std
     if (parameters_.prior_model_params) {
         return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
         Haplotype {mapped_region(haplotypes.front()), reference_},
-        *parameters_.prior_model_params
+        *parameters_.prior_model_params, haplotypes.size(), CoalescentModel::CachingStrategy::address
         });
     } else {
         return std::make_unique<UniformGenotypePriorModel>();
