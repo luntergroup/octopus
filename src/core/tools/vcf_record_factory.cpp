@@ -385,7 +385,12 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                                         new_genotype.emplace(move(new_allele));
                                     }
                                 } else {
-                                    throw std::runtime_error {"Bad phase"};
+                                    auto new_sequence = old_genotype[i].sequence();
+                                    assert(!old_genotype[i].sequence().empty());
+                                    new_sequence.front() = actual_reference_base;
+                                    Allele new_allele {mapped_region(curr_call), move(new_sequence)};
+                                    replacements.emplace(old_genotype[i], new_allele);
+                                    new_genotype.emplace(move(new_allele));
                                 }
                             } else {
                                 auto new_sequence = old_genotype[i].sequence();
