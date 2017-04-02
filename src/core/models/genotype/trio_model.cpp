@@ -42,6 +42,7 @@ void clear(Container& c)
 
 using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
 using GenotypeIndiceVector = std::vector<unsigned>;
+using GenotypeIndiceVectorReference = std::reference_wrapper<const GenotypeIndiceVector>;
 
 bool operator==(const GenotypeReference lhs, const GenotypeReference rhs)
 {
@@ -133,10 +134,17 @@ auto compute_posteriors(const std::vector<GenotypeRefProbabilityPair>& likelihoo
                         const PopulationPriorModel& prior_model)
 {
     std::vector<double> posteriors(likelihoods.size());
-    std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::begin(posteriors),
-                   [&] (const auto& p) {
-                       return p.probability + prior_model.evaluate(std::vector<GenotypeReference> {p.genotype});
-                   });
+    if (prior_model.is_primed()) {
+        std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::begin(posteriors),
+                       [&] (const auto& p) {
+                           return p.probability + prior_model.evaluate(std::vector<GenotypeIndiceVectorReference> {*p.indices});
+                       });
+    } else {
+        std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::begin(posteriors),
+                       [&] (const auto& p) {
+                           return p.probability + prior_model.evaluate(std::vector<GenotypeReference> {p.genotype});
+                       });
+    }
     maths::normalise_exp(posteriors);
     std::vector<GenotypeRefProbabilityPair> result {};
     result.reserve(posteriors.size());
@@ -299,6 +307,23 @@ double joint_probability(const Genotype<Haplotype>& mother, const Genotype<Haplo
     return model.evaluate(parental_genotypes);
 }
 
+double joint_probability(const GenotypeIndiceVector& mother, const GenotypeIndiceVector& father,
+                         const PopulationPriorModel& model)
+{
+    const std::vector<GenotypeIndiceVectorReference> parental_genotypes {mother, father};
+    return model.evaluate(parental_genotypes);
+}
+
+double joint_probability(const GenotypeRefProbabilityPair& mother, const GenotypeRefProbabilityPair& father,
+                         const PopulationPriorModel& model)
+{
+    if (mother.indices && father.indices) {
+        return mother.probability + father.probability + joint_probability(*mother.indices, *father.indices, model);
+    } else {
+        return mother.probability + father.probability + joint_probability(mother.genotype, father.genotype, model);
+    }
+}
+
 template <typename T1, typename T2>
 auto join_size(const ReducedVectorMap<T1>& first, const ReducedVectorMap<T2>& second) noexcept
 {
@@ -318,23 +343,17 @@ auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& maternal,
     result.reserve(join_size(maternal, paternal));
     std::for_each(maternal.first, maternal.last_to_join, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_join, [&] (const auto& p) {
-            result.push_back({m.genotype, p.genotype,
-                              m.probability + p.probability + joint_probability(m.genotype, p.genotype, model),
-                              m.indices, p.indices});
+            result.push_back({m.genotype, p.genotype, joint_probability(m, p, model), m.indices, p.indices});
         });
     });
     std::for_each(maternal.last_to_join, maternal.last, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_partially_join, [&] (const auto& p) {
-            result.push_back({m.genotype, p.genotype,
-                              m.probability + p.probability + joint_probability(m.genotype, p.genotype, model),
-                              m.indices, p.indices});
+            result.push_back({m.genotype, p.genotype, joint_probability(m, p, model), m.indices, p.indices});
         });
     });
     std::for_each(paternal.last_to_join, paternal.last, [&] (const auto& p) {
         std::for_each(maternal.first, maternal.last_to_partially_join, [&] (const auto& m) {
-            result.push_back({m.genotype, p.genotype,
-                              m.probability + p.probability + joint_probability(m.genotype, p.genotype, model),
-                              m.indices, p.indices});
+            result.push_back({m.genotype, p.genotype, joint_probability(m, p, model), m.indices, p.indices});
         });
     });
     return result;
@@ -664,7 +683,7 @@ TrioModel::InferredLatents
 TrioModel::evaluate(const GenotypeVector& genotypes, std::vector<std::vector<unsigned>>& genotype_indices,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    assert(mutation_model_.is_primed());
+    assert(prior_model_.is_primed() && mutation_model_.is_primed());
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
     resume(misc_timer[0]);
     haplotype_likelihoods.prime(trio_.mother());
