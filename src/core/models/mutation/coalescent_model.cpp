@@ -114,8 +114,7 @@ bool CoalescentModel::is_primed() const noexcept
 
 double CoalescentModel::evaluate(const std::vector<unsigned>& haplotype_indices) const
 {
-    const auto t = count_segregating_sites(haplotype_indices);
-    return evaluate(t);
+    return evaluate(count_segregating_sites(haplotype_indices));
 }
 
 namespace {
@@ -259,22 +258,32 @@ double CoalescentModel::evaluate(const unsigned k_snp, const unsigned k_indel, c
 
 void CoalescentModel::fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const
 {
-    assert(site_buffer2_.empty());
     site_buffer1_.clear();
     std::fill(std::begin(index_flag_buffer_), std::end(index_flag_buffer_), false);
+    unsigned num_unique_nonempty_indices {0};
+    auto middle = std::begin(site_buffer1_);
     for (auto index : haplotype_indices) {
         if (!index_flag_buffer_[index]) {
             auto& variants = index_cache_[index];
             if (!variants) {
                 variants = haplotypes_[index].difference(reference_);
             }
-            std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
-                           std::cbegin(*variants), std::cend(*variants),
-                           std::back_inserter(site_buffer2_));
+            if (!variants->empty()) {
+                middle = site_buffer1_.insert(std::cend(site_buffer1_), std::cbegin(*variants), std::cend(*variants));
+                ++num_unique_nonempty_indices;
+            }
             index_flag_buffer_[index] = true;
-            site_buffer1_ = std::move(site_buffer2_);
-            site_buffer2_.clear();
         }
+    }
+    if (num_unique_nonempty_indices == 2) {
+        assert(site_buffer2_.empty());
+        std::merge(std::begin(site_buffer1_), middle, middle, std::end(site_buffer1_), std::back_inserter(site_buffer2_));
+        site_buffer2_.erase(std::unique(std::begin(site_buffer2_), std::end(site_buffer2_)), std::end(site_buffer2_));
+        site_buffer1_ = std::move(site_buffer2_);
+        site_buffer2_.clear();
+    } else if (num_unique_nonempty_indices > 2) {
+        std::sort(std::begin(site_buffer1_), std::end(site_buffer1_));
+        site_buffer1_.erase(std::unique(std::begin(site_buffer1_), std::end(site_buffer1_)), std::end(site_buffer1_));
     }
 }
 

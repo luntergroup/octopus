@@ -60,6 +60,7 @@ public:
     double evaluate(const std::vector<unsigned>& haplotype_indices) const;
     
 private:
+    using VariantReference = std::reference_wrapper<const Variant>;
     using SiteCountTuple = std::tuple<unsigned, unsigned, unsigned>;
     using SiteCountIndelTuple = std::tuple<unsigned, unsigned, unsigned, int>;
     
@@ -77,7 +78,7 @@ private:
     std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;
     
-    mutable std::vector<std::reference_wrapper<const Variant>> site_buffer1_, site_buffer2_;
+    mutable std::vector<VariantReference> site_buffer1_, site_buffer2_;
     mutable std::unordered_map<Haplotype, std::vector<Variant>> difference_value_cache_;
     mutable std::unordered_map<const Haplotype*, std::vector<Variant>> difference_address_cache_;
     mutable std::vector<boost::optional<std::vector<Variant>>> index_cache_;
