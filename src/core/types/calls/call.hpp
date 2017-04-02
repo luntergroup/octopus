@@ -81,6 +81,8 @@ public:
     
     virtual const Allele& reference() const noexcept = 0;
     
+    virtual bool is_represented(const Allele& allele) const noexcept = 0;
+    
     void replace(char old_base, char replacement_base);
     
     virtual void replace(const Allele& old, Allele replacement) = 0;
