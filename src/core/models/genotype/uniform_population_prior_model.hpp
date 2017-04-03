@@ -15,6 +15,9 @@ namespace octopus {
 class UniformPopulationPriorModel : public PopulationPriorModel
 {
 public:
+    using PopulationPriorModel::GenotypeReference;
+    using PopulationPriorModel::GenotypeIndiceVectorReference;
+    
     UniformPopulationPriorModel() = default;
     
     UniformPopulationPriorModel(const UniformPopulationPriorModel&)            = default;
@@ -25,13 +28,35 @@ public:
     virtual ~UniformPopulationPriorModel() = default;
 
 private:
-    virtual double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
+    bool is_primed_ = false;
+    
+    double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
     {
         return 1.0;
     }
-    virtual double do_evaluate(const std::vector<std::reference_wrapper<const Genotype<Haplotype>>>& genotypes) const override
+    double do_evaluate(const std::vector<GenotypeReference>& genotypes) const override
     {
         return 1.0;
+    }
+    double do_evaluate(const std::vector<std::vector<unsigned>>& indices) const override
+    {
+        return 1.0;
+    }
+    double do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const override
+    {
+        return 1.0;
+    }
+    void do_prime(const std::vector<Haplotype>& haplotypes) override
+    {
+        is_primed_ = true;
+    }
+    void do_unprime() noexcept override
+    {
+        is_primed_ = false;
+    }
+    bool check_is_primed() const noexcept override
+    {
+        return is_primed_;
     }
 };
     

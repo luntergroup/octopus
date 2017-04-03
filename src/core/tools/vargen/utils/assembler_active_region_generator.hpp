@@ -44,6 +44,9 @@ public:
     
     void add(const SampleName& sample, const AlignedRead& read);
     
+    template <typename ForwardIterator>
+    void add(const SampleName& sample, ForwardIterator first_read, ForwardIterator last_read);
+    
     std::vector<GenomicRegion> generate(const GenomicRegion& region) const;
 
 private:
@@ -57,6 +60,29 @@ private:
     
     bool is_interesting(const AlignedRead& read) const;
 };
+
+template <typename ForwardIterator>
+void AssemblerActiveRegionGenerator::add(const SampleName& sample, ForwardIterator first_read, ForwardIterator last_read)
+{
+    auto& coverage_tracker = coverage_tracker_[sample];
+    auto& interesting_coverage_tracker = interesting_read_coverages_[sample];
+    std::for_each(first_read, last_read, [&] (const AlignedRead& read) {
+        coverage_tracker.add(read);
+        if (is_interesting(read)) {
+            interesting_coverage_tracker.add(read);
+        }
+    });
+    if (structual_interesting_) {
+        auto& clipped_coverage_tracker = clipped_coverage_tracker_[sample];
+        std::for_each(first_read, last_read, [&] (const AlignedRead& read) {
+            if (is_soft_clipped(read)) {
+                clipped_coverage_tracker.add(clipped_mapped_region(read));
+            } else {
+                clipped_coverage_tracker.add(read);
+            }
+        });
+    }
+}
     
 } // namespace coretools
 } // namespace octopus

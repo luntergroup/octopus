@@ -36,6 +36,7 @@
 #include "readpipe/read_pipe_fwd.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
+#include "utils/append.hpp"
 #include "config/octopus_vcf.hpp"
 #include "core/callers/caller_factory.hpp"
 #include "core/callers/caller.hpp"
@@ -146,7 +147,6 @@ std::string get_caller_name(const GenomeCallingComponents& components)
 void log_startup_info(const GenomeCallingComponents& components)
 {
     logging::InfoLogger log {};
-    stream(log) << "Invoked calling model: " << get_caller_name(components);
     std::ostringstream ss {};
     if (!components.samples().empty()) {
         const auto num_samples = components.samples().size();
@@ -164,6 +164,18 @@ void log_startup_info(const GenomeCallingComponents& components)
     auto str = ss.str();
     str.pop_back(); // the extra whitespace
     log << str;
+    stream(log) << "Invoked calling model: " << get_caller_name(components);
+    const auto search_size = utils::format_with_commas(sum_region_sizes(components.search_regions()));
+    const auto num_threads = components.num_threads();
+    if (num_threads) {
+        if (*num_threads == 1) {
+            stream(log) << "Processing " << search_size << "bp with a single thread";
+        } else {
+            stream(log) << "Processing " << search_size << "bp with " << *num_threads << " threads";
+        }
+    } else {
+        stream(log) << "Processing " << search_size << "bp with automatic thread management";
+    }
     auto sl = stream(log);
     sl << "Writing calls to ";
     const auto output_path = components.output().path();
@@ -452,10 +464,12 @@ auto count_tasks(const TaskMap& tasks) noexcept
 
 struct TaskMakerSyncPacket
 {
-    TaskMakerSyncPacket() : num_tasks {0}, finished {}, all_done {false} {}
+    TaskMakerSyncPacket() : batch_size_hint {1}, waiting {true}, num_tasks {0}, finished {}, all_done {false} {}
     std::condition_variable cv;
     std::mutex mutex;
     bool ready = true;
+    std::atomic_uint batch_size_hint; // Only read by task maker
+    std::atomic_bool waiting; // Only read by task maker
     std::atomic_uint num_tasks;
     std::unordered_map<ContigName, bool> finished;
     std::atomic_bool all_done;
@@ -467,29 +481,52 @@ void make_region_tasks(const GenomicRegion& region, const ContigCallingComponent
     static constexpr GenomicRegion::Size minTaskSize {1000};
     std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
     auto subregion = propose_call_subregion(components, region, minTaskSize);
-    while (true) {
-        assert(!lock.owns_lock());
+    if (ends_equal(subregion, region)) {
         lock.lock();
-        while (!sync.ready) {
-            sync.cv.wait(lock, [&] () { return sync.ready; });
-        }
-        result.emplace(subregion, policy);
+        sync.cv.wait(lock, [&] () { return sync.ready; });
+        result.emplace(std::move(subregion), policy);
         ++sync.num_tasks;
-        assert(!ends_before(region, subregion));
-        if (ends_equal(subregion, region)) {
-            if (last_region_in_contig) {
-                sync.finished.at(region.contig_name()) = true;
-                if (last_contig) sync.all_done = true;
-            } else {
-                assert(!last_contig);
+        if (last_region_in_contig) {
+            sync.finished.at(region.contig_name()) = true;
+            if (last_contig) sync.all_done = true;
+        }
+        lock.unlock();
+        sync.cv.notify_one();
+    } else {
+        std::deque<GenomicRegion> batch {};
+        batch.push_back(subregion);
+        bool done {false};
+        while (true) {
+            while (batch.size() < std::max(sync.batch_size_hint.load(), 1u) || !sync.waiting) {
+                subregion = propose_call_subregion(components, subregion, region, minTaskSize);
+                batch.push_back(subregion);
+                assert(!ends_before(region, subregion));
+                if (ends_equal(subregion, region)) {
+                    done = true;
+                    break;
+                }
             }
-            lock.unlock();
-            sync.cv.notify_one();
-            break;
-        } else {
-            lock.unlock();
-            sync.cv.notify_one();
-            subregion = propose_call_subregion(components, subregion, region, minTaskSize);
+            assert(!batch.empty());
+            assert(!lock.owns_lock());
+            lock.lock();
+            sync.cv.wait(lock, [&] () { return sync.ready; });
+            for (auto&& r : batch) result.emplace(std::move(r), policy);
+            sync.num_tasks += batch.size();
+            if (done) {
+                if (last_region_in_contig) {
+                    sync.finished.at(region.contig_name()) = true;
+                    if (last_contig) sync.all_done = true;
+                } else {
+                    assert(!last_contig);
+                }
+                lock.unlock();
+                sync.cv.notify_one();
+                break;
+            } else {
+                batch.clear();
+                lock.unlock();
+                sync.cv.notify_one();
+            }
         }
     }
 }
@@ -587,6 +624,8 @@ Task pop(TaskMap& tasks, TaskMakerSyncPacket& sync)
     const auto result = std::move(contig_task_itr->second.front());
     contig_task_itr->second.pop();
     if (sync.finished.at(contig_task_itr->first) && contig_task_itr->second.empty()) {
+        static auto debug_log = get_debug_log();
+        if (debug_log) stream(*debug_log) << "Finished calling contig " << contig_task_itr->first;
         tasks.erase(contig_task_itr);
     }
     --sync.num_tasks;
@@ -766,6 +805,47 @@ void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks,
                   [&] (auto& rhs) { resolve_connecting_calls(*lhs++, rhs, calling_components); });
 }
 
+struct TaskWriterSync
+{
+    std::condition_variable cv;
+    std::mutex mutex;
+    std::deque<CompletedTask> tasks = {};
+    bool done = false;
+};
+
+void write(std::deque<CompletedTask>& tasks, TempVcfWriterMap& writers)
+{
+    static auto debug_log = get_debug_log();
+    for (auto&& task : tasks) {
+        if (debug_log) {
+            stream(*debug_log) << "Writing completed task " << task << " that finished in " << duration(task);
+        }
+        auto& writer = writers.at(contig_name(task));
+        write_calls(std::move(task.calls), writer);
+    }
+    tasks.clear();
+}
+
+void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSync& sync)
+{
+    std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
+    std::deque<CompletedTask> buffer {};
+    while (!sync.done) {
+        lock.lock();
+        sync.cv.wait(lock, [&] () { return !sync.tasks.empty(); });
+        assert(buffer.empty());
+        std::swap(sync.tasks, buffer);
+        lock.unlock();
+        sync.cv.notify_one();
+        write(buffer, writers);
+    }
+}
+
+std::thread make_task_writer_thread(TempVcfWriterMap& temp_writers, TaskWriterSync& writer_sync)
+{
+    return std::thread {write_temp_vcf_helper, std::ref(temp_writers), std::ref(writer_sync)};
+}
+
 void write(std::deque<CompletedTask>&& tasks, VcfWriter& temp_vcf)
 {
     static auto debug_log = get_debug_log();
@@ -777,10 +857,18 @@ void write(std::deque<CompletedTask>&& tasks, VcfWriter& temp_vcf)
     }
 }
 
+void write(std::deque<CompletedTask>&& tasks, TaskWriterSync& sync)
+{
+    std::unique_lock<std::mutex> lock {sync.mutex};
+    utils::append(std::move(tasks), sync.tasks);
+    lock.unlock();
+    sync.cv.notify_one();
+}
+
 // A CompletedTask can only be written if all proceeding tasks have completed (either written or buffered)
 void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffered_tasks,
                      TaskQueue& running_tasks, HoldbackTask& holdback,
-                     VcfWriter& temp_vcf, const ContigCallingComponentFactory& calling_components)
+                     TaskWriterSync& sync, const ContigCallingComponentFactory& calling_components)
 {
     static auto debug_log = get_debug_log();
     if (is_same_region(task, running_tasks.front())) {
@@ -794,11 +882,20 @@ void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffer
         holdback = p.first->second;
         if (debug_log) stream(*debug_log) << "Holding back completed task " << *holdback;
         writable_tasks.pop_back();
-        write(std::move(writable_tasks), temp_vcf);
+        write(std::move(writable_tasks), sync);
     } else {
         if (debug_log) stream(*debug_log) << "Buffering completed task " << task;
         buffered_tasks.emplace(contig_region(task), std::move(task));
     }
+}
+
+void wait_until_finished(TaskWriterSync& sync)
+{
+    std::unique_lock<std::mutex> lock {sync.mutex};
+    sync.cv.wait(lock, [&] () { return sync.tasks.empty(); });
+    sync.done = true;
+    lock.unlock();
+    sync.cv.notify_one();
 }
 
 using FutureCompletedTasks = std::vector<std::future<CompletedTask>>;
@@ -896,11 +993,11 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     using namespace std::chrono_literals;
     static auto debug_log = get_debug_log();
     
-    auto temp_vcfs = make_temp_vcf_writers(components);
     const auto num_task_threads = calculate_num_task_threads(components);
     
     TaskMap pending_tasks {components.contigs()};
     TaskMakerSyncPacket task_maker_sync {};
+    task_maker_sync.batch_size_hint = 2 * num_task_threads;
     std::unique_lock<std::mutex> pending_task_lock {task_maker_sync.mutex, std::defer_lock};
     auto maker_thread = make_tasks(pending_tasks, components, num_task_threads, task_maker_sync);
     if (maker_thread.joinable()) maker_thread.detach();
@@ -920,6 +1017,11 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     const auto calling_components = make_contig_calling_component_factory_map(components);
     unsigned num_idle_futures {0};
     
+    auto temp_writers = make_temp_vcf_writers(components);
+    TaskWriterSync task_writer_sync {};
+    auto task_writer_thread = make_task_writer_thread(temp_writers, task_writer_sync);
+    task_writer_thread.detach();
+    
     // Wait for the first task to be made
     const auto tasks_available = [&] () noexcept { return task_maker_sync.num_tasks > 0; };
     while(task_maker_sync.num_tasks == 0) {
@@ -927,12 +1029,15 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
         task_maker_sync.cv.wait(pending_task_lock, tasks_available);
         pending_task_lock.unlock();
     }
+    task_maker_sync.batch_size_hint = num_task_threads / 2;
+    
     components.progress_meter().start();
     
-    while (!task_maker_sync.all_done) {
+    while (!task_maker_sync.all_done || task_maker_sync.num_tasks > 0) {
         pending_task_lock.lock();
         assert(count_tasks(pending_tasks) == task_maker_sync.num_tasks);
         if (!task_maker_sync.all_done && task_maker_sync.num_tasks == 0) {
+            task_maker_sync.batch_size_hint = std::max(num_idle_futures, num_task_threads / 2);
             if (num_idle_futures < futures.size()) {
                 // If there are running futures then it's good periodically check to see if
                 // any have finished and process them while we wait for the task maker.
@@ -952,7 +1057,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
                 const auto& contig = contig_name(completed_task.region);
                 write_or_buffer(std::move(completed_task), buffered_tasks.at(contig),
                                 running_tasks.at(contig), holdbacks.at(contig),
-                                temp_vcfs.at(contig), calling_components.at(contig));
+                                task_writer_sync, calling_components.at(contig));
                 --caller_sync.num_finished;
             }
             if (!future.valid()) {
@@ -968,11 +1073,13 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
                 }
             }
         }
-        // If there are idle futures then we must have run out of tasks, so we should
-        // wait on the task maker condition variable.
+        // If there are no idle futures then all threads are busy and we must wait for one to finish,
+        // otherwise we must have run out of tasks, so we should wait for new ones.
         if (num_idle_futures == 0 && caller_sync.num_finished == 0) {
+            task_maker_sync.waiting = false;
             std::unique_lock<std::mutex> lock {caller_sync.mutex};
             caller_sync.cv.wait(lock, [&] () { return caller_sync.num_finished > 0; });
+            task_maker_sync.waiting = true;
         } else {
             if (debug_log) stream(*debug_log) << "There are " << num_idle_futures << " idle futures";
         }
@@ -981,9 +1088,10 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     assert(pending_tasks.empty());
     running_tasks.clear();
     holdbacks.clear(); // holdbacks are just references to buffered tasks
-    write_remaining_tasks(futures, buffered_tasks, temp_vcfs, calling_components);
+    wait_until_finished(task_writer_sync);
+    write_remaining_tasks(futures, buffered_tasks, temp_writers, calling_components);
     components.progress_meter().stop();
-    merge(std::move(temp_vcfs), components);
+    merge(std::move(temp_writers), components);
 }
 
 } // namespace

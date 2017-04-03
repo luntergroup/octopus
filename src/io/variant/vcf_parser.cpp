@@ -442,7 +442,7 @@ VcfParser::RecordIterator::RecordIterator(const VcfParser& vcf, UnpackPolicy unp
 : RecordIterator {vcf, unpack}
 {
     contig_ = std::move(contig);
-    if (record_ && record_->chrom() != contig) {
+    if (record_ && record_->chrom() != *contig_) {
         next();
     }
 }
@@ -451,7 +451,7 @@ VcfParser::RecordIterator::RecordIterator(const VcfParser& vcf, UnpackPolicy unp
 : RecordIterator {vcf, unpack}
 {
     region_ = std::move(region);
-    if (record_ && !overlaps(*record_, region)) {
+    if (record_ && !overlaps(*record_, *region_)) {
         next();
     }
 }

@@ -22,6 +22,7 @@ class CoalescentPopulationPriorModel : public PopulationPriorModel
 {
 public:
     using PopulationPriorModel::GenotypeReference;
+    using PopulationPriorModel::GenotypeIndiceVectorReference;
     
     CoalescentPopulationPriorModel() = delete;
     
@@ -38,14 +39,29 @@ private:
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;
     
     CoalescentModel model_;
+    mutable std::vector<unsigned> index_buffer_;
         
-    virtual double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
+    double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
     {
         return do_evaluate_helper(genotypes);
     }
-    virtual double do_evaluate(const std::vector<GenotypeReference>& genotypes) const override
+    double do_evaluate(const std::vector<GenotypeReference>& genotypes) const override
     {
         return do_evaluate_helper(genotypes);
+    }
+    double do_evaluate(const std::vector<std::vector<unsigned>>& indices) const override;
+    double do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const override;
+    void do_prime(const std::vector<Haplotype>& haplotypes) override
+    {
+        model_.prime(haplotypes);
+    }
+    void do_unprime() noexcept override
+    {
+        model_.unprime();
+    }
+    bool check_is_primed() const noexcept override
+    {
+        return model_.is_primed();
     }
     
     template <typename Container>

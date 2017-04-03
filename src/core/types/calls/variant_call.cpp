@@ -30,6 +30,11 @@ const Allele& VariantCall::alternative() const noexcept
     return variant_.alt_allele();
 }
 
+bool VariantCall::is_represented(const Allele& allele) const noexcept
+{
+    return allele == variant_.ref_allele() || allele == variant_.alt_allele();
+}
+
 void VariantCall::replace_called_alleles(const char old_base, const char replacement_base)
 {
     const auto& ref_seq = ref_sequence(variant_);

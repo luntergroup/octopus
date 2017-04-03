@@ -321,14 +321,17 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
 }
 
 namespace debug {
-    void log(const GenotypeProbabilityMap& genotype_posteriors,
-             boost::optional<logging::DebugLogger>& debug_log,
-             boost::optional<logging::TraceLogger>& trace_log);
-    void log(const VariantPosteriorVector& candidate_posteriors,
-             boost::optional<logging::DebugLogger>& debug_log,
-             boost::optional<logging::TraceLogger>& trace_log);
-    void log(const Genotype<Haplotype>& called_genotype,
-             boost::optional<logging::DebugLogger>& debug_log);
+
+void log(const GenotypeProbabilityMap& genotype_posteriors,
+         boost::optional<logging::DebugLogger>& debug_log,
+         boost::optional<logging::TraceLogger>& trace_log);
+void log(const VariantPosteriorVector& candidate_posteriors,
+         boost::optional<logging::DebugLogger>& debug_log,
+         boost::optional<logging::TraceLogger>& trace_log,
+         Phred<double> min_posterior);
+void log(const Genotype<Haplotype>& called_genotype,
+         boost::optional<logging::DebugLogger>& debug_log);
+
 } // namespace debug
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
@@ -339,7 +342,7 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
     debug::log(genotype_posteriors, debug_log_, trace_log_);
     const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
-    debug::log(candidate_posteriors, debug_log_, trace_log_);
+    debug::log(candidate_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
     const auto genotype_call = octopus::call_genotype(genotype_posteriors);
     auto variant_calls = call_candidates(candidate_posteriors, genotype_call,
                                          parameters_.min_variant_posterior);
@@ -439,7 +442,7 @@ std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const std
     if (parameters_.prior_model_params) {
         return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
         Haplotype {mapped_region(haplotypes.front()), reference_},
-        *parameters_.prior_model_params
+        *parameters_.prior_model_params, haplotypes.size(), CoalescentModel::CachingStrategy::address
         });
     } else {
         return std::make_unique<UniformGenotypePriorModel>();
@@ -447,106 +450,92 @@ std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const std
 }
 
 namespace debug {
-    template <typename S>
-    void print_genotype_posteriors(S&& stream,
-                                   const GenotypeProbabilityMap& genotype_posteriors,
-                                   const std::size_t n)
-    {
-        const auto m = std::min(n, genotype_posteriors.size());
-        
-        if (m == genotype_posteriors.size()) {
-            stream << "Printing all genotype posteriors " << '\n';
-        } else {
-            stream << "Printing top " << m << " genotype posteriors " << '\n';
-        }
-        
-        using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-        
-        std::vector<std::pair<GenotypeReference, double>> v {};
-        v.reserve(genotype_posteriors.size());
-        
-        std::copy(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                  std::back_inserter(v));
-        
-        const auto mth = std::next(std::begin(v), m);
-        
-        std::partial_sort(std::begin(v), mth, std::end(v),
-                          [] (const auto& lhs, const auto& rhs) {
-                              return lhs.second > rhs.second;
-                          });
-        
-        std::for_each(std::begin(v), mth,
-                      [&] (const auto& p) {
-                          print_variant_alleles(stream, p.first);
-                          stream << " " << p.second << '\n';
-                      });
+
+template <typename S>
+void print_genotype_posteriors(S&& stream,
+                               const GenotypeProbabilityMap& genotype_posteriors,
+                               const std::size_t n)
+{
+    const auto m = std::min(n, genotype_posteriors.size());
+    if (m == genotype_posteriors.size()) {
+        stream << "Printing all genotype posteriors " << '\n';
+    } else {
+        stream << "Printing top " << m << " genotype posteriors " << '\n';
     }
-    
-    void print_genotype_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
-                                   const std::size_t n)
-    {
-        print_genotype_posteriors(std::cout, genotype_posteriors, n);
+    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+    std::vector<std::pair<GenotypeReference, double>> v {};
+    v.reserve(genotype_posteriors.size());
+    std::copy(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), std::back_inserter(v));
+    const auto mth = std::next(std::begin(v), m);
+    std::partial_sort(std::begin(v), mth, std::end(v),
+                      [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+    std::for_each(std::begin(v), mth,
+                  [&] (const auto& p) {
+                      print_variant_alleles(stream, p.first);
+                      stream << " " << p.second << '\n';
+                  });
+}
+
+void print_genotype_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
+                               const std::size_t n)
+{
+    print_genotype_posteriors(std::cout, genotype_posteriors, n);
+}
+
+template <typename S>
+void print_candidate_posteriors(S&& stream, const VariantPosteriorVector& candidate_posteriors,
+                                const std::size_t n)
+{
+    const auto m = std::min(n, candidate_posteriors.size());
+    if (m == candidate_posteriors.size()) {
+        stream << "Printing all candidate variant posteriors " << '\n';
+    } else {
+        stream << "Printing top " << m << " candidate variant posteriors " << '\n';
     }
-    
-    template <typename S>
-    void print_candidate_posteriors(S&& stream, const VariantPosteriorVector& candidate_posteriors,
-                                    const std::size_t n)
-    {
-        const auto m = std::min(n, candidate_posteriors.size());
-        
-        if (m == candidate_posteriors.size()) {
-            stream << "Printing all candidate variant posteriors " << '\n';
-        } else {
-            stream << "Printing top " << m << " candidate variant posteriors " << '\n';
-        }
-        
-        std::vector<std::pair<VariantReference, Phred<double>>> v {};
-        v.reserve(candidate_posteriors.size());
-        
-        std::copy(std::cbegin(candidate_posteriors), std::cend(candidate_posteriors),
-                  std::back_inserter(v));
-        
-        const auto mth = std::next(std::begin(v), m);
-        
-        std::partial_sort(std::begin(v), mth, std::end(v),
-                          [] (const auto& lhs, const auto& rhs) {
-                              return lhs.second > rhs.second;
-                          });
-        
-        std::for_each(std::begin(v), mth,
-                      [&] (const auto& p) {
-                          stream << p.first.get() << " " << p.second.probability_true() << '\n';
-                      });
+    std::vector<std::pair<VariantReference, Phred<double>>> v {};
+    v.reserve(candidate_posteriors.size());
+    std::copy(std::cbegin(candidate_posteriors), std::cend(candidate_posteriors), std::back_inserter(v));
+    const auto mth = std::next(std::begin(v), m);
+    std::partial_sort(std::begin(v), mth, std::end(v),
+                      [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+    std::for_each(std::begin(v), mth,
+                  [&] (const auto& p) {
+                      stream << p.first.get() << " " << p.second.probability_true() << '\n';
+                  });
+}
+
+void print_candidate_posteriors(const VariantPosteriorVector& candidate_posteriors,
+                                const std::size_t n)
+{
+    print_candidate_posteriors(std::cout, candidate_posteriors, n);
+}
+
+void log(const GenotypeProbabilityMap& genotype_posteriors,
+         boost::optional<logging::DebugLogger>& debug_log,
+         boost::optional<logging::TraceLogger>& trace_log)
+{
+    if (trace_log) {
+        print_genotype_posteriors(stream(*trace_log), genotype_posteriors, -1);
     }
-    
-    void print_candidate_posteriors(const VariantPosteriorVector& candidate_posteriors,
-                                    const std::size_t n)
-    {
-        print_candidate_posteriors(std::cout, candidate_posteriors, n);
+    if (debug_log) {
+        print_genotype_posteriors(stream(*debug_log), genotype_posteriors, 5);
     }
-    
-    void log(const GenotypeProbabilityMap& genotype_posteriors,
-             boost::optional<logging::DebugLogger>& debug_log,
-             boost::optional<logging::TraceLogger>& trace_log)
-    {
-        if (trace_log) {
-            print_genotype_posteriors(stream(*trace_log), genotype_posteriors, -1);
-        }
-        if (debug_log) {
-            print_genotype_posteriors(stream(*debug_log), genotype_posteriors, 5);
-        }
+}
+
+void log(const VariantPosteriorVector& candidate_posteriors,
+         boost::optional<logging::DebugLogger>& debug_log,
+         boost::optional<logging::TraceLogger>& trace_log,
+         Phred<double> min_posterior)
+{
+    if (trace_log) {
+        print_candidate_posteriors(stream(*trace_log), candidate_posteriors, -1);
     }
-    
-    void log(const VariantPosteriorVector& candidate_posteriors,
-             boost::optional<logging::DebugLogger>& debug_log,
-             boost::optional<logging::TraceLogger>& trace_log)
-    {
-        if (trace_log) {
-            print_candidate_posteriors(stream(*trace_log), candidate_posteriors, -1);
-        }
-        if (debug_log) {
-            print_candidate_posteriors(stream(*debug_log), candidate_posteriors, 5);
-        }
+    if (debug_log) {
+        const auto n = std::count_if(std::cbegin(candidate_posteriors), std::cend(candidate_posteriors),
+                                     [=] (const auto& p) { return p.second >= min_posterior; });
+        print_candidate_posteriors(stream(*debug_log), candidate_posteriors, std::max(n,  decltype(n) {5}));
     }
+}
+
 } // namespace debug
 } // namespace octopus

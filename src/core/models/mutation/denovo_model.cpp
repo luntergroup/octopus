@@ -24,10 +24,14 @@ auto make_hmm_model(const double denovo_mutation_rate) noexcept
 DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint, CachingStrategy caching)
 : mutation_model_ {make_hmm_model(parameters.mutation_rate)}
 , num_haplotypes_hint_ {num_haplotypes_hint}
+, haplotypes_ {}
 , caching_ {caching}
 , value_cache_ {}
 , address_cache_ {}
+, guarded_index_cache_ {}
+, unguarded_index_cache_ {}
 , padded_given_ {}
+, use_unguarded_ {false}
 {
     if (caching_ == CachingStrategy::address) {
         address_cache_.reserve(num_haplotypes_hint_ * num_haplotypes_hint_);
@@ -37,6 +41,41 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
     padded_given_.reserve(1000);
 }
 
+void DeNovoModel::prime(std::vector<Haplotype> haplotypes)
+{
+    constexpr std::size_t max_unguardered {50};
+    if (haplotypes.size() <= max_unguardered) {
+        unguarded_index_cache_.assign(haplotypes.size(), std::vector<double>(haplotypes.size(), 0));
+        for (unsigned target {0}; target < haplotypes.size(); ++target) {
+            for (unsigned given {0}; given < haplotypes.size(); ++given) {
+                if (target != given) {
+                    unguarded_index_cache_[target][given] = evaluate_uncached(haplotypes[target], haplotypes[given]);
+                }
+            }
+        }
+        use_unguarded_ = true;
+    } else {
+        haplotypes_ = std::move(haplotypes);
+        guarded_index_cache_.assign(haplotypes_.size(), std::vector<boost::optional<double>>(haplotypes_.size()));
+    }
+}
+
+void DeNovoModel::unprime() noexcept
+{
+    haplotypes_.clear();
+    haplotypes_.shrink_to_fit();
+    guarded_index_cache_.clear();
+    guarded_index_cache_.shrink_to_fit();
+    unguarded_index_cache_.clear();
+    unguarded_index_cache_.shrink_to_fit();
+    use_unguarded_ = false;
+}
+
+bool DeNovoModel::is_primed() const noexcept
+{
+    return !guarded_index_cache_.empty() || !unguarded_index_cache_.empty();
+}
+
 double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) const
 {
     switch (caching_) {
@@ -44,6 +83,23 @@ double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) co
         case CachingStrategy::value: return evaluate_basic_cache(target, given);
         case CachingStrategy::none: return evaluate_uncached(target, given);
         default: return evaluate_uncached(target, given); // to prevent compiler warning
+    }
+}
+
+double DeNovoModel::evaluate(const unsigned target, const unsigned given) const noexcept
+{
+    if (use_unguarded_) {
+        return unguarded_index_cache_[target][given];
+    } else {
+        auto& result = guarded_index_cache_[target][given];
+        if (!result) {
+            if (target != given) {
+                result = evaluate_uncached(haplotypes_[target], haplotypes_[given]);
+            } else {
+                result = 0;
+            }
+        }
+        return *result;
     }
 }
 

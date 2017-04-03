@@ -300,12 +300,14 @@ void LocalReassembler::do_add_read(const SampleName& sample, const AlignedRead& 
 
 void LocalReassembler::do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last)
 {
-    std::for_each(first, last, [&] (const AlignedRead& read) { do_add_read(sample, read); });
+    active_region_generator_.add(sample, first, last);
+    read_buffer_.insert(first, last);
 }
 
 void LocalReassembler::do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last)
 {
-    std::for_each(first, last, [&] (const AlignedRead& read) { do_add_read(sample, read); });
+    active_region_generator_.add(sample, first, last);
+    read_buffer_.insert(first, last);
 }
 
 template <typename Container>
@@ -386,8 +388,9 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
     finalise_bins();
     if (bins_.empty()) return {};
     const auto active_bins = overlapped_bins(bins_, region);
+	const auto num_bins = size(active_bins);
     std::deque<Variant> candidates {};
-    if (execution_policy_ == ExecutionPolicy::seq) {
+    if (execution_policy_ == ExecutionPolicy::seq || num_bins < 2) {
         for (auto& bin : active_bins) {
             if (debug_log_) {
                 stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
@@ -400,8 +403,8 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
             bin.clear();
         }
     } else {
-        const std::size_t num_threads {2 * (std::thread::hardware_concurrency() + 1)};
-        std::vector<std::future<std::deque<Variant>>> bin_futures(num_threads);
+        const std::size_t num_threads {4};
+        std::vector<std::future<std::deque<Variant>>> bin_futures(std::min(num_bins, num_threads));
         for (auto first_bin = std::begin(active_bins), last_bin = std::end(active_bins); first_bin != last_bin; ) {
             const auto batch_size = std::min(num_threads, static_cast<std::size_t>(std::distance(first_bin, last_bin)));
             const auto next_bin = std::next(first_bin, batch_size);
