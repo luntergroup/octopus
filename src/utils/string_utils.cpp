@@ -63,6 +63,19 @@ bool find(const std::string& lhs, const std::string& rhs)
     return lhs.find(rhs) != std::string::npos;
 }
 
+std::string& capitalise(std::string& str) noexcept
+{
+	std::transform(std::cbegin(str), std::cend(str), std::begin(str), [] (char c) { return std::toupper(c); });
+    return str;
+}
+
+std::string capitalise(const std::string& str)
+{
+	std::string result(str.size(), char {});
+	std::transform(std::cbegin(str), std::cend(str), std::begin(result), [] (char c) { return std::toupper(c); });
+	return result;
+}
+
 std::string& capitalise_front(std::string& str) noexcept
 {
     if (!str.empty()) str.front() = std::toupper(str.front());
@@ -73,6 +86,19 @@ std::string capitalise_front(const std::string& str)
 {
     auto result = str;
     return capitalise_front(result);
+}
+
+std::string& to_lower(std::string& str) noexcept
+{
+	std::transform(std::cbegin(str), std::cend(str), std::begin(str), [] (char c) { return std::tolower(c); });
+    return str;
+}
+
+std::string to_lower(const std::string& str)
+{
+	std::string result(str.size(), char {});
+	std::transform(std::cbegin(str), std::cend(str), std::begin(result), [] (char c) { return std::tolower(c); });
+	return result;
 }
 
 bool is_vowel(const char c)

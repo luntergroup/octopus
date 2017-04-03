@@ -29,6 +29,8 @@ public:
     
     const Allele& reference() const noexcept override;
     
+    bool is_represented(const Allele& allele) const noexcept override;
+    
     void replace(const Allele& old, Allele replacement) override;
     void replace_uncalled_genotype_alleles(const Allele& replacement, char ignore) override;
     

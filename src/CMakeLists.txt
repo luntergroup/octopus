@@ -248,6 +248,7 @@ set(CORE_SOURCES
     core/models/genotype/population_prior_model.hpp
     core/models/genotype/uniform_population_prior_model.hpp
     core/models/genotype/coalescent_population_prior_model.hpp
+    core/models/genotype/coalescent_population_prior_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp

@@ -46,7 +46,7 @@ public:
     struct Options
     {
         std::size_t max_joint_genotypes;
-        double max_mass_loss = 1e-100;
+        double max_individual_mass_loss = 1e-80, max_joint_mass_loss = 1e-200;
     };
     
     TrioModel() = delete;
@@ -73,12 +73,20 @@ public:
     InferredLatents evaluate(const GenotypeVector& genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
+    InferredLatents evaluate(const GenotypeVector& genotypes,
+                             std::vector<std::vector<unsigned>>& genotype_indices,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    
 private:
     const Trio& trio_;
     const PopulationPriorModel& prior_model_;
     const DeNovoModel& mutation_model_;
     Options options_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
+    
+    InferredLatents evaluate_allosome(const GenotypeVector& parent_genotypes,
+                                      const GenotypeVector& child_genotypes,
+                                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
 };
     
 } // namespace model

@@ -12,50 +12,69 @@
 #include <cassert>
 
 #include "basics/phred.hpp"
-#include "core/types/variant.hpp"
-//#include "../pairhmm/pair_hmm.hpp"
 
 namespace octopus {
 
+auto make_hmm_model(const double denovo_mutation_rate) noexcept
+{
+    const auto p = static_cast<std::int8_t>(probability_to_phred(denovo_mutation_rate).score());
+    return hmm::BasicMutationModel {p, p, p};
+}
+
 DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint, CachingStrategy caching)
-: parameters_ {parameters}
+: mutation_model_ {make_hmm_model(parameters.mutation_rate)}
 , num_haplotypes_hint_ {num_haplotypes_hint}
+, haplotypes_ {}
 , caching_ {caching}
 , value_cache_ {}
 , address_cache_ {}
+, guarded_index_cache_ {}
+, unguarded_index_cache_ {}
+, padded_given_ {}
+, use_unguarded_ {false}
 {
     if (caching_ == CachingStrategy::address) {
         address_cache_.reserve(num_haplotypes_hint_ * num_haplotypes_hint_);
     } else if (caching == CachingStrategy::value) {
         value_cache_.reserve(num_haplotypes_hint_);
     }
+    padded_given_.reserve(1000);
 }
 
-//auto make_hmm_model(const double denovo_mutation_rate) noexcept
-//{
-//    const auto p = static_cast<std::int8_t>(probability_to_phred(denovo_mutation_rate).score());
-//    return hmm::BasicMutationModel {p, p, p};
-//}
-//
-//auto pad(const Haplotype::NucleotideSequence& given, const std::size_t target_size)
-//{
-//    auto required_pad = 2 * hmm::min_flank_pad();
-//    const auto given_size = given.size();
-//    if (target_size > given_size) {
-//        required_pad += target_size - given_size;
-//    } else if (given_size > target_size) {
-//        const auto excess = given_size - target_size;
-//        if (excess >= required_pad) {
-//            return given;
-//        } else {
-//            required_pad -= excess;
-//        }
-//    }
-//    Haplotype::NucleotideSequence result(given.size() + required_pad, 'N');
-//    std::copy(std::cbegin(given), std::cend(given),
-//              std::next(std::begin(result), hmm::min_flank_pad()));
-//    return result;
-//}
+void DeNovoModel::prime(std::vector<Haplotype> haplotypes)
+{
+    constexpr std::size_t max_unguardered {50};
+    if (haplotypes.size() <= max_unguardered) {
+        unguarded_index_cache_.assign(haplotypes.size(), std::vector<double>(haplotypes.size(), 0));
+        for (unsigned target {0}; target < haplotypes.size(); ++target) {
+            for (unsigned given {0}; given < haplotypes.size(); ++given) {
+                if (target != given) {
+                    unguarded_index_cache_[target][given] = evaluate_uncached(haplotypes[target], haplotypes[given]);
+                }
+            }
+        }
+        use_unguarded_ = true;
+    } else {
+        haplotypes_ = std::move(haplotypes);
+        guarded_index_cache_.assign(haplotypes_.size(), std::vector<boost::optional<double>>(haplotypes_.size()));
+    }
+}
+
+void DeNovoModel::unprime() noexcept
+{
+    haplotypes_.clear();
+    haplotypes_.shrink_to_fit();
+    guarded_index_cache_.clear();
+    guarded_index_cache_.shrink_to_fit();
+    unguarded_index_cache_.clear();
+    unguarded_index_cache_.shrink_to_fit();
+    use_unguarded_ = false;
+}
+
+bool DeNovoModel::is_primed() const noexcept
+{
+    return !guarded_index_cache_.empty() || !unguarded_index_cache_.empty();
+}
 
 double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) const
 {
@@ -67,24 +86,44 @@ double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) co
     }
 }
 
+double DeNovoModel::evaluate(const unsigned target, const unsigned given) const noexcept
+{
+    if (use_unguarded_) {
+        return unguarded_index_cache_[target][given];
+    } else {
+        auto& result = guarded_index_cache_[target][given];
+        if (!result) {
+            if (target != given) {
+                result = evaluate_uncached(haplotypes_[target], haplotypes_[given]);
+            } else {
+                result = 0;
+            }
+        }
+        return *result;
+    }
+}
+
 // private methods
+
+void pad_given(const Haplotype::NucleotideSequence& target, const Haplotype::NucleotideSequence& given,
+               std::string& result)
+{
+    const auto required_size = std::max(target.size(), given.size()) + 2 * hmm::min_flank_pad();
+    result.resize(required_size);
+    auto itr = std::fill_n(std::begin(result), hmm::min_flank_pad(), 'N');
+    itr = std::copy(std::cbegin(given), std::cend(given), itr);
+    std::fill(itr, std::end(result), 'N');
+}
+
+void pad_given(const Haplotype& target, const Haplotype& given, std::string& result)
+{
+    pad_given(target.sequence(), given.sequence(), result);
+}
 
 double DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given) const
 {
-    // TODO: make indel errors context based
-    const auto variants = target.difference(given);
-    return std::accumulate(std::cbegin(variants), std::cend(variants), 0.0,
-                           [this] (const double curr, const Variant& v) {
-                               double penalty {std::log(parameters_.mutation_rate)};
-//                               if (is_insertion(v)) {
-//                                   penalty *= alt_sequence_size(v);
-//                               } else if (is_deletion(v)) {
-//                                   penalty *= region_size(v);
-//                               }
-                               return curr + penalty;
-                           });
-//    const auto model = make_hmm_model(parameters_.mutation_rate);
-//    const auto result = hmm::evaluate(target.sequence(), pad(given.sequence(), sequence_size(target)), model);
+    pad_given(target, given, padded_given_);
+    return hmm::evaluate(target.sequence(), padded_given_, mutation_model_);
 }
 
 double DeNovoModel::evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const

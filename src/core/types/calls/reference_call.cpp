@@ -17,6 +17,11 @@ const Allele& ReferenceCall::reference() const noexcept
     return reference_;
 }
 
+bool ReferenceCall::is_represented(const Allele& allele) const noexcept
+{
+    return allele == reference_;
+}
+
 void ReferenceCall::replace_called_alleles(const char old_base, const char replacement_base)
 {
     const auto& ref_sequence = reference_.sequence();

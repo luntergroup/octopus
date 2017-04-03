@@ -275,6 +275,18 @@ bool is_indel(const BasicAllele<RegionTp>& allele)
 }
 
 template <typename RegionTp>
+typename BasicAllele<RegionTp>::MappingDomain::Size reference_distance(const BasicAllele<RegionTp>& allele)
+{
+    if (is_insertion(allele)) {
+        return sequence_size(allele) - region_size(allele);
+    } else if (is_deletion(allele)) {
+        return region_size(allele) - sequence_size(allele);
+    } else {
+        return 0;
+    }
+}
+
+template <typename RegionTp>
 bool operator==(const BasicAllele<RegionTp>& lhs, const BasicAllele<RegionTp>& rhs)
 {
     return lhs.mapped_region() == rhs.mapped_region() && lhs.sequence() == rhs.sequence();

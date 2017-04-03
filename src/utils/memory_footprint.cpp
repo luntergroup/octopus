@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <cctype>
 
+#include "string_utils.hpp"
+
 namespace octopus {
     
 MemoryFootprint::MemoryFootprint(std::size_t num_bytes) noexcept
@@ -36,27 +38,28 @@ std::istream& operator>>(std::istream& is, MemoryFootprint& result)
 
 enum class MemoryUnit { kB, KiB, MB, MiB, GB, GiB, TB, TiB, PB, PiB, EB, EiB, ZB, ZiB, YB, YiB, };
 
-boost::optional<MemoryUnit> parse_units(const std::string& str)
+boost::optional<MemoryUnit> parse_units(std::string& units_str)
 {
     static const std::unordered_map<std::string, MemoryUnit> units {
-        {"kB", MemoryUnit::kB},
-        {"MB", MemoryUnit::MB},
-        {"GB", MemoryUnit::GB},
-        {"TB", MemoryUnit::TB},
-        {"PB", MemoryUnit::PB},
-        {"EB", MemoryUnit::EB},
-        {"ZB", MemoryUnit::ZB},
-        {"YB", MemoryUnit::YB},
-        {"KiB", MemoryUnit::KiB},
-        {"MiB", MemoryUnit::MiB},
-        {"GiB", MemoryUnit::GiB},
-        {"TiB", MemoryUnit::TiB},
-        {"PiB", MemoryUnit::PiB},
-        {"EiB", MemoryUnit::EiB},
-        {"ZiB", MemoryUnit::ZiB},
-        {"YiB", MemoryUnit::YiB}
+        {"K", MemoryUnit::kB}, {"KB", MemoryUnit::kB},
+        {"M", MemoryUnit::kB}, {"MB", MemoryUnit::MB},
+        {"G", MemoryUnit::kB}, {"GB", MemoryUnit::GB},
+        {"T", MemoryUnit::kB}, {"TB", MemoryUnit::TB},
+        {"P", MemoryUnit::kB}, {"PB", MemoryUnit::PB},
+        {"E", MemoryUnit::kB}, {"EB", MemoryUnit::EB},
+        {"Z", MemoryUnit::kB}, {"ZB", MemoryUnit::ZB},
+        {"Y", MemoryUnit::kB}, {"YB", MemoryUnit::YB},
+        {"KIB", MemoryUnit::KiB},
+        {"MIB", MemoryUnit::MiB},
+        {"GIB", MemoryUnit::GiB},
+        {"TIB", MemoryUnit::TiB},
+        {"PIB", MemoryUnit::PiB},
+        {"EIB", MemoryUnit::EiB},
+        {"ZIB", MemoryUnit::ZiB},
+        {"YIB", MemoryUnit::YiB}
     };
-    const auto iter = units.find(str);
+	utils::capitalise(units_str);
+    const auto iter = units.find(units_str);
     if (iter != std::cend(units)) {
         return iter->second;
     } else {
@@ -106,21 +109,21 @@ std::size_t get_multiplier(const MemoryUnit units)
     return multiplier.at(units);
 }
 
-boost::optional<MemoryFootprint> parse_footprint(std::string str)
+boost::optional<MemoryFootprint> parse_footprint(std::string footprint_str)
 {
-    const auto iter = std::find_if_not(std::cbegin(str), std::cend(str),
+    const auto iter = std::find_if_not(std::cbegin(footprint_str), std::cend(footprint_str),
                                        [] (char c) { return std::isdigit(c); });
-    if (iter == std::cbegin(str)) return boost::none;
-    const auto unit_begin = std::find_if_not(iter, std::cend(str), [] (char c) { return c == ' '; });
-    const std::string unit_part {unit_begin, std::cend(str)};
+    if (iter == std::cbegin(footprint_str)) return boost::none;
+    const auto unit_begin = std::find_if_not(iter, std::cend(footprint_str), [] (char c) { return c == ' '; });
+    std::string unit_part {unit_begin, std::cend(footprint_str)};
     std::size_t multiplier {1};
     if (!unit_part.empty()) {
-        str.erase(iter, std::cend(str));
+        footprint_str.erase(iter, std::cend(footprint_str));
         const auto units = parse_units(unit_part);
         if (!units) return boost::none;
         multiplier = get_multiplier(*units);
     }
-    return MemoryFootprint {multiplier * std::stoll(str)};
+    return MemoryFootprint {multiplier * std::stoll(footprint_str)};
 }
 
 } // namespace octopus

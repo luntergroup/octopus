@@ -291,7 +291,7 @@ inline ContigRegion right_overhang_region(const ContigRegion& lhs, const ContigR
     return ContigRegion {rhs.end(), lhs.end()};
 }
 
-inline ContigRegion closed_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion closed_region(const ContigRegion& lhs, const ContigRegion& rhs)
 {
     return ContigRegion {lhs.begin(), rhs.end()};
 }

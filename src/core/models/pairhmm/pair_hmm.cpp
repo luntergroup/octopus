@@ -117,7 +117,7 @@ void print_alignment(const std::vector<char>& align1, const std::vector<char>& a
 auto simd_align(const std::string& truth, const std::string& target,
                 const std::vector<std::uint8_t>& target_qualities,
                 const std::size_t target_offset,
-                const MutationModel& model)
+                const MutationModel& model) noexcept
 {
     constexpr auto pad = simd::min_flank_pad();
     const auto truth_size  = static_cast<int>(truth.size());
@@ -251,12 +251,8 @@ double evaluate(const std::string& target, const std::string& truth,
     return simd_align(truth, target, target_qualities, target_offset, model);
 }
 
-double evaluate(const std::string& target, const std::string& truth,
-                const BasicMutationModel& model)
+double evaluate(const std::string& target, const std::string& truth, const BasicMutationModel& model) noexcept
 {
-    if (truth.size() != target.size() + 2 * min_flank_pad()) {
-        return -ln10Div10<> * std::max(target.size(), truth.size()) * model.mutation;
-    }
     using std::cbegin; using std::cend; using std::next; using std::distance;
     static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
     const auto truth_begin = next(cbegin(truth), min_flank_pad());
@@ -272,14 +268,14 @@ double evaluate(const std::string& target, const std::string& truth,
         }
         return lnProbability[model.mutation];
     }
+    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
     thread_local std::vector<std::int8_t> dummy_gap_open_penalities;
-    dummy_qualities.assign(truth.size(), model.mutation);
-    dummy_gap_open_penalities.assign(truth.size(), model.gap_open);
-    auto score = simd::align(truth.c_str(),
-                             target.c_str(),
+    dummy_qualities.assign(target.size(), model.mutation);
+    dummy_gap_open_penalities.assign(truth_alignment_size, model.gap_open);
+    auto score = simd::align(truth.c_str(), target.c_str(),
                              dummy_qualities.data(),
-                             static_cast<int>(truth.size()) - 1,
+                             truth_alignment_size,
                              static_cast<int>(target.size()),
                              dummy_gap_open_penalities.data(),
                              model.gap_extend, 2);

@@ -36,11 +36,12 @@ private:
 std::ostream& operator<<(std::ostream& os, MemoryFootprint footprint);
 std::istream& operator>>(std::istream& is, MemoryFootprint& result);
 
-boost::optional<MemoryFootprint> parse_footprint(std::string str);
+boost::optional<MemoryFootprint> parse_footprint(std::string footprint_str);
 
 } // namespace octopus
 
 namespace std {
+
 template <> struct hash<octopus::MemoryFootprint>
 {
     size_t operator()(const octopus::MemoryFootprint& fp) const noexcept
@@ -48,6 +49,7 @@ template <> struct hash<octopus::MemoryFootprint>
         return hash<decltype(fp.num_bytes())>()(fp.num_bytes());
     }
 };
+
 } // namespace std
 
 #endif

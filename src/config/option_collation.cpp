@@ -238,7 +238,12 @@ boost::optional<fs::path> get_trace_log_file_name(const OptionMap& options)
 
 bool is_fast_mode(const OptionMap& options)
 {
-    return options.at("fast").as<bool>();
+    return options.at("fast").as<bool>() || options.at("very-fast").as<bool>();
+}
+
+bool is_very_fast_mode(const OptionMap& options)
+{
+    return options.at("very-fast").as<bool>();
 }
 
 ReferenceGenome make_reference(const OptionMap& options)
@@ -1072,7 +1077,16 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
-auto get_exclusion_threshold() noexcept
+auto get_max_expected_log_allele_count_per_base(const OptionMap& options)
+{
+    const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
+    const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
+    const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
+    const auto max_log_allele_count_per_base = 3 * std::sqrt(heterozygosity) + heterozygosity;
+    return max_log_allele_count_per_base;
+}
+
+auto get_max_indicator_join_distance() noexcept
 {
     return HaplotypeLikelihoodModel{}.pad_requirement();
 }
@@ -1092,7 +1106,9 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options))
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
-    .set_exclusion_threshold(get_exclusion_threshold()).set_min_flank_pad(get_min_flank_pad());
+    .set_max_indicator_join_distance(get_max_indicator_join_distance())
+    .set_max_expected_log_allele_count_per_base(get_max_expected_log_allele_count_per_base(options))
+    .set_min_flank_pad(get_min_flank_pad());
 }
 
 boost::optional<Pedigree> get_pedigree(const OptionMap& options)
@@ -1190,10 +1206,9 @@ class BadTrioSamples : public UserError
     boost::optional<SampleName> mother_, father_;
     
 public:
-    BadTrioSamples(boost::optional<SampleName> mother,
-                   boost::optional<SampleName> father)
-    : mother_ {mother}
-    , father_ {father}
+    BadTrioSamples(boost::optional<SampleName> mother, boost::optional<SampleName> father)
+    : mother_ {std::move(mother)}
+    , father_ {std::move(father)}
     {}
 };
 
@@ -1282,12 +1297,14 @@ Trio make_trio(std::vector<SampleName> samples, const OptionMap& options,
                         std::cbegin(parents), std::cend(parents),
                         std::back_inserter(children));
     if (children.size() != 1) {
-        const auto iter1 = std::find(std::cbegin(children), std::cend(children), mother);
-        const auto iter2 = std::find(std::cbegin(children), std::cend(children), father);
-        boost::optional<SampleName> mother, father;
-        if (iter1 != std::cend(children)) mother = *iter1;
-        if (iter2 != std::cend(children)) father = *iter2;
-        throw BadTrioSamples {mother, father};
+        boost::optional<SampleName> bad_mother, bad_father;
+        if (!std::binary_search(std::cbegin(samples), std::cend(samples), mother)) {
+            bad_mother = std::move(mother);
+        }
+        if (!std::binary_search(std::cbegin(samples), std::cend(samples), father)) {
+            bad_father = std::move(father);
+        }
+        throw BadTrioSamples {std::move(bad_mother), std::move(bad_father)};
     }
     return Trio {
         Trio::Mother {std::move(mother)},
@@ -1321,7 +1338,7 @@ public:
 
 bool allow_flank_scoring(const OptionMap& options)
 {
-    return options.at("inactive-flank-scoring").as<bool>() && !is_fast_mode(options);
+    return options.at("inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,

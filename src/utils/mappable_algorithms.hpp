@@ -1873,21 +1873,33 @@ unsigned max_coverage(const Container& mappables)
     return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
 }
 
-template <typename ForwardIt>
-auto join(ForwardIt first, const ForwardIt last, const GenomicRegion::Distance n)
+template <typename ForwardIt, typename BinaryPredicate>
+auto join_if(ForwardIt first, const ForwardIt last, BinaryPredicate pred)
 {
     std::vector<GenomicRegion> result {};
     if (first == last) return result;
     result.reserve(std::distance(first, last));
     auto prev = first++, leftmost = prev;
     for (; first != last; ++first, ++prev) {
-        if (inner_distance(*prev, *first) > n) {
+        if (!pred(*prev, *first)) {
             result.push_back(closed_region(*leftmost, *prev));
             leftmost = first;
         }
     }
     result.push_back(closed_region(*leftmost, *prev));
     return result;
+}
+
+template <typename Container, typename BinaryPredicate>
+auto join_if(const Container& regions, BinaryPredicate pred)
+{
+    return join_if(std::cbegin(regions), std::cend(regions), pred);
+}
+
+template <typename ForwardIt>
+auto join(ForwardIt first, const ForwardIt last, const GenomicRegion::Distance n)
+{
+    return join_if(first, last, [n] (const auto& lhs, const auto& rhs) { return inner_distance(lhs, rhs) <= n; });
 }
 
 template <typename Container>
