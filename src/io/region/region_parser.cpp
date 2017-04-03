@@ -155,7 +155,7 @@ auto open(const boost::filesystem::path& file)
 bool is_valid_bed_record(const std::string& line)
 {
     constexpr static char bedDelim {'\t'};
-    return std::count(std::cbegin(line), std::cend(line), bedDelim) >= 3;
+    return std::count(std::cbegin(line), std::cend(line), bedDelim) >= 2;
 }
 
 std::string convert_bed_line_to_region_str(const std::string& bed_line)
