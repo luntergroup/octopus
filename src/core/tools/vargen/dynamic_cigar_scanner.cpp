@@ -16,6 +16,8 @@
 #include "io/reference/reference_genome.hpp"
 #include "concepts/mappable_range.hpp"
 #include "utils/mappable_algorithms.hpp"
+#include "utils/sequence_utils.hpp"
+#include "utils/append.hpp"
 #include "logging/logging.hpp"
 
 namespace octopus { namespace coretools {
@@ -157,6 +159,51 @@ unsigned get_min_depth(const Variant& v, const CoverageTracker<GenomicRegion>& t
     }
 }
 
+auto get_reference_repeats(const ReferenceGenome& reference, const GenomicRegion& region,
+                           const unsigned max_period)
+{
+    const auto sequence = reference.fetch_sequence(region);
+    return utils::extract_exact_tandem_repeats(sequence, region, 2, max_period);
+}
+
+auto get_reference_repeat_regions(const ReferenceGenome& reference, const GenomicRegion& region,
+                                  const std::size_t min_length)
+{
+    auto repeats = get_reference_repeats(reference, region, min_length);
+    auto itr = std::remove_if(std::begin(repeats), std::end(repeats),
+                              [=] (const auto& repeat) noexcept { return region_size(repeat) < min_length; });
+    repeats.erase(itr, std::end(repeats));
+    std::sort(std::begin(repeats), std::end(repeats));
+    return join(extract_covered_regions(repeats), min_length / 2);
+}
+
+struct RegionVariants : public Mappable<RegionVariants>
+{
+    RegionVariants(GenomicRegion region) : region {std::move(region)} {}
+    GenomicRegion region;
+    std::deque<Variant> variants;
+    const GenomicRegion& mapped_region() const noexcept { return region; }
+};
+
+auto init_region_variants(const std::vector<GenomicRegion>& regions)
+{
+    std::vector<RegionVariants> result {};
+    result.reserve(regions.size());
+    std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(result),
+                   [] (const auto& region) { return RegionVariants {region}; });
+    return result;
+}
+
+bool has_overlapped(const std::vector<RegionVariants>& regions, const Variant& variant) noexcept
+{
+    return has_overlapped(regions, variant, BidirectionallySortedTag {});
+}
+
+auto overlap_range(std::vector<RegionVariants>& regions, const Variant& variant)
+{
+    return bases(overlap_range(regions, variant, BidirectionallySortedTag {}));
+}
+
 std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next; using std::distance;
@@ -165,7 +212,13 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
     auto overlapped = overlap_range(candidates_, region, max_seen_candidate_size_);
     
     std::vector<Variant> result {};
+    
+    if (empty(overlapped)) return result;
+    
     result.reserve(size(overlapped, BidirectionallySortedTag {})); // maximum possible
+    
+    const auto repeat_regions = get_reference_repeat_regions(reference_, region, 100);
+    auto repeat_region_variants = init_region_variants(repeat_regions);
     
     while (!overlapped.empty()) {
         const Candidate& candidate {overlapped.front()};
@@ -185,18 +238,40 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
             if (num_observations > 1) {
                 auto unique_iter = cbegin(overlapped);
                 while (unique_iter != next_candidate) {
-                    result.push_back(unique_iter->variant);
+                    if (has_overlapped(repeat_regions, unique_iter->variant)) {
+                        for (auto& region : overlap_range(repeat_region_variants, unique_iter->variant)) {
+                            region.variants.push_back(unique_iter->variant);
+                        }
+                    } else {
+                        result.push_back(unique_iter->variant);
+                    }
                     unique_iter = std::find_if_not(next(unique_iter), next_candidate,
                                                    [unique_iter] (const Candidate& c) {
                                                        return c.variant == unique_iter->variant;
                                                    });
                 }
             } else {
-                result.push_back(candidate.variant);
+                if (has_overlapped(repeat_regions, candidate.variant)) {
+                    for (auto& region : overlap_range(repeat_region_variants, candidate.variant)) {
+                        region.variants.push_back(candidate.variant);
+                    }
+                } else {
+                    result.push_back(candidate.variant);
+                }
             }
         }
         overlapped.advance_begin(num_observations);
     }
+    
+    std::vector<Variant> good_repeat_region_variants {};
+    for (auto& region : repeat_region_variants) {
+        const auto density = region.variants.size() / size(region.region);
+        if (density < 2) {
+            utils::append(std::move(region.variants), good_repeat_region_variants);
+        }
+    }
+    auto itr = utils::append(std::move(good_repeat_region_variants), result);
+    std::inplace_merge(std::begin(result), itr, std::end(result));
     
     return result;
 }
