@@ -18,6 +18,7 @@
 
 #include "basics/contig_region.hpp"
 #include "basics/genomic_region.hpp"
+#include "concepts/mappable.hpp"
 
 namespace octopus { namespace utils {
 
@@ -347,7 +348,7 @@ std::unordered_map<char, size_t> count_bases(const SequenceType& sequence)
     return result;
 }
 
-struct TandemRepeat
+struct TandemRepeat : public Mappable<TandemRepeat>
 {
     using SizeType = GenomicRegion::Size;
     TandemRepeat() = delete;
@@ -357,27 +358,25 @@ struct TandemRepeat
     
     GenomicRegion region;
     GenomicRegion::Size period;
+    
+    const GenomicRegion& mapped_region() const noexcept { return region; }
 };
 
 template <typename SequenceType>
 std::vector<TandemRepeat>
 extract_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
-                             GenomicRegion::Size min_repeat_size = 2,
-                             GenomicRegion::Size max_repeat_size = 10000)
+                             GenomicRegion::Size min_period = 2, GenomicRegion::Size max_period = 10000)
 {
     if (sequence.back() != 'N') {
         sequence.reserve(sequence.size() + 1);
         sequence.push_back('N');
     }
-    
     auto n_shift_map = tandem::collapse(sequence, 'N');
-    auto maximal_repetitions = tandem::extract_exact_tandem_repeats(sequence , min_repeat_size, max_repeat_size);
+    auto maximal_repetitions = tandem::extract_exact_tandem_repeats(sequence , min_period, max_period);
     tandem::rebase(maximal_repetitions, n_shift_map);
     n_shift_map.clear();
-    
     std::vector<TandemRepeat> result {};
     result.reserve(maximal_repetitions.size());
-    
     auto offset = region.begin();
     for (const auto& run : maximal_repetitions) {
         result.emplace_back(GenomicRegion {region.contig_name(),
@@ -385,7 +384,6 @@ extract_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
             static_cast<GenomicRegion::Size>(run.pos + run.length + offset)
         }, run.period);
     }
-    
     return result;
 }
 
