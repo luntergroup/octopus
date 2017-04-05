@@ -985,6 +985,7 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
                                 auto tail = boost::target(tail_edge, graph_);
                                 while (!is_reference(tail) && boost::out_degree(tail, graph_) == 1
                                        && bad_kmers.count(tail) == 0) {
+                                    bad_kmers.insert(tail);
                                     tail = *boost::adjacent_vertices(tail, graph_).first;
                                 }
                                 if (is_reference(tail)) {
