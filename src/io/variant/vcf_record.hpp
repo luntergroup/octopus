@@ -223,6 +223,7 @@ public:
     Builder& set_refcall();
     Builder& set_somatic();
     Builder& set_denovo();
+    Builder& set_reference_reversion();
     
     GenomicRegion::Position pos() const noexcept;
     
