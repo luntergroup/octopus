@@ -27,6 +27,9 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
     {std::type_index(typeid(DenovoCall)), [] (auto& hb) {
         hb.add_info("DENOVO", "0", "Flag", "Indicates that the record is a de novo mutation");
         hb.add_info("MP", "1", "Float", "Model posterior");
+    }},
+    {std::type_index(typeid(DenovoReferenceReversionCall)), [] (auto& hb) {
+        hb.add_info("REVERSION", "0", "Flag", "Indicates that the record contains a reference reversion");
     }}
 };
 
