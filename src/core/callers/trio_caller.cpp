@@ -13,19 +13,19 @@
 
 #include "basics/genomic_region.hpp"
 #include "concepts/mappable.hpp"
+#include "containers/probability_matrix.hpp"
 #include "core/types/allele.hpp"
 #include "core/types/variant.hpp"
-#include "containers/probability_matrix.hpp"
 #include "core/types/calls/germline_variant_call.hpp"
 #include "core/types/calls/denovo_call.hpp"
+#include "core/types/calls/denovo_reference_reversion_call.hpp"
 #include "core/types/calls/reference_call.hpp"
-#include "utils/map_utils.hpp"
-#include "utils/mappable_algorithms.hpp"
-#include "utils/maths.hpp"
-
 #include "core/models/genotype/uniform_population_prior_model.hpp"
 #include "core/models/genotype/coalescent_population_prior_model.hpp"
 #include "core/models/genotype/population_model.hpp"
+#include "utils/map_utils.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/maths.hpp"
 
 #include "timers.hpp"
 
@@ -50,7 +50,8 @@ std::string TrioCaller::do_name() const
 Caller::CallTypeSet TrioCaller::do_call_types() const
 {
     return {std::type_index(typeid(GermlineVariantCall)),
-            std::type_index(typeid(DenovoCall))};
+            std::type_index(typeid(DenovoCall)),
+            std::type_index(typeid(DenovoReferenceReversionCall))};
 }
 
 // TrioCaller::Latents
@@ -719,6 +720,11 @@ auto call_genotypes(const Trio& trio, const TrioCall& called_trio,
     return result;
 }
 
+bool is_reference_reversion(const Allele& denovo, const std::map<Allele, Allele>& reference_alleles)
+{
+    return reference_alleles.at(denovo) == denovo;
+}
+
 auto make_variant(Allele&& denovo, const std::map<Allele, Allele>& reference_alleles)
 {
     return Variant {reference_alleles.at(denovo), std::move(denovo)};
@@ -750,10 +756,16 @@ auto make_calls(std::vector<CalledDenovo>&& alleles,
                    std::make_move_iterator(std::end(alleles)),
                    std::make_move_iterator(std::begin(genotypes)),
                    std::back_inserter(result),
-                   [&trio, &reference_alleles] (auto&& allele, auto&& genotype) {
-                       return std::make_unique<DenovoCall>(make_variant(std::move(allele.allele), reference_alleles),
-                                                           make_genotype_calls(std::move(genotype), trio),
-                                                           allele.posterior);
+                   [&trio, &reference_alleles] (auto&& allele, auto&& genotype) -> std::unique_ptr<DenovoCall> {
+                       if (is_reference_reversion(allele.allele, reference_alleles)) {
+                           return std::make_unique<DenovoReferenceReversionCall>(std::move(allele.allele),
+                                                                                 make_genotype_calls(std::move(genotype), trio),
+                                                                                 allele.posterior);
+                       } else {
+                           return std::make_unique<DenovoCall>(make_variant(std::move(allele.allele), reference_alleles),
+                                                               make_genotype_calls(std::move(genotype), trio),
+                                                               allele.posterior);
+                       }
                    });
     return result;
 }

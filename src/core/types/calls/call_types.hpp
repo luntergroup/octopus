@@ -10,5 +10,6 @@
 #include "reference_call.hpp"
 #include "somatic_call.hpp"
 #include "denovo_call.hpp"
+#include "denovo_reference_reversion_call.hpp"
 
 #endif
