@@ -20,18 +20,26 @@
 #include "concepts/mappable.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/mappable_reference_wrapper.hpp"
-#include "utils/mappable_algorithms.hpp"
 #include "core/types/allele.hpp"
+#include "core/types/calls/variant_call.hpp"
+#include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
 #include "exceptions/program_error.hpp"
-#include "core/types/calls/variant_call.hpp"
+#include "io/variant/vcf_spec.hpp"
 
 #define _unused(x) ((void)(x))
 
 namespace octopus {
+
+namespace {
+
+constexpr char dummy_base {'#'};
+const std::string deleted_sequence {vcfspec::missingValue, 1};
+
+} // namespace
 
 VcfRecordFactory::VcfRecordFactory(const ReferenceGenome& reference, const ReadMap& reads,
                                    std::vector<SampleName> samples, bool sites_only)
@@ -163,7 +171,7 @@ void pad_indels(std::vector<CallWrapper>& calls, const std::vector<SampleName>& 
 {
     using std::begin; using std::end; using std::move;
     const auto first_modified = std::stable_partition(begin(calls), end(calls),
-                                                      [] (const auto& call) { return !call->parsimonise('#'); });
+                                                      [] (const auto& call) { return !call->parsimonise(dummy_base); });
     if (first_modified != end(calls)) {
         const auto last = end(calls);
         const auto first_phase_adjusted = std::partition(first_modified, last,
@@ -232,10 +240,10 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
         const auto block_begin_itr = adjacent_overlap_find(call_itr, end(calls));
         transform(std::make_move_iterator(call_itr), std::make_move_iterator(block_begin_itr), std::back_inserter(result),
                   [this] (CallWrapper&& call) {
-                      call->replace('#', reference_.fetch_sequence(head_position(call->mapped_region())).front());
+                      call->replace(dummy_base, reference_.fetch_sequence(head_position(call->mapped_region())).front());
                       // We may still have uncalled genotyped alleles here if the called genotype
                       // did not have a high posterior
-                      call->replace_uncalled_genotype_alleles(Allele {call->mapped_region(), "."}, 'N');
+                      call->replace_uncalled_genotype_alleles(Allele {call->mapped_region(), vcfspec::missingValue}, 'N');
                       return this->make(move(call.call));
                   });
         if (block_begin_itr == end(calls)) break;
@@ -249,14 +257,14 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                                                    });
         const auto alt_itr = std::find_if_not(block_begin_itr, block_head_end_itr,
                                               [] (const auto& call) {
-                                                  return call->reference().sequence().front() == '#';
+                                                  return call->reference().sequence().front() == dummy_base;
                                               });
         boost::optional<decltype(block_head_end_itr)> base;
         if (alt_itr != block_head_end_itr)  base = alt_itr;
         std::deque<CallWrapper> duplicates {};
         for_each(block_begin_itr, block_head_end_itr, [this, base, &duplicates] (auto& call) {
             assert(!call->reference().sequence().empty());
-            if (call->reference().sequence().front() == '#') {
+            if (call->reference().sequence().front() == dummy_base) {
                 const auto actual_reference_base = reference_.fetch_sequence(head_position(call)).front();
                 auto new_sequence = call->reference().sequence();
                 new_sequence.front() = actual_reference_base;
@@ -270,7 +278,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     Genotype<Allele> new_genotype {ploidy};
                     for (unsigned i {0}; i < ploidy; ++i) {
                         assert(!old_genotype[i].sequence().empty());
-                        if (old_genotype[i].sequence().front() == '#') {
+                        if (old_genotype[i].sequence().front() == dummy_base) {
                             auto new_sequence = old_genotype[i].sequence();
                             if (base) {
                                 const auto& base_sequence = (**base)->get_genotype_call(sample).genotype[i].sequence();
@@ -312,10 +320,10 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     const auto ploidy = old_genotype.ploidy();
                     Genotype<Allele> new_genotype {ploidy};
                     for (unsigned i {0}; i < ploidy; ++i) {
-                        if (prev_genotype[i].sequence() == "*" ||
+                        if (prev_genotype[i].sequence() == deleted_sequence ||
                             (prev_genotype[i].sequence() == old_genotype[i].sequence()
                              && sequence_size(old_genotype[i]) < region_size(old_genotype))) {
-                            Allele::NucleotideSequence new_sequence(1, '*');
+                            Allele::NucleotideSequence new_sequence(1, vcfspec::deletedBase);
                             Allele new_allele {mapped_region(curr_call), move(new_sequence)};
                             new_genotype.emplace(move(new_allele));
                         } else {
@@ -346,7 +354,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
             auto& curr_call = *block_head_end_itr;
             std::unordered_map<Allele, Allele> replacements {};
             assert(!curr_call->reference().sequence().empty());
-            if (curr_call->reference().sequence().front() == '#') {
+            if (curr_call->reference().sequence().front() == dummy_base) {
                 const auto actual_reference_base = reference_.fetch_sequence(head_position(curr_call)).front();
                 auto new_ref_sequence = curr_call->reference().sequence();
                 new_ref_sequence.front() = actual_reference_base;
@@ -360,10 +368,10 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     Genotype<Allele> new_genotype {ploidy};
                     for (unsigned i {0}; i < ploidy; ++i) {
                         if (old_genotype[i].sequence().empty()) {
-                            Allele::NucleotideSequence new_sequence(region_size(curr_call), '*');
+                            Allele::NucleotideSequence new_sequence(region_size(curr_call), vcfspec::deletedBase);
                             Allele new_allele {mapped_region(curr_call), move(new_sequence)};
                             new_genotype.emplace(move(new_allele));
-                        } else if (old_genotype[i].sequence().front() == '#') {
+                        } else if (old_genotype[i].sequence().front() == dummy_base) {
                             if (prev_represented[s][i] && begins_before(*prev_represented[s][i], curr_call)) {
                                 const auto& prev_represented_genotype = prev_represented[s][i]->get_genotype_call(sample);
                                 if (are_in_phase(genotype_call, prev_represented_genotype)) {
@@ -372,7 +380,8 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                                     if (overlap && prev_allele != prev_represented[s][i]->reference()) {
                                         auto new_sequence = old_genotype[i].sequence();
                                         const auto overlap_size = static_cast<std::size_t>(region_size(*overlap));
-                                        std::fill_n(std::begin(new_sequence), std::min(overlap_size, new_sequence.size()), '*');
+                                        std::fill_n(std::begin(new_sequence), std::min(overlap_size, new_sequence.size()),
+                                                    vcfspec::deletedBase);
                                         Allele new_allele {mapped_region(curr_call), move(new_sequence)};
                                         replacements.emplace(old_genotype[i], new_allele);
                                         new_genotype.emplace(move(new_allele));
@@ -414,7 +423,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     Genotype<Allele> new_genotype {ploidy};
                     for (unsigned i {0}; i < ploidy; ++i) {
                         if (old_genotype[i].sequence().empty()) {
-                            Allele::NucleotideSequence new_sequence(region_size(curr_call), '*');
+                            Allele::NucleotideSequence new_sequence(region_size(curr_call), vcfspec::deletedBase);
                             Allele new_allele {mapped_region(curr_call), move(new_sequence)};
                             new_genotype.emplace(move(new_allele));
                         } else {
@@ -431,7 +440,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                 const auto& new_genotype = block_head_end_itr->call->get_genotype_call(samples_[s]).genotype;
                 for (unsigned i {0}; i < new_genotype.ploidy(); ++i) {
                     const auto& seq = new_genotype[i].sequence();
-                    if (std::find(std::cbegin(seq), std::cend(seq), '*') == std::cend(seq)
+                    if (std::find(std::cbegin(seq), std::cend(seq), vcfspec::deletedBase) == std::cend(seq)
                         && block_head_end_itr->call->is_represented(new_genotype[i])) {
                         prev_represented[s][i] = std::addressof(*block_head_end_itr->call);
                     }
@@ -439,7 +448,8 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
             }
         }
         for_each(block_begin_itr, block_end_itr, [] (auto& call) {
-            call->replace_uncalled_genotype_alleles(Allele {call->mapped_region(), "."}, '*');
+            call->replace_uncalled_genotype_alleles(Allele {call->mapped_region(), vcfspec::missingValue},
+                                                    vcfspec::deletedBase);
         });
         // At this point, all genotypes fields contain canonical bases, '.', or '*', but not '#'.
         std::vector<std::vector<CallWrapper>> segements;
@@ -471,54 +481,54 @@ std::vector<VcfRecord::NucleotideSequence>
 extract_all_genotyped_alleles(const Call* call, const std::vector<SampleName>& samples)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend;
-    
     std::vector<VcfRecord::NucleotideSequence> result {};
-    
+    static constexpr char unique_dummy_base {'~'};
     for (const auto& sample : samples) {
         const auto& called_genotype = call->get_genotype_call(sample).genotype;
         std::transform(cbegin(called_genotype), cend(called_genotype),
                        std::back_inserter(result), [] (const Allele& allele) {
                            auto result = allele.sequence();
-                           std::replace(begin(result), end(result), '*', '~');
+                           std::replace(begin(result), end(result), vcfspec::deletedBase, unique_dummy_base);
                            return result;
                        });
     }
-    
-    const VcfRecord::NucleotideSequence missing_allele(1, '.');
-    auto it = std::remove(begin(result), end(result), missing_allele);
-    result.erase(it, end(result));
+    auto itr = std::remove(begin(result), end(result), vcfspec::missingValue);
+    result.erase(itr, end(result));
     std::sort(begin(result), end(result));
-    it = std::unique(begin(result), end(result));
-    result.erase(it, end(result));
-    
+    itr = std::unique(begin(result), end(result));
+    result.erase(itr, end(result));
     for (auto& alt : result) {
-        std::replace(begin(alt), end(alt), '~', '*');
+        std::replace(begin(alt), end(alt), unique_dummy_base, vcfspec::deletedBase);
     }
-    
     return result;
 }
 
-void set_alt_alleles(const Call* call, VcfRecord::Builder& record,
-                     const std::vector<SampleName>& samples)
+auto extract_genotyped_alt_alleles(const Call* call, const std::vector<SampleName>& samples)
 {
-    auto alts = extract_all_genotyped_alleles(call, samples);
-    auto it = std::find(std::begin(alts), std::end(alts), call->reference().sequence());
-    if (it != std::end(alts)) alts.erase(it);
-    assert(std::find(std::cbegin(alts), std::cend(alts), "#") == std::cend(alts));
-    assert(std::find(std::cbegin(alts), std::cend(alts), ".") == std::cend(alts));
-    assert(std::find(std::cbegin(alts), std::cend(alts), "") == std::cend(alts));
-    record.set_alt(std::move(alts));
+    auto result = extract_all_genotyped_alleles(call, samples);
+    auto itr = std::find(std::begin(result), std::end(result), call->reference().sequence());
+    if (itr != std::end(result)) result.erase(itr);
+    return result;
 }
 
-void set_vcf_genotype(const SampleName& sample, const Call::GenotypeCall& genotype_call,
-                      VcfRecord::Builder& record)
+auto extract_allele_sequences(const Genotype<Allele>& genotype)
 {
     std::vector<VcfRecord::NucleotideSequence> result {};
-    result.reserve(genotype_call.genotype.ploidy());
-    for (const auto& allele : genotype_call.genotype) {
-        result.push_back(allele.sequence());
+    result.reserve(genotype.ploidy());
+    std::transform(std::cbegin(genotype), std::end(genotype), std::back_inserter(result),
+                   [] (const auto& allele) { return allele.sequence(); });
+    return result;
+}
+
+void set_vcf_genotype(const SampleName& sample, const Call::GenotypeCall& call, VcfRecord::Builder& record,
+                      const bool replace_missing_with_non_ref = false)
+{
+    auto genotyped_alleles = extract_allele_sequences(call.genotype);
+    if (replace_missing_with_non_ref) {
+        std::replace(std::begin(genotyped_alleles), std::end(genotyped_alleles),
+                     std::string {vcfspec::missingValue}, std::string {"<NON_REF>"});
     }
-    record.set_genotype(sample, result, VcfRecord::Builder::Phasing::phased);
+    record.set_genotype(sample, std::move(genotyped_alleles), VcfRecord::Builder::Phasing::phased);
 }
 
 VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
@@ -526,10 +536,11 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     auto result = VcfRecord::Builder {};
     const auto& region = call->mapped_region();
     
+    auto alts = extract_genotyped_alt_alleles(call.get(), samples_);
     result.set_chrom(contig_name(region));
     result.set_pos(mapped_begin(region) + 1);
     result.set_ref(call->reference().sequence());
-    set_alt_alleles(call.get(), result, samples_);
+    result.set_alt(std::move(alts));
     result.set_qual(std::min(5000.0, maths::round(call->quality().score(), 2)));
     const auto call_reads = copy_overlapped(reads_, region);
     result.set_info("NS",  count_samples_with_coverage(call_reads));
@@ -548,11 +559,9 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
         } else {
             result.set_format({"GT", "GQ", "DP", "BQ", "MQ"});
         }
-        
         for (const auto& sample : samples_) {
             const auto& genotype_call = call->get_genotype_call(sample);
             auto gq = std::min(999, static_cast<int>(std::round(genotype_call.posterior.score())));
-            
             set_vcf_genotype(sample, genotype_call, result);
             result.set_format(sample, "GQ", std::to_string(gq));
             result.set_format(sample, "DP", max_coverage(call_reads.at(sample)));
@@ -566,7 +575,6 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
             }
         }
     }
-    
     call->decorate(result);
     
     return result.build_once();
@@ -637,14 +645,14 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     for (const auto& genotype : resolved_genotypes) {
         alt_alleles.insert(std::end(alt_alleles), std::cbegin(genotype), std::cend(genotype));
     }
-    const VcfRecord::NucleotideSequence missing_allele(1, '.');
-    auto it = std::remove(std::begin(alt_alleles), std::end(alt_alleles), missing_allele);
-    it = std::remove(std::begin(alt_alleles), it, calls.front()->reference().sequence());
-    alt_alleles.erase(it, std::end(alt_alleles));
+    auto itr = std::remove(std::begin(alt_alleles), std::end(alt_alleles), vcfspec::missingValue);
+    itr = std::remove(std::begin(alt_alleles), itr, calls.front()->reference().sequence());
+    alt_alleles.erase(itr, std::end(alt_alleles));
     std::sort(std::begin(alt_alleles), std::end(alt_alleles));
-    it = std::unique(std::begin(alt_alleles), std::end(alt_alleles));
-    alt_alleles.erase(it, std::end(alt_alleles));
+    itr = std::unique(std::begin(alt_alleles), std::end(alt_alleles));
+    alt_alleles.erase(itr, std::end(alt_alleles));
     result.set_alt(std::move(alt_alleles));
+    
     auto q = std::min_element(std::cbegin(calls), std::cend(calls),
                               [] (const auto& lhs, const auto& rhs) { return lhs->quality() < rhs->quality(); });
     result.set_qual(std::min(5000.0, maths::round(q->get()->quality().score(), 2)));
@@ -670,7 +678,6 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         for (const auto& sample : samples_) {
             const auto posterior = calls.front()->get_genotype_call(sample).posterior;
             auto gq = std::min(999, static_cast<int>(std::round(posterior.score())));
-            
             result.set_genotype(sample, *sample_itr++, VcfRecord::Builder::Phasing::phased);
             result.set_format(sample, "GQ", std::to_string(gq));
             result.set_format(sample, "DP", max_coverage(reads_.at(sample), region));
