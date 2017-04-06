@@ -536,7 +536,15 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     auto result = VcfRecord::Builder {};
     const auto& region = call->mapped_region();
     
+    bool has_non_ref {false};
     auto alts = extract_genotyped_alt_alleles(call.get(), samples_);
+    if (alts.empty()) {
+        alts.push_back("<NON_REF>");
+        has_non_ref = true;
+    } else {
+        has_non_ref = std::find(std::cbegin(alts), std::cend(alts), "<NON_REF>") != std::cend(alts);
+    }
+    
     result.set_chrom(contig_name(region));
     result.set_pos(mapped_begin(region) + 1);
     result.set_ref(call->reference().sequence());
@@ -553,6 +561,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     if (call->model_posterior()) {
         result.set_info("MP",  maths::round(call->model_posterior()->score(), 2));
     }
+    
     if (!sites_only_) {
         if (call->all_phased()) {
             result.set_format({"GT", "GQ", "DP", "BQ", "MQ", "PS", "PQ"});
@@ -562,7 +571,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
         for (const auto& sample : samples_) {
             const auto& genotype_call = call->get_genotype_call(sample);
             auto gq = std::min(999, static_cast<int>(std::round(genotype_call.posterior.score())));
-            set_vcf_genotype(sample, genotype_call, result);
+            set_vcf_genotype(sample, genotype_call, result, has_non_ref);
             result.set_format(sample, "GQ", std::to_string(gq));
             result.set_format(sample, "DP", max_coverage(call_reads.at(sample)));
             result.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(call_reads.at(sample))));
@@ -651,6 +660,13 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     std::sort(std::begin(alt_alleles), std::end(alt_alleles));
     itr = std::unique(std::begin(alt_alleles), std::end(alt_alleles));
     alt_alleles.erase(itr, std::end(alt_alleles));
+    bool has_non_ref {false};
+    if (alt_alleles.empty()) {
+        alt_alleles.push_back("<NON_REF>");
+        has_non_ref = true;
+    } else {
+        has_non_ref = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), "<NON_REF>") != std::cend(alt_alleles);
+    }
     result.set_alt(std::move(alt_alleles));
     
     auto q = std::min_element(std::cbegin(calls), std::cend(calls),
