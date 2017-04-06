@@ -12,6 +12,8 @@
 #include <cassert>
 
 #include "basics/phred.hpp"
+#include "utils/maths.hpp"
+#include "core/types/variant.hpp"
 
 namespace octopus {
 
@@ -120,10 +122,39 @@ void pad_given(const Haplotype& target, const Haplotype& given, std::string& res
     pad_given(target.sequence(), given.sequence(), result);
 }
 
+auto sequence_length_distance(const Haplotype& lhs, const Haplotype& rhs) noexcept
+{
+    const auto p = std::minmax({sequence_size(lhs), sequence_size(rhs)});
+    return p.second - p.first;
+}
+
+bool can_align_with_hmm(const Haplotype& target, const Haplotype& given) noexcept
+{
+    return sequence_length_distance(target, given) <= hmm::min_flank_pad();
+}
+
+double approx_align(const Haplotype& target, const Haplotype& given, const hmm::BasicMutationModel& model)
+{
+    using maths::constants::ln10Div10;
+    const auto indel_size = sequence_length_distance(target, given);
+    double score = {model.gap_open + model.gap_extend * (static_cast<double>(indel_size) - 1)};
+    const auto variants = target.difference(given);
+    const auto mismatch_size = std::accumulate(std::cbegin(variants), std::cend(variants), 0,
+                                               [] (auto curr, const auto& variant) noexcept {
+                                                   return curr + (!is_indel(variant) ? region_size(variant) : 0);
+                                               });
+    score += mismatch_size * model.mutation;
+    return -ln10Div10<> * score;
+}
+
 double DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given) const
 {
-    pad_given(target, given, padded_given_);
-    return hmm::evaluate(target.sequence(), padded_given_, mutation_model_);
+    if (can_align_with_hmm(target, given)) {
+        pad_given(target, given, padded_given_);
+        return hmm::evaluate(target.sequence(), padded_given_, mutation_model_);
+    } else {
+        return approx_align(target, given, mutation_model_);
+    }
 }
 
 double DeNovoModel::evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const
