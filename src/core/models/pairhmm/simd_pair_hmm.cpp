@@ -51,10 +51,10 @@ constexpr std::size_t staticBackpointerCapacity {10000};
 template <typename T>
 using SmallVector = boost::container::small_vector<T, staticBackpointerCapacity>;
 
-constexpr short nScore {0 << 2};
-constexpr int   bandSize {8};
+constexpr short nScore {2 << 2};
+constexpr int bandSize {8};
 constexpr short inf {0x7800};
-constexpr char  gap {'-'};
+constexpr char gap {'-'};
 
 auto extract_epi16(const __m128i a, const int imm) noexcept
 {
@@ -72,7 +72,7 @@ auto extract_epi16(const __m128i a, const int imm) noexcept
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           const int truth_len, const int target_len,
-          const std::int8_t* gap_open, short gap_extend, short nuc_prior)
+          const std::int8_t* gap_open, short gap_extend, short nuc_prior) noexcept
 {
     // target is the read; the shorter of the sequences
     // no checks for overflow are done
@@ -119,7 +119,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     SimdInt _gap_open {_mm_set_epi16(gap_open[7] << 2,gap_open[6] << 2,gap_open[5] << 2,gap_open[4] << 2,
                                      gap_open[3] << 2,gap_open[2] << 2,gap_open[1] << 2,gap_open[0] << 2)};
     
-    short cur_score {0}, minscore {inf};
+    short minscore {inf};
     
     for (int s {0}; s <= 2 * (target_len + bandSize); s += 2) {
         // truth is current; target needs updating
@@ -140,13 +140,8 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _m2 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m2));
         _m1 = _mm_min_epi16(_m1, _mm_min_epi16(_i1, _d1));
         
-        // at this point, extract minimum score.  Referred-to position must
-        // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         if (s / 2 >= target_len) {
-            cur_score = extract_epi16(_m1, s / 2 - target_len);
-            if (cur_score < minscore) {
-                minscore = cur_score;
-            }
+            minscore = std::min(static_cast<short>(extract_epi16(_m1, s / 2 - target_len)), minscore);
         }
         
         _m1 = _mm_add_epi16(_m1, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
@@ -177,13 +172,8 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         
         _m2 = _mm_min_epi16(_m2, _mm_min_epi16(_i2, _d2));
         
-        // at this point, extract minimum score.  Referred-to position must
-        // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         if (s / 2 >= target_len) {
-            cur_score = extract_epi16(_m2, s / 2 - target_len);
-            if (cur_score < minscore) {
-                minscore = cur_score;
-            }
+            minscore = std::min(static_cast<short>(extract_epi16(_m2, s / 2 - target_len)), minscore);
         }
         
         _m2 = _mm_add_epi16(_m2, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
@@ -204,7 +194,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           const int truth_len, const int target_len,
           const char* snv_mask, const std::int8_t* snv_prior,
-          const std::int8_t* gap_open, short gap_extend, short nuc_prior)
+          const std::int8_t* gap_open, short gap_extend, short nuc_prior) noexcept
 {
     assert(truth_len > bandSize && (truth_len == target_len + 2 * bandSize - 1));
     
@@ -245,7 +235,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     SimdInt _gap_open {_mm_set_epi16(gap_open[7] << 2,gap_open[6] << 2,gap_open[5] << 2,gap_open[4] << 2,
                                      gap_open[3] << 2,gap_open[2] << 2,gap_open[1] << 2,gap_open[0] << 2)};
     
-    short cur_score {0}, minscore {inf};
+    short minscore {inf};
     
     for (int s {0}; s <= 2 * (target_len + bandSize); s += 2) {
         // truth is current; target needs updating
@@ -267,10 +257,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _m1 = _mm_min_epi16(_m1, _mm_min_epi16(_i1, _d1));
         
         if (s / 2 >= target_len) {
-            cur_score = extract_epi16(_m1, s / 2 - target_len);
-            if (cur_score < minscore) {
-                minscore = cur_score;
-            }
+            minscore = std::min(static_cast<short>(extract_epi16(_m1, s / 2 - target_len)), minscore);
         }
         
         _snvmask = _mm_cmpeq_epi16(_targetwin, _snvmaskwin);
@@ -315,10 +302,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _m2 = _mm_min_epi16(_m2, _mm_min_epi16(_i2, _d2));
         
         if (s / 2 >= target_len) {
-            cur_score = extract_epi16(_m2, s / 2 - target_len);
-            if (cur_score < minscore) {
-                minscore = cur_score;
-            }
+            minscore = std::min(static_cast<short>(extract_epi16(_m2, s / 2 - target_len)), minscore);
         }
         
         _snvmask = _mm_cmpeq_epi16(_targetwin, _snvmaskwin);
@@ -343,7 +327,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           const int truth_len, const int target_len,
           const std::int8_t* gap_open, short gap_extend, short nuc_prior,
-          char* aln1, char* aln2, int& first_pos)
+          int& first_pos, char* aln1, char* aln2) noexcept
 {
     // target is the read; the shorter of the sequences
     // no checks for overflow are done
@@ -354,7 +338,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     // longer (horizontal) sequence to 15 (2*8-1) more than the shorter
     
     assert(truth_len > bandSize && (truth_len == target_len + 2 * bandSize - 1));
-    
     assert(aln1 != nullptr && aln2 != nullptr);
     
     gap_extend <<= 2;
@@ -415,13 +398,9 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         }
         
         // S even
-        // initialize to -0x8000
         _m1 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m1));
         _m2 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m2));
         _m1 = _mm_min_epi16(_m1, _mm_min_epi16(_i1, _d1));
-        
-        // at this point, extract minimum score.  Referred-to position must
-        // be y==target_len-1, so that current position has y==target_len; i==0 so d=0 and y=s/2
         
         if (s / 2 >= target_len) {
             cur_score = extract_epi16(_m1, s / 2 - target_len);
@@ -468,7 +447,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
             cur_score = extract_epi16(_m2, s / 2 - target_len);
             if (cur_score < minscore) {
                 minscore = cur_score;
-                minscoreidx = s+1;
+                minscoreidx = s + 1;
             }
         }
         
@@ -530,8 +509,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     first_pos = x;
     
     // reverse them
-    int j;
-    for (i = 0, j = alnidx - 1; i < j; ++i, j--) {
+    for (int j {alnidx - 1}, i = 0; i < j; ++i, j--) {
         x = aln1[i];
         y = aln2[i];
         aln1[i] = aln1[j];
@@ -547,7 +525,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
           int truth_len, int target_len,
           const char* snv_mask, const std::int8_t* snv_prior,
           const std::int8_t* gap_open, short gap_extend, short nuc_prior,
-          char* aln1, char* aln2, int& first_pos)
+          char* aln1, char* aln2, int& first_pos) noexcept
 {
     assert(truth_len > bandSize && (truth_len == target_len + 2 * bandSize - 1));
     assert(aln1 != nullptr && aln2 != nullptr);
@@ -681,7 +659,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
             cur_score = extract_epi16(_m2, s / 2 - target_len);
             if (cur_score < minscore) {
                 minscore = cur_score;
-                minscoreidx = s+1;
+                minscoreidx = s + 1;
             }
         }
         
@@ -747,8 +725,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     first_pos = x;
     
     // reverse them
-    int j;
-    for (i = 0, j = alnidx - 1; i < j; ++i, j--) {
+    for (int j {j = alnidx - 1}, i = 0; i < j; ++i, j--) {
         x = aln1[i];
         y = aln2[i];
         aln1[i] = aln1[j];
@@ -764,7 +741,7 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                           const std::int8_t* quals, const std::int8_t* gap_open,
                           const short gap_extend, const short nuc_prior,
                           const int first_pos, const char* aln1, const char* aln2,
-                          int& target_mask_size)
+                          int& target_mask_size) noexcept
 {
     static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
     
@@ -839,7 +816,7 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                           const char* snv_mask, const std::int8_t* snv_prior,
                           const std::int8_t* gap_open, const short gap_extend, const short nuc_prior,
                           const int first_pos, const char* aln1, const char* aln2,
-                          int& target_mask_size)
+                          int& target_mask_size) noexcept
 {
     static constexpr char Match {'M'}, Insertion {'I'}, Deletion {'D'};
     
