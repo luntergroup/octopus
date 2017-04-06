@@ -725,7 +725,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     first_pos = x;
     
     // reverse them
-    for (int j {j = alnidx - 1}, i = 0; i < j; ++i, j--) {
+    for (int j {alnidx - 1}, i = 0; i < j; ++i, j--) {
         x = aln1[i];
         y = aln2[i];
         aln1[i] = aln1[j];
