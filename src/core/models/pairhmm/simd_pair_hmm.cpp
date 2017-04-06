@@ -51,7 +51,7 @@ constexpr std::size_t staticBackpointerCapacity {10000};
 template <typename T>
 using SmallVector = boost::container::small_vector<T, staticBackpointerCapacity>;
 
-constexpr short nScore {2 << 2};
+constexpr short nScore {0 << 2};
 constexpr int bandSize {8};
 constexpr short inf {0x7800};
 constexpr char gap {'-'};
