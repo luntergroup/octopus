@@ -566,6 +566,8 @@ void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCa
     });
     auto contig_components = make_contig_components(contigs.back(), components, num_threads);
     make_contig_tasks(contig_components, execution_policy, tasks[contigs.back()], sync, true);
+    static auto debug_log = get_debug_log();
+    if (debug_log) *debug_log << "Finished making tasks";
 }
 
 std::thread make_tasks(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
@@ -776,6 +778,9 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                 stream(*debug_log) << "Calls are inconsistent in connecting region " << unresolved_region
                                    << ". Recalling the region";
             }
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "Recalling " << unresolved_region
+                             << " due to call inconsistency between thread tasks. This may increase expected runtime";
             auto resolved_calls = components.caller->call(unresolved_region, components.progress_meter);
             if (!resolved_calls.empty()) {
                 if (!contains(unresolved_region, encompassing_region(resolved_calls))) {
