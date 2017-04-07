@@ -40,6 +40,8 @@ public:
         Variant::MappingDomain::Size max_variant_size = 2000;
         boost::optional<RepeatRegionGenerator> repeat_region_generator = boost::none;
         double max_repeat_region_density = 2;
+        double max_expected_mutation_rate = 1e-3;
+        double min_ln_prob_correctly_aligned = std::log(0.001);
     };
     
     DynamicCigarScanner() = delete;
@@ -83,16 +85,16 @@ private:
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     Options options_;
-    std::deque<Candidate> candidates_;
+    std::vector<Candidate> buffer_;
+    std::deque<Candidate> candidates_, likely_misaligned_candidates_;
     Variant::MappingDomain::Size max_seen_candidate_size_;
-    CoverageTracker<GenomicRegion> read_coverage_tracker_;
+    CoverageTracker<GenomicRegion> read_coverage_tracker_, misaligned_tracker_;
     
     template <typename T1, typename T2, typename T3>
     void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
                        AlignedRead::BaseQualityVector::const_iterator first_base_quality);
-    void add_snvs_in_match_range(const GenomicRegion& region,
-                                 SequenceIterator first_base, SequenceIterator last_base,
-                                 AlignedRead::BaseQualityVector::const_iterator first_quality);
+    unsigned add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base, SequenceIterator last_base,
+                                     AlignedRead::BaseQualityVector::const_iterator first_quality);
     unsigned sum_base_qualities(const Candidate& candidate) const noexcept;
     std::vector<GenomicRegion> get_repeat_regions(const GenomicRegion& region) const;
 };
@@ -110,10 +112,10 @@ void DynamicCigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&&
 {
     const auto candidate_size = size(region);
     if (candidate_size <= options_.max_variant_size) {
-        candidates_.emplace_back(std::forward<T1>(region),
-                                 std::forward<T2>(sequence_removed),
-                                 std::forward<T3>(sequence_added),
-                                 first_base_quality);
+        buffer_.emplace_back(std::forward<T1>(region),
+                             std::forward<T2>(sequence_removed),
+                             std::forward<T3>(sequence_added),
+                             first_base_quality);
         max_seen_candidate_size_ = std::max(max_seen_candidate_size_, candidate_size);
     }
 }

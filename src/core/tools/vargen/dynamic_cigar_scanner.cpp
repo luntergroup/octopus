@@ -19,6 +19,8 @@
 #include "utils/append.hpp"
 #include "logging/logging.hpp"
 
+#include "utils/maths.hpp"
+
 namespace octopus { namespace coretools {
 
 std::unique_ptr<VariantGenerator> DynamicCigarScanner::do_clone() const
@@ -32,7 +34,9 @@ DynamicCigarScanner::DynamicCigarScanner(const ReferenceGenome& reference, Optio
 , candidates_ {}
 , max_seen_candidate_size_ {}
 , read_coverage_tracker_ {}
-{}
+{
+    buffer_.reserve(100);
+}
 
 bool DynamicCigarScanner::do_requires_reads() const noexcept
 {
@@ -46,6 +50,23 @@ Sequence copy(const Sequence& sequence, const P pos, const S size)
 {
     const auto it = std::next(std::cbegin(sequence), pos);
     return Sequence {it, std::next(it, size)};
+}
+
+double ln_probability_read_correctly_aligned(const unsigned num_candidates, const AlignedRead& read,
+                                             const double max_expected_mutation_rate)
+{
+    if (num_candidates == 0) {
+        return 0;
+    } else {
+        const auto ln_prob_missmapped = -maths::constants::ln10Div10<> * read.mapping_quality();
+        const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
+        auto k = num_candidates;
+        if (is_front_soft_clipped(read)) ++k;
+        if (is_back_soft_clipped(read)) ++k;
+        const auto mu = max_expected_mutation_rate * region_size(read);
+        auto ln_prob_given_mapped = maths::log_poisson_sf(k, mu);
+        return ln_prob_mapped + ln_prob_given_mapped;
+    }
 }
 
 } // namespace
@@ -62,15 +83,15 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
     GenomicRegion region;
-    
+    unsigned num_candidates {0};
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
         switch (cigar_operation.flag()) {
         case Flag::alignmentMatch:
-            add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
-                                    next(sequence_iter, read_index),
-                                    next(sequence_iter, read_index + op_size),
-                                    next(base_quality_iter, read_index));
+            num_candidates += add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
+                                                      next(sequence_iter, read_index),
+                                                      next(sequence_iter, read_index + op_size),
+                                                      next(base_quality_iter, read_index));
             read_index += op_size;
             ref_index  += op_size;
             break;
@@ -87,6 +108,7 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
                           next(base_quality_iter, read_index));
             read_index += op_size;
             ref_index  += op_size;
+            ++num_candidates;
             break;
         }
         case Flag::insertion:
@@ -96,6 +118,7 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
                           copy(read_sequence, read_index, op_size),
                           next(base_quality_iter, read_index));
             read_index += op_size;
+            ++num_candidates;
             break;
         }
         case Flag::deletion:
@@ -106,12 +129,15 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
                           "",
                           next(base_quality_iter, read_index));
             ref_index += op_size;
+            ++num_candidates;
             break;
         }
         case Flag::softClipped:
+        {
             read_index += op_size;
             ref_index  += op_size;
             break;
+        }
         case Flag::hardClipped:
             break;
         case Flag::padding:
@@ -126,6 +152,15 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
         read_coverage_tracker_.add(clipped_mapped_region(read));
     } else {
         read_coverage_tracker_.add(read);
+    }
+    const auto ln_prob_misaligned = ln_probability_read_correctly_aligned(num_candidates, read, options_.max_expected_mutation_rate);
+    if (ln_prob_misaligned > options_.min_ln_prob_correctly_aligned) {
+        utils::append(std::move(buffer_), candidates_);
+    } else {
+//        std::cout << "Low prob alignment: " << read.mapped_region() << " " << (int) read.mapping_quality() << " "
+//                  << read.cigar() << " " << num_candidates << " " << ln_prob_misaligned << std::endl;
+        utils::append(std::move(buffer_), likely_misaligned_candidates_);
+        misaligned_tracker_.add(clipped_mapped_region(read));
     }
 }
 
@@ -243,6 +278,23 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
         overlapped.advance_begin(num_observations);
     }
     
+    std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));
+    likely_misaligned_candidates_.erase(std::unique(std::begin(likely_misaligned_candidates_),
+                                                    std::end(likely_misaligned_candidates_)),
+                                        std::end(likely_misaligned_candidates_));
+    
+    if (debug_log_) {
+        stream(*debug_log_) << "DynamicCigarScanner: ignoring " << likely_misaligned_candidates_.size()
+                            << " unique candidates in " << region;
+    }
+    
+    for (const auto& candidate : likely_misaligned_candidates_) {
+        auto repeat_region = find_contained(repeat_region_variants, candidate.variant);
+        if (repeat_region) {
+            repeat_region->variants.push_back(candidate.variant);
+        }
+    }
+    
     std::vector<Variant> good_repeat_region_variants {};
     for (auto& region : repeat_region_variants) {
         const auto density = region.variants.size() / size(region.region);
@@ -274,28 +326,31 @@ std::string DynamicCigarScanner::name() const
 
 // private methods
 
-void DynamicCigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
-                                                  const SequenceIterator first_base, const SequenceIterator last_base,
-                                                  AlignedRead::BaseQualityVector::const_iterator first_base_quality)
+unsigned DynamicCigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
+                                                      const SequenceIterator first_base, const SequenceIterator last_base,
+                                                      AlignedRead::BaseQualityVector::const_iterator first_base_quality)
 {
     using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
     using Tuple = boost::tuple<char, char>;
-    
     const NucleotideSequence ref_segment {reference_.get().fetch_sequence(region)};
     const auto& contig = region.contig_name();
     auto ref_index = mapped_begin(region);
-    
+    unsigned num_snvs {0};
     for_each(make_zip_iterator(boost::make_tuple(cbegin(ref_segment), first_base)),
              make_zip_iterator(boost::make_tuple(cend(ref_segment), last_base)),
-             [this, &contig, &ref_index, &first_base_quality] (const Tuple& t) {
+             [this, &contig, &ref_index, &first_base_quality, &num_snvs] (const Tuple& t) {
                  const char ref_base  {t.get<0>()}, read_base {t.get<1>()};
                  if (ref_base != read_base && ref_base != 'N' && read_base != 'N') {
                      add_candidate(GenomicRegion {contig, ref_index, ref_index + 1},
                                    ref_base, read_base, first_base_quality);
+                     if (*first_base_quality >= 30) {
+                         ++num_snvs;
+                     }
                  }
                  ++ref_index;
                  ++first_base_quality;
              });
+    return num_snvs;
 }
 
 unsigned DynamicCigarScanner::sum_base_qualities(const Candidate& candidate) const noexcept
