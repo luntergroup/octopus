@@ -483,6 +483,11 @@ ContigOutputOrder get_contig_output_order(const OptionMap& options)
     return options.at("contig-output-order").as<ContigOutputOrder>();
 }
 
+bool ignore_unmapped_contigs(const OptionMap& options)
+{
+    return options.at("ignore-unmapped-contigs").as<bool>();
+}
+
 boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& options)
 {
     if (options.count("samples") == 1) {
