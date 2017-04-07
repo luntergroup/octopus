@@ -417,11 +417,15 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("snp-heterozygosity",
      po::value<float>()->default_value(0.001, "0.001"),
-     "The germline SNP heterozygosity used to calculate genotype priors")
+     "SNP heterozygosity for the given samples")
+
+    ("snp-heterozygosity-stdev",
+     po::value<float>()->default_value(0.01, "0.01"),
+     "Standard deviation of the SNP heterozygosity used for the given samples")
     
     ("indel-heterozygosity",
      po::value<float>()->default_value(0.0001, "0.0001"),
-     "The germline indel heterozygosity used to calculate genotype priors")
+     "Indel heterozygosity for the given samples")
     
     ("use-uniform-genotype-priors",
     po::bool_switch()->default_value(false),
