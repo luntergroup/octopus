@@ -16,7 +16,6 @@
 #include "io/reference/reference_genome.hpp"
 #include "concepts/mappable_range.hpp"
 #include "utils/mappable_algorithms.hpp"
-#include "utils/sequence_utils.hpp"
 #include "utils/append.hpp"
 #include "logging/logging.hpp"
 
@@ -159,24 +158,6 @@ unsigned get_min_depth(const Variant& v, const CoverageTracker<GenomicRegion>& t
     }
 }
 
-auto get_reference_repeats(const ReferenceGenome& reference, const GenomicRegion& region,
-                           const unsigned max_period)
-{
-    const auto sequence = reference.fetch_sequence(region);
-    return utils::extract_exact_tandem_repeats(sequence, region, 2, max_period);
-}
-
-auto get_reference_repeat_regions(const ReferenceGenome& reference, const GenomicRegion& region,
-                                  const std::size_t min_length)
-{
-    auto repeats = get_reference_repeats(reference, region, min_length);
-    auto itr = std::remove_if(std::begin(repeats), std::end(repeats),
-                              [=] (const auto& repeat) noexcept { return region_size(repeat) < min_length; });
-    repeats.erase(itr, std::end(repeats));
-    std::sort(std::begin(repeats), std::end(repeats));
-    return join(extract_covered_regions(repeats), min_length / 2);
-}
-
 struct RegionVariants : public Mappable<RegionVariants>
 {
     RegionVariants(GenomicRegion region) : region {std::move(region)} {}
@@ -194,14 +175,17 @@ auto init_region_variants(const std::vector<GenomicRegion>& regions)
     return result;
 }
 
-bool has_overlapped(const std::vector<RegionVariants>& regions, const Variant& variant) noexcept
+boost::optional<RegionVariants&> find_contained(std::vector<RegionVariants>& regions, const Variant& variant)
 {
-    return has_overlapped(regions, variant, BidirectionallySortedTag {});
-}
-
-auto overlap_range(std::vector<RegionVariants>& regions, const Variant& variant)
-{
-    return bases(overlap_range(regions, variant, BidirectionallySortedTag {}));
+    if (regions.empty()) return boost::none;
+    const auto itr = std::find_if(std::begin(regions), std::end(regions),
+                                  [&] (const auto& region) { return contains(region, variant); });
+    if (itr != std::end(regions)) {
+        assert(contains(*itr, variant));
+        return *itr;
+    } else {
+        return boost::none;
+    }
 }
 
 std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegion& region)
@@ -217,7 +201,7 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
     
     result.reserve(size(overlapped, BidirectionallySortedTag {})); // maximum possible
     
-    const auto repeat_regions = get_reference_repeat_regions(reference_, region, 100);
+    const auto repeat_regions = get_repeat_regions(region);
     auto repeat_region_variants = init_region_variants(repeat_regions);
     
     while (!overlapped.empty()) {
@@ -231,17 +215,14 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
         thread_local std::vector<unsigned> observed_qualities {};
         observed_qualities.resize(num_observations);
         std::transform(cbegin(overlapped), next_candidate, begin(observed_qualities),
-                       [this] (const Candidate& c) noexcept {
-                           return sum_base_qualities(c);
-                       });
+                       [this] (const Candidate& c) noexcept { return sum_base_qualities(c); });
         if (options_.include(candidate.variant, min_depth, observed_qualities)) {
             if (num_observations > 1) {
                 auto unique_iter = cbegin(overlapped);
                 while (unique_iter != next_candidate) {
-                    if (has_overlapped(repeat_regions, unique_iter->variant)) {
-                        for (auto& region : overlap_range(repeat_region_variants, unique_iter->variant)) {
-                            region.variants.push_back(unique_iter->variant);
-                        }
+                    auto repeat_region = find_contained(repeat_region_variants, unique_iter->variant);
+                    if (repeat_region) {
+                        repeat_region->variants.push_back(unique_iter->variant);
                     } else {
                         result.push_back(unique_iter->variant);
                     }
@@ -251,10 +232,9 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
                                                    });
                 }
             } else {
-                if (has_overlapped(repeat_regions, candidate.variant)) {
-                    for (auto& region : overlap_range(repeat_region_variants, candidate.variant)) {
-                        region.variants.push_back(candidate.variant);
-                    }
+                auto repeat_region = find_contained(repeat_region_variants, candidate.variant);
+                if (repeat_region) {
+                    repeat_region->variants.push_back(candidate.variant);
                 } else {
                     result.push_back(candidate.variant);
                 }
@@ -266,8 +246,13 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
     std::vector<Variant> good_repeat_region_variants {};
     for (auto& region : repeat_region_variants) {
         const auto density = region.variants.size() / size(region.region);
-        if (density < 2) {
+        if (density < options_.max_repeat_region_density) {
             utils::append(std::move(region.variants), good_repeat_region_variants);
+        } else {
+            if (debug_log_) {
+                stream(*debug_log_) << "DynamicCigarScanner: masking " << region.variants.size()
+                                    << " candidates in repetitive region " << region.region;
+            }
         }
     }
     auto itr = utils::append(std::move(good_repeat_region_variants), result);
@@ -318,6 +303,15 @@ unsigned DynamicCigarScanner::sum_base_qualities(const Candidate& candidate) con
     return std::accumulate(candidate.first_base_quality_iter,
                            std::next(candidate.first_base_quality_iter, alt_sequence_size(candidate.variant)),
                            0u);
+}
+
+std::vector<GenomicRegion> DynamicCigarScanner::get_repeat_regions(const GenomicRegion& region) const
+{
+    if (options_.repeat_region_generator) {
+        return (*options_.repeat_region_generator)(reference_, region);
+    } else {
+        return {};
+    }
 }
 
 } // coretools
