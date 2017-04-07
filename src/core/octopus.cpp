@@ -559,14 +559,15 @@ auto make_contig_components(const ContigName& contig, GenomeCallingComponents& c
 void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCallingComponents& components,
                        const unsigned num_threads, ExecutionPolicy execution_policy, TaskMakerSyncPacket& sync)
 {
+    static auto debug_log = get_debug_log();
     assert(!contigs.empty());
     std::for_each(std::cbegin(contigs), std::prev(std::cend(contigs)), [&] (const auto& contig) {
         auto contig_components = make_contig_components(contig, components, num_threads);
         make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, false);
+        if (debug_log) *debug_log << "Finished making tasks for contig " << contig;
     });
     auto contig_components = make_contig_components(contigs.back(), components, num_threads);
     make_contig_tasks(contig_components, execution_policy, tasks[contigs.back()], sync, true);
-    static auto debug_log = get_debug_log();
     if (debug_log) *debug_log << "Finished making tasks";
 }
 
@@ -676,15 +677,23 @@ auto run(Task task, ContigCallingComponents components, CallerSyncPacket& sync)
     static auto debug_log = get_debug_log();
     if (debug_log) stream(*debug_log) << "Spawning task " << task;
     return std::async(std::launch::async, [task = std::move(task), components = std::move(components), &sync] () {
-        CompletedTask result {task};
-        result.runtime.start = std::chrono::system_clock::now();
-        result.calls = components.caller->call(task.region, components.progress_meter);
-        result.runtime.end = std::chrono::system_clock::now();
-        std::unique_lock<std::mutex> lock {sync.mutex};
-        ++sync.num_finished;
-        lock.unlock();
-        sync.cv.notify_all();
-        return result;
+        try {
+            CompletedTask result {task};
+            result.runtime.start = std::chrono::system_clock::now();
+            result.calls = components.caller->call(task.region, components.progress_meter);
+            result.runtime.end = std::chrono::system_clock::now();
+            std::unique_lock<std::mutex> lock {sync.mutex};
+            ++sync.num_finished;
+            lock.unlock();
+            sync.cv.notify_all();
+            return result;
+        } catch (...) {
+            logging::ErrorLogger error_log {};
+            stream(error_log) << "Encountered a problem whilst calling " << task;
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(2s); // Try to make sure the error is logged before raising
+            throw;
+        }
     });
 }
 
