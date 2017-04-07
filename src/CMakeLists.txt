@@ -149,7 +149,6 @@ set(UTILS_SOURCES
     utils/read_algorithms.cpp
     utils/read_stats.hpp
     utils/read_stats.cpp
-    utils/sequence_complexity.hpp
     utils/sequence_utils.hpp
     utils/string_utils.hpp
     utils/string_utils.cpp
@@ -164,6 +163,8 @@ set(UTILS_SOURCES
     utils/memory_footprint.hpp
     utils/memory_footprint.cpp
     utils/emplace_iterator.hpp
+    utils/repeat_finder.hpp
+    utils/repeat_finder.cpp
 )
 
 set(CORE_SOURCES
@@ -315,7 +316,7 @@ set(CORE_SOURCES
     core/tools/vargen/utils/global_aligner.cpp
     core/tools/vargen/utils/assembler_active_region_generator.hpp
     core/tools/vargen/utils/assembler_active_region_generator.cpp
-    
+
     core/types/allele.hpp
     core/types/allele.cpp
     core/types/cancer_genotype.hpp
@@ -404,7 +405,7 @@ if (BUILD_TESTING)
         target_link_libraries (Octopus ${HTSlib_LIBRARIES})
     endif (HTSlib_FOUND)
 elseif (CMAKE_BUILD_TYPE MATCHES Debug)
-    add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
+    add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES} utils/repeat_finder.cpp)
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
    if (CMAKE_COMPILER_IS_GNUCXX)
        target_compile_options(octopus-debug PRIVATE -Wall -Wextra -Wextra ${WarningIgnores} -pedantic)

@@ -24,6 +24,7 @@
 #include "utils/read_stats.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/string_utils.hpp"
+#include "utils/repeat_finder.hpp"
 #include "utils/append.hpp"
 #include "utils/maths.hpp"
 #include "basics/phred.hpp"
@@ -831,6 +832,14 @@ public:
     MissingSourceVariantFile(fs::path p) : MissingFileError {std::move(p), "source variant"} {};
 };
 
+struct DefaultRepeatGenerator
+{
+    std::vector<GenomicRegion> operator()(const ReferenceGenome& reference, GenomicRegion region) const
+    {
+        return find_repeat_regions(reference, region);
+    }
+};
+
 auto make_variant_generator_builder(const OptionMap& options)
 {
     using namespace coretools;
@@ -851,11 +860,11 @@ auto make_variant_generator_builder(const OptionMap& options)
             }
             result.set_cigar_scanner(scanner_options);
         } else {
-            DynamicCigarScanner::Options scanner_options {
-                get_default_inclusion_predicate(options),
-                get_default_match_predicate(),
-                true
-            };
+            DynamicCigarScanner::Options scanner_options {};
+            scanner_options.include = get_default_inclusion_predicate(options);
+            scanner_options.match = get_default_match_predicate();
+            scanner_options.use_clipped_coverage_tracking = true;
+            scanner_options.repeat_region_generator = DefaultRepeatGenerator {};
             result.set_dynamic_cigar_scanner(std::move(scanner_options));
         }
     }
