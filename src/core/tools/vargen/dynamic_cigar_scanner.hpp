@@ -33,10 +33,13 @@ public:
         // Signature is (Variant, depth, observed base_qualities). For insertions, observed base_qualities is the sum.
         using InclusionPredicate = std::function<bool(const Variant&, unsigned, std::vector<unsigned>&)>;
         using MatchPredicate = std::function<bool(const Variant&, const Variant&)>;
+        using RepeatRegionGenerator = std::function<std::vector<GenomicRegion>(const ReferenceGenome&, GenomicRegion)>;
         InclusionPredicate include;
         MatchPredicate match = std::equal_to<> {};
         bool use_clipped_coverage_tracking = false;
         Variant::MappingDomain::Size max_variant_size = 2000;
+        boost::optional<RepeatRegionGenerator> repeat_region_generator = boost::none;
+        double max_repeat_region_density = 2;
     };
     
     DynamicCigarScanner() = delete;
@@ -91,6 +94,7 @@ private:
                                  SequenceIterator first_base, SequenceIterator last_base,
                                  AlignedRead::BaseQualityVector::const_iterator first_quality);
     unsigned sum_base_qualities(const Candidate& candidate) const noexcept;
+    std::vector<GenomicRegion> get_repeat_regions(const GenomicRegion& region) const;
 };
 
 template <typename T1, typename T2, typename T3>
