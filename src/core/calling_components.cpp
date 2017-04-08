@@ -321,11 +321,11 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
     drop_unused_samples(this->samples, this->read_manager);
     const auto num_bp_to_process = sum_region_sizes(regions);
     if (num_bp_to_process < 100000000) {
-        progress_meter.set_percent_block_size(1.0);
+        progress_meter.set_max_tick_size(1.0);
     } else if (num_bp_to_process < 1000000000) {
-        progress_meter.set_percent_block_size(0.5);
+        progress_meter.set_max_tick_size(0.5);
     } else {
-        progress_meter.set_percent_block_size(0.1);
+        progress_meter.set_max_tick_size(0.1);
     }
     if (!samples.empty() && !regions.empty() && read_manager.good()) {
         read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options).num_bytes(),

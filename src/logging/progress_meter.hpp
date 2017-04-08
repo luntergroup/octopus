@@ -33,7 +33,7 @@ public:
     
     ~ProgressMeter();
     
-    void set_percent_block_size(double size);
+    void set_max_tick_size(double percent);
     
     void start();
     void resume();
@@ -50,18 +50,15 @@ private:
     InputRegionMap regions_;
     ContigRegionMap completed_regions_;
     RegionSizeType num_bp_to_search_, num_bp_completed_;
-    
-    double percent_block_size_ = 1.0;
-    double percent_unitl_log_;
-    double percent_at_last_log_;
-    
-    std::chrono::time_point<std::chrono::system_clock> start_, last_log_;
+    double min_tick_size_ = 0.1, max_tick_size_ = 1.0, curr_tick_size_ = 1.0;
+    double percent_until_tick_;
+    double percent_at_last_tick_;
+    std::chrono::time_point<std::chrono::system_clock> start_, last_tick_;
+    std::deque<std::chrono::duration<float>> tick_durations_;
     bool done_;
     std::size_t position_tab_length_;
-    
     mutable std::deque<DurationUnits> block_compute_times_;
     mutable std::mutex mutex_;
-    
     logging::InfoLogger log_;
     
     RegionSizeType merge(const GenomicRegion& region);
@@ -73,6 +70,7 @@ private:
     std::string completed_pad(const std::string& percent_completed) const;
     std::string time_taken_pad(const std::string& time_taken) const;
     std::string ttc_pad(const std::string& ttc) const;
+    void update_tick_size();
 };
 
 } // namespace octopus

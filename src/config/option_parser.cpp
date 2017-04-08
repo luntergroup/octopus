@@ -684,21 +684,6 @@ public:
     }
 };
 
-void parse_config_file(const fs::path& config_file, OptionMap& vm, const po::options_description& options)
-{
-    if (!fs::exists(config_file)) {
-        throw BadConfigFile {config_file};
-    }
-    std::ifstream config {config_file.string()};
-    if (config) {
-        try {
-            po::store(po::parse_config_file(config, options), vm);
-        } catch (const po::invalid_config_file_syntax& e) {
-            throw CommandLineError {e.what()};
-        }
-    }
-}
-
 class UnknownCommandLineOption : public CommandLineError
 {
 public:
@@ -733,8 +718,8 @@ public:
     template <typename T>
     InvalidCommandLineOptionValue(std::string option, T value, std::string reason)
     : CommandLineError {
-        "The arguement '" + std::to_string(value) + "' given to option '--" + option
-        + "' was rejected as it " + reason
+    "The arguement '" + std::to_string(value) + "' given to option '--" + option
+    + "' was rejected as it " + reason
     } {}
 };
 
@@ -763,6 +748,31 @@ public:
         why_ = ss.str();
     }
 };
+
+void parse_config_file(const fs::path& config_file, OptionMap& vm, const po::options_description& options)
+{
+    if (!fs::exists(config_file)) {
+        throw BadConfigFile {config_file};
+    }
+    std::ifstream config {config_file.string()};
+    if (config) {
+        try {
+            po::store(po::parse_config_file(config, options), vm);
+        } catch (const po::invalid_config_file_syntax& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::unknown_option& e) {
+            throw UnknownCommandLineOption {po::strip_prefixes(e.get_option_name())};
+        } catch (const po::invalid_option_value& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::invalid_bool_value& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::ambiguous_option& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::reading_file& e) {
+            throw CommandLineError {e.what()};
+        }
+    }
+}
 
 void check_positive(const std::string& option, const OptionMap& vm)
 {
