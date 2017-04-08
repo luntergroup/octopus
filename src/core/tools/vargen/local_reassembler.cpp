@@ -50,9 +50,11 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , reference_ {reference}
 , default_kmer_sizes_ {std::move(options.kmer_sizes)}
 , fallback_kmer_sizes_ {}
+, read_buffer_ {}
 , bin_size_ {options.bin_size}
 , bin_overlap_ {options.bin_overlap}
 , bins_ {}
+, masked_sequence_buffer_ {}
 , mask_threshold_ {options.mask_threshold}
 , min_kmer_observations_ {options.min_kmer_observations}
 , max_bubbles_ {options.max_bubbles}
@@ -434,10 +436,12 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
 
 void LocalReassembler::do_clear() noexcept
 {
-    bins_.clear();
-    bins_.shrink_to_fit();
+    read_buffer_.clear();
+    read_buffer_.shrink_to_fit();
     masked_sequence_buffer_.clear();
     masked_sequence_buffer_.shrink_to_fit();
+    bins_.clear();
+    bins_.shrink_to_fit();
 }
 
 std::string LocalReassembler::name() const
