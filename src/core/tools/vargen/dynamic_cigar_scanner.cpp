@@ -157,8 +157,6 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
     if (ln_prob_misaligned > options_.min_ln_prob_correctly_aligned) {
         utils::append(std::move(buffer_), candidates_);
     } else {
-//        std::cout << "Low prob alignment: " << read.mapped_region() << " " << (int) read.mapping_quality() << " "
-//                  << read.cigar() << " " << num_candidates << " " << ln_prob_misaligned << std::endl;
         utils::append(std::move(buffer_), likely_misaligned_candidates_);
         misaligned_tracker_.add(clipped_mapped_region(read));
     }
@@ -283,8 +281,8 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
                                                     std::end(likely_misaligned_candidates_)),
                                         std::end(likely_misaligned_candidates_));
     
-    if (debug_log_) {
-        stream(*debug_log_) << "DynamicCigarScanner: ignoring " << likely_misaligned_candidates_.size()
+    if (!likely_misaligned_candidates_.empty() && debug_log_) {
+        stream(*debug_log_) << "DynamicCigarScanner: ignoring " << count_overlapped(likely_misaligned_candidates_, region)
                             << " unique candidates in " << region;
     }
     
