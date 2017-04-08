@@ -576,7 +576,6 @@ void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCa
         logging::FatalLogger fatal_log {};
         fatal_log << "Encountered error in task maker thread. Calling terminate";
         std::terminate();
-        
     } catch (const std::exception& e) {
         log_error(e);
         logging::FatalLogger fatal_log {};
@@ -710,6 +709,10 @@ auto run(Task task, ContigCallingComponents components, CallerSyncPacket& sync)
             stream(error_log) << "Encountered a problem whilst calling " << task;
             using namespace std::chrono_literals;
             std::this_thread::sleep_for(2s); // Try to make sure the error is logged before raising
+            std::unique_lock<std::mutex> lock {sync.mutex};
+            ++sync.num_finished;
+            lock.unlock();
+            sync.cv.notify_all();
             throw;
         }
     });
