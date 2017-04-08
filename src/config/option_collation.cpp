@@ -840,6 +840,15 @@ struct DefaultRepeatGenerator
     }
 };
 
+auto get_max_expected_heterozygosity(const OptionMap& options)
+{
+    const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
+    const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
+    const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
+    const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
+    return std::min(static_cast<double>(heterozygosity + 2 * heterozygosity_stdev), 0.9999);
+}
+
 auto make_variant_generator_builder(const OptionMap& options)
 {
     using namespace coretools;
@@ -865,6 +874,7 @@ auto make_variant_generator_builder(const OptionMap& options)
             scanner_options.match = get_default_match_predicate();
             scanner_options.use_clipped_coverage_tracking = true;
             scanner_options.repeat_region_generator = DefaultRepeatGenerator {};
+            scanner_options.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
             result.set_dynamic_cigar_scanner(std::move(scanner_options));
         }
     }
