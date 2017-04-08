@@ -232,15 +232,12 @@ std::vector<SampleName> extract_samples(const options::OptionMap& options, const
 {
     auto user_samples = options::get_user_samples(options);
     auto file_samples = read_manager.samples();
-    
     if (user_samples) {
         const auto it = std::partition(std::begin(*user_samples), std::end(*user_samples),
                                        [&file_samples] (const auto& sample) {
                                            return is_in_file_samples(sample, file_samples);
                                        });
-        
         const auto num_not_found = std::distance(it, std::end(*user_samples));
-        
         if (num_not_found > 0) {
             std::ostringstream ss {};
             ss << "The requested calling sample";
@@ -258,11 +255,25 @@ std::vector<SampleName> extract_samples(const options::OptionMap& options, const
             log << ss.str();
             user_samples->erase(it, std::end(*user_samples));
         }
-        
         return *user_samples;
     } else {
         return file_samples;
     }
+}
+
+void drop_unused_samples(std::vector<SampleName>& calling_samples, ReadManager& rm)
+{
+    if (rm.num_samples() <= calling_samples.size()) return;
+    std::sort(std::begin(calling_samples), std::end(calling_samples));
+    auto managed_samples = rm.samples();
+    assert(calling_samples.size() < managed_samples.size());
+    std::sort(std::begin(managed_samples), std::end(managed_samples));
+    std::vector<SampleName> unused_samples {};
+    unused_samples.reserve(managed_samples.size() - calling_samples.size());
+    std::set_difference(std::cbegin(managed_samples), std::cend(managed_samples),
+                        std::cbegin(calling_samples), std::cend(calling_samples),
+                        std::back_inserter(unused_samples));
+    rm.drop_samples(unused_samples);
 }
 
 auto estimate_read_size(const std::vector<SampleName>& samples,
@@ -307,6 +318,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , sites_only {options::call_sites_only(options)}
 , legacy {options::legacy_vcf_requested(options)}
 {
+    drop_unused_samples(this->samples, this->read_manager);
     const auto num_bp_to_process = sum_region_sizes(regions);
     if (num_bp_to_process < 100000000) {
         progress_meter.set_percent_block_size(1.0);
@@ -315,11 +327,9 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
     } else {
         progress_meter.set_percent_block_size(0.1);
     }
-    
     if (!samples.empty() && !regions.empty() && read_manager.good()) {
         read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options).num_bytes(),
-                                                   this->samples, this->regions,
-                                                   this->read_manager);
+                                                   this->samples, this->regions, this->read_manager);
     }
 }
 

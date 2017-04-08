@@ -64,12 +64,14 @@ public:
     
     bool is_empty() const noexcept;
     
+    std::size_t num_tracked() const noexcept;
+    
     void clear() noexcept;
     
 private:
     std::deque<unsigned> coverage_ = {};
     Region encompassing_region_;
-    std::size_t num_mappables_added_ = 0;
+    std::size_t num_tracked_ = 0;
     
     using Iterator = decltype(coverage_)::const_iterator;
     
@@ -202,7 +204,13 @@ boost::optional<Region> CoverageTracker<Region>::encompassing_region() const
 template <typename Region>
 bool CoverageTracker<Region>::is_empty() const noexcept
 {
-    return num_mappables_added_ == 0;
+    return num_tracked_ == 0;
+}
+
+template <typename Region>
+std::size_t CoverageTracker<Region>::num_tracked() const noexcept
+{
+    return num_tracked_;
 }
 
 template <typename Region>
@@ -210,7 +218,7 @@ void CoverageTracker<Region>::clear() noexcept
 {
     coverage_.clear();
     coverage_.shrink_to_fit();
-    num_mappables_added_ = 0;
+    num_tracked_ = 0;
 }
 
 // private methods
@@ -233,7 +241,7 @@ template <typename Region>
 void CoverageTracker<Region>::do_add(const Region& region)
 {
     if (octopus::is_empty(region)) return;
-    if (num_mappables_added_ == 0) {
+    if (num_tracked_ == 0) {
         coverage_.assign(size(region), 1);
         encompassing_region_ = region;
     } else {
@@ -257,7 +265,7 @@ void CoverageTracker<Region>::do_add(const Region& region)
         assert(std::next(first, size(region)) <= std::end(coverage_));
         std::transform(first, std::next(first, size(region)), first, [] (auto count) { return count + 1; });
     }
-    ++num_mappables_added_;
+    ++num_tracked_;
 }
 
 template <typename Region>
