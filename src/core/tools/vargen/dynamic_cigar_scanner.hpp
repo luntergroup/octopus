@@ -30,6 +30,14 @@ class DynamicCigarScanner : public VariantGenerator
 public:
     struct Options
     {
+        struct MisalignmentParameters
+        {
+            AlignedRead::BaseQuality snv_threshold;
+            double snv_penalty = 1, indel_penalty = 1, clip_penalty = 1;
+            double max_expected_mutation_rate = 1e-3;
+            double min_ln_prob_correctly_aligned = std::log(0.0001);
+            unsigned max_unpenalised_clip_size = 3;
+        };
         // Signature is (Variant, depth, observed base_qualities). For insertions, observed base_qualities is the sum.
         using InclusionPredicate = std::function<bool(const Variant&, unsigned, std::vector<unsigned>&)>;
         using MatchPredicate = std::function<bool(const Variant&, const Variant&)>;
@@ -38,10 +46,9 @@ public:
         MatchPredicate match = std::equal_to<> {};
         bool use_clipped_coverage_tracking = false;
         Variant::MappingDomain::Size max_variant_size = 2000;
+        MisalignmentParameters misalignment_parameters = MisalignmentParameters {};
         boost::optional<RepeatRegionGenerator> repeat_region_generator = boost::none;
         double max_repeat_region_density = 2;
-        double max_expected_mutation_rate = 1e-3;
-        double min_ln_prob_correctly_aligned = std::log(0.001);
     };
     
     DynamicCigarScanner() = delete;
@@ -93,8 +100,8 @@ private:
     template <typename T1, typename T2, typename T3>
     void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
                        AlignedRead::BaseQualityVector::const_iterator first_base_quality);
-    unsigned add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base, SequenceIterator last_base,
-                                     AlignedRead::BaseQualityVector::const_iterator first_quality);
+    double add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base, SequenceIterator last_base,
+                                   AlignedRead::BaseQualityVector::const_iterator first_quality);
     unsigned sum_base_qualities(const Candidate& candidate) const noexcept;
     std::vector<GenomicRegion> get_repeat_regions(const GenomicRegion& region) const;
 };

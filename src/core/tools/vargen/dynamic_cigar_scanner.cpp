@@ -52,17 +52,15 @@ Sequence copy(const Sequence& sequence, const P pos, const S size)
     return Sequence {it, std::next(it, size)};
 }
 
-double ln_probability_read_correctly_aligned(const unsigned num_candidates, const AlignedRead& read,
+double ln_probability_read_correctly_aligned(const double misalign_penalty, const AlignedRead& read,
                                              const double max_expected_mutation_rate)
 {
-    if (num_candidates == 0) {
+    const auto k = static_cast<unsigned>(std::floor(misalign_penalty));
+    if (k == 0) {
         return 0;
     } else {
         const auto ln_prob_missmapped = -maths::constants::ln10Div10<> * read.mapping_quality();
         const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
-        auto k = num_candidates;
-        if (is_front_soft_clipped(read)) ++k;
-        if (is_back_soft_clipped(read)) ++k;
         const auto mu = max_expected_mutation_rate * region_size(read);
         auto ln_prob_given_mapped = maths::log_poisson_sf(k, mu);
         return ln_prob_mapped + ln_prob_given_mapped;
@@ -83,15 +81,15 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
     GenomicRegion region;
-    unsigned num_candidates {0};
+    double misalignment_penalty {0};
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
         switch (cigar_operation.flag()) {
         case Flag::alignmentMatch:
-            num_candidates += add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
-                                                      next(sequence_iter, read_index),
-                                                      next(sequence_iter, read_index + op_size),
-                                                      next(base_quality_iter, read_index));
+            misalignment_penalty += add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
+                                                            next(sequence_iter, read_index),
+                                                            next(sequence_iter, read_index + op_size),
+                                                            next(base_quality_iter, read_index));
             read_index += op_size;
             ref_index  += op_size;
             break;
@@ -108,7 +106,7 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
                           next(base_quality_iter, read_index));
             read_index += op_size;
             ref_index  += op_size;
-            ++num_candidates;
+            misalignment_penalty += op_size * options_.misalignment_parameters.snv_penalty;
             break;
         }
         case Flag::insertion:
@@ -118,7 +116,7 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
                           copy(read_sequence, read_index, op_size),
                           next(base_quality_iter, read_index));
             read_index += op_size;
-            ++num_candidates;
+            misalignment_penalty += options_.misalignment_parameters.indel_penalty;
             break;
         }
         case Flag::deletion:
@@ -129,17 +127,25 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
                           "",
                           next(base_quality_iter, read_index));
             ref_index += op_size;
-            ++num_candidates;
+            misalignment_penalty += options_.misalignment_parameters.indel_penalty;
             break;
         }
         case Flag::softClipped:
         {
             read_index += op_size;
             ref_index  += op_size;
+            if (op_size > options_.misalignment_parameters.max_unpenalised_clip_size) {
+                misalignment_penalty += options_.misalignment_parameters.clip_penalty;
+            }
             break;
         }
         case Flag::hardClipped:
+        {
+            if (op_size > options_.misalignment_parameters.max_unpenalised_clip_size) {
+                misalignment_penalty += options_.misalignment_parameters.clip_penalty;
+            }
             break;
+        }
         case Flag::padding:
             ref_index += op_size;
             break;
@@ -153,8 +159,10 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
     } else {
         read_coverage_tracker_.add(read);
     }
-    const auto ln_prob_misaligned = ln_probability_read_correctly_aligned(num_candidates, read, options_.max_expected_mutation_rate);
-    if (ln_prob_misaligned > options_.min_ln_prob_correctly_aligned) {
+    const auto mu = options_.misalignment_parameters.max_expected_mutation_rate;
+    const auto ln_prob_misaligned = ln_probability_read_correctly_aligned(misalignment_penalty, read, mu);
+    const auto min_ln_prob_misaligned = options_.misalignment_parameters.min_ln_prob_correctly_aligned;
+    if (ln_prob_misaligned >= min_ln_prob_misaligned) {
         utils::append(std::move(buffer_), candidates_);
     } else {
         utils::append(std::move(buffer_), likely_misaligned_candidates_);
@@ -277,19 +285,27 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
     }
     
     std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));
-    likely_misaligned_candidates_.erase(std::unique(std::begin(likely_misaligned_candidates_),
-                                                    std::end(likely_misaligned_candidates_)),
-                                        std::end(likely_misaligned_candidates_));
-    
-    if (!likely_misaligned_candidates_.empty() && debug_log_) {
-        stream(*debug_log_) << "DynamicCigarScanner: ignoring " << count_overlapped(likely_misaligned_candidates_, region)
+    std::vector<Candidate> unique_misaligned_candidates {};
+    unique_misaligned_candidates.reserve(likely_misaligned_candidates_.size());
+    std::unique_copy(std::cbegin(likely_misaligned_candidates_), std::cend(likely_misaligned_candidates_),
+                     std::back_inserter(unique_misaligned_candidates));
+    std::vector<Variant> unique_misaligned_variants {};
+    unique_misaligned_variants.reserve(unique_misaligned_candidates.size());
+    std::transform(std::cbegin(unique_misaligned_candidates), std::cend(unique_misaligned_candidates),
+                   std::back_inserter(unique_misaligned_variants),
+                   [] (const Candidate& candidate) { return candidate.variant; });
+    std::vector<Variant> novel_unique_misaligned_variants {};
+    novel_unique_misaligned_variants.reserve(unique_misaligned_variants.size());
+    std::set_difference(std::cbegin(unique_misaligned_variants), std::cend(unique_misaligned_variants),
+                        std::cbegin(result), std::cend(result), std::back_inserter(novel_unique_misaligned_variants));
+    if (!novel_unique_misaligned_variants.empty() && debug_log_) {
+        stream(*debug_log_) << "DynamicCigarScanner: ignoring " << count_overlapped(novel_unique_misaligned_variants, region)
                             << " unique candidates in " << region;
     }
-    
-    for (const auto& candidate : likely_misaligned_candidates_) {
-        auto repeat_region = find_contained(repeat_region_variants, candidate.variant);
+    for (const auto& candidate : novel_unique_misaligned_variants) {
+        auto repeat_region = find_contained(repeat_region_variants, candidate);
         if (repeat_region) {
-            repeat_region->variants.push_back(candidate.variant);
+            repeat_region->variants.push_back(candidate);
         }
     }
     
@@ -324,31 +340,31 @@ std::string DynamicCigarScanner::name() const
 
 // private methods
 
-unsigned DynamicCigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
-                                                      const SequenceIterator first_base, const SequenceIterator last_base,
-                                                      AlignedRead::BaseQualityVector::const_iterator first_base_quality)
+double DynamicCigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
+                                                    const SequenceIterator first_base, const SequenceIterator last_base,
+                                                    AlignedRead::BaseQualityVector::const_iterator first_base_quality)
 {
     using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
     using Tuple = boost::tuple<char, char>;
     const NucleotideSequence ref_segment {reference_.get().fetch_sequence(region)};
     const auto& contig = region.contig_name();
     auto ref_index = mapped_begin(region);
-    unsigned num_snvs {0};
+    double misalignment_penalty {0};
     for_each(make_zip_iterator(boost::make_tuple(cbegin(ref_segment), first_base)),
              make_zip_iterator(boost::make_tuple(cend(ref_segment), last_base)),
-             [this, &contig, &ref_index, &first_base_quality, &num_snvs] (const Tuple& t) {
+             [this, &contig, &ref_index, &first_base_quality, &misalignment_penalty] (const Tuple& t) {
                  const char ref_base  {t.get<0>()}, read_base {t.get<1>()};
                  if (ref_base != read_base && ref_base != 'N' && read_base != 'N') {
                      add_candidate(GenomicRegion {contig, ref_index, ref_index + 1},
                                    ref_base, read_base, first_base_quality);
-                     if (*first_base_quality >= 30) {
-                         ++num_snvs;
+                     if (*first_base_quality >= options_.misalignment_parameters.snv_threshold) {
+                         misalignment_penalty += options_.misalignment_parameters.snv_penalty;
                      }
                  }
                  ++ref_index;
                  ++first_base_quality;
              });
-    return num_snvs;
+    return misalignment_penalty;
 }
 
 unsigned DynamicCigarScanner::sum_base_qualities(const Candidate& candidate) const noexcept
