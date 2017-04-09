@@ -479,7 +479,7 @@ struct TaskMakerSyncPacket
 void make_region_tasks(const GenomicRegion& region, const ContigCallingComponents& components, const ExecutionPolicy policy,
                        TaskQueue& result, TaskMakerSyncPacket& sync, const bool last_region_in_contig, const bool last_contig)
 {
-    static constexpr GenomicRegion::Size minTaskSize {1000};
+    static constexpr GenomicRegion::Size minTaskSize {5'000};
     std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
     auto subregion = propose_call_subregion(components, region, minTaskSize);
     if (ends_equal(subregion, region)) {

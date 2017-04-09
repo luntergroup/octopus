@@ -258,7 +258,10 @@ auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker, cons
 {
     const auto tracker_region = position_tracker.encompassing_region();
     if (tracker_region) {
-        if (is_before(*tracker_region, region.contig_region()) || ends_before(region.contig_region(), *tracker_region)) {
+        if (is_before(*tracker_region, region.contig_region())) {
+            return head_position(region);
+        }
+        if (ends_before(region.contig_region(), *tracker_region)) {
             return region;
         } else {
             return GenomicRegion {region.contig_name(), closed_region(region.contig_region(), *tracker_region)};

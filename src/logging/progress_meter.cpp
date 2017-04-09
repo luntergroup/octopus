@@ -340,14 +340,14 @@ void ProgressMeter::output_log(const GenomicRegion& region)
     const TimeInterval duration {start_, now};
     const auto time_taken = to_string(duration);
     if (percent_done >= 100) return;
-    const auto percent_since_last_log = percent_done - percent_at_last_tick_;
-    const auto num_blocks_completed = static_cast<std::size_t>(std::floor(percent_since_last_log / curr_tick_size_));
+    const auto percent_since_last_tick = percent_done - percent_at_last_tick_;
+    const auto num_blocks_completed = static_cast<std::size_t>(std::floor(percent_since_last_tick / min_tick_size_));
     std::string ttc {"-"};
     if (num_blocks_completed > 0) {
-        const auto duration_since_last_log = std::chrono::duration_cast<DurationUnits>(now - last_tick_);
-        const DurationUnits duration_per_block {duration_since_last_log.count() / num_blocks_completed};
+        const auto tick_duration = std::chrono::duration_cast<DurationUnits>(now - last_tick_);
+        const DurationUnits duration_per_block {tick_duration.count() / num_blocks_completed};
         std::fill_n(std::back_inserter(block_compute_times_), num_blocks_completed, duration_per_block);
-        const auto num_remaining_blocks = static_cast<std::size_t>((100.0 - percent_done) / curr_tick_size_);
+        const auto num_remaining_blocks = static_cast<std::size_t>((100.0 - percent_done) / min_tick_size_);
         remove_outliers(block_compute_times_);
         ttc = to_string(estimate_ttc(now, block_compute_times_, num_remaining_blocks));
         assert(!ttc.empty());
