@@ -24,6 +24,7 @@
 #include "utils/read_stats.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/string_utils.hpp"
+#include "utils/repeat_finder.hpp"
 #include "utils/append.hpp"
 #include "utils/maths.hpp"
 #include "basics/phred.hpp"
@@ -831,6 +832,23 @@ public:
     MissingSourceVariantFile(fs::path p) : MissingFileError {std::move(p), "source variant"} {};
 };
 
+struct DefaultRepeatGenerator
+{
+    std::vector<GenomicRegion> operator()(const ReferenceGenome& reference, GenomicRegion region) const
+    {
+        return find_repeat_regions(reference, region);
+    }
+};
+
+auto get_max_expected_heterozygosity(const OptionMap& options)
+{
+    const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
+    const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
+    const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
+    const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
+    return std::min(static_cast<double>(heterozygosity + 2 * heterozygosity_stdev), 0.9999);
+}
+
 auto make_variant_generator_builder(const OptionMap& options)
 {
     using namespace coretools;
@@ -839,6 +857,7 @@ auto make_variant_generator_builder(const OptionMap& options)
     logging::ErrorLogger log {};
     
     VariantGeneratorBuilder result {};
+    const bool use_assembler {allow_assembler_generation(options)};
     
     if (options.at("raw-cigar-candidate-generator").as<bool>()) {
         if (options.count("min-supporting-reads") == 1) {
@@ -851,15 +870,24 @@ auto make_variant_generator_builder(const OptionMap& options)
             }
             result.set_cigar_scanner(scanner_options);
         } else {
-            DynamicCigarScanner::Options scanner_options {
-                get_default_inclusion_predicate(options),
-                get_default_match_predicate(),
-                true
-            };
+            DynamicCigarScanner::Options scanner_options {};
+            scanner_options.include = get_default_inclusion_predicate(options);
+            scanner_options.match = get_default_match_predicate();
+            scanner_options.use_clipped_coverage_tracking = true;
+            scanner_options.repeat_region_generator = DefaultRepeatGenerator {};
+            DynamicCigarScanner::Options::MisalignmentParameters misalign_params {};
+            misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
+            misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
+            if (use_assembler) {
+                misalign_params.indel_penalty = 1.5;
+                misalign_params.clip_penalty = 2;
+                misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
+            }
+            scanner_options.misalignment_parameters = misalign_params;
             result.set_dynamic_cigar_scanner(std::move(scanner_options));
         }
     }
-    if (allow_assembler_generation(options)) {
+    if (use_assembler) {
         LocalReassembler::Options reassembler_options {};
         const auto kmer_sizes = options.at("kmer-sizes").as<std::vector<int>>();
         reassembler_options.kmer_sizes.assign(std::cbegin(kmer_sizes), std::cend(kmer_sizes));

@@ -174,9 +174,15 @@ inline bool contains(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 
 inline ContigRegion::Distance inner_distance(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    if (overlaps(lhs, rhs)) return 0;
-    return (is_before(lhs, rhs)) ? static_cast<ContigRegion::Distance>(rhs.begin() - lhs.end())
-                                : -inner_distance(rhs, lhs);
+    if (overlaps(lhs, rhs)) {
+        return 0;
+    } else {
+        if (begins_before(lhs, rhs)) {
+            return static_cast<ContigRegion::Distance>(rhs.begin() - lhs.end());
+        } else {
+            return -static_cast<ContigRegion::Distance>(lhs.begin() - rhs.end());
+        }
+    }
 }
 
 inline ContigRegion::Distance outer_distance(const ContigRegion& lhs, const ContigRegion& rhs) noexcept

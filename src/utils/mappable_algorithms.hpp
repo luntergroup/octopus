@@ -550,6 +550,15 @@ overlap_range(const Container& mappables, const MappableTp& mappable,
                          BidirectionallySortedTag {});
 }
 
+template <typename Container, typename MappableTp>
+OverlapRange<typename Container::iterator>
+overlap_range(Container& mappables, const MappableTp& mappable,
+              BidirectionallySortedTag)
+{
+    return overlap_range(std::begin(mappables), std::end(mappables), mappable,
+                         BidirectionallySortedTag {});
+}
+
 // copy_overlapped
 
 template <typename Container, typename MappableTp>
