@@ -286,7 +286,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Enable candidate generation from raw read alignments (CIGAR strings)")
     
     ("assembly-candidate-generator,a",
-     po::value<bool>()->default_value(false),
+     po::value<bool>()->default_value(true),
      "Enable candidate generation using local re-assembly")
     
     ("source-candidates,c",
