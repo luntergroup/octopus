@@ -31,7 +31,9 @@ std::unique_ptr<VariantGenerator> DynamicCigarScanner::do_clone() const
 DynamicCigarScanner::DynamicCigarScanner(const ReferenceGenome& reference, Options options)
 : reference_ {reference}
 , options_ {options}
+, buffer_ {}
 , candidates_ {}
+, likely_misaligned_candidates_ {}
 , max_seen_candidate_size_ {}
 , read_coverage_tracker_ {}
 {
@@ -329,8 +331,12 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
 
 void DynamicCigarScanner::do_clear() noexcept
 {
+    buffer_.clear();
+    buffer_.shrink_to_fit();
     candidates_.clear();
     candidates_.shrink_to_fit();
+    likely_misaligned_candidates_.clear();
+    likely_misaligned_candidates_.shrink_to_fit();
 }
 
 std::string DynamicCigarScanner::name() const
