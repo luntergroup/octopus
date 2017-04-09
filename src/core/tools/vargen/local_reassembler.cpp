@@ -829,6 +829,15 @@ void add_to_mapped_variants(std::deque<Assembler::Variant>&& variants, std::dequ
     }
 }
 
+void remove_large_deletions(std::deque<Assembler::Variant>& variants, const unsigned max_size)
+{
+    variants.erase(std::remove_if(std::begin(variants), std::end(variants),
+                                  [=] (const auto& variant) {
+                                      return variant.ref.size() >= max_size && variant.alt.empty();
+                                  }),
+                   std::end(variants));
+}
+
 LocalReassembler::AssemblerStatus
 LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequence& reference_sequence,
                                       const GenomicRegion& assemble_region, std::deque<Variant>& result) const
@@ -852,6 +861,11 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
         std::sort(std::begin(variants), std::end(variants), VariantLess {});
         variants.erase(std::unique(std::begin(variants), std::end(variants)), std::end(variants));
         decompose_complex(variants);
+        if (status == AssemblerStatus::partial_success && assembler.kmer_size() <= 10) {
+            // TODO: Some false positive large deletions are being generated for small kmer sizes.
+            // Until Assembler is better able to remove these automatically, filter them here.
+            remove_large_deletions(variants, 100);
+        }
         add_to_mapped_variants(std::move(variants), result, assemble_region);
     }
     return status;
