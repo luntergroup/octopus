@@ -577,7 +577,12 @@ auto merge(const std::vector<GenomicRegion>& indicator_blocks, const std::vector
     for (auto&& exclusion_zone : exclusion_zones) {
         auto interacting = bases(overlap_range(last_block, std::cend(indicator_blocks), exclusion_zone, BidirectionallySortedTag {}));
         result.insert(std::cend(result), last_block, std::begin(interacting));
-        result.push_back(std::move(exclusion_zone));
+        if (empty(interacting)) {
+            result.push_back(std::move(exclusion_zone));
+        } else {
+            auto indicator_block = closed_region(interacting.front(), interacting.back());
+            result.push_back(encompassing_region(indicator_block, exclusion_zone));
+        }
         last_block = std::end(interacting);
     }
     result.insert(std::cend(result), last_block, std::cend(indicator_blocks));
