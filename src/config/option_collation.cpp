@@ -1245,37 +1245,6 @@ public:
     {}
 };
 
-bool all_members(const std::vector<SampleName>& samples, const Pedigree& pedigree)
-{
-	return std::all_of(std::cbegin(samples), std::cend(samples),
-					   [&] (const auto& sample) { return pedigree.is_member(sample); });
-}
-
-bool is_parent_of(const SampleName& parent, const SampleName& offspring, const Pedigree& pedigree)
-{
-	const auto mother = pedigree.mother_of(offspring);
-	if (mother && *mother == parent) return true;
-	const auto father = pedigree.father_of(offspring);
-	return father && *father == parent;
-}
-
-bool is_trio(const std::vector<SampleName>& samples, const Pedigree& pedigree)
-{
-	if (samples.size() == 3 && all_members(samples, pedigree)) {
-		if (pedigree.size() == 3) return true;
-		if (is_parent_of(samples[0], samples[2], pedigree)) {
-			return is_parent_of(samples[1], samples[2], pedigree);
-		} else if (is_parent_of(samples[0], samples[1], pedigree)) {
-			return is_parent_of(samples[2], samples[1], pedigree);
-		} else {
-			return is_parent_of(samples[1], samples[0], pedigree)
-				 && is_parent_of(samples[2], samples[0], pedigree);
-		}
-	} else {
-		return false;
-	}
-}
-
 auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples,
 	 				 const boost::optional<Pedigree>& pedigree)
 {
@@ -1296,15 +1265,15 @@ auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& sa
     return result;
 }
 
-auto get_child(std::vector<SampleName> samples, const Pedigree& pedigree)
+auto get_child_from_trio(std::vector<SampleName> trio, const Pedigree& pedigree)
 {
-	if (is_parent_of(samples[0], samples[1], pedigree)) return samples[1];
-	return is_parent_of(samples[1], samples[0], pedigree) ? samples[0] : samples[2];
+	if (is_parent_of(trio[0], trio[1], pedigree)) return trio[1];
+	return is_parent_of(trio[1], trio[0], pedigree) ? trio[0] : trio[2];
 }
 
 Trio make_trio(std::vector<SampleName> samples, const Pedigree& pedigree)
 {
-	return *make_trio(get_child(samples, pedigree), pedigree);
+	return *make_trio(get_child_from_trio(samples, pedigree), pedigree);
 }
 
 Trio make_trio(std::vector<SampleName> samples, const OptionMap& options,
