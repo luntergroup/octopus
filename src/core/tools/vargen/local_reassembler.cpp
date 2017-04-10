@@ -861,10 +861,16 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
         std::sort(std::begin(variants), std::end(variants), VariantLess {});
         variants.erase(std::unique(std::begin(variants), std::end(variants)), std::end(variants));
         decompose_complex(variants);
-        if (status == AssemblerStatus::partial_success && assembler.kmer_size() <= 10) {
+        if (status == AssemblerStatus::partial_success) {
             // TODO: Some false positive large deletions are being generated for small kmer sizes.
             // Until Assembler is better able to remove these automatically, filter them here.
-            remove_large_deletions(variants, 100);
+            if (assembler.kmer_size() <= 10) {
+                remove_large_deletions(variants, 100);
+            } else if (assembler.kmer_size() <= 15) {
+                remove_large_deletions(variants, 150);
+            } else if (assembler.kmer_size() <= 20) {
+                remove_large_deletions(variants, 200);
+            }
         }
         add_to_mapped_variants(std::move(variants), result, assemble_region);
     }
