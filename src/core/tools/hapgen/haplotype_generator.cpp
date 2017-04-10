@@ -577,7 +577,12 @@ auto merge(const std::vector<GenomicRegion>& indicator_blocks, const std::vector
     for (auto&& exclusion_zone : exclusion_zones) {
         auto interacting = bases(overlap_range(last_block, std::cend(indicator_blocks), exclusion_zone, BidirectionallySortedTag {}));
         result.insert(std::cend(result), last_block, std::begin(interacting));
-        result.push_back(std::move(exclusion_zone));
+        if (empty(interacting)) {
+            result.push_back(std::move(exclusion_zone));
+        } else {
+            auto indicator_block = closed_region(interacting.front(), interacting.back());
+            result.push_back(encompassing_region(indicator_block, exclusion_zone));
+        }
         last_block = std::end(interacting);
     }
     result.insert(std::cend(result), last_block, std::cend(indicator_blocks));
@@ -1193,12 +1198,23 @@ boost::optional<HaplotypeGenerator::HoldoutSet> HaplotypeGenerator::propose_new_
     assert(can_try_extracting_holdouts(region));
     const auto active_alleles = copy_overlapped(alleles_, region);
     assert(!active_alleles.empty());
-    const auto containment_counts = get_containment_counts(active_alleles);
-    const auto holdout_itr = std::find_if(std::cbegin(containment_counts), std::cend(containment_counts),
-                                          [] (const auto& cc) {
-                                              return size(cc.region) > 1 && cc.count > 2;
-                                          });
-    if (holdout_itr != std::cend(containment_counts)) {
+    auto containment_counts = get_containment_counts(active_alleles);
+    auto last_viable_holdout = std::upper_bound(std::begin(containment_counts), std::end(containment_counts),
+                                                3u, [] (auto lhs, const auto& rhs) { return lhs > rhs.count; });
+    if (last_viable_holdout != std::end(containment_counts)) {
+        last_viable_holdout = std::remove_if(std::begin(containment_counts), last_viable_holdout,
+                                             [] (const auto& c) { return size(c.region) < 2; });
+        const auto num_viable_holdouts = std::distance(std::begin(containment_counts), last_viable_holdout);
+        if (num_viable_holdouts == 0) return boost::none;
+        auto holdout_itr = std::begin(containment_counts);
+        if (num_viable_holdouts > 1) {
+            const auto good_count = std::log2(policies_.haplotype_limits.holdout);
+            auto itr = std::find_if(std::next(holdout_itr), last_viable_holdout,
+                                    [=] (const auto& c) {
+                                        return c.count > good_count && is_before(c.region, holdout_itr->region);
+                                    });
+            if (itr != last_viable_holdout) holdout_itr = itr;
+        }
         const auto holdouts = get_holdout_range(active_alleles, holdout_itr->region);
         assert(!holdouts.empty());
         return HoldoutSet {std::cbegin(holdouts), std::cend(holdouts), holdout_itr->region};

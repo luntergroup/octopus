@@ -70,9 +70,9 @@ void print_left_aligned_candidates(const std::vector<Variant>& raw_candidates,
                                    const ReferenceGenome& reference);
 
 template <typename S>
-void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
+void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidates, const GenomicRegion& region,
                             bool number_only = false);
-void print_final_candidates(const MappableFlatSet<Variant>& candidates,
+void print_final_candidates(const MappableFlatSet<Variant>& candidates, const GenomicRegion& region,
                             bool number_only = false);
 
 } // namespace debug
@@ -131,14 +131,14 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         reads = read_pipe_.get().fetch_reads(expand(call_region, 100));
         add_reads(reads, candidate_generator_);
         if (!refcalls_requested() && all_empty(reads)) {
-            if (debug_log_) stream(*debug_log_) << "Stopping early as no reads found in call region";
+            if (debug_log_) stream(*debug_log_) << "Stopping early as no reads found in call region " << call_region;
             return {};
         }
-        if (debug_log_) stream(*debug_log_) << "There are " << count_reads(reads) << " reads";
+        if (debug_log_) stream(*debug_log_) << "Using " << count_reads(reads) << " reads in call region " << call_region;
     }
     const auto candidate_region = calculate_candidate_region(call_region, reads, candidate_generator_);
     auto candidates = generate_candidate_variants(candidate_region);
-    if (debug_log_) debug::print_final_candidates(stream(*debug_log_), candidates);
+    if (debug_log_) debug::print_final_candidates(stream(*debug_log_), candidates, candidate_region);
     if (!refcalls_requested() && candidates.empty()) {
         progress_meter.log_completed(call_region);
         return {};
@@ -151,6 +151,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     auto calls = call_variants(call_region, candidates, reads, progress_meter);
     progress_meter.log_completed(call_region);
     const auto record_factory = make_record_factory(reads);
+    if (debug_log_) stream(*debug_log_) << "Converting " << calls.size() << " calls made in " << call_region << " to VCF";
     return convert_to_vcf(std::move(calls), record_factory, call_region);
 }
     
@@ -244,10 +245,10 @@ Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<V
         }
         const auto active_reads = copy_overlapped(reads, active_region);
         if (!refcalls_requested() && !has_coverage(active_reads)) {
-            if (debug_log_) stream(*debug_log_) << "Skipping active region as there are no active reads";
+            if (debug_log_) stream(*debug_log_) << "Skipping active region " << active_region << " as there are no active reads";
             continue;
         }
-        if (debug_log_) stream(*debug_log_) << "There are " << count_reads(active_reads) << " active reads";
+        if (debug_log_) stream(*debug_log_) << "There are " << count_reads(active_reads) << " active reads in " << active_region;
         if (!populate(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads)) {
             haplotype_generator.clear_progress();
             haplotype_likelihoods.clear();
@@ -316,10 +317,12 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
     if (is_after(active_region, call_region) || haplotypes.empty()) {
         if (debug_log_) {
             if (haplotypes.empty()) {
-                stream(*debug_log_) << "No haplotypes were generated in the active region";
+                stream(*debug_log_) << "No haplotypes were generated in active region " << active_region;
             } else {
                 stream(*debug_log_) << "Generated " << haplotypes.size()
-                                    << " haplotypes but active region is after call region";
+                                    << " haplotypes in " << active_region
+                                    << " but they are after the call region "
+                                    << call_region;
             }
         }
         return GeneratorStatus::done;
@@ -1013,15 +1016,16 @@ void print_left_aligned_candidates(const std::vector<Variant>& raw_candidates,
 }
 
 template <typename S>
-void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidates, bool number_only)
+void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidates, const GenomicRegion& region,
+                            bool number_only)
 {
     if (candidates.empty()) {
-        stream << "There are no final candidates" << '\n';
+        stream << "There are no final candidates in " << region << '\n';
     } else {
         if (candidates.size() == 1) {
-            stream << "There is 1 final candidate:" << '\n';
+            stream << "There is 1 final candidates in " << region << ":" << '\n';
         } else {
-            stream << "There are " << candidates.size() << " final candidates:" << '\n';
+            stream << "There are " << candidates.size() << " final candidates in " << region << ":" << '\n';
         }
         if (!number_only) {
             for (const auto& c : candidates) stream << c << '\n';
@@ -1029,9 +1033,9 @@ void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidat
     }
 }
 
-void print_final_candidates(const MappableFlatSet<Variant>& candidates, bool number_only)
+void print_final_candidates(const MappableFlatSet<Variant>& candidates, const GenomicRegion& region, bool number_only)
 {
-    print_final_candidates(std::cout, candidates, number_only);
+    print_final_candidates(std::cout, candidates, region, number_only);
 }
 
 template <typename S>

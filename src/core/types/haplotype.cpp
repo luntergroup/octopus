@@ -153,11 +153,11 @@ Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) co
         append_reference(result, left_overhang_region(region, explicit_allele_region_));
     }
     auto overlapped_explicit_alleles = haplotype_overlap_range(explicit_alleles_, region);
-    // known that !overlapped_explicit_alleles.empty()
+    assert(!overlapped_explicit_alleles.empty());
     if (contains(overlapped_explicit_alleles.front(), region)) {
         append(result, copy(overlapped_explicit_alleles.front(), region));
         overlapped_explicit_alleles.advance_begin(1);
-        if (!overlapped_explicit_alleles.empty() && is_insertion(overlapped_explicit_alleles.front())) {
+        if (!overlapped_explicit_alleles.empty() && is_empty_region(overlapped_explicit_alleles.front())) {
             append(result, overlapped_explicit_alleles.front());
         }
         return result;

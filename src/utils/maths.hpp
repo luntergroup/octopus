@@ -210,6 +210,46 @@ RealType log_factorial(IntegerType x)
     }
 }
 
+template <typename IntegerType, typename RealType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_poisson_pmf(const IntegerType k, const RealType mu)
+{
+    return k * std::log(mu) - boost::math::lgamma(k) - mu;
+}
+
+template <typename IntegerType, typename RealType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType poisson_cdf(const IntegerType k, const RealType mu)
+{
+    return almost_zero(mu) ? 1.0 : boost::math::gamma_q(k + 1, mu);
+}
+
+template <typename IntegerType, typename RealType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType poisson_sf(const IntegerType k, const RealType mu)
+{
+    return almost_zero(mu) ? 0.0 : boost::math::gamma_p(k + 1, mu);
+}
+
+template <typename IntegerType, typename RealType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_poisson_cdf(const IntegerType k, const RealType mu)
+{
+    return std::log(poisson_cdf(k, mu));
+}
+
+template <typename IntegerType, typename RealType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_poisson_sf(const IntegerType k, const RealType mu)
+{
+    return std::log(poisson_sf(k, mu));
+}
+
 template <typename ForwardIt>
 auto log_beta(const ForwardIt first, const ForwardIt last)
 {

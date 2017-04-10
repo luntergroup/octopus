@@ -947,35 +947,69 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
     boost::depth_first_search(graph_, boost::visitor(vis).root_vertex(reference_head()).vertex_index_map(index_map));
     if (cyclic_edges.empty()) return;
     std::unordered_set<Vertex> bad_kmers {}, reference_origins {}, reference_sinks {};
+    std::deque<std::pair<Vertex, Vertex>> cyclic_reference_segments {};
     if (break_chains) {
         bad_kmers.reserve(std::min(2 * cyclic_edges.size(), num_kmers()));
         reference_origins.reserve(num_reference_kmers());
     }
-    for (const Edge& e : cyclic_edges) {
-        if (!is_reference(e)) {
+    for (const Edge& back_edge : cyclic_edges) {
+        if (!is_reference(back_edge)) {
             if (break_chains) {
-                Vertex cycle_origin {boost::source(e, graph_)};
+                Vertex cycle_origin {boost::source(back_edge, graph_)};
                 while (!is_reference(cycle_origin) && is_bridge(cycle_origin) && bad_kmers.count(cycle_origin) == 0) {
                     bad_kmers.insert(cycle_origin);
                     cycle_origin = *boost::inv_adjacent_vertices(cycle_origin, graph_).first;
                 }
+                bool refererence_origin {false};
                 if (is_reference(cycle_origin)) {
                     reference_origins.insert(cycle_origin);
+                    refererence_origin = true;
                 } else {
                     bad_kmers.insert(cycle_origin);
                 }
-                Vertex cycle_sink {boost::target(e, graph_)};
+                Vertex cycle_sink {boost::target(back_edge, graph_)};
                 while (!is_reference(cycle_sink) && is_bridge(cycle_sink) && bad_kmers.count(cycle_sink) == 0) {
                     bad_kmers.insert(cycle_origin);
                     cycle_sink = *boost::adjacent_vertices(cycle_sink, graph_).first;
                 }
                 if (is_reference(cycle_sink)) {
                     reference_sinks.insert(cycle_sink);
+                    if (refererence_origin) {
+                        cyclic_reference_segments.emplace_back(cycle_sink, cycle_origin);
+                    } else if (boost::out_degree(cycle_origin, graph_) > 1) {
+                        const auto p = boost::out_edges(cycle_origin, graph_);
+                        std::vector<Vertex> reference_tails {};
+                        reference_tails.reserve(std::distance(p.first, p.second));
+                        std::for_each(p.first, p.second, [&] (Edge tail_edge) {
+                            if (tail_edge != back_edge) {
+                                auto tail = boost::target(tail_edge, graph_);
+                                while (!is_reference(tail) && boost::out_degree(tail, graph_) == 1
+                                       && bad_kmers.count(tail) == 0) {
+                                    bad_kmers.insert(tail);
+                                    tail = *boost::adjacent_vertices(tail, graph_).first;
+                                }
+                                if (is_reference(tail)) {
+                                    reference_tails.push_back(tail);
+                                }
+                            }
+                        });
+                        if (!reference_tails.empty()) {
+                            if (reference_tails.size() == 1) {
+                                cyclic_reference_segments.emplace_back(cycle_sink, reference_tails.front());
+                            } else {
+                                // Just add the rightmost reference vertex
+                                auto itr = std::find_first_of(std::crbegin(reference_vertices_), std::crend(reference_vertices_),
+                                                              std::cbegin(reference_tails), std::cend(reference_tails));
+                                assert(itr != std::crend(reference_vertices_));
+                                cyclic_reference_segments.emplace_back(cycle_sink, *itr);
+                            }
+                        }
+                    }
                 } else {
                     bad_kmers.insert(cycle_sink);
                 }
             }
-            remove_edge(e);
+            remove_edge(back_edge);
         }
     }
     bool regenerate_indices {false};
@@ -989,6 +1023,19 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
     }
     if (!bad_kmers.empty()) {
         clear_and_remove_all(bad_kmers);
+        regenerate_indices = true;
+    }
+    if (!cyclic_reference_segments.empty()) {
+        for (const auto& p : cyclic_reference_segments) {
+            const auto first_vertex_itr = std::find(std::cbegin(reference_vertices_), std::cend(reference_vertices_), p.first);
+            assert(first_vertex_itr != std::cend(reference_vertices_));
+            const auto last_vertex_itr  = std::find(first_vertex_itr, std::cend(reference_vertices_), p.second);
+            assert(last_vertex_itr != std::cend(reference_vertices_));
+            std::for_each(first_vertex_itr, last_vertex_itr, [this] (Vertex v) {
+                boost::remove_in_edge_if(v, [this] (Edge e) { return !is_reference(e); }, graph_);
+                boost::remove_out_edge_if(v, [this] (Edge e) { return !is_reference(e); }, graph_);
+            });
+        }
         regenerate_indices = true;
     }
     if (regenerate_indices) {

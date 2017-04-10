@@ -50,9 +50,11 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , reference_ {reference}
 , default_kmer_sizes_ {std::move(options.kmer_sizes)}
 , fallback_kmer_sizes_ {}
+, read_buffer_ {}
 , bin_size_ {options.bin_size}
 , bin_overlap_ {options.bin_overlap}
 , bins_ {}
+, masked_sequence_buffer_ {}
 , mask_threshold_ {options.mask_threshold}
 , min_kmer_observations_ {options.min_kmer_observations}
 , max_bubbles_ {options.max_bubbles}
@@ -434,10 +436,12 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
 
 void LocalReassembler::do_clear() noexcept
 {
-    bins_.clear();
-    bins_.shrink_to_fit();
+    read_buffer_.clear();
+    read_buffer_.shrink_to_fit();
     masked_sequence_buffer_.clear();
     masked_sequence_buffer_.shrink_to_fit();
+    bins_.clear();
+    bins_.shrink_to_fit();
 }
 
 std::string LocalReassembler::name() const
@@ -825,6 +829,15 @@ void add_to_mapped_variants(std::deque<Assembler::Variant>&& variants, std::dequ
     }
 }
 
+void remove_large_deletions(std::deque<Assembler::Variant>& variants, const unsigned max_size)
+{
+    variants.erase(std::remove_if(std::begin(variants), std::end(variants),
+                                  [=] (const auto& variant) {
+                                      return variant.ref.size() >= max_size && variant.alt.empty();
+                                  }),
+                   std::end(variants));
+}
+
 LocalReassembler::AssemblerStatus
 LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequence& reference_sequence,
                                       const GenomicRegion& assemble_region, std::deque<Variant>& result) const
@@ -848,6 +861,11 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
         std::sort(std::begin(variants), std::end(variants), VariantLess {});
         variants.erase(std::unique(std::begin(variants), std::end(variants)), std::end(variants));
         decompose_complex(variants);
+        if (status == AssemblerStatus::partial_success && assembler.kmer_size() <= 10) {
+            // TODO: Some false positive large deletions are being generated for small kmer sizes.
+            // Until Assembler is better able to remove these automatically, filter them here.
+            remove_large_deletions(variants, 100);
+        }
         add_to_mapped_variants(std::move(variants), result, assemble_region);
     }
     return status;

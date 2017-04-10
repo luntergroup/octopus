@@ -142,7 +142,11 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "File of sample names to analyse, one per line, which must be a subset of the samples"
      " that appear in the read files")
-
+    
+    ("ignore-unmapped-contigs",
+     po::bool_switch()->default_value(false),
+     "Ignore any contigs that are not present in the read files")
+    
     ("pedigree",
      po::value<fs::path>(),
      "PED file containing sample pedigree")
@@ -282,7 +286,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Enable candidate generation from raw read alignments (CIGAR strings)")
     
     ("assembly-candidate-generator,a",
-     po::value<bool>()->default_value(false),
+     po::value<bool>()->default_value(true),
      "Enable candidate generation using local re-assembly")
     
     ("source-candidates,c",
@@ -413,11 +417,15 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("snp-heterozygosity",
      po::value<float>()->default_value(0.001, "0.001"),
-     "The germline SNP heterozygosity used to calculate genotype priors")
+     "SNP heterozygosity for the given samples")
+
+    ("snp-heterozygosity-stdev",
+     po::value<float>()->default_value(0.01, "0.01"),
+     "Standard deviation of the SNP heterozygosity used for the given samples")
     
     ("indel-heterozygosity",
      po::value<float>()->default_value(0.0001, "0.0001"),
-     "The germline indel heterozygosity used to calculate genotype priors")
+     "Indel heterozygosity for the given samples")
     
     ("use-uniform-genotype-priors",
     po::bool_switch()->default_value(false),
@@ -676,21 +684,6 @@ public:
     }
 };
 
-void parse_config_file(const fs::path& config_file, OptionMap& vm, const po::options_description& options)
-{
-    if (!fs::exists(config_file)) {
-        throw BadConfigFile {config_file};
-    }
-    std::ifstream config {config_file.string()};
-    if (config) {
-        try {
-            po::store(po::parse_config_file(config, options), vm);
-        } catch (const po::invalid_config_file_syntax& e) {
-            throw CommandLineError {e.what()};
-        }
-    }
-}
-
 class UnknownCommandLineOption : public CommandLineError
 {
 public:
@@ -725,8 +718,8 @@ public:
     template <typename T>
     InvalidCommandLineOptionValue(std::string option, T value, std::string reason)
     : CommandLineError {
-        "The arguement '" + std::to_string(value) + "' given to option '--" + option
-        + "' was rejected as it " + reason
+    "The arguement '" + std::to_string(value) + "' given to option '--" + option
+    + "' was rejected as it " + reason
     } {}
 };
 
@@ -755,6 +748,31 @@ public:
         why_ = ss.str();
     }
 };
+
+void parse_config_file(const fs::path& config_file, OptionMap& vm, const po::options_description& options)
+{
+    if (!fs::exists(config_file)) {
+        throw BadConfigFile {config_file};
+    }
+    std::ifstream config {config_file.string()};
+    if (config) {
+        try {
+            po::store(po::parse_config_file(config, options), vm);
+        } catch (const po::invalid_config_file_syntax& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::unknown_option& e) {
+            throw UnknownCommandLineOption {po::strip_prefixes(e.get_option_name())};
+        } catch (const po::invalid_option_value& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::invalid_bool_value& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::ambiguous_option& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::reading_file& e) {
+            throw CommandLineError {e.what()};
+        }
+    }
+}
 
 void check_positive(const std::string& option, const OptionMap& vm)
 {

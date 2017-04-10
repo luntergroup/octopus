@@ -35,7 +35,7 @@ ReadManager::ReadManager(std::vector<Path> read_file_paths, unsigned max_open_fi
     for (const auto& pair : reader_paths_containing_sample_) {
         samples_.emplace_back(pair.first);
     }
-    std::sort(std::begin(samples_), std::end(samples_)); // just for consistency
+    std::sort(std::begin(samples_), std::end(samples_));
 }
 
 ReadManager::ReadManager(std::initializer_list<Path> read_file_paths)
@@ -87,6 +87,54 @@ unsigned ReadManager::num_samples() const noexcept
 const std::vector<ReadManager::SampleName>& ReadManager::samples() const
 {
     return samples_;
+}
+
+unsigned ReadManager::drop_samples(std::vector<SampleName> samples)
+{
+    std::sort(std::begin(samples), std::end(samples));
+    std::vector<SampleName> remaining_samples {};
+    remaining_samples.reserve(samples_.size());
+    std::set_difference(std::cbegin(samples_), std::cend(samples_),
+                        std::cbegin(samples), std::cend(samples),
+                        std::back_inserter(remaining_samples));
+    remaining_samples.shrink_to_fit();
+    samples_ = std::move(remaining_samples);
+    for (const auto& sample : samples) {
+        reader_paths_containing_sample_.erase(sample);
+    }
+    reader_paths_containing_sample_.rehash(samples_.size());
+    std::set<Path> remaining_reader_paths {};
+    for (const auto& p : reader_paths_containing_sample_) {
+        remaining_reader_paths.insert(std::cbegin(p.second), std::cend(p.second));
+    }
+    std::set<Path> dropped_reader_paths {};
+    unsigned num_new_spaces {0};
+    for (auto itr = std::cbegin(open_readers_); itr != std::cend(open_readers_); ) {
+        if (remaining_reader_paths.count(itr->first) == 0) {
+            dropped_reader_paths.insert(itr->first);
+            itr = open_readers_.erase(itr);
+            ++num_new_spaces;
+        } else {
+            ++itr;
+        }
+    }
+    for (auto itr = std::cbegin(closed_readers_); itr != std::cend(closed_readers_); ) {
+        if (remaining_reader_paths.count(*itr) == 0) {
+            dropped_reader_paths.insert(*itr);
+            itr = closed_readers_.erase(itr);
+        } else {
+            ++itr;
+        }
+    }
+    for (const auto& path : dropped_reader_paths) {
+        possible_regions_in_readers_.erase(path);
+    }
+    possible_regions_in_readers_.rehash(possible_regions_in_readers_.size());
+    if (num_new_spaces > 0 && !closed_readers_.empty()) {
+        open_readers(num_new_spaces);
+    }
+    num_files_ -= dropped_reader_paths.size();
+    return dropped_reader_paths.size();
 }
 
 bool ReadManager::has_reads(const SampleName& sample, const GenomicRegion& region) const
@@ -210,7 +258,10 @@ auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker, cons
 {
     const auto tracker_region = position_tracker.encompassing_region();
     if (tracker_region) {
-        if (is_before(*tracker_region, region.contig_region()) || ends_before(region.contig_region(), *tracker_region)) {
+        if (is_before(*tracker_region, region.contig_region())) {
+            return head_position(region);
+        }
+        if (ends_before(region.contig_region(), *tracker_region)) {
             return region;
         } else {
             return GenomicRegion {region.contig_name(), closed_region(region.contig_region(), *tracker_region)};
@@ -223,9 +274,9 @@ auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker, cons
 auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker,
                      const GenomicRegion& region, const std::size_t max_coverage)
 {
-    if (position_tracker.is_empty()) return region;
+    if (position_tracker.num_tracked() <= max_coverage) return region;
     const auto max_region = max_head_region(position_tracker, region);
-    if (position_tracker.total_coverage(max_region.contig_region()) <= max_coverage) return max_region;
+    if (size(max_region) <= 1) return max_region;
     auto position_coverage = position_tracker.coverage(max_region.contig_region());
     std::partial_sum(std::begin(position_coverage), std::end(position_coverage), std::begin(position_coverage));
     const auto last_position = std::upper_bound(std::cbegin(position_coverage), std::cend(position_coverage), max_coverage);
@@ -240,16 +291,11 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
     if (samples.empty() || is_empty(region)) return region;
     CoverageTracker<ContigRegion> position_tracker {};
     if (all_readers_are_open()) {
-        bool added_tail_position {false};
         for (const auto& p : open_readers_) {
             // Request one more than the max so we can determine if the entire request region can be included
             const auto positions = p.second.extract_read_positions(samples, region, max_reads + 1);
             for (auto position : positions) {
                 add(position, position_tracker);
-            }
-            if (positions.size() <= max_reads && !added_tail_position) {
-                position_tracker.add(tail_position(region).contig_region());
-                added_tail_position = true;
             }
         }
     } else {
@@ -257,16 +303,11 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
         auto reader_paths = get_possible_reader_paths(samples, region);
         auto reader_itr = partition_open(reader_paths);
         while (!reader_paths.empty()) {
-            bool added_tail_position {false};
             std::for_each(reader_itr, end(reader_paths), [&] (const auto& reader_path) {
                 // Request one more than the max so we can determine if the entire request region can be included
                 const auto positions = open_readers_.at(reader_path).extract_read_positions(samples, region, max_reads + 1);
                 for (auto position : positions) {
                     add(position, position_tracker);
-                }
-                if (positions.size() <= max_reads && !added_tail_position) {
-                    position_tracker.add(tail_position(region).contig_region());
-                    added_tail_position = true;
                 }
             });
             reader_paths.erase(reader_itr, end(reader_paths));
@@ -466,6 +507,15 @@ ReadManager::open_readers(std::vector<Path>::iterator first, std::vector<Path>::
     auto first_open = std::next(first, num_requested_spaces - num_available_spaces);
     std::for_each(first_open, last, [this] (const Path& path) { open_reader(path); });
     return first_open;
+}
+
+void ReadManager::open_readers(unsigned n) const
+{
+    n = std::min(n, static_cast<unsigned>(closed_readers_.size()));
+    std::vector<Path> closed_reader_paths {std::cbegin(closed_readers_), std::cend(closed_readers_)};
+    const auto nth = std::next(std::begin(closed_reader_paths), n);
+    std::nth_element(std::begin(closed_reader_paths), nth, std::end(closed_reader_paths), FileSizeCompare {});
+    open_readers(std::begin(closed_reader_paths), nth);
 }
 
 void ReadManager::close_reader(const Path& reader_path) const

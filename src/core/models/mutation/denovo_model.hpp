@@ -61,6 +61,7 @@ private:
     };
     
     hmm::BasicMutationModel mutation_model_;
+    boost::optional<double> min_ln_probability_;
     std::size_t num_haplotypes_hint_;
     std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;

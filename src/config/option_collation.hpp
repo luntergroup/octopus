@@ -42,6 +42,8 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
 
 ContigOutputOrder get_contig_output_order(const OptionMap& options);
 
+bool ignore_unmapped_contigs(const OptionMap& options);
+
 boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& options);
 
 ReadManager make_read_manager(const OptionMap& options);

@@ -12,6 +12,8 @@
 #include <cassert>
 
 #include "basics/phred.hpp"
+#include "utils/maths.hpp"
+#include "core/types/variant.hpp"
 
 namespace octopus {
 
@@ -23,6 +25,7 @@ auto make_hmm_model(const double denovo_mutation_rate) noexcept
 
 DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint, CachingStrategy caching)
 : mutation_model_ {make_hmm_model(parameters.mutation_rate)}
+, min_ln_probability_ {}
 , num_haplotypes_hint_ {num_haplotypes_hint}
 , haplotypes_ {}
 , caching_ {caching}
@@ -33,6 +36,7 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 , padded_given_ {}
 , use_unguarded_ {false}
 {
+    min_ln_probability_ = 8 * std::log(parameters.mutation_rate);
     if (caching_ == CachingStrategy::address) {
         address_cache_.reserve(num_haplotypes_hint_ * num_haplotypes_hint_);
     } else if (caching == CachingStrategy::value) {
@@ -120,10 +124,53 @@ void pad_given(const Haplotype& target, const Haplotype& given, std::string& res
     pad_given(target.sequence(), given.sequence(), result);
 }
 
+auto sequence_length_distance(const Haplotype& lhs, const Haplotype& rhs) noexcept
+{
+    const auto p = std::minmax({sequence_size(lhs), sequence_size(rhs)});
+    return p.second - p.first;
+}
+
+bool can_align_with_hmm(const Haplotype& target, const Haplotype& given) noexcept
+{
+    return sequence_length_distance(target, given) <= hmm::min_flank_pad();
+}
+
+double hmm_align(const Haplotype::NucleotideSequence& target, const Haplotype::NucleotideSequence& given,
+                 const hmm::BasicMutationModel& model, const boost::optional<double> min_ln_probability) noexcept
+{
+    const auto p = hmm::evaluate(target, given, model);
+    return min_ln_probability ? std::max(p, *min_ln_probability) : p;
+}
+
+double approx_align(const Haplotype& target, const Haplotype& given, const hmm::BasicMutationModel& model,
+                    const boost::optional<double> min_ln_probability)
+{
+    using maths::constants::ln10Div10;
+    const auto indel_size = sequence_length_distance(target, given);
+    double score = {model.gap_open + model.gap_extend * (static_cast<double>(indel_size) - 1)};
+    if (min_ln_probability) {
+        const auto max_score = -*min_ln_probability / ln10Div10<>;
+        if (score >= max_score) {
+            return *min_ln_probability;
+        }
+    }
+    const auto variants = target.difference(given);
+    const auto mismatch_size = std::accumulate(std::cbegin(variants), std::cend(variants), 0,
+                                               [] (auto curr, const auto& variant) noexcept {
+                                                   return curr + (!is_indel(variant) ? region_size(variant) : 0);
+                                               });
+    score += mismatch_size * model.mutation;
+    return min_ln_probability ? std::max(-ln10Div10<> * score, *min_ln_probability) : -ln10Div10<> * score;
+}
+
 double DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given) const
 {
-    pad_given(target, given, padded_given_);
-    return hmm::evaluate(target.sequence(), padded_given_, mutation_model_);
+    if (can_align_with_hmm(target, given)) {
+        pad_given(target, given, padded_given_);
+        return hmm_align(target.sequence(), padded_given_, mutation_model_, min_ln_probability_);
+    } else {
+        return approx_align(target, given, mutation_model_, min_ln_probability_);
+    }
 }
 
 double DeNovoModel::evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const

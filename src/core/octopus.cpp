@@ -43,6 +43,7 @@
 #include "utils/maths.hpp"
 #include "logging/progress_meter.hpp"
 #include "logging/logging.hpp"
+#include "logging/error_handler.hpp"
 #include "core/tools/vcf_header_factory.hpp"
 #include "io/variant/vcf.hpp"
 #include "utils/timing.hpp"
@@ -478,7 +479,7 @@ struct TaskMakerSyncPacket
 void make_region_tasks(const GenomicRegion& region, const ContigCallingComponents& components, const ExecutionPolicy policy,
                        TaskQueue& result, TaskMakerSyncPacket& sync, const bool last_region_in_contig, const bool last_contig)
 {
-    static constexpr GenomicRegion::Size minTaskSize {1000};
+    static constexpr GenomicRegion::Size minTaskSize {5'000};
     std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
     auto subregion = propose_call_subregion(components, region, minTaskSize);
     if (ends_equal(subregion, region)) {
@@ -559,13 +560,32 @@ auto make_contig_components(const ContigName& contig, GenomeCallingComponents& c
 void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCallingComponents& components,
                        const unsigned num_threads, ExecutionPolicy execution_policy, TaskMakerSyncPacket& sync)
 {
-    assert(!contigs.empty());
-    std::for_each(std::cbegin(contigs), std::prev(std::cend(contigs)), [&] (const auto& contig) {
-        auto contig_components = make_contig_components(contig, components, num_threads);
-        make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, false);
-    });
-    auto contig_components = make_contig_components(contigs.back(), components, num_threads);
-    make_contig_tasks(contig_components, execution_policy, tasks[contigs.back()], sync, true);
+    try {
+        static auto debug_log = get_debug_log();
+        assert(!contigs.empty());
+        std::for_each(std::cbegin(contigs), std::prev(std::cend(contigs)), [&] (const auto& contig) {
+            auto contig_components = make_contig_components(contig, components, num_threads);
+            make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, false);
+            if (debug_log) *debug_log << "Finished making tasks for contig " << contig;
+        });
+        auto contig_components = make_contig_components(contigs.back(), components, num_threads);
+        make_contig_tasks(contig_components, execution_policy, tasks[contigs.back()], sync, true);
+        if (debug_log) *debug_log << "Finished making tasks";
+    } catch (const Error& e) {
+        log_error(e);
+        logging::FatalLogger fatal_log {};
+        fatal_log << "Encountered error in task maker thread. Calling terminate";
+        std::terminate();
+    } catch (const std::exception& e) {
+        log_error(e);
+        logging::FatalLogger fatal_log {};
+        fatal_log << "Encountered error in task maker thread. Calling terminate";
+        std::terminate();
+    } catch (...) {
+        logging::FatalLogger fatal_log {};
+        fatal_log << "Encountered error in task maker thread. Calling terminate";
+        std::terminate();
+    }
 }
 
 std::thread make_tasks(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
@@ -674,15 +694,27 @@ auto run(Task task, ContigCallingComponents components, CallerSyncPacket& sync)
     static auto debug_log = get_debug_log();
     if (debug_log) stream(*debug_log) << "Spawning task " << task;
     return std::async(std::launch::async, [task = std::move(task), components = std::move(components), &sync] () {
-        CompletedTask result {task};
-        result.runtime.start = std::chrono::system_clock::now();
-        result.calls = components.caller->call(task.region, components.progress_meter);
-        result.runtime.end = std::chrono::system_clock::now();
-        std::unique_lock<std::mutex> lock {sync.mutex};
-        ++sync.num_finished;
-        lock.unlock();
-        sync.cv.notify_all();
-        return result;
+        try {
+            CompletedTask result {task};
+            result.runtime.start = std::chrono::system_clock::now();
+            result.calls = components.caller->call(task.region, components.progress_meter);
+            result.runtime.end = std::chrono::system_clock::now();
+            std::unique_lock<std::mutex> lock {sync.mutex};
+            ++sync.num_finished;
+            lock.unlock();
+            sync.cv.notify_all();
+            return result;
+        } catch (...) {
+            logging::ErrorLogger error_log {};
+            stream(error_log) << "Encountered a problem whilst calling " << task;
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(2s); // Try to make sure the error is logged before raising
+            std::unique_lock<std::mutex> lock {sync.mutex};
+            ++sync.num_finished;
+            lock.unlock();
+            sync.cv.notify_all();
+            throw;
+        }
     });
 }
 
@@ -776,6 +808,9 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                 stream(*debug_log) << "Calls are inconsistent in connecting region " << unresolved_region
                                    << ". Recalling the region";
             }
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "Recalling " << unresolved_region
+                             << " due to call inconsistency between thread tasks. This may increase expected runtime";
             auto resolved_calls = components.caller->call(unresolved_region, components.progress_meter);
             if (!resolved_calls.empty()) {
                 if (!contains(unresolved_region, encompassing_region(resolved_calls))) {
@@ -828,16 +863,33 @@ void write(std::deque<CompletedTask>& tasks, TempVcfWriterMap& writers)
 
 void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSync& sync)
 {
-    std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
-    std::deque<CompletedTask> buffer {};
-    while (!sync.done) {
-        lock.lock();
-        sync.cv.wait(lock, [&] () { return !sync.tasks.empty(); });
-        assert(buffer.empty());
-        std::swap(sync.tasks, buffer);
-        lock.unlock();
-        sync.cv.notify_one();
-        write(buffer, writers);
+    try {
+        std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
+        std::deque<CompletedTask> buffer {};
+        while (!sync.done) {
+            lock.lock();
+            sync.cv.wait(lock, [&] () { return !sync.tasks.empty(); });
+            assert(buffer.empty());
+            std::swap(sync.tasks, buffer);
+            lock.unlock();
+            sync.cv.notify_one();
+            write(buffer, writers);
+        }
+    } catch (const Error& e) {
+        log_error(e);
+        logging::FatalLogger fatal_log {};
+        fatal_log << "Encountered error in task writer thread. Calling terminate";
+        std::terminate();
+    
+    } catch (const std::exception& e) {
+        log_error(e);
+        logging::FatalLogger fatal_log {};
+        fatal_log << "Encountered error in task writer thread. Calling terminate";
+        std::terminate();
+    } catch (...) {
+        logging::FatalLogger fatal_log {};
+        fatal_log << "Encountered error in task writer thread. Calling terminate";
+        std::terminate();
     }
 }
 

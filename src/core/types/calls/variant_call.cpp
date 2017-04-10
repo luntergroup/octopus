@@ -128,6 +128,8 @@ void VariantCall::replace_uncalled_genotype_alleles(const Allele& replacement,
     }
 }
 
+namespace {
+
 class DummyGenerator
 {
 public:
@@ -142,6 +144,8 @@ public:
 private:
     char dummy_;
 };
+
+} // namespace
 
 bool VariantCall::parsimonise(const char dummy_base)
 {
