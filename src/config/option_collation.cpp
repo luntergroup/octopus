@@ -49,6 +49,8 @@
 
 namespace octopus { namespace options {
 
+boost::optional<fs::path> get_output_path(const OptionMap& options);
+
 // unsigned are banned from the option map to prevent user input errors, but once the option
 // map is passed they are all safe
 unsigned as_unsigned(const std::string& option, const OptionMap& options)
@@ -119,7 +121,6 @@ fs::path resolve_path(const fs::path& path, const OptionMap& options)
 struct Line
 {
     std::string line_data;
-
     operator std::string() const
     {
         return line_data;
@@ -134,8 +135,6 @@ std::istream& operator>>(std::istream& is, Line& data)
     }
     return is;
 }
-
-} // namespace
 
 std::vector<fs::path> extract_paths_from_file(const fs::path& file_path, const OptionMap& options)
 {
@@ -181,6 +180,8 @@ bool is_file_writable(const fs::path& path)
     fs::remove(path);
     return result;
 }
+
+} // namespace
 
 bool is_threading_allowed(const OptionMap& options)
 {
@@ -267,14 +268,11 @@ ReferenceGenome make_reference(const OptionMap& options)
 InputRegionMap make_search_regions(const std::vector<GenomicRegion>& regions)
 {
     InputRegionMap contig_mapped_regions {};
-    
     for (const auto& region : regions) {
         contig_mapped_regions[region.contig_name()].insert(region);
     }
-    
     InputRegionMap result {};
     result.reserve(contig_mapped_regions.size());
-    
     for (const auto& p : contig_mapped_regions) {
         auto covered_contig_regions = extract_covered_regions(p.second);
         result.emplace(std::piecewise_construct,
@@ -282,7 +280,6 @@ InputRegionMap make_search_regions(const std::vector<GenomicRegion>& regions)
                        std::forward_as_tuple(std::make_move_iterator(std::begin(covered_contig_regions)),
                                              std::make_move_iterator(std::end(covered_contig_regions))));
     }
-    
     return result;
 }
 
@@ -406,9 +403,7 @@ public:
 InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenome& reference)
 {
     using namespace utils;
-    
     std::vector<GenomicRegion> skip_regions {};
-    
     if (options.count("skip-regions") == 1) {
         const auto& region_strings = options.at("skip-regions").as<std::vector<std::string>>();
         append(parse_regions(region_strings, reference), skip_regions);
@@ -416,37 +411,29 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
     if (options.count("skip-regions-file") == 1) {
         const auto& input_path = options.at("skip-regions-file").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
-        
         if (!fs::exists(resolved_path)) {
             MissingRegionPathFile e {resolved_path};
             e.set_location_specified("the command line option '--skip-regions-file'");
             throw e;
         }
-        
         auto regions = io::extract_regions(resolved_path, reference, io::NonreferenceContigPolicy::ignore);
-        
         if (regions.empty()) {
             logging::WarningLogger log {};
             stream(log) << "The regions path file you specified " << resolved_path
                 << " in the command line option '--skip-regions-file' is empty";
         }
-        
         append(std::move(regions), skip_regions);
     }
-    
     if (options.at("one-based-indexing").as<bool>()) {
         skip_regions = transform_to_zero_based(std::move(skip_regions));
     }
-    
     if (options.count("regions") == 0 && options.count("regions-file") == 0) {
         if (options.count("regenotype") == 1) {
             // TODO: only extract regions in the regenotype VCF
         }
         return extract_search_regions(reference, skip_regions);
     }
-    
     std::vector<GenomicRegion> input_regions {};
-    
     if (options.count("regions") == 1) {
         const auto& region_strings = options.at("regions").as<std::vector<std::string>>();
         append(parse_regions(region_strings, reference), input_regions);
@@ -454,24 +441,19 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
     if (options.count("regions-file") == 1) {
         const auto& input_path = options.at("regions-file").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
-        
         if (!fs::exists(resolved_path)) {
             MissingRegionPathFile e {resolved_path};
             e.set_location_specified("the command line option '--regions-file'");
             throw e;
         }
-        
         auto regions = io::extract_regions(resolved_path, reference);
-        
         if (regions.empty()) {
             logging::WarningLogger log {};
             stream(log) << "The regions path file you specified " << resolved_path
                 << " in the command line option '--skip-regions-file' is empty";
         }
-        
         append(std::move(regions), input_regions);
     }
-    
     auto result = extract_search_regions(input_regions, skip_regions);
     if (options.at("one-based-indexing").as<bool>()) {
         return transform_to_zero_based(std::move(result));
@@ -832,6 +814,34 @@ public:
     MissingSourceVariantFile(fs::path p) : MissingFileError {std::move(p), "source variant"} {};
 };
 
+class ConflictingSourceVariantFile : public UserError
+{
+    std::string do_where() const override
+    {
+        return "make_variant_generator_builder";
+    }
+    
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "The source variant file you specified " << source_;
+        ss << " conflicts with the output file " << output_;
+        return ss.str();
+    }
+    
+    std::string do_help() const override
+    {
+        return "Specify a unique output file";
+    }
+    
+    fs::path source_, output_;
+public:
+    ConflictingSourceVariantFile(fs::path source, fs::path output)
+    : source_ {std::move(source)}
+    , output_ {std::move(output)}
+    {}
+};
+
 struct DefaultRepeatGenerator
 {
     std::vector<GenomicRegion> operator()(const ReferenceGenome& reference, GenomicRegion region) const
@@ -906,13 +916,17 @@ auto make_variant_generator_builder(const OptionMap& options)
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (options.count("source-candidates") == 1) {
+        const auto output_path = get_output_path(options);
         const auto input_paths = options.at("source-candidates").as<std::vector<fs::path>>();
         for (const auto& input_path : input_paths) {
-            auto resolved_path = resolve_path(input_path, options);
-            if (!fs::exists(resolved_path)) {
+            auto resolved_source_path = resolve_path(input_path, options);
+            if (!fs::exists(resolved_source_path)) {
                 throw MissingSourceVariantFile {input_path};
             }
-            result.add_vcf_extractor(std::move(resolved_path));
+            if (output_path && resolved_source_path == *output_path) {
+                throw ConflictingSourceVariantFile {std::move(resolved_source_path), *output_path};
+            }
+            result.add_vcf_extractor(std::move(resolved_source_path));
         }
     }
     if (options.count("regenotype") == 1) {
@@ -924,11 +938,15 @@ auto make_variant_generator_builder(const OptionMap& options)
             }
             return result;
         }
-        auto resolved_path = resolve_path(regenotype_path, options);
-        if (!fs::exists(resolved_path)) {
-            throw MissingSourceVariantFile {resolved_path};
+        auto resolved_regenotype_path = resolve_path(regenotype_path, options);
+        if (!fs::exists(resolved_regenotype_path)) {
+            throw MissingSourceVariantFile {resolved_regenotype_path};
         }
-        result.add_vcf_extractor(std::move(resolved_path));
+        const auto output_path = get_output_path(options);
+        if (output_path && resolved_regenotype_path == *output_path) {
+            throw ConflictingSourceVariantFile {std::move(resolved_regenotype_path), *output_path};
+        }
+        result.add_vcf_extractor(std::move(resolved_regenotype_path));
     }
     
     return result;
@@ -1011,18 +1029,15 @@ public:
 
 void remove_duplicate_ploidies(std::vector<ContigPloidy>& contig_ploidies)
 {
-    std::sort(std::begin(contig_ploidies), std::end(contig_ploidies),
-              ContigPloidyLess {});
-    const auto itr = std::unique(std::begin(contig_ploidies), std::end(contig_ploidies),
-                                 ContigPloidyEqual {});
+    std::sort(std::begin(contig_ploidies), std::end(contig_ploidies), ContigPloidyLess {});
+    auto itr = std::unique(std::begin(contig_ploidies), std::end(contig_ploidies), ContigPloidyEqual {});
     contig_ploidies.erase(itr, std::end(contig_ploidies));
 }
 
 bool has_ambiguous_ploidies(const std::vector<ContigPloidy>& contig_ploidies)
 {
-    const auto it2 = std::adjacent_find(std::cbegin(contig_ploidies), std::cend(contig_ploidies),
-                                        ContigPloidyAmbiguous {});
-    return it2 != std::cend(contig_ploidies);
+    return std::adjacent_find(std::cbegin(contig_ploidies), std::cend(contig_ploidies),
+                              ContigPloidyAmbiguous {}) != std::cend(contig_ploidies);
 }
 
 class MissingPloidyFile : public MissingFileError
@@ -1427,7 +1442,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     return CallerFactory {std::move(vc_builder)};
 }
 
-boost::optional<fs::path> get_final_output_path(const OptionMap& options)
+boost::optional<fs::path> get_output_path(const OptionMap& options)
 {
     if (options.count("output") == 1) {
         return resolve_path(options.at("output").as<fs::path>(), options);
@@ -1437,7 +1452,7 @@ boost::optional<fs::path> get_final_output_path(const OptionMap& options)
 
 VcfWriter make_output_vcf_writer(const OptionMap& options)
 {
-    auto output = get_final_output_path(options);
+    auto output = get_output_path(options);
     return output ? VcfWriter {std::move(*output)} : VcfWriter {};
 }
 
