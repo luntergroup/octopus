@@ -105,20 +105,25 @@ double marginalise(const PhaseComplementSet& phase_set, const Map& genotype_post
                            });
 }
 
+double maximum_entropy(const std::size_t num_elements)
+{
+    return std::log2(num_elements);
+}
+
 template <typename Map>
 double calculate_entropy(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
 {
     const auto norm = marginalise(phase_set, genotype_posteriors);
+    if (norm <= 0.0) {
+        // if norm ~= 0 then every element in the phase must must have probability ~= 0, so it
+        // just looks like a uniform distirbution
+        return maximum_entropy(phase_set.size());
+    }
     return std::max(0.0, -std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
                                           [&genotype_posteriors, norm] (const auto curr, const auto& genotype) {
                                               const auto p = genotype_posteriors.at(genotype) / norm;
                                               return curr + p * std::log2(p);
                                           }));
-}
-
-double maximum_entropy(const size_t num_elements)
-{
-    return std::log2(num_elements);
 }
 
 template <typename Map>
