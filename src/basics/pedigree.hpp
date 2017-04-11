@@ -61,6 +61,10 @@ private:
     boost::optional<const SampleName&> parent_of(const SampleName& child, Member::Sex parent_gender) const;
 };
 
+bool is_parent_of(const SampleName& parent, const SampleName& offspring, const Pedigree& pedigree);
+
+bool is_trio(const std::vector<SampleName>& samples, const Pedigree& pedigree);
+
 boost::optional<Trio> make_trio(const SampleName& child, const Pedigree& pedigree);
 
 } // namespace octopus

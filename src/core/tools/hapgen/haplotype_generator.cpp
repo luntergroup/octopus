@@ -978,6 +978,7 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
     if (last_added_novel_itr != std::cend(novel_active_alleles)) {
         reset_next_active_region();
         const auto active_region_before_holdout = active_region_;
+        const auto novel_region_before_holdout = novel_active_region;
         auto next_holdout_region = novel_active_region;
         while (last_added_novel_itr != std::cend(novel_active_alleles) && can_try_extracting_holdouts(next_holdout_region)) {
             if (!try_extract_holdouts(next_holdout_region)) {
@@ -989,6 +990,10 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
             active_region_ = *std::move(next_active_region_);
             reset_next_active_region();
             novel_active_region = right_overhang_region(active_region_, active_region_before_holdout);
+            if (begins_before(novel_active_region, novel_region_before_holdout)) {
+                assert(!is_before(novel_active_region, novel_region_before_holdout));
+                novel_active_region = closed_region(novel_region_before_holdout, novel_active_region);
+            }
             novel_active_alleles = overlap_range(alleles_, novel_active_region);
             last_added_novel_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
             if (overlaps(active_region_, top_holdout_region())) {
@@ -997,6 +1002,7 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
                 next_holdout_region = novel_active_region;
             }
         }
+        assert(!begins_before(active_region_before_holdout, active_region_));
         if (last_added_novel_itr != std::cend(novel_active_alleles)) {
             last_added_novel_itr = extend_tree_until(last_added_novel_itr, std::cend(novel_active_alleles), tree_,
                                                      policies_.haplotype_limits.overflow);

@@ -415,7 +415,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Only reports call sites (i.e. without sample genotype information)")
     
-    ("snp-heterozygosity",
+    ("snp-heterozygosity,z",
      po::value<float>()->default_value(0.001, "0.001"),
      "SNP heterozygosity for the given samples")
 
@@ -423,7 +423,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<float>()->default_value(0.01, "0.01"),
      "Standard deviation of the SNP heterozygosity used for the given samples")
     
-    ("indel-heterozygosity",
+    ("indel-heterozygosity,y",
      po::value<float>()->default_value(0.0001, "0.0001"),
      "Indel heterozygosity for the given samples")
     
@@ -592,7 +592,7 @@ class InvalidWorkingDirectory : public UserError
     {
         return "get_working_directory";
     }
-
+    
     std::string do_why() const override
     {
         std::ostringstream ss {};
@@ -601,12 +601,12 @@ class InvalidWorkingDirectory : public UserError
         ss << " does not exist";
         return ss.str();
     }
-
+    
     std::string do_help() const override
     {
         return "enter a valid working directory";
     }
-
+    
     fs::path path_;
 public:
     InvalidWorkingDirectory(fs::path p) : path_ {std::move(p)} {}
@@ -650,9 +650,9 @@ class CommandLineError : public UserError
 {
 public:
     CommandLineError() = default;
-
+    
     CommandLineError(std::string&& why) : why_ {std::move(why)} {}
-
+    
 protected:
     std::string why_;
 
@@ -661,12 +661,12 @@ private:
     {
         return "parse_options";
     }
-
+    
     virtual std::string do_why() const override
     {
         return why_;
     }
-
+    
     virtual std::string do_help() const override
     {
         return "use the --help command to view required and allowable options";

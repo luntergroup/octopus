@@ -127,6 +127,16 @@ void DynamicCigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&&
     }
 }
 
+struct DefaultInclusionPredicate
+{
+    bool operator()(const Variant& v, const unsigned depth, std::vector<unsigned>& observed_qualities);
+};
+
+struct DefaultMatchPredicate
+{
+    bool operator()(const Variant& lhs, const Variant& rhs) noexcept;
+};
+
 } // coretools
 } // namespace octopus
 
