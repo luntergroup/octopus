@@ -49,6 +49,8 @@
 
 namespace octopus { namespace options {
 
+boost::optional<fs::path> get_output_path(const OptionMap& options);
+
 // unsigned are banned from the option map to prevent user input errors, but once the option
 // map is passed they are all safe
 unsigned as_unsigned(const std::string& option, const OptionMap& options)
@@ -119,7 +121,6 @@ fs::path resolve_path(const fs::path& path, const OptionMap& options)
 struct Line
 {
     std::string line_data;
-
     operator std::string() const
     {
         return line_data;
@@ -134,8 +135,6 @@ std::istream& operator>>(std::istream& is, Line& data)
     }
     return is;
 }
-
-} // namespace
 
 std::vector<fs::path> extract_paths_from_file(const fs::path& file_path, const OptionMap& options)
 {
@@ -181,6 +180,8 @@ bool is_file_writable(const fs::path& path)
     fs::remove(path);
     return result;
 }
+
+} // namespace
 
 bool is_threading_allowed(const OptionMap& options)
 {
@@ -267,14 +268,11 @@ ReferenceGenome make_reference(const OptionMap& options)
 InputRegionMap make_search_regions(const std::vector<GenomicRegion>& regions)
 {
     InputRegionMap contig_mapped_regions {};
-    
     for (const auto& region : regions) {
         contig_mapped_regions[region.contig_name()].insert(region);
     }
-    
     InputRegionMap result {};
     result.reserve(contig_mapped_regions.size());
-    
     for (const auto& p : contig_mapped_regions) {
         auto covered_contig_regions = extract_covered_regions(p.second);
         result.emplace(std::piecewise_construct,
@@ -282,7 +280,6 @@ InputRegionMap make_search_regions(const std::vector<GenomicRegion>& regions)
                        std::forward_as_tuple(std::make_move_iterator(std::begin(covered_contig_regions)),
                                              std::make_move_iterator(std::end(covered_contig_regions))));
     }
-    
     return result;
 }
 
@@ -406,9 +403,7 @@ public:
 InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenome& reference)
 {
     using namespace utils;
-    
     std::vector<GenomicRegion> skip_regions {};
-    
     if (options.count("skip-regions") == 1) {
         const auto& region_strings = options.at("skip-regions").as<std::vector<std::string>>();
         append(parse_regions(region_strings, reference), skip_regions);
@@ -416,37 +411,29 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
     if (options.count("skip-regions-file") == 1) {
         const auto& input_path = options.at("skip-regions-file").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
-        
         if (!fs::exists(resolved_path)) {
             MissingRegionPathFile e {resolved_path};
             e.set_location_specified("the command line option '--skip-regions-file'");
             throw e;
         }
-        
         auto regions = io::extract_regions(resolved_path, reference, io::NonreferenceContigPolicy::ignore);
-        
         if (regions.empty()) {
             logging::WarningLogger log {};
             stream(log) << "The regions path file you specified " << resolved_path
                 << " in the command line option '--skip-regions-file' is empty";
         }
-        
         append(std::move(regions), skip_regions);
     }
-    
     if (options.at("one-based-indexing").as<bool>()) {
         skip_regions = transform_to_zero_based(std::move(skip_regions));
     }
-    
     if (options.count("regions") == 0 && options.count("regions-file") == 0) {
         if (options.count("regenotype") == 1) {
             // TODO: only extract regions in the regenotype VCF
         }
         return extract_search_regions(reference, skip_regions);
     }
-    
     std::vector<GenomicRegion> input_regions {};
-    
     if (options.count("regions") == 1) {
         const auto& region_strings = options.at("regions").as<std::vector<std::string>>();
         append(parse_regions(region_strings, reference), input_regions);
@@ -454,24 +441,19 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
     if (options.count("regions-file") == 1) {
         const auto& input_path = options.at("regions-file").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
-        
         if (!fs::exists(resolved_path)) {
             MissingRegionPathFile e {resolved_path};
             e.set_location_specified("the command line option '--regions-file'");
             throw e;
         }
-        
         auto regions = io::extract_regions(resolved_path, reference);
-        
         if (regions.empty()) {
             logging::WarningLogger log {};
             stream(log) << "The regions path file you specified " << resolved_path
                 << " in the command line option '--skip-regions-file' is empty";
         }
-        
         append(std::move(regions), input_regions);
     }
-    
     auto result = extract_search_regions(input_regions, skip_regions);
     if (options.at("one-based-indexing").as<bool>()) {
         return transform_to_zero_based(std::move(result));
@@ -507,52 +489,65 @@ public:
     MissingReadPathFile(fs::path p) : MissingFileError {std::move(p), "read path"} {};
 };
 
+void log_and_remove_duplicates(std::vector<fs::path>& paths)
+{
+    std::sort(std::begin(paths), std::end(paths));
+    const auto first_duplicate = std::adjacent_find(std::begin(paths), std::end(paths));
+    if (first_duplicate != std::end(paths)) {
+        std::deque<fs::path> duplicates {};
+        for (auto duplicate_itr = first_duplicate; duplicate_itr != std::end(paths); ) {
+            duplicates.push_back(*duplicate_itr);
+            duplicate_itr = std::adjacent_find(std::find_if(std::next(duplicate_itr, 2), std::end(paths),
+                                                            [=] (const auto& path) { return path != *duplicate_itr; }),
+                                               std::end(paths));
+        }
+        const auto num_paths = paths.size();
+        paths.erase(std::unique(first_duplicate, std::end(paths)), std::end(paths));
+        const auto num_unique_paths = paths.size();
+        const auto num_duplicate_paths = num_paths - num_unique_paths;
+        logging::WarningLogger warn_log {};
+        auto warn_log_stream = stream(warn_log);
+        warn_log_stream << "Ignoring " << num_duplicate_paths << " duplicate read path";
+        if (num_duplicate_paths > 1) {
+            warn_log_stream << 's';
+        }
+        warn_log_stream << ": ";
+        std::for_each(std::cbegin(duplicates), std::prev(std::cend(duplicates)), [&] (const auto& path) {
+            warn_log_stream << path << ", ";
+        });
+        warn_log_stream << duplicates.back();
+        if (num_duplicate_paths > duplicates.size()) {
+            warn_log_stream << " (showing unique duplicates)";
+        }
+    }
+}
+
 std::vector<fs::path> get_read_paths(const OptionMap& options)
 {
     using namespace utils;
-    
     std::vector<fs::path> result {};
-    
     if (options.count("reads") == 1) {
         auto resolved_paths = resolve_paths(options.at("reads").as<std::vector<fs::path>>(), options);
         append(std::move(resolved_paths), result);
     }
-    
     if (options.count("reads-file") == 1) {
         const fs::path input_path {options.at("reads-file").as<fs::path>()};
         auto resolved_path = resolve_path(input_path, options);
-        
         if (!fs::exists(resolved_path)) {
             MissingReadPathFile e {resolved_path};
             e.set_location_specified("the command line option '--reads-file'");
             throw e;
         }
-        
         auto paths = extract_paths_from_file(resolved_path, options);
         auto resolved_paths = resolve_paths(paths, options);
-        
         if (resolved_paths.empty()) {
             logging::WarningLogger log {};
             stream(log) << "The read path file you specified " << resolved_path
                         << " in the command line option '--reads-file' is empty";
         }
-        
         append(std::move(resolved_paths), result);
     }
-    
-    std::sort(std::begin(result), std::end(result));
-    
-    const auto it = std::unique(std::begin(result), std::end(result));
-    const auto num_duplicates = std::distance(it, std::end(result));
-    
-    if (num_duplicates > 0) {
-        logging::WarningLogger log {};
-        stream(log) << "There are " << num_duplicates
-                    << " duplicate read paths but only unique paths will be considered";
-    }
-    
-    result.erase(it, std::end(result));
-    
+    log_and_remove_duplicates(result);
     return result;
 }
 
@@ -687,9 +682,7 @@ auto make_read_filterer(const OptionMap& options)
     if (options.at("no-adapter-contaminated-reads").as<bool>()) {
         result.add(make_unique<IsNotContaminated>());
     }
-    
     result.shrink_to_fit();
-    
     return result;
 }
 
@@ -723,73 +716,7 @@ ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> sampl
 
 auto get_default_inclusion_predicate()
 {
-    static const auto sum = [] (const std::vector<unsigned>& observed_qualities) noexcept {
-        return std::accumulate(std::cbegin(observed_qualities), std::cend(observed_qualities), 0);
-    };
-    static const auto erase_low = [] (std::vector<unsigned>& observed_qualities, const unsigned min) {
-        observed_qualities.erase(std::remove_if(std::begin(observed_qualities), std::end(observed_qualities),
-                                                [=] (const auto q) { return q < min; }),
-                                 std::end(observed_qualities));
-    };
-    static const auto partial_sort = [] (std::vector<unsigned>& observed_qualities, unsigned n) {
-        std::partial_sort(std::begin(observed_qualities),
-                          std::next(std::begin(observed_qualities), 2),
-                          std::end(observed_qualities),
-                          std::greater<> {});
-    };
-    return [] (const Variant& v, const unsigned depth, std::vector<unsigned>& observed_qualities)
-    {
-        const auto num_observations = observed_qualities.size();
-        if (depth < 4) {
-            return num_observations > 1 || sum(observed_qualities) >= 20 || is_deletion(v);
-        }
-        if (is_snp(v)) {
-            const auto base_quality_sum = sum(observed_qualities);
-            if (depth <= 60) {
-                if (num_observations < 2) return false;
-                if (base_quality_sum > 100) return true;
-                erase_low(observed_qualities, 5);
-                if (observed_qualities.size() < 2) return false;
-                if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
-                partial_sort(observed_qualities, 2);
-                return observed_qualities[0] >= 20 && observed_qualities[1] >= 20;
-            } else {
-                if (num_observations < 3) return false;
-                if (base_quality_sum > 150) return true;
-                erase_low(observed_qualities, 10);
-                if (observed_qualities.size() < 3) return false;
-                if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
-                partial_sort(observed_qualities, 3);
-                return observed_qualities[0] >= 30 && observed_qualities[1] >= 25 && observed_qualities[2] >= 20;
-            }
-        } else if (is_insertion(v)) {
-            if (num_observations == 1 && alt_sequence_size(v) > 8) return false;
-            if (depth <= 15) {
-                return num_observations > 1;
-            } else if (depth <= 30) {
-                if (static_cast<double>(num_observations) / depth > 0.45) return true;
-                erase_low(observed_qualities, 20);
-                return num_observations > 1;
-            } else if (depth <= 60) {
-                if (num_observations == 1) return false;
-                if (static_cast<double>(num_observations) / depth > 0.4) return true;
-                erase_low(observed_qualities, 25);
-                if (observed_qualities.size() <= 1) return false;
-                if (observed_qualities.size() > 2) return true;
-                partial_sort(observed_qualities, 2);
-                return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
-            } else {
-                if (num_observations == 1) return false;
-                if (static_cast<double>(num_observations) / depth > 0.35) return true;
-                erase_low(observed_qualities, 20);
-                if (observed_qualities.size() <= 1) return false;
-                if (observed_qualities.size() > 3) return true;
-                return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
-            }
-        } else {
-            return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.05;
-        }
-    };
+    return coretools::DefaultInclusionPredicate {};
 }
 
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
@@ -807,19 +734,7 @@ auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 
 auto get_default_match_predicate() noexcept
 {
-    return [] (const Variant& lhs, const Variant& rhs) noexcept
-    {
-        if (!are_same_type(lhs, rhs) || is_snp(lhs) || is_mnv(lhs)) {
-            return lhs == rhs;
-        }
-        if (is_insertion(lhs) && alt_sequence_size(lhs) == alt_sequence_size(rhs)) {
-            const auto& lhs_alt = alt_sequence(lhs);
-            const auto& rhs_alt = alt_sequence(rhs);
-            return std::count(std::cbegin(lhs_alt), std::cend(lhs_alt), 'N')
-                   == std::count(std::cbegin(rhs_alt), std::cend(rhs_alt), 'N');
-        }
-        return overlaps(lhs, rhs);
-    };
+    return coretools::DefaultMatchPredicate {};
 }
 
 class MissingSourceVariantFile : public MissingFileError
@@ -830,6 +745,34 @@ class MissingSourceVariantFile : public MissingFileError
     }
 public:
     MissingSourceVariantFile(fs::path p) : MissingFileError {std::move(p), "source variant"} {};
+};
+
+class ConflictingSourceVariantFile : public UserError
+{
+    std::string do_where() const override
+    {
+        return "make_variant_generator_builder";
+    }
+    
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "The source variant file you specified " << source_;
+        ss << " conflicts with the output file " << output_;
+        return ss.str();
+    }
+    
+    std::string do_help() const override
+    {
+        return "Specify a unique output file";
+    }
+    
+    fs::path source_, output_;
+public:
+    ConflictingSourceVariantFile(fs::path source, fs::path output)
+    : source_ {std::move(source)}
+    , output_ {std::move(output)}
+    {}
 };
 
 struct DefaultRepeatGenerator
@@ -906,13 +849,17 @@ auto make_variant_generator_builder(const OptionMap& options)
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (options.count("source-candidates") == 1) {
+        const auto output_path = get_output_path(options);
         const auto input_paths = options.at("source-candidates").as<std::vector<fs::path>>();
         for (const auto& input_path : input_paths) {
-            auto resolved_path = resolve_path(input_path, options);
-            if (!fs::exists(resolved_path)) {
+            auto resolved_source_path = resolve_path(input_path, options);
+            if (!fs::exists(resolved_source_path)) {
                 throw MissingSourceVariantFile {input_path};
             }
-            result.add_vcf_extractor(std::move(resolved_path));
+            if (output_path && resolved_source_path == *output_path) {
+                throw ConflictingSourceVariantFile {std::move(resolved_source_path), *output_path};
+            }
+            result.add_vcf_extractor(std::move(resolved_source_path));
         }
     }
     if (options.count("regenotype") == 1) {
@@ -924,11 +871,15 @@ auto make_variant_generator_builder(const OptionMap& options)
             }
             return result;
         }
-        auto resolved_path = resolve_path(regenotype_path, options);
-        if (!fs::exists(resolved_path)) {
-            throw MissingSourceVariantFile {resolved_path};
+        auto resolved_regenotype_path = resolve_path(regenotype_path, options);
+        if (!fs::exists(resolved_regenotype_path)) {
+            throw MissingSourceVariantFile {resolved_regenotype_path};
         }
-        result.add_vcf_extractor(std::move(resolved_path));
+        const auto output_path = get_output_path(options);
+        if (output_path && resolved_regenotype_path == *output_path) {
+            throw ConflictingSourceVariantFile {std::move(resolved_regenotype_path), *output_path};
+        }
+        result.add_vcf_extractor(std::move(resolved_regenotype_path));
     }
     
     return result;
@@ -1011,18 +962,15 @@ public:
 
 void remove_duplicate_ploidies(std::vector<ContigPloidy>& contig_ploidies)
 {
-    std::sort(std::begin(contig_ploidies), std::end(contig_ploidies),
-              ContigPloidyLess {});
-    const auto itr = std::unique(std::begin(contig_ploidies), std::end(contig_ploidies),
-                                 ContigPloidyEqual {});
+    std::sort(std::begin(contig_ploidies), std::end(contig_ploidies), ContigPloidyLess {});
+    auto itr = std::unique(std::begin(contig_ploidies), std::end(contig_ploidies), ContigPloidyEqual {});
     contig_ploidies.erase(itr, std::end(contig_ploidies));
 }
 
 bool has_ambiguous_ploidies(const std::vector<ContigPloidy>& contig_ploidies)
 {
-    const auto it2 = std::adjacent_find(std::cbegin(contig_ploidies), std::cend(contig_ploidies),
-                                        ContigPloidyAmbiguous {});
-    return it2 != std::cend(contig_ploidies);
+    return std::adjacent_find(std::cbegin(contig_ploidies), std::cend(contig_ploidies),
+                              ContigPloidyAmbiguous {}) != std::cend(contig_ploidies);
 }
 
 class MissingPloidyFile : public MissingFileError
@@ -1245,37 +1193,6 @@ public:
     {}
 };
 
-bool all_members(const std::vector<SampleName>& samples, const Pedigree& pedigree)
-{
-	return std::all_of(std::cbegin(samples), std::cend(samples),
-					   [&] (const auto& sample) { return pedigree.is_member(sample); });
-}
-
-bool is_parent_of(const SampleName& parent, const SampleName& offspring, const Pedigree& pedigree)
-{
-	const auto mother = pedigree.mother_of(offspring);
-	if (mother && *mother == parent) return true;
-	const auto father = pedigree.father_of(offspring);
-	return father && *father == parent;
-}
-
-bool is_trio(const std::vector<SampleName>& samples, const Pedigree& pedigree)
-{
-	if (samples.size() == 3 && all_members(samples, pedigree)) {
-		if (pedigree.size() == 3) return true;
-		if (is_parent_of(samples[0], samples[2], pedigree)) {
-			return is_parent_of(samples[1], samples[2], pedigree);
-		} else if (is_parent_of(samples[0], samples[1], pedigree)) {
-			return is_parent_of(samples[2], samples[1], pedigree);
-		} else {
-			return is_parent_of(samples[1], samples[0], pedigree)
-				 && is_parent_of(samples[2], samples[0], pedigree);
-		}
-	} else {
-		return false;
-	}
-}
-
 auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples,
 	 				 const boost::optional<Pedigree>& pedigree)
 {
@@ -1296,15 +1213,15 @@ auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& sa
     return result;
 }
 
-auto get_child(std::vector<SampleName> samples, const Pedigree& pedigree)
+auto get_child_from_trio(std::vector<SampleName> trio, const Pedigree& pedigree)
 {
-	if (is_parent_of(samples[0], samples[1], pedigree)) return samples[1];
-	return is_parent_of(samples[1], samples[0], pedigree) ? samples[0] : samples[2];
+	if (is_parent_of(trio[0], trio[1], pedigree)) return trio[1];
+	return is_parent_of(trio[1], trio[0], pedigree) ? trio[0] : trio[2];
 }
 
 Trio make_trio(std::vector<SampleName> samples, const Pedigree& pedigree)
 {
-	return *make_trio(get_child(samples, pedigree), pedigree);
+	return *make_trio(get_child_from_trio(samples, pedigree), pedigree);
 }
 
 Trio make_trio(std::vector<SampleName> samples, const OptionMap& options,
@@ -1458,7 +1375,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     return CallerFactory {std::move(vc_builder)};
 }
 
-boost::optional<fs::path> get_final_output_path(const OptionMap& options)
+boost::optional<fs::path> get_output_path(const OptionMap& options)
 {
     if (options.count("output") == 1) {
         return resolve_path(options.at("output").as<fs::path>(), options);
@@ -1468,7 +1385,7 @@ boost::optional<fs::path> get_final_output_path(const OptionMap& options)
 
 VcfWriter make_output_vcf_writer(const OptionMap& options)
 {
-    auto output = get_final_output_path(options);
+    auto output = get_output_path(options);
     return output ? VcfWriter {std::move(*output)} : VcfWriter {};
 }
 

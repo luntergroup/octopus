@@ -161,6 +161,37 @@ boost::optional<const SampleName&> Pedigree::parent_of(const SampleName& child, 
 
 // non-member methods
 
+bool is_parent_of(const SampleName& parent, const SampleName& offspring, const Pedigree& pedigree)
+{
+    const auto mother = pedigree.mother_of(offspring);
+    if (mother && *mother == parent) return true;
+    const auto father = pedigree.father_of(offspring);
+    return father && *father == parent;
+}
+
+bool all_members(const std::vector<SampleName>& samples, const Pedigree& pedigree)
+{
+    return std::all_of(std::cbegin(samples), std::cend(samples),
+                       [&] (const auto& sample) { return pedigree.is_member(sample); });
+}
+
+bool is_trio(const std::vector<SampleName>& samples, const Pedigree& pedigree)
+{
+    if (samples.size() == 3 && all_members(samples, pedigree)) {
+        if (pedigree.size() == 3) return true;
+        if (is_parent_of(samples[0], samples[2], pedigree)) {
+            return is_parent_of(samples[1], samples[2], pedigree);
+        } else if (is_parent_of(samples[0], samples[1], pedigree)) {
+            return is_parent_of(samples[2], samples[1], pedigree);
+        } else {
+            return is_parent_of(samples[1], samples[0], pedigree)
+                   && is_parent_of(samples[2], samples[0], pedigree);
+        }
+    } else {
+        return false;
+    }
+}
+
 boost::optional<Trio> make_trio(const SampleName& child, const Pedigree& pedigree)
 {
     const auto mother = pedigree.mother_of(child);
