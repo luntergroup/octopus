@@ -489,52 +489,65 @@ public:
     MissingReadPathFile(fs::path p) : MissingFileError {std::move(p), "read path"} {};
 };
 
+void log_and_remove_duplicates(std::vector<fs::path>& paths)
+{
+    std::sort(std::begin(paths), std::end(paths));
+    const auto first_duplicate = std::adjacent_find(std::begin(paths), std::end(paths));
+    if (first_duplicate != std::end(paths)) {
+        std::deque<fs::path> duplicates {};
+        for (auto duplicate_itr = first_duplicate; duplicate_itr != std::end(paths); ) {
+            duplicates.push_back(*duplicate_itr);
+            duplicate_itr = std::adjacent_find(std::find_if(std::next(duplicate_itr, 2), std::end(paths),
+                                                            [=] (const auto& path) { return path != *duplicate_itr; }),
+                                               std::end(paths));
+        }
+        const auto num_paths = paths.size();
+        paths.erase(std::unique(first_duplicate, std::end(paths)), std::end(paths));
+        const auto num_unique_paths = paths.size();
+        const auto num_duplicate_paths = num_paths - num_unique_paths;
+        logging::WarningLogger warn_log {};
+        auto warn_log_stream = stream(warn_log);
+        warn_log_stream << "Ignoring " << num_duplicate_paths << " duplicate read path";
+        if (num_duplicate_paths > 1) {
+            warn_log_stream << 's';
+        }
+        warn_log_stream << ": ";
+        std::for_each(std::cbegin(duplicates), std::prev(std::cend(duplicates)), [&] (const auto& path) {
+            warn_log_stream << path << ", ";
+        });
+        warn_log_stream << duplicates.back();
+        if (num_duplicate_paths > duplicates.size()) {
+            warn_log_stream << " (showing unique duplicates)";
+        }
+    }
+}
+
 std::vector<fs::path> get_read_paths(const OptionMap& options)
 {
     using namespace utils;
-    
     std::vector<fs::path> result {};
-    
     if (options.count("reads") == 1) {
         auto resolved_paths = resolve_paths(options.at("reads").as<std::vector<fs::path>>(), options);
         append(std::move(resolved_paths), result);
     }
-    
     if (options.count("reads-file") == 1) {
         const fs::path input_path {options.at("reads-file").as<fs::path>()};
         auto resolved_path = resolve_path(input_path, options);
-        
         if (!fs::exists(resolved_path)) {
             MissingReadPathFile e {resolved_path};
             e.set_location_specified("the command line option '--reads-file'");
             throw e;
         }
-        
         auto paths = extract_paths_from_file(resolved_path, options);
         auto resolved_paths = resolve_paths(paths, options);
-        
         if (resolved_paths.empty()) {
             logging::WarningLogger log {};
             stream(log) << "The read path file you specified " << resolved_path
                         << " in the command line option '--reads-file' is empty";
         }
-        
         append(std::move(resolved_paths), result);
     }
-    
-    std::sort(std::begin(result), std::end(result));
-    
-    const auto it = std::unique(std::begin(result), std::end(result));
-    const auto num_duplicates = std::distance(it, std::end(result));
-    
-    if (num_duplicates > 0) {
-        logging::WarningLogger log {};
-        stream(log) << "There are " << num_duplicates
-                    << " duplicate read paths but only unique paths will be considered";
-    }
-    
-    result.erase(it, std::end(result));
-    
+    log_and_remove_duplicates(result);
     return result;
 }
 
