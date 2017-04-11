@@ -389,5 +389,97 @@ std::vector<GenomicRegion> DynamicCigarScanner::get_repeat_regions(const Genomic
     }
 }
 
+// non-member methods
+
+namespace {
+
+auto sum(const std::vector<unsigned>& observed_qualities) noexcept
+{
+    return std::accumulate(std::cbegin(observed_qualities), std::cend(observed_qualities), 0);
+}
+
+void erase_below(std::vector<unsigned>& observed_qualities, const unsigned min)
+{
+    observed_qualities.erase(std::remove_if(std::begin(observed_qualities), std::end(observed_qualities),
+                                            [=] (const auto q) { return q < min; }),
+                             std::end(observed_qualities));
+}
+
+void partial_sort(std::vector<unsigned>& observed_qualities, const unsigned n)
+{
+    std::partial_sort(std::begin(observed_qualities), std::next(std::begin(observed_qualities), 2),
+                      std::end(observed_qualities), std::greater<> {});
+}
+
+} // namespace
+
+bool DefaultInclusionPredicate::operator()(const Variant& v, const unsigned depth, std::vector<unsigned>& observed_qualities)
+{
+    const auto num_observations = observed_qualities.size();
+    if (depth < 4) {
+        return num_observations > 1 || sum(observed_qualities) >= 20 || is_deletion(v);
+    }
+    if (is_snp(v)) {
+        const auto base_quality_sum = sum(observed_qualities);
+        if (depth <= 60) {
+            if (num_observations < 2) return false;
+            if (base_quality_sum > 100) return true;
+            erase_below(observed_qualities, 5);
+            if (observed_qualities.size() < 2) return false;
+            if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
+            partial_sort(observed_qualities, 2);
+            return observed_qualities[0] >= 20 && observed_qualities[1] >= 20;
+        } else {
+            if (num_observations < 3) return false;
+            if (base_quality_sum > 150) return true;
+            erase_below(observed_qualities, 10);
+            if (observed_qualities.size() < 3) return false;
+            if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
+            partial_sort(observed_qualities, 3);
+            return observed_qualities[0] >= 30 && observed_qualities[1] >= 25 && observed_qualities[2] >= 20;
+        }
+    } else if (is_insertion(v)) {
+        if (num_observations == 1 && alt_sequence_size(v) > 8) return false;
+        if (depth <= 15) {
+            return num_observations > 1;
+        } else if (depth <= 30) {
+            if (static_cast<double>(num_observations) / depth > 0.45) return true;
+            erase_below(observed_qualities, 20);
+            return num_observations > 1;
+        } else if (depth <= 60) {
+            if (num_observations == 1) return false;
+            if (static_cast<double>(num_observations) / depth > 0.4) return true;
+            erase_below(observed_qualities, 25);
+            if (observed_qualities.size() <= 1) return false;
+            if (observed_qualities.size() > 2) return true;
+            partial_sort(observed_qualities, 2);
+            return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
+        } else {
+            if (num_observations == 1) return false;
+            if (static_cast<double>(num_observations) / depth > 0.35) return true;
+            erase_below(observed_qualities, 20);
+            if (observed_qualities.size() <= 1) return false;
+            if (observed_qualities.size() > 3) return true;
+            return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
+        }
+    } else {
+        return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.05;
+    }
+}
+
+bool DefaultMatchPredicate::operator()(const Variant& lhs, const Variant& rhs) noexcept
+{
+    if (!are_same_type(lhs, rhs) || is_snp(lhs) || is_mnv(lhs)) {
+        return lhs == rhs;
+    }
+    if (is_insertion(lhs) && alt_sequence_size(lhs) == alt_sequence_size(rhs)) {
+        const auto& lhs_alt = alt_sequence(lhs);
+        const auto& rhs_alt = alt_sequence(rhs);
+        return std::count(std::cbegin(lhs_alt), std::cend(lhs_alt), 'N')
+               == std::count(std::cbegin(rhs_alt), std::cend(rhs_alt), 'N');
+    }
+    return overlaps(lhs, rhs);
+}
+
 } // coretools
 } // namespace octopus
