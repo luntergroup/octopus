@@ -149,6 +149,8 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     }
     pause(init_timer);
     auto calls = call_variants(call_region, candidates, reads, progress_meter);
+    candidates.clear();
+    candidates.shrink_to_fit();
     progress_meter.log_completed(call_region);
     const auto record_factory = make_record_factory(reads);
     if (debug_log_) stream(*debug_log_) << "Converting " << calls.size() << " calls made in " << call_region << " to VCF";
@@ -220,7 +222,7 @@ void run_likelihood_calculation(const std::string& haplotype_str,
 } // namespace debug
 
 std::deque<CallWrapper>
-Caller::call_variants(const GenomicRegion& call_region,  const MappableFlatSet<Variant>& candidates,
+Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Variant>& candidates,
                       const ReadMap& reads, ProgressMeter& progress_meter) const
 {
     auto haplotype_generator   = make_haplotype_generator(candidates, reads);
