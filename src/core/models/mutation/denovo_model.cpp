@@ -19,8 +19,10 @@ namespace octopus {
 
 auto make_hmm_model(const double denovo_mutation_rate) noexcept
 {
-    const auto p = static_cast<std::int8_t>(probability_to_phred(denovo_mutation_rate).score());
-    return hmm::BasicMutationModel {p, p, p};
+    auto mutation = static_cast<std::int8_t>(probability_to_phred(denovo_mutation_rate).score());
+    auto gap_open = mutation;
+    auto gap_extension = static_cast<std::int8_t>(probability_to_phred(std::min(100 * denovo_mutation_rate, 1.0)).score());
+    return hmm::BasicMutationModel {mutation, gap_open, gap_extension};
 }
 
 DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint, CachingStrategy caching)
