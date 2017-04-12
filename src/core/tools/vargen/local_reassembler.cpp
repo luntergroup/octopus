@@ -442,6 +442,7 @@ void LocalReassembler::do_clear() noexcept
     masked_sequence_buffer_.shrink_to_fit();
     bins_.clear();
     bins_.shrink_to_fit();
+    active_region_generator_.clear();
 }
 
 std::string LocalReassembler::name() const

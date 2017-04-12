@@ -280,6 +280,13 @@ std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const Genomi
     return join(extract_covered_regions(interesting_regions), 30);
 }
 
+void AssemblerActiveRegionGenerator::clear() noexcept
+{
+    coverage_tracker_.clear();
+    interesting_read_coverages_.clear();
+    clipped_coverage_tracker_.clear();
+}
+
 // private methods
 
 namespace {
