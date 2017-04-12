@@ -858,6 +858,8 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
                 remove_large_deletions(variants, 150);
             } else if (assembler.kmer_size() <= 20) {
                 remove_large_deletions(variants, 200);
+            } else if (assembler.kmer_size() <= 30) {
+                remove_large_deletions(variants, 250);
             }
         }
         add_to_mapped_variants(std::move(variants), result, assemble_region);
