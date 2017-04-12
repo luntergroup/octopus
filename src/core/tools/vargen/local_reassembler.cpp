@@ -51,8 +51,8 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , default_kmer_sizes_ {std::move(options.kmer_sizes)}
 , fallback_kmer_sizes_ {}
 , read_buffer_ {}
-, bin_size_ {options.bin_size}
-, bin_overlap_ {options.bin_overlap}
+, max_bin_size_ {options.bin_size}
+, max_bin_overlap_ {options.bin_overlap}
 , bins_ {}
 , masked_sequence_buffer_ {}
 , mask_threshold_ {options.mask_threshold}
@@ -62,11 +62,11 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , max_variant_size_ {options.max_variant_size}
 , active_region_generator_ {reference}
 {
-    if (bin_size_ == 0) {
+    if (max_bin_size_ == 0) {
         throw std::runtime_error {"bin size must be greater than zero"};
     }
-    if (bin_overlap_ >= bin_size_) {
-        bin_overlap_ = bin_size_ - 1;
+    if (max_bin_overlap_ >= max_bin_size_) {
+        max_bin_overlap_ = max_bin_size_ - 1;
     }
     if (options.fallback_interval_size == 0) {
         throw std::runtime_error {"fallback interval size must be greater than zero"};
@@ -171,11 +171,9 @@ auto expand_cigar(const CigarString& cigar, const std::size_t size_hint = 0)
 {
     ExpandedCigarString result {};
     result.reserve(size_hint);
-    
     for (const auto& op : cigar) {
         utils::append(result, op.size(), op.flag());
     }
-    
     return result;
 }
 
@@ -297,19 +295,19 @@ auto overlapped_bins(Container& bins, const M& mappable)
 void LocalReassembler::do_add_read(const SampleName& sample, const AlignedRead& read)
 {
     active_region_generator_.add(sample, read);
-    read_buffer_.insert(read);
+    read_buffer_[sample].insert(read);
 }
 
 void LocalReassembler::do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last)
 {
     active_region_generator_.add(sample, first, last);
-    read_buffer_.insert(first, last);
+    read_buffer_[sample].insert(first, last);
 }
 
 void LocalReassembler::do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last)
 {
     active_region_generator_.add(sample, first, last);
-    read_buffer_.insert(first, last);
+    read_buffer_[sample].insert(first, last);
 }
 
 template <typename Container>
@@ -368,25 +366,26 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
     const auto active_regions = active_region_generator_.generate(region);
     debug::log_active_regions(active_regions, debug_log_);
     for (const auto& active_region : active_regions) {
-        for (const auto& read : overlap_range(read_buffer_, active_region)) {
-            prepare_bins_to_insert(read);
-            auto active_bins = overlapped_bins(bins_, read);
-            assert(!active_bins.empty());
-            if (requires_masking(read, mask_threshold_)) {
-                auto masked_sequence = mask(read, mask_threshold_, reference_);
-                if (masked_sequence) {
-                    masked_sequence_buffer_.emplace_back(std::move(*masked_sequence));
-                    for (auto& bin : active_bins) {
-                        bin.add(mapped_region(read), std::cref(masked_sequence_buffer_.back()));
+        prepare_bins(active_region);
+        for (const auto& p : read_buffer_) {
+            for (const auto& read : overlap_range(p.second, active_region)) {
+                auto active_bins = overlapped_bins(bins_, read);
+                assert(!active_bins.empty());
+                if (requires_masking(read, mask_threshold_)) {
+                    auto masked_sequence = mask(read, mask_threshold_, reference_);
+                    if (masked_sequence) {
+                        masked_sequence_buffer_.emplace_back(std::move(*masked_sequence));
+                        for (auto& bin : active_bins) {
+                            bin.add(mapped_region(read), std::cref(masked_sequence_buffer_.back()));
+                        }
                     }
+                } else {
+                    for (auto& bin : active_bins) bin.add(read);
                 }
-            } else {
-                for (auto& bin : active_bins) bin.add(read);
             }
         }
     }
     read_buffer_.clear();
-    read_buffer_.shrink_to_fit();
     finalise_bins();
     if (bins_.empty()) return {};
     const auto active_bins = overlapped_bins(bins_, region);
@@ -437,7 +436,6 @@ std::vector<Variant> LocalReassembler::do_generate_variants(const GenomicRegion&
 void LocalReassembler::do_clear() noexcept
 {
     read_buffer_.clear();
-    read_buffer_.shrink_to_fit();
     masked_sequence_buffer_.clear();
     masked_sequence_buffer_.shrink_to_fit();
     bins_.clear();
@@ -474,29 +472,18 @@ auto decompose(const MappableTp& mappable, const GenomicRegion::Position n,
     return result;
 }
 
-void LocalReassembler::prepare_bins_to_insert(const AlignedRead& read)
+void LocalReassembler::prepare_bins(const GenomicRegion& region)
 {
-    const auto& read_region = mapped_region(read);
-    if (bins_.empty()) {
-        if (region_size(read_region) > bin_size_) {
-            for (auto subregion : decompose(read_region, bin_size_, bin_overlap_)) {
-                bins_.emplace_back(std::move(subregion));
-            }
-            bins_.emplace_back(shift(mapped_region(bins_.back()), bin_size_));
-        } else if (region_size(read_region) == bin_size_) {
-            bins_.emplace_back(read_region);
-        } else {
-            bins_.emplace_back(expand_rhs(head_region(read_region), bin_size_));
+    assert(bins_.empty() || is_after(region, bins_.back()));
+    if (size(region) > max_bin_size_) {
+        auto bin_region = expand_rhs(head_region(region), max_bin_size_);
+        while (ends_before(bin_region, region)) {
+            bins_.push_back(bin_region);
+            bin_region = shift(bin_region, max_bin_overlap_);
         }
-    } else if (!contains(closed_region(bins_.front(), bins_.back()), read_region)) {
-        while (begins_before(read_region, bins_.front())) {
-            bins_.emplace_front(shift(mapped_region(bins_.front()), -bin_size_ + bin_overlap_));
-        }
-        while (ends_before(bins_.back(), read_region)) {
-            bins_.emplace_back(shift(mapped_region(bins_.back()), bin_size_ - bin_overlap_));
-        }
+    } else {
+        bins_.push_back(region);
     }
-    assert(contains(closed_region(bins_.front(), bins_.back()), read_region));
 }
 
 bool LocalReassembler::should_assemble_bin(const Bin& bin) const

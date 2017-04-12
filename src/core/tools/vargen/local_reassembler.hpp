@@ -5,6 +5,7 @@
 #define local_reassembler_hpp
 
 #include <vector>
+#include <map>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -78,6 +79,9 @@ private:
     
     using NucleotideSequence = AlignedRead::NucleotideSequence;
     
+    using ReadBuffer    = MappableFlatMultiSet<MappableReferenceWrapper<const AlignedRead>>;
+    using ReadBufferMap = std::map<SampleName, ReadBuffer>;
+    
     struct Bin : public Mappable<Bin>
     {
         Bin(GenomicRegion region);
@@ -103,9 +107,9 @@ private:
     
     std::vector<unsigned> default_kmer_sizes_, fallback_kmer_sizes_;
     
-    MappableFlatMultiSet<MappableReferenceWrapper<const AlignedRead>> read_buffer_;
+    ReadBufferMap read_buffer_;
     
-    GenomicRegion::Size bin_size_, bin_overlap_;
+    GenomicRegion::Size max_bin_size_, max_bin_overlap_;
     std::deque<Bin> bins_;
     std::deque<NucleotideSequence> masked_sequence_buffer_;
     
@@ -117,7 +121,7 @@ private:
     
     AssemblerActiveRegionGenerator active_region_generator_;
     
-    void prepare_bins_to_insert(const AlignedRead& read);
+    void prepare_bins(const GenomicRegion& active_region);
     bool should_assemble_bin(const Bin& bin) const;
     void finalise_bins();
     unsigned try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result) const;
