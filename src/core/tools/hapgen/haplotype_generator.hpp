@@ -50,7 +50,7 @@ public:
     class HaplotypeOverflow;
     class Builder;
     
-    using HaplotypePacket = std::tuple<std::vector<Haplotype>, GenomicRegion, boost::optional<GenomicRegion>>;
+    using HaplotypePacket = std::tuple<std::vector<Haplotype>, boost::optional<GenomicRegion>, boost::optional<GenomicRegion>>;
     
     HaplotypeGenerator() = delete;
     

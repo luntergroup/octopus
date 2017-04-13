@@ -306,7 +306,11 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
         next_active_region = boost::none;
     } else {
         try {
-            std::tie(haplotypes, active_region, std::ignore) = haplotype_generator.generate();
+            std::tie(haplotypes, next_active_region, std::ignore) = haplotype_generator.generate();
+            if (next_active_region) {
+                active_region = std::move(*next_active_region);
+                next_active_region = boost::none;
+            }
         } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
             logging::WarningLogger warn_log {};
             stream(warn_log) << "Skipping region " << e.region() << " as there are too many haplotypes";
