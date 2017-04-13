@@ -1063,7 +1063,8 @@ auto get_max_expected_log_allele_count_per_base(const OptionMap& options)
     const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
     const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
     const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
-    const auto max_log_allele_count_per_base = 3 * std::sqrt(heterozygosity) + heterozygosity;
+    const auto snp_heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
+    const auto max_log_allele_count_per_base = heterozygosity + 8 * snp_heterozygosity_stdev;
     return max_log_allele_count_per_base;
 }
 
