@@ -155,9 +155,9 @@ auto mean_mapped_region_size(const ReadMap& reads) noexcept
     return total_read_size / num_reads;
 }
 
-auto find_lagging_exclusion_zones(const MappableFlatSet<Allele>& alleles, const ReadMap& reads,
-                                  const double dense_zone_log_count_threshold,
-                                  const double max_shared_dense_zones)
+auto find_dense_regions(const MappableFlatSet<Allele>& alleles, const ReadMap& reads,
+                        const double dense_zone_log_count_threshold,
+                        const double max_shared_dense_zones)
 {
     const auto initial_blocks = extract_covered_regions(alleles);
     MappableFlatSet<AlleleBlock> blocks {};
@@ -242,7 +242,7 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference, const M
     if (is_lagging_enabled() && policies.max_expected_log_allele_count_per_base && !all_empty(reads_)) {
         const auto mean_read_size = mean_mapped_region_size(reads_);
         const auto dense_zone_log_count_threshold = *policies.max_expected_log_allele_count_per_base * mean_read_size;
-        lagging_exclusion_zones_ = find_lagging_exclusion_zones(alleles_, reads_, dense_zone_log_count_threshold, 3.0);
+        lagging_exclusion_zones_ = find_dense_regions(alleles_, reads_, dense_zone_log_count_threshold, 3.0);
         if (!lagging_exclusion_zones_.empty() && debug_log_) {
             auto log = stream(*debug_log_);
             log << "Found lagging exclusion zones: ";
@@ -304,6 +304,8 @@ void HaplotypeGenerator::clear_progress() noexcept
     if (in_holdout_mode()) {
         clear_holdouts();
     }
+    GenomicRegion passed_region {active_region_.contig_name(), 0, active_region_.begin()};
+    alleles_.erase_contained(passed_region);
 }
 
 void HaplotypeGenerator::jump(GenomicRegion region)
@@ -1006,7 +1008,12 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
         if (last_added_novel_itr != std::cend(novel_active_alleles)) {
             last_added_novel_itr = extend_tree_until(last_added_novel_itr, std::cend(novel_active_alleles), tree_,
                                                      policies_.haplotype_limits.overflow);
-            active_region_ = tree_.encompassing_region();
+            if (!tree_.is_empty()) {
+                active_region_ = encompassing_region(active_region_, tree_.encompassing_region());
+            }
+            if (in_holdout_mode()) {
+                active_region_ = encompassing_region(active_region_, *holdout_region_);
+            }
             if (last_added_novel_itr != std::cend(novel_active_alleles)) {
                 throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
             }
