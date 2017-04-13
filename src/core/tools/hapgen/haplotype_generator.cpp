@@ -281,7 +281,9 @@ bool has_rhs_sandwich_insertion(const MappableFlatSet<Allele>& alleles, const Ge
 
 HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
 {
-    if (alleles_.empty()) return std::make_tuple(std::vector<Haplotype> {}, active_region_, boost::none);
+    if (alleles_.empty()) {
+        return std::make_tuple(std::vector<Haplotype> {}, shift(tail_region(rightmost_allele_), 1), boost::none);
+    }
     populate_tree();
     const auto haplotype_region = calculate_haplotype_region();
     assert(contains(haplotype_region, active_region_));
