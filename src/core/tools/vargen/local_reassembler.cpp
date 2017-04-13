@@ -481,6 +481,9 @@ void LocalReassembler::prepare_bins(const GenomicRegion& region)
             bins_.push_back(bin_region);
             bin_region = shift(bin_region, max_bin_overlap_);
         }
+        if (overlap_size(region, bin_region) > 0) {
+            bins_.push_back(*overlapped_region(region, bin_region));
+        }
     } else {
         bins_.push_back(region);
     }
