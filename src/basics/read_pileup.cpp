@@ -7,7 +7,7 @@ namespace octopus {
 
 auto make_pileup(const ReadContainer& reads, const GenomicRegion& region)
 {
-    AlignedReadPileup result {region};
+    ReadPileup result {region};
     for (const auto& read : overlap_range(reads, region)) {
         auto subsequence = get_sequence(read, region);
         auto base_qualities = get_base_qualities(read, region);
