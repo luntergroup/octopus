@@ -203,7 +203,8 @@ auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<Ge
     return extract_covered_regions(expand_each(get_regions(deletion_bases, region), 50));
 }
 
-auto get_interesting_hotspots(const GenomicRegion& region, const std::vector<unsigned>& interesting_coverages,
+auto get_interesting_hotspots(const GenomicRegion& region,
+                              const std::vector<unsigned>& interesting_coverages,
                               const std::vector<unsigned>& coverages)
 {
     std::vector<bool> interesting_bases(interesting_coverages.size());
@@ -230,6 +231,12 @@ auto get_interesting_hotspots(const GenomicRegion& region,
     return get_interesting_hotspots(region, interesting_coverages, coverages);
 }
 
+void merge(std::vector<GenomicRegion>&& src, std::vector<GenomicRegion>& dst)
+{
+    const auto itr = utils::append(std::move(src), dst);
+    std::inplace_merge(std::begin(dst), itr, std::end(dst));
+}
+
 std::vector<GenomicRegion>
 get_interesting_hotspots(const GenomicRegion& region,
                          const std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>& interesting_read_tracker,
@@ -244,7 +251,8 @@ get_interesting_hotspots(const GenomicRegion& region,
         return get_interesting_hotspots(region, itr->second, tracker.at(itr->first));
     } else {
         const auto n = size(region);
-        std::vector<unsigned> total_interesting_coverage(n), total_coverage(n);
+        std::vector<unsigned> pooled_interesting_coverage(n), pooled_coverage(n);
+        std::vector<unsigned> best_sample_interesting_coverage(n), best_sample_coverage(n);
         for (const auto& p : interesting_read_tracker) {
             assert(tracker.count(p.first) == 1);
             const auto sample_coverage = tracker.at(p.first).coverage(region);
@@ -253,19 +261,25 @@ get_interesting_hotspots(const GenomicRegion& region,
             assert(sample_interesting_coverage.size() == n);
             for (std::size_t i {0}; i < sample_coverage.size(); ++i) {
                 if (sample_interesting_coverage[i] > 0) {
-                    total_interesting_coverage[i] += sample_interesting_coverage[i];
-                    total_coverage[i] += sample_coverage[i];
+                    pooled_interesting_coverage[i] += sample_interesting_coverage[i];
+                    pooled_coverage[i] += sample_coverage[i];
+                    const auto coverage_diff = sample_coverage[i] - sample_interesting_coverage[i];
+                    if (coverage_diff > (best_sample_coverage[i] - best_sample_interesting_coverage[i])) {
+                        best_sample_interesting_coverage[i] = sample_interesting_coverage[i];
+                        best_sample_coverage[i] = sample_coverage[i];
+                    }
                 }
             }
         }
-        return get_interesting_hotspots(region, total_interesting_coverage, total_coverage);
+        auto pooled_hotspots = get_interesting_hotspots(region, pooled_interesting_coverage, pooled_coverage);
+        auto best_sample_hotspots = get_interesting_hotspots(region, best_sample_interesting_coverage, best_sample_coverage);
+        if (!best_sample_hotspots.empty() && best_sample_hotspots != pooled_hotspots) {
+            merge(std::move(best_sample_hotspots), pooled_hotspots);
+            return extract_covered_regions(pooled_hotspots);
+        } else {
+            return pooled_hotspots;
+        }
     }
-}
-
-void merge(std::vector<GenomicRegion>&& src, std::vector<GenomicRegion>& dst)
-{
-    const auto itr = utils::append(std::move(src), dst);
-    std::inplace_merge(std::begin(dst), itr, std::end(dst));
 }
 
 std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const GenomicRegion& region) const
@@ -278,6 +292,13 @@ std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const Genomi
         }
     }
     return join(extract_covered_regions(interesting_regions), 30);
+}
+
+void AssemblerActiveRegionGenerator::clear() noexcept
+{
+    coverage_tracker_.clear();
+    interesting_read_coverages_.clear();
+    clipped_coverage_tracker_.clear();
 }
 
 // private methods

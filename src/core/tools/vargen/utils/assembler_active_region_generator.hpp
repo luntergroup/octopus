@@ -49,6 +49,8 @@ public:
     
     std::vector<GenomicRegion> generate(const GenomicRegion& region) const;
 
+    void clear() noexcept;
+    
 private:
     using CoverageTrackerMap = std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>;
     

@@ -36,6 +36,7 @@ DynamicCigarScanner::DynamicCigarScanner(const ReferenceGenome& reference, Optio
 , likely_misaligned_candidates_ {}
 , max_seen_candidate_size_ {}
 , read_coverage_tracker_ {}
+, misaligned_tracker_ {}
 {
     buffer_.reserve(100);
 }
@@ -337,6 +338,9 @@ void DynamicCigarScanner::do_clear() noexcept
     candidates_.shrink_to_fit();
     likely_misaligned_candidates_.clear();
     likely_misaligned_candidates_.shrink_to_fit();
+    read_coverage_tracker_.clear();
+    misaligned_tracker_.clear();
+    max_seen_candidate_size_ = 0;
 }
 
 std::string DynamicCigarScanner::name() const
