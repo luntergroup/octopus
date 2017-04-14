@@ -343,7 +343,10 @@ set(CORE_SOURCES
     core/models/mutation/coalescent_model.cpp
     core/models/mutation/denovo_model.hpp
     core/models/mutation/denovo_model.cpp
-    
+
+    core/models/reference/individual_reference_likelihood_model.hpp
+    core/models/reference/individual_reference_likelihood_model.cpp
+
     core/tools/coretools.hpp
     core/tools/haplotype_filter.hpp
     core/tools/haplotype_filter.cpp
