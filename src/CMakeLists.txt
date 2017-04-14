@@ -49,6 +49,8 @@ set(BASICS_SOURCES
     basics/pedigree.cpp
     basics/trio.hpp
     basics/trio.cpp
+    basics/read_pileup.hpp
+    basics/read_pileup.cpp
 )
 
 set(CONTAINERS_SOURCES
