@@ -254,6 +254,35 @@ AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read
     return sequence_size(contained_cigar_copy);
 }
 
+auto get_sequence_offsets(const AlignedRead& read, const GenomicRegion& region)
+{
+    if (!overlaps(read, region)) {
+        throw std::logic_error {"AlignedRead: trying to copy non-overlapping region"};
+    }
+    if (contains(region, read)) return std::make_pair(0u, sequence_size(read));
+    const auto copy_region = *overlapped_region(read, region);
+    const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, copy_region));
+    const auto uncontained_cigar_copy = copy_reference(read.cigar(), 0, reference_offset);
+    auto contained_cigar_copy = copy_reference(read.cigar(), reference_offset, region_size(copy_region));
+    const auto sequence_offset = sequence_size(uncontained_cigar_copy);
+    const auto sequence_length = sequence_size(contained_cigar_copy);
+    return std::make_pair(sequence_offset, static_cast<std::size_t>(sequence_length));
+}
+
+AlignedRead::NucleotideSequence get_sequence(const AlignedRead& read, const GenomicRegion& region)
+{
+    auto p = get_sequence_offsets(read, region);
+    using std::cbegin; using std::next;
+    return {next(cbegin(read.sequence()), p.first), next(cbegin(read.sequence()), p.first + p.second)};
+}
+
+AlignedRead::BaseQualityVector get_base_qualities(const AlignedRead& read, const GenomicRegion& region)
+{
+    auto p = get_sequence_offsets(read, region);
+    using std::cbegin; using std::next;
+    return {next(cbegin(read.base_qualities()), p.first), next(cbegin(read.base_qualities()), p.first + p.second)};
+}
+
 bool is_soft_clipped(const AlignedRead& read) noexcept
 {
     return is_soft_clipped(read.cigar());
