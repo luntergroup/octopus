@@ -164,15 +164,15 @@ CancerCaller::Latents::haplotype_posteriors() const
 std::shared_ptr<CancerCaller::Latents::GenotypeProbabilityMap>
 CancerCaller::Latents::genotype_posteriors() const
 {
-    // TODO: properly
-    GenotypeProbabilityMap genotype_posteriors {
-        std::begin(germline_genotypes_), std::end(germline_genotypes_)
-    };
-    for (const auto& sample : samples_.get()) {
-        insert_sample(std::move(sample), germline_model_inferences_.posteriors.genotype_probabilities,
-                      genotype_posteriors);
+    if (genotype_posteriors_ == nullptr) {
+        // TODO: properly
+        GenotypeProbabilityMap genotype_posteriors {std::begin(germline_genotypes_), std::end(germline_genotypes_)};
+        for (const auto& sample : samples_.get()) {
+            insert_sample(sample, germline_model_inferences_.posteriors.genotype_probabilities, genotype_posteriors);
+        }
+        genotype_posteriors_ = std::make_shared<Latents::GenotypeProbabilityMap>(std::move(genotype_posteriors));
     }
-    return std::make_shared<Latents::GenotypeProbabilityMap>(std::move(genotype_posteriors));
+    return genotype_posteriors_;
 }
 
 // private methods
