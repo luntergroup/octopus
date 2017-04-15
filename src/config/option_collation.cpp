@@ -1291,20 +1291,20 @@ bool allow_flank_scoring(const OptionMap& options)
     return options.at("inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
 }
 
+bool allow_model_filtering(const OptionMap& options)
+{
+    return options.count("model-filtering") == 1 && options.at("model-filtering").as<bool>();
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options)
 {
-    CallerBuilder vc_builder {
-        reference,
-        read_pipe,
-        make_variant_generator_builder(options),
-        make_haplotype_generator_builder(options)
-    };
-    
+    CallerBuilder vc_builder {reference, read_pipe,
+                              make_variant_generator_builder(options),
+                              make_haplotype_generator_builder(options)};
 	const auto pedigree = get_pedigree(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
     vc_builder.set_caller(caller);
-    
     if (options.count("refcall") == 1) {
         const auto refcall_type = options.at("refcall").as<RefCallType>();
         if (refcall_type == RefCallType::positional) {
@@ -1317,9 +1317,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     } else {
         vc_builder.set_refcall_type(CallerBuilder::RefCallType::none);
     }
-    
     auto min_variant_posterior = options.at("min-variant-posterior").as<Phred<double>>();
-    
     if (options.count("regenotype") == 1) {
         if (caller == "cancer") {
             vc_builder.set_min_variant_posterior(min_variant_posterior);
@@ -1338,7 +1336,6 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
         vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
     }
-    
     if (caller == "cancer") {
         if (options.count("normal-sample") == 1) {
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
@@ -1355,24 +1352,14 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_indel_denovo_mutation_rate(options.at("indel-denovo-mutation-rate").as<float>());
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     }
-    
-    if (options.count("model-filtering") == 1) {
-        vc_builder.set_model_filtering(options.at("model-filtering").as<bool>());
-    } else {
-        vc_builder.set_model_filtering(caller == "cancer");
-    }
-    
-    if (call_sites_only(options)) {
-        vc_builder.set_sites_only();
-    }
+    vc_builder.set_model_filtering(allow_model_filtering(options));
+    if (call_sites_only(options)) vc_builder.set_sites_only();
     vc_builder.set_flank_scoring(allow_flank_scoring(options));
     vc_builder.set_model_mapping_quality(options.at("model-mapping-quality").as<bool>());
     vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
-    
     if (options.count("sequence-error-model") == 1) {
         vc_builder.set_sequencer(options.at("sequence-error-model").as<std::string>());
     }
-    
     return CallerFactory {std::move(vc_builder)};
 }
 
