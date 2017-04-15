@@ -583,11 +583,11 @@ void Caller::call_variants(const GenomicRegion& active_region,
 
 Genotype<Haplotype> Caller::call_genotype(const Latents& latents, const SampleName& sample) const
 {
-    const auto& genotype_posteriors = (*latents.genotype_posteriors())[sample];
-    const auto itr = std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                                      [] (const auto& lhs, const auto& rhs) {
-                                          return lhs.second < rhs.second;
-                                      });
+    const auto genotype_posteriors_ptr = latents.genotype_posteriors();
+    const auto& genotype_posteriors = (*genotype_posteriors_ptr)[sample];
+    auto itr = std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                                [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+    assert(itr != std::cend(genotype_posteriors));
     return itr->first;
 }
 
