@@ -25,8 +25,7 @@ namespace octopus { namespace model {
 // public methods
 
 TumourModel::TumourModel(std::vector<SampleName> samples, const unsigned ploidy, Priors priors)
-:
-TumourModel {std::move(samples), ploidy, std::move(priors), AlgorithmParameters {}}
+: TumourModel {std::move(samples), ploidy, std::move(priors), AlgorithmParameters {}}
 {}
 
 TumourModel::TumourModel(std::vector<SampleName> samples, const unsigned ploidy, Priors priors,
@@ -63,18 +62,12 @@ TumourModel::evaluate(std::vector<CancerGenotype<Haplotype>> genotypes,
                       const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
-    
     const VariationalBayesParameters vb_params {parameters_.epsilon, parameters_.max_iterations};
-    
     assert(ploidy_ < 3);
-    
     if (ploidy_ == 1) {
-        return run_variational_bayes<2>(samples_, std::move(genotypes), priors_,
-                                        haplotype_likelihoods, vb_params);
+        return run_variational_bayes<2>(samples_, std::move(genotypes), priors_, haplotype_likelihoods, vb_params);
     }
-    
-    return run_variational_bayes<3>(samples_, std::move(genotypes), priors_,
-                                    haplotype_likelihoods, vb_params);
+    return run_variational_bayes<3>(samples_, std::move(genotypes), priors_, haplotype_likelihoods, vb_params);
 }
 
 // Compressed types used by the Variational Bayes model
@@ -220,18 +213,18 @@ compress(const std::vector<CancerGenotype<Haplotype>>& genotypes,
     return result;
 }
 
-auto sum(const CompressedAlpha<2>& alpha)
+auto sum(const CompressedAlpha<2>& alpha) noexcept
 {
     return alpha.front() + alpha.back();
 }
 
-auto sum(const CompressedAlpha<3>& alpha)
+auto sum(const CompressedAlpha<3>& alpha) noexcept
 {
     return alpha[0] + alpha[1] + alpha[2];
 }
 
 template <std::size_t K>
-auto sum(const CompressedAlpha<K>& alpha)
+auto sum(const CompressedAlpha<K>& alpha) noexcept
 {
     return std::accumulate(std::cbegin(alpha), std::cend(alpha), 0.0);
 }
@@ -245,7 +238,7 @@ auto digamma_diff(const double a, const double b)
 template <std::size_t K>
 double expectation(const ProbabilityVector& distribution,
                    const CompressedGenotypes<K>& likelihoods,
-                   const unsigned k, const std::size_t n)
+                   const unsigned k, const std::size_t n) noexcept
 {
     return std::inner_product(std::cbegin(distribution), std::cend(distribution),
                               std::cbegin(likelihoods), 0.0, std::plus<> {},
@@ -321,7 +314,7 @@ template <std::size_t K>
 double sum(const ResponsabilityVector<K>& taus, const unsigned k)
 {
     return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
-                           [k] (const auto curr, const auto& tau) {
+                           [k] (const auto curr, const auto& tau) noexcept {
                                return curr + tau[k];
                            });
 }
@@ -381,18 +374,18 @@ void update_genotype_log_posteriors(LogProbabilityVector& result,
     maths::normalise_logs(result);
 }
 
-auto max_change(const CompressedAlpha<2>& lhs, const CompressedAlpha<2>& rhs)
+auto max_change(const CompressedAlpha<2>& lhs, const CompressedAlpha<2>& rhs) noexcept
 {
     return std::max(std::abs(lhs.front() - rhs.front()), std::abs(lhs.back() - rhs.back()));
 }
 
-auto max_change(const CompressedAlpha<3>& lhs, const CompressedAlpha<3>& rhs)
+auto max_change(const CompressedAlpha<3>& lhs, const CompressedAlpha<3>& rhs) noexcept
 {
     return std::max({std::abs(lhs[0] - rhs[0]), std::abs(lhs[1] - rhs[1]), std::abs(lhs[2] - rhs[2])});
 }
 
 template <std::size_t K>
-auto max_change(const CompressedAlpha<K>& lhs, const CompressedAlpha<K>& rhs)
+auto max_change(const CompressedAlpha<K>& lhs, const CompressedAlpha<K>& rhs) noexcept
 {
     double result {0};
     for (std::size_t k {0}; k < K; ++k) {
@@ -403,8 +396,7 @@ auto max_change(const CompressedAlpha<K>& lhs, const CompressedAlpha<K>& rhs)
 }
 
 template <std::size_t K>
-auto max_change(const CompressedAlphas<K>& prior_alphas,
-                const CompressedAlphas<K>& posterior_alphas)
+auto max_change(const CompressedAlphas<K>& prior_alphas, const CompressedAlphas<K>& posterior_alphas) noexcept
 {
     const auto S = prior_alphas.size();
     assert(S == posterior_alphas.size());
@@ -420,7 +412,7 @@ template <std::size_t K>
 std::pair<bool, double> check_convergence(const CompressedAlphas<K>& prior_alphas,
                                           const CompressedAlphas<K>& posterior_alphas,
                                           const double prev_max_change,
-                                          const double epsilon)
+                                          const double epsilon) noexcept
 {
     const auto new_max_change = max_change(prior_alphas, posterior_alphas);
     return std::make_pair(std::abs(new_max_change - prev_max_change) < epsilon, new_max_change);
@@ -429,7 +421,7 @@ std::pair<bool, double> check_convergence(const CompressedAlphas<K>& prior_alpha
 // lower-bound calculation
 
 double expectation(const ProbabilityVector& genotype_posteriors,
-                   const LogProbabilityVector& genotype_log_priors)
+                   const LogProbabilityVector& genotype_log_priors) noexcept
 {
     return std::inner_product(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
                               std::cbegin(genotype_log_priors), 0.0);
@@ -440,8 +432,7 @@ double dirichlet_expectation(const CompressedAlpha<K>& priors, const CompressedA
 {
     using boost::math::digamma;
     const auto da0 = digamma(sum(posteriors));
-    return std::inner_product(std::cbegin(priors), std::cend(priors), std::cbegin(posteriors),
-                              0.0, std::plus<> {},
+    return std::inner_product(std::cbegin(priors), std::cend(priors), std::cbegin(posteriors), 0.0, std::plus<> {},
                               [da0] (const auto& prior, const auto& post) {
                                   return (prior - 1) * (digamma(post) - da0);
                               }) - maths::log_beta(priors);
@@ -531,36 +522,36 @@ double expectation(const CompressedAlphas<K>& posteriors)
 }
 
 template <std::size_t K>
-double q_expectation(const Tau<K>& tau)
+double q_expectation(const Tau<K>& tau) noexcept
 {
     return std::accumulate(std::cbegin(tau), std::cend(tau), 0.0,
-                           [] (const auto curr, const auto t) {
+                           [] (const auto curr, const auto t) noexcept {
                                return curr + (t * std::log(t));
                            });
 }
 
 template <>
-double q_expectation<2>(const Tau<2>& tau)
+double q_expectation<2>(const Tau<2>& tau) noexcept
 {
     return tau[0] * std::log(tau[0]) + tau[1] * std::log(tau[1]);
 }
 
 // E [ln q(Z_s)]
 template <std::size_t K>
-double q_expectation(const ResponsabilityVector<K>& taus)
+double q_expectation(const ResponsabilityVector<K>& taus) noexcept
 {
     return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
-                           [] (const auto curr, const auto& tau) {
+                           [] (const auto curr, const auto& tau) noexcept {
                                return curr + q_expectation(tau);
                            });
 }
 
 // sum s E [ln q(Z_s)]
 template <std::size_t K>
-double q_expectation(const ResponsabilityVectors<K>& taus)
+double q_expectation(const ResponsabilityVectors<K>& taus) noexcept
 {
     return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
-                           [] (const auto curr, const auto& t) {
+                           [] (const auto curr, const auto& t) noexcept {
                                return curr + q_expectation(t);
                            });
 }
@@ -644,8 +635,7 @@ run_variational_bayes(const CompressedAlphas<K>& prior_alphas,
     std::vector<double> result_evidences(results.size());
     std::transform(std::cbegin(results), std::cend(results), std::begin(result_evidences),
                    [&] (const auto& latents) {
-                       return calculate_lower_bound(prior_alphas, genotype_log_priors,
-                                                    log_likelihoods, latents);
+                       return calculate_lower_bound(prior_alphas, genotype_log_priors, log_likelihoods, latents);
                    });
     const auto it = std::max_element(std::cbegin(result_evidences), std::cend(result_evidences));
     const auto idx = std::distance(std::cbegin(result_evidences), it);
@@ -655,17 +645,14 @@ run_variational_bayes(const CompressedAlphas<K>& prior_alphas,
 // Helpers
 
 TumourModel::Latents::GenotypeProbabilityMap
-expand(std::vector<CancerGenotype<Haplotype>>&& genotypes,
-       LogProbabilityVector&& genotype_log_posteriors)
+expand(std::vector<CancerGenotype<Haplotype>>&& genotypes, LogProbabilityVector&& genotype_log_posteriors)
 {
     TumourModel::Latents::GenotypeProbabilityMap result {};
     std::transform(std::make_move_iterator(std::begin(genotypes)),
                    std::make_move_iterator(std::end(genotypes)),
                    std::begin(genotype_log_posteriors),
                    std::inserter(result, std::begin(result)),
-                   [] (auto&& g, auto p) {
-                       return std::make_pair(std::move(g), p);
-                   });
+                   [] (auto&& g, auto p) { return std::make_pair(std::move(g), p); });
     return result;
 }
 
@@ -787,18 +774,15 @@ run_variational_bayes(const std::vector<SampleName>& samples,
     const auto prior_alphas = flatten_priors<K>(priors, samples);
     const auto genotype_log_priors = calculate_log_priors(genotypes, priors.genotype_prior_model);
     const auto log_likelihoods = compress<K>(genotypes, samples, haplotype_log_likelihoods);
-    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors,
-                                priors, haplotype_log_likelihoods);
-    auto p = run_variational_bayes(prior_alphas, genotype_log_priors,
-                                   log_likelihoods, params, seeds);
+    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, priors, haplotype_log_likelihoods);
+    auto p = run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, seeds);
     return expand(samples, std::move(genotypes), std::move(p.first), p.second);
 }
 
 // Previously declared helpers
 
 ReadLikelihoods::ReadLikelihoods(const BaseType& underlying_likelihoods)
-:
-likelihoods {std::addressof(underlying_likelihoods)}
+: likelihoods {std::addressof(underlying_likelihoods)}
 {}
 
 void ReadLikelihoods::operator=(const BaseType& other)
