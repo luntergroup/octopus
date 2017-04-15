@@ -176,6 +176,8 @@ private:
     std::reference_wrapper<const std::vector<SampleName>> samples_;
     boost::optional<std::reference_wrapper<const SampleName>> normal_sample_;
     
+    mutable std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_ = nullptr;
+    
     friend CancerCaller;
 };
 
