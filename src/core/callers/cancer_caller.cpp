@@ -743,109 +743,111 @@ std::vector<std::unique_ptr<VariantCall>>
 CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
     // TODO: refactor this into smaller methods!
-    
     const auto model_posteriors = calculate_model_posteriors(latents);
-    
     if (debug_log_) {
         stream(*debug_log_) << "Germline model posterior: " << model_posteriors.germline;
         stream(*debug_log_) << "CNV model posterior:      " << model_posteriors.cnv;
         stream(*debug_log_) << "Somatic model posterior:  " << model_posteriors.somatic;
+    }
+    const auto sample_somatic_inv_posteriors = calculate_probability_samples_not_somatic(latents);
+    const auto somatic_posterior = calculate_somatic_probability(sample_somatic_inv_posteriors, model_posteriors);
+    const auto germline_genotype_posteriors = calculate_germline_genotype_posteriors(latents, model_posteriors);
+    if (debug_log_) {
+        auto map_germline = find_map_genotype(germline_genotype_posteriors);
+        auto germline_log = stream(*debug_log_);
+        germline_log << "MAP germline genotype: ";
+        debug::print_variant_alleles(germline_log, map_germline->first);
         auto map_cnv = find_map_genotype(latents.cnv_model_inferences_.posteriors.genotype_probabilities);
         auto cnv_log = stream(*debug_log_);
-        cnv_log << "MAP CNV genotype is: ";
+        cnv_log << "MAP CNV genotype: ";
         debug::print_variant_alleles(cnv_log, map_cnv->first);
         auto somatic_log = stream(*debug_log_);
         auto map_somatic = find_map_genotype(latents.somatic_model_inferences_.posteriors.genotype_probabilities);
-        somatic_log << "MAP cancer genotype is: ";
+        somatic_log << "MAP cancer genotype: ";
         debug::print_variant_alleles(somatic_log, map_somatic->first);
         somatic_log << ' ' << map_somatic->second;
     }
-    
-    const auto germline_genotype_posteriors = calculate_germline_genotype_posteriors(latents, model_posteriors);
     const auto germline_candidate_posteriors = compute_candidate_posteriors(candidates, germline_genotype_posteriors);
-    const auto& called_germline_genotype = find_map_genotype(germline_genotype_posteriors)->first;
-    
+    Genotype<Haplotype> called_germline_genotype;
+    boost::optional<CancerGenotype<Haplotype>> called_cancer_genotype {};
+    if (model_posteriors.somatic > model_posteriors.germline && somatic_posterior >= parameters_.min_somatic_posterior) {
+        if (debug_log_) {
+            *debug_log_ << "Using cancer genotype for germline genotype call";
+        }
+        const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.posteriors.genotype_probabilities;
+        called_cancer_genotype = find_map_genotype(cancer_genotype_posteriors)->first;
+        called_germline_genotype = called_cancer_genotype->germline_genotype();
+    } else {
+        called_germline_genotype = find_map_genotype(germline_genotype_posteriors)->first;
+    }
     GermlineVariantCalls germline_variant_calls;
     std::vector<VariantReference> uncalled_germline_candidates;
     std::tie(germline_variant_calls, uncalled_germline_candidates) = call_candidates(germline_candidate_posteriors,
                                                                                      called_germline_genotype,
                                                                                      parameters_.min_variant_posterior);
-    
-    const auto sample_somatic_inv_posteriors = calculate_probability_samples_not_somatic(latents);
-    const auto somatic_posterior = calculate_somatic_probability(sample_somatic_inv_posteriors,
-                                                                 model_posteriors);
-    
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     boost::optional<Haplotype> called_somatic_haplotype {};
     std::vector<SampleName> somatic_samples {};
-    
     if (somatic_posterior >= parameters_.min_somatic_posterior) {
         const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.posteriors.genotype_probabilities;
-        
         auto reduced_cancer_genotype_posteriors = extract_likely_cancer_genotypes(cancer_genotype_posteriors);
         auto somatic_allele_posteriors = compute_somatic_variant_posteriors(uncalled_germline_candidates,
                                                                             reduced_cancer_genotype_posteriors,
                                                                             somatic_posterior.probability_true(),
                                                                             model_posteriors.somatic);
-        
-        const auto& called_cancer_genotype = find_map_genotype(cancer_genotype_posteriors)->first;
-        auto somatic_variant_calls = call_somatic_variants(somatic_allele_posteriors,
-                                                           called_cancer_genotype,
-                                                           parameters_.min_somatic_posterior);
-        
-        const auto& somatic_alphas = latents.somatic_model_inferences_.posteriors.alphas;
-        const auto credible_regions = compute_marginal_credible_intervals(somatic_alphas, parameters_.credible_mass);
-        
-        if (!somatic_variant_calls.empty()) {
-            for (const auto& p : credible_regions) {
-                if (p.second.back().first >= parameters_.min_credible_somatic_frequency) {
-                    if (has_normal_sample() && p.first == normal_sample()) {
-                        somatic_samples.clear();
-                        break;
-                    }
-                    somatic_samples.push_back(p.first);
-                }
-            }
-            if (has_normal_sample()) {
-                const auto& noisy_alphas = latents.noise_model_inferences_->posteriors.alphas.at(normal_sample());
-                const auto noise_credible_region = compute_marginal_credible_interval(noisy_alphas, parameters_.credible_mass).back();
-                const auto somatic_mass = compute_somatic_mass(noisy_alphas, parameters_.min_expected_somatic_frequency);
-                if (noise_credible_region.first >= parameters_.min_credible_somatic_frequency || somatic_mass > 0.35) {
-                    somatic_samples.clear();
-                }
-            }
-            if (somatic_samples.empty()) {
-                somatic_variant_calls.clear();
-                somatic_variant_calls.shrink_to_fit();
-            } else {
-                called_somatic_haplotype = called_cancer_genotype.somatic_element();
-            }
+        if (!called_cancer_genotype) {
+            called_cancer_genotype = find_map_genotype(cancer_genotype_posteriors)->first;
         }
-        
-        const auto called_somatic_regions = extract_regions(somatic_variant_calls);
-        auto cancer_genotype_calls = call_somatic_genotypes(called_cancer_genotype,
-                                                            called_somatic_regions,
-                                                            reduced_cancer_genotype_posteriors,
-                                                            credible_regions);
-        result = transform_somatic_calls(std::move(somatic_variant_calls),
-                                         std::move(cancer_genotype_calls),
-                                         somatic_samples);
+        if (called_cancer_genotype->germline_genotype() == called_germline_genotype) {
+            auto somatic_variant_calls = call_somatic_variants(somatic_allele_posteriors, *called_cancer_genotype,
+                                                               parameters_.min_somatic_posterior);
+            const auto& somatic_alphas = latents.somatic_model_inferences_.posteriors.alphas;
+            const auto credible_regions = compute_marginal_credible_intervals(somatic_alphas, parameters_.credible_mass);
+            if (!somatic_variant_calls.empty()) {
+                for (const auto& p : credible_regions) {
+                    if (p.second.back().first >= parameters_.min_credible_somatic_frequency) {
+                        if (has_normal_sample() && p.first == normal_sample()) {
+                            somatic_samples.clear();
+                            break;
+                        }
+                        somatic_samples.push_back(p.first);
+                    }
+                }
+                if (has_normal_sample()) {
+                    const auto& noisy_alphas = latents.noise_model_inferences_->posteriors.alphas.at(normal_sample());
+                    const auto noise_credible_region = compute_marginal_credible_interval(noisy_alphas, parameters_.credible_mass).back();
+                    const auto somatic_mass = compute_somatic_mass(noisy_alphas, parameters_.min_expected_somatic_frequency);
+                    if (noise_credible_region.first >= parameters_.min_credible_somatic_frequency || somatic_mass > 0.35) {
+                        somatic_samples.clear();
+                    }
+                }
+                if (somatic_samples.empty()) {
+                    somatic_variant_calls.clear();
+                    somatic_variant_calls.shrink_to_fit();
+                } else {
+                    called_somatic_haplotype = called_cancer_genotype->somatic_element();
+                }
+            }
+            const auto called_somatic_regions = extract_regions(somatic_variant_calls);
+            auto cancer_genotype_calls = call_somatic_genotypes(*called_cancer_genotype, called_somatic_regions,
+                                                                reduced_cancer_genotype_posteriors, credible_regions);
+            result = transform_somatic_calls(std::move(somatic_variant_calls), std::move(cancer_genotype_calls),
+                                             somatic_samples);
+        } else if (debug_log_) {
+            stream(*debug_log_) << "Conflict between called germline genotype and called cancer genotype. Not calling somatics";
+        }
     }
     
     const auto called_germline_regions = extract_regions(germline_variant_calls);
-    
     GermlineGenotypeCalls germline_genotype_calls {};
     germline_genotype_calls.reserve(called_germline_regions.size());
-    
     for (const auto& region : called_germline_regions) {
         auto genotype_chunk = copy<Allele>(called_germline_genotype, region);
-        
         const auto inv_posterior = std::accumulate(std::cbegin(germline_genotype_posteriors),
                                                    std::cend(germline_genotype_posteriors), 0.0,
                                                    [&called_germline_genotype] (const double curr, const auto& p) {
                                                        return curr + (contains(p.first, called_germline_genotype) ? 0.0 : p.second);
                                                    });
-        
         if (called_somatic_haplotype) {
             germline_genotype_calls.emplace_back(std::move(genotype_chunk),
                                                  copy<Allele>(*called_somatic_haplotype, region),
@@ -854,10 +856,8 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
             germline_genotype_calls.emplace_back(std::move(genotype_chunk), probability_to_phred(inv_posterior));
         }
     }
-    
     result.reserve(result.size() + germline_variant_calls.size());
-    
-    const auto it = std::end(result);
+    const auto itr = std::end(result);
     std::transform(std::make_move_iterator(std::begin(germline_variant_calls)),
                    std::make_move_iterator(std::end(germline_variant_calls)),
                    std::make_move_iterator(std::begin(germline_genotype_calls)),
@@ -866,11 +866,8 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                        return transform_germline_call(std::move(variant_call), std::move(genotype_call),
                                                       samples_, somatic_samples);
                    });
-    std::inplace_merge(std::begin(result), it, std::end(result),
-                       [] (const auto& lhs, const auto& rhs) {
-                           return *lhs < *rhs;
-                       });
-    
+    std::inplace_merge(std::begin(result), itr, std::end(result),
+                       [] (const auto& lhs, const auto& rhs) { return *lhs < *rhs; });
     return result;
 }
 
