@@ -1010,14 +1010,16 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
         if (last_added_novel_itr != std::cend(novel_active_alleles)) {
             last_added_novel_itr = extend_tree_until(last_added_novel_itr, std::cend(novel_active_alleles), tree_,
                                                      policies_.haplotype_limits.overflow);
-            if (!tree_.is_empty()) {
-                active_region_ = encompassing_region(active_region_, tree_.encompassing_region());
-            }
-            if (in_holdout_mode()) {
-                active_region_ = encompassing_region(active_region_, *holdout_region_);
-            }
             if (last_added_novel_itr != std::cend(novel_active_alleles)) {
+                if (in_holdout_mode()) {
+                    active_region_ = encompassing_region(active_region_, tree_.encompassing_region());
+                    active_region_ = encompassing_region(active_region_, *holdout_region_);
+                } else {
+                    active_region_ = tree_.encompassing_region();
+                }
                 throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
+            } else {
+                active_region_ = tree_.encompassing_region();
             }
         }
     } else {
