@@ -37,7 +37,7 @@ namespace octopus {
 namespace {
 
 constexpr char dummy_base {'#'};
-const std::string deleted_sequence {vcfspec::missingValue, 1};
+const std::string deleted_sequence {vcfspec::deletedBase};
 
 } // namespace
 
@@ -323,8 +323,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                         if (prev_genotype[i].sequence() == deleted_sequence ||
                             (prev_genotype[i].sequence() == old_genotype[i].sequence()
                              && sequence_size(old_genotype[i]) < region_size(old_genotype))) {
-                            Allele::NucleotideSequence new_sequence(1, vcfspec::deletedBase);
-                            Allele new_allele {mapped_region(curr_call), move(new_sequence)};
+                            Allele new_allele {mapped_region(curr_call), deleted_sequence};
                             new_genotype.emplace(move(new_allele));
                         } else {
                             new_genotype.emplace(old_genotype[i]);
