@@ -9,28 +9,71 @@
 #include <numeric>
 #include <cmath>
 #include <cstdint>
+#include <stdexcept>
 #include <cassert>
 
+#include "tandem/tandem.hpp"
 #include "basics/phred.hpp"
 #include "utils/maths.hpp"
 #include "core/types/variant.hpp"
 
 namespace octopus {
 
-auto make_hmm_model(const double denovo_mutation_rate) noexcept
+namespace {
+
+auto make_flat_hmm_model(const double snv_mutation_rate, const double indel_mutation_rate,
+                         const double max_rate = 0.5) noexcept
 {
-    auto mutation = static_cast<std::int8_t>(probability_to_phred(denovo_mutation_rate).score());
+    auto mutation = static_cast<std::int8_t>(probability_to_phred(snv_mutation_rate).score());
     auto gap_open = mutation;
-    auto gap_extension = static_cast<std::int8_t>(probability_to_phred(std::min(100 * denovo_mutation_rate, 1.0)).score());
-    return hmm::BasicMutationModel {mutation, gap_open, gap_extension};
+    auto gap_extension = static_cast<std::int8_t>(probability_to_phred(std::min(100 * indel_mutation_rate, max_rate)).score());
+    return hmm::FlatGapMutationModel {mutation, gap_open, gap_extension};
 }
 
+auto make_exponential_length_model(const double base_rate, const std::size_t max_repeat_length,
+                                   const double length_log_multiplier, const double max_rate)
+{
+    using Penalty = hmm::VariableGapOpenMutationModel::Penalty;
+    std::vector<Penalty> result(max_repeat_length);
+    const auto log_base_mutation_rate = std::log(base_rate);
+    const auto min_penalty = static_cast<Penalty>(std::max(std::log(max_rate) / -maths::constants::ln10Div10<>, 1.0));
+    for (unsigned i {0}; i < max_repeat_length; ++i) {
+        auto adjusted_log_rate = length_log_multiplier * i + log_base_mutation_rate;
+        auto adjusted_phred_rate = adjusted_log_rate / -maths::constants::ln10Div10<>;
+        if (adjusted_phred_rate > min_penalty) {
+            result[i] = static_cast<Penalty>(std::min(adjusted_phred_rate, 128.0));
+        } else {
+            std::fill(std::next(std::begin(result), i), std::end(result), min_penalty);
+            break;
+        }
+    }
+    return result;
+}
+
+auto make_gap_open_model(const double indel_mutation_rate, const std::size_t max_repeat_length,
+                         const double max_rate = 0.2)
+{
+    return make_exponential_length_model(indel_mutation_rate, max_repeat_length, 1.5, max_rate);
+}
+
+auto make_gap_extend_model(const double indel_mutation_rate, const std::size_t max_repeat_length,
+                           const double max_rate = 0.6)
+{
+    return make_exponential_length_model(10 * indel_mutation_rate, max_repeat_length, 2, max_rate);
+}
+
+} // namespace
+
 DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint, CachingStrategy caching)
-: mutation_model_ {make_hmm_model(parameters.mutation_rate)}
+: flat_mutation_model_ {make_flat_hmm_model(parameters.snv_mutation_rate, parameters.indel_mutation_rate)}
+, repeat_length_gap_open_model_ {make_gap_open_model(parameters.indel_mutation_rate, 20)}
+, repeat_length_gap_extend_model_ {make_gap_extend_model(parameters.indel_mutation_rate, 20)}
 , min_ln_probability_ {}
 , num_haplotypes_hint_ {num_haplotypes_hint}
 , haplotypes_ {}
 , caching_ {caching}
+, gap_open_penalties_ {}
+, gap_open_index_cache_ {}
 , value_cache_ {}
 , address_cache_ {}
 , guarded_index_cache_ {}
@@ -38,7 +81,8 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 , padded_given_ {}
 , use_unguarded_ {false}
 {
-    min_ln_probability_ = 8 * std::log(parameters.mutation_rate);
+    gap_open_penalties_.reserve(1000);
+    min_ln_probability_ = 8 * std::log(parameters.snv_mutation_rate);
     if (caching_ == CachingStrategy::address) {
         address_cache_.reserve(num_haplotypes_hint_ * num_haplotypes_hint_);
     } else if (caching == CachingStrategy::value) {
@@ -49,19 +93,21 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 
 void DeNovoModel::prime(std::vector<Haplotype> haplotypes)
 {
+    if (is_primed()) throw std::runtime_error {"DeNovoModel: already primed"};
     constexpr std::size_t max_unguardered {50};
-    if (haplotypes.size() <= max_unguardered) {
-        unguarded_index_cache_.assign(haplotypes.size(), std::vector<double>(haplotypes.size(), 0));
-        for (unsigned target {0}; target < haplotypes.size(); ++target) {
-            for (unsigned given {0}; given < haplotypes.size(); ++given) {
+    haplotypes_ = std::move(haplotypes);
+    gap_open_index_cache_.resize(haplotypes_.size());
+    if (haplotypes_.size() <= max_unguardered) {
+        unguarded_index_cache_.assign(haplotypes_.size(), std::vector<double>(haplotypes_.size(), 0));
+        for (unsigned target {0}; target < haplotypes_.size(); ++target) {
+            for (unsigned given {0}; given < haplotypes_.size(); ++given) {
                 if (target != given) {
-                    unguarded_index_cache_[target][given] = evaluate_uncached(haplotypes[target], haplotypes[given]);
+                    unguarded_index_cache_[target][given] = evaluate_uncached(target, given);
                 }
             }
         }
         use_unguarded_ = true;
     } else {
-        haplotypes_ = std::move(haplotypes);
         guarded_index_cache_.assign(haplotypes_.size(), std::vector<boost::optional<double>>(haplotypes_.size()));
     }
 }
@@ -70,6 +116,8 @@ void DeNovoModel::unprime() noexcept
 {
     haplotypes_.clear();
     haplotypes_.shrink_to_fit();
+    gap_open_index_cache_.clear();
+    gap_open_index_cache_.shrink_to_fit();
     guarded_index_cache_.clear();
     guarded_index_cache_.shrink_to_fit();
     unguarded_index_cache_.clear();
@@ -100,7 +148,7 @@ double DeNovoModel::evaluate(const unsigned target, const unsigned given) const 
         auto& result = guarded_index_cache_[target][given];
         if (!result) {
             if (target != given) {
-                result = evaluate_uncached(haplotypes_[target], haplotypes_[given]);
+                result = evaluate_uncached(target, given);
             } else {
                 result = 0;
             }
@@ -110,6 +158,13 @@ double DeNovoModel::evaluate(const unsigned target, const unsigned given) const 
 }
 
 // private methods
+
+namespace {
+
+auto get_short_tandem_repeats(const Haplotype::NucleotideSequence& given)
+{
+    return tandem::extract_exact_tandem_repeats(given, 1, 3);
+}
 
 void pad_given(const Haplotype::NucleotideSequence& target, const Haplotype::NucleotideSequence& given,
                std::string& result)
@@ -137,14 +192,28 @@ bool can_align_with_hmm(const Haplotype& target, const Haplotype& given) noexcep
     return sequence_length_distance(target, given) <= hmm::min_flank_pad();
 }
 
+template <typename Container>
+void rotate_right(Container& c, const std::size_t n)
+{
+    assert(c.size() > n);
+    std::rotate(std::rbegin(c), std::next(std::rbegin(c), n), std::rend(c));
+}
+
 double hmm_align(const Haplotype::NucleotideSequence& target, const Haplotype::NucleotideSequence& given,
-                 const hmm::BasicMutationModel& model, const boost::optional<double> min_ln_probability) noexcept
+                 const hmm::FlatGapMutationModel& model, const boost::optional<double> min_ln_probability) noexcept
 {
     const auto p = hmm::evaluate(target, given, model);
     return min_ln_probability ? std::max(p, *min_ln_probability) : p;
 }
 
-double approx_align(const Haplotype& target, const Haplotype& given, const hmm::BasicMutationModel& model,
+double hmm_align(const Haplotype::NucleotideSequence& target, const Haplotype::NucleotideSequence& given,
+                 const hmm::VariableGapOpenMutationModel& model, const boost::optional<double> min_ln_probability) noexcept
+{
+    const auto p = hmm::evaluate(target, given, model);
+    return min_ln_probability ? std::max(p, *min_ln_probability) : p;
+}
+
+double approx_align(const Haplotype& target, const Haplotype& given, const hmm::FlatGapMutationModel& model,
                     const boost::optional<double> min_ln_probability)
 {
     using maths::constants::ln10Div10;
@@ -158,20 +227,110 @@ double approx_align(const Haplotype& target, const Haplotype& given, const hmm::
     }
     const auto variants = target.difference(given);
     const auto mismatch_size = std::accumulate(std::cbegin(variants), std::cend(variants), 0,
-                                               [] (auto curr, const auto& variant) noexcept {
+                                               [](auto curr, const auto& variant) noexcept {
                                                    return curr + (!is_indel(variant) ? region_size(variant) : 0);
                                                });
     score += mismatch_size * model.mutation;
     return min_ln_probability ? std::max(-ln10Div10<> * score, *min_ln_probability) : -ln10Div10<> * score;
 }
 
+} // namespace
+
+boost::optional<unsigned> DeNovoModel::set_gap_open_penalties(const Haplotype& given) const
+{
+    const auto repeats = get_short_tandem_repeats(given.sequence());
+    if (!repeats.empty()) {
+        gap_open_penalties_.assign(sequence_size(given), flat_mutation_model_.gap_open);
+        const auto max_length = static_cast<unsigned>(repeat_length_gap_open_model_.size());
+        unsigned result {0};
+        for (const auto& repeat : repeats) {
+            const auto num_periods = repeat.period * (repeat.length / repeat.period);
+            const auto penalty = repeat_length_gap_open_model_[std::min(num_periods, max_length)];
+            std::fill_n(std::next(std::begin(gap_open_penalties_), repeat.pos), repeat.length, penalty);
+            result = std::max(repeat.length, result);
+        }
+        return result;
+    } else {
+        return boost::none;
+    }
+}
+
+boost::optional<unsigned> DeNovoModel::set_gap_open_penalties(const unsigned given) const
+{
+    assert(given < gap_open_index_cache_.size());
+    auto& cached_result = gap_open_index_cache_[given];
+    if (cached_result) {
+        if (cached_result->second) {
+            gap_open_penalties_ = cached_result->first;
+        }
+        return cached_result->second;
+    } else {
+        auto result = set_gap_open_penalties(haplotypes_[given]);
+        cached_result = std::make_pair(gap_open_penalties_, result);
+        return result;
+    }
+}
+
+hmm::VariableGapOpenMutationModel DeNovoModel::make_variable_hmm_model(const unsigned max_repeat_length) const
+{
+    return {flat_mutation_model_.mutation, gap_open_penalties_, repeat_length_gap_extend_model_[max_repeat_length]};
+}
+
 double DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given) const
 {
-    if (can_align_with_hmm(target, given)) {
+    if (sequence_size(target) == sequence_size(given)) {
         pad_given(target, given, padded_given_);
-        return hmm_align(target.sequence(), padded_given_, mutation_model_, min_ln_probability_);
+        return hmm_align(target.sequence(), padded_given_, flat_mutation_model_, min_ln_probability_);
     } else {
-        return approx_align(target, given, mutation_model_, min_ln_probability_);
+        const auto max_repeat_length = set_gap_open_penalties(given);
+        if (max_repeat_length) {
+            if (can_align_with_hmm(target, given)) {
+                pad_given(target, given, padded_given_);
+                gap_open_penalties_.resize(padded_given_.size(), flat_mutation_model_.gap_open);
+                rotate_right(gap_open_penalties_, hmm::min_flank_pad());
+                const auto model = make_variable_hmm_model(*max_repeat_length);
+                return hmm_align(target.sequence(), padded_given_, model, min_ln_probability_);
+            } else {
+                return approx_align(target, given, flat_mutation_model_, min_ln_probability_);
+            }
+        } else {
+            if (can_align_with_hmm(target, given)) {
+                pad_given(target, given, padded_given_);
+                return hmm_align(target.sequence(), padded_given_, flat_mutation_model_, min_ln_probability_);
+            } else {
+                return approx_align(target, given, flat_mutation_model_, min_ln_probability_);
+            }
+        }
+    }
+}
+
+double DeNovoModel::evaluate_uncached(const unsigned target_idx, const unsigned given_idx) const
+{
+    const auto& target = haplotypes_[target_idx];
+    const auto& given  = haplotypes_[given_idx];
+    if (sequence_size(target) == sequence_size(given)) {
+        pad_given(target, given, padded_given_);
+        return hmm_align(target.sequence(), padded_given_, flat_mutation_model_, min_ln_probability_);
+    } else {
+        const auto max_repeat_length = set_gap_open_penalties(given_idx);
+        if (max_repeat_length) {
+            if (can_align_with_hmm(target, given)) {
+                pad_given(target, given, padded_given_);
+                gap_open_penalties_.resize(padded_given_.size(), flat_mutation_model_.gap_open);
+                rotate_right(gap_open_penalties_, hmm::min_flank_pad());
+                const auto model = make_variable_hmm_model(*max_repeat_length);
+                return hmm_align(target.sequence(), padded_given_, model, min_ln_probability_);
+            } else {
+                return approx_align(target, given, flat_mutation_model_, min_ln_probability_);
+            }
+        } else {
+            if (can_align_with_hmm(target, given)) {
+                pad_given(target, given, padded_given_);
+                return hmm_align(target.sequence(), padded_given_, flat_mutation_model_, min_ln_probability_);
+            } else {
+                return approx_align(target, given, flat_mutation_model_, min_ln_probability_);
+            }
+        }
     }
 }
 
