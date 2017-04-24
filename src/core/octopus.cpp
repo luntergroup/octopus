@@ -1194,9 +1194,22 @@ auto add_identifier(const boost::filesystem::path& base, const std::string& iden
     return base.parent_path() / new_stem;
 }
 
+void destroy(VcfWriter& writer)
+{
+    VcfWriter tmp {};
+    swap(writer, tmp);
+}
+
 auto get_legacy_path(const boost::filesystem::path& native)
 {
     return add_identifier(native, "legacy");
+}
+
+void make_legacy_copy(const boost::filesystem::path& native)
+{
+    const VcfReader in {native};
+    VcfWriter out {get_legacy_path(native)};
+    convert_to_legacy(in, out);
 }
 
 void log_run_start(const GenomeCallingComponents& components)
@@ -1234,9 +1247,7 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
     
     log_run_start(components);
     write_caller_output_header(components, command);
-    
     const auto start = std::chrono::system_clock::now();
-    
     try {
         if (is_multithreaded(components)) {
             if (DEBUG_MODE) {
@@ -1266,26 +1277,24 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
         } catch (...) {}
         throw CallingBug {};
     }
-    
     components.output().close();
-    
     try {
         if (components.legacy()) {
-            auto output_path = components.output().path();
+            const auto output_path = components.output().path();
+            destroy(components.output());
             if (output_path) {
-                const VcfReader native {*output_path};
-                VcfWriter legacy {get_legacy_path(native.path())};
-                convert_to_legacy(native, legacy);
+                make_legacy_copy(*output_path);
             }
         }
-    } catch (...) {}
-    
+    } catch (...) {
+        logging::WarningLogger warn_log {};
+        warn_log << "Failed to make legacy output";
+    }
     const auto end = std::chrono::system_clock::now();
     const auto search_size = sum_region_sizes(components.search_regions());
     stream(info_log) << "Finished calling "
                      << utils::format_with_commas(search_size) << "bp, total runtime "
                      << TimeInterval {start, end};
-    
     cleanup(components);
 }
 } // namespace octopus
