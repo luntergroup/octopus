@@ -277,19 +277,21 @@ auto reduce(std::vector<ParentsProbabilityPair>& zipped, const TrioModel::Option
     const auto reduction_count = get_sample_reduction_count(options.max_joint_genotypes);
     auto last_to_join = reduce(zipped, reduction_count, options.max_joint_mass_loss);
     if (last_to_join != std::cend(zipped)) {
-        std::vector<UniformPriorJointProbabilityHelper> tmp(zipped.size());
+        std::vector<UniformPriorJointProbabilityHelper> likelihood_zipped(zipped.size());
         for (std::size_t i {0}; i < zipped.size(); ++i) {
-            tmp[i].index = i;
-            tmp[i].probability = zipped[i].maternal_likelihood + zipped[i].paternal_likelihood;
+            likelihood_zipped[i].index = i;
+            likelihood_zipped[i].probability = zipped[i].maternal_likelihood + zipped[i].paternal_likelihood;
         }
-        tmp.erase(reduce(tmp, reduction_count, options.max_joint_mass_loss), std::cend(tmp));
+        likelihood_zipped.erase(reduce(likelihood_zipped, reduction_count, options.max_joint_mass_loss),
+                                std::cend(likelihood_zipped));
         std::deque<std::size_t> new_indices {};
         const auto num_posterior_joined = static_cast<std::size_t>(std::distance(std::begin(zipped), last_to_join));
-        for (const auto& p : tmp) {
+        for (const auto& p : likelihood_zipped) {
             if (p.index >= num_posterior_joined) {
                 new_indices.push_back(p.index);
             }
         }
+        likelihood_zipped.clear();
         if (!new_indices.empty()) {
             std::sort(std::begin(new_indices), std::end(new_indices));
             auto curr_index = num_posterior_joined;
