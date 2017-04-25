@@ -241,16 +241,19 @@ boost::optional<unsigned> DeNovoModel::set_gap_open_penalties(const Haplotype& g
     const auto repeats = get_short_tandem_repeats(given.sequence());
     if (!repeats.empty()) {
         gap_open_penalties_.assign(sequence_size(given), flat_mutation_model_.gap_open);
-        const auto max_length = static_cast<unsigned>(repeat_length_gap_open_model_.size());
+        const auto max_num_periods = static_cast<unsigned>(repeat_length_gap_open_model_.size());
         unsigned result {0};
         for (const auto& repeat : repeats) {
             const auto num_periods = repeat.period * (repeat.length / repeat.period);
-            const auto penalty = repeat_length_gap_open_model_[std::min(num_periods, max_length)];
+            assert(num_periods > 0);
+            const auto penalty = repeat_length_gap_open_model_[std::min(num_periods - 1, max_num_periods - 1)];
+            assert(repeat.pos + repeat.length <= gap_open_penalties_.size());
             std::fill_n(std::next(std::begin(gap_open_penalties_), repeat.pos), repeat.length, penalty);
-            result = std::max(repeat.length, result);
+            result = std::max(num_periods, result);
         }
         return result;
     } else {
+        gap_open_penalties_.clear();
         return boost::none;
     }
 }
@@ -273,7 +276,10 @@ boost::optional<unsigned> DeNovoModel::set_gap_open_penalties(const unsigned giv
 
 hmm::VariableGapOpenMutationModel DeNovoModel::make_variable_hmm_model(const unsigned max_repeat_length) const
 {
-    return {flat_mutation_model_.mutation, gap_open_penalties_, repeat_length_gap_extend_model_[max_repeat_length]};
+    assert(max_repeat_length > 0);
+    auto extension_idx = std::min(repeat_length_gap_extend_model_.size() - 1, static_cast<std::size_t>(max_repeat_length) - 1);
+    auto extension_penalty = repeat_length_gap_extend_model_[extension_idx];
+    return {flat_mutation_model_.mutation, gap_open_penalties_, extension_penalty};
 }
 
 double DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given) const
