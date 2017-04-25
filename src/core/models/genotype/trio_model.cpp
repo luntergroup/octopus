@@ -642,7 +642,7 @@ auto join(const ReducedVectorMap<ParentsProbabilityPair>& parents,
         
         }
     } else if (child_ploidy == 3 && maternal_ploidy == 3 && paternal_ploidy == 3) {
-        return join(parents, child, ProbabilityOfChildGivenParents<2, 2, 2> {mutation_model});
+        return join(parents, child, ProbabilityOfChildGivenParents<3, 3, 3> {mutation_model});
     }
     throw std::runtime_error {"TrioModel: unimplemented joint probability function"};
 }
