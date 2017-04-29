@@ -231,21 +231,21 @@ double evaluate(const std::string& target, const std::string& truth,
     const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
     if (m2.first == cend(target)) {
         // then there is only a single base difference between the sequences, can optimise
-        const auto truth_index = distance(offsetted_truth_begin_itr, m1.second) + target_offset;
-        if (truth_index < model.lhs_flank_size || truth_index >= (truth.size() - model.rhs_flank_size)) {
+        const auto truth_mismatch_idx = distance(offsetted_truth_begin_itr, m1.second) + target_offset;
+        if (truth_mismatch_idx < model.lhs_flank_size || truth_mismatch_idx >= (truth.size() - model.rhs_flank_size)) {
             return 0;
         }
         const auto target_index = distance(cbegin(target), m1.first);
         auto mispatch_penalty = target_qualities[target_index];
-        if (model.snv_mask[truth_index] == *m1.first) {
+        if (model.snv_mask[truth_mismatch_idx] == *m1.first) {
             mispatch_penalty = std::min(target_qualities[target_index],
-                                        static_cast<std::uint8_t>(model.snv_priors[truth_index]));
+                                        static_cast<std::uint8_t>(model.snv_priors[truth_mismatch_idx]));
         }
-        if (mispatch_penalty <= model.gap_open[truth_index]
+        if (mispatch_penalty <= model.gap_open[truth_mismatch_idx]
             || !std::equal(next(m1.first), cend(target), m1.second)) {
             return lnProbability[mispatch_penalty];
         }
-        return lnProbability[model.gap_open[truth_index]];
+        return lnProbability[model.gap_open[truth_mismatch_idx]];
     }
     // TODO: we should be able to optimise the alignment based of the first mismatch postition
     return simd_align(truth, target, target_qualities, target_offset, model);
@@ -264,9 +264,9 @@ double evaluate(const std::string& target, const std::string& truth, const Varia
     const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
     if (m2.first == cend(target)) {
         // then there is only a single base difference between the sequences, can optimise
-        const auto index = distance(cbegin(target), m1.second);
-        if (model.mutation <= model.gap_open[index] || !std::equal(next(m1.first), cend(target), m1.second)) {
-            return lnProbability[model.gap_open[index]];
+        const auto truth_mismatch_idx = static_cast<std::size_t>(distance(cbegin(truth), m1.second));
+        if (model.mutation <= model.gap_open[truth_mismatch_idx] || !std::equal(next(m1.first), cend(target), m1.second)) {
+            return lnProbability[model.gap_open[truth_mismatch_idx]];
         }
         return lnProbability[model.mutation];
     }
