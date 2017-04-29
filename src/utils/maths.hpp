@@ -133,6 +133,7 @@ auto stdev(const Container& values, UnaryOperation unary_op)
 template <typename RealType, typename InputIt>
 RealType rmq(InputIt first, InputIt last)
 {
+    if (first == last) return 0.0;
     return std::sqrt((std::inner_product(first, last, first, RealType {0}))
                      / static_cast<RealType>(std::distance(first, last)));
 }
