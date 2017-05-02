@@ -325,7 +325,8 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     Genotype<Allele> new_genotype {ploidy};
                     for (unsigned i {0}; i < ploidy; ++i) {
                         if (prev_genotype[i].sequence() == deleted_sequence ||
-                            (prev_genotype[i].sequence() == old_genotype[i].sequence()
+                            (old_genotype[i] != prev_genotype[i]
+                             && prev_genotype[i].sequence() == old_genotype[i].sequence()
                              && sequence_size(old_genotype[i]) < region_size(old_genotype))) {
                             Allele new_allele {mapped_region(curr_call), deleted_sequence};
                             new_genotype.emplace(move(new_allele));
