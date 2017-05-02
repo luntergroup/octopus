@@ -282,7 +282,11 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                             auto new_sequence = old_genotype[i].sequence();
                             if (base) {
                                 const auto& base_sequence = (**base)->get_genotype_call(sample).genotype[i].sequence();
-                                new_sequence.front() = base_sequence.front();
+                                if (!base_sequence.empty()) {
+                                    new_sequence.front() = base_sequence.front();
+                                } else {
+                                    new_sequence = vcfspec::missingValue;
+                                }
                             } else {
                                 new_sequence.front() = actual_reference_base;
                             }
