@@ -1351,7 +1351,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
-        vc_builder.set_denovo_mutation_rate(options.at("denovo-mutation-rate").as<float>());
+        vc_builder.set_snv_denovo_mutation_rate(options.at("snv-denovo-mutation-rate").as<float>());
+        vc_builder.set_indel_denovo_mutation_rate(options.at("indel-denovo-mutation-rate").as<float>());
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     }
     

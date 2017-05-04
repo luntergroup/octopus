@@ -295,12 +295,15 @@ TrioCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
                                       const Latents& latents) const
 {
     const auto max_ploidy = std::max({parameters_.maternal_ploidy, parameters_.paternal_ploidy, parameters_.child_ploidy});
-    const auto genotypes = generate_all_genotypes(haplotypes, max_ploidy + 1);
+    std::vector<std::vector<unsigned>> genotype_indices {};
+    const auto genotypes = generate_all_genotypes(haplotypes, max_ploidy + 1, genotype_indices);
     const auto germline_prior_model = make_prior_model(haplotypes);
-    DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
+    DeNovoModel denovo_model {parameters_.denovo_model_params};
+    germline_prior_model->prime(haplotypes);
+    denovo_model.prime(haplotypes);
     const model::TrioModel model {parameters_.trio, *germline_prior_model, denovo_model,
                                   TrioModel::Options {parameters_.max_joint_genotypes}};
-    const auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
+    const auto inferences = model.evaluate(genotypes, genotype_indices, haplotype_likelihoods);
     return octopus::calculate_model_posterior(latents.model_latents.log_evidence, inferences.log_evidence);
 }
 
