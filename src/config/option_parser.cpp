@@ -473,9 +473,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>(),
      "Paternal sample")
     
-    ("denovo-mutation-rate",
-     po::value<float>()->default_value(1e-8, "1e-8"),
-     "Expected de novo mutation rate, per megabase pair, for this sample")
+    ("snv-denovo-mutation-rate",
+     po::value<float>()->default_value(1e-9, "1e-9"),
+     "SNV de novo mutation rate, per base per generation")
+    
+    ("indel-denovo-mutation-rate",
+     po::value<float>()->default_value(1e-10, "1e-10"),
+     "INDEL de novo mutation rate, per base per generation")
     
     ("min-denovo-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
@@ -518,7 +522,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Include the read mapping quality in the haplotype likelihood calculation")
     
     ("max-joint-genotypes",
-     po::value<int>()->default_value(200000),
+     po::value<int>()->default_value(1000000),
      "The maximum number of joint genotype vectors to consider when computing joint"
      " genotype posterior probabilities")
     
@@ -794,6 +798,16 @@ void check_strictly_positive(const std::string& option, const OptionMap& vm)
     }
 }
 
+void check_probability(const std::string& option, const OptionMap& vm)
+{
+    if (vm.count(option) == 1) {
+        const auto value = vm.at(option).as<float>();
+        if (value < 0 || value > 1) {
+            throw InvalidCommandLineOptionValue {option, value, "must be between zero and one" };
+        }
+    }
+}
+
 void conflicting_options(const OptionMap& vm, const std::string& opt1, const std::string& opt2)
 {
     if (vm.count(opt1) == 1 && !vm[opt1].defaulted() && vm.count(opt2) == 1 && !vm[opt2].defaulted()) {
@@ -888,6 +902,11 @@ void validate(const OptionMap& vm)
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
         "max-joint-genotypes"
     };
+    const std::vector<std::string> probability_options {
+        "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
+        "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "credible-mass",
+        "snv-denovo-mutation-rate", "indel-denovo-mutation-rate"
+    };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");
     for (const auto& option : positive_int_options) {
@@ -895,6 +914,9 @@ void validate(const OptionMap& vm)
     }
     for (const auto& option : strictly_positive_int_options) {
         check_strictly_positive(option, vm);
+    }
+    for (const auto& option : probability_options) {
+        check_probability(option, vm);
     }
     check_reads_present(vm);
     check_region_files_consistent(vm);

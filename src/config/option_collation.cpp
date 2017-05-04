@@ -267,13 +267,14 @@ ReferenceGenome make_reference(const OptionMap& options)
 
 InputRegionMap make_search_regions(const std::vector<GenomicRegion>& regions)
 {
-    InputRegionMap contig_mapped_regions {};
+    std::map<ContigName, std::deque<GenomicRegion>> contig_mapped_regions {};
     for (const auto& region : regions) {
-        contig_mapped_regions[region.contig_name()].insert(region);
+        contig_mapped_regions[region.contig_name()].push_back(region);
     }
     InputRegionMap result {};
     result.reserve(contig_mapped_regions.size());
-    for (const auto& p : contig_mapped_regions) {
+    for (auto& p : contig_mapped_regions) {
+        std::sort(std::begin(p.second), std::end(p.second));
         auto covered_contig_regions = extract_covered_regions(p.second);
         result.emplace(std::piecewise_construct,
                        std::forward_as_tuple(p.first),
@@ -288,26 +289,24 @@ InputRegionMap extract_search_regions(const ReferenceGenome& reference)
     return make_search_regions(get_all_contig_regions(reference));
 }
 
-auto cut(const MappableFlatSet<GenomicRegion>& mappables, const MappableFlatSet<GenomicRegion>& regions)
+auto get_unskipped(const MappableFlatSet<GenomicRegion>& regions, const MappableFlatSet<GenomicRegion>& skips)
 {
-    if (mappables.empty()) return regions;
+    if (skips.empty()) return regions;
     MappableFlatSet<GenomicRegion> result {};
     for (const auto& region : regions) {
-        auto overlapped = mappables.overlap_range(region);
+        const auto overlapped = skips.overlap_range(region);
         if (empty(overlapped)) {
             result.emplace(region);
-        } else if (!is_same_region(region, overlapped.front())) {
-            auto chunk = region;
-            if (begins_before(overlapped.front(), chunk)) {
-                chunk = right_overhang_region(chunk, overlapped.front());
-                overlapped.advance_begin(1);
+        } else if (!contains(overlapped.front(), region)) {
+            if (begins_before(region, overlapped.front())) {
+                result.emplace(left_overhang_region(region, overlapped.front()));
             }
-            std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&] (const auto& region) {
-                result.emplace(left_overhang_region(chunk, region));
-                chunk = expand_lhs(chunk, -begin_distance(chunk, region));
-            });
-            if (ends_before(overlapped.back(), chunk)) {
-                result.emplace(right_overhang_region(chunk, overlapped.back()));
+            auto intervening_chunks = extract_intervening_regions(overlapped);
+            using std::make_move_iterator;
+            result.insert(make_move_iterator(std::begin(intervening_chunks)),
+                          make_move_iterator(std::end(intervening_chunks)));
+            if (ends_before(overlapped.back(), region)) {
+                result.emplace(right_overhang_region(region, overlapped.back()));
             }
         }
     }
@@ -323,7 +322,7 @@ InputRegionMap extract_search_regions(const std::vector<GenomicRegion>& regions,
     InputRegionMap result {input_regions.size()};
     for (auto& p : input_regions) {
         if (skipped.count(p.first) == 1) {
-            result.emplace(p.first, cut(skipped.at(p.first), std::move(p.second)));
+            result.emplace(p.first, get_unskipped(std::move(p.second), skipped.at(p.first)));
         } else {
             result.emplace(p.first, std::move(p.second));
         }
@@ -1352,7 +1351,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
-        vc_builder.set_denovo_mutation_rate(options.at("denovo-mutation-rate").as<float>());
+        vc_builder.set_snv_denovo_mutation_rate(options.at("snv-denovo-mutation-rate").as<float>());
+        vc_builder.set_indel_denovo_mutation_rate(options.at("indel-denovo-mutation-rate").as<float>());
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     }
     

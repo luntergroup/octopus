@@ -467,7 +467,12 @@ bool DefaultInclusionPredicate::operator()(const Variant& v, const unsigned dept
             return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
         }
     } else {
-        return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.05;
+        // deletion or mnv
+        if (region_size(v) < 10) {
+            return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.05;
+        } else {
+            return num_observations > 1 && num_observations >= 5;
+        }
     }
 }
 

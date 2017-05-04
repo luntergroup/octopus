@@ -44,9 +44,8 @@ auto estimate_read_size(const AlignedRead& read) noexcept
     return sizeof(AlignedRead) + estimate_dynamic_size(read);
 }
 
-auto get_valid_sample_regions(const std::vector<SampleName>& samples,
-                              const InputRegionMap& input_regions,
-                              ReadManager& read_manager)
+auto get_covered_sample_regions(const std::vector<SampleName>& samples, const InputRegionMap& input_regions,
+                                ReadManager& read_manager)
 {
     InputRegionMap result {};
     result.reserve(input_regions.size());
@@ -54,9 +53,7 @@ auto get_valid_sample_regions(const std::vector<SampleName>& samples,
         InputRegionMap::mapped_type contig_regions {};
         std::copy_if(std::cbegin(p.second), std::cend(p.second),
                      std::inserter(contig_regions, std::begin(contig_regions)),
-                     [&] (const auto& region) {
-                         return read_manager.has_reads(samples, region);
-                     });
+                     [&] (const auto& region) { return read_manager.has_reads(samples, region); });
         if (!contig_regions.empty()) {
             result.emplace(p.first, std::move(contig_regions));
         }
@@ -72,7 +69,7 @@ boost::optional<std::size_t> estimate_mean_read_size(const std::vector<SampleNam
                                                      const unsigned max_sample_size)
 {
     if (input_regions.empty()) return boost::none;
-    const auto sample_regions = get_valid_sample_regions(samples, input_regions, read_manager);
+    const auto sample_regions = get_covered_sample_regions(samples, input_regions, read_manager);
     if (sample_regions.empty()) return boost::none;
     const auto num_samples_per_sample = max_sample_size / samples.size();
     std::deque<std::size_t> read_size_samples {};

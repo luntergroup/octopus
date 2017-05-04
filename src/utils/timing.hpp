@@ -54,14 +54,16 @@ inline std::ostream& operator<<(std::ostream& os, const TimeInterval& interval)
                << ((100 * (duration_m.count() % 60)) / 60) << 'h';
         } else {
             using H = std::chrono::hours::rep;
-            const auto days = std::div(duration_h.count(), H {24});
+            constexpr H num_hours_in_day {24};
+            const auto days = std::div(duration_h.count(), num_hours_in_day);
             if (days.quot < 7) {
                 os << days.quot << '.' << std::setw(2) << std::setfill('0')
-                   << days.rem << 'd';
+                   << ((100 * days.rem) / num_hours_in_day) << 'd';
             } else {
-                const auto weeks = std::div(duration_h.count(), H {24 * 7});
+                constexpr H num_hours_in_week {7 * num_hours_in_day};
+                const auto weeks = std::div(duration_h.count(), num_hours_in_week);
                 os << weeks.quot << '.' << std::setw(2) << std::setfill('0')
-                   << weeks.rem << 'w';
+                   << ((100 * weeks.rem) / num_hours_in_week) << 'w';
             }
         }
         

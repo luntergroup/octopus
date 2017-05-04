@@ -97,7 +97,7 @@ struct GenotypeRefProbabilityPairGenotypeLess
 struct ParentsProbabilityPair
 {
     GenotypeReference maternal, paternal;
-    double probability;
+    double probability, maternal_likelihood, paternal_likelihood;
     const GenotypeIndiceVector* maternal_indices = nullptr, *paternal_indices = nullptr;
 };
 
@@ -249,10 +249,65 @@ auto reduce(std::vector<T>& zipped, const TrioModel::Options& options)
     return make_reduction_map(zipped, last_to_join, options);
 }
 
+struct UniformPriorJointProbabilityHelper
+{
+    std::size_t index;
+    double probability;
+};
+
+bool operator==(const UniformPriorJointProbabilityHelper& lhs, const UniformPriorJointProbabilityHelper& rhs) noexcept
+{
+    return lhs.probability == rhs.probability;
+}
+bool operator!=(const UniformPriorJointProbabilityHelper& lhs, const UniformPriorJointProbabilityHelper& rhs) noexcept
+{
+    return lhs.probability != rhs.probability;
+}
+bool operator<(const UniformPriorJointProbabilityHelper& lhs, const UniformPriorJointProbabilityHelper& rhs) noexcept
+{
+    return lhs.probability < rhs.probability;
+}
+bool operator>(const UniformPriorJointProbabilityHelper& lhs, const UniformPriorJointProbabilityHelper& rhs) noexcept
+{
+    return lhs.probability > rhs.probability;
+}
+
 auto reduce(std::vector<ParentsProbabilityPair>& zipped, const TrioModel::Options& options)
 {
-    auto last_to_join = reduce(zipped, get_sample_reduction_count(options.max_joint_genotypes),
-                               options.max_joint_mass_loss);
+    const auto reduction_count = get_sample_reduction_count(options.max_joint_genotypes);
+    auto last_to_join = reduce(zipped, reduction_count, options.max_joint_mass_loss);
+    if (last_to_join != std::cend(zipped)) {
+        std::vector<UniformPriorJointProbabilityHelper> likelihood_zipped(zipped.size());
+        for (std::size_t i {0}; i < zipped.size(); ++i) {
+            likelihood_zipped[i].index = i;
+            likelihood_zipped[i].probability = zipped[i].maternal_likelihood + zipped[i].paternal_likelihood;
+        }
+        likelihood_zipped.erase(reduce(likelihood_zipped, reduction_count, options.max_joint_mass_loss),
+                                std::cend(likelihood_zipped));
+        std::deque<std::size_t> new_indices {};
+        const auto num_posterior_joined = static_cast<std::size_t>(std::distance(std::begin(zipped), last_to_join));
+        for (const auto& p : likelihood_zipped) {
+            if (p.index >= num_posterior_joined) {
+                new_indices.push_back(p.index);
+            }
+        }
+        likelihood_zipped.clear();
+        if (!new_indices.empty()) {
+            std::sort(std::begin(new_indices), std::end(new_indices));
+            auto curr_index = num_posterior_joined;
+            // Can use std::partition as it must do a single left-to-right pass due to ForwardIterator
+            // and complexity requirements
+            last_to_join = std::partition(last_to_join, std::end(zipped), [&] (const auto& p) {
+                if (!new_indices.empty() && curr_index++ == new_indices.front()) {
+                    new_indices.pop_front();
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+            assert(new_indices.empty());
+        }
+    }
     return make_reduction_map(zipped, last_to_join, options);
 }
 
@@ -343,17 +398,20 @@ auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& maternal,
     result.reserve(join_size(maternal, paternal));
     std::for_each(maternal.first, maternal.last_to_join, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_join, [&] (const auto& p) {
-            result.push_back({m.genotype, p.genotype, joint_probability(m, p, model), m.indices, p.indices});
+            result.push_back({m.genotype, p.genotype, joint_probability(m, p, model),
+                              m.probability, m.probability, m.indices, p.indices});
         });
     });
     std::for_each(maternal.last_to_join, maternal.last, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_partially_join, [&] (const auto& p) {
-            result.push_back({m.genotype, p.genotype, joint_probability(m, p, model), m.indices, p.indices});
+            result.push_back({m.genotype, p.genotype, joint_probability(m, p, model),
+                              m.probability, m.probability, m.indices, p.indices});
         });
     });
     std::for_each(paternal.last_to_join, paternal.last, [&] (const auto& p) {
         std::for_each(maternal.first, maternal.last_to_partially_join, [&] (const auto& m) {
-            result.push_back({m.genotype, p.genotype, joint_probability(m, p, model), m.indices, p.indices});
+            result.push_back({m.genotype, p.genotype, joint_probability(m, p, model),
+                              m.probability, m.probability, m.indices, p.indices});
         });
     });
     return result;
@@ -586,7 +644,7 @@ auto join(const ReducedVectorMap<ParentsProbabilityPair>& parents,
         
         }
     } else if (child_ploidy == 3 && maternal_ploidy == 3 && paternal_ploidy == 3) {
-        return join(parents, child, ProbabilityOfChildGivenParents<2, 2, 2> {mutation_model});
+        return join(parents, child, ProbabilityOfChildGivenParents<3, 3, 3> {mutation_model});
     }
     throw std::runtime_error {"TrioModel: unimplemented joint probability function"};
 }

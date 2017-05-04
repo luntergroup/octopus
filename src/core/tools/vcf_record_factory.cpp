@@ -37,7 +37,7 @@ namespace octopus {
 namespace {
 
 constexpr char dummy_base {'#'};
-const std::string deleted_sequence {vcfspec::missingValue, 1};
+const std::string deleted_sequence {vcfspec::deletedBase};
 
 } // namespace
 
@@ -282,7 +282,11 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                             auto new_sequence = old_genotype[i].sequence();
                             if (base) {
                                 const auto& base_sequence = (**base)->get_genotype_call(sample).genotype[i].sequence();
-                                new_sequence.front() = base_sequence.front();
+                                if (!base_sequence.empty()) {
+                                    new_sequence.front() = base_sequence.front();
+                                } else {
+                                    new_sequence = vcfspec::missingValue;
+                                }
                             } else {
                                 new_sequence.front() = actual_reference_base;
                             }
@@ -321,10 +325,10 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     Genotype<Allele> new_genotype {ploidy};
                     for (unsigned i {0}; i < ploidy; ++i) {
                         if (prev_genotype[i].sequence() == deleted_sequence ||
-                            (prev_genotype[i].sequence() == old_genotype[i].sequence()
+                            (old_genotype[i] != prev_genotype[i]
+                             && prev_genotype[i].sequence() == old_genotype[i].sequence()
                              && sequence_size(old_genotype[i]) < region_size(old_genotype))) {
-                            Allele::NucleotideSequence new_sequence(1, vcfspec::deletedBase);
-                            Allele new_allele {mapped_region(curr_call), move(new_sequence)};
+                            Allele new_allele {mapped_region(curr_call), deleted_sequence};
                             new_genotype.emplace(move(new_allele));
                         } else {
                             new_genotype.emplace(old_genotype[i]);

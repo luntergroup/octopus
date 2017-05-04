@@ -333,8 +333,12 @@ unsigned HaplotypeGenerator::max_removal_impact() const
     const auto novel_region = right_overhang_region(max_lagged_region, active_region_);
     const auto num_novel_alleles = count_overlapped(alleles_, novel_region);
     if (num_novel_alleles == 0) return 0;
-    const auto max_new_haplotypes = std::max(static_cast<unsigned>(std::exp2(num_novel_alleles / 2)), 1u);
-    const auto num_leftover_haplotypes = policies_.haplotype_limits.target / max_new_haplotypes;
+    unsigned num_leftover_haplotypes {0};
+    static auto max_exponent = static_cast<unsigned>(std::log2(std::numeric_limits<unsigned>::max()));
+    if (num_novel_alleles / 2 < max_exponent) {
+        const auto max_new_haplotypes = std::max(static_cast<unsigned>(std::exp2(num_novel_alleles / 2)), 1u);
+        num_leftover_haplotypes = policies_.haplotype_limits.target / max_new_haplotypes;
+    }
     const auto cur_num_haplotypes = tree_.num_haplotypes();
     if (cur_num_haplotypes > num_leftover_haplotypes) {
         return cur_num_haplotypes - num_leftover_haplotypes;
@@ -1010,14 +1014,16 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
         if (last_added_novel_itr != std::cend(novel_active_alleles)) {
             last_added_novel_itr = extend_tree_until(last_added_novel_itr, std::cend(novel_active_alleles), tree_,
                                                      policies_.haplotype_limits.overflow);
-            if (!tree_.is_empty()) {
-                active_region_ = encompassing_region(active_region_, tree_.encompassing_region());
-            }
-            if (in_holdout_mode()) {
-                active_region_ = encompassing_region(active_region_, *holdout_region_);
-            }
             if (last_added_novel_itr != std::cend(novel_active_alleles)) {
+                if (in_holdout_mode()) {
+                    active_region_ = encompassing_region(active_region_, tree_.encompassing_region());
+                    active_region_ = encompassing_region(active_region_, *holdout_region_);
+                } else {
+                    active_region_ = tree_.encompassing_region();
+                }
                 throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
+            } else {
+                active_region_ = tree_.encompassing_region();
             }
         }
     } else {

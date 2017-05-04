@@ -136,7 +136,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                                        target_size,
                                        model.snv_mask.data() + alignment_offset,
                                        model.snv_priors.data() + alignment_offset,
-                                       model.gap_open_penalties.data() + alignment_offset,
+                                       model.gap_open.data() + alignment_offset,
                                        model.gap_extend, model.nuc_prior);
         return -ln10Div10<> * static_cast<double>(score);
     } else {
@@ -152,7 +152,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                                        target_size,
                                        model.snv_mask.data() + alignment_offset,
                                        model.snv_priors.data() + alignment_offset,
-                                       model.gap_open_penalties.data() + alignment_offset,
+                                       model.gap_open.data() + alignment_offset,
                                        model.gap_extend, model.nuc_prior,
                                        align1.data(), align2.data(), first_pos);
         auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
@@ -178,7 +178,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                                                        target.data(), qualities,
                                                        model.snv_mask.data() + alignment_offset,
                                                        model.snv_priors.data() + alignment_offset,
-                                                       model.gap_open_penalties.data() + alignment_offset,
+                                                       model.gap_open.data() + alignment_offset,
                                                        model.gap_extend, model.nuc_prior,
                                                        first_pos,
                                                        align1.data(), align2.data(),
@@ -186,8 +186,13 @@ auto simd_align(const std::string& truth, const std::string& target,
         const auto num_explained_bases = target_size - target_mask_size;
         constexpr int min_explained_bases {2};
         if (num_explained_bases < min_explained_bases) flank_score = 0;
-        assert(flank_score <= score);
-        return -ln10Div10<> * static_cast<double>(score - flank_score);
+        //assert(flank_score <= score);
+        if (flank_score <= score) {
+            return -ln10Div10<> * static_cast<double>(score - flank_score);
+        } else {
+            // Overflow has occurred when calculating score;
+            return -ln10Div10<> * (flank_score + score);
+        }
     }
 }
 
@@ -207,7 +212,7 @@ void validate(const std::string& truth, const std::string& target,
     if (truth.size() != model.snv_priors.size()) {
         throw std::invalid_argument {"PairHMM::align: truth size not equal to snv priors length"};
     }
-    if (truth.size() != model.gap_open_penalties.size()) {
+    if (truth.size() != model.gap_open.size()) {
         throw std::invalid_argument {"PairHMM::align: truth size not equal to gap open penalties length"};
     }
     if (target_offset + target.size() > truth.size()) {
@@ -231,27 +236,58 @@ double evaluate(const std::string& target, const std::string& truth,
     const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
     if (m2.first == cend(target)) {
         // then there is only a single base difference between the sequences, can optimise
-        const auto truth_index = distance(offsetted_truth_begin_itr, m1.second) + target_offset;
-        if (truth_index < model.lhs_flank_size || truth_index >= (truth.size() - model.rhs_flank_size)) {
+        const auto truth_mismatch_idx = distance(offsetted_truth_begin_itr, m1.second) + target_offset;
+        if (truth_mismatch_idx < model.lhs_flank_size || truth_mismatch_idx >= (truth.size() - model.rhs_flank_size)) {
             return 0;
         }
         const auto target_index = distance(cbegin(target), m1.first);
         auto mispatch_penalty = target_qualities[target_index];
-        if (model.snv_mask[truth_index] == *m1.first) {
+        if (model.snv_mask[truth_mismatch_idx] == *m1.first) {
             mispatch_penalty = std::min(target_qualities[target_index],
-                                        static_cast<std::uint8_t>(model.snv_priors[truth_index]));
+                                        static_cast<std::uint8_t>(model.snv_priors[truth_mismatch_idx]));
         }
-        if (mispatch_penalty <= model.gap_open_penalties[truth_index]
+        if (mispatch_penalty <= model.gap_open[truth_mismatch_idx]
             || !std::equal(next(m1.first), cend(target), m1.second)) {
             return lnProbability[mispatch_penalty];
         }
-        return lnProbability[model.gap_open_penalties[truth_index]];
+        return lnProbability[model.gap_open[truth_mismatch_idx]];
     }
     // TODO: we should be able to optimise the alignment based of the first mismatch postition
     return simd_align(truth, target, target_qualities, target_offset, model);
 }
 
-double evaluate(const std::string& target, const std::string& truth, const BasicMutationModel& model) noexcept
+double evaluate(const std::string& target, const std::string& truth, const VariableGapOpenMutationModel& model) noexcept
+{
+    assert(truth.size() == model.gap_open.size());
+    using std::cbegin; using std::cend; using std::next; using std::distance;
+    static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
+    const auto truth_begin = next(cbegin(truth), min_flank_pad());
+    const auto m1 = std::mismatch(cbegin(target), cend(target), truth_begin);
+    if (m1.first == cend(target)) {
+        return 0; // sequences are equal, can't do better than this
+    }
+    const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
+    if (m2.first == cend(target)) {
+        // then there is only a single base difference between the sequences, can optimise
+        const auto truth_mismatch_idx = static_cast<std::size_t>(distance(cbegin(truth), m1.second));
+        if (model.mutation <= model.gap_open[truth_mismatch_idx] || !std::equal(next(m1.first), cend(target), m1.second)) {
+            return lnProbability[model.gap_open[truth_mismatch_idx]];
+        }
+        return lnProbability[model.mutation];
+    }
+    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
+    thread_local std::vector<std::int8_t> dummy_qualities;
+    dummy_qualities.assign(target.size(), model.mutation);
+    auto score = simd::align(truth.c_str(), target.c_str(),
+                             dummy_qualities.data(),
+                             truth_alignment_size,
+                             static_cast<int>(target.size()),
+                             model.gap_open.data(),
+                             model.gap_extend, 2);
+    return -ln10Div10<> * static_cast<double>(score);
+}
+
+double evaluate(const std::string& target, const std::string& truth, const FlatGapMutationModel& model) noexcept
 {
     using std::cbegin; using std::cend; using std::next; using std::distance;
     static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
