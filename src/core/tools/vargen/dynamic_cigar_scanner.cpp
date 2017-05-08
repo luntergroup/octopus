@@ -433,7 +433,7 @@ bool DefaultInclusionPredicate::operator()(const Variant& v, const unsigned dept
             if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
             partial_sort(observed_qualities, 2);
             return observed_qualities[0] >= 20 && observed_qualities[1] >= 20;
-        } else {
+        } else if (depth < 300) {
             if (num_observations < 3) return false;
             if (base_quality_sum > 150) return true;
             erase_below(observed_qualities, 10);
@@ -441,6 +441,10 @@ bool DefaultInclusionPredicate::operator()(const Variant& v, const unsigned dept
             if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
             partial_sort(observed_qualities, 3);
             return observed_qualities[0] >= 30 && observed_qualities[1] >= 25 && observed_qualities[2] >= 20;
+        } else {
+            if (num_observations < 8) return false;
+            erase_below(observed_qualities, 10);
+            return observed_qualities.size() > 7;
         }
     } else if (is_insertion(v)) {
         if (num_observations == 1 && alt_sequence_size(v) > 8) return false;
