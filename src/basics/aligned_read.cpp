@@ -315,16 +315,16 @@ AlignedRead copy(const AlignedRead& read, const GenomicRegion& region)
     };
 }
 
-bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
+bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
     return lhs.mapping_quality() == rhs.mapping_quality()
         && lhs.mapped_region()   == rhs.mapped_region()
         && lhs.cigar()           == rhs.cigar()
         && lhs.sequence()        == rhs.sequence()
-        && lhs.base_qualities()       == rhs.base_qualities();
+        && lhs.base_qualities()  == rhs.base_qualities();
 }
 
-bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
+bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
     if (lhs.mapped_region() == rhs.mapped_region()) {
         if (lhs.mapping_quality() == rhs.mapping_quality()) {
@@ -345,23 +345,28 @@ bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
     }
 }
 
-bool are_other_segments_duplicates(const AlignedRead &lhs, const AlignedRead &rhs)
+bool next_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
-    if (lhs.has_other_segment() && rhs.has_other_segment()) {
-        return lhs.next_segment() == rhs.next_segment();
+    if (lhs.has_other_segment()) {
+        if (rhs.has_other_segment()) {
+            return lhs.next_segment() == rhs.next_segment();
+        } else {
+            return false;
+        }
+    } else {
+        return !rhs.has_other_segment();
     }
-    return false;
 }
 
-bool IsDuplicate::operator()(const AlignedRead &lhs, const AlignedRead &rhs) const
+bool IsDuplicate::operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
 {
     return lhs.mapped_region() == rhs.mapped_region()
         && lhs.cigar() == rhs.cigar()
-        && lhs.flags().reverse_mapped == rhs.flags().reverse_mapped
-        && are_other_segments_duplicates(lhs, rhs);
+        && lhs.is_marked_reverse_mapped() == rhs.is_marked_reverse_mapped()
+        && next_segments_are_duplicates(lhs, rhs);
 }
 
-bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs)
+bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
 {
     return lhs.contig_name() == rhs.contig_name()
         && lhs.begin() == rhs.begin()

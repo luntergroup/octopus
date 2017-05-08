@@ -232,15 +232,15 @@ CigarString copy_cigar(const AlignedRead& read, const GenomicRegion& region);
 // Returns the part of the read (cigar, sequence, base_qualities) contained by the region
 AlignedRead copy(const AlignedRead& read, const GenomicRegion& region);
 
-bool operator==(const AlignedRead& lhs, const AlignedRead& rhs);
-bool operator<(const AlignedRead& lhs, const AlignedRead& rhs);
+bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
+bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
 
 struct IsDuplicate
 {
-    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const;
+    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
 };
 
-bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs);
+bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept;
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector& qualities);
 std::ostream& operator<<(std::ostream& os, const AlignedRead& read);
@@ -253,31 +253,35 @@ struct ReadHash
 } // namespace octopus
 
 namespace std {
-    template <> struct hash<octopus::AlignedRead>
+
+template <> struct hash<octopus::AlignedRead>
+{
+    size_t operator()(const octopus::AlignedRead& read) const
     {
-        size_t operator()(const octopus::AlignedRead& read) const
-        {
-            return octopus::ReadHash()(read);
-        }
-    };
-    
-    template <> struct hash<reference_wrapper<const octopus::AlignedRead>>
+        return octopus::ReadHash()(read);
+    }
+};
+
+template <> struct hash<reference_wrapper<const octopus::AlignedRead>>
+{
+    size_t operator()(const reference_wrapper<const octopus::AlignedRead> read) const
     {
-        size_t operator()(const reference_wrapper<const octopus::AlignedRead> read) const
-        {
-            return hash<octopus::AlignedRead>()(read);
-        }
-    };
+        return hash<octopus::AlignedRead>()(read);
+    }
+};
+
 } // namespace std
 
 namespace boost {
-    template <> struct hash<octopus::AlignedRead> : std::unary_function<octopus::AlignedRead, std::size_t>
+
+template <> struct hash<octopus::AlignedRead> : std::unary_function<octopus::AlignedRead, std::size_t>
+{
+    std::size_t operator()(const octopus::AlignedRead& read) const
     {
-        std::size_t operator()(const octopus::AlignedRead& read) const
-        {
-            return std::hash<octopus::AlignedRead>()(read);
-        }
-    };
+        return std::hash<octopus::AlignedRead>()(read);
+    }
+};
+
 } // namespace boost
 
 #endif
