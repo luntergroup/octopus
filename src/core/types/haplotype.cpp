@@ -484,6 +484,26 @@ Haplotype expand(const Haplotype& haplotype, Haplotype::MappingDomain::Size n)
     };
 }
 
+Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region)
+{
+    if (is_same_region(haplotype, region)) {
+        return haplotype;
+    } else if (contains(region, haplotype)) {
+        return Haplotype {
+            region, std::cbegin(haplotype.explicit_alleles_), std::cend(haplotype.explicit_alleles_), haplotype.reference_
+        };
+    } else if (contains(haplotype, region)) {
+        return splice<Haplotype>(haplotype, region);
+    } else if (is_same_contig(haplotype, region)) {
+        const auto remap_alleles = haplotype_contained_range(haplotype.explicit_alleles_, region.contig_region());
+        return Haplotype {
+            region, std::cbegin(remap_alleles), std::cend(remap_alleles), haplotype.reference_
+        };
+    } else {
+        return Haplotype {region, haplotype.reference_};
+    }
+}
+
 std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs)
 {
     auto result = lhs.difference(rhs);
