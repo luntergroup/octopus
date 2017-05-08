@@ -493,7 +493,7 @@ Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region)
             region, std::cbegin(haplotype.explicit_alleles_), std::cend(haplotype.explicit_alleles_), haplotype.reference_
         };
     } else if (contains(haplotype, region)) {
-        return splice<Haplotype>(haplotype, region);
+        return copy<Haplotype>(haplotype, region);
     } else if (is_same_contig(haplotype, region)) {
         const auto remap_alleles = haplotype_contained_range(haplotype.explicit_alleles_, region.contig_region());
         return Haplotype {
