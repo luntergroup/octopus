@@ -319,15 +319,6 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
     return result;
 }
 
-namespace {
-
-const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
-{
-    return mapped_region(haplotypes.front());
-}
-    
-} // namespace
-
 std::size_t Caller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
 {
     return unique_least_complex(haplotypes, Haplotype {haplotype_region(haplotypes), reference_.get()});
