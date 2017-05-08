@@ -221,6 +221,29 @@ void run_likelihood_calculation(const std::string& haplotype_str,
 
 } // namespace debug
 
+namespace {
+
+const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
+{
+    return mapped_region(haplotypes.front());
+}
+
+void remap_each(std::deque<Haplotype>& haplotypes, const GenomicRegion& region)
+{
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(haplotypes),
+                   [&] (const Haplotype& haplotype) { return remap(haplotype, region); });
+}
+
+template <typename T>
+void merge_unique(std::deque<T>&& src, std::deque<T>& dst)
+{
+    const auto itr = utils::append(std::move(src), dst);
+    std::inplace_merge(std::begin(dst), itr, std::end(dst));
+    dst.erase(std::unique(std::begin(dst), std::end(dst)), std::end(dst));
+}
+
+} // namespace
+
 std::deque<CallWrapper>
 Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Variant>& candidates,
                       const ReadMap& reads, ProgressMeter& progress_meter) const
@@ -233,6 +256,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
     GenomicRegion active_region;
     boost::optional<GenomicRegion> next_active_region {}, prev_called_region {};
     auto completed_region = head_region(call_region);
+    std::deque<Haplotype> protected_haplotypes {};
     while (true) {
         status = generate_active_haplotypes(call_region, haplotype_generator, active_region,
                                             next_active_region, haplotypes, next_haplotypes);
@@ -266,9 +290,18 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         } else if (debug_log_) {
             debug::print_haplotype_posteriors(stream(*debug_log_), *caller_latents->haplotype_posteriors());
         }
-        filter_haplotypes(has_removal_impact, haplotypes, haplotype_generator, haplotype_likelihoods, *caller_latents);
-        const auto backtrack_region = generate_next_active_haplotypes(next_haplotypes, next_active_region,
-                                                                      haplotype_generator);
+        if (!protected_haplotypes.empty()) {
+            std::sort(std::begin(haplotypes), std::end(haplotypes));
+            remap_each(protected_haplotypes, haplotype_region(haplotypes));
+        }
+        filter_haplotypes(has_removal_impact, haplotypes, haplotype_generator,
+                          haplotype_likelihoods, *caller_latents, protected_haplotypes);
+        const auto backtrack_region = generate_next_active_haplotypes(next_haplotypes, next_active_region, haplotype_generator);
+        if (backtrack_region) {
+            merge_unique(get_called_haplotypes(*caller_latents), protected_haplotypes);
+        } else {
+            protected_haplotypes.clear();
+        }
         call_variants(active_region, call_region, next_active_region, backtrack_region,
                       candidates, haplotypes, haplotype_likelihoods, active_reads, *caller_latents,
                       result, prev_called_region, completed_region);
@@ -397,7 +430,8 @@ void Caller::filter_haplotypes(bool prefilter_had_removal_impact,
                                const std::vector<Haplotype>& haplotypes,
                                HaplotypeGenerator& haplotype_generator,
                                const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                               const Latents& latents) const
+                               const Latents& latents,
+                               const std::deque<Haplotype>& protected_haplotypes) const
 {
     if (prefilter_had_removal_impact) { // if there was no impact before then there can't be now either
         prefilter_had_removal_impact = haplotype_generator.removal_has_impact();
@@ -406,8 +440,8 @@ void Caller::filter_haplotypes(bool prefilter_had_removal_impact,
         const auto max_to_remove = haplotype_generator.max_removal_impact();
         auto removable_haplotypes = get_removable_haplotypes(haplotypes, haplotype_likelihoods,
                                                              *latents.haplotype_posteriors(),
-                                                             max_to_remove);
-        if (debug_log_ && !removable_haplotypes.empty()) {
+                                                             protected_haplotypes, max_to_remove);
+        if (debug_log_) {
             stream(*debug_log_) << "Discarding " << removable_haplotypes.size()
                                 << " haplotypes with low posterior support";
         }
@@ -589,6 +623,18 @@ Genotype<Haplotype> Caller::call_genotype(const Latents& latents, const SampleNa
                                           return lhs.second < rhs.second;
                                       });
     return itr->first;
+}
+
+std::deque<Haplotype> Caller::get_called_haplotypes(const Latents& latents) const
+{
+    std::deque<Haplotype> result {};
+    for (const auto& sample : samples_) {
+        auto called_genotype = call_genotype(latents, sample);
+        std::copy(std::begin(called_genotype), std::cend(called_genotype), std::back_inserter(result));
+    }
+    std::sort(std::begin(result), std::end(result));
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    return result;
 }
 
 bool requires_model_evaluation(const std::vector<CallWrapper>& calls)
@@ -824,10 +870,22 @@ std::vector<std::reference_wrapper<const Haplotype>>
 Caller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
                                  const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                  const Caller::Latents::HaplotypeProbabilityMap& haplotype_posteriors,
-                                 const unsigned max_to_remove) const
+                                 const std::deque<Haplotype>& protected_haplotypes, const unsigned max_to_remove) const
 {
-    return extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
-                             max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
+    if (protected_haplotypes.empty()) {
+        return extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
+                                 max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
+    } else {
+        std::vector<Haplotype> removable_haplotypes {};
+        removable_haplotypes.reserve(haplotypes.size());
+        assert(std::is_sorted(std::cbegin(haplotypes), std::cend(haplotypes)));
+        assert(std::is_sorted(std::cbegin(protected_haplotypes), std::cend(protected_haplotypes)));
+        std::set_difference(std::cbegin(haplotypes), std::cend(haplotypes),
+                            std::cbegin(protected_haplotypes), std::cend(protected_haplotypes),
+                            std::back_inserter(removable_haplotypes));
+        return extract_removable(removable_haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
+                                 max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
+    }
 }
 
 Caller::GenotypeCallMap Caller::get_genotype_calls(const Latents& latents) const
