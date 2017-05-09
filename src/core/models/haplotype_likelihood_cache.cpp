@@ -218,7 +218,7 @@ void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
                                       const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                       const std::size_t n)
 {
-    print_read_haplotype_likelihoods(std::cout, haplotypes, reads, haplotype_likelihoods);
+    print_read_haplotype_likelihoods(std::cout, haplotypes, reads, haplotype_likelihoods, n);
 }
 
 } // namespace debug
