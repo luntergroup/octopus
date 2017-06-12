@@ -25,6 +25,8 @@
 #include "core/models/genotype/individual_model.hpp"
 #include "core/models/genotype/uniform_population_prior_model.hpp"
 #include "core/models/genotype/coalescent_population_prior_model.hpp"
+#include "core/models/genotype/uniform_genotype_prior_model.hpp"
+#include "core/models/genotype/coalescent_genotype_prior_model.hpp"
 #include "logging/logging.hpp"
 #include "core/types/calls/germline_variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
@@ -148,6 +150,31 @@ auto calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
 PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                    const std::vector<Haplotype>& haplotypes,
                                    std::vector<Genotype<Haplotype>>&& genotypes,
+                                   IndependenceModelInferences&& inferences)
+{
+    auto inverse_genotypes = make_inverse_genotype_table(haplotypes, genotypes);
+    auto& genotype_marginal_posteriors = inferences.posteriors.genotype_probabilities;
+    haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes, genotypes, genotype_marginal_posteriors, inverse_genotypes));
+    GenotypeProbabilityMap genotype_posteriors {std::begin(genotypes), std::end(genotypes)};
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        insert_sample(samples[s], std::move(genotype_marginal_posteriors[s]), genotype_posteriors);
+    }
+    genotype_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
+    genotypes_.emplace(genotypes.front().ploidy(), std::move(genotypes));
+}
+
+PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
+                                   const std::vector<Haplotype>& haplotypes,
+                                   std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>>&& genotypes,
+                                   IndependenceModelInferences&& inferences)
+: genotypes_ {std::move(genotypes)}
+{
+
+}
+
+PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
+                                   const std::vector<Haplotype>& haplotypes,
+                                   std::vector<Genotype<Haplotype>>&& genotypes,
                                    ModelInferences&& inferences)
 : model_latents_ {std::move(inferences)}
 {
@@ -213,8 +240,10 @@ std::unique_ptr<PopulationCaller::Caller::Latents>
 PopulationCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                 const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    const auto prior_model = make_prior_model(haplotypes);
-    const model::PopulationModel model {*prior_model, {parameters_.max_genotypes_per_sample}, debug_log_};
+    //const auto prior_model = make_prior_model(haplotypes);
+    //const model::PopulationModel model {*prior_model, {parameters_.max_genotypes_per_sample}, debug_log_};
+    const auto prior_model = make_independent_prior_model(haplotypes);
+    const model::IndependentPopulationModel model {*prior_model, debug_log_};
     if (parameters_.ploidies.size() == 1) {
         auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidies.front());
         if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
@@ -417,6 +446,24 @@ auto call_genotypes(const GM::Latents& latents, const std::unordered_map<unsigne
     return call_genotypes(latents, std::cbegin(genotypes)->second);
 }
 
+auto call_genotype(const PopulationGenotypeProbabilityMap::InnerMap& genotype_posteriors)
+{
+    return std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                            [] (const auto& lhs, const auto& rhs) {
+                                return lhs.second < rhs.second;
+                            })->first;
+}
+
+auto call_genotypes(const std::vector<SampleName>& samples, const PopulationGenotypeProbabilityMap& genotype_posteriors)
+{
+    std::vector<Genotype<Haplotype>> result {};
+    result.reserve(samples.size());
+    for (const auto& sample : samples) {
+        result.push_back(call_genotype(genotype_posteriors[sample]));
+    }
+    return result;
+}
+
 // variant calling
 
 bool has_above(const std::vector<Phred<double>>& posteriors, const Phred<double> min_posterior)
@@ -608,11 +655,11 @@ void log(const Genotype<Haplotype>& called_genotype,
 std::vector<std::unique_ptr<octopus::VariantCall>>
 PopulationCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
-    const auto& genotype_posteriors = (*latents.genotype_posteriors_);
+    const auto& genotype_posteriors = *latents.genotype_posteriors_;
     debug::log(genotype_posteriors, debug_log_, trace_log_);
     const auto candidate_posteriors = compute_posteriors(samples_, candidates, genotype_posteriors);
     debug::log(candidate_posteriors, debug_log_, trace_log_);
-    const auto genotype_calls = call_genotypes(latents.model_latents_.posteriors, latents.genotypes_);
+    const auto genotype_calls = call_genotypes(samples_, genotype_posteriors);
     auto variant_calls = call_candidates(candidate_posteriors, genotype_calls, parameters_.min_variant_posterior);
     const auto called_regions = extract_regions(variant_calls);
     auto allele_genotype_calls = call_genotypes(samples_, genotype_calls, genotype_posteriors, called_regions);
@@ -701,6 +748,18 @@ std::unique_ptr<PopulationPriorModel> PopulationCaller::make_prior_model(const s
         });
     } else {
         return std::make_unique<UniformPopulationPriorModel>();
+    }
+}
+
+std::unique_ptr<GenotypePriorModel> PopulationCaller::make_independent_prior_model(const std::vector<Haplotype>& haplotypes) const
+{
+    if (parameters_.prior_model_params) {
+        return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
+        Haplotype {mapped_region(haplotypes.front()), reference_},
+        *parameters_.prior_model_params, haplotypes.size(), CoalescentModel::CachingStrategy::address
+        });
+    } else {
+        return std::make_unique<UniformGenotypePriorModel>();
     }
 }
 
