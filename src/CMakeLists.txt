@@ -236,6 +236,8 @@ set(CORE_SOURCES
     core/models/genotype/germline_likelihood_model.cpp
     core/models/genotype/individual_model.hpp
     core/models/genotype/individual_model.cpp
+    core/models/genotype/independent_population_model.hpp
+    core/models/genotype/independent_population_model.cpp
     core/models/genotype/population_model.hpp
     core/models/genotype/population_model.cpp
     core/models/genotype/tumour_model.hpp
