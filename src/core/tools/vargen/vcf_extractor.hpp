@@ -29,6 +29,7 @@ public:
     
     VcfExtractor() = delete;
     
+    VcfExtractor(std::unique_ptr<const VcfReader> reader);
     VcfExtractor(std::unique_ptr<const VcfReader> reader, Options options);
         
     VcfExtractor(const VcfExtractor&)            = default;

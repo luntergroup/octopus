@@ -14,6 +14,10 @@
 
 namespace octopus { namespace coretools {
 
+VcfExtractor::VcfExtractor(std::unique_ptr<const VcfReader> reader)
+: VcfExtractor {std::move(reader), Options {}}
+{}
+
 VcfExtractor::VcfExtractor(std::unique_ptr<const VcfReader> reader, Options options)
 : reader_ {std::move(reader)}
 , options_ {options}
