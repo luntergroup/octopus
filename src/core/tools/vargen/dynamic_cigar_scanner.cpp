@@ -72,7 +72,13 @@ double ln_probability_read_correctly_aligned(const double misalign_penalty, cons
 
 } // namespace
 
-void DynamicCigarScanner::add_read(const AlignedRead& read)
+void DynamicCigarScanner::do_add_read(const SampleName& sample, const AlignedRead& read)
+{
+    add_read(sample, read, sample_read_coverage_tracker_[sample]);
+}
+
+void DynamicCigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
+                                   CoverageTracker<GenomicRegion>& sample_coverage_tracker)
 {
     using std::cbegin; using std::next; using std::move;
     using Flag = CigarOperation::Flag;
@@ -88,79 +94,90 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
         switch (cigar_operation.flag()) {
-        case Flag::alignmentMatch:
-            misalignment_penalty += add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
-                                                            next(sequence_iter, read_index),
-                                                            next(sequence_iter, read_index + op_size),
-                                                            next(base_quality_iter, read_index));
-            read_index += op_size;
-            ref_index  += op_size;
-            break;
-        case Flag::sequenceMatch:
-            read_index += op_size;
-            ref_index  += op_size;
-            break;
-        case Flag::substitution:
-        {
-            region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
-            add_candidate(region,
-                          reference_.get().fetch_sequence(region),
-                          copy(read_sequence, read_index, op_size),
-                          next(base_quality_iter, read_index));
-            read_index += op_size;
-            ref_index  += op_size;
-            misalignment_penalty += op_size * options_.misalignment_parameters.snv_penalty;
-            break;
-        }
-        case Flag::insertion:
-        {
-            add_candidate(GenomicRegion {read_contig, ref_index, ref_index},
-                          "",
-                          copy(read_sequence, read_index, op_size),
-                          next(base_quality_iter, read_index));
-            read_index += op_size;
-            misalignment_penalty += options_.misalignment_parameters.indel_penalty;
-            break;
-        }
-        case Flag::deletion:
-        {
-            region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
-            add_candidate(move(region),
-                          reference_.get().fetch_sequence(region),
-                          "",
-                          next(base_quality_iter, read_index));
-            ref_index += op_size;
-            misalignment_penalty += options_.misalignment_parameters.indel_penalty;
-            break;
-        }
-        case Flag::softClipped:
-        {
-            read_index += op_size;
-            ref_index  += op_size;
-            if (op_size > options_.misalignment_parameters.max_unpenalised_clip_size) {
-                misalignment_penalty += options_.misalignment_parameters.clip_penalty;
+            case Flag::alignmentMatch:
+                misalignment_penalty += add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
+                                                                next(sequence_iter, read_index),
+                                                                next(sequence_iter, read_index + op_size),
+                                                                sample,
+                                                                next(base_quality_iter, read_index),
+                                                                read.direction());
+                read_index += op_size;
+                ref_index  += op_size;
+                break;
+            case Flag::sequenceMatch:
+                read_index += op_size;
+                ref_index  += op_size;
+                break;
+            case Flag::substitution:
+            {
+                region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
+                add_candidate(region,
+                              reference_.get().fetch_sequence(region),
+                              copy(read_sequence, read_index, op_size),
+                              sample,
+                              next(base_quality_iter, read_index),
+                              read.direction());
+                read_index += op_size;
+                ref_index  += op_size;
+                misalignment_penalty += op_size * options_.misalignment_parameters.snv_penalty;
+                break;
             }
-            break;
-        }
-        case Flag::hardClipped:
-        {
-            if (op_size > options_.misalignment_parameters.max_unpenalised_clip_size) {
-                misalignment_penalty += options_.misalignment_parameters.clip_penalty;
+            case Flag::insertion:
+            {
+                add_candidate(GenomicRegion {read_contig, ref_index, ref_index},
+                              "",
+                              copy(read_sequence, read_index, op_size),
+                              sample,
+                              next(base_quality_iter, read_index),
+                              read.direction());
+                read_index += op_size;
+                misalignment_penalty += options_.misalignment_parameters.indel_penalty;
+                break;
             }
-            break;
-        }
-        case Flag::padding:
-            ref_index += op_size;
-            break;
-        case Flag::skipped:
-            ref_index += op_size;
-            break;
+            case Flag::deletion:
+            {
+                region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
+                add_candidate(move(region),
+                              reference_.get().fetch_sequence(region),
+                              "",
+                              sample,
+                              next(base_quality_iter, read_index),
+                              read.direction());
+                ref_index += op_size;
+                misalignment_penalty += options_.misalignment_parameters.indel_penalty;
+                break;
+            }
+            case Flag::softClipped:
+            {
+                read_index += op_size;
+                ref_index  += op_size;
+                if (op_size > options_.misalignment_parameters.max_unpenalised_clip_size) {
+                    misalignment_penalty += options_.misalignment_parameters.clip_penalty;
+                }
+                break;
+            }
+            case Flag::hardClipped:
+            {
+                if (op_size > options_.misalignment_parameters.max_unpenalised_clip_size) {
+                    misalignment_penalty += options_.misalignment_parameters.clip_penalty;
+                }
+                break;
+            }
+            case Flag::padding:
+                ref_index += op_size;
+                break;
+            case Flag::skipped:
+                ref_index += op_size;
+                break;
         }
     }
     if (options_.use_clipped_coverage_tracking) {
-        read_coverage_tracker_.add(clipped_mapped_region(read));
+        const auto clipped_region = clipped_mapped_region(read);
+        read_coverage_tracker_.add(clipped_region);
+        sample_coverage_tracker.add(clipped_region);
     } else {
         read_coverage_tracker_.add(read);
+        sample_coverage_tracker.add(read);
     }
     const auto mu = options_.misalignment_parameters.max_expected_mutation_rate;
     const auto ln_prob_misaligned = ln_probability_read_correctly_aligned(misalignment_penalty, read, mu);
@@ -173,19 +190,16 @@ void DynamicCigarScanner::add_read(const AlignedRead& read)
     }
 }
 
-void DynamicCigarScanner::do_add_read(const SampleName& sample, const AlignedRead& read)
-{
-    add_read(read);
-}
-
 void DynamicCigarScanner::do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last)
 {
-    std::for_each(first, last, [this] (const AlignedRead& read) { add_read(read); });
+    auto& sample_coverage_tracker = sample_read_coverage_tracker_[sample];
+    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, sample_coverage_tracker); });
 }
 
 void DynamicCigarScanner::do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last)
 {
-    std::for_each(first, last, [this] (const AlignedRead& read) { add_read(read); });
+    auto& sample_coverage_tracker = sample_read_coverage_tracker_[sample];
+    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, sample_coverage_tracker); });
 }
 
 unsigned get_min_depth(const Variant& v, const CoverageTracker<GenomicRegion>& tracker)
@@ -254,14 +268,33 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
                                                      [this, &candidate] (const Candidate& c) {
                                                          return options_.match(c.variant, candidate.variant);
                                                      });
-        const auto num_observations = static_cast<unsigned>(distance(cbegin(overlapped), next_candidate));
-        const auto min_depth = get_min_depth(candidate.variant, read_coverage_tracker_);
-        thread_local std::vector<unsigned> observed_qualities {};
-        observed_qualities.resize(num_observations);
-        std::transform(cbegin(overlapped), next_candidate, begin(observed_qualities),
-                       [this] (const Candidate& c) noexcept { return sum_base_qualities(c); });
-        if (options_.include(candidate.variant, min_depth, observed_qualities)) {
-            if (num_observations > 1) {
+        ObservedVariant observation {};
+        observation.variant = candidate.variant;
+        observation.total_depth = get_min_depth(candidate.variant, read_coverage_tracker_);
+        observation.num_samples = sample_read_coverage_tracker_.size();
+        std::vector<Candidate> observations {cbegin(overlapped), next_candidate};
+        std::sort(begin(observations), end(observations),
+                  [] (const Candidate& lhs, const Candidate& rhs) { return lhs.origin < rhs.origin; });
+        for (auto observation_itr = begin(observations); observation_itr != end(observations);) {
+            const auto& origin = observation_itr->origin;
+            auto next_itr = std::find_if_not(next(observation_itr), end(observations),
+                                             [&] (const Candidate& c) { return c.origin == origin; });
+            std::vector<unsigned> observed_qualities(std::distance(observation_itr, next_itr));
+            std::transform(observation_itr, next_itr, begin(observed_qualities),
+                           [this] (const Candidate& c) noexcept { return sum_base_qualities(c); });
+            const auto num_fwd_support = std::accumulate(observation_itr, next_itr, 0u,
+                                                         [] (unsigned curr, const Candidate& c) noexcept {
+                                                             if (c.support_direction == AlignedRead::Direction::forward) {
+                                                                 ++curr;
+                                                             }
+                                                             return curr;
+                                                         });
+            const auto depth = get_min_depth(candidate.variant, sample_read_coverage_tracker_.at(origin));
+            observation.sample_observations.push_back({depth, std::move(observed_qualities), num_fwd_support});
+            observation_itr = next_itr;
+        }
+        if (options_.include(observation)) {
+            if (observations.size() > 1) {
                 auto unique_iter = cbegin(overlapped);
                 while (unique_iter != next_candidate) {
                     auto repeat_region = find_contained(repeat_region_variants, unique_iter->variant);
@@ -284,7 +317,7 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
                 }
             }
         }
-        overlapped.advance_begin(num_observations);
+        overlapped.advance_begin(observations.size());
     }
     
     std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));
@@ -352,7 +385,9 @@ std::string DynamicCigarScanner::name() const
 
 double DynamicCigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
                                                     const SequenceIterator first_base, const SequenceIterator last_base,
-                                                    AlignedRead::BaseQualityVector::const_iterator first_base_quality)
+                                                    const SampleName& origin,
+                                                    AlignedRead::BaseQualityVector::const_iterator first_base_quality,
+                                                    AlignedRead::Direction support_direction)
 {
     using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
     using Tuple = boost::tuple<char, char>;
@@ -362,11 +397,12 @@ double DynamicCigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
     double misalignment_penalty {0};
     for_each(make_zip_iterator(boost::make_tuple(cbegin(ref_segment), first_base)),
              make_zip_iterator(boost::make_tuple(cend(ref_segment), last_base)),
-             [this, &contig, &ref_index, &first_base_quality, &misalignment_penalty] (const Tuple& t) {
+             [this, &contig, &ref_index, &origin, &first_base_quality,
+              &misalignment_penalty, support_direction] (const Tuple& t) {
                  const char ref_base  {t.get<0>()}, read_base {t.get<1>()};
                  if (ref_base != read_base && ref_base != 'N' && read_base != 'N') {
                      add_candidate(GenomicRegion {contig, ref_index, ref_index + 1},
-                                   ref_base, read_base, first_base_quality);
+                                   ref_base, read_base, origin, first_base_quality, support_direction);
                      if (*first_base_quality >= options_.misalignment_parameters.snv_threshold) {
                          misalignment_penalty += options_.misalignment_parameters.snv_penalty;
                      }
@@ -415,15 +451,17 @@ void partial_sort(std::vector<unsigned>& observed_qualities, const unsigned n)
                       std::end(observed_qualities), std::greater<> {});
 }
 
-} // namespace
-
-bool DefaultInclusionPredicate::operator()(const Variant& v, const unsigned depth, std::vector<unsigned>& observed_qualities)
+bool is_good(const Variant& variant, const unsigned depth, const unsigned num_fwd_observations,
+             std::vector<unsigned> observed_qualities)
 {
     const auto num_observations = observed_qualities.size();
     if (depth < 4) {
-        return num_observations > 1 || sum(observed_qualities) >= 20 || is_deletion(v);
+        return num_observations > 1 || sum(observed_qualities) >= 20 || is_deletion(variant);
     }
-    if (is_snp(v)) {
+    if (depth > 10 && (depth == num_fwd_observations || num_fwd_observations == 0)) {
+        return false;
+    }
+    if (is_snp(variant)) {
         const auto base_quality_sum = sum(observed_qualities);
         if (depth <= 60) {
             if (num_observations < 2) return false;
@@ -446,8 +484,8 @@ bool DefaultInclusionPredicate::operator()(const Variant& v, const unsigned dept
             erase_below(observed_qualities, 10);
             return observed_qualities.size() > 7;
         }
-    } else if (is_insertion(v)) {
-        if (num_observations == 1 && alt_sequence_size(v) > 8) return false;
+    } else if (is_insertion(variant)) {
+        if (num_observations == 1 && alt_sequence_size(variant) > 8) return false;
         if (depth <= 15) {
             return num_observations > 1;
         } else if (depth <= 30) {
@@ -461,23 +499,33 @@ bool DefaultInclusionPredicate::operator()(const Variant& v, const unsigned dept
             if (observed_qualities.size() <= 1) return false;
             if (observed_qualities.size() > 2) return true;
             partial_sort(observed_qualities, 2);
-            return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
+            return static_cast<double>(observed_qualities[0]) / alt_sequence_size(variant) > 20;
         } else {
             if (num_observations == 1) return false;
             if (static_cast<double>(num_observations) / depth > 0.35) return true;
             erase_below(observed_qualities, 20);
             if (observed_qualities.size() <= 1) return false;
             if (observed_qualities.size() > 3) return true;
-            return static_cast<double>(observed_qualities[0]) / alt_sequence_size(v) > 20;
+            return static_cast<double>(observed_qualities[0]) / alt_sequence_size(variant) > 20;
         }
     } else {
         // deletion or mnv
-        if (region_size(v) < 10) {
+        if (region_size(variant) < 10) {
             return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.05;
         } else {
             return num_observations > 1 && num_observations >= 5;
         }
     }
+}
+
+} // namespace
+
+bool DefaultInclusionPredicate::operator()(DynamicCigarScanner::ObservedVariant candidate)
+{
+    return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
+                       [&] (const auto& o) {
+                           return is_good(candidate.variant, o.depth, o.num_fwd_observations, o.observed_qualities);
+                       });
 }
 
 bool DefaultMatchPredicate::operator()(const Variant& lhs, const Variant& rhs) noexcept
