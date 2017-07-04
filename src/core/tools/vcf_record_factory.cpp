@@ -535,6 +535,52 @@ void set_vcf_genotype(const SampleName& sample, const Call::GenotypeCall& call, 
     record.set_genotype(sample, std::move(genotyped_alleles), VcfRecord::Builder::Phasing::phased);
 }
 
+bool is_missing(const Allele& a) noexcept
+{
+    return a.sequence() == vcfspec::missingValue;
+}
+
+bool is_delete_masked(const Allele& a) noexcept
+{
+    return a.sequence() == deleted_sequence;
+}
+
+auto get_allele_counts(const Call& call, const std::vector<SampleName>& samples)
+{
+    const auto& ref = call.reference();
+    unsigned ac {0}, ad {0}, an {0};
+    for (const auto& sample : samples) {
+        const auto& genotype_call = call.get_genotype_call(sample);
+        for (const auto& allele : genotype_call.genotype) {
+            if (!is_missing(allele)) {
+                ++an;
+                if (allele != ref) {
+                    if (is_delete_masked(allele)) {
+                        ++ad;
+                    } else {
+                        ++ac;
+                    }
+                }
+            }
+        }
+    }
+    return std::make_tuple(ac, ad, an);
+}
+
+void set_allele_counts(const Call& call, const std::vector<SampleName>& samples, VcfRecord::Builder& result)
+{
+    auto t = get_allele_counts(call, samples);
+    if (std::get<1>(t) == 0) {
+        result.set_info("AC", std::get<0>(t));
+    } else {
+        // It's safe to put ac before ad as there can only be one canonical alt allele, which is always listed
+        // before the deleted allele.
+        result.set_info("AC", {std::to_string(std::get<0>(t)), std::to_string(std::get<1>(t))});
+    }
+    
+    result.set_info("AN", std::get<2>(t));
+}
+
 VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
 {
     auto result = VcfRecord::Builder {};
@@ -561,6 +607,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_info("BQ",  static_cast<unsigned>(rmq_base_quality(call_reads)));
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
     result.set_info("MQ0", count_mapq_zero(call_reads));
+    set_allele_counts(*call, samples_, result);
     
     if (call->model_posterior()) {
         result.set_info("MP",  maths::round(call->model_posterior()->score(), 2));
@@ -608,6 +655,34 @@ boost::optional<double> get_model_posterior(const std::vector<std::unique_ptr<Ca
     } else {
         return *std::max_element(std::cbegin(model_posteriors), std::cend(model_posteriors));
     }
+}
+
+auto get_allele_counts(const std::vector<VcfRecord::NucleotideSequence>& alt_alleles,
+                       const std::vector<std::vector<VcfRecord::NucleotideSequence>>& genotypes)
+{
+    std::vector<unsigned> ac(alt_alleles.size(), 0);
+    unsigned an {0};
+    for (const auto& genotype : genotypes) {
+        for (const auto& allele : genotype) {
+            if (allele != vcfspec::missingValue) {
+                ++an;
+                const auto itr = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), allele);
+                if (itr != std::cend(alt_alleles)) {
+                    ++ac[std::distance(std::cbegin(alt_alleles), itr)];
+                }
+            }
+        }
+    }
+    return std::make_pair(std::move(ac), an);
+}
+
+void set_allele_counts(const std::vector<VcfRecord::NucleotideSequence>& alt_alleles,
+                       const std::vector<std::vector<VcfRecord::NucleotideSequence>>& genotypes,
+                       VcfRecord::Builder& result)
+{
+    auto p = get_allele_counts(alt_alleles, genotypes);
+    result.set_info("AC", utils::to_strings(p.first));
+    result.set_info("AN", p.second);
 }
 
 } // namespace
@@ -671,8 +746,8 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     } else {
         has_non_ref = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), "<NON_REF>") != std::cend(alt_alleles);
     }
+    set_allele_counts(alt_alleles, resolved_genotypes, result);
     result.set_alt(std::move(alt_alleles));
-    
     auto q = std::min_element(std::cbegin(calls), std::cend(calls),
                               [] (const auto& lhs, const auto& rhs) { return lhs->quality() < rhs->quality(); });
     result.set_qual(std::min(5000.0, maths::round(q->get()->quality().score(), 2)));
