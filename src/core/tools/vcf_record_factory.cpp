@@ -599,7 +599,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_pos(mapped_begin(region) + 1);
     result.set_ref(call->reference().sequence());
     result.set_alt(std::move(alts));
-    result.set_qual(std::min(5000.0, maths::round(call->quality().score(), 2)));
+    result.set_qual(std::min(max_qual, maths::round(call->quality().score(), 2)));
     const auto call_reads = copy_overlapped(reads_, region);
     result.set_info("NS",  count_samples_with_coverage(call_reads));
     result.set_info("DP",  sum_max_coverages(call_reads));
@@ -750,7 +750,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     result.set_alt(std::move(alt_alleles));
     auto q = std::min_element(std::cbegin(calls), std::cend(calls),
                               [] (const auto& lhs, const auto& rhs) { return lhs->quality() < rhs->quality(); });
-    result.set_qual(std::min(5000.0, maths::round(q->get()->quality().score(), 2)));
+    result.set_qual(std::min(max_qual, maths::round(q->get()->quality().score(), 2)));
     result.set_info("NS",  count_samples_with_coverage(reads_, region));
     result.set_info("DP",  sum_max_coverages(reads_, region));
     result.set_info("SB",  utils::to_string(strand_bias(reads_, region), 2));
