@@ -292,6 +292,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("source-candidates,c",
      po::value<std::vector<fs::path>>()->multitoken(),
      "Variant file paths containing known variants. These variants will automatically become candidates")
+
+    ("min-source-quality",
+     po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
+     "Only variants with quality above this value are considered for candidate generation")
     
     ("min-base-quality",
      po::value<int>()->default_value(20),

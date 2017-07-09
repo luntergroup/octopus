@@ -863,6 +863,11 @@ auto make_variant_generator_builder(const OptionMap& options)
             if (output_path && resolved_source_path == *output_path) {
                 throw ConflictingSourceVariantFile {std::move(resolved_source_path), *output_path};
             }
+            VcfExtractor::Options vcf_options {};
+            vcf_options.max_variant_size = as_unsigned("max-variant-size", options);
+            if (is_set("min-source-quality", options)) {
+                vcf_options.min_quality = options.at("min-source-quality").as<Phred<double>>().score();
+            }
             result.add_vcf_extractor(std::move(resolved_source_path));
         }
     }
