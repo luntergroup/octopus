@@ -374,9 +374,7 @@ auto get_contained_alleles(const PopulationGenotypeProbabilityMap& genotype_post
     for (const auto& allele : alleles) {
         result.emplace_back(num_genotypes);
         std::transform(genotype_begin, genotype_end, std::begin(result.back()),
-                       [&] (const auto& p) {
-                           return contains(p.first, allele);
-                       });
+                       [&] (const auto& p) { return contains(p.first, allele); });
     }
     return result;
 }
@@ -449,9 +447,7 @@ auto call_genotypes(const GM::Latents& latents, const std::unordered_map<unsigne
 auto call_genotype(const PopulationGenotypeProbabilityMap::InnerMap& genotype_posteriors)
 {
     return std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                            [] (const auto& lhs, const auto& rhs) {
-                                return lhs.second < rhs.second;
-                            })->first;
+                            [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; })->first;
 }
 
 auto call_genotypes(const std::vector<SampleName>& samples, const PopulationGenotypeProbabilityMap& genotype_posteriors)
@@ -513,9 +509,7 @@ auto get_homozygous_alleles(const PopulationGenotypeProbabilityMap& genotype_pos
     for (const auto& allele : alleles) {
         result.emplace_back(num_genotypes);
         std::transform(genotype_begin, genotype_end, std::begin(result.back()),
-                       [&] (const auto& p) {
-                           return is_homozygous(p.first, allele);
-                       });
+                       [&] (const auto& p) { return is_homozygous(p.first, allele); });
     }
     return result;
 }
@@ -619,8 +613,9 @@ transform_call(const std::vector<SampleName>& samples,
                    [] (const auto& sample, auto&& genotype) {
                        return std::make_pair(sample, convert(std::move(genotype)));
                    });
-    return std::make_unique<GermlineVariantCall>(variant_call.variant.get(), std::move(tmp),
-                                                 max(variant_call.posteriors));
+    auto p = std::accumulate(std::cbegin(variant_call.posteriors), std::cend(variant_call.posteriors), 0.0,
+                             [] (auto curr, auto x) { return curr + x.score(); });
+    return std::make_unique<GermlineVariantCall>(variant_call.variant.get(), std::move(tmp), Phred<> {p});
 }
 
 auto transform_calls(const std::vector<SampleName>& samples,
