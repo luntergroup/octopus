@@ -49,6 +49,11 @@
 
 namespace octopus { namespace options {
 
+bool is_set(const std::string& option, const OptionMap& options) noexcept
+{
+    return options.count(option) == 1;
+}
+
 boost::optional<fs::path> get_output_path(const OptionMap& options);
 
 // unsigned are banned from the option map to prevent user input errors, but once the option
@@ -60,17 +65,17 @@ unsigned as_unsigned(const std::string& option, const OptionMap& options)
 
 bool is_run_command(const OptionMap& options)
 {
-    return options.count("help") == 0 && options.count("version") == 0;
+    return !is_set("help", options) && !is_set("version", options);
 }
 
 bool is_debug_mode(const OptionMap& options)
 {
-    return options.count("debug") == 1;
+    return is_set("debug", options);
 }
 
 bool is_trace_mode(const OptionMap& options)
 {
-    return options.count("trace") == 1;
+    return is_set("trace", options);
 }
 
 namespace {
@@ -103,7 +108,7 @@ public:
 
 fs::path get_working_directory(const OptionMap& options)
 {
-    if (options.count("working-directory") == 1) {
+    if (is_set("working-directory", options)) {
         auto result = expand_user_path(options.at("working-directory").as<fs::path>());
         if (!fs::exists(result) && !fs::is_directory(result)) {
             throw InvalidWorkingDirectory {result};
@@ -186,7 +191,7 @@ bool is_file_writable(const fs::path& path)
 bool is_threading_allowed(const OptionMap& options)
 {
     unsigned num_threads {1};
-    if (options.count("threads") == 1) {
+    if (is_set("threads", options)) {
         num_threads = as_unsigned("threads", options);
     }
     return num_threads != 1;
@@ -195,7 +200,7 @@ bool is_threading_allowed(const OptionMap& options)
 boost::optional<unsigned> get_num_threads(const OptionMap& options)
 {
     unsigned num_threads {1};
-    if (options.count("threads") == 1) {
+    if (is_set("threads", options)) {
         num_threads = as_unsigned("threads", options);
     }
     if (num_threads > 0) return num_threads;
@@ -204,7 +209,7 @@ boost::optional<unsigned> get_num_threads(const OptionMap& options)
 
 ExecutionPolicy get_thread_execution_policy(const OptionMap& options)
 {
-    if (options.count("threads") == 1) {
+    if (is_set("threads", options)) {
         if (options.at("threads").as<int>() == 0) {
             return ExecutionPolicy::par;
         } else {
@@ -222,7 +227,7 @@ MemoryFootprint get_target_read_buffer_size(const OptionMap& options)
 
 boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options)
 {
-    if (options.count("debug") == 1) {
+    if (is_debug_mode(options)) {
         return resolve_path(options.at("debug").as<fs::path>(), options);
     } else {
         return boost::none;
@@ -231,7 +236,7 @@ boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options)
 
 boost::optional<fs::path> get_trace_log_file_name(const OptionMap& options)
 {
-    if (options.count("trace") == 1) {
+    if (is_trace_mode(options)) {
         return resolve_path(options.at("trace").as<fs::path>(), options);
     } else {
         return boost::none;
@@ -403,11 +408,11 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
 {
     using namespace utils;
     std::vector<GenomicRegion> skip_regions {};
-    if (options.count("skip-regions") == 1) {
+    if (is_set("skip-regions", options)) {
         const auto& region_strings = options.at("skip-regions").as<std::vector<std::string>>();
         append(parse_regions(region_strings, reference), skip_regions);
     }
-    if (options.count("skip-regions-file") == 1) {
+    if (is_set("skip-regions-file", options)) {
         const auto& input_path = options.at("skip-regions-file").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
         if (!fs::exists(resolved_path)) {
@@ -426,18 +431,18 @@ InputRegionMap get_search_regions(const OptionMap& options, const ReferenceGenom
     if (options.at("one-based-indexing").as<bool>()) {
         skip_regions = transform_to_zero_based(std::move(skip_regions));
     }
-    if (options.count("regions") == 0 && options.count("regions-file") == 0) {
-        if (options.count("regenotype") == 1) {
+    if (!is_set("regions", options) && !is_set("regions-file", options)) {
+        if (is_set("regenotype", options)) {
             // TODO: only extract regions in the regenotype VCF
         }
         return extract_search_regions(reference, skip_regions);
     }
     std::vector<GenomicRegion> input_regions {};
-    if (options.count("regions") == 1) {
+    if (is_set("regions", options)) {
         const auto& region_strings = options.at("regions").as<std::vector<std::string>>();
         append(parse_regions(region_strings, reference), input_regions);
     }
-    if (options.count("regions-file") == 1) {
+    if (is_set("regions-file", options)) {
         const auto& input_path = options.at("regions-file").as<fs::path>();
         auto resolved_path = resolve_path(input_path, options);
         if (!fs::exists(resolved_path)) {
@@ -472,7 +477,7 @@ bool ignore_unmapped_contigs(const OptionMap& options)
 
 boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& options)
 {
-    if (options.count("samples") == 1) {
+    if (is_set("samples", options)) {
         return options.at("samples").as<std::vector<SampleName>>();
     }
     return boost::none;
@@ -525,11 +530,11 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
 {
     using namespace utils;
     std::vector<fs::path> result {};
-    if (options.count("reads") == 1) {
+    if (is_set("reads", options)) {
         auto resolved_paths = resolve_paths(options.at("reads").as<std::vector<fs::path>>(), options);
         append(std::move(resolved_paths), result);
     }
-    if (options.count("reads-file") == 1) {
+    if (is_set("reads-file", options)) {
         const fs::path input_path {options.at("reads-file").as<fs::path>()};
         auto resolved_path = resolve_path(input_path, options);
         if (!fs::exists(resolved_path)) {
@@ -569,14 +574,14 @@ auto make_read_transformers(const OptionMap& options)
     prefilter_transformer.add(CapitaliseBases {});
     prefilter_transformer.add(CapBaseQualities {125});
     if (options.at("read-transforms").as<bool>()) {
-        if (options.count("mask-low-quality-tails") == 1) {
+        if (is_set("mask-low-quality-tails", options)) {
             const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-low-quality-tails", options));
             prefilter_transformer.add(MaskLowQualityTails {threshold});
         }
         if (options.at("soft-clip-masking").as<bool>()) {
             const auto boundary_size = as_unsigned("mask-soft-clipped-boundary-bases", options);
             if (boundary_size > 0) {
-                if (options.count("soft-clip-mask-threshold") == 1) {
+                if (is_set("soft-clip-mask-threshold", options)) {
                     const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
                 } else if (allow_assembler_generation(options)) {
@@ -587,7 +592,7 @@ auto make_read_transformers(const OptionMap& options)
                     prefilter_transformer.add(MaskSoftClippedBoundraryBases {boundary_size});
                 }
             } else {
-                if (options.count("soft-clip-mask-threshold") == 1) {
+                if (is_set("soft-clip-mask-threshold", options)) {
                     const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {threshold});
                 } else if (allow_assembler_generation(options)) {
@@ -646,14 +651,14 @@ auto make_read_filterer(const OptionMap& options)
     if (min_base_quality > 0 && min_good_bases > 0) {
         result.add(make_unique<HasSufficientGoodQualityBases>(min_base_quality, min_good_bases));
     }
-    if (min_base_quality > 0 && options.count("min-good-base-fraction") == 1) {
+    if (min_base_quality > 0 && is_set("min-good-base-fraction", options)) {
         auto min_good_base_fraction = options.at("min-good-base-fraction").as<double>();
         result.add(make_unique<HasSufficientGoodBaseFraction>(min_base_quality, min_good_base_fraction));
     }
-    if (options.count("min-read-length") == 1) {
+    if (is_set("min-read-length", options)) {
         result.add(make_unique<IsShort>(as_unsigned("min-read-length", options)));
     }
-    if (options.count("max-read-length") == 1) {
+    if (is_set("max-read-length", options)) {
         result.add(make_unique<IsLong>(as_unsigned("max-read-length", options)));
     }
     if (!options.at("allow-marked-duplicates").as<bool>()) {
@@ -802,7 +807,7 @@ auto make_variant_generator_builder(const OptionMap& options)
     const bool use_assembler {allow_assembler_generation(options)};
     
     if (options.at("raw-cigar-candidate-generator").as<bool>()) {
-        if (options.count("min-supporting-reads") == 1) {
+        if (is_set("min-supporting-reads", options)) {
             CigarScanner::Options scanner_options {};
             scanner_options.min_base_quality = as_unsigned("min-base-quality", options);
             scanner_options.min_support = as_unsigned("min-supporting-reads", options);
@@ -833,7 +838,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         LocalReassembler::Options reassembler_options {};
         const auto kmer_sizes = options.at("kmer-sizes").as<std::vector<int>>();
         reassembler_options.kmer_sizes.assign(std::cbegin(kmer_sizes), std::cend(kmer_sizes));
-        if (options.count("assembler-mask-base-quality") == 1) {
+        if (is_set("assembler-mask-base-quality", options)) {
             reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
         }
         reassembler_options.execution_policy = get_thread_execution_policy(options);
@@ -847,7 +852,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
-    if (options.count("source-candidates") == 1) {
+    if (is_set("source-candidates", options)) {
         const auto output_path = get_output_path(options);
         const auto input_paths = options.at("source-candidates").as<std::vector<fs::path>>();
         for (const auto& input_path : input_paths) {
@@ -861,9 +866,9 @@ auto make_variant_generator_builder(const OptionMap& options)
             result.add_vcf_extractor(std::move(resolved_source_path));
         }
     }
-    if (options.count("regenotype") == 1) {
+    if (is_set("regenotype", options)) {
         auto regenotype_path = options.at("regenotype").as<fs::path>();
-        if (options.count("source-candidates") == 1) {
+        if (is_set("source-candidates", options)) {
             fs::path input_path {options.at("source-candidates").as<std::string>()};
             if (regenotype_path != input_path) {
                 warning_log << "Running in regenotype mode but given a different source variant file";
@@ -985,7 +990,7 @@ public:
 PloidyMap get_ploidy_map(const OptionMap& options)
 {
     std::vector<ContigPloidy> flat_plodies {};
-    if (options.count("contig-ploidies-file") == 1) {
+    if (is_set("contig-ploidies-file", options)) {
         const fs::path input_path {options.at("contig-ploidies-file").as<std::string>()};
         const auto resolved_path = resolve_path(input_path, options);
         if (!fs::exists(resolved_path)) {
@@ -1000,7 +1005,7 @@ PloidyMap get_ploidy_map(const OptionMap& options)
             return result;
         });
     }
-    if (options.count("contig-ploidies") == 1) {
+    if (is_set("contig-ploidies", options)) {
         utils::append(options.at("contig-ploidies").as<std::vector<ContigPloidy>>(), flat_plodies);
     }
     remove_duplicate_ploidies(flat_plodies);
@@ -1094,7 +1099,7 @@ auto make_haplotype_generator_builder(const OptionMap& options)
 
 boost::optional<Pedigree> get_pedigree(const OptionMap& options)
 {
-	if (options.count("pedigree") == 1) {
+	if (is_set("pedigree", options)) {
 		const auto ped_file = resolve_path(options.at("pedigree").as<fs::path>(), options);
 		return io::read_pedigree(ped_file);
 	} else {
@@ -1203,11 +1208,11 @@ auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& sa
     if (result == "population" && samples.size() == 1) {
         result = "individual";
     }
-    if (options.count("maternal-sample") == 1 || options.count("paternal-sample") == 1
+    if (is_set("maternal-sample", options) || is_set("paternal-sample", options)
 		|| (pedigree && is_trio(samples, *pedigree))) {
         result = "trio";
     }
-    if (options.count("normal-sample") == 1) {
+    if (is_set("normal-sample", options)) {
         result = "cancer";
     }
     return result;
@@ -1305,7 +1310,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
     vc_builder.set_caller(caller);
     
-    if (options.count("refcall") == 1) {
+    if (is_set("refcall", options)) {
         const auto refcall_type = options.at("refcall").as<RefCallType>();
         if (refcall_type == RefCallType::positional) {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::positional);
@@ -1320,7 +1325,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     
     auto min_variant_posterior = options.at("min-variant-posterior").as<Phred<double>>();
     
-    if (options.count("regenotype") == 1) {
+    if (is_set("regenotype", options)) {
         if (caller == "cancer") {
             vc_builder.set_min_variant_posterior(min_variant_posterior);
         } else {
@@ -1340,7 +1345,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     }
     
     if (caller == "cancer") {
-        if (options.count("normal-sample") == 1) {
+        if (is_set("normal-sample", options)) {
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
         }
         vc_builder.set_somatic_mutation_rate(options.at("somatic-mutation-rate").as<float>());
@@ -1356,7 +1361,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     }
     
-    if (options.count("model-filtering") == 1) {
+    if (is_set("model-filtering", options)) {
         vc_builder.set_model_filtering(options.at("model-filtering").as<bool>());
     } else {
         vc_builder.set_model_filtering(caller == "cancer");
@@ -1369,7 +1374,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_model_mapping_quality(options.at("model-mapping-quality").as<bool>());
     vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
     
-    if (options.count("sequence-error-model") == 1) {
+    if (is_set("sequence-error-model", options)) {
         vc_builder.set_sequencer(options.at("sequence-error-model").as<std::string>());
     }
     
@@ -1378,7 +1383,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
 
 boost::optional<fs::path> get_output_path(const OptionMap& options)
 {
-    if (options.count("output") == 1) {
+    if (is_set("output", options)) {
         return resolve_path(options.at("output").as<fs::path>(), options);
     }
     return boost::none;
