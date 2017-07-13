@@ -61,12 +61,12 @@ OptionMap parse_options(const int argc, const char** argv)
     ("trace",
      po::value<fs::path>()->implicit_value("octopus_trace.log"),
      "Writes very verbose debug information to trace.log in the working directory")
-
+    
     ("fast",
      po::bool_switch()->default_value(false),
      "Turns off some features to improve runtime, at the cost of decreased calling accuracy."
      " Equivalent to '-a off -l minimal x 50`")
-
+    
     ("very-fast",
      po::bool_switch()->default_value(false),
      "The same as fast but also disables inactive flank scoring")
@@ -109,8 +109,8 @@ OptionMap parse_options(const int argc, const char** argv)
      " May be specified multiple times")
     
     ("reads-file,i",
-     po::value<fs::path>(),
-     "File containing a list of BAM/CRAM files, one per line, to be analysed")
+     po::value<std::vector<fs::path>>()->multitoken(),
+     "Files containing lists of BAM/CRAM files, one per line, to be analysed")
     
     ("one-based-indexing",
      po::bool_switch()->default_value(false),
@@ -292,7 +292,11 @@ OptionMap parse_options(const int argc, const char** argv)
     ("source-candidates,c",
      po::value<std::vector<fs::path>>()->multitoken(),
      "Variant file paths containing known variants. These variants will automatically become candidates")
-
+    
+    ("source-candidates-file",
+     po::value<std::vector<fs::path>>()->multitoken(),
+     "Files containing lists of source candidate variant files")
+    
     ("min-source-quality",
      po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
      "Only variants with quality above this value are considered for candidate generation")

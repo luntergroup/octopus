@@ -141,19 +141,6 @@ std::istream& operator>>(std::istream& is, Line& data)
     return is;
 }
 
-std::vector<fs::path> extract_paths_from_file(const fs::path& file_path, const OptionMap& options)
-{
-    std::ifstream file {file_path.string()};
-    assert(file.good());
-    std::vector<fs::path> result {};
-    std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
-                   std::back_inserter(result), [] (const auto& line) { return line.line_data; });
-    result.erase(std::remove_if(std::begin(result), std::end(result),
-                                [] (const auto& path) { return path.empty(); }),
-                 std::end(result));
-    return result;
-}
-
 auto resolve_paths(const std::vector<fs::path>& paths, const OptionMap& options)
 {
     std::vector<fs::path> result {};
@@ -167,6 +154,39 @@ auto resolve_paths(const std::vector<std::string>& path_strings, const OptionMap
 {
     std::vector<fs::path> paths {std::cbegin(path_strings), std::cend(path_strings)};
     return resolve_paths(paths, options);
+}
+
+std::vector<fs::path> extract_paths_from_file(const fs::path& file_path)
+{
+    std::ifstream file {file_path.string()};
+    assert(file.good());
+    std::vector<fs::path> result {};
+    std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
+                   std::back_inserter(result), [] (const auto& line) { return line.line_data; });
+    result.erase(std::remove_if(std::begin(result), std::end(result), [] (const auto& path) { return path.empty(); }),
+                 std::end(result));
+    return result;
+}
+
+auto resolve_file_paths(const fs::path& file_path, std::vector<fs::path> paths_in_file, const OptionMap& options)
+{
+    for (auto& path : paths_in_file) {
+        if (!fs::exists(path)) {
+            auto full_path = file_path.parent_path();
+            full_path /= path;
+            if (fs::exists(full_path)) {
+                path = std::move(full_path);
+            } else {
+                path = resolve_path(path, options);
+            }
+        }
+    }
+    return paths_in_file;
+}
+
+auto get_resolved_paths_from_file(const fs::path& file, const OptionMap& options)
+{
+    return resolve_file_paths(file, extract_paths_from_file(file), options);
 }
 
 bool is_file_readable(const fs::path& path)
@@ -493,7 +513,7 @@ public:
     MissingReadPathFile(fs::path p) : MissingFileError {std::move(p), "read path"} {};
 };
 
-void log_and_remove_duplicates(std::vector<fs::path>& paths)
+void log_and_remove_duplicates(std::vector<fs::path>& paths, const std::string& type)
 {
     std::sort(std::begin(paths), std::end(paths));
     const auto first_duplicate = std::adjacent_find(std::begin(paths), std::end(paths));
@@ -511,7 +531,7 @@ void log_and_remove_duplicates(std::vector<fs::path>& paths)
         const auto num_duplicate_paths = num_paths - num_unique_paths;
         logging::WarningLogger warn_log {};
         auto warn_log_stream = stream(warn_log);
-        warn_log_stream << "Ignoring " << num_duplicate_paths << " duplicate read path";
+        warn_log_stream << "Ignoring " << num_duplicate_paths << " duplicate " << type << " path";
         if (num_duplicate_paths > 1) {
             warn_log_stream << 's';
         }
@@ -535,23 +555,24 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
         append(std::move(resolved_paths), result);
     }
     if (is_set("reads-file", options)) {
-        const fs::path input_path {options.at("reads-file").as<fs::path>()};
-        auto resolved_path = resolve_path(input_path, options);
-        if (!fs::exists(resolved_path)) {
-            MissingReadPathFile e {resolved_path};
-            e.set_location_specified("the command line option '--reads-file'");
-            throw e;
+        auto paths_to_read_paths = options.at("reads-file").as<std::vector<fs::path>>();
+        for (auto& path_to_read_paths : paths_to_read_paths) {
+            path_to_read_paths = resolve_path(path_to_read_paths, options);
+            if (!fs::exists(path_to_read_paths)) {
+                MissingReadPathFile e {path_to_read_paths};
+                e.set_location_specified("the command line option '--reads-file'");
+                throw e;
+            }
+            auto paths = get_resolved_paths_from_file(path_to_read_paths, options);
+            if (paths.empty()) {
+                logging::WarningLogger log {};
+                stream(log) << "The read path file you specified " << path_to_read_paths
+                            << " in the command line option '--reads-file' is empty";
+            }
+            append(std::move(paths), result);
         }
-        auto paths = extract_paths_from_file(resolved_path, options);
-        auto resolved_paths = resolve_paths(paths, options);
-        if (resolved_paths.empty()) {
-            logging::WarningLogger log {};
-            stream(log) << "The read path file you specified " << resolved_path
-                        << " in the command line option '--reads-file' is empty";
-        }
-        append(std::move(resolved_paths), result);
     }
-    log_and_remove_duplicates(result);
+    log_and_remove_duplicates(result, "read");
     return result;
 }
 
@@ -751,6 +772,16 @@ public:
     MissingSourceVariantFile(fs::path p) : MissingFileError {std::move(p), "source variant"} {};
 };
 
+class MissingSourceVariantFileOfPaths : public MissingFileError
+{
+    std::string do_where() const override
+    {
+        return "make_variant_generator_builder";
+    }
+public:
+    MissingSourceVariantFileOfPaths(fs::path p) : MissingFileError {std::move(p), "source variant paths"} {};
+};
+
 class ConflictingSourceVariantFile : public UserError
 {
     std::string do_where() const override
@@ -852,23 +883,42 @@ auto make_variant_generator_builder(const OptionMap& options)
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
-    if (is_set("source-candidates", options)) {
+    if (is_set("source-candidates", options) || is_set("source-candidates-file", options)) {
         const auto output_path = get_output_path(options);
-        const auto input_paths = options.at("source-candidates").as<std::vector<fs::path>>();
-        for (const auto& input_path : input_paths) {
-            auto resolved_source_path = resolve_path(input_path, options);
-            if (!fs::exists(resolved_source_path)) {
-                throw MissingSourceVariantFile {input_path};
+        std::vector<fs::path> source_paths {};
+        if (is_set("source-candidates", options)) {
+            source_paths = resolve_paths(options.at("source-candidates").as<std::vector<fs::path>>(), options);
+        }
+        if (is_set("source-candidates-file", options)) {
+            auto paths_to_source_paths = options.at("source-candidates-file").as<std::vector<fs::path>>();
+            for (auto& path_to_source_paths : paths_to_source_paths) {
+                path_to_source_paths = resolve_path(path_to_source_paths, options);
+                if (!fs::exists(path_to_source_paths)) {
+                    throw MissingSourceVariantFileOfPaths {path_to_source_paths};
+                }
+                auto file_sources_paths = get_resolved_paths_from_file(path_to_source_paths, options);
+                if (file_sources_paths.empty()) {
+                    logging::WarningLogger log {};
+                    stream(log) << "The source candidate path file you specified " << path_to_source_paths
+                                << " in the command line option '--source-candidates-file' is empty";
+                }
+                utils::append(std::move(file_sources_paths), source_paths);
             }
-            if (output_path && resolved_source_path == *output_path) {
-                throw ConflictingSourceVariantFile {std::move(resolved_source_path), *output_path};
+        }
+        log_and_remove_duplicates(source_paths, "source variant");
+        for (const auto& source_path : source_paths) {
+            if (!fs::exists(source_path)) {
+                throw MissingSourceVariantFile {source_path};
+            }
+            if (output_path && source_path == *output_path) {
+                throw ConflictingSourceVariantFile {std::move(source_path), *output_path};
             }
             VcfExtractor::Options vcf_options {};
             vcf_options.max_variant_size = as_unsigned("max-variant-size", options);
             if (is_set("min-source-quality", options)) {
                 vcf_options.min_quality = options.at("min-source-quality").as<Phred<double>>().score();
             }
-            result.add_vcf_extractor(std::move(resolved_source_path));
+            result.add_vcf_extractor(std::move(source_path), vcf_options);
         }
     }
     if (is_set("regenotype", options)) {
