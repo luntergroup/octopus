@@ -97,7 +97,7 @@ private:
         Phred<double> min_variant_posterior;
         Phred<double> min_refcall_posterior;
         unsigned max_haplotypes;
-        Phred<double> haplotype_extension_threshold;
+        Phred<double> haplotype_extension_threshold, saturation_limit = Phred<> {10.0};
         bool allow_flank_scoring;
         bool allow_model_filtering;
         boost::optional<double> snp_heterozygosity, indel_heterozygosity;
