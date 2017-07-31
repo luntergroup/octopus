@@ -1356,7 +1356,11 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (call_sites_only(options)) vc_builder.set_sites_only();
     vc_builder.set_flank_scoring(allow_flank_scoring(options));
     vc_builder.set_model_mapping_quality(options.at("model-mapping-quality").as<bool>());
-    vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
+    if (caller == "cancer") {
+        vc_builder.set_max_joint_genotypes(as_unsigned("max-cancer-genotypes", options));
+    } else {
+        vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
+    }
     if (options.count("sequence-error-model") == 1) {
         vc_builder.set_sequencer(options.at("sequence-error-model").as<std::string>());
     }
