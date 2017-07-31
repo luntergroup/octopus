@@ -458,9 +458,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
      "Minimum posterior probability (phred scale) to emit a somatic mutation call")
     
-    ("somatics-only",
-     po::bool_switch()->default_value(false),
-     "Only report somatic variant calls")
+//    ("somatics-only",
+//     po::bool_switch()->default_value(false),
+//     "Only report somatic variant calls")
     ;
     
     po::options_description trio("Caller (trio)");
