@@ -122,7 +122,7 @@ template <std::size_t K>
 using ResponsabilityVector = std::vector<Tau<K>>;
 
 template <std::size_t K>
-using ResponsabilityVectors = std::vector<ResponsabilityVector<K>>;
+using ResponsabilityMatrix = std::vector<ResponsabilityVector<K>>;
 
 template <std::size_t K>
 struct CompressedLatents
@@ -130,7 +130,7 @@ struct CompressedLatents
     ProbabilityVector genotype_posteriors;
     LogProbabilityVector genotype_log_posteriors;
     CompressedAlphas<K> alphas;
-    ResponsabilityVectors<K> responsabilities;
+    ResponsabilityMatrix<K> responsabilities;
 };
 
 // non-member methods
@@ -236,28 +236,27 @@ auto digamma_diff(const double a, const double b)
 }
 
 template <std::size_t K>
-double expectation(const ProbabilityVector& distribution,
-                   const CompressedGenotypes<K>& likelihoods,
+double expectation(const ProbabilityVector& distribution, const CompressedGenotypes<K>& likelihoods,
                    const unsigned k, const std::size_t n) noexcept
 {
     return std::inner_product(std::cbegin(distribution), std::cend(distribution),
                               std::cbegin(likelihoods), 0.0, std::plus<> {},
-                              [k, n] (const auto p, const auto& haplotype_likelihoods) {
+                              [k, n] (const auto p, const auto& haplotype_likelihoods) noexcept {
                                   return p * haplotype_likelihoods[k][n];
                               });
 }
 
 template <std::size_t K>
-ResponsabilityVectors<K>
+ResponsabilityMatrix<K>
 init_responsabilities(const CompressedAlphas<K>& prior_alphas,
-                      const ProbabilityVector& genotype_pobabilities,
+                      const ProbabilityVector& genotype_probabilities,
                       const CompressedReadLikelihoods<K>& read_likelihoods)
 {
     assert(!read_likelihoods.empty());
     assert(prior_alphas.size() == read_likelihoods.size());
     // notation follows documentation
     const auto S = read_likelihoods.size(); // num samples
-    ResponsabilityVectors<K> result {};
+    ResponsabilityMatrix<K> result {};
     result.reserve(S);
     for (std::size_t s {0}; s < S; ++s) {
         std::array<double, K> al; // no need to keep recomputing this
@@ -270,7 +269,7 @@ init_responsabilities(const CompressedAlphas<K>& prior_alphas,
         std::array<double, K> ln_rho;
         for (std::size_t n {0}; n < N; ++n) {
             for (unsigned k {0}; k < K; ++k) {
-                ln_rho[k] = al[k] + expectation(genotype_pobabilities, read_likelihoods[s], k, n);
+                ln_rho[k] = al[k] + expectation(genotype_probabilities, read_likelihoods[s], k, n);
             }
             const auto ln_rho_norm = maths::log_sum_exp(ln_rho);
             for (unsigned k {0}; k < K; ++k) {
@@ -282,36 +281,45 @@ init_responsabilities(const CompressedAlphas<K>& prior_alphas,
     return result;
 }
 
-// same as init_responsabilities but in-place
 template <std::size_t K>
-void update_responsabilities(ResponsabilityVectors<K>& result,
-                             const CompressedAlphas<K>& posterior_alphas,
-                             const ProbabilityVector& genotype_pobabilities,
-                             const CompressedReadLikelihoods<K>& read_likelihoods)
+void update_responsabilities(ResponsabilityVector<K>& result,
+                             const CompressedAlpha<K>& posterior_alphas,
+                             const ProbabilityVector& genotype_probabilities,
+                             const CompressedGenotypes<K>& read_likelihoods)
 {
-    const auto S = read_likelihoods.size();
-    for (std::size_t s {0}; s < S; ++s) {
-        std::array<double, K> al;
-        const auto a0 = sum(posterior_alphas[s]);
+    std::array<double, K> al;
+    const auto a0 = sum(posterior_alphas);
+    for (unsigned k {0}; k < K; ++k) {
+        al[k] = digamma_diff(posterior_alphas[k], a0);
+    }
+    const auto N = read_likelihoods[0][0].size();
+    std::array<double, K> ln_rho;
+    for (std::size_t n {0}; n < N; ++n) {
         for (unsigned k {0}; k < K; ++k) {
-            al[k] = digamma_diff(posterior_alphas[s][k], a0);
+            ln_rho[k] = al[k] + expectation(genotype_probabilities, read_likelihoods, k, n);
         }
-        const auto N = read_likelihoods[s][0][0].size();
-        std::array<double, K> ln_rho;
-        for (std::size_t n {0}; n < N; ++n) {
-            for (unsigned k {0}; k < K; ++k) {
-                ln_rho[k] = al[k] + expectation(genotype_pobabilities, read_likelihoods[s], k, n);
-            }
-            const auto ln_rho_norm = maths::log_sum_exp(ln_rho);
-            for (unsigned k {0}; k < K; ++k) {
-                result[s][n][k] = std::exp(ln_rho[k] - ln_rho_norm);
-            }
+        const auto ln_rho_norm = maths::log_sum_exp(ln_rho);
+        for (unsigned k {0}; k < K; ++k) {
+            result[n][k] = std::exp(ln_rho[k] - ln_rho_norm);
         }
     }
 }
 
+// same as init_responsabilities but in-place
 template <std::size_t K>
-double sum(const ResponsabilityVector<K>& taus, const unsigned k)
+void update_responsabilities(ResponsabilityMatrix<K>& result,
+                             const CompressedAlphas<K>& posterior_alphas,
+                             const ProbabilityVector& genotype_probabilities,
+                             const CompressedReadLikelihoods<K>& read_likelihoods)
+{
+    const auto S = read_likelihoods.size();
+    for (std::size_t s {0}; s < S; ++s) {
+        update_responsabilities(result[s], posterior_alphas[s], genotype_probabilities, read_likelihoods[s]);
+    }
+}
+
+template <std::size_t K>
+double sum(const ResponsabilityVector<K>& taus, const unsigned k) noexcept
 {
     return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
                            [k] (const auto curr, const auto& tau) noexcept {
@@ -321,7 +329,7 @@ double sum(const ResponsabilityVector<K>& taus, const unsigned k)
 
 template <std::size_t K>
 void update_alpha(CompressedAlpha<K>& alpha, const CompressedAlpha<K>& prior_alpha,
-                  const ResponsabilityVector<K>& taus)
+                  const ResponsabilityVector<K>& taus) noexcept
 {
     for (unsigned k {0}; k < K; ++k) {
         alpha[k] = prior_alpha[k] + sum(taus, k);
@@ -330,7 +338,7 @@ void update_alpha(CompressedAlpha<K>& alpha, const CompressedAlpha<K>& prior_alp
 
 template <std::size_t K>
 void update_alphas(CompressedAlphas<K>& alphas, const CompressedAlphas<K>& prior_alphas,
-                   const ResponsabilityVectors<K>& responsabilities)
+                   const ResponsabilityMatrix<K>& responsabilities) noexcept
 {
     const auto S = alphas.size();
     assert(S == prior_alphas.size() && S == responsabilities.size());
@@ -340,7 +348,7 @@ void update_alphas(CompressedAlphas<K>& alphas, const CompressedAlphas<K>& prior
 }
 
 template <std::size_t K>
-double marginalise(const ResponsabilityVectors<K>& responsabilities,
+double marginalise(const ResponsabilityMatrix<K>& responsabilities,
                    const CompressedReadLikelihoods<K>& read_likelihoods,
                    const std::size_t g)
 {
@@ -364,7 +372,7 @@ double marginalise(const ResponsabilityVectors<K>& responsabilities,
 template <std::size_t K>
 void update_genotype_log_posteriors(LogProbabilityVector& result,
                                     const LogProbabilityVector& genotype_log_priors,
-                                    const ResponsabilityVectors<K>& responsabilities,
+                                    const ResponsabilityMatrix<K>& responsabilities,
                                     const CompressedReadLikelihoods<K>& read_likelihoods)
 {
     const auto G = result.size();
@@ -463,7 +471,7 @@ double expectation(const ResponsabilityVector<K>& taus, const CompressedAlpha<K>
 
 // sum s E[ln p(Z_s | pi_s)]
 template <std::size_t K>
-double expectation(const ResponsabilityVectors<K>& taus, const CompressedAlphas<K>& alphas)
+double expectation(const ResponsabilityMatrix<K>& taus, const CompressedAlphas<K>& alphas)
 {
     return std::inner_product(std::cbegin(taus), std::cend(taus), std::cbegin(alphas),
                               0.0, std::plus<> {},
@@ -473,7 +481,7 @@ double expectation(const ResponsabilityVectors<K>& taus, const CompressedAlphas<
 }
 
 template <std::size_t K>
-double expectation(const ResponsabilityVectors<K>& taus,
+double expectation(const ResponsabilityMatrix<K>& taus,
                    const CompressedReadLikelihoods<K>& log_likelihoods,
                    const std::size_t g)
 {
@@ -491,7 +499,7 @@ double expectation(const ResponsabilityVectors<K>& taus,
 // E[ln p(R | Z, g)]
 template <std::size_t K>
 double expectation(const ProbabilityVector& genotype_posteriors,
-                   const ResponsabilityVectors<K>& taus,
+                   const ResponsabilityMatrix<K>& taus,
                    const CompressedReadLikelihoods<K>& log_likelihoods)
 {
     double result {0};
@@ -548,7 +556,7 @@ double q_expectation(const ResponsabilityVector<K>& taus) noexcept
 
 // sum s E [ln q(Z_s)]
 template <std::size_t K>
-double q_expectation(const ResponsabilityVectors<K>& taus) noexcept
+double q_expectation(const ResponsabilityMatrix<K>& taus) noexcept
 {
     return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
                            [] (const auto curr, const auto& t) noexcept {
@@ -601,13 +609,11 @@ run_variational_bayes(const CompressedAlphas<K>& prior_alphas,
     bool is_converged {false};
     double max_change {0};
     for (unsigned i {0}; i < params.max_iterations; ++i) {
-        update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors,
-                                       responsabilities, log_likelihoods);
+        update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors, responsabilities, log_likelihoods);
         exp(genotype_log_posteriors, genotype_posteriors);
         update_alphas(posterior_alphas, prior_alphas, responsabilities);
         update_responsabilities(responsabilities, posterior_alphas, genotype_posteriors, log_likelihoods);
-        std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas,
-                                                               max_change, params.epsilon);
+        std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas, max_change, params.epsilon);
         if (is_converged) break;
     }
     return CompressedLatents<K> {
