@@ -216,7 +216,7 @@ auto get_interesting_hotspots(const GenomicRegion& region,
                        } else if (coverage <= 30) {
                            return interesting_coverage > 1;
                        } else {
-                           return 5 * interesting_coverage >= coverage;
+                           return 10 * interesting_coverage >= coverage;
                        }
                    });
     return get_regions(interesting_bases, region);
