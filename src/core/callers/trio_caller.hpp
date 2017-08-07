@@ -8,7 +8,7 @@
 #include <string>
 
 #include "caller.hpp"
-#include "core/types/trio.hpp"
+#include "basics/trio.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
@@ -32,8 +32,8 @@ public:
         unsigned maternal_ploidy, paternal_ploidy, child_ploidy;
         boost::optional<CoalescentModel::Parameters> germline_prior_model_params;
         DeNovoModel::Parameters denovo_model_params;
-        Phred<double> min_variant_posterior, min_refcall_posterior;
-        unsigned max_genotypes_per_sample;
+        Phred<double> min_variant_posterior, min_denovo_posterior, min_refcall_posterior;
+        unsigned max_joint_genotypes;
     };
     
     TrioCaller() = delete;

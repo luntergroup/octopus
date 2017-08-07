@@ -20,10 +20,25 @@ struct MutationModel
     using Penalty = std::int8_t;
     const std::vector<char>& snv_mask;
     const std::vector<Penalty>& snv_priors;
-    const std::vector<Penalty>& gap_open_penalties;
+    const std::vector<Penalty>& gap_open;
     short gap_extend;
     short nuc_prior = 2;
     std::size_t lhs_flank_size = 0, rhs_flank_size = 0;
+};
+
+struct VariableGapOpenMutationModel
+{
+    using Penalty = std::int8_t;
+    using PenaltyVector = std::vector<Penalty>;
+    Penalty mutation;
+    const PenaltyVector& gap_open;
+    short gap_extend;
+};
+
+struct FlatGapMutationModel
+{
+    std::int8_t mutation;
+    short gap_open, gap_extend;
 };
 
 // p(target | truth, target_qualities, target_offset, model)
@@ -35,18 +50,19 @@ double evaluate(const std::string& target, const std::string& truth,
                 std::size_t target_offset,
                 const MutationModel& model);
 
-struct BasicMutationModel
-{
-    std::int8_t mutation;
-    short gap_open, gap_extend;
-};
+// p(target | truth, model)
+//
+// Warning: The target must be contained by the truth by exactly
+// min_flank_pad() on either side.
+double evaluate(const std::string& target, const std::string& truth,
+                const VariableGapOpenMutationModel& model) noexcept;
 
 // p(target | truth, model)
 //
 // Warning: The target must be contained by the truth by exactly
 // min_flank_pad() on either side.
 double evaluate(const std::string& target, const std::string& truth,
-                const BasicMutationModel& model);
+                const FlatGapMutationModel& model) noexcept;
 
 } // namespace hmm
 } // namespace octopus

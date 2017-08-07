@@ -65,8 +65,8 @@ bool operator==(const Variant& lhs, const Variant& rhs)
 
 bool operator<(const Variant& lhs, const Variant& rhs)
 {
-    return (lhs.ref_allele() < rhs.ref_allele() ||
-            (lhs.ref_allele() == rhs.ref_allele() && lhs.alt_allele() < rhs.alt_allele()));
+    return (lhs.ref_allele() < rhs.ref_allele()
+            || (lhs.ref_allele() == rhs.ref_allele() && lhs.alt_allele() < rhs.alt_allele()));
 }
 
 void remove_duplicates(std::vector<Variant>& variants)
@@ -77,30 +77,21 @@ void remove_duplicates(std::vector<Variant>& variants)
 std::vector<Variant> split_mnv(const Variant& variant)
 {
     using std::begin; using std::end; using std::next; using std::prev; using std::distance;
-    
     std::vector<Variant> result {};
     result.reserve(ref_sequence_size(variant));
-    
     const auto& contig   = contig_name(variant);
     const auto begin_pos = mapped_begin(variant);
     const auto& ref      = ref_sequence(variant);
     const auto& alt      = alt_sequence(variant);
-    
     result.emplace_back(contig, begin_pos, ref.front(), alt.front());
-    
     const auto last = prev(end(ref));
-    
     auto p = std::mismatch(next(begin(ref)), last, next(begin(alt)));
-    
     while (p.first != prev(end(ref))) {
         result.emplace_back(contig, begin_pos + distance(begin(ref), p.first), *p.first, *p.second);
         p = std::mismatch(next(p.first), last, next(p.second));
     }
-    
     result.emplace_back(contig, mapped_end(variant) - 1, ref.back(), alt.back());
-    
     result.shrink_to_fit();
-    
     return result;
 }
 
@@ -108,18 +99,13 @@ std::vector<Allele> decompose(const std::vector<Variant>& variants)
 {
     std::vector<Allele> result {};
     result.reserve(2 * variants.size()); // max num alleles (may be less)
-    
-    if (variants.empty()) return result;
-    
     for (const auto& variant : variants) {
         if (result.empty() || !is_same_region(result.back(), variant)) {
             result.emplace_back(variant.ref_allele());
         }
         result.emplace_back(variant.alt_allele());
     }
-    
     result.shrink_to_fit();
-    
     return result;
 }
 
@@ -127,18 +113,13 @@ std::vector<std::reference_wrapper<const Allele>> decompose_ref(const std::vecto
 {
     std::vector<std::reference_wrapper<const Allele>> result {};
     result.reserve(2 * variants.size());
-    
-    if (variants.empty()) return result;
-    
     for (const auto& variant : variants) {
         if (result.empty() || !is_same_region(result.back().get(), variant)) {
             result.emplace_back(variant.ref_allele());
         }
         result.emplace_back(variant.alt_allele());
     }
-    
     result.shrink_to_fit();
-    
     return result;
 }
 
@@ -147,15 +128,12 @@ std::vector<Allele> extract_intervening_reference_alleles(const std::vector<Vari
 {
     const auto all_overlapped_regions     = extract_covered_regions(variants);
     const auto regions_between_candidates = extract_intervening_regions(all_overlapped_regions);
-    
     std::vector<Allele> result {};
     result.reserve(regions_between_candidates.size());
-    
     boost::transform(regions_between_candidates, std::back_inserter(result),
                      [&reference] (const auto& region) {
                          return make_reference_allele(region, reference);
                      });
-    
     return result;
 }
 
@@ -200,44 +178,33 @@ Variant trim(const Variant& v)
     
     const auto& ref = ref_sequence(v);
     const auto& alt = alt_sequence(v);
-    
     const auto m1 = std::mismatch(cbegin(ref), cend(ref), cbegin(alt), cend(alt));
     const auto m2 = std::mismatch(crbegin(ref), make_reverse_iterator(m1.first),
                                   crbegin(alt), make_reverse_iterator(m1.second));
-    
     using NucleotideSequence = Variant::NucleotideSequence;
-    
     NucleotideSequence new_ref {m1.first, m2.first.base()};
     NucleotideSequence new_alt {m1.second, m2.second.base()};
-    
     const auto pad_front = std::distance(m1.first, cbegin(ref));
     const auto pad_back  = std::distance(m2.first, crbegin(ref));
-    
     auto new_region = expand(mapped_region(v), pad_front, pad_back);
-    
     return Variant {std::move(new_region), std::move(new_ref), std::move(new_alt)};
 }
 
 bool is_parsimonious(const Variant& variant) noexcept
 {
     using std::cbegin; using std::cend; using std::crbegin; using std::crend;
-    
     if (ref_sequence_size(variant) == 0 || alt_sequence_size(variant) == 0) {
         return false;
     }
-    
     const auto& alleles = allele_minmax(ref_sequence(variant), alt_sequence(variant));
     const auto& small_allele = alleles.first;
     const auto& big_allele   = alleles.second;
-    
     if (count_redundant_front_bases(small_allele, big_allele) > 1) {
         return false;
     }
-    
     if (small_allele.size() > 1 && count_redundant_back_bases(small_allele, big_allele) > 0) {
         return false;
     }
-    
     return true;
 }
 
@@ -305,11 +272,9 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     
     do {
         if (current_region.begin() >= extension_size) {
-            current_region = extend_alleles(big_allele, small_allele, reference,
-                                            current_region, extension_size);
+            current_region = extend_alleles(big_allele, small_allele, reference, current_region, extension_size);
         } else if (current_region.begin() > 0) {
-            current_region = extend_alleles(big_allele, small_allele, reference,
-                                            current_region, current_region.begin());
+            current_region = extend_alleles(big_allele, small_allele, reference, current_region, current_region.begin());
         } else {
             break;
         }
@@ -326,8 +291,7 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
         const auto required_left_padding = small_allele_size - removable_extension;
         // Note this will automatically pad to the right if we've reached the start of the contig
         if (current_region.begin() >= required_left_padding) {
-            current_region = extend_alleles(big_allele, small_allele, reference,
-                                            current_region, required_left_padding);
+            current_region = extend_alleles(big_allele, small_allele, reference, current_region, required_left_padding);
             removable_extension = 0;
         }
     }
@@ -385,9 +349,7 @@ Variant pad_left(const Variant& variant, const ReferenceGenome& reference, const
 Variant pad_right(const Variant& variant, const ReferenceGenome& reference, const unsigned n)
 {
     const auto pad_region = expand_rhs(tail_region(variant), static_cast<GenomicRegion::Distance>(n));
-    
     const auto pad_sequence = reference.fetch_sequence(pad_region);
-    
     return Variant {
         encompassing_region(variant, pad_region),
         ref_sequence(variant) + pad_sequence,
@@ -400,14 +362,9 @@ std::vector<Variant> unique_left_align(const std::vector<Variant>& variants,
 {
     std::vector<Variant> result {};
     result.reserve(variants.size());
-    
     boost::transform(variants, std::back_inserter(result),
-                     [&reference] (const Variant& variant) {
-                         return left_align(variant, reference);
-                     });
-    
+                     [&reference] (const Variant& variant) { return left_align(variant, reference); });
     result.erase(boost::unique<boost::return_found>(boost::sort(result)), std::end(result));
-    
     return result;
 }
 
@@ -416,23 +373,17 @@ std::vector<Variant> unique_left_align(std::vector<Variant>&& variants,
 {
     assert(std::is_sorted(std::cbegin(variants), std::cend(variants)));
     assert(std::adjacent_find(std::cbegin(variants), std::cend(variants)) == std::cend(variants));
-    
     const auto it = std::stable_partition(std::begin(variants), std::end(variants),
                                           [] (const Variant& variant) {
                                               return !is_left_alignable(variant);
                                           });
-    
     std::transform(std::make_move_iterator(it), std::make_move_iterator(end(variants)), it,
                    [&reference] (Variant&& variant) {
                        return left_align(std::move(variant), reference);
                    });
-    
     std::sort(it, std::end(variants));
-    
     variants.erase(std::unique(it, std::end(variants)), std::end(variants));
-    
     std::inplace_merge(std::begin(variants), it, std::end(variants));
-    
     return variants;
 }
 
@@ -441,12 +392,8 @@ std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants,
 {
     std::vector<Variant> result {};
     result.reserve(variants.size());
-    
     boost::transform(variants, std::back_inserter(result),
-                     [&reference] (const auto& variant) {
-                         return make_parsimonious(variant, reference);
-                     });
-    
+                     [&reference] (const auto& variant) { return make_parsimonious(variant, reference); });
     return result;
 }
 
@@ -455,7 +402,6 @@ std::vector<Variant> parsimonise_each(std::vector<Variant>&& variants,
 {
     std::vector<Variant> result {};
     result.reserve(variants.size());
-    
     std::transform(std::make_move_iterator(std::begin(variants)),
                    std::make_move_iterator(std::end(variants)),
                    std::back_inserter(result),
@@ -465,7 +411,6 @@ std::vector<Variant> parsimonise_each(std::vector<Variant>&& variants,
                        }
                        return variant;
                    });
-    
     return result;
 }
 
@@ -473,15 +418,11 @@ std::vector<Variant> parsimonise_together(const std::vector<Variant>& segment,
                                           const ReferenceGenome& reference)
 {
     if (segment.empty()) return {};
-    
     auto parsimonised_variants = parsimonise_each(segment, reference);
-    
     const auto leftmost  = *leftmost_mappable(parsimonised_variants);
     const auto rightmost = *rightmost_mappable(parsimonised_variants);
-    
     std::vector<Variant> result {};
     result.reserve(segment.size());
-    
     for (auto&& variant : parsimonised_variants) {
         if (begins_before(leftmost, variant)) {
             variant = pad_left(variant, reference, left_overhang_size(leftmost, variant));
@@ -491,7 +432,6 @@ std::vector<Variant> parsimonise_together(const std::vector<Variant>& segment,
         }
         result.push_back(std::move(variant));
     }
-    
     return result;
 }
 
@@ -547,10 +487,7 @@ std::vector<Allele::NucleotideSequence> extract_alt_allele_sequences(const std::
 {
     std::vector<Allele::NucleotideSequence> result {};
     result.reserve(variants.size());
-    
-    boost::transform(variants, std::back_inserter(result),
-                     [] (const auto& variant) { return alt_sequence(variant); });
-    
+    boost::transform(variants, std::back_inserter(result), [] (const auto& variant) { return alt_sequence(variant); });
     return result;
 }
 

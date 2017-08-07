@@ -15,8 +15,8 @@
 #include "basics/ploidy_map.hpp"
 #include "readpipe/read_pipe.hpp"
 #include "core/tools/coretools.hpp"
-#include "core/types/trio.hpp"
-#include "core/types/pedigree.hpp"
+#include "basics/trio.hpp"
+#include "basics/pedigree.hpp"
 #include "caller.hpp"
 
 namespace octopus {
@@ -55,7 +55,9 @@ public:
     CallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
     CallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
-    CallerBuilder& set_max_genotypes_per_sample(unsigned max) noexcept;
+    CallerBuilder& set_max_joint_genotypes(unsigned max) noexcept;
+    CallerBuilder& set_sequencer(std::string sequencer) noexcept;
+    CallerBuilder& set_model_mapping_quality(bool b) noexcept;
     
     // cancer
     CallerBuilder& set_normal_sample(SampleName normal_sample);
@@ -67,7 +69,9 @@ public:
     
     // trio
     CallerBuilder& set_trio(Trio trio);
-    CallerBuilder& set_denovo_mutation_rate(double rate) noexcept;
+    CallerBuilder& set_min_denovo_posterior(Phred<double> posterior) noexcept;
+    CallerBuilder& set_snv_denovo_mutation_rate(double rate) noexcept;
+    CallerBuilder& set_indel_denovo_mutation_rate(double rate) noexcept;
     
     // pedigree
     CallerBuilder& set_pedigree(Pedigree pedigree);
@@ -98,7 +102,9 @@ private:
         bool allow_model_filtering;
         boost::optional<double> snp_heterozygosity, indel_heterozygosity;
         Phred<double> min_phase_score;
-        unsigned max_genotypes_per_sample;
+        unsigned max_joint_genotypes;
+        boost::optional<std::string> sequencer;
+        bool model_mapping_quality = true;
         
         // cancer
         boost::optional<SampleName> normal_sample;
@@ -111,7 +117,8 @@ private:
         
         // trio
         boost::optional<Trio> trio;
-        boost::optional<double> denovo_mutation_rate;
+        Phred<double> min_denovo_posterior;
+        boost::optional<double> snv_denovo_mutation_rate, indel_denovo_mutation_rate;
         
         // pedigree
         boost::optional<Pedigree> pedigree;

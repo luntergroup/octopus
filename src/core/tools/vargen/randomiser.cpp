@@ -24,12 +24,12 @@ std::unique_ptr<VariantGenerator> Randomiser::do_clone() const
     return std::make_unique<Randomiser>(*this);
 }
 
-void Randomiser::do_add_reads(VectorIterator first, VectorIterator last)
+void Randomiser::do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last)
 {
     max_read_size_ = region_size(*largest_mappable(first, last));
 }
 
-void Randomiser::do_add_reads(FlatSetIterator first, FlatSetIterator last)
+void Randomiser::do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last)
 {
     max_read_size_ = region_size(*largest_mappable(first, last));
 }

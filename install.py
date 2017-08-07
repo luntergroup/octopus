@@ -5,6 +5,7 @@ from subprocess import call
 import platform
 import argparse
 from shutil import move, rmtree
+import multiprocessing
 
 def is_unix():
     system = platform.system()
@@ -16,6 +17,8 @@ parser.add_argument('--root', help='Install into /usr/local/bin', action='store_
 parser.add_argument('--compiler', help='C++ compiler path')
 parser.add_argument('--keep_cache', help='Do not refresh CMake cache', action='store_true')
 parser.add_argument('--debug', help='Builds in debug mode', action='store_true')
+parser.add_argument('--static', help='Builds using static libraries', action='store_true')
+parser.add_argument('--threads', help='The number of threads to use for building', type=int)
 args = vars(parser.parse_args())
 
 octopus_dir = os.path.dirname(os.path.realpath(__file__))
@@ -61,13 +64,23 @@ if not args["debug"]:
     cmake_options.append("-DCMAKE_BUILD_TYPE=Release")
 else:
     cmake_options.append("-DCMAKE_BUILD_TYPE=Debug")
+if args["static"]:
+    cmake_options.append("-DUSE_STATIC_BOOST=ON")
     
 ret = call(["cmake"] + cmake_options + [".."])
+
 if ret == 0:
+    make_options = []
+    if args["threads"]:
+        if (args["threads"] > 1):
+            make_options.append("-j" + str(args["threads"]))
+    else:
+        make_options.append("-j" + str(multiprocessing.cpu_count()))
+    
     if is_unix():
         if args["root"]:
-            call(["sudo", "make", "install"])
+            call(["sudo", "make", "install"] + make_options)
         else:
-            call(["make", "install"])
+            call(["make", "install"] + make_options)
     else:
-        print("TODO: make for Windows!")
+        print("Windows make files not supported. Build files have been written to " + octopus_build_dir)

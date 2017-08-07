@@ -148,9 +148,21 @@ CallerBuilder& CallerBuilder::set_indel_heterozygosity(double heterozygosity) no
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_max_genotypes_per_sample(unsigned max) noexcept
+CallerBuilder& CallerBuilder::set_max_joint_genotypes(unsigned max) noexcept
 {
-    params_.max_genotypes_per_sample = max;
+    params_.max_joint_genotypes = max;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_sequencer(std::string sequencer) noexcept
+{
+    params_.sequencer = std::move(sequencer);
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_model_mapping_quality(bool b) noexcept
+{
+    params_.model_mapping_quality = b;
     return *this;
 }
 
@@ -198,9 +210,21 @@ CallerBuilder& CallerBuilder::set_trio(Trio trio)
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_denovo_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_min_denovo_posterior(Phred<double> posterior) noexcept
 {
-    params_.denovo_mutation_rate = rate;
+    params_.min_denovo_posterior = posterior;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_snv_denovo_mutation_rate(double rate) noexcept
+{
+    params_.snv_denovo_mutation_rate = rate;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_indel_denovo_mutation_rate(double rate) noexcept
+{
+    params_.indel_denovo_mutation_rate = rate;
     return *this;
 }
 
@@ -223,7 +247,6 @@ Caller::Components CallerBuilder::make_components() const
         components_.variant_generator_builder.build(components_.reference),
         components_.haplotype_generator_builder,
         Phaser {params_.min_phase_score}
-
     };
 }
 
@@ -279,7 +302,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
         params_.max_haplotypes,
         params_.haplotype_extension_threshold,
         params_.allow_flank_scoring,
-        params_.allow_model_filtering
+        params_.allow_model_filtering,
+        params_.sequencer,
+        params_.model_mapping_quality
     };
     const auto& samples = components_.read_pipe.get().samples();
     return CallerFactoryMap {
@@ -301,7 +326,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.min_refcall_posterior,
                                                           get_ploidies(samples, *requested_contig_, params_.ploidies),
                                                           make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                                                          params_.max_genotypes_per_sample
+                                                          params_.max_joint_genotypes,
                                                       });
         }},
         {"cancer", [this, general_parameters = std::move(general_parameters), &samples] () {
@@ -329,10 +354,11 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.ploidies.of(params_.trio->father(), *requested_contig_),
                                                     params_.ploidies.of(params_.trio->child(), *requested_contig_),
                                                     make_trio_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                                                    {*params_.denovo_mutation_rate},
+                                                    {*params_.snv_denovo_mutation_rate, *params_.indel_denovo_mutation_rate},
                                                     params_.min_variant_posterior,
+                                                    params_.min_denovo_posterior,
                                                     params_.min_refcall_posterior,
-                                                    params_.max_genotypes_per_sample
+                                                    params_.max_joint_genotypes
                                                 });
         }}
     };

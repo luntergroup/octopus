@@ -18,6 +18,7 @@
 
 #include "basics/contig_region.hpp"
 #include "basics/genomic_region.hpp"
+#include "concepts/mappable.hpp"
 
 namespace octopus { namespace utils {
 
@@ -137,21 +138,24 @@ bool has_mixed_case(SequenceType& sequence)
 }
 
 namespace detail {
-    struct CapitaliseBase
+
+struct CapitaliseBase
+{
+    auto operator()(const char base) const noexcept
     {
-        auto operator()(const char base) const noexcept
-        {
-            switch (base) {
-                case 'a': return 'A';
-                case 'c': return 'C';
-                case 'g': return 'G';
-                case 't': return 'T';
-                case 'u': return 'U';
-                default : return base;
-            }
+        switch (base) {
+            case 'a': return 'A';
+            case 'c': return 'C';
+            case 'g': return 'G';
+            case 't': return 'T';
+            case 'u': return 'U';
+            case 'n': return 'N';
+            default : return base;
         }
-    };
-}
+    }
+};
+
+} // namespace detail
 
 template <typename SequenceType>
 void capitalise(SequenceType& sequence)
@@ -339,48 +343,6 @@ std::unordered_map<char, size_t> count_bases(const SequenceType& sequence)
     
     for (char base : sequence) {
         ++result[base];
-    }
-    
-    return result;
-}
-
-struct TandemRepeat
-{
-    using SizeType = GenomicRegion::Size;
-    TandemRepeat() = delete;
-    template <typename T>
-    TandemRepeat(T region, GenomicRegion::Size period)
-    : region {std::forward<T>(region)}, period {period} {}
-    
-    GenomicRegion region;
-    GenomicRegion::Size period;
-};
-
-template <typename SequenceType>
-std::vector<TandemRepeat>
-extract_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
-                             GenomicRegion::Size min_repeat_size = 2,
-                             GenomicRegion::Size max_repeat_size = 10000)
-{
-    if (sequence.back() != 'N') {
-        sequence.reserve(sequence.size() + 1);
-        sequence.push_back('N');
-    }
-    
-    auto n_shift_map = tandem::collapse(sequence, 'N');
-    auto maximal_repetitions = tandem::extract_exact_tandem_repeats(sequence , min_repeat_size, max_repeat_size);
-    tandem::rebase(maximal_repetitions, n_shift_map);
-    n_shift_map.clear();
-    
-    std::vector<TandemRepeat> result {};
-    result.reserve(maximal_repetitions.size());
-    
-    auto offset = region.begin();
-    for (const auto& run : maximal_repetitions) {
-        result.emplace_back(GenomicRegion {region.contig_name(),
-            static_cast<GenomicRegion::Size>(run.pos + offset),
-            static_cast<GenomicRegion::Size>(run.pos + run.length + offset)
-        }, run.period);
     }
     
     return result;

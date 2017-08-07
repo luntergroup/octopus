@@ -37,7 +37,6 @@ set(CONCEPTS_SOURCES
 set(BASICS_SOURCES
     basics/contig_region.hpp
     basics/genomic_region.hpp
-
     basics/phred.hpp
     basics/cigar_string.hpp
     basics/cigar_string.cpp
@@ -45,7 +44,12 @@ set(BASICS_SOURCES
     basics/aligned_read.cpp
     basics/mappable_reference_wrapper.hpp
     basics/ploidy_map.hpp
-    basics/ploidy_map.cpp)
+    basics/ploidy_map.cpp
+    basics/pedigree.hpp
+    basics/pedigree.cpp
+    basics/trio.hpp
+    basics/trio.cpp
+)
 
 set(CONTAINERS_SOURCES
     containers/mappable_flat_multi_set.hpp
@@ -79,6 +83,9 @@ set(IO_SOURCES
 
     io/region/region_parser.hpp
     io/region/region_parser.cpp
+
+    io/pedigree/pedigree_reader.hpp
+    io/pedigree/pedigree_reader.cpp
 
     io/read/htslib_sam_facade.hpp
     io/read/htslib_sam_facade.cpp
@@ -142,7 +149,6 @@ set(UTILS_SOURCES
     utils/read_algorithms.cpp
     utils/read_stats.hpp
     utils/read_stats.cpp
-    utils/sequence_complexity.hpp
     utils/sequence_utils.hpp
     utils/string_utils.hpp
     utils/string_utils.cpp
@@ -157,6 +163,8 @@ set(UTILS_SOURCES
     utils/memory_footprint.hpp
     utils/memory_footprint.cpp
     utils/emplace_iterator.hpp
+    utils/repeat_finder.hpp
+    utils/repeat_finder.cpp
 )
 
 set(CORE_SOURCES
@@ -174,27 +182,29 @@ set(CORE_SOURCES
     core/callers/population_caller.cpp
     core/callers/trio_caller.hpp
     core/callers/trio_caller.cpp
-    
-    core/callers/utils/call_types.hpp
-    core/callers/utils/call.hpp
-    core/callers/utils/call.cpp
-    core/callers/utils/germline_variant_call.hpp
-    core/callers/utils/germline_variant_call.cpp
-    core/callers/utils/reference_call.hpp
-    core/callers/utils/reference_call.cpp
-    core/callers/utils/somatic_call.hpp
-    core/callers/utils/somatic_call.cpp
-    core/callers/utils/variant_call.hpp
-    core/callers/utils/variant_call.cpp
-    core/callers/utils/denovo_call.hpp
-    core/callers/utils/denovo_call.cpp
-    core/callers/utils/vcf_header_factory.hpp
-    core/callers/utils/vcf_header_factory.cpp
-    core/callers/utils/vcf_record_factory.hpp
-    core/callers/utils/vcf_record_factory.cpp
 
-    core/csr/facets/facet.hpp
-    core/csr/facets/facet.cpp
+    core/types/calls/call_types.hpp
+    core/types/calls/call.hpp
+    core/types/calls/call.cpp
+    core/types/calls/germline_variant_call.hpp
+    core/types/calls/germline_variant_call.cpp
+    core/types/calls/reference_call.hpp
+    core/types/calls/reference_call.cpp
+    core/types/calls/somatic_call.hpp
+    core/types/calls/somatic_call.cpp
+    core/types/calls/variant_call.hpp
+    core/types/calls/variant_call.cpp
+    core/types/calls/denovo_call.hpp
+    core/types/calls/denovo_call.cpp
+    core/types/calls/denovo_reference_reversion_call.hpp
+    core/types/calls/denovo_reference_reversion_call.cpp
+    core/types/calls/call_wrapper.hpp
+    core/types/calls/call_wrapper.cpp
+    core/tools/vcf_header_factory.hpp
+    core/tools/vcf_header_factory.cpp
+    core/tools/vcf_record_factory.hpp
+    core/tools/vcf_record_factory.cpp
+    
     core/csr/facets/read_assignment.hpp
     core/csr/facets/read_assignment.cpp
     
@@ -243,6 +253,7 @@ set(CORE_SOURCES
     core/models/genotype/population_prior_model.hpp
     core/models/genotype/uniform_population_prior_model.hpp
     core/models/genotype/coalescent_population_prior_model.hpp
+    core/models/genotype/coalescent_population_prior_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
@@ -251,10 +262,18 @@ set(CORE_SOURCES
 
     core/models/mutation/hiseq_indel_error_model.hpp
     core/models/mutation/hiseq_indel_error_model.cpp
+    core/models/mutation/x10_indel_error_model.hpp
+    core/models/mutation/x10_indel_error_model.cpp
     core/models/mutation/indel_error_model.hpp
     core/models/mutation/indel_error_model.cpp
     core/models/mutation/snv_error_model.hpp
     core/models/mutation/snv_error_model.cpp
+    core/models/mutation/hiseq_snv_error_model.hpp
+    core/models/mutation/hiseq_snv_error_model.cpp
+    core/models/mutation/x10_snv_error_model.hpp
+    core/models/mutation/x10_snv_error_model.cpp
+    core/models/mutation/error_model_factory.hpp
+    core/models/mutation/error_model_factory.cpp
     core/models/mutation/somatic_mutation_model.hpp
     core/models/mutation/somatic_mutation_model.cpp
     core/models/mutation/coalescent_model.hpp
@@ -297,7 +316,9 @@ set(CORE_SOURCES
     core/tools/vargen/utils/assembler.cpp
     core/tools/vargen/utils/global_aligner.hpp
     core/tools/vargen/utils/global_aligner.cpp
-    
+    core/tools/vargen/utils/assembler_active_region_generator.hpp
+    core/tools/vargen/utils/assembler_active_region_generator.cpp
+
     core/types/allele.hpp
     core/types/allele.cpp
     core/types/cancer_genotype.hpp
@@ -306,10 +327,6 @@ set(CORE_SOURCES
     core/types/genotype.cpp
     core/types/haplotype.hpp
     core/types/haplotype.cpp
-    core/types/pedigree.hpp
-    core/types/pedigree.cpp
-    core/types/trio.hpp
-    core/types/trio.cpp
     core/types/variant.hpp
     core/types/variant.cpp
 
@@ -342,6 +359,8 @@ set(OCTOPUS_SOURCES
 set(INCLUDE_SOURCES
     ${octopus_SOURCE_DIR}/lib/bioio.hpp
     ${octopus_SOURCE_DIR}/lib/tandem/tandem.hpp
+    ${octopus_SOURCE_DIR}//lib/ksp/custom_dijkstra_call.hpp
+    ${octopus_SOURCE_DIR}//lib/ksp/yen_ksp.hpp
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
@@ -382,13 +401,13 @@ if (BUILD_TESTING)
         target_link_libraries (Octopus ${Boost_LIBRARIES})
     endif (Boost_FOUND)
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
-    find_package (HTSlib 1.3.1 REQUIRED)
+    find_package (HTSlib 1.4 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (Octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (Octopus ${HTSlib_LIBRARIES})
     endif (HTSlib_FOUND)
 elseif (CMAKE_BUILD_TYPE MATCHES Debug)
-    add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
+    add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES} utils/repeat_finder.cpp)
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
    if (CMAKE_COMPILER_IS_GNUCXX)
        target_compile_options(octopus-debug PRIVATE -Wall -Wextra -Wextra ${WarningIgnores} -pedantic)
@@ -397,14 +416,20 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
    endif()
     target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus-debug tandem)
-    target_compile_definitions(octopus-debug PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    if (USE_STATIC_BOOST)
+        message(STATUS "Linking against boost static libraries")
+        set(Boost_USE_STATIC_LIBS ON)
+    else()
+        message(STATUS "Linking against boost dynamic libraries")
+        target_compile_definitions(octopus-debug PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    endif()
     find_package (Boost 1.58 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (octopus-debug PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (octopus-debug ${Boost_LIBRARIES})
     endif (Boost_FOUND)
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
-    find_package (HTSlib 1.3.1 REQUIRED)
+    find_package (HTSlib 1.4 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (octopus-debug PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
@@ -417,18 +442,24 @@ else()
     if (CMAKE_COMPILER_IS_GNUCXX)
         target_compile_options(octopus PRIVATE -Wall -Wextra -pedantic ${WarningIgnores} -ffast-math -fno-tree-slp-vectorize)
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(octopus PRIVATE -Wall -Wextra ${WarningIgnores} -ffast-math)
+        target_compile_options(octopus PRIVATE -Wall -Wextra ${WarningIgnores} -Werror -ffast-math)
     endif()
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus tandem)
-    target_compile_definitions(octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    if (USE_STATIC_BOOST)
+        message(STATUS "Linking against boost static libraries")
+        set(Boost_USE_STATIC_LIBS ON)
+    else()
+        message(STATUS "Linking against boost dynamic libraries")
+        target_compile_definitions(octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    endif()
     find_package (Boost 1.58 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (octopus PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (octopus ${Boost_LIBRARIES})
     endif (Boost_FOUND)
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
-    find_package (HTSlib 1.3.1 REQUIRED)
+    find_package (HTSlib 1.4 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (octopus ${HTSlib_LIBRARIES})

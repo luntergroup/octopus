@@ -22,8 +22,23 @@ ReadPipe::ReadPipe(const ReadManager& manager, std::vector<SampleName> samples)
 ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer transformer, ReadFilterer filterer,
                    boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
 : manager_ {manager}
-, transformer_ {std::move(transformer)}
+, prefilter_transformer_ {std::move(transformer)}
 , filterer_ {std::move(filterer)}
+, postfilter_transformer_ {}
+, downsampler_ {std::move(downsampler)}
+, samples_ {std::move(samples)}
+, debug_log_ {}
+{
+    if (DEBUG_MODE) debug_log_ = logging::DebugLogger {};
+}
+
+ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer prefilter_transformer,
+                   ReadFilterer filterer, ReadTransformer postfilter_transformer,
+                   boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
+: manager_ {manager}
+, prefilter_transformer_ {std::move(prefilter_transformer)}
+, filterer_ {std::move(filterer)}
+, postfilter_transformer_ {std::move(postfilter_transformer)}
 , downsampler_ {std::move(downsampler)}
 , samples_ {std::move(samples)}
 , debug_log_ {}
@@ -34,9 +49,7 @@ ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer transformer, Read
 std::vector<std::vector<SampleName>> batch_samples(std::vector<SampleName> samples)
 {
     std::vector<std::vector<SampleName>> result {};
-    
     result.emplace_back(std::move(samples)); // TODO: find a better strategy for this
-    
     return result;
 }
 
@@ -56,6 +69,21 @@ const std::vector<SampleName>& ReadPipe::samples() const noexcept
 }
 
 namespace {
+
+template <typename Map>
+void sort_each(Map& reads)
+{
+    for (auto& p : reads) {
+        std::sort(std::begin(p.second), std::end(p.second));
+    }
+}
+
+auto fetch_batch(const ReadManager& rm, const std::vector<SampleName>& samples, const GenomicRegion& region)
+{
+    auto result = rm.fetch_reads(samples, region);
+    sort_each(result);
+    return result;
+}
 
 template <typename Container>
 void move_construct(Container&& src, ReadMap::mapped_type& dst)
@@ -98,22 +126,16 @@ void shrink_to_fit(ReadMap& reads)
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
 {
     using namespace readpipe;
-    
     ReadMap result {samples_.size()};
     for (const auto& sample : samples_) {
         result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
     }
-    
     for (const auto& batch : batch_samples(samples_)) {
-        auto batch_reads = manager_.get().fetch_reads(batch, region);
-        
+        auto batch_reads = fetch_batch(manager_, batch, region);
         if (debug_log_) {
             stream(*debug_log_) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
         }
-        
-        // transforms should be done first as they may affect which reads are filtered
-        transform_reads(batch_reads, transformer_);
-        
+        transform_reads(batch_reads, prefilter_transformer_);
         if (debug_log_) {
             SampleFilterCountMap<SampleName, decltype(filterer_)> filter_counts {};
             filter_counts.reserve(samples_.size());
@@ -136,12 +158,13 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
         } else {
             erase_filtered_reads(batch_reads, filter(batch_reads, filterer_));
         }
-        
+        if (postfilter_transformer_) {
+            transform_reads(batch_reads, *postfilter_transformer_);
+        }
         if (debug_log_) {
             stream(*debug_log_) << "There are " << count_reads(batch_reads) << " reads in " << region
                             << " after filtering";
         }
-        
         if (downsampler_) {
             auto reads = make_mappable_map(std::move(batch_reads));
             const auto n = downsample(reads, *downsampler_);
@@ -151,32 +174,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
             insert_each(std::move(batch_reads), result);
         }
     }
-    
     shrink_to_fit(result); // TODO: should we make this conditional on extra capacity?
-    
-    return result;
-}
-
-std::vector<GenomicRegion> join_close_regions(const std::vector<GenomicRegion>& regions,
-                                              const GenomicRegion::Size max_distance)
-{
-    std::vector<GenomicRegion> result {};
-    if (regions.empty()) return result;
-    result.reserve(regions.size());
-    auto tmp = regions.front();
-    
-    std::for_each(std::next(std::cbegin(regions)), std::cend(regions),
-                  [&tmp, &result, max_distance] (const auto& region) {
-                      if (static_cast<GenomicRegion::Size>(inner_distance(tmp, region)) <= max_distance) {
-                          tmp = encompassing_region(tmp, region);
-                      } else {
-                          result.push_back(tmp);
-                          tmp = region;
-                      }
-                  });
-    
-    result.push_back(std::move(tmp));
-    assert(contains(encompassing_region(result), encompassing_region(regions)));
     return result;
 }
 
@@ -185,7 +183,7 @@ ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
     assert(std::is_sorted(std::cbegin(regions), std::cend(regions)));
     
     const auto covered_regions = extract_covered_regions(regions);
-    const auto fetch_regions = join_close_regions(covered_regions, 10000);
+    const auto fetch_regions = join(covered_regions, 10000);
     
     ReadMap result {samples_.size()};
     const auto total_fetch_bp = sum_region_sizes(fetch_regions);

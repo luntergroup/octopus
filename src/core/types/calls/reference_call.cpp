@@ -17,6 +17,11 @@ const Allele& ReferenceCall::reference() const noexcept
     return reference_;
 }
 
+bool ReferenceCall::is_represented(const Allele& allele) const noexcept
+{
+    return allele == reference_;
+}
+
 void ReferenceCall::replace_called_alleles(const char old_base, const char replacement_base)
 {
     const auto& ref_sequence = reference_.sequence();
@@ -45,6 +50,11 @@ void ReferenceCall::replace_uncalled_genotype_alleles(const Allele& replacement,
 void ReferenceCall::decorate(VcfRecord::Builder& record) const
 {
     
+}
+
+std::unique_ptr<Call> ReferenceCall::do_clone() const
+{
+    return std::make_unique<ReferenceCall>(*this);
 }
 
 } // namespace octopus

@@ -26,8 +26,8 @@
 #include "core/models/genotype/uniform_population_prior_model.hpp"
 #include "core/models/genotype/coalescent_population_prior_model.hpp"
 #include "logging/logging.hpp"
-#include "utils/germline_variant_call.hpp"
-#include "utils/reference_call.hpp"
+#include "core/types/calls/germline_variant_call.hpp"
+#include "core/types/calls/reference_call.hpp"
 
 namespace octopus {
 
@@ -461,9 +461,9 @@ auto call_genotypes(const std::vector<SampleName>& samples,
         std::vector<GenotypeCall> region_calls {};
         region_calls.reserve(samples.size());
         for (std::size_t s {0}; s < samples.size(); ++s) {
-            auto spliced_genotype = splice<Allele>(genotype_calls[s], region);
-            const auto posterior = marginalise(spliced_genotype, genotype_posteriors[samples[s]]);
-            region_calls.push_back({std::move(spliced_genotype), posterior});
+            auto genotype_chunk = copy<Allele>(genotype_calls[s], region);
+            const auto posterior = marginalise(genotype_chunk, genotype_posteriors[samples[s]]);
+            region_calls.push_back({std::move(genotype_chunk), posterior});
         }
         result.push_back(std::move(region_calls));
     }

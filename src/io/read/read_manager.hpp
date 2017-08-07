@@ -55,6 +55,7 @@ public:
     
     unsigned num_samples() const noexcept;
     const std::vector<SampleName>& samples() const;
+    unsigned drop_samples(std::vector<SampleName> samples);
     
     bool has_reads(const SampleName& sample, const GenomicRegion& region) const;
     bool has_reads(const std::vector<SampleName>& samples, const GenomicRegion& region) const;
@@ -106,6 +107,7 @@ private:
     void open_initial_files();
     
     ReadReader make_reader(const Path& reader_path) const;
+    bool all_readers_are_open() const noexcept;
     bool is_open(const Path& reader_path) const noexcept;
     std::vector<Path>::iterator partition_open(std::vector<Path>& reader_paths) const;
     unsigned num_open_readers() const noexcept;
@@ -113,6 +115,7 @@ private:
     void open_reader(const Path& reader_path) const;
     std::vector<Path>::iterator open_readers(std::vector<Path>::iterator first,
                                              std::vector<Path>::iterator last) const;
+    void open_readers(unsigned n) const;
     void close_reader(const Path& reader_path) const;
     Path choose_reader_to_close() const;
     void close_readers(unsigned n) const;

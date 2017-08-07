@@ -66,6 +66,8 @@ public:
     
     virtual ~Call() = default;
     
+    std::unique_ptr<Call> clone() const;
+    
     Phred<double> quality() const noexcept;
     
     GenotypeCall& get_genotype_call(const SampleName& sample);
@@ -79,6 +81,8 @@ public:
     
     virtual const Allele& reference() const noexcept = 0;
     
+    virtual bool is_represented(const Allele& allele) const noexcept = 0;
+    
     void replace(char old_base, char replacement_base);
     
     virtual void replace(const Allele& old, Allele replacement) = 0;
@@ -88,6 +92,8 @@ public:
     virtual bool parsimonise(const ReferenceGenome& reference) { return false; };
     
     virtual void decorate(VcfRecord::Builder& record) const = 0;
+    
+    virtual bool requires_model_evaluation() const noexcept { return false; };
     
     void set_model_posterior(Phred<double> p) noexcept;
     
@@ -101,6 +107,7 @@ protected:
     boost::optional<Phred<double>> model_posterior_;
     
 private:
+    virtual std::unique_ptr<Call> do_clone() const = 0;
     virtual void replace_called_alleles(const char old_base, const char replacement_base) = 0;
 };
 

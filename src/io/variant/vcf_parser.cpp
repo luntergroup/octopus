@@ -21,11 +21,7 @@ template <char Delim>
 struct Token
 {
     std::string data;
-    
-    operator std::string() const
-    {
-        return data;
-    }
+    operator std::string() const { return data; }
 };
 
 template <char Delim>
@@ -62,9 +58,7 @@ std::size_t VcfParser::count_records() const
 {
     const auto result = std::count_if(std::istreambuf_iterator<char>(file_), std::istreambuf_iterator<char>(),
                                       [] (char c) { return c == '\n'; });
-    
     reset_vcf();
-    
     return result;
 }
 
@@ -72,9 +66,7 @@ std::size_t VcfParser::count_records(const std::string& contig) const
 {
     const auto result = std::count_if(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                                       [&contig] (const auto& line) { return is_same_contig(line, contig); });
-    
     reset_vcf();
-    
     return result;
 }
 
@@ -82,9 +74,7 @@ std::size_t VcfParser::count_records(const GenomicRegion& region) const
 {
     const auto result = std::count_if(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                                       [&region] (const auto& line) { return overlaps(line, region); });
-    
     reset_vcf();
-    
     return result;
 }
 
@@ -97,75 +87,58 @@ VcfParser::RecordIteratorPtrPair VcfParser::iterate(UnpackPolicy level) const
 
 VcfParser::RecordIteratorPtrPair VcfParser::iterate(const std::string& contig, UnpackPolicy level) const
 {
-    // TODO
     reset_vcf();
-    return std::make_pair(std::make_unique<RecordIterator>(*this, level),
+    return std::make_pair(std::make_unique<RecordIterator>(*this, level, contig),
                           std::make_unique<RecordIterator>());
 }
 
 VcfParser::RecordIteratorPtrPair VcfParser::iterate(const GenomicRegion& region, const UnpackPolicy level) const
 {
-    // TODO
     reset_vcf();
-    return std::make_pair(std::make_unique<RecordIterator>(*this, level),
+    return std::make_pair(std::make_unique<RecordIterator>(*this, level, region),
                           std::make_unique<RecordIterator>());
 }
 
 VcfParser::RecordContainer VcfParser::fetch_records(const UnpackPolicy level) const
 {
     RecordContainer result {};
-    
     result.reserve(count_records());
-    
     bool unpack_all {level == UnpackPolicy::all};
-    
     std::transform(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                    std::back_inserter(result), [this, unpack_all] (const auto& line) {
                        return (unpack_all) ? parse_record(line, samples_) : parse_record(line);
                    });
-    
     reset_vcf();
-    
     return result;
 }
 
 VcfParser::RecordContainer VcfParser::fetch_records(const std::string& contig, const UnpackPolicy level) const
 {
     RecordContainer result {};
-    
     result.reserve(count_records(contig));
-    
     bool unpack_all {level == UnpackPolicy::all};
-    
     std::for_each(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                   [this, &result, &contig, unpack_all] (const auto& line) {
                       if (is_same_contig(line, contig)) {
                           result.push_back((unpack_all) ? parse_record(line, samples_) : parse_record(line));
                       }
                   });
-    
     reset_vcf();
-    
     return result;
 }
 
 VcfParser::RecordContainer VcfParser::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
 {
     RecordContainer result {};
-    
     result.reserve(count_records(region));
-    
     bool unpack_all {level == UnpackPolicy::all};
-    
     std::for_each(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                   [this, &result, &region, unpack_all] (const std::string& line) {
                       if (overlaps(line, region)) {
                           result.push_back((unpack_all) ? parse_record(line, samples_) : parse_record(line));
                       }
                   });
-    
     reset_vcf();
-    
     return result;
 }
 
@@ -187,9 +160,7 @@ using Field = Token<','>;
 std::istream& operator>>(std::istream& str, Field& field)
 {
     std::getline(str, field.data, ',');
-    
     auto pos = field.data.find_first_of('=');
-    
     if (pos != field.data.length() - 1 && field.data[pos + 1] == '"') {
         std::string s;
         while (field.data.back() != '"') {
@@ -197,7 +168,6 @@ std::istream& operator>>(std::istream& str, Field& field)
             field.data += s;
         }
     }
-    
     return str;
 }
 
@@ -219,7 +189,6 @@ void parse_basic_header_line(const std::string& line, VcfHeader::Builder& hb)
     if (std::count(line.cbegin(), line.cend(), '=') != 1) {
         throw std::runtime_error {"VCF header line " + line + " is incorrectly formatted"};
     }
-    
     auto pos = line.find_first_of('=');
     hb.add_basic_field(line.substr(2, pos - 2), line.substr(pos + 1));
 }
@@ -269,7 +238,6 @@ void parse_header_sample_names(const std::string& line, VcfHeader::Builder& hb)
 {
     std::istringstream ss {line};
     std::istream_iterator<Column> it {ss}, eos {};
-    
     std::advance(it, 8);
     if (it != eos) {
         std::advance(it, 1); // now on FORMAT
@@ -283,23 +251,17 @@ void parse_header_sample_names(const std::string& line, VcfHeader::Builder& hb)
 VcfHeader parse_header(std::ifstream& vcf_file)
 {
     vcf_file.seekg(0, std::ios::beg); // reset
-    
     VcfHeader::Builder hb {};
     std::string line;
     std::getline(vcf_file, line);
-    
     if (!is_header_meta_line(line)) {
         throw std::runtime_error {"the first line of a VCF file must be ##fileformat"};
     }
-    
     hb.set_file_format(line.substr(line.find_first_of('=') + 1));
-    
     while (std::getline(vcf_file, line) && is_header_meta_line(line)) {
         parse_header_meta_line(line, hb);
     }
-    
     parse_header_sample_names(line, hb); // last line is column names, including sample names
-    
     return hb.build_once();
 }
 
@@ -329,18 +291,15 @@ std::vector<std::string> split(const std::string& str, char delim = ',')
     std::string item;
     std::vector<std::string> result {};
     result.reserve(std::count(std::cbegin(str), std::cend(str), delim) + 1);
-    
     while (std::getline(ss, item, delim)) {
         result.emplace_back(item);
     }
-    
     return result;
 }
 
 void parse_info_field(const std::string& field, VcfRecord::Builder& rb)
 {
     const auto pos = field.find_first_of('=');
-    
     if (pos == std::string::npos) {
         rb.set_info_flag(field);
     } else {
@@ -398,13 +357,11 @@ void parse_sample(const std::string& column, const VcfRecord::SampleName& sample
     auto first_key = std::cbegin(format);
     std::istringstream ss {column};
     std::istream_iterator<SampleField> first_value {ss};
-    
     if (format.front() == "GT") { // GT must always come first, if present
         parse_genotype(sample, *first_value, rb);
         ++first_key;
         ++first_value;
     }
-    
     std::for_each(first_value, std::istream_iterator<SampleField> {},
                   [&rb, &sample, &first_key] (const std::string& value) {
                       rb.set_format(sample, *first_key, split(value, ','));
@@ -466,9 +423,10 @@ VcfParser::RecordIterator::RecordIterator(const VcfParser& vcf, UnpackPolicy unp
 : parent_vcf_ {&vcf}
 , unpack_ {unpack}
 , local_ {vcf.file_path_.string()}
+, contig_ {}
+, region_ {}
 {
     local_.seekg(parent_vcf_->file_.tellg());
-    
     if (std::getline(local_, line_)) {
         if (unpack_ == UnpackPolicy::all) {
             record_ = std::make_shared<VcfRecord>(parse_record(line_, vcf.samples_));
@@ -480,13 +438,30 @@ VcfParser::RecordIterator::RecordIterator(const VcfParser& vcf, UnpackPolicy unp
     }
 }
 
+VcfParser::RecordIterator::RecordIterator(const VcfParser& vcf, UnpackPolicy unpack, std::string contig)
+: RecordIterator {vcf, unpack}
+{
+    contig_ = std::move(contig);
+    if (record_ && record_->chrom() != *contig_) {
+        next();
+    }
+}
+
+VcfParser::RecordIterator::RecordIterator(const VcfParser& vcf, UnpackPolicy unpack, GenomicRegion region)
+: RecordIterator {vcf, unpack}
+{
+    region_ = std::move(region);
+    if (record_ && !overlaps(*record_, *region_)) {
+        next();
+    }
+}
+
 VcfParser::RecordIterator::RecordIterator(const RecordIterator& other)
 : parent_vcf_ {other.parent_vcf_}
 , unpack_ {other.unpack_}
 , local_ {parent_vcf_->file_path_.string()}
 {
     local_.seekg(parent_vcf_->file_.tellg());
-    
     if (std::getline(local_, line_)) {
         if (unpack_ == UnpackPolicy::all) {
             record_ = std::make_shared<VcfRecord>(parse_record(line_, parent_vcf_->samples_));
@@ -519,12 +494,18 @@ VcfParser::RecordIterator::pointer VcfParser::RecordIterator::operator->() const
 
 void VcfParser::RecordIterator::next()
 {
-    if (std::getline(local_, line_) && !line_.empty()) {
+    while (std::getline(local_, line_) && !line_.empty()) {
         if (unpack_ == UnpackPolicy::all) {
             *record_ = parse_record(line_, parent_vcf_->samples_);
         } else {
             *record_ = parse_record(line_);
         }
+        if (region_) {
+            if (!overlaps(*record_, *region_)) continue;
+        } else if (contig_) {
+            if (record_->chrom() != *contig_) continue;
+        }
+        break;
     }
 }
 

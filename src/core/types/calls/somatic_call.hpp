@@ -46,8 +46,12 @@ public:
     
     virtual void decorate(VcfRecord::Builder& record) const override;
     
+    virtual bool requires_model_evaluation() const noexcept override { return true; }
+    
 protected:
     std::unordered_map<SampleName, GenotypeCredibleRegions> credible_regions_;
+private:
+    virtual std::unique_ptr<Call> do_clone() const override;
 };
 
 template <typename V, typename C>
@@ -67,12 +71,10 @@ SomaticCall::SomaticCall(V&& variant,
             variant_.alt_allele()
         };
     }
-    
     genotype_calls_.reserve(credible_regions_.size()); // num samples
-    
     for (const auto& p : credible_regions_) {
         if (p.second.somatic) {
-            genotype_calls_.emplace(p.first, GenotypeCall {convert(genotype_call), genotype_posterior});
+            genotype_calls_.emplace(p.first, GenotypeCall {demote(genotype_call), genotype_posterior});
         } else {
             genotype_calls_.emplace(p.first, GenotypeCall {genotype_call.germline_genotype(), genotype_posterior});
         }

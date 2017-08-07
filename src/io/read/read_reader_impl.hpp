@@ -23,7 +23,7 @@ public:
     using SampleName      = std::string;
     using ReadContainer   = std::vector<AlignedRead>;
     using SampleReadMap   = std::unordered_map<SampleName, ReadContainer>;
-    using CoveragePair    = std::pair<GenomicRegion, std::vector<unsigned>>;
+    using PositionList    = std::vector<GenomicRegion::Position>;
     
     virtual ~IReadReaderImpl() noexcept = default;
     
@@ -46,14 +46,14 @@ public:
     virtual std::size_t count_reads(const std::vector<SampleName>& sample,
                                     const GenomicRegion& region) const = 0;
     
-    virtual CoveragePair find_covered_subregion(const GenomicRegion& region,
-                                                std::size_t max_coverage) const = 0;
-    virtual CoveragePair find_covered_subregion(const SampleName& sample,
+    virtual PositionList extract_read_positions(const GenomicRegion& region,
+                                                std::size_t max_reads) const = 0;
+    virtual PositionList extract_read_positions(const SampleName& sample,
                                                 const GenomicRegion& region,
-                                                std::size_t max_coverage) const = 0;
-    virtual CoveragePair find_covered_subregion(const std::vector<SampleName>& samples,
+                                                std::size_t max_reads) const = 0;
+    virtual PositionList extract_read_positions(const std::vector<SampleName>& samples,
                                                 const GenomicRegion& region,
-                                                std::size_t max_coverage) const = 0;
+                                                std::size_t max_reads) const = 0;
     
     virtual SampleReadMap fetch_reads(const GenomicRegion& region) const = 0;
     virtual ReadContainer fetch_reads(const SampleName& sample,

@@ -21,7 +21,7 @@ HasValidBaseQualities::HasValidBaseQualities(std::string name) : BasicReadFilter
 
 bool HasValidBaseQualities::passes(const AlignedRead& read) const noexcept
 {
-    return read.sequence().size() == read.qualities().size();
+    return read.sequence().size() == read.base_qualities().size();
 }
 
 IsNotSecondaryAlignment::IsNotSecondaryAlignment()
@@ -77,7 +77,7 @@ HasSufficientGoodBaseFraction::HasSufficientGoodBaseFraction(std::string name,
 
 bool HasSufficientGoodBaseFraction::passes(const AlignedRead& read) const noexcept
 {
-    const auto& qualities = read.qualities();
+    const auto& qualities = read.base_qualities();
     auto num_good_bases = std::count_if(std::cbegin(qualities), std::cend(qualities),
                                         [this] (const auto quality) {
                                             return quality >= good_base_quality_;
@@ -99,7 +99,7 @@ HasSufficientGoodQualityBases::HasSufficientGoodQualityBases(std::string name,
 
 bool HasSufficientGoodQualityBases::passes(const AlignedRead& read) const noexcept
 {
-    const auto& qualities = read.qualities();
+    const auto& qualities = read.base_qualities();
     return std::count_if(std::cbegin(qualities), std::cend(qualities), [this]
                          (const auto quality) {
                              return quality >= good_base_quality_;

@@ -10,6 +10,8 @@
 #include <fstream>
 #include <functional>
 
+#include <boost/optional.hpp>
+
 #include "exceptions/user_error.hpp"
 #include "utils/string_utils.hpp"
 
@@ -18,7 +20,6 @@ namespace octopus { namespace io {
 class MalformedRegion : public UserError
 {
     std::string do_where() const override { return "parse_region"; }
-    
     std::string do_why() const override
     {
         std::ostringstream ss {};
@@ -28,7 +29,6 @@ class MalformedRegion : public UserError
         ss << why_;
         return ss.str();
     }
-    
     std::string do_help() const override
     {
         return "ensure the region is in the format contig[:begin][-][end]";
@@ -50,12 +50,10 @@ public:
 class MissingReferenceContig : public UserError
 {
     std::string do_where() const override { return "parse_region"; }
-    
     std::string do_why() const override
     {
         return "the region you specified '" + region_ + "' refers to a contig not in the reference " + reference_;
     }
-    
     std::string do_help() const override
     {
         return "ensure the region is in the format contig[:begin][-][end], where contig refers to"
@@ -129,11 +127,9 @@ struct Line
 std::istream& operator>>(std::istream& is, Line& data)
 {
     std::getline(is, data.line_data);
-    
     if (!data.line_data.empty() && data.line_data.back() == '\r') {
         data.line_data.pop_back();
     }
-    
     return is;
 }
 
@@ -150,18 +146,16 @@ void seek_past_bed_header(std::ifstream& file)
 auto open(const boost::filesystem::path& file)
 {
     std::ifstream result {file.string()};
-    
     if (is_bed_file(file)) {
         seek_past_bed_header(result);
     }
-    
     return result;
 }
 
 bool is_valid_bed_record(const std::string& line)
 {
     constexpr static char bedDelim {'\t'};
-    return std::count(std::cbegin(line), std::cend(line), bedDelim) >= 3;
+    return std::count(std::cbegin(line), std::cend(line), bedDelim) >= 2;
 }
 
 std::string convert_bed_line_to_region_str(const std::string& bed_line)
@@ -175,7 +169,7 @@ std::string convert_bed_line_to_region_str(const std::string& bed_line)
 }
 
 std::function<GenomicRegion(const std::string&)>
-make_region_line_parser(const boost::filesystem::path& file, const ReferenceGenome& reference)
+make_throwing_region_line_parser(const boost::filesystem::path& file, const ReferenceGenome& reference)
 {
     if (is_bed_file(file)) {
         return [&] (const std::string& line) -> GenomicRegion
@@ -190,15 +184,51 @@ make_region_line_parser(const boost::filesystem::path& file, const ReferenceGeno
     }
 }
 
+std::function<boost::optional<GenomicRegion>(const std::string&)>
+make_optional_region_line_parser(const boost::filesystem::path& file, const ReferenceGenome& reference)
+{
+    if (is_bed_file(file)) {
+        return [&] (const std::string& line) -> boost::optional<GenomicRegion>
+        {
+            try {
+                return parse_region(convert_bed_line_to_region_str(line), reference);
+            } catch (const MissingReferenceContig&) {
+                return boost::none;
+            }
+        };
+    } else {
+        return [&] (const std::string& line) -> boost::optional<GenomicRegion>
+        {
+            try {
+                return parse_region(line, reference);
+            } catch (const MissingReferenceContig&) {
+                return boost::none;
+            }
+        };
+    }
+}
+
 } // namespace
 
 std::deque<GenomicRegion> extract_regions(const boost::filesystem::path& file,
-                                          const ReferenceGenome& reference)
+                                          const ReferenceGenome& reference,
+                                          const NonreferenceContigPolicy policy)
 {
     auto stream = open(file);
     std::deque<GenomicRegion> result {};
-    std::transform(std::istream_iterator<Line>(stream), std::istream_iterator<Line>(),
-                   std::back_inserter(result), make_region_line_parser(file, reference));
+    if (policy == NonreferenceContigPolicy::exception) {
+        std::transform(std::istream_iterator<Line>(stream), std::istream_iterator<Line>(),
+                       std::back_inserter(result), make_throwing_region_line_parser(file, reference));
+    } else {
+        std::deque<boost::optional<GenomicRegion>> filtered_results {};
+        std::transform(std::istream_iterator<Line>(stream), std::istream_iterator<Line>(),
+                       std::back_inserter(filtered_results), make_optional_region_line_parser(file, reference));
+        for (const auto& region : filtered_results) {
+            if (region) {
+                result.push_back(std::move(*region));
+            }
+        }
+    }
     result.shrink_to_fit();
     return result;
 }

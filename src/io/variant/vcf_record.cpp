@@ -622,6 +622,11 @@ VcfRecord::Builder& VcfRecord::Builder::set_denovo()
     return this->set_info_flag("DENOVO");
 }
 
+VcfRecord::Builder& VcfRecord::Builder::set_reference_reversion()
+{
+    return this->set_info_flag("REVERSION");
+}
+
 GenomicRegion::Position VcfRecord::Builder::pos() const noexcept
 {
     return pos_;

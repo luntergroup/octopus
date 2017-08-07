@@ -79,16 +79,14 @@ public:
     
     AlignedRead() = default;
     
-    template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
-    AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                Qualities_&& qualities, CigarString_&& cigar,
-                MappingQuality mapping_quality, const Flags& flags);
+    template <typename String_, typename GenomicRegion_, typename Seq_, typename Qualities_, typename CigarString_>
+    AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq_&& sequence, Qualities_&& qualities,
+                CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags);
     
-    template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
+    template <typename String1_, typename GenomicRegion_, typename Seq_, typename Qualities_, typename CigarString_,
               typename String2_>
-    AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                Qualities_&& qualities, CigarString_&& cigar,
-                MappingQuality mapping_quality, Flags flags,
+    AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq_&& sequence, Qualities_&& qualities,
+                CigarString_&& cigar, MappingQuality mapping_quality, Flags flags,
                 String2_&& next_segment_contig_name, MappingDomain::Position next_segment_begin,
                 MappingDomain::Size inferred_template_length,
                 const Segment::Flags& next_segment_flags);
@@ -104,7 +102,9 @@ public:
     const std::string& read_group() const noexcept;
     const GenomicRegion& mapped_region() const noexcept;
     const NucleotideSequence& sequence() const noexcept;
-    const BaseQualityVector& qualities() const noexcept;
+    NucleotideSequence& sequence() noexcept;
+    const BaseQualityVector& base_qualities() const noexcept;
+    BaseQualityVector& base_qualities() noexcept;
     MappingQuality mapping_quality() const noexcept;
     const CigarString& cigar() const noexcept;
     bool has_other_segment() const noexcept;
@@ -120,19 +120,15 @@ public:
     bool is_marked_duplicate() const noexcept;
     bool is_marked_supplementary_alignment() const noexcept;
     
-    void capitalise_bases() noexcept;
-    void cap_qualities(BaseQuality max = 0) noexcept;
-    void cap_front_qualities(std::size_t num_bases, BaseQuality max = 0) noexcept;
-    void cap_back_qualities(std::size_t num_bases, BaseQuality max = 0) noexcept;
-    
 private:
     static constexpr std::size_t numFlags_ = 8;
     using FlagBits = std::bitset<numFlags_>;
     
     // should be ordered by sizeof
     GenomicRegion region_;
+    std::string name_;
     NucleotideSequence sequence_;
-    BaseQualityVector qualities_;
+    BaseQualityVector base_qualities_;
     CigarString cigar_;
     std::string read_group_;
     boost::optional<Segment> next_segment_;
@@ -163,13 +159,13 @@ struct AlignedRead::Flags
     bool last_template_segment;
 };
 
-template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
-AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                         Qualities_&& qualities, CigarString_&& cigar,
-                         MappingQuality mapping_quality, const Flags& flags)
+template <typename String_, typename GenomicRegion_, typename Seq, typename Qualities_, typename CigarString_>
+AlignedRead::AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq&& sequence, Qualities_&& qualities,
+                         CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags)
 : region_ {std::forward<GenomicRegion_>(reference_region)}
-, sequence_ {std::forward<String1_>(sequence)}
-, qualities_ {std::forward<Qualities_>(qualities)}
+, name_ {std::forward<String_>(name)}
+, sequence_ {std::forward<Seq>(sequence)}
+, base_qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
 , read_group_ {}
 , next_segment_ {}
@@ -177,18 +173,16 @@ AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
 , mapping_quality_ {mapping_quality}
 {}
 
-template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
+template <typename String1_, typename GenomicRegion_, typename Seq, typename Qualities_, typename CigarString_,
           typename String2_>
-AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                         Qualities_&& qualities, CigarString_&& cigar,
-                         MappingQuality mapping_quality, Flags flags,
-                         String2_&& next_segment_contig_name,
-                         MappingDomain::Position next_segment_begin,
-                         MappingDomain::Size inferred_template_length,
-                         const Segment::Flags& next_segment_flags)
+AlignedRead::AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq&& sequence, Qualities_&& qualities,
+                         CigarString_&& cigar, MappingQuality mapping_quality, Flags flags,
+                         String2_&& next_segment_contig_name, MappingDomain::Position next_segment_begin,
+                         MappingDomain::Size inferred_template_length, const Segment::Flags& next_segment_flags)
 : region_ {std::forward<GenomicRegion_>(reference_region)}
-, sequence_ {std::forward<String1_>(sequence)}
-, qualities_ {std::forward<Qualities_>(qualities)}
+, name_ {std::forward<String1_>(name)}
+, sequence_ {std::forward<Seq>(sequence)}
+, base_qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
 , read_group_ {}
 , next_segment_ {
@@ -201,7 +195,7 @@ AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
 
 template <typename String_>
 AlignedRead::Segment::Segment(String_&& contig_name, GenomicRegion::Position begin,
-                                      GenomicRegion::Size inferred_template_length, Flags data)
+                              GenomicRegion::Size inferred_template_length, Flags data)
 : contig_name_ {std::forward<String_>(contig_name)}
 , begin_ {begin}
 , inferred_template_length_ {inferred_template_length}
@@ -210,33 +204,43 @@ AlignedRead::Segment::Segment(String_&& contig_name, GenomicRegion::Position beg
 
 // Non-member methods
 
+void capitalise_bases(AlignedRead& read) noexcept;
+
+void cap_qualities(AlignedRead& read, AlignedRead::BaseQuality max = 0) noexcept;
+
+void set_front_qualities(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality value) noexcept;
+void zero_front_qualities(AlignedRead& read, std::size_t num_bases) noexcept;
+void set_back_qualities(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality value) noexcept;
+void zero_back_qualities(AlignedRead& read, std::size_t num_bases) noexcept;
+
 bool is_sequence_empty(const AlignedRead& read) noexcept;
 
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read) noexcept;
+AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read, const GenomicRegion& region);
 
-bool is_soft_clipped(const AlignedRead& read);
+bool is_soft_clipped(const AlignedRead& read) noexcept;
+bool is_front_soft_clipped(const AlignedRead& read) noexcept;
+bool is_back_soft_clipped(const AlignedRead& read) noexcept;
 
-std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const AlignedRead& read);
+std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const AlignedRead& read) noexcept;
 
 GenomicRegion clipped_mapped_region(const AlignedRead& read);
 
 // Returns the part of the read cigar string contained by the region
-CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region);
-
-ContigRegion::Size count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region);
+CigarString copy_cigar(const AlignedRead& read, const GenomicRegion& region);
     
-// Returns the part of the read (cigar, sequence, qualities) contained by the region
-AlignedRead splice(const AlignedRead& read, const GenomicRegion& region);
+// Returns the part of the read (cigar, sequence, base_qualities) contained by the region
+AlignedRead copy(const AlignedRead& read, const GenomicRegion& region);
 
-bool operator==(const AlignedRead& lhs, const AlignedRead& rhs);
-bool operator<(const AlignedRead& lhs, const AlignedRead& rhs);
+bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
+bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
 
 struct IsDuplicate
 {
-    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const;
+    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
 };
 
-bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs);
+bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept;
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector& qualities);
 std::ostream& operator<<(std::ostream& os, const AlignedRead& read);
@@ -249,31 +253,35 @@ struct ReadHash
 } // namespace octopus
 
 namespace std {
-    template <> struct hash<octopus::AlignedRead>
+
+template <> struct hash<octopus::AlignedRead>
+{
+    size_t operator()(const octopus::AlignedRead& read) const
     {
-        size_t operator()(const octopus::AlignedRead& read) const
-        {
-            return octopus::ReadHash()(read);
-        }
-    };
-    
-    template <> struct hash<reference_wrapper<const octopus::AlignedRead>>
+        return octopus::ReadHash()(read);
+    }
+};
+
+template <> struct hash<reference_wrapper<const octopus::AlignedRead>>
+{
+    size_t operator()(const reference_wrapper<const octopus::AlignedRead> read) const
     {
-        size_t operator()(const reference_wrapper<const octopus::AlignedRead> read) const
-        {
-            return hash<octopus::AlignedRead>()(read);
-        }
-    };
+        return hash<octopus::AlignedRead>()(read);
+    }
+};
+
 } // namespace std
 
 namespace boost {
-    template <> struct hash<octopus::AlignedRead> : std::unary_function<octopus::AlignedRead, std::size_t>
+
+template <> struct hash<octopus::AlignedRead> : std::unary_function<octopus::AlignedRead, std::size_t>
+{
+    std::size_t operator()(const octopus::AlignedRead& read) const
     {
-        std::size_t operator()(const octopus::AlignedRead& read) const
-        {
-            return std::hash<octopus::AlignedRead>()(read);
-        }
-    };
+        return std::hash<octopus::AlignedRead>()(read);
+    }
+};
+
 } // namespace boost
 
 #endif

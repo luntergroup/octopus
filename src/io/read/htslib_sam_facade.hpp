@@ -36,7 +36,7 @@ public:
     using IReadReaderImpl::SampleName;
     using IReadReaderImpl::ReadContainer;
     using IReadReaderImpl::SampleReadMap;
-    using IReadReaderImpl::CoveragePair;
+    using IReadReaderImpl::PositionList;
     
     using NucleotideSequence = AlignedRead::NucleotideSequence;
     
@@ -71,14 +71,14 @@ public:
     std::size_t count_reads(const std::vector<SampleName>& samples,
                             const GenomicRegion& region) const override;
     
-    CoveragePair find_covered_subregion(const GenomicRegion& region,
-                                        std::size_t max_coverage) const override;
-    CoveragePair find_covered_subregion(const SampleName& sample,
+    PositionList extract_read_positions(const GenomicRegion& region,
+                                        std::size_t max_reads) const override;
+    PositionList extract_read_positions(const SampleName& sample,
                                         const GenomicRegion& region,
-                                        std::size_t max_coverage) const override;
-    CoveragePair find_covered_subregion(const std::vector<SampleName>& samples,
+                                        std::size_t max_reads) const override;
+    PositionList extract_read_positions(const std::vector<SampleName>& samples,
                                         const GenomicRegion& region,
-                                        std::size_t max_coverage) const override;
+                                        std::size_t max_reads) const override;
     
     SampleReadMap fetch_reads(const GenomicRegion& region) const override;
     ReadContainer fetch_reads(const SampleName& sample,
@@ -161,6 +161,7 @@ private:
     HtsTid get_htslib_target(const GenomicRegion::ContigName& contig) const;
     const GenomicRegion::ContigName& get_contig_name(HtsTid target) const;
     std::uint64_t get_num_mapped_reads(const GenomicRegion::ContigName& contig) const;
+    ReadContainer fetch_all_reads(const GenomicRegion& region) const;
 };
 
 } // namespace io

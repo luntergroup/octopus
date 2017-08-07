@@ -73,11 +73,9 @@ fs::path resolve_path(const fs::path& path, const fs::path& working_directory)
         return expand_user_path(path); // must be a root path
     }
     if (fs::exists(path)) {
-        return path; // must be a root path
+        return fs::canonical(path); // must be a root path
     }
-
     const auto parent_dir = path.parent_path();
-
     if (fs::exists(parent_dir) && fs::is_directory(parent_dir)) {
         auto tmp = working_directory;
         tmp /= path;
@@ -87,7 +85,6 @@ fs::path resolve_path(const fs::path& path, const fs::path& working_directory)
         }
         return path; // must be yet-to-be-created root path
     }
-
     auto result = working_directory;
     result /= path;
     return result;

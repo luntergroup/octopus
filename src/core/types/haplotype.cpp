@@ -55,7 +55,7 @@ bool Haplotype::contains(const ContigAllele& allele) const
                 return allele.sequence() == fetch_reference_sequence(contig_region(allele));
             }
             const auto flank_region = left_overhang_region(explicit_allele_region_, contig_region(allele));
-            if (splice(allele, flank_region).sequence() != fetch_reference_sequence(flank_region)) {
+            if (copy(allele, flank_region).sequence() != fetch_reference_sequence(flank_region)) {
                 return false;
             }
         }
@@ -64,7 +64,7 @@ bool Haplotype::contains(const ContigAllele& allele) const
                 return allele.sequence() == fetch_reference_sequence(contig_region(allele));
             }
             const auto flank_region = right_overhang_region(contig_region(allele), explicit_allele_region_);
-            if (splice(allele, flank_region).sequence() != fetch_reference_sequence(flank_region)) {
+            if (copy(allele, flank_region).sequence() != fetch_reference_sequence(flank_region)) {
                 return false;
             }
         }
@@ -83,7 +83,7 @@ bool Haplotype::contains(const ContigAllele& allele) const
         }
         const auto overlapped = haplotype_overlap_range(explicit_alleles_, allele);
         if (overlapped.size() == 1 && contains(overlapped.front(), allele)) {
-            return allele == splice(overlapped.front(), contig_region(allele));
+            return allele == copy(overlapped.front(), contig_region(allele));
         }
         return sequence(allele.mapped_region()) == allele.sequence();
     }
@@ -137,66 +137,52 @@ bool is_in_reference_flank(const ContigRegion& region, const ContigRegion& expli
 
 Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) const
 {
-    using std::cbegin; using std::cend;
-    using octopus::contains;
-    
+    using std::cbegin; using std::cend; using octopus::contains;
     if (!contains(region_.contig_region(), region)) {
         throw std::out_of_range {"Haplotype: attempting to sequence from region not contained by Haplotype region"};
     }
-    
     if (explicit_alleles_.empty()) {
-        return sequence_.substr(begin_distance(region_.contig_region(), region),
-                                region_size(region));
+        return sequence_.substr(begin_distance(region_.contig_region(), region), region_size(region));
     }
     if (is_in_reference_flank(region, explicit_allele_region_, explicit_alleles_)) {
         return fetch_reference_sequence(region);
     }
-    
     NucleotideSequence result {};
     result.reserve(region_size(region)); // may be more or less depending on indels
-    
     if (begins_before(region, explicit_allele_region_)) {
         append_reference(result, left_overhang_region(region, explicit_allele_region_));
     }
-    
     auto overlapped_explicit_alleles = haplotype_overlap_range(explicit_alleles_, region);
-    
-    // known that !overlapped_explicit_alleles.empty()
-    
+    assert(!overlapped_explicit_alleles.empty());
     if (contains(overlapped_explicit_alleles.front(), region)) {
-        append(result, splice(overlapped_explicit_alleles.front(), region));
+        append(result, copy(overlapped_explicit_alleles.front(), region));
         overlapped_explicit_alleles.advance_begin(1);
-        if (!overlapped_explicit_alleles.empty() && is_insertion(overlapped_explicit_alleles.front())) {
+        if (!overlapped_explicit_alleles.empty() && is_empty_region(overlapped_explicit_alleles.front())) {
             append(result, overlapped_explicit_alleles.front());
         }
         return result;
     } else if (begins_before(overlapped_explicit_alleles.front(), region)) {
-        append(result, splice(overlapped_explicit_alleles.front(),
-                              *overlapped_region(overlapped_explicit_alleles.front(), region)));
+        append(result, copy(overlapped_explicit_alleles.front(),
+                            *overlapped_region(overlapped_explicit_alleles.front(), region)));
         overlapped_explicit_alleles.advance_begin(1);
         if (overlapped_explicit_alleles.empty()) {
             append_reference(result, right_overhang_region(region, explicit_allele_region_));
             return result;
         }
     }
-    
     bool region_ends_before_last_overlapped_allele {ends_before(region, overlapped_explicit_alleles.back())};
-    
     if (region_ends_before_last_overlapped_allele) {
         overlapped_explicit_alleles.advance_end(-1); // as we don't want all of the last allele
         region_ends_before_last_overlapped_allele = true;
     }
-    
     append(result, cbegin(overlapped_explicit_alleles), cend(overlapped_explicit_alleles));
-    
     if (region_ends_before_last_overlapped_allele) {
         overlapped_explicit_alleles.advance_end(1); // as we previously removed this allele
-        append(result, splice(overlapped_explicit_alleles.back(),
-                              *overlapped_region(overlapped_explicit_alleles.back(), region)));
+        append(result, copy(overlapped_explicit_alleles.back(),
+                            *overlapped_region(overlapped_explicit_alleles.back(), region)));
     } else if (ends_before(explicit_allele_region_, region)) {
         append_reference(result, right_overhang_region(region, explicit_allele_region_));
     }
-    
     return result;
 }
 
@@ -419,85 +405,65 @@ bool contains(const Haplotype& lhs, const Allele& rhs)
 
 bool contains(const Haplotype& lhs, const Haplotype& rhs)
 {
-    return contains(mapped_region(lhs), mapped_region(rhs))
-            && lhs.sequence(rhs.region_) == rhs.sequence();
+    return contains(mapped_region(lhs), mapped_region(rhs)) && lhs.sequence(rhs.region_) == rhs.sequence();
 }
 
 namespace detail {
 
-Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type)
+Haplotype do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type)
 {
     using std::end; using std::cbegin; using std::cend; using std::prev;
-    
     if (!is_same_contig(haplotype, region)) {
-        throw std::logic_error {"Haplotype: trying to splice region from different contig"};
+        throw std::logic_error {"Haplotype: trying to copy region from different contig"};
     }
-    
     if (!contains(contig_region(haplotype), contig_region(region))) {
-        throw std::logic_error {"Haplotype: trying to splice uncontained region"};
+        throw std::logic_error {"Haplotype: trying to copy uncontained region"};
     }
-    
     if (is_same_region(haplotype, region)) return haplotype;
-    
     Haplotype::Builder result {region, haplotype.reference_};
-    
     if (haplotype.explicit_alleles_.empty()) return result.build();
-    
     const auto& contig_region = region.contig_region();
-    
     if (contains(contig_region, haplotype.explicit_allele_region_)) {
-        result.explicit_alleles_.assign(std::cbegin(haplotype.explicit_alleles_),
-                                        std::cend(haplotype.explicit_alleles_));
+        result.explicit_alleles_.assign(cbegin(haplotype.explicit_alleles_), cend(haplotype.explicit_alleles_));
         return result.build();
     }
-    
     if (!overlaps(contig_region, haplotype.explicit_allele_region_)) return result.build();
-    
     auto overlapped = haplotype_overlap_range(haplotype.explicit_alleles_, region.contig_region());
-    
     assert(!overlapped.empty());
-    
     if (is_empty(contig_region)) {
         if (!is_empty_region(overlapped.front()) && are_adjacent(contig_region, overlapped.front())) {
             overlapped.advance_begin(1);
         }
-        
         if (!overlapped.empty() && is_empty_region(overlapped.front())) {
             result.push_back(overlapped.front());
         } else {
             result.push_back(ContigAllele {contig_region, ""});
         }
-        
         return result.build();
     }
-    
     if (!contains(contig_region, overlapped.front())) {
-        result.push_front(splice(overlapped.front(), *overlapped_region(overlapped.front(), contig_region)));
+        result.push_front(copy(overlapped.front(), *overlapped_region(overlapped.front(), contig_region)));
         overlapped.advance_begin(1);
     }
-    
     if (!overlapped.empty()) {
         if (contains(contig_region, overlapped.back())) {
-            result.explicit_alleles_.insert(end(result.explicit_alleles_),
-                                            cbegin(overlapped), cend(overlapped));
+            result.explicit_alleles_.insert(end(result.explicit_alleles_), cbegin(overlapped), cend(overlapped));
         } else {
-            result.explicit_alleles_.insert(end(result.explicit_alleles_),
-                                            cbegin(overlapped), prev(cend(overlapped)));
-            result.push_back(splice(overlapped.back(), *overlapped_region(overlapped.back(), contig_region)));
+            result.explicit_alleles_.insert(end(result.explicit_alleles_), cbegin(overlapped), prev(cend(overlapped)));
+            result.push_back(copy(overlapped.back(), *overlapped_region(overlapped.back(), contig_region)));
         }
     }
-    
     return result.build();
 }
 
-Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::false_type)
+Allele do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::false_type)
 {
     return Allele {region, haplotype.sequence(region)};
 }
 
 } // namespace detail
 
-ContigAllele splice(const Haplotype& haplotype, const ContigRegion& region)
+ContigAllele copy(const Haplotype& haplotype, const ContigRegion& region)
 {
     return ContigAllele {region, haplotype.sequence(region)};
 }
@@ -522,13 +488,10 @@ std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs)
 {
     auto result = lhs.difference(rhs);
     auto diffs2 = rhs.difference(lhs);
-    
-    const auto it = result.insert(std::end(result),
-                                  std::make_move_iterator(std::begin(diffs2)),
-                                  std::make_move_iterator(std::end(diffs2)));
-    
-    std::inplace_merge(std::begin(result), it, std::end(result));
-    
+    const auto itr = result.insert(std::end(result),
+                                   std::make_move_iterator(std::begin(diffs2)),
+                                   std::make_move_iterator(std::end(diffs2)));
+    std::inplace_merge(std::begin(result), itr, std::end(result));
     return result;
 }
 
@@ -553,21 +516,16 @@ bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
     return HaveSameAlleles()(lhs, rhs);
 }
 
-IsLessComplex::IsLessComplex(boost::optional<Haplotype> reference)
-:
-reference_ {std::move(reference)}
-{}
+IsLessComplex::IsLessComplex(boost::optional<Haplotype> reference) : reference_ {std::move(reference)} {}
 
 bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const noexcept
 {
     if (lhs.explicit_alleles_.size() != rhs.explicit_alleles_.size()) {
         return lhs.explicit_alleles_.size() < rhs.explicit_alleles_.size();
     }
-    
     if (reference_) {
         return lhs.difference(*reference_).size() < rhs.difference(*reference_).size();
     }
-    
     // otherwise prefer the sequence with the least amount of indels
     auto score = std::inner_product(std::cbegin(lhs.explicit_alleles_),
                                     std::cend(lhs.explicit_alleles_),
@@ -588,25 +546,19 @@ bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const
                                             return 0;
                                         }
                                     });
-    
     return score >= 0;
 }
 
 unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optional<Haplotype> reference)
 {
     using std::begin; using std::end;
-    
     std::sort(begin(haplotypes), end(haplotypes));
-    
     auto first_dup  = begin(haplotypes);
     const auto last = end(haplotypes);
     const IsLessComplex cmp {std::move(reference)};
-    
     while (true) {
         first_dup = std::adjacent_find(first_dup, last);
-        
         if (first_dup == last) break;
-        
         auto least_complex = (cmp(*first_dup, *std::next(first_dup))) ? first_dup : std::next(first_dup);
         auto last_dup = std::next(first_dup, 2);
         for (; last_dup != last; ++last_dup) {
@@ -620,17 +572,15 @@ unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optiona
         std::iter_swap(first_dup, least_complex);
         first_dup = last_dup;
     }
-    
     const auto it = std::unique(begin(haplotypes), end(haplotypes));
     const auto result = std::distance(it, end(haplotypes));
     haplotypes.erase(it, last);
-    
     return static_cast<unsigned>(result);
 }
 
 bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region)
 {
-    return splice<Haplotype>(lhs, region) == splice<Haplotype>(rhs, region);
+    return copy<Haplotype>(lhs, region) == copy<Haplotype>(rhs, region);
 }
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype)
@@ -641,15 +591,15 @@ std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype)
 
 namespace debug {
 
-    void print_alleles(const Haplotype& haplotype)
-    {
-        print_alleles(std::cout, haplotype);
-    }
-    
-    void print_variant_alleles(const Haplotype& haplotype)
-    {
-        print_variant_alleles(std::cout, haplotype);
-    }
+void print_alleles(const Haplotype& haplotype)
+{
+    print_alleles(std::cout, haplotype);
+}
+
+void print_variant_alleles(const Haplotype& haplotype)
+{
+    print_variant_alleles(std::cout, haplotype);
+}
 
 } // namespace debug
 } // namespace octopus

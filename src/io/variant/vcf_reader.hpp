@@ -28,13 +28,10 @@ class VcfReader
 {
 public:
     using Path = boost::filesystem::path;
-    
     using UnpackPolicy = IVcfReaderImpl::UnpackPolicy;
-    
     using RecordContainer = IVcfReaderImpl::RecordContainer;
     
     class RecordIterator;
-    
     using RecordIteratorPair = std::pair<RecordIterator, RecordIterator>;
     
     VcfReader() = default;

@@ -166,43 +166,38 @@ bool contains(const CancerGenotype<Haplotype>& genotype, const Allele& allele);
 bool includes(const CancerGenotype<Haplotype>& genotype, const Allele& allele);
 
 template <typename MappableType2, typename MappableType1>
-CancerGenotype<MappableType2> splice(const CancerGenotype<MappableType1>& genotype,
-                                     const GenomicRegion& region)
+CancerGenotype<MappableType2> copy(const CancerGenotype<MappableType1>& genotype, const GenomicRegion& region)
 {
     return CancerGenotype<MappableType2> {
-        splice<MappableType2>(genotype.germline_genotype(), region),
-        splice<MappableType2>(genotype.somatic_element(), region)
+    copy<MappableType2>(genotype.germline_genotype(), region),
+        copy<MappableType2>(genotype.somatic_element(), region)
     };
 }
 
 template <typename MappableType1, typename MappableType2>
 bool contains(const CancerGenotype<MappableType1>& lhs, const CancerGenotype<MappableType2>& rhs)
 {
-    return splice<MappableType2>(lhs, rhs.mapped_region()) == rhs;
+    return copy<MappableType2>(lhs, rhs.mapped_region()) == rhs;
 }
 
 std::pair<std::vector<CancerGenotype<Haplotype>>, std::vector<Genotype<Haplotype>>>
 generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const unsigned ploidy);
 
 template <typename MappableType>
-Genotype<MappableType> convert(const CancerGenotype<MappableType>& genotype)
+Genotype<MappableType> demote(const CancerGenotype<MappableType>& genotype)
 {
     Genotype<MappableType> result {genotype.ploidy() + 1};
-    
     for (const auto& e : genotype.germline_genotype()) {
         result.emplace(e);
     }
-    
     result.emplace(genotype.somatic_element());
-    
     return result;
 }
     
 template <typename MappableType>
 bool operator==(const CancerGenotype<MappableType>& lhs, const CancerGenotype<MappableType>& rhs)
 {
-    return lhs.somatic_element() == rhs.somatic_element()
-                && lhs.germline_genotype() == rhs.germline_genotype();
+    return lhs.somatic_element() == rhs.somatic_element() && lhs.germline_genotype() == rhs.germline_genotype();
 }
 
 template <typename MappableType>

@@ -10,4 +10,9 @@ void DenovoCall::decorate(VcfRecord::Builder& record) const
     record.set_denovo();
 }
 
+std::unique_ptr<Call> DenovoCall::do_clone() const
+{
+    return std::make_unique<DenovoCall>(*this);
+}
+
 } // namespace octopus

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_parser.hpp"
@@ -64,7 +64,12 @@ OptionMap parse_options(const int argc, const char** argv)
 
     ("fast",
      po::bool_switch()->default_value(false),
-     "Turns off certain features to improve runtime, at the cost of decreased callings accuracy")
+     "Turns off some features to improve runtime, at the cost of decreased calling accuracy."
+     " Equivalent to '-a off -l minimal x 50`")
+
+    ("very-fast",
+     po::bool_switch()->default_value(false),
+     "The same as fast but also disables inactive flank scoring")
     ;
     
     po::options_description backend("Backend");
@@ -83,7 +88,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Maximum memory footprint for cached reference sequence")
     
     ("target-read-buffer-footprint,B",
-     po::value<MemoryFootprint>()->default_value(*parse_footprint("2GB"), "2GB"),
+     po::value<MemoryFootprint>()->default_value(*parse_footprint("6GB"), "6GB"),
      "None binding request to limit the memory footprint of buffered read data")
     
     ("max-open-read-files",
@@ -99,7 +104,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " will be extracted from the reference index if not provded explicitly")
     
     ("reads,I",
-     po::value<std::vector<std::string>>()->multitoken(),
+     po::value<std::vector<fs::path>>()->multitoken(),
      "Space-separated list of BAM/CRAM files to be analysed."
      " May be specified multiple times")
     
@@ -138,6 +143,14 @@ OptionMap parse_options(const int argc, const char** argv)
      "File of sample names to analyse, one per line, which must be a subset of the samples"
      " that appear in the read files")
     
+    ("ignore-unmapped-contigs",
+     po::bool_switch()->default_value(false),
+     "Ignore any contigs that are not present in the read files")
+    
+    ("pedigree",
+     po::value<fs::path>(),
+     "PED file containing sample pedigree")
+    
     ("output,o",
      po::value<fs::path>(),
      "File to where output is written. If unspecified, calls are written to stdout")
@@ -161,17 +174,20 @@ OptionMap parse_options(const int argc, const char** argv)
     ("read-transforms",
      po::value<bool>()->default_value(true),
      "Enable all read transformations")
+
+    ("mask-low-quality-tails",
+     po::value<int>()->implicit_value(3),
+     "Masks read tail bases with base quality less than this")
     
     ("soft-clip-masking",
      po::value<bool>()->default_value(true),
-     "Enable soft clipped masking, thus allowing all soft clipped bases to be used"
-     " for candidate generation")
-    
-    ("mask-tails",
+     "Turn on or off soft clip base recalibration")
+
+    ("soft-clip-mask-threshold",
      po::value<int>()->implicit_value(3),
-     "Masks this number of bases of the tail of all reads")
+     "Only soft clipped bases with quality less than this will be recalibrated, rather than all bases")
     
-    ("mask-soft-clipped-boundries",
+    ("mask-soft-clipped-boundary-bases",
      po::value<int>()->default_value(2),
      "Masks this number of adjacent non soft clipped bases when soft clipped bases are present")
     
@@ -246,9 +262,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Allows reads with template segmenets that are on different contigs")
     
-    ("allow-adapter-contaminated-reads",
+    ("no-adapter-contaminated-reads",
      po::bool_switch()->default_value(false),
-     "Allows reads with possible adapter contamination")
+     "Filter reads with possible adapter contamination")
     
     ("disable-downsampling",
      po::bool_switch()->default_value(false),
@@ -273,10 +289,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Enable candidate generation using local re-assembly")
     
-    ("source-candidates",
-     po::value<fs::path>(),
-     "Variant file path containing known variants. These variants will automatically become"
-     " candidates")
+    ("source-candidates,c",
+     po::value<std::vector<fs::path>>()->multitoken(),
+     "Variant file paths containing known variants. These variants will automatically become candidates")
     
     ("min-base-quality",
      po::value<int>()->default_value(20),
@@ -305,11 +320,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "The gap size used to generate local assembly fallback kmers")
     
     ("max-region-to-assemble",
-     po::value<int>()->default_value(500),
+     po::value<int>()->default_value(400),
      "The maximum region size that can be used for local assembly")
     
     ("max-assemble-region-overlap",
-     po::value<int>()->default_value(100),
+     po::value<int>()->default_value(200),
      "The maximum number of bases allowed to overlap assembly regions")
     
     ("force-assemble",
@@ -317,43 +332,47 @@ OptionMap parse_options(const int argc, const char** argv)
      "Forces all regions to be assembled")
     
     ("assembler-mask-base-quality",
-     po::value<int>()->default_value(15),
-     "Aligned bases with quality less than this will be converted to reference before "
-     "being inserted into the De Bruijn graph")
-    
-    ("min-kmer-support",
-     po::value<int>()->default_value(1),
-     "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
-    
-    ("min-bubble-weight",
-     po::value<double>()->default_value(2.0),
-     "Minimum mean graph bubble weight that is extracted from the assembly graph")
-    
-    ("max-bubbles",
      po::value<int>()->default_value(10),
+     "Aligned bases with quality less than this will be converted to reference before"
+     " being inserted into the De Bruijn graph")
+    
+    ("min-kmer-prune",
+     po::value<int>()->default_value(2),
+     "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
+
+    ("max-bubbles",
+     po::value<int>()->default_value(30),
      "Maximum number of bubbles to extract from the assembly graph")
+    
+    ("min-bubble-score",
+     po::value<double>()->default_value(2.0),
+     "Minimum bubble score that will be extracted from the assembly graph")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");
     haplotype_generation.add_options()
-    ("max-haplotypes",
-     po::value<int>()->default_value(128),
+    ("max-haplotypes,x",
+     po::value<int>()->default_value(200),
      "Maximum number of candidate haplotypes the caller may consider. If a region contains"
      " more candidate haplotypes than this then filtering is applied")
     
     ("haplotype-holdout-threshold",
-     po::value<int>()->default_value(2048),
+     po::value<int>()->default_value(2500),
      "Forces the haplotype generator to temporarily hold out some alleles if the number"
      " of haplotypes in a region exceeds this threshold")
     
     ("haplotype-overflow",
-     po::value<int>()->default_value(16384),
+     po::value<int>()->default_value(200000),
      "Regions with more haplotypes than this will be skipped")
     
     ("max-holdout-depth",
-     po::value<int>()->default_value(3),
+     po::value<int>()->default_value(20),
      "Maximum number of holdout attempts the haplotype generator can make before the region"
      " is skipped")
+    
+    ("extension-level",
+     po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
+     "Level of haplotype extension. Possible values are: conservative, normal, optimistic, aggressive")
     ;
     
     po::options_description caller("Caller (general)");
@@ -396,13 +415,17 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Only reports call sites (i.e. without sample genotype information)")
     
-    ("snp-heterozygosity",
+    ("snp-heterozygosity,z",
      po::value<float>()->default_value(0.001, "0.001"),
-     "The germline SNP heterozygosity used to calculate genotype priors")
+     "SNP heterozygosity for the given samples")
+
+    ("snp-heterozygosity-stdev",
+     po::value<float>()->default_value(0.01, "0.01"),
+     "Standard deviation of the SNP heterozygosity used for the given samples")
     
-    ("indel-heterozygosity",
+    ("indel-heterozygosity,y",
      po::value<float>()->default_value(0.0001, "0.0001"),
-     "The germline indel heterozygosity used to calculate genotype priors")
+     "Indel heterozygosity for the given samples")
     
     ("use-uniform-genotype-priors",
     po::bool_switch()->default_value(false),
@@ -433,7 +456,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("min-somatic-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
-     "Minimum somatic mutation call posterior probability (phred scale)")
+     "Minimum posterior probability (phred scale) to emit a somatic mutation call")
     
     ("somatics-only",
      po::bool_switch()->default_value(false),
@@ -450,9 +473,17 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>(),
      "Paternal sample")
     
-    ("denovo-mutation-rate",
-     po::value<float>()->default_value(1e-8, "1e-8"),
-     "Expected de novo mutation rate, per megabase pair, for this sample")
+    ("snv-denovo-mutation-rate",
+     po::value<float>()->default_value(1e-9, "1e-9"),
+     "SNV de novo mutation rate, per base per generation")
+    
+    ("indel-denovo-mutation-rate",
+     po::value<float>()->default_value(1e-10, "1e-10"),
+     "INDEL de novo mutation rate, per base per generation")
+    
+    ("min-denovo-posterior",
+     po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
+     "Minimum posterior probability (phred scale) to emit a de novo mutation call")
     
     ("denovos-only,d",
      po::bool_switch()->default_value(false),
@@ -462,9 +493,9 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description phasing("Phasing");
     phasing.add_options()
     ("phasing-level,l",
-     po::value<PhasingLevel>()->default_value(PhasingLevel::conservative),
+     po::value<PhasingLevel>()->default_value(PhasingLevel::normal),
      "Level of phasing - longer range phasing can improve calling accuracy at the cost"
-     " of runtime speed. Possible values are: minimal, conservative, aggressive")
+     " of runtime speed. Possible values are: minimal, conservative, moderate, normal, aggressive")
     
     ("min-phase-score",
      po::value<Phred<double>>()->default_value(Phred<double> {20.0}),
@@ -473,16 +504,12 @@ OptionMap parse_options(const int argc, const char** argv)
     ("use-unconditional-phase-score",
      po::bool_switch()->default_value(false),
      "Computes unconditional phase scores rather than conditioning on called genotypes")
-    
-    ("disable-read-guided-phasing",
-     po::bool_switch()->default_value(false),
-     "Restricts phase score computation to use only genotype posteriors")
     ;
     
     po::options_description advanced("Advanced calling algorithm");
     advanced.add_options()
-    ("haplotype-extension-threshold",
-     po::value<Phred<double>>()->default_value(Phred<double> {150.0}, "150"),
+    ("haplotype-extension-threshold,e",
+     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
      "Haplotypes with posterior probability less than this can be filtered before extension")
     
     ("inactive-flank-scoring",
@@ -490,10 +517,18 @@ OptionMap parse_options(const int argc, const char** argv)
      "Disables additional calculation to adjust alignment score when there are inactive"
      " candidates in haplotype flanking regions")
     
-    ("max-genotypes-per-sample",
-     po::value<unsigned>()->default_value(200),
-     "The maximum number of genotype combinations to consider per sample when computing joint"
+    ("model-mapping-quality",
+     po::value<bool>()->default_value(true),
+     "Include the read mapping quality in the haplotype likelihood calculation")
+    
+    ("max-joint-genotypes",
+     po::value<int>()->default_value(1000000),
+     "The maximum number of joint genotype vectors to consider when computing joint"
      " genotype posterior probabilities")
+    
+    ("sequence-error-model",
+     po::value<std::string>()->default_value("hiseq"),
+     "The sequencer error model to use.")
     ;
     
     po::options_description call_filtering("Callset filtering");
@@ -561,7 +596,7 @@ class InvalidWorkingDirectory : public UserError
     {
         return "get_working_directory";
     }
-
+    
     std::string do_why() const override
     {
         std::ostringstream ss {};
@@ -570,12 +605,12 @@ class InvalidWorkingDirectory : public UserError
         ss << " does not exist";
         return ss.str();
     }
-
+    
     std::string do_help() const override
     {
         return "enter a valid working directory";
     }
-
+    
     fs::path path_;
 public:
     InvalidWorkingDirectory(fs::path p) : path_ {std::move(p)} {}
@@ -619,9 +654,9 @@ class CommandLineError : public UserError
 {
 public:
     CommandLineError() = default;
-
+    
     CommandLineError(std::string&& why) : why_ {std::move(why)} {}
-
+    
 protected:
     std::string why_;
 
@@ -630,12 +665,12 @@ private:
     {
         return "parse_options";
     }
-
+    
     virtual std::string do_why() const override
     {
         return why_;
     }
-
+    
     virtual std::string do_help() const override
     {
         return "use the --help command to view required and allowable options";
@@ -652,21 +687,6 @@ public:
         why_ = ss.str();
     }
 };
-
-void parse_config_file(const fs::path& config_file, OptionMap& vm, const po::options_description& options)
-{
-    if (!fs::exists(config_file)) {
-        throw BadConfigFile {config_file};
-    }
-    std::ifstream config {config_file.string()};
-    if (config) {
-        try {
-            po::store(po::parse_config_file(config, options), vm);
-        } catch (const po::invalid_config_file_syntax& e) {
-            throw CommandLineError {e.what()};
-        }
-    }
-}
 
 class UnknownCommandLineOption : public CommandLineError
 {
@@ -702,8 +722,8 @@ public:
     template <typename T>
     InvalidCommandLineOptionValue(std::string option, T value, std::string reason)
     : CommandLineError {
-        "The arguement '" + std::to_string(value) + "' given to option '--" + option
-        + "' was rejected as it " + reason
+    "The arguement '" + std::to_string(value) + "' given to option '--" + option
+    + "' was rejected as it " + reason
     } {}
 };
 
@@ -733,6 +753,31 @@ public:
     }
 };
 
+void parse_config_file(const fs::path& config_file, OptionMap& vm, const po::options_description& options)
+{
+    if (!fs::exists(config_file)) {
+        throw BadConfigFile {config_file};
+    }
+    std::ifstream config {config_file.string()};
+    if (config) {
+        try {
+            po::store(po::parse_config_file(config, options), vm);
+        } catch (const po::invalid_config_file_syntax& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::unknown_option& e) {
+            throw UnknownCommandLineOption {po::strip_prefixes(e.get_option_name())};
+        } catch (const po::invalid_option_value& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::invalid_bool_value& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::ambiguous_option& e) {
+            throw CommandLineError {e.what()};
+        } catch (const po::reading_file& e) {
+            throw CommandLineError {e.what()};
+        }
+    }
+}
+
 void check_positive(const std::string& option, const OptionMap& vm)
 {
     if (vm.count(option) == 1) {
@@ -749,6 +794,16 @@ void check_strictly_positive(const std::string& option, const OptionMap& vm)
         const auto value = vm.at(option).as<int>();
         if (value < 1) {
             throw InvalidCommandLineOptionValue {option, value, "must be greater than zero" };
+        }
+    }
+}
+
+void check_probability(const std::string& option, const OptionMap& vm)
+{
+    if (vm.count(option) == 1) {
+        const auto value = vm.at(option).as<float>();
+        if (value < 0 || value > 1) {
+            throw InvalidCommandLineOptionValue {option, value, "must be between zero and one" };
         }
     }
 }
@@ -778,11 +833,10 @@ void check_reads_present(const OptionMap& vm)
 void check_region_files_consistent(const OptionMap& vm)
 {
     if (vm.count("regions-file") == 1 && vm.count("skip-regions-file") == 1) {
-        const auto regions_file = vm.at("regions-file").as<std::string>();
-        const auto skip_regions_file = vm.at("skip-regions-file").as<std::string>();
+        const auto regions_file = vm.at("regions-file").as<fs::path>();
+        const auto skip_regions_file = vm.at("skip-regions-file").as<fs::path>();
         if (regions_file == skip_regions_file) {
-            throw std::invalid_argument {"options 'regions-file' and 'skip-regions-file' must"
-                " have unique values"};
+            throw std::invalid_argument {"options 'regions-file' and 'skip-regions-file' must be unique"};
         }
     }
 }
@@ -836,16 +890,22 @@ po::parsed_options run(po::command_line_parser& parser)
 void validate(const OptionMap& vm)
 {
     const std::vector<std::string> positive_int_options {
-        "threads", "mask-tails", "mask-soft-clipped-boundries",
+        "threads", "mask-low-quality-tails", "soft-clip-mask-threshold", "mask-soft-clipped-boundary-bases",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
-        "min-kmer-support", "max-bubbles", "max-holdout-depth"
+        "min-kmer-prune", "max-bubbles", "max-holdout-depth"
     };
     const std::vector<std::string> strictly_positive_int_options {
         "max-open-read-files", "downsample-above", "downsample-target",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
-        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow"
+        "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
+        "max-joint-genotypes"
+    };
+    const std::vector<std::string> probability_options {
+        "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
+        "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "credible-mass",
+        "snv-denovo-mutation-rate", "indel-denovo-mutation-rate"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");
@@ -854,6 +914,9 @@ void validate(const OptionMap& vm)
     }
     for (const auto& option : strictly_positive_int_options) {
         check_strictly_positive(option, vm);
+    }
+    for (const auto& option : probability_options) {
+        check_probability(option, vm);
     }
     check_reads_present(vm);
     check_region_files_consistent(vm);
@@ -898,8 +961,7 @@ std::istream& operator>>(std::istream& in, RefCallType& result)
         result = RefCallType::positional;
     else if (token == "blocked")
         result = RefCallType::blocked;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "refcalls"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "refcalls"};
     return in;
 }
 
@@ -934,8 +996,7 @@ std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
         result = ContigOutputOrder::asInReferenceIndexReversed;
     else if (token == "unspecified")
         result = ContigOutputOrder::unspecified;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "contig-output-order"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "contig-output-order"};
     return in;
 }
 
@@ -967,6 +1028,41 @@ std::ostream& operator<<(std::ostream& out, const ContigOutputOrder& order)
     return out;
 }
 
+std::istream& operator>>(std::istream& in, ExtensionLevel& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "conservative")
+        result = ExtensionLevel::conservative;
+    else if (token == "normal")
+        result = ExtensionLevel::normal;
+    else if (token == "optimistic")
+        result = ExtensionLevel::optimistic;
+    else if (token == "aggressive")
+        result = ExtensionLevel::aggressive;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "extension-level"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const ExtensionLevel& level)
+{
+    switch (level) {
+    case ExtensionLevel::conservative:
+        out << "conservative";
+        break;
+    case ExtensionLevel::normal:
+        out << "normal";
+        break;
+    case ExtensionLevel::optimistic:
+        out << "optimistic";
+        break;
+    case ExtensionLevel::aggressive:
+        out << "aggressive";
+        break;
+    }
+    return out;
+}
+
 std::istream& operator>>(std::istream& in, PhasingLevel& result)
 {
     std::string token;
@@ -975,10 +1071,13 @@ std::istream& operator>>(std::istream& in, PhasingLevel& result)
         result = PhasingLevel::minimal;
     else if (token == "conservative")
         result = PhasingLevel::conservative;
+    else if (token == "moderate")
+        result = PhasingLevel::moderate;
+    else if (token == "normal")
+        result = PhasingLevel::normal;
     else if (token == "aggressive")
         result = PhasingLevel::aggressive;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
-        "phasing-level"};
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "phasing-level"};
     return in;
 }
 
@@ -991,11 +1090,18 @@ std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
         case PhasingLevel::conservative:
             out << "conservative";
             break;
+        case PhasingLevel::moderate:
+            out << "moderate";
+            break;
+        case PhasingLevel::normal:
+            out << "normal";
+            break;
         case PhasingLevel::aggressive:
             out << "aggressive";
             break;
     }
     return out;
 }
+
 } // namespace options
 } // namespace octopus

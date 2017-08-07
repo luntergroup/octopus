@@ -124,24 +124,17 @@ template <typename S = CigarOperation::Size>
 CigarOperation get_operation_at_sequence_position(const CigarString& cigar, S pos)
 {
     auto first = std::cbegin(cigar);
-    
     while (pos >= first->size()) {
         ++first;
         pos -= first->size();
     }
-    
     return *first;
 }
 
 // Relative to both reference and sequence
-CigarString splice(const CigarString& cigar, CigarOperation::Size offset,
-                   CigarOperation::Size size);
-
-CigarString splice_reference(const CigarString& cigar, CigarOperation::Size offset,
-                             CigarOperation::Size size);
-
-CigarString splice_sequence(const CigarString& cigar, CigarOperation::Size offset,
-                            CigarOperation::Size size);
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size);
+CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size);
+CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size);
 
 bool operator==(const CigarOperation& lhs, const CigarOperation& rhs) noexcept;
 bool operator<(const CigarOperation& lhs, const CigarOperation& rhs) noexcept;

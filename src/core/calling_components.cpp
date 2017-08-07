@@ -120,6 +120,44 @@ bool GenomeCallingComponents::sites_only() const noexcept
     return components_.sites_only;
 }
 
+std::vector<ContigName>
+copy_unmapped_contigs(const ReadManager& rm, const ReferenceGenome& reference, const std::vector<ContigName>& contigs)
+{
+    std::vector<ContigName> result {};
+    result.reserve(contigs.size());
+    std::copy_if(std::cbegin(contigs), std::cend(contigs), std::back_inserter(result),
+                 [&] (const auto& contig) {
+                     try {
+                         rm.has_reads(reference.contig_region(contig));
+                         return false;
+                     } catch (...) {
+                         return true;
+                     }
+                 });
+    return result;
+}
+
+std::vector<ContigName> get_unmapped_contigs(const ReadManager& rm, const ReferenceGenome& reference)
+{
+    return copy_unmapped_contigs(rm, reference, reference.contig_names());
+}
+
+auto get_search_regions(const options::OptionMap& options, const ReferenceGenome& reference, const ReadManager& rm)
+{
+    auto result = options::get_search_regions(options, reference);
+    if (options::ignore_unmapped_contigs(options)) {
+        const auto unmapped_contigs = get_unmapped_contigs(rm, reference);
+        if (!unmapped_contigs.empty()) {
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "Ignoring " << unmapped_contigs.size() << " unmapped contigs";
+            for (const auto& contig : unmapped_contigs) {
+                result.erase(contig);
+            }
+        }
+    }
+    return result;
+}
+
 template <typename T>
 std::size_t index_of(const std::vector<T>& elements, const T& value)
 {
@@ -199,15 +237,12 @@ std::vector<SampleName> extract_samples(const options::OptionMap& options, const
 {
     auto user_samples = options::get_user_samples(options);
     auto file_samples = read_manager.samples();
-    
     if (user_samples) {
         const auto it = std::partition(std::begin(*user_samples), std::end(*user_samples),
                                        [&file_samples] (const auto& sample) {
                                            return is_in_file_samples(sample, file_samples);
                                        });
-        
         const auto num_not_found = std::distance(it, std::end(*user_samples));
-        
         if (num_not_found > 0) {
             std::ostringstream ss {};
             ss << "The requested calling sample";
@@ -225,11 +260,25 @@ std::vector<SampleName> extract_samples(const options::OptionMap& options, const
             log << ss.str();
             user_samples->erase(it, std::end(*user_samples));
         }
-        
         return *user_samples;
     } else {
         return file_samples;
     }
+}
+
+void drop_unused_samples(std::vector<SampleName>& calling_samples, ReadManager& rm)
+{
+    if (rm.num_samples() <= calling_samples.size()) return;
+    std::sort(std::begin(calling_samples), std::end(calling_samples));
+    auto managed_samples = rm.samples();
+    assert(calling_samples.size() < managed_samples.size());
+    std::sort(std::begin(managed_samples), std::end(managed_samples));
+    std::vector<SampleName> unused_samples {};
+    unused_samples.reserve(managed_samples.size() - calling_samples.size());
+    std::set_difference(std::cbegin(managed_samples), std::cend(managed_samples),
+                        std::cbegin(calling_samples), std::cend(calling_samples),
+                        std::back_inserter(unused_samples));
+    rm.drop_samples(unused_samples);
 }
 
 auto estimate_read_size(const std::vector<SampleName>& samples,
@@ -262,7 +311,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 : reference {std::move(reference)}
 , read_manager {std::move(read_manager)}
 , samples {extract_samples(options, this->read_manager)}
-, regions {options::get_search_regions(options, this->reference)}
+, regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
 , read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options)}
@@ -275,20 +324,18 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , sites_only {options::call_sites_only(options)}
 , legacy {options::legacy_vcf_requested(options)}
 {
+    drop_unused_samples(this->samples, this->read_manager);
     const auto num_bp_to_process = sum_region_sizes(regions);
-    
     if (num_bp_to_process < 100000000) {
-        progress_meter.set_percent_block_size(1.0);
+        progress_meter.set_max_tick_size(1.0);
     } else if (num_bp_to_process < 1000000000) {
-        progress_meter.set_percent_block_size(0.5);
+        progress_meter.set_max_tick_size(0.5);
     } else {
-        progress_meter.set_percent_block_size(0.1);
+        progress_meter.set_max_tick_size(0.1);
     }
-    
     if (!samples.empty() && !regions.empty() && read_manager.good()) {
         read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options).num_bytes(),
-                                                   this->samples, this->regions,
-                                                   this->read_manager);
+                                                   this->samples, this->regions, this->read_manager);
     }
 }
 
@@ -299,9 +346,8 @@ void GenomeCallingComponents::update_dependents() noexcept
     components_.caller_factory.set_read_pipe(components_.read_pipe);
 }
 
-bool reads_map_to_matched_reference(const ReadManager& rm, const ReferenceGenome& reference)
+bool all_reference_contigs_mapped(const ReadManager& rm, const ReferenceGenome& reference)
 {
-    // TODO: There must be a better way to do this...
     const auto contigs = reference.contig_names();
     return std::all_of(std::cbegin(contigs), std::cend(contigs),
                        [&reference, &rm] (const auto& contig) {
@@ -319,13 +365,10 @@ class UnmatchedReference : public UserError
 {
 public:
     UnmatchedReference(const ReferenceGenome& reference)
-    {
-        std::ostringstream ss {};
-        ss << "Some or all of the reads are not mapped to the given reference genome (";
-        ss << reference.name();
-        ss << ")";
-        why_ = ss.str();
-    }
+    : reference_name_ {reference.name()}
+    , why_ {"Some or all of the contigs in the reference genome (" +  reference_name_
+            + ") are not present in the read files"}
+    {}
 
 private:
     std::string do_where() const override
@@ -340,19 +383,22 @@ private:
     
     std::string do_help() const override
     {
-        return "Ensure the given reference genome is the correct version";
+        return "Ensure the reference genome used for mapping is the same as the one used for calling"
+        " (" + reference_name_ + ") and all input contigs are present in the read headers";
     }
     
-    std::string why_;
+    std::string reference_name_, why_;
 };
 
 GenomeCallingComponents collate_genome_calling_components(const options::OptionMap& options)
 {
     auto reference    = options::make_reference(options);
     auto read_manager = options::make_read_manager(options);
-    if (!reads_map_to_matched_reference(read_manager, reference)) {
+    // Check this here to avoid creating output file on error
+    if (!options::ignore_unmapped_contigs(options) && !all_reference_contigs_mapped(read_manager, reference)) {
         throw UnmatchedReference {reference};
     }
+    auto output = options::make_output_vcf_writer(options);
     return GenomeCallingComponents {
         std::move(reference),
         std::move(read_manager),
