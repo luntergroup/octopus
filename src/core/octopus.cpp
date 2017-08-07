@@ -1164,7 +1164,6 @@ void run_calling(GenomeCallingComponents& components)
     } else {
         run_octopus_single_threaded(components);
     }
-    components.output().close();
 }
 
 auto make_filter_read_pipe(const GenomeCallingComponents& components)
@@ -1234,18 +1233,6 @@ void make_legacy_copy(const boost::filesystem::path& native)
     convert_to_legacy(in, out);
 }
 
-void run_reporting(const GenomeCallingComponents& components)
-{
-    if (components.legacy()) {
-        auto output_path = components.output().path();
-        if (output_path) {
-            const VcfReader native {*output_path};
-            VcfWriter legacy {get_legacy_path(native.path())};
-            convert_to_legacy(native, legacy);
-        }
-    }
-}
-
 void log_run_start(const GenomeCallingComponents& components)
 {
     static auto debug_log = get_debug_log();
@@ -1283,35 +1270,36 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
     write_caller_output_header(components, command);
     const auto start = std::chrono::system_clock::now();
     try {
-        if (is_multithreaded(components)) {
-            if (DEBUG_MODE) {
-                logging::WarningLogger warn_log {};
-                warn_log << "Running in parallel mode can make debug log difficult to interpret";
-            }
-            run_octopus_multi_threaded(components);
-        } else {
-            run_octopus_single_threaded(components);
-        }
+        run_calling(components);
     } catch (const ProgramError& e) {
         try {
-            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
             cleanup(components);
         } catch (...) {}
         throw;
     } catch (const std::exception& e) {
         try {
-            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
             cleanup(components);
         } catch (...) {}
         throw CallingBug {e};
     } catch (...) {
         try {
-            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
             cleanup(components);
         } catch (...) {}
         throw CallingBug {};
     }
     components.output().close();
+    try {
+        run_filtering(components);
+    } catch (...) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {};
+    }
     try {
         if (components.legacy()) {
             const auto output_path = components.output().path();
