@@ -120,6 +120,8 @@ set(READPIPE_SOURCES
     readpipe/read_pipe_fwd.hpp
     readpipe/read_pipe.hpp
     readpipe/read_pipe.cpp
+    readpipe/buffered_read_pipe.hpp
+    readpipe/buffered_read_pipe.cpp
     
     readpipe/downsampling/downsampler.hpp
     readpipe/downsampling/downsampler.cpp
