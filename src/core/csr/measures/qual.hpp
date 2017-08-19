@@ -18,6 +18,7 @@ namespace csr {
 
 class Qual : public Measure
 {
+public:
     virtual double operator()(const VcfRecord& call) const override;
     virtual std::string name() const override;
 };
