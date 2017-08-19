@@ -22,6 +22,7 @@ class Measure
 public:
     virtual double operator()(const VcfRecord& call) const = 0;
     virtual std::string name() const = 0;
+    virtual ~Measure() = default;
     //virtual std::unordered_set<Facet> requirements() const noexcept { return {}; }
 };
 
