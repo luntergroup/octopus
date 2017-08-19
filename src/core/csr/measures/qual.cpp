@@ -10,7 +10,7 @@ namespace octopus { namespace csr {
 double Qual::operator()(const VcfRecord& call) const
 {
     if (call.qual()) {
-        static_cast<double>(*call.qual());
+        return static_cast<double>(*call.qual());
     } else {
         return 0.0;
     }
