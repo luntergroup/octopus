@@ -164,6 +164,8 @@ bool is_1000g_member(const VcfRecord& record) noexcept;
 bool is_somatic(const VcfRecord& record) noexcept;
 bool is_validated(const VcfRecord& record) noexcept;
 
+boost::optional<GenomicRegion> get_phase_region(const VcfRecord& record, const VcfRecord::SampleName& sample);
+
 bool operator==(const VcfRecord& lhs, const VcfRecord& rhs);
 bool operator<(const VcfRecord& lhs, const VcfRecord& rhs);
 
