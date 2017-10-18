@@ -4,12 +4,10 @@
 #ifndef measure_hpp
 #define measure_hpp
 
+#include <vector>
 #include <string>
-#include <unordered_set>
 #include <memory>
 #include <utility>
-
-//#include "../facets/facet.hpp"
 
 namespace octopus {
 
@@ -20,10 +18,23 @@ namespace csr {
 class Measure
 {
 public:
-    virtual double operator()(const VcfRecord& call) const = 0;
-    virtual std::string name() const = 0;
+    Measure() = default;
+    
+    Measure(const Measure&)            = default;
+    Measure& operator=(const Measure&) = default;
+    Measure(Measure&&)                 = default;
+    Measure& operator=(Measure&&)      = default;
+    
     virtual ~Measure() = default;
-    //virtual std::unordered_set<Facet> requirements() const noexcept { return {}; }
+    
+    double evaluate(const VcfRecord& call) const { return do_evaluate(call); }
+    std::string name() const { return do_name(); }
+    std::vector<std::string> requirements() const { return do_requirements(); }
+    
+private:
+    virtual double do_evaluate(const VcfRecord& call) const = 0;
+    virtual std::string do_name() const = 0;
+    virtual std::vector<std::string> do_requirements() const { return {}; }
 };
 
 class MeasureWrapper
@@ -40,8 +51,10 @@ public:
     
     ~MeasureWrapper() = default;
     
-    auto operator()(const VcfRecord& call) const { return (*measure_)(call); }
+    const Measure* base() const noexcept { return measure_.get(); }
+    auto operator()(const VcfRecord& call) const { return measure_->evaluate(call); }
     std::string name() const { return measure_->name(); }
+    std::vector<std::string> requirements() const { return measure_->requirements(); }
     
 private:
     std::unique_ptr<Measure> measure_;
