@@ -12,13 +12,13 @@ namespace octopus { namespace csr {
 
 struct LessThreshold : public ThresholdVariantCallFilter::Threshold
 {
-    explicit LessThreshold(double target) : target_ {target} {}
-    bool operator()(double value) const noexcept
+    explicit LessThreshold(Measure::ResultType target) : target_ {target} {}
+    bool operator()(Measure::ResultType value) const noexcept
     {
         return value >= target_;
     }
 private:
-    double target_;
+    Measure::ResultType target_;
 };
 
 std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const ReferenceGenome& reference, const ReadPipe& read_pipe) const

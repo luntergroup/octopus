@@ -139,9 +139,7 @@ VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& cal
 {
     MeasureVector result(measures_.size());
     std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
-                   [&call] (const MeasureWrapper& measure) -> MeasureDomain {
-                       return measure(call);
-                   });
+                   [&call] (const MeasureWrapper& measure) { return measure(call); });
     return result;
 }
 

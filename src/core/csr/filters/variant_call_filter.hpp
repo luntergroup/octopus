@@ -45,8 +45,7 @@ public:
     void filter(const VcfReader& source, VcfWriter& dest);
     
 protected:
-    using MeasureDomain = std::result_of_t<MeasureWrapper(VcfRecord)>;
-    using MeasureVector = std::vector<MeasureDomain>;
+    using MeasureVector = std::vector<Measure::ResultType>;
     
     struct Classification
     {

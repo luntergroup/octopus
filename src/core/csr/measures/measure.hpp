@@ -18,6 +18,8 @@ namespace csr {
 class Measure
 {
 public:
+    using ResultType = double;
+    
     Measure() = default;
     
     Measure(const Measure&)            = default;
@@ -27,12 +29,12 @@ public:
     
     virtual ~Measure() = default;
     
-    double evaluate(const VcfRecord& call) const { return do_evaluate(call); }
+    ResultType evaluate(const VcfRecord& call) const { return do_evaluate(call); }
     std::string name() const { return do_name(); }
     std::vector<std::string> requirements() const { return do_requirements(); }
     
 private:
-    virtual double do_evaluate(const VcfRecord& call) const = 0;
+    virtual ResultType do_evaluate(const VcfRecord& call) const = 0;
     virtual std::string do_name() const = 0;
     virtual std::vector<std::string> do_requirements() const { return {}; }
 };

@@ -7,7 +7,7 @@
 
 namespace octopus { namespace csr {
 
-double MeanMappingQuality::do_evaluate(const VcfRecord& call) const
+MeanMappingQuality::ResultType MeanMappingQuality::do_evaluate(const VcfRecord& call) const
 {
     return std::stod(call.info_value("MQ").front());
 }

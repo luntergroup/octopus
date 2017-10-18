@@ -19,7 +19,7 @@ class ThresholdVariantCallFilter : public VariantCallFilter
 public:
     struct Threshold
     {
-        virtual bool operator()(double value) const noexcept { return true; }
+        virtual bool operator()(Measure::ResultType value) const noexcept { return true; }
         virtual ~Threshold() = default;
     };
     

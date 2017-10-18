@@ -7,7 +7,7 @@
 
 namespace octopus { namespace csr {
 
-double QualityByDepth::do_evaluate(const VcfRecord& call) const
+QualityByDepth::ResultType QualityByDepth::do_evaluate(const VcfRecord& call) const
 {
     if (call.qual()) {
         return *call.qual() / std::stod(call.info_value("DP").front());

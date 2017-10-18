@@ -7,7 +7,7 @@
 
 namespace octopus { namespace csr {
 
-double Qual::do_evaluate(const VcfRecord& call) const
+Qual::ResultType Qual::do_evaluate(const VcfRecord& call) const
 {
     if (call.qual()) {
         return static_cast<double>(*call.qual());
