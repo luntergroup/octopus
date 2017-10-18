@@ -1,7 +1,7 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "read_assignment.hpp"
+#include "read_assigner.hpp"
 
 #include <utility>
 #include <iterator>
