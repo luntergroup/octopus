@@ -206,7 +206,9 @@ set(CORE_SOURCES
     core/tools/vcf_header_factory.cpp
     core/tools/vcf_record_factory.hpp
     core/tools/vcf_record_factory.cpp
-    
+
+    core/csr/facets/facet.hpp
+    core/csr/facets/facet.cpp
     core/csr/facets/read_assignment.hpp
     core/csr/facets/read_assignment.cpp
     
