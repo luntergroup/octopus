@@ -226,9 +226,9 @@ set(CORE_SOURCES
     core/csr/measures/quality_by_depth.cpp
     core/csr/measures/mean_mapping_quality.hpp
     core/csr/measures/mean_mapping_quality.cpp
-    
-    core/csr/utils/genotype_reader.hpp
-    core/csr/utils/genotype_reader.cpp
+
+    utils/genotype_reader.hpp
+    utils/genotype_reader.cpp
     core/csr/utils/variant_call_filter_factory.hpp
     core/csr/utils/variant_call_filter_factory.cpp
     
