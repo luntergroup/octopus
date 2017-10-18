@@ -3,6 +3,9 @@
 
 #include "threshold_filter.hpp"
 
+#include <numeric>
+#include <functional>
+
 #include "io/variant/vcf_header.hpp"
 
 namespace octopus { namespace csr {
@@ -10,8 +13,10 @@ namespace octopus { namespace csr {
 ThresholdVariantCallFilter::ThresholdVariantCallFilter(const ReferenceGenome& reference,
                                                        const ReadPipe& read_pipe,
                                                        std::vector<MeasureWrapper> measures,
-                                                       std::size_t max_read_buffer_size)
-: VariantCallFilter {reference, read_pipe, std::move(measures), max_read_buffer_size}
+                                                       std::vector<std::unique_ptr<Threshold>> thresholds)
+: VariantCallFilter {reference, std::move(measures)}
+, read_pipe_ {read_pipe}
+, thresholds_ {std::move(thresholds)}
 {}
 
 void ThresholdVariantCallFilter::annotate(VcfHeader& header) const
@@ -19,9 +24,19 @@ void ThresholdVariantCallFilter::annotate(VcfHeader& header) const
     // TODO
 }
 
-VariantCallFilter::Classification ThresholdVariantCallFilter::classify(const MeasureVector& call_measures) const
+VariantCallFilter::Classification ThresholdVariantCallFilter::classify(const MeasureVector& measures) const
 {
-    return VariantCallFilter::Classification {};
+    if (passes_all_filters(measures)) {
+        return Classification {Classification::Category::unfiltered, {}, boost::none};
+    } else {
+        return Classification {Classification::Category::filtered, {}, boost::none};
+    }
+}
+
+bool ThresholdVariantCallFilter::passes_all_filters(const MeasureVector& measures) const
+{
+    return std::inner_product(std::cbegin(measures), std::cend(measures), std::cbegin(thresholds_), true, std::multiplies<> {},
+                              [] (const auto& measure, const auto& threshold) -> bool { return (*threshold)(measure); });
 }
 
 } // namespace csr

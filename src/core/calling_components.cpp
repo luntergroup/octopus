@@ -102,7 +102,7 @@ const CallerFactory& GenomeCallingComponents::caller_factory() const noexcept
 
 std::unique_ptr<csr::VariantCallFilter> GenomeCallingComponents::call_filter() const noexcept
 {
-    return components_.call_filter_factory.make();
+    return components_.call_filter_factory.make(reference(), read_pipe());
 }
 
 ProgressMeter& GenomeCallingComponents::progress_meter() noexcept

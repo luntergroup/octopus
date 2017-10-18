@@ -7,6 +7,8 @@
 #include <memory>
 
 #include "../filters/variant_call_filter.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "readpipe/read_pipe_fwd.hpp"
 
 namespace octopus { namespace csr {
 
@@ -22,7 +24,7 @@ public:
     
     ~VariantCallFilterFactory() = default;
     
-    std::unique_ptr<VariantCallFilter> make() const;
+    std::unique_ptr<VariantCallFilter> make(const ReferenceGenome& reference, const ReadPipe& read_pipe) const;
 };
 
 } // namespace csr

@@ -34,6 +34,7 @@
 #include "io/reference/reference_genome.hpp"
 #include "io/read/read_manager.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
+#include "readpipe/buffered_read_pipe.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/append.hpp"
@@ -1213,11 +1214,21 @@ void destroy(VcfWriter& writer)
     swap(writer, tmp);
 }
 
+auto get_filter_path(const boost::filesystem::path& native)
+{
+    return add_identifier(native, "filter");
+}
+
 void run_filtering(const GenomeCallingComponents& components)
 {
     auto filter = components.call_filter();
     if (filter) {
-        // TODO
+        const auto output_path = components.output().path();
+        if (output_path) {
+            const VcfReader in {*output_path};
+            VcfWriter out {get_filter_path(*output_path)};
+            filter->filter(in, out);
+        }
     }
 }
 

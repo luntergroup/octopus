@@ -5,6 +5,8 @@
 #define threshold_filter_hpp
 
 #include "variant_call_filter.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "readpipe/read_pipe_fwd.hpp"
 
 namespace octopus {
 
@@ -15,12 +17,18 @@ namespace csr {
 class ThresholdVariantCallFilter : public VariantCallFilter
 {
 public:
+    struct Threshold
+    {
+        virtual bool operator()(double value) const noexcept { return true; }
+        virtual ~Threshold() = default;
+    };
+    
     ThresholdVariantCallFilter() = delete;
     
     ThresholdVariantCallFilter(const ReferenceGenome& reference,
                                const ReadPipe& read_pipe,
                                std::vector<MeasureWrapper> measures,
-                               std::size_t max_read_buffer_size);
+                               std::vector<std::unique_ptr<Threshold>> thresholds);
     
     ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;
     ThresholdVariantCallFilter& operator=(const ThresholdVariantCallFilter&) = delete;
@@ -30,8 +38,13 @@ public:
     virtual ~ThresholdVariantCallFilter() = default;
 
 private:
+    std::reference_wrapper<const ReadPipe> read_pipe_;
+    std::vector<std::unique_ptr<Threshold>> thresholds_;
+    
     virtual void annotate(VcfHeader& dest) const override;
-    virtual Classification classify(const MeasureVector& call_measures) const override;
+    virtual Classification classify(const MeasureVector& measures) const override;
+    
+    bool passes_all_filters(const MeasureVector& measures) const;
 };
 
 } // namespace csr

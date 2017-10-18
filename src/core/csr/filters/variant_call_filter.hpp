@@ -5,16 +5,16 @@
 #define variant_call_filter_hpp
 
 #include <vector>
+#include <string>
 #include <cstddef>
 #include <type_traits>
+#include <functional>
 
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
 #include "basics/phred.hpp"
-#include "readpipe/read_pipe.hpp"
 #include "core/types/variant.hpp"
-#include "io/reference/reference_genome.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "../facets/facet.hpp"
 #include "../measures/measure.hpp"
@@ -33,10 +33,7 @@ class VariantCallFilter
 public:
     VariantCallFilter() = delete;
     
-    VariantCallFilter(const ReferenceGenome& reference,
-                      const ReadPipe& read_pipe,
-                      std::vector<MeasureWrapper> measures,
-                      std::size_t max_read_buffer_size);
+    VariantCallFilter(const ReferenceGenome& reference, std::vector<MeasureWrapper> measures);
     
     VariantCallFilter(const VariantCallFilter&)            = delete;
     VariantCallFilter& operator=(const VariantCallFilter&) = delete;
@@ -44,10 +41,6 @@ public:
     VariantCallFilter& operator=(VariantCallFilter&&)      = default;
     
     virtual ~VariantCallFilter() = default;
-    
-    virtual bool is_supervised() const noexcept { return false; }
-    
-    void register_training_set(const VcfReader& calls, double confidence);
     
     void filter(const VcfReader& source, VcfWriter& dest);
     
@@ -58,30 +51,28 @@ protected:
     struct Classification
     {
         enum class Category { filtered, unfiltered } category;
+        std::vector<std::string> reasons;
         boost::optional<Phred<double>> quality;
     };
     
+    std::reference_wrapper<const ReferenceGenome> reference_;
     std::vector<MeasureWrapper> measures_;
     
 private:
-    using FacetSet = std::vector<Facet>;
-//    const ReferenceGenome& reference_;
-//    const ReadPipe& read_pipe_;
-//
-//    std::size_t read_buffer_size_;
+    using FacetSet = std::vector<std::string>;
     
-    std::deque<std::pair<std::reference_wrapper<const VcfReader>, double>> training_sets_;
+    FacetSet facets_;
     
     virtual void annotate(VcfHeader& header) const = 0;
-    virtual void register_training_point(const MeasureVector& call_measures, double confidence) {};
-    virtual void train() {};
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
     
+    VcfRecord filter(const VcfRecord& call) const;
+    std::vector<VcfRecord> filter(std::vector<VcfRecord> calls) const;
     FacetSet compute_facets(const VcfRecord& call) const;
     MeasureVector measure(const VcfRecord& call) const;
     void annotate(VcfRecord::Builder& call, Classification status) const;
     void pass(VcfRecord::Builder& call) const;
-    void fail(VcfRecord::Builder& call) const;
+    void fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const;
 };
 
 } // namespace csr
@@ -90,4 +81,4 @@ using csr::VariantCallFilter;
 
 } // namespace octopus
 
-#endif /* variant_call_filter_hpp */
+#endif

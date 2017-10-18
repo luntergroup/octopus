@@ -7,6 +7,8 @@
 #include <deque>
 
 #include "variant_call_filter.hpp"
+#include "io/reference/reference_genome.hpp"
+#include "readpipe/read_pipe_fwd.hpp"
 
 namespace octopus { namespace csr  {
 
