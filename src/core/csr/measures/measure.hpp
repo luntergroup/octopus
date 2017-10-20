@@ -23,8 +23,8 @@ namespace csr {
 class Measure
 {
 public:
-    using ResultType = double;
     using FacetMap = std::unordered_map<std::string, FacetWrapper>;
+    using ResultType = boost::variant<double>;
     
     Measure() = default;
     
