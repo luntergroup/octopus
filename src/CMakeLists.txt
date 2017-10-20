@@ -211,6 +211,8 @@ set(CORE_SOURCES
     core/csr/facets/facet.cpp
     core/tools/read_assigner.hpp
     core/tools/read_assigner.cpp
+    core/csr/facets/read_assignments.hpp
+    core/csr/facets/read_assignments.cpp
     
     core/csr/filters/supervised_variant_call_filter.hpp
     core/csr/filters/supervised_variant_call_filter.cpp

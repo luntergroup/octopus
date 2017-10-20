@@ -4,7 +4,6 @@
 #ifndef facet_hpp
 #define facet_hpp
 
-#include <unordered_map>
 #include <string>
 #include <functional>
 #include <memory>
@@ -12,17 +11,20 @@
 #include <boost/variant.hpp>
 
 #include "concepts/equitable.hpp"
+
+#include <unordered_map>
+
 #include "config/common.hpp"
-#include "core/types/haplotype.hpp"
-#include "core/types/genotype.hpp"
+#include "core/tools/read_assigner.hpp"
 
 namespace octopus { namespace csr {
 
 class Facet : public Equitable<Facet>
 {
 public:
-    using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
-    using ResultType = boost::variant<int>;
+    using ResultType = boost::variant<int,
+                                      std::unordered_map<SampleName, HaplotypeSupportMap>
+                                     >;
     
     Facet() = default;
     
@@ -34,11 +36,11 @@ public:
     virtual ~Facet() = default;
     
     const std::string& name() const noexcept { return do_name(); }
-    ResultType evaluate(const GenotypeMap& genotypes) const { return do_evaluate(genotypes); }
+    ResultType get() const { return do_get(); }
     
 private:
     virtual const std::string& do_name() const noexcept = 0;
-    virtual ResultType do_evaluate(const GenotypeMap& genotypes) const = 0;
+    virtual ResultType do_get() const = 0;
 };
 
 bool operator==(const Facet& lhs, const Facet& rhs) noexcept;
@@ -59,6 +61,7 @@ public:
     
     const Facet* base() const noexcept { return facet_.get(); }
     const std::string& name() const noexcept { return facet_->name(); }
+    Facet::ResultType get() const { return facet_->get(); }
 
 private:
     std::unique_ptr<Facet> facet_;
