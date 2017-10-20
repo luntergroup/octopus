@@ -167,6 +167,8 @@ set(UTILS_SOURCES
     utils/emplace_iterator.hpp
     utils/repeat_finder.hpp
     utils/repeat_finder.cpp
+    utils/genotype_reader.hpp
+    utils/genotype_reader.cpp
 )
 
 set(CORE_SOURCES
@@ -206,13 +208,15 @@ set(CORE_SOURCES
     core/tools/vcf_header_factory.cpp
     core/tools/vcf_record_factory.hpp
     core/tools/vcf_record_factory.cpp
+    core/tools/read_assigner.hpp
+    core/tools/read_assigner.cpp
 
     core/csr/facets/facet.hpp
     core/csr/facets/facet.cpp
-    core/tools/read_assigner.hpp
-    core/tools/read_assigner.cpp
     core/csr/facets/read_assignments.hpp
     core/csr/facets/read_assignments.cpp
+    core/csr/facets/facet_factory.hpp
+    core/csr/facets/facet_factory.cpp
     
     core/csr/filters/supervised_variant_call_filter.hpp
     core/csr/filters/supervised_variant_call_filter.cpp
@@ -228,9 +232,9 @@ set(CORE_SOURCES
     core/csr/measures/quality_by_depth.cpp
     core/csr/measures/mean_mapping_quality.hpp
     core/csr/measures/mean_mapping_quality.cpp
+    core/csr/measures/allele_frequency.hpp
+    core/csr/measures/allele_frequency.cpp
 
-    utils/genotype_reader.hpp
-    utils/genotype_reader.cpp
     core/csr/utils/variant_call_filter_factory.hpp
     core/csr/utils/variant_call_filter_factory.cpp
     
