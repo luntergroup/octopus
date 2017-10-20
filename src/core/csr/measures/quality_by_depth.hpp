@@ -5,8 +5,6 @@
 #define quality_by_depth_hpp
 
 #include <string>
-#include <memory>
-#include <utility>
 
 #include "measure.hpp"
 
@@ -18,8 +16,8 @@ namespace csr  {
 
 class QualityByDepth : public Measure
 {
-    virtual ResultType do_evaluate(const VcfRecord& call) const override;
-    virtual std::string do_name() const override;
+    ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
+    std::string do_name() const override;
 };
 
 } // namespace csr

@@ -7,7 +7,7 @@
 
 namespace octopus { namespace csr {
 
-Qual::ResultType Qual::do_evaluate(const VcfRecord& call) const
+Measure::ResultType Qual::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (call.qual()) {
         return static_cast<double>(*call.qual());
