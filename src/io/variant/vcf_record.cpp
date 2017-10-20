@@ -313,6 +313,11 @@ static const VcfRecord::KeyType Info_1000g {"1000G"};
 static const VcfRecord::KeyType Info_somatic {"SOMATIC"};
 static const VcfRecord::KeyType Info_validated {"VALIDATED"};
 
+std::vector<VcfRecord::NucleotideSequence> get_genotype(const VcfRecord& record, const VcfRecord::SampleName& sample)
+{
+    return record.get_sample_value(sample, "GT");
+}
+
 bool is_dbsnp_member(const VcfRecord& record) noexcept
 {
     return record.has_info(Info_dbsnp);
