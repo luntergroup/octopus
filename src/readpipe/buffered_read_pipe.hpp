@@ -19,7 +19,7 @@ class BufferedReadPipe
 public:
     BufferedReadPipe() = delete;
     
-    BufferedReadPipe(ReadPipe& source, std::size_t max_buffer_size);
+    BufferedReadPipe(const ReadPipe& source, std::size_t max_buffer_size);
     
     BufferedReadPipe(const BufferedReadPipe&)            = delete;
     BufferedReadPipe& operator=(const BufferedReadPipe&) = delete;
@@ -28,14 +28,14 @@ public:
     
     ~BufferedReadPipe() = default;
     
-    ReadPipe& source() noexcept;
+    const ReadPipe& source() const noexcept;
     
     void clear() noexcept;
     
     ReadMap fetch_reads(const GenomicRegion& region) const;
     
 private:
-    std::reference_wrapper<ReadPipe> source_;
+    std::reference_wrapper<const ReadPipe> source_;
     std::size_t max_buffer_size_;
     mutable ReadMap buffer_;
     mutable boost::optional<GenomicRegion> buffered_region_;

@@ -5,14 +5,14 @@
 
 namespace octopus {
 
-BufferedReadPipe::BufferedReadPipe(ReadPipe& source, std::size_t max_buffer_size)
+BufferedReadPipe::BufferedReadPipe(const ReadPipe& source, std::size_t max_buffer_size)
 : source_ {source}
 , max_buffer_size_ {max_buffer_size}
 , buffer_ {}
 , buffered_region_ {}
 {}
 
-ReadPipe& BufferedReadPipe::source() noexcept
+const ReadPipe& BufferedReadPipe::source() const noexcept
 {
     return source_.get();
 }
