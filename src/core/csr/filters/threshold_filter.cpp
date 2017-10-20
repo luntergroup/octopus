@@ -3,6 +3,7 @@
 
 #include "threshold_filter.hpp"
 
+#include <utility>
 #include <numeric>
 #include <functional>
 
@@ -10,14 +11,16 @@
 
 namespace octopus { namespace csr {
 
-ThresholdVariantCallFilter::ThresholdVariantCallFilter(const ReferenceGenome& reference,
-                                                       const ReadPipe& read_pipe,
+ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factory,
                                                        std::vector<MeasureWrapper> measures,
                                                        std::vector<std::unique_ptr<Threshold>> thresholds)
-: VariantCallFilter {reference, std::move(measures)}
-, read_pipe_ {read_pipe}
+: VariantCallFilter {std::move(facet_factory), std::move(measures)}
 , thresholds_ {std::move(thresholds)}
-{}
+{
+    if (measures.size() != thresholds.size()) {
+        throw;
+    }
+}
 
 void ThresholdVariantCallFilter::annotate(VcfHeader& header) const
 {

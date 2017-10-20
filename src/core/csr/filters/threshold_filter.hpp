@@ -5,8 +5,7 @@
 #define threshold_filter_hpp
 
 #include "variant_call_filter.hpp"
-#include "io/reference/reference_genome.hpp"
-#include "readpipe/read_pipe_fwd.hpp"
+#include "../facets/facet_factory.hpp"
 
 namespace octopus {
 
@@ -25,8 +24,7 @@ public:
     
     ThresholdVariantCallFilter() = delete;
     
-    ThresholdVariantCallFilter(const ReferenceGenome& reference,
-                               const ReadPipe& read_pipe,
+    ThresholdVariantCallFilter(FacetFactory facet_factory,
                                std::vector<MeasureWrapper> measures,
                                std::vector<std::unique_ptr<Threshold>> thresholds);
     
@@ -38,7 +36,6 @@ public:
     virtual ~ThresholdVariantCallFilter() = default;
 
 private:
-    std::reference_wrapper<const ReadPipe> read_pipe_;
     std::vector<std::unique_ptr<Threshold>> thresholds_;
     
     virtual void annotate(VcfHeader& dest) const override;

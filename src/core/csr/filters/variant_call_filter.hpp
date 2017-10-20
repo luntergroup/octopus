@@ -17,6 +17,7 @@
 #include "core/types/variant.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "../facets/facet.hpp"
+#include "../facets/facet_factory.hpp"
 #include "../measures/measure.hpp"
 
 namespace octopus {
@@ -33,7 +34,7 @@ class VariantCallFilter
 public:
     VariantCallFilter() = delete;
     
-    VariantCallFilter(const ReferenceGenome& reference, std::vector<MeasureWrapper> measures);
+    VariantCallFilter(FacetFactory facet_factory, std::vector<MeasureWrapper> measures);
     
     VariantCallFilter(const VariantCallFilter&)            = delete;
     VariantCallFilter& operator=(const VariantCallFilter&) = delete;
@@ -54,12 +55,12 @@ protected:
         boost::optional<Phred<double>> quality;
     };
     
-    std::reference_wrapper<const ReferenceGenome> reference_;
     std::vector<MeasureWrapper> measures_;
     
 private:
     using FacetSet = std::vector<std::string>;
     
+    FacetFactory facet_factory_;
     FacetSet facets_;
     
     virtual void annotate(VcfHeader& header) const = 0;
@@ -67,8 +68,9 @@ private:
     
     VcfRecord filter(const VcfRecord& call) const;
     std::vector<VcfRecord> filter(std::vector<VcfRecord> calls) const;
-    FacetSet compute_facets(const VcfRecord& call) const;
+    Measure::FacetMap compute_facets(const std::vector<VcfRecord>& calls) const;
     MeasureVector measure(const VcfRecord& call) const;
+    MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;
     void annotate(VcfRecord::Builder& call, Classification status) const;
     void pass(VcfRecord::Builder& call) const;
     void fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const;
