@@ -8,6 +8,11 @@
 #include <string>
 #include <memory>
 #include <utility>
+#include <unordered_map>
+
+#include <boost/variant.hpp>
+
+#include "../facets/facet.hpp"
 
 namespace octopus {
 
@@ -19,6 +24,7 @@ class Measure
 {
 public:
     using ResultType = double;
+    using FacetMap = std::unordered_map<std::string, FacetWrapper>;
     
     Measure() = default;
     
@@ -29,12 +35,12 @@ public:
     
     virtual ~Measure() = default;
     
-    ResultType evaluate(const VcfRecord& call) const { return do_evaluate(call); }
+    ResultType evaluate(const VcfRecord& call, const FacetMap& facets) const { return do_evaluate(call, facets); }
     std::string name() const { return do_name(); }
     std::vector<std::string> requirements() const { return do_requirements(); }
     
 private:
-    virtual ResultType do_evaluate(const VcfRecord& call) const = 0;
+    virtual ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const = 0;
     virtual std::string do_name() const = 0;
     virtual std::vector<std::string> do_requirements() const { return {}; }
 };
@@ -54,7 +60,8 @@ public:
     ~MeasureWrapper() = default;
     
     const Measure* base() const noexcept { return measure_.get(); }
-    auto operator()(const VcfRecord& call) const { return measure_->evaluate(call); }
+    auto operator()(const VcfRecord& call) const { return measure_->evaluate(call, {}); }
+    auto operator()(const VcfRecord& call, const Measure::FacetMap& facets) const { return measure_->evaluate(call, facets); }
     std::string name() const { return measure_->name(); }
     std::vector<std::string> requirements() const { return measure_->requirements(); }
     
