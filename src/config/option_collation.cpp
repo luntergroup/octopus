@@ -1356,8 +1356,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     }
     
-    if (options.count("model-filtering") == 1) {
-        vc_builder.set_model_filtering(options.at("model-filtering").as<bool>());
+    if (options.count("model-posterior") == 1) {
+        vc_builder.set_model_filtering(options.at("model-posterior").as<bool>());
     } else {
         vc_builder.set_model_filtering(caller == "cancer");
     }
