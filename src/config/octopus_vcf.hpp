@@ -6,9 +6,20 @@
 
 #include <string>
 
-#include <io/variant/vcf_header.hpp>
+#include "io/variant/vcf_header.hpp"
+#include "io/variant/vcf_spec.hpp"
 
 namespace octopus { namespace vcf {
+
+namespace spec {
+
+namespace info {
+
+VCF_SPEC_CONSTANT modelPosterior {"MP"};
+
+} // namespace info
+
+} // namespace spec
 
 VcfHeader::Builder make_header_template();
 
