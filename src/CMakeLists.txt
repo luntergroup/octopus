@@ -228,6 +228,8 @@ set(CORE_SOURCES
     core/csr/measures/measure.hpp
     core/csr/measures/qual.hpp
     core/csr/measures/qual.cpp
+    core/csr/measures/depth.hpp
+    core/csr/measures/depth.cpp
     core/csr/measures/quality_by_depth.hpp
     core/csr/measures/quality_by_depth.cpp
     core/csr/measures/mean_mapping_quality.hpp
