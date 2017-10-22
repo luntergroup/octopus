@@ -19,6 +19,7 @@
 #include "core/types/allele.hpp"
 #include "core/types/variant.hpp"
 #include "io/variant/vcf_header.hpp"
+#include "io/variant/vcf_spec.hpp"
 #include "io/reference/reference_genome.hpp"
 
 #include <iostream> // DEBUG
@@ -27,26 +28,19 @@ namespace octopus {
 
 namespace {
 
-auto mapped_contig_region(const VcfRecord& call)
-{
-    const auto begin = static_cast<ContigRegion::Position>(call.pos()) - 1;
-    return ContigRegion {
-        begin, begin + static_cast<ContigRegion::Position>(call.ref().size())
-    };
-}
-
 auto extract_phase_region(const VcfRecord& call, const SampleName& sample)
 {
     auto result = get_phase_region(call, sample);
     if (result) return *result;
-    return GenomicRegion {call.chrom(), mapped_contig_region(call)};
+    return GenomicRegion {call.chrom(), contig_region(call)};
 }
 
 struct CallWrapper : public Mappable<CallWrapper>
 {
     CallWrapper(const VcfRecord& record, const SampleName& sample)
-    :
-    call {std::cref(record)}, phase_region {extract_phase_region(record, sample)} {}
+    : call {std::cref(record)}
+    , phase_region {extract_phase_region(record, sample)}
+    {}
     
     std::reference_wrapper<const VcfRecord> call;
     GenomicRegion phase_region;
@@ -57,21 +51,18 @@ auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleName& sample)
 {
     std::vector<CallWrapper> result {};
     result.reserve(calls.size());
-    
     for (const auto& call : calls) {
         result.emplace_back(call, sample);
     }
-    
     return result;
 }
 
 decltype(auto) extract_genotype(const CallWrapper& call, const SampleName& sample)
 {
-    return call.call.get().get_sample_value(sample, "GT");
+    return get_genotype(call.call, sample);
 }
 
-auto extract_ploidy(const std::vector<CallWrapper>& phased_calls,
-                    const SampleName& sample)
+auto extract_ploidy(const std::vector<CallWrapper>& phased_calls, const SampleName& sample)
 {
     assert(!phased_calls.empty());
     return extract_genotype(phased_calls.front(), sample).size();
@@ -80,22 +71,21 @@ auto extract_ploidy(const std::vector<CallWrapper>& phased_calls,
 auto make_genotype(std::vector<Haplotype::Builder>&& haplotypes)
 {
     Genotype<Haplotype> result {static_cast<unsigned>(haplotypes.size())};
-    
     for (auto& haplotype : haplotypes) {
         result.emplace(haplotype.build());
     }
-    
     return result;
 }
 
 auto mapped_contig_region(const CallWrapper& call)
 {
-    return mapped_contig_region(call.call.get());
+    return contig_region(call.call.get());
 }
 
 bool is_missing(const VcfRecord::NucleotideSequence& allele)
 {
-    return allele == "." || allele == "*";
+    const std::string deleted_sequence {vcfspec::deletedBase};
+    return allele == vcfspec::missingValue || allele == deleted_sequence;
 }
 
 auto make_allele(const ContigRegion& region, const VcfRecord::NucleotideSequence& ref_allele,
@@ -120,7 +110,6 @@ Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_call
     
     for (const auto& call : phased_calls) {
         const auto& genotype = extract_genotype(call, sample);
-        
         for (unsigned i {0}; i < ploidy; ++i) {
             if (!is_missing(genotype[i])) {
                 try {
