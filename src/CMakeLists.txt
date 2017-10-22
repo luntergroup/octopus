@@ -224,6 +224,8 @@ set(CORE_SOURCES
     core/csr/filters/threshold_filter.cpp
     core/csr/filters/variant_call_filter.hpp
     core/csr/filters/variant_call_filter.cpp
+    core/csr/filters/variant_call_filter_factory.hpp
+    core/csr/filters/variant_call_filter_factory.cpp
     
     core/csr/measures/measure.hpp
     core/csr/measures/qual.hpp
@@ -240,9 +242,6 @@ set(CORE_SOURCES
     core/csr/measures/allele_frequency.cpp
     core/csr/measures/strand_bias.hpp
     core/csr/measures/strand_bias.cpp
-
-    core/csr/utils/variant_call_filter_factory.hpp
-    core/csr/utils/variant_call_filter_factory.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp

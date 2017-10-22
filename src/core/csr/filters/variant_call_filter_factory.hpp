@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "../filters/variant_call_filter.hpp"
+#include "variant_call_filter.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
 

@@ -5,11 +5,12 @@
 
 #include <boost/variant.hpp>
 
-#include "../filters/threshold_filter.hpp"
-#include "../facets/facet_factory.hpp"
-#include "../measures/qual.hpp"
-#include "../measures/mean_mapping_quality.hpp"
-#include "../measures/allele_frequency.hpp"
+#include "threshold_filter.hpp"
+#include "core/csr/facets/facet_factory.hpp"
+#include "core/csr/measures/qual.hpp"
+#include "core/csr/measures/mean_mapping_quality.hpp"
+#include "core/csr/measures/allele_frequency.hpp"
+#include "core/csr/measures/strand_bias.hpp"
 
 namespace octopus { namespace csr {
 
@@ -31,11 +32,13 @@ std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const Referenc
     measures.push_back(make_wrapped_measure<Qual>());
     measures.push_back(make_wrapped_measure<MeanMappingQuality>());
     measures.push_back(make_wrapped_measure<AlleleFrequency>());
+    measures.push_back(make_wrapped_measure<StrandBias>());
     using TP = std::unique_ptr<ThresholdVariantCallFilter::Threshold>;
     std::vector<TP> thresholds {};
     thresholds.push_back(std::make_unique<LessThreshold>(20.0));
     thresholds.push_back(std::make_unique<LessThreshold>(40.0));
     thresholds.push_back(std::make_unique<LessThreshold>(0.2));
+    thresholds.push_back(std::make_unique<LessThreshold>(0.1));
     return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory), std::move(measures), std::move(thresholds));
 }
 

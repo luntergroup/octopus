@@ -19,7 +19,7 @@
 #include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe.hpp"
 #include "core/callers/caller_factory.hpp"
-#include "core/csr/utils/variant_call_filter_factory.hpp"
+#include "core/csr/filters/variant_call_filter_factory.hpp"
 
 namespace fs = boost::filesystem;
 
