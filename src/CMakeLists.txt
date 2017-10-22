@@ -238,6 +238,8 @@ set(CORE_SOURCES
     core/csr/measures/model_posterior.cpp
     core/csr/measures/allele_frequency.hpp
     core/csr/measures/allele_frequency.cpp
+    core/csr/measures/strand_bias.hpp
+    core/csr/measures/strand_bias.cpp
 
     core/csr/utils/variant_call_filter_factory.hpp
     core/csr/utils/variant_call_filter_factory.cpp

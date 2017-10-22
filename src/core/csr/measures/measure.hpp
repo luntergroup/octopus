@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include <boost/variant.hpp>
+#include <boost/optional.hpp>
 
 #include "../facets/facet.hpp"
 
@@ -24,7 +25,7 @@ class Measure
 {
 public:
     using FacetMap = std::unordered_map<std::string, FacetWrapper>;
-    using ResultType = boost::variant<double>;
+    using ResultType = boost::variant<double, boost::optional<double>>;
     
     Measure() = default;
     
