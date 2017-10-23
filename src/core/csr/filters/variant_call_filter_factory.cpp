@@ -25,6 +25,17 @@ private:
     Measure::ResultType target_;
 };
 
+struct GreaterThreshold : public ThresholdVariantCallFilter::Threshold
+{
+    explicit GreaterThreshold(Measure::ResultType target) : target_ {target} {}
+    bool operator()(Measure::ResultType value) const noexcept
+    {
+        return value <= target_;
+    }
+private:
+    Measure::ResultType target_;
+};
+
 std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const ReferenceGenome& reference,
                                                                   BufferedReadPipe read_pipe,
                                                                   boost::optional<ProgressMeter&> progress) const
