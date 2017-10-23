@@ -142,8 +142,12 @@ HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotyp
                                               const std::vector<AlignedRead>& reads,
                                               HaplotypeLikelihoodModel model)
 {
-    const auto likelihoods = calculate_likelihoods(genotype, reads, model);
-    return calculate_support(genotype, reads, likelihoods);
+    if (!reads.empty()) {
+        const auto likelihoods = calculate_likelihoods(genotype, reads, model);
+        return calculate_support(genotype, reads, likelihoods);
+    } else {
+        return HaplotypeSupportMap {};
+    }
 }
 
 AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
