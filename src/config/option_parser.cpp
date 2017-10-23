@@ -537,7 +537,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description call_filtering("Callset filtering");
     call_filtering.add_options()
-    ("call-filtering",
+    ("call-filtering,f",
      po::value<bool>()->default_value(false),
      "Enable all variant call filtering")
     ;
