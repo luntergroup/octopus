@@ -12,7 +12,7 @@ Measure::ResultType ModelPosterior::do_evaluate(const VcfRecord& call, const Fac
 {
     namespace ovcf = octopus::vcf::spec;
     if (call.has_info(ovcf::info::modelPosterior)) {
-        return std::stod(call.info_value(ovcf::info::modelPosterior)).front());
+        return std::stod(call.info_value(ovcf::info::modelPosterior).front());
     } else {
         return boost::none;
     }
