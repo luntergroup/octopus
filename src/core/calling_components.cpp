@@ -14,6 +14,7 @@
 #include "config/option_collation.hpp"
 #include "utils/read_size_estimator.hpp"
 #include "utils/map_utils.hpp"
+#include "readpipe/buffered_read_pipe.hpp"
 #include "logging/logging.hpp"
 #include "exceptions/user_error.hpp"
 
@@ -132,7 +133,9 @@ boost::optional<const VcfWriter&> GenomeCallingComponents::filtered_output() con
 std::unique_ptr<csr::VariantCallFilter> GenomeCallingComponents::call_filter(boost::optional<ProgressMeter&> progress) const noexcept
 {
     if (components_.call_filter_factory) {
-        return components_.call_filter_factory->make(reference(), read_pipe(), progress);
+        return components_.call_filter_factory->make(reference(),
+                                                     BufferedReadPipe {read_pipe(), components_.read_buffer_size},
+                                                     progress);
     } else {
         return nullptr;
     }

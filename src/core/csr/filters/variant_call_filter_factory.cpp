@@ -26,10 +26,10 @@ private:
 };
 
 std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const ReferenceGenome& reference,
-                                                                  const ReadPipe& read_pipe,
+                                                                  BufferedReadPipe read_pipe,
                                                                   boost::optional<ProgressMeter&> progress) const
 {
-    FacetFactory facet_factory {reference, BufferedReadPipe {read_pipe, 100'000}};
+    FacetFactory facet_factory {reference, std::move(read_pipe)};
     std::vector<MeasureWrapper> measures {};
     measures.push_back(make_wrapped_measure<Qual>());
     measures.push_back(make_wrapped_measure<MeanMappingQuality>());
