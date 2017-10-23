@@ -29,6 +29,16 @@ ThreadsafeFasta::ThreadsafeFasta(ThreadsafeFasta&& other)
     fasta_ = std::move(other.fasta_);
 }
 
+ThreadsafeFasta& ThreadsafeFasta::operator=(ThreadsafeFasta&& other)
+{
+    if (this != &other) {
+        std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
+        std::lock(lock_lhs, lock_rhs);
+        fasta_ = std::move(other.fasta_);
+    }
+    return *this;
+}
+
 std::unique_ptr<ReferenceReader> ThreadsafeFasta::do_clone() const
 {
     return std::make_unique<ThreadsafeFasta>(*this);

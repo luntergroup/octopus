@@ -82,6 +82,18 @@ VcfWriter::VcfWriter(VcfWriter&& other)
     writer_            = std::move(other.writer_);
 }
 
+VcfWriter& VcfWriter::operator=(VcfWriter&& other)
+{
+    if (this != &other) {
+        std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
+        std::lock(lock_lhs, lock_rhs);
+        file_path_         = std::move(other.file_path_);
+        is_header_written_ = other.is_header_written_;
+        writer_            = std::move(other.writer_);
+    }
+    return *this;
+}
+
 VcfWriter::~VcfWriter()
 {
     try {

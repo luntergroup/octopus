@@ -36,7 +36,7 @@ public:
     ThreadsafeFasta(const ThreadsafeFasta&);
     ThreadsafeFasta& operator=(ThreadsafeFasta);
     ThreadsafeFasta(ThreadsafeFasta&&);
-    ThreadsafeFasta& operator=(ThreadsafeFasta&&) = default;
+    ThreadsafeFasta& operator=(ThreadsafeFasta&&);
     
 private:
     std::unique_ptr<Fasta> fasta_;

@@ -34,7 +34,7 @@ public:
     VcfWriter(const VcfWriter&)            = delete;
     VcfWriter& operator=(const VcfWriter&) = delete;
     VcfWriter(VcfWriter&&);
-    VcfWriter& operator=(VcfWriter&&)      = default;
+    VcfWriter& operator=(VcfWriter&&);
     
     ~VcfWriter();
     
