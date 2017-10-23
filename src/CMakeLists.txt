@@ -242,6 +242,8 @@ set(CORE_SOURCES
     core/csr/measures/allele_frequency.cpp
     core/csr/measures/strand_bias.hpp
     core/csr/measures/strand_bias.cpp
+    core/csr/measures/mapping_quality_divergence.hpp
+    core/csr/measures/mapping_quality_divergence.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
