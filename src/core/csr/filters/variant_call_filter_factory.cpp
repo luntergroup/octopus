@@ -25,7 +25,9 @@ private:
     Measure::ResultType target_;
 };
 
-std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const ReferenceGenome& reference, const ReadPipe& read_pipe) const
+std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const ReferenceGenome& reference,
+                                                                  const ReadPipe& read_pipe,
+                                                                  boost::optional<ProgressMeter&> progress) const
 {
     FacetFactory facet_factory {reference, BufferedReadPipe {read_pipe, 100'000}};
     std::vector<MeasureWrapper> measures {};
@@ -40,6 +42,8 @@ std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const Referenc
     thresholds.push_back(std::make_unique<LessThreshold>(0.2));
     thresholds.push_back(std::make_unique<LessThreshold>(0.1));
     return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory), std::move(measures), std::move(thresholds));
+    return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory), std::move(measures),
+                                                        std::move(thresholds), progress);
 }
 
 } // namespace csr

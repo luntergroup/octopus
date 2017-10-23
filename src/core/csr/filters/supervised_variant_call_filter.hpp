@@ -6,9 +6,12 @@
 
 #include <deque>
 
+#include <boost/optional.hpp>
+
 #include "variant_call_filter.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
+#include "logging/progress_meter.hpp"
 
 namespace octopus { namespace csr  {
 
@@ -20,7 +23,7 @@ public:
     SupervisedVariantCallFilter(const ReferenceGenome& reference,
                                 const ReadPipe& read_pipe,
                                 std::vector<MeasureWrapper> measures,
-                                std::size_t max_read_buffer_size);
+                                boost::optional<ProgressMeter&> progress = boost::none);
     
     SupervisedVariantCallFilter(const SupervisedVariantCallFilter&)            = delete;
     SupervisedVariantCallFilter& operator=(const SupervisedVariantCallFilter&) = delete;

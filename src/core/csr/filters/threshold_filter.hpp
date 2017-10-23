@@ -4,7 +4,10 @@
 #ifndef threshold_filter_hpp
 #define threshold_filter_hpp
 
+#include <boost/optional.hpp>
+
 #include "variant_call_filter.hpp"
+#include "logging/progress_meter.hpp"
 #include "../facets/facet_factory.hpp"
 
 namespace octopus {
@@ -26,7 +29,8 @@ public:
     
     ThresholdVariantCallFilter(FacetFactory facet_factory,
                                std::vector<MeasureWrapper> measures,
-                               std::vector<std::unique_ptr<Threshold>> thresholds);
+                               std::vector<std::unique_ptr<Threshold>> thresholds,
+                               boost::optional<ProgressMeter&> progress = boost::none);
     
     ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;
     ThresholdVariantCallFilter& operator=(const ThresholdVariantCallFilter&) = delete;

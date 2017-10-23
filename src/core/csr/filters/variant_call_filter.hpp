@@ -16,6 +16,7 @@
 #include "basics/phred.hpp"
 #include "core/types/variant.hpp"
 #include "io/variant/vcf_record.hpp"
+#include "logging/progress_meter.hpp"
 #include "../facets/facet.hpp"
 #include "../facets/facet_factory.hpp"
 #include "../measures/measure.hpp"
@@ -34,7 +35,9 @@ class VariantCallFilter
 public:
     VariantCallFilter() = delete;
     
-    VariantCallFilter(FacetFactory facet_factory, std::vector<MeasureWrapper> measures);
+    VariantCallFilter(FacetFactory facet_factory,
+                      std::vector<MeasureWrapper> measures,
+                      boost::optional<ProgressMeter&> progress);
     
     VariantCallFilter(const VariantCallFilter&)            = delete;
     VariantCallFilter& operator=(const VariantCallFilter&) = delete;
@@ -62,6 +65,7 @@ private:
     
     FacetFactory facet_factory_;
     FacetSet facets_;
+    boost::optional<ProgressMeter&> progress_;
     
     virtual void annotate(VcfHeader& header) const = 0;
     virtual Classification classify(const MeasureVector& call_measures) const = 0;

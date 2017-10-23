@@ -6,9 +6,12 @@
 
 #include <memory>
 
+#include <boost/optional.hpp>
+
 #include "variant_call_filter.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
+#include "logging/progress_meter.hpp"
 
 namespace octopus { namespace csr {
 
@@ -24,7 +27,8 @@ public:
     
     ~VariantCallFilterFactory() = default;
     
-    std::unique_ptr<VariantCallFilter> make(const ReferenceGenome& reference, const ReadPipe& read_pipe) const;
+    std::unique_ptr<VariantCallFilter> make(const ReferenceGenome& reference, const ReadPipe& read_pipe,
+                                            boost::optional<ProgressMeter&> progress = boost::none) const;
 };
 
 } // namespace csr

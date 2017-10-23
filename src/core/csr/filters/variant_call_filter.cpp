@@ -42,10 +42,12 @@ auto get_facets(const std::vector<MeasureWrapper>& measures)
     return result;
 }
 
-VariantCallFilter::VariantCallFilter(FacetFactory facet_factory, std::vector<MeasureWrapper> measures)
+VariantCallFilter::VariantCallFilter(FacetFactory facet_factory, std::vector<MeasureWrapper> measures,
+                                     boost::optional<ProgressMeter&> progress)
 : measures_ {std::move(measures)}
 , facet_factory_ {std::move(facet_factory)}
 , facets_ {get_facets(measures_)}
+, progress_ {progress}
 {}
 
 namespace {
@@ -94,6 +96,9 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
         auto p = source.iterate();
         std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) {
             dest << filter(call);
+            if (progress_) {
+                progress_->log_completed(mapped_region(call));
+            }
         });
     } else {
         std::vector<std::pair<VcfRecord, GenomicRegion>> block {};
@@ -102,6 +107,9 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
             auto call_phase_region = get_phase_region(call, samples);
             if (!block.empty() && !overlaps(block.back().second, call_phase_region)) {
                 dest << filter(copy_each_first(block));
+                if (progress_) {
+                    progress_->log_completed(call_phase_region);
+                }
                 block.clear();
             }
             block.push_back({call, std::move(call_phase_region)});
