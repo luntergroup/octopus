@@ -1167,6 +1167,12 @@ void run_calling(GenomeCallingComponents& components)
     }
 }
 
+void destroy(VcfWriter& writer)
+{
+    VcfWriter tmp {};
+    swap(writer, tmp);
+}
+
 auto make_filter_read_pipe(const GenomeCallingComponents& components)
 {
     using std::make_unique;
@@ -1191,56 +1197,23 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
     };
 }
 
-auto add_identifier(const boost::filesystem::path& base, const std::string& identifier)
-{
-    const auto old_stem  = base.stem();
-    const auto extension = base.extension();
-    
-    boost::filesystem::path new_stem;
-    
-    if (extension.string() == ".gz") {
-        new_stem = old_stem.stem().string() + "." + identifier
-        + old_stem.extension().string() + extension.string();
-    } else {
-        new_stem = old_stem.string() + "." + identifier + extension.string();
-    }
-    
-    return base.parent_path() / new_stem;
-}
-
-void destroy(VcfWriter& writer)
-{
-    VcfWriter tmp {};
-    swap(writer, tmp);
-}
-
-auto get_filter_path(const boost::filesystem::path& native)
-{
-    return add_identifier(native, "filter");
-}
-
-void run_filtering(const GenomeCallingComponents& components)
+void run_filtering(GenomeCallingComponents& components)
 {
     auto filter = components.call_filter();
     if (filter) {
-        const auto output_path = components.output().path();
-        if (output_path) {
-            const VcfReader in {*output_path};
-            VcfWriter out {get_filter_path(*output_path)};
-            filter->filter(in, out);
-        }
+        assert(components.output().path());
+        assert(!components.output().is_open());
+        const VcfReader in {*components.output().path()};
+        assert(components.filtered_output());
+        VcfWriter out {*components.filtered_output()};
+        filter->filter(in, out);
     }
 }
 
-auto get_legacy_path(const boost::filesystem::path& native)
+void convert_to_legacy(const boost::filesystem::path& src, const boost::filesystem::path& dest)
 {
-    return add_identifier(native, "legacy");
-}
-
-void make_legacy_copy(const boost::filesystem::path& native)
-{
-    const VcfReader in {native};
-    VcfWriter out {get_legacy_path(native)};
+    const VcfReader in {src};
+    VcfWriter out {dest};
     convert_to_legacy(in, out);
 }
 
@@ -1316,7 +1289,7 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
             const auto output_path = components.output().path();
             destroy(components.output());
             if (output_path) {
-                make_legacy_copy(*output_path);
+                convert_to_legacy(*output_path, *components.legacy());
             }
         }
     } catch (...) {
@@ -1330,6 +1303,5 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
                      << TimeInterval {start, end};
     cleanup(components);
 }
+
 } // namespace octopus
-
-

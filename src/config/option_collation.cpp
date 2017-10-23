@@ -1376,10 +1376,19 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     return CallerFactory {std::move(vc_builder)};
 }
 
-VariantCallFilterFactory make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
-                                                  const OptionMap& options)
+bool is_call_filtering_requested(const OptionMap& options) noexcept
 {
-    return VariantCallFilterFactory {};
+    return options.at("call-filtering").as<bool>();
+}
+
+boost::optional<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
+                                                                   const OptionMap& options)
+{
+    if (is_call_filtering_requested(options)) {
+        return VariantCallFilterFactory {};
+    } else {
+        return boost::none;
+    }
 }
 
 boost::optional<fs::path> get_output_path(const OptionMap& options)
@@ -1388,12 +1397,6 @@ boost::optional<fs::path> get_output_path(const OptionMap& options)
         return resolve_path(options.at("output").as<fs::path>(), options);
     }
     return boost::none;
-}
-
-VcfWriter make_output_vcf_writer(const OptionMap& options)
-{
-    auto output = get_output_path(options);
-    return output ? VcfWriter {std::move(*output)} : VcfWriter {};
 }
 
 boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
@@ -1431,7 +1434,7 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
     return result;
 }
 
-bool legacy_vcf_requested(const OptionMap& options)
+bool is_legacy_vcf_requested(const OptionMap& options)
 {
     return options.at("legacy").as<bool>();
 }

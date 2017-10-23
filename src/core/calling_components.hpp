@@ -20,7 +20,7 @@
 #include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/callers/caller_factory.hpp"
-#include "core/csr/utils/variant_call_filter_factory.hpp"
+#include "core/csr/filters/variant_call_filter_factory.hpp"
 #include "core/csr/filters/variant_call_filter.hpp"
 #include "logging/progress_meter.hpp"
 
@@ -29,6 +29,8 @@ namespace octopus {
 class GenomeCallingComponents
 {
 public:
+    using Path = boost::filesystem::path;
+    
     GenomeCallingComponents() = delete;
     
     GenomeCallingComponents(ReferenceGenome&& reference, ReadManager&& read_manager,
@@ -52,13 +54,14 @@ public:
     VcfWriter& output() noexcept;
     const VcfWriter& output() const noexcept;
     std::size_t read_buffer_size() const noexcept;
-    const boost::optional<boost::filesystem::path>& temp_directory() const noexcept;
+    const boost::optional<Path>& temp_directory() const noexcept;
     boost::optional<unsigned> num_threads() const noexcept;
     const CallerFactory& caller_factory() const noexcept;
+    boost::optional<VcfWriter> filtered_output() const;
     std::unique_ptr<csr::VariantCallFilter> call_filter() const noexcept;
     ProgressMeter& progress_meter() noexcept;
     bool sites_only() const noexcept;
-    bool legacy() const noexcept;
+    boost::optional<Path> legacy() const;
     
 private:
     struct Components
@@ -82,14 +85,18 @@ private:
         std::vector<GenomicRegion::ContigName> contigs;
         ReadPipe read_pipe;
         CallerFactory caller_factory;
-        VariantCallFilterFactory call_filter_factory;
+        boost::optional<VariantCallFilterFactory> call_filter_factory;
         VcfWriter output;
         boost::optional<unsigned> num_threads;
         std::size_t read_buffer_size;
-        boost::optional<boost::filesystem::path> temp_directory;
+        boost::optional<Path> temp_directory;
         ProgressMeter progress_meter;
         bool sites_only;
-        bool legacy;
+        boost::optional<Path> filtered_output, legacy;
+        
+        void setup_progress_meter(const options::OptionMap& options);
+        void set_read_buffer_size(const options::OptionMap& options);
+        void setup_writers(const options::OptionMap& options);
     };
     
     Components components_;
