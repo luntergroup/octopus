@@ -1205,8 +1205,7 @@ void run_filtering(GenomeCallingComponents& components)
         assert(!components.output().is_open());
         const VcfReader in {*components.output().path()};
         assert(components.filtered_output());
-        VcfWriter out {*components.filtered_output()};
-        filter->filter(in, out);
+        filter->filter(in, *components.filtered_output());
     }
 }
 

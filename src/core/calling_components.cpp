@@ -111,10 +111,10 @@ const CallerFactory& GenomeCallingComponents::caller_factory() const noexcept
     return components_.caller_factory;
 }
 
-boost::optional<VcfWriter> GenomeCallingComponents::filtered_output() const
+boost::optional<VcfWriter&> GenomeCallingComponents::filtered_output()
 {
-    if (components_.call_filter_factory) {
-        return make_vcf_writer(components_.filtered_output);
+    if (components_.filtered_output) {
+        return *components_.filtered_output; // convert to referece
     } else {
         return boost::none;
     }
@@ -434,13 +434,15 @@ void GenomeCallingComponents::Components::setup_writers(const options::OptionMap
 {
     if (call_filter_factory) {
         const auto final_output_path = output.path();
-        filtered_output = final_output_path;
+        filtered_output = std::move(output);
+        fs::path prefilter_path;
         if (final_output_path) {
-            output.open(get_unfiltered_path(*final_output_path));
+            prefilter_path = get_unfiltered_path(*final_output_path);
         } else {
             assert(temp_directory);
-            output.open(generate_temp_output_path(*temp_directory));
+            prefilter_path = generate_temp_output_path(*temp_directory);
         }
+        output.open(std::move(prefilter_path));
         if (options::is_legacy_vcf_requested(options) && final_output_path) {
             legacy = get_legacy_path(*final_output_path);
         }
