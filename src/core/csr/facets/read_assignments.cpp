@@ -26,9 +26,15 @@ ReadAssignments::ReadAssignments(const GenotypeMap& genotypes, const ReadMap& re
         assignments_[p.first].reserve(p.second.size());
         for (const auto& genotype : p.second) {
             auto local_reads = copy_overlapped_to_vector(reads.at(p.first), genotype);
-            auto local_assignments = compute_haplotype_support(genotype, local_reads);
-            for (auto s : local_assignments) {
-                assignments_[p.first][s.first] = s.second;
+            for (const auto& haplotype : genotype) {
+                // So every called haplotype appears in support map, even if no read support
+                assignments_[p.first][haplotype] = {};
+            }
+            if (!local_reads.empty()) {
+                auto local_assignments = compute_haplotype_support(genotype, local_reads);
+                for (auto s : local_assignments) {
+                    assignments_[p.first][s.first] = s.second;
+                }
             }
         }
     }
