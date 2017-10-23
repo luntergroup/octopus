@@ -111,19 +111,28 @@ const CallerFactory& GenomeCallingComponents::caller_factory() const noexcept
     return components_.caller_factory;
 }
 
-boost::optional<VcfWriter&> GenomeCallingComponents::filtered_output()
+boost::optional<VcfWriter&> GenomeCallingComponents::filtered_output() noexcept
 {
     if (components_.filtered_output) {
-        return *components_.filtered_output; // convert to referece
+        return *components_.filtered_output; // convert to reference
     } else {
         return boost::none;
     }
 }
 
-std::unique_ptr<csr::VariantCallFilter> GenomeCallingComponents::call_filter() const noexcept
+boost::optional<const VcfWriter&> GenomeCallingComponents::filtered_output() const noexcept
+{
+    if (components_.filtered_output) {
+        return *components_.filtered_output; // convert to reference
+    } else {
+        return boost::none;
+    }
+}
+
+std::unique_ptr<csr::VariantCallFilter> GenomeCallingComponents::call_filter(boost::optional<ProgressMeter&> progress) const noexcept
 {
     if (components_.call_filter_factory) {
-        return components_.call_filter_factory->make(reference(), read_pipe());
+        return components_.call_filter_factory->make(reference(), read_pipe(), progress);
     } else {
         return nullptr;
     }

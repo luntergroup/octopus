@@ -57,8 +57,9 @@ public:
     const boost::optional<Path>& temp_directory() const noexcept;
     boost::optional<unsigned> num_threads() const noexcept;
     const CallerFactory& caller_factory() const noexcept;
-    boost::optional<VcfWriter&> filtered_output();
-    std::unique_ptr<csr::VariantCallFilter> call_filter() const noexcept;
+    boost::optional<VcfWriter&> filtered_output() noexcept;
+    boost::optional<const VcfWriter&> filtered_output() const noexcept;
+    std::unique_ptr<csr::VariantCallFilter> call_filter(boost::optional<ProgressMeter&> progress = boost::none) const noexcept;
     ProgressMeter& progress_meter() noexcept;
     bool sites_only() const noexcept;
     boost::optional<Path> legacy() const;

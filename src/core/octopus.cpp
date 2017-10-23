@@ -179,8 +179,16 @@ void log_startup_info(const GenomeCallingComponents& components)
         stream(log) << "Processing " << search_size << "bp with automatic thread management";
     }
     auto sl = stream(log);
-    sl << "Writing calls to ";
-    const auto output_path = components.output().path();
+    const bool is_filtered_run {components.filtered_output()};
+    if (is_filtered_run) {
+        sl << "Writing filtered calls to ";
+    } else {
+        sl << "Writing unfiltered calls to ";
+    }
+    auto output_path = components.output().path();
+    if (is_filtered_run) {
+        output_path = components.filtered_output()->path();
+    }
     if (output_path) {
         sl << *output_path;
     } else {
@@ -1197,15 +1205,25 @@ auto make_filter_read_pipe(const GenomeCallingComponents& components)
     };
 }
 
+void log_filtering_info(const GenomeCallingComponents& components)
+{
+    logging::InfoLogger log {};
+    log << "Starting Call Set Refinement (CSR) filtering";
+}
+
 void run_filtering(GenomeCallingComponents& components)
 {
-    auto filter = components.call_filter();
-    if (filter) {
+    if (components.filtered_output()) {
+        log_filtering_info(components);
+        ProgressMeter progress {components.search_regions()};
+        auto filter = components.call_filter(progress);
+        assert(filter);
         assert(components.output().path());
         assert(!components.output().is_open());
         const VcfReader in {*components.output().path()};
-        assert(components.filtered_output());
+        progress.start();
         filter->filter(in, *components.filtered_output());
+        progress.stop();
     }
 }
 
