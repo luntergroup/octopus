@@ -49,6 +49,9 @@
 #include "io/variant/vcf.hpp"
 #include "utils/timing.hpp"
 #include "exceptions/program_error.hpp"
+#include "csr/filters/variant_call_filter.hpp"
+#include "csr/filters/variant_call_filter_factory.hpp"
+#include "readpipe/buffered_read_pipe.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -1216,11 +1219,15 @@ void run_filtering(GenomeCallingComponents& components)
     if (components.filtered_output()) {
         log_filtering_info(components);
         ProgressMeter progress {components.search_regions()};
-        auto filter = components.call_filter(progress);
+        const auto filter_factory = components.call_filter_factory();
+        const auto filter_read_pipe = make_filter_read_pipe(components);
+        auto unfiltered_output_path = components.output().path();
+        assert(unfiltered_output_path); // cannot be stdout
+        BufferedReadPipe buffered_rp {filter_read_pipe, components.read_buffer_size()};
+        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), progress);
         assert(filter);
-        assert(components.output().path());
         assert(!components.output().is_open());
-        const VcfReader in {*components.output().path()};
+        const VcfReader in {std::move(*unfiltered_output_path)};
         progress.start();
         filter->filter(in, *components.filtered_output());
         progress.stop();

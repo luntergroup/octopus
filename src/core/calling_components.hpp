@@ -21,7 +21,6 @@
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/callers/caller_factory.hpp"
 #include "core/csr/filters/variant_call_filter_factory.hpp"
-#include "core/csr/filters/variant_call_filter.hpp"
 #include "logging/progress_meter.hpp"
 
 namespace octopus {
@@ -59,7 +58,7 @@ public:
     const CallerFactory& caller_factory() const noexcept;
     boost::optional<VcfWriter&> filtered_output() noexcept;
     boost::optional<const VcfWriter&> filtered_output() const noexcept;
-    std::unique_ptr<csr::VariantCallFilter> call_filter(boost::optional<ProgressMeter&> progress = boost::none) const noexcept;
+    const VariantCallFilterFactory& call_filter_factory() const;
     ProgressMeter& progress_meter() noexcept;
     bool sites_only() const noexcept;
     boost::optional<Path> legacy() const;
