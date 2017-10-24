@@ -1214,6 +1214,45 @@ void log_filtering_info(const GenomeCallingComponents& components)
     log << "Starting Call Set Refinement (CSR) filtering";
 }
 
+std::vector<GenomicRegion> extract_call_regions(VcfReader& vcf)
+{
+    std::deque<GenomicRegion> regions {};
+    auto p = vcf.iterate(VcfReader::UnpackPolicy::sites);
+    std::transform(std::move(p.first), std::move(p.second), std::back_inserter(regions),
+                   [] (const VcfRecord& record) { return mapped_region(record); });
+    return {std::make_move_iterator(std::begin(regions)), std::make_move_iterator(std::end(regions))};
+}
+
+std::vector<GenomicRegion> extract_call_regions(boost::filesystem::path vcf_path)
+{
+    VcfReader tmp {std::move(vcf_path)};
+    return extract_call_regions(tmp);
+}
+
+template <typename Map>
+std::size_t sum_mapped_container_size(const Map& map)
+{
+    return std::accumulate(std::cbegin(map), std::cend(map), std::size_t {0},
+                           [] (auto curr, const auto& p) noexcept { return curr + p.second.size(); });
+}
+
+std::vector<GenomicRegion> flatten(const InputRegionMap& regions)
+{
+    std::vector<GenomicRegion> result {};
+    result.reserve(sum_mapped_container_size(regions));
+    for (const auto& p : regions) {
+        std::copy(std::cbegin(p.second), std::cend(p.second), std::back_inserter(result));
+    }
+    return result;
+}
+
+bool use_unfiltered_call_region_hints_for_filtering(const GenomeCallingComponents& components)
+{
+    // TODO: no need to do this if reads won't be used, or if likely hints won't help because the calls
+    // are very dense.
+    return true;
+}
+
 void run_filtering(GenomeCallingComponents& components)
 {
     if (components.filtered_output()) {
@@ -1224,6 +1263,11 @@ void run_filtering(GenomeCallingComponents& components)
         auto unfiltered_output_path = components.output().path();
         assert(unfiltered_output_path); // cannot be stdout
         BufferedReadPipe buffered_rp {filter_read_pipe, components.read_buffer_size()};
+        if (use_unfiltered_call_region_hints_for_filtering(components)) {
+            buffered_rp.hint(extract_call_regions(*unfiltered_output_path));
+        } else {
+            buffered_rp.hint(flatten(components.search_regions()));
+        }
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), progress);
         assert(filter);
         assert(!components.output().is_open());
