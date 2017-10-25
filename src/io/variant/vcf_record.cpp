@@ -627,6 +627,13 @@ VcfRecord::Builder& VcfRecord::Builder::set_format_missing(const SampleName& sam
     return this->set_format(sample, key, std::string {"."});
 }
 
+VcfRecord::Builder& VcfRecord::Builder::clear_format() noexcept
+{
+    format_.clear();
+    genotypes_.clear();
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::set_refcall()
 {
     return set_alt("<NON_REF>");

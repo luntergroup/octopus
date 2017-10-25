@@ -197,6 +197,7 @@ public:
     Builder& set_format(const SampleName& sample, const KeyType& key, std::vector<ValueType> values);
     Builder& set_format(const SampleName& sample, const KeyType& key, std::initializer_list<ValueType> values);
     Builder& set_format_missing(const SampleName& sample, const KeyType& key);
+    Builder& clear_format() noexcept;
     
     Builder& set_refcall();
     Builder& set_somatic();
