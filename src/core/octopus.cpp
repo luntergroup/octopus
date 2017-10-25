@@ -1268,7 +1268,8 @@ void run_filtering(GenomeCallingComponents& components)
         } else {
             buffered_rp.hint(flatten(components.search_regions()));
         }
-        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), progress);
+        VariantCallFilter::OutputOptions output_config {};
+        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), output_config, progress);
         assert(filter);
         assert(!components.output().is_open());
         const VcfReader in {std::move(*unfiltered_output_path)};

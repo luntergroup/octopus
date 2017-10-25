@@ -28,6 +28,7 @@ public:
     ~VariantCallFilterFactory() = default;
     
     std::unique_ptr<VariantCallFilter> make(const ReferenceGenome& reference, BufferedReadPipe read_pipe,
+                                            VariantCallFilter::OutputOptions output_config,
                                             boost::optional<ProgressMeter&> progress = boost::none) const;
 };
 

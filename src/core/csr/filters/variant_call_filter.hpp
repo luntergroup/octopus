@@ -33,10 +33,15 @@ namespace csr {
 class VariantCallFilter
 {
 public:
+    struct OutputOptions
+    {
+    };
+    
     VariantCallFilter() = delete;
     
     VariantCallFilter(FacetFactory facet_factory,
                       std::vector<MeasureWrapper> measures,
+                      OutputOptions output_config,
                       boost::optional<ProgressMeter&> progress);
     
     VariantCallFilter(const VariantCallFilter&)            = delete;
@@ -65,16 +70,19 @@ private:
     
     FacetFactory facet_factory_;
     FacetSet facets_;
+    OutputOptions output_config_;
     boost::optional<ProgressMeter&> progress_;
     
     virtual void annotate(VcfHeader& header) const = 0;
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
     
+    VcfHeader make_header(const VcfReader& source) const;
     VcfRecord filter(const VcfRecord& call) const;
     std::vector<VcfRecord> filter(std::vector<VcfRecord> calls) const;
     Measure::FacetMap compute_facets(const std::vector<VcfRecord>& calls) const;
     MeasureVector measure(const VcfRecord& call) const;
     MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;
+    VcfRecord::Builder construct_template(const VcfRecord& call) const;
     void annotate(VcfRecord::Builder& call, Classification status) const;
     void pass(VcfRecord::Builder& call) const;
     void fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const;

@@ -60,6 +60,7 @@ private:
 
 std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const ReferenceGenome& reference,
                                                                   BufferedReadPipe read_pipe,
+                                                                  VariantCallFilter::OutputOptions output_config,
                                                                   boost::optional<ProgressMeter&> progress) const
 {
     FacetFactory facet_factory {reference, std::move(read_pipe)};
@@ -79,7 +80,7 @@ std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const Referenc
     //thresholds.push_back(std::make_unique<LessThreshold>(0.1));
     //thresholds.push_back(std::make_unique<GreaterThreshold>(20.0));
     return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory), std::move(measures),
-                                                        std::move(thresholds), progress);
+                                                        std::move(thresholds), output_config, progress);
 }
 
 } // namespace csr

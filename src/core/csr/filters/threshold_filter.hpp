@@ -19,6 +19,8 @@ namespace csr {
 class ThresholdVariantCallFilter : public VariantCallFilter
 {
 public:
+    using VariantCallFilter::OutputOptions;
+    
     struct Threshold
     {
         virtual bool operator()(Measure::ResultType value) const noexcept { return true; }
@@ -30,6 +32,7 @@ public:
     ThresholdVariantCallFilter(FacetFactory facet_factory,
                                std::vector<MeasureWrapper> measures,
                                std::vector<std::unique_ptr<Threshold>> thresholds,
+                               OutputOptions output_config,
                                boost::optional<ProgressMeter&> progress = boost::none);
     
     ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;

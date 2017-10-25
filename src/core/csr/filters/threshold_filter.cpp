@@ -14,8 +14,9 @@ namespace octopus { namespace csr {
 ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factory,
                                                        std::vector<MeasureWrapper> measures,
                                                        std::vector<std::unique_ptr<Threshold>> thresholds,
+                                                       OutputOptions output_config,
                                                        boost::optional<ProgressMeter&> progress)
-: VariantCallFilter {std::move(facet_factory), std::move(measures), progress}
+: VariantCallFilter {std::move(facet_factory), std::move(measures), output_config, progress}
 , thresholds_ {std::move(thresholds)}
 {
     if (measures.size() != thresholds.size()) {

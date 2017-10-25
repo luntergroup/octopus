@@ -42,11 +42,14 @@ auto get_facets(const std::vector<MeasureWrapper>& measures)
     return result;
 }
 
-VariantCallFilter::VariantCallFilter(FacetFactory facet_factory, std::vector<MeasureWrapper> measures,
+VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
+                                     std::vector<MeasureWrapper> measures,
+                                     OutputOptions output_config,
                                      boost::optional<ProgressMeter&> progress)
 : measures_ {std::move(measures)}
 , facet_factory_ {std::move(facet_factory)}
 , facets_ {get_facets(measures_)}
+, output_config_ {output_config}
 , progress_ {progress}
 {}
 
