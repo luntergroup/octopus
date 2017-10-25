@@ -79,6 +79,11 @@ void print_input_regions(const InputRegionMap& regions)
     print_input_regions(std::cout, regions);
 }
 
+bool apply_csr(const GenomeCallingComponents& components) noexcept
+{
+    return static_cast<bool>(components.filtered_output());
+}
+
 using CallTypeSet = std::set<std::type_index>;
 
 VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
@@ -132,7 +137,7 @@ auto get_call_types(const GenomeCallingComponents& components, const std::vector
 void write_caller_output_header(GenomeCallingComponents& components, const std::string& command)
 {
     const auto call_types = get_call_types(components, components.contigs());
-    if (components.sites_only()) {
+    if (components.sites_only() && !apply_csr(components)) {
         components.output() << make_vcf_header({}, components.contigs(), components.reference(),
                                                call_types, command);
     } else {
@@ -1255,7 +1260,7 @@ bool use_unfiltered_call_region_hints_for_filtering(const GenomeCallingComponent
 
 void run_filtering(GenomeCallingComponents& components)
 {
-    if (components.filtered_output()) {
+    if (apply_csr(components)) {
         log_filtering_info(components);
         ProgressMeter progress {components.search_regions()};
         const auto filter_factory = components.call_filter_factory();
@@ -1269,12 +1274,16 @@ void run_filtering(GenomeCallingComponents& components)
             buffered_rp.hint(flatten(components.search_regions()));
         }
         VariantCallFilter::OutputOptions output_config {};
+        if (components.sites_only()) {
+            output_config.emit_sites_only = true;
+        }
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), output_config, progress);
         assert(filter);
         assert(!components.output().is_open());
         const VcfReader in {std::move(*unfiltered_output_path)};
+        VcfWriter& out {*components.filtered_output()};
         progress.start();
-        filter->filter(in, *components.filtered_output());
+        filter->filter(in, out);
         progress.stop();
     }
 }

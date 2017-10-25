@@ -90,9 +90,7 @@ std::vector<T> copy_each_first(const std::vector<std::pair<T, _>>& items)
 void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
 {
     if (!dest.is_header_written()) {
-        auto header = source.fetch_header();
-        annotate(header);
-        dest << header;
+        dest << make_header(source);
     }
     const auto samples = source.fetch_header().samples();
     if (facets_.empty()) {
@@ -121,9 +119,23 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
     }
 }
 
+// private methods
+
+VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
+{
+    VcfHeader result {};
+    if (output_config_.emit_sites_only) {
+        result = VcfHeader::Builder(source.fetch_header()).clear_format().build_once();
+    } else {
+        result = source.fetch_header();
+    }
+    annotate(result);
+    return result;
+}
+
 VcfRecord VariantCallFilter::filter(const VcfRecord& call) const
 {
-    VcfRecord::Builder filtered_call {call};
+    auto filtered_call = construct_template(call);
     annotate(filtered_call, classify(measure(call)));
     return filtered_call.build_once();
 }
@@ -133,11 +145,20 @@ std::vector<VcfRecord> VariantCallFilter::filter(std::vector<VcfRecord> calls) c
     const auto facets = compute_facets(calls);
     std::transform(std::begin(calls), std::end(calls), std::begin(calls),
                    [&] (VcfRecord call) {
-                       VcfRecord::Builder filtered_call {call};
+                       auto filtered_call = construct_template(call);
                        annotate(filtered_call, classify(measure(call, facets)));
                        return filtered_call.build_once();
                    });
     return calls;
+}
+
+VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) const
+{
+    VcfRecord::Builder result {call};
+    if (output_config_.emit_sites_only) {
+        result.clear_format();
+    }
+    return result;
 }
 
 void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification status) const

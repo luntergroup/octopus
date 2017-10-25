@@ -1362,7 +1362,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_model_filtering(caller == "cancer");
     }
     
-    if (call_sites_only(options)) {
+    if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
     }
     vc_builder.set_flank_scoring(allow_flank_scoring(options));
