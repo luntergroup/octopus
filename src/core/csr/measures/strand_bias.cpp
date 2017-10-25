@@ -3,8 +3,6 @@
 
 #include "strand_bias.hpp"
 
-#include <vector>
-
 #include <boost/variant.hpp>
 
 #include "io/variant/vcf_record.hpp"

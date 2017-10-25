@@ -5,6 +5,7 @@
 #define mapping_quality_divergence_hpp
 
 #include <string>
+#include <vector>
 
 #include "measure.hpp"
 

@@ -11,7 +11,6 @@
 
 #include <algorithm>
 #include <iterator>
-#include <vector>
 
 #include "core/types/allele.hpp"
 
