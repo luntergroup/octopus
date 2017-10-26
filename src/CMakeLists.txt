@@ -246,6 +246,7 @@ set(CORE_SOURCES
     core/csr/measures/strand_bias.cpp
     core/csr/measures/mapping_quality_divergence.hpp
     core/csr/measures/mapping_quality_divergence.cpp
+    core/csr/measures/measures_fwd.hpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
