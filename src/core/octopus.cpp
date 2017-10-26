@@ -1189,30 +1189,6 @@ void destroy(VcfWriter& writer)
     swap(writer, tmp);
 }
 
-auto make_filter_read_pipe(const GenomeCallingComponents& components)
-{
-    using std::make_unique;
-    using namespace readpipe;
-    
-    ReadTransformer transformer {};
-    transformer.add(MaskSoftClipped {});
-    
-    using ReadFilterer = ReadPipe::ReadFilterer;
-    ReadFilterer filterer {};
-    filterer.add(make_unique<HasValidBaseQualities>());
-    filterer.add(make_unique<HasWellFormedCigar>());
-    filterer.add(make_unique<IsMapped>());
-    filterer.add(make_unique<IsNotMarkedQcFail>());
-    filterer.add(make_unique<IsNotMarkedDuplicate>());
-    filterer.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
-    filterer.add(make_unique<IsProperTemplate>());
-    
-    return ReadPipe {
-        components.read_manager(), std::move(transformer), std::move(filterer),
-        boost::none, components.samples()
-    };
-}
-
 void log_filtering_info(const GenomeCallingComponents& components)
 {
     logging::InfoLogger log {};
@@ -1264,7 +1240,7 @@ void run_filtering(GenomeCallingComponents& components)
         log_filtering_info(components);
         ProgressMeter progress {components.search_regions()};
         const auto& filter_factory = components.call_filter_factory();
-        const auto filter_read_pipe = make_filter_read_pipe(components);
+        const auto& filter_read_pipe = components.filter_read_pipe();
         auto unfiltered_output_path = components.output().path();
         assert(unfiltered_output_path); // cannot be stdout
         BufferedReadPipe buffered_rp {filter_read_pipe, components.read_buffer_size()};

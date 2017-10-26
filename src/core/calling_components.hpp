@@ -59,6 +59,8 @@ public:
     boost::optional<VcfWriter&> filtered_output() noexcept;
     boost::optional<const VcfWriter&> filtered_output() const noexcept;
     const VariantCallFilterFactory& call_filter_factory() const;
+    ReadPipe& filter_read_pipe() noexcept;
+    const ReadPipe& filter_read_pipe() const noexcept;
     ProgressMeter& progress_meter() noexcept;
     bool sites_only() const noexcept;
     boost::optional<Path> legacy() const;
@@ -86,6 +88,7 @@ private:
         ReadPipe read_pipe;
         CallerFactory caller_factory;
         std::unique_ptr<VariantCallFilterFactory> call_filter_factory;
+        boost::optional<ReadPipe> filter_read_pipe;
         VcfWriter output;
         boost::optional<unsigned> num_threads;
         std::size_t read_buffer_size;
@@ -98,6 +101,7 @@ private:
         void setup_progress_meter(const options::OptionMap& options);
         void set_read_buffer_size(const options::OptionMap& options);
         void setup_writers(const options::OptionMap& options);
+        void setup_filter_read_pipe(const options::OptionMap& options);
     };
     
     Components components_;

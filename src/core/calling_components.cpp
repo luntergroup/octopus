@@ -134,6 +134,16 @@ const VariantCallFilterFactory& GenomeCallingComponents::call_filter_factory() c
     return *components_.call_filter_factory;
 }
 
+ReadPipe& GenomeCallingComponents::filter_read_pipe() noexcept
+{
+    return components_.filter_read_pipe ? *components_.filter_read_pipe : read_pipe();
+}
+
+const ReadPipe& GenomeCallingComponents::filter_read_pipe() const noexcept
+{
+    return components_.filter_read_pipe ? *components_.filter_read_pipe : read_pipe();
+}
+
 ProgressMeter& GenomeCallingComponents::progress_meter() noexcept
 {
     return components_.progress_meter;
@@ -400,6 +410,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options)}
 , call_filter_factory {options::make_call_filter_factory(this->reference, this->read_pipe, options)}
+, filter_read_pipe {}
 , output {std::move(output)}
 , num_threads {options::get_num_threads(options)}
 , read_buffer_size {}
@@ -413,6 +424,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
     setup_progress_meter(options);
     set_read_buffer_size(options);
     setup_writers(options);
+    setup_filter_read_pipe(options);
 }
 
 void GenomeCallingComponents::Components::setup_progress_meter(const options::OptionMap& options)
@@ -456,9 +468,19 @@ void GenomeCallingComponents::Components::setup_writers(const options::OptionMap
     }
 }
 
+void GenomeCallingComponents::Components::setup_filter_read_pipe(const options::OptionMap& options)
+{
+    if (!options::use_calling_read_pipe_for_call_filtering(options)) {
+        filter_read_pipe = options::make_call_filter_read_pipe(read_manager, samples, options);
+    }
+}
+
 void GenomeCallingComponents::update_dependents() noexcept
 {
     components_.read_pipe.set_read_manager(components_.read_manager);
+    if (components_.filter_read_pipe) {
+        components_.filter_read_pipe->set_read_manager(components_.read_manager);
+    }
     components_.caller_factory.set_reference(components_.reference);
     components_.caller_factory.set_read_pipe(components_.read_pipe);
 }

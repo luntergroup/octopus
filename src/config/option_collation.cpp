@@ -1382,13 +1382,47 @@ bool is_call_filtering_requested(const OptionMap& options) noexcept
     return options.at("call-filtering").as<bool>();
 }
 
-std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
+std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference,
+                                                                   ReadPipe& read_pipe,
                                                                    const OptionMap& options)
 {
     if (is_call_filtering_requested(options)) {
         return std::make_unique<ThresholdFilterFactory>();
     } else {
         return nullptr;
+    }
+}
+
+bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
+{
+    return options.at("use-calling-reads-for-filtering").as<bool>();
+}
+
+ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples)
+{
+    using std::make_unique;
+    using namespace readpipe;
+    ReadTransformer transformer {};
+    transformer.add(MaskSoftClipped {});
+    using ReadFilterer = ReadPipe::ReadFilterer;
+    ReadFilterer filterer {};
+    filterer.add(make_unique<HasValidBaseQualities>());
+    filterer.add(make_unique<HasWellFormedCigar>());
+    filterer.add(make_unique<IsMapped>());
+    filterer.add(make_unique<IsNotMarkedQcFail>());
+    filterer.add(make_unique<IsNotMarkedDuplicate>());
+    filterer.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
+    filterer.add(make_unique<IsProperTemplate>());
+    return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
+}
+
+ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
+                                    const OptionMap& options)
+{
+    if (use_calling_read_pipe_for_call_filtering(options)) {
+        return make_read_pipe(read_manager, std::move(samples), options);
+    } else {
+        return make_default_filter_read_pipe(read_manager, std::move(samples));
     }
 }
 
