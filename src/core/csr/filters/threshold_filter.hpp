@@ -5,6 +5,7 @@
 #define threshold_filter_hpp
 
 #include <vector>
+#include <string>
 
 #include <boost/optional.hpp>
 #include <boost/variant.hpp>
@@ -48,6 +49,7 @@ public:
     {
         MeasureWrapper measure;
         ThresholdWrapper threshold;
+        std::string vcf_filter_key = ".";
     };
     
     ThresholdVariantCallFilter() = delete;
@@ -66,11 +68,14 @@ public:
 
 private:
     std::vector<ThresholdWrapper> thresholds_;
+    std::vector<std::string> vcf_filter_keys_;
+    bool all_unique_filter_keys_;
     
     virtual void annotate(VcfHeader::Builder& header) const override;
     virtual Classification classify(const MeasureVector& measures) const override;
     
     bool passes_all_filters(const MeasureVector& measures) const;
+    std::vector<std::string> get_failing_vcf_filter_keys(const MeasureVector& measures) const;
 };
 
 template <typename M, typename... Args>

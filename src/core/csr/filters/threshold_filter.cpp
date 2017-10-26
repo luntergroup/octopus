@@ -6,8 +6,11 @@
 #include <utility>
 #include <numeric>
 #include <functional>
+#include <iterator>
+#include <algorithm>
 
 #include "io/variant/vcf_header.hpp"
+#include "config/octopus_vcf.hpp"
 
 namespace octopus { namespace csr {
 
@@ -31,29 +34,45 @@ auto extract_thresholds(std::vector<ThresholdVariantCallFilter::Condition>& cond
     return result;
 }
 
+auto extract_vcf_filter_keys(std::vector<ThresholdVariantCallFilter::Condition>& conditions)
+{
+    std::vector<std::string> result {};
+    result.reserve(conditions.size());
+    for (auto& condition : conditions) {
+        result.push_back(std::move(condition.vcf_filter_key));
+    }
+    return result;
+}
+
+bool are_all_unique(std::vector<std::string> keys)
+{
+    std::sort(std::begin(keys), std::end(keys));
+    return std::adjacent_find(std::cbegin(keys), std::cend(keys)) == std::cend(keys);
+}
+
 ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factory,
                                                        std::vector<Condition> conditions,
                                                        OutputOptions output_config,
                                                        boost::optional<ProgressMeter&> progress)
 : VariantCallFilter {std::move(facet_factory), extract_measures(conditions), output_config, progress}
 , thresholds_ {extract_thresholds(conditions)}
-{
-    if (measures_.size() != thresholds_.size()) {
-        throw;
-    }
-}
+, vcf_filter_keys_ {extract_vcf_filter_keys(conditions)}
+, all_unique_filter_keys_ {are_all_unique(vcf_filter_keys_)}
+{}
 
 void ThresholdVariantCallFilter::annotate(VcfHeader::Builder& header) const
 {
-    // TODO
+    for (const auto& key : vcf_filter_keys_) {
+        octopus::vcf::add_filter(header, key);
+    }
 }
 
 VariantCallFilter::Classification ThresholdVariantCallFilter::classify(const MeasureVector& measures) const
 {
     if (passes_all_filters(measures)) {
-        return Classification {Classification::Category::unfiltered, {}, boost::none};
+        return Classification {Classification::Category::unfiltered};
     } else {
-        return Classification {Classification::Category::filtered, {}, boost::none};
+        return Classification {Classification::Category::filtered, get_failing_vcf_filter_keys(measures)};
     }
 }
 
@@ -61,6 +80,22 @@ bool ThresholdVariantCallFilter::passes_all_filters(const MeasureVector& measure
 {
     return std::inner_product(std::cbegin(measures), std::cend(measures), std::cbegin(thresholds_), true, std::multiplies<> {},
                               [] (const auto& measure, const auto& threshold) -> bool { return threshold(measure); });
+}
+
+std::vector<std::string> ThresholdVariantCallFilter::get_failing_vcf_filter_keys(const MeasureVector& measures) const
+{
+    std::vector<std::string> result {};
+    result.reserve(measures.size());
+    for (std::size_t i {0}; i < measures.size(); ++i) {
+        if (!thresholds_[i](measures[i])) {
+            result.push_back(vcf_filter_keys_[i]);
+        }
+    }
+    if (!all_unique_filter_keys_) {
+        std::sort(std::begin(result), std::end(result));
+        result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    }
+    return result;
 }
 
 } // namespace csr
