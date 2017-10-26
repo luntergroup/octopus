@@ -11,15 +11,34 @@
 
 namespace octopus { namespace csr {
 
+auto extract_measures(std::vector<ThresholdVariantCallFilter::Condition>& conditions)
+{
+    std::vector<MeasureWrapper> result {};
+    result.reserve(conditions.size());
+    for (auto& condition : conditions) {
+        result.push_back(std::move(condition.measure));
+    }
+    return result;
+}
+
+auto extract_thresholds(std::vector<ThresholdVariantCallFilter::Condition>& conditions)
+{
+    std::vector<ThresholdVariantCallFilter::ThresholdWrapper> result {};
+    result.reserve(conditions.size());
+    for (auto& condition : conditions) {
+        result.push_back(std::move(condition.threshold));
+    }
+    return result;
+}
+
 ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factory,
-                                                       std::vector<MeasureWrapper> measures,
-                                                       std::vector<std::unique_ptr<Threshold>> thresholds,
+                                                       std::vector<Condition> conditions,
                                                        OutputOptions output_config,
                                                        boost::optional<ProgressMeter&> progress)
-: VariantCallFilter {std::move(facet_factory), std::move(measures), output_config, progress}
-, thresholds_ {std::move(thresholds)}
+: VariantCallFilter {std::move(facet_factory), extract_measures(conditions), output_config, progress}
+, thresholds_ {extract_thresholds(conditions)}
 {
-    if (measures.size() != thresholds.size()) {
+    if (measures_.size() != thresholds_.size()) {
         throw;
     }
 }
@@ -41,7 +60,7 @@ VariantCallFilter::Classification ThresholdVariantCallFilter::classify(const Mea
 bool ThresholdVariantCallFilter::passes_all_filters(const MeasureVector& measures) const
 {
     return std::inner_product(std::cbegin(measures), std::cend(measures), std::cbegin(thresholds_), true, std::multiplies<> {},
-                              [] (const auto& measure, const auto& threshold) -> bool { return (*threshold)(measure); });
+                              [] (const auto& measure, const auto& threshold) -> bool { return threshold(measure); });
 }
 
 } // namespace csr

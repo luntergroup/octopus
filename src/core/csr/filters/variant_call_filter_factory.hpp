@@ -5,31 +5,38 @@
 #define variant_call_filter_factory_hpp
 
 #include <memory>
+#include <utility>
 
 #include <boost/optional.hpp>
 
-#include "variant_call_filter.hpp"
-#include "io/reference/reference_genome.hpp"
-#include "readpipe/buffered_read_pipe.hpp"
 #include "logging/progress_meter.hpp"
+#include "variant_call_filter.hpp"
 
-namespace octopus { namespace csr {
+namespace octopus {
+
+class ReferenceGenome;
+class BufferedReadPipe;
+
+namespace csr {
+
+class FacetFactory;
 
 class VariantCallFilterFactory
 {
 public:
-    VariantCallFilterFactory() = default;
+    virtual ~VariantCallFilterFactory() = default;
     
-    VariantCallFilterFactory(const VariantCallFilterFactory&)            = default;
-    VariantCallFilterFactory& operator=(const VariantCallFilterFactory&) = default;
-    VariantCallFilterFactory(VariantCallFilterFactory&&)                 = default;
-    VariantCallFilterFactory& operator=(VariantCallFilterFactory&&)      = default;
-    
-    ~VariantCallFilterFactory() = default;
+    std::unique_ptr<VariantCallFilterFactory> clone() const;
     
     std::unique_ptr<VariantCallFilter> make(const ReferenceGenome& reference, BufferedReadPipe read_pipe,
                                             VariantCallFilter::OutputOptions output_config,
                                             boost::optional<ProgressMeter&> progress = boost::none) const;
+    
+private:
+    virtual std::unique_ptr<VariantCallFilterFactory> do_clone() const = 0;
+    virtual std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,
+                                                       VariantCallFilter::OutputOptions output_config,
+                                                       boost::optional<ProgressMeter&> progress) const = 0;
 };
 
 } // namespace csr
@@ -38,4 +45,4 @@ using csr::VariantCallFilterFactory;
 
 } // namespace octopus
 
-#endif /* variant_call_filter_factory_hpp */
+#endif

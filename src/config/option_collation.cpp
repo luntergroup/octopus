@@ -46,6 +46,7 @@
 #include "exceptions/system_error.hpp"
 #include "exceptions/missing_file_error.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
+#include "core/csr/filters/threshold_filter_factory.hpp"
 
 namespace octopus { namespace options {
 
@@ -1381,13 +1382,13 @@ bool is_call_filtering_requested(const OptionMap& options) noexcept
     return options.at("call-filtering").as<bool>();
 }
 
-boost::optional<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
+std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                                                    const OptionMap& options)
 {
     if (is_call_filtering_requested(options)) {
-        return VariantCallFilterFactory {};
+        return std::make_unique<ThresholdFilterFactory>();
     } else {
-        return boost::none;
+        return nullptr;
     }
 }
 

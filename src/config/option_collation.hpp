@@ -58,7 +58,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
 
 bool is_call_filtering_requested(const OptionMap& options) noexcept;
 
-boost::optional<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
+std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                                                    const OptionMap& options);
 
 boost::optional<fs::path> get_output_path(const OptionMap& options);

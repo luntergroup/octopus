@@ -4,7 +4,10 @@
 #ifndef threshold_filter_hpp
 #define threshold_filter_hpp
 
+#include <vector>
+
 #include <boost/optional.hpp>
+#include <boost/variant.hpp>
 
 #include "variant_call_filter.hpp"
 #include "logging/progress_meter.hpp"
@@ -23,15 +26,34 @@ public:
     
     struct Threshold
     {
-        virtual bool operator()(Measure::ResultType value) const noexcept { return true; }
         virtual ~Threshold() = default;
+        virtual std::unique_ptr<Threshold> clone() const = 0;
+        virtual bool operator()(Measure::ResultType value) const noexcept = 0;
+    };
+    
+    struct ThresholdWrapper
+    {
+        ThresholdWrapper(std::unique_ptr<Threshold> threshold) : threshold {std::move(threshold)} {}
+        ThresholdWrapper(const ThresholdWrapper& other) : threshold {other.threshold->clone()} {}
+        ThresholdWrapper& operator=(const ThresholdWrapper& other)
+        {
+            if (&other != this) threshold = other.threshold->clone();
+            return *this;
+        }
+        bool operator()(Measure::ResultType value) const noexcept { return (*threshold)(value); }
+        std::unique_ptr<Threshold> threshold;
+    };
+    
+    struct Condition
+    {
+        MeasureWrapper measure;
+        ThresholdWrapper threshold;
     };
     
     ThresholdVariantCallFilter() = delete;
     
     ThresholdVariantCallFilter(FacetFactory facet_factory,
-                               std::vector<MeasureWrapper> measures,
-                               std::vector<std::unique_ptr<Threshold>> thresholds,
+                               std::vector<Condition> conditions,
                                OutputOptions output_config,
                                boost::optional<ProgressMeter&> progress = boost::none);
     
@@ -43,7 +65,7 @@ public:
     virtual ~ThresholdVariantCallFilter() = default;
 
 private:
-    std::vector<std::unique_ptr<Threshold>> thresholds_;
+    std::vector<ThresholdWrapper> thresholds_;
     
     virtual void annotate(VcfHeader& dest) const override;
     virtual Classification classify(const MeasureVector& measures) const override;
@@ -51,7 +73,93 @@ private:
     bool passes_all_filters(const MeasureVector& measures) const;
 };
 
+template <typename M, typename... Args>
+decltype(auto) make_wrapped_threshold(Args&&... args)
+{
+    using Wrapper = ThresholdVariantCallFilter::ThresholdWrapper;
+    return Wrapper {std::make_unique<M>(std::forward<Args>(args)...)};
+}
+
+struct LessThreshold : public ThresholdVariantCallFilter::Threshold
+{
+    explicit LessThreshold(double target) : visitor_ {target} {}
+    std::unique_ptr<ThresholdVariantCallFilter::Threshold> clone() const
+    {
+        return std::make_unique<LessThreshold>(*this);
+    }
+    bool operator()(Measure::ResultType value) const noexcept
+    {
+        return boost::apply_visitor(visitor_, value);
+    }
+private:
+    struct LessVisitor : public boost::static_visitor<bool>
+    {
+        explicit LessVisitor(double target) : target {target} {}
+        bool operator()(double value) const noexcept { return value >= target; }
+        bool operator()(boost::optional<double> value) const noexcept
+        {
+            return !value || (*this)(*value);
+        }
+        double target;
+    };
+    LessVisitor visitor_;
+};
+
+struct GreaterThreshold : public ThresholdVariantCallFilter::Threshold
+{
+    explicit GreaterThreshold(double target) : visitor_ {target} {}
+    std::unique_ptr<ThresholdVariantCallFilter::Threshold> clone() const
+    {
+        return std::make_unique<GreaterThreshold>(*this);
+    }
+    bool operator()(Measure::ResultType value) const noexcept
+    {
+        return boost::apply_visitor(visitor_, value);
+    }
+private:
+    struct GreaterVisitor : public boost::static_visitor<bool>
+    {
+        explicit GreaterVisitor(double target) : target {target} {}
+        bool operator()(double value) const noexcept { return value <= target; }
+        bool operator()(boost::optional<double> value) const noexcept
+        {
+            return !value || (*this)(*value);
+        }
+        double target;
+    };
+    GreaterVisitor visitor_;
+};
+
+struct BetweenThreshold : public ThresholdVariantCallFilter::Threshold
+{
+    explicit BetweenThreshold(double lower_bound, double upper_bound) : visitor_ {lower_bound, upper_bound} {}
+    std::unique_ptr<ThresholdVariantCallFilter::Threshold> clone() const
+    {
+        return std::make_unique<BetweenThreshold>(*this);
+    }
+    bool operator()(Measure::ResultType value) const noexcept
+    {
+        return boost::apply_visitor(visitor_, value);
+    }
+private:
+    struct BetweenVisitor : public boost::static_visitor<bool>
+    {
+        explicit BetweenVisitor(double lower_bound, double upper_bound)
+        : lower_bound {lower_bound}, upper_bound {upper_bound} {}
+        bool operator()(double value) const noexcept
+        {
+            return lower_bound <= value && value <= upper_bound;
+        }
+        bool operator()(boost::optional<double> value) const noexcept
+        {
+            return !value || (*this)(*value);
+        }
+        double lower_bound, upper_bound;
+    };
+    BetweenVisitor visitor_;
+};
+
 } // namespace csr
 } // namespace octopus
 
-#endif /* threshold_filter_hpp */
+#endif

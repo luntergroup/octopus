@@ -85,7 +85,7 @@ private:
         std::vector<GenomicRegion::ContigName> contigs;
         ReadPipe read_pipe;
         CallerFactory caller_factory;
-        boost::optional<VariantCallFilterFactory> call_filter_factory;
+        std::unique_ptr<VariantCallFilterFactory> call_filter_factory;
         VcfWriter output;
         boost::optional<unsigned> num_threads;
         std::size_t read_buffer_size;

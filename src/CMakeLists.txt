@@ -226,6 +226,8 @@ set(CORE_SOURCES
     core/csr/filters/variant_call_filter.cpp
     core/csr/filters/variant_call_filter_factory.hpp
     core/csr/filters/variant_call_filter_factory.cpp
+    core/csr/filters/threshold_filter_factory.hpp
+    core/csr/filters/threshold_filter_factory.cpp
     
     core/csr/measures/measure.hpp
     core/csr/measures/qual.hpp
