@@ -139,13 +139,15 @@ VcfRecord VariantCallFilter::filter(const VcfRecord& call) const
 
 std::vector<VcfRecord> VariantCallFilter::filter(std::vector<VcfRecord> calls) const
 {
-    const auto facets = compute_facets(calls);
-    std::transform(std::begin(calls), std::end(calls), std::begin(calls),
-                   [&] (VcfRecord call) {
-                       auto filtered_call = construct_template(call);
-                       annotate(filtered_call, classify(measure(call, facets)));
-                       return filtered_call.build_once();
-                   });
+    if (!calls.empty()) {
+        const auto facets = compute_facets(calls);
+        std::transform(std::begin(calls), std::end(calls), std::begin(calls),
+                       [&] (VcfRecord call) {
+                           auto filtered_call = construct_template(call);
+                           annotate(filtered_call, classify(measure(call, facets)));
+                           return filtered_call.build_once();
+                       });
+    }
     return calls;
 }
 
