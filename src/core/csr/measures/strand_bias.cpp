@@ -42,7 +42,7 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
             }
         }
     }
-    return 0;
+    return boost::none;
 }
 
 std::string StrandBias::do_name() const
