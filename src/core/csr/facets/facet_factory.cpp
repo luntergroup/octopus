@@ -67,7 +67,7 @@ void FacetFactory::setup_facet_makers()
         auto samples = read_pipe_.source().samples();
         auto genotypes = extract_genotypes(records, samples, reference_);
         ReadMap reads {};
-        if (!reads.empty()) {
+        if (!records.empty()) {
             reads = read_pipe_.fetch_reads(encompassing_region(records));
         }
         return FacetWrapper {std::make_unique<ReadAssignments>(genotypes, reads)};
