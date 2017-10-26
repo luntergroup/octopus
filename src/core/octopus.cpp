@@ -1263,7 +1263,7 @@ void run_filtering(GenomeCallingComponents& components)
     if (apply_csr(components)) {
         log_filtering_info(components);
         ProgressMeter progress {components.search_regions()};
-        const auto filter_factory = components.call_filter_factory();
+        const auto& filter_factory = components.call_filter_factory();
         const auto filter_read_pipe = make_filter_read_pipe(components);
         auto unfiltered_output_path = components.output().path();
         assert(unfiltered_output_path); // cannot be stdout
