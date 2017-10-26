@@ -43,7 +43,7 @@ ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factor
     }
 }
 
-void ThresholdVariantCallFilter::annotate(VcfHeader& header) const
+void ThresholdVariantCallFilter::annotate(VcfHeader::Builder& header) const
 {
     // TODO
 }

@@ -67,7 +67,7 @@ public:
 private:
     std::vector<ThresholdWrapper> thresholds_;
     
-    virtual void annotate(VcfHeader& dest) const override;
+    virtual void annotate(VcfHeader::Builder& header) const override;
     virtual Classification classify(const MeasureVector& measures) const override;
     
     bool passes_all_filters(const MeasureVector& measures) const;

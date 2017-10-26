@@ -15,6 +15,7 @@
 #include "config/common.hpp"
 #include "basics/phred.hpp"
 #include "core/types/variant.hpp"
+#include "io/variant/vcf_header.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "logging/progress_meter.hpp"
 #include "../facets/facet.hpp"
@@ -74,7 +75,7 @@ private:
     OutputOptions output_config_;
     boost::optional<ProgressMeter&> progress_;
     
-    virtual void annotate(VcfHeader& header) const = 0;
+    virtual void annotate(VcfHeader::Builder& header) const = 0;
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
     
     VcfHeader make_header(const VcfReader& source) const;

@@ -26,7 +26,6 @@
 #include "utils/genotype_reader.hpp"
 #include "io/variant/vcf_reader.hpp"
 #include "io/variant/vcf_writer.hpp"
-#include "io/variant/vcf_header.hpp"
 
 namespace octopus { namespace csr  {
 
@@ -123,14 +122,12 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
 
 VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
 {
-    VcfHeader result {};
+    VcfHeader::Builder builder {source.fetch_header()};
     if (output_config_.emit_sites_only) {
-        result = VcfHeader::Builder(source.fetch_header()).clear_format().build_once();
-    } else {
-        result = source.fetch_header();
+        builder.clear_format();
     }
-    annotate(result);
-    return result;
+    annotate(builder);
+    return builder.build_once();
 }
 
 VcfRecord VariantCallFilter::filter(const VcfRecord& call) const
