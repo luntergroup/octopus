@@ -16,6 +16,11 @@
 
 namespace octopus { namespace csr {
 
+std::unique_ptr<Measure> AlleleFrequency::do_clone() const
+{
+    return std::make_unique<AlleleFrequency>(*this);
+}
+
 int num_matching_lhs_bases(const VcfRecord::NucleotideSequence& lhs, const VcfRecord::NucleotideSequence& rhs) noexcept
 {
     auto p = std::mismatch(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));

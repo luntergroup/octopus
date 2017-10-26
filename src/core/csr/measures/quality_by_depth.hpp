@@ -16,6 +16,7 @@ namespace csr  {
 
 class QualityByDepth : public Measure
 {
+    std::unique_ptr<Measure> do_clone() const override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
     std::string do_name() const override;
 };
@@ -23,4 +24,4 @@ class QualityByDepth : public Measure
 } // namespace csr
 } // namespace octopus
 
-#endif /* quality_by_depth_hpp */
+#endif

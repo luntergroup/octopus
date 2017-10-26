@@ -7,6 +7,11 @@
 
 namespace octopus { namespace csr {
 
+std::unique_ptr<Measure> MeanMappingQuality::do_clone() const
+{
+    return std::make_unique<MeanMappingQuality>(*this);
+}
+
 Measure::ResultType MeanMappingQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     return std::stod(call.info_value("MQ").front());

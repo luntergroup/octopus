@@ -12,6 +12,11 @@
 
 namespace octopus { namespace csr {
 
+std::unique_ptr<Measure> StrandBias::do_clone() const
+{
+    return std::make_unique<StrandBias>(*this);
+}
+
 bool is_forward(const AlignedRead& read) noexcept
 {
     return read.direction() == AlignedRead::Direction::forward;

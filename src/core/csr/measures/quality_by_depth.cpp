@@ -7,6 +7,11 @@
 
 namespace octopus { namespace csr {
 
+std::unique_ptr<Measure> QualityByDepth::do_clone() const
+{
+    return std::make_unique<QualityByDepth>(*this);
+}
+
 Measure::ResultType QualityByDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (call.qual()) {

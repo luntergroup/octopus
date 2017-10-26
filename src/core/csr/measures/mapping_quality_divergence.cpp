@@ -15,6 +15,11 @@
 
 namespace octopus { namespace csr {
 
+std::unique_ptr<Measure> MappingQualityDivergence::do_clone() const
+{
+    return std::make_unique<MappingQualityDivergence>(*this);
+}
+
 Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto assignments = boost::get<ReadAssignments::ResultType>(facets.at("ReadAssignments").get());

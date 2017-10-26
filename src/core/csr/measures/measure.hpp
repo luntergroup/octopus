@@ -36,11 +36,14 @@ public:
     
     virtual ~Measure() = default;
     
+    std::unique_ptr<Measure> clone() const { return do_clone(); }
+    
     ResultType evaluate(const VcfRecord& call, const FacetMap& facets) const { return do_evaluate(call, facets); }
     std::string name() const { return do_name(); }
     std::vector<std::string> requirements() const { return do_requirements(); }
     
 private:
+    virtual std::unique_ptr<Measure> do_clone() const = 0;
     virtual ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const = 0;
     virtual std::string do_name() const = 0;
     virtual std::vector<std::string> do_requirements() const { return {}; }
@@ -53,10 +56,14 @@ public:
     
     MeasureWrapper(std::unique_ptr<Measure> measure) : measure_ {std::move(measure)} {}
     
-    MeasureWrapper(const MeasureWrapper&)            = delete;
-    MeasureWrapper& operator=(const MeasureWrapper&) = delete;
-    MeasureWrapper(MeasureWrapper&&)                 = default;
-    MeasureWrapper& operator=(MeasureWrapper&&)      = default;
+    MeasureWrapper(const MeasureWrapper& other) : measure_ {other.measure_->clone()} {}
+    MeasureWrapper& operator=(const MeasureWrapper& other)
+    {
+        if (&other != this) measure_ = other.measure_->clone();
+        return *this;
+    }
+    MeasureWrapper(MeasureWrapper&&)            = default;
+    MeasureWrapper& operator=(MeasureWrapper&&) = default;
     
     ~MeasureWrapper() = default;
     

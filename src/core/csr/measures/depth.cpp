@@ -10,6 +10,11 @@
 
 namespace octopus { namespace csr {
 
+std::unique_ptr<Measure> Depth::do_clone() const
+{
+    return std::make_unique<Depth>(*this);
+}
+
 Measure::ResultType Depth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     return std::stod(call.info_value(vcfspec::info::combinedReadDepth).front());

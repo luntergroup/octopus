@@ -8,6 +8,11 @@
 
 namespace octopus { namespace csr {
 
+std::unique_ptr<Measure> ModelPosterior::do_clone() const
+{
+    return std::make_unique<ModelPosterior>(*this);
+}
+
 Measure::ResultType ModelPosterior::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     namespace ovcf = octopus::vcf::spec;
