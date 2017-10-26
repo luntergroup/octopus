@@ -61,8 +61,8 @@ protected:
     struct Classification
     {
         enum class Category { filtered, unfiltered } category;
-        std::vector<std::string> reasons;
-        boost::optional<Phred<double>> quality;
+        std::vector<std::string> reasons = {};
+        boost::optional<Phred<double>> quality = boost::none;
     };
     
     std::vector<MeasureWrapper> measures_;
