@@ -22,7 +22,7 @@ namespace octopus { namespace csr {
 class Facet : public Equitable<Facet>
 {
 public:
-    using ResultType = boost::variant<int,
+    using ResultType = boost::variant<ReadMap,
                                       std::unordered_map<SampleName, HaplotypeSupportMap>
                                      >;
     

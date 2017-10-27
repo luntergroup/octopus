@@ -7,6 +7,7 @@
 #include <memory>
 #include <algorithm>
 
+#include "overlapping_reads.hpp"
 #include "read_assignments.hpp"
 #include "utils/genotype_reader.hpp"
 #include "exceptions/program_error.hpp"
@@ -62,6 +63,15 @@ FacetWrapper FacetFactory::make(const std::string& name, const std::vector<VcfRe
 
 void FacetFactory::setup_facet_makers()
 {
+    facet_makers_["OverlappingReads"] = [this] (const std::vector<VcfRecord>& records) -> FacetWrapper
+    {
+        auto samples = read_pipe_.source().samples();
+        ReadMap reads {};
+        if (!records.empty()) {
+            reads = read_pipe_.fetch_reads(encompassing_region(records));
+        }
+        return FacetWrapper {std::make_unique<OverlappingReads>(std::move(reads))};
+    };
     facet_makers_["ReadAssignments"] = [this] (const std::vector<VcfRecord>& records) -> FacetWrapper
     {
         auto samples = read_pipe_.source().samples();
