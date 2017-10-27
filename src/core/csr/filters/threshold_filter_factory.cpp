@@ -1,25 +1,122 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include <config/octopus_vcf.hpp>
 #include "threshold_filter_factory.hpp"
+
+#include <cassert>
+#include <iterator>
+#include <algorithm>
+#include <unordered_map>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "core/csr/facets/facet_factory.hpp"
 #include "core/csr/measures/measures_fwd.hpp"
+#include "core/csr/measures/measure_factory.hpp"
+#include "config/octopus_vcf.hpp"
+#include "exceptions/user_error.hpp"
+#include "utils/maths.hpp"
 
 namespace octopus { namespace csr {
 
-ThresholdFilterFactory::ThresholdFilterFactory()
+class BadVariantFilterCondition : public UserError
 {
-    using std::make_unique;
-    using namespace octopus::vcf::spec::filter;
-    conditions_.push_back({make_wrapped_measure<Qual>(), make_wrapped_threshold<LessThreshold>(10.0), q10});
-    conditions_.push_back({make_wrapped_measure<MeanMappingQuality>(), make_wrapped_threshold<LessThreshold>(30.0), mappingQuality});
-    conditions_.push_back({make_wrapped_measure<ModelPosterior>(), make_wrapped_threshold<LessThreshold>(20.0), modelPosterior});
-    conditions_.push_back({make_wrapped_measure<AlleleFrequency>(), make_wrapped_threshold<LessThreshold>(0.2), alleleBias});
-    conditions_.push_back({make_wrapped_measure<StrandBias>(), make_wrapped_threshold<LessThreshold>(0.1), strandBias});
-    conditions_.push_back({make_wrapped_measure<MappingQualityDivergence>(), make_wrapped_threshold<GreaterThreshold>(20.0), mappingQualityDivergence});
+    std::string do_where() const override { return "ThresholdFilterFactory"; }
+    std::string do_why() const override
+    {
+        return "The variant filter expression entered is not a valid Boolean expression";
+    }
+    std::string do_help() const override
+    {
+        return "Enter a valid Boolean expression";
+    }
+};
+
+auto make_threshold(const std::string& comparator, const double target)
+{
+    if (comparator == "<" || comparator == "<=") {
+        return make_wrapped_threshold<LessThreshold>(target);
+    }
+    if (comparator == ">" || comparator == ">=") {
+        return make_wrapped_threshold<GreaterThreshold>(target);
+    }
+    throw BadVariantFilterCondition {};
 }
+
+using MeasureToFilterKeyMap = std::unordered_map<std::string, std::string>;
+
+void init(MeasureToFilterKeyMap& filter_names)
+{
+    using namespace octopus::vcf::spec::filter;
+    filter_names[name<AlleleFrequency>()]          = alleleBias;
+    filter_names[name<Depth>()]                    = lowDepth;
+    filter_names[name<MappingQualityDivergence>()] = highMappingQualityDivergence;
+    filter_names[name<MappingQualityZeroCount>()]  = highMappingQualityZeroCount;
+    filter_names[name<MeanMappingQuality>()]       = lowMappingQuality;
+    filter_names[name<ModelPosterior>()]           = lowModelPosterior;
+    filter_names[name<Qual>()]                     = lowQuality;
+    filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
+    filter_names[name<StrandBias>()]               = strandBias;
+}
+
+auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)
+{
+    using namespace octopus::vcf::spec::filter;
+    // First look for special names
+    if (measure.name() == Qual().name()) {
+        if (maths::almost_equal(threshold_target, 10.0)) return std::string {q10};
+        if (maths::almost_equal(threshold_target, 20.0)) return std::string {q20};
+    }
+    static MeasureToFilterKeyMap default_filter_names {};
+    if (default_filter_names.empty()) {
+        init(default_filter_names);
+    }
+    return default_filter_names[measure.name()];
+}
+
+auto make_condition(const std::string& measure_name, const std::string& comparator, const double threshold_target)
+{
+    auto measure = make_measure(measure_name);
+    auto threshold = make_threshold(comparator, threshold_target);
+    auto filter_name = get_vcf_filter_name(measure, comparator, threshold_target);
+    return ThresholdVariantCallFilter::Condition {std::move(measure), std::move(threshold), std::move(filter_name)};
+}
+
+auto make_condition(const std::string& measure, const std::string& comparator, const std::string& threshold_target)
+{
+    try {
+        return make_condition(measure, comparator, boost::lexical_cast<double>(threshold_target));
+    } catch (const boost::bad_lexical_cast&) {
+        throw BadVariantFilterCondition {};
+    }
+}
+
+auto parse_conditions(std::string expression)
+{
+    expression.erase(std::remove(std::begin(expression), std::end(expression), ' '), std::end(expression));
+    std::vector<std::string> conditions {};
+    boost::split(conditions, expression, boost::is_any_of("|"));
+    std::vector<ThresholdVariantCallFilter::Condition> result {};
+    for (const auto& condition : conditions) {
+        std::vector<std::string> tokens {};
+        boost::split(tokens, condition, boost::is_any_of("<,>,<=,=>"));
+        if (tokens.size() == 2) {
+            const auto comparitor_pos = tokens.front().size();
+            const auto comparitor_length = condition.size() - comparitor_pos - tokens.back().size();
+            assert(comparitor_length == 1 || comparitor_length == 2);
+            const auto comparator = condition.substr(comparitor_pos, comparitor_length);
+            result.push_back(make_condition(tokens.front(), comparator, tokens.back()));
+        } else {
+            throw BadVariantFilterCondition {};
+        }
+    }
+    return result;
+}
+
+ThresholdFilterFactory::ThresholdFilterFactory(std::string expression)
+: conditions_ {parse_conditions(std::move(expression))}
+{}
 
 std::unique_ptr<VariantCallFilterFactory> ThresholdFilterFactory::do_clone() const
 {

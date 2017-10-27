@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 
 #include <boost/optional.hpp>
 
@@ -21,7 +22,9 @@ class FacetFactory;
 class ThresholdFilterFactory : public VariantCallFilterFactory
 {
 public:
-    ThresholdFilterFactory();
+    ThresholdFilterFactory() = default;
+    
+    ThresholdFilterFactory(std::string condition);
     
     ThresholdFilterFactory(const ThresholdFilterFactory&)            = default;
     ThresholdFilterFactory& operator=(const ThresholdFilterFactory&) = default;
