@@ -25,7 +25,7 @@ class Measure
 {
 public:
     using FacetMap = std::unordered_map<std::string, FacetWrapper>;
-    using ResultType = boost::variant<double, boost::optional<double>>;
+    using ResultType = boost::variant<double, boost::optional<double>, int>;
     
     Measure() = default;
     
@@ -81,6 +81,12 @@ template <typename M, typename... Args>
 MeasureWrapper make_wrapped_measure(Args&&... args)
 {
     return MeasureWrapper {std::make_unique<M>(std::forward<Args>(args)...)};
+}
+
+template <typename Measure>
+std::string name()
+{
+    return Measure().name();
 }
 
 } // namespace csr
