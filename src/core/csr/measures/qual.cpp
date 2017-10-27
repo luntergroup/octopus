@@ -23,7 +23,7 @@ Measure::ResultType Qual::do_evaluate(const VcfRecord& call, const FacetMap& fac
 
 std::string Qual::do_name() const
 {
-    return "qual";
+    return "QUAL";
 }
     
 } // namespace csr

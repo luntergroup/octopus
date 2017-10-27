@@ -22,7 +22,7 @@ Measure::ResultType Depth::do_evaluate(const VcfRecord& call, const FacetMap& fa
 
 std::string Depth::do_name() const
 {
-    return "strand bias";
+    return "DP";
 }
 
 } // namespace csr

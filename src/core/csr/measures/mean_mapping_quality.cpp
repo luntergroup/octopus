@@ -19,7 +19,7 @@ Measure::ResultType MeanMappingQuality::do_evaluate(const VcfRecord& call, const
 
 std::string MeanMappingQuality::do_name() const
 {
-    return "mmq";
+    return "MQ";
 }
 
 } // namespace csr

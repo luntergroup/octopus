@@ -47,7 +47,7 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
 
 std::string StrandBias::do_name() const
 {
-    return "strand bias";
+    return "SB";
 }
 
 std::vector<std::string> StrandBias::do_requirements() const

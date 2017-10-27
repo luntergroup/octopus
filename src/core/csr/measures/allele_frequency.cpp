@@ -94,7 +94,7 @@ Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const Fa
 
 std::string AlleleFrequency::do_name() const
 {
-    return "allele frequency";
+    return "AF";
 }
 
 std::vector<std::string> AlleleFrequency::do_requirements() const

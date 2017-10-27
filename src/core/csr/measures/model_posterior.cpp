@@ -25,7 +25,7 @@ Measure::ResultType ModelPosterior::do_evaluate(const VcfRecord& call, const Fac
 
 std::string ModelPosterior::do_name() const
 {
-    return "model posterior";
+    return "MP";
 }
 
 } // namespace csr
