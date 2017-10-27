@@ -540,7 +540,11 @@ OptionMap parse_options(const int argc, const char** argv)
     ("call-filtering,f",
      po::value<bool>()->default_value(false),
      "Enable all variant call filtering")
-
+    
+    ("filter-expression",
+     po::value<std::string>(),
+     "Boolean expression to use to filter variant calls")
+    
     ("use-calling-reads-for-filtering",
      po::value<bool>()->default_value(false),
      "Use the original reads used for variant calling for filtering")
