@@ -48,12 +48,15 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {
 {spec::filter::q10, "Variant quality is below 10"},
 {spec::filter::q20, "Variant quality is below 20"},
-{spec::filter::mappingQualityDivergence, "High Kullback–Leibler divergence between REF and ALT mapping quality distributions"},
+{spec::filter::lowQuality, "Variant quality is low"},
+{spec::filter::highMappingQualityDivergence, "High Kullback–Leibler divergence between REF and ALT mapping quality distributions"},
 {spec::filter::alleleBias, "Variant quality is below 10"},
-{spec::filter::modelPosterior, "Variant failed model posterior filter"},
-{spec::filter::mappingQuality, "Mapping quality across calling region is low"},
-{spec::filter::qualityByDepth, "Variant failed quality/depth filter"},
+{spec::filter::lowModelPosterior, "Variant failed model posterior filter"},
+{spec::filter::lowMappingQuality, "Mapping quality across calling region is low"},
+{spec::filter::highMappingQualityZeroCount, "The number of reads with mapping quality zero is low"},
+{spec::filter::lowQualityByDepth, "Variant failed quality/depth filter"},
 {spec::filter::strandBias, "One of the alternative alleles has strand bias"},
+{spec::filter::lowDepth, "Read depth around variant is low"}
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)

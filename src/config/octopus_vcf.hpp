@@ -23,11 +23,14 @@ namespace filter {
 
 VCF_SPEC_CONSTANT q10 {"q10"};
 VCF_SPEC_CONSTANT q20 {"q20"};
-VCF_SPEC_CONSTANT mappingQualityDivergence {"MQD"};
+VCF_SPEC_CONSTANT lowQuality {"LQ"};
+VCF_SPEC_CONSTANT lowDepth {"DP"};
+VCF_SPEC_CONSTANT highMappingQualityDivergence {"MQD"};
 VCF_SPEC_CONSTANT alleleBias {"AFB"};
-VCF_SPEC_CONSTANT modelPosterior {"MP"};
-VCF_SPEC_CONSTANT mappingQuality {"MQ"};
-VCF_SPEC_CONSTANT qualityByDepth {"QD"};
+VCF_SPEC_CONSTANT lowModelPosterior {"MP"};
+VCF_SPEC_CONSTANT lowMappingQuality {"MQ"};
+VCF_SPEC_CONSTANT highMappingQualityZeroCount {"MQ0"};
+VCF_SPEC_CONSTANT lowQualityByDepth {"QD"};
 VCF_SPEC_CONSTANT strandBias {"SB"};
 
 } // namespace filter
