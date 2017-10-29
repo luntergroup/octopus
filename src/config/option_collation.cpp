@@ -1387,7 +1387,7 @@ std::string get_filter_expression(const OptionMap& options)
     if (options.count("filter-expression") == 1) {
         return options.at("filter-expression").as<std::string>();
     } else {
-        return "QUAL < 10 | MQ < 30 | MP < 20 | AF < 0.2 | SB < 0.1 | MQD > 0.5";
+        return "QUAL < 10 | MQ < 30 | MP < 20 | AF < 0.05 | SB > 0.9 | MQD > 0.5";
     }
 }
 
