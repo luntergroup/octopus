@@ -157,7 +157,6 @@ set(UTILS_SOURCES
     utils/timing.hpp
     utils/type_tricks.hpp
     utils/coverage_tracker.hpp
-    utils/coverage_tracker.cpp
     utils/read_size_estimator.hpp
     utils/read_size_estimator.cpp
     utils/kmer_mapper.hpp
