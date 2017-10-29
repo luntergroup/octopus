@@ -169,6 +169,7 @@ set(UTILS_SOURCES
     utils/repeat_finder.cpp
     utils/genotype_reader.hpp
     utils/genotype_reader.cpp
+    utils/beta_distribution.hpp
 )
 
 set(CORE_SOURCES
