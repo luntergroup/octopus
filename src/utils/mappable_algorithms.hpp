@@ -1727,7 +1727,7 @@ template <typename ForwardIt, typename RegionTp,
 auto calculate_positional_coverage(ForwardIt first, ForwardIt last, const RegionTp& region)
 {
     using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
-    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
+    static_assert(std::is_same<RegionType<MappableTp>, RegionType<RegionTp>>::value,
                   "RegionType mismatch");
     using std::next; using std::min;
     const auto num_positions = region_size(region);
@@ -1762,9 +1762,6 @@ template <typename Container, typename RegionTp,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 auto calculate_positional_coverage(const Container& mappables, const RegionTp& region)
 {
-    using MappableTp = typename Container::value_type;
-    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
-                  "RegionType mismatch");
     const auto overlapped = overlap_range(mappables, region);
     return calculate_positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
 }
@@ -1774,7 +1771,7 @@ template <typename ForwardIt, typename RegionTp,
 auto calculate_positional_seeds(ForwardIt first, ForwardIt last, const RegionTp& region)
 {
     using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
-    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
+    static_assert(std::is_same<RegionType<MappableTp>, RegionType<RegionTp>>::value,
                   "RegionType mismatch");
     std::vector<unsigned> result(region_size(region) + 1, 0); // + 1 for empty mappables at last position
     for (const auto& mappable : contained_range(first, last, region)) {
@@ -1802,9 +1799,6 @@ template <typename Container, typename RegionTp,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 auto calculate_positional_seeds(const Container& mappables, const RegionTp& region)
 {
-    using MappableTp = typename Container::value_type;
-    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
-                  "RegionType mismatch");
     const auto overlapped = overlap_range(mappables, region);
     return calculate_positional_seeds(std::cbegin(overlapped), std::cend(overlapped), region);
 }
@@ -1814,9 +1808,6 @@ template <typename Container, typename RegionTp,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 bool has_coverage(const Container& mappables, const RegionTp& region)
 {
-    using MappableTp = typename Container::value_type;
-    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
-                  "RegionType mismatch");
     if (mappables.empty() || is_empty(region)) return false;
     const auto overlapped = overlap_range(mappables, region);
     return std::any_of(std::cbegin(overlapped), std::cend(overlapped),
@@ -1841,9 +1832,6 @@ template <typename Container, typename RegionTp,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 unsigned min_coverage(const Container& mappables, const RegionTp& region)
 {
-    using MappableTp = typename Container::value_type;
-    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
-                  "RegionType mismatch");
     if (mappables.empty() || is_empty(region)) return 0;
     const auto positional_coverage = calculate_positional_coverage(mappables, region);
     return *std::min_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
@@ -1864,9 +1852,6 @@ template <typename Container, typename RegionTp,
           typename = EnableIfRegionOrMappable<typename Container::value_type>>
 unsigned max_coverage(const Container& mappables, const RegionTp& region)
 {
-    using MappableTp = typename Container::value_type;
-    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
-                  "RegionType mismatch");
     if (mappables.empty() || is_empty(region)) return 0;
     const auto positional_coverage = calculate_positional_coverage(mappables, region);
     return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
@@ -1881,6 +1866,8 @@ unsigned max_coverage(const Container& mappables)
     const auto positional_coverage = calculate_positional_coverage(mappables);
     return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
 }
+
+// join_if
 
 template <typename ForwardIt, typename BinaryPredicate>
 auto join_if(ForwardIt first, const ForwardIt last, BinaryPredicate pred)
