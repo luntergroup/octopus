@@ -3,9 +3,17 @@
 
 #include "mean_mapping_quality.hpp"
 
+#include <cassert>
+
+#include <boost/variant.hpp>
+
 #include "io/variant/vcf_record.hpp"
+#include "utils/read_stats.hpp"
+#include "../facets/overlapping_reads.hpp"
 
 namespace octopus { namespace csr {
+
+MeanMappingQuality::MeanMappingQuality(bool recalculate) : recalculate_ {recalculate} {}
 
 std::unique_ptr<Measure> MeanMappingQuality::do_clone() const
 {
@@ -14,12 +22,27 @@ std::unique_ptr<Measure> MeanMappingQuality::do_clone() const
 
 Measure::ResultType MeanMappingQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    return std::stod(call.info_value("MQ").front());
+    if (recalculate_) {
+        const auto reads = boost::get<OverlappingReads::ResultType>(facets.at("OverlappingReads").get());
+        assert(!reads.empty());
+        return rmq_mapping_quality(reads, mapped_region(call));
+    } else {
+        return std::stod(call.info_value("MQ").front());
+    }
 }
 
 std::string MeanMappingQuality::do_name() const
 {
     return "MQ";
+}
+
+std::vector<std::string> MeanMappingQuality::do_requirements() const
+{
+    if (recalculate_) {
+        return {"OverlappingReads"};
+    } else {
+        return {};
+    }
 }
 
 } // namespace csr
