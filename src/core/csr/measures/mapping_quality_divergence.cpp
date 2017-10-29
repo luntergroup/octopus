@@ -107,14 +107,19 @@ double calculate_max_pairwise_kl_divergence(const std::vector<MappingQualityVect
 Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto assignments = boost::get<ReadAssignments::ResultType>(facets.at("ReadAssignments").get());
-    double max_divergence {0};
+    boost::optional<double> result {0};
     for (const auto& p : assignments) {
         if (call.is_heterozygous(p.first)) {
             auto mapping_qualities = extract_mapping_qualities(p.second);
-            max_divergence = std::max(max_divergence, calculate_max_pairwise_kl_divergence(mapping_qualities));
+            const auto kl = calculate_max_pairwise_kl_divergence(mapping_qualities);
+            if (result) {
+                result = std::max(*result, kl);
+            } else {
+                result = kl;
+            }
         }
     }
-    return max_divergence;
+    return result;
 }
 
 std::string MappingQualityDivergence::do_name() const
