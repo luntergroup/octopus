@@ -5,6 +5,7 @@
 #define read_assignments_hpp
 
 #include <unordered_map>
+#include <string>
 
 #include "facet.hpp"
 #include "config/common.hpp"
