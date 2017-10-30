@@ -9,6 +9,7 @@
 
 #include "io/variant/vcf_record.hpp"
 #include "utils/read_stats.hpp"
+#include "io/variant/vcf_spec.hpp"
 #include "../facets/overlapping_reads.hpp"
 
 namespace octopus { namespace csr {
@@ -27,7 +28,7 @@ Measure::ResultType MeanMappingQuality::do_evaluate(const VcfRecord& call, const
         assert(!reads.empty());
         return rmq_mapping_quality(reads, mapped_region(call));
     } else {
-        return std::stod(call.info_value("MQ").front());
+        return std::stod(call.info_value(vcfspec::info::rmsMappingQuality).front());
     }
 }
 

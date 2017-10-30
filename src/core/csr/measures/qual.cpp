@@ -14,11 +14,11 @@ std::unique_ptr<Measure> Qual::do_clone() const
 
 Measure::ResultType Qual::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
+    boost::optional<double> result {};
     if (call.qual()) {
-        return static_cast<double>(*call.qual());
-    } else {
-        return 0.0;
+        result = static_cast<double>(*call.qual());
     }
+    return result;
 }
 
 std::string Qual::do_name() const

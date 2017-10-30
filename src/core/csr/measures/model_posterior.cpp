@@ -16,11 +16,11 @@ std::unique_ptr<Measure> ModelPosterior::do_clone() const
 Measure::ResultType ModelPosterior::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     namespace ovcf = octopus::vcf::spec;
+    boost::optional<double> result {};
     if (call.has_info(ovcf::info::modelPosterior)) {
-        return std::stod(call.info_value(ovcf::info::modelPosterior).front());
-    } else {
-        return boost::none;
+        result = std::stod(call.info_value(ovcf::info::modelPosterior).front());
     }
+    return result;
 }
 
 std::string ModelPosterior::do_name() const

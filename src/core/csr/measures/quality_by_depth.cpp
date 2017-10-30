@@ -3,9 +3,14 @@
 
 #include "quality_by_depth.hpp"
 
+#include <boost/variant.hpp>
+#include <boost/optional.hpp>
+
 #include "io/variant/vcf_record.hpp"
 
 namespace octopus { namespace csr {
+
+QualityByDepth::QualityByDepth(bool recalculate) : depth_ {recalculate} {}
 
 std::unique_ptr<Measure> QualityByDepth::do_clone() const
 {
@@ -14,16 +19,22 @@ std::unique_ptr<Measure> QualityByDepth::do_clone() const
 
 Measure::ResultType QualityByDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    if (call.qual()) {
-        return *call.qual() / std::stod(call.info_value("DP").front());
-    } else {
-        return 0;
+    auto depth = boost::get<std::size_t>(depth_.evaluate(call, facets));
+    boost::optional<double> result {};
+    if (depth > 0) {
+        result = static_cast<double>(*call.qual()) / depth;
     }
+    return result;
 }
 
 std::string QualityByDepth::do_name() const
 {
     return "QD";
+}
+
+std::vector<std::string> QualityByDepth::do_requirements() const
+{
+    return depth_.requirements();
 }
 
 } // namespace csr
