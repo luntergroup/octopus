@@ -625,8 +625,7 @@ const MappableType& MappableFlatMultiSet<MappableType, Allocator>::rightmost() c
         return last;
     } else {
         using octopus::overlap_range;
-        const auto overlapped = overlap_range(cbegin(elements_), cend(elements_), last,
-                                              max_element_size_);
+        const auto overlapped = overlap_range(cbegin(elements_), cend(elements_), last, max_element_size_);
         return *rightmost_mappable(cbegin(overlapped), cend(overlapped));
     }
 }
@@ -638,7 +637,7 @@ MappableFlatMultiSet<MappableType, Allocator>::has_overlapped(const MappableType
 {
     using octopus::has_overlapped;
     if (is_bidirectionally_sorted_) {
-        has_overlapped(std::begin(elements_), std::end(elements_), mappable, BidirectionallySortedTag {});
+        return has_overlapped(std::begin(elements_), std::end(elements_), mappable, BidirectionallySortedTag {});
     }
     return has_overlapped(std::begin(elements_), std::end(elements_), mappable);
 }
@@ -651,7 +650,7 @@ MappableFlatMultiSet<MappableType, Allocator>::has_overlapped(const_iterator fir
 {
     using octopus::has_overlapped;
     if (is_bidirectionally_sorted_) {
-        has_overlapped(first, last, mappable, BidirectionallySortedTag {});
+        return has_overlapped(first, last, mappable, BidirectionallySortedTag {});
     }
     return has_overlapped(first, last, mappable);
 }
