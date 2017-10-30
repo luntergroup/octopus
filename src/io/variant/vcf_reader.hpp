@@ -41,7 +41,7 @@ public:
     VcfReader(const VcfReader&)            = delete;
     VcfReader& operator=(const VcfReader&) = delete;
     VcfReader(VcfReader&&);
-    VcfReader& operator=(VcfReader&&)      = default;
+    VcfReader& operator=(VcfReader&&);
     
     ~VcfReader() = default;
     

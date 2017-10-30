@@ -34,14 +34,14 @@ public:
     VcfWriter(const VcfWriter&)            = delete;
     VcfWriter& operator=(const VcfWriter&) = delete;
     VcfWriter(VcfWriter&&);
-    VcfWriter& operator=(VcfWriter&&)      = default;
+    VcfWriter& operator=(VcfWriter&&);
     
     ~VcfWriter();
     
     friend void swap(VcfWriter& lhs, VcfWriter& rhs) noexcept;
     
     bool is_open() const noexcept;
-    void open(Path file_path) noexcept;
+    void open(Path file_path);
     void close() noexcept;
     
     bool is_header_written() const noexcept;

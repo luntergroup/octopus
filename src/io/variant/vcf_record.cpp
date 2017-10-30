@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <iterator>
 
+#include <boost/lexical_cast.hpp>
+
 namespace octopus {
 
 // public methods
@@ -311,6 +313,11 @@ static const VcfRecord::KeyType Info_1000g {"1000G"};
 static const VcfRecord::KeyType Info_somatic {"SOMATIC"};
 static const VcfRecord::KeyType Info_validated {"VALIDATED"};
 
+std::vector<VcfRecord::NucleotideSequence> get_genotype(const VcfRecord& record, const VcfRecord::SampleName& sample)
+{
+    return record.get_sample_value(sample, "GT");
+}
+
 bool is_dbsnp_member(const VcfRecord& record) noexcept
 {
     return record.has_info(Info_dbsnp);
@@ -339,6 +346,19 @@ bool is_somatic(const VcfRecord& record) noexcept
 bool is_validated(const VcfRecord& record) noexcept
 {
     return record.has_info(Info_validated);
+}
+
+boost::optional<GenomicRegion> get_phase_region(const VcfRecord& record, const VcfRecord::SampleName& sample)
+{
+    if (record.is_sample_phased(sample) && record.has_format("PS")) {
+        return GenomicRegion {
+        record.chrom(),
+        boost::lexical_cast<ContigRegion::Position>(record.get_sample_value(sample, "PS").front()) - 1,
+        static_cast<ContigRegion::Position>(record.pos() + record.ref().size()) - 1
+        };
+    } else {
+        return boost::none;
+    }
 }
 
 bool operator==(const VcfRecord& lhs, const VcfRecord& rhs)
@@ -605,6 +625,13 @@ VcfRecord::Builder& VcfRecord::Builder::set_format_missing(const SampleName& sam
                                                            const KeyType& key)
 {
     return this->set_format(sample, key, std::string {"."});
+}
+
+VcfRecord::Builder& VcfRecord::Builder::clear_format() noexcept
+{
+    format_.clear();
+    genotypes_.clear();
+    return *this;
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_refcall()

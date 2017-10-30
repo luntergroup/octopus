@@ -67,62 +67,37 @@ public:
     // Methods that corrospond to fields in the VCF format, hence the poor naming
     //
     const GenomicRegion::ContigName& chrom() const noexcept;
-    
     GenomicRegion::Position pos() const noexcept; // One based!
-    
     const std::string& id() const noexcept;
-    
     const NucleotideSequence& ref() const noexcept;
-    
     unsigned num_alt() const noexcept;
-    
     const std::vector<NucleotideSequence>& alt() const noexcept;
-    
     boost::optional<QualityType> qual() const noexcept;
-    
     bool has_filter(const KeyType& filter) const noexcept;
-    
     const std::vector<KeyType> filter() const noexcept;
-    
     bool has_info(const KeyType& key) const noexcept;
-    
     std::vector<KeyType> info_keys() const;
-    
     const std::vector<ValueType>& info_value(const KeyType& key) const;
     
     //
     // Sample releated functions
     //
     bool has_format(const KeyType& key) const noexcept;
-    
     unsigned format_cardinality(const KeyType& key) const noexcept;
-    
     const std::vector<KeyType>& format() const noexcept;
-    
     unsigned num_samples() const noexcept;
-    
     bool has_genotypes() const noexcept;
-    
     unsigned ploidy(const SampleName& sample) const;
-    
     bool is_sample_phased(const SampleName& sample) const;
-    
     bool is_homozygous(const SampleName& sample) const;
-    
     bool is_heterozygous(const SampleName& sample) const;
-    
     bool is_homozygous_ref(const SampleName& sample) const;
-    
     bool is_homozygous_non_ref(const SampleName& sample) const;
-    
     bool has_ref_allele(const SampleName& sample) const;
-    
     bool has_alt_allele(const SampleName& sample) const;
-    
     const std::vector<ValueType>& get_sample_value(const SampleName& sample, const KeyType& key) const;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
-    
     friend Builder;
     
 private:
@@ -154,6 +129,7 @@ private:
 
 // non-member functions
 
+std::vector<VcfRecord::NucleotideSequence> get_genotype(const VcfRecord& record, const VcfRecord::SampleName& sample);
 VcfRecord::NucleotideSequence get_ancestral_allele(const VcfRecord& record);
 std::vector<unsigned> get_allele_count(const VcfRecord& record);
 std::vector<double> get_allele_frequency(const VcfRecord& record);
@@ -163,6 +139,8 @@ bool is_hapmap3_member(const VcfRecord& record) noexcept;
 bool is_1000g_member(const VcfRecord& record) noexcept;
 bool is_somatic(const VcfRecord& record) noexcept;
 bool is_validated(const VcfRecord& record) noexcept;
+
+boost::optional<GenomicRegion> get_phase_region(const VcfRecord& record, const VcfRecord::SampleName& sample);
 
 bool operator==(const VcfRecord& lhs, const VcfRecord& rhs);
 bool operator<(const VcfRecord& lhs, const VcfRecord& rhs);
@@ -219,6 +197,7 @@ public:
     Builder& set_format(const SampleName& sample, const KeyType& key, std::vector<ValueType> values);
     Builder& set_format(const SampleName& sample, const KeyType& key, std::initializer_list<ValueType> values);
     Builder& set_format_missing(const SampleName& sample, const KeyType& key);
+    Builder& clear_format() noexcept;
     
     Builder& set_refcall();
     Builder& set_somatic();

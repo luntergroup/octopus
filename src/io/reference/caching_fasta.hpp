@@ -61,7 +61,7 @@ public:
     CachingFasta(const CachingFasta&);
     CachingFasta& operator=(CachingFasta);
     CachingFasta(CachingFasta&&);
-    CachingFasta& operator=(CachingFasta&&)      = default;
+    CachingFasta& operator=(CachingFasta&&);
     
 private:
     using ContigSequenceCache = std::map<ContigRegion, GeneticSequence>;

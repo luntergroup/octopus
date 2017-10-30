@@ -91,7 +91,24 @@ CachingFasta::CachingFasta(CachingFasta&& other)
     current_cache_size_ = move(other.current_cache_size_);
     locality_bias_      = move(other.locality_bias_);
     forward_bias_       = move(other.forward_bias_);
+}
+
+CachingFasta& CachingFasta::operator=(CachingFasta&& other)
+{
+    if (this != &other) {
+        std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
+        std::lock(lock_lhs, lock_rhs);
+        using std::move;
+        fasta_              = move(other.fasta_);
+        contig_sizes_       = move(other.contig_sizes_);
+        genome_size_        = move(other.genome_size_);
+        max_cache_size_     = move(other.max_cache_size_);
+        current_cache_size_ = move(other.current_cache_size_);
+        locality_bias_      = move(other.locality_bias_);
+        forward_bias_       = move(other.forward_bias_);
     }
+    return *this;
+}
 
 // virtual private methods
 

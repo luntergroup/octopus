@@ -29,7 +29,7 @@ public:
     ProgressMeter(const ProgressMeter&)            = delete;
     ProgressMeter& operator=(const ProgressMeter&) = delete;
     ProgressMeter(ProgressMeter&&);
-    ProgressMeter& operator=(ProgressMeter&&)      = default;
+    ProgressMeter& operator=(ProgressMeter&&);
     
     ~ProgressMeter();
     

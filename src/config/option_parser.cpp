@@ -438,6 +438,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("use-uniform-genotype-priors",
     po::bool_switch()->default_value(false),
     "Use a uniform prior model when calculating genotype posteriors")
+    
+    ("model-posterior",
+     po::value<bool>(),
+     "Calculate model posteriors for every call")
     ;
     
     po::options_description cancer("Caller (cancer)");
@@ -544,13 +548,17 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description call_filtering("Callset filtering");
     call_filtering.add_options()
-    ("call-filtering",
+    ("call-filtering,f",
      po::value<bool>()->default_value(false),
      "Enable all variant call filtering")
     
-    ("model-filtering",
-     po::value<bool>(),
-     "Enable model based filtering of variant calls")
+    ("filter-expression",
+     po::value<std::string>(),
+     "Boolean expression to use to filter variant calls")
+    
+    ("use-calling-reads-for-filtering",
+     po::value<bool>()->default_value(false),
+     "Use the original reads used for variant calling for filtering")
     ;
     
     po::options_description all("octopus options");

@@ -46,6 +46,7 @@
 #include "exceptions/system_error.hpp"
 #include "exceptions/missing_file_error.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
+#include "core/csr/filters/threshold_filter_factory.hpp"
 
 namespace octopus { namespace options {
 
@@ -1415,18 +1416,78 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     }
     vc_builder.set_model_filtering(allow_model_filtering(options));
-    if (call_sites_only(options)) vc_builder.set_sites_only();
-    vc_builder.set_flank_scoring(allow_flank_scoring(options));
-    vc_builder.set_model_mapping_quality(options.at("model-mapping-quality").as<bool>());
     if (caller == "cancer") {
         vc_builder.set_max_joint_genotypes(as_unsigned("max-cancer-genotypes", options));
     } else {
         vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
     }
+    if (call_sites_only(options) && !is_call_filtering_requested(options)) {
+        vc_builder.set_sites_only();
+    }
+    vc_builder.set_flank_scoring(allow_flank_scoring(options));
+    vc_builder.set_model_mapping_quality(options.at("model-mapping-quality").as<bool>());
     if (is_set("sequence-error-model", options)) {
         vc_builder.set_sequencer(options.at("sequence-error-model").as<std::string>());
     }
     return CallerFactory {std::move(vc_builder)};
+}
+
+bool is_call_filtering_requested(const OptionMap& options) noexcept
+{
+    return options.at("call-filtering").as<bool>();
+}
+
+std::string get_filter_expression(const OptionMap& options)
+{
+    if (options.count("filter-expression") == 1) {
+        return options.at("filter-expression").as<std::string>();
+    } else {
+        return "QUAL < 10 | MQ < 30 | MP < 20 | AF < 0.05 | SB > 0.9 | MQD > 0.5";
+    }
+}
+
+std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference,
+                                                                   ReadPipe& read_pipe,
+                                                                   const OptionMap& options)
+{
+    if (is_call_filtering_requested(options)) {
+        return std::make_unique<ThresholdFilterFactory>(get_filter_expression(options));
+    } else {
+        return nullptr;
+    }
+}
+
+bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
+{
+    return options.at("use-calling-reads-for-filtering").as<bool>();
+}
+
+ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples)
+{
+    using std::make_unique;
+    using namespace readpipe;
+    ReadTransformer transformer {};
+    transformer.add(MaskSoftClipped {});
+    using ReadFilterer = ReadPipe::ReadFilterer;
+    ReadFilterer filterer {};
+    filterer.add(make_unique<HasValidBaseQualities>());
+    filterer.add(make_unique<HasWellFormedCigar>());
+    filterer.add(make_unique<IsMapped>());
+    filterer.add(make_unique<IsNotMarkedQcFail>());
+    filterer.add(make_unique<IsNotMarkedDuplicate>());
+    filterer.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
+    filterer.add(make_unique<IsProperTemplate>());
+    return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
+}
+
+ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
+                                    const OptionMap& options)
+{
+    if (use_calling_read_pipe_for_call_filtering(options)) {
+        return make_read_pipe(read_manager, std::move(samples), options);
+    } else {
+        return make_default_filter_read_pipe(read_manager, std::move(samples));
+    }
 }
 
 boost::optional<fs::path> get_output_path(const OptionMap& options)
@@ -1435,12 +1496,6 @@ boost::optional<fs::path> get_output_path(const OptionMap& options)
         return resolve_path(options.at("output").as<fs::path>(), options);
     }
     return boost::none;
-}
-
-VcfWriter make_output_vcf_writer(const OptionMap& options)
-{
-    auto output = get_output_path(options);
-    return output ? VcfWriter {std::move(*output)} : VcfWriter {};
 }
 
 boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
@@ -1478,7 +1533,7 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
     return result;
 }
 
-bool legacy_vcf_requested(const OptionMap& options)
+bool is_legacy_vcf_requested(const OptionMap& options)
 {
     return options.at("legacy").as<bool>();
 }
