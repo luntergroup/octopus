@@ -174,7 +174,7 @@ Measure::FacetMap VariantCallFilter::compute_facets(const std::vector<VcfRecord>
     Measure::FacetMap result {};
     result.reserve(facets_.size());
     for (const auto& facet : facets_) {
-        result.insert({facet, facet_factory_.make(facet, calls)});
+        result.emplace(facet, facet_factory_.make(facet, calls));
     }
     return result;
 }
