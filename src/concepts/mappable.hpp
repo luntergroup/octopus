@@ -45,8 +45,8 @@ using EnableIfMappable = std::enable_if_t<is_mappable<T>, R>;
 template <typename T, typename R = void>
 using EnableIfRegionOrMappable = std::enable_if_t<is_region_or_mappable<T>, R>;
 
-inline decltype(auto) mapped_region(const ContigRegion& region) { return region; }
-inline decltype(auto) mapped_region(const GenomicRegion& region) { return region; }
+inline decltype(auto) mapped_region(const ContigRegion& region) noexcept { return region; }
+inline decltype(auto) mapped_region(const GenomicRegion& region) noexcept { return region; }
 
 template <typename T>
 decltype(auto) mapped_region(const Mappable<T>& mappable)
