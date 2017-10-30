@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <string>
+#include <functional>
 
 #include <boost/optional.hpp>
 #include <boost/variant.hpp>
@@ -85,59 +86,119 @@ decltype(auto) make_wrapped_threshold(Args&&... args)
     return Wrapper {std::make_unique<M>(std::forward<Args>(args)...)};
 }
 
+namespace detail {
+
+template <typename Cmp, typename T = double>
+struct UnaryThreshold
+{
+    explicit UnaryThreshold(T target, Cmp cmp) : visitor_ {target, cmp} {}
+    bool operator()(Measure::ResultType value) const noexcept
+    {
+        return boost::apply_visitor(visitor_, value);
+    }
+private:
+    struct UnaryVisitor : public boost::static_visitor<bool>
+    {
+        explicit UnaryVisitor(T target, Cmp cmp) : target {target}, cmp {cmp} {}
+        template <typename T_>
+        bool operator()(T_ value) const noexcept { return cmp(target, value); }
+        template <typename T_>
+        bool operator()(boost::optional<T_> value) const noexcept
+        {
+            return !value || (*this)(*value);
+        }
+        T target;
+        Cmp cmp;
+    };
+    UnaryVisitor visitor_;
+};
+
+} // namespace detail
+
+template <typename T = double>
+struct EqualThreshold : public ThresholdVariantCallFilter::Threshold
+{
+    explicit EqualThreshold(T target) : base_ {target, std::equal_to<> {}} {}
+    std::unique_ptr<ThresholdVariantCallFilter::Threshold> clone() const
+    {
+        return std::make_unique<EqualThreshold>(*this);
+    }
+    bool operator()(Measure::ResultType value) const noexcept
+    {
+        return base_(value);
+    }
+private:
+    detail::UnaryThreshold<std::equal_to<>, T> base_;
+};
+
+template <typename T = double>
 struct LessThreshold : public ThresholdVariantCallFilter::Threshold
 {
-    explicit LessThreshold(double target) : visitor_ {target} {}
+    explicit LessThreshold(T target) : base_ {target, std::less<> {}} {}
     std::unique_ptr<ThresholdVariantCallFilter::Threshold> clone() const
     {
         return std::make_unique<LessThreshold>(*this);
     }
     bool operator()(Measure::ResultType value) const noexcept
     {
-        return boost::apply_visitor(visitor_, value);
+        return base_(value);
     }
 private:
-    struct LessVisitor : public boost::static_visitor<bool>
-    {
-        explicit LessVisitor(double target) : target {target} {}
-        bool operator()(double value) const noexcept { return value >= target; }
-        bool operator()(boost::optional<double> value) const noexcept
-        {
-            return !value || (*this)(*value);
-        }
-        double target;
-    };
-    LessVisitor visitor_;
+    detail::UnaryThreshold<std::less<>, T> base_;
 };
 
+template <typename T = double>
+struct LessEqualThreshold : public ThresholdVariantCallFilter::Threshold
+{
+    explicit LessEqualThreshold(T target) : base_ {target, std::less_equal<> {}} {}
+    std::unique_ptr<ThresholdVariantCallFilter::Threshold> clone() const
+    {
+        return std::make_unique<LessEqualThreshold>(*this);
+    }
+    bool operator()(Measure::ResultType value) const noexcept
+    {
+        return base_(value);
+    }
+private:
+    detail::UnaryThreshold<std::less_equal<>, T> base_;
+};
+
+template <typename T = double>
 struct GreaterThreshold : public ThresholdVariantCallFilter::Threshold
 {
-    explicit GreaterThreshold(double target) : visitor_ {target} {}
+    explicit GreaterThreshold(T target) : base_ {target, std::greater<> {}} {}
     std::unique_ptr<ThresholdVariantCallFilter::Threshold> clone() const
     {
         return std::make_unique<GreaterThreshold>(*this);
     }
     bool operator()(Measure::ResultType value) const noexcept
     {
-        return boost::apply_visitor(visitor_, value);
+        return base_(value);
     }
 private:
-    struct GreaterVisitor : public boost::static_visitor<bool>
-    {
-        explicit GreaterVisitor(double target) : target {target} {}
-        bool operator()(double value) const noexcept { return value <= target; }
-        bool operator()(boost::optional<double> value) const noexcept
-        {
-            return !value || (*this)(*value);
-        }
-        double target;
-    };
-    GreaterVisitor visitor_;
+    detail::UnaryThreshold<std::greater<>, T> base_;
 };
 
+template <typename T = double>
+struct GreaterEqualThreshold : public ThresholdVariantCallFilter::Threshold
+{
+    explicit GreaterEqualThreshold(T target) : base_ {target, std::greater_equal<> {}} {}
+    std::unique_ptr<ThresholdVariantCallFilter::Threshold> clone() const
+    {
+        return std::make_unique<GreaterEqualThreshold>(*this);
+    }
+    bool operator()(Measure::ResultType value) const noexcept
+    {
+        return base_(value);
+    }
+private:
+    detail::UnaryThreshold<std::greater_equal<>, T> base_;
+};
+
+template <typename T = double>
 struct BetweenThreshold : public ThresholdVariantCallFilter::Threshold
 {
-    explicit BetweenThreshold(double lower_bound, double upper_bound) : visitor_ {lower_bound, upper_bound} {}
+    explicit BetweenThreshold(T lower_bound, T upper_bound) : visitor_ {lower_bound, upper_bound} {}
     std::unique_ptr<ThresholdVariantCallFilter::Threshold> clone() const
     {
         return std::make_unique<BetweenThreshold>(*this);
@@ -149,17 +210,19 @@ struct BetweenThreshold : public ThresholdVariantCallFilter::Threshold
 private:
     struct BetweenVisitor : public boost::static_visitor<bool>
     {
-        explicit BetweenVisitor(double lower_bound, double upper_bound)
+        explicit BetweenVisitor(T lower_bound, T upper_bound)
         : lower_bound {lower_bound}, upper_bound {upper_bound} {}
-        bool operator()(double value) const noexcept
+        template <typename T_>
+        bool operator()(T_ value) const noexcept
         {
             return lower_bound <= value && value <= upper_bound;
         }
-        bool operator()(boost::optional<double> value) const noexcept
+        template <typename T_>
+        bool operator()(boost::optional<T_> value) const noexcept
         {
             return !value || (*this)(*value);
         }
-        double lower_bound, upper_bound;
+        T lower_bound, upper_bound;
     };
     BetweenVisitor visitor_;
 };
