@@ -301,6 +301,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
         params_.call_sites_only,
         params_.max_haplotypes,
         params_.haplotype_extension_threshold,
+        params_.saturation_limit,
         params_.allow_flank_scoring,
         params_.allow_model_filtering,
         params_.sequencer,

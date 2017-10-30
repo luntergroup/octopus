@@ -266,9 +266,15 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         } else if (debug_log_) {
             debug::print_haplotype_posteriors(stream(*debug_log_), *caller_latents->haplotype_posteriors());
         }
-        filter_haplotypes(has_removal_impact, haplotypes, haplotype_generator, haplotype_likelihoods, *caller_latents);
-        const auto backtrack_region = generate_next_active_haplotypes(next_haplotypes, next_active_region,
-                                                                      haplotype_generator);
+        if (!is_saturated(haplotypes, *caller_latents)) {
+            filter_haplotypes(has_removal_impact, haplotypes, haplotype_generator, haplotype_likelihoods, *caller_latents);
+        } else {
+            if (debug_log_) {
+                *debug_log_ << "Haplotypes are saturated, clearing lagging";
+            }
+            haplotype_generator.clear_progress();
+        }
+        const auto backtrack_region = generate_next_active_haplotypes(next_haplotypes, next_active_region, haplotype_generator);
         call_variants(active_region, call_region, next_active_region, backtrack_region,
                       candidates, haplotypes, haplotype_likelihoods, active_reads, *caller_latents,
                       result, prev_called_region, completed_region);
@@ -391,6 +397,18 @@ Caller::generate_next_active_haplotypes(std::vector<Haplotype>& next_haplotypes,
         haplotype_generator.clear_progress();
     }
     return backtrack_region;
+}
+
+bool Caller::is_saturated(const std::vector<Haplotype>& haplotypes, const Latents& latents) const
+{
+    return haplotypes.size() == parameters_.max_haplotypes
+           && count_probable_haplotypes(*latents.haplotype_posteriors()) > parameters_.max_haplotypes / 2;
+}
+
+unsigned Caller::count_probable_haplotypes(const Caller::Latents::HaplotypeProbabilityMap& haplotype_posteriors) const
+{
+    return std::count_if(std::cbegin(haplotype_posteriors), std::cend(haplotype_posteriors),
+                         [this] (const auto& p) { return p.second >= parameters_.saturation_limit.probability_true(); });
 }
 
 void Caller::filter_haplotypes(bool prefilter_had_removal_impact,

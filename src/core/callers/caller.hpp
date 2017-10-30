@@ -106,7 +106,7 @@ public:
         RefCallType refcall_type;
         bool call_sites_only;
         unsigned max_haplotypes;
-        Phred<double> haplotype_extension_threshold;
+        Phred<double> haplotype_extension_threshold, saturation_limit;
         bool allow_inactive_flank_scoring;
         bool allow_model_filtering;
         boost::optional<std::string> sequencer;
@@ -178,6 +178,8 @@ private:
     void remove_duplicates(std::vector<Haplotype>& haplotypes) const;
     bool filter_haplotypes(std::vector<Haplotype>& haplotypes, HaplotypeGenerator& haplotype_generator,
                            HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    bool is_saturated(const std::vector<Haplotype>& haplotypes, const Latents& latents) const;
+    unsigned count_probable_haplotypes(const Caller::Latents::HaplotypeProbabilityMap& haplotype_posteriors) const;
     void filter_haplotypes(bool prefilter_had_removal_impact, const std::vector<Haplotype>& haplotypes,
                            HaplotypeGenerator& haplotype_generator, const HaplotypeLikelihoodCache& haplotype_likelihoods,
                            const Latents& latents) const;
