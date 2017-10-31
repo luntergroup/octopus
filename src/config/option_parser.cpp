@@ -61,12 +61,12 @@ OptionMap parse_options(const int argc, const char** argv)
     ("trace",
      po::value<fs::path>()->implicit_value("octopus_trace.log"),
      "Writes very verbose debug information to trace.log in the working directory")
-
+    
     ("fast",
      po::bool_switch()->default_value(false),
      "Turns off some features to improve runtime, at the cost of decreased calling accuracy."
-     " Equivalent to '-a off -l minimal x 50`")
-
+     " Equivalent to '-a off -l minimal -x 50`")
+    
     ("very-fast",
      po::bool_switch()->default_value(false),
      "The same as fast but also disables inactive flank scoring")
@@ -159,6 +159,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::asInReferenceIndex),
      "The order contigs should be written to the output")
     
+    ("sites-only",
+     po::bool_switch()->default_value(false),
+     "Only reports call sites (i.e. without sample genotype information)")
+    
     ("legacy",
      po::bool_switch()->default_value(false),
      "Outputs a legacy version of the final callset in addition to the native version")
@@ -174,7 +178,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("read-transforms",
      po::value<bool>()->default_value(true),
      "Enable all read transformations")
-
+    
     ("mask-low-quality-tails",
      po::value<int>()->implicit_value(3),
      "Masks read tail bases with base quality less than this")
@@ -182,7 +186,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("soft-clip-masking",
      po::value<bool>()->default_value(true),
      "Turn on or off soft clip base recalibration")
-
+    
     ("soft-clip-mask-threshold",
      po::value<int>()->implicit_value(3),
      "Only soft clipped bases with quality less than this will be recalibrated, rather than all bases")
@@ -339,7 +343,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-kmer-prune",
      po::value<int>()->default_value(2),
      "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
-
+    
     ("max-bubbles",
      po::value<int>()->default_value(30),
      "Maximum number of bubbles to extract from the assembly graph")
@@ -411,14 +415,10 @@ OptionMap parse_options(const int argc, const char** argv)
 //     "Caller will report reference confidence calls for each position (positional),"
 //     " or in automatically sized blocks (blocked)")
     
-    ("sites-only",
-     po::bool_switch()->default_value(false),
-     "Only reports call sites (i.e. without sample genotype information)")
-    
     ("snp-heterozygosity,z",
      po::value<float>()->default_value(0.001, "0.001"),
      "SNP heterozygosity for the given samples")
-
+    
     ("snp-heterozygosity-stdev",
      po::value<float>()->default_value(0.01, "0.01"),
      "Standard deviation of the SNP heterozygosity used for the given samples")
