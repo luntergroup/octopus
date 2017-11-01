@@ -451,6 +451,11 @@ void partial_sort(std::vector<unsigned>& observed_qualities, const unsigned n)
                       std::end(observed_qualities), std::greater<> {});
 }
 
+bool is_strongly_strand_biased(const unsigned num_observations, const unsigned num_fwd_observations) noexcept
+{
+    return num_observations > 20 && (num_observations == num_fwd_observations || num_fwd_observations == 0);
+}
+
 bool is_good(const Variant& variant, const unsigned depth, const unsigned num_fwd_observations,
              std::vector<unsigned> observed_qualities)
 {
@@ -458,7 +463,7 @@ bool is_good(const Variant& variant, const unsigned depth, const unsigned num_fw
     if (depth < 4) {
         return num_observations > 1 || sum(observed_qualities) >= 20 || is_deletion(variant);
     }
-    if (depth > 10 && (depth == num_fwd_observations || num_fwd_observations == 0)) {
+    if (is_strongly_strand_biased(num_observations, num_fwd_observations)) {
         return false;
     }
     if (is_snp(variant)) {
