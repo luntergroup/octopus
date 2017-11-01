@@ -60,7 +60,7 @@ protected:
     
     struct Classification
     {
-        enum class Category { filtered, unfiltered } category;
+        enum class Category { hard_filtered, soft_filtered, unfiltered } category;
         std::vector<std::string> reasons = {};
         boost::optional<Phred<double>> quality = boost::none;
     };
@@ -79,8 +79,8 @@ private:
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
     
     VcfHeader make_header(const VcfReader& source) const;
-    VcfRecord filter(const VcfRecord& call) const;
-    std::vector<VcfRecord> filter(std::vector<VcfRecord> calls) const;
+    boost::optional<VcfRecord> filter(const VcfRecord& call) const;
+    std::vector<VcfRecord> filter(const std::vector<VcfRecord>& calls) const;
     Measure::FacetMap compute_facets(const std::vector<VcfRecord>& calls) const;
     MeasureVector measure(const VcfRecord& call) const;
     MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;

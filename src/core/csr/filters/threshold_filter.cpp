@@ -72,7 +72,7 @@ VariantCallFilter::Classification ThresholdVariantCallFilter::classify(const Mea
     if (passes_all_filters(measures)) {
         return Classification {Classification::Category::unfiltered};
     } else {
-        return Classification {Classification::Category::filtered, get_failing_vcf_filter_keys(measures)};
+        return Classification {Classification::Category::soft_filtered, get_failing_vcf_filter_keys(measures)};
     }
 }
 
