@@ -22,8 +22,7 @@ class TumourModel
 public:
     struct AlgorithmParameters
     {
-        unsigned max_parameter_seeds = 3;
-        unsigned max_iterations      = 100;
+        unsigned max_iterations      = 1000;
         double epsilon               = 0.001;
     };
     

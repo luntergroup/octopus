@@ -13,7 +13,9 @@
 #include "basics/ploidy_map.hpp"
 #include "basics/phred.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
+#include "core/models/genotype/genotype_prior_model.hpp"
 #include "core/models/genotype/population_prior_model.hpp"
+#include "core/models/genotype/independent_population_model.hpp"
 #include "core/models/genotype/population_model.hpp"
 #include "caller.hpp"
 
@@ -74,17 +76,29 @@ private:
                    const ReadMap& reads) const override;
     
     std::unique_ptr<PopulationPriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    std::unique_ptr<GenotypePriorModel> make_independent_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
 
 class PopulationCaller::Latents : public Caller::Latents
 {
 public:
+    using IndependenceModelInferences = model::IndependentPopulationModel::InferredLatents;
     using ModelInferences = model::PopulationModel::InferredLatents;
     
     using Caller::Latents::HaplotypeProbabilityMap;
     using Caller::Latents::GenotypeProbabilityMap;
     
     friend PopulationCaller;
+    
+    Latents(const std::vector<SampleName>& samples,
+            const std::vector<Haplotype>&,
+            std::vector<Genotype<Haplotype>>&& genotypes,
+            IndependenceModelInferences&&);
+    
+    Latents(const std::vector<SampleName>& samples,
+            const std::vector<Haplotype>&,
+            std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>>&& genotypes,
+            IndependenceModelInferences&&);
     
     Latents(const std::vector<SampleName>& samples,
             const std::vector<Haplotype>&,

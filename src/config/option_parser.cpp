@@ -109,8 +109,8 @@ OptionMap parse_options(const int argc, const char** argv)
      " May be specified multiple times")
     
     ("reads-file,i",
-     po::value<fs::path>(),
-     "File containing a list of BAM/CRAM files, one per line, to be analysed")
+     po::value<std::vector<fs::path>>()->multitoken(),
+     "Files containing lists of BAM/CRAM files, one per line, to be analysed")
     
     ("one-based-indexing",
      po::bool_switch()->default_value(false),
@@ -297,6 +297,14 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<fs::path>>()->multitoken(),
      "Variant file paths containing known variants. These variants will automatically become candidates")
     
+    ("source-candidates-file",
+     po::value<std::vector<fs::path>>()->multitoken(),
+     "Files containing lists of source candidate variant files")
+    
+    ("min-source-quality",
+     po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
+     "Only variants with quality above this value are considered for candidate generation")
+    
     ("min-base-quality",
      po::value<int>()->default_value(20),
      "Only bases with quality above this value are considered for candidate generation")
@@ -430,6 +438,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("use-uniform-genotype-priors",
     po::bool_switch()->default_value(false),
     "Use a uniform prior model when calculating genotype posteriors")
+    
+    ("model-posterior",
+     po::value<bool>(),
+     "Calculate model posteriors for every call")
     ;
     
     po::options_description cancer("Caller (cancer)");
@@ -457,10 +469,13 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-somatic-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
      "Minimum posterior probability (phred scale) to emit a somatic mutation call")
-    
-    ("somatics-only",
-     po::bool_switch()->default_value(false),
-     "Only report somatic variant calls")
+
+    ("max-cancer-genotypes",
+     po::value<int>()->default_value(20000),
+     "The maximum number of cancer genotype vectors to evaluate")
+//    ("somatics-only",
+//     po::bool_switch()->default_value(false),
+//     "Only report somatic variant calls")
     ;
     
     po::options_description trio("Caller (trio)");
@@ -533,13 +548,17 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description call_filtering("Callset filtering");
     call_filtering.add_options()
-    ("call-filtering",
+    ("call-filtering,f",
      po::value<bool>()->default_value(false),
      "Enable all variant call filtering")
     
-    ("model-filtering",
-     po::value<bool>(),
-     "Enable model based filtering of variant calls")
+    ("filter-expression",
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 30 | MP < 20 | AF < 0.05 | SB > 0.95 | MQD > 0.5"),
+     "Boolean expression to use to filter variant calls")
+    
+    ("use-calling-reads-for-filtering",
+     po::value<bool>()->default_value(false),
+     "Use the original reads used for variant calling for filtering")
     ;
     
     po::options_description all("octopus options");

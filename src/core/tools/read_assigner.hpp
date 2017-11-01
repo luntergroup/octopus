@@ -1,8 +1,8 @@
 // Copyright (c) 2016 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef read_assignment_hpp
-#define read_assignment_hpp
+#ifndef read_assigner_hpp
+#define read_assigner_hpp
 
 #include <unordered_map>
 #include <vector>
@@ -35,4 +35,4 @@ AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
 
 } // namespace octopus
 
-#endif /* read_assignment_hpp */
+#endif

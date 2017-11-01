@@ -19,6 +19,7 @@
 #include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe.hpp"
 #include "core/callers/caller_factory.hpp"
+#include "core/csr/filters/variant_call_filter_factory.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -55,11 +56,22 @@ bool call_sites_only(const OptionMap& options);
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options);
 
-VcfWriter make_output_vcf_writer(const OptionMap& options);
+bool is_call_filtering_requested(const OptionMap& options) noexcept;
+
+std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference,
+                                                                   ReadPipe& read_pipe,
+                                                                   const OptionMap& options);
+
+bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept;
+
+ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
+                                    const OptionMap& options);
+
+boost::optional<fs::path> get_output_path(const OptionMap& options);
 
 boost::optional<fs::path> create_temp_file_directory(const OptionMap& options);
 
-bool legacy_vcf_requested(const OptionMap& options);
+bool is_legacy_vcf_requested(const OptionMap& options);
 
 } // namespace options
 } // namespace octopus

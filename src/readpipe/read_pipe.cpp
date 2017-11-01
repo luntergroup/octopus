@@ -15,13 +15,13 @@ namespace octopus {
 
 // public members
 
-ReadPipe::ReadPipe(const ReadManager& manager, std::vector<SampleName> samples)
-: ReadPipe {manager, {}, {}, boost::none, std::move(samples)}
+ReadPipe::ReadPipe(const ReadManager& source, std::vector<SampleName> samples)
+: ReadPipe {source, {}, {}, boost::none, std::move(samples)}
 {}
 
-ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer transformer, ReadFilterer filterer,
+ReadPipe::ReadPipe(const ReadManager& source, ReadTransformer transformer, ReadFilterer filterer,
                    boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
-: manager_ {manager}
+: source_ {source}
 , prefilter_transformer_ {std::move(transformer)}
 , filterer_ {std::move(filterer)}
 , postfilter_transformer_ {}
@@ -32,10 +32,10 @@ ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer transformer, Read
     if (DEBUG_MODE) debug_log_ = logging::DebugLogger {};
 }
 
-ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer prefilter_transformer,
+ReadPipe::ReadPipe(const ReadManager& source, ReadTransformer prefilter_transformer,
                    ReadFilterer filterer, ReadTransformer postfilter_transformer,
                    boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
-: manager_ {manager}
+: source_ {source}
 , prefilter_transformer_ {std::move(prefilter_transformer)}
 , filterer_ {std::move(filterer)}
 , postfilter_transformer_ {std::move(postfilter_transformer)}
@@ -53,9 +53,14 @@ std::vector<std::vector<SampleName>> batch_samples(std::vector<SampleName> sampl
     return result;
 }
 
-void ReadPipe::set_read_manager(const ReadManager& manager) noexcept
+const ReadManager& ReadPipe::read_manager() const noexcept
 {
-    manager_ = manager;
+    return source_;
+}
+
+void ReadPipe::set_read_manager(const ReadManager& source) noexcept
+{
+    source_ = source;
 }
 
 unsigned ReadPipe::num_samples() const noexcept
@@ -131,7 +136,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
         result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
     }
     for (const auto& batch : batch_samples(samples_)) {
-        auto batch_reads = fetch_batch(manager_, batch, region);
+        auto batch_reads = fetch_batch(source_, batch, region);
         if (debug_log_) {
             stream(*debug_log_) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
         }

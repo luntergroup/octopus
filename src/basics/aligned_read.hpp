@@ -34,6 +34,8 @@ public:
     using BaseQuality         = std::uint_fast8_t;
     using BaseQualityVector   = std::vector<BaseQuality>;
     
+    enum class Direction { forward, reverse };
+    
     class Segment : public Equitable<Segment>
     {
     public:
@@ -107,6 +109,7 @@ public:
     BaseQualityVector& base_qualities() noexcept;
     MappingQuality mapping_quality() const noexcept;
     const CigarString& cigar() const noexcept;
+    Direction direction() const noexcept;
     bool has_other_segment() const noexcept;
     const Segment& next_segment() const;
     Flags flags() const noexcept;

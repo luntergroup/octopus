@@ -115,12 +115,23 @@ VcfReader::VcfReader(VcfReader&& other)
     reader_  = std::move(other.reader_);
 }
 
+VcfReader& VcfReader::operator=(VcfReader&& other)
+{
+    if (this != &other) {
+        std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
+        std::lock(lock_lhs, lock_rhs);
+        file_path_ = std::move(other.file_path_);
+        reader_    = std::move(other.reader_);
+    }
+    return *this;
+}
+
 void swap(VcfReader& lhs, VcfReader& rhs) noexcept
 {
-    using std::swap;
     if (&lhs == &rhs) return;
     std::lock(lhs.mutex_, rhs.mutex_);
     std::lock_guard<std::mutex> lock_lhs {lhs.mutex_, std::adopt_lock}, lock_rhs {rhs.mutex_, std::adopt_lock};
+    using std::swap;
     swap(lhs.file_path_, rhs.file_path_);
     swap(lhs.reader_, rhs.reader_);
 }

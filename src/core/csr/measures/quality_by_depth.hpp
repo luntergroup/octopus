@@ -5,10 +5,10 @@
 #define quality_by_depth_hpp
 
 #include <string>
-#include <memory>
-#include <utility>
+#include <vector>
 
 #include "measure.hpp"
+#include "depth.hpp"
 
 namespace octopus {
 
@@ -18,11 +18,16 @@ namespace csr  {
 
 class QualityByDepth : public Measure
 {
-    virtual double operator()(const VcfRecord &call) const override;
-    virtual std::string name() const override;
+    Depth depth_;
+    std::unique_ptr<Measure> do_clone() const override;
+    ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
+    std::string do_name() const override;
+    std::vector<std::string> do_requirements() const override;
+public:
+    QualityByDepth(bool recalculate = false);
 };
 
 } // namespace csr
 } // namespace octopus
 
-#endif /* quality_by_depth_hpp */
+#endif

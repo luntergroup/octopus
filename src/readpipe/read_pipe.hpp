@@ -42,9 +42,9 @@ public:
     
     ReadPipe() = delete;
     
-    ReadPipe(const ReadManager& manager, std::vector<SampleName> samples);
+    ReadPipe(const ReadManager& source, std::vector<SampleName> samples);
     
-    ReadPipe(const ReadManager& manager, ReadTransformer transformer,
+    ReadPipe(const ReadManager& source, ReadTransformer transformer,
              ReadFilterer filterer, boost::optional<Downsampler> downsampler,
              std::vector<SampleName> samples);
     
@@ -60,7 +60,8 @@ public:
     
     ~ReadPipe() = default;
     
-    void set_read_manager(const ReadManager& manager) noexcept;
+    const ReadManager& read_manager() const noexcept;
+    void set_read_manager(const ReadManager& source) noexcept;
     
     unsigned num_samples() const noexcept;
     const std::vector<SampleName>& samples() const noexcept;
@@ -71,7 +72,7 @@ public:
     //Report get_report() const;
     
 private:
-    std::reference_wrapper<const ReadManager> manager_;
+    std::reference_wrapper<const ReadManager> source_;
     ReadTransformer prefilter_transformer_;
     ReadFilterer filterer_;
     boost::optional<ReadTransformer> postfilter_transformer_;

@@ -43,11 +43,11 @@ public:
         boost::optional<CoalescentModel::Parameters> germline_prior_model_params;
         SomaticMutationModel::Parameters somatic_mutation_model_params;
         double min_expected_somatic_frequency, credible_mass, min_credible_somatic_frequency;
-        unsigned max_genotypes = 30000;
+        unsigned max_genotypes = 20000;
         double cnv_normal_alpha = 10.0, cnv_tumour_alpha = 0.75;
         double somatic_normal_germline_alpha = 10.0, somatic_normal_somatic_alpha = 0.08;
-        double somatic_tumour_germline_alpha = 5.0, somatic_tumour_somatic_alpha = 0.8;
-        double germline_weight = 90, cnv_weight = 5, somatic_weight = 1;
+        double somatic_tumour_germline_alpha = 1.0, somatic_tumour_somatic_alpha = 0.8;
+        double germline_weight = 70, cnv_weight = 3, somatic_weight = 2;
     };
     
     CancerCaller() = delete;
@@ -175,6 +175,8 @@ private:
     
     std::reference_wrapper<const std::vector<SampleName>> samples_;
     boost::optional<std::reference_wrapper<const SampleName>> normal_sample_;
+    
+    mutable std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_ = nullptr;
     
     friend CancerCaller;
 };
