@@ -140,7 +140,7 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
     for (const auto& p : assignments) {
         if (call.is_heterozygous(p.first)) {
             const auto direction_counts = get_direction_counts(p.second);
-            const auto divergence = calculate_max_prob_different(direction_counts, 10'000, 0.5);
+            const auto divergence = calculate_max_prob_different(direction_counts, 10'000, 0.25);
             if (result) {
                 result = std::max(*result, divergence);
             } else {
