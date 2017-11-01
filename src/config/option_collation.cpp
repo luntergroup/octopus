@@ -1384,11 +1384,7 @@ bool is_call_filtering_requested(const OptionMap& options) noexcept
 
 std::string get_filter_expression(const OptionMap& options)
 {
-    if (options.count("filter-expression") == 1) {
-        return options.at("filter-expression").as<std::string>();
-    } else {
-        return "QUAL < 10 | MQ < 30 | MP < 20 | AF < 0.05 | SB > 0.9 | MQD > 0.5";
-    }
+    return options.at("filter-expression").as<std::string>();
 }
 
 std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference,
