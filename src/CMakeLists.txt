@@ -250,6 +250,10 @@ set(CORE_SOURCES
     core/csr/measures/strand_bias.cpp
     core/csr/measures/mapping_quality_divergence.hpp
     core/csr/measures/mapping_quality_divergence.cpp
+    core/csr/measures/is_denovo.hpp
+    core/csr/measures/is_denovo.cpp
+    core/csr/measures/is_somatic.hpp
+    core/csr/measures/is_somatic.cpp
     core/csr/measures/measures_fwd.hpp
     core/csr/measures/measure_factory.hpp
     core/csr/measures/measure_factory.cpp

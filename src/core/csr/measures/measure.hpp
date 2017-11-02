@@ -26,7 +26,8 @@ class Measure
 public:
     using FacetMap = std::unordered_map<std::string, FacetWrapper>;
     using ResultType = boost::variant<double, boost::optional<double>,
-                                      std::size_t, boost::optional<std::size_t>>;
+                                      std::size_t, boost::optional<std::size_t>,
+                                      bool>;
     
     Measure() = default;
     

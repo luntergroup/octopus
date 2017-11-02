@@ -24,7 +24,8 @@ class ThresholdFilterFactory : public VariantCallFilterFactory
 public:
     ThresholdFilterFactory() = default;
     
-    ThresholdFilterFactory(std::string condition);
+    ThresholdFilterFactory(std::string soft_expression);
+    ThresholdFilterFactory(std::string hard_expression, std::string soft_expression);
     
     ThresholdFilterFactory(const ThresholdFilterFactory&)            = default;
     ThresholdFilterFactory& operator=(const ThresholdFilterFactory&) = default;
@@ -36,7 +37,7 @@ public:
 private:
     using Condition = ThresholdVariantCallFilter::Condition;
     
-    std::vector<Condition> conditions_;
+    std::vector<Condition> hard_conditions_, soft_conditions_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
     std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,

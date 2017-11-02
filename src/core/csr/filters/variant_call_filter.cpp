@@ -95,7 +95,8 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
     if (facets_.empty()) {
         auto p = source.iterate();
         std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) {
-            dest << filter(call);
+            auto filtered_call = filter(call);
+            if (filtered_call) dest << *filtered_call;
             if (progress_) {
                 progress_->log_completed(mapped_region(call));
             }
@@ -130,25 +131,34 @@ VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
     return builder.build_once();
 }
 
-VcfRecord VariantCallFilter::filter(const VcfRecord& call) const
+boost::optional<VcfRecord> VariantCallFilter::filter(const VcfRecord& call) const
 {
-    auto filtered_call = construct_template(call);
-    annotate(filtered_call, classify(measure(call)));
-    return filtered_call.build_once();
+    const auto classification = classify(measure(call));
+    if (classification.category != Classification::Category::hard_filtered) {
+        auto filtered_call = construct_template(call);
+        annotate(filtered_call, classification);
+        return filtered_call.build_once();
+    } else {
+        return boost::none;
+    }
 }
 
-std::vector<VcfRecord> VariantCallFilter::filter(std::vector<VcfRecord> calls) const
+std::vector<VcfRecord> VariantCallFilter::filter(const std::vector<VcfRecord>& calls) const
 {
+    std::vector<VcfRecord> result {};
     if (!calls.empty()) {
         const auto facets = compute_facets(calls);
-        std::transform(std::begin(calls), std::end(calls), std::begin(calls),
-                       [&] (VcfRecord call) {
-                           auto filtered_call = construct_template(call);
-                           annotate(filtered_call, classify(measure(call, facets)));
-                           return filtered_call.build_once();
-                       });
+        result.reserve(calls.size());
+        for (const auto& call : calls) {
+            const auto classification = classify(measure(call, facets));
+            if (classification.category != Classification::Category::hard_filtered) {
+                auto filtered_call = construct_template(call);
+                annotate(filtered_call, classification);
+                result.push_back(filtered_call.build_once());
+            }
+        }
     }
-    return calls;
+    return result;
 }
 
 VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) const
@@ -162,7 +172,7 @@ VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) 
 
 void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification status) const
 {
-    if (status.category != Classification::Category::filtered) {
+    if (status.category == Classification::Category::unfiltered) {
         pass(call);
     } else {
         fail(call, std::move(status.reasons));

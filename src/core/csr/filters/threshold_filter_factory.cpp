@@ -106,9 +106,10 @@ auto make_condition(const std::string& measure, const std::string& comparator, c
 auto parse_conditions(std::string expression)
 {
     expression.erase(std::remove(std::begin(expression), std::end(expression), ' '), std::end(expression));
+    std::vector<ThresholdVariantCallFilter::Condition> result {};
+    if (expression.empty()) return result;
     std::vector<std::string> conditions {};
     boost::split(conditions, expression, boost::is_any_of("|"));
-    std::vector<ThresholdVariantCallFilter::Condition> result {};
     for (const auto& condition : conditions) {
         std::vector<std::string> tokens {};
         boost::split(tokens, condition, boost::is_any_of("<,>,<=,=>,=="));
@@ -125,8 +126,13 @@ auto parse_conditions(std::string expression)
     return result;
 }
 
-ThresholdFilterFactory::ThresholdFilterFactory(std::string expression)
-: conditions_ {parse_conditions(std::move(expression))}
+ThresholdFilterFactory::ThresholdFilterFactory(std::string soft_expression)
+: ThresholdFilterFactory {{}, std::move(soft_expression)}
+{}
+
+ThresholdFilterFactory::ThresholdFilterFactory(std::string hard_expression, std::string soft_expression)
+: hard_conditions_ {parse_conditions(std::move(hard_expression))}
+, soft_conditions_ {parse_conditions(std::move(soft_expression))}
 {}
 
 std::unique_ptr<VariantCallFilterFactory> ThresholdFilterFactory::do_clone() const
@@ -138,7 +144,8 @@ std::unique_ptr<VariantCallFilter> ThresholdFilterFactory::do_make(FacetFactory 
                                                                    VariantCallFilter::OutputOptions output_config,
                                                                    boost::optional<ProgressMeter&> progress) const
 {
-    return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory), conditions_, output_config, progress);
+    return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory), hard_conditions_, soft_conditions_,
+                                                        output_config, progress);
 }
 
 } // namespace csr
