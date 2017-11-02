@@ -106,7 +106,6 @@ VCF_SPEC_CONSTANT hapmap2Member {"H2"};
 VCF_SPEC_CONSTANT hapmap3Member {"H3"};
 VCF_SPEC_CONSTANT rmsMappingQuality {"MQ"};
 VCF_SPEC_CONSTANT mappingQualityZeroCount {"MQ0"};
-VCF_SPEC_CONSTANT hapmap3 {"H3"};
 VCF_SPEC_CONSTANT numSamplesWithData {"NS"};
 VCF_SPEC_CONSTANT strandBias {"SB"};
 VCF_SPEC_CONSTANT somatic {"SOMATIC"};
