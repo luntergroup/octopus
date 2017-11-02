@@ -56,7 +56,8 @@ public:
     ThresholdVariantCallFilter() = delete;
     
     ThresholdVariantCallFilter(FacetFactory facet_factory,
-                               std::vector<Condition> conditions,
+                               std::vector<Condition> hard_conditions,
+                               std::vector<Condition> soft_conditions,
                                OutputOptions output_config,
                                boost::optional<ProgressMeter&> progress = boost::none);
     
@@ -68,14 +69,15 @@ public:
     virtual ~ThresholdVariantCallFilter() = default;
 
 private:
-    std::vector<ThresholdWrapper> thresholds_;
+    std::vector<ThresholdWrapper> hard_thresholds_, soft_thresholds_;
     std::vector<std::string> vcf_filter_keys_;
     bool all_unique_filter_keys_;
     
     virtual void annotate(VcfHeader::Builder& header) const override;
     virtual Classification classify(const MeasureVector& measures) const override;
     
-    bool passes_all_filters(const MeasureVector& measures) const;
+    bool passes_all_hard_filters(const MeasureVector& measures) const;
+    bool passes_all_soft_filters(const MeasureVector& measures) const;
     std::vector<std::string> get_failing_vcf_filter_keys(const MeasureVector& measures) const;
 };
 
@@ -129,6 +131,22 @@ struct EqualThreshold : public ThresholdVariantCallFilter::Threshold
     }
 private:
     detail::UnaryThreshold<std::equal_to<>, T> base_;
+};
+
+template <typename T = double>
+struct NotEqualThreshold : public ThresholdVariantCallFilter::Threshold
+{
+    explicit NotEqualThreshold(T target) : base_ {target, std::not_equal_to<> {}} {}
+    std::unique_ptr<ThresholdVariantCallFilter::Threshold> clone() const
+    {
+        return std::make_unique<NotEqualThreshold>(*this);
+    }
+    bool operator()(Measure::ResultType value) const noexcept
+    {
+        return base_(value);
+    }
+private:
+    detail::UnaryThreshold<std::not_equal_to<>, T> base_;
 };
 
 template <typename T = double>
