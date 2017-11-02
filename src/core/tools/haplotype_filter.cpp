@@ -215,13 +215,20 @@ struct MaxLikelihood
     }
 };
 
+template <typename Container>
+auto count_zeros(const Container& floats) noexcept
+{
+    return std::count_if(std::cbegin(floats), std::cend(floats),
+                         [] (auto value) noexcept { return maths::almost_zero(value); });
+}
+
 struct LikelihoodZeroCount
 {
     auto operator()(const Haplotype& haplotype, const SampleName& sample,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods) const
     {
         const auto& sample_likelihoods = haplotype_likelihoods(sample, haplotype);
-        return std::count(std::cbegin(sample_likelihoods), std::cend(sample_likelihoods), 0.0);
+        return count_zeros(sample_likelihoods);
     }
     auto operator()(const Haplotype& haplotype, const std::vector<SampleName>& samples,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods) const
@@ -229,7 +236,7 @@ struct LikelihoodZeroCount
         std::size_t result {0};
         for (const auto& sample : samples) {
             const auto& sample_likelihoods = haplotype_likelihoods(sample, haplotype);
-            result += std::count(std::cbegin(sample_likelihoods), std::cend(sample_likelihoods), 0.0);
+            result += count_zeros(sample_likelihoods);
         }
         return result;
     }
