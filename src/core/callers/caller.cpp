@@ -315,6 +315,8 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         }
         const auto backtrack_region = generate_next_active_haplotypes(next_haplotypes, next_active_region, haplotype_generator);
         if (backtrack_region) {
+            // Only protect haplotypes in backtrack - or holdout - regions as these are more likely
+            // to suffer from window artifacts.
             merge_unique(get_called_haplotypes(*caller_latents), protected_haplotypes);
         } else {
             protected_haplotypes.clear();
@@ -867,9 +869,14 @@ Caller::filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCach
     if (protected_haplotypes.empty()) {
         removed_haplotypes = filter_to_n(haplotypes, samples_, haplotype_likelihoods, parameters_.max_haplotypes);
     } else {
+        if (debug_log_) {
+            stream(*debug_log_) << "Protecting " << protected_haplotypes.size() << " haplotypes from filtering";
+        }
         std::vector<Haplotype> removable_haplotypes {}, protected_copies {};
         removable_haplotypes.reserve(haplotypes.size());
         protected_copies.reserve(protected_haplotypes.size());
+        assert(std::is_sorted(std::cbegin(haplotypes), std::cend(haplotypes)));
+        assert(std::is_sorted(std::cbegin(protected_haplotypes), std::cend(protected_haplotypes)));
         std::set_difference(std::cbegin(haplotypes), std::cend(haplotypes),
                             std::cbegin(protected_haplotypes), std::cend(protected_haplotypes),
                             std::back_inserter(removable_haplotypes));
