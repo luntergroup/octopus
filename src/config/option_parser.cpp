@@ -501,9 +501,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
      "Minimum posterior probability (phred scale) to emit a de novo mutation call")
     
-    ("denovos-only,d",
+    ("denovos-only",
      po::bool_switch()->default_value(false),
-     "Only report de novo variant calls (i.e. alleles unique to the child)")
+     "Only emit de novo variant calls")
     ;
     
     po::options_description phasing("Phasing");
