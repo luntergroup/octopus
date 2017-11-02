@@ -473,9 +473,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-cancer-genotypes",
      po::value<int>()->default_value(20000),
      "The maximum number of cancer genotype vectors to evaluate")
-//    ("somatics-only",
-//     po::bool_switch()->default_value(false),
-//     "Only report somatic variant calls")
+    
+    ("somatics-only",
+     po::bool_switch()->default_value(false),
+     "Only emit somatic variant calls")
     ;
     
     po::options_description trio("Caller (trio)");
