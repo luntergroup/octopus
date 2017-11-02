@@ -289,8 +289,10 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
             continue;
         }
         if (!protected_haplotypes.empty()) {
+            assert(!haplotypes.empty());
             std::sort(std::begin(haplotypes), std::end(haplotypes));
             remap_each(protected_haplotypes, haplotype_region(haplotypes));
+            std::sort(std::begin(protected_haplotypes), std::end(protected_haplotypes));
         }
         auto has_removal_impact = filter_haplotypes(haplotypes, haplotype_generator, haplotype_likelihoods, protected_haplotypes);
         if (haplotypes.empty()) continue;
