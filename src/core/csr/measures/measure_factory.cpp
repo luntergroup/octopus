@@ -24,6 +24,8 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<Qual>()]                     = [] () { return make_wrapped_measure<Qual>(); };
     measure_makers[name<QualityByDepth>()]           = [] () { return make_wrapped_measure<QualityByDepth>(); };
     measure_makers[name<StrandBias>()]               = [] () { return make_wrapped_measure<StrandBias>(); };
+    measure_makers[name<IsDenovo>()]                 = [] () { return make_wrapped_measure<IsDenovo>(); };
+    measure_makers[name<IsSomatic>()]                = [] () { return make_wrapped_measure<IsSomatic>(); };
 }
 
 class UnknownMeasure : public UserError

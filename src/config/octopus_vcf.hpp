@@ -16,6 +16,8 @@ namespace spec {
 namespace info {
 
 VCF_SPEC_CONSTANT modelPosterior {"MP"};
+VCF_SPEC_CONSTANT denovo {"DENOVO"};
+VCF_SPEC_CONSTANT reversion {"REVERSION"};
 
 } // namespace info
 
