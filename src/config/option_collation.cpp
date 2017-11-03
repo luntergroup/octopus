@@ -79,6 +79,14 @@ bool is_trace_mode(const OptionMap& options)
     return is_set("trace", options);
 }
 
+void emit_in_development_warning(const std::string& option)
+{
+    logging::WarningLogger log {};
+    stream(log) << "The requested option '--" << option 
+                << "' invokes a feature that is currently under development"
+                    " and may not function correctly or as expected";
+}
+
 namespace {
 
 class InvalidWorkingDirectory : public UserError
@@ -1367,7 +1375,13 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
     vc_builder.set_caller(caller);
     
+    if (caller == "population") {
+        logging::WarningLogger log {};
+        log << "The population calling model is currently under development and may not function as expected";
+    }
+    
     if (is_set("refcall", options)) {
+        emit_in_development_warning("refcall");
         const auto refcall_type = options.at("refcall").as<RefCallType>();
         if (refcall_type == RefCallType::positional) {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::positional);
