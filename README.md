@@ -112,8 +112,7 @@ If Python3 isn't available, the binaries can be installed manually with [CMake](
 ```shell
 $ git clone https://github.com/luntergroup/octopus.git
 $ cd octopus/build
-$ cmake ..
-$ make install
+$ cmake .. && make install
 ```
 
 By default this installs to the `/bin` directory where octopus was installed. To install to root (e.g. `/usr/local/bin`) use the `-D` option:
@@ -193,14 +192,19 @@ $ octopus -R hs37d5.fa -I NA12878.bam -K 1 2:30,000,000- 3:10,000,000-20,000,000
 
 #### *Calling de novo mutations in a trio*
 
-To call germline and de novo mutations in a trio, either specify both maternal (`--maternal-sample`; `-M`) and paternal (`--paternal-sample`; `-F`) samples, or supply a pedigree file which contains the trio (`--pedigree`):
+To call germline and de novo mutations in a trio, either specify both maternal (`--maternal-sample`; `-M`) and paternal (`--paternal-sample`; `-F`) samples:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -F NA12891
+```
+
+The trio can also be specified with a PED file:
+
+```shell
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam --pedigree ceu_trio.ped
 ```
 
-#### *Calling somatic mutations in tumours (WIP)*
+#### *Calling somatic mutations in tumours*
 
 To call germline and somatic mutations in a paired tumour-normal sample, just specify which sample is the normal (`--normal-sample`; `-N`):
 
@@ -222,14 +226,23 @@ $ octopus -R hs37d5.fa -I tumour1.bam tumour2.bam -C cancer
 
 Note however, that without a normal sample, somatic mutation classification power is significantly reduced.
 
-#### *Joint variant calling (WIP)*
+#### *Joint variant calling (in development)*
 
 Multiple samples from the same population, without pedigree information, can be called jointly:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
 ```
-Joint calling samples can increases calling power, especially for low coverage sequencing.
+
+Joint calling samples may increase calling power, especially for low coverage sequencing.
+
+#### *HLA genotyping*
+
+To call phased HLA genotypes, increase the default phase level:
+
+```shell
+$ octopus -R human.fa -I NA12878.bam -t hla-regions.txt -l aggressive
+```
 
 #### *Multithreaded calling*
 
