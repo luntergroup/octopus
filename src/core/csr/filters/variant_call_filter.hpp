@@ -14,6 +14,7 @@
 
 #include "config/common.hpp"
 #include "basics/phred.hpp"
+#include "basics/genomic_region.hpp"
 #include "core/types/variant.hpp"
 #include "io/variant/vcf_header.hpp"
 #include "io/variant/vcf_record.hpp"
@@ -24,7 +25,6 @@
 
 namespace octopus {
 
-class GenomicRegion;
 class VcfReader;
 class VcfWriter;
 class VcfHeader;
@@ -74,6 +74,7 @@ private:
     FacetSet facets_;
     OutputOptions output_config_;
     boost::optional<ProgressMeter&> progress_;
+    mutable boost::optional<GenomicRegion::ContigName> current_contig_;
     
     virtual void annotate(VcfHeader::Builder& header) const = 0;
     virtual Classification classify(const MeasureVector& call_measures) const = 0;

@@ -17,7 +17,6 @@
 #include "containers/mappable_map.hpp"
 #include "core/types/variant.hpp"
 #include "core/models/haplotype_likelihood_cache.hpp"
-#include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/maths.hpp"
@@ -50,6 +49,7 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
 , facets_ {get_facets(measures_)}
 , output_config_ {output_config}
 , progress_ {progress}
+, current_contig_ {}
 {}
 
 namespace {
@@ -221,6 +221,14 @@ auto expand_lhs_to_zero(const GenomicRegion& region)
 void VariantCallFilter::log_progress(const GenomicRegion& region) const
 {
     if (progress_) {
+        if (current_contig_) {
+            if (*current_contig_ != region.contig_name()) {
+                progress_->log_completed(*current_contig_);
+                current_contig_ = region.contig_name();
+            }
+        } else {
+            current_contig_ = region.contig_name();
+        }
         progress_->log_completed(expand_lhs_to_zero(region));
     }
 }
