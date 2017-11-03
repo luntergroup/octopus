@@ -1255,7 +1255,6 @@ void run_filtering(GenomeCallingComponents& components)
         }
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), output_config, progress);
         assert(filter);
-        assert(!components.output().is_open());
         const VcfReader in {std::move(*unfiltered_output_path)};
         VcfWriter& out {*components.filtered_output()};
         progress.start();
@@ -1269,6 +1268,27 @@ void convert_to_legacy(const boost::filesystem::path& src, const boost::filesyst
     const VcfReader in {src};
     VcfWriter out {dest};
     convert_to_legacy(in, out);
+}
+
+VcfWriter& get_final_output(GenomeCallingComponents& components)
+{
+    if (apply_csr(components)) {
+        return *components.filtered_output();
+    } else {
+        return components.output();
+    }
+}
+
+void run_legacy_generation(GenomeCallingComponents& components)
+{
+    if (components.legacy()) {
+        VcfWriter& final_output {get_final_output(components)};
+        const auto output_path = final_output.path();
+        if (output_path) {
+            destroy(final_output);
+            convert_to_legacy(*output_path, *components.legacy());
+        }
+    }
 }
 
 void log_run_start(const GenomeCallingComponents& components)
@@ -1339,16 +1359,10 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
         throw CallingBug {};
     }
     try {
-        if (components.legacy()) {
-            const auto output_path = components.output().path();
-            destroy(components.output());
-            if (output_path) {
-                convert_to_legacy(*output_path, *components.legacy());
-            }
-        }
+        run_legacy_generation(components);
     } catch (...) {
         logging::WarningLogger warn_log {};
-        warn_log << "Failed to make legacy output";
+        warn_log << "Failed to make legacy vcf";
     }
     const auto end = std::chrono::system_clock::now();
     const auto search_size = sum_region_sizes(components.search_regions());
