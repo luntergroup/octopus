@@ -543,8 +543,8 @@ OptionMap parse_options(const int argc, const char** argv)
      " genotype posterior probabilities")
     
     ("sequence-error-model",
-     po::value<std::string>()->default_value("hiseq"),
-     "The sequencer error model to use.")
+     po::value<std::string>()->default_value("HiSeq"),
+     "The sequencer error model to use (HiSeq or xTen)")
     ;
     
     po::options_description call_filtering("Callset filtering");
