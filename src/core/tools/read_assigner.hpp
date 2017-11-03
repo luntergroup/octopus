@@ -6,6 +6,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <functional>
 #include <iosfwd>
 
 #include "core/types/haplotype.hpp"
@@ -17,11 +18,10 @@ namespace octopus {
 
 class HaplotypeLikelihoodModel;
 
-using SupportSet = std::vector<AlignedRead>;
-
-using HaplotypeSupportMap = std::unordered_map<Haplotype, SupportSet>;
-
-using AlleleSupportMap = std::unordered_map<Allele, SupportSet>;
+using ReadSupportSet = std::vector<AlignedRead>;
+using HaplotypeSupportMap = std::unordered_map<Haplotype, ReadSupportSet>;
+using ReadRefSupportSet = std::vector<std::reference_wrapper<const AlignedRead>>;
+using AlleleSupportMap = std::unordered_map<Allele, ReadRefSupportSet>;
 
 HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
                                               const std::vector<AlignedRead>& reads);

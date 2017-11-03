@@ -155,15 +155,13 @@ AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
 {
     AlleleSupportMap result {};
     result.reserve(alleles.size());
-    
     for (const auto& allele : alleles) {
         for (const auto& p : haplotype_support) {
             if (p.first.contains(allele)) {
-                utils::append(p.second, result[allele]);
+                result[allele].insert(std::cend(result[allele]), std::cbegin(p.second), std::cend(p.second));
             }
         }
     }
-    
     return result;
     
 }
