@@ -414,14 +414,14 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
      "Report variant alleles with posterior probability (phred scale) greater than this")
     
-//    ("min-refcall-posterior",
-//     po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
-//     "Report reference alleles with posterior probability (phred scale) greater than this")
-//
-//    ("refcall,v",
-//     po::value<RefCallType>()->implicit_value(RefCallType::blocked),
-//     "Caller will report reference confidence calls for each position (positional),"
-//     " or in automatically sized blocks (blocked)")
+    ("refcall",
+     po::value<RefCallType>()->implicit_value(RefCallType::blocked),
+     "Caller will report reference confidence calls for each position (positional),"
+     " or in automatically sized blocks (blocked)")
+    
+    ("min-refcall-posterior",
+     po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
+     "Report reference alleles with posterior probability (phred scale) greater than this")
     
     ("snp-heterozygosity,z",
      po::value<float>()->default_value(0.001, "0.001"),
@@ -601,12 +601,12 @@ OptionMap parse_options(const int argc, const char** argv)
         auto config_path = resolve_path(vm_init.at("config").as<fs::path>(), vm_init);
         parse_config_file(config_path, vm, all);
     }
-
+    
     vm_init.clear();
     po::store(run(po::command_line_parser(argc, argv).options(all)), vm);
     validate(vm);
     po::notify(vm);
-
+    
     return vm;
 }
 
