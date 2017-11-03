@@ -41,6 +41,7 @@ public:
     void stop();
     
     void log_completed(const GenomicRegion& region);
+    void log_completed(const GenomicRegion::ContigName& contig);
     
 private:
     using RegionSizeType = ContigRegion::Position;

@@ -285,6 +285,15 @@ void ProgressMeter::log_completed(const GenomicRegion& region)
     if (percent_until_tick_ <= 0) output_log(region);
 }
 
+void ProgressMeter::log_completed(const GenomicRegion::ContigName& contig)
+{
+    const auto& contig_regions = regions_.at(contig);
+    if (!contig_regions.empty()) {
+        const auto contig_region = encompassing_region(contig_regions.front(), contig_regions.back());
+        log_completed(contig_region);
+    }
+}
+
 // private methods
 
 ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
