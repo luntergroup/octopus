@@ -90,8 +90,7 @@ double max_pairwise_kl_divergence(const DirectionCountVector& direction_counts) 
 
 auto sample_beta(const DirectionCounts& counts, const std::size_t n)
 {
-    std::random_device rd;
-    std::mt19937 generator {rd()};
+    static std::default_random_engine generator {};
     std::beta_distribution<> beta {static_cast<double>(counts.forward), static_cast<double>(counts.reverse)};
     std::vector<double> result(n);
     std::generate_n(std::begin(result), n, [&] () { return beta(generator); });
