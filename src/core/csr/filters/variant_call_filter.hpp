@@ -88,6 +88,7 @@ private:
     void annotate(VcfRecord::Builder& call, Classification status) const;
     void pass(VcfRecord::Builder& call) const;
     void fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const;
+    void log_progress(const GenomicRegion& region) const;
 };
 
 } // namespace csr

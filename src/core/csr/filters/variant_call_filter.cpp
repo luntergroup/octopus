@@ -97,9 +97,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
         std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) {
             auto filtered_call = filter(call);
             if (filtered_call) dest << *filtered_call;
-            if (progress_) {
-                progress_->log_completed(mapped_region(call));
-            }
+            log_progress(mapped_region(call));
         });
     } else {
         std::vector<std::pair<VcfRecord, GenomicRegion>> block {};
@@ -108,9 +106,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
             auto call_phase_region = get_phase_region(call, samples);
             if (!block.empty() && !overlaps(block.back().second, call_phase_region)) {
                 dest << filter(copy_each_first(block));
-                if (progress_) {
-                    progress_->log_completed(call_phase_region);
-                }
+                log_progress(call_phase_region);
                 block.clear();
             }
             block.push_back({call, std::move(call_phase_region)});
@@ -214,6 +210,18 @@ void VariantCallFilter::fail(VcfRecord::Builder& call, std::vector<std::string> 
 {
     for (auto& reason : reasons) {
         call.add_filter(std::move(reason));
+    }
+}
+
+auto expand_lhs_to_zero(const GenomicRegion& region)
+{
+    return GenomicRegion {region.contig_name(), 0, region.end()};
+}
+
+void VariantCallFilter::log_progress(const GenomicRegion& region) const
+{
+    if (progress_) {
+        progress_->log_completed(expand_lhs_to_zero(region));
     }
 }
 
