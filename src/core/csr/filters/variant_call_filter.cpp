@@ -56,8 +56,8 @@ namespace {
 
 GenomicRegion get_phase_set(const VcfRecord& record, const SampleName& sample)
 {
-    const std::string& begin{record.get_sample_value(sample, "PS").front()};
-    return GenomicRegion {record.chrom(), static_cast<GenomicRegion::Position>(std::stoi(begin)), record.pos()};
+    auto result = get_phase_region(record, sample);
+    return result ? *result : mapped_region(record);
 }
 
 std::vector<GenomicRegion> get_phase_sets(const VcfRecord& record, const std::vector<SampleName>& samples)
