@@ -36,35 +36,27 @@ auto num_matching_lhs_bases(const VcfRecord::NucleotideSequence& lhs, const VcfR
     return static_cast<int>(std::distance(std::cbegin(lhs), p.first));
 }
 
-int min_padding(const VcfRecord::NucleotideSequence& reference,
-                const std::vector<VcfRecord::NucleotideSequence>& genotype) noexcept
-{
-    auto result = static_cast<int>(reference.size());
-    for (const auto& allele : genotype) {
-        result = std::min(result, num_matching_lhs_bases(reference, allele));
-    }
-    return result;
-}
-
 auto get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample,
                         const bool trim_padding = false)
 {
-    auto call_region = mapped_region(call);
     auto genotype = get_genotype(call, sample);
     remove_partial_alleles(genotype);
     std::sort(std::begin(genotype), std::end(genotype));
     genotype.erase(std::unique(std::begin(genotype), std::end(genotype)), std::end(genotype));
-    if (trim_padding) {
-        const auto num_bases_to_remove = min_padding(call.ref(), genotype);
-        for (auto& allele : genotype) {
-            allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), num_bases_to_remove));
-        }
-        call_region = expand_lhs(call_region, -num_bases_to_remove);
-    }
+    const auto call_region = mapped_region(call);
     std::vector<Allele> result {};
     result.reserve(genotype.size());
-    std::transform(std::cbegin(genotype), std::cend(genotype), std::back_inserter(result),
-                   [&] (const auto& alt_seq) { return Allele {call_region, alt_seq}; });
+    if (trim_padding) {
+        for (auto& allele : genotype) {
+            const auto num_bases_to_remove = num_matching_lhs_bases(call.ref(), allele);
+            allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), num_bases_to_remove));
+            auto allele_region = expand_lhs(call_region, -num_bases_to_remove);
+            result.emplace_back(std::move(allele_region), std::move(allele));
+        }
+    } else {
+        std::transform(std::cbegin(genotype), std::cend(genotype), std::back_inserter(result),
+                       [&] (const auto& alt_seq) { return Allele {call_region, alt_seq}; });
+    }
     return result;
 }
 
