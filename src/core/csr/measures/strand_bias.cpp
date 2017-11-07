@@ -33,6 +33,22 @@ std::unique_ptr<Measure> StrandBias::do_clone() const
     return std::make_unique<StrandBias>(*this);
 }
 
+void remove_non_overlapping_support(ReadAssignments::ResultType::mapped_type& support, const GenomicRegion& region)
+{
+    for (auto& p : support) {
+        auto itr = std::remove_if(std::begin(p.second), std::end(p.second),
+                                  [&] (const auto& read) { return !overlaps(read, region); });
+        p.second.erase(itr, std::end(p.second));
+    }
+}
+
+void remove_non_overlapping_support(ReadAssignments::ResultType& support, const GenomicRegion& region)
+{
+    for (auto& p : support) {
+        remove_non_overlapping_support(p.second, region);
+    }
+}
+
 bool is_forward(const AlignedRead& read) noexcept
 {
     return read.direction() == AlignedRead::Direction::forward;
@@ -111,7 +127,11 @@ double calculate_max_prob_different(const DirectionCountVector& direction_counts
 
 Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto assignments = boost::get<ReadAssignments::ResultType>(facets.at("ReadAssignments").get());
+    auto assignments = boost::get<ReadAssignments::ResultType>(facets.at("ReadAssignments").get());
+    // TODO: What we should really do here is calculate which reads directly support each allele in the
+    // genotype by looking if each supporting read overlaps the allele given the realignment to the called haplotype.
+    // The current approach of just removing non-overlapping reads may not work optimally in complex indel regions.
+    remove_non_overlapping_support(assignments, mapped_region(call));
     boost::optional<double> result {0};
     for (const auto& p : assignments) {
         if (call.is_heterozygous(p.first)) {
