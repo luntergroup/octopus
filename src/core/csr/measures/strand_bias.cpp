@@ -22,6 +22,12 @@
 
 namespace octopus { namespace csr {
 
+StrandBias::StrandBias(const double critical_value)
+: min_medium_trigger_ {critical_value / 2}
+, min_big_trigger_ {critical_value / 8}
+, use_resampling_ {true}
+{}
+
 std::unique_ptr<Measure> StrandBias::do_clone() const
 {
     return std::make_unique<StrandBias>(*this);
@@ -54,36 +60,6 @@ auto get_direction_counts(const HaplotypeSupportMap& support, const unsigned pri
         result.push_back(count_directions(p.second));
         result.back().forward += prior;
         result.back().reverse += prior;
-    }
-    return result;
-}
-
-double kl_divergence_beta(double a1, double b1, double a2, double b2) noexcept
-{
-    using boost::math::beta;
-    auto a = beta(a2, b2, 1.0);
-    auto b = beta(a1, b1, 1.0);
-    using boost::math::digamma;
-    auto c = (a1 - a2) * digamma(a1);
-    auto d = (b1 - b2) * digamma(b1);
-    auto e = (a2 - a1 + b2 - b1) * digamma(a1 + b1);
-    return a - b + c + d + e;
-}
-
-double kl_divergence(const DirectionCounts& lhs, const DirectionCounts& rhs) noexcept
-{
-    return kl_divergence_beta(lhs.forward, lhs.reverse, rhs.forward, rhs.reverse);
-}
-
-double max_pairwise_kl_divergence(const DirectionCountVector& direction_counts) noexcept
-{
-    double result {0};
-    const auto num_counts = direction_counts.size();
-    if (num_counts < 2) return result;
-    for (std::size_t i {0}; i < num_counts - 1; ++i) {
-        for (auto j = i + 1; j < num_counts; ++j) {
-            result = std::max(result, kl_divergence(direction_counts[i], direction_counts[j]));
-        }
     }
     return result;
 }
@@ -139,11 +115,24 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
     for (const auto& p : assignments) {
         if (call.is_heterozygous(p.first)) {
             const auto direction_counts = get_direction_counts(p.second);
-            const auto divergence = calculate_max_prob_different(direction_counts, 10'000, 0.25);
-            if (result) {
-                result = std::max(*result, divergence);
+            double prob;
+            if (use_resampling_) {
+                prob = calculate_max_prob_different(direction_counts, small_sample_size_, min_difference_);
+                if (prob >= min_big_trigger_) {
+                    prob = calculate_max_prob_different(direction_counts, big_sample_size_, min_difference_);
+                } else if (prob >= min_medium_trigger_) {
+                    prob = calculate_max_prob_different(direction_counts, medium_sample_size_, min_difference_);
+                    if (prob >= min_big_trigger_) {
+                        prob = calculate_max_prob_different(direction_counts, big_sample_size_, min_difference_);
+                    }
+                }
             } else {
-                result = divergence;
+                prob = calculate_max_prob_different(direction_counts, big_sample_size_, min_difference_);
+            }
+            if (result) {
+                result = std::max(*result, prob);
+            } else {
+                result = prob;
             }
         }
     }
