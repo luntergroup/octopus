@@ -21,8 +21,8 @@ Octopus is a mapping-based variant caller that implements several calling models
 * CMake 3.5 or greater
 * Optional:
     * Python3 or greater
-    
-Warning: GCC 6.1.1 and below have bugs which affect octopus, the code may compile, but do not trust the results. GCC 6.2 should be safe. Clang 3.8 has been tested. Visual Studio likely won't compile as it is not C++14 feature complete.
+
+**Warning**: GCC 6.2.1 and below have bugs which affect octopus, the code may compile, but do not trust the results. GCC 6.3 and above should be safe. Clang 3.8 has been tested. Visual Studio likely won't compile as it is not C++14 feature complete.
 
 #### *Obtaining requirements on OS X*
 
@@ -42,7 +42,7 @@ Note if you already have any of these packages installed via Homebrew on your sy
 
 #### *Obtaining requirements on Ubuntu Xenial*
 
-On Ubuntu, Clang 3.8 is recommended as GCC 6.2 has a [bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77550) which slows down octopus. To install the requirements use:
+To install the requirements (using Clang) enter:
 
 ```shell
 $ sudo apt-get update && sudo apt-get upgrade
@@ -270,11 +270,11 @@ Note this does not turn on multithreading or increase buffer sizes.
 
 ## Documentation
 
-Complete user and developer documentation is available in the doc directory.
+Complete [user](https://github.com/luntergroup/octopus/doc/manuals/user/octopus-user-manual.pdf) and developer documentation is available in the doc directory.
 
 ## Support
 
-Please report any bugs or feature requests to the [octopus issue tracker](https://github.com/dancooke/octopus/issues).
+Please report any bugs or feature requests to the [octopus issue tracker](https://github.com/luntergroup/octopus/issues).
 
 ## Contributing
 
