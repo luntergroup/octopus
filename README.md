@@ -270,7 +270,7 @@ Note this does not turn on multithreading or increase buffer sizes.
 
 ## Documentation
 
-Complete [user](https://github.com/luntergroup/octopus/doc/manuals/user/octopus-user-manual.pdf) and developer documentation is available in the doc directory.
+Complete [user](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) and [developer](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/dev/octopus-dev-manual.pdf) documentation is available in the doc directory.
 
 ## Support
 
