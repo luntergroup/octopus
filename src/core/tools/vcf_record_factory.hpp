@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_record_factory_hpp
@@ -37,6 +37,7 @@ private:
     const ReadMap& reads_;
     std::vector<SampleName> samples_;
     bool sites_only_;
+    double max_qual = 10000;
     
     VcfRecord make(std::unique_ptr<Call> call) const;
     VcfRecord make_segment(std::vector<std::unique_ptr<Call>>&& calls) const;

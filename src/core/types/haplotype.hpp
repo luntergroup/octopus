@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef haplotype_hpp
@@ -99,6 +99,7 @@ public:
     friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     friend bool is_reference(const Haplotype& haplotype);
     friend Haplotype expand(const Haplotype& haplotype, MappingDomain::Position n);
+    friend Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region);
     
     template <typename S> friend void debug::print_alleles(S&&, const Haplotype&);
     template <typename S> friend void debug::print_variant_alleles(S&&, const Haplotype&);
@@ -274,6 +275,7 @@ std::vector<ContigAllele> copy_unique(const Container& haplotypes, const ContigR
 bool is_reference(const Haplotype& haplotype);
 
 Haplotype expand(const Haplotype& haplotype, Haplotype::MappingDomain::Size n);
+Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region);
 
 std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs);
 

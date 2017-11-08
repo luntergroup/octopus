@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef caller_builder_hpp
@@ -97,7 +97,7 @@ private:
         Phred<double> min_variant_posterior;
         Phred<double> min_refcall_posterior;
         unsigned max_haplotypes;
-        Phred<double> haplotype_extension_threshold;
+        Phred<double> haplotype_extension_threshold, saturation_limit = Phred<> {10.0};
         bool allow_flank_scoring;
         bool allow_model_filtering;
         boost::optional<double> snp_heterozygosity, indel_heterozygosity;

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef cancer_genotype_hpp
@@ -180,8 +180,9 @@ bool contains(const CancerGenotype<MappableType1>& lhs, const CancerGenotype<Map
     return copy<MappableType2>(lhs, rhs.mapped_region()) == rhs;
 }
 
-std::pair<std::vector<CancerGenotype<Haplotype>>, std::vector<Genotype<Haplotype>>>
-generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const unsigned ploidy);
+std::vector<CancerGenotype<Haplotype>>
+generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_genotypes,
+                              const std::vector<Haplotype>& somatic_haplotypes);
 
 template <typename MappableType>
 Genotype<MappableType> demote(const CancerGenotype<MappableType>& genotype)
@@ -221,45 +222,50 @@ struct CancerGenotypeHash
 };
 
 namespace debug {
-    template <typename S>
-    void print_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
-    {
-        print_alleles(stream, genotype.germline_genotype());
-        stream << " + ";
-        print_alleles(stream, genotype.somatic_element());
-    }
-    
-    void print_alleles(const CancerGenotype<Haplotype>& genotype);
-    
-    template <typename S>
-    void print_variant_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
-    {
-        print_variant_alleles(stream, genotype.germline_genotype());
-        stream << " + ";
-        print_variant_alleles(stream, genotype.somatic_element());
-    }
-    
-    void print_variant_alleles(const CancerGenotype<Haplotype>& genotype);
+
+template <typename S>
+void print_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
+{
+    print_alleles(stream, genotype.germline_genotype());
+    stream << " + ";
+    print_alleles(stream, genotype.somatic_element());
+}
+
+void print_alleles(const CancerGenotype<Haplotype>& genotype);
+
+template <typename S>
+void print_variant_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
+{
+    print_variant_alleles(stream, genotype.germline_genotype());
+    stream << " + ";
+    print_variant_alleles(stream, genotype.somatic_element());
+}
+
+void print_variant_alleles(const CancerGenotype<Haplotype>& genotype);
+
 } // namespace debug
+
 } // namespace octopus
 
 namespace std {
-    template <typename MappableType> struct hash<octopus::CancerGenotype<MappableType>>
+
+template <typename MappableType> struct hash<octopus::CancerGenotype<MappableType>>
+{
+    size_t operator()(const octopus::CancerGenotype<MappableType>& genotype) const
     {
-        size_t operator()(const octopus::CancerGenotype<MappableType>& genotype) const
-        {
-            return octopus::CancerGenotypeHash()(genotype);
-        }
-    };
-    
-    template <typename MappableType>
-    struct hash<reference_wrapper<const octopus::CancerGenotype<MappableType>>>
+        return octopus::CancerGenotypeHash()(genotype);
+    }
+};
+
+template <typename MappableType>
+struct hash<reference_wrapper<const octopus::CancerGenotype<MappableType>>>
+{
+    size_t operator()(const reference_wrapper<const octopus::CancerGenotype<MappableType>> genotype) const
     {
-        size_t operator()(const reference_wrapper<const octopus::CancerGenotype<MappableType>> genotype) const
-        {
-            return hash<octopus::CancerGenotype<MappableType>>()(genotype);
-        }
-    };
+        return hash<octopus::CancerGenotype<MappableType>>()(genotype);
+    }
+};
+
 } // namespace std
 
 #endif

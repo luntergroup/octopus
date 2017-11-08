@@ -21,8 +21,8 @@ Octopus is a mapping-based variant caller that implements several calling models
 * CMake 3.5 or greater
 * Optional:
     * Python3 or greater
-    
-Warning: GCC 6.1.1 and below have bugs which affect octopus, the code may compile, but do not trust the results. GCC 6.2 should be safe. Clang 3.8 has been tested. Visual Studio likely won't compile as it is not C++14 feature complete.
+
+**Warning**: GCC 6.2.1 and below have bugs which affect octopus, the code may compile, but do not trust the results. GCC 6.3 and above should be safe. Clang 3.8 has been tested. Visual Studio likely won't compile as it is not C++14 feature complete.
 
 #### *Obtaining requirements on OS X*
 
@@ -42,7 +42,7 @@ Note if you already have any of these packages installed via Homebrew on your sy
 
 #### *Obtaining requirements on Ubuntu Xenial*
 
-On Ubuntu, Clang 3.8 is recommended as GCC 6.2 has a [bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77550) which slows down octopus. To install the requirements use:
+To install the requirements (using Clang) enter:
 
 ```shell
 $ sudo apt-get update && sudo apt-get upgrade
@@ -112,8 +112,7 @@ If Python3 isn't available, the binaries can be installed manually with [CMake](
 ```shell
 $ git clone https://github.com/luntergroup/octopus.git
 $ cd octopus/build
-$ cmake ..
-$ make install
+$ cmake .. && make install
 ```
 
 By default this installs to the `/bin` directory where octopus was installed. To install to root (e.g. `/usr/local/bin`) use the `-D` option:
@@ -193,14 +192,19 @@ $ octopus -R hs37d5.fa -I NA12878.bam -K 1 2:30,000,000- 3:10,000,000-20,000,000
 
 #### *Calling de novo mutations in a trio*
 
-To call germline and de novo mutations in a trio, either specify both maternal (`--maternal-sample`; `-M`) and paternal (`--paternal-sample`; `-F`) samples, or supply a pedigree file which contains the trio (`--pedigree`):
+To call germline and de novo mutations in a trio, either specify both maternal (`--maternal-sample`; `-M`) and paternal (`--paternal-sample`; `-F`) samples:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -F NA12891
+```
+
+The trio can also be specified with a PED file:
+
+```shell
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam --pedigree ceu_trio.ped
 ```
 
-#### *Calling somatic mutations in tumours (WIP)*
+#### *Calling somatic mutations in tumours*
 
 To call germline and somatic mutations in a paired tumour-normal sample, just specify which sample is the normal (`--normal-sample`; `-N`):
 
@@ -222,14 +226,23 @@ $ octopus -R hs37d5.fa -I tumour1.bam tumour2.bam -C cancer
 
 Note however, that without a normal sample, somatic mutation classification power is significantly reduced.
 
-#### *Joint variant calling (WIP)*
+#### *Joint variant calling (in development)*
 
 Multiple samples from the same population, without pedigree information, can be called jointly:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
 ```
-Joint calling samples can increases calling power, especially for low coverage sequencing.
+
+Joint calling samples may increase calling power, especially for low coverage sequencing.
+
+#### *HLA genotyping*
+
+To call phased HLA genotypes, increase the default phase level:
+
+```shell
+$ octopus -R human.fa -I NA12878.bam -t hla-regions.txt -l aggressive
+```
 
 #### *Multithreaded calling*
 
@@ -257,11 +270,11 @@ Note this does not turn on multithreading or increase buffer sizes.
 
 ## Documentation
 
-Complete user and developer documentation is available in the doc directory.
+Complete [user](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) and [developer](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/dev/octopus-dev-manual.pdf) documentation is available in the doc directory.
 
 ## Support
 
-Please report any bugs or feature requests to the [octopus issue tracker](https://github.com/dancooke/octopus/issues).
+Please report any bugs or feature requests to the [octopus issue tracker](https://github.com/luntergroup/octopus/issues).
 
 ## Contributing
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "individual_caller.hpp"
@@ -208,15 +208,19 @@ auto compute_candidate_posteriors(const std::vector<Variant>& candidates,
 {
     VariantPosteriorVector result {};
     result.reserve(candidates.size());
-    
     for (const auto& candidate : candidates) {
         result.emplace_back(candidate, compute_posterior(candidate.alt_allele(), genotype_posteriors));
     }
-    
     return result;
 }
 
 // variant calling
+
+bool has_callable(const VariantPosteriorVector& variant_posteriors, const Phred<double> min_posterior) noexcept
+{
+    return std::any_of(std::cbegin(variant_posteriors), std::cend(variant_posteriors),
+                       [=] (const auto& p) noexcept { return p.second >= min_posterior; });
+}
 
 bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReference& candidate)
 {
@@ -241,12 +245,37 @@ VariantCalls call_candidates(const VariantPosteriorVector& candidate_posteriors,
 
 // variant genotype calling
 
-auto call_genotype(const GenotypeProbabilityMap& genotype_posteriors)
+template <typename PairIterator>
+PairIterator find_map(PairIterator first, PairIterator last)
 {
-    return std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                            [] (const auto& lhs, const auto& rhs) {
-                                return lhs.second < rhs.second;
-                            })->first;
+    return std::max_element(first, last, [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+}
+
+template <typename T>
+bool is_homozygous_reference(const Genotype<T>& g)
+{
+    return is_reference(g[0]) && g.is_homozygous();
+}
+
+auto call_genotype(const GenotypeProbabilityMap& genotype_posteriors, const bool ignore_hom_ref = false)
+{
+    const auto map_itr = find_map(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors));
+    assert(map_itr != std::cend(genotype_posteriors));
+    if (!ignore_hom_ref || !is_homozygous_reference(map_itr->first)) {
+        return map_itr->first;
+    } else {
+        const auto lhs_map_itr = find_map(std::cbegin(genotype_posteriors), map_itr);
+        const auto rhs_map_itr = find_map(std::next(map_itr), std::cend(genotype_posteriors));
+        if (lhs_map_itr != map_itr) {
+            if (rhs_map_itr != std::cend(genotype_posteriors)) {
+                return lhs_map_itr->second < rhs_map_itr->second ? rhs_map_itr->first : lhs_map_itr->first;
+            } else {
+                return lhs_map_itr->first;
+            }
+        } else {
+            return rhs_map_itr->first;
+        }
+    }
 }
 
 auto compute_posterior(const Genotype<Allele>& genotype, const GenotypeProbabilityMap& genotype_posteriors)
@@ -264,13 +293,11 @@ GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
 {
     GenotypeCalls result {};
     result.reserve(variant_regions.size());
-    
     for (const auto& region : variant_regions) {
         auto genotype_chunk = copy<Allele>(genotype_call, region);
         const auto posterior = compute_posterior(genotype_chunk, genotype_posteriors);
         result.emplace_back(std::move(genotype_chunk), posterior);
     }
-    
     return result;
 }
 
@@ -299,7 +326,6 @@ auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
 {
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     result.reserve(variant_calls.size());
-    
     std::transform(std::make_move_iterator(std::begin(variant_calls)),
                    std::make_move_iterator(std::end(variant_calls)),
                    std::make_move_iterator(std::begin(genotype_calls)),
@@ -307,15 +333,13 @@ auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
                    [&sample] (VariantCall&& variant_call, GenotypeCall&& genotype_call) {
                        return transform_call(sample, std::move(variant_call), std::move(genotype_call));
                    });
-    
     return result;
 }
 
 } // namespace
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
-IndividualCaller::call_variants(const std::vector<Variant>& candidates,
-                                const Caller::Latents& latents) const
+IndividualCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
@@ -343,9 +367,9 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
     debug::log(genotype_posteriors, debug_log_, trace_log_);
     const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
     debug::log(candidate_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
-    const auto genotype_call = octopus::call_genotype(genotype_posteriors);
-    auto variant_calls = call_candidates(candidate_posteriors, genotype_call,
-                                         parameters_.min_variant_posterior);
+    const bool force_call_non_ref {has_callable(candidate_posteriors, parameters_.min_variant_posterior)};
+    const auto genotype_call = octopus::call_genotype(genotype_posteriors, force_call_non_ref);
+    auto variant_calls = call_candidates(candidate_posteriors, genotype_call, parameters_.min_variant_posterior);
     const auto called_regions = extract_regions(variant_calls);
     auto genotype_calls = call_genotypes(genotype_call, genotype_posteriors, called_regions);
     return transform_calls(sample(), std::move(variant_calls), std::move(genotype_calls));

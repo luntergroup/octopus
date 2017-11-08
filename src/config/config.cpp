@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "config.hpp"
@@ -7,7 +7,7 @@
 
 namespace octopus { namespace config {
 
-const VersionNumber Version {0, 2, 1, boost::optional<std::string> {"alpha"}};
+const VersionNumber Version {0, 3, 0, boost::optional<std::string> {"alpha"}};
 
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version)
 {

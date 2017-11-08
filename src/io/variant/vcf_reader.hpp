@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_reader_hpp
@@ -41,7 +41,7 @@ public:
     VcfReader(const VcfReader&)            = delete;
     VcfReader& operator=(const VcfReader&) = delete;
     VcfReader(VcfReader&&);
-    VcfReader& operator=(VcfReader&&)      = default;
+    VcfReader& operator=(VcfReader&&);
     
     ~VcfReader() = default;
     

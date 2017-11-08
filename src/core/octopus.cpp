@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "octopus.hpp"
@@ -34,6 +34,7 @@
 #include "io/reference/reference_genome.hpp"
 #include "io/read/read_manager.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
+#include "readpipe/buffered_read_pipe.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/append.hpp"
@@ -48,6 +49,9 @@
 #include "io/variant/vcf.hpp"
 #include "utils/timing.hpp"
 #include "exceptions/program_error.hpp"
+#include "csr/filters/variant_call_filter.hpp"
+#include "csr/filters/variant_call_filter_factory.hpp"
+#include "readpipe/buffered_read_pipe.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -73,6 +77,11 @@ void print_input_regions(S&& stream, const InputRegionMap& regions)
 void print_input_regions(const InputRegionMap& regions)
 {
     print_input_regions(std::cout, regions);
+}
+
+bool apply_csr(const GenomeCallingComponents& components) noexcept
+{
+    return static_cast<bool>(components.filtered_output());
 }
 
 using CallTypeSet = std::set<std::type_index>;
@@ -128,7 +137,7 @@ auto get_call_types(const GenomeCallingComponents& components, const std::vector
 void write_caller_output_header(GenomeCallingComponents& components, const std::string& command)
 {
     const auto call_types = get_call_types(components, components.contigs());
-    if (components.sites_only()) {
+    if (components.sites_only() && !apply_csr(components)) {
         components.output() << make_vcf_header({}, components.contigs(), components.reference(),
                                                call_types, command);
     } else {
@@ -178,8 +187,16 @@ void log_startup_info(const GenomeCallingComponents& components)
         stream(log) << "Processing " << search_size << "bp with automatic thread management";
     }
     auto sl = stream(log);
-    sl << "Writing calls to ";
-    const auto output_path = components.output().path();
+    const bool is_filtered_run {components.filtered_output()};
+    if (is_filtered_run) {
+        sl << "Writing filtered calls to ";
+    } else {
+        sl << "Writing unfiltered calls to ";
+    }
+    auto output_path = components.output().path();
+    if (is_filtered_run) {
+        output_path = components.filtered_output()->path();
+    }
     if (output_path) {
         sl << *output_path;
     } else {
@@ -1153,45 +1170,17 @@ bool is_multithreaded(const GenomeCallingComponents& components)
     return !components.num_threads() || *components.num_threads() > 1;
 }
 
-auto make_filter_read_pipe(const GenomeCallingComponents& components)
+void run_calling(GenomeCallingComponents& components)
 {
-    using std::make_unique;
-    using namespace readpipe;
-    
-    ReadTransformer transformer {};
-    transformer.add(MaskSoftClipped {});
-    
-    using ReadFilterer = ReadPipe::ReadFilterer;
-    ReadFilterer filterer {};
-    filterer.add(make_unique<HasValidBaseQualities>());
-    filterer.add(make_unique<HasWellFormedCigar>());
-    filterer.add(make_unique<IsMapped>());
-    filterer.add(make_unique<IsNotMarkedQcFail>());
-    filterer.add(make_unique<IsNotMarkedDuplicate>());
-    filterer.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
-    filterer.add(make_unique<IsProperTemplate>());
-    
-    return ReadPipe {
-        components.read_manager(), std::move(transformer), std::move(filterer),
-        boost::none, components.samples()
-    };
-}
-
-auto add_identifier(const boost::filesystem::path& base, const std::string& identifier)
-{
-    const auto old_stem  = base.stem();
-    const auto extension = base.extension();
-    
-    boost::filesystem::path new_stem;
-    
-    if (extension.string() == ".gz") {
-        new_stem = old_stem.stem().string() + "." + identifier
-        + old_stem.extension().string() + extension.string();
+    if (is_multithreaded(components)) {
+        if (DEBUG_MODE) {
+            logging::WarningLogger warn_log {};
+            warn_log << "Running in parallel mode can make debug log difficult to interpret";
+        }
+        run_octopus_multi_threaded(components);
     } else {
-        new_stem = old_stem.string() + "." + identifier + extension.string();
+        run_octopus_single_threaded(components);
     }
-    
-    return base.parent_path() / new_stem;
 }
 
 void destroy(VcfWriter& writer)
@@ -1200,16 +1189,106 @@ void destroy(VcfWriter& writer)
     swap(writer, tmp);
 }
 
-auto get_legacy_path(const boost::filesystem::path& native)
+void log_filtering_info(const GenomeCallingComponents& components)
 {
-    return add_identifier(native, "legacy");
+    logging::InfoLogger log {};
+    log << "Starting Call Set Refinement (CSR) filtering";
 }
 
-void make_legacy_copy(const boost::filesystem::path& native)
+std::vector<GenomicRegion> extract_call_regions(VcfReader& vcf)
 {
-    const VcfReader in {native};
-    VcfWriter out {get_legacy_path(native)};
+    std::deque<GenomicRegion> regions {};
+    auto p = vcf.iterate(VcfReader::UnpackPolicy::sites);
+    std::transform(std::move(p.first), std::move(p.second), std::back_inserter(regions),
+                   [] (const VcfRecord& record) { return mapped_region(record); });
+    return {std::make_move_iterator(std::begin(regions)), std::make_move_iterator(std::end(regions))};
+}
+
+std::vector<GenomicRegion> extract_call_regions(boost::filesystem::path vcf_path)
+{
+    VcfReader tmp {std::move(vcf_path)};
+    return extract_call_regions(tmp);
+}
+
+template <typename Map>
+std::size_t sum_mapped_container_size(const Map& map)
+{
+    return std::accumulate(std::cbegin(map), std::cend(map), std::size_t {0},
+                           [] (auto curr, const auto& p) noexcept { return curr + p.second.size(); });
+}
+
+std::vector<GenomicRegion> flatten(const InputRegionMap& regions)
+{
+    std::vector<GenomicRegion> result {};
+    result.reserve(sum_mapped_container_size(regions));
+    for (const auto& p : regions) {
+        std::copy(std::cbegin(p.second), std::cend(p.second), std::back_inserter(result));
+    }
+    return result;
+}
+
+bool use_unfiltered_call_region_hints_for_filtering(const GenomeCallingComponents& components)
+{
+    // TODO: no need to do this if reads won't be used, or if likely hints won't help because the calls
+    // are very dense.
+    return true;
+}
+
+void run_filtering(GenomeCallingComponents& components)
+{
+    if (apply_csr(components)) {
+        log_filtering_info(components);
+        ProgressMeter progress {components.search_regions()};
+        const auto& filter_factory = components.call_filter_factory();
+        const auto& filter_read_pipe = components.filter_read_pipe();
+        auto unfiltered_output_path = components.output().path();
+        assert(unfiltered_output_path); // cannot be stdout
+        BufferedReadPipe buffered_rp {filter_read_pipe, components.read_buffer_size()};
+        if (use_unfiltered_call_region_hints_for_filtering(components)) {
+            buffered_rp.hint(extract_call_regions(*unfiltered_output_path));
+        } else {
+            buffered_rp.hint(flatten(components.search_regions()));
+        }
+        VariantCallFilter::OutputOptions output_config {};
+        if (components.sites_only()) {
+            output_config.emit_sites_only = true;
+        }
+        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), output_config, progress);
+        assert(filter);
+        const VcfReader in {std::move(*unfiltered_output_path)};
+        VcfWriter& out {*components.filtered_output()};
+        progress.start();
+        filter->filter(in, out);
+        progress.stop();
+    }
+}
+
+void convert_to_legacy(const boost::filesystem::path& src, const boost::filesystem::path& dest)
+{
+    const VcfReader in {src};
+    VcfWriter out {dest};
     convert_to_legacy(in, out);
+}
+
+VcfWriter& get_final_output(GenomeCallingComponents& components)
+{
+    if (apply_csr(components)) {
+        return *components.filtered_output();
+    } else {
+        return components.output();
+    }
+}
+
+void run_legacy_generation(GenomeCallingComponents& components)
+{
+    if (components.legacy()) {
+        VcfWriter& final_output {get_final_output(components)};
+        const auto output_path = final_output.path();
+        if (output_path) {
+            destroy(final_output);
+            convert_to_legacy(*output_path, *components.legacy());
+        }
+    }
 }
 
 void log_run_start(const GenomeCallingComponents& components)
@@ -1249,46 +1328,41 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
     write_caller_output_header(components, command);
     const auto start = std::chrono::system_clock::now();
     try {
-        if (is_multithreaded(components)) {
-            if (DEBUG_MODE) {
-                logging::WarningLogger warn_log {};
-                warn_log << "Running in parallel mode can make debug log difficult to interpret";
-            }
-            run_octopus_multi_threaded(components);
-        } else {
-            run_octopus_single_threaded(components);
-        }
+        run_calling(components);
     } catch (const ProgramError& e) {
         try {
-            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
             cleanup(components);
         } catch (...) {}
         throw;
     } catch (const std::exception& e) {
         try {
-            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
             cleanup(components);
         } catch (...) {}
         throw CallingBug {e};
     } catch (...) {
         try {
-            if (debug_log) *debug_log << "Encountered an error, attempting to cleanup";
+            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
             cleanup(components);
         } catch (...) {}
         throw CallingBug {};
     }
     components.output().close();
     try {
-        if (components.legacy()) {
-            const auto output_path = components.output().path();
-            destroy(components.output());
-            if (output_path) {
-                make_legacy_copy(*output_path);
-            }
-        }
+        run_filtering(components);
+    } catch (...) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {};
+    }
+    try {
+        run_legacy_generation(components);
     } catch (...) {
         logging::WarningLogger warn_log {};
-        warn_log << "Failed to make legacy output";
+        warn_log << "Failed to make legacy vcf";
     }
     const auto end = std::chrono::system_clock::now();
     const auto search_size = sum_region_sizes(components.search_regions());
@@ -1297,6 +1371,5 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
                      << TimeInterval {start, end};
     cleanup(components);
 }
+
 } // namespace octopus
-
-

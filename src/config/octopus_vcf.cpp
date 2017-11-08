@@ -1,8 +1,10 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "io/variant/vcf_spec.hpp"
 #include "octopus_vcf.hpp"
+
+#include <unordered_map>
+#include <functional>
 
 namespace octopus { namespace vcf {
 
@@ -13,7 +15,7 @@ VcfHeader::Builder make_header_template()
     result.set_file_format(vcfspec::version);
     
     result.add_info("AA", "1", "String", "Ancestral allele");
-    result.add_info("AC", "1", "Integer", "Allele count in genotypes, for each ALT allele, in the same order as listed");
+    result.add_info("AC", "A", "Integer", "Allele count in genotypes, for each ALT allele, in the same order as listed");
     //result.add_info("AF", "A", "Float", "Allele Frequency, for each ALT allele, in the same order as listed");
     result.add_info("AN", "1", "Integer", "Total number of alleles in called genotypes");
     result.add_info("BQ", "1", "Integer", "RMS base quality at this position");
@@ -37,13 +39,30 @@ VcfHeader::Builder make_header_template()
     result.add_format("MQ", "1", "Integer", "RMS mapping quality");
     result.add_format("BQ", "1", "Integer", "RMS base quality at this position");
     
-//    result.add_filter("PASS", "All filters passed");
-//    result.add_filter("MQ", "Root-mean-square mapping quality across calling region is low");
-//    result.add_filter("q10", "Variant quality is below 10");
-//    result.add_filter("SB", "One of the alternative alleles has strand bias");
-//    result.add_filter("KL", "High Kullback–Leibler divergence between REF and ALT mapping quality distributions");
+    result.add_filter("PASS", "All filters passed");
     
     return result;
+}
+
+static const std::unordered_map<std::string, std::string> filter_descriptions
+{
+{spec::filter::q10, "Variant quality is below 10"},
+{spec::filter::q20, "Variant quality is below 20"},
+{spec::filter::lowQuality, "Variant quality is low"},
+{spec::filter::highMappingQualityDivergence, "High Kullback–Leibler divergence between REF and ALT mapping quality distributions"},
+{spec::filter::alleleBias, "The called allele frequencies are not as expected for the given ploidy"},
+{spec::filter::lowModelPosterior, "Variant failed model posterior filter"},
+{spec::filter::lowMappingQuality, "Mapping quality across calling region is low"},
+{spec::filter::highMappingQualityZeroCount, "The number of reads with mapping quality zero is low"},
+{spec::filter::lowQualityByDepth, "Variant failed quality/depth filter"},
+{spec::filter::strandBias, "One of the alternative alleles has strand bias"},
+{spec::filter::lowDepth, "Read depth around variant is low"}
+};
+
+VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)
+{
+    builder.add_filter(key, filter_descriptions.at(key));
+    return builder;
 }
 
 } // namespace vcf

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef threadsafe_fasta_hpp
@@ -36,7 +36,7 @@ public:
     ThreadsafeFasta(const ThreadsafeFasta&);
     ThreadsafeFasta& operator=(ThreadsafeFasta);
     ThreadsafeFasta(ThreadsafeFasta&&);
-    ThreadsafeFasta& operator=(ThreadsafeFasta&&) = default;
+    ThreadsafeFasta& operator=(ThreadsafeFasta&&);
     
 private:
     std::unique_ptr<Fasta> fasta_;

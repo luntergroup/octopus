@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_extractor.hpp"
@@ -14,6 +14,10 @@
 
 namespace octopus { namespace coretools {
 
+VcfExtractor::VcfExtractor(std::unique_ptr<const VcfReader> reader)
+: VcfExtractor {std::move(reader), Options {}}
+{}
+
 VcfExtractor::VcfExtractor(std::unique_ptr<const VcfReader> reader, Options options)
 : reader_ {std::move(reader)}
 , options_ {options}
@@ -24,17 +28,24 @@ std::unique_ptr<VariantGenerator> VcfExtractor::do_clone() const
     return std::make_unique<VcfExtractor>(*this);
 }
 
+namespace {
+
 static bool is_canonical(const VcfRecord::NucleotideSequence& allele)
 {
     return allele != vcfspec::missingValue
            && std::none_of(std::cbegin(allele), std::cend(allele),
-                           [] (const auto base) { return base == vcfspec::deletedBase; });
+                           [](const auto base) { return base == vcfspec::deletedBase; });
+}
+
+bool is_good_quality(const VcfRecord& record, boost::optional<VcfRecord::QualityType> min_quality) noexcept
+{
+    return !min_quality || (record.qual() && *record.qual() >= *min_quality);
 }
 
 template <typename Iterator>
 auto make_allele(const Iterator first_base, const Iterator last_base)
 {
-    Variant::NucleotideSequence result {first_base, last_base};
+    Variant::NucleotideSequence result{first_base, last_base};
     utils::capitalise(result);
     return result;
 }
@@ -60,7 +71,8 @@ void extract_variants(const VcfRecord& record, Container& result)
                                         make_allele(p.first, std::cend(ref_allele)),
                                         make_allele(p.second, first_alt_end));
                     begin += remaining_ref_size;
-                    result.emplace_back(record.chrom(), begin - 1, "", make_allele(first_alt_end, std::cend(alt_allele)));
+                    result.emplace_back(record.chrom(), begin - 1, "",
+                                        make_allele(first_alt_end, std::cend(alt_allele)));
                 } else {
                     begin += std::distance(std::cbegin(ref_allele), p.first);
                     result.emplace_back(record.chrom(), begin - 1,
@@ -77,22 +89,29 @@ void extract_variants(const VcfRecord& record, Container& result)
     }
 }
 
-std::vector<Variant> fetch_variants(const GenomicRegion& region, const VcfReader& reader)
+std::vector<Variant> fetch_variants(const GenomicRegion& region, const VcfReader& reader,
+                                    const boost::optional<VcfRecord::QualityType> min_quality)
 {
-    std::deque<Variant> variants {}; // Use deque to prevent reallocating
+    std::deque<Variant> variants{}; // Use deque to prevent reallocating
     auto p = reader.iterate(region, VcfReader::UnpackPolicy::sites);
     std::for_each(std::move(p.first), std::move(p.second),
-                  [&variants] (const auto& record) { extract_variants(record, variants); });
-    std::vector<Variant> result {std::make_move_iterator(std::begin(variants)),
-                                 std::make_move_iterator(std::end(variants))};
+                  [&variants, min_quality](const auto& record) {
+                      if (is_good_quality(record, min_quality)) {
+                          extract_variants(record, variants);
+                      }
+                  });
+    std::vector<Variant> result{std::make_move_iterator(std::begin(variants)),
+                                std::make_move_iterator(std::end(variants))};
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
 }
 
+} // namespace
+
 std::vector<Variant> VcfExtractor::do_generate_variants(const GenomicRegion& region)
 {
-    return fetch_variants(region, *reader_);
+    return fetch_variants(region, *reader_, options_.min_quality);
 }
 
 std::string VcfExtractor::name() const

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_header.hpp"
@@ -351,6 +351,14 @@ VcfHeader::Builder& VcfHeader::Builder::add_contig(std::string id,
     
     add_structured_field(tag::contig, std::move(other_values));
     
+    return *this;
+}
+
+VcfHeader::Builder& VcfHeader::Builder::clear_format() noexcept
+{
+    using namespace vcfspec::header::meta;
+    structured_fields_.erase(tag::format);
+    samples_.clear();
     return *this;
 }
 

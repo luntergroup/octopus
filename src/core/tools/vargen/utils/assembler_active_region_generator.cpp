@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "assembler_active_region_generator.hpp"
@@ -216,7 +216,7 @@ auto get_interesting_hotspots(const GenomicRegion& region,
                        } else if (coverage <= 30) {
                            return interesting_coverage > 1;
                        } else {
-                           return 5 * interesting_coverage >= coverage;
+                           return 10 * interesting_coverage >= coverage;
                        }
                    });
     return get_regions(interesting_bases, region);

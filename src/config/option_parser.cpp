@@ -1,4 +1,4 @@
-
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_parser.hpp"
@@ -61,12 +61,12 @@ OptionMap parse_options(const int argc, const char** argv)
     ("trace",
      po::value<fs::path>()->implicit_value("octopus_trace.log"),
      "Writes very verbose debug information to trace.log in the working directory")
-
+    
     ("fast",
      po::bool_switch()->default_value(false),
      "Turns off some features to improve runtime, at the cost of decreased calling accuracy."
-     " Equivalent to '-a off -l minimal x 50`")
-
+     " Equivalent to '-a off -l minimal -x 50`")
+    
     ("very-fast",
      po::bool_switch()->default_value(false),
      "The same as fast but also disables inactive flank scoring")
@@ -109,8 +109,8 @@ OptionMap parse_options(const int argc, const char** argv)
      " May be specified multiple times")
     
     ("reads-file,i",
-     po::value<fs::path>(),
-     "File containing a list of BAM/CRAM files, one per line, to be analysed")
+     po::value<std::vector<fs::path>>()->multitoken(),
+     "Files containing lists of BAM/CRAM files, one per line, to be analysed")
     
     ("one-based-indexing",
      po::bool_switch()->default_value(false),
@@ -159,6 +159,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::asInReferenceIndex),
      "The order contigs should be written to the output")
     
+    ("sites-only",
+     po::bool_switch()->default_value(false),
+     "Only reports call sites (i.e. without sample genotype information)")
+    
     ("legacy",
      po::bool_switch()->default_value(false),
      "Outputs a legacy version of the final callset in addition to the native version")
@@ -174,7 +178,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("read-transforms",
      po::value<bool>()->default_value(true),
      "Enable all read transformations")
-
+    
     ("mask-low-quality-tails",
      po::value<int>()->implicit_value(3),
      "Masks read tail bases with base quality less than this")
@@ -182,7 +186,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("soft-clip-masking",
      po::value<bool>()->default_value(true),
      "Turn on or off soft clip base recalibration")
-
+    
     ("soft-clip-mask-threshold",
      po::value<int>()->implicit_value(3),
      "Only soft clipped bases with quality less than this will be recalibrated, rather than all bases")
@@ -293,6 +297,14 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<fs::path>>()->multitoken(),
      "Variant file paths containing known variants. These variants will automatically become candidates")
     
+    ("source-candidates-file",
+     po::value<std::vector<fs::path>>()->multitoken(),
+     "Files containing lists of source candidate variant files")
+    
+    ("min-source-quality",
+     po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
+     "Only variants with quality above this value are considered for candidate generation")
+    
     ("min-base-quality",
      po::value<int>()->default_value(20),
      "Only bases with quality above this value are considered for candidate generation")
@@ -339,7 +351,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-kmer-prune",
      po::value<int>()->default_value(2),
      "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
-
+    
     ("max-bubbles",
      po::value<int>()->default_value(30),
      "Maximum number of bubbles to extract from the assembly graph")
@@ -402,23 +414,19 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
      "Report variant alleles with posterior probability (phred scale) greater than this")
     
-//    ("min-refcall-posterior",
-//     po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
-//     "Report reference alleles with posterior probability (phred scale) greater than this")
-//
-//    ("refcall,v",
-//     po::value<RefCallType>()->implicit_value(RefCallType::blocked),
-//     "Caller will report reference confidence calls for each position (positional),"
-//     " or in automatically sized blocks (blocked)")
+    ("refcall",
+     po::value<RefCallType>()->implicit_value(RefCallType::blocked),
+     "Caller will report reference confidence calls for each position (positional),"
+     " or in automatically sized blocks (blocked)")
     
-    ("sites-only",
-     po::bool_switch()->default_value(false),
-     "Only reports call sites (i.e. without sample genotype information)")
+    ("min-refcall-posterior",
+     po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
+     "Report reference alleles with posterior probability (phred scale) greater than this")
     
     ("snp-heterozygosity,z",
      po::value<float>()->default_value(0.001, "0.001"),
      "SNP heterozygosity for the given samples")
-
+    
     ("snp-heterozygosity-stdev",
      po::value<float>()->default_value(0.01, "0.01"),
      "Standard deviation of the SNP heterozygosity used for the given samples")
@@ -430,6 +438,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("use-uniform-genotype-priors",
     po::bool_switch()->default_value(false),
     "Use a uniform prior model when calculating genotype posteriors")
+    
+    ("model-posterior",
+     po::value<bool>(),
+     "Calculate model posteriors for every call")
     ;
     
     po::options_description cancer("Caller (cancer)");
@@ -457,10 +469,14 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-somatic-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
      "Minimum posterior probability (phred scale) to emit a somatic mutation call")
+
+    ("max-cancer-genotypes",
+     po::value<int>()->default_value(20000),
+     "The maximum number of cancer genotype vectors to evaluate")
     
     ("somatics-only",
      po::bool_switch()->default_value(false),
-     "Only report somatic variant calls")
+     "Only emit somatic variant calls")
     ;
     
     po::options_description trio("Caller (trio)");
@@ -485,9 +501,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
      "Minimum posterior probability (phred scale) to emit a de novo mutation call")
     
-    ("denovos-only,d",
+    ("denovos-only",
      po::bool_switch()->default_value(false),
-     "Only report de novo variant calls (i.e. alleles unique to the child)")
+     "Only emit de novo variant calls")
     ;
     
     po::options_description phasing("Phasing");
@@ -527,19 +543,23 @@ OptionMap parse_options(const int argc, const char** argv)
      " genotype posterior probabilities")
     
     ("sequence-error-model",
-     po::value<std::string>()->default_value("hiseq"),
-     "The sequencer error model to use.")
+     po::value<std::string>()->default_value("HiSeq"),
+     "The sequencer error model to use (HiSeq or xTen)")
     ;
     
     po::options_description call_filtering("Callset filtering");
     call_filtering.add_options()
-    ("call-filtering",
-     po::value<bool>()->default_value(false),
+    ("call-filtering,f",
+     po::value<bool>()->default_value(true),
      "Enable all variant call filtering")
     
-    ("model-filtering",
-     po::value<bool>(),
-     "Enable model based filtering of variant calls")
+    ("filter-expression",
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 20 | AF < 0.05 | SB > 0.95 | MQD > 0.9"),
+     "Boolean expression to use to filter variant calls")
+    
+    ("use-calling-reads-for-filtering",
+     po::value<bool>()->default_value(false),
+     "Use the original reads used for variant calling for filtering")
     ;
     
     po::options_description all("octopus options");
@@ -581,12 +601,12 @@ OptionMap parse_options(const int argc, const char** argv)
         auto config_path = resolve_path(vm_init.at("config").as<fs::path>(), vm_init);
         parse_config_file(config_path, vm, all);
     }
-
+    
     vm_init.clear();
     po::store(run(po::command_line_parser(argc, argv).options(all)), vm);
     validate(vm);
     po::notify(vm);
-
+    
     return vm;
 }
 

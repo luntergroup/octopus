@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef caller_hpp
@@ -106,7 +106,7 @@ public:
         RefCallType refcall_type;
         bool call_sites_only;
         unsigned max_haplotypes;
-        Phred<double> haplotype_extension_threshold;
+        Phred<double> haplotype_extension_threshold, saturation_limit;
         bool allow_inactive_flank_scoring;
         bool allow_model_filtering;
         boost::optional<std::string> sequencer;
@@ -123,7 +123,7 @@ private:
     HaplotypeGenerator::Builder haplotype_generator_builder_;
     Phaser phaser_;
     Parameters parameters_;
-    
+        
     // virtual methods
     
     virtual std::string do_name() const = 0;
@@ -160,13 +160,15 @@ private:
     HaplotypeLikelihoodCache make_haplotype_likelihood_cache() const;
     VcfRecordFactory make_record_factory(const ReadMap& reads) const;
     std::vector<Haplotype>
-    filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods,
+           const std::deque<Haplotype>& protected_haplotypes) const;
     bool populate(HaplotypeLikelihoodCache& haplotype_likelihoods, const GenomicRegion& active_region,
                   const std::vector<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
                   const ReadMap& active_reads) const;
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                             const Latents::HaplotypeProbabilityMap& haplotype_posteriors, unsigned max_to_remove) const;
+                             const Latents::HaplotypeProbabilityMap& haplotype_posteriors,
+                             const std::deque<Haplotype>& protected_haplotypes, unsigned max_to_remove) const;
     GeneratorStatus
     generate_active_haplotypes(const GenomicRegion& call_region, HaplotypeGenerator& haplotype_generator,
                                GenomicRegion& active_region, boost::optional<GenomicRegion>& next_active_region,
@@ -177,10 +179,13 @@ private:
                                     HaplotypeGenerator& haplotype_generator) const;
     void remove_duplicates(std::vector<Haplotype>& haplotypes) const;
     bool filter_haplotypes(std::vector<Haplotype>& haplotypes, HaplotypeGenerator& haplotype_generator,
-                           HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                           HaplotypeLikelihoodCache& haplotype_likelihoods,
+                           const std::deque<Haplotype>& protected_haplotypes) const;
+    bool is_saturated(const std::vector<Haplotype>& haplotypes, const Latents& latents) const;
+    unsigned count_probable_haplotypes(const Caller::Latents::HaplotypeProbabilityMap& haplotype_posteriors) const;
     void filter_haplotypes(bool prefilter_had_removal_impact, const std::vector<Haplotype>& haplotypes,
                            HaplotypeGenerator& haplotype_generator, const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                           const Latents& latents) const;
+                           const Latents& latents, const std::deque<Haplotype>& protected_haplotypes) const;
     void call_variants(const GenomicRegion& active_region, const GenomicRegion& call_region,
                        const boost::optional<GenomicRegion>& next_active_region,
                        const boost::optional<GenomicRegion>& backtrack_region,
@@ -189,6 +194,7 @@ private:
                        const Latents& latents, std::deque<CallWrapper>& result,
                        boost::optional<GenomicRegion>& prev_called_region, GenomicRegion& completed_region) const;
     GenotypeCallMap get_genotype_calls(const Latents& latents) const;
+    std::deque<Haplotype> get_called_haplotypes(const Latents& latents) const;
     void set_model_posteriors(std::vector<CallWrapper>& calls, const Latents& latents,
                               const std::vector<Haplotype>& haplotypes,
                               const HaplotypeLikelihoodCache& haplotype_likelihoods) const;

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_spec_hpp
@@ -106,7 +106,6 @@ VCF_SPEC_CONSTANT hapmap2Member {"H2"};
 VCF_SPEC_CONSTANT hapmap3Member {"H3"};
 VCF_SPEC_CONSTANT rmsMappingQuality {"MQ"};
 VCF_SPEC_CONSTANT mappingQualityZeroCount {"MQ0"};
-VCF_SPEC_CONSTANT hapmap3 {"H3"};
 VCF_SPEC_CONSTANT numSamplesWithData {"NS"};
 VCF_SPEC_CONSTANT strandBias {"SB"};
 VCF_SPEC_CONSTANT somatic {"SOMATIC"};

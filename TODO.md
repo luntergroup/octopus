@@ -1,10 +1,10 @@
 # TODO
 
-Here is a non-exhaustive list of things that need doing. In general, the individual caller is now pretty solid (other than some runtime performance issues). Everything else needs work, in particular the cancer caller which suffers from significant runtime issues.
+This is a non-exhaustive list of things that need doing.
 
 ## Features
 
-- Variant filtering.
+- Population joint calling.
 - Reference callings.
 
 ## Calling accuracy improvements
@@ -22,7 +22,7 @@ Here is a non-exhaustive list of things that need doing. In general, the individ
 - Variational Bayes model needs rewriting as current implementation is just a prototype. In general the CancerCaller is very slow and needs improving.
 - In multithreaded mode, if we have too many variants buffered, we should write them to another temporary file.
 
-## Cosmetic
+## Refactoring
 
 - VcfRecordFactory is horrible and needs refactoring. The entire design are the Call family needs looking at.
 
@@ -35,5 +35,5 @@ Here is a non-exhaustive list of things that need doing. In general, the individ
 
 ## Testing
 
-- In dire need of proper unit testing!
-- Add regression testing
+- More unit testing!
+- Add regression testing,

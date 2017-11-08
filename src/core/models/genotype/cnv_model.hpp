@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef cnv_model_hpp
@@ -21,8 +21,7 @@ class CNVModel
 public:
     struct AlgorithmParameters
     {
-        unsigned max_parameter_seeds = 3;
-        unsigned max_iterations      = 100;
+        unsigned max_iterations      = 1000;
         double epsilon               = 0.001;
     };
     

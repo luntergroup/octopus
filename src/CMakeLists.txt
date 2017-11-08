@@ -120,6 +120,8 @@ set(READPIPE_SOURCES
     readpipe/read_pipe_fwd.hpp
     readpipe/read_pipe.hpp
     readpipe/read_pipe.cpp
+    readpipe/buffered_read_pipe.hpp
+    readpipe/buffered_read_pipe.cpp
     
     readpipe/downsampling/downsampler.hpp
     readpipe/downsampling/downsampler.cpp
@@ -155,7 +157,6 @@ set(UTILS_SOURCES
     utils/timing.hpp
     utils/type_tricks.hpp
     utils/coverage_tracker.hpp
-    utils/coverage_tracker.cpp
     utils/read_size_estimator.hpp
     utils/read_size_estimator.cpp
     utils/kmer_mapper.hpp
@@ -165,6 +166,9 @@ set(UTILS_SOURCES
     utils/emplace_iterator.hpp
     utils/repeat_finder.hpp
     utils/repeat_finder.cpp
+    utils/genotype_reader.hpp
+    utils/genotype_reader.cpp
+    utils/beta_distribution.hpp
 )
 
 set(CORE_SOURCES
@@ -204,9 +208,17 @@ set(CORE_SOURCES
     core/tools/vcf_header_factory.cpp
     core/tools/vcf_record_factory.hpp
     core/tools/vcf_record_factory.cpp
-    
-    core/csr/facets/read_assignment.hpp
-    core/csr/facets/read_assignment.cpp
+    core/tools/read_assigner.hpp
+    core/tools/read_assigner.cpp
+
+    core/csr/facets/facet.hpp
+    core/csr/facets/facet.cpp
+    core/csr/facets/overlapping_reads.hpp
+    core/csr/facets/overlapping_reads.cpp
+    core/csr/facets/read_assignments.hpp
+    core/csr/facets/read_assignments.cpp
+    core/csr/facets/facet_factory.hpp
+    core/csr/facets/facet_factory.cpp
     
     core/csr/filters/supervised_variant_call_filter.hpp
     core/csr/filters/supervised_variant_call_filter.cpp
@@ -214,15 +226,37 @@ set(CORE_SOURCES
     core/csr/filters/threshold_filter.cpp
     core/csr/filters/variant_call_filter.hpp
     core/csr/filters/variant_call_filter.cpp
+    core/csr/filters/variant_call_filter_factory.hpp
+    core/csr/filters/variant_call_filter_factory.cpp
+    core/csr/filters/threshold_filter_factory.hpp
+    core/csr/filters/threshold_filter_factory.cpp
     
     core/csr/measures/measure.hpp
+    core/csr/measures/qual.hpp
+    core/csr/measures/qual.cpp
+    core/csr/measures/depth.hpp
+    core/csr/measures/depth.cpp
     core/csr/measures/quality_by_depth.hpp
     core/csr/measures/quality_by_depth.cpp
-    
-    core/csr/utils/genotype_reader.hpp
-    core/csr/utils/genotype_reader.cpp
-    core/csr/utils/variant_call_filter_factory.hpp
-    core/csr/utils/variant_call_filter_factory.cpp
+    core/csr/measures/mapping_quality_zero_count.hpp
+    core/csr/measures/mapping_quality_zero_count.cpp
+    core/csr/measures/mean_mapping_quality.hpp
+    core/csr/measures/mean_mapping_quality.cpp
+    core/csr/measures/model_posterior.hpp
+    core/csr/measures/model_posterior.cpp
+    core/csr/measures/allele_frequency.hpp
+    core/csr/measures/allele_frequency.cpp
+    core/csr/measures/strand_bias.hpp
+    core/csr/measures/strand_bias.cpp
+    core/csr/measures/mapping_quality_divergence.hpp
+    core/csr/measures/mapping_quality_divergence.cpp
+    core/csr/measures/is_denovo.hpp
+    core/csr/measures/is_denovo.cpp
+    core/csr/measures/is_somatic.hpp
+    core/csr/measures/is_somatic.cpp
+    core/csr/measures/measures_fwd.hpp
+    core/csr/measures/measure_factory.hpp
+    core/csr/measures/measure_factory.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
@@ -236,6 +270,8 @@ set(CORE_SOURCES
     core/models/genotype/germline_likelihood_model.cpp
     core/models/genotype/individual_model.hpp
     core/models/genotype/individual_model.cpp
+    core/models/genotype/independent_population_model.hpp
+    core/models/genotype/independent_population_model.cpp
     core/models/genotype/population_model.hpp
     core/models/genotype/population_model.cpp
     core/models/genotype/tumour_model.hpp

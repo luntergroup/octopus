@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "somatic_mutation_model.hpp"
@@ -12,20 +12,34 @@
 
 namespace octopus {
 
-SomaticMutationModel::SomaticMutationModel(Parameters params)
-: params_ {params}
+SomaticMutationModel::SomaticMutationModel(Parameters params, std::size_t num_haplotypes_hint,
+                                           CachingStrategy caching)
+: model_ {params, num_haplotypes_hint, caching}
+{}
+
+void SomaticMutationModel::prime(std::vector<Haplotype> haplotypes)
 {
-    if (params_.somatic_mutation_rate <= 0) {
-        throw std::domain_error {"SomaticMutationModel: somatic mutation rate must be > 0"};
-    }
+    model_.prime(std::move(haplotypes));
+}
+
+void SomaticMutationModel::unprime() noexcept
+{
+    model_.unprime();
+}
+
+bool SomaticMutationModel::is_primed() const noexcept
+{
+    return model_.is_primed();
 }
 
 double SomaticMutationModel::evaluate(const Haplotype& somatic, const Haplotype& germline) const
 {
-    // TODO: implement a proper model for this (snv/indel).
-    const auto mutations = difference(somatic, germline);
-    const auto num_mutation_sites = count_mutually_exclusive_regions(mutations);
-    return num_mutation_sites * std::log(params_.somatic_mutation_rate);
+    return model_.evaluate(somatic, germline);
+}
+
+double SomaticMutationModel::evaluate(unsigned somatic, unsigned germline) const noexcept
+{
+    return model_.evaluate(somatic, germline);
 }
 
 } // namespace octopus

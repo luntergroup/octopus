@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef somatic_mutation_model_hpp
@@ -7,25 +7,22 @@
 #include <type_traits>
 #include <functional>
 
-#include "coalescent_model.hpp"
 #include "core/types/haplotype.hpp"
-#include "core/types/genotype.hpp"
-#include "core/types/cancer_genotype.hpp"
-#include "utils/maths.hpp"
+#include "denovo_model.hpp"
 
 namespace octopus {
 
 class SomaticMutationModel
 {
 public:
-    struct Parameters
-    {
-        double somatic_mutation_rate = 0.00001;
-    };
+    using Parameters      = DeNovoModel::Parameters;
+    using CachingStrategy = DeNovoModel::CachingStrategy;
     
     SomaticMutationModel() = delete;
     
-    SomaticMutationModel(Parameters params);
+    SomaticMutationModel(Parameters params,
+                         std::size_t num_haplotypes_hint = 1000,
+                         CachingStrategy caching = CachingStrategy::value);
     
     SomaticMutationModel(const SomaticMutationModel&)            = default;
     SomaticMutationModel& operator=(const SomaticMutationModel&) = default;
@@ -34,11 +31,17 @@ public:
     
     ~SomaticMutationModel() = default;
     
+    void prime(std::vector<Haplotype> haplotypes);
+    void unprime() noexcept;
+    bool is_primed() const noexcept;
+    
     // ln p(somatic | germline)
     double evaluate(const Haplotype& somatic, const Haplotype& germline) const;
-
+    
+    double evaluate(unsigned somatic, unsigned germline) const noexcept;
+    
 private:
-    Parameters params_;
+    DeNovoModel model_;
 };
 
 } // namespace octopus

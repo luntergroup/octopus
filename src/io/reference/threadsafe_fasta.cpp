@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "threadsafe_fasta.hpp"
@@ -27,6 +27,16 @@ ThreadsafeFasta::ThreadsafeFasta(ThreadsafeFasta&& other)
 {
     std::lock_guard<std::mutex> lock {other.mutex_};
     fasta_ = std::move(other.fasta_);
+}
+
+ThreadsafeFasta& ThreadsafeFasta::operator=(ThreadsafeFasta&& other)
+{
+    if (this != &other) {
+        std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
+        std::lock(lock_lhs, lock_rhs);
+        fasta_ = std::move(other.fasta_);
+    }
+    return *this;
 }
 
 std::unique_ptr<ReferenceReader> ThreadsafeFasta::do_clone() const

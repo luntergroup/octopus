@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_extractor_hpp
@@ -8,8 +8,9 @@
 #include <memory>
 
 #include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 
-#include "io/variant/vcf_reader.hpp"
+#include "io/variant/vcf.hpp"
 #include "core/types/variant.hpp"
 #include "variant_generator.hpp"
 
@@ -25,10 +26,12 @@ public:
     struct Options
     {
         Variant::MappingDomain::Size max_variant_size = 100;
+        boost::optional<VcfRecord::QualityType> min_quality = boost::none;
     };
     
     VcfExtractor() = delete;
     
+    VcfExtractor(std::unique_ptr<const VcfReader> reader);
     VcfExtractor(std::unique_ptr<const VcfReader> reader, Options options);
         
     VcfExtractor(const VcfExtractor&)            = default;

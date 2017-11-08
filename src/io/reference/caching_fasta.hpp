@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef caching_fasta_hpp
@@ -61,7 +61,7 @@ public:
     CachingFasta(const CachingFasta&);
     CachingFasta& operator=(CachingFasta);
     CachingFasta(CachingFasta&&);
-    CachingFasta& operator=(CachingFasta&&)      = default;
+    CachingFasta& operator=(CachingFasta&&);
     
 private:
     using ContigSequenceCache = std::map<ContigRegion, GeneticSequence>;

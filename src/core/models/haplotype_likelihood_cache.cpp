@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "haplotype_likelihood_cache.hpp"
@@ -218,7 +218,7 @@ void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
                                       const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                       const std::size_t n)
 {
-    print_read_haplotype_likelihoods(std::cout, haplotypes, reads, haplotype_likelihoods);
+    print_read_haplotype_likelihoods(std::cout, haplotypes, reads, haplotype_likelihoods, n);
 }
 
 } // namespace debug

@@ -1,10 +1,14 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_record.hpp"
 
 #include <algorithm>
 #include <iterator>
+
+#include <boost/lexical_cast.hpp>
+
+#include "vcf_spec.hpp"
 
 namespace octopus {
 
@@ -159,7 +163,7 @@ bool VcfRecord::has_alt_allele(const SampleName& sample) const
 
 const std::vector<VcfRecord::ValueType>& VcfRecord::get_sample_value(const SampleName& sample, const KeyType& key) const
 {
-    return (key == "GT") ? genotypes_.at(sample).first : samples_.at(sample).at(key);
+    return (key == vcfspec::format::genotype) ? genotypes_.at(sample).first : samples_.at(sample).at(key);
 }
 
 // helper non-members needed for printing
@@ -275,7 +279,7 @@ void VcfRecord::print_sample_data(std::ostream& os) const
         std::for_each(std::cbegin(samples), std::prev(std::cend(samples)),
                       [this, &os] (const SampleName& sample) {
                           auto it = std::cbegin(format_);
-                          if (*it == "GT") {
+                          if (*it == vcfspec::format::genotype) {
                               print_genotype_allele_numbers(os, sample);
                               ++it;
                           }
@@ -287,7 +291,7 @@ void VcfRecord::print_sample_data(std::ostream& os) const
                           os << '\t';
         });
         auto it = std::cbegin(format_);
-        if (*it == "GT") {
+        if (*it == vcfspec::format::genotype) {
             print_genotype_allele_numbers(os, samples.back());
             ++it;
         }
@@ -301,44 +305,52 @@ void VcfRecord::print_sample_data(std::ostream& os) const
 
 // non-member functions
 
-// these INFO keys are reserved
-static const VcfRecord::KeyType Info_ancestral_allele {"AA"};
-static const VcfRecord::KeyType Info_genotype_allele_count {"AC"};
-static const VcfRecord::KeyType Info_dbsnp {"DB"};
-static const VcfRecord::KeyType Info_hapmap2 {"H2"};
-static const VcfRecord::KeyType Info_hapmap3 {"H3"};
-static const VcfRecord::KeyType Info_1000g {"1000G"};
-static const VcfRecord::KeyType Info_somatic {"SOMATIC"};
-static const VcfRecord::KeyType Info_validated {"VALIDATED"};
+std::vector<VcfRecord::NucleotideSequence> get_genotype(const VcfRecord& record, const VcfRecord::SampleName& sample)
+{
+    return record.get_sample_value(sample, vcfspec::format::genotype);
+}
 
 bool is_dbsnp_member(const VcfRecord& record) noexcept
 {
-    return record.has_info(Info_dbsnp);
+    return record.has_info(vcfspec::info::dbSNPMember);
 }
 
 bool is_hapmap2_member(const VcfRecord& record) noexcept
 {
-    return record.has_info(Info_hapmap2);
+    return record.has_info(vcfspec::info::hapmap2Member);
 }
 
 bool is_hapmap3_member(const VcfRecord& record) noexcept
 {
-    return record.has_info(Info_hapmap3);
+    return record.has_info(vcfspec::info::hapmap3Member);
 }
 
 bool is_1000g_member(const VcfRecord& record) noexcept
 {
-    return record.has_info(Info_1000g);
+    return record.has_info(vcfspec::info::thousandGenomes);
 }
 
 bool is_somatic(const VcfRecord& record) noexcept
 {
-    return record.has_info(Info_somatic);
+    return record.has_info(vcfspec::info::somatic);
 }
 
 bool is_validated(const VcfRecord& record) noexcept
 {
-    return record.has_info(Info_validated);
+    return record.has_info(vcfspec::info::validated);
+}
+
+boost::optional<GenomicRegion> get_phase_region(const VcfRecord& record, const VcfRecord::SampleName& sample)
+{
+    if (record.is_sample_phased(sample) && record.has_format(vcfspec::format::phaseSet)) {
+        return GenomicRegion {
+        record.chrom(),
+        boost::lexical_cast<ContigRegion::Position>(record.get_sample_value(sample, vcfspec::format::phaseSet).front()) - 1,
+        static_cast<ContigRegion::Position>(record.pos() + record.ref().size()) - 1
+        };
+    } else {
+        return boost::none;
+    }
 }
 
 bool operator==(const VcfRecord& lhs, const VcfRecord& rhs)
@@ -607,6 +619,13 @@ VcfRecord::Builder& VcfRecord::Builder::set_format_missing(const SampleName& sam
     return this->set_format(sample, key, std::string {"."});
 }
 
+VcfRecord::Builder& VcfRecord::Builder::clear_format() noexcept
+{
+    format_.clear();
+    genotypes_.clear();
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::set_refcall()
 {
     return set_alt("<NON_REF>");
@@ -614,7 +633,7 @@ VcfRecord::Builder& VcfRecord::Builder::set_refcall()
 
 VcfRecord::Builder& VcfRecord::Builder::set_somatic()
 {
-    return this->set_info_flag("SOMATIC");
+    return this->set_info_flag(vcfspec::info::somatic);
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_denovo()

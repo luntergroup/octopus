@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_writer.hpp"
@@ -15,9 +15,22 @@
 
 namespace octopus {
 
+namespace {
+
+auto make_vcf_writer(boost::optional<VcfWriter::Path> path = boost::none)
+{
+    if (path) {
+        return std::make_unique<HtslibBcfFacade>(std::move(*path), HtslibBcfFacade::Mode::write);
+    } else {
+        return std::make_unique<HtslibBcfFacade>();
+    }
+}
+
+} // namespace
+
 VcfWriter::VcfWriter()
 : file_path_ {}
-, writer_ {std::make_unique<HtslibBcfFacade>()}
+, writer_ {make_vcf_writer()}
 , is_header_written_ {false}
 {}
 
@@ -40,16 +53,13 @@ VcfWriter::VcfWriter(Path file_path)
             throw std::runtime_error {ss.str()};
         }
     }
-    
     Path index_path1 {file_path_->string() + ".csi"}, index_path2 {file_path_->string() + ".tbi"};
-    
     if (exists(index_path1)) {
         remove(index_path1);
     } else if (exists(index_path2)) {
         remove(index_path2);
     }
-    
-    writer_ = std::make_unique<HtslibBcfFacade>(*file_path_, HtslibBcfFacade::Mode::write);
+    writer_ = make_vcf_writer(*file_path_);
 }
 
 VcfWriter::VcfWriter(const VcfHeader& header)
@@ -70,6 +80,18 @@ VcfWriter::VcfWriter(VcfWriter&& other)
     file_path_         = std::move(other.file_path_);
     is_header_written_ = other.is_header_written_;
     writer_            = std::move(other.writer_);
+}
+
+VcfWriter& VcfWriter::operator=(VcfWriter&& other)
+{
+    if (this != &other) {
+        std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
+        std::lock(lock_lhs, lock_rhs);
+        file_path_         = std::move(other.file_path_);
+        is_header_written_ = other.is_header_written_;
+        writer_            = std::move(other.writer_);
+    }
+    return *this;
 }
 
 VcfWriter::~VcfWriter()
@@ -101,16 +123,12 @@ bool VcfWriter::is_open() const noexcept
     return writer_ != nullptr;
 }
 
-void VcfWriter::open(Path file_path) noexcept
+void VcfWriter::open(Path file_path)
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    try {
-        file_path_         = std::move(file_path);
-        writer_            = std::make_unique<HtslibBcfFacade>(*file_path_, HtslibBcfFacade::Mode::write);
-        is_header_written_ = writer_->is_header_written();
-    } catch (...) {
-        this->close();
-    }
+    file_path_         = std::move(file_path);
+    writer_            = make_vcf_writer(*file_path_);
+    is_header_written_ = false;
 }
 
 void VcfWriter::close() noexcept

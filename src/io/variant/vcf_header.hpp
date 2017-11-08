@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_header_hpp
@@ -218,6 +218,8 @@ public:
     Builder& add_format(std::string id, std::string number, std::string type, std::string description,
                         std::unordered_map<std::string, std::string> other_values = {});
     Builder& add_contig(std::string id, std::unordered_map<std::string, std::string> other_values = {});
+    
+    Builder& clear_format() noexcept;
     
     VcfHeader build() const;
     VcfHeader build_once() noexcept;

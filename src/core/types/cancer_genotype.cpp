@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "cancer_genotype.hpp"
@@ -17,45 +17,39 @@ bool includes(const CancerGenotype<Haplotype>& genotype, const Allele& allele)
 {
     return includes(genotype.germline_genotype(), allele) || genotype.somatic_element().includes(allele);
 }
-    
+
 std::size_t estimate_num_cancer_genotypes(const std::size_t num_haplotypes, const unsigned ploidy)
 {
     return (num_genotypes(static_cast<unsigned>(num_haplotypes), ploidy) - 1) * num_haplotypes;
 }
 
 namespace {
-    auto make_all_shared(const std::vector<Haplotype>& elements)
-    {
-        std::vector<std::shared_ptr<Haplotype>> result(elements.size());
-        std::transform(std::cbegin(elements), std::cend(elements), std::begin(result),
-                       [] (const auto& element) { return std::make_shared<Haplotype>(element); });
-        return result;
-    }
+
+auto make_all_shared(const std::vector<Haplotype>& elements)
+{
+    std::vector<std::shared_ptr<Haplotype>> result(elements.size());
+    std::transform(std::cbegin(elements), std::cend(elements), std::begin(result),
+                   [] (const auto& element) { return std::make_shared<Haplotype>(element); });
+    return result;
 }
 
-std::pair<std::vector<CancerGenotype<Haplotype>>, std::vector<Genotype<Haplotype>>>
-generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const unsigned ploidy)
+}
+
+std::vector<CancerGenotype<Haplotype>>
+generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_genotypes,
+                              const std::vector<Haplotype>& somatic_haplotypes)
 {
-    assert(!haplotypes.empty());
-    
-    const auto haplotypes_ptrs = make_all_shared(haplotypes);
-    
-    const auto germline_genotypes = generate_all_genotypes(haplotypes_ptrs, ploidy);
-    
-    std::vector<CancerGenotype<Haplotype>> cancer_genotypes {};
-    cancer_genotypes.reserve(estimate_num_cancer_genotypes(haplotypes.size(), ploidy));
-    
-    for (const auto& germline_genotype : germline_genotypes) {
-        for (const auto& ptr : haplotypes_ptrs) {
-            if (!contains(germline_genotype, *ptr)) {
-                cancer_genotypes.emplace_back(germline_genotype, ptr);
+    auto haplotype_ptrs = make_all_shared(somatic_haplotypes);
+    std::vector<CancerGenotype<Haplotype>> result {};
+    result.reserve(germline_genotypes.size() * somatic_haplotypes.size());
+    for (const auto& genotype : germline_genotypes) {
+        for (const auto& haplotype : haplotype_ptrs) {
+            if (!contains(genotype, *haplotype)) {
+                result.emplace_back(genotype, haplotype);
             }
         }
     }
-    
-    cancer_genotypes.shrink_to_fit();
-    
-    return std::make_pair(std::move(cancer_genotypes), std::move(germline_genotypes));
+    return result;
 }
 
 namespace debug {

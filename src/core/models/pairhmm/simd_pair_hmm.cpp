@@ -1,9 +1,4 @@
-/*****************************************************************************************************************
- This code is copyright (c) Gerton Lunter, Dec 2009
- It may not be distributed, made public, or used in other software without the permission of the copyright holder
- ******************************************************************************************************************/
-
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke and Gerton Lunter
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "simd_pair_hmm.hpp"
@@ -749,15 +744,16 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
     int x {first_pos}; // index into haplotype
     int y {0};         // index into read
     int i {0};         // index into alignment
-    int result {0}; // alignment score (within flank)
+    int result {0};    // alignment score (within flank)
     target_mask_size = 0;
     
     while (aln1[i]) {
         auto new_state = match;
-        
-        if (aln1[i] == gap) new_state = insertion;
-        if (aln2[i] == gap) new_state = deletion;  // can't be both '-'
-        
+        if (aln1[i] == gap) {
+            new_state = insertion;
+        } else if (aln2[i] == gap) { // can't be both '-'
+            new_state = deletion;
+        }
         switch (new_state) {
             case match:
             {
@@ -781,8 +777,7 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                     if (prev_state == insertion) {
                         result += gap_extend + nuc_prior;
                     } else {
-                        // gap open score is charged for insertions just after the corresponding base,
-                        // hence the -1
+                        // gap open score is charged for insertions just after the corresponding base, hence the -1
                         result += gap_open[x - 1] + nuc_prior;
                     }
                     ++target_mask_size;
@@ -818,9 +813,9 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                           const int first_pos, const char* aln1, const char* aln2,
                           int& target_mask_size) noexcept
 {
-    static constexpr char Match {'M'}, Insertion {'I'}, Deletion {'D'};
+    static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
     
-    auto prev_state = Match;
+    auto prev_state = match;
     int x {first_pos}; // index into truth
     int y {0};         // index into target
     int i {0};         // index into alignment
@@ -829,13 +824,14 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
     target_mask_size = 0;
     
     while (aln1[i]) {
-        auto new_state = Match;
-        
-        if (aln1[i] == gap) new_state = Insertion;
-        if (aln2[i] == gap) new_state = Deletion;  // can't be both '-'
-        
+        auto new_state = match;
+        if (aln1[i] == gap) {
+            new_state = insertion;
+        } else if (aln2[i] == gap) { // can't be both '-'
+            new_state = deletion;
+        }
         switch (new_state) {
-            case Match:
+            case match:
             {
                 if (x < lhs_flank_len || x >= rhs_flank_begin) {
                     if (aln1[i] != aln2[i]) {
@@ -851,14 +847,13 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                 ++y;
                 break;
             }
-            case Insertion:
+            case insertion:
             {
                 if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                    if (prev_state == Insertion) {
+                    if (prev_state == insertion) {
                         result += gap_extend + nuc_prior;
                     } else {
-                        // gap open score is charged for insertions just after the corresponding base,
-                        // hence the -1
+                        // gap open score is charged for insertions just after the corresponding base, hence the -1
                         result += gap_open[x - 1] + nuc_prior;
                     }
                     ++target_mask_size;
@@ -866,10 +861,10 @@ int calculate_flank_score(const int truth_len, const int lhs_flank_len, const in
                 ++y;
                 break;
             }
-            case Deletion:
+            case deletion:
             {
                 if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                    if (prev_state == Deletion) {
+                    if (prev_state == deletion) {
                         result += gap_extend;
                     } else {
                         result += gap_open[x];

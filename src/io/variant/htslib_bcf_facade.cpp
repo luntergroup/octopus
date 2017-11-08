@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "htslib_bcf_facade.hpp"
@@ -28,10 +28,12 @@
 namespace octopus {
 
 namespace {
-    static const std::string vcfMissingValue {vcfspec::missingValue};
-    
-    namespace bc = boost::container;
-}
+
+static const std::string vcfMissingValue {vcfspec::missingValue};
+
+namespace bc = boost::container;
+
+} // namespace
 
 char* convert(const std::string& source)
 {
@@ -75,9 +77,16 @@ std::string get_hts_mode(const HtslibBcfFacade::Path& file_path, HtslibBcfFacade
 HtslibBcfFacade::HtslibBcfFacade()
 : file_path_ {}
 , file_ {bcf_open("-", "[w]"), HtsFileDeleter {}}
-, header_ {bcf_hdr_init("[w]"), HtsHeaderDeleter {}}
+, header_ {bcf_hdr_init("w"), HtsHeaderDeleter {}}
 , samples_ {}
-{}
+{
+    if (file_ == nullptr) {
+        throw std::runtime_error {"HtslibBcfFacade: could not open stdout writer"};
+    }
+    if (header_ == nullptr) {
+        throw std::runtime_error {"HtslibBcfFacade: failed to initialise stdout header"};
+    }
+}
 
 HtslibBcfFacade::HtslibBcfFacade(Path file_path, Mode mode)
 : file_path_ {std::move(file_path)}

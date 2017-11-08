@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "caller_builder.hpp"
@@ -301,6 +301,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
         params_.call_sites_only,
         params_.max_haplotypes,
         params_.haplotype_extension_threshold,
+        params_.saturation_limit,
         params_.allow_flank_scoring,
         params_.allow_model_filtering,
         params_.sequencer,
@@ -339,10 +340,11 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.ploidies.of(samples.front(), *requested_contig_),
                                                       params_.normal_sample,
                                                       make_cancer_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                                                      {params_.somatic_mutation_rate},
+                                                      {params_.somatic_mutation_rate, params_.somatic_mutation_rate},
                                                       params_.min_expected_somatic_frequency,
                                                       params_.credible_mass,
-                                                      params_.min_credible_somatic_frequency
+                                                      params_.min_credible_somatic_frequency,
+                                                      params_.max_joint_genotypes
                                                   });
         }},
         {"trio", [this, general_parameters = std::move(general_parameters)] () {

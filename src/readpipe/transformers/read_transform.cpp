@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_transform.hpp"
@@ -263,22 +263,23 @@ mask_strand_of_duplicated_bases(AlignedRead& forward, AlignedRead& reverse, cons
     const auto num_forward_duplicate_bps = sequence_size(forward, duplicated_region);
     const auto num_reverse_duplicate_bps = sequence_size(reverse, duplicated_region);
     auto num_duplicate_bps = std::min(num_forward_duplicate_bps, num_reverse_duplicate_bps);
-    bool select_first{true};
+    bool select_first {true};
+    static constexpr AlignedRead::BaseQuality mask_quality {0};
     for (; num_duplicate_bps > 0; --num_duplicate_bps) {
         assert(forward_qual_itr < std::rend(forward.base_qualities()));
         assert(reverse_qual_itr < std::end(reverse.base_qualities()));
         if (*forward_qual_itr == *reverse_qual_itr) {
             if (select_first) {
-                *reverse_qual_itr++ = 0;
+                *reverse_qual_itr++ = mask_quality;
                 select_first = false;
             } else {
-                *forward_qual_itr++ = 0;
+                *forward_qual_itr++ = mask_quality;
                 select_first = true;
             }
         } else if (*forward_qual_itr < *reverse_qual_itr) {
-            *forward_qual_itr++ = 0;
+            *forward_qual_itr++ = mask_quality;
         } else {
-            *reverse_qual_itr++ = 0;
+            *reverse_qual_itr++ = mask_quality;
         }
     }
 }

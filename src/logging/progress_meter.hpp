@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef progress_meter_hpp
@@ -29,7 +29,7 @@ public:
     ProgressMeter(const ProgressMeter&)            = delete;
     ProgressMeter& operator=(const ProgressMeter&) = delete;
     ProgressMeter(ProgressMeter&&);
-    ProgressMeter& operator=(ProgressMeter&&)      = default;
+    ProgressMeter& operator=(ProgressMeter&&);
     
     ~ProgressMeter();
     
@@ -41,6 +41,7 @@ public:
     void stop();
     
     void log_completed(const GenomicRegion& region);
+    void log_completed(const GenomicRegion::ContigName& contig);
     
 private:
     using RegionSizeType = ContigRegion::Position;

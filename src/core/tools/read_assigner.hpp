@@ -1,11 +1,12 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef read_assignment_hpp
-#define read_assignment_hpp
+#ifndef read_assigner_hpp
+#define read_assigner_hpp
 
 #include <unordered_map>
 #include <vector>
+#include <functional>
 #include <iosfwd>
 
 #include "core/types/haplotype.hpp"
@@ -17,11 +18,10 @@ namespace octopus {
 
 class HaplotypeLikelihoodModel;
 
-using SupportSet = std::vector<AlignedRead>;
-
-using HaplotypeSupportMap = std::unordered_map<Haplotype, SupportSet>;
-
-using AlleleSupportMap = std::unordered_map<Allele, SupportSet>;
+using ReadSupportSet = std::vector<AlignedRead>;
+using HaplotypeSupportMap = std::unordered_map<Haplotype, ReadSupportSet>;
+using ReadRefSupportSet = std::vector<std::reference_wrapper<const AlignedRead>>;
+using AlleleSupportMap = std::unordered_map<Allele, ReadRefSupportSet>;
 
 HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
                                               const std::vector<AlignedRead>& reads);
@@ -35,4 +35,4 @@ AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
 
 } // namespace octopus
 
-#endif /* read_assignment_hpp */
+#endif

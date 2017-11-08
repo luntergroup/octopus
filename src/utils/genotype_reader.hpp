@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef genotype_reader_hpp
@@ -19,13 +19,13 @@
 
 namespace octopus {
 
-class VcfHeader;
 class ReferenceGenome;
 class GenomicRegion;
 
 using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
 
-GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls, const VcfHeader& header,
+GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls,
+                              const std::vector<VcfRecord::SampleName>& samples,
                               const ReferenceGenome& reference,
                               boost::optional<GenomicRegion> call_region = boost::none);
 

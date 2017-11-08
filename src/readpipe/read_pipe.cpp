@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_pipe.hpp"
@@ -15,13 +15,13 @@ namespace octopus {
 
 // public members
 
-ReadPipe::ReadPipe(const ReadManager& manager, std::vector<SampleName> samples)
-: ReadPipe {manager, {}, {}, boost::none, std::move(samples)}
+ReadPipe::ReadPipe(const ReadManager& source, std::vector<SampleName> samples)
+: ReadPipe {source, {}, {}, boost::none, std::move(samples)}
 {}
 
-ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer transformer, ReadFilterer filterer,
+ReadPipe::ReadPipe(const ReadManager& source, ReadTransformer transformer, ReadFilterer filterer,
                    boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
-: manager_ {manager}
+: source_ {source}
 , prefilter_transformer_ {std::move(transformer)}
 , filterer_ {std::move(filterer)}
 , postfilter_transformer_ {}
@@ -32,10 +32,10 @@ ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer transformer, Read
     if (DEBUG_MODE) debug_log_ = logging::DebugLogger {};
 }
 
-ReadPipe::ReadPipe(const ReadManager& manager, ReadTransformer prefilter_transformer,
+ReadPipe::ReadPipe(const ReadManager& source, ReadTransformer prefilter_transformer,
                    ReadFilterer filterer, ReadTransformer postfilter_transformer,
                    boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
-: manager_ {manager}
+: source_ {source}
 , prefilter_transformer_ {std::move(prefilter_transformer)}
 , filterer_ {std::move(filterer)}
 , postfilter_transformer_ {std::move(postfilter_transformer)}
@@ -53,9 +53,14 @@ std::vector<std::vector<SampleName>> batch_samples(std::vector<SampleName> sampl
     return result;
 }
 
-void ReadPipe::set_read_manager(const ReadManager& manager) noexcept
+const ReadManager& ReadPipe::read_manager() const noexcept
 {
-    manager_ = manager;
+    return source_;
+}
+
+void ReadPipe::set_read_manager(const ReadManager& source) noexcept
+{
+    source_ = source;
 }
 
 unsigned ReadPipe::num_samples() const noexcept
@@ -69,6 +74,21 @@ const std::vector<SampleName>& ReadPipe::samples() const noexcept
 }
 
 namespace {
+
+template <typename Map>
+void sort_each(Map& reads)
+{
+    for (auto& p : reads) {
+        std::sort(std::begin(p.second), std::end(p.second));
+    }
+}
+
+auto fetch_batch(const ReadManager& rm, const std::vector<SampleName>& samples, const GenomicRegion& region)
+{
+    auto result = rm.fetch_reads(samples, region);
+    sort_each(result);
+    return result;
+}
 
 template <typename Container>
 void move_construct(Container&& src, ReadMap::mapped_type& dst)
@@ -111,21 +131,16 @@ void shrink_to_fit(ReadMap& reads)
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
 {
     using namespace readpipe;
-    
     ReadMap result {samples_.size()};
     for (const auto& sample : samples_) {
         result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
     }
-    
     for (const auto& batch : batch_samples(samples_)) {
-        auto batch_reads = manager_.get().fetch_reads(batch, region);
-        
+        auto batch_reads = fetch_batch(source_, batch, region);
         if (debug_log_) {
             stream(*debug_log_) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
         }
-    
         transform_reads(batch_reads, prefilter_transformer_);
-        
         if (debug_log_) {
             SampleFilterCountMap<SampleName, decltype(filterer_)> filter_counts {};
             filter_counts.reserve(samples_.size());
@@ -148,16 +163,13 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
         } else {
             erase_filtered_reads(batch_reads, filter(batch_reads, filterer_));
         }
-        
         if (postfilter_transformer_) {
             transform_reads(batch_reads, *postfilter_transformer_);
         }
-        
         if (debug_log_) {
             stream(*debug_log_) << "There are " << count_reads(batch_reads) << " reads in " << region
                             << " after filtering";
         }
-        
         if (downsampler_) {
             auto reads = make_mappable_map(std::move(batch_reads));
             const auto n = downsample(reads, *downsampler_);
@@ -167,9 +179,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
             insert_each(std::move(batch_reads), result);
         }
     }
-    
     shrink_to_fit(result); // TODO: should we make this conditional on extra capacity?
-    
     return result;
 }
 
