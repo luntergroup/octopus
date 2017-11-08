@@ -1,9 +1,4 @@
-/*****************************************************************************************************************
- This code is copyright (c) Gerton Lunter, Dec 2009
- It may not be distributed, made public, or used in other software without the permission of the copyright holder
- ******************************************************************************************************************/
-
-// Copyright (c) 2016 Daniel Cooke
+// Copyright (c) 2017 Daniel Cooke and Gerton Lunter
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "simd_pair_hmm.hpp"

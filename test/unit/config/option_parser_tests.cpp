@@ -1,10 +1,5 @@
-//
-//  options_tests.cpp
-//  octopus
-//
-//  Created by Daniel Cooke on 29/04/2015.
-//  Copyright (c) 2015 Oxford University. All rights reserved.
-//
+// Copyright (c) 2017 Daniel Cooke
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include <boost/test/unit_test.hpp>
 
