@@ -71,34 +71,40 @@ Octopus can be built and installed on a wide range of operating systems includin
 
 #### *Quick installation with Python3*
 
-Manually installing octopus requires obtaining a copy the binaries. In the command line, direct to an appropriate install directory and execute:
+Installing octopus first requires obtaining a copy the source code. In the command line, move to an appropriate install directory and execute:
 
 ```shell
-$ git clone https://github.com/luntergroup/octopus.git
+$ git clone https://github.com/luntergroup/octopus.git && cd octopus
 ```
 
-then *if your default compiler is Clang 3.8 or GCC 6.2* use the Python3 install helper:
+The default branch is develop, which is not always stable. You may prefer to switch to the master branch which always has the latest release:
 
 ```shell
-$ ./octopus/install.py
+$ git checkout master
+```
+
+Installation is easy using the Python3 install script. If your default compiler satisfies the minimum requirements just execute:
+
+```shell
+$ ./install.py
 ```
 
 otherwise explicitly specify the compiler to use:
 
 ```shell
-$ ./octopus/install.py --compiler /path/to/cpp/compiler # or just the compiler name if on your PATH
+$ ./install.py --compiler /path/to/cpp/compiler # or just the compiler name if on your PATH
 ```
 
 For example, if the requirement instructions above were used:
 
 ```shell
-$ ./octopus/install.py --compiler clang++-3.8
+$ ./install.py --compiler clang++-3.8
 ```
 
 By default this installs to `/bin` relative to where you installed octopus. To install to a root directory (e.g. `/usr/local/bin`) use:
 
 ```shell
-$ ./octopus/install.py --root
+$ ./install.py --root
 ```
 
 this may prompt you to enter a `sudo` password.
