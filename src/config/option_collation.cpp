@@ -1362,7 +1362,7 @@ bool allow_flank_scoring(const OptionMap& options)
 
 bool allow_model_filtering(const OptionMap& options)
 {
-    return options.count("model-filtering") == 1 && options.at("model-filtering").as<bool>();
+    return options.count("model-posterior") == 1 && options.at("model-posterior").as<bool>();
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
