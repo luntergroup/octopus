@@ -341,14 +341,20 @@ bool is_multithreaded_run(const options::OptionMap& options) noexcept
     return !num_threads || *num_threads > 1;
 }
 
-bool is_filtered_stdout_run(const options::OptionMap& options) noexcept
+bool is_stdout_output(const options::OptionMap& options)
 {
-    return options::is_call_filtering_requested(options) && !options::get_output_path(options);
+    return !options::get_output_path(options);
 }
 
-bool is_temp_directory_needed(const options::OptionMap& options) noexcept
+bool require_temp_dir_for_filtering(const options::OptionMap& options)
 {
-    return is_multithreaded_run(options) || is_filtered_stdout_run(options);
+    return options::is_call_filtering_requested(options)
+           && (!options::keep_unfiltered_calls(options) || is_stdout_output(options));
+}
+
+bool is_temp_directory_needed(const options::OptionMap& options)
+{
+    return is_multithreaded_run(options) || require_temp_dir_for_filtering(options);
 }
 
 boost::optional<fs::path> get_temp_directory(const options::OptionMap& options)
@@ -454,7 +460,12 @@ void GenomeCallingComponents::Components::setup_writers(const options::OptionMap
         filtered_output = std::move(output);
         fs::path prefilter_path;
         if (final_output_path) {
-            prefilter_path = get_unfiltered_path(*final_output_path);
+            if (options::keep_unfiltered_calls(options)) {
+                prefilter_path = get_unfiltered_path(*final_output_path);
+            } else {
+                assert(temp_directory);
+                prefilter_path = *temp_directory / get_unfiltered_path(final_output_path->filename());
+            }
         } else {
             assert(temp_directory);
             prefilter_path = generate_temp_output_path(*temp_directory);

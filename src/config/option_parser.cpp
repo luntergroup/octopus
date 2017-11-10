@@ -560,6 +560,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("use-calling-reads-for-filtering",
      po::value<bool>()->default_value(false),
      "Use the original reads used for variant calling for filtering")
+
+    ("keep-unfiltered-calls",
+     po::bool_switch()->default_value(false),
+     "Keep a copy of unfiltered calls")
     ;
     
     po::options_description all("octopus options");

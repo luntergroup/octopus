@@ -1472,6 +1472,11 @@ bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
     return options.at("use-calling-reads-for-filtering").as<bool>();
 }
 
+bool keep_unfiltered_calls(const OptionMap& options) noexcept
+{
+    return options.at("keep-unfiltered-calls").as<bool>();
+}
+
 ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples)
 {
     using std::make_unique;
