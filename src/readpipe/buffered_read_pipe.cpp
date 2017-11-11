@@ -80,7 +80,7 @@ void BufferedReadPipe::setup_buffer(const GenomicRegion& request) const
 GenomicRegion BufferedReadPipe::get_max_fetch_region(const GenomicRegion& request) const
 {
     const auto default_max_region = get_default_max_fetch_region(request);
-    if (hints_.empty() || hints_.at(request.contig_name()).empty()) {
+    if (hints_.empty() || hints_.count(request.contig_name()) == 0 || hints_.at(request.contig_name()).empty()) {
         return default_max_region;
     } else {
         const auto contained_hints = contained_range(hints_.at(request.contig_name()), default_max_region);
