@@ -21,6 +21,7 @@ public:
     struct Config
     {
         std::size_t max_buffer_size;
+        GenomicRegion::Size fetch_expansion = 0;
         boost::optional<GenomicRegion::Size> max_fetch_size = boost::none;
         boost::optional<GenomicRegion::Size> max_hint_gap = boost::none;
     };

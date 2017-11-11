@@ -10,8 +10,6 @@
 
 #include "utils/mappable_algorithms.hpp"
 
-#include <iostream>
-
 namespace octopus {
 
 BufferedReadPipe::BufferedReadPipe(const ReadPipe& source, Config config)
@@ -73,7 +71,7 @@ void BufferedReadPipe::setup_buffer(const GenomicRegion& request) const
     if (requires_new_fetch(request)) {
         const auto max_region = get_max_fetch_region(request);
         buffered_region_ = source_.get().read_manager().find_covered_subregion(max_region, config_.max_buffer_size);
-        buffer_ = source_.get().fetch_reads(*buffered_region_);
+        buffer_ = source_.get().fetch_reads(expand(*buffered_region_, config_.fetch_expansion));
     }
 }
 
