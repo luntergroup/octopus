@@ -1244,6 +1244,7 @@ void run_filtering(GenomeCallingComponents& components)
         auto unfiltered_output_path = components.output().path();
         assert(unfiltered_output_path); // cannot be stdout
         BufferedReadPipe::Config buffer_config {components.read_buffer_size()};
+        buffer_config.fetch_expansion = 100;
         buffer_config.max_hint_gap = 5'000;
         BufferedReadPipe buffered_rp {filter_read_pipe, buffer_config};
         if (use_unfiltered_call_region_hints_for_filtering(components)) {
