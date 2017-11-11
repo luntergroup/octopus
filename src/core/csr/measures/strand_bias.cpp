@@ -25,6 +25,8 @@ namespace octopus { namespace csr {
 StrandBias::StrandBias(const double critical_value)
 : min_medium_trigger_ {critical_value / 2}
 , min_big_trigger_ {critical_value / 8}
+, critical_resample_lb_ {0.995 * critical_value}
+, critical_resample_ub_ {1.005 * critical_value}
 , use_resampling_ {true}
 {}
 
@@ -131,7 +133,7 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
     // genotype by looking if each supporting read overlaps the allele given the realignment to the called haplotype.
     // The current approach of just removing non-overlapping reads may not work optimally in complex indel regions.
     remove_non_overlapping_support(assignments, mapped_region(call));
-    boost::optional<double> result {0};
+    boost::optional<double> result {};
     for (const auto& p : assignments) {
         if (call.is_heterozygous(p.first)) {
             const auto direction_counts = get_direction_counts(p.second);
@@ -145,6 +147,9 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
                     if (prob >= min_big_trigger_) {
                         prob = calculate_max_prob_different(direction_counts, big_sample_size_, min_difference_);
                     }
+                }
+                if (prob > critical_resample_lb_ && prob < critical_resample_ub_) {
+                    prob = calculate_max_prob_different(direction_counts, very_big_sample_size, min_difference_);
                 }
             } else {
                 prob = calculate_max_prob_different(direction_counts, big_sample_size_, min_difference_);
