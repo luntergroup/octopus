@@ -357,6 +357,7 @@ std::vector<Variant> DynamicCigarScanner::do_generate_variants(const GenomicRegi
             }
         }
     }
+    std::sort(std::begin(good_repeat_region_variants), std::end(good_repeat_region_variants));
     auto itr = utils::append(std::move(good_repeat_region_variants), result);
     std::inplace_merge(std::begin(result), itr, std::end(result));
     
