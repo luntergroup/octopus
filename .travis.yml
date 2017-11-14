@@ -1,8 +1,79 @@
 sudo: required
 dist: trusty
-
 language: generic
-osx_image: xcode8
+
+env:
+  global:
+    - /usr/local/bin:$PATH
+
+# Use Linux unless specified
+os: linux
+
+before_install:
+  - sudo apt-get update -qy
+  - sudo apt-get remove -qy cmake
+
+matrix:
+  include:
+  - compiler: gcc
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - g++-6
+    env: COMPILER=g++-6
+  - compiler: gcc
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - g++-7
+    env: COMPILER=g++-7
+  - compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.8
+        packages:
+          - clang-3.8
+    env: COMPILER=clang++-3.8
+  - compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.9
+        packages:
+          - clang-3.9
+    env: COMPILER=clang++-3.9
+  - compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-trusty-4.0
+        packages:
+          - clang-4.0
+    env: COMPILER=clang++-4.0
+  - compiler: clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-trusty-5.0
+        packages:
+          - clang-5.0
+    env: COMPILER=clang++-5.0
+  - os: osx
+    osx_image: xcode8
+    compiler: clang
+    before_install:
+      - brew update
+      - brew install --with-clang llvm
+    env: COMPILER=clang++
 
 install:
   ############################################################################
@@ -11,33 +82,73 @@ install:
   - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
   - mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
 
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export DEBIAN_FRONTEND=noninteractive; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -qy; fi
+  ############################################################################
+  # Setup default versions and override CXX set by Travis if needed
+  ############################################################################
+  - if [[ "${COMPILER}" == "default" ]]; then COMPILER=clang++-4.0; fi
+  - if [[ "${BOOST_VERSION}" == "default" ]]; then BOOST_VERSION=1.64.0; fi
 
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+  - if [[ "${COMPILER}" != "" ]]; then export CXX=${COMPILER}; fi
+  - ${CXX} --version
 
   ############################################################################
   # Install CMake
   ############################################################################
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      CMAKE_URL="https://cmake.org/files/v3.6/cmake-3.6.2-Linux-x86_64.tar.gz";
-      mkdir -p cmake && travis_retry wget --no-check-certificate --quiet -O - "${CMAKE_URL}" | tar --strip-components=1 -xz -C cmake;
-      export PATH=${DEPS_DIR}/cmake/bin:${PATH};
+      CMAKE_INSTALLER=install-cmake.sh;
+      curl -sSL https://cmake.org/files/v3.9/cmake-3.9.6-Linux-x86_64.sh -o ${CMAKE_INSTALLER};
+      chmod +x ${CMAKE_INSTALLER};
+      sudo ./${CMAKE_INSTALLER} --prefix=/usr/local --skip-license;
     else
       brew outdated cmake || brew upgrade cmake;
     fi
 
   ############################################################################
+  # Install libc++ and libc++abi if needed
+  ############################################################################
+  - |
+    if [[ "${CXX%%+*}" == "clang" ]]; then
+      if   [[ "${CXX}" == "clang++-3.8" ]]; then LLVM_VERSION="3.8.1";
+      elif [[ "${CXX}" == "clang++-3.9" ]]; then LLVM_VERSION="3.9.1";
+      elif [[ "${CXX}" == "clang++-4.0" ]]; then LLVM_VERSION="4.0.0";
+      elif [[ "${CXX}" == "clang++-5.0" ]]; then LLVM_VERSION="5.0.0";
+      fi
+      LLVM_URL="http://llvm.org/releases/${LLVM_VERSION}/llvm-${LLVM_VERSION}.src.tar.xz"
+      LIBCXX_URL="http://llvm.org/releases/${LLVM_VERSION}/libcxx-${LLVM_VERSION}.src.tar.xz"
+      LIBCXXABI_URL="http://llvm.org/releases/${LLVM_VERSION}/libcxxabi-${LLVM_VERSION}.src.tar.xz"
+      mkdir -p llvm llvm/build llvm/projects/libcxx llvm/projects/libcxxabi
+      travis_retry wget -O - ${LLVM_URL} | tar --strip-components=1 -xJ -C llvm
+      travis_retry wget -O - ${LIBCXX_URL} | tar --strip-components=1 -xJ -C llvm/projects/libcxx
+      travis_retry wget -O - ${LIBCXXABI_URL} | tar --strip-components=1 -xJ -C llvm/projects/libcxxabi
+      (cd llvm/build && cmake .. -DCMAKE_INSTALL_PREFIX=${DEPS_DIR}/llvm/install)
+      (cd llvm/build/projects/libcxx && make install -j2)
+      (cd llvm/build/projects/libcxxabi && make install -j2)
+      export CXXFLAGS="-isystem ${DEPS_DIR}/llvm/install/include/c++/v1"
+      export LDFLAGS="-L ${DEPS_DIR}/llvm/install/lib -l c++ -l c++abi"
+      export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${DEPS_DIR}/llvm/install/lib"
+    fi
+
+  ############################################################################
   # Install Boost
   ############################################################################
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      BOOST_VERSION=trunk;
-      BOOST_DIR=${DEPS_DIR}/boost-${BOOST_VERSION};
-      BOOST_URL="http://github.com/boostorg/boost.git";
-      travis_retry git clone --depth 1 --recursive --quiet ${BOOST_URL} ${BOOST_DIR} || exit 1;
-      cd ${BOOST_DIR} && ./bootstrap.sh && ./b2 headers;
-      cd ${BOOST_DIR}/tools/build && ./bootstrap.sh && ./b2 install --prefix=${DEPS_DIR}/b2;
-      export PATH=${DEPS_DIR}/b2/bin:${PATH};
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      BOOST_VERSION=1.65.1
+      BOOST_DIR=${DEPS_DIR}/boost-${BOOST_VERSION}
+      BOOST_URL="http://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/boost_${BOOST_VERSION//\./_}.tar.gz"
+      mkdir -p ${BOOST_DIR}
+      travis_retry wget -O - ${BOOST_URL} | tar --strip-components=1 -xz -C ${BOOST_DIR}
+      cd ${BOOST_DIR}/tools/build && ./bootstrap.sh && ./b2 install --prefix=${DEPS_DIR}/b2
+      export PATH=${DEPS_DIR}/b2/bin:${PATH}
+      cd ${BOOST_DIR}
+      if [[ "${CXX%%+*}" == "clang" ]]; then
+        b2 toolset=clang cxxflags="-std=c++11 -stdlib=libc++ ${CXXFLAGS}" linkflags="-stdlib=libc++ ${LDFLAGS}" --without-python --without-mpi
+      else
+        b2 toolset=gcc cxxflags="-std=c++11" --without-python --without-mpi
+      fi
+      export BOOST_ROOT=${BOOST_DIR}
+    else
+      brew outdated boost || brew upgrade boost;
     fi
 
   ############################################################################
@@ -56,43 +167,17 @@ install:
       git clone https://github.com/samtools/htslib.git;
       cd htslib && autoheader && autoconf && ./configure && make && sudo make install;
     else
-      brew tap homebrew/science;
-      brew install htslib;
+      brew tap homebrew/science && brew install htslib;
     fi
-
-matrix:
-  include:
-#  - os: linux
-#    compiler: gcc
-#    addons:
-#      apt:
-#        sources:
-#          - ubuntu-toolchain-r-test
-#      packages:
-#        - g++-6
-#    env: COMPILER=g++
-#  - os: linux
-#    compiler: clang
-#    addons:
-#      apt:
-#        sources:
-#          - ubuntu-toolchain-r-test
-#          - llvm-toolchain-precise-3.8
-#      packages:
-#        - clang-3.8
-#    env: COMPILER=clang++
-  - os: osx
-    compiler: clang
-    before_install:
-      - brew install --with-clang llvm
-      - brew outdated boost || brew upgrade boost
-    env: COMPILER=clang++
 
 before_script:
   - cd "${TRAVIS_BUILD_DIR}"
+  - cmake --version
+  - echo "PATH = " ${PATH};
+  - echo "BOOST_ROOT = " ${BOOST_ROOT};
 
 script:
-  - ./install.py --compiler=$COMPILER
+  - ./install.py --compiler=${COMPILER}
 
 notifications:
   email: false
