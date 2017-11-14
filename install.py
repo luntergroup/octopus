@@ -20,6 +20,7 @@ parser.add_argument('--keep_cache', help='Do not refresh CMake cache', action='s
 parser.add_argument('--debug', help='Builds in debug mode', action='store_true')
 parser.add_argument('--static', help='Builds using static libraries', action='store_true')
 parser.add_argument('--threads', help='The number of threads to use for building', type=int)
+parser.add_argument('--boost', help='The Boost library root')
 args = vars(parser.parse_args())
 
 octopus_dir = os.path.dirname(os.path.realpath(__file__))
@@ -67,6 +68,8 @@ else:
     cmake_options.append("-DCMAKE_BUILD_TYPE=Debug")
 if args["static"]:
     cmake_options.append("-DUSE_STATIC_BOOST=ON")
+if args["boost"]:
+    cmake_options.append("-DBOOST_ROOT=" + args["boost"])
     
 ret = call(["cmake"] + cmake_options + [".."])
 
