@@ -55,9 +55,7 @@ os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
 if not args["keep_cache"] and os.path.exists(cmake_cache_file):
     os.remove(cmake_cache_file)
 
-ret = 0
 cmake_options = []
-
 if args["root"]:
     cmake_options.extend(["-DINSTALL_ROOT=ON", octopus_dir])
 if args["compiler"]:
@@ -70,7 +68,7 @@ if args["static"]:
     cmake_options.append("-DUSE_STATIC_BOOST=ON")
 if args["boost"]:
     cmake_options.append("-DBOOST_ROOT=" + args["boost"])
-    
+
 ret = call(["cmake"] + cmake_options + [".."])
 
 if ret == 0:
@@ -82,10 +80,12 @@ if ret == 0:
         make_options.append("-j" + str(multiprocessing.cpu_count()))
     
     if is_unix():
-        if args["root"]:
-            ret = call(["sudo", "make", "install"] + make_options)
-        else:
-            ret = call(["make", "install"] + make_options)
+        ret = call(["make"] + make_options)
+        if ret == 0 and args["root"]:
+            try:
+                ret = call(["make", "install"])
+            except:
+                ret = call(["sudo", "make", "install"])
     else:
         print("Windows make files not supported. Build files have been written to " + octopus_build_dir)
 
