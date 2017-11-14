@@ -115,8 +115,8 @@ std::size_t get_multiplier(const MemoryUnit units)
 boost::optional<MemoryFootprint> parse_footprint(std::string footprint_str)
 {
     using std::cbegin; using std::cend;
-    const std::string::const_iterator first_digit_itr {std::find_if_not(cbegin(footprint_str), cend(footprint_str),
-                                                                        [] (char c) { return std::isdigit(c); })};
+    const auto first_digit_itr = std::find_if_not(cbegin(footprint_str), cend(footprint_str),
+                                                  [] (char c) { return std::isdigit(c); });
     if (first_digit_itr == cbegin(footprint_str)) return boost::none;
     const auto unit_begin_itr = std::find_if_not(first_digit_itr, cend(footprint_str), [] (char c) { return c == ' '; });
     std::string unit_part {unit_begin_itr, cend(footprint_str)};
