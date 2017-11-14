@@ -16,13 +16,11 @@ Octopus is a mapping-based variant caller that implements several calling models
 * A C++14 compiler with SSE2 support
 * A C++14 standard library implementation
 * Git 2.5 or greater
-* Boost 1.58 or greater
+* Boost 1.61 or greater
 * htslib 1.4 or greater
-* CMake 3.5 or greater
+* CMake 3.9 or greater
 * Optional:
     * Python3 or greater
-
-**Warning**: GCC 6.2.1 and below have bugs which affect octopus, the code may compile, but do not trust the results. GCC 6.3 and above should be safe. Clang 3.8 has been tested. Visual Studio likely won't compile as it is not C++14 feature complete.
 
 #### *Obtaining requirements on OS X*
 
