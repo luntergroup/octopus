@@ -437,7 +437,7 @@ auto copy_each_cached(const Container& genotypes, const GenomicRegion& region, s
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::back_inserter(result),
                    [&] (const auto& genotype) { return copy_shared<MappableType>(genotype, region, cache); });
     return result;
-};
+}
 
 template <typename MappableType, typename Container>
 auto copy_each_cached(const Container& genotypes, const GenomicRegion& region)

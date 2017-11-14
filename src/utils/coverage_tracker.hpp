@@ -73,7 +73,7 @@ private:
     Region encompassing_region_;
     std::size_t num_tracked_ = 0;
     
-    using Iterator = decltype(coverage_)::const_iterator;
+    using Iterator = typename decltype(coverage_)::const_iterator;
     
     void do_add(const Region& region);
     std::pair<Iterator, Iterator> range(const Region& region) const;

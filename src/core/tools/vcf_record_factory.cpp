@@ -773,7 +773,12 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         for (const auto& sample : samples_) {
             const auto posterior = calls.front()->get_genotype_call(sample).posterior;
             auto gq = std::min(999, static_cast<int>(std::round(posterior.score())));
-            result.set_genotype(sample, *sample_itr++, VcfRecord::Builder::Phasing::phased);
+            auto& genotype_call = *sample_itr++;
+            if (has_non_ref) {
+                std::replace(std::begin(genotype_call), std::end(genotype_call),
+                             std::string {vcfspec::missingValue}, std::string {"<NON_REF>"});
+            }
+            result.set_genotype(sample, genotype_call, VcfRecord::Builder::Phasing::phased);
             result.set_format(sample, "GQ", std::to_string(gq));
             result.set_format(sample, "DP", max_coverage(reads_.at(sample), region));
             result.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region)));

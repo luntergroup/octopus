@@ -1,6 +1,10 @@
 // Copyright (c) 2017 Daniel Cooke and Gerton Lunter
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
+#if __GNUC__ >= 6
+    #pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
+
 #include "simd_pair_hmm.hpp"
 
 #include <vector>
