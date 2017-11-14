@@ -98,8 +98,6 @@ public:
     
     void clear();
     
-    void swap(const MappableFlatSet&);
-    
     size_type size() const noexcept;
     size_type capacity() const noexcept;
     size_type max_size() const noexcept;
@@ -158,7 +156,7 @@ public:
     template <typename M, typename A>
     friend bool operator<(const MappableFlatSet<M, A>& lhs, const MappableFlatSet<M, A>& rhs);
     template <typename M, typename A>
-    friend void swap(MappableFlatSet<M, A>& lhs, MappableFlatSet<M, A>& rhs);
+    friend void swap(MappableFlatSet<M, A>& lhs, MappableFlatSet<M, A>& rhs) noexcept;
     
 private:
     base_t elements_;
@@ -670,15 +668,6 @@ void MappableFlatSet<MappableType, Allocator>::clear()
 }
 
 template <typename MappableType, typename Allocator>
-void MappableFlatSet<MappableType, Allocator>::swap(const MappableFlatSet& m)
-{
-    using std::swap;
-    swap(elements_, m.elements_);
-    swap(is_bidirectionally_sorted_, m.is_bidirectionally_sorted_);
-    swap(max_element_size_, m.max_element_size_);
-}
-
-template <typename MappableType, typename Allocator>
 typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::size() const noexcept
 {
@@ -921,11 +910,12 @@ bool operator<(const MappableFlatSet<MappableType, Allocator>& lhs,
 
 template <typename MappableType, typename Allocator>
 void swap(MappableFlatSet<MappableType, Allocator>& lhs,
-          MappableFlatSet<MappableType, Allocator>& rhs)
+          MappableFlatSet<MappableType, Allocator>& rhs) noexcept
 {
-    std::swap(lhs.elements_, rhs.elements_);
-    std::swap(lhs.is_bidirectionally_sorted_, rhs.is_bidirectionally_sorted_);
-    std::swap(lhs.max_element_size_, rhs.max_element_size_);
+    using std::swap;
+    swap(lhs.elements_, rhs.elements_);
+    swap(lhs.is_bidirectionally_sorted_, rhs.is_bidirectionally_sorted_);
+    swap(lhs.max_element_size_, rhs.max_element_size_);
 }
 
 } // namespace octopus

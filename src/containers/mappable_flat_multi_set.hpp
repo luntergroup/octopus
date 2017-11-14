@@ -98,8 +98,6 @@ public:
     
     void clear();
     
-    void swap(const MappableFlatMultiSet&);
-    
     size_type size() const noexcept;
     size_type capacity() const noexcept;
     size_type max_size() const noexcept;
@@ -177,7 +175,7 @@ public:
     template <typename M, typename A>
     friend bool operator<(const MappableFlatMultiSet<M, A>& lhs, const MappableFlatMultiSet<M, A>& rhs);
     template <typename M, typename A>
-    friend void swap(MappableFlatMultiSet<M, A>& lhs, MappableFlatMultiSet<M, A>& rhs);
+    friend void swap(MappableFlatMultiSet<M, A>& lhs, MappableFlatMultiSet<M, A>& rhs) noexcept;
     
 private:
     base_t elements_;
@@ -555,14 +553,6 @@ void MappableFlatMultiSet<MappableType, Allocator>::clear()
 }
 
 template <typename MappableType, typename Allocator>
-void MappableFlatMultiSet<MappableType, Allocator>::swap(const MappableFlatMultiSet& m)
-{
-    std::swap(elements_, m.elements_);
-    std::swap(is_bidirectionally_sorted_, m.is_bidirectionally_sorted_);
-    std::swap(max_element_size_, m.max_element_size_);
-}
-
-template <typename MappableType, typename Allocator>
 typename MappableFlatMultiSet<MappableType, Allocator>::size_type
 MappableFlatMultiSet<MappableType, Allocator>::size() const noexcept
 {
@@ -871,11 +861,12 @@ bool operator<(const MappableFlatMultiSet<MappableType, Allocator>& lhs,
 
 template <typename MappableType, typename Allocator>
 void swap(MappableFlatMultiSet<MappableType, Allocator>& lhs,
-          MappableFlatMultiSet<MappableType, Allocator>& rhs)
+          MappableFlatMultiSet<MappableType, Allocator>& rhs) noexcept
 {
-    std::swap(lhs.elements_, rhs.elements_);
-    std::swap(lhs.is_bidirectionally_sorted_, rhs.is_bidirectionally_sorted_);
-    std::swap(lhs.max_element_size_, rhs.max_element_size_);
+    using std::swap;
+    swap(lhs.elements_, rhs.elements_);
+    swap(lhs.is_bidirectionally_sorted_, rhs.is_bidirectionally_sorted_);
+    swap(lhs.max_element_size_, rhs.max_element_size_);
 }
 
 template <typename ForwardIterator, typename MappableType1, typename MappableType2, typename Allocator>
