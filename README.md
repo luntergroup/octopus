@@ -16,7 +16,7 @@ Octopus is a mapping-based variant caller that implements several calling models
 * A C++14 compiler with SSE2 support
 * A C++14 standard library implementation
 * Git 2.5 or greater
-* Boost 1.61 or greater
+* Boost 1.65 or greater
 * htslib 1.4 or greater
 * CMake 3.9 or greater
 * Optional:
@@ -36,32 +36,28 @@ $ brew tap homebrew/science # required for htslib
 $ brew install htslib
 $ brew install python3
 ```
+
 Note if you already have any of these packages installed via Homebrew on your system the command will fail, but you can update to the latest version using `brew upgrade`.
 
-#### *Obtaining requirements on Ubuntu Xenial*
+#### *Obtaining requirements on Ubuntu*
 
-To install the requirements (using Clang) enter:
+Depending on your Ubuntu distribution, some requirements can be installed with `apt-get`. It may be preferable to use GCC as this will simplify installing Boost:
 
 ```shell
+$ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update && sudo apt-get upgrade
-$ sudo apt-get install clang-3.8
-$ sudo apt-get install libstdc++6
-$ sudo apt-get install libboost-all-dev
-$ sudo apt-get install cmake
+$ sudo apt-get install gcc-7
 $ sudo apt-get install git-all
 $ sudo apt-get install python3
 ```
 
-Only htslib 1.2.1 is currently available via `apt-get` so this will need to be installed manually:
+The other packages will need to be installed manually:
 
-```shell
-$ sudo apt-get install autoconf
-$ git clone https://github.com/samtools/htslib.git
-$ autoheader
-$ autoconf
-$ ./configure
-$ make && sudo make install
-```
+- CMake installation instructions are given [here](https://askubuntu.com/a/865294).
+- Htslib installation instructions are given [here](https://github.com/samtools/htslib). Note you may need to install `autoconf` (`sudo apt-get install autoconf`).
+- Instructions on installing Boost are given [here](https://stackoverflow.com/a/24086375/2970186).
+
+These instructions are replicated in the [user documentation](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) (Appendix).
 
 ## Installation
 
@@ -96,7 +92,7 @@ $ ./install.py --compiler /path/to/cpp/compiler # or just the compiler name if o
 For example, if the requirement instructions above were used:
 
 ```shell
-$ ./install.py --compiler clang++-3.8
+$ ./install.py --compiler clang++-4.0
 ```
 
 By default this installs to `/bin` relative to where you installed octopus. To install to a root directory (e.g. `/usr/local/bin`) use:
@@ -128,7 +124,7 @@ $ cmake -DINSTALL_ROOT=ON ..
 CMake will try to find a suitable compiler on your system, if you'd like you use a specific compiler use the `-D` option, for example:
 
 ```shell
-$ cmake -D CMAKE_C_COMPILER=clang-3.8 -D CMAKE_CXX_COMPILER=clang++-3.8 ..
+$ cmake -D CMAKE_C_COMPILER=clang-4.0 -D CMAKE_CXX_COMPILER=clang++-4.0 ..
 ```
 
 You can check installation was successful by executing the command:
