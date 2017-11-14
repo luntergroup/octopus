@@ -418,6 +418,9 @@ set(WarningIgnores
 # Compile options for all builds
 add_compile_options(-Wall -Wextra -Werror ${WarningIgnores})
 
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+
 if (BUILD_TESTING)
     # Make a library of all octopus non-main.cpp sources so can be used with tests
     add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
@@ -459,7 +462,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
         target_include_directories (octopus-debug PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
     endif (HTSlib_FOUND)
-    find_package(Threads)
+    find_package(Threads REQUIRED)
     target_link_libraries(octopus-debug ${CMAKE_THREAD_LIBS_INIT})
     option(INSTALL_ROOT "INSTALL_ROOT" OFF)
     install(TARGETS octopus-debug DESTINATION ${octopus_SOURCE_DIR}/bin)
@@ -487,7 +490,7 @@ else()
         target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (octopus ${HTSlib_LIBRARIES})
     endif (HTSlib_FOUND)
-    find_package(Threads)
+    find_package(Threads REQUIRED)
     target_link_libraries(octopus ${CMAKE_THREAD_LIBS_INIT})
     check_ipo_supported(RESULT ipo_supported)
     if(ipo_supported)
