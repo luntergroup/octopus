@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 from subprocess import call
 import platform
 import argparse
@@ -79,8 +80,10 @@ if ret == 0:
     
     if is_unix():
         if args["root"]:
-            call(["sudo", "make", "install"] + make_options)
+            ret = call(["sudo", "make", "install"] + make_options)
         else:
-            call(["make", "install"] + make_options)
+            ret = call(["make", "install"] + make_options)
     else:
         print("Windows make files not supported. Build files have been written to " + octopus_build_dir)
+
+sys.exit(ret)
