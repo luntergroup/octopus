@@ -82,10 +82,7 @@ if ret == 0:
     if is_unix():
         ret = call(["make"] + make_options)
         if ret == 0 and args["root"]:
-            try:
-                ret = call(["make", "install"])
-            except:
-                ret = call(["sudo", "make", "install"])
+            ret = call(["make", "install"])
     else:
         print("Windows make files not supported. Build files have been written to " + octopus_build_dir)
 
