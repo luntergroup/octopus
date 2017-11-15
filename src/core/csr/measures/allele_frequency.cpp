@@ -77,11 +77,13 @@ Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const Fa
                                    read_count += p.second.size();
                                    return p.second.size();
                                });
-                std::sort(std::begin(allele_counts), std::end(allele_counts), std::greater<> {});
-                auto major_af = allele_counts.front() / read_count;
-                auto minor_af = allele_counts.back() / read_count;
-                if (major_af > max_freq) max_freq = major_af;
-                if (minor_af < min_freq) min_freq = minor_af;
+                if (read_count > 0) {
+                    std::sort(std::begin(allele_counts), std::end(allele_counts), std::greater<> {});
+                    auto major_af = allele_counts.front() / read_count;
+                    auto minor_af = allele_counts.back() / read_count;
+                    if (major_af > max_freq) max_freq = major_af;
+                    if (minor_af < min_freq) min_freq = minor_af;
+                }
             }
         }
     }
