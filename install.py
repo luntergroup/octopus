@@ -83,9 +83,7 @@ if ret == 0:
         make_options.append("-j" + str(multiprocessing.cpu_count()))
     
     if is_unix():
-        ret = call(["make"] + make_options)
-        if ret == 0 and args["root"]:
-            ret = call(["make", "install"])
+        ret = call(["make", "install"] + make_options)
     else:
         print("Windows make files not supported. Build files have been written to " + octopus_build_dir)
 
