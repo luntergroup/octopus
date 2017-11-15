@@ -268,6 +268,37 @@ $ octopus -R hs37d5.fa -I NA12878.bam --fast
 
 Note this does not turn on multithreading or increase buffer sizes.
 
+## Output format
+
+By default, octopus outputs variants using a simple but rich VCF format (see user documentation for full details). For example, two overlapping deletions are represented like:
+
+```
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
+1	102738191	.	ATTATTTAT	A,*	.	.	.	GT	1|2
+1	102738191	.	ATTATTTATTTAT	A	.	.	.	GT	.|1
+```
+
+in contrast to how such a site would usually be represented, either
+
+```
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
+1	102738191	.	ATTATTTAT	A	.	.	.	GT	1/0
+1	102738191	.	ATTATTTATTTAT	A	.	.	.	GT	1/0
+```
+
+which is inconsistent as the reference is deduced in each record, or
+
+```
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
+1	102738191	.	ATTATTTATTTAT	ATTAT,A	.	.	.	GT	1/2
+```
+
+which is at least consistent, but rapidly becomes unmanageable as the length and number of overlapping variants increases.
+
+Octopus's representation is both succinct and consistent. The `*` allele denotes an upstream deletion, while the `.` in the genotype of the second record indicates the allele is missing due to a previous event. As the records are phased, the called haplotypes can be unambiguously reconstructed when the VCF file is read sequentially.
+
+However, some existing tools will not recognise this format. For example, RTG Tools does not fully support this representation. Therefore, octopus has an option to also produce calls using a more typical VCF format (like the first of the two examples). To request this, use the `--legacy` command line option. This option is only available when outputting calls to a file (i.e. not `stdout`).   
+
 ## Documentation
 
 Complete [user](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) and [developer](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/dev/octopus-dev-manual.pdf) documentation is available in the doc directory.
