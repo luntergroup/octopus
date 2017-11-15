@@ -16,8 +16,19 @@ namespace octopus {
 CallerBuilder::CallerBuilder(const ReferenceGenome& reference, const ReadPipe& read_pipe,
                              VariantGeneratorBuilder vgb, HaplotypeGenerator::Builder hgb)
 : components_ {reference, read_pipe, std::move(vgb), std::move(hgb), Phaser {}}
-, factory_ {generate_factory()}
-{}
+, params_ {}
+, factory_ {}
+{
+    params_.general.allow_inactive_flank_scoring = true;
+    params_.general.refcall_type = Caller::RefCallType::none;
+    params_.general.call_sites_only = false;
+    params_.general.allow_model_filtering = false;
+    params_.general.haplotype_extension_threshold = Phred<> {150.0};
+    params_.general.saturation_limit = Phred<> {10.0};
+    params_.general.model_mapping_quality = true;
+    params_.general.max_haplotypes = 200;
+    factory_ = generate_factory();
+}
 
 CallerBuilder::CallerBuilder(const CallerBuilder& other)
 : caller_ {other.caller_}
@@ -84,13 +95,13 @@ CallerBuilder& CallerBuilder::set_caller(std::string caller)
 
 CallerBuilder& CallerBuilder::set_refcall_type(Caller::RefCallType type) noexcept
 {
-    params_.refcall_type = type;
+    params_.general.refcall_type = type;
     return *this;
 }
 
 CallerBuilder& CallerBuilder::set_sites_only() noexcept
 {
-    params_.call_sites_only = true;
+    params_.general.call_sites_only = true;
     return *this;
 }
 
@@ -108,25 +119,25 @@ CallerBuilder& CallerBuilder::set_min_refcall_posterior(Phred<double> posterior)
 
 CallerBuilder& CallerBuilder::set_max_haplotypes(unsigned n) noexcept
 {
-    params_.max_haplotypes = n;
+    params_.general.max_haplotypes = n;
     return *this;
 }
 
 CallerBuilder& CallerBuilder::set_haplotype_extension_threshold(Phred<double> p) noexcept
 {
-    params_.haplotype_extension_threshold = p;
+    params_.general.haplotype_extension_threshold = p;
     return *this;
 }
 
 CallerBuilder& CallerBuilder::set_flank_scoring(bool b) noexcept
 {
-    params_.allow_flank_scoring = b;
+    params_.general.allow_inactive_flank_scoring = b;
     return *this;
 }
 
 CallerBuilder& CallerBuilder::set_model_filtering(bool b) noexcept
 {
-    params_.allow_model_filtering = b;
+    params_.general.allow_model_filtering = b;
     return *this;
 }
 
@@ -156,13 +167,13 @@ CallerBuilder& CallerBuilder::set_max_joint_genotypes(unsigned max) noexcept
 
 CallerBuilder& CallerBuilder::set_sequencer(std::string sequencer) noexcept
 {
-    params_.sequencer = std::move(sequencer);
+    params_.general.sequencer = std::move(sequencer);
     return *this;
 }
 
 CallerBuilder& CallerBuilder::set_model_mapping_quality(bool b) noexcept
 {
-    params_.model_mapping_quality = b;
+    params_.general.model_mapping_quality = b;
     return *this;
 }
 
@@ -296,22 +307,11 @@ auto make_trio_prior_model(boost::optional<double> snp_heterozygosity,
 
 CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
 {
-    Caller::Parameters general_parameters {
-        params_.refcall_type,
-        params_.call_sites_only,
-        params_.max_haplotypes,
-        params_.haplotype_extension_threshold,
-        params_.saturation_limit,
-        params_.allow_flank_scoring,
-        params_.allow_model_filtering,
-        params_.sequencer,
-        params_.model_mapping_quality
-    };
     const auto& samples = components_.read_pipe.get().samples();
     return CallerFactoryMap {
-        {"individual", [this, general_parameters = std::move(general_parameters), &samples] () {
+        {"individual", [this, &samples] () {
             return std::make_unique<IndividualCaller>(make_components(),
-                                                      std::move(general_parameters),
+                                                      params_.general,
                                                       IndividualCaller::Parameters {
                                                           params_.ploidies.of(samples.front(), *requested_contig_),
                                                           make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
@@ -319,9 +319,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.min_refcall_posterior
                                                       });
         }},
-        {"population", [this, general_parameters = std::move(general_parameters), &samples] () {
+        {"population", [this, &samples] () {
             return std::make_unique<PopulationCaller>(make_components(),
-                                                      std::move(general_parameters),
+                                                      params_.general,
                                                       PopulationCaller::Parameters {
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
@@ -330,9 +330,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.max_joint_genotypes,
                                                       });
         }},
-        {"cancer", [this, general_parameters = std::move(general_parameters), &samples] () {
+        {"cancer", [this, &samples] () {
             return std::make_unique<CancerCaller>(make_components(),
-                                                  std::move(general_parameters),
+                                                  params_.general,
                                                   CancerCaller::Parameters {
                                                       params_.min_variant_posterior,
                                                       params_.min_somatic_posterior,
@@ -347,9 +347,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.max_joint_genotypes
                                                   });
         }},
-        {"trio", [this, general_parameters = std::move(general_parameters)] () {
+        {"trio", [this] () {
             return std::make_unique<TrioCaller>(make_components(),
-                                                std::move(general_parameters),
+                                                params_.general,
                                                 TrioCaller::Parameters {
                                                     *params_.trio,
                                                     params_.ploidies.of(params_.trio->mother(), *requested_contig_),

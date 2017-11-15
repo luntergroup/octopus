@@ -91,20 +91,12 @@ private:
     struct Parameters
     {
         // common
+        Caller::Parameters general;
         PloidyMap ploidies;
-        Caller::RefCallType refcall_type = Caller::RefCallType::none;
-        bool call_sites_only = false;
-        Phred<double> min_variant_posterior;
-        Phred<double> min_refcall_posterior;
-        unsigned max_haplotypes;
-        Phred<double> haplotype_extension_threshold, saturation_limit = Phred<> {10.0};
-        bool allow_flank_scoring;
-        bool allow_model_filtering;
+        Phred<double> min_variant_posterior, min_refcall_posterior;
         boost::optional<double> snp_heterozygosity, indel_heterozygosity;
         Phred<double> min_phase_score;
         unsigned max_joint_genotypes;
-        boost::optional<std::string> sequencer;
-        bool model_mapping_quality = true;
         
         // cancer
         boost::optional<SampleName> normal_sample;
