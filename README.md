@@ -270,7 +270,7 @@ Note this does not turn on multithreading or increase buffer sizes.
 
 ## Output format
 
-By default, octopus outputs variants using a simple but rich VCF format (see user documentation for full details). For example, two overlapping deletions are represented like:
+Octopus outputs variants using a simple but rich VCF format (see [user documentation](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) for full details). For example, two overlapping deletions are represented like:
 
 ```
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
@@ -278,7 +278,7 @@ By default, octopus outputs variants using a simple but rich VCF format (see use
 1	102738191	.	ATTATTTATTTAT	A	.	.	.	GT	.|1
 ```
 
-in contrast to how such a site would usually be represented, either
+in contrast to how such a site would usually be represented, either:
 
 ```
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
@@ -286,7 +286,7 @@ in contrast to how such a site would usually be represented, either
 1	102738191	.	ATTATTTATTTAT	A	.	.	.	GT	1/0
 ```
 
-which is inconsistent as the reference is deduced in each record, or
+which is inconsistent as the reference is deduced in each record, or:
 
 ```
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
