@@ -41,7 +41,7 @@ RUN wget -O boost_1_65_1.tar.gz http://sourceforge.net/projects/boost/files/boos
 RUN tar xzvf boost_1_65_1.tar.gz
 WORKDIR /tmp/boost_1_65_1
 RUN ./bootstrap.sh --prefix=/usr/local --without-libraries=python,mpi
-RUN ./b2
+RUN ./b2 cxxflags="-std=c++11"
 RUN ./b2 install
 
 # Install htslib
