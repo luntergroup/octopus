@@ -18,11 +18,6 @@ bool includes(const CancerGenotype<Haplotype>& genotype, const Allele& allele)
     return includes(genotype.germline_genotype(), allele) || genotype.somatic_element().includes(allele);
 }
 
-std::size_t estimate_num_cancer_genotypes(const std::size_t num_haplotypes, const unsigned ploidy)
-{
-    return (num_genotypes(static_cast<unsigned>(num_haplotypes), ploidy) - 1) * num_haplotypes;
-}
-
 namespace {
 
 auto make_all_shared(const std::vector<Haplotype>& elements)
@@ -33,7 +28,7 @@ auto make_all_shared(const std::vector<Haplotype>& elements)
     return result;
 }
 
-}
+} // namespace
 
 std::vector<CancerGenotype<Haplotype>>
 generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_genotypes,
@@ -53,14 +48,17 @@ generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_g
 }
 
 namespace debug {
-    void print_alleles(const CancerGenotype<Haplotype>& genotype)
-    {
-        print_alleles(std::cout, genotype);
-    }
-    
-    void print_variant_alleles(const CancerGenotype<Haplotype>& genotype)
-    {
-        print_variant_alleles(std::cout, genotype);
-    }
+
+void print_alleles(const CancerGenotype<Haplotype>& genotype)
+{
+    print_alleles(std::cout, genotype);
+}
+
+void print_variant_alleles(const CancerGenotype<Haplotype>& genotype)
+{
+    print_variant_alleles(std::cout, genotype);
+}
+
 } // namespace debug
+
 } // namespace octopus
