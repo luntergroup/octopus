@@ -31,6 +31,11 @@ TrioModel::TrioModel(const Trio& trio,
 , debug_log_ {debug_log}
 {}
 
+const PopulationPriorModel& TrioModel::prior_model() const noexcept
+{
+    return prior_model_;
+}
+
 namespace {
 
 template <typename Container>

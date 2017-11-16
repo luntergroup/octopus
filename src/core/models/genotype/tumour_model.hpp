@@ -14,8 +14,7 @@
 #include "core/models/haplotype_likelihood_cache.hpp"
 #include "core/types/cancer_genotype.hpp"
 
-namespace octopus { namespace model
-{
+namespace octopus { namespace model {
 
 class TumourModel
 {
@@ -55,7 +54,6 @@ public:
     TumourModel() = delete;
     
     TumourModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors);
-    
     TumourModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors,
                 AlgorithmParameters parameters);
     
@@ -65,6 +63,8 @@ public:
     TumourModel& operator=(const TumourModel&) = default;
     TumourModel(TumourModel&&)                 = default;
     TumourModel& operator=(TumourModel&&)      = default;
+    
+    const Priors& priors() const noexcept;
     
     InferredLatents evaluate(std::vector<CancerGenotype<Haplotype>> genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;

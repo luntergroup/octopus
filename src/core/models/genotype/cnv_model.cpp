@@ -30,6 +30,11 @@ CNVModel::CNVModel(std::vector<SampleName> samples, const unsigned ploidy, Prior
 , parameters_ {parameters}
 {}
 
+const CNVModel::Priors& CNVModel::priors() const noexcept
+{
+    return priors_;
+}
+
 namespace {
 
 template <std::size_t K>

@@ -54,7 +54,6 @@ public:
     CNVModel() = delete;
     
     CNVModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors);
-    
     CNVModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors,
              AlgorithmParameters parameters);
     
@@ -65,16 +64,15 @@ public:
     
     ~CNVModel() = default;
     
+    const Priors& priors() const noexcept;
+    
     InferredLatents evaluate(std::vector<Genotype<Haplotype>> genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
     std::vector<SampleName> samples_;
-    
     unsigned ploidy_;
-    
     Priors priors_;
-    
     AlgorithmParameters parameters_;
 };
     

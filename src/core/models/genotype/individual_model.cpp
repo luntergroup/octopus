@@ -24,6 +24,11 @@ IndividualModel::IndividualModel(const GenotypePriorModel& genotype_prior_model,
 , trace_log_ {trace_log}
 {}
 
+const GenotypePriorModel& IndividualModel::prior_model() const noexcept
+{
+    return genotype_prior_model_;
+}
+
 namespace debug {
 
 template <typename S>
