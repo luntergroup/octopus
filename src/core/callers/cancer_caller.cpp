@@ -297,55 +297,62 @@ CancerCaller::get_normal_noise_model_priors(const GenotypePriorModel& prior_mode
     return Priors {prior_model, std::move(cnv_alphas)};
 }
 
-auto make_posterior_map(const std::vector<Genotype<Haplotype>>& genotypes,
-                        const std::vector<double>& posteriors)
+auto extract_greatest_probability_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+                                            const std::vector<double>& probabilities,
+                                            const std::size_t n,
+                                            const boost::optional<double> min_include_probability = boost::none,
+                                            const boost::optional<double> max_exclude_probability = boost::none)
 {
+    assert(genotypes.size() == probabilities.size());
+    if (genotypes.size() <= n) return genotypes;
     using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-    auto hash = std::hash<GenotypeReference>();
-    const auto cmp = [] (const auto& lhs, const auto& rhs) { return lhs.get() == rhs.get(); };
-    std::unordered_map<GenotypeReference, double, decltype(hash), decltype(cmp)> result {genotypes.size(), hash, cmp};
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(posteriors),
-                   std::inserter(result, std::begin(result)),
-                   [] (const auto& genotype, const auto posterior) {
-                       return std::make_pair(std::cref(genotype), posterior);
-                   });
+    std::vector<std::pair<GenotypeReference, double>> genotype_probabilities {};
+    genotype_probabilities.reserve(genotypes.size());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(probabilities),
+                   std::back_inserter(genotype_probabilities),
+                   [] (const auto& g, const auto& p) noexcept { return std::make_pair(std::cref(g), p); });
+    auto last_include_itr = std::next(std::begin(genotype_probabilities), n);
+    const auto probability_greater = [] (const auto& lhs, const auto& rhs) noexcept { return lhs.second > rhs.second; };
+    std::partial_sort(std::begin(genotype_probabilities), last_include_itr, std::end(genotype_probabilities), probability_greater);
+    if (min_include_probability) {
+        last_include_itr = std::upper_bound(std::begin(genotype_probabilities), last_include_itr, *min_include_probability,
+                                            [] (auto lhs, const auto& rhs) noexcept { return lhs > rhs.second; });
+        if (last_include_itr == std::begin(genotype_probabilities)) ++last_include_itr;
+    }
+    if (max_exclude_probability) {
+        last_include_itr = std::partition(last_include_itr, std::end(genotype_probabilities),
+                                          [&] (const auto& p) noexcept { return p.second > *max_exclude_probability; });
+    }
+    std::vector<Genotype<Haplotype>> result {};
+    result.reserve(std::distance(std::begin(genotype_probabilities), last_include_itr));
+    std::transform(std::begin(genotype_probabilities), last_include_itr, std::back_inserter(result),
+                   [] (const auto& p) { return p.first.get(); });
     return result;
 }
 
 CancerCaller::CancerGenotypeVector
 CancerCaller::generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    auto result = generate_all_cancer_genotypes(latents.germline_genotypes_, latents.haplotypes_);
-    if (result.size() <= parameters_.max_genotypes) {
-        return result;
+    const auto num_haplotypes = latents.haplotypes_.get().size();
+    const auto num_germline_genotypes = latents.germline_genotypes_.size();
+    const auto max_possible_cancer_genotypes = num_haplotypes * num_germline_genotypes;
+    if (max_possible_cancer_genotypes <= parameters_.max_genotypes) {
+        return generate_all_cancer_genotypes(latents.germline_genotypes_, latents.haplotypes_);
     }
     if (has_normal_sample()) {
-        haplotype_likelihoods.prime(normal_sample());
         assert(latents.germline_model_);
+        // This method will not work well if there is a high degree of normal contamination
+        haplotype_likelihoods.prime(normal_sample());
         latents.normal_germline_inferences_ = latents.germline_model_->evaluate(latents.germline_genotypes_, haplotype_likelihoods);
         const auto& germline_normal_posteriors = latents.normal_germline_inferences_->posteriors.genotype_probabilities;
-        const auto posteriors = make_posterior_map(latents.germline_genotypes_, germline_normal_posteriors);
-        auto first_removable = std::next(std::begin(result), parameters_.max_genotypes);
-        std::partial_sort(std::begin(result), first_removable, std::end(result),
-                          [&posteriors] (const auto& lhs, const auto& rhs) {
-                              return posteriors.at(lhs.germline_genotype()) > posteriors.at(rhs.germline_genotype());
-                          });
-        constexpr double min_germline_posterior {1e-40};
-        first_removable = std::upper_bound(std::begin(result), first_removable, min_germline_posterior,
-                                           [&posteriors] (const auto& lhs, const auto& rhs) {
-                                               return lhs > posteriors.at(rhs.germline_genotype());
-                                           });
-        if (first_removable == std::begin(result)) {
-            ++first_removable;
-        }
-        result.erase(first_removable, std::end(result));
-        if (result.capacity() > 2 * result.size()) {
-            result.shrink_to_fit();
-        }
+        const auto max_germline_genotype_bases = parameters_.max_genotypes / num_haplotypes;
+        auto germline_bases = extract_greatest_probability_genotypes(latents.germline_genotypes_, germline_normal_posteriors,
+                                                                     max_germline_genotype_bases, 1e-100, 1e-2);
+        return generate_all_cancer_genotypes(germline_bases, latents.haplotypes_);
     } else {
         // TODO
+        return generate_all_cancer_genotypes(latents.germline_genotypes_, latents.haplotypes_);
     }
-    return result;
 }
 
 std::vector<std::unique_ptr<VariantCall>>
