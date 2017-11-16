@@ -38,10 +38,9 @@ public:
     {
         using GenotypeMixturesDirichletAlphas   = std::vector<double>;
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
+        using ProbabilityVector                 = std::vector<double>;
         
-        using GenotypeProbabilityMap = std::unordered_map<Genotype<Haplotype>, double>;
-        
-        GenotypeProbabilityMap genotype_probabilities;
+        ProbabilityVector genotype_probabilities;
         GenotypeMixturesDirichletAlphaMap alphas;
     };
     
@@ -66,7 +65,7 @@ public:
     
     const Priors& priors() const noexcept;
     
-    InferredLatents evaluate(std::vector<Genotype<Haplotype>> genotypes,
+    InferredLatents evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:

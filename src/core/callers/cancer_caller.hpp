@@ -136,9 +136,9 @@ private:
     CancerGenotypeVector generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
     ModelPriors get_model_priors() const;
-    ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
+    ModelPosteriors calculate_model_posteriors(const Latents& latents) const;
     
-    GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& inferences,
+    GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& latents,
                                                                           const ModelPosteriors& model_posteriors) const;
     ProbabilityVector calculate_probability_samples_not_somatic(const Latents& inferences) const;
     Phred<double> calculate_somatic_probability(const ProbabilityVector& sample_somatic_posteriors,
@@ -174,7 +174,7 @@ private:
     std::unique_ptr<GermlineModel> germline_model_ = nullptr;
     GermlineModel::InferredLatents germline_model_inferences_;
     CNVModel::InferredLatents cnv_model_inferences_;
-    TumourModel::InferredLatents somatic_model_inferences_;
+    TumourModel::InferredLatents tumour_model_inferences_;
     boost::optional<TumourModel::InferredLatents> noise_model_inferences_ = boost::none;
     boost::optional<GermlineModel::InferredLatents> normal_germline_inferences_ = boost::none;
     
