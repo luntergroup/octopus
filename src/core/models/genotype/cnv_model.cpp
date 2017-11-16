@@ -67,66 +67,63 @@ CNVModel::evaluate(std::vector<Genotype<Haplotype>> genotypes,
 namespace {
 
 template <std::size_t K>
-CompressedAlpha<K> compress(const CNVModel::Priors::GenotypeMixturesDirichletAlphas& alpha)
+VBAlpha<K> flatten(const CNVModel::Priors::GenotypeMixturesDirichletAlphas& alpha)
 {
-    CompressedAlpha<K> result;
+    VBAlpha<K> result;
     std::copy_n(std::cbegin(alpha), K, std::begin(result));
     return result;
 }
 
 template <std::size_t K>
-CompressedAlphaVector<K> flatten_priors(const CNVModel::Priors& priors,
-                                   const std::vector<SampleName>& samples)
+VBAlphaVector<K> flatten(const CNVModel::Priors& priors, const std::vector<SampleName>& samples)
 {
-    CompressedAlphaVector<K> result(samples.size());
+    VBAlphaVector<K> result(samples.size());
     std::transform(std::cbegin(samples), std::cend(samples), std::begin(result),
                    [&priors] (const auto& sample) {
-                       return compress<K>(priors.alphas.at(sample));
+                       return flatten<K>(priors.alphas.at(sample));
                    });
     return result;
 }
 
 template <std::size_t K>
-CompressedGenotype<K>
-compress(const Genotype<Haplotype>& genotype, const SampleName& sample,
-         const HaplotypeLikelihoodCache& haplotype_likelihoods)
+VBGenotype<K>
+flatten(const Genotype<Haplotype>& genotype, const SampleName& sample,
+        const HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
-    CompressedGenotype<K> result;
-    
+    VBGenotype<K> result;
     std::transform(std::cbegin(genotype), std::cend(genotype),
                    std::begin(result),
                    [&sample, &haplotype_likelihoods] (const Haplotype& haplotype)
-                   -> std::reference_wrapper<const ReadLikelihoodArray::BaseType> {
+                   -> std::reference_wrapper<const VBReadLikelihoodArray::BaseType> {
                        return std::cref(haplotype_likelihoods(sample, haplotype));
                    });
-    
     return result;
 }
 
 template <std::size_t K>
-CompressedGenotypeVector<K>
-compress(const std::vector<Genotype<Haplotype>>& genotypes, const SampleName& sample,
-         const HaplotypeLikelihoodCache& haplotype_likelihoods)
+VBGenotypeVector<K>
+flatten(const std::vector<Genotype<Haplotype>>& genotypes, const SampleName& sample,
+        const HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
-    CompressedGenotypeVector<K> result(genotypes.size());
+    VBGenotypeVector<K> result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&sample, &haplotype_likelihoods] (const auto& genotype) {
-                       return compress<K>(genotype, sample, haplotype_likelihoods);
+                       return flatten<K>(genotype, sample, haplotype_likelihoods);
                    });
     return result;
 }
 
 template <std::size_t K>
-CompressedReadLikelihoodMatrix<K>
-compress(const std::vector<Genotype<Haplotype>>& genotypes,
-         const std::vector<SampleName>& samples,
-         const HaplotypeLikelihoodCache& haplotype_likelihoods)
+VBReadLikelihoodMatrix<K>
+flatten(const std::vector<Genotype<Haplotype>>& genotypes,
+        const std::vector<SampleName>& samples,
+        const HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
-    CompressedReadLikelihoodMatrix<K> result {};
+    VBReadLikelihoodMatrix<K> result {};
     result.reserve(samples.size());
     std::transform(std::cbegin(samples), std::cend(samples), std::back_inserter(result),
                    [&genotypes, &haplotype_likelihoods] (const auto& sample) {
-                       return compress<K>(genotypes, sample, haplotype_likelihoods);
+                       return flatten<K>(genotypes, sample, haplotype_likelihoods);
                    });
     return result;
 }
@@ -158,20 +155,20 @@ expand(std::vector<Genotype<Haplotype>>&& genotypes, LogProbabilityVector&& geno
 }
 
 template <std::size_t K>
-CNVModel::Latents::GenotypeMixturesDirichletAlphas expand(CompressedAlpha<K>& alpha)
+CNVModel::Latents::GenotypeMixturesDirichletAlphas expand(VBAlpha<K>& alpha)
 {
     return CNVModel::Latents::GenotypeMixturesDirichletAlphas(std::begin(alpha), std::end(alpha));
 }
 
 template <std::size_t K>
 CNVModel::Latents::GenotypeMixturesDirichletAlphaMap
-expand(const std::vector<SampleName>& samples, CompressedAlphaVector<K>&& alphas)
+expand(const std::vector<SampleName>& samples, VBAlphaVector<K>&& alphas)
 {
     CNVModel::Latents::GenotypeMixturesDirichletAlphaMap result {};
     std::transform(std::cbegin(samples), std::cend(samples), std::begin(alphas),
                    std::inserter(result, std::begin(result)),
-                   [] (const auto& sample, auto&& compressed_alpha) {
-                       return std::make_pair(sample, expand(compressed_alpha));
+                   [] (const auto& sample, auto&& vb_alpha) {
+                       return std::make_pair(sample, expand(vb_alpha));
                    });
     return result;
 }
@@ -179,7 +176,7 @@ expand(const std::vector<SampleName>& samples, CompressedAlphaVector<K>&& alphas
 template <std::size_t K>
 CNVModel::InferredLatents
 expand(const std::vector<SampleName>& samples, std::vector<Genotype<Haplotype>>&& genotypes,
-       CompressedLatents<K>&& inferred_latents, double evidence)
+       VBLatents<K>&& inferred_latents, double evidence)
 {
     CNVModel::Latents posterior_latents {
         expand(std::move(genotypes), std::move(inferred_latents.genotype_posteriors)),
@@ -226,9 +223,9 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params)
 {
-    const auto prior_alphas = flatten_priors<K>(priors, samples);
+    const auto prior_alphas = flatten<K>(priors, samples);
     const auto genotype_log_priors = calculate_log_priors(genotypes, priors.genotype_prior_model);
-    const auto log_likelihoods = compress<K>(genotypes, samples, haplotype_log_likelihoods);
+    const auto log_likelihoods = flatten<K>(genotypes, samples, haplotype_log_likelihoods);
     auto seeds = generate_seeds(samples, genotypes, genotype_log_priors,
                                 priors, haplotype_log_likelihoods);
     auto p = run_variational_bayes(prior_alphas, genotype_log_priors,
