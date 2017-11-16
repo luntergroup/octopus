@@ -93,18 +93,6 @@ const SampleName& CancerCaller::normal_sample() const
     return *parameters_.normal_sample;
 }
 
-auto get_high_posterior_genotypes(const model::TumourModel::Latents::GenotypeProbabilityMap& posteriors)
-{
-    std::vector<CancerGenotype<Haplotype>> result {};
-    result.reserve(posteriors.size());
-    for (const auto& p : posteriors) {
-        if (p.second >= 1e-3) {
-            result.push_back(p.first);
-        }
-    }
-    return result;
-}
-
 std::unique_ptr<CancerCaller::Caller::Latents>
 CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const
@@ -222,13 +210,58 @@ void CancerCaller::evaluate_tumour_model(Latents& latents, const HaplotypeLikeli
     latents.somatic_model_inferences_ = somatic_model.evaluate(latents.cancer_genotypes_, haplotype_likelihoods);
 }
 
+template <typename Genotype_>
+auto extract_greatest_probability_genotypes(const std::vector<Genotype_>& genotypes,
+                                            const std::vector<double>& probabilities,
+                                            const std::size_t n,
+                                            const boost::optional<double> min_include_probability = boost::none,
+                                            const boost::optional<double> max_exclude_probability = boost::none)
+{
+    assert(genotypes.size() == probabilities.size());
+    if (genotypes.size() <= n) return genotypes;
+    using GenotypeReference = std::reference_wrapper<const Genotype_>;
+    std::vector<std::pair<GenotypeReference, double>> genotype_probabilities {};
+    genotype_probabilities.reserve(genotypes.size());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(probabilities),
+                   std::back_inserter(genotype_probabilities),
+                   [] (const auto& g, const auto& p) noexcept { return std::make_pair(std::cref(g), p); });
+    auto last_include_itr = std::next(std::begin(genotype_probabilities), n);
+    const auto probability_greater = [] (const auto& lhs, const auto& rhs) noexcept { return lhs.second > rhs.second; };
+    std::partial_sort(std::begin(genotype_probabilities), last_include_itr, std::end(genotype_probabilities), probability_greater);
+    if (min_include_probability) {
+        last_include_itr = std::upper_bound(std::begin(genotype_probabilities), last_include_itr, *min_include_probability,
+                                            [] (auto lhs, const auto& rhs) noexcept { return lhs > rhs.second; });
+        if (last_include_itr == std::begin(genotype_probabilities)) ++last_include_itr;
+    }
+    if (max_exclude_probability) {
+        last_include_itr = std::partition(last_include_itr, std::end(genotype_probabilities),
+                                          [&] (const auto& p) noexcept { return p.second > *max_exclude_probability; });
+    }
+    std::vector<Genotype_> result {};
+    result.reserve(std::distance(std::begin(genotype_probabilities), last_include_itr));
+    std::transform(std::begin(genotype_probabilities), last_include_itr, std::back_inserter(result),
+                   [] (const auto& p) { return p.first.get(); });
+    return result;
+}
+
+auto get_high_posterior_genotypes(const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                  const model::TumourModel::Latents::GenotypeProbabilityMap& posteriors)
+{
+    assert(posteriors.size() == genotypes.size());
+    std::vector<double> flattened_posteriors(genotypes.size());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(flattened_posteriors),
+                   [&] (const auto& genotype) { return posteriors.at(genotype); });
+    return extract_greatest_probability_genotypes(genotypes, flattened_posteriors, 10, 1e-3);
+}
+
 void CancerCaller::evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     if (has_normal_sample()) {
         assert(latents.cancer_genotype_prior_model_);
         auto noise_model_priors = get_noise_model_priors(*latents.cancer_genotype_prior_model_);
         const TumourModel noise_model {samples_, parameters_.ploidy, std::move(noise_model_priors)};
-        auto noise_genotypes = get_high_posterior_genotypes(latents.somatic_model_inferences_.posteriors.genotype_probabilities);
+        const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.posteriors.genotype_probabilities;
+        auto noise_genotypes = get_high_posterior_genotypes(latents.cancer_genotypes_, cancer_genotype_posteriors);
         latents.noise_model_inferences_ = noise_model.evaluate(noise_genotypes, haplotype_likelihoods);
     }
 }
@@ -295,39 +328,6 @@ CancerCaller::get_normal_noise_model_priors(const GenotypePriorModel& prior_mode
         cnv_alphas.emplace(normal_sample(), std::move(sample_alphas));
     }
     return Priors {prior_model, std::move(cnv_alphas)};
-}
-
-auto extract_greatest_probability_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
-                                            const std::vector<double>& probabilities,
-                                            const std::size_t n,
-                                            const boost::optional<double> min_include_probability = boost::none,
-                                            const boost::optional<double> max_exclude_probability = boost::none)
-{
-    assert(genotypes.size() == probabilities.size());
-    if (genotypes.size() <= n) return genotypes;
-    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-    std::vector<std::pair<GenotypeReference, double>> genotype_probabilities {};
-    genotype_probabilities.reserve(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(probabilities),
-                   std::back_inserter(genotype_probabilities),
-                   [] (const auto& g, const auto& p) noexcept { return std::make_pair(std::cref(g), p); });
-    auto last_include_itr = std::next(std::begin(genotype_probabilities), n);
-    const auto probability_greater = [] (const auto& lhs, const auto& rhs) noexcept { return lhs.second > rhs.second; };
-    std::partial_sort(std::begin(genotype_probabilities), last_include_itr, std::end(genotype_probabilities), probability_greater);
-    if (min_include_probability) {
-        last_include_itr = std::upper_bound(std::begin(genotype_probabilities), last_include_itr, *min_include_probability,
-                                            [] (auto lhs, const auto& rhs) noexcept { return lhs > rhs.second; });
-        if (last_include_itr == std::begin(genotype_probabilities)) ++last_include_itr;
-    }
-    if (max_exclude_probability) {
-        last_include_itr = std::partition(last_include_itr, std::end(genotype_probabilities),
-                                          [&] (const auto& p) noexcept { return p.second > *max_exclude_probability; });
-    }
-    std::vector<Genotype<Haplotype>> result {};
-    result.reserve(std::distance(std::begin(genotype_probabilities), last_include_itr));
-    std::transform(std::begin(genotype_probabilities), last_include_itr, std::back_inserter(result),
-                   [] (const auto& p) { return p.first.get(); });
-    return result;
 }
 
 CancerCaller::CancerGenotypeVector
