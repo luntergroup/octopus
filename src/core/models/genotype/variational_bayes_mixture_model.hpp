@@ -71,18 +71,18 @@ private:
 };
 
 template <std::size_t K>
-using VBGenotype = std::array<VBReadLikelihoodArray, K>;
+using VBGenotype = std::array<VBReadLikelihoodArray, K>; // One element per haplotype in genotype (i.e. K)
 template <std::size_t K>
-using VBGenotypeVector = std::vector<VBGenotype<K>>;
+using VBGenotypeVector = std::vector<VBGenotype<K>>; // Per element per genotype
 template <std::size_t K>
-using VBReadLikelihoodMatrix = std::vector<VBGenotypeVector<K>>;
+using VBReadLikelihoodMatrix = std::vector<VBGenotypeVector<K>>; // One element per sample
 
 template <std::size_t K>
-using VBTau = std::array<double, K>;
+using VBTau = std::array<double, K>; // One element per haplotype in genotype (i.e. K)
 template <std::size_t K>
-using VBResponsabilityVector = std::vector<VBTau<K>>;
+using VBResponsabilityVector = std::vector<VBTau<K>>; // One element per genotype
 template <std::size_t K>
-using VBResponsabilityMatrix = std::vector<VBResponsabilityVector<K>>;
+using VBResponsabilityMatrix = std::vector<VBResponsabilityVector<K>>; // One element per sample
 
 template <std::size_t K>
 struct VBLatents
@@ -104,6 +104,42 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                       std::vector<LogProbabilityVector> seeds);
 
 namespace detail {
+
+using VBInverseLikelihood = std::vector<double>; // One element per genotype
+using VBInverseGenotype = std::vector<VBInverseLikelihood>; // One element per read
+template <std::size_t K>
+using VBInverseGenotypeVector = std::array<VBInverseGenotype, K>; // One element per haplotype in genotype
+template <std::size_t K>
+using VBInverseReadLikelihoodMatrix = std::vector<VBInverseGenotypeVector<K>>; // One element per sample
+
+template <std::size_t K>
+auto invert(const VBGenotypeVector<K>& likelihoods)
+{
+    static_assert(K > 0, "K == 0");
+    const auto num_genotypes = likelihoods.size();
+    assert(num_genotypes > 0);
+    const auto num_reads = likelihoods.front().front().size();
+    VBInverseGenotypeVector<K> result {};
+    for (std::size_t k {0}; k < K; ++k) {
+        result[k] = VBInverseGenotype(num_reads, VBInverseLikelihood(num_genotypes));
+        for (std::size_t n {0}; n < num_reads; ++n) {
+            for (std::size_t g {0}; g < num_genotypes; ++g) {
+                result[k][n][g] = likelihoods[g][k][n];
+            }
+        }
+    }
+    return result;
+}
+
+template <std::size_t K>
+auto invert(const VBReadLikelihoodMatrix<K>& matrix)
+{
+    VBInverseReadLikelihoodMatrix<K> result {};
+    result.reserve(matrix.size());
+    std::transform(std::cbegin(matrix), std::cend(matrix), std::back_inserter(result),
+                   [] (const auto& v) { return invert(v); });
+    return result;
+}
 
 inline ProbabilityVector& exp(const LogProbabilityVector& log_probabilities, ProbabilityVector& result) noexcept
 {
@@ -134,61 +170,85 @@ auto sum(const VBAlpha<K>& alpha) noexcept
     return std::accumulate(std::cbegin(alpha), std::cend(alpha), 0.0);
 }
 
-inline auto digamma_diff(const double a, const double b)
+template <typename T>
+inline auto digamma_diff(const T a, const T b)
 {
     using boost::math::digamma;
     return digamma(a) - digamma(b);
 }
 
-inline double log_sum_exp(const std::array<double, 1>& logs)
+template <typename T>
+inline T log_sum_exp(const std::array<T, 1>& logs)
 {
     return logs[0];
 }
 
-inline double log_sum_exp(const std::array<double, 2>& logs)
+template <typename T>
+inline T log_sum_exp(const std::array<T, 2>& logs)
 {
     return maths::log_sum_exp(logs[0], logs[1]);
 }
 
-inline double log_sum_exp(const std::array<double, 3>& logs)
+template <typename T>
+inline T log_sum_exp(const std::array<T, 3>& logs)
 {
     return maths::log_sum_exp(logs[0], logs[1], logs[2]);
 }
 
-template <std::size_t K>
-double log_sum_exp(const std::array<double, K>& logs)
+template <typename T, std::size_t K>
+T log_sum_exp(const std::array<T, K>& logs)
 {
     return maths::log_sum_exp(logs);
 }
 
 template <std::size_t K>
-double expectation(const ProbabilityVector& distribution, const VBGenotypeVector<K>& likelihoods,
-                   const unsigned k, const std::size_t n) noexcept
+auto count_reads(const VBGenotypeVector<K>& likelihoods) noexcept
+{
+    return likelihoods[0][0].size();
+}
+
+template <std::size_t K>
+auto count_reads(const VBInverseGenotypeVector<K>& likelihoods) noexcept
+{
+    return likelihoods[0].size();
+}
+
+template <std::size_t K>
+auto marginalise(const ProbabilityVector& distribution, const VBGenotypeVector<K>& likelihoods,
+                 const unsigned k, const std::size_t n) noexcept
 {
     return std::inner_product(std::cbegin(distribution), std::cend(distribution),
                               std::cbegin(likelihoods), 0.0, std::plus<> {},
-                              [k, n](const auto p, const auto& haplotype_likelihoods) noexcept {
+                              [k, n] (const auto p, const auto& haplotype_likelihoods) noexcept {
                                   return p * haplotype_likelihoods[k][n];
                               });
 }
 
 template <std::size_t K>
+auto marginalise(const ProbabilityVector& distribution, const VBInverseGenotypeVector<K>& likelihoods,
+                 const unsigned k, const std::size_t n) noexcept
+{
+    return std::inner_product(std::cbegin(distribution), std::cend(distribution), std::cbegin(likelihoods[k][n]), 0.0);
+}
+
+template <std::size_t K, typename VBLikelihoodVector_>
 VBResponsabilityVector<K>
 init_responsabilities(const VBAlpha<K>& prior_alphas,
                       const ProbabilityVector& genotype_probabilities,
-                      const VBGenotypeVector<K>& read_likelihoods)
+                      const VBLikelihoodVector_& read_likelihoods)
 {
-    std::array<double, K> al; // no need to keep recomputing this
+    using T = typename VBAlpha<K>::value_type;
+    std::array<T, K> al; // no need to keep recomputing this
     const auto a0 = sum(prior_alphas);
     for (unsigned k {0}; k < K; ++k) {
         al[k] = digamma_diff(prior_alphas[k], a0);
     }
-    const auto N = read_likelihoods[0][0].size(); // num reads in sample s
+    const auto N = count_reads(read_likelihoods);
     VBResponsabilityVector<K> result(N);
-    std::array<double, K> ln_rho;
+    std::array<T, K> ln_rho;
     for (std::size_t n {0}; n < N; ++n) {
         for (unsigned k {0}; k < K; ++k) {
-            ln_rho[k] = al[k] + expectation(genotype_probabilities, read_likelihoods, k, n);
+            ln_rho[k] = al[k] + marginalise(genotype_probabilities, read_likelihoods, k, n);
         }
         const auto ln_rho_norm = log_sum_exp(ln_rho);
         for (unsigned k {0}; k < K; ++k) {
@@ -198,14 +258,12 @@ init_responsabilities(const VBAlpha<K>& prior_alphas,
     return result;
 }
 
-template <std::size_t K>
+template <std::size_t K, typename VBLikelihoodMatrix>
 VBResponsabilityMatrix<K>
 init_responsabilities(const VBAlphaVector<K>& prior_alphas,
                       const ProbabilityVector& genotype_probabilities,
-                      const VBReadLikelihoodMatrix<K>& read_likelihoods)
+                      const VBLikelihoodMatrix& read_likelihoods)
 {
-    assert(!read_likelihoods.empty());
-    assert(prior_alphas.size() == read_likelihoods.size());
     const auto S = read_likelihoods.size(); // num samples
     VBResponsabilityMatrix<K> result{};
     result.reserve(S);
@@ -215,22 +273,23 @@ init_responsabilities(const VBAlphaVector<K>& prior_alphas,
     return result;
 }
 
-template <std::size_t K>
+template <std::size_t K, typename VBLikelihoodVector_>
 void update_responsabilities(VBResponsabilityVector<K>& result,
                              const VBAlpha<K>& posterior_alphas,
                              const ProbabilityVector& genotype_probabilities,
-                             const VBGenotypeVector<K>& read_likelihoods)
+                             const VBLikelihoodVector_& read_likelihoods)
 {
-    std::array<double, K> al;
+    using T = typename VBAlpha<K>::value_type;
+    std::array<T, K> al;
     const auto a0 = sum(posterior_alphas);
     for (unsigned k {0}; k < K; ++k) {
         al[k] = digamma_diff(posterior_alphas[k], a0);
     }
-    const auto N = read_likelihoods[0][0].size();
-    std::array<double, K> ln_rho;
+    const auto N = count_reads(read_likelihoods);
+    std::array<T, K> ln_rho;
     for (std::size_t n {0}; n < N; ++n) {
         for (unsigned k {0}; k < K; ++k) {
-            ln_rho[k] = al[k] + expectation(genotype_probabilities, read_likelihoods, k, n);
+            ln_rho[k] = al[k] + marginalise(genotype_probabilities, read_likelihoods, k, n);
         }
         const auto ln_rho_norm = log_sum_exp(ln_rho);
         for (unsigned k {0}; k < K; ++k) {
@@ -240,11 +299,11 @@ void update_responsabilities(VBResponsabilityVector<K>& result,
 }
 
 // same as init_responsabilities but in-place
-template <std::size_t K>
+template <std::size_t K, typename VBLikelihoodMatrix>
 void update_responsabilities(VBResponsabilityMatrix<K>& result,
                              const VBAlphaVector<K>& posterior_alphas,
                              const ProbabilityVector& genotype_probabilities,
-                             const VBReadLikelihoodMatrix<K>& read_likelihoods)
+                             const VBLikelihoodMatrix& read_likelihoods)
 {
     const auto S = read_likelihoods.size();
     for (std::size_t s {0}; s < S; ++s) {
@@ -256,7 +315,7 @@ template <std::size_t K>
 auto sum(const VBResponsabilityVector<K>& taus, const unsigned k) noexcept
 {
     return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
-                           [k](const auto curr, const auto& tau) noexcept {
+                           [k] (const auto curr, const auto& tau) noexcept {
                                return curr + tau[k];
                            });
 }
@@ -376,7 +435,7 @@ auto dirichlet_expectation(const VBAlpha<K>& priors, const VBAlpha<K>& posterior
     const auto da0 = digamma(sum(posteriors));
     return std::inner_product(std::cbegin(priors), std::cend(priors),
                               std::cbegin(posteriors), 0.0, std::plus<> {},
-                              [da0](const auto& prior, const auto& post) {
+                              [da0] (const auto& prior, const auto& post) {
                                   return (prior - 1) * (digamma(post) - da0);
                               }) - maths::log_beta(priors);
 }
@@ -386,7 +445,7 @@ auto expectation(const VBAlphaVector<K>& priors, const VBAlphaVector<K>& posteri
 {
     return std::inner_product(std::cbegin(priors), std::cend(priors),
                               std::cbegin(posteriors), 0.0, std::plus<> {},
-                              [](const auto& prior, const auto& post) {
+                              [] (const auto& prior, const auto& post) {
                                   return dirichlet_expectation(prior, post);
                               });
 }
@@ -409,15 +468,15 @@ template <std::size_t K>
 auto expectation(const VBResponsabilityMatrix<K>& taus, const VBAlphaVector<K>& alphas)
 {
     return std::inner_product(std::cbegin(taus), std::cend(taus), std::cbegin(alphas), 0.0, std::plus<> {},
-                              [](const auto& tau, const auto& alpha) {
+                              [] (const auto& tau, const auto& alpha) {
                                   return expectation(tau, alpha);
                               });
 }
 
 template <std::size_t K>
 auto expectation(const VBResponsabilityMatrix<K>& taus,
-                   const VBReadLikelihoodMatrix<K>& log_likelihoods,
-                   const std::size_t g)
+                 const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                 const std::size_t g)
 {
     double result {0};
     for (std::size_t s {0}; s < taus.size(); ++s) {
@@ -433,8 +492,8 @@ auto expectation(const VBResponsabilityMatrix<K>& taus,
 // E[ln p(R | Z, g)]
 template <std::size_t K>
 auto expectation(const ProbabilityVector& genotype_posteriors,
-                   const VBResponsabilityMatrix<K>& taus,
-                   const VBReadLikelihoodMatrix<K>& log_likelihoods)
+                 const VBResponsabilityMatrix<K>& taus,
+                 const VBReadLikelihoodMatrix<K>& log_likelihoods)
 {
     double result {0};
     for (std::size_t g {0}; g < genotype_posteriors.size(); ++g) {
@@ -449,7 +508,7 @@ auto dirichlet_expectation(const VBAlpha<K>& posterior)
     using boost::math::digamma;
     const auto da0 = digamma(sum(posterior));
     return std::accumulate(std::cbegin(posterior), std::cend(posterior), 0.0,
-                           [da0](const auto curr, const auto a) {
+                           [da0] (const auto curr, const auto a) {
                                return curr + ((a - 1) * (digamma(a) - da0));
                            }) - maths::log_beta(posterior);
 }
@@ -458,7 +517,7 @@ template <std::size_t K>
 auto expectation(const VBAlphaVector<K>& posteriors)
 {
     return std::accumulate(std::cbegin(posteriors), std::cend(posteriors), 0.0,
-                           [](const auto curr, const auto& posterior) {
+                           [] (const auto curr, const auto& posterior) {
                                return curr + dirichlet_expectation(posterior);
                            });
 }
@@ -467,7 +526,7 @@ template <std::size_t K>
 auto q_expectation(const VBTau<K>& tau) noexcept
 {
     return std::accumulate(std::cbegin(tau), std::cend(tau), 0.0,
-                           [](const auto curr, const auto t) noexcept {
+                           [] (const auto curr, const auto t) noexcept {
                                return curr + (t * std::log(t));
                            });
 }
@@ -483,7 +542,7 @@ template <std::size_t K>
 auto q_expectation(const VBResponsabilityVector<K>& taus) noexcept
 {
     return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
-                           [](const auto curr, const auto& tau) noexcept {
+                           [] (const auto curr, const auto& tau) noexcept {
                                return curr + q_expectation(tau);
                            });
 }
@@ -493,16 +552,16 @@ template <std::size_t K>
 auto q_expectation(const VBResponsabilityMatrix<K>& taus) noexcept
 {
     return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
-                           [](const auto curr, const auto& t) noexcept {
+                           [] (const auto curr, const auto& t) noexcept {
                                return curr + q_expectation(t);
                            });
 }
 
 template <std::size_t K>
 auto calculate_lower_bound(const VBAlphaVector<K>& prior_alphas,
-                             const LogProbabilityVector& genotype_log_priors,
-                             const VBReadLikelihoodMatrix<K>& log_likelihoods,
-                             const VBLatents<K>& latents)
+                           const LogProbabilityVector& genotype_log_priors,
+                           const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                           const VBLatents<K>& latents)
 {
     const auto& genotype_posteriors     = latents.genotype_posteriors;
     const auto& genotype_log_posteriors = latents.genotype_log_posteriors;
@@ -522,31 +581,33 @@ auto calculate_lower_bound(const VBAlphaVector<K>& prior_alphas,
 // Main algorithm - single seed
 
 // Starting iteration with given genotype_log_posteriors
-template <std::size_t K>
+template <std::size_t K, typename VBLikelihoodMatrix1, typename VBLikelihoodMatrix2>
 VBLatents<K>
 run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                       const LogProbabilityVector& genotype_log_priors,
-                      const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                      const VBLikelihoodMatrix1& log_likelihoods1,
+                      const VBLikelihoodMatrix2& log_likelihoods2,
                       LogProbabilityVector genotype_log_posteriors,
                       const VariationalBayesParameters& params)
 {
     assert(!prior_alphas.empty());
     assert(!genotype_log_priors.empty());
-    assert(!log_likelihoods.empty());
-    assert(prior_alphas.size() == log_likelihoods.size()); // num samples
-    assert(log_likelihoods.front().size() == genotype_log_priors.size()); // num genotypes
+    assert(!log_likelihoods1.empty());
+    assert(log_likelihoods1.size() == log_likelihoods2.size());
+    assert(prior_alphas.size() == log_likelihoods1.size()); // num samples
+    assert(log_likelihoods1.front().size() == genotype_log_priors.size()); // num genotypes
     assert(params.max_iterations > 0);
     auto genotype_posteriors = exp(genotype_log_posteriors);
     auto posterior_alphas = prior_alphas;
-    auto responsabilities = init_responsabilities<K>(posterior_alphas, genotype_posteriors, log_likelihoods);
-    assert(responsabilities.size() == log_likelihoods.size()); // num samples
+    auto responsabilities = init_responsabilities<K>(posterior_alphas, genotype_posteriors, log_likelihoods2);
+    assert(responsabilities.size() == log_likelihoods1.size()); // num samples
     bool is_converged {false};
     double max_change {0};
     for (unsigned i {0}; i < params.max_iterations; ++i) {
-        update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors, responsabilities, log_likelihoods);
+        update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors, responsabilities, log_likelihoods1);
         exp(genotype_log_posteriors, genotype_posteriors);
         update_alphas(posterior_alphas, prior_alphas, responsabilities);
-        update_responsabilities(responsabilities, posterior_alphas, genotype_posteriors, log_likelihoods);
+        update_responsabilities(responsabilities, posterior_alphas, genotype_posteriors, log_likelihoods2);
         std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas, max_change, params.epsilon);
         if (is_converged) break;
     }
@@ -556,16 +617,66 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
     };
 }
 
+// Not using inverted log likelihoods
 template <std::size_t K>
-std::pair<VBLatents<K>, double>
-get_max_evidence_seed(const VBAlphaVector<K>& prior_alphas,
+VBLatents<K>
+run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                       const LogProbabilityVector& genotype_log_priors,
                       const VBReadLikelihoodMatrix<K>& log_likelihoods,
-                      std::vector<VBLatents<K>>&& latents)
+                      LogProbabilityVector genotype_log_posteriors,
+                      const VariationalBayesParameters& params)
+{
+    return run_variational_bayes(prior_alphas, genotype_log_posteriors, log_likelihoods,
+                                 log_likelihoods, genotype_log_posteriors, params);
+}
+
+// Main algorithm - multiple seed
+
+template <std::size_t K>
+bool run_vb_with_matrix_inversion(const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                                  const VariationalBayesParameters& params,
+                                  const std::vector<LogProbabilityVector>& seeds) noexcept
+{
+    return true;
+}
+
+template <std::size_t K>
+std::vector<VBLatents<K>>
+run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
+                      const LogProbabilityVector& genotype_log_priors,
+                      const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                      const VariationalBayesParameters& params,
+                      std::vector<LogProbabilityVector>&& seeds)
+{
+    std::vector<VBLatents<K>> result {};
+    result.reserve(seeds.size());
+    if (run_vb_with_matrix_inversion(log_likelihoods, params, seeds)) {
+        const auto inverted_log_likelihoods = invert(log_likelihoods);
+        for (auto& seed : seeds) {
+            result.push_back(detail::run_variational_bayes(prior_alphas, genotype_log_priors,
+                                                           log_likelihoods, inverted_log_likelihoods,
+                                                           std::move(seed), params));
+        }
+    } else {
+        for (auto& seed : seeds) {
+            result.push_back(detail::run_variational_bayes(prior_alphas, genotype_log_priors,
+                                                           log_likelihoods,
+                                                           std::move(seed), params));
+        }
+    }
+    return result;
+}
+
+template <std::size_t K>
+std::pair<VBLatents<K>, double>
+get_max_evidence_latents(const VBAlphaVector<K>& prior_alphas,
+                         const LogProbabilityVector& genotype_log_priors,
+                         const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                         std::vector<VBLatents<K>>&& latents)
 {
     std::vector<double> seed_evidences(latents.size());
     std::transform(std::cbegin(latents), std::cend(latents), std::begin(seed_evidences),
-                   [&](const auto& seed_latents) {
+                   [&] (const auto& seed_latents) {
                        return calculate_lower_bound(prior_alphas, genotype_log_priors, log_likelihoods, seed_latents);
                    });
     const auto max_itr = std::max_element(std::cbegin(seed_evidences), std::cend(seed_evidences));
@@ -583,13 +694,8 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                       const VariationalBayesParameters& params,
                       std::vector<LogProbabilityVector> seeds)
 {
-    std::vector<VBLatents<K>> latents {};
-    latents.reserve(seeds.size());
-    for (auto& seed : seeds) {
-        latents.push_back(detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods,
-                                                        std::move(seed), params));
-    }
-    return detail::get_max_evidence_seed(prior_alphas, genotype_log_priors, log_likelihoods, std::move(latents));
+    auto latents = detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
+    return detail::get_max_evidence_latents(prior_alphas, genotype_log_priors, log_likelihoods, std::move(latents));
 }
 
 inline VBReadLikelihoodArray::VBReadLikelihoodArray(const BaseType& underlying_likelihoods)
