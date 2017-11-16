@@ -75,7 +75,7 @@ VBAlphaVector<K> flatten(const TumourModel::Priors& priors, const std::vector<Sa
 {
     VBAlphaVector<K> result(samples.size());
     std::transform(std::cbegin(samples), std::cend(samples), std::begin(result),
-                   [&priors](const auto& sample) {
+                   [&priors] (const auto& sample) {
                        return flatten<K>(priors.alphas.at(sample));
                    });
     return result;
@@ -91,7 +91,7 @@ flatten(const CancerGenotype<Haplotype>& genotype, const SampleName& sample,
     assert(germline_genotype.ploidy() == (K - 1));
     std::transform(std::cbegin(germline_genotype), std::cend(germline_genotype),
                    std::begin(result),
-                   [&sample, &haplotype_likelihoods](const Haplotype& haplotype)
+                   [&sample, &haplotype_likelihoods] (const Haplotype& haplotype)
                    -> std::reference_wrapper<const VBReadLikelihoodArray::BaseType> {
                        return std::cref(haplotype_likelihoods(sample, haplotype));
                    });
@@ -106,7 +106,7 @@ flatten(const std::vector<CancerGenotype<Haplotype>>& genotypes, const SampleNam
 {
     VBGenotypeVector<K> result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&sample, &haplotype_likelihoods](const auto& genotype) {
+                   [&sample, &haplotype_likelihoods] (const auto& genotype) {
                        return flatten<K>(genotype, sample, haplotype_likelihoods);
                    });
     return result;
@@ -118,10 +118,10 @@ flatten(const std::vector<CancerGenotype<Haplotype>>& genotypes,
         const std::vector<SampleName>& samples,
         const HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
-    VBReadLikelihoodMatrix<K> result{};
+    VBReadLikelihoodMatrix<K> result {};
     result.reserve(samples.size());
     std::transform(std::cbegin(samples), std::cend(samples), std::back_inserter(result),
-                   [&genotypes, &haplotype_likelihoods](const auto& sample) {
+                   [&genotypes, &haplotype_likelihoods] (const auto& sample) {
                        return flatten<K>(genotypes, sample, haplotype_likelihoods);
                    });
     return result;
@@ -130,12 +130,12 @@ flatten(const std::vector<CancerGenotype<Haplotype>>& genotypes,
 TumourModel::Latents::GenotypeProbabilityMap
 expand(std::vector<CancerGenotype<Haplotype>>&& genotypes, LogProbabilityVector&& genotype_log_posteriors)
 {
-    TumourModel::Latents::GenotypeProbabilityMap result{};
+    TumourModel::Latents::GenotypeProbabilityMap result {};
     std::transform(std::make_move_iterator(std::begin(genotypes)),
                    std::make_move_iterator(std::end(genotypes)),
                    std::begin(genotype_log_posteriors),
                    std::inserter(result, std::begin(result)),
-                   [](auto&& g, auto p) { return std::make_pair(std::move(g), p); });
+                   [] (auto&& g, auto p) { return std::make_pair(std::move(g), p); });
     return result;
 }
 
@@ -149,10 +149,10 @@ template <std::size_t K>
 TumourModel::Latents::GenotypeMixturesDirichletAlphaMap
 expand(const std::vector<SampleName>& samples, VBAlphaVector<K>&& alphas)
 {
-    TumourModel::Latents::GenotypeMixturesDirichletAlphaMap result{};
+    TumourModel::Latents::GenotypeMixturesDirichletAlphaMap result {};
     std::transform(std::cbegin(samples), std::cend(samples), std::begin(alphas),
                    std::inserter(result, std::begin(result)),
-                   [](const auto& sample, auto&& vb_alpha) {
+                   [] (const auto& sample, auto&& vb_alpha) {
                        return std::make_pair(sample, expand(vb_alpha));
                    });
     return result;
@@ -163,42 +163,36 @@ TumourModel::InferredLatents
 expand(const std::vector<SampleName>& samples, std::vector<CancerGenotype<Haplotype>>&& genotypes,
        VBLatents<K>&& inferred_latents, const double evidence)
 {
-    TumourModel::Latents posterior_latents{
-    expand(std::move(genotypes), std::move(inferred_latents.genotype_posteriors)),
-    expand(samples, std::move(inferred_latents.alphas))
+    TumourModel::Latents posterior_latents {
+        expand(std::move(genotypes), std::move(inferred_latents.genotype_posteriors)),
+        expand(samples, std::move(inferred_latents.alphas))
     };
     return TumourModel::InferredLatents {std::move(posterior_latents), evidence};
 }
 
-auto compute_germline_log_posteriors(const SampleName& sample,
-                                     const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+auto compute_germline_log_likelihoods(const SampleName& sample,
+                                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
 {
-    assert(!genotypes.empty());
     haplotype_log_likelihoods.prime(sample);
-    const GermlineLikelihoodModel likelihood_model{haplotype_log_likelihoods};
+    const GermlineLikelihoodModel likelihood_model {haplotype_log_likelihoods};
     std::vector<double> result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&](const auto& genotype) {
+                   [&] (const auto& genotype) {
                        return likelihood_model.evaluate(genotype.germline_genotype());
                    });
-    maths::normalise_logs(result);
     return result;
 }
 
-auto compute_germline_log_posteriors(const SampleName& sample,
-                                     const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+auto compute_germline_log_posteriors(const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                     const std::vector<double>& log_likelihoods,
                                      const CancerGenotypePriorModel& genotype_prior_model)
 {
-    assert(!genotypes.empty());
-    haplotype_log_likelihoods.prime(sample);
-    const GermlineLikelihoodModel likelihood_model{haplotype_log_likelihoods};
+    assert(genotypes.size() == log_likelihoods.size());
     std::vector<double> result(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&](const auto& genotype) {
-                       return genotype_prior_model.evaluate(genotype)
-                              + likelihood_model.evaluate(genotype.germline_genotype());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(log_likelihoods), std::begin(result),
+                   [&] (const auto& genotype, auto likelihood) {
+                       return genotype_prior_model.evaluate(genotype) + likelihood;
                    });
     maths::normalise_logs(result);
     return result;
@@ -210,10 +204,10 @@ auto compute_log_posteriors_with_germline_model(const SampleName& sample,
 {
     assert(!genotypes.empty());
     haplotype_log_likelihoods.prime(sample);
-    const GermlineLikelihoodModel likelihood_model{haplotype_log_likelihoods};
+    const GermlineLikelihoodModel likelihood_model {haplotype_log_likelihoods};
     std::vector<double> result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&](const auto& genotype) {
+                   [&] (const auto& genotype) {
                        return likelihood_model.evaluate(demote(genotype));
                    });
     maths::normalise_logs(result);
@@ -231,15 +225,16 @@ auto generate_seeds(const std::vector<SampleName>& samples,
                     const TumourModel::Priors& priors,
                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
 {
-    std::vector<LogProbabilityVector> result{};
+    std::vector<LogProbabilityVector> result {};
     result.reserve(2 + 3 * samples.size());
-    result.emplace_back(genotype_log_priors);
-    result.emplace_back(log_uniform_dist(genotypes.size()));
+    result.push_back(genotype_log_priors);
+    result.push_back(log_uniform_dist(genotypes.size()));
     for (const auto& sample : samples) {
-        result.emplace_back(compute_germline_log_posteriors(sample, genotypes, haplotype_log_likelihoods));
-        result.emplace_back(compute_germline_log_posteriors(sample, genotypes, haplotype_log_likelihoods,
-                                                            priors.genotype_prior_model));
-        result.emplace_back(compute_log_posteriors_with_germline_model(sample, genotypes, haplotype_log_likelihoods));
+        auto log_likelihoods = compute_germline_log_likelihoods(sample, genotypes, haplotype_log_likelihoods);
+        result.push_back(compute_germline_log_posteriors(genotypes, log_likelihoods, priors.genotype_prior_model));
+        maths::normalise_exp(log_likelihoods); // convert to probabilities
+        result.push_back(std::move(log_likelihoods));
+        result.push_back(compute_log_posteriors_with_germline_model(sample, genotypes, haplotype_log_likelihoods));
     }
     return result;
 }
