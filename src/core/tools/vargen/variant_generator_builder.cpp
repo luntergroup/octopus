@@ -18,13 +18,6 @@ VariantGeneratorBuilder::set_cigar_scanner(CigarScanner::Options options)
 }
 
 VariantGeneratorBuilder&
-VariantGeneratorBuilder::set_dynamic_cigar_scanner(DynamicCigarScanner::Options options)
-{
-    dynamic_cigar_scanner_ = std::move(options);
-    return *this;
-}
-
-VariantGeneratorBuilder&
 VariantGeneratorBuilder::set_local_reassembler(LocalReassembler::Options options)
 {
     local_reassembler_ = std::move(options);
@@ -58,9 +51,6 @@ VariantGenerator VariantGeneratorBuilder::build(const ReferenceGenome& reference
     
     if (cigar_scanner_) {
         result.add(std::make_unique<CigarScanner>(reference, *cigar_scanner_));
-    }
-    if (dynamic_cigar_scanner_) {
-        result.add(std::make_unique<DynamicCigarScanner>(reference, *dynamic_cigar_scanner_));
     }
     if (local_reassembler_) {
         result.add(std::make_unique<LocalReassembler>(reference, *local_reassembler_));

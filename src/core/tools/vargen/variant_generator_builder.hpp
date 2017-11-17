@@ -10,7 +10,6 @@
 #include <boost/filesystem.hpp>
 
 #include "cigar_scanner.hpp"
-#include "dynamic_cigar_scanner.hpp"
 #include "local_reassembler.hpp"
 #include "vcf_extractor.hpp"
 #include "downloader.hpp"
@@ -36,7 +35,6 @@ public:
     ~VariantGeneratorBuilder() = default;
     
     VariantGeneratorBuilder& set_cigar_scanner(CigarScanner::Options options);
-    VariantGeneratorBuilder& set_dynamic_cigar_scanner(DynamicCigarScanner::Options options);
     VariantGeneratorBuilder& set_local_reassembler(LocalReassembler::Options options);
     VariantGeneratorBuilder& add_vcf_extractor(boost::filesystem::path reader,
                                                VcfExtractor::Options options = VcfExtractor::Options {});
@@ -53,7 +51,6 @@ private:
     };
     
     boost::optional<CigarScanner::Options> cigar_scanner_;
-    boost::optional<DynamicCigarScanner::Options> dynamic_cigar_scanner_;
     boost::optional<LocalReassembler::Options> local_reassembler_;
     std::deque<VcfExtractorPacket> vcf_extractors_;
     std::deque<Downloader::Options> downloaders_;

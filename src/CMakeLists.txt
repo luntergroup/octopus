@@ -328,11 +328,9 @@ set(CORE_SOURCES
     
     core/tools/phaser/phaser.hpp
     core/tools/phaser/phaser.cpp
-    
+
     core/tools/vargen/cigar_scanner.hpp
     core/tools/vargen/cigar_scanner.cpp
-    core/tools/vargen/dynamic_cigar_scanner.hpp
-    core/tools/vargen/dynamic_cigar_scanner.cpp
     core/tools/vargen/downloader.hpp
     core/tools/vargen/downloader.cpp
     core/tools/vargen/local_reassembler.hpp
