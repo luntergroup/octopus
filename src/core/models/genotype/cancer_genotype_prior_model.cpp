@@ -4,7 +4,6 @@
 #include "cancer_genotype_prior_model.hpp"
 
 #include <utility>
-#include <cmath>
 #include <numeric>
 #include <stdexcept>
 
@@ -18,49 +17,43 @@ CancerGenotypePriorModel::CancerGenotypePriorModel(const GenotypePriorModel& ger
 , mutation_model_ {mutation_model}
 {}
 
+const GenotypePriorModel& CancerGenotypePriorModel::germline_model() const noexcept
+{
+    return germline_model_.get();
+}
+
+SomaticMutationModel& CancerGenotypePriorModel::mutation_model() noexcept
+{
+    return mutation_model_;
+}
+
+const SomaticMutationModel& CancerGenotypePriorModel::mutation_model() const noexcept
+{
+    return mutation_model_;
+}
+
 double CancerGenotypePriorModel::evaluate(const CancerGenotype<Haplotype>& genotype) const
 {
     const auto& germline = genotype.germline_genotype();
     const auto& somatic = genotype.somatic_element();
     const auto germline_log_prior = germline_model_.get().evaluate(germline);
-    return germline_log_prior + ln_probability_of_somatic(somatic, germline);
+    return germline_log_prior + ln_probability_of_somatic_given_genotype(somatic, germline);
 }
 
-// p(somatic | germline) = 1 / M sum [k = 1 -> M] p(somatic | germline_k) (M = germline ploidy)
-double CancerGenotypePriorModel::ln_probability_of_somatic(const Haplotype& somatic, const Genotype<Haplotype>& germline) const
+double CancerGenotypePriorModel::evaluate(const std::vector<unsigned>& germline_indices, const unsigned somatic_index) const
 {
-    switch (germline.ploidy()) {
-        case 1: return ln_probability_of_somatic(somatic, germline);
-        case 2:
-        {
-            const static double ln2 {std::log(2)};
-            const auto a = ln_probability_of_somatic(somatic, germline[0]);
-            const auto b = ln_probability_of_somatic(somatic, germline[1]);
-            return maths::log_sum_exp(a, b) - ln2;
-        }
-        case 3:
-        {
-            const static double ln3 {std::log(2)};
-            const auto a = ln_probability_of_somatic(somatic, germline[0]);
-            const auto b = ln_probability_of_somatic(somatic, germline[1]);
-            const auto c = ln_probability_of_somatic(somatic, germline[3]);
-            return maths::log_sum_exp(a, b, c) - ln3;
-        }
-        default:
-        {
-            std::vector<double> tmp(germline.ploidy());
-            std::transform(std::cbegin(germline), std::cend(germline), std::begin(tmp),
-                           [this, &somatic] (const Haplotype& haplotype) {
-                               return ln_probability_of_somatic(somatic, haplotype);
-                           });
-            return maths::log_sum_exp(tmp) - std::log(germline.ploidy());
-        }
-    }
+    return germline_model_.get().evaluate(germline_indices)
+           + ln_probability_of_somatic_given_genotype(somatic_index, germline_indices);
 }
 
-double CancerGenotypePriorModel::ln_probability_of_somatic(const Haplotype& somatic, const Haplotype& germline) const
+double CancerGenotypePriorModel::ln_probability_of_somatic_given_haplotype(const Haplotype& somatic, const Haplotype& germline) const
 {
     return mutation_model_.evaluate(somatic, germline);
 }
-    
+
+double CancerGenotypePriorModel::ln_probability_of_somatic_given_haplotype(unsigned somatic_index, unsigned germline_index) const
+{
+    return mutation_model_.evaluate(somatic_index, germline_index);
+}
+
 } // namespace octopus
