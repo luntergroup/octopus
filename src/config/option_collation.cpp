@@ -847,32 +847,30 @@ auto make_variant_generator_builder(const OptionMap& options)
     const bool use_assembler {allow_assembler_generation(options)};
     
     if (options.at("raw-cigar-candidate-generator").as<bool>()) {
+        DynamicCigarScanner::Options scanner_options {};
         if (is_set("min-supporting-reads", options)) {
-            CigarScanner::Options scanner_options {};
-            scanner_options.min_base_quality = as_unsigned("min-base-quality", options);
-            scanner_options.min_support = as_unsigned("min-supporting-reads", options);
-            if (scanner_options.min_support == 0) {
+            auto min_support = as_unsigned("min-supporting-reads", options);
+            if (min_support == 0) {
                 warning_log << "The option --min_supporting_reads was set to 0 - assuming this is a typo and setting to 1";
-                ++scanner_options.min_support;
+                ++min_support;
             }
-            result.set_cigar_scanner(scanner_options);
+            scanner_options.include = coretools::SimpleThresholdInclusionPredicate {min_support};
         } else {
-            DynamicCigarScanner::Options scanner_options {};
             scanner_options.include = get_default_inclusion_predicate(options);
-            scanner_options.match = get_default_match_predicate();
-            scanner_options.use_clipped_coverage_tracking = true;
-            scanner_options.repeat_region_generator = DefaultRepeatGenerator {};
-            DynamicCigarScanner::Options::MisalignmentParameters misalign_params {};
-            misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
-            misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
-            if (use_assembler) {
-                misalign_params.indel_penalty = 1.5;
-                misalign_params.clip_penalty = 2;
-                misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
-            }
-            scanner_options.misalignment_parameters = misalign_params;
-            result.set_dynamic_cigar_scanner(std::move(scanner_options));
         }
+        scanner_options.match = get_default_match_predicate();
+        scanner_options.use_clipped_coverage_tracking = true;
+        scanner_options.repeat_region_generator = DefaultRepeatGenerator {};
+        DynamicCigarScanner::Options::MisalignmentParameters misalign_params {};
+        misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
+        misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
+        if (use_assembler) {
+            misalign_params.indel_penalty = 1.5;
+            misalign_params.clip_penalty = 2;
+            misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
+        }
+        scanner_options.misalignment_parameters = misalign_params;
+        result.set_dynamic_cigar_scanner(std::move(scanner_options));
     }
     if (use_assembler) {
         LocalReassembler::Options reassembler_options {};

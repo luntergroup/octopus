@@ -162,7 +162,15 @@ void DynamicCigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&&
 
 struct DefaultInclusionPredicate
 {
-    bool operator()(DynamicCigarScanner::ObservedVariant);
+    bool operator()(const DynamicCigarScanner::ObservedVariant& candidate);
+};
+
+struct SimpleThresholdInclusionPredicate
+{
+    SimpleThresholdInclusionPredicate(std::size_t min_observations) : min_observations_ {min_observations} {}
+    bool operator()(const DynamicCigarScanner::ObservedVariant& candidate) noexcept;
+private:
+    std::size_t min_observations_;
 };
 
 struct DefaultMatchPredicate

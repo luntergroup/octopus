@@ -526,12 +526,27 @@ bool is_good(const Variant& variant, const unsigned depth, const unsigned num_fw
 
 } // namespace
 
-bool DefaultInclusionPredicate::operator()(DynamicCigarScanner::ObservedVariant candidate)
+bool DefaultInclusionPredicate::operator()(const DynamicCigarScanner::ObservedVariant& candidate)
 {
     return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
                        [&] (const auto& o) {
                            return is_good(candidate.variant, o.depth, o.num_fwd_observations, o.observed_qualities);
                        });
+}
+
+namespace {
+
+auto count_observations(const DynamicCigarScanner::ObservedVariant& candidate)
+{
+    return std::accumulate(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations), std::size_t {0},
+                           [] (auto curr, const auto& sample) { return curr + sample.observed_qualities.size(); });
+}
+
+} // namespace
+
+bool SimpleThresholdInclusionPredicate::operator()(const DynamicCigarScanner::ObservedVariant& candidate) noexcept
+{
+    return count_observations(candidate) >= min_observations_;
 }
 
 bool DefaultMatchPredicate::operator()(const Variant& lhs, const Variant& rhs) noexcept
