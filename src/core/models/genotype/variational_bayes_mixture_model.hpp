@@ -93,7 +93,7 @@ struct VBLatents
     VBResponsabilityMatrix<K> responsabilities;
 };
 
-// Main VB mathod
+// Main VB method
 
 template <std::size_t K>
 std::pair<VBLatents<K>, double>
@@ -341,23 +341,33 @@ void update_alphas(VBAlphaVector<K>& alphas, const VBAlphaVector<K>& prior_alpha
 }
 
 template <std::size_t K>
+auto marginalise(const VBResponsabilityVector<K>& responsabilities,
+                 const VBGenotypeVector<K>& read_likelihoods,
+                 const std::size_t g) noexcept
+{
+    double result {0};
+    const auto N = read_likelihoods[0][0].size(); // num reads in sample s
+    assert(responsabilities.size() == N);
+    assert(responsabilities[0].size() == K && read_likelihoods[g].size() == K);
+    for (unsigned k {0}; k < K; ++k) {
+        const auto& k_likelihoods = read_likelihoods[g][k];
+        for (std::size_t n {0}; n < N; ++n) {
+            result += responsabilities[n][k] * k_likelihoods[n];
+        }
+    }
+    return result;
+}
+
+template <std::size_t K>
 auto marginalise(const VBResponsabilityMatrix<K>& responsabilities,
                  const VBReadLikelihoodMatrix<K>& read_likelihoods,
-                 const std::size_t g)
+                 const std::size_t g) noexcept
 {
     double result {0};
     const auto S = read_likelihoods.size(); // num samples
     assert(S == responsabilities.size());
     for (std::size_t s {0}; s < S; ++s) {
-        const auto N = read_likelihoods[s][0][0].size(); // num reads in sample s
-        assert(responsabilities[s].size() == N);
-        assert(responsabilities[s][0].size() == K);
-        assert(read_likelihoods[s][g].size() == K);
-        for (unsigned k {0}; k < K; ++k) {
-            for (std::size_t n {0}; n < N; ++n) {
-                result += responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
-            }
-        }
+        result += marginalise(responsabilities[s], read_likelihoods[s], g);
     }
     return result;
 }
