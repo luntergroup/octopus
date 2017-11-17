@@ -122,6 +122,10 @@ private:
     using GermlineGenotypeProbabilityMap = std::unordered_map<GermlineGenotypeReference, double>;
     using ProbabilityVector              = std::vector<double>;
     
+    void generate_germline_genotypes(Latents& latents, const std::vector<Haplotype>& haplotypes) const;
+    void generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void generate_cancer_genotypes(Latents& latents, const std::vector<Genotype<Haplotype>>& germline_genotypes) const;
+    
     void evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void evaluate_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
@@ -132,8 +136,6 @@ private:
     TumourModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model) const;
     TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const;
     CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
-    
-    CancerGenotypeVector generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
     ModelPriors get_model_priors() const;
     ModelPosteriors calculate_model_posteriors(const Latents& latents) const;
@@ -164,6 +166,8 @@ private:
     std::reference_wrapper<const std::vector<Haplotype>> haplotypes_;
     std::vector<Genotype<Haplotype>> germline_genotypes_;
     std::vector<CancerGenotype<Haplotype>> cancer_genotypes_;
+    boost::optional<std::vector<std::vector<unsigned>>> germline_genotype_indices_ = boost::none;
+    boost::optional<std::vector<std::pair<std::vector<unsigned>, unsigned>>> cancer_genotype_indices_ = boost::none;
     
     std::reference_wrapper<const std::vector<SampleName>> samples_;
     boost::optional<std::reference_wrapper<const SampleName>> normal_sample_ = boost::none;

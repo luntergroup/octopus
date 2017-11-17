@@ -30,7 +30,7 @@ public:
         using GenotypeMixturesDirichletAlphas   = std::vector<double>;
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
         
-        CancerGenotypePriorModel genotype_prior_model;
+        const CancerGenotypePriorModel& genotype_prior_model;
         GenotypeMixturesDirichletAlphaMap alphas;
     };
     
@@ -51,9 +51,8 @@ public:
     
     TumourModel() = delete;
     
-    TumourModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors);
-    TumourModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors,
-                AlgorithmParameters parameters);
+    TumourModel(std::vector<SampleName> samples, Priors priors);
+    TumourModel(std::vector<SampleName> samples, Priors priors, AlgorithmParameters parameters);
     
     ~TumourModel() = default;
     
@@ -67,9 +66,12 @@ public:
     InferredLatents evaluate(const std::vector<CancerGenotype<Haplotype>>& genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
+    InferredLatents evaluate(const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                             const std::vector<std::pair<std::vector<unsigned>, unsigned>>& genotype_indices,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    
 private:
     std::vector<SampleName> samples_;
-    unsigned ploidy_;
     Priors priors_;
     AlgorithmParameters parameters_;
 };

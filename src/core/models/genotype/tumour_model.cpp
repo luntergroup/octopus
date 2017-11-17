@@ -18,14 +18,12 @@
 
 namespace octopus { namespace model {
 
-TumourModel::TumourModel(std::vector<SampleName> samples, const unsigned ploidy, Priors priors)
-: TumourModel {std::move(samples), ploidy, std::move(priors), AlgorithmParameters {}}
+TumourModel::TumourModel(std::vector<SampleName> samples, Priors priors)
+: TumourModel {std::move(samples), std::move(priors), AlgorithmParameters {}}
 {}
 
-TumourModel::TumourModel(std::vector<SampleName> samples, const unsigned ploidy, Priors priors,
-                         AlgorithmParameters parameters)
+TumourModel::TumourModel(std::vector<SampleName> samples, Priors priors, AlgorithmParameters parameters)
 : samples_ {std::move(samples)}
-, ploidy_ {ploidy}
 , priors_ {std::move(priors)}
 , parameters_ {parameters}
 {}
@@ -45,6 +43,15 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params);
 
+template <std::size_t K>
+TumourModel::InferredLatents
+run_variational_bayes(const std::vector<SampleName>& samples,
+                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                      const std::vector<std::pair<std::vector<unsigned>, unsigned>>& genotype_indices,
+                      const TumourModel::Priors& priors,
+                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                      const VariationalBayesParameters& params);
+
 } // namespace
 
 TumourModel::InferredLatents
@@ -53,11 +60,28 @@ TumourModel::evaluate(const std::vector<CancerGenotype<Haplotype>>& genotypes,
 {
     assert(!genotypes.empty());
     const VariationalBayesParameters vb_params {parameters_.epsilon, parameters_.max_iterations};
-    assert(ploidy_ < 3);
-    if (ploidy_ == 1) {
-        return run_variational_bayes<2>(samples_, std::move(genotypes), priors_, haplotype_likelihoods, vb_params);
+    auto ploidy = genotypes.front().ploidy();
+    assert(ploidy < 3);
+    if (ploidy == 1) {
+        return run_variational_bayes<2>(samples_, genotypes, priors_, haplotype_likelihoods, vb_params);
     }
-    return run_variational_bayes<3>(samples_, std::move(genotypes), priors_, haplotype_likelihoods, vb_params);
+    return run_variational_bayes<3>(samples_, genotypes, priors_, haplotype_likelihoods, vb_params);
+}
+
+TumourModel::InferredLatents
+TumourModel::evaluate(const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                      const std::vector<std::pair<std::vector<unsigned>, unsigned>>& genotype_indices,
+                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    assert(!genotypes.empty());
+    assert(genotypes.size() == genotype_indices.size());
+    const VariationalBayesParameters vb_params {parameters_.epsilon, parameters_.max_iterations};
+    auto ploidy = genotypes.front().ploidy();
+    assert(ploidy < 3);
+    if (ploidy == 1) {
+        return run_variational_bayes<2>(samples_, genotypes, genotype_indices, priors_, haplotype_likelihoods, vb_params);
+    }
+    return run_variational_bayes<3>(samples_, genotypes, genotype_indices, priors_, haplotype_likelihoods, vb_params);
 }
 
 namespace {
@@ -71,13 +95,12 @@ VBAlpha<K> flatten(const TumourModel::Priors::GenotypeMixturesDirichletAlphas& a
 }
 
 template <std::size_t K>
-VBAlphaVector<K> flatten(const TumourModel::Priors& priors, const std::vector<SampleName>& samples)
+VBAlphaVector<K> flatten(const TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+                         const std::vector<SampleName>& samples)
 {
     VBAlphaVector<K> result(samples.size());
     std::transform(std::cbegin(samples), std::cend(samples), std::begin(result),
-                   [&priors] (const auto& sample) {
-                       return flatten<K>(priors.alphas.at(sample));
-                   });
+                   [&alphas] (const auto& sample) { return flatten<K>(alphas.at(sample)); });
     return result;
 }
 
@@ -89,8 +112,7 @@ flatten(const CancerGenotype<Haplotype>& genotype, const SampleName& sample,
     VBGenotype<K> result;
     const Genotype<Haplotype>& germline_genotype{genotype.germline_genotype()};
     assert(germline_genotype.ploidy() == (K - 1));
-    std::transform(std::cbegin(germline_genotype), std::cend(germline_genotype),
-                   std::begin(result),
+    std::transform(std::cbegin(germline_genotype), std::cend(germline_genotype), std::begin(result),
                    [&sample, &haplotype_likelihoods] (const Haplotype& haplotype)
                    -> std::reference_wrapper<const VBReadLikelihoodArray::BaseType> {
                        return std::cref(haplotype_likelihoods(sample, haplotype));
@@ -156,6 +178,17 @@ expand(const std::vector<SampleName>& samples, VBLatents<K>&& inferred_latents, 
     return {std::move(posterior_latents), evidence};
 }
 
+auto calculate_log_priors(const std::vector<std::pair<std::vector<unsigned>, unsigned>>& genotype_indices,
+                          const CancerGenotypePriorModel& model)
+{
+    
+    std::vector<double> result(genotype_indices.size());
+    std::transform(std::cbegin(genotype_indices), std::cend(genotype_indices), std::begin(result),
+                   [&] (const auto& p) { return model.evaluate(p.first, p.second); });
+    maths::normalise_logs(result);
+    return result;
+}
+
 auto compute_germline_log_likelihoods(const SampleName& sample,
                                       const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
@@ -170,16 +203,12 @@ auto compute_germline_log_likelihoods(const SampleName& sample,
     return result;
 }
 
-auto compute_germline_log_posteriors(const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                     const std::vector<double>& log_likelihoods,
-                                     const CancerGenotypePriorModel& genotype_prior_model)
+auto compute_germline_log_posteriors(const LogProbabilityVector& log_priors, const LogProbabilityVector& log_likelihoods)
 {
-    assert(genotypes.size() == log_likelihoods.size());
-    std::vector<double> result(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(log_likelihoods), std::begin(result),
-                   [&] (const auto& genotype, auto likelihood) {
-                       return genotype_prior_model.evaluate(genotype) + likelihood;
-                   });
+    assert(log_priors.size() == log_likelihoods.size());
+    LogProbabilityVector result(log_priors.size());
+    std::transform(std::cbegin(log_priors), std::cend(log_priors), std::cbegin(log_likelihoods), std::begin(result),
+                   [] (auto prior, auto likelihood) noexcept { return prior + likelihood; });
     maths::normalise_logs(result);
     return result;
 }
@@ -208,7 +237,6 @@ LogProbabilityVector log_uniform_dist(const std::size_t n)
 auto generate_seeds(const std::vector<SampleName>& samples,
                     const std::vector<CancerGenotype<Haplotype>>& genotypes,
                     const LogProbabilityVector& genotype_log_priors,
-                    const TumourModel::Priors& priors,
                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
 {
     std::vector<LogProbabilityVector> result {};
@@ -217,12 +245,28 @@ auto generate_seeds(const std::vector<SampleName>& samples,
     result.push_back(log_uniform_dist(genotypes.size()));
     for (const auto& sample : samples) {
         auto log_likelihoods = compute_germline_log_likelihoods(sample, genotypes, haplotype_log_likelihoods);
-        result.push_back(compute_germline_log_posteriors(genotypes, log_likelihoods, priors.genotype_prior_model));
+        result.push_back(compute_germline_log_posteriors(genotype_log_priors, log_likelihoods));
         maths::normalise_exp(log_likelihoods); // convert to probabilities
         result.push_back(std::move(log_likelihoods));
         result.push_back(compute_log_posteriors_with_germline_model(sample, genotypes, haplotype_log_likelihoods));
     }
     return result;
+}
+
+template <std::size_t K>
+TumourModel::InferredLatents
+run_variational_bayes(const std::vector<SampleName>& samples,
+                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                      const TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& prior_alphas,
+                      const std::vector<double>& genotype_log_priors,
+                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                      const VariationalBayesParameters& params,
+                      std::vector<std::vector<double>>&& seeds)
+{
+    const auto vb_prior_alphas = flatten<K>(prior_alphas, samples);
+    const auto log_likelihoods = flatten<K>(genotypes, samples, haplotype_log_likelihoods);
+    auto p = run_variational_bayes(vb_prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
+    return expand(samples, std::move(p.first), p.second);
 }
 
 // Main entry point
@@ -235,12 +279,25 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params)
 {
-    const auto prior_alphas = flatten<K>(priors, samples);
     const auto genotype_log_priors = calculate_log_priors(genotypes, priors.genotype_prior_model);
-    const auto log_likelihoods = flatten<K>(genotypes, samples, haplotype_log_likelihoods);
-    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, priors, haplotype_log_likelihoods);
-    auto p = run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
-    return expand(samples, std::move(p.first), p.second);
+    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods);
+    return run_variational_bayes<K>(samples, genotypes, priors.alphas, genotype_log_priors,
+                                    haplotype_log_likelihoods, params, std::move(seeds));
+}
+
+template <std::size_t K>
+TumourModel::InferredLatents
+run_variational_bayes(const std::vector<SampleName>& samples,
+                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                      const std::vector<std::pair<std::vector<unsigned>, unsigned>>& genotype_indices,
+                      const TumourModel::Priors& priors,
+                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                      const VariationalBayesParameters& params)
+{
+    const auto genotype_log_priors = calculate_log_priors(genotype_indices, priors.genotype_prior_model);
+    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods);
+    return run_variational_bayes<K>(samples, genotypes, priors.alphas, genotype_log_priors,
+                                    haplotype_log_likelihoods, params, std::move(seeds));
 }
 
 } // namespace

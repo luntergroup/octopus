@@ -18,14 +18,12 @@
 
 namespace octopus { namespace model {
 
-CNVModel::CNVModel(std::vector<SampleName> samples, const unsigned ploidy, Priors priors)
-: CNVModel {std::move(samples), ploidy, std::move(priors), AlgorithmParameters {}}
+CNVModel::CNVModel(std::vector<SampleName> samples, Priors priors)
+: CNVModel {std::move(samples), std::move(priors), AlgorithmParameters {}}
 {}
 
-CNVModel::CNVModel(std::vector<SampleName> samples, const unsigned ploidy, Priors priors,
-                   AlgorithmParameters parameters)
+CNVModel::CNVModel(std::vector<SampleName> samples, Priors priors, AlgorithmParameters parameters)
 : samples_ {std::move(samples)}
-, ploidy_ {ploidy}
 , priors_ {std::move(priors)}
 , parameters_ {parameters}
 {}
@@ -44,7 +42,16 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const CNVModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params);
-    
+
+template <std::size_t K>
+CNVModel::InferredLatents
+run_variational_bayes(const std::vector<SampleName>& samples,
+                      const std::vector<Genotype<Haplotype>>& genotypes,
+                      const std::vector<std::vector<unsigned>>& genotype_indices,
+                      const CNVModel::Priors& priors,
+                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                      const VariationalBayesParameters& params);
+
 } // namespace
 
 CNVModel::InferredLatents
@@ -52,14 +59,34 @@ CNVModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
-    assert(ploidy_ < 4);
+    auto ploidy = genotypes.front().ploidy();
+    assert(ploidy < 4);
     const VariationalBayesParameters vb_params {parameters_.epsilon, parameters_.max_iterations};
-    switch (ploidy_) {
-        case 1: return run_variational_bayes<1>(samples_, std::move(genotypes), priors_,
+    switch (ploidy) {
+        case 1: return run_variational_bayes<1>(samples_, genotypes, priors_,
                                                 haplotype_likelihoods, vb_params);
-        case 2: return run_variational_bayes<2>(samples_, std::move(genotypes), priors_,
+        case 2: return run_variational_bayes<2>(samples_, genotypes, priors_,
                                                 haplotype_likelihoods, vb_params);
-        default: return run_variational_bayes<3>(samples_, std::move(genotypes), priors_,
+        default: return run_variational_bayes<3>(samples_, genotypes, priors_,
+                                                 haplotype_likelihoods, vb_params);
+    }
+}
+
+CNVModel::InferredLatents
+CNVModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+                   const std::vector<std::vector<unsigned>>& genotype_indices,
+                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    assert(!genotypes.empty());
+    auto ploidy = genotypes.front().ploidy();
+    assert(ploidy < 4);
+    const VariationalBayesParameters vb_params {parameters_.epsilon, parameters_.max_iterations};
+    switch (ploidy) {
+        case 1: return run_variational_bayes<1>(samples_, genotypes, genotype_indices,  priors_,
+                                                haplotype_likelihoods, vb_params);
+        case 2: return run_variational_bayes<2>(samples_, genotypes, genotype_indices, priors_,
+                                                haplotype_likelihoods, vb_params);
+        default: return run_variational_bayes<3>(samples_, genotypes, genotype_indices, priors_,
                                                  haplotype_likelihoods, vb_params);
     }
 }
@@ -75,13 +102,12 @@ VBAlpha<K> flatten(const CNVModel::Priors::GenotypeMixturesDirichletAlphas& alph
 }
 
 template <std::size_t K>
-VBAlphaVector<K> flatten(const CNVModel::Priors& priors, const std::vector<SampleName>& samples)
+VBAlphaVector<K> flatten(const CNVModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+                         const std::vector<SampleName>& samples)
 {
     VBAlphaVector<K> result(samples.size());
     std::transform(std::cbegin(samples), std::cend(samples), std::begin(result),
-                   [&priors] (const auto& sample) {
-                       return flatten<K>(priors.alphas.at(sample));
-                   });
+                   [&alphas] (const auto& sample) { return flatten<K>(alphas.at(sample)); });
     return result;
 }
 
@@ -127,16 +153,6 @@ flatten(const std::vector<Genotype<Haplotype>>& genotypes,
     return result;
 }
 
-template <typename Container>
-std::vector<double> calculate_log_priors(const Container& genotypes, const GenotypePriorModel& model)
-{
-    std::vector<double> result(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&model] (const auto& genotype) { return model.evaluate(genotype); });
-    maths::normalise_logs(result);
-    return result;
-}
-
 template <std::size_t K>
 CNVModel::Latents::GenotypeMixturesDirichletAlphas expand(VBAlpha<K>& alpha)
 {
@@ -167,6 +183,16 @@ expand(const std::vector<SampleName>& samples, VBLatents<K>&& inferred_latents, 
     return {std::move(posterior_latents), evidence};
 }
 
+template <typename Container>
+auto calculate_log_priors(const Container& genotypes, const GenotypePriorModel& model)
+{
+    std::vector<double> result(genotypes.size());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                   [&model] (const auto& genotype) { return model.evaluate(genotype); });
+    maths::normalise_logs(result);
+    return result;
+}
+
 LogProbabilityVector log_uniform_dist(const std::size_t n)
 {
     return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
@@ -176,16 +202,22 @@ auto generate_seeds(const std::vector<SampleName>& samples,
                     const std::vector<Genotype<Haplotype>>& genotypes,
                     const LogProbabilityVector& genotype_log_priors,
                     const CNVModel::Priors& priors,
-                    const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+                    const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                    const boost::optional<const std::vector<std::vector<unsigned>>&> genotype_indices = boost::none)
 {
     std::vector<LogProbabilityVector> result {};
     result.reserve(2 + 2 * samples.size());
     result.push_back(genotype_log_priors);
     result.push_back(log_uniform_dist(genotypes.size()));
-    model::IndividualModel germline_model {priors.genotype_prior_model};
+    IndividualModel germline_model {priors.genotype_prior_model};
     for (const auto& sample : samples) {
         haplotype_log_likelihoods.prime(sample);
-        const auto latents = germline_model.evaluate(genotypes, haplotype_log_likelihoods);
+        IndividualModel::InferredLatents latents;
+        if (genotype_indices) {
+            latents = germline_model.evaluate(genotypes, *genotype_indices, haplotype_log_likelihoods);
+        } else {
+            latents = germline_model.evaluate(genotypes, haplotype_log_likelihoods);
+        }
         result.push_back(latents.posteriors.genotype_probabilities);
         maths::log_each(result.back());
         result.push_back(latents.posteriors.genotype_probabilities);
@@ -193,6 +225,22 @@ auto generate_seeds(const std::vector<SampleName>& samples,
         maths::log_each(result.back());
     }
     return result;
+}
+
+template <std::size_t K>
+CNVModel::InferredLatents
+run_variational_bayes(const std::vector<SampleName>& samples,
+                      const std::vector<Genotype<Haplotype>>& genotypes,
+                      const CNVModel::Priors::GenotypeMixturesDirichletAlphaMap& prior_alphas,
+                      const std::vector<double>& genotype_log_priors,
+                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                      const VariationalBayesParameters& params,
+                      std::vector<std::vector<double>>&& seeds)
+{
+    const auto vb_prior_alphas = flatten<K>(prior_alphas, samples);
+    const auto log_likelihoods = flatten<K>(genotypes, samples, haplotype_log_likelihoods);
+    auto p = run_variational_bayes(vb_prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
+    return expand(samples, std::move(p.first), p.second);
 }
 
 // Main entry point
@@ -205,12 +253,26 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params)
 {
-    const auto prior_alphas = flatten<K>(priors, samples);
     const auto genotype_log_priors = calculate_log_priors(genotypes, priors.genotype_prior_model);
-    const auto log_likelihoods = flatten<K>(genotypes, samples, haplotype_log_likelihoods);
     auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, priors, haplotype_log_likelihoods);
-    auto p = run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
-    return expand(samples, std::move(p.first), p.second);
+    return run_variational_bayes<K>(samples, genotypes, priors.alphas, genotype_log_priors,
+                                    haplotype_log_likelihoods, params, std::move(seeds));
+}
+
+template <std::size_t K>
+CNVModel::InferredLatents
+run_variational_bayes(const std::vector<SampleName>& samples,
+                      const std::vector<Genotype<Haplotype>>& genotypes,
+                      const std::vector<std::vector<unsigned>>& genotype_indices,
+                      const CNVModel::Priors& priors,
+                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                      const VariationalBayesParameters& params)
+{
+    
+    const auto genotype_log_priors = calculate_log_priors(genotype_indices, priors.genotype_prior_model);
+    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, priors, haplotype_log_likelihoods, genotype_indices);
+    return run_variational_bayes<K>(samples, genotypes, priors.alphas, genotype_log_priors,
+                                    haplotype_log_likelihoods, params, std::move(seeds));
 }
 
 } // namespace
