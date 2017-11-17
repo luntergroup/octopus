@@ -1363,6 +1363,17 @@ bool allow_model_filtering(const OptionMap& options)
     return options.count("model-posterior") == 1 && options.at("model-posterior").as<bool>();
 }
 
+auto get_normal_contamination_risk(const OptionMap& options)
+{
+    auto risk = options.at("normal-contamination-risk").as<NormalContaminationRisk>();
+    CallerBuilder::NormalContaminationRisk result {};
+    switch (risk) {
+        case NormalContaminationRisk::high: result = CallerBuilder::NormalContaminationRisk::high;
+            case NormalContaminationRisk::low: result = CallerBuilder::NormalContaminationRisk::low;
+    }
+    return result;
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options)
 {
@@ -1421,6 +1432,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_credible_somatic_frequency(options.at("min-credible-somatic-frequency").as<float>());
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
+        vc_builder.set_normal_contamination_risk(get_normal_contamination_risk(options));
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_snv_denovo_mutation_rate(options.at("snv-denovo-mutation-rate").as<float>());

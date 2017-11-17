@@ -39,6 +39,7 @@ public:
     
     struct Parameters
     {
+        enum class NormalContaminationRisk { high, low };
         Phred<double> min_variant_posterior, min_somatic_posterior, min_refcall_posterior;
         unsigned ploidy;
         boost::optional<SampleName> normal_sample;
@@ -46,6 +47,7 @@ public:
         SomaticMutationModel::Parameters somatic_mutation_model_params;
         double min_expected_somatic_frequency, credible_mass, min_credible_somatic_frequency;
         unsigned max_genotypes = 20000;
+        NormalContaminationRisk normal_contamination_risk = NormalContaminationRisk::low;
         double cnv_normal_alpha = 10.0, cnv_tumour_alpha = 0.75;
         double somatic_normal_germline_alpha = 10.0, somatic_normal_somatic_alpha = 0.08;
         double somatic_tumour_germline_alpha = 1.0, somatic_tumour_somatic_alpha = 0.8;
@@ -71,7 +73,6 @@ private:
     using TumourModel   = model::TumourModel;
     
     class Latents;
-    
     friend Latents;
     
     struct ModelProbabilities
@@ -124,7 +125,11 @@ private:
     
     void generate_germline_genotypes(Latents& latents, const std::vector<Haplotype>& haplotypes) const;
     void generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void generate_cancer_genotypes_with_contaminated_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void generate_cancer_genotypes_with_no_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void generate_cancer_genotypes(Latents& latents, const std::vector<Genotype<Haplotype>>& germline_genotypes) const;
+    bool has_high_normal_contamination_risk(const Latents& latents) const;
     
     void evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
@@ -136,12 +141,11 @@ private:
     TumourModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model) const;
     TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const;
     CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
-    
     ModelPriors get_model_priors() const;
     ModelPosteriors calculate_model_posteriors(const Latents& latents) const;
     
-    GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& latents,
-                                                                          const ModelPosteriors& model_posteriors) const;
+    GermlineGenotypeProbabilityMap
+    calculate_germline_genotype_posteriors(const Latents& latents, const ModelPosteriors& model_posteriors) const;
     ProbabilityVector calculate_probability_samples_not_somatic(const Latents& inferences) const;
     Phred<double> calculate_somatic_probability(const ProbabilityVector& sample_somatic_posteriors,
                                                 const ModelPosteriors& model_posteriors) const;

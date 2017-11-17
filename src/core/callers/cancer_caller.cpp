@@ -273,39 +273,59 @@ void CancerCaller::generate_cancer_genotypes(Latents& latents, const HaplotypeLi
     if (max_possible_cancer_genotypes <= parameters_.max_genotypes) {
         generate_cancer_genotypes(latents, latents.germline_genotypes_);
     } else if (has_normal_sample()) {
-        assert(latents.germline_model_);
-        // This method will not work well if there is a high degree of normal contamination
-        haplotype_likelihoods.prime(normal_sample());
-        if (latents.germline_genotype_indices_) {
-            latents.normal_germline_inferences_ = latents.germline_model_->evaluate(germline_genotypes,
-                                                                                    *latents.germline_genotype_indices_,
-                                                                                    haplotype_likelihoods);
+        if (has_high_normal_contamination_risk(latents)) {
+            generate_cancer_genotypes_with_contaminated_normal(latents, haplotype_likelihoods);
         } else {
-            latents.normal_germline_inferences_ = latents.germline_model_->evaluate(germline_genotypes, haplotype_likelihoods);
-        }
-        const auto& germline_normal_posteriors = latents.normal_germline_inferences_->posteriors.genotype_probabilities;
-        const auto max_germline_genotype_bases = parameters_.max_genotypes / num_haplotypes;
-        if (latents.germline_genotype_indices_) {
-            std::vector<Genotype<Haplotype>> germline_bases;
-            std::vector<std::vector<unsigned>> germline_bases_indices;
-            std::tie(germline_bases, germline_bases_indices) = extract_greatest_probability_genotypes(germline_genotypes,
-                                                                                                      *latents.germline_genotype_indices_,
-                                                                                                      germline_normal_posteriors,
-                                                                                                      max_germline_genotype_bases,
-                                                                                                      1e-100, 1e-2);
-            std::vector<std::pair<std::vector<unsigned>, unsigned>> cancer_genotype_indices {};
-            latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_bases, germline_bases_indices,
-                                                                      latents.haplotypes_, cancer_genotype_indices);
-            latents.cancer_genotype_indices_ = std::move(cancer_genotype_indices);
-        } else {
-            auto germline_bases = extract_greatest_probability_genotypes(germline_genotypes, germline_normal_posteriors,
-                                                                         max_germline_genotype_bases, 1e-100, 1e-2);
-            latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_bases, latents.haplotypes_);
+            generate_cancer_genotypes_with_clean_normal(latents, haplotype_likelihoods);
         }
     } else {
-        // TODO
-        generate_cancer_genotypes(latents, latents.germline_genotypes_);
+        generate_cancer_genotypes_with_no_normal(latents, haplotype_likelihoods);
     }
+}
+
+void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    const auto& germline_genotypes = latents.germline_genotypes_;
+    assert(latents.germline_model_);
+    haplotype_likelihoods.prime(normal_sample());
+    if (latents.germline_genotype_indices_) {
+        latents.normal_germline_inferences_ = latents.germline_model_->evaluate(germline_genotypes,
+                                                                                *latents.germline_genotype_indices_,
+                                                                                haplotype_likelihoods);
+    } else {
+        latents.normal_germline_inferences_ = latents.germline_model_->evaluate(germline_genotypes, haplotype_likelihoods);
+    }
+    const auto& germline_normal_posteriors = latents.normal_germline_inferences_->posteriors.genotype_probabilities;
+    const auto max_germline_genotype_bases = parameters_.max_genotypes / latents.haplotypes_.get().size();
+    if (latents.germline_genotype_indices_) {
+        std::vector<Genotype<Haplotype>> germline_bases;
+        std::vector<std::vector<unsigned>> germline_bases_indices;
+        std::tie(germline_bases, germline_bases_indices) = extract_greatest_probability_genotypes(germline_genotypes,
+                                                                                                  *latents.germline_genotype_indices_,
+                                                                                                  germline_normal_posteriors,
+                                                                                                  max_germline_genotype_bases,
+                                                                                                  1e-100, 1e-2);
+        std::vector<std::pair<std::vector<unsigned>, unsigned>> cancer_genotype_indices {};
+        latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_bases, germline_bases_indices,
+                                                                  latents.haplotypes_, cancer_genotype_indices);
+        latents.cancer_genotype_indices_ = std::move(cancer_genotype_indices);
+    } else {
+        auto germline_bases = extract_greatest_probability_genotypes(germline_genotypes, germline_normal_posteriors,
+                                                                     max_germline_genotype_bases, 1e-100, 1e-2);
+        latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_bases, latents.haplotypes_);
+    }
+}
+
+void CancerCaller::generate_cancer_genotypes_with_contaminated_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    // TODO
+    generate_cancer_genotypes(latents, latents.germline_genotypes_);
+}
+
+void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    // TODO
+    generate_cancer_genotypes(latents, latents.germline_genotypes_);
 }
 
 void CancerCaller::generate_cancer_genotypes(Latents& latents, const std::vector<Genotype<Haplotype>>& germline_genotypes) const
@@ -318,6 +338,11 @@ void CancerCaller::generate_cancer_genotypes(Latents& latents, const std::vector
     } else {
         latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_genotypes, latents.haplotypes_);
     }
+}
+
+bool CancerCaller::has_high_normal_contamination_risk(const Latents& latents) const
+{
+    return parameters_.normal_contamination_risk == Parameters::NormalContaminationRisk::high;
 }
 
 void CancerCaller::evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
