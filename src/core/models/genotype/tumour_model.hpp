@@ -21,8 +21,8 @@ class TumourModel
 public:
     struct AlgorithmParameters
     {
-        unsigned max_iterations      = 1000;
-        double epsilon               = 0.001;
+        unsigned max_iterations = 1000;
+        double epsilon          = 0.05;
     };
     
     struct Priors
