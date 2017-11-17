@@ -8,13 +8,11 @@ set(WarningIgnores
     -Wno-missing-braces
     )
 
-if (CMAKE_COMPILER_IS_GNUCXX)
-    target_compile_options(tandem PRIVATE -Wall -Wextra -Wextra ${WarningIgnores} -pedantic)
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(tandem PRIVATE -Wall -Wextra ${WarningIgnores})
-endif()
-
+add_compile_options(-Wall -Wextra -Werror ${WarningIgnores})
 target_link_libraries(tandem libdivsufsort)
-
 set_target_properties(tandem PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(tandem PROPERTIES INTERPROCEDURAL_OPTIMIZATION True)
+
+check_ipo_supported(RESULT ipo_supported)
+if(ipo_supported)
+    set_property(TARGET tandem PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()

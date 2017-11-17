@@ -12,4 +12,8 @@ set(SOURCES
 add_library(libdivsufsort STATIC ${SOURCES})
 
 set_target_properties(libdivsufsort PROPERTIES LINKER_LANGUAGE C)
-set_target_properties(libdivsufsort PROPERTIES INTERPROCEDURAL_OPTIMIZATION True)
+
+check_ipo_supported(RESULT ipo_supported)
+if(ipo_supported)
+    set_property(TARGET libdivsufsort PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
