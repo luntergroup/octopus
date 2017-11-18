@@ -24,8 +24,6 @@ namespace csr {
 class ThresholdVariantCallFilter : public SinglePassVariantCallFilter
 {
 public:
-    using SinglePassVariantCallFilter::OutputOptions;
-    
     struct Threshold
     {
         virtual ~Threshold() = default;

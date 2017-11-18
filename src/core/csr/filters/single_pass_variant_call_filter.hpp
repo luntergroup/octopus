@@ -17,8 +17,6 @@ namespace octopus {namespace csr {
 class SinglePassVariantCallFilter : public VariantCallFilter
 {
 public:
-    using VariantCallFilter::OutputOptions;
-    
     SinglePassVariantCallFilter() = delete;
     
     SinglePassVariantCallFilter(FacetFactory facet_factory,
