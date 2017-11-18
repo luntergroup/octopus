@@ -25,6 +25,7 @@ void DoublePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& des
 {
     assert(dest.is_header_written());
     make_registration_pass(source, samples);
+    prepare_for_classification();
     make_filter_pass(source, dest);
 }
 
