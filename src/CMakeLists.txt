@@ -218,13 +218,15 @@ set(CORE_SOURCES
     core/csr/facets/read_assignments.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
-    
-    core/csr/filters/supervised_variant_call_filter.hpp
-    core/csr/filters/supervised_variant_call_filter.cpp
-    core/csr/filters/threshold_filter.hpp
-    core/csr/filters/threshold_filter.cpp
+
     core/csr/filters/variant_call_filter.hpp
     core/csr/filters/variant_call_filter.cpp
+    core/csr/filters/single_pass_variant_call_filter.hpp
+    core/csr/filters/single_pass_variant_call_filter.cpp
+    core/csr/filters/double_pass_variant_call_filter.hpp
+    core/csr/filters/double_pass_variant_call_filter.cpp
+    core/csr/filters/threshold_filter.hpp
+    core/csr/filters/threshold_filter.cpp
     core/csr/filters/variant_call_filter_factory.hpp
     core/csr/filters/variant_call_filter_factory.cpp
     core/csr/filters/threshold_filter_factory.hpp

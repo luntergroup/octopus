@@ -18,14 +18,13 @@
 #include "core/types/variant.hpp"
 #include "io/variant/vcf_header.hpp"
 #include "io/variant/vcf_record.hpp"
-#include "logging/progress_meter.hpp"
+#include "io/variant/vcf_reader.hpp"
 #include "../facets/facet.hpp"
 #include "../facets/facet_factory.hpp"
 #include "../measures/measure.hpp"
 
 namespace octopus {
 
-class VcfReader;
 class VcfWriter;
 class VcfHeader;
 
@@ -43,8 +42,7 @@ public:
     
     VariantCallFilter(FacetFactory facet_factory,
                       std::vector<MeasureWrapper> measures,
-                      OutputOptions output_config,
-                      boost::optional<ProgressMeter&> progress);
+                      OutputOptions output_config);
     
     VariantCallFilter(const VariantCallFilter&)            = delete;
     VariantCallFilter& operator=(const VariantCallFilter&) = delete;
@@ -53,10 +51,12 @@ public:
     
     virtual ~VariantCallFilter() = default;
     
-    void filter(const VcfReader& source, VcfWriter& dest);
+    void filter(const VcfReader& source, VcfWriter& dest) const;
     
 protected:
+    using SampleList    = std::vector<SampleName>;
     using MeasureVector = std::vector<Measure::ResultType>;
+    using VcfIterator   = VcfReader::RecordIterator;
     
     struct Classification
     {
@@ -65,31 +65,32 @@ protected:
         boost::optional<Phred<double>> quality = boost::none;
     };
     
-    std::vector<MeasureWrapper> measures_;
+    bool can_measure_single_call() const noexcept;
+    std::vector<VcfRecord> get_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const;
+    MeasureVector measure(const VcfRecord& call) const;
+    std::vector<MeasureVector> measure(const std::vector<VcfRecord>& calls) const;
+    void write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const;
     
 private:
     using FacetSet = std::vector<std::string>;
     
     FacetFactory facet_factory_;
     FacetSet facets_;
+    std::vector<MeasureWrapper> measures_;
     OutputOptions output_config_;
-    boost::optional<ProgressMeter&> progress_;
-    mutable boost::optional<GenomicRegion::ContigName> current_contig_;
     
     virtual void annotate(VcfHeader::Builder& header) const = 0;
-    virtual Classification classify(const MeasureVector& call_measures) const = 0;
+    virtual void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const = 0;
     
     VcfHeader make_header(const VcfReader& source) const;
     boost::optional<VcfRecord> filter(const VcfRecord& call) const;
     std::vector<VcfRecord> filter(const std::vector<VcfRecord>& calls) const;
     Measure::FacetMap compute_facets(const std::vector<VcfRecord>& calls) const;
-    MeasureVector measure(const VcfRecord& call) const;
     MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;
     VcfRecord::Builder construct_template(const VcfRecord& call) const;
     void annotate(VcfRecord::Builder& call, Classification status) const;
     void pass(VcfRecord::Builder& call) const;
     void fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const;
-    void log_progress(const GenomicRegion& region) const;
 };
 
 } // namespace csr
