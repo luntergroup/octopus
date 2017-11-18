@@ -275,6 +275,20 @@ void ProgressMeter::stop()
     done_ = true;
 }
 
+void ProgressMeter::reset()
+{
+    if (!done_) stop();
+    completed_regions_.clear();
+    num_bp_to_search_ = sum_region_sizes(regions_);
+    num_bp_completed_ = 0;
+    percent_until_tick_ = max_tick_size_;
+    start_ = std::chrono::system_clock::now();
+    last_tick_ = start_;
+    tick_durations_.clear();
+    done_ = false;
+    block_compute_times_.clear();
+}
+
 void ProgressMeter::log_completed(const GenomicRegion& region)
 {
     std::lock_guard<std::mutex> lock {mutex_};

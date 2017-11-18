@@ -39,6 +39,7 @@ public:
     void resume();
     void pause();
     void stop();
+    void reset();
     
     void log_completed(const GenomicRegion& region);
     void log_completed(const GenomicRegion::ContigName& contig);
