@@ -11,7 +11,7 @@
 #include "io/variant/vcf_reader.hpp"
 #include "io/variant/vcf_writer.hpp"
 
-namespace octopus { namespace csr  {
+namespace octopus { namespace csr {
 
 DoublePassVariantCallFilter::DoublePassVariantCallFilter(FacetFactory facet_factory,
                                                          std::vector<MeasureWrapper> measures,
@@ -30,6 +30,8 @@ void DoublePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& des
 
 void DoublePassVariantCallFilter::make_registration_pass(const VcfReader& source, const SampleList& samples) const
 {
+    if (info_log_) *info_log_ << "CSR: Starting registration pass";
+    if (progress_) progress_->start();
     if (can_measure_single_call()) {
         auto p = source.iterate();
         std::size_t idx {0};
@@ -42,6 +44,7 @@ void DoublePassVariantCallFilter::make_registration_pass(const VcfReader& source
             idx += calls.size();
         }
     }
+    if (progress_) progress_->stop();
 }
 
 void DoublePassVariantCallFilter::record(const VcfRecord& call, const std::size_t idx) const
@@ -60,9 +63,15 @@ void DoublePassVariantCallFilter::record(const std::vector<VcfRecord>& calls, st
 
 void DoublePassVariantCallFilter::make_filter_pass(const VcfReader& source, VcfWriter& dest) const
 {
+    if (info_log_) *info_log_ << "CSR: Starting filtering pass";
+    if (progress_) {
+        progress_->reset();
+        progress_->start();
+    }
     auto p = source.iterate();
     std::size_t idx {0};
     std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { filter(call, idx++, dest); });
+    if (progress_) progress_->stop();
 }
 
 void DoublePassVariantCallFilter::filter(const VcfRecord& call, const std::size_t idx, VcfWriter& dest) const

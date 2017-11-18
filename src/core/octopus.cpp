@@ -1260,9 +1260,7 @@ void run_filtering(GenomeCallingComponents& components)
         assert(filter);
         const VcfReader in {std::move(*unfiltered_output_path)};
         VcfWriter& out {*components.filtered_output()};
-        progress.start();
         filter->filter(in, out);
-        progress.stop();
     }
 }
 

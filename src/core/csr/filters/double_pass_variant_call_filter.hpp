@@ -10,9 +10,10 @@
 
 #include "logging/progress_meter.hpp"
 #include "basics/genomic_region.hpp"
+#include "logging/logging.hpp"
 #include "variant_call_filter.hpp"
 
-namespace octopus { namespace csr  {
+namespace octopus { namespace csr {
 
 class DoublePassVariantCallFilter : public VariantCallFilter
 {
@@ -32,7 +33,8 @@ public:
     virtual ~DoublePassVariantCallFilter() override = default;
     
 private:
-    boost::optional<ProgressMeter&> progress_;
+    mutable boost::optional<logging::InfoLogger> info_log_;
+    mutable boost::optional<ProgressMeter&> progress_;
     mutable boost::optional<GenomicRegion::ContigName> current_contig_;
     
     virtual void record(std::size_t call_idx, const MeasureVector& measures) const = 0;

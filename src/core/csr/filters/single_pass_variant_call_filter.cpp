@@ -26,6 +26,7 @@ SinglePassVariantCallFilter::SinglePassVariantCallFilter(FacetFactory facet_fact
 void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const
 {
     assert(dest.is_header_written());
+    if (progress_) progress_->start();
     if (can_measure_single_call()) {
         auto p = source.iterate();
         std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { filter(call, dest); });
@@ -34,6 +35,7 @@ void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& des
             filter(get_next_block(p.first, p.second, samples), dest);
         }
     }
+    if (progress_) progress_->stop();
 }
 
 void SinglePassVariantCallFilter::filter(const VcfRecord& call, VcfWriter& dest) const
