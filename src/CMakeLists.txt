@@ -227,10 +227,14 @@ set(CORE_SOURCES
     core/csr/filters/double_pass_variant_call_filter.cpp
     core/csr/filters/threshold_filter.hpp
     core/csr/filters/threshold_filter.cpp
+    core/csr/filters/unsupervised_clustering_filter.hpp
+    core/csr/filters/unsupervised_clustering_filter.cpp
     core/csr/filters/variant_call_filter_factory.hpp
     core/csr/filters/variant_call_filter_factory.cpp
     core/csr/filters/threshold_filter_factory.hpp
     core/csr/filters/threshold_filter_factory.cpp
+    core/csr/filters/unsupervised_clustering_filter_factory.hpp
+    core/csr/filters/unsupervised_clustering_filter_factory.cpp
     
     core/csr/measures/measure.hpp
     core/csr/measures/qual.hpp
