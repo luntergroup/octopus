@@ -349,7 +349,7 @@ std::unordered_map<char, size_t> count_bases(const SequenceType& sequence)
 }
 
 template <typename SequenceType>
-double gc_bias(const SequenceType& sequence)
+double gc_content(const SequenceType& sequence) noexcept
 {
     const auto gc_count = std::count_if(std::cbegin(sequence), std::cend(sequence),
                                         [] (const char base) { return base == 'G' || base == 'C'; });
