@@ -37,7 +37,7 @@ private:
     mutable boost::optional<ProgressMeter&> progress_;
     mutable boost::optional<GenomicRegion::ContigName> current_contig_;
     
-    virtual void record(std::size_t call_idx, const MeasureVector& measures) const = 0;
+    virtual void record(std::size_t call_idx, MeasureVector measures) const = 0;
     virtual void prepare_for_classification() const = 0;
     virtual Classification classify(std::size_t call_idx) const = 0;
     
