@@ -1,18 +1,18 @@
 // Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "qual.hpp"
+#include "quality.hpp"
 
 #include "io/variant/vcf_record.hpp"
 
 namespace octopus { namespace csr {
 
-std::unique_ptr<Measure> Qual::do_clone() const
+std::unique_ptr<Measure> Quality::do_clone() const
 {
-    return std::make_unique<Qual>(*this);
+    return std::make_unique<Quality>(*this);
 }
 
-Measure::ResultType Qual::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
+Measure::ResultType Quality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     boost::optional<double> result {};
     if (call.qual()) {
@@ -21,7 +21,7 @@ Measure::ResultType Qual::do_evaluate(const VcfRecord& call, const FacetMap& fac
     return result;
 }
 
-std::string Qual::do_name() const
+std::string Quality::do_name() const
 {
     return "QUAL";
 }

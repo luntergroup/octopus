@@ -11,7 +11,7 @@
 #include "core/csr/measures/mapping_quality_zero_count.hpp"
 #include "core/csr/measures/mean_mapping_quality.hpp"
 #include "core/csr/measures/model_posterior.hpp"
-#include "core/csr/measures/qual.hpp"
+#include "core/csr/measures/quality.hpp"
 #include "core/csr/measures/quality_by_depth.hpp"
 #include "core/csr/measures/strand_bias.hpp"
 #include "core/csr/measures/gc_content.hpp"
