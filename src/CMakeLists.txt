@@ -257,6 +257,8 @@ set(CORE_SOURCES
     core/csr/measures/strand_bias.cpp
     core/csr/measures/mapping_quality_divergence.hpp
     core/csr/measures/mapping_quality_divergence.cpp
+    core/csr/measures/gc_content.hpp
+    core/csr/measures/gc_content.cpp
     core/csr/measures/is_denovo.hpp
     core/csr/measures/is_denovo.cpp
     core/csr/measures/is_somatic.hpp

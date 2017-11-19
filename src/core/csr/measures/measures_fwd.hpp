@@ -14,6 +14,7 @@
 #include "core/csr/measures/qual.hpp"
 #include "core/csr/measures/quality_by_depth.hpp"
 #include "core/csr/measures/strand_bias.hpp"
+#include "core/csr/measures/gc_content.hpp"
 #include "core/csr/measures/is_denovo.hpp"
 #include "core/csr/measures/is_somatic.hpp"
 
