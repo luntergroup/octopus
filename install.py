@@ -68,6 +68,7 @@ elif args["sanitize"]:
 else:
     cmake_options.append("-DCMAKE_BUILD_TYPE=Release")
 if args["static"]:
+    cmake_options.append("-DBUILD_SHARED_LIBS=OFF")
     cmake_options.append("-DUSE_STATIC_BOOST=ON")
 if args["boost"]:
     cmake_options.append("-DBOOST_ROOT=" + args["boost"])
