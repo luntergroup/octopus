@@ -216,6 +216,8 @@ set(CORE_SOURCES
     core/csr/facets/overlapping_reads.cpp
     core/csr/facets/read_assignments.hpp
     core/csr/facets/read_assignments.cpp
+    core/csr/facets/reference_context.hpp
+    core/csr/facets/reference_context.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
 
