@@ -49,7 +49,7 @@ private:
     using ContigRegionMap = MappableSetMap<ContigName, ContigRegion>;
     using DurationUnits = std::chrono::milliseconds;
     
-    InputRegionMap regions_;
+    InputRegionMap target_regions_;
     ContigRegionMap completed_regions_;
     RegionSizeType num_bp_to_search_, num_bp_completed_;
     double min_tick_size_ = 0.1, max_tick_size_ = 1.0, curr_tick_size_ = 1.0;

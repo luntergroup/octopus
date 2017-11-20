@@ -62,9 +62,9 @@ unsigned calculate_position_tab_length(const T& region)
 } // namespace
 
 ProgressMeter::ProgressMeter(InputRegionMap regions)
-: regions_ {std::move(regions)}
+: target_regions_ {std::move(regions)}
 , completed_regions_ {}
-, num_bp_to_search_ {sum_region_sizes(regions_)}
+, num_bp_to_search_ {}
 , num_bp_completed_ {0}
 , percent_until_tick_ {max_tick_size_}
 , percent_at_last_tick_ {0}
@@ -76,8 +76,16 @@ ProgressMeter::ProgressMeter(InputRegionMap regions)
 , block_compute_times_ {}
 , log_ {}
 {
-    if (!regions_.empty()) {
-        position_tab_length_ = calculate_position_tab_length(regions_);
+    for (auto& p : target_regions_) {
+        auto covered_regions = extract_covered_regions(p.second);
+        p.second.clear();
+        p.second.insert(std::make_move_iterator(std::begin(covered_regions)),
+                        std::make_move_iterator(std::end(covered_regions)));
+        p.second.shrink_to_fit();
+    }
+    num_bp_to_search_ = sum_region_sizes(target_regions_);
+    if (!target_regions_.empty()) {
+        position_tab_length_ = calculate_position_tab_length(target_regions_);
     }
 }
 
@@ -89,7 +97,7 @@ ProgressMeter::ProgressMeter(ProgressMeter&& other)
 {
     std::lock_guard<std::mutex> lock {other.mutex_};
     using std::move;
-    regions_              = move(other.regions_);
+    target_regions_       = move(other.target_regions_);
     completed_regions_    = move(other.completed_regions_);
     num_bp_to_search_     = move(other.num_bp_to_search_);
     num_bp_completed_     = move(other.num_bp_completed_);
@@ -112,7 +120,7 @@ ProgressMeter& ProgressMeter::operator=(ProgressMeter&& other)
         std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
         std::lock(lock_lhs, lock_rhs);
         using std::move;
-        regions_              = move(other.regions_);
+        target_regions_       = move(other.target_regions_);
         completed_regions_    = move(other.completed_regions_);
         num_bp_to_search_     = move(other.num_bp_to_search_);
         num_bp_completed_     = move(other.num_bp_completed_);
@@ -216,7 +224,7 @@ auto estimate_ttc(const std::chrono::system_clock::time_point now,
 
 ProgressMeter::~ProgressMeter()
 {
-    if (!done_ && !regions_.empty() && num_bp_completed_ > 0) {
+    if (!done_ && !target_regions_.empty() && num_bp_completed_ > 0) {
         const TimeInterval duration {start_, std::chrono::system_clock::now()};
         const auto time_taken = to_string(duration);
         stream(log_) << std::string(position_tab_length_ - 4, ' ')
@@ -240,8 +248,8 @@ void ProgressMeter::set_max_tick_size(double percent)
 
 void ProgressMeter::start()
 {
-    if (!regions_.empty()) {
-        completed_regions_.reserve(regions_.size());
+    if (!target_regions_.empty()) {
+        completed_regions_.reserve(target_regions_.size());
         write_header();
     }
     start_ = std::chrono::system_clock::now();
@@ -260,7 +268,7 @@ void ProgressMeter::pause()
 
 void ProgressMeter::stop()
 {
-    if (!done_ && !regions_.empty()) {
+    if (!done_ && !target_regions_.empty()) {
         const TimeInterval duration {start_, std::chrono::system_clock::now()};
         const auto time_taken = to_string(duration);
         stream(log_) << std::string(position_tab_length_ - 4, ' ')
@@ -279,14 +287,19 @@ void ProgressMeter::reset()
 {
     if (!done_) stop();
     completed_regions_.clear();
-    num_bp_to_search_ = sum_region_sizes(regions_);
+    num_bp_to_search_ = sum_region_sizes(target_regions_);
     num_bp_completed_ = 0;
+    curr_tick_size_ = max_tick_size_;
     percent_until_tick_ = max_tick_size_;
+    percent_at_last_tick_ = 0;
     start_ = std::chrono::system_clock::now();
     last_tick_ = start_;
     tick_durations_.clear();
+    tick_durations_.shrink_to_fit();
     done_ = false;
     block_compute_times_.clear();
+    block_compute_times_.shrink_to_fit();
+    
 }
 
 void ProgressMeter::log_completed(const GenomicRegion& region)
@@ -301,7 +314,7 @@ void ProgressMeter::log_completed(const GenomicRegion& region)
 
 void ProgressMeter::log_completed(const GenomicRegion::ContigName& contig)
 {
-    const auto& contig_regions = regions_.at(contig);
+    const auto& contig_regions = target_regions_.at(contig);
     if (!contig_regions.empty()) {
         const auto contig_region = encompassing_region(contig_regions.front(), contig_regions.back());
         log_completed(contig_region);
@@ -312,55 +325,64 @@ void ProgressMeter::log_completed(const GenomicRegion::ContigName& contig)
 
 ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
 {
-    const auto& contig_region = region.contig_region();
-    if (completed_regions_.count(region.contig_name()) == 0) {
-        completed_regions_.emplace(std::piecewise_construct,
-                                   std::forward_as_tuple(region.contig_name()),
-                                   std::forward_as_tuple(std::initializer_list<ContigRegion>({contig_region})));
-        return size(contig_region);
-    }
-    auto& completed_regions = completed_regions_.at(region.contig_name());
-    if (completed_regions.has_overlapped(contig_region)) {
-        auto overlapped = completed_regions.overlap_range(contig_region);
-        assert(size(overlapped) >= 1);
-        if (size(overlapped) == 1) {
-            RegionSizeType result {0};
-            const auto& interactor = overlapped.front();
-            if (contains(interactor, contig_region)) return result;
-            auto new_region = contig_region;
-            if (begins_before(new_region, interactor)) {
-                result += left_overhang_size(new_region, interactor);
-            } else if (begins_before(interactor, new_region)) {
-                new_region = encompassing_region(overlapped.front(), new_region);
+    RegionSizeType result {0};
+    const auto target_itr = target_regions_.find(region.contig_name());
+    if (target_itr != std::cend(target_regions_)) {
+        const auto overlapped_targets = overlap_range(target_itr->second, region);
+        for (const auto& target : overlapped_targets) {
+            const auto completed_target = overlapped_region(target, region)->contig_region();
+            if (completed_regions_.count(region.contig_name()) == 0) {
+                completed_regions_.emplace(std::piecewise_construct,
+                                           std::forward_as_tuple(region.contig_name()),
+                                           std::forward_as_tuple(std::initializer_list<ContigRegion>({completed_target})));
+                result += size(completed_target);
+            } else {
+                auto& completed_regions = completed_regions_.at(region.contig_name());
+                if (completed_regions.has_overlapped(completed_target)) {
+                    auto overlapped = completed_regions.overlap_range(completed_target);
+                    assert(size(overlapped) >= 1);
+                    if (size(overlapped) == 1) {
+                        const auto& interactor = overlapped.front();
+                        if (!contains(interactor, completed_target)) {
+                            auto new_region = completed_target;
+                            if (begins_before(new_region, interactor)) {
+                                result += left_overhang_size(new_region, interactor);
+                            } else if (begins_before(interactor, new_region)) {
+                                new_region = encompassing_region(overlapped.front(), new_region);
+                            }
+                            if (ends_before(interactor, new_region)) {
+                                result += right_overhang_size(new_region, interactor);
+                            } else if (ends_before(new_region, interactor)) {
+                                new_region = encompassing_region(interactor, new_region);
+                            }
+                            completed_regions.erase(interactor);
+                            completed_regions.insert(std::move(new_region));
+                        }
+                    } else {
+                        auto new_region = completed_target;
+                        result += size(new_region);
+                        result -= overlap_size(overlapped.front(), completed_target);
+                        if (begins_before(overlapped.front(), new_region)) {
+                            new_region = encompassing_region(overlapped.front(), new_region);
+                        }
+                        overlapped.advance_begin(1);
+                        result -= overlap_size(overlapped.back(), new_region);
+                        if (ends_before(new_region, overlapped.back())) {
+                            new_region = encompassing_region(new_region, overlapped.back());
+                        }
+                        overlapped.advance_end(-1);
+                        for (const auto& r : overlapped) result -= size(r);
+                        completed_regions.erase_overlapped(completed_target);
+                        completed_regions.insert(std::move(new_region));
+                    }
+                } else {
+                    completed_regions.insert(completed_target);
+                    result += size(completed_target);
+                }
             }
-            if (ends_before(interactor, new_region)) {
-                result += right_overhang_size(new_region, interactor);
-            } else if (ends_before(new_region, interactor)) {
-                new_region = encompassing_region(interactor, new_region);
-            }
-            completed_regions.erase(interactor);
-            completed_regions.insert(std::move(new_region));
-            return result;
         }
-        auto new_region = contig_region;
-        auto result     = size(new_region);
-        result -= overlap_size(overlapped.front(), contig_region);
-        if (begins_before(overlapped.front(), new_region)) {
-            new_region = encompassing_region(overlapped.front(), new_region);
-        }
-        overlapped.advance_begin(1);
-        result -= overlap_size(overlapped.back(), new_region);
-        if (ends_before(new_region, overlapped.back())) {
-            new_region = encompassing_region(new_region, overlapped.back());
-        }
-        overlapped.advance_end(-1);
-        for (const auto& r : overlapped) result -= size(r);
-        completed_regions.erase_overlapped(contig_region);
-        completed_regions.insert(std::move(new_region));
-        return result;
     }
-    completed_regions.insert(contig_region);
-    return size(contig_region);
+    return result;
 }
 
 void ProgressMeter::write_header()
