@@ -5,6 +5,7 @@
 #define double_variant_call_filter_hpp
 
 #include <vector>
+#include <cstddef>
 
 #include <boost/optional.hpp>
 
@@ -31,14 +32,19 @@ public:
     DoublePassVariantCallFilter& operator=(DoublePassVariantCallFilter&&)      = default;
     
     virtual ~DoublePassVariantCallFilter() override = default;
+
+protected:
+    using Log = logging::InfoLogger;
     
 private:
-    mutable boost::optional<logging::InfoLogger> info_log_;
+    mutable boost::optional<Log> info_log_;
     mutable boost::optional<ProgressMeter&> progress_;
     mutable boost::optional<GenomicRegion::ContigName> current_contig_;
     
+    virtual void log_registration_pass_start(Log& log) const;
     virtual void record(std::size_t call_idx, MeasureVector measures) const = 0;
-    virtual void prepare_for_classification() const = 0;
+    virtual void prepare_for_classification(boost::optional<Log>& log) const = 0;
+    virtual void log_filter_pass_start(Log& log) const;
     virtual Classification classify(std::size_t call_idx) const = 0;
     
     void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const override;

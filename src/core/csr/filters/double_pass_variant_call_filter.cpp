@@ -18,20 +18,27 @@ DoublePassVariantCallFilter::DoublePassVariantCallFilter(FacetFactory facet_fact
                                                          OutputOptions output_config,
                                                          boost::optional<ProgressMeter&> progress)
 : VariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config)}
+, info_log_ {logging::InfoLogger {}}
 , progress_ {progress}
+, current_contig_ {}
 {}
 
 void DoublePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const
 {
     assert(dest.is_header_written());
     make_registration_pass(source, samples);
-    prepare_for_classification();
+    prepare_for_classification(info_log_);
     make_filter_pass(source, dest);
+}
+
+void DoublePassVariantCallFilter::log_registration_pass_start(Log& log) const
+{
+    log << "CSR: Starting registration pass";
 }
 
 void DoublePassVariantCallFilter::make_registration_pass(const VcfReader& source, const SampleList& samples) const
 {
-    if (info_log_) *info_log_ << "CSR: Starting registration pass";
+    if (info_log_) log_registration_pass_start(*info_log_);
     if (progress_) progress_->start();
     if (can_measure_single_call()) {
         auto p = source.iterate();
@@ -51,22 +58,32 @@ void DoublePassVariantCallFilter::make_registration_pass(const VcfReader& source
 void DoublePassVariantCallFilter::record(const VcfRecord& call, const std::size_t idx) const
 {
     record(idx, measure(call));
+    log_progress(mapped_region(call));
 }
 
 void DoublePassVariantCallFilter::record(const std::vector<VcfRecord>& calls, std::size_t first_idx) const
 {
-    const auto measures = measure(calls);
-    assert(measures.size() == calls.size());
-    for (const auto& m : measures) {
-        record(first_idx++, m);
+    if (!calls.empty()) {
+        const auto measures = measure(calls);
+        assert(measures.size() == calls.size());
+        for (const auto& m : measures) {
+            record(first_idx++, m);
+        }
+        log_progress(encompassing_region(calls));
     }
+}
+
+void DoublePassVariantCallFilter::log_filter_pass_start(Log& log) const
+{
+    log << "CSR: Starting filtering pass";
 }
 
 void DoublePassVariantCallFilter::make_filter_pass(const VcfReader& source, VcfWriter& dest) const
 {
-    if (info_log_) *info_log_ << "CSR: Starting filtering pass";
+    if (info_log_) log_filter_pass_start(*info_log_);
     if (progress_) {
         progress_->reset();
+        progress_->set_max_tick_size(10);
         progress_->start();
     }
     auto p = source.iterate();

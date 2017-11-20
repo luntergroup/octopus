@@ -6,9 +6,7 @@
 #include <utility>
 #include <iterator>
 #include <algorithm>
-
-#include <iostream>
-#include <boost/optional/optional_io.hpp>
+#include <numeric>
 
 namespace octopus { namespace csr {
 
@@ -36,21 +34,61 @@ void UnsupervisedClusteringFilter::record(const std::size_t call_idx, MeasureVec
     }
 }
 
-void UnsupervisedClusteringFilter::prepare_for_classification() const
+void UnsupervisedClusteringFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
-    for (const auto& point : data_) {
-        std::copy(std::cbegin(point), std::cend(point), std::ostream_iterator<Measure::ResultType> {std::cout, "\t"});
-        std::cout << '\n';
+    if (log) {
+        stream(*log) << "CSR: clustering " << data_.size() << " records";
     }
+    remove_missing_features();
+    const auto num_calls = data_.size();
     // TODO
     data_.clear();
     data_.shrink_to_fit();
+    classifications_.resize(num_calls);
 }
 
 VariantCallFilter::Classification UnsupervisedClusteringFilter::classify(std::size_t call_idx) const
 {
-    // TODO
-    return Classification {};
+    return classifications_[call_idx];
+}
+
+bool UnsupervisedClusteringFilter::all_missing(const MeasureVector& measures) const noexcept
+{
+    return std::all_of(std::cbegin(measures), std::cend(measures),
+                       [] (const auto& measure) noexcept { return is_missing(measure); });
+}
+
+void UnsupervisedClusteringFilter::remove_missing_features() const
+{
+    if (!data_.empty()) {
+        const auto num_dimensions = data_.front().size();
+        std::vector<std::size_t> missing_columns(num_dimensions);
+        std::iota(std::begin(missing_columns), std::end(missing_columns), 0);
+        for (const auto& point : data_) {
+            for (auto itr = std::cbegin(missing_columns); itr != std::cend(missing_columns);) {
+                assert(*itr < point.size());
+                if (is_missing(point[*itr])) {
+                    ++itr;
+                } else {
+                    itr = missing_columns.erase(itr);
+                }
+            }
+            if (missing_columns.empty()) break;
+        }
+        if (!missing_columns.empty()) {
+            if (missing_columns.size() != num_dimensions) {
+                assert(std::is_sorted(std::cbegin(missing_columns), std::cend(missing_columns)));
+                for (auto& point : data_) {
+                    std::for_each(std::crbegin(missing_columns), std::crend(missing_columns),
+                                  [&point] (auto idx) { point.erase(std::next(std::cbegin(point), idx)); });
+        
+                }
+            } else {
+                data_.clear();
+                data_.shrink_to_fit();
+            }
+        }
+    }
 }
 
 } // namespace csr

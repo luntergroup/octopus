@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <deque>
+#include <cstddef>
 
 #include <boost/optional.hpp>
 
@@ -16,13 +17,6 @@ namespace octopus { namespace csr {
 class UnsupervisedClusteringFilter : public DoublePassVariantCallFilter
 {
 public:
-    struct Distance
-    {
-        double operator()(const Measure::ResultType& lhs, const Measure::ResultType& rhs) const;
-    };
-    
-    
-    
     UnsupervisedClusteringFilter() = delete;
     
     UnsupervisedClusteringFilter(FacetFactory facet_factory,
@@ -39,11 +33,15 @@ public:
     
 private:
     mutable std::deque<MeasureVector> data_;
+    mutable std::vector<Classification> classifications_;
     
-    virtual void annotate(VcfHeader::Builder& header) const override;
+    void annotate(VcfHeader::Builder& header) const override;
     void record(std::size_t call_idx, MeasureVector measures) const override;
-    void prepare_for_classification() const override;
+    void prepare_for_classification(boost::optional<Log>& log) const override;
     Classification classify(std::size_t call_idx) const override;
+    
+    bool all_missing(const MeasureVector& measures) const noexcept;
+    void remove_missing_features() const;
 };
 
 } // namespace csr
