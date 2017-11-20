@@ -36,6 +36,7 @@ public:
     struct OutputOptions
     {
         bool emit_sites_only = false;
+        bool clear_existing_filters = true;
     };
     
     VariantCallFilter() = delete;

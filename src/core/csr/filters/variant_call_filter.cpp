@@ -159,6 +159,9 @@ VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) 
     if (output_config_.emit_sites_only) {
         result.clear_format();
     }
+    if (output_config_.clear_existing_filters) {
+        result.clear_filter();
+    }
     return result;
 }
 
