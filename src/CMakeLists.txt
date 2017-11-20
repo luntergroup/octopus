@@ -259,6 +259,8 @@ set(CORE_SOURCES
     core/csr/measures/mapping_quality_divergence.cpp
     core/csr/measures/gc_content.hpp
     core/csr/measures/gc_content.cpp
+    core/csr/measures/filtered_read_fraction.hpp
+    core/csr/measures/filtered_read_fraction.cpp
     core/csr/measures/is_denovo.hpp
     core/csr/measures/is_denovo.cpp
     core/csr/measures/is_somatic.hpp
