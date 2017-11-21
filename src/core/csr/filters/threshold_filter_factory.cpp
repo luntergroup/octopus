@@ -65,9 +65,11 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<MappingQualityZeroCount>()]  = highMappingQualityZeroCount;
     filter_names[name<MeanMappingQuality>()]       = lowMappingQuality;
     filter_names[name<ModelPosterior>()]           = lowModelPosterior;
-    filter_names[name<Quality>()]                     = lowQuality;
+    filter_names[name<Quality>()]                  = lowQuality;
     filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
     filter_names[name<StrandBias>()]               = strandBias;
+    filter_names[name<FilteredReadFraction>()]     = filteredReadFraction;
+    filter_names[name<GCContent>()]                = highGCRegion;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)

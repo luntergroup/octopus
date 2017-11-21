@@ -57,23 +57,31 @@ void SinglePassVariantCallFilter::filter(const std::vector<VcfRecord>& calls, Vc
     }
 }
 
-struct MeasureValueVisitor : public boost::static_visitor<bool>
+template <typename T>
+struct MeasureValueVisitor : public boost::static_visitor<T>
 {
-    template <typename T> bool operator()(const boost::optional<T>& value) const { return *value; }
-    template <typename T> bool operator()(const T& value) const noexcept { return value; }
+    template <typename _> T operator()(const boost::optional<_>& value) const { return static_cast<T>(*value); }
+    template <typename _> T operator()(const _& value) const noexcept { return static_cast<T>(value); }
 };
 
+template <typename T>
 auto get_value(const Measure::ResultType& value)
 {
-    return boost::apply_visitor(MeasureValueVisitor {}, value);
+    return boost::apply_visitor(MeasureValueVisitor<T> {}, value);
 }
 
 void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest) const
 {
     VcfRecord::Builder builder {call};
     for (std::size_t i {0}; i < measures.size(); ++i) {
-        if (!is_missing(measures[i])) {
-            builder.set_info(measure_names_[i], get_value(measures[i]));
+        if (measure_names_[i] != "QUAL") {
+            if (!is_missing(measures[i])) {
+                if (measure_names_[i] == "DP" || measure_names_[i] == "MQ0") {
+                    builder.set_info(measure_names_[i], get_value<int>(measures[i]));
+                } else {
+                    builder.set_info(measure_names_[i], get_value<double>(measures[i]));
+                }
+            }
         }
     }
     write(builder.build_once(), classify(measures), dest);
