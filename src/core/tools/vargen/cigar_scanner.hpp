@@ -55,13 +55,15 @@ public:
         using InclusionPredicate = std::function<bool(ObservedVariant)>;
         using MatchPredicate = std::function<bool(const Variant&, const Variant&)>;
         using RepeatRegionGenerator = std::function<std::vector<GenomicRegion>(const ReferenceGenome&, GenomicRegion)>;
+        using RepeatRegionInclusionPredicate = std::function<bool(const GenomicRegion&, const std::deque<Variant>&)>;
+        
         InclusionPredicate include;
         MatchPredicate match = std::equal_to<> {};
         bool use_clipped_coverage_tracking = false;
         Variant::MappingDomain::Size max_variant_size = 2000;
         MisalignmentParameters misalignment_parameters = MisalignmentParameters {};
         boost::optional<RepeatRegionGenerator> repeat_region_generator = boost::none;
-        double max_repeat_region_density = 2;
+        RepeatRegionInclusionPredicate include_repeat_region = [] (const auto& region, const auto& variants) { return variants.size() < 100; };
     };
     
     CigarScanner() = delete;

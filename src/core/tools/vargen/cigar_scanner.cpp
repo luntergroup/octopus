@@ -306,8 +306,7 @@ std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& reg
     }
     std::vector<Variant> good_repeat_region_variants {};
     for (auto& bucket : repeat_buckets) {
-        const auto density = bucket.variants.size() / region_size(bucket);
-        if (density < options_.max_repeat_region_density) {
+        if (options_.include_repeat_region(bucket.region, bucket.variants)) {
             utils::append(std::move(bucket.variants), good_repeat_region_variants);
         } else {
             if (debug_log_) {
