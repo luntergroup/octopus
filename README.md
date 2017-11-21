@@ -135,19 +135,10 @@ $ octopus --help
 
 ## Running Tests
 
-Octopus comes packaged with unit, regression, and benchmark testing. The unit tests are self-contained whilst the regression and benchmark tests require external data sources.
-
-#### *Running the tests with Python3*
+Octopus currently has limited unit tests (more are planned!). To install and run them, use the Python3 install script in the `test` directory:
 
 ```shell
 $ test/install.py
-```
-
-#### *Running tests with CMake*
-
-```shell
-$ cd build
-$ cmake -DBUILD_TESTING=ON .. && make test
 ```
 
 ## Examples
