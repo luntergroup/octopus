@@ -118,9 +118,10 @@ private:
     CoverageTracker<GenomicRegion> read_coverage_tracker_, misaligned_tracker_;
     std::unordered_map<SampleName, CoverageTracker<GenomicRegion>> sample_read_coverage_tracker_;
     
+    using CandidateIterator = OverlapIterator<decltype(candidates_)::const_iterator>;
+    
     template <typename T1, typename T2, typename T3, typename T4>
-    void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
-                       T4&& origin,
+    void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added, T4&& origin,
                        AlignedRead::BaseQualityVector::const_iterator first_base_quality,
                        AlignedRead::Direction support_direction);
     double add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base, SequenceIterator last_base,
@@ -129,6 +130,9 @@ private:
                                    AlignedRead::Direction support_direction);
     unsigned sum_base_qualities(const Candidate& candidate) const noexcept;
     std::vector<GenomicRegion> get_repeat_regions(const GenomicRegion& region) const;
+    bool is_likely_misaligned(const AlignedRead& read, double penalty) const;
+    ObservedVariant make_observation(CandidateIterator first_match, CandidateIterator last_match) const;
+    std::vector<Variant> get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates);
 };
 
 template <typename T1, typename T2, typename T3, typename T4>
@@ -143,10 +147,9 @@ CigarScanner::Candidate::Candidate(T1&& region, T2&& sequence_removed, T3&& sequ
 {}
 
 template <typename T1, typename T2, typename T3, typename T4>
-void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
-                                        T4&& origin,
-                                        AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                                        AlignedRead::Direction support_direction)
+void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added, T4&& origin,
+                                 AlignedRead::BaseQualityVector::const_iterator first_base_quality,
+                                 AlignedRead::Direction support_direction)
 {
     const auto candidate_size = size(region);
     if (candidate_size <= options_.max_variant_size) {

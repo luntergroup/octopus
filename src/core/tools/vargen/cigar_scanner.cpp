@@ -179,10 +179,7 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
         read_coverage_tracker_.add(read);
         sample_coverage_tracker.add(read);
     }
-    const auto mu = options_.misalignment_parameters.max_expected_mutation_rate;
-    const auto ln_prob_misaligned = ln_probability_read_correctly_aligned(misalignment_penalty, read, mu);
-    const auto min_ln_prob_misaligned = options_.misalignment_parameters.min_ln_prob_correctly_aligned;
-    if (ln_prob_misaligned >= min_ln_prob_misaligned) {
+    if (!is_likely_misaligned(read, misalignment_penalty)) {
         utils::append(std::move(buffer_), candidates_);
     } else {
         utils::append(std::move(buffer_), likely_misaligned_candidates_);
@@ -216,29 +213,29 @@ unsigned get_min_depth(const Variant& v, const CoverageTracker<GenomicRegion>& t
     }
 }
 
-struct RegionVariants : public Mappable<RegionVariants>
+struct VariantBucket : public Mappable<VariantBucket>
 {
-    RegionVariants(GenomicRegion region) : region {std::move(region)} {}
+    VariantBucket(GenomicRegion region) : region {std::move(region)} {}
     GenomicRegion region;
     std::deque<Variant> variants;
     const GenomicRegion& mapped_region() const noexcept { return region; }
 };
 
-auto init_region_variants(const std::vector<GenomicRegion>& regions)
+auto init_variant_buckets(const std::vector<GenomicRegion>& regions)
 {
-    std::vector<RegionVariants> result {};
+    std::vector<VariantBucket> result {};
     result.reserve(regions.size());
     std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(result),
-                   [] (const auto& region) { return RegionVariants {region}; });
+                   [] (const auto& region) { return VariantBucket {region}; });
     return result;
 }
 
-boost::optional<RegionVariants&> find_contained(std::vector<RegionVariants>& regions, const Variant& variant)
+boost::optional<VariantBucket&> find_contained(std::vector<VariantBucket>& buckets, const Variant& variant)
 {
-    if (regions.empty()) return boost::none;
-    const auto itr = std::find_if(std::begin(regions), std::end(regions),
+    if (buckets.empty()) return boost::none;
+    const auto itr = std::find_if(std::begin(buckets), std::end(buckets),
                                   [&] (const auto& region) { return contains(region, variant); });
-    if (itr != std::end(regions)) {
+    if (itr != std::end(buckets)) {
         assert(contains(*itr, variant));
         return *itr;
     } else {
@@ -246,121 +243,81 @@ boost::optional<RegionVariants&> find_contained(std::vector<RegionVariants>& reg
     }
 }
 
+void choose_push_back(Variant candidate, std::vector<Variant>& final_candidates,
+                      std::vector<VariantBucket>& repeat_buckets)
+{
+    auto bucket = find_contained(repeat_buckets, candidate);
+    if (bucket) {
+        bucket->variants.push_back(std::move(candidate));
+    } else {
+        final_candidates.push_back(std::move(candidate));
+    }
+}
+
 std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& region)
 {
-    using std::begin; using std::end; using std::cbegin; using std::cend; using std::next; using std::distance;
+    using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
     
     std::sort(begin(candidates_), end(candidates_));
-    auto overlapped = overlap_range(candidates_, region, max_seen_candidate_size_);
-    
+    auto viable_candidates = overlap_range(candidates_, region, max_seen_candidate_size_);
     std::vector<Variant> result {};
-    
-    if (empty(overlapped)) return result;
-    
-    result.reserve(size(overlapped, BidirectionallySortedTag {})); // maximum possible
-    
+    if (empty(viable_candidates)) return result;
+    result.reserve(size(viable_candidates, BidirectionallySortedTag {})); // maximum possible
     const auto repeat_regions = get_repeat_regions(region);
-    auto repeat_region_variants = init_region_variants(repeat_regions);
+    auto repeat_buckets = init_variant_buckets(repeat_regions);
+    const auto last_viable_candidate_itr = cend(viable_candidates);
     
-    while (!overlapped.empty()) {
-        const Candidate& candidate {overlapped.front()};
-        const auto next_candidate = std::find_if_not(next(cbegin(overlapped)), cend(overlapped),
-                                                     [this, &candidate] (const Candidate& c) {
-                                                         return options_.match(c.variant, candidate.variant);
-                                                     });
-        ObservedVariant observation {};
-        observation.variant = candidate.variant;
-        observation.total_depth = get_min_depth(candidate.variant, read_coverage_tracker_);
-        observation.num_samples = sample_read_coverage_tracker_.size();
-        std::vector<Candidate> observations {cbegin(overlapped), next_candidate};
-        std::sort(begin(observations), end(observations),
-                  [] (const Candidate& lhs, const Candidate& rhs) { return lhs.origin < rhs.origin; });
-        for (auto observation_itr = begin(observations); observation_itr != end(observations);) {
-            const auto& origin = observation_itr->origin;
-            auto next_itr = std::find_if_not(next(observation_itr), end(observations),
-                                             [&] (const Candidate& c) { return c.origin == origin; });
-            std::vector<unsigned> observed_qualities(std::distance(observation_itr, next_itr));
-            std::transform(observation_itr, next_itr, begin(observed_qualities),
-                           [this] (const Candidate& c) noexcept { return sum_base_qualities(c); });
-            const auto num_fwd_support = std::accumulate(observation_itr, next_itr, 0u,
-                                                         [] (unsigned curr, const Candidate& c) noexcept {
-                                                             if (c.support_direction == AlignedRead::Direction::forward) {
-                                                                 ++curr;
-                                                             }
-                                                             return curr;
+    while (!viable_candidates.empty()) {
+        const Candidate& candidate {viable_candidates.front()};
+        const auto next_candidate_itr = std::find_if_not(next(cbegin(viable_candidates)), last_viable_candidate_itr,
+                                                         [this, &candidate] (const Candidate& c) {
+                                                             return options_.match(c.variant, candidate.variant);
                                                          });
-            const auto depth = get_min_depth(candidate.variant, sample_read_coverage_tracker_.at(origin));
-            observation.sample_observations.push_back({depth, std::move(observed_qualities), num_fwd_support});
-            observation_itr = next_itr;
-        }
+        const auto num_matches = std::distance(cbegin(viable_candidates), next_candidate_itr);
+        const auto observation = make_observation(cbegin(viable_candidates), next_candidate_itr);
         if (options_.include(observation)) {
-            if (observations.size() > 1) {
-                auto unique_iter = cbegin(overlapped);
-                while (unique_iter != next_candidate) {
-                    auto repeat_region = find_contained(repeat_region_variants, unique_iter->variant);
-                    if (repeat_region) {
-                        repeat_region->variants.push_back(unique_iter->variant);
-                    } else {
-                        result.push_back(unique_iter->variant);
-                    }
-                    unique_iter = std::find_if_not(next(unique_iter), next_candidate,
-                                                   [unique_iter] (const Candidate& c) {
-                                                       return c.variant == unique_iter->variant;
-                                                   });
+            if (num_matches > 1) {
+                auto unique_itr = cbegin(viable_candidates);
+                while (unique_itr != next_candidate_itr) {
+                    choose_push_back(unique_itr->variant, result, repeat_buckets);
+                    unique_itr = std::find_if_not(next(unique_itr), next_candidate_itr,
+                                                  [unique_itr] (const Candidate& c) {
+                                                      return c.variant == unique_itr->variant;
+                                                  });
                 }
             } else {
-                auto repeat_region = find_contained(repeat_region_variants, candidate.variant);
-                if (repeat_region) {
-                    repeat_region->variants.push_back(candidate.variant);
-                } else {
-                    result.push_back(candidate.variant);
-                }
+                choose_push_back(candidate.variant, result, repeat_buckets);
             }
         }
-        overlapped.advance_begin(observations.size());
+        viable_candidates.advance_begin(num_matches);
     }
-    
-    std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));
-    std::vector<Candidate> unique_misaligned_candidates {};
-    unique_misaligned_candidates.reserve(likely_misaligned_candidates_.size());
-    std::unique_copy(std::cbegin(likely_misaligned_candidates_), std::cend(likely_misaligned_candidates_),
-                     std::back_inserter(unique_misaligned_candidates));
-    std::vector<Variant> unique_misaligned_variants {};
-    unique_misaligned_variants.reserve(unique_misaligned_candidates.size());
-    std::transform(std::cbegin(unique_misaligned_candidates), std::cend(unique_misaligned_candidates),
-                   std::back_inserter(unique_misaligned_variants),
-                   [] (const Candidate& candidate) { return candidate.variant; });
-    std::vector<Variant> novel_unique_misaligned_variants {};
-    novel_unique_misaligned_variants.reserve(unique_misaligned_variants.size());
-    std::set_difference(std::cbegin(unique_misaligned_variants), std::cend(unique_misaligned_variants),
-                        std::cbegin(result), std::cend(result), std::back_inserter(novel_unique_misaligned_variants));
-    if (!novel_unique_misaligned_variants.empty() && debug_log_) {
-        stream(*debug_log_) << "CigarScanner: ignoring " << count_overlapped(novel_unique_misaligned_variants, region)
+    const auto novel_unique_misaligned_variants = get_novel_likely_misaligned_candidates(result);
+    if (debug_log_ && !novel_unique_misaligned_variants.empty()) {
+        stream(*debug_log_) << "DynamicCigarScanner: ignoring "
+                            << count_overlapped(novel_unique_misaligned_variants, region)
                             << " unique candidates in " << region;
     }
     for (const auto& candidate : novel_unique_misaligned_variants) {
-        auto repeat_region = find_contained(repeat_region_variants, candidate);
-        if (repeat_region) {
-            repeat_region->variants.push_back(candidate);
-        }
+        auto bucket = find_contained(repeat_buckets, candidate);
+        if (bucket) bucket->variants.push_back(candidate);
     }
-    
+    for (auto& bucket : repeat_buckets) {
+        std::sort(begin(bucket.variants), end(bucket.variants));
+    }
     std::vector<Variant> good_repeat_region_variants {};
-    for (auto& region : repeat_region_variants) {
-        const auto density = region.variants.size() / size(region.region);
+    for (auto& bucket : repeat_buckets) {
+        const auto density = bucket.variants.size() / region_size(bucket);
         if (density < options_.max_repeat_region_density) {
-            utils::append(std::move(region.variants), good_repeat_region_variants);
+            utils::append(std::move(bucket.variants), good_repeat_region_variants);
         } else {
             if (debug_log_) {
-                stream(*debug_log_) << "CigarScanner: masking " << region.variants.size()
-                                    << " candidates in repetitive region " << region.region;
+                stream(*debug_log_) << "DynamicCigarScanner: ignoring " << bucket.variants.size()
+                                    << " candidates in repetitive region " << bucket.region;
             }
         }
     }
-    std::sort(std::begin(good_repeat_region_variants), std::end(good_repeat_region_variants));
     auto itr = utils::append(std::move(good_repeat_region_variants), result);
-    std::inplace_merge(std::begin(result), itr, std::end(result));
-    
+    std::inplace_merge(begin(result), itr, end(result));
     return result;
 }
 
@@ -385,10 +342,10 @@ std::string CigarScanner::name() const
 // private methods
 
 double CigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
-                                                    const SequenceIterator first_base, const SequenceIterator last_base,
-                                                    const SampleName& origin,
-                                                    AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                                                    AlignedRead::Direction support_direction)
+                                             const SequenceIterator first_base, const SequenceIterator last_base,
+                                             const SampleName& origin,
+                                             AlignedRead::BaseQualityVector::const_iterator first_base_quality,
+                                             AlignedRead::Direction support_direction)
 {
     using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
     using Tuple = boost::tuple<char, char>;
@@ -428,6 +385,67 @@ std::vector<GenomicRegion> CigarScanner::get_repeat_regions(const GenomicRegion&
     } else {
         return {};
     }
+}
+
+bool CigarScanner::is_likely_misaligned(const AlignedRead& read, const double penalty) const
+{
+    auto mu = options_.misalignment_parameters.max_expected_mutation_rate;
+    auto ln_prob_misaligned = ln_probability_read_correctly_aligned(penalty, read, mu);
+    auto min_ln_prob_misaligned = options_.misalignment_parameters.min_ln_prob_correctly_aligned;
+    return ln_prob_misaligned < min_ln_prob_misaligned;
+}
+CigarScanner::ObservedVariant
+CigarScanner::make_observation(const CandidateIterator first_match, const CandidateIterator last_match) const
+{
+    assert(first_match != last_match);
+    const Candidate& candidate {*first_match};
+    ObservedVariant result {};
+    result.variant = candidate.variant;
+    result.total_depth = get_min_depth(candidate.variant, read_coverage_tracker_);
+    result.num_samples = sample_read_coverage_tracker_.size();
+    std::vector<Candidate> observations {first_match, last_match};
+    std::sort(begin(observations), end(observations), [] (const Candidate& lhs, const Candidate& rhs) { return lhs.origin < rhs.origin; });
+    for (auto observation_itr = begin(observations); observation_itr != end(observations);) {
+        const auto& origin = observation_itr->origin;
+        auto next_itr = std::find_if_not(next(observation_itr), end(observations),
+                                         [&] (const Candidate& c) { return c.origin == origin; });
+        std::vector<unsigned> observed_qualities(std::distance(observation_itr, next_itr));
+        std::transform(observation_itr, next_itr, begin(observed_qualities),
+                       [this] (const Candidate& c) noexcept { return sum_base_qualities(c); });
+        const auto num_fwd_support = std::accumulate(observation_itr, next_itr, 0u,
+                                                     [] (unsigned curr, const Candidate& c) noexcept {
+                                                         if (c.support_direction == AlignedRead::Direction::forward) {
+                                                             ++curr;
+                                                         }
+                                                         return curr;
+                                                     });
+        const auto depth = get_min_depth(candidate.variant, sample_read_coverage_tracker_.at(origin));
+        result.sample_observations.push_back({depth, std::move(observed_qualities), num_fwd_support});
+        observation_itr = next_itr;
+    }
+    return result;
+}
+
+std::vector<Variant>
+CigarScanner::get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates)
+{
+    std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));
+    std::vector<Candidate> unique_misaligned_candidates {};
+    unique_misaligned_candidates.reserve(likely_misaligned_candidates_.size());
+    std::unique_copy(std::cbegin(likely_misaligned_candidates_), std::cend(likely_misaligned_candidates_),
+                     std::back_inserter(unique_misaligned_candidates));
+    std::vector<Variant> unique_misaligned_variants {};
+    unique_misaligned_variants.reserve(unique_misaligned_candidates.size());
+    std::transform(std::cbegin(unique_misaligned_candidates), std::cend(unique_misaligned_candidates),
+                   std::back_inserter(unique_misaligned_variants),
+                   [] (const Candidate& candidate) { return candidate.variant; });
+    std::vector<Variant> result {};
+    result.reserve(unique_misaligned_variants.size());
+    assert(std::is_sorted(std::cbegin(current_candidates), std::cend(current_candidates)));
+    std::set_difference(std::cbegin(unique_misaligned_variants), std::cend(unique_misaligned_variants),
+                        std::cbegin(current_candidates), std::cend(current_candidates),
+                        std::back_inserter(result));
+    return result;
 }
 
 // non-member methods
