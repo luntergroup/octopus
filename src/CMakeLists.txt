@@ -148,7 +148,6 @@ set(UTILS_SOURCES
     utils/path_utils.hpp
     utils/path_utils.cpp
     utils/read_algorithms.hpp
-    utils/read_algorithms.cpp
     utils/read_stats.hpp
     utils/read_stats.cpp
     utils/sequence_utils.hpp
