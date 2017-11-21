@@ -66,17 +66,17 @@ BOOST_AUTO_TEST_CASE(a_cigar_is_valid_if_all_ops_are_valid)
     BOOST_CHECK(!is_valid(cigar6));
 }
 
-BOOST_AUTO_TEST_CASE(can_splice)
+BOOST_AUTO_TEST_CASE(can_copy_parts_of_cigar)
 {
     const auto cigar = parse_cigar("5M1D10M3I4M");
-    BOOST_CHECK_EQUAL(splice(cigar, 3, 10), parse_cigar("2M1D7M"));
-    BOOST_CHECK_EQUAL(splice(cigar, 3, 15), parse_cigar("2M1D10M2I"));
-    BOOST_CHECK_EQUAL(splice(cigar, 0, 10), parse_cigar("5M1D4M"));
-    BOOST_CHECK_EQUAL(splice(cigar, 0, 50), cigar);
-    BOOST_CHECK_EQUAL(splice(cigar, 20, 10), parse_cigar("3M"));
-    BOOST_CHECK_EQUAL(splice(cigar, 20, 3), parse_cigar("3M"));
-    BOOST_CHECK_EQUAL(splice(cigar, 24, 10), parse_cigar(""));
-    BOOST_CHECK_EQUAL(splice(cigar, 16, 7), parse_cigar("3I4M"));
+    BOOST_CHECK_EQUAL(copy(cigar, 3, 10), parse_cigar("2M1D7M"));
+    BOOST_CHECK_EQUAL(copy(cigar, 3, 15), parse_cigar("2M1D10M2I"));
+    BOOST_CHECK_EQUAL(copy(cigar, 0, 10), parse_cigar("5M1D4M"));
+    BOOST_CHECK_EQUAL(copy(cigar, 0, 50), cigar);
+    BOOST_CHECK_EQUAL(copy(cigar, 20, 10), parse_cigar("3M"));
+    BOOST_CHECK_EQUAL(copy(cigar, 20, 3), parse_cigar("3M"));
+    BOOST_CHECK_EQUAL(copy(cigar, 24, 10), parse_cigar(""));
+    BOOST_CHECK_EQUAL(copy(cigar, 16, 7), parse_cigar("3I4M"));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
