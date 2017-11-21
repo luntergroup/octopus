@@ -139,14 +139,15 @@ AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
     AlleleSupportMap result {};
     result.reserve(alleles.size());
     for (const auto& allele : alleles) {
+        ReadRefSupportSet allele_support {};
         for (const auto& p : haplotype_support) {
             if (p.first.contains(allele)) {
-                result[allele].insert(std::cend(result[allele]), std::cbegin(p.second), std::cend(p.second));
+                allele_support.insert(std::cend(allele_support), std::cbegin(p.second), std::cend(p.second));
             }
         }
+        result.emplace(allele, std::move(allele_support));
     }
     return result;
-    
 }
 
 } // namespace octopus
