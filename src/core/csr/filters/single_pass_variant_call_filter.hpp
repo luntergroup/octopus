@@ -31,6 +31,9 @@ public:
     
     virtual ~SinglePassVariantCallFilter() override = default;
     
+protected:
+    std::vector<std::string> measure_names_;
+    
 private:
     boost::optional<ProgressMeter&> progress_;
     mutable boost::optional<GenomicRegion::ContigName> current_contig_;

@@ -19,9 +19,14 @@ SinglePassVariantCallFilter::SinglePassVariantCallFilter(FacetFactory facet_fact
                                                          std::vector<MeasureWrapper> measures,
                                                          OutputOptions output_config,
                                                          boost::optional<ProgressMeter&> progress)
-: VariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config)}
+: VariantCallFilter {std::move(facet_factory), measures, std::move(output_config)}
 , progress_ {progress}
-{}
+{
+    measure_names_.reserve(measures.size());
+    for (const auto& measure : measures) {
+        measure_names_.push_back(measure.name());
+    }
+}
 
 void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const
 {
@@ -52,9 +57,26 @@ void SinglePassVariantCallFilter::filter(const std::vector<VcfRecord>& calls, Vc
     }
 }
 
+struct MeasureValueVisitor : public boost::static_visitor<bool>
+{
+    template <typename T> bool operator()(const boost::optional<T>& value) const { return *value; }
+    template <typename T> bool operator()(const T& value) const noexcept { return value; }
+};
+
+auto get_value(const Measure::ResultType& value)
+{
+    return boost::apply_visitor(MeasureValueVisitor {}, value);
+}
+
 void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest) const
 {
-    write(call, classify(measures), dest);
+    VcfRecord::Builder builder {call};
+    for (std::size_t i {0}; i < measures.size(); ++i) {
+        if (!is_missing(measures[i])) {
+            builder.set_info(measure_names_[i], get_value(measures[i]));
+        }
+    }
+    write(builder.build_once(), classify(measures), dest);
     log_progress(mapped_region(call));
 }
 
