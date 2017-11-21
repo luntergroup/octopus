@@ -230,7 +230,7 @@ auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& r
             break;
         case ContigOutputOrder::asInReferenceIndex: {
             auto reference_contigs = reference.contig_names();
-            result = [&reference, reference_contigs = std::move(reference_contigs)]
+            result = [reference_contigs = std::move(reference_contigs)]
             (const auto& lhs, const auto& rhs) -> bool {
                 return index_of(reference_contigs, lhs) < index_of(reference_contigs, rhs);
             };
@@ -238,7 +238,7 @@ auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& r
         }
         case ContigOutputOrder::asInReferenceIndexReversed: {
             auto reference_contigs = reference.contig_names();
-            result = [&reference, reference_contigs = std::move(reference_contigs)]
+            result = [reference_contigs = std::move(reference_contigs)]
             (const auto& lhs, const auto& rhs) -> bool {
                 return index_of(reference_contigs, lhs) < index_of(reference_contigs, rhs);
             };

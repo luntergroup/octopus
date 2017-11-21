@@ -921,17 +921,12 @@ CancerCaller::ProbabilityVector
 CancerCaller::calculate_probability_samples_not_somatic(const Latents& inferences) const
 {
     std::vector<double> result(samples_.size());
-    const auto ploidy = parameters_.ploidy;
     const auto& posterior_alphas = inferences.somatic_model_inferences_.posteriors.alphas;
-    
     std::transform(std::cbegin(posterior_alphas), std::cend(posterior_alphas),
-                   std::begin(result), [this, ploidy] (const auto& p) {
-                       const auto a0 = std::accumulate(std::cbegin(p.second),
-                                                       std::prev(std::cend(p.second)),
-                                                       0.0);
+                   std::begin(result), [this] (const auto& p) {
+                       const auto a0 = std::accumulate(std::cbegin(p.second), std::prev(std::cend(p.second)), 0.0);
                        return maths::beta_cdf(p.second.back(), a0, parameters_.min_expected_somatic_frequency);
                    });
-    
     return result;
 }
 

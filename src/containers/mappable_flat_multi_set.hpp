@@ -510,13 +510,10 @@ MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt 
 {
     using ItrValueType = typename std::iterator_traits<InputIt>::value_type;
     static_assert(std::is_same<ItrValueType, MappableType>::value, "Cannot erase different type");
-    
     size_type result {0};
     if (first == last) return result;
-    auto from = std::cbegin(elements_);
     typename RegionType<MappableType>::Size max_erased_size {0};
-    
-    std::for_each(first, last, [this, &result, &from, &max_erased_size] (const auto& element) {
+    std::for_each(first, last, [this, &result, &max_erased_size] (const auto& element) {
         const auto er = elements_.equal_range(element);
         if (er.first != er.second) {
             if (region_size(element) > max_erased_size) {
@@ -526,7 +523,6 @@ MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt 
             elements_.erase(er.first, er.second);
         }
     });
-    
     if (result > 0) {
         if (!elements_.empty()) {
             if (!is_bidirectionally_sorted_) {
@@ -540,7 +536,6 @@ MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt 
             is_bidirectionally_sorted_ = true;
         }
     }
-    
     return result;
 }
 

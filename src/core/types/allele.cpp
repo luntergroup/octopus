@@ -29,35 +29,23 @@ Allele make_reference_allele(const GenomicRegion& region, const ReferenceGenome&
     return Allele {region, reference.fetch_sequence(region)};
 }
 
-std::vector<Allele> make_reference_alleles(const std::vector<GenomicRegion>& regions,
-                                           const ReferenceGenome& reference)
+std::vector<Allele> make_reference_alleles(const std::vector<GenomicRegion>& regions, const ReferenceGenome& reference)
 {
     std::vector<Allele> result {};
     result.reserve(regions.size());
-    
     std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(result),
-                   [&reference] (const auto& region) {
-                       return make_reference_allele(region, reference);
-                   });
-    
+                   [&reference] (const auto& region) { return make_reference_allele(region, reference); });
     return result;
 }
 
-std::vector<Allele> make_positional_reference_alleles(const GenomicRegion& region,
-                                                      const ReferenceGenome& reference)
+std::vector<Allele> make_positional_reference_alleles(const GenomicRegion& region, const ReferenceGenome& reference)
 {
     const auto sequence  = reference.fetch_sequence(region);
     const auto positions = decompose(region);
-    
     std::vector<Allele> result {};
     result.reserve(positions.size());
-    
-    std::transform(std::cbegin(positions), std::cend(positions),
-                   std::cbegin(sequence), std::back_inserter(result),
-                   [&reference] (const auto& region, auto base) {
-                       return Allele {region, base};
-                   });
-    
+    std::transform(std::cbegin(positions), std::cend(positions), std::cbegin(sequence), std::back_inserter(result),
+                   [] (const auto& region, auto base) { return Allele {region, base}; });
     return result;
 }
 

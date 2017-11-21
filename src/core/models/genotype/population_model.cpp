@@ -194,9 +194,8 @@ compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
                    [&genotypes, &haplotype_likelihoods, &likelihood_model] (const auto& sample) {
                        GenotypeLogLikelihoodVector likelihoods(genotypes.size());
                        haplotype_likelihoods.prime(sample);
-                       std::transform(std::cbegin(genotypes), std::cend(genotypes),
-                                      std::begin(likelihoods),
-                                      [&sample, &likelihood_model] (const auto& genotype) {
+                       std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(likelihoods),
+                                      [&likelihood_model] (const auto& genotype) {
                                           return likelihood_model.evaluate(genotype);
                                       });
                        return likelihoods;
