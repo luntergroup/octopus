@@ -12,6 +12,7 @@
 #include "overlapping_reads.hpp"
 #include "read_assignments.hpp"
 #include "reference_context.hpp"
+#include "samples.hpp"
 
 namespace octopus { namespace csr {
 
@@ -93,6 +94,10 @@ void FacetFactory::setup_facet_makers()
         } else {
             return FacetWrapper {nullptr};
         }
+    };
+    facet_makers_["Samples"] = [this] (const std::vector<VcfRecord>& records) -> FacetWrapper
+    {
+        return FacetWrapper {std::make_unique<Samples>(read_pipe_.source().samples())};
     };
 }
 
