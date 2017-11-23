@@ -14,9 +14,9 @@
 
 namespace octopus { namespace csr {
 
-std::unique_ptr<Measure> ClippedReadFration::do_clone() const
+std::unique_ptr<Measure> ClippedReadFraction::do_clone() const
 {
-    return std::make_unique<ClippedReadFration>(*this);
+    return std::make_unique<ClippedReadFraction>(*this);
 }
 
 namespace {
@@ -46,7 +46,7 @@ double clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
 
 } // namespace
 
-Measure::ResultType ClippedReadFration::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
+Measure::ResultType ClippedReadFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     auto reads = boost::get<OverlappingReads::ResultType>(facets.at("OverlappingReads").get());
     // Only use samples genotyped for an ALT allele
@@ -60,12 +60,12 @@ Measure::ResultType ClippedReadFration::do_evaluate(const VcfRecord& call, const
     return clipped_fraction(reads, mapped_region(call));
 }
 
-std::string ClippedReadFration::do_name() const
+std::string ClippedReadFraction::do_name() const
 {
     return "CRF";
 }
 
-std::vector<std::string> ClippedReadFration::do_requirements() const
+std::vector<std::string> ClippedReadFraction::do_requirements() const
 {
     return {"OverlappingReads"};
 }
