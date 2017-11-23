@@ -1,7 +1,7 @@
 // Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "soft_clip_fraction.hpp"
+#include "clipped_read_fraction.hpp"
 
 #include <cassert>
 
@@ -14,9 +14,9 @@
 
 namespace octopus { namespace csr {
 
-std::unique_ptr<Measure> SoftClipFration::do_clone() const
+std::unique_ptr<Measure> ClippedReadFration::do_clone() const
 {
-    return std::make_unique<SoftClipFration>(*this);
+    return std::make_unique<ClippedReadFration>(*this);
 }
 
 namespace {
@@ -46,7 +46,7 @@ double clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
 
 } // namespace
 
-Measure::ResultType SoftClipFration::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
+Measure::ResultType ClippedReadFration::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     auto reads = boost::get<OverlappingReads::ResultType>(facets.at("OverlappingReads").get());
     // Only use samples genotyped for an ALT allele
@@ -60,12 +60,12 @@ Measure::ResultType SoftClipFration::do_evaluate(const VcfRecord& call, const Fa
     return clipped_fraction(reads, mapped_region(call));
 }
 
-std::string SoftClipFration::do_name() const
+std::string ClippedReadFration::do_name() const
 {
-    return "SCF";
+    return "CRF";
 }
 
-std::vector<std::string> SoftClipFration::do_requirements() const
+std::vector<std::string> ClippedReadFration::do_requirements() const
 {
     return {"OverlappingReads"};
 }

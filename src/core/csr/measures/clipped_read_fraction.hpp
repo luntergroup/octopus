@@ -1,8 +1,8 @@
 // Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef soft_clip_fraction_hpp
-#define soft_clip_fraction_hpp
+#ifndef clipped_read_fraction_hpp
+#define clipped_read_fraction_hpp
 
 #include <string>
 #include <vector>
@@ -15,7 +15,7 @@ class VcfRecord;
 
 namespace csr {
 
-class SoftClipFration : public Measure
+class ClippedReadFration : public Measure
 {
     std::unique_ptr<Measure> do_clone() const override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;

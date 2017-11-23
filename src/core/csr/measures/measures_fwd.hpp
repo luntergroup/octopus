@@ -17,7 +17,7 @@
 #include "core/csr/measures/strand_bias.hpp"
 #include "core/csr/measures/gc_content.hpp"
 #include "core/csr/measures/filtered_read_fraction.hpp"
-#include "core/csr/measures/soft_clip_fraction.hpp"
+#include "core/csr/measures/clipped_read_fraction.hpp"
 #include "core/csr/measures/is_denovo.hpp"
 #include "core/csr/measures/is_somatic.hpp"
 
