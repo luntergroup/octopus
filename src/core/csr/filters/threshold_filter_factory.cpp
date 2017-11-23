@@ -67,6 +67,7 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<ModelPosterior>()]           = lowModelPosterior;
     filter_names[name<Quality>()]                  = lowQuality;
     filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
+    filter_names[name<MaxGenotypeQuality>()]       = lowGQ;
     filter_names[name<StrandBias>()]               = strandBias;
     filter_names[name<FilteredReadFraction>()]     = filteredReadFraction;
     filter_names[name<GCContent>()]                = highGCRegion;
