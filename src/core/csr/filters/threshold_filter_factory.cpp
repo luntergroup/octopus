@@ -71,6 +71,7 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<StrandBias>()]               = strandBias;
     filter_names[name<FilteredReadFraction>()]     = filteredReadFraction;
     filter_names[name<GCContent>()]                = highGCRegion;
+    filter_names[name<SoftClipFration>()]          = highSoftClipFraction;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)
