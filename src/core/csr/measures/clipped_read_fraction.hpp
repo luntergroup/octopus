@@ -15,7 +15,7 @@ class VcfRecord;
 
 namespace csr {
 
-class ClippedReadFration : public Measure
+class ClippedReadFraction : public Measure
 {
     std::unique_ptr<Measure> do_clone() const override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
