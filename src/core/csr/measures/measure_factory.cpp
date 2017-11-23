@@ -27,6 +27,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<StrandBias>()]               = [] () { return make_wrapped_measure<StrandBias>(); };
     measure_makers[name<GCContent>()]                = [] () { return make_wrapped_measure<GCContent>(); };
     measure_makers[name<FilteredReadFraction>()]     = [] () { return make_wrapped_measure<FilteredReadFraction>(); };
+    measure_makers[name<SoftClipFration>()]          = [] () { return make_wrapped_measure<SoftClipFration>(); };
     measure_makers[name<IsDenovo>()]                 = [] () { return make_wrapped_measure<IsDenovo>(); };
     measure_makers[name<IsSomatic>()]                = [] () { return make_wrapped_measure<IsSomatic>(); };
 }

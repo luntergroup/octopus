@@ -1,0 +1,56 @@
+// Copyright (c) 2017 Daniel Cooke
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
+
+#include "soft_clip_fraction.hpp"
+
+#include <boost/variant.hpp>
+
+#include "io/variant/vcf_record.hpp"
+#include "utils/read_stats.hpp"
+#include "../facets/overlapping_reads.hpp"
+
+namespace octopus { namespace csr {
+
+std::unique_ptr<Measure> SoftClipFration::do_clone() const
+{
+    return std::make_unique<SoftClipFration>(*this);
+}
+
+static double soft_clip_fraction(const ReadMap& reads, const GenomicRegion& region)
+{
+    unsigned num_reads {0}, num_soft_clipped_reads {0};
+    for (const auto& p : reads) {
+        for (const auto& read : overlap_range(p.second, region)) {
+            if (is_soft_clipped(read)) ++num_soft_clipped_reads;
+            ++num_reads;
+        }
+    }
+    return static_cast<double>(num_soft_clipped_reads) / num_reads;
+}
+
+Measure::ResultType SoftClipFration::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
+{
+    auto reads = boost::get<OverlappingReads::ResultType>(facets.at("OverlappingReads").get());
+    // Only use samples genotyped for an ALT allele
+    for (auto itr = std::cbegin(reads); itr != std::cend(reads);) {
+        if (call.is_homozygous_ref(itr->first)) {
+            itr = reads.erase(itr);
+        } else {
+            ++itr;
+        }
+    }
+    return soft_clip_fraction(reads, mapped_region(call));
+}
+
+std::string SoftClipFration::do_name() const
+{
+    return "SCF";
+}
+
+std::vector<std::string> SoftClipFration::do_requirements() const
+{
+    return {"OverlappingReads"};
+}
+
+} // namespace csr
+} // namespace octopus
