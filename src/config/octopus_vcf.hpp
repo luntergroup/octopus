@@ -37,7 +37,7 @@ VCF_SPEC_CONSTANT strandBias {"SB"};
 VCF_SPEC_CONSTANT filteredReadFraction {"FRF"};
 VCF_SPEC_CONSTANT highGCRegion {"GC"};
 VCF_SPEC_CONSTANT lowGQ {"GQ"};
-VCF_SPEC_CONSTANT highSoftClipFraction {"SCF"};
+VCF_SPEC_CONSTANT highClippedReadFraction {"CRF"};
 
 } // namespace filter
 

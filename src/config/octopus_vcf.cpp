@@ -60,7 +60,7 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::filteredReadFraction, "The number of reads filtered for calling is high"},
 {spec::filter::highGCRegion, "The GC content of the region is too high"},
 {spec::filter::lowGQ, "Sample genotype quality low"},
-{spec::filter::highSoftClipFraction, "High fraction of soft clipped reads covering position"},
+{spec::filter::highClippedReadFraction, "High fraction of clipped reads covering position"},
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)
