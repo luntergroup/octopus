@@ -265,8 +265,8 @@ set(CORE_SOURCES
     core/csr/measures/gc_content.cpp
     core/csr/measures/filtered_read_fraction.hpp
     core/csr/measures/filtered_read_fraction.cpp
-    core/csr/measures/soft_clip_fraction.hpp
-    core/csr/measures/soft_clip_fraction.cpp
+    core/csr/measures/clipped_read_fraction.hpp
+    core/csr/measures/clipped_read_fraction.cpp
     core/csr/measures/is_denovo.hpp
     core/csr/measures/is_denovo.cpp
     core/csr/measures/is_somatic.hpp

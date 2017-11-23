@@ -274,6 +274,12 @@ std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(con
     return get_soft_clipped_sizes(read.cigar());
 }
 
+CigarOperation::Size total_clip_size(const AlignedRead& read) noexcept
+{
+    const auto p = get_soft_clipped_sizes(read);
+    return p.first + p.second;
+}
+
 GenomicRegion clipped_mapped_region(const AlignedRead& read)
 {
     const auto p = get_soft_clipped_sizes(read);
