@@ -109,7 +109,7 @@ std::vector<VcfRecord> VariantCallFilter::get_next_block(VcfIterator& first, con
         if (!block.empty() && !overlaps(block.back().second, call_phase_region)) {
             return copy_each_first(block);
         }
-        block.push_back({call, std::move(call_phase_region)});
+        block.emplace_back(call, std::move(call_phase_region));
     }
     return copy_each_first(block);
 }
