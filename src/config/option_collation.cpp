@@ -1369,7 +1369,8 @@ auto get_normal_contamination_risk(const OptionMap& options)
     CallerBuilder::NormalContaminationRisk result {};
     switch (risk) {
         case NormalContaminationRisk::high: result = CallerBuilder::NormalContaminationRisk::high;
-            case NormalContaminationRisk::low: result = CallerBuilder::NormalContaminationRisk::low;
+        case NormalContaminationRisk::low: result = CallerBuilder::NormalContaminationRisk::low;
+        default: result = CallerBuilder::NormalContaminationRisk::low;
     }
     return result;
 }
