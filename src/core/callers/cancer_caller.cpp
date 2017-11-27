@@ -964,7 +964,7 @@ CancerCaller::ProbabilityVector
 CancerCaller::calculate_probability_samples_not_somatic(const Latents& inferences) const
 {
     std::vector<double> result(samples_.size());
-    const auto& posterior_alphas = inferences.somatic_model_inferences_.posteriors.alphas;
+    const auto& posterior_alphas = inferences.tumour_model_inferences_.posteriors.alphas;
     std::transform(std::cbegin(posterior_alphas), std::cend(posterior_alphas),
                    std::begin(result), [this] (const auto& p) {
                        const auto a0 = std::accumulate(std::cbegin(p.second), std::prev(std::cend(p.second)), 0.0);
