@@ -60,6 +60,8 @@ public:
     
     ~PopulationModel() = default;
     
+    const PopulationPriorModel& prior_model() const noexcept;
+    
     // All samples have same ploidy
     InferredLatents evaluate(const SampleVector& samples,
                              const GenotypeVector& genotypes,

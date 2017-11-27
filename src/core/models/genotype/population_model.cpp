@@ -29,6 +29,11 @@ PopulationModel::PopulationModel(const PopulationPriorModel& prior_model,
 , debug_log_ {debug_log}
 {}
 
+const PopulationPriorModel& PopulationModel::prior_model() const noexcept
+{
+    return prior_model_;
+}
+
 namespace {
 
 using GenotypeLogLikelihoodVector  = std::vector<double>;
