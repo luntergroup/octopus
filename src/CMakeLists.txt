@@ -212,31 +212,43 @@ set(CORE_SOURCES
 
     core/csr/facets/facet.hpp
     core/csr/facets/facet.cpp
+    core/csr/facets/samples.hpp
+    core/csr/facets/samples.cpp
     core/csr/facets/overlapping_reads.hpp
     core/csr/facets/overlapping_reads.cpp
     core/csr/facets/read_assignments.hpp
     core/csr/facets/read_assignments.cpp
+    core/csr/facets/reference_context.hpp
+    core/csr/facets/reference_context.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
-    
-    core/csr/filters/supervised_variant_call_filter.hpp
-    core/csr/filters/supervised_variant_call_filter.cpp
-    core/csr/filters/threshold_filter.hpp
-    core/csr/filters/threshold_filter.cpp
+
     core/csr/filters/variant_call_filter.hpp
     core/csr/filters/variant_call_filter.cpp
+    core/csr/filters/single_pass_variant_call_filter.hpp
+    core/csr/filters/single_pass_variant_call_filter.cpp
+    core/csr/filters/double_pass_variant_call_filter.hpp
+    core/csr/filters/double_pass_variant_call_filter.cpp
+    core/csr/filters/threshold_filter.hpp
+    core/csr/filters/threshold_filter.cpp
+    core/csr/filters/unsupervised_clustering_filter.hpp
+    core/csr/filters/unsupervised_clustering_filter.cpp
     core/csr/filters/variant_call_filter_factory.hpp
     core/csr/filters/variant_call_filter_factory.cpp
     core/csr/filters/threshold_filter_factory.hpp
     core/csr/filters/threshold_filter_factory.cpp
+    core/csr/filters/unsupervised_clustering_filter_factory.hpp
+    core/csr/filters/unsupervised_clustering_filter_factory.cpp
     
     core/csr/measures/measure.hpp
-    core/csr/measures/qual.hpp
-    core/csr/measures/qual.cpp
+    core/csr/measures/quality.hpp
+    core/csr/measures/quality.cpp
     core/csr/measures/depth.hpp
     core/csr/measures/depth.cpp
     core/csr/measures/quality_by_depth.hpp
     core/csr/measures/quality_by_depth.cpp
+    core/csr/measures/max_genotype_quality.hpp
+    core/csr/measures/max_genotype_quality.cpp
     core/csr/measures/mapping_quality_zero_count.hpp
     core/csr/measures/mapping_quality_zero_count.cpp
     core/csr/measures/mean_mapping_quality.hpp
@@ -249,6 +261,12 @@ set(CORE_SOURCES
     core/csr/measures/strand_bias.cpp
     core/csr/measures/mapping_quality_divergence.hpp
     core/csr/measures/mapping_quality_divergence.cpp
+    core/csr/measures/gc_content.hpp
+    core/csr/measures/gc_content.cpp
+    core/csr/measures/filtered_read_fraction.hpp
+    core/csr/measures/filtered_read_fraction.cpp
+    core/csr/measures/clipped_read_fraction.hpp
+    core/csr/measures/clipped_read_fraction.cpp
     core/csr/measures/is_denovo.hpp
     core/csr/measures/is_denovo.cpp
     core/csr/measures/is_somatic.hpp

@@ -7,10 +7,12 @@
 #include <memory>
 #include <algorithm>
 
-#include "overlapping_reads.hpp"
-#include "read_assignments.hpp"
 #include "utils/genotype_reader.hpp"
 #include "exceptions/program_error.hpp"
+#include "overlapping_reads.hpp"
+#include "read_assignments.hpp"
+#include "reference_context.hpp"
+#include "samples.hpp"
 
 namespace octopus { namespace csr {
 
@@ -81,6 +83,21 @@ void FacetFactory::setup_facet_makers()
             reads = read_pipe_.fetch_reads(encompassing_region(records));
         }
         return FacetWrapper {std::make_unique<ReadAssignments>(genotypes, reads)};
+    };
+    facet_makers_["ReferenceContext"] = [this] (const std::vector<VcfRecord>& records) -> FacetWrapper
+    {
+        if (!records.empty()) {
+            auto record_region = encompassing_region(records);
+            constexpr GenomicRegion::Size context_size {50};
+            auto context_region = expand(record_region, context_size);
+            return FacetWrapper {std::make_unique<ReferenceContext>(reference_, std::move(context_region))};
+        } else {
+            return FacetWrapper {nullptr};
+        }
+    };
+    facet_makers_["Samples"] = [this] (const std::vector<VcfRecord>& records) -> FacetWrapper
+    {
+        return FacetWrapper {std::make_unique<Samples>(read_pipe_.source().samples())};
     };
 }
 

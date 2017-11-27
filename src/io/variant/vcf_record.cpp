@@ -488,6 +488,12 @@ VcfRecord::Builder& VcfRecord::Builder::add_filter(KeyType filter)
     return *this;
 }
 
+VcfRecord::Builder& VcfRecord::Builder::clear_filter() noexcept
+{
+    filter_.clear();
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::reserve_info(unsigned n)
 {
     info_.reserve(n);

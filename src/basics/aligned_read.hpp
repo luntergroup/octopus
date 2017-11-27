@@ -224,9 +224,8 @@ AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read
 bool is_soft_clipped(const AlignedRead& read) noexcept;
 bool is_front_soft_clipped(const AlignedRead& read) noexcept;
 bool is_back_soft_clipped(const AlignedRead& read) noexcept;
-
 std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const AlignedRead& read) noexcept;
-
+CigarOperation::Size total_clip_size(const AlignedRead& read) noexcept;
 GenomicRegion clipped_mapped_region(const AlignedRead& read);
 
 // Returns the part of the read cigar string contained by the region

@@ -91,6 +91,21 @@ std::string name()
     return Measure().name();
 }
 
+namespace detail {
+
+struct IsMissingMeasureVisitor : public boost::static_visitor<bool>
+{
+    template <typename T> bool operator()(const boost::optional<T>& value) const noexcept { return !value; }
+    template <typename T> bool operator()(const T& value) const noexcept { return false; }
+};
+
+} // namespace detail
+
+inline bool is_missing(const Measure::ResultType& value) noexcept
+{
+    return boost::apply_visitor(detail::IsMissingMeasureVisitor {}, value);
+}
+
 } // namespace csr
 } // namespace octopus
 

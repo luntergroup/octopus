@@ -175,6 +175,7 @@ public:
     Builder& set_filter(std::vector<KeyType> filter);
     Builder& set_filter(std::initializer_list<KeyType> filter);
     Builder& add_filter(KeyType filter);
+    Builder& clear_filter() noexcept;
     Builder& reserve_info(unsigned n);
     Builder& add_info(const KeyType& key); // flags
     Builder& set_info(const KeyType& key, const ValueType& value);

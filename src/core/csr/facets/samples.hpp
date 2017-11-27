@@ -1,28 +1,27 @@
 // Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef overlapping_reads_hpp
-#define overlapping_reads_hpp
+#ifndef samples_hpp
+#define samples_hpp
 
 #include <string>
+#include <vector>
 
 #include "facet.hpp"
-#include "config/common.hpp"
-#include "basics/aligned_read.hpp"
 
 namespace octopus { namespace csr {
 
-class OverlappingReads : public Facet
+class Samples : public Facet
 {
 public:
-    using ResultType = ReadMap;
+    using ResultType = std::vector<std::string>;
     
-    OverlappingReads(ReadMap reads);
+    Samples(std::vector<std::string> samples);
 
 private:
     static const std::string name_;
     
-    ReadMap reads_;
+    std::vector<std::string> samples_;
     
     const std::string& do_name() const noexcept override { return name_; }
     Facet::ResultType do_get() const override;
