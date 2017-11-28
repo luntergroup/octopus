@@ -84,7 +84,7 @@ auto get_direction_counts(const HaplotypeSupportMap& support, const unsigned pri
 
 auto sample_beta(const DirectionCounts& counts, const std::size_t n)
 {
-    static std::default_random_engine generator {};
+    static std::mt19937 generator {};
     std::beta_distribution<> beta {static_cast<double>(counts.forward), static_cast<double>(counts.reverse)};
     std::vector<double> result(n);
     std::generate_n(std::begin(result), n, [&] () { return beta(generator); });
