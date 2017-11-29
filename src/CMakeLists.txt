@@ -148,7 +148,6 @@ set(UTILS_SOURCES
     utils/path_utils.hpp
     utils/path_utils.cpp
     utils/read_algorithms.hpp
-    utils/read_algorithms.cpp
     utils/read_stats.hpp
     utils/read_stats.cpp
     utils/sequence_utils.hpp
@@ -213,31 +212,43 @@ set(CORE_SOURCES
 
     core/csr/facets/facet.hpp
     core/csr/facets/facet.cpp
+    core/csr/facets/samples.hpp
+    core/csr/facets/samples.cpp
     core/csr/facets/overlapping_reads.hpp
     core/csr/facets/overlapping_reads.cpp
     core/csr/facets/read_assignments.hpp
     core/csr/facets/read_assignments.cpp
+    core/csr/facets/reference_context.hpp
+    core/csr/facets/reference_context.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
-    
-    core/csr/filters/supervised_variant_call_filter.hpp
-    core/csr/filters/supervised_variant_call_filter.cpp
-    core/csr/filters/threshold_filter.hpp
-    core/csr/filters/threshold_filter.cpp
+
     core/csr/filters/variant_call_filter.hpp
     core/csr/filters/variant_call_filter.cpp
+    core/csr/filters/single_pass_variant_call_filter.hpp
+    core/csr/filters/single_pass_variant_call_filter.cpp
+    core/csr/filters/double_pass_variant_call_filter.hpp
+    core/csr/filters/double_pass_variant_call_filter.cpp
+    core/csr/filters/threshold_filter.hpp
+    core/csr/filters/threshold_filter.cpp
+    core/csr/filters/unsupervised_clustering_filter.hpp
+    core/csr/filters/unsupervised_clustering_filter.cpp
     core/csr/filters/variant_call_filter_factory.hpp
     core/csr/filters/variant_call_filter_factory.cpp
     core/csr/filters/threshold_filter_factory.hpp
     core/csr/filters/threshold_filter_factory.cpp
+    core/csr/filters/unsupervised_clustering_filter_factory.hpp
+    core/csr/filters/unsupervised_clustering_filter_factory.cpp
     
     core/csr/measures/measure.hpp
-    core/csr/measures/qual.hpp
-    core/csr/measures/qual.cpp
+    core/csr/measures/quality.hpp
+    core/csr/measures/quality.cpp
     core/csr/measures/depth.hpp
     core/csr/measures/depth.cpp
     core/csr/measures/quality_by_depth.hpp
     core/csr/measures/quality_by_depth.cpp
+    core/csr/measures/max_genotype_quality.hpp
+    core/csr/measures/max_genotype_quality.cpp
     core/csr/measures/mapping_quality_zero_count.hpp
     core/csr/measures/mapping_quality_zero_count.cpp
     core/csr/measures/mean_mapping_quality.hpp
@@ -250,6 +261,12 @@ set(CORE_SOURCES
     core/csr/measures/strand_bias.cpp
     core/csr/measures/mapping_quality_divergence.hpp
     core/csr/measures/mapping_quality_divergence.cpp
+    core/csr/measures/gc_content.hpp
+    core/csr/measures/gc_content.cpp
+    core/csr/measures/filtered_read_fraction.hpp
+    core/csr/measures/filtered_read_fraction.cpp
+    core/csr/measures/clipped_read_fraction.hpp
+    core/csr/measures/clipped_read_fraction.cpp
     core/csr/measures/is_denovo.hpp
     core/csr/measures/is_denovo.cpp
     core/csr/measures/is_somatic.hpp
@@ -328,11 +345,9 @@ set(CORE_SOURCES
     
     core/tools/phaser/phaser.hpp
     core/tools/phaser/phaser.cpp
-    
+
     core/tools/vargen/cigar_scanner.hpp
     core/tools/vargen/cigar_scanner.cpp
-    core/tools/vargen/dynamic_cigar_scanner.hpp
-    core/tools/vargen/dynamic_cigar_scanner.cpp
     core/tools/vargen/downloader.hpp
     core/tools/vargen/downloader.cpp
     core/tools/vargen/local_reassembler.hpp
@@ -397,8 +412,6 @@ set(INCLUDE_SOURCES
     ${octopus_SOURCE_DIR}//lib/ksp/yen_ksp.hpp
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
-
 set(REQUIRED_BOOST_LIBRARIES
     system
     filesystem
@@ -417,6 +430,12 @@ set(WarningIgnores
     -Wno-missing-braces
 )
 
+# Compile options for all builds
+add_compile_options(-Wall -Wextra -Werror ${WarningIgnores})
+
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+
 if (BUILD_TESTING)
     # Make a library of all octopus non-main.cpp sources so can be used with tests
     add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
@@ -424,12 +443,7 @@ if (BUILD_TESTING)
     target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(Octopus tandem)
     target_compile_definitions(Octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
-    if (CMAKE_COMPILER_IS_GNUCXX)
-        target_compile_options(Octopus PRIVATE ${WarningIgnores})
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(Octopus PRIVATE ${WarningIgnores})
-    endif()
-    find_package (Boost 1.58 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
+    find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (Octopus PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (Octopus ${Boost_LIBRARIES})
@@ -441,13 +455,8 @@ if (BUILD_TESTING)
         target_link_libraries (Octopus ${HTSlib_LIBRARIES})
     endif (HTSlib_FOUND)
 elseif (CMAKE_BUILD_TYPE MATCHES Debug)
-    add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES} utils/repeat_finder.cpp)
+    add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
-   if (CMAKE_COMPILER_IS_GNUCXX)
-       target_compile_options(octopus-debug PRIVATE -Wall -Wextra -Wextra ${WarningIgnores} -pedantic)
-   elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-       target_compile_options(octopus-debug PRIVATE -Wall -Wextra ${WarningIgnores})
-   endif()
     target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus-debug tandem)
     if (USE_STATIC_BOOST)
@@ -457,7 +466,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
         message(STATUS "Linking against boost dynamic libraries")
         target_compile_definitions(octopus-debug PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     endif()
-    find_package (Boost 1.58 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
+    find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (octopus-debug PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (octopus-debug ${Boost_LIBRARIES})
@@ -468,16 +477,43 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
         target_include_directories (octopus-debug PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
     endif (HTSlib_FOUND)
+    find_package(Threads REQUIRED)
+    target_link_libraries(octopus-debug ${CMAKE_THREAD_LIBS_INIT})
     option(INSTALL_ROOT "INSTALL_ROOT" OFF)
     install(TARGETS octopus-debug DESTINATION ${octopus_SOURCE_DIR}/bin)
+elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
+    set(SanitizeFlags -fsanitize=address,undefined)
+    add_executable(octopus-sanitize main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
+    target_compile_features(octopus-sanitize PRIVATE cxx_thread_local)
+    target_compile_options(octopus-sanitize PRIVATE ${SanitizeFlags})
+    target_include_directories(octopus-sanitize PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
+    target_link_libraries(octopus-sanitize tandem ${SanitizeFlags})
+    if (USE_STATIC_BOOST)
+        message(STATUS "Linking against boost static libraries")
+        set(Boost_USE_STATIC_LIBS ON)
+    else()
+        message(STATUS "Linking against boost dynamic libraries")
+        target_compile_definitions(octopus-sanitize PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    endif()
+    find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
+    if (Boost_FOUND)
+        target_include_directories (octopus-sanitize PUBLIC ${Boost_INCLUDE_DIR})
+        target_link_libraries (octopus-sanitize ${Boost_LIBRARIES} ${SanitizeFlags})
+    endif (Boost_FOUND)
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
+    find_package (HTSlib 1.4 REQUIRED)
+    if (HTSlib_FOUND)
+        target_include_directories (octopus-sanitize PUBLIC ${HTSlib_INCLUDE_DIRS})
+        target_link_libraries (octopus-sanitize ${HTSlib_LIBRARIES} ${SanitizeFlags})
+    endif (HTSlib_FOUND)
+    find_package(Threads REQUIRED)
+    target_link_libraries(octopus-sanitize ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
+    option(INSTALL_ROOT "INSTALL_ROOT" OFF)
+    install(TARGETS octopus-sanitize DESTINATION ${octopus_SOURCE_DIR}/bin)
 else()
     add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus PRIVATE cxx_thread_local)
-    if (CMAKE_COMPILER_IS_GNUCXX)
-        target_compile_options(octopus PRIVATE -Wall -Wextra -pedantic ${WarningIgnores} -ffast-math -fno-tree-slp-vectorize)
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(octopus PRIVATE -Wall -Wextra ${WarningIgnores} -Werror -ffast-math)
-    endif()
+    target_compile_options(octopus PRIVATE -ffast-math -funroll-loops -march=native)
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus tandem)
     if (USE_STATIC_BOOST)
@@ -487,7 +523,7 @@ else()
         message(STATUS "Linking against boost dynamic libraries")
         target_compile_definitions(octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     endif()
-    find_package (Boost 1.58 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
+    find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (octopus PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (octopus ${Boost_LIBRARIES})
@@ -498,7 +534,15 @@ else()
         target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
         target_link_libraries (octopus ${HTSlib_LIBRARIES})
     endif (HTSlib_FOUND)
-    set_target_properties(octopus PROPERTIES INTERPROCEDURAL_OPTIMIZATION True)
+    find_package(Threads REQUIRED)
+    target_link_libraries(octopus ${CMAKE_THREAD_LIBS_INIT})
+    check_ipo_supported(RESULT ipo_supported)
+    if(ipo_supported)
+        message("-- IPO is supported!")
+        set_property(TARGET octopus PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "IPO is not supported!")
+    endif()
     option(INSTALL_ROOT "INSTALL_ROOT" OFF)
     if(INSTALL_ROOT)
         install(TARGETS octopus DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)

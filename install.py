@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 from subprocess import call
 import platform
 import argparse
@@ -17,8 +18,10 @@ parser.add_argument('--root', help='Install into /usr/local/bin', action='store_
 parser.add_argument('--compiler', help='C++ compiler path')
 parser.add_argument('--keep_cache', help='Do not refresh CMake cache', action='store_true')
 parser.add_argument('--debug', help='Builds in debug mode', action='store_true')
+parser.add_argument('--sanitize', help='Builds in release mode with sanitize flags', action='store_true')
 parser.add_argument('--static', help='Builds using static libraries', action='store_true')
 parser.add_argument('--threads', help='The number of threads to use for building', type=int)
+parser.add_argument('--boost', help='The Boost library root')
 args = vars(parser.parse_args())
 
 octopus_dir = os.path.dirname(os.path.realpath(__file__))
@@ -53,20 +56,23 @@ os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
 if not args["keep_cache"] and os.path.exists(cmake_cache_file):
     os.remove(cmake_cache_file)
 
-ret = 0
 cmake_options = []
-
 if args["root"]:
     cmake_options.extend(["-DINSTALL_ROOT=ON", octopus_dir])
 if args["compiler"]:
     cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["compiler"])
-if not args["debug"]:
-    cmake_options.append("-DCMAKE_BUILD_TYPE=Release")
-else:
+if args["debug"]:
     cmake_options.append("-DCMAKE_BUILD_TYPE=Debug")
+elif args["sanitize"]:
+    cmake_options.append("-DCMAKE_BUILD_TYPE=RelWithDebInfo")
+else:
+    cmake_options.append("-DCMAKE_BUILD_TYPE=Release")
 if args["static"]:
+    cmake_options.append("-DBUILD_SHARED_LIBS=OFF")
     cmake_options.append("-DUSE_STATIC_BOOST=ON")
-    
+if args["boost"]:
+    cmake_options.append("-DBOOST_ROOT=" + args["boost"])
+
 ret = call(["cmake"] + cmake_options + [".."])
 
 if ret == 0:
@@ -78,9 +84,8 @@ if ret == 0:
         make_options.append("-j" + str(multiprocessing.cpu_count()))
     
     if is_unix():
-        if args["root"]:
-            call(["sudo", "make", "install"] + make_options)
-        else:
-            call(["make", "install"] + make_options)
+        ret = call(["make", "install"] + make_options)
     else:
         print("Windows make files not supported. Build files have been written to " + octopus_build_dir)
+
+sys.exit(ret)

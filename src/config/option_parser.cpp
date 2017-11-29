@@ -474,6 +474,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(20000),
      "The maximum number of cancer genotype vectors to evaluate")
     
+    ("normal-contamination-risk",
+     po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
+     "The risk the normal sample has contamination from the tumour")
+    
     ("somatics-only",
      po::bool_switch()->default_value(false),
      "Only emit somatic variant calls")
@@ -554,12 +558,16 @@ OptionMap parse_options(const int argc, const char** argv)
      "Enable all variant call filtering")
     
     ("filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 20 | AF < 0.05 | SB > 0.95 | MQD > 0.9"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 20 | AF < 0.05 | SB > 0.98 | MQD > 0.9"),
      "Boolean expression to use to filter variant calls")
     
     ("use-calling-reads-for-filtering",
      po::value<bool>()->default_value(false),
      "Use the original reads used for variant calling for filtering")
+
+    ("keep-unfiltered-calls",
+     po::bool_switch()->default_value(false),
+     "Keep a copy of unfiltered calls")
     ;
     
     po::options_description all("octopus options");
@@ -1118,6 +1126,31 @@ std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
             break;
         case PhasingLevel::aggressive:
             out << "aggressive";
+            break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, NormalContaminationRisk& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "low")
+        result = NormalContaminationRisk::low;
+    else if (token == "high")
+        result = NormalContaminationRisk::high;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "normal-contamination-risk"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const NormalContaminationRisk& risk)
+{
+    switch (risk) {
+        case NormalContaminationRisk::low:
+            out << "low";
+            break;
+        case NormalContaminationRisk::high:
+            out << "high";
             break;
     }
     return out;

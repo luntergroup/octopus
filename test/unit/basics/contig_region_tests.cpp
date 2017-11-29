@@ -16,7 +16,7 @@ BOOST_AUTO_TEST_CASE(constructing_a_negative_region_is_an_error)
 {
     BOOST_CHECK_NO_THROW((ContigRegion {0, 0}));
     BOOST_CHECK_NO_THROW((ContigRegion {0, 1}));
-    BOOST_CHECK_THROW((ContigRegion {1, 0}), std::runtime_error);
+    BOOST_CHECK_THROW((ContigRegion {1, 0}), ContigRegion::BadRegion);
 }
 
 BOOST_AUTO_TEST_CASE(ordering_is_by_begin_then_end)

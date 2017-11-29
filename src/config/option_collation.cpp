@@ -756,7 +756,7 @@ auto get_default_inclusion_predicate()
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 {
     using namespace coretools;
-    using InclusionPredicate = DynamicCigarScanner::Options::InclusionPredicate;
+    using InclusionPredicate = CigarScanner::Options::InclusionPredicate;
     const auto caller = options.at("caller").as<std::string>();
     if (caller == "cancer") {
         // TODO: specialise for this case; we need to be careful about low frequency somatics.
@@ -847,32 +847,30 @@ auto make_variant_generator_builder(const OptionMap& options)
     const bool use_assembler {allow_assembler_generation(options)};
     
     if (options.at("raw-cigar-candidate-generator").as<bool>()) {
+        CigarScanner::Options scanner_options {};
         if (is_set("min-supporting-reads", options)) {
-            CigarScanner::Options scanner_options {};
-            scanner_options.min_base_quality = as_unsigned("min-base-quality", options);
-            scanner_options.min_support = as_unsigned("min-supporting-reads", options);
-            if (scanner_options.min_support == 0) {
+            auto min_support = as_unsigned("min-supporting-reads", options);
+            if (min_support == 0) {
                 warning_log << "The option --min_supporting_reads was set to 0 - assuming this is a typo and setting to 1";
-                ++scanner_options.min_support;
+                ++min_support;
             }
-            result.set_cigar_scanner(scanner_options);
+            scanner_options.include = coretools::SimpleThresholdInclusionPredicate {min_support};
         } else {
-            DynamicCigarScanner::Options scanner_options {};
             scanner_options.include = get_default_inclusion_predicate(options);
-            scanner_options.match = get_default_match_predicate();
-            scanner_options.use_clipped_coverage_tracking = true;
-            scanner_options.repeat_region_generator = DefaultRepeatGenerator {};
-            DynamicCigarScanner::Options::MisalignmentParameters misalign_params {};
-            misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
-            misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
-            if (use_assembler) {
-                misalign_params.indel_penalty = 1.5;
-                misalign_params.clip_penalty = 2;
-                misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
-            }
-            scanner_options.misalignment_parameters = misalign_params;
-            result.set_dynamic_cigar_scanner(std::move(scanner_options));
         }
+        scanner_options.match = get_default_match_predicate();
+        scanner_options.use_clipped_coverage_tracking = true;
+        scanner_options.repeat_region_generator = DefaultRepeatGenerator {};
+        CigarScanner::Options::MisalignmentParameters misalign_params {};
+        misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
+        misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
+        if (use_assembler) {
+            misalign_params.indel_penalty = 1.5;
+            misalign_params.clip_penalty = 2;
+            misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
+        }
+        scanner_options.misalignment_parameters = misalign_params;
+        result.set_cigar_scanner(std::move(scanner_options));
     }
     if (use_assembler) {
         LocalReassembler::Options reassembler_options {};
@@ -1365,6 +1363,17 @@ bool allow_model_filtering(const OptionMap& options)
     return options.count("model-posterior") == 1 && options.at("model-posterior").as<bool>();
 }
 
+auto get_normal_contamination_risk(const OptionMap& options)
+{
+    auto risk = options.at("normal-contamination-risk").as<NormalContaminationRisk>();
+    CallerBuilder::NormalContaminationRisk result {};
+    switch (risk) {
+        case NormalContaminationRisk::high: result = CallerBuilder::NormalContaminationRisk::high; break;
+        case NormalContaminationRisk::low: result = CallerBuilder::NormalContaminationRisk::low; break;
+    }
+    return result;
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options)
 {
@@ -1416,6 +1425,10 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (caller == "cancer") {
         if (is_set("normal-sample", options)) {
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
+        } else {
+            logging::WarningLogger log {};
+            log << "Tumour only calling requested. "
+                "Please note this feature is still under development and results and runtimes may be poor";
         }
         vc_builder.set_somatic_mutation_rate(options.at("somatic-mutation-rate").as<float>());
         vc_builder.set_min_expected_somatic_frequency(options.at("min-expected-somatic-frequency").as<float>());
@@ -1423,6 +1436,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_credible_somatic_frequency(options.at("min-credible-somatic-frequency").as<float>());
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
+        vc_builder.set_normal_contamination_risk(get_normal_contamination_risk(options));
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_snv_denovo_mutation_rate(options.at("snv-denovo-mutation-rate").as<float>());
@@ -1470,6 +1484,11 @@ std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const Referen
 bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
 {
     return options.at("use-calling-reads-for-filtering").as<bool>();
+}
+
+bool keep_unfiltered_calls(const OptionMap& options) noexcept
+{
+    return options.at("keep-unfiltered-calls").as<bool>();
 }
 
 ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples)

@@ -24,8 +24,8 @@ private:
     
     ReadMap reads_;
     
-    const std::string& do_name() const noexcept { return name_; }
-    Facet::ResultType do_get() const;
+    const std::string& do_name() const noexcept override { return name_; }
+    Facet::ResultType do_get() const override;
 };
 
 } // namespace csr

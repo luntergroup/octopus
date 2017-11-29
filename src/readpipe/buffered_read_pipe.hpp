@@ -18,12 +18,18 @@ namespace octopus {
 class BufferedReadPipe
 {
 public:
+    struct Config
+    {
+        std::size_t max_buffer_size;
+        GenomicRegion::Size fetch_expansion = 0;
+        boost::optional<GenomicRegion::Size> max_fetch_size = boost::none;
+        boost::optional<GenomicRegion::Size> max_hint_gap = boost::none;
+    };
+    
     BufferedReadPipe() = delete;
     
-    BufferedReadPipe(const ReadPipe& source, std::size_t max_buffer_size);
-    
-    BufferedReadPipe(const ReadPipe& source, std::size_t max_buffer_size,
-                     std::vector<GenomicRegion> hints);
+    BufferedReadPipe(const ReadPipe& source, Config config);
+    BufferedReadPipe(const ReadPipe& source, Config config, std::vector<GenomicRegion> hints);
     
     BufferedReadPipe(const BufferedReadPipe&)            = delete;
     BufferedReadPipe& operator=(const BufferedReadPipe&) = delete;
@@ -47,14 +53,15 @@ private:
     using RegionMap = MappableSetMap<GenomicRegion::ContigName, GenomicRegion>;
     
     std::reference_wrapper<const ReadPipe> source_;
-    std::size_t max_buffer_size_;
+    Config config_;
     mutable ReadMap buffer_;
     mutable boost::optional<GenomicRegion> buffered_region_;
     mutable RegionMap hints_;
     
-    bool requires_new_fetch(const GenomicRegion& region) const noexcept ;
-    void setup_buffer(const GenomicRegion& region) const;
-    GenomicRegion calculate_max_buffer_region(const GenomicRegion& request) const;
+    bool requires_new_fetch(const GenomicRegion& request) const noexcept ;
+    void setup_buffer(const GenomicRegion& request) const;
+    GenomicRegion get_max_fetch_region(const GenomicRegion& request) const;
+    GenomicRegion get_default_max_fetch_region(const GenomicRegion& request) const;
 };
 
 } // namespace octopus

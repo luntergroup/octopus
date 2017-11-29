@@ -98,8 +98,6 @@ public:
     
     void clear();
     
-    void swap(const MappableFlatMultiSet&);
-    
     size_type size() const noexcept;
     size_type capacity() const noexcept;
     size_type max_size() const noexcept;
@@ -177,7 +175,7 @@ public:
     template <typename M, typename A>
     friend bool operator<(const MappableFlatMultiSet<M, A>& lhs, const MappableFlatMultiSet<M, A>& rhs);
     template <typename M, typename A>
-    friend void swap(MappableFlatMultiSet<M, A>& lhs, MappableFlatMultiSet<M, A>& rhs);
+    friend void swap(MappableFlatMultiSet<M, A>& lhs, MappableFlatMultiSet<M, A>& rhs) noexcept;
     
 private:
     base_t elements_;
@@ -512,13 +510,10 @@ MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt 
 {
     using ItrValueType = typename std::iterator_traits<InputIt>::value_type;
     static_assert(std::is_same<ItrValueType, MappableType>::value, "Cannot erase different type");
-    
     size_type result {0};
     if (first == last) return result;
-    auto from = std::cbegin(elements_);
     typename RegionType<MappableType>::Size max_erased_size {0};
-    
-    std::for_each(first, last, [this, &result, &from, &max_erased_size] (const auto& element) {
+    std::for_each(first, last, [this, &result, &max_erased_size] (const auto& element) {
         const auto er = elements_.equal_range(element);
         if (er.first != er.second) {
             if (region_size(element) > max_erased_size) {
@@ -528,7 +523,6 @@ MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt 
             elements_.erase(er.first, er.second);
         }
     });
-    
     if (result > 0) {
         if (!elements_.empty()) {
             if (!is_bidirectionally_sorted_) {
@@ -542,7 +536,6 @@ MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt 
             is_bidirectionally_sorted_ = true;
         }
     }
-    
     return result;
 }
 
@@ -552,14 +545,6 @@ void MappableFlatMultiSet<MappableType, Allocator>::clear()
     elements_.clear();
     is_bidirectionally_sorted_ = true;
     max_element_size_ = 0;
-}
-
-template <typename MappableType, typename Allocator>
-void MappableFlatMultiSet<MappableType, Allocator>::swap(const MappableFlatMultiSet& m)
-{
-    std::swap(elements_, m.elements_);
-    std::swap(is_bidirectionally_sorted_, m.is_bidirectionally_sorted_);
-    std::swap(max_element_size_, m.max_element_size_);
 }
 
 template <typename MappableType, typename Allocator>
@@ -871,11 +856,12 @@ bool operator<(const MappableFlatMultiSet<MappableType, Allocator>& lhs,
 
 template <typename MappableType, typename Allocator>
 void swap(MappableFlatMultiSet<MappableType, Allocator>& lhs,
-          MappableFlatMultiSet<MappableType, Allocator>& rhs)
+          MappableFlatMultiSet<MappableType, Allocator>& rhs) noexcept
 {
-    std::swap(lhs.elements_, rhs.elements_);
-    std::swap(lhs.is_bidirectionally_sorted_, rhs.is_bidirectionally_sorted_);
-    std::swap(lhs.max_element_size_, rhs.max_element_size_);
+    using std::swap;
+    swap(lhs.elements_, rhs.elements_);
+    swap(lhs.is_bidirectionally_sorted_, rhs.is_bidirectionally_sorted_);
+    swap(lhs.max_element_size_, rhs.max_element_size_);
 }
 
 template <typename ForwardIterator, typename MappableType1, typename MappableType2, typename Allocator>

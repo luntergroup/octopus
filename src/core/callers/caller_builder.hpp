@@ -13,11 +13,12 @@
 
 #include "config/common.hpp"
 #include "basics/ploidy_map.hpp"
-#include "readpipe/read_pipe.hpp"
-#include "core/tools/coretools.hpp"
 #include "basics/trio.hpp"
 #include "basics/pedigree.hpp"
+#include "readpipe/read_pipe.hpp"
+#include "core/tools/coretools.hpp"
 #include "caller.hpp"
+#include "cancer_caller.hpp"
 
 namespace octopus {
 
@@ -25,6 +26,7 @@ class CallerBuilder
 {
 public:
     using RefCallType = Caller::RefCallType;
+    using NormalContaminationRisk = CancerCaller::Parameters::NormalContaminationRisk;
     
     CallerBuilder() = delete;
     
@@ -66,6 +68,7 @@ public:
     CallerBuilder& set_credible_mass(double mass) noexcept;
     CallerBuilder& set_min_credible_somatic_frequency(double frequency) noexcept;
     CallerBuilder& set_min_somatic_posterior(Phred<double> posterior) noexcept;
+    CallerBuilder& set_normal_contamination_risk(NormalContaminationRisk risk) noexcept;
     
     // trio
     CallerBuilder& set_trio(Trio trio);
@@ -91,20 +94,12 @@ private:
     struct Parameters
     {
         // common
+        Caller::Parameters general;
         PloidyMap ploidies;
-        Caller::RefCallType refcall_type = Caller::RefCallType::none;
-        bool call_sites_only = false;
-        Phred<double> min_variant_posterior;
-        Phred<double> min_refcall_posterior;
-        unsigned max_haplotypes;
-        Phred<double> haplotype_extension_threshold, saturation_limit = Phred<> {10.0};
-        bool allow_flank_scoring;
-        bool allow_model_filtering;
+        Phred<double> min_variant_posterior, min_refcall_posterior;
         boost::optional<double> snp_heterozygosity, indel_heterozygosity;
         Phred<double> min_phase_score;
         unsigned max_joint_genotypes;
-        boost::optional<std::string> sequencer;
-        bool model_mapping_quality = true;
         
         // cancer
         boost::optional<SampleName> normal_sample;
@@ -113,6 +108,7 @@ private:
         double credible_mass;
         double min_credible_somatic_frequency;
         Phred<double> min_somatic_posterior;
+        NormalContaminationRisk normal_contamination_risk;
         bool call_somatics_only;
         
         // trio

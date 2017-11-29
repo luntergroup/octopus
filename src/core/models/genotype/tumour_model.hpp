@@ -14,16 +14,15 @@
 #include "core/models/haplotype_likelihood_cache.hpp"
 #include "core/types/cancer_genotype.hpp"
 
-namespace octopus { namespace model
-{
+namespace octopus { namespace model {
 
 class TumourModel
 {
 public:
     struct AlgorithmParameters
     {
-        unsigned max_iterations      = 1000;
-        double epsilon               = 0.001;
+        unsigned max_iterations = 1000;
+        double epsilon          = 0.05;
     };
     
     struct Priors
@@ -31,7 +30,7 @@ public:
         using GenotypeMixturesDirichletAlphas   = std::vector<double>;
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
         
-        CancerGenotypePriorModel genotype_prior_model;
+        const CancerGenotypePriorModel& genotype_prior_model;
         GenotypeMixturesDirichletAlphaMap alphas;
     };
     
@@ -39,10 +38,8 @@ public:
     {
         using GenotypeMixturesDirichletAlphas   = std::vector<double>;
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
-        
-        using GenotypeProbabilityMap = std::unordered_map<CancerGenotype<Haplotype>, double>;
-        
-        GenotypeProbabilityMap genotype_probabilities;
+        using ProbabilityVector                 = std::vector<double>;
+        ProbabilityVector genotype_probabilities;
         GenotypeMixturesDirichletAlphaMap alphas;
     };
     
@@ -54,10 +51,8 @@ public:
     
     TumourModel() = delete;
     
-    TumourModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors);
-    
-    TumourModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors,
-                AlgorithmParameters parameters);
+    TumourModel(std::vector<SampleName> samples, Priors priors);
+    TumourModel(std::vector<SampleName> samples, Priors priors, AlgorithmParameters parameters);
     
     ~TumourModel() = default;
     
@@ -66,12 +61,17 @@ public:
     TumourModel(TumourModel&&)                 = default;
     TumourModel& operator=(TumourModel&&)      = default;
     
-    InferredLatents evaluate(std::vector<CancerGenotype<Haplotype>> genotypes,
+    const Priors& priors() const noexcept;
+    
+    InferredLatents evaluate(const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    
+    InferredLatents evaluate(const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                             const std::vector<std::pair<std::vector<unsigned>, unsigned>>& genotype_indices,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
     std::vector<SampleName> samples_;
-    unsigned ploidy_;
     Priors priors_;
     AlgorithmParameters parameters_;
 };

@@ -23,7 +23,9 @@ class Facet : public Equitable<Facet>
 {
 public:
     using ResultType = boost::variant<ReadMap,
-                                      std::unordered_map<SampleName, HaplotypeSupportMap>
+                                      std::unordered_map<SampleName, HaplotypeSupportMap>,
+                                      std::string,
+                                      std::vector<std::string>
                                      >;
     
     Facet() = default;

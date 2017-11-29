@@ -16,13 +16,11 @@ Octopus is a mapping-based variant caller that implements several calling models
 * A C++14 compiler with SSE2 support
 * A C++14 standard library implementation
 * Git 2.5 or greater
-* Boost 1.58 or greater
+* Boost 1.65 or greater
 * htslib 1.4 or greater
-* CMake 3.5 or greater
+* CMake 3.9 or greater
 * Optional:
     * Python3 or greater
-
-**Warning**: GCC 6.2.1 and below have bugs which affect octopus, the code may compile, but do not trust the results. GCC 6.3 and above should be safe. Clang 3.8 has been tested. Visual Studio likely won't compile as it is not C++14 feature complete.
 
 #### *Obtaining requirements on OS X*
 
@@ -38,32 +36,28 @@ $ brew tap homebrew/science # required for htslib
 $ brew install htslib
 $ brew install python3
 ```
+
 Note if you already have any of these packages installed via Homebrew on your system the command will fail, but you can update to the latest version using `brew upgrade`.
 
-#### *Obtaining requirements on Ubuntu Xenial*
+#### *Obtaining requirements on Ubuntu*
 
-To install the requirements (using Clang) enter:
+Depending on your Ubuntu distribution, some requirements can be installed with `apt-get`. It may be preferable to use GCC as this will simplify installing Boost:
 
 ```shell
+$ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update && sudo apt-get upgrade
-$ sudo apt-get install clang-3.8
-$ sudo apt-get install libstdc++6
-$ sudo apt-get install libboost-all-dev
-$ sudo apt-get install cmake
+$ sudo apt-get install gcc-7
 $ sudo apt-get install git-all
 $ sudo apt-get install python3
 ```
 
-Only htslib 1.2.1 is currently available via `apt-get` so this will need to be installed manually:
+The other packages will need to be installed manually:
 
-```shell
-$ sudo apt-get install autoconf
-$ git clone https://github.com/samtools/htslib.git
-$ autoheader
-$ autoconf
-$ ./configure
-$ make && sudo make install
-```
+- CMake installation instructions are given [here](https://askubuntu.com/a/865294).
+- Htslib installation instructions are given [here](https://github.com/samtools/htslib). Note you may need to install `autoconf` (`sudo apt-get install autoconf`).
+- Instructions on installing Boost are given [here](https://stackoverflow.com/a/24086375/2970186).
+
+These instructions are replicated in the [user documentation](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) (Appendix).
 
 ## Installation
 
@@ -98,7 +92,7 @@ $ ./install.py --compiler /path/to/cpp/compiler # or just the compiler name if o
 For example, if the requirement instructions above were used:
 
 ```shell
-$ ./install.py --compiler clang++-3.8
+$ ./install.py --compiler clang++-4.0
 ```
 
 By default this installs to `/bin` relative to where you installed octopus. To install to a root directory (e.g. `/usr/local/bin`) use:
@@ -130,7 +124,7 @@ $ cmake -DINSTALL_ROOT=ON ..
 CMake will try to find a suitable compiler on your system, if you'd like you use a specific compiler use the `-D` option, for example:
 
 ```shell
-$ cmake -D CMAKE_C_COMPILER=clang-3.8 -D CMAKE_CXX_COMPILER=clang++-3.8 ..
+$ cmake -D CMAKE_C_COMPILER=clang-4.0 -D CMAKE_CXX_COMPILER=clang++-4.0 ..
 ```
 
 You can check installation was successful by executing the command:
@@ -141,19 +135,10 @@ $ octopus --help
 
 ## Running Tests
 
-Octopus comes packaged with unit, regression, and benchmark testing. The unit tests are self-contained whilst the regression and benchmark tests require external data sources.
-
-#### *Running the tests with Python3*
+Octopus currently has limited unit tests (more are planned!). To install and run them, use the Python3 install script in the `test` directory:
 
 ```shell
 $ test/install.py
-```
-
-#### *Running tests with CMake*
-
-```shell
-$ cd build
-$ cmake -DBUILD_TESTING=ON .. && make test
 ```
 
 ## Examples
@@ -273,6 +258,37 @@ $ octopus -R hs37d5.fa -I NA12878.bam --fast
 ```
 
 Note this does not turn on multithreading or increase buffer sizes.
+
+## Output format
+
+Octopus outputs variants using a simple but rich VCF format (see [user documentation](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) for full details). For example, two overlapping deletions are represented like:
+
+```
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
+1	102738191	.	ATTATTTAT	A,*	.	.	.	GT	1|2
+1	102738191	.	ATTATTTATTTAT	A	.	.	.	GT	.|1
+```
+
+in contrast to how such a site would usually be represented, either:
+
+```
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
+1	102738191	.	ATTATTTAT	A	.	.	.	GT	1/0
+1	102738191	.	ATTATTTATTTAT	A	.	.	.	GT	1/0
+```
+
+which is inconsistent as the reference is deduced in each record, or:
+
+```
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
+1	102738191	.	ATTATTTATTTAT	ATTAT,A	.	.	.	GT	1/2
+```
+
+which is at least consistent, but rapidly becomes unmanageable as the length and number of overlapping variants increases.
+
+Octopus's representation is both succinct and consistent. The `*` allele denotes an upstream deletion, while the `.` in the genotype of the second record indicates the allele is missing due to a previous event. As the records are phased, the called haplotypes can be unambiguously reconstructed when the VCF file is read sequentially.
+
+However, some existing tools will not recognise this format. For example, RTG Tools does not fully support this representation. Therefore, octopus has an option to also produce calls using a more typical VCF format (like the first of the two examples). To request this, use the `--legacy` command line option. This option is only available when outputting calls to a file (i.e. not `stdout`).   
 
 ## Documentation
 

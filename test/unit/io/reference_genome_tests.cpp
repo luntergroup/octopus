@@ -20,19 +20,21 @@ BOOST_AUTO_TEST_SUITE(io)
 BOOST_AUTO_TEST_SUITE(reference)
 
 namespace {
-    auto to_ints(const std::vector<std::string>& strings)
-    {
-        std::vector<int> result(strings.size());
-        std::transform(std::cbegin(strings), std::cend(strings), std::begin(result),
-                       [] (const auto& str) { return std::stoi(str); });
-        return result;
-    }
-    
-    template <typename Container>
-    bool is_sorted(const Container& container)
-    {
-        return std::is_sorted(std::cbegin(container), std::cend(container));
-    }
+
+auto to_ints(const std::vector<std::string>& strings)
+{
+    std::vector<int> result(strings.size());
+    std::transform(std::cbegin(strings), std::cend(strings), std::begin(result),
+                   [] (const auto& str) { return std::stoi(str); });
+    return result;
+}
+
+template <typename Container>
+bool is_sorted(const Container& container)
+{
+    return std::is_sorted(std::cbegin(container), std::cend(container));
+}
+
 }
 
 BOOST_AUTO_TEST_CASE(reference_genomes_can_be_fasta_files)

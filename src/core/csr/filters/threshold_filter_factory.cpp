@@ -65,8 +65,9 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<MappingQualityZeroCount>()]  = highMappingQualityZeroCount;
     filter_names[name<MeanMappingQuality>()]       = lowMappingQuality;
     filter_names[name<ModelPosterior>()]           = lowModelPosterior;
-    filter_names[name<Qual>()]                     = lowQuality;
+    filter_names[name<Quality>()]                  = lowQuality;
     filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
+    filter_names[name<MaxGenotypeQuality>()]       = lowGQ;
     filter_names[name<StrandBias>()]               = strandBias;
 }
 
@@ -74,7 +75,7 @@ auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& compa
 {
     using namespace octopus::vcf::spec::filter;
     // First look for special names
-    if (measure.name() == Qual().name()) {
+    if (measure.name() == Quality().name()) {
         if (maths::almost_equal(threshold_target, 10.0)) return std::string {q10};
         if (maths::almost_equal(threshold_target, 20.0)) return std::string {q20};
     }

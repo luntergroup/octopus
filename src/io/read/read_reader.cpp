@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <string>
 #include <sstream>
+#include <iterator>
+#include <algorithm>
 
 #include "htslib_sam_facade.hpp"
 #include "exceptions/user_error.hpp"
@@ -46,9 +48,9 @@ namespace {
 
 auto get_extension(const boost::filesystem::path& file_path)
 {
-    auto result = file_path.extension().string();
+    std::string result {file_path.extension().string()};
     if (!result.empty() && result.front() == '.') {
-        result.erase(std::cbegin(result));
+        result.erase(0, 1);
     }
     return result;
 }

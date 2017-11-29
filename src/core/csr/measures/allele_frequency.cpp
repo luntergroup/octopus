@@ -36,8 +36,7 @@ auto num_matching_lhs_bases(const VcfRecord::NucleotideSequence& lhs, const VcfR
     return static_cast<int>(std::distance(std::cbegin(lhs), p.first));
 }
 
-auto get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample,
-                        const bool trim_padding = false)
+auto get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, const bool trim_padding = false)
 {
     auto genotype = get_genotype(call, sample);
     remove_partial_alleles(genotype);
@@ -46,46 +45,78 @@ auto get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& samp
     const auto call_region = mapped_region(call);
     std::vector<Allele> result {};
     result.reserve(genotype.size());
+    bool has_ref {false};
     if (trim_padding) {
-        for (auto& allele : genotype) {
+        auto first_itr = std::begin(genotype);
+        const auto ref_itr = std::find(first_itr, std::end(genotype), call.ref());
+        if (ref_itr != std::end(genotype)) {
+            if (ref_itr != first_itr) std::iter_swap(first_itr, ref_itr);
+            ++first_itr;
+            has_ref = true;
+        }
+        auto min_removed_bases = static_cast<int>(call.ref().size());
+        std::for_each(first_itr, std::end(genotype), [&] (auto& allele) {
             const auto num_bases_to_remove = num_matching_lhs_bases(call.ref(), allele);
             allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), num_bases_to_remove));
             auto allele_region = expand_lhs(call_region, -num_bases_to_remove);
             result.emplace_back(std::move(allele_region), std::move(allele));
+            min_removed_bases = std::min(min_removed_bases, num_bases_to_remove);
+        });
+        if (has_ref) {
+            auto& ref = genotype.front();
+            ref.erase(std::cbegin(ref), std::next(std::cbegin(ref), min_removed_bases));
+            auto allele_region = expand_lhs(call_region, -min_removed_bases);
+            result.emplace_back(std::move(allele_region), std::move(ref));
         }
     } else {
+        const auto ref_itr = std::find(std::begin(genotype), std::end(genotype), call.ref());
+        if (ref_itr != std::end(genotype)) {
+            if (ref_itr != std::begin(genotype)) std::iter_swap(std::begin(genotype), ref_itr);
+            has_ref = true;
+        }
         std::transform(std::cbegin(genotype), std::cend(genotype), std::back_inserter(result),
                        [&] (const auto& alt_seq) { return Allele {call_region, alt_seq}; });
     }
-    return result;
+    return std::make_pair(std::move(result), has_ref);
 }
 
 Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto assignments = boost::get<ReadAssignments::ResultType>(facets.at("ReadAssignments").get());
-    double min_freq {1.0}, max_freq {0.0};
+    boost::optional<double> result {};
     for (const auto& p : assignments) {
         if (call.is_heterozygous(p.first)) {
-            auto alleles = get_called_alleles(call, p.first, true);
+            std::vector<Allele> alleles; bool has_ref;
+            std::tie(alleles, has_ref) = get_called_alleles(call, p.first, true);
             if (alleles.size() > 1) {
                 // This might not be the case if there are unknown or deleted alleles in the genotype
                 auto allele_support = compute_allele_support(alleles, p.second);
-                std::vector<double> allele_counts(alleles.size());
                 std::size_t read_count {0};
+                if (has_ref) {
+                    const auto ref_itr = allele_support.find(alleles.front()); // ref always at front if present
+                    assert(ref_itr != std::cend(allele_support));
+                    read_count += ref_itr->second.size();
+                    allele_support.erase(ref_itr);
+                }
+                std::vector<unsigned> allele_counts(allele_support.size());
                 std::transform(std::cbegin(allele_support), std::cend(allele_support), std::begin(allele_counts),
                                [&] (const auto& p) {
                                    read_count += p.second.size();
                                    return p.second.size();
                                });
-                std::sort(std::begin(allele_counts), std::end(allele_counts), std::greater<> {});
-                auto major_af = allele_counts.front() / read_count;
-                auto minor_af = allele_counts.back() / read_count;
-                if (major_af > max_freq) max_freq = major_af;
-                if (minor_af < min_freq) min_freq = minor_af;
+                if (read_count > 0) {
+                    const auto min_count_itr = std::min_element(std::cbegin(allele_counts), std::cend(allele_counts));
+                    const auto maf = static_cast<double>(*min_count_itr) / read_count;
+                    if (result) {
+                        result = std::min(*result, maf);
+                    } else {
+                        result = maf;
+                    }
+                }
             }
         }
     }
-    return std::min(min_freq, 1.0 - max_freq);
+    return result;
 }
 
 std::string AlleleFrequency::do_name() const

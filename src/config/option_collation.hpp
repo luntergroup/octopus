@@ -64,6 +64,8 @@ std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const Referen
 
 bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept;
 
+bool keep_unfiltered_calls(const OptionMap& options) noexcept;
+
 ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
                                     const OptionMap& options);
 

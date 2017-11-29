@@ -184,6 +184,12 @@ std::vector<CancerGenotype<Haplotype>>
 generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_genotypes,
                               const std::vector<Haplotype>& somatic_haplotypes);
 
+std::vector<CancerGenotype<Haplotype>>
+generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_genotypes,
+                              const std::vector<std::vector<unsigned>>& germline_genotype_indices,
+                              const std::vector<Haplotype>& somatic_haplotypes,
+                              std::vector<std::pair<std::vector<unsigned>, unsigned>>& cancer_genotype_indices);
+
 template <typename MappableType>
 Genotype<MappableType> demote(const CancerGenotype<MappableType>& genotype)
 {

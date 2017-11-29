@@ -21,9 +21,8 @@
 #include "utils/read_stats.hpp"
 #include "utils/maths.hpp"
 #include "utils/string_utils.hpp"
-#include "utils/append.hpp"
 #include "utils/genotype_reader.hpp"
-#include "io/variant/vcf_reader.hpp"
+#include "utils/append.hpp"
 #include "io/variant/vcf_writer.hpp"
 
 namespace octopus { namespace csr  {
@@ -40,17 +39,32 @@ auto get_facets(const std::vector<MeasureWrapper>& measures)
     return result;
 }
 
+// public methods
+
 VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
                                      std::vector<MeasureWrapper> measures,
-                                     OutputOptions output_config,
-                                     boost::optional<ProgressMeter&> progress)
-: measures_ {std::move(measures)}
-, facet_factory_ {std::move(facet_factory)}
-, facets_ {get_facets(measures_)}
+                                     OutputOptions output_config)
+: facet_factory_ {std::move(facet_factory)}
+, facets_ {get_facets(measures)}
+, measures_ {std::move(measures)}
 , output_config_ {output_config}
-, progress_ {progress}
-, current_contig_ {}
 {}
+
+void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
+{
+    if (!dest.is_header_written()) {
+        dest << make_header(source);
+    }
+    const auto samples = source.fetch_header().samples();
+    filter(source, dest, samples);
+}
+
+// protected methods
+
+bool VariantCallFilter::can_measure_single_call() const noexcept
+{
+    return facets_.empty();
+}
 
 namespace {
 
@@ -86,32 +100,44 @@ std::vector<T> copy_each_first(const std::vector<std::pair<T, _>>& items)
 
 } // namespace
 
-void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest)
+std::vector<VcfRecord> VariantCallFilter::get_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const
 {
-    if (!dest.is_header_written()) {
-        dest << make_header(source);
-    }
-    const auto samples = source.fetch_header().samples();
-    if (facets_.empty()) {
-        auto p = source.iterate();
-        std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) {
-            auto filtered_call = filter(call);
-            if (filtered_call) dest << *filtered_call;
-            log_progress(mapped_region(call));
-        });
-    } else {
-        std::vector<std::pair<VcfRecord, GenomicRegion>> block {};
-        for (auto p = source.iterate(); p.first != p.second; ++p.first) {
-            const VcfRecord& call {*p.first};
-            auto call_phase_region = get_phase_region(call, samples);
-            if (!block.empty() && !overlaps(block.back().second, call_phase_region)) {
-                dest << filter(copy_each_first(block));
-                log_progress(call_phase_region);
-                block.clear();
-            }
-            block.push_back({call, std::move(call_phase_region)});
+    std::vector<std::pair<VcfRecord, GenomicRegion>> block {};
+    for (; first != last; ++first) {
+        const VcfRecord& call {*first};
+        auto call_phase_region = get_phase_region(call, samples);
+        if (!block.empty() && !overlaps(block.back().second, call_phase_region)) {
+            return copy_each_first(block);
         }
-        dest << filter(copy_each_first(block));
+        block.emplace_back(call, std::move(call_phase_region));
+    }
+    return copy_each_first(block);
+}
+
+VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& call) const
+{
+    MeasureVector result(measures_.size());
+    std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
+                   [&call] (const MeasureWrapper& f) { return f(call); });
+    return result;
+}
+
+std::vector<VariantCallFilter::MeasureVector> VariantCallFilter::measure(const std::vector<VcfRecord>& calls) const
+{
+    const auto facets = compute_facets(calls);
+    std::vector<MeasureVector> result {};
+    result.reserve(calls.size());
+    std::transform(std::cbegin(calls), std::cend(calls), std::back_inserter(result),
+                   [this, &facets] (const auto& call) { return measure(call, facets); });
+    return result;
+}
+
+void VariantCallFilter::write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const
+{
+    if (classification.category != Classification::Category::hard_filtered) {
+        auto filtered_call = construct_template(call);
+        annotate(filtered_call, classification);
+        dest << filtered_call.build_once();
     }
 }
 
@@ -127,41 +153,14 @@ VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
     return builder.build_once();
 }
 
-boost::optional<VcfRecord> VariantCallFilter::filter(const VcfRecord& call) const
-{
-    const auto classification = classify(measure(call));
-    if (classification.category != Classification::Category::hard_filtered) {
-        auto filtered_call = construct_template(call);
-        annotate(filtered_call, classification);
-        return filtered_call.build_once();
-    } else {
-        return boost::none;
-    }
-}
-
-std::vector<VcfRecord> VariantCallFilter::filter(const std::vector<VcfRecord>& calls) const
-{
-    std::vector<VcfRecord> result {};
-    if (!calls.empty()) {
-        const auto facets = compute_facets(calls);
-        result.reserve(calls.size());
-        for (const auto& call : calls) {
-            const auto classification = classify(measure(call, facets));
-            if (classification.category != Classification::Category::hard_filtered) {
-                auto filtered_call = construct_template(call);
-                annotate(filtered_call, classification);
-                result.push_back(filtered_call.build_once());
-            }
-        }
-    }
-    return result;
-}
-
 VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) const
 {
     VcfRecord::Builder result {call};
     if (output_config_.emit_sites_only) {
         result.clear_format();
+    }
+    if (output_config_.clear_existing_filters) {
+        result.clear_filter();
     }
     return result;
 }
@@ -185,14 +184,6 @@ Measure::FacetMap VariantCallFilter::compute_facets(const std::vector<VcfRecord>
     return result;
 }
 
-VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& call) const
-{
-    MeasureVector result(measures_.size());
-    std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
-                   [&call] (const MeasureWrapper& measure) { return measure(call); });
-    return result;
-}
-
 VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& call, const Measure::FacetMap& facets) const
 {
     MeasureVector result(measures_.size());
@@ -210,26 +201,6 @@ void VariantCallFilter::fail(VcfRecord::Builder& call, std::vector<std::string> 
 {
     for (auto& reason : reasons) {
         call.add_filter(std::move(reason));
-    }
-}
-
-auto expand_lhs_to_zero(const GenomicRegion& region)
-{
-    return GenomicRegion {region.contig_name(), 0, region.end()};
-}
-
-void VariantCallFilter::log_progress(const GenomicRegion& region) const
-{
-    if (progress_) {
-        if (current_contig_) {
-            if (*current_contig_ != region.contig_name()) {
-                progress_->log_completed(*current_contig_);
-                current_contig_ = region.contig_name();
-            }
-        } else {
-            current_contig_ = region.contig_name();
-        }
-        progress_->log_completed(expand_lhs_to_zero(region));
     }
 }
 

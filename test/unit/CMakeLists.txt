@@ -25,7 +25,7 @@ set(LOGGING_TEST_SOURCES
 )
 
 set(IO_TEST_SOURCES
-    io/reference_genome_tests.cpp
+#    io/reference_genome_tests.cpp
 )
 
 set(READPIPE_TEST_SOURCES
@@ -39,6 +39,8 @@ set(UTILS_TEST_SOURCES
 set(CORE_TEST_SOURCES
     core/types/allele_tests.cpp
     core/types/variant_tests.cpp
+#    core/types/haplotype_tests.cpp
+#    core/types/genotype_tests.cpp
 
     core/tools/global_aligner_tests.cpp
     core/tools/assembler_tests.cpp
@@ -58,7 +60,7 @@ set(OCTOPUS_TEST_SOURCES
 )
 
 add_definitions(-DBOOST_TEST_DYN_LINK)
-find_package(Boost 1.58 REQUIRED COMPONENTS unit_test_framework REQUIRED)
+find_package(Boost 1.65 REQUIRED COMPONENTS unit_test_framework REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS} ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src ${octopus_SOURCE_DIR}/test)
 

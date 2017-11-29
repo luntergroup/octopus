@@ -21,8 +21,8 @@ class CNVModel
 public:
     struct AlgorithmParameters
     {
-        unsigned max_iterations      = 1000;
-        double epsilon               = 0.001;
+        unsigned max_iterations = 1000;
+        double epsilon          = 0.05;
     };
     
     struct Priors
@@ -38,10 +38,9 @@ public:
     {
         using GenotypeMixturesDirichletAlphas   = std::vector<double>;
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
+        using ProbabilityVector                 = std::vector<double>;
         
-        using GenotypeProbabilityMap = std::unordered_map<Genotype<Haplotype>, double>;
-        
-        GenotypeProbabilityMap genotype_probabilities;
+        ProbabilityVector genotype_probabilities;
         GenotypeMixturesDirichletAlphaMap alphas;
     };
     
@@ -53,10 +52,8 @@ public:
     
     CNVModel() = delete;
     
-    CNVModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors);
-    
-    CNVModel(std::vector<SampleName> samples, unsigned ploidy, Priors priors,
-             AlgorithmParameters parameters);
+    CNVModel(std::vector<SampleName> samples, Priors priors);
+    CNVModel(std::vector<SampleName> samples, Priors priors, AlgorithmParameters parameters);
     
     CNVModel(const CNVModel&)            = default;
     CNVModel& operator=(const CNVModel&) = default;
@@ -65,16 +62,18 @@ public:
     
     ~CNVModel() = default;
     
-    InferredLatents evaluate(std::vector<Genotype<Haplotype>> genotypes,
+    const Priors& priors() const noexcept;
+    
+    InferredLatents evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    
+    InferredLatents evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+                             const std::vector<std::vector<unsigned>>& genotype_indices,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
     std::vector<SampleName> samples_;
-    
-    unsigned ploidy_;
-    
     Priors priors_;
-    
     AlgorithmParameters parameters_;
 };
     

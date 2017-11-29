@@ -1734,15 +1734,16 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
                 assert(is_reference(vertex_before_bridge));
                 const auto bifurication_point_itr = is_bridge_until(alt_path);
                 if (bifurication_point_itr == std::cend(alt_path)) {
-                    //
-                    //      -> ref -> ref -> ->
-                    //     /                    \
-                    //  ref                     ref*
-                    //     \                    /
-                    //      -> alt -> alt -> alt
-                    //
-                    // The entire alt path can be removed as it never needs to be explored again;
-                    // the reference path can always be taken.
+                    /*
+                           -> ref -> ref -> ->
+                          /                    \
+                       ref                     ref*
+                          \                    /
+                            -> alt -> alt -> alt
+                      
+                       The entire alt path can be removed as it never needs to be explored again;
+                       the reference path can always be taken.
+                    */
                     remove_path(alt_path);
                     regenerate_vertex_indices();
                     set_out_edge_transition_scores(vertex_before_bridge);
@@ -1750,15 +1751,16 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
                     alt_path.clear();
                     removed_bubble = true;
                 } else if (joins_reference_only(bifurication_point_itr, std::cend(alt_path))) {
-                    //
-                    //      -> ref -> ref -> ref -> ref ->
-                    //     /                              \
-                    //  ref -> alt -> -> alt              ref
-                    //     \                 \            /
-                    //      -> alt -> alt -> alt* -> alt ->
-                    //
-                    // The alt path can be removed up until the bifurication point as one of the other
-                    // alt paths can be taken in future paths.
+                    /*
+                            -> ref -> ref -> ref -> ref ->
+                           /                              \
+                        ref -> alt -> -> alt              ref
+                           \                 \            /
+                            -> alt -> alt -> alt* -> alt ->
+                      
+                       The alt path can be removed up until the bifurication point as one of the other
+                       alt paths can be taken in future paths.
+                    */
                     if (bifurication_point_itr == std::cbegin(alt_path)) {
                         remove_edge(ref_before_bubble, alt_path.front());
                         alt_path.clear();
@@ -1791,13 +1793,13 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
                                     }
                                 });
                                 if (is_simple_bubble) {
-                                    //
-                                    //      -> ref -> ref -> ref -> ref ->
-                                    //     /                               \
-                                    //  ref         -> alt -> -> alt        ref
-                                    //     \      /                  \     /
-                                    //      -> alt* -> alt -> alt -> alt ->
-                                    //
+                                    /*
+                                            -> ref -> ref -> ref -> ref ->
+                                           /                               \
+                                        ref         -> alt -> -> alt        ref
+                                           \      /                  \     /
+                                            -> alt* -> alt -> alt -> alt ->
+                                    */
                                     const auto bifurication_point = *bifurication_point_itr;
                                     if (std::next(bifurication_point_itr) == next_bifurication_point_itr) {
                                         remove_edge(*bifurication_point_itr, *std::next(bifurication_point_itr));
@@ -1815,13 +1817,13 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
                             }
                         }
                     } else {
-                        //
-                        //      -> ref -> ref -> ref -> ref ->
-                        //     /                        /      \
-                        //  ref         -> alt -> -> alt        ref
-                        //     \      /                        /
-                        //      -> alt* -> alt -> alt -> alt ->
-                        //
+                        /*
+                                -> ref -> ref -> ref -> ref ->
+                               /                        /      \
+                            ref         -> alt -> -> alt        ref
+                               \      /                        /
+                                -> alt* -> alt -> alt -> alt ->
+                        */
                         const auto bifurication_point = *bifurication_point_itr;
                         alt_path.erase(std::cbegin(alt_path), std::next(bifurication_point_itr));
                         if (alt_path.empty()) {

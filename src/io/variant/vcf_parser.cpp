@@ -338,7 +338,7 @@ void parse_genotype(const VcfRecord::SampleName& sample, const std::string& geno
     alleles.reserve(ploidy);
     
     std::transform(std::cbegin(allele_numbers), std::cend(allele_numbers), std::back_inserter(alleles),
-                   [ploidy] (const auto& a) -> boost::optional<unsigned> {
+                   [] (const auto& a) -> boost::optional<unsigned> {
                        try {
                            return boost::lexical_cast<unsigned>(a);
                        } catch (const boost::bad_lexical_cast&) {
