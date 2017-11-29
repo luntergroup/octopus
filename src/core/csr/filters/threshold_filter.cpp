@@ -64,7 +64,7 @@ ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factor
                                                        std::vector<Condition> soft_conditions,
                                                        OutputOptions output_config,
                                                        boost::optional<ProgressMeter&> progress)
-: VariantCallFilter {std::move(facet_factory), extract_measures(hard_conditions, soft_conditions), output_config, progress}
+: SinglePassVariantCallFilter {std::move(facet_factory), extract_measures(hard_conditions, soft_conditions), output_config, progress}
 , hard_thresholds_ {extract_thresholds(hard_conditions)}
 , soft_thresholds_ {extract_thresholds(soft_conditions)}
 , vcf_filter_keys_ {extract_vcf_filter_keys(soft_conditions)}

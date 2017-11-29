@@ -24,6 +24,11 @@ IndividualModel::IndividualModel(const GenotypePriorModel& genotype_prior_model,
 , trace_log_ {trace_log}
 {}
 
+const GenotypePriorModel& IndividualModel::prior_model() const noexcept
+{
+    return genotype_prior_model_;
+}
+
 namespace debug {
 
 template <typename S>
@@ -60,7 +65,8 @@ auto compute_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
     return result;
 }
 
-void add_priors(const std::vector<Genotype<Haplotype>>& genotypes,
+template <typename Container>
+void add_priors(const Container& genotypes,
                 ProbabilityVector& genotype_likelihoods,
                 const GenotypePriorModel& genotype_prior_model)
 {
@@ -81,6 +87,20 @@ IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
     auto result = compute_likelihoods(genotypes, haplotype_likelihoods);
     debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, result);
     add_priors(genotypes, result, genotype_prior_model_);
+    const auto log_evidence = maths::normalise_exp(result);
+    return {{std::move(result)}, log_evidence};
+}
+
+IndividualModel::InferredLatents
+IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+                          const std::vector<std::vector<unsigned>>& genotype_indices,
+                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    assert(!genotypes.empty());
+    assert(genotypes.size() == genotype_indices.size());
+    auto result = compute_likelihoods(genotypes, haplotype_likelihoods);
+    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, result);
+    add_priors(genotype_indices, result, genotype_prior_model_);
     const auto log_evidence = maths::normalise_exp(result);
     return {{std::move(result)}, log_evidence};
 }

@@ -32,6 +32,22 @@ private:
     {
         return model_.evaluate(genotype);
     }
+    double do_evaluate(const std::vector<unsigned>& genotype) const override
+    {
+        return model_.evaluate(genotype);
+    }
+    void do_prime(const std::vector<Haplotype>& haplotypes) override
+    {
+        model_.prime(haplotypes);
+    }
+    void do_unprime() noexcept override
+    {
+        model_.unprime();
+    }
+    bool check_is_primed() const noexcept override
+    {
+        return model_.is_primed();
+    }
 };
 
 } // namespace octopus

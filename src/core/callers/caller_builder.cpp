@@ -6,7 +6,6 @@
 #include "core/tools/phaser/phaser.hpp"
 #include "individual_caller.hpp"
 #include "population_caller.hpp"
-#include "cancer_caller.hpp"
 #include "trio_caller.hpp"
 
 namespace octopus {
@@ -215,6 +214,12 @@ CallerBuilder& CallerBuilder::set_min_somatic_posterior(Phred<double> posterior)
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_normal_contamination_risk(NormalContaminationRisk risk) noexcept
+{
+    params_.normal_contamination_risk = risk;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_trio(Trio trio)
 {
     params_.trio = std::move(trio);
@@ -344,7 +349,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.min_expected_somatic_frequency,
                                                       params_.credible_mass,
                                                       params_.min_credible_somatic_frequency,
-                                                      params_.max_joint_genotypes
+                                                      params_.max_joint_genotypes,
+                                                      params_.normal_contamination_risk
                                                   });
         }},
         {"trio", [this] () {

@@ -1363,6 +1363,17 @@ bool allow_model_filtering(const OptionMap& options)
     return options.count("model-posterior") == 1 && options.at("model-posterior").as<bool>();
 }
 
+auto get_normal_contamination_risk(const OptionMap& options)
+{
+    auto risk = options.at("normal-contamination-risk").as<NormalContaminationRisk>();
+    CallerBuilder::NormalContaminationRisk result {};
+    switch (risk) {
+        case NormalContaminationRisk::high: result = CallerBuilder::NormalContaminationRisk::high; break;
+        case NormalContaminationRisk::low: result = CallerBuilder::NormalContaminationRisk::low; break;
+    }
+    return result;
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options)
 {
@@ -1414,6 +1425,10 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (caller == "cancer") {
         if (is_set("normal-sample", options)) {
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
+        } else {
+            logging::WarningLogger log {};
+            log << "Tumour only calling requested. "
+                "Please note this feature is still under development and results and runtimes may be poor";
         }
         vc_builder.set_somatic_mutation_rate(options.at("somatic-mutation-rate").as<float>());
         vc_builder.set_min_expected_somatic_frequency(options.at("min-expected-somatic-frequency").as<float>());
@@ -1421,6 +1436,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_credible_somatic_frequency(options.at("min-credible-somatic-frequency").as<float>());
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
+        vc_builder.set_normal_contamination_risk(get_normal_contamination_risk(options));
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_snv_denovo_mutation_rate(options.at("snv-denovo-mutation-rate").as<float>());

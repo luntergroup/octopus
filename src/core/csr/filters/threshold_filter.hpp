@@ -11,7 +11,7 @@
 #include <boost/optional.hpp>
 #include <boost/variant.hpp>
 
-#include "variant_call_filter.hpp"
+#include "single_pass_variant_call_filter.hpp"
 #include "logging/progress_meter.hpp"
 #include "../facets/facet_factory.hpp"
 
@@ -21,11 +21,9 @@ class VcfHeader;
 
 namespace csr {
 
-class ThresholdVariantCallFilter : public VariantCallFilter
+class ThresholdVariantCallFilter : public SinglePassVariantCallFilter
 {
 public:
-    using VariantCallFilter::OutputOptions;
-    
     struct Threshold
     {
         virtual ~Threshold() = default;
@@ -66,7 +64,7 @@ public:
     ThresholdVariantCallFilter(ThresholdVariantCallFilter&&)                 = default;
     ThresholdVariantCallFilter& operator=(ThresholdVariantCallFilter&&)      = default;
     
-    virtual ~ThresholdVariantCallFilter() = default;
+    virtual ~ThresholdVariantCallFilter() override = default;
 
 private:
     std::vector<ThresholdWrapper> hard_thresholds_, soft_thresholds_;

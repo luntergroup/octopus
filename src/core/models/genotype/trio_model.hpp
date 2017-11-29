@@ -64,6 +64,8 @@ public:
     
     ~TrioModel() = default;
     
+    const PopulationPriorModel& prior_model() const noexcept;
+    
     InferredLatents evaluate(const GenotypeVector& maternal_genotypes,
                              const GenotypeVector& paternal_genotypes,
                              const GenotypeVector& child_genotypes,
