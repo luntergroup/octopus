@@ -88,7 +88,7 @@ matrix:
 #      - COMPILER=clang++-5.0
 #      - CC=clang-5.0 CXX=clang++-5.0
   - os: osx
-    osx_image: xcode8
+    osx_image: xcode9.1
     compiler: clang
     before_install:
       - brew update
