@@ -11,6 +11,7 @@
 
 #include <boost/optional.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/type_traits/is_unsigned.hpp>
 
 #include "exceptions/user_error.hpp"
 #include "utils/string_utils.hpp"
@@ -69,6 +70,23 @@ public:
     {}
 };
 
+template <bool is_unsigned>
+struct unsigned_checker
+{
+    template <typename String_type>
+    static inline void do_check(const String_type& str) {}
+};
+
+template <>
+struct unsigned_checker<true>
+{
+    template <typename String_type>
+    static inline void do_check(const String_type& str)
+    {
+        if (str.front() == '-') boost::throw_exception(boost::bad_lexical_cast());
+    }
+};
+
 GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
 {
     if (reference.has_contig(region)) {
@@ -77,19 +95,26 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
     }
     const auto last_colon_ritr = std::find(std::rbegin(region), std::rend(region), ':');
     if (last_colon_ritr == std::rend(region)) {
-        throw MalformedRegion {region};
+        throw MissingReferenceContig {region, reference.name()};
     }
     const auto begin_begin_itr = last_colon_ritr.base();
     region.erase(std::remove(begin_begin_itr, std::end(region), ','), std::end(region));
     const auto begin_end_itr = std::find(begin_begin_itr, std::end(region), '-');
+    if (begin_end_itr == begin_begin_itr) {
+        throw MalformedRegion {region};
+    }
     const std::string begin_str {begin_begin_itr, begin_end_itr};
     try {
         using Position = GenomicRegion::Position;
         std::string contig {std::begin(region), std::prev(begin_begin_itr)};
+        if (!reference.has_contig(contig)) {
+            throw MissingReferenceContig {region, reference.name()};
+        }
         const auto contig_size = static_cast<Position>(reference.contig_size(contig));
         if (contig_size == 0) {
             return GenomicRegion {std::move(contig), 0, 0};
         }
+        unsigned_checker<boost::is_unsigned<Position>::value>::do_check(begin_str);
         const auto begin = std::min(boost::lexical_cast<Position>(begin_str), contig_size - 1);
         if (begin_end_itr == std::end(region)) {
             // contig:position
@@ -101,13 +126,14 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
         } else {
             // contig:begin-end
             const std::string end_str {std::next(begin_end_itr), std::end(region)};
+            unsigned_checker<boost::is_unsigned<Position>::value>::do_check(end_str);
             const auto end = std::min(boost::lexical_cast<Position>(end_str), contig_size);
             if (begin > end) {
                 throw MalformedRegion {region, "has begin greater than end"};
             }
             return GenomicRegion {std::move(contig), begin, end};
         }
-    } catch (const boost::bad_lexical_cast& e) {
+    } catch (const boost::bad_lexical_cast&) {
         throw MalformedRegion {region};
     }
 }
