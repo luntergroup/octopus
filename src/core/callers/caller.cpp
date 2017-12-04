@@ -85,10 +85,16 @@ bool all_empty(const ReadMap& reads)
 }
 
 auto calculate_candidate_region(const GenomicRegion& call_region, const ReadMap& reads,
-                                const VariantGenerator& candidate_generator)
+                                const ReferenceGenome& reference, const VariantGenerator& candidate_generator)
 {
     if (!candidate_generator.requires_reads()) return call_region;
-    return all_empty(reads) ? call_region : encompassing_region(reads);
+    const auto read_region = all_empty(reads) ? call_region : encompassing_region(reads);
+    const auto contig_region = reference.contig_region(call_region.contig_name());
+    if (right_overhangs(read_region, contig_region)) {
+        return *overlapped_region(read_region, contig_region);
+    } else {
+        return read_region;
+    }
 }
 
 auto mapped_region(const VcfRecord& record)
@@ -136,7 +142,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         }
         if (debug_log_) stream(*debug_log_) << "Using " << count_reads(reads) << " reads in call region " << call_region;
     }
-    const auto candidate_region = calculate_candidate_region(call_region, reads, candidate_generator_);
+    const auto candidate_region = calculate_candidate_region(call_region, reads, reference_, candidate_generator_);
     auto candidates = generate_candidate_variants(candidate_region);
     if (debug_log_) debug::print_final_candidates(stream(*debug_log_), candidates, candidate_region);
     if (!refcalls_requested() && candidates.empty()) {
