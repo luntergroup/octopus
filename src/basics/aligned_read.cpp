@@ -399,6 +399,7 @@ std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector&
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead& read)
 {
+    os << read.name() << ' ';
     os << read.mapped_region() << ' ';
     os << read.sequence() << ' ';
     os << read.base_qualities() << ' ';
