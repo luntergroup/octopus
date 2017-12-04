@@ -579,14 +579,14 @@ void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCa
 {
     try {
         static auto debug_log = get_debug_log();
-        assert(!contigs.empty());
-        std::for_each(std::cbegin(contigs), std::prev(std::cend(contigs)), [&] (const auto& contig) {
+        if (debug_log) stream(*debug_log) << "Making tasks for " << contigs.size() << " contigs";
+        for (std::size_t i {0}; i < contigs.size(); ++i) {
+            const auto& contig = contigs[i];
+            if (debug_log) stream(*debug_log) << "Making tasks for contig " << contig;
             auto contig_components = make_contig_components(contig, components, num_threads);
-            make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, false);
-            if (debug_log) *debug_log << "Finished making tasks for contig " << contig;
-        });
-        auto contig_components = make_contig_components(contigs.back(), components, num_threads);
-        make_contig_tasks(contig_components, execution_policy, tasks[contigs.back()], sync, true);
+            make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, i == contigs.size() - 1);
+            if (debug_log) stream(*debug_log) << "Finished making tasks for contig " << contig;
+        }
         if (debug_log) *debug_log << "Finished making tasks";
     } catch (const Error& e) {
         log_error(e);
