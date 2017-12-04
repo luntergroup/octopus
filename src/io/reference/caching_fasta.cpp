@@ -224,9 +224,13 @@ CachingFasta::GenomicSize CachingFasta::get_lhs_extension_size(const GenomicRegi
 
 CachingFasta::GenomicSize CachingFasta::get_rhs_extension_size(const GenomicRegion& requested_region) const
 {
+    const auto contig_size = contig_sizes_.at(requested_region.contig_name());
+    const auto remaining_rhs_size = contig_size - std::min(requested_region.end(), contig_size);
     assert(max_cache_size_ >= size(requested_region));
-    return std::min(contig_sizes_.at(requested_region.contig_name()) - requested_region.end(),
-                    static_cast<GenomicSize>((max_cache_size_ - size(requested_region)) * locality_bias_ * forward_bias_));
+    const auto remaining_cache_size = max_cache_size_ - size(requested_region);
+    assert(locality_bias_ * forward_bias_ <= 1.0);
+    const auto preferred_extension_size = static_cast<GenomicSize>(remaining_cache_size * locality_bias_ * forward_bias_);
+    return std::min(remaining_rhs_size, preferred_extension_size);
 }
 
 GenomicRegion CachingFasta::get_new_contig_chunk(const GenomicRegion& requested_region) const
