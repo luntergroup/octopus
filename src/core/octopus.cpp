@@ -919,9 +919,7 @@ void write(std::deque<CompletedTask>&& tasks, VcfWriter& temp_vcf)
 {
     static auto debug_log = get_debug_log();
     for (auto&& task : tasks) {
-        if (debug_log) {
-            stream(*debug_log) << "Writing completed task " << task << " that finished in " << duration(task);
-        }
+        if (debug_log) stream(*debug_log) << "Writing completed task " << task << " that finished in " << duration(task);
         write_calls(std::move(task.calls), temp_vcf);
     }
 }
@@ -1030,6 +1028,8 @@ void write(RemainingTaskMap&& remaining_tasks, TempVcfWriterMap& temp_vcfs)
 void write_remaining_tasks(FutureCompletedTasks& futures, CompletedTaskMap& buffered_tasks, TempVcfWriterMap& temp_vcfs,
                            const ContigCallingComponentFactoryMap& calling_components)
 {
+    static auto debug_log = get_debug_log();
+    if (debug_log) stream(*debug_log) << "Waiting for " << futures.size() << " running tasks to finish";
     auto remaining_tasks = extract_remaining_tasks(futures, buffered_tasks);
     resolve_connecting_calls(remaining_tasks, calling_components);
     write(std::move(remaining_tasks), temp_vcfs);
@@ -1053,6 +1053,8 @@ auto extract_as_readers(TempVcfWriterMap&& vcfs)
 
 void merge(TempVcfWriterMap&& temp_vcf_writers, GenomeCallingComponents& components)
 {
+    static auto debug_log = get_debug_log();
+    if (debug_log) stream(*debug_log) << "Merging " << temp_vcf_writers.size() << " temporary VCF files";
     auto temp_readers = extract_as_readers(std::move(temp_vcf_writers));
     merge(temp_readers, components.output(), components.contigs());
 }
@@ -1157,6 +1159,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     assert(pending_tasks.empty());
     running_tasks.clear();
     holdbacks.clear(); // holdbacks are just references to buffered tasks
+    if (debug_log) *debug_log << "Finished making new tasks. Waiting for task writer to complete existing jobs";
     wait_until_finished(task_writer_sync);
     write_remaining_tasks(futures, buffered_tasks, temp_writers, calling_components);
     components.progress_meter().stop();
