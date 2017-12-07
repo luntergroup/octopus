@@ -149,6 +149,14 @@ private:
     ProbabilityVector calculate_probability_samples_not_somatic(const Latents& inferences) const;
     Phred<double> calculate_somatic_probability(const ProbabilityVector& sample_somatic_posteriors,
                                                 const ModelPosteriors& model_posteriors) const;
+    
+    // logging
+    void log(const ModelPosteriors& model_posteriors) const;
+    void log(const GenotypeVector& germline_genotypes,
+             const GermlineGenotypeProbabilityMap& germline_genotype_posteriors,
+             const CNVModel::InferredLatents& cnv_inferences,
+             const CancerGenotypeVector& cancer_genotypes,
+             const TumourModel::InferredLatents& tumour_inferences) const;
 };
 
 class CancerCaller::Latents : public Caller::Latents
