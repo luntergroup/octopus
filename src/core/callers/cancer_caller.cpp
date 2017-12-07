@@ -448,13 +448,15 @@ CancerCaller::get_somatic_model_priors(const CancerGenotypePriorModel& prior_mod
 CancerCaller::TumourModel::Priors
 CancerCaller::get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const
 {
+    // The noise model is intended to capture noise that may also be present in the normal sample,
+    // hence all samples have the same prior alphas.
     using Priors = TumourModel::Priors;
+    Priors::GenotypeMixturesDirichletAlphas noise_alphas(parameters_.ploidy + 1, parameters_.somatic_tumour_germline_alpha);
+    noise_alphas.back() = parameters_.somatic_tumour_somatic_alpha;
     Priors::GenotypeMixturesDirichletAlphaMap alphas {};
     alphas.reserve(samples_.size());
     for (const auto& sample : samples_) {
-        Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy + 1, parameters_.somatic_tumour_germline_alpha);
-        sample_alphas.back() = parameters_.somatic_tumour_somatic_alpha;
-        alphas.emplace(sample, std::move(sample_alphas));
+        alphas.emplace(sample, noise_alphas);
     }
     return Priors {prior_model, std::move(alphas)};
 }
@@ -648,13 +650,10 @@ auto call_somatic_variants(const VariantPosteriorVector& somatic_variant_posteri
 {
     SomaticVariantCalls result {};
     result.reserve(somatic_variant_posteriors.size());
-    
-    std::copy_if(std::begin(somatic_variant_posteriors), std::end(somatic_variant_posteriors),
-                 std::back_inserter(result),
+    std::copy_if(std::begin(somatic_variant_posteriors), std::end(somatic_variant_posteriors), std::back_inserter(result),
                  [min_posterior, &called_genotype] (const auto& p) {
                      return p.second >= min_posterior && includes(called_genotype, p.first.get().alt_allele());
                  });
-    
     return result;
 }
 
@@ -852,11 +851,12 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                         somatic_samples.push_back(p.first);
                     }
                 }
-                if (has_normal_sample()) {
+                if (has_normal_sample() && latents.noise_model_inferences_) {
+                    // Does the normal sample contain the called somatic variant?
                     const auto& noisy_alphas = latents.noise_model_inferences_->posteriors.alphas.at(normal_sample());
                     const auto noise_credible_region = compute_marginal_credible_interval(noisy_alphas, parameters_.credible_mass).back();
                     const auto somatic_mass = compute_somatic_mass(noisy_alphas, parameters_.min_expected_somatic_frequency);
-                    if (noise_credible_region.first >= parameters_.min_credible_somatic_frequency || somatic_mass > 0.35) {
+                    if (noise_credible_region.first >= parameters_.min_credible_somatic_frequency || somatic_mass > 0.5) {
                         somatic_samples.clear();
                     }
                 }
