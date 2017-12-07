@@ -7,8 +7,8 @@
 #include <iterator>
 #include <algorithm>
 #include <limits>
-#include <iostream>
 #include <stdexcept>
+#include <cassert>
 
 #include "utils/maths.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
@@ -18,13 +18,13 @@ namespace octopus {
 
 using HaplotypeLikelihoods = std::vector<std::vector<double>>;
 
-auto max_posterior_haplotypes(const Genotype<Haplotype>& genotype, const unsigned read,
+auto max_posterior_haplotypes(const std::vector<Haplotype>& haplotypes, const unsigned read,
                               const HaplotypeLikelihoods& likelihoods)
 {
     std::vector<unsigned> result {};
-    result.reserve(genotype.ploidy());
+    result.reserve(haplotypes.size());
     auto max_likelihood = std::numeric_limits<double>::lowest();
-    for (unsigned k {0}; k < genotype.ploidy(); ++k) {
+    for (unsigned k {0}; k < haplotypes.size(); ++k) {
         const auto curr = likelihoods[k][read];
         if (maths::almost_equal(curr, max_likelihood)) {
             result.push_back(k);
@@ -37,26 +37,26 @@ auto max_posterior_haplotypes(const Genotype<Haplotype>& genotype, const unsigne
     return result;
 }
 
-auto calculate_support(const Genotype<Haplotype>& genotype,
+auto calculate_support(const std::vector<Haplotype>& haplotypes,
                        const std::vector<AlignedRead>& reads,
                        const HaplotypeLikelihoods& likelihoods)
 {
     HaplotypeSupportMap result {};
     for (unsigned i {0}; i < reads.size(); ++i) {
-        const auto top = max_posterior_haplotypes(genotype, i, likelihoods);
+        const auto top = max_posterior_haplotypes(haplotypes, i, likelihoods);
         if (top.size() == 1) {
-            result[genotype[top.front()]].push_back(reads[i]);
+            result[haplotypes[top.front()]].push_back(reads[i]);
         }
     }
     return result;
 }
 
-auto max_deletion_size(const Genotype<Haplotype>& genotype)
+auto max_deletion_size(const std::vector<Haplotype>& haplotypes)
 {
     unsigned result {0};
-    for (const auto& haplotype : genotype) {
-        if (region_size(genotype) > sequence_size(haplotype)) {
-            auto diff = static_cast<unsigned>(region_size(genotype) - sequence_size(haplotype));
+    for (const auto& haplotype : haplotypes) {
+        if (region_size(haplotype) > sequence_size(haplotype)) {
+            auto diff = static_cast<unsigned>(region_size(haplotype) - sequence_size(haplotype));
             result = std::max(result, diff);
         }
     }
@@ -73,11 +73,12 @@ auto compute_read_hashes(const std::vector<AlignedRead>& reads)
     return result;
 }
 
-auto calculate_likelihoods(const Genotype<Haplotype>& genotype,
+auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes,
                            const std::vector<AlignedRead>& reads,
                            HaplotypeLikelihoodModel& model)
 {
-    const auto& genotype_region = mapped_region(genotype);
+    assert(!haplotypes.empty());
+    const auto& genotype_region = mapped_region(haplotypes.front());
     const auto reads_region = encompassing_region(reads);
     const auto min_flank_pad = HaplotypeLikelihoodModel::pad_requirement();
     unsigned min_lhs_expansion {min_flank_pad}, min_rhs_expansion {min_flank_pad};
@@ -87,31 +88,27 @@ auto calculate_likelihoods(const Genotype<Haplotype>& genotype,
     if (ends_before(genotype_region, reads_region)) {
         min_rhs_expansion += end_distance(genotype_region, reads_region);
     }
-    const auto min_expansion = std::max({min_lhs_expansion, min_rhs_expansion, 20u}) + max_deletion_size(genotype);
-    std::map<Haplotype, Haplotype> expanded_haplotypes {};
-    for (const auto& haplotype : genotype) {
-        expanded_haplotypes.emplace(haplotype, expand(haplotype, min_expansion));
-    }
+    const auto min_expansion = std::max({min_lhs_expansion, min_rhs_expansion, 20u}) + max_deletion_size(haplotypes);
     const auto read_hashes = compute_read_hashes(reads);
     static constexpr unsigned char mapperKmerSize {6};
     auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
-    std::map<Haplotype, std::vector<double>> likelihoods {};
-    for (const auto& p : expanded_haplotypes) {
-        populate_kmer_hash_table<mapperKmerSize>(p.second.sequence(), haplotype_hashes);
+    HaplotypeLikelihoods result {};
+    result.reserve(haplotypes.size());
+    for (const auto& haplotype : haplotypes) {
+        const auto expanded_haplotype = expand(haplotype, min_expansion);
+        populate_kmer_hash_table<mapperKmerSize>(expanded_haplotype.sequence(), haplotype_hashes);
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
-        model.reset(p.second);
-        likelihoods[p.first].resize(reads.size());
-        std::transform(std::cbegin(reads), std::cend(reads), std::cbegin(read_hashes), std::begin(likelihoods[p.first]),
+        model.reset(expanded_haplotype);
+        std::vector<double> likelihoods(reads.size());
+        std::transform(std::cbegin(reads), std::cend(reads), std::cbegin(read_hashes), std::begin(likelihoods),
                        [&] (const auto& read, const auto& read_hash) {
                            auto mapping_positions = map_query_to_target(read_hash, haplotype_hashes, haplotype_mapping_counts);
                            reset_mapping_counts(haplotype_mapping_counts);
                            return model.evaluate(read, mapping_positions);
                        });
         clear_kmer_hash_table(haplotype_hashes);
+        result.push_back(std::move(likelihoods));
     }
-    HaplotypeLikelihoods result(genotype.ploidy());
-    std::transform(std::cbegin(genotype), std::cend(genotype), std::begin(result),
-                   [&] (const auto& haplotype) { return likelihoods[haplotype]; });
     return result;
 }
 
@@ -126,8 +123,10 @@ HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotyp
                                               HaplotypeLikelihoodModel model)
 {
     if (!genotype.is_homozygous() && !reads.empty()) {
-        const auto likelihoods = calculate_likelihoods(genotype, reads, model);
-        return calculate_support(genotype, reads, likelihoods);
+        const auto unique_haplotypes = genotype.copy_unique();
+        assert(unique_haplotypes.size() > 1);
+        const auto likelihoods = calculate_likelihoods(unique_haplotypes, reads, model);
+        return calculate_support(unique_haplotypes, reads, likelihoods);
     } else {
         return {};
     }
