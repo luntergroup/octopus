@@ -450,9 +450,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>(),
      "Normal sample - all other samples are considered tumour")
     
-    ("somatic-mutation-rate",
-     po::value<float>()->default_value(1e-05, "1e-05"),
-     "Expected somatic mutation rate, per megabase pair, for this sample")
+    ("somatic-snv-mutation-rate",
+     po::value<float>()->default_value(2e-05, "1e-05"),
+     "Expected SNV somatic mutation rate, per megabase pair, for this sample")
+    
+    ("somatic-indel-mutation-rate",
+     po::value<float>()->default_value(5e-06, "1e-05"),
+     "Expected INDEL somatic mutation rate, per megabase pair, for this sample")
     
     ("min-expected-somatic-frequency",
      po::value<float>()->default_value(0.05, "0.05"),
@@ -469,7 +473,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-somatic-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
      "Minimum posterior probability (phred scale) to emit a somatic mutation call")
-
+    
     ("max-cancer-genotypes",
      po::value<int>()->default_value(20000),
      "The maximum number of cancer genotype vectors to evaluate")
