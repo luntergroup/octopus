@@ -83,7 +83,7 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 , use_unguarded_ {false}
 {
     gap_open_penalties_.reserve(1000);
-    min_ln_probability_ = 2 * std::log(parameters.snv_mutation_rate);
+    min_ln_probability_ = std::log(parameters.snv_mutation_rate) + std::log(parameters.indel_mutation_rate);
     if (caching_ == CachingStrategy::address) {
         address_cache_.reserve(num_haplotypes_hint_ * num_haplotypes_hint_);
     } else if (caching == CachingStrategy::value) {
