@@ -892,12 +892,13 @@ void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSyncPacket& sync
             sync.cv.notify_one();
             write(buffer, writers);
         }
+        logging::DebugLogger debug_log {};
+        debug_log << "Task writer finished";
     } catch (const Error& e) {
         log_error(e);
         logging::FatalLogger fatal_log {};
         fatal_log << "Encountered error in task writer thread. Calling terminate";
         std::terminate();
-    
     } catch (const std::exception& e) {
         log_error(e);
         logging::FatalLogger fatal_log {};
