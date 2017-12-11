@@ -885,7 +885,7 @@ void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSyncPacket& sync
         std::deque<CompletedTask> buffer {};
         while (!sync.done) {
             lock.lock();
-            sync.cv.wait(lock, [&] () { return !sync.tasks.empty(); });
+            sync.cv.wait(lock, [&] () { return !sync.tasks.empty() || sync.done; });
             assert(buffer.empty());
             std::swap(sync.tasks, buffer);
             lock.unlock();
