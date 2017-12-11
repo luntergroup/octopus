@@ -1070,8 +1070,13 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     TaskMakerSyncPacket task_maker_sync {};
     task_maker_sync.batch_size_hint = 2 * num_task_threads;
     std::unique_lock<std::mutex> pending_task_lock {task_maker_sync.mutex, std::defer_lock};
-    if (maker_thread.joinable()) maker_thread.detach();
     auto task_maker_thread = make_task_maker_thread(pending_tasks, components, num_task_threads, task_maker_sync);
+    if (!task_maker_thread.joinable()) {
+        logging::FatalLogger fatal_log {};
+        fatal_log << "Unable to make task maker thread";
+        return;
+    }
+    task_maker_thread.detach();
     
     FutureCompletedTasks futures(num_task_threads);
     TaskMap running_tasks {ContigOrder {components.contigs()}};
@@ -1091,6 +1096,11 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     auto temp_writers = make_temp_vcf_writers(components);
     TaskWriterSyncPacket task_writer_sync {};
     auto task_writer_thread = make_task_writer_thread(temp_writers, task_writer_sync);
+    if (!task_writer_thread.joinable()) {
+        logging::FatalLogger fatal_log {};
+        fatal_log << "Unable to make task writer thread";
+        return;
+    }
     task_writer_thread.detach();
     
     // Wait for the first task to be made
