@@ -857,7 +857,7 @@ void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks,
                   [&] (auto& rhs) { resolve_connecting_calls(*lhs++, rhs, calling_components); });
 }
 
-struct TaskWriterSync
+struct TaskWriterSyncPacket
 {
     std::condition_variable cv;
     std::mutex mutex;
@@ -878,7 +878,7 @@ void write(std::deque<CompletedTask>& tasks, TempVcfWriterMap& writers)
     tasks.clear();
 }
 
-void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSync& sync)
+void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSyncPacket& sync)
 {
     try {
         std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
@@ -910,7 +910,7 @@ void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSync& sync)
     }
 }
 
-std::thread make_task_writer_thread(TempVcfWriterMap& temp_writers, TaskWriterSync& writer_sync)
+std::thread make_task_writer_thread(TempVcfWriterMap& temp_writers, TaskWriterSyncPacket& writer_sync)
 {
     return std::thread {write_temp_vcf_helper, std::ref(temp_writers), std::ref(writer_sync)};
 }
@@ -924,7 +924,7 @@ void write(std::deque<CompletedTask>&& tasks, VcfWriter& temp_vcf)
     }
 }
 
-void write(std::deque<CompletedTask>&& tasks, TaskWriterSync& sync)
+void write(std::deque<CompletedTask>&& tasks, TaskWriterSyncPacket& sync)
 {
     std::unique_lock<std::mutex> lock {sync.mutex};
     utils::append(std::move(tasks), sync.tasks);
@@ -935,7 +935,7 @@ void write(std::deque<CompletedTask>&& tasks, TaskWriterSync& sync)
 // A CompletedTask can only be written if all proceeding tasks have completed (either written or buffered)
 void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffered_tasks,
                      TaskQueue& running_tasks, HoldbackTask& holdback,
-                     TaskWriterSync& sync, const ContigCallingComponentFactory& calling_components)
+                     TaskWriterSyncPacket& sync, const ContigCallingComponentFactory& calling_components)
 {
     static auto debug_log = get_debug_log();
     if (is_same_region(task, running_tasks.front())) {
@@ -956,7 +956,7 @@ void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffer
     }
 }
 
-void wait_until_finished(TaskWriterSync& sync)
+void wait_until_finished(TaskWriterSyncPacket& sync)
 {
     std::unique_lock<std::mutex> lock {sync.mutex};
     sync.cv.wait(lock, [&] () { return sync.tasks.empty(); });
@@ -1089,7 +1089,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     unsigned num_idle_futures {0};
     
     auto temp_writers = make_temp_vcf_writers(components);
-    TaskWriterSync task_writer_sync {};
+    TaskWriterSyncPacket task_writer_sync {};
     auto task_writer_thread = make_task_writer_thread(temp_writers, task_writer_sync);
     task_writer_thread.detach();
     
