@@ -605,8 +605,8 @@ void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCa
     }
 }
 
-std::thread make_tasks(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
-                       TaskMakerSyncPacket& sync)
+std::thread make_task_maker_thread(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
+                                   TaskMakerSyncPacket& sync)
 {
     auto contigs = components.contigs();
     if (contigs.empty()) {
@@ -1070,8 +1070,8 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     TaskMakerSyncPacket task_maker_sync {};
     task_maker_sync.batch_size_hint = 2 * num_task_threads;
     std::unique_lock<std::mutex> pending_task_lock {task_maker_sync.mutex, std::defer_lock};
-    auto maker_thread = make_tasks(pending_tasks, components, num_task_threads, task_maker_sync);
     if (maker_thread.joinable()) maker_thread.detach();
+    auto task_maker_thread = make_task_maker_thread(pending_tasks, components, num_task_threads, task_maker_sync);
     
     FutureCompletedTasks futures(num_task_threads);
     TaskMap running_tasks {ContigOrder {components.contigs()}};
