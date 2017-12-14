@@ -24,14 +24,26 @@ auto extract_repeats(const Haplotype& haplotype)
 {
     return tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 3);
 }
-    
-} // namespace
 
 template <typename C, typename T>
 static auto get_penalty(const C& penalties, const T length)
 {
     return (length < penalties.size()) ? penalties[length] : penalties.back();
 }
+
+template <typename FordwardIt, typename Tp>
+auto fill_if_less(FordwardIt first, FordwardIt last, const Tp& value)
+{
+    return std::transform(first, last, first, [&] (const auto& x) { return std::min(x, value); });
+}
+
+template <typename FordwardIt, typename Tp>
+auto fill_n_if_less(FordwardIt first, std::size_t n, const Tp& value)
+{
+    return fill_if_less(first, std::next(first, n), value);
+}
+
+} // namespace
 
 X10IndelErrorModel::PenaltyType
 X10IndelErrorModel::do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalities) const
@@ -74,7 +86,7 @@ X10IndelErrorModel::do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_o
         default:
             e = get_penalty(polyNucleotideTandemRepeatErrors_, repeat.length / repeat.period);
         }
-        std::fill_n(next(begin(gap_open_penalities), repeat.pos), repeat.length, e);
+        fill_n_if_less(next(begin(gap_open_penalities), repeat.pos), repeat.length, e);
         if (repeat.length > max_repeat.length) {
             max_repeat = repeat;
         }
