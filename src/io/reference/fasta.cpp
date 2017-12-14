@@ -14,6 +14,7 @@
 #include "exceptions/missing_file_error.hpp"
 #include "exceptions/missing_index_error.hpp"
 #include "exceptions/malformed_file_error.hpp"
+#include "exceptions/program_error.hpp"
 
 namespace octopus { namespace io {
 
@@ -63,24 +64,30 @@ public:
     MalformedFastaIndex(Fasta::Path file) : MalformedFileError {std::move(file), "fasta"} {}
 };
 
-Fasta::Fasta(Path fasta_path, BaseTransformPolicy base_transform)
-: Fasta {fasta_path, fasta_path.string() + ".fai", base_transform}
+Fasta::Fasta(Path fasta_path)
+: Fasta {fasta_path, fasta_path.string() + ".fai", Options {}}
 {}
 
-Fasta::Fasta(Path fasta_path, Path fasta_index_path, BaseTransformPolicy base_transform)
+Fasta::Fasta(Path fasta_path, Options options)
+: Fasta {fasta_path, fasta_path.string() + ".fai", options}
+{}
+
+Fasta::Fasta(Path fasta_path, Path fasta_index_path)
+: Fasta {std::move(fasta_path), std::move(fasta_index_path), Options {}}
+{}
+
+Fasta::Fasta(Path fasta_path, Path fasta_index_path, Options options)
 : path_ {std::move(fasta_path)}
 , index_path_ {std::move(fasta_index_path)}
-, base_transform_ {base_transform}
+, options_ {options}
 {
     using boost::filesystem::exists;
-    
     if (!exists(path_)) {
         throw MissingFasta {path_};
     }
     if (!is_valid_fasta()) {
         throw MalformedFasta {path_};
     }
-    
     if (!exists(index_path_)) {
         index_path_ = path_;
         index_path_.replace_extension("fai");
@@ -88,11 +95,9 @@ Fasta::Fasta(Path fasta_path, Path fasta_index_path, BaseTransformPolicy base_tr
             throw MissingFastaIndex {path_};
         }
     }
-    
     if (!is_valid_fasta_index()) {
         throw MalformedFastaIndex {index_path_};
     }
-    
     fasta_       = std::ifstream(path_.string());
     fasta_index_ = bioio::read_fasta_index(index_path_.string());
 }
@@ -148,13 +153,41 @@ Fasta::GenomicSize Fasta::do_fetch_contig_size(const ContigName& contig) const
     return static_cast<GenomicSize>(fasta_index_.at(contig).length);
 }
 
+class BadReferenceRequestRegion : public ProgramError
+{
+    GenomicRegion region;
+    
+    std::string do_why() const override
+    {
+        return "Requested bad reference region " + to_string(region);
+    }
+    std::string do_help() const override
+    {
+        return "Send a debug report";
+    }
+    std::string do_where() const override
+    {
+        return "Fasta";
+    }
+public:
+    BadReferenceRequestRegion(GenomicRegion region) : region {std::move(region)} {}
+};
+
 Fasta::GeneticSequence Fasta::do_fetch_sequence(const GenomicRegion& region) const
 {
     try {
         auto result = bioio::read_fasta_contig(fasta_, fasta_index_.at(contig_name(region)),
                                                mapped_begin(region), size(region));
-        if (base_transform_ == BaseTransformPolicy::capitalise) {
+        if (is_capitalisation_requested()) {
             utils::capitalise(result);
+        }
+        if (result.size() < size(region)) {
+            if (options_.base_fill_policy == Options::BaseFillPolicy::throw_exception) {
+                throw BadReferenceRequestRegion {region};
+            }
+            if (options_.base_fill_policy == Options::BaseFillPolicy::fill_with_ns) {
+                result.resize(size(region), 'N');
+            }
         }
         return result;
     } catch (const std::ios::failure& e) {
@@ -182,6 +215,11 @@ bool Fasta::is_valid_fasta_index() const noexcept
         return false;
     }
     return true; // TODO: could actually check valid fasta format
+}
+
+bool Fasta::is_capitalisation_requested() const noexcept
+{
+    return options_.base_transform_policy == Options::BaseTransformPolicy::capitalise;
 }
 
 } // namespace io

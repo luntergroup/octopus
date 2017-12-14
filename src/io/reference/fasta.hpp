@@ -31,12 +31,20 @@ public:
     using GenomicSize     = ReferenceReader::GenomicSize;
     using GeneticSequence = ReferenceReader::GeneticSequence;
     
-    enum class BaseTransformPolicy { capitalise, original };
+    struct Options
+    {
+        enum class BaseTransformPolicy { original, capitalise };
+        enum class BaseFillPolicy { ignore, throw_exception, fill_with_ns };
+        BaseTransformPolicy base_transform_policy = BaseTransformPolicy::original;
+        BaseFillPolicy base_fill_policy = BaseFillPolicy::ignore;
+    };
     
     Fasta() = delete;
     
-    Fasta(Path fasta_path, BaseTransformPolicy base_transform = BaseTransformPolicy::capitalise);
-    Fasta(Path fasta_path, Path fasta_index_path, BaseTransformPolicy base_transform = BaseTransformPolicy::capitalise);
+    Fasta(Path fasta_path);
+    Fasta(Path fasta_path, Options options);
+    Fasta(Path fasta_path, Path fasta_index_path);
+    Fasta(Path fasta_path, Path fasta_index_path, Options options);
     
     Fasta(const Fasta&);
     Fasta& operator=(Fasta);
@@ -50,7 +58,7 @@ private:
     mutable std::ifstream fasta_;
     bioio::FastaIndex fasta_index_;
     
-    BaseTransformPolicy base_transform_;
+    Options options_;
     
     std::unique_ptr<ReferenceReader> do_clone() const override;
     bool do_is_open() const noexcept override;
@@ -61,6 +69,7 @@ private:
     
     bool is_valid_fasta() const noexcept;
     bool is_valid_fasta_index() const noexcept;
+    bool is_capitalisation_requested() const noexcept;
 };
 
 } // namespace io
