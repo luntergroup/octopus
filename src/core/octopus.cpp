@@ -579,14 +579,14 @@ void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCa
 {
     try {
         static auto debug_log = get_debug_log();
-        assert(!contigs.empty());
-        std::for_each(std::cbegin(contigs), std::prev(std::cend(contigs)), [&] (const auto& contig) {
+        if (debug_log) stream(*debug_log) << "Making tasks for " << contigs.size() << " contigs";
+        for (std::size_t i {0}; i < contigs.size(); ++i) {
+            const auto& contig = contigs[i];
+            if (debug_log) stream(*debug_log) << "Making tasks for contig " << contig;
             auto contig_components = make_contig_components(contig, components, num_threads);
-            make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, false);
-            if (debug_log) *debug_log << "Finished making tasks for contig " << contig;
-        });
-        auto contig_components = make_contig_components(contigs.back(), components, num_threads);
-        make_contig_tasks(contig_components, execution_policy, tasks[contigs.back()], sync, true);
+            make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, i == contigs.size() - 1);
+            if (debug_log) stream(*debug_log) << "Finished making tasks for contig " << contig;
+        }
         if (debug_log) *debug_log << "Finished making tasks";
     } catch (const Error& e) {
         log_error(e);
@@ -605,8 +605,8 @@ void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCa
     }
 }
 
-std::thread make_tasks(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
-                       TaskMakerSyncPacket& sync)
+std::thread make_task_maker_thread(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
+                                   TaskMakerSyncPacket& sync)
 {
     auto contigs = components.contigs();
     if (contigs.empty()) {
@@ -857,7 +857,7 @@ void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks,
                   [&] (auto& rhs) { resolve_connecting_calls(*lhs++, rhs, calling_components); });
 }
 
-struct TaskWriterSync
+struct TaskWriterSyncPacket
 {
     std::condition_variable cv;
     std::mutex mutex;
@@ -878,26 +878,27 @@ void write(std::deque<CompletedTask>& tasks, TempVcfWriterMap& writers)
     tasks.clear();
 }
 
-void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSync& sync)
+void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSyncPacket& sync)
 {
     try {
         std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
         std::deque<CompletedTask> buffer {};
         while (!sync.done) {
             lock.lock();
-            sync.cv.wait(lock, [&] () { return !sync.tasks.empty(); });
+            sync.cv.wait(lock, [&] () { return !sync.tasks.empty() || sync.done; });
             assert(buffer.empty());
             std::swap(sync.tasks, buffer);
             lock.unlock();
             sync.cv.notify_one();
             write(buffer, writers);
         }
+        logging::DebugLogger debug_log {};
+        debug_log << "Task writer finished";
     } catch (const Error& e) {
         log_error(e);
         logging::FatalLogger fatal_log {};
         fatal_log << "Encountered error in task writer thread. Calling terminate";
         std::terminate();
-    
     } catch (const std::exception& e) {
         log_error(e);
         logging::FatalLogger fatal_log {};
@@ -910,7 +911,7 @@ void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSync& sync)
     }
 }
 
-std::thread make_task_writer_thread(TempVcfWriterMap& temp_writers, TaskWriterSync& writer_sync)
+std::thread make_task_writer_thread(TempVcfWriterMap& temp_writers, TaskWriterSyncPacket& writer_sync)
 {
     return std::thread {write_temp_vcf_helper, std::ref(temp_writers), std::ref(writer_sync)};
 }
@@ -924,7 +925,7 @@ void write(std::deque<CompletedTask>&& tasks, VcfWriter& temp_vcf)
     }
 }
 
-void write(std::deque<CompletedTask>&& tasks, TaskWriterSync& sync)
+void write(std::deque<CompletedTask>&& tasks, TaskWriterSyncPacket& sync)
 {
     std::unique_lock<std::mutex> lock {sync.mutex};
     utils::append(std::move(tasks), sync.tasks);
@@ -935,7 +936,7 @@ void write(std::deque<CompletedTask>&& tasks, TaskWriterSync& sync)
 // A CompletedTask can only be written if all proceeding tasks have completed (either written or buffered)
 void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffered_tasks,
                      TaskQueue& running_tasks, HoldbackTask& holdback,
-                     TaskWriterSync& sync, const ContigCallingComponentFactory& calling_components)
+                     TaskWriterSyncPacket& sync, const ContigCallingComponentFactory& calling_components)
 {
     static auto debug_log = get_debug_log();
     if (is_same_region(task, running_tasks.front())) {
@@ -956,7 +957,7 @@ void write_or_buffer(CompletedTask&& task, CompletedTaskMap::mapped_type& buffer
     }
 }
 
-void wait_until_finished(TaskWriterSync& sync)
+void wait_until_finished(TaskWriterSyncPacket& sync)
 {
     std::unique_lock<std::mutex> lock {sync.mutex};
     sync.cv.wait(lock, [&] () { return sync.tasks.empty(); });
@@ -1070,8 +1071,13 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     TaskMakerSyncPacket task_maker_sync {};
     task_maker_sync.batch_size_hint = 2 * num_task_threads;
     std::unique_lock<std::mutex> pending_task_lock {task_maker_sync.mutex, std::defer_lock};
-    auto maker_thread = make_tasks(pending_tasks, components, num_task_threads, task_maker_sync);
-    if (maker_thread.joinable()) maker_thread.detach();
+    auto task_maker_thread = make_task_maker_thread(pending_tasks, components, num_task_threads, task_maker_sync);
+    if (!task_maker_thread.joinable()) {
+        logging::FatalLogger fatal_log {};
+        fatal_log << "Unable to make task maker thread";
+        return;
+    }
+    task_maker_thread.detach();
     
     FutureCompletedTasks futures(num_task_threads);
     TaskMap running_tasks {ContigOrder {components.contigs()}};
@@ -1089,8 +1095,13 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     unsigned num_idle_futures {0};
     
     auto temp_writers = make_temp_vcf_writers(components);
-    TaskWriterSync task_writer_sync {};
+    TaskWriterSyncPacket task_writer_sync {};
     auto task_writer_thread = make_task_writer_thread(temp_writers, task_writer_sync);
+    if (!task_writer_thread.joinable()) {
+        logging::FatalLogger fatal_log {};
+        fatal_log << "Unable to make task writer thread";
+        return;
+    }
     task_writer_thread.detach();
     
     // Wait for the first task to be made
