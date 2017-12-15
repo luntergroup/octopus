@@ -12,6 +12,10 @@ constexpr int min_flank_pad() noexcept { return 8; }
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           int truth_len, int target_len,
+          short gap_open, short gap_extend, short nuc_prior) noexcept;
+
+int align(const char* truth, const char* target, const std::int8_t* qualities,
+          int truth_len, int target_len,
           const std::int8_t* gap_open, short gap_extend, short nuc_prior) noexcept;
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,

@@ -184,9 +184,15 @@ CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_somatic_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_somatic_snv_mutation_rate(double rate) noexcept
 {
-    params_.somatic_mutation_rate = rate;
+    params_.somatic_snv_mutation_rate = rate;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_somatic_indel_mutation_rate(double rate) noexcept
+{
+    params_.somatic_indel_mutation_rate = rate;
     return *this;
 }
 
@@ -345,7 +351,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.ploidies.of(samples.front(), *requested_contig_),
                                                       params_.normal_sample,
                                                       make_cancer_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                                                      {params_.somatic_mutation_rate, params_.somatic_mutation_rate},
+                                                      {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
                                                       params_.min_expected_somatic_frequency,
                                                       params_.credible_mass,
                                                       params_.min_credible_somatic_frequency,

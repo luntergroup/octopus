@@ -306,14 +306,12 @@ double evaluate(const std::string& target, const std::string& truth, const FlatG
     }
     const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
-    thread_local std::vector<std::int8_t> dummy_gap_open_penalities;
     dummy_qualities.assign(target.size(), model.mutation);
-    dummy_gap_open_penalities.assign(truth_alignment_size, model.gap_open);
     auto score = simd::align(truth.c_str(), target.c_str(),
                              dummy_qualities.data(),
                              truth_alignment_size,
                              static_cast<int>(target.size()),
-                             dummy_gap_open_penalities.data(),
+                             model.gap_open,
                              model.gap_extend, 2);
     return -ln10Div10<> * static_cast<double>(score);
 }
