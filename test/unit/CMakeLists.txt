@@ -25,6 +25,7 @@ set(LOGGING_TEST_SOURCES
 )
 
 set(IO_TEST_SOURCES
+    io/region_parser_tests.cpp
 #    io/reference_genome_tests.cpp
 )
 

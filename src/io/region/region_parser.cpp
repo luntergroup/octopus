@@ -3,7 +3,6 @@
 
 #include "region_parser.hpp"
 
-#include <regex>
 #include <sstream>
 #include <iterator>
 #include <algorithm>
@@ -11,6 +10,8 @@
 #include <functional>
 
 #include <boost/optional.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/type_traits/is_unsigned.hpp>
 
 #include "exceptions/user_error.hpp"
 #include "utils/string_utils.hpp"
@@ -69,45 +70,70 @@ public:
     {}
 };
 
+template <bool is_unsigned>
+struct unsigned_checker
+{
+    template <typename String_type>
+    static inline void do_check(const String_type& str) {}
+};
+
+template <>
+struct unsigned_checker<true>
+{
+    template <typename String_type>
+    static inline void do_check(const String_type& str)
+    {
+        if (str.front() == '-') boost::throw_exception(boost::bad_lexical_cast());
+    }
+};
+
 GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
 {
-    using Position = GenomicRegion::Position;
-    
-    region.erase(std::remove(std::begin(region), std::end(region), ','), std::end(region));
-    
-    static const std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
-    std::smatch match;
-    
-    if (std::regex_match(region, match, re) && match.size() == 5) {
-        GenomicRegion::ContigName contig {match.str(1)};
-        
+    if (reference.has_contig(region)) {
+        // contig
+        return GenomicRegion {std::move(region), 0, reference.contig_size(region)};
+    }
+    const auto last_colon_ritr = std::find(std::rbegin(region), std::rend(region), ':');
+    if (last_colon_ritr == std::rend(region)) {
+        throw MissingReferenceContig {region, reference.name()};
+    }
+    const auto begin_begin_itr = last_colon_ritr.base();
+    region.erase(std::remove(begin_begin_itr, std::end(region), ','), std::end(region));
+    const auto begin_end_itr = std::find(begin_begin_itr, std::end(region), '-');
+    if (begin_end_itr == begin_begin_itr) {
+        throw MalformedRegion {region};
+    }
+    const std::string begin_str {begin_begin_itr, begin_end_itr};
+    try {
+        using Position = GenomicRegion::Position;
+        std::string contig {std::begin(region), std::prev(begin_begin_itr)};
         if (!reference.has_contig(contig)) {
             throw MissingReferenceContig {region, reference.name()};
         }
-        
-        const auto contig_size = reference.contig_size(contig);
-        Position begin {0}, end {0};
-        
-        if (match.length(2) == 0) {
-            end = contig_size;
+        const auto contig_size = static_cast<Position>(reference.contig_size(contig));
+        if (contig_size == 0) {
+            return GenomicRegion {std::move(contig), 0, 0};
+        }
+        unsigned_checker<boost::is_unsigned<Position>::value>::do_check(begin_str);
+        const auto begin = std::min(boost::lexical_cast<Position>(begin_str), contig_size - 1);
+        if (begin_end_itr == std::end(region)) {
+            // contig:position
+            return GenomicRegion {std::move(contig), begin, begin + 1};
+        } else if (std::next(begin_end_itr) == std::end(region)) {
+            // contig:begin-
+            region.erase(std::prev(begin_begin_itr), std::end(region));
+            return GenomicRegion {std::move(region), begin, contig_size};
         } else {
-            begin = static_cast<Position>(std::stoul(match.str(2)));
-            
-            if (match.length(3) == 0) {
-                end = begin + 1;
-            } else if (match.str(4).empty()) {
-                end = contig_size;
-            } else {
-                end = static_cast<Position>(std::stoul(match.str(4)));
-            }
+            // contig:begin-end
+            const std::string end_str {std::next(begin_end_itr), std::end(region)};
+            unsigned_checker<boost::is_unsigned<Position>::value>::do_check(end_str);
+            const auto end = std::min(boost::lexical_cast<Position>(end_str), contig_size);
             if (begin > end) {
                 throw MalformedRegion {region, "has begin greater than end"};
             }
-            if (begin > contig_size) begin = contig_size;
-            if (end > contig_size) end = contig_size;
+            return GenomicRegion {std::move(contig), begin, end};
         }
-        return GenomicRegion {std::move(contig), begin, end};
-    } else {
+    } catch (const boost::bad_lexical_cast&) {
         throw MalformedRegion {region};
     }
 }

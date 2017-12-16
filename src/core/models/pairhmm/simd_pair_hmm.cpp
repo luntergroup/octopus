@@ -70,6 +70,123 @@ auto extract_epi16(const __m128i a, const int imm) noexcept
 }
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,
+          int truth_len, int target_len,
+          short gap_open, short gap_extend, short nuc_prior) noexcept
+{
+    // target is the read; the shorter of the sequences
+    // no checks for overflow are done
+    //
+    // the bottom-left and top-right corners of the DP table are just
+    // included at the extreme ends of the diagonal, which measures
+    // n=8 entries diagonally across.  This fixes the length of the
+    // longer (horizontal) sequence to 15 (2*8-1) more than the shorter
+    //
+    // the << 2's are because the lower two bits are reserved for back tracing
+    
+    assert(truth_len > bandSize && (truth_len == target_len + 2 * bandSize - 1));
+    
+    gap_open <<= 2;
+    gap_extend <<= 2;
+    nuc_prior <<= 2;
+    
+    using SimdInt = __m128i;
+    
+    SimdInt _m1 {_mm_set1_epi16(inf)};
+    auto _i1 = _m1;
+    auto _d1 = _m1;
+    auto _m2 = _m1;
+    auto _i2 = _m1;
+    auto _d2 = _m1;
+    
+    const SimdInt _gap_open {_mm_set1_epi16(gap_open)};
+    const SimdInt _gap_extend {_mm_set1_epi16(gap_extend)};
+    const SimdInt _nuc_prior  {_mm_set1_epi16(nuc_prior)};
+    
+    SimdInt _initmask   {_mm_set_epi16(0,0,0,0,0,0,0,-1)};
+    SimdInt _initmask2  {_mm_set_epi16(0,0,0,0,0,0,0,-0x8000)};
+    
+    // truth is initialized with the n-long prefix, in forward direction
+    // target is initialized as empty; reverse direction
+    SimdInt _truthwin  {_mm_set_epi16(truth[7], truth[6], truth[5], truth[4],
+                                      truth[3], truth[2], truth[1], truth[0])};
+    SimdInt _targetwin  {_m1};
+    SimdInt _qualitieswin {_mm_set1_epi16(64 << 2)};
+    
+    // if N, make nScore; if != N, make inf
+    SimdInt _truthnqual {_mm_add_epi16(_mm_and_si128(_mm_cmpeq_epi16(_truthwin, _mm_set1_epi16('N')),
+                                                     _mm_set1_epi16(nScore - inf)),
+                                       _mm_set1_epi16(inf))};
+    
+    short minscore {inf};
+    
+    for (int s {0}; s <= 2 * (target_len + bandSize); s += 2) {
+        // truth is current; target needs updating
+        _targetwin    = _mm_slli_si128(_targetwin, 2);
+        _qualitieswin = _mm_slli_si128(_qualitieswin, 2);
+        
+        if (s / 2 < target_len) {
+            _targetwin    = _mm_insert_epi16(_targetwin, target[s / 2], 0);
+            _qualitieswin = _mm_insert_epi16(_qualitieswin, qualities[s / 2] << 2, 0);
+        } else {
+            _targetwin    = _mm_insert_epi16(_targetwin, '0', 0);
+            _qualitieswin = _mm_insert_epi16(_qualitieswin, 64 << 2, 0);
+        }
+        
+        // S even
+        
+        _m1 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m1));
+        _m2 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m2));
+        _m1 = _mm_min_epi16(_m1, _mm_min_epi16(_i1, _d1));
+        
+        short score = extract_epi16(_m1, std::max(0, s / 2 - target_len));
+        if (s / 2 >= target_len) {
+            minscore = std::min(score, minscore);
+        }
+        
+        _m1 = _mm_add_epi16(_m1, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
+                                                                _qualitieswin), _truthnqual));
+        _d1 = _mm_min_epi16(_mm_add_epi16(_d2, _gap_extend),
+                            _mm_add_epi16(_mm_min_epi16(_m2, _i2),
+                                          _mm_srli_si128(_gap_open, 2))); // allow I->D
+        _d1 = _mm_insert_epi16(_mm_slli_si128(_d1, 2), inf, 0);
+        _i1 = _mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_i2, _gap_extend),
+                                          _mm_add_epi16(_m2, _gap_open)),
+                            _nuc_prior);
+        
+        // S odd
+        // truth needs updating; target is current
+        const auto pos = bandSize + s / 2;
+        const char base {(pos < truth_len) ? truth[pos] : 'N'};
+        
+        _truthwin   = _mm_insert_epi16(_mm_srli_si128(_truthwin, 2), base,
+                                       bandSize - 1);
+        _truthnqual = _mm_insert_epi16(_mm_srli_si128(_truthnqual, 2), base == 'N' ? nScore : inf,
+                                       bandSize - 1);
+        
+        _initmask  = _mm_slli_si128(_initmask, 2);
+        _initmask2 = _mm_slli_si128(_initmask2, 2);
+        _m2 = _mm_min_epi16(_m2, _mm_min_epi16(_i2, _d2));
+        
+        if (s / 2 >= target_len) {
+            minscore = std::min(static_cast<short>(extract_epi16(_m2, s / 2 - target_len)), minscore);
+        }
+        
+        _m2 = _mm_add_epi16(_m2, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
+                                                                _qualitieswin), _truthnqual));
+        _d2 = _mm_min_epi16(_mm_add_epi16(_d1, _gap_extend),
+                            _mm_add_epi16(_mm_min_epi16(_m1, _i1), _gap_open)); // allow I->D
+        _i2 = _mm_insert_epi16(_mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_mm_srli_si128(_i1, 2),
+                                                                         _gap_extend),
+                                                           _mm_add_epi16(_mm_srli_si128(_m1, 2),
+                                                                         _gap_open)),
+                                             _nuc_prior), inf, bandSize - 1);
+        
+    }
+    
+    return (minscore + 0x8000) >> 2;
+}
+
+int align(const char* truth, const char* target, const std::int8_t* qualities,
           const int truth_len, const int target_len,
           const std::int8_t* gap_open, short gap_extend, short nuc_prior) noexcept
 {

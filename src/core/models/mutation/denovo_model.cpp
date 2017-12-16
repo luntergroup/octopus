@@ -31,21 +31,23 @@ auto make_flat_hmm_model(const double snv_mutation_rate, const double indel_muta
 }
 
 auto make_exponential_repeat_count_model(const double base_rate, const double repeat_count_log_multiplier,
-                                         const std::size_t max_repeat_count, const double max_rate)
+                                         const std::size_t max_repeat_count,
+                                         const boost::optional<double> max_rate = boost::none)
 {
     using Penalty = hmm::VariableGapOpenMutationModel::Penalty;
     std::vector<Penalty> result(max_repeat_count);
     const auto log_base_mutation_rate = std::log(base_rate);
-    const auto min_penalty = static_cast<Penalty>(std::max(std::log(max_rate) / -maths::constants::ln10Div10<>, 1.0));
+    boost::optional<double> min_penalty {};
+    if (max_rate) min_penalty = static_cast<Penalty>(std::max(std::log(*max_rate) / -maths::constants::ln10Div10<>, 1.0));
     for (unsigned i {0}; i < max_repeat_count; ++i) {
         auto adjusted_log_rate = repeat_count_log_multiplier * i + log_base_mutation_rate;
         auto adjusted_phred_rate = adjusted_log_rate / -maths::constants::ln10Div10<>;
-        if (adjusted_phred_rate > min_penalty) {
-            static constexpr double max_representable_penalty {127};
-            result[i] = static_cast<Penalty>(std::min(adjusted_phred_rate, max_representable_penalty));
-        } else {
-            std::fill(std::next(std::begin(result), i), std::end(result), min_penalty);
+        if (min_penalty && adjusted_phred_rate < *min_penalty) {
+            std::fill(std::next(std::begin(result), i), std::end(result), *min_penalty);
             break;
+        } else {
+            static constexpr double max_representable_penalty {127};
+            result[i] = std::max(std::min(adjusted_phred_rate, max_representable_penalty), 1.0);
         }
     }
     return result;
@@ -56,9 +58,9 @@ auto make_gap_open_model(double indel_mutation_rate, std::size_t max_repeat_numb
     return make_exponential_repeat_count_model(indel_mutation_rate, 1.5, max_repeat_number, max_rate);
 }
 
-auto make_gap_extend_model(double indel_mutation_rate, std::size_t max_repeat_number, double max_rate = 0.6)
+auto make_gap_extend_model(double indel_mutation_rate, std::size_t max_repeat_number)
 {
-    return make_exponential_repeat_count_model(10 * indel_mutation_rate, 2, max_repeat_number, max_rate);
+    return make_exponential_repeat_count_model(100 * indel_mutation_rate, 1.6, max_repeat_number);
 }
 
 } // namespace
@@ -81,7 +83,7 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 , use_unguarded_ {false}
 {
     gap_open_penalties_.reserve(1000);
-    min_ln_probability_ = 8 * std::log(parameters.snv_mutation_rate);
+    min_ln_probability_ = std::log(parameters.snv_mutation_rate) + std::log(parameters.indel_mutation_rate);
     if (caching_ == CachingStrategy::address) {
         address_cache_.reserve(num_haplotypes_hint_ * num_haplotypes_hint_);
     } else if (caching == CachingStrategy::value) {
@@ -189,7 +191,7 @@ auto sequence_length_distance(const Haplotype& lhs, const Haplotype& rhs) noexce
 
 bool can_align_with_hmm(const Haplotype& target, const Haplotype& given) noexcept
 {
-    return sequence_length_distance(target, given) <= hmm::min_flank_pad();
+    return sequence_length_distance(target, given) <= 10 * hmm::min_flank_pad();
 }
 
 template <typename Container>

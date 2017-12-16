@@ -305,6 +305,16 @@ inline GenomicRegion::Size right_overhang_size(const GenomicRegion& lhs, const G
     return (is_same_contig(lhs, rhs)) ? right_overhang_size(lhs.contig_region(), rhs.contig_region()) : 0;
 }
 
+inline bool left_overhangs(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    return (is_same_contig(lhs, rhs)) ? left_overhangs(lhs.contig_region(), rhs.contig_region()) : 0;
+}
+
+inline bool right_overhangs(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    return (is_same_contig(lhs, rhs)) ? right_overhangs(lhs.contig_region(), rhs.contig_region()) : 0;
+}
+
 inline GenomicRegion left_overhang_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (!is_same_contig(lhs, rhs)) throw BadRegionCompare {to_string(lhs), to_string(rhs)};

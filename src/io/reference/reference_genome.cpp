@@ -100,20 +100,17 @@ ReferenceGenome make_reference(boost::filesystem::path reference_path,
                                bool capitalise_bases)
 {
     using namespace io;
-    
     std::unique_ptr<ReferenceReader> impl_ {};
-    
-    Fasta::BaseTransformPolicy policy = Fasta::BaseTransformPolicy::original;
+    Fasta::Options options {};
     if (capitalise_bases) {
-        policy = Fasta::BaseTransformPolicy::capitalise;
+        options.base_transform_policy = Fasta::Options::BaseTransformPolicy::capitalise;
     }
-    
+    options.base_fill_policy = Fasta::Options::BaseFillPolicy::fill_with_ns;
     if (is_threaded) {
-        impl_ = std::make_unique<ThreadsafeFasta>(std::make_unique<Fasta>(reference_path, policy));
+        impl_ = std::make_unique<ThreadsafeFasta>(std::make_unique<Fasta>(reference_path, options));
     } else {
-        impl_ = std::make_unique<Fasta>(std::move(reference_path), policy);
+        impl_ = std::make_unique<Fasta>(std::move(reference_path), options);
     }
-    
     if (max_cached_bases > 0) {
         double locality_bias {0.99}, forward_bias {0.99};
         if (is_threaded) locality_bias = 0.25;

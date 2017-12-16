@@ -281,6 +281,16 @@ inline ContigRegion::Size right_overhang_size(const ContigRegion& lhs, const Con
     return (ends_before(lhs, rhs)) ? 0 : (lhs.end() - rhs.end());
 }
 
+inline bool left_overhangs(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+{
+    return left_overhang_size(lhs, rhs) > 0;
+}
+
+inline bool right_overhangs(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+{
+    return right_overhang_size(lhs, rhs) > 0;
+}
+
 inline ContigRegion left_overhang_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (begins_before(rhs, lhs)) {
