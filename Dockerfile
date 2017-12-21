@@ -20,6 +20,8 @@ RUN apt-get -y install \
     openssl \
     libssl-dev \
     libcrypto++-dev
+
+# Install GCC 7
 RUN apt-get -y install software-properties-common python-software-properties
 RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
 RUN apt-get -y install \
@@ -41,7 +43,7 @@ RUN wget -O boost_1_65_1.tar.gz http://sourceforge.net/projects/boost/files/boos
 RUN tar xzvf boost_1_65_1.tar.gz
 WORKDIR /tmp/boost_1_65_1
 RUN ./bootstrap.sh --prefix=/usr/local --without-libraries=python,mpi
-RUN ./b2 cxxflags="-std=c++11"
+RUN ./b2 -j4 cxxflags="-std=c++11"
 RUN ./b2 install
 
 # Install htslib
@@ -51,7 +53,7 @@ WORKDIR /tmp/htslib
 RUN autoheader
 RUN autoconf
 RUN ./configure
-RUN make
+RUN make -j4
 RUN make install
 
 # Install Octopus
