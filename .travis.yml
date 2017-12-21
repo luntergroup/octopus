@@ -197,7 +197,7 @@ before_script:
   - echo "BOOST_ROOT = " ${BOOST_ROOT};
 
 script:
-  - ./install.py --compiler=${COMPILER}
+  - ./install.py --cxx_compiler=${COMPILER}
 
 notifications:
   email: false
