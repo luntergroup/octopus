@@ -95,7 +95,7 @@ For example, if the requirement instructions above were used:
 $ ./install.py --cxx_compiler clang++-4.0
 ```
 
-On some systems, you may also need to specify a C compiler which is ABI compatible with your C++ compiler, otherwise you'll get lots of link errors. This can be done with the `--c_compiler` option:
+On some systems, you may also need to specify a C compiler which is the same version as your C++ compiler, otherwise you'll get lots of link errors. This can be done with the `--c_compiler` option:
 
 ```shell
 $ ./install.py --cxx_compiler g++-7 --c_compiler gcc-7 
