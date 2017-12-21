@@ -23,6 +23,7 @@ parser.add_argument('--sanitize', help='Builds in release mode with sanitize fla
 parser.add_argument('--static', help='Builds using static libraries', action='store_true')
 parser.add_argument('--threads', help='The number of threads to use for building', type=int)
 parser.add_argument('--boost', help='The Boost library root')
+parser.add_argument('--verbose', help='Ouput verbose make information', action='store_true')
 args = vars(parser.parse_args())
 
 octopus_dir = os.path.dirname(os.path.realpath(__file__))
@@ -75,6 +76,8 @@ if args["static"]:
     cmake_options.append("-DUSE_STATIC_BOOST=ON")
 if args["boost"]:
     cmake_options.append("-DBOOST_ROOT=" + args["boost"])
+if args["verbose"]:
+    cmake_options.append("CMAKE_VERBOSE_MAKEFILE:BOOL=ON")
 
 ret = call(["cmake"] + cmake_options + [".."])
 
