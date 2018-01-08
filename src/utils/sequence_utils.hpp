@@ -275,19 +275,16 @@ void reverse_complement(SequenceType& sequence)
 }
 
 template <typename InputIt, typename BidirIt>
-bool is_reverse_complement(InputIt first1, InputIt last1, BidirIt first2, BidirIt last2)
+bool are_reverse_complements(InputIt first1, InputIt last1, BidirIt first2, BidirIt last2)
 {
-    return std::equal(first1, last1,
-                      std::make_reverse_iterator(last2), std::make_reverse_iterator(first2),
-                      [] (const char lhs, const char rhs) {
-                          return lhs == complement(rhs);
-                      });
+    return std::equal(first1, last1, std::make_reverse_iterator(last2), std::make_reverse_iterator(first2),
+                      [] (const char lhs, const char rhs) noexcept { return lhs == complement(rhs); });
 }
 
 template <typename SeqType1, typename SeqType2>
-bool is_reverse_complement(const SeqType1& lhs, const SeqType2& rhs)
+bool are_reverse_complements(const SeqType1& lhs, const SeqType2& rhs)
 {
-    return is_reverse_complement(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
+    return are_reverse_complements(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
 }
 
 namespace detail {
