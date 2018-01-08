@@ -613,6 +613,17 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     }
 }
 
+bool is_invserion(const Assembler::Variant& v) noexcept
+{
+    return utils::are_reverse_complements(v.ref, v.alt);
+}
+
+bool is_complex(const Assembler::Variant& v) noexcept
+{
+    if (is_invserion(v)) return false;
+    return (v.ref.size() > 1 && !v.alt.empty()) || (v.alt.size() > 1 && !v.ref.empty());
+}
+
 auto partition_complex(std::deque<Assembler::Variant>& variants)
 {
     return std::stable_partition(std::begin(variants), std::end(variants),
@@ -634,11 +645,6 @@ void trim_reference(Assembler::Variant& v)
 void trim_reference(std::deque<Assembler::Variant>& variants)
 {
     for (auto& v : variants) trim_reference(v);
-}
-
-bool is_complex(const Assembler::Variant& v) noexcept
-{
-    return (v.ref.size() > 1 && !v.alt.empty()) || (v.alt.size() > 1 && !v.ref.empty());
 }
 
 bool is_mnp(const Assembler::Variant& v) noexcept
