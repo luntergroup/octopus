@@ -613,12 +613,6 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     }
 }
 
-auto partition_complex(std::deque<Assembler::Variant>& variants)
-{
-    return std::stable_partition(std::begin(variants), std::end(variants),
-                                 [] (const auto& candidate) { return !is_complex(candidate); });
-}
-
 void trim_reference(Assembler::Variant& v)
 {
     using std::cbegin; using std::cend; using std::crbegin; using std::crend;
@@ -641,39 +635,42 @@ bool is_complex(const Assembler::Variant& v) noexcept
     return (v.ref.size() > 1 && !v.alt.empty()) || (v.alt.size() > 1 && !v.ref.empty());
 }
 
-bool is_mnp(const Assembler::Variant& v) noexcept
+auto partition_complex(std::deque<Assembler::Variant>& variants)
 {
-    return v.ref.size() == 2 && v.ref.size() == v.alt.size();
+    return std::stable_partition(std::begin(variants), std::end(variants),
+                                 [] (const auto& candidate) { return !is_complex(candidate); });
 }
 
-auto split_mnp(Assembler::Variant&& v)
+bool is_mnv(const Assembler::Variant& v) noexcept
 {
-    assert(v.ref.size() > 1 && v.alt.size() > 1);
-    assert(v.ref.front() != v.alt.front() && v.ref.back() != v.alt.back());
-    
+    return v.ref.size() == v.alt.size()
+           && (v.ref.size() <= 2
+               || std::equal(std::next(std::cbegin(v.ref)), std::prev(std::cend(v.ref)), std::next(std::cbegin(v.alt))));
+}
+
+auto split_mnv(Assembler::Variant&& mnv)
+{
+    assert(mnv.ref.size() > 1 && mnv.alt.size() > 1);
+    assert(mnv.ref.front() != mnv.alt.front() && mnv.ref.back() != mnv.alt.back());
     std::vector<Assembler::Variant> result {};
     result.reserve(4);
     // Need to allocate new memory for all but the last SNV
-    result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
-    
-    const auto first_ref_itr       = std::cbegin(v.ref);
-    const auto penultimate_ref_itr = std::prev(std::cend(v.ref));
-    const auto first_alt_itr       = std::cbegin(v.alt);
-    const auto penultimate_alt_itr = std::prev(std::cend(v.alt));
-    
+    result.emplace_back(mnv.begin_pos, mnv.ref.front(), mnv.alt.front());
+    const auto first_ref_itr       = std::cbegin(mnv.ref);
+    const auto penultimate_ref_itr = std::prev(std::cend(mnv.ref));
+    const auto first_alt_itr       = std::cbegin(mnv.alt);
+    const auto penultimate_alt_itr = std::prev(std::cend(mnv.alt));
     auto p = std::mismatch(std::next(first_ref_itr), penultimate_ref_itr, std::next(first_alt_itr));
     while (p.first != penultimate_ref_itr) {
         assert(p.first < penultimate_ref_itr && p.second < penultimate_alt_itr);
-        result.emplace_back(v.begin_pos + std::distance(first_ref_itr, p.first), *p.first, *p.second);
+        result.emplace_back(mnv.begin_pos + std::distance(first_ref_itr, p.first), *p.first, *p.second);
         p = std::mismatch(std::next(p.first), penultimate_ref_itr, std::next(p.second));
     }
-    
     // So just need to remove the unwanted sequence from the last one
-    const auto last_snv_begin = v.begin_pos + v.ref.size() - 1;
-    v.ref.erase(first_ref_itr, penultimate_ref_itr);
-    v.alt.erase(first_alt_itr, penultimate_alt_itr);
-    result.emplace_back(last_snv_begin, std::move(v.ref), std::move(v.alt));
-    
+    const auto last_snv_begin = mnv.begin_pos + mnv.ref.size() - 1;
+    mnv.ref.erase(first_ref_itr, penultimate_ref_itr);
+    mnv.alt.erase(first_alt_itr, penultimate_alt_itr);
+    result.emplace_back(last_snv_begin, std::move(mnv.ref), std::move(mnv.alt));
     return result;
 }
 
@@ -682,14 +679,11 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
 {
     std::vector<Assembler::Variant> result {};
     result.reserve(cigar.size());
-    
     auto ref_itr = std::cbegin(ref);
     auto alt_itr = std::cbegin(alt);
-    
     for (const auto& op : cigar) {
         using Flag = CigarOperation::Flag;
         using NucleotideSequence = Assembler::NucleotideSequence;
-        
         switch(op.flag()) {
             case Flag::sequenceMatch:
             {
@@ -729,7 +723,6 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
         }
         assert(ref_itr <= std::cend(ref) && alt_itr <= std::cend(alt));
     }
-    
     return result;
 }
 
@@ -739,15 +732,44 @@ auto align(const Assembler::Variant& v)
     return align(v.ref, v.alt, model).cigar;
 }
 
-auto decompose_complex_indel(Assembler::Variant&& v)
+bool has_indels_and_snvs(const CigarString& cigar) noexcept
 {
-    const auto cigar = align(v);
-    return extract_variants(v.ref, v.alt, cigar, v.begin_pos);
+    bool has_snv {false}, has_indel {false};
+    for (const auto& op : cigar) {
+        switch (op.flag()) {
+            case CigarOperation::Flag::substitution: has_snv = true; break;
+            case CigarOperation::Flag::insertion: has_indel = true; break;
+            case CigarOperation::Flag::deletion: has_indel = true; break;
+            default: break;
+        }
+    }
+    return has_snv && has_indel;
 }
 
-auto decompose_complex(Assembler::Variant&& v)
+bool is_complex_alignment(const CigarString& cigar, const Assembler::Variant& v) noexcept
 {
-    return is_mnp(v) ? split_mnp(std::move(v)) : decompose_complex_indel(std::move(v));
+    const auto min_allele_size = std::min(v.ref.size(), v.alt.size());
+    return (min_allele_size > 5 && cigar.size() >= min_allele_size)
+           || (min_allele_size > 8 && cigar.size() > 2 * min_allele_size / 3 && has_indels_and_snvs(cigar));
+}
+
+bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) noexcept
+{
+    return !is_complex_alignment(cigar, v);
+}
+
+std::vector<Assembler::Variant> decompose_complex(Assembler::Variant v)
+{
+    if (is_mnv(v)) {
+        return split_mnv(std::move(v));
+    } else {
+        const auto cigar = align(v);
+        if (is_good_alignment(cigar, v)) {
+            return extract_variants(v.ref, v.alt, cigar, v.begin_pos);
+        } else {
+            return {std::move(v)};
+        }
+    }
 }
 
 struct VariantLess
@@ -771,10 +793,9 @@ auto decompose_complex(VariantIterator first, VariantIterator last)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     std::deque<Assembler::Variant> result {};
-    std::for_each(make_move_iterator(first), make_move_iterator(last),
-                  [&result] (auto&& complex) {
-                      utils::append(decompose_complex(std::move(complex)), result);
-                  });
+    std::for_each(make_move_iterator(first), make_move_iterator(last), [&result] (auto&& complex) {
+        utils::append(decompose_complex(std::move(complex)), result);
+    });
     std::sort(begin(result), end(result), VariantLess {});
     result.erase(std::unique(begin(result), end(result)), end(result));
     return result;
