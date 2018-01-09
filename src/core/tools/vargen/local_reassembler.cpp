@@ -735,7 +735,7 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
 
 auto align(const Assembler::Variant& v)
 {
-    constexpr Model model {2, -3, -4, -1};
+    constexpr Model model {1, -4, -6, -1};
     return align(v.ref, v.alt, model).cigar;
 }
 
