@@ -128,7 +128,7 @@ std::vector<VariantCallFilter::MeasureVector> VariantCallFilter::measure(const s
     std::vector<MeasureVector> result {};
     result.reserve(calls.size());
     std::transform(std::cbegin(calls), std::cend(calls), std::back_inserter(result),
-                   [this, &facets] (const auto& call) { return measure(call, facets); });
+                   [this, &facets] (const auto& call) { return this->measure(call, facets); });
     return result;
 }
 
