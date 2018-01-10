@@ -613,14 +613,17 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     }
 }
 
-bool is_invserion(const Assembler::Variant& v) noexcept
+bool is_inversion(const Assembler::Variant& v) noexcept
 {
-    return utils::are_reverse_complements(v.ref, v.alt);
+    return v.ref.size() > 2
+           && utils::are_reverse_complements(v.ref, v.alt)
+           && !utils::is_homopolymer(v.ref)
+           && !std::equal(std::next(std::cbegin(v.ref)), std::prev(std::cend(v.ref)), std::next(std::cbegin(v.alt)));
 }
 
 bool is_complex(const Assembler::Variant& v) noexcept
 {
-    if (is_invserion(v)) return false;
+    if (is_inversion(v)) return false;
     return (v.ref.size() > 1 && !v.alt.empty()) || (v.alt.size() > 1 && !v.ref.empty());
 }
 
