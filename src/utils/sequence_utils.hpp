@@ -61,6 +61,11 @@ inline bool is_rna_nucleotide(const char b) noexcept
     return b == 'A' || b == 'C' || b == 'G' || b == 'U';
 }
 
+inline bool is_dna_or_rna_nucleotide(const char b) noexcept
+{
+    return b == 'A' || b == 'C' || b == 'G' || b == 'T' || b == 'U';
+}
+
 } // namespace detail
 
 template <typename SequenceType>
@@ -351,6 +356,19 @@ double gc_content(const SequenceType& sequence) noexcept
     const auto gc_count = std::count_if(std::cbegin(sequence), std::cend(sequence),
                                         [] (const char base) { return base == 'G' || base == 'C'; });
     return static_cast<double>(gc_count) / sequence.size();
+}
+
+template <typename ForwardIt>
+bool is_homopolymer(ForwardIt first, ForwardIt last) noexcept
+{
+    return std::distance(first, last) > 0 && detail::is_dna_or_rna_nucleotide(*first)
+           && std::adjacent_find(first, last, std::not_equal_to<> {}) == last;
+}
+
+template <typename SequenceType>
+bool is_homopolymer(const SequenceType& sequence) noexcept
+{
+    return is_homopolymer(std::cbegin(sequence), std::cend(sequence));
 }
 
 } // namespace utils
