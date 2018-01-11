@@ -440,6 +440,11 @@ bool is_snp(const Variant& variant) noexcept
     return ref_sequence_size(variant) == 1 && alt_sequence_size(variant) == 1;
 }
 
+bool is_mnv(const Variant& variant) noexcept
+{
+    return ref_sequence_size(variant) == alt_sequence_size(variant) && ref_sequence_size(variant) > 1;
+}
+
 bool is_insertion(const Variant& variant) noexcept
 {
     return ref_sequence_size(variant) < alt_sequence_size(variant);
@@ -455,9 +460,19 @@ bool is_indel(const Variant& variant) noexcept
     return is_insertion(variant) || is_deletion(variant);
 }
 
-bool is_mnv(const Variant& variant) noexcept
+bool is_simple_insertion(const Variant& variant) noexcept
 {
-    return ref_sequence_size(variant) == alt_sequence_size(variant) && ref_sequence_size(variant) > 1;
+    return is_insertion(variant) && is_empty_region(variant);
+}
+
+bool is_simple_deletion(const Variant& variant) noexcept
+{
+    return is_deletion(variant) && is_sequence_empty(variant.alt_allele());
+}
+
+bool is_simple_indel(const Variant& variant) noexcept
+{
+    return is_simple_insertion(variant) || is_simple_deletion(variant);
 }
 
 bool are_same_type(const Variant& lhs, const Variant& rhs) noexcept

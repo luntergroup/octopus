@@ -257,21 +257,39 @@ BasicAllele<RegionTp> copy(BasicAllele<RegionTp>&& allele, const RegionTp& regio
 }
 
 template <typename RegionTp>
-bool is_insertion(const BasicAllele<RegionTp>& allele)
+bool is_insertion(const BasicAllele<RegionTp>& allele) noexcept
 {
     return allele.sequence().size() > region_size(allele);
 }
 
 template <typename RegionTp>
-bool is_deletion(const BasicAllele<RegionTp>& allele)
+bool is_deletion(const BasicAllele<RegionTp>& allele) noexcept
 {
     return allele.sequence().size() < region_size(allele);
 }
 
 template <typename RegionTp>
-bool is_indel(const BasicAllele<RegionTp>& allele)
+bool is_indel(const BasicAllele<RegionTp>& allele) noexcept
 {
     return is_insertion(allele) || is_deletion(allele);
+}
+
+template <typename RegionTp>
+bool is_simple_insertion(const BasicAllele<RegionTp>& allele) noexcept
+{
+    return is_insertion(allele) && is_empty_region(allele);
+}
+
+template <typename RegionTp>
+bool is_simple_deletion(const BasicAllele<RegionTp>& allele) noexcept
+{
+    return is_deletion(allele) && is_sequence_empty(allele);
+}
+
+template <typename RegionTp>
+bool is_simple_indel(const BasicAllele<RegionTp>& allele) noexcept
+{
+    return is_simple_insertion(allele) || is_simple_deletion(allele);
 }
 
 template <typename RegionTp>
