@@ -164,7 +164,7 @@ auto copy_sequence(const BasicAllele<RegionTp>& allele, const RegionTp& region)
         }
     } else {
         first_base_itr = std::next(std::cbegin(allele.sequence()), region_offset);
-        if (is_insertion(allele)) {
+        if (is_simple_insertion(allele)) {
             const auto num_trailing_bases = static_cast<std::size_t>(end_distance(region, allele));
             const auto num_subsequence_bases = sequence_size(allele) - region_offset - num_trailing_bases;
             last_base_itr = std::next(first_base_itr, num_subsequence_bases);
