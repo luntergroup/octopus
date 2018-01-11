@@ -95,7 +95,7 @@ double CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const 
             std::vector<double> tmp(ploidy);
             std::transform(std::cbegin(germline), std::cend(germline), std::begin(tmp),
                            [this, &somatic] (const auto& haplotype) {
-                               return ln_probability_of_somatic_given_haplotype(somatic, haplotype);
+                               return this->ln_probability_of_somatic_given_haplotype(somatic, haplotype);
                            });
             return maths::log_sum_exp(tmp) - std::log(ploidy);
         }

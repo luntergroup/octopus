@@ -1977,7 +1977,7 @@ void Assembler::print_weighted(const Path& path) const
                        Edge e; bool good;
                        std::tie(e, good) = boost::edge(u, v, graph_);
                        assert(good);
-                       return static_cast<std::string>(kmer_of(v)) + "(" + std::to_string(graph_[e].weight) + ")";
+                       return static_cast<std::string>(this->kmer_of(v)) + "(" + std::to_string(graph_[e].weight) + ")";
                    });
     std::cout << kmer_of(path.back());
 }
