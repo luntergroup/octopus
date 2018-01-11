@@ -435,7 +435,7 @@ std::vector<Variant> parsimonise_together(const std::vector<Variant>& segment,
     return result;
 }
 
-bool is_snp(const Variant& variant) noexcept
+bool is_snv(const Variant& variant) noexcept
 {
     return ref_sequence_size(variant) == 1 && alt_sequence_size(variant) == 1;
 }
@@ -478,7 +478,7 @@ bool is_simple_indel(const Variant& variant) noexcept
 bool are_same_type(const Variant& lhs, const Variant& rhs) noexcept
 {
     if (ref_sequence_size(lhs) == alt_sequence_size(rhs)) {
-        return (ref_sequence_size(lhs) == 1) ? is_snp(rhs) : is_mnv(rhs);
+        return (ref_sequence_size(lhs) == 1) ? is_snv(rhs) : is_mnv(rhs);
     }
     if (is_insertion(lhs)) return is_insertion(rhs);
     return is_deletion(rhs);
@@ -486,7 +486,7 @@ bool are_same_type(const Variant& lhs, const Variant& rhs) noexcept
 
 bool is_transition(const Variant& variant) noexcept
 {
-    return is_snp(variant)
+    return is_snv(variant)
         && ((ref_sequence(variant) == "A" && alt_sequence(variant) == "G")
          || (ref_sequence(variant) == "G" && alt_sequence(variant) == "A")
          || (ref_sequence(variant) == "C" && alt_sequence(variant) == "T")
@@ -495,7 +495,7 @@ bool is_transition(const Variant& variant) noexcept
 
 bool is_transversion(const Variant& variant) noexcept
 {
-    return is_snp(variant) && !is_transition(variant);
+    return is_snv(variant) && !is_transition(variant);
 }
 
 std::vector<Allele::NucleotideSequence> extract_alt_allele_sequences(const std::vector<Variant>& variants)

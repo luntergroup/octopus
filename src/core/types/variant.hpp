@@ -254,7 +254,7 @@ std::vector<Variant> parsimonise_each(std::vector<Variant>&& variants,
 std::vector<Variant> parsimonise_together(const std::vector<Variant>& variants,
                                           const ReferenceGenome& reference);
 
-bool is_snp(const Variant& variant) noexcept;
+bool is_snv(const Variant& variant) noexcept;
 bool is_mnv(const Variant& variant) noexcept;
 bool is_insertion(const Variant& variant) noexcept;
 bool is_deletion(const Variant& variant) noexcept;
