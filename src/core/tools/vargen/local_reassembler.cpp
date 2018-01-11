@@ -613,6 +613,14 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     }
 }
 
+bool is_inversion(const Assembler::Variant& v) noexcept
+{
+    return v.ref.size() > 2
+           && utils::are_reverse_complements(v.ref, v.alt)
+           && !utils::is_homopolymer(v.ref)
+           && !std::equal(std::next(std::cbegin(v.ref)), std::prev(std::cend(v.ref)), std::next(std::cbegin(v.alt)));
+}
+
 void trim_reference(Assembler::Variant& v)
 {
     using std::cbegin; using std::cend; using std::crbegin; using std::crend;

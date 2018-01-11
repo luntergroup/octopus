@@ -61,6 +61,11 @@ inline bool is_rna_nucleotide(const char b) noexcept
     return b == 'A' || b == 'C' || b == 'G' || b == 'U';
 }
 
+inline bool is_dna_or_rna_nucleotide(const char b) noexcept
+{
+    return b == 'A' || b == 'C' || b == 'G' || b == 'T' || b == 'U';
+}
+
 } // namespace detail
 
 template <typename SequenceType>
@@ -275,19 +280,16 @@ void reverse_complement(SequenceType& sequence)
 }
 
 template <typename InputIt, typename BidirIt>
-bool is_reverse_complement(InputIt first1, InputIt last1, BidirIt first2, BidirIt last2)
+bool are_reverse_complements(InputIt first1, InputIt last1, BidirIt first2, BidirIt last2)
 {
-    return std::equal(first1, last1,
-                      std::make_reverse_iterator(last2), std::make_reverse_iterator(first2),
-                      [] (const char lhs, const char rhs) {
-                          return lhs == complement(rhs);
-                      });
+    return std::equal(first1, last1, std::make_reverse_iterator(last2), std::make_reverse_iterator(first2),
+                      [] (const char lhs, const char rhs) noexcept { return lhs == complement(rhs); });
 }
 
 template <typename SeqType1, typename SeqType2>
-bool is_reverse_complement(const SeqType1& lhs, const SeqType2& rhs)
+bool are_reverse_complements(const SeqType1& lhs, const SeqType2& rhs)
 {
-    return is_reverse_complement(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
+    return are_reverse_complements(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
 }
 
 namespace detail {
@@ -354,6 +356,19 @@ double gc_content(const SequenceType& sequence) noexcept
     const auto gc_count = std::count_if(std::cbegin(sequence), std::cend(sequence),
                                         [] (const char base) { return base == 'G' || base == 'C'; });
     return static_cast<double>(gc_count) / sequence.size();
+}
+
+template <typename ForwardIt>
+bool is_homopolymer(ForwardIt first, ForwardIt last) noexcept
+{
+    return std::distance(first, last) > 0 && detail::is_dna_or_rna_nucleotide(*first)
+           && std::adjacent_find(first, last, std::not_equal_to<> {}) == last;
+}
+
+template <typename SequenceType>
+bool is_homopolymer(const SequenceType& sequence) noexcept
+{
+    return is_homopolymer(std::cbegin(sequence), std::cend(sequence));
 }
 
 } // namespace utils
