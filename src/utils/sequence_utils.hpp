@@ -371,6 +371,40 @@ bool is_homopolymer(const SequenceType& sequence) noexcept
     return is_homopolymer(std::cbegin(sequence), std::cend(sequence));
 }
 
+template <typename Sequence>
+bool is_tandem_repeat(const Sequence& sequence, const unsigned period) noexcept
+{
+    if (period == 0 || sequence.empty() || period > sequence.size() / 2) {
+        return false;
+    }
+    if (period == 1) {
+        return is_homopolymer(sequence);
+    }
+    const auto num_full_periods = sequence.size() / period;
+    const auto first_unit_begin_itr = std::cbegin(sequence);
+    const auto first_unit_end_itr   = std::next(first_unit_begin_itr, period);
+    for (unsigned i {1}; i < num_full_periods; ++i) {
+        if (!std::equal(first_unit_begin_itr, first_unit_end_itr, std::next(first_unit_begin_itr, i * period))) {
+            return false;
+        }
+    }
+    const auto last_unit_begin_itr = std::next(first_unit_begin_itr, num_full_periods * period);
+    if (last_unit_begin_itr != std::cend(sequence)) {
+        return std::equal(last_unit_begin_itr, std::cend(sequence), first_unit_begin_itr);
+    } else {
+        return true;
+    }
+}
+
+template <typename Sequence>
+bool is_tandem_repeat(const Sequence& sequence) noexcept
+{
+    for (unsigned i {1}; i < sequence.size() / 2; ++i) {
+        if (is_tandem_repeat(sequence, i)) return true;
+    }
+    return false;
+}
+
 } // namespace utils
 } // namespace octopus
 
