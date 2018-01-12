@@ -640,14 +640,18 @@ void trim_reference(std::deque<Assembler::Variant>& variants)
 
 bool is_complex(const Assembler::Variant& v) noexcept
 {
-    if (is_inversion(v)) return false;
     return (v.ref.size() > 1 && !v.alt.empty()) || (v.alt.size() > 1 && !v.ref.empty());
 }
 
-auto partition_complex(std::deque<Assembler::Variant>& variants)
+bool is_decomposable(const Assembler::Variant& v) noexcept
+{
+    return is_complex(v) && !is_inversion(v);
+}
+
+auto partition_decomposable(std::deque<Assembler::Variant>& variants)
 {
     return std::stable_partition(std::begin(variants), std::end(variants),
-                                 [] (const auto& candidate) { return !is_complex(candidate); });
+                                 [] (const auto& candidate) { return !is_decomposable(candidate); });
 }
 
 bool is_mnv(const Assembler::Variant& v) noexcept
@@ -741,25 +745,25 @@ auto align(const Assembler::Variant& v)
     return align(v.ref, v.alt, model).cigar;
 }
 
-bool has_indels_and_snvs(const CigarString& cigar) noexcept
+auto count_variant_types(const CigarString& cigar) noexcept
 {
-    bool has_snv {false}, has_indel {false};
+    bool has_snv {false}, has_insertion {false}, has_deletion {false};
     for (const auto& op : cigar) {
         switch (op.flag()) {
             case CigarOperation::Flag::substitution: has_snv = true; break;
-            case CigarOperation::Flag::insertion: has_indel = true; break;
-            case CigarOperation::Flag::deletion: has_indel = true; break;
+            case CigarOperation::Flag::insertion: has_insertion = true; break;
+            case CigarOperation::Flag::deletion: has_deletion = true; break;
             default: break;
         }
     }
-    return has_snv && has_indel;
+    return has_snv + has_insertion + has_deletion;
 }
 
 bool is_complex_alignment(const CigarString& cigar, const Assembler::Variant& v) noexcept
 {
     const auto min_allele_size = std::min(v.ref.size(), v.alt.size());
     return (min_allele_size > 5 && cigar.size() >= min_allele_size)
-           || (min_allele_size > 8 && cigar.size() > 2 * min_allele_size / 3 && has_indels_and_snvs(cigar));
+           || (min_allele_size > 8 && cigar.size() > 2 * min_allele_size / 3 && count_variant_types(cigar) > 1);
 }
 
 bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) noexcept
@@ -767,7 +771,7 @@ bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) no
     return !is_complex_alignment(cigar, v);
 }
 
-std::vector<Assembler::Variant> decompose_complex(Assembler::Variant v)
+std::vector<Assembler::Variant> decompose(Assembler::Variant v)
 {
     if (is_mnv(v)) {
         return split_mnv(std::move(v));
@@ -798,12 +802,12 @@ struct VariantLess
 
 using VariantIterator = std::deque<Assembler::Variant>::iterator;
 
-auto decompose_complex(VariantIterator first, VariantIterator last)
+auto decompose(VariantIterator first, VariantIterator last)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     std::deque<Assembler::Variant> result {};
     std::for_each(make_move_iterator(first), make_move_iterator(last), [&result] (auto&& complex) {
-        utils::append(decompose_complex(std::move(complex)), result);
+        utils::append(decompose(std::move(complex)), result);
     });
     std::sort(begin(result), end(result), VariantLess {});
     result.erase(std::unique(begin(result), end(result)), end(result));
@@ -833,11 +837,11 @@ void merge(std::deque<Assembler::Variant>&& decomposed, std::deque<Assembler::Va
     std::inplace_merge(begin(variants), first_complex, end(variants), VariantLess {});
 }
 
-void decompose_complex(std::deque<Assembler::Variant>& variants)
+void decompose(std::deque<Assembler::Variant>& variants)
 {
-    const auto first_complex = partition_complex(variants);
-    if (first_complex != std::end(variants)) {
-        merge(decompose_complex(first_complex, std::end(variants)), variants, first_complex);
+    const auto first_decomposable = partition_decomposable(variants);
+    if (first_decomposable != std::end(variants)) {
+        merge(decompose(first_decomposable, std::end(variants)), variants, first_decomposable);
     }
 }
 
@@ -853,9 +857,7 @@ void add_to_mapped_variants(std::deque<Assembler::Variant>&& variants, std::dequ
 void remove_large_deletions(std::deque<Assembler::Variant>& variants, const unsigned max_size)
 {
     variants.erase(std::remove_if(std::begin(variants), std::end(variants),
-                                  [=] (const auto& variant) {
-                                      return variant.ref.size() >= max_size && variant.alt.empty();
-                                  }),
+                                  [=] (const auto& variant) { return variant.ref.size() >= max_size && variant.alt.empty(); }),
                    std::end(variants));
 }
 
@@ -881,7 +883,7 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
         trim_reference(variants);
         std::sort(std::begin(variants), std::end(variants), VariantLess {});
         variants.erase(std::unique(std::begin(variants), std::end(variants)), std::end(variants));
-        decompose_complex(variants);
+        decompose(variants);
         if (status == AssemblerStatus::partial_success) {
             // TODO: Some false positive large deletions are being generated for small kmer sizes.
             // Until Assembler is better able to remove these automatically, filter them here.
