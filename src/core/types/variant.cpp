@@ -271,10 +271,9 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     auto small_allele_ritr = crbegin(small_allele);
     
     do {
-        if (current_region.begin() >= extension_size) {
-            current_region = extend_alleles(big_allele, small_allele, reference, current_region, extension_size);
-        } else if (current_region.begin() > 0) {
-            current_region = extend_alleles(big_allele, small_allele, reference, current_region, current_region.begin());
+        if (current_region.begin() > 0) {
+            current_region = extend_alleles(big_allele, small_allele, reference, current_region,
+                                            std::min(extension_size, current_region.begin()));
         } else {
             break;
         }
