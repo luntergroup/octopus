@@ -17,14 +17,8 @@ namespace {
 
 struct Cell
 {
-    int score      = 0;
-    char traceback = '$';
+    int match = 0, insertion = 0, deletion = 0;
 };
-
-bool operator<(const Cell& lhs, const Cell& rhs) noexcept
-{
-    return lhs.score < rhs.score;
-}
 
 using DPMatrix = std::vector<std::vector<Cell>>;
 
@@ -38,20 +32,23 @@ auto nrows(const DPMatrix& matrix) noexcept
     return matrix.front().size();
 }
 
-auto init_dp_matrix(const std::string& target, const std::string& query,
-                    const Model& model)
+auto init_dp_matrix(const std::string& target, const std::string& query, const Model& model)
 {
     assert(!(target.empty() || query.empty()));
     DPMatrix result(target.size() + 1, DPMatrix::value_type(query.size() + 1));
     result[0][0] = Cell {};
-    using S = decltype(Cell::score);
+    using S = decltype(Cell::match);
+    const auto min_score = std::min({model.mismatch, model.gap_open});
+    const auto inf = min_score * std::max(ncols(result), nrows(result));
     for (std::size_t i {1}; i < ncols(result); ++i) {
-        result[i][0].score = model.gap_open + static_cast<S>(i - 1) * model.gap_extend;
-        result[i][0].traceback = 'D';
+        result[i][0].match     = inf;
+        result[i][0].insertion = inf;
+        result[i][0].deletion  = model.gap_open + static_cast<S>(i - 1) * model.gap_extend;
     }
     for (std::size_t j {1}; j < nrows(result); ++j) {
-        result[0][j].score = model.gap_open + static_cast<S>(j - 1) * model.gap_extend;
-        result[0][j].traceback = 'I';
+        result[0][j].match     = inf;
+        result[0][j].insertion = model.gap_open + static_cast<S>(j - 1) * model.gap_extend;
+        result[0][j].deletion  = inf;
     }
     return result;
 }
@@ -60,44 +57,89 @@ auto match(const std::string& target, const std::string& query,
            const DPMatrix& matrix, const std::size_t i, const std::size_t j,
            const Model& model) noexcept
 {
-    if (target[i - 1] == query[j - 1]) {
-        return Cell {matrix[i - 1][j - 1].score + model.match, '='};
-    } else {
-        return Cell {matrix[i - 1][j - 1].score + model.mismatch, 'X'};
-    }
+    const auto penalty = target[i - 1] == query[j - 1] ? model.match : model.mismatch;
+    const auto& prev = matrix[i - 1][j - 1];
+    return std::max({prev.match, prev.insertion, prev.deletion}) + penalty;
 }
 
-auto insertion(const DPMatrix& matrix, const std::size_t i, const std::size_t j,
-               const Model& model) noexcept
+auto insertion(const DPMatrix& matrix, const std::size_t i, const std::size_t j, const Model& model) noexcept
 {
-    const auto score = matrix[i][j - 1].traceback == 'I' ? model.gap_extend : model.gap_open;
-    return Cell {matrix[i][j - 1].score + score, 'I'};
+    const auto& prev = matrix[i][j - 1];
+    return std::max(prev.insertion + model.gap_extend, prev.match + model.gap_open);
 }
 
-auto deletion(const DPMatrix& matrix, const std::size_t i, const std::size_t j,
-              const Model& model) noexcept
+auto deletion(const DPMatrix& matrix, const std::size_t i, const std::size_t j, const Model& model) noexcept
 {
-    const auto score = matrix[i - 1][j].traceback == 'D' ? model.gap_extend : model.gap_open;
-    return Cell {matrix[i - 1][j].score + score, 'D'};
+    const auto& prev = matrix[i - 1][j];
+    return std::max(prev.deletion + model.gap_extend, prev.match + model.gap_open);
 }
 
-Cell extract_max(const std::string& target, const std::string& query,
-                 const DPMatrix& matrix, const std::size_t i, const std::size_t j,
-                 const Model& model) noexcept
-{
-    return std::max({
-        insertion(matrix, i, j, model),
-        deletion(matrix, i, j, model),
-        match(target, query, matrix, i, j, model)
-    });
-}
-
-void fill(DPMatrix& matrix, const std::string& target, const std::string& query,
+void fill(const std::string& target, const std::string& query,
+          DPMatrix& matrix, const std::size_t i, const std::size_t j,
           const Model& model) noexcept
+{
+    auto& curr = matrix[i][j];
+    curr.match     = match(target, query, matrix, i, j, model);
+    curr.insertion = insertion(matrix, i, j, model);
+    curr.deletion  = deletion(matrix, i, j, model);
+}
+
+void fill(DPMatrix& matrix, const std::string& target, const std::string& query, const Model& model) noexcept
 {
     for (std::size_t i {1}; i < ncols(matrix); ++i) {
         for (std::size_t j {1}; j < nrows(matrix); ++j) {
-            matrix[i][j] = extract_max(target, query, matrix, i, j, model);
+            fill(target, query, matrix, i, j, model);
+        }
+    }
+}
+
+auto build_dp_matrix(const std::string& target, const std::string& query, const Model& model)
+{
+    auto result = init_dp_matrix(target, query, model);
+    fill(result, target, query, model);
+    return result;
+}
+
+char traceback(const std::string& target, const std::string& query, const DPMatrix& matrix,
+               const std::size_t i, const std::size_t j, const Model& model, const char prev_state) noexcept
+{
+    const auto& curr = matrix[i][j];
+    if (prev_state == '$') {
+        if (curr.match >= curr.deletion) {
+            if (curr.match >= curr.insertion) {
+                return target[i - 1] == query[j - 1] ? '=' : 'X';
+            } else {
+                return 'I';
+            }
+        } else {
+            return curr.deletion >= curr.insertion ? 'D' : 'I';
+        }
+    } else {
+        if (prev_state == '=' || prev_state == 'X') {
+            if (curr.match >= curr.deletion) {
+                if (curr.match >= curr.insertion) {
+                    return target[i - 1] == query[j - 1] ? '=' : 'X';
+                } else {
+                    return 'I';
+                }
+            } else {
+                return curr.deletion >= curr.insertion ? 'D' : 'I';
+            }
+        } else if (prev_state == 'D') {
+            const auto& prev = matrix[i + 1][j];
+            if (prev.deletion == curr.match + model.gap_open) {
+                return target[i - 1] == query[j - 1] ? '=' : 'X';
+            } else {
+                return 'D';
+            }
+        } else {
+            assert(prev_state == 'I');
+            const auto& prev = matrix[i][j + 1];
+            if (prev.insertion == curr.match + model.gap_open) {
+                return target[i - 1] == query[j - 1] ? '=' : 'X';
+            } else {
+                return 'I';
+            }
         }
     }
 }
@@ -121,14 +163,16 @@ auto make_cigar(const AlignmentString& alignment)
     return result;
 }
 
-auto extract_alignment(const DPMatrix& matrix)
+auto extract_alignment(const std::string& target, const std::string& query, const DPMatrix& matrix, const Model& model)
 {
     AlignmentString alignment {};
     auto i = ncols(matrix) - 1;
     auto j = nrows(matrix) - 1;
+    char state {'$'};
     while(i > 0 || j > 0) {
         using Flag = CigarOperation::Flag;
-        switch(matrix[i][j].traceback) {
+        state = traceback(target, query, matrix, i, j, model, state);
+        switch(state) {
             case '=':
             {
                 assert(i > 0 && j > 0);
@@ -164,6 +208,12 @@ auto extract_alignment(const DPMatrix& matrix)
     return make_cigar(alignment);
 }
 
+auto score(const DPMatrix& matrix) noexcept
+{
+    const auto& last = matrix.back().back();
+    return std::max({last.match, last.insertion, last.deletion});
+}
+
 } // namespace
 
 Alignment align(const std::string& target, const std::string& query, Model model)
@@ -179,9 +229,8 @@ Alignment align(const std::string& target, const std::string& query, Model model
         return {CigarString {CigarOperation {static_cast<Size>(target.size()), Flag::deletion}},
                 model.gap_open + static_cast<int>(target.size() - 1) * model.gap_extend};
     }
-    auto matrix = init_dp_matrix(target, query, model);
-    fill(matrix, target, query, model);
-    return {extract_alignment(matrix), matrix.back().back().score};
+    const auto matrix = build_dp_matrix(target, query, model);
+    return {extract_alignment(target, query, matrix, model), score(matrix)};
 }
 
 } // namespace coretools
