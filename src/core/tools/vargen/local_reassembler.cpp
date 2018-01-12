@@ -640,6 +640,7 @@ void trim_reference(std::deque<Assembler::Variant>& variants)
 
 bool is_complex(const Assembler::Variant& v) noexcept
 {
+    if (is_inversion(v)) return false;
     return (v.ref.size() > 1 && !v.alt.empty()) || (v.alt.size() > 1 && !v.ref.empty());
 }
 
