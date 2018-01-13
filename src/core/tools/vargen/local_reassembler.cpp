@@ -762,8 +762,10 @@ auto count_variant_types(const CigarString& cigar) noexcept
 bool is_complex_alignment(const CigarString& cigar, const Assembler::Variant& v) noexcept
 {
     const auto min_allele_size = std::min(v.ref.size(), v.alt.size());
-    return (min_allele_size > 5 && cigar.size() >= min_allele_size)
-           || (min_allele_size > 8 && cigar.size() > 2 * min_allele_size / 3 && count_variant_types(cigar) > 1);
+    const auto num_variant_types = count_variant_types(cigar);
+    return (min_allele_size > 5 && cigar.size() >= min_allele_size && num_variant_types > 1)
+           || (min_allele_size > 8 && cigar.size() > 2 * min_allele_size / 3 && num_variant_types > 1)
+           || (min_allele_size > 20 && cigar.size() > min_allele_size / 2 && num_variant_types > 2);
 }
 
 bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) noexcept
@@ -771,17 +773,22 @@ bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) no
     return !is_complex_alignment(cigar, v);
 }
 
+std::vector<Assembler::Variant> decompose_complex(Assembler::Variant v)
+{
+    const auto cigar = align(v);
+    if (is_good_alignment(cigar, v)) {
+        return extract_variants(v.ref, v.alt, cigar, v.begin_pos);
+    } else {
+        return {std::move(v)};
+    }
+}
+
 std::vector<Assembler::Variant> decompose(Assembler::Variant v)
 {
     if (is_mnv(v)) {
         return split_mnv(std::move(v));
     } else {
-        const auto cigar = align(v);
-        if (is_good_alignment(cigar, v)) {
-            return extract_variants(v.ref, v.alt, cigar, v.begin_pos);
-        } else {
-            return {std::move(v)};
-        }
+        return decompose_complex(std::move(v));
     }
 }
 
