@@ -252,7 +252,7 @@ GenomicRegion extend_alleles(NucleotideList& big_allele, NucleotideList& small_a
 } // namespace
 
 Variant left_align(const Variant& variant, const ReferenceGenome& reference,
-                   const unsigned extension_size)
+                   const GenomicRegion::Size extension_size)
 {
     using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
     using std::tie; using std::next; using std::mismatch;
