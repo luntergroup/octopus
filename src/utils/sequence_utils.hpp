@@ -14,6 +14,8 @@
 #include <functional>
 #include <random>
 
+#include <boost/optional.hpp>
+
 #include "tandem/tandem.hpp"
 
 #include "basics/contig_region.hpp"
@@ -397,12 +399,18 @@ bool is_tandem_repeat(const Sequence& sequence, const unsigned period) noexcept
 }
 
 template <typename Sequence>
+boost::optional<unsigned> find_tandem_repeat_period(const Sequence& sequence) noexcept
+{
+    for (unsigned period {1}; period < sequence.size() / 2; ++period) {
+        if (is_tandem_repeat(sequence, period)) return period;
+    }
+    return boost::none;
+}
+
+template <typename Sequence>
 bool is_tandem_repeat(const Sequence& sequence) noexcept
 {
-    for (unsigned i {1}; i < sequence.size() / 2; ++i) {
-        if (is_tandem_repeat(sequence, i)) return true;
-    }
-    return false;
+    return find_tandem_repeat_period(sequence);
 }
 
 } // namespace utils
