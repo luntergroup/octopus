@@ -11,6 +11,8 @@
 #include <future>
 #include <cassert>
 
+#include "tandem/tandem.hpp"
+
 #include "basics/cigar_string.hpp"
 #include "concepts/mappable_range.hpp"
 #include "utils/mappable_algorithms.hpp"
@@ -739,9 +741,39 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
     return result;
 }
 
-auto align(const Assembler::Variant& v)
+template <typename Sequence>
+auto count_repeat_bases(Sequence& sequence)
 {
-    constexpr Model model {1, -4, -6, -1};
+    sequence.push_back('$');
+    const auto repeats = tandem::extract_exact_tandem_repeats(sequence);
+    sequence.pop_back();
+    std::vector<short> mask(sequence.size(), false);
+    for (const auto& repeat : repeats) {
+        if (repeat.length / repeat.period > 2) {
+            std::fill_n(std::next(std::begin(mask), repeat.pos), repeat.length, 1);
+        }
+    }
+    return std::accumulate(std::cbegin(mask), std::cend(mask), 0);
+}
+
+template <typename Sequence>
+auto calculate_fraction_repetitive(Sequence& sequence)
+{
+    auto num_repeat_bases = count_repeat_bases(sequence);
+    return static_cast<double>(num_repeat_bases) / sequence.size();
+}
+
+bool is_repetitive(Assembler::Variant& v)
+{
+    return calculate_fraction_repetitive(v.ref) > 0.5 || calculate_fraction_repetitive(v.alt) > 0.5;
+}
+
+auto align(Assembler::Variant& v)
+{
+    Model model {4, -6, -8, -1};
+    if (is_repetitive(v)) {
+        model = Model {1, -6, -7, -1};
+    }
     return align(v.ref, v.alt, model).cigar;
 }
 
