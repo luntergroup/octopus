@@ -164,7 +164,7 @@ namespace {
 
 auto get_short_tandem_repeats(const Haplotype::NucleotideSequence& given)
 {
-    constexpr unsigned max_repeat_period {4};
+    constexpr unsigned max_repeat_period {3};
     return tandem::extract_exact_tandem_repeats(given, 1, max_repeat_period);
 }
 
