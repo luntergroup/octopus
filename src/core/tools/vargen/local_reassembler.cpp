@@ -452,28 +452,6 @@ std::string LocalReassembler::name() const
 
 // private methods
 
-template <typename MappableTp>
-auto decompose(const MappableTp& mappable, const GenomicRegion::Position n,
-               const GenomicRegion::Size overlap = 0)
-{
-    if (overlap >= n) {
-        throw std::runtime_error {"decompose: overlap must be less than n"};
-    }
-    std::vector<GenomicRegion> result {};
-    if (n == 0) return result;
-    const auto num_elements = region_size(mappable) / (n - overlap);
-    if (num_elements == 0) return result;
-    result.reserve(num_elements);
-    const auto& contig = contig_name(mappable);
-    auto curr = mapped_begin(mappable);
-    std::generate_n(std::back_inserter(result), num_elements, [&contig, &curr, n, overlap] () {
-        auto tmp = curr;
-        curr += (n - overlap);
-        return GenomicRegion {contig, tmp, tmp + n};
-    });
-    return result;
-}
-
 void LocalReassembler::prepare_bins(const GenomicRegion& region)
 {
     assert(bins_.empty() || is_after(region, bins_.back()));
