@@ -60,6 +60,8 @@ private:
     std::string do_name() const override;
     CallTypeSet do_call_types() const override;
     
+    std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const override;
+    
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
