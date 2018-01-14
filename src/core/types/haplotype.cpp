@@ -670,10 +670,8 @@ bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const
         return lhs.difference(*reference_).size() < rhs.difference(*reference_).size();
     }
     // otherwise prefer the sequence with the least amount of indels
-    auto score = std::inner_product(std::cbegin(lhs.explicit_alleles_),
-                                    std::cend(lhs.explicit_alleles_),
-                                    std::cbegin(rhs.explicit_alleles_), 0, 
-                                    std::plus<void> {},
+    auto score = std::inner_product(std::cbegin(lhs.explicit_alleles_), std::cend(lhs.explicit_alleles_),
+                                    std::cbegin(rhs.explicit_alleles_), 0, std::plus<> {},
                                     [] (const auto& lhs, const auto& rhs) {
                                         if (lhs == rhs) {
                                             return 0;
@@ -690,6 +688,17 @@ bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const
                                         }
                                     });
     return score >= 0;
+}
+
+unsigned remove_duplicates(std::vector<Haplotype>& haplotypes)
+{
+    return remove_duplicates(haplotypes, IsLessComplex {});
+}
+
+unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, Haplotype reference)
+{
+    IsLessComplex cmp {std::move(reference)};
+    return remove_duplicates(haplotypes, cmp);
 }
 
 unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optional<Haplotype> reference)
