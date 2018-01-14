@@ -40,12 +40,12 @@ struct InexactRepeatDefinition
 
 template <typename SequenceType>
 std::vector<TandemRepeat>
-find_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
-                          GenomicRegion::Size min_period = 2, GenomicRegion::Size max_period = 10000)
+find_exact_tandem_repeats(SequenceType& sequence, const GenomicRegion& region,
+                          GenomicRegion::Size min_period, GenomicRegion::Size max_period)
 {
-    if (sequence.back() != 'N') {
+    if (sequence.back() != '$') {
         sequence.reserve(sequence.size() + 1);
-        sequence.push_back('N');
+        sequence.push_back('$');
     }
     auto n_shift_map = tandem::collapse(sequence, 'N');
     auto maximal_repetitions = tandem::extract_exact_tandem_repeats(sequence , min_period, max_period);
@@ -64,25 +64,20 @@ find_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
 }
 
 template <typename SequenceType>
-std::vector<GenomicRegion>
-find_repeat_regions(const SequenceType& sequence, const GenomicRegion& region,
-                    const InexactRepeatDefinition repeat_definition)
+std::vector<TandemRepeat>
+find_exact_tandem_repeats(const SequenceType& sequence, const GenomicRegion& region,
+                          GenomicRegion::Size min_period, GenomicRegion::Size max_period)
 {
-    auto repeats = find_exact_tandem_repeats(sequence, region, 2, repeat_definition.max_exact_repeat_seed_period);
-    auto itr = std::partition(std::begin(repeats), std::end(repeats),
-                              [&] (const auto& repeat) noexcept {
-                                  return region_size(repeat) >= repeat_definition.min_exact_repeat_seed_length;
-                              });
-    itr = std::remove_if(itr, std::end(repeats),
-                         [&] (const auto& small_repeat) {
-                             return std::none_of(std::begin(repeats), itr, [&] (const auto& seed) {
-                                 return std::abs(inner_distance(small_repeat, seed)) <= repeat_definition.max_seed_join_distance;
-                             });
-                         });
-    repeats.erase(itr, std::end(repeats));
-    std::sort(std::begin(repeats), std::end(repeats));
-    return join(extract_covered_regions(repeats), repeat_definition.max_seed_join_distance);
+    auto tmp = sequence;
+    return find_exact_tandem_repeats(tmp, region, min_period, max_period);
 }
+
+std::vector<TandemRepeat>
+find_exact_repeats(const ReferenceGenome& reference, const GenomicRegion& region, unsigned max_period);
+
+std::vector<GenomicRegion>
+find_repeat_regions(std::vector<TandemRepeat>& seeds, const GenomicRegion& region,
+                    const InexactRepeatDefinition repeat_definition);
 
 std::vector<GenomicRegion>
 find_repeat_regions(const ReferenceGenome& reference, const GenomicRegion& region,
