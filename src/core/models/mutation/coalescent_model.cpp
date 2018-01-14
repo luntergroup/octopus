@@ -297,13 +297,26 @@ void CoalescentModel::fill_site_buffer(const std::vector<unsigned>& haplotype_in
     }
 }
 
+void CoalescentModel::fill_site_buffer_uncached(const Haplotype& haplotype) const
+{
+    // Although we won't retrieve from the cache, we need to make sure all the variants
+    // stay in existence as we populate the buffers by reference.
+    auto itr = difference_value_cache_.find(reference_);
+    if (itr == std::cend(difference_value_cache_)) {
+        itr = difference_value_cache_.emplace(reference_, haplotype.difference(reference_)).first;
+    } else {
+        itr->second = haplotype.difference(reference_);
+    }
+    std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
+                   std::cbegin(itr->second), std::cend(itr->second),
+                   std::back_inserter(site_buffer2_));
+}
+
 void CoalescentModel::fill_site_buffer_from_value_cache(const Haplotype& haplotype) const
 {
     auto itr = difference_value_cache_.find(haplotype);
     if (itr == std::cend(difference_value_cache_)) {
-        itr = difference_value_cache_.emplace(std::piecewise_construct,
-                                              std::forward_as_tuple(haplotype),
-                                              std::forward_as_tuple(haplotype.difference(reference_))).first;
+        itr = difference_value_cache_.emplace(haplotype, haplotype.difference(reference_)).first;
     }
     std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
                    std::cbegin(itr->second), std::cend(itr->second),
@@ -314,9 +327,7 @@ void CoalescentModel::fill_site_buffer_from_address_cache(const Haplotype& haplo
 {
     auto itr = difference_address_cache_.find(std::addressof(haplotype));
     if (itr == std::cend(difference_address_cache_)) {
-        itr = difference_address_cache_.emplace(std::piecewise_construct,
-                                                std::forward_as_tuple(std::addressof(haplotype)),
-                                                std::forward_as_tuple(haplotype.difference(reference_))).first;
+        itr = difference_address_cache_.emplace(std::addressof(haplotype), haplotype.difference(reference_)).first;
     }
     std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
                    std::cbegin(itr->second), std::cend(itr->second),

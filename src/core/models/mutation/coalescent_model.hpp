@@ -93,6 +93,7 @@ private:
     template <typename Container>
     void fill_site_buffer(const Container& haplotypes) const;
     void fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const;
+    void fill_site_buffer_uncached(const Haplotype& haplotype) const;
     void fill_site_buffer_from_value_cache(const Haplotype& haplotype) const;
     void fill_site_buffer_from_address_cache(const Haplotype& haplotype) const;
     
@@ -115,10 +116,10 @@ void CoalescentModel::fill_site_buffer(const Container& haplotypes) const
     assert(site_buffer2_.empty());
     site_buffer1_.clear();
     for (const Haplotype& haplotype : haplotypes) {
-        if (caching_ == CachingStrategy::address) {
-            fill_site_buffer_from_address_cache(haplotype);
-        } else {
-            fill_site_buffer_from_value_cache(haplotype);
+        switch (caching_) {
+            case CachingStrategy::address: fill_site_buffer_from_address_cache(haplotype); break;
+            case CachingStrategy::value: fill_site_buffer_from_value_cache(haplotype); break;
+            default: fill_site_buffer_uncached(haplotype);
         }
         site_buffer1_ = std::move(site_buffer2_);
         site_buffer2_.clear();
