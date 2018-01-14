@@ -11,6 +11,7 @@
 #include "io/variant/vcf_spec.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "utils/sequence_utils.hpp"
+#include "utils/append.hpp"
 
 namespace octopus { namespace coretools {
 
@@ -86,9 +87,25 @@ void extract_variants(const VcfRecord& record, Container& result)
 
 } // namespace
 
-std::vector<Variant> VcfExtractor::do_generate_variants(const GenomicRegion& region)
+} // namespace
+
+std::vector<Variant> VcfExtractor::do_generate(const RegionSet& regions) const
 {
-    std::deque<Variant> variants {};
+    std::vector<Variant> result {};
+    for (const auto& region : regions) {
+        utils::append(fetch_variants(region, *reader_, options_.min_quality), result);
+    }
+    return result;
+}
+
+std::string VcfExtractor::name() const
+{
+    return "VCF extraction";
+}
+
+std::vector<Variant> VcfExtractor::fetch_variants(const GenomicRegion& region) const
+{
+  std::deque<Variant> variants {};
     for (auto p = reader_->iterate(region, VcfReader::UnpackPolicy::sites); p.first != p.second; ++p.first) {
         if (is_good(*p.first)) {
             extract_variants(*p.first, variants);
@@ -99,11 +116,6 @@ std::vector<Variant> VcfExtractor::do_generate_variants(const GenomicRegion& reg
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
-}
-
-std::string VcfExtractor::name() const
-{
-    return "VCF extraction";
 }
 
 bool VcfExtractor::is_good(const VcfRecord& record)

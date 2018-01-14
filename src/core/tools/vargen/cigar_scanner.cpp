@@ -179,21 +179,24 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
         read_coverage_tracker_.add(read);
         sample_coverage_tracker.add(read);
     }
+    std::sort(std::begin(buffer_), std::end(buffer_));
     if (!is_likely_misaligned(read, misalignment_penalty)) {
-        utils::append(std::move(buffer_), candidates_);
+        auto itr = utils::append(std::move(buffer_), candidates_);
+        std::inplace_merge(std::begin(candidates_), itr, std::end(candidates_));
     } else {
-        utils::append(std::move(buffer_), likely_misaligned_candidates_);
+        auto itr = utils::append(std::move(buffer_), likely_misaligned_candidates_);
+        std::inplace_merge(std::begin(likely_misaligned_candidates_), itr, std::end(likely_misaligned_candidates_));
         misaligned_tracker_.add(clipped_mapped_region(read));
     }
 }
 
-void CigarScanner::do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last)
+void CigarScanner::do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last)
 {
     auto& sample_coverage_tracker = sample_read_coverage_tracker_[sample];
     std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, sample_coverage_tracker); });
 }
 
-void CigarScanner::do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last)
+void CigarScanner::do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last)
 {
     auto& sample_coverage_tracker = sample_read_coverage_tracker_[sample];
     std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, sample_coverage_tracker); });
@@ -254,15 +257,72 @@ void choose_push_back(Variant candidate, std::vector<Variant>& final_candidates,
     }
 }
 
-std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& region)
+std::vector<Variant> CigarScanner::do_generate(const RegionSet& regions) const
+{
+    std::vector<Variant> result {};
+    for (const auto& region : regions) {
+        generate(region, result);
+    }
+    return result;
+}
+
+void CigarScanner::do_clear() noexcept
+{
+    buffer_.clear();
+    buffer_.shrink_to_fit();
+    candidates_.clear();
+    candidates_.shrink_to_fit();
+    likely_misaligned_candidates_.clear();
+    likely_misaligned_candidates_.shrink_to_fit();
+    read_coverage_tracker_.clear();
+    misaligned_tracker_.clear();
+    max_seen_candidate_size_ = 0;
+}
+
+std::string CigarScanner::name() const
+{
+    return "CigarScanner";
+}
+
+// private methods
+
+double CigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
+                                             const SequenceIterator first_base, const SequenceIterator last_base,
+                                             const SampleName& origin,
+                                             AlignedRead::BaseQualityVector::const_iterator first_base_quality,
+                                             AlignedRead::Direction support_direction)
+{
+    using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
+    using Tuple = boost::tuple<char, char>;
+    const NucleotideSequence ref_segment {reference_.get().fetch_sequence(region)};
+    const auto& contig = region.contig_name();
+    auto ref_index = mapped_begin(region);
+    double misalignment_penalty {0};
+    for_each(make_zip_iterator(boost::make_tuple(cbegin(ref_segment), first_base)),
+             make_zip_iterator(boost::make_tuple(cend(ref_segment), last_base)),
+             [this, &contig, &ref_index, &origin, &first_base_quality,
+              &misalignment_penalty, support_direction] (const Tuple& t) {
+                 const char ref_base  {t.get<0>()}, read_base {t.get<1>()};
+                 if (ref_base != read_base && ref_base != 'N' && read_base != 'N') {
+                     add_candidate(GenomicRegion {contig, ref_index, ref_index + 1},
+                                   ref_base, read_base, origin, first_base_quality, support_direction);
+                     if (*first_base_quality >= options_.misalignment_parameters.snv_threshold) {
+                         misalignment_penalty += options_.misalignment_parameters.snv_penalty;
+                     }
+                 }
+                 ++ref_index;
+                 ++first_base_quality;
+             });
+    return misalignment_penalty;
+}
+
+void CigarScanner::generate(const GenomicRegion& region, std::vector<Variant>& result) const
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
-    
-    std::sort(begin(candidates_), end(candidates_));
+    assert(std::is_sorted(std::cbegin(candidates_), std::cend(candidates_)));
     auto viable_candidates = overlap_range(candidates_, region, max_seen_candidate_size_);
-    std::vector<Variant> result {};
-    if (empty(viable_candidates)) return result;
-    result.reserve(size(viable_candidates, BidirectionallySortedTag {})); // maximum possible
+    if (empty(viable_candidates)) return;
+    result.reserve(result.size() + size(viable_candidates, BidirectionallySortedTag {})); // maximum possible
     const auto repeat_regions = get_repeat_regions(region);
     auto repeat_buckets = init_variant_buckets(repeat_regions);
     const auto last_viable_candidate_itr = cend(viable_candidates);
@@ -317,57 +377,6 @@ std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& reg
     }
     auto itr = utils::append(std::move(good_repeat_region_variants), result);
     std::inplace_merge(begin(result), itr, end(result));
-    return result;
-}
-
-void CigarScanner::do_clear() noexcept
-{
-    buffer_.clear();
-    buffer_.shrink_to_fit();
-    candidates_.clear();
-    candidates_.shrink_to_fit();
-    likely_misaligned_candidates_.clear();
-    likely_misaligned_candidates_.shrink_to_fit();
-    read_coverage_tracker_.clear();
-    misaligned_tracker_.clear();
-    max_seen_candidate_size_ = 0;
-}
-
-std::string CigarScanner::name() const
-{
-    return "CigarScanner";
-}
-
-// private methods
-
-double CigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
-                                             const SequenceIterator first_base, const SequenceIterator last_base,
-                                             const SampleName& origin,
-                                             AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                                             AlignedRead::Direction support_direction)
-{
-    using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
-    using Tuple = boost::tuple<char, char>;
-    const NucleotideSequence ref_segment {reference_.get().fetch_sequence(region)};
-    const auto& contig = region.contig_name();
-    auto ref_index = mapped_begin(region);
-    double misalignment_penalty {0};
-    for_each(make_zip_iterator(boost::make_tuple(cbegin(ref_segment), first_base)),
-             make_zip_iterator(boost::make_tuple(cend(ref_segment), last_base)),
-             [this, &contig, &ref_index, &origin, &first_base_quality,
-              &misalignment_penalty, support_direction] (const Tuple& t) {
-                 const char ref_base  {t.get<0>()}, read_base {t.get<1>()};
-                 if (ref_base != read_base && ref_base != 'N' && read_base != 'N') {
-                     add_candidate(GenomicRegion {contig, ref_index, ref_index + 1},
-                                   ref_base, read_base, origin, first_base_quality, support_direction);
-                     if (*first_base_quality >= options_.misalignment_parameters.snv_threshold) {
-                         misalignment_penalty += options_.misalignment_parameters.snv_penalty;
-                     }
-                 }
-                 ++ref_index;
-                 ++first_base_quality;
-             });
-    return misalignment_penalty;
 }
 
 unsigned CigarScanner::sum_base_qualities(const Candidate& candidate) const noexcept
@@ -393,6 +402,7 @@ bool CigarScanner::is_likely_misaligned(const AlignedRead& read, const double pe
     auto min_ln_prob_misaligned = options_.misalignment_parameters.min_ln_prob_correctly_aligned;
     return ln_prob_misaligned < min_ln_prob_misaligned;
 }
+
 CigarScanner::ObservedVariant
 CigarScanner::make_observation(const CandidateIterator first_match, const CandidateIterator last_match) const
 {
@@ -426,9 +436,9 @@ CigarScanner::make_observation(const CandidateIterator first_match, const Candid
 }
 
 std::vector<Variant>
-CigarScanner::get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates)
+CigarScanner::get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates) const
 {
-    std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));
+    std::is_sorted(std::cbegin(likely_misaligned_candidates_), std::cend(likely_misaligned_candidates_));
     std::vector<Candidate> unique_misaligned_candidates {};
     unique_misaligned_candidates.reserve(likely_misaligned_candidates_.size());
     std::unique_copy(std::cbegin(likely_misaligned_candidates_), std::cend(likely_misaligned_candidates_),

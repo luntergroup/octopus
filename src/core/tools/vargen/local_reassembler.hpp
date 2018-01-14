@@ -22,8 +22,6 @@
 #include "variant_generator.hpp"
 #include "utils/assembler.hpp"
 
-#include "utils/assembler_active_region_generator.hpp"
-
 namespace octopus {
 
 class ReferenceGenome;
@@ -60,27 +58,28 @@ public:
     ~LocalReassembler() override = default;
 
 private:
-    using VariantGenerator::VectorIterator;
-    using VariantGenerator::FlatSetIterator;
+    using VariantGenerator::ReadVectorIterator;
+    using VariantGenerator::ReadFlatSetIterator;
     
     std::unique_ptr<VariantGenerator> do_clone() const override;
     
     bool do_requires_reads() const noexcept override;
     
     void do_add_read(const SampleName& sample, const AlignedRead& read) override;
-    void do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last) override;
-    void do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last) override;
+    void do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last) override;
+    void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) override;
     
-    std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
+    std::vector<Variant> do_generate(const RegionSet& regions) const override;
     
     void do_clear() noexcept override;
     
     std::string name() const override;
     
     using NucleotideSequence = AlignedRead::NucleotideSequence;
-    
-    using ReadBuffer    = MappableFlatMultiSet<MappableReferenceWrapper<const AlignedRead>>;
-    using ReadBufferMap = std::map<SampleName, ReadBuffer>;
+    using SequenceBuffer     = std::deque<NucleotideSequence>;
+    using ReadReference      = MappableReferenceWrapper<const AlignedRead>;
+    using ReadBuffer         = MappableFlatMultiSet<ReadReference>;
+    using ReadBufferMap      = std::map<SampleName, ReadBuffer>;
     
     struct Bin : public Mappable<Bin>
     {
@@ -99,31 +98,24 @@ private:
         std::deque<std::reference_wrapper<const NucleotideSequence>> read_sequences;
     };
     
+    using BinList = std::deque<Bin>;
+    
     enum class AssemblerStatus { success, partial_success, failed };
     
     ExecutionPolicy execution_policy_;
-    
     std::reference_wrapper<const ReferenceGenome> reference_;
-    
     std::vector<unsigned> default_kmer_sizes_, fallback_kmer_sizes_;
-    
     ReadBufferMap read_buffer_;
-    
     GenomicRegion::Size max_bin_size_, max_bin_overlap_;
-    std::deque<Bin> bins_;
-    std::deque<NucleotideSequence> masked_sequence_buffer_;
-    
     AlignedRead::BaseQuality mask_threshold_;
     unsigned min_kmer_observations_;
     unsigned max_bubbles_;
     double min_bubble_score_;
     Variant::MappingDomain::Size max_variant_size_;
     
-    AssemblerActiveRegionGenerator active_region_generator_;
-    
-    void prepare_bins(const GenomicRegion& active_region);
+    void prepare_bins(const GenomicRegion& active_region, BinList& bins) const;
     bool should_assemble_bin(const Bin& bin) const;
-    void finalise_bins();
+    void finalise_bins(BinList& bins, const RegionSet& active_regions) const;
     unsigned try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result) const;
     void try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result) const;
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;

@@ -44,12 +44,13 @@ public:
     
 private:
     std::unique_ptr<VariantGenerator> do_clone() const override;
-    std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
+    std::vector<Variant> do_generate(const RegionSet& regions) const override;
     std::string name() const override;
     
     std::shared_ptr<const VcfReader> reader_;
     Options options_;
     
+    std::vector<Variant> fetch_variants(const GenomicRegion& region) const;
     bool is_good(const VcfRecord& record);
 };
 
