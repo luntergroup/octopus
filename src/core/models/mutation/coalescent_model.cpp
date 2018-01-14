@@ -334,4 +334,30 @@ void CoalescentModel::fill_site_buffer_from_address_cache(const Haplotype& haplo
                    std::back_inserter(site_buffer2_));
 }
 
+CoalescentProbabilityGreater::CoalescentProbabilityGreater(CoalescentModel model)
+: model_ {std::move(model)}
+, buffer_ {}
+, cache_ {}
+{
+    buffer_.reserve(1);
+    cache_.reserve(100);
+}
+
+bool CoalescentProbabilityGreater::operator()(const Haplotype& lhs, const Haplotype& rhs) const
+{
+    auto cache_itr = cache_.find(lhs);
+    if (cache_itr == std::cend(cache_)) {
+        buffer_.assign({lhs});
+        cache_itr = cache_.emplace(lhs, model_.evaluate(buffer_)).first;
+    }
+    const auto lhs_probability = cache_itr->second;
+    cache_itr = cache_.find(rhs);
+    if (cache_itr == std::cend(cache_)) {
+        buffer_.assign({rhs});
+        cache_itr = cache_.emplace(rhs, model_.evaluate(buffer_)).first;
+    }
+    const auto rhs_probability = cache_itr->second;
+    return lhs_probability > rhs_probability;
+}
+
 } // namespace octopus

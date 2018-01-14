@@ -148,6 +148,18 @@ CoalescentModel::count_segregating_sites(const Container& haplotypes) const
                            static_cast<unsigned>(detail::size(haplotypes) + 1));
 }
 
+struct CoalescentProbabilityGreater
+{
+    CoalescentProbabilityGreater(CoalescentModel model);
+    
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const;
+
+private:
+    CoalescentModel model_;
+    mutable std::vector<Haplotype> buffer_;
+    mutable std::unordered_map<Haplotype, double, std::hash<Haplotype>, HaveSameAlleles> cache_;
+};
+
 } // namespace octopus
 
 #endif
