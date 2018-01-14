@@ -37,6 +37,7 @@ VariantGenerator& VariantGenerator::operator=(VariantGenerator other)
 
 void VariantGenerator::add(std::unique_ptr<VariantGenerator> generator)
 {
+    if (active_region_generator_) active_region_generator_->add_generator(generator->name());
     variant_generators_.push_back(std::move(generator));
 }
 
@@ -115,6 +116,7 @@ void VariantGenerator::add_read(const SampleName& sample, const AlignedRead& rea
 
 void VariantGenerator::clear() noexcept
 {
+    if (active_region_generator_) active_region_generator_->clear();
     for (auto& generator : variant_generators_) generator->do_clear();
 }
 
