@@ -766,6 +766,7 @@ try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequen
         const auto alt_pad_begin = prev(alt_pad_end, insertion.alt.size() - alt_repeat.length);
         v.alt.assign(alt_pad_begin, alt_pad_end);
         insertion.alt.erase(alt_pad_begin, alt_pad_end);
+        v.begin_pos += ref_repeat.length;
     }
     // Complete any partial repeats (e.g. CAGCAGCA > CAGCAGCAG).
     // This is to ensure the repeat can be left aligned.
