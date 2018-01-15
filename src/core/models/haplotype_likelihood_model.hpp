@@ -17,6 +17,7 @@
 
 #include "config/common.hpp"
 #include "basics/contig_region.hpp"
+#include "basics/cigar_string.hpp"
 #include "core/types/haplotype.hpp"
 #include "mutation/snv_error_model.hpp"
 #include "mutation/indel_error_model.hpp"
@@ -43,6 +44,8 @@ public:
     using MappingPosition       = std::size_t;
     using MappingPositionVector = std::vector<MappingPosition>;
     using MappingPositionItr    = MappingPositionVector::const_iterator;
+    
+    using Alignment = std::pair<CigarString, double>;
     
     HaplotypeLikelihoodModel();
     
@@ -74,9 +77,11 @@ public:
     // ln p(read | haplotype, model)
     double evaluate(const AlignedRead& read) const;
     double evaluate(const AlignedRead& read, const MappingPositionVector& mapping_positions) const;
-    double evaluate(const AlignedRead& read,
-                    MappingPositionItr first_mapping_position,
-                    MappingPositionItr last_mapping_position) const;
+    double evaluate(const AlignedRead& read, MappingPositionItr first_mapping_position, MappingPositionItr last_mapping_position) const;
+    
+    Alignment align(const AlignedRead& read) const;
+    Alignment align(const AlignedRead& read, const MappingPositionVector& mapping_positions) const;
+    Alignment align(const AlignedRead& read, MappingPositionItr first_mapping_position, MappingPositionItr last_mapping_position) const;
     
 private:
     std::unique_ptr<SnvErrorModel> snv_error_model_;

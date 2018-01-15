@@ -15,7 +15,6 @@
 #include <cassert>
 #include <iostream>
 
-#include "basics/cigar_string.hpp"
 #include "utils/maths.hpp"
 #include "simd_pair_hmm.hpp"
 
@@ -196,6 +195,78 @@ auto simd_align(const std::string& truth, const std::string& target,
     }
 }
 
+auto simd_align_with_cigar(const std::string& truth, const std::string& target,
+                           const std::vector<std::uint8_t>& target_qualities,
+                           const std::size_t target_offset,
+                           const MutationModel& model) noexcept
+{
+    constexpr auto pad = simd::min_flank_pad();
+    const auto truth_size  = static_cast<int>(truth.size());
+    const auto target_size = static_cast<int>(target.size());
+    const auto truth_alignment_size = static_cast<int>(target_size + 2 * pad - 1);
+    const auto alignment_offset = std::max(0, static_cast<int>(target_offset) - pad);
+    if (alignment_offset + truth_alignment_size > truth_size) {
+        return std::make_pair(CigarString {}, std::numeric_limits<double>::lowest());
+    }
+    const auto qualities = reinterpret_cast<const std::int8_t*>(target_qualities.data());
+    thread_local std::vector<char> align1 {}, align2 {};
+    const auto max_alignment_size = 2 * (target.size() + pad);
+    align1.assign(max_alignment_size + 1, 0);
+    align2.assign(max_alignment_size + 1, 0);
+    int first_pos;
+    auto score = simd::align(truth.data() + alignment_offset,
+                             target.data(),
+                             qualities,
+                             truth_alignment_size,
+                             target_size,
+                             model.snv_mask.data() + alignment_offset,
+                             model.snv_priors.data() + alignment_offset,
+                             model.gap_open.data() + alignment_offset,
+                             model.gap_extend, model.nuc_prior,
+                             align1.data(), align2.data(), first_pos);
+    if (!use_adjusted_alignment_score(truth, target, target_offset, model)) {
+        auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
+        if (lhs_flank_size < alignment_offset) {
+            lhs_flank_size = 0;
+        } else {
+            lhs_flank_size -= alignment_offset;
+            if (lhs_flank_size < 0) lhs_flank_size = 0;
+        }
+        auto rhs_flank_size = static_cast<int>(model.rhs_flank_size);
+        if (alignment_offset + truth_alignment_size < truth_size - rhs_flank_size) {
+            rhs_flank_size = 0;
+        } else {
+            rhs_flank_size += alignment_offset + truth_alignment_size;
+            rhs_flank_size -= truth_size;
+            if (rhs_flank_size < 0) rhs_flank_size = 0;
+        }
+        assert(lhs_flank_size >= 0 && rhs_flank_size >= 0);
+        assert(align1.back() == 0); // required by calculate_flank_score
+        int target_mask_size;
+        auto flank_score = simd::calculate_flank_score(truth_alignment_size,
+                                                       lhs_flank_size, rhs_flank_size,
+                                                       target.data(), qualities,
+                                                       model.snv_mask.data() + alignment_offset,
+                                                       model.snv_priors.data() + alignment_offset,
+                                                       model.gap_open.data() + alignment_offset,
+                                                       model.gap_extend, model.nuc_prior,
+                                                       first_pos,
+                                                       align1.data(), align2.data(),
+                                                       target_mask_size);
+        const auto num_explained_bases = target_size - target_mask_size;
+        constexpr int min_explained_bases {2};
+        if (num_explained_bases < min_explained_bases) flank_score = 0;
+        //assert(flank_score <= score);
+        if (flank_score <= score) {
+            score -= flank_score;
+        } else {
+            score += flank_score;
+            // Overflow has occurred when calculating score;
+        }
+    }
+    return std::make_pair(make_cigar(align1, align2), -ln10Div10<> * static_cast<double>(score));
+}
+
 unsigned min_flank_pad() noexcept
 {
     return simd::min_flank_pad();
@@ -254,6 +325,20 @@ double evaluate(const std::string& target, const std::string& truth,
     }
     // TODO: we should be able to optimise the alignment based of the first mismatch postition
     return simd_align(truth, target, target_qualities, target_offset, model);
+}
+
+std::pair<CigarString, double>
+align(const std::string& target, const std::string& truth,
+      const std::vector<std::uint8_t>& target_qualities,
+      std::size_t target_offset,
+      const MutationModel& model)
+{
+    validate(truth, target, target_qualities, target_offset, model);
+    if (std::equal(std::cbegin(target), std::cend(target), std::next(std::cbegin(truth), target_offset))) {
+        return {{CigarOperation {static_cast<CigarOperation::Size>(target.size()), CigarOperation::Flag::sequenceMatch}}, 0};
+    } else {
+        return simd_align_with_cigar(truth, target, target_qualities, target_offset, model);
+    }
 }
 
 double evaluate(const std::string& target, const std::string& truth, const VariableGapOpenMutationModel& model) noexcept
