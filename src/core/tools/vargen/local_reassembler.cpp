@@ -748,8 +748,8 @@ try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequen
         if (ref_repeat_is_lhs && !std::equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
                                              next(cbegin(reference), v.begin_pos - ref_repeat.period))) {
             // The reference deletion covers the entire repeat, cannot left align
-            if (std::equal(cbegin(v.alt), next(cbegin(v.alt), alt_repeat.period),
-                           next(cbegin(reference), v.begin_pos - alt_repeat.period))) {
+            if (!alt_has_lhs_flank && std::equal(cbegin(v.alt), next(cbegin(v.alt), alt_repeat.period),
+                                                 next(cbegin(reference), v.begin_pos - alt_repeat.period))) {
                 return {{v.begin_pos, std::move(v.ref), ""}, {v.begin_pos, "", std::move(v.alt)}};
             } else {
                 return {};
