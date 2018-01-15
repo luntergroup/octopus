@@ -452,28 +452,6 @@ std::string LocalReassembler::name() const
 
 // private methods
 
-template <typename MappableTp>
-auto decompose(const MappableTp& mappable, const GenomicRegion::Position n,
-               const GenomicRegion::Size overlap = 0)
-{
-    if (overlap >= n) {
-        throw std::runtime_error {"decompose: overlap must be less than n"};
-    }
-    std::vector<GenomicRegion> result {};
-    if (n == 0) return result;
-    const auto num_elements = region_size(mappable) / (n - overlap);
-    if (num_elements == 0) return result;
-    result.reserve(num_elements);
-    const auto& contig = contig_name(mappable);
-    auto curr = mapped_begin(mappable);
-    std::generate_n(std::back_inserter(result), num_elements, [&contig, &curr, n, overlap] () {
-        auto tmp = curr;
-        curr += (n - overlap);
-        return GenomicRegion {contig, tmp, tmp + n};
-    });
-    return result;
-}
-
 void LocalReassembler::prepare_bins(const GenomicRegion& region)
 {
     assert(bins_.empty() || is_after(region, bins_.back()));
@@ -707,22 +685,19 @@ auto find_repeat_blocks(Assembler::NucleotideSequence& sequence, const unsigned 
 {
     auto repeats = find_repeats(sequence, max_period);
     if (repeats.size() < 2) return repeats;
-    std::sort(std::begin(repeats), std::end(repeats), [] (const auto& lhs, const auto& rhs) { return lhs.period < rhs.period; });
-    std::vector<short> mask(sequence.size(), 0);
-    for (const auto& repeat : repeats) {
-        std::fill_n(std::next(std::begin(mask), repeat.pos), repeat.length, repeat.period);
-    }
+    std::sort(std::begin(repeats), std::end(repeats), [] (const auto& lhs, const auto& rhs) { return lhs.period > rhs.period; });
+    std::vector<bool> mask(sequence.size(), false);
     std::vector<tandem::Repeat> result {};
     result.reserve(repeats.size());
-    for (auto block_begin_itr = std::cbegin(mask); block_begin_itr != std::cend(mask); ) {
-        const auto block_end_itr = find_not(std::next(block_begin_itr), std::cend(mask), *block_begin_itr);
-        const auto block_length = std::distance(block_begin_itr, block_end_itr);
-        if (block_length > 1) {
-            const auto block_pos = std::distance(std::cbegin(mask), block_begin_itr);
-            result.emplace_back(block_pos, block_length, *block_begin_itr);
+    for (const auto& repeat : repeats) {
+        const auto mask_begin_itr = std::next(std::begin(mask), repeat.pos);
+        const auto mask_end_itr   = std::next(mask_begin_itr, repeat.length);
+        if (std::find(mask_begin_itr, mask_end_itr, true) == mask_end_itr) {
+            result.push_back(repeat);
+            std::fill(mask_begin_itr, mask_end_itr, true);
         }
-        block_begin_itr = block_end_itr;
     }
+    std::sort(std::begin(result), std::end(result), [] (const auto& lhs, const auto& rhs) { return lhs.pos < rhs.pos; });
     return result;
 }
 
@@ -749,12 +724,13 @@ try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequen
     assert(v.begin_pos >= ref_repeat.period);
     assert(reference.size() > v.begin_pos + v.ref.size() + ref_repeat.period);
     const bool ref_has_lhs_flank {ref_repeat.pos != 0};
-    const bool ref_has_rhs_flank {!ref_has_lhs_flank && ref_repeat.length != v.ref.size()};
+    const bool ref_has_rhs_flank {!ref_has_lhs_flank && ref_repeat.length < v.ref.size()};
     const bool alt_has_lhs_flank {alt_repeat.pos != 0};
-    const bool alt_has_rhs_flank {!alt_has_lhs_flank && alt_repeat.length != v.alt.size()};
+    const bool alt_has_rhs_flank {!alt_has_lhs_flank && alt_repeat.length < v.alt.size()};
     
-    if (ref_has_lhs_flank && alt_has_rhs_flank) {
-        // e.g. NNNNgcgcgcgc > ttttttttNNN
+    if ((ref_has_lhs_flank && (alt_has_lhs_flank || alt_has_rhs_flank)) || (ref_has_rhs_flank && alt_has_lhs_flank)) {
+        // e.g. NNNNgcgcgcgc > ttttttttNNN, gcgcgcgcNNNN > NNNtttttttt, or NNNNgcgcgcgc > NNNtttttttt
+        // Don't allow cases where both flanks
         return {};
     }
     using std::cbegin; using std::cend; using std::next; using std::prev;
@@ -769,8 +745,8 @@ try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequen
         if (ref_repeat_is_lhs && !std::equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
                                              next(cbegin(reference), v.begin_pos - ref_repeat.period))) {
             // The reference deletion covers the entire repeat, cannot left align
-            if (std::equal(cbegin(v.alt), next(cbegin(v.alt), alt_repeat.period),
-                           next(cbegin(reference), v.begin_pos - alt_repeat.period))) {
+            if (!alt_has_lhs_flank && std::equal(cbegin(v.alt), next(cbegin(v.alt), alt_repeat.period),
+                                                 next(cbegin(reference), v.begin_pos - alt_repeat.period))) {
                 return {{v.begin_pos, std::move(v.ref), ""}, {v.begin_pos, "", std::move(v.alt)}};
             } else {
                 return {};
@@ -778,26 +754,16 @@ try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequen
         }
     }
     Assembler::Variant deletion {v.begin_pos, std::move(v.ref), ""}, insertion {v.begin_pos, "", std::move(v.alt)};
-    if (ref_has_lhs_flank && alt_has_lhs_flank) {
-        const auto ref_pad_begin = cbegin(deletion.ref);
-        const auto ref_pad_end   = next(ref_pad_begin, ref_repeat.pos);
-        v.ref.assign(ref_pad_begin, ref_pad_end);
-        deletion.ref.erase(ref_pad_begin, ref_pad_end);
-        const auto alt_pad_begin = cbegin(insertion.alt);
-        const auto alt_pad_end   = next(alt_pad_begin, ref_repeat.pos);
-        v.alt.assign(alt_pad_begin, alt_pad_end);
-        insertion.alt.erase(alt_pad_begin, alt_pad_end);
-        deletion.begin_pos  += ref_repeat.pos;
-        insertion.begin_pos += ref_repeat.pos;
-    } else if (ref_has_rhs_flank && alt_has_rhs_flank) {
+    if (ref_has_rhs_flank && alt_has_rhs_flank) {
         const auto ref_pad_end   = cend(deletion.ref);
-        const auto ref_pad_begin = prev(ref_pad_end, ref_repeat.pos);
+        const auto ref_pad_begin = prev(ref_pad_end, deletion.ref.size() - ref_repeat.length);
         v.ref.assign(ref_pad_begin, ref_pad_end);
         deletion.ref.erase(ref_pad_begin, ref_pad_end);
         const auto alt_pad_end   = cend(insertion.alt);
-        const auto alt_pad_begin = prev(alt_pad_end, ref_repeat.pos);
+        const auto alt_pad_begin = prev(alt_pad_end, insertion.alt.size() - alt_repeat.length);
         v.alt.assign(alt_pad_begin, alt_pad_end);
         insertion.alt.erase(alt_pad_begin, alt_pad_end);
+        v.begin_pos += ref_repeat.length;
     }
     // Complete any partial repeats (e.g. CAGCAGCA > CAGCAGCAG).
     // This is to ensure the repeat can be left aligned.
@@ -961,7 +927,7 @@ auto decompose_with_aligner(Assembler::Variant v, const VariantRepeatStructure& 
 {
     Model model {4, -6, -8, -1};
     if (is_repetitive(v, repeat_structure)) {
-        model = Model {1, -6, -7, -1};
+        model = Model {4, -6, -7, -1};
     }
     return decompose_with_aligner(std::move(v), model);
 }

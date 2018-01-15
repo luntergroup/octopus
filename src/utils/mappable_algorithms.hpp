@@ -1362,6 +1362,28 @@ auto decompose(const MappableTp& mappable, const GenomicRegion::Position n)
     return result;
 }
 
+template <typename MappableTp>
+auto decompose(const MappableTp& mappable, const GenomicRegion::Position n, const GenomicRegion::Size overlap = 0)
+{
+    static_assert(is_region_or_mappable<MappableTp>, "Mappable required");
+    if (overlap >= n) {
+        throw std::runtime_error {"decompose: overlap must be less than n"};
+    }
+    std::vector<GenomicRegion> result {};
+    if (n == 0) return result;
+    const auto num_elements = region_size(mappable) / (n - overlap);
+    if (num_elements == 0) return result;
+    result.reserve(num_elements);
+    const auto& contig = contig_name(mappable);
+    auto curr = mapped_begin(mappable);
+    std::generate_n(std::back_inserter(result), num_elements, [&contig, &curr, n, overlap] () {
+        auto tmp = curr;
+        curr += (n - overlap);
+        return GenomicRegion {contig, tmp, tmp + n};
+    });
+    return result;
+}
+
 // encompassing_region
 
 /**
