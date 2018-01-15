@@ -204,6 +204,23 @@ CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset,
     return copy(cigar, offset, size, [](const auto& op) { return op.advances_sequence(); });
 }
 
+CigarString collapse_matches(const CigarString& cigar)
+{
+    CigarString result {};
+    result.reserve(cigar.size());
+    for (auto match_end_itr = std::begin(cigar); match_end_itr != std::cend(cigar); ) {
+        const auto match_begin_itr = std::find_if(match_end_itr, std::end(cigar), is_match);
+        result.insert(std::cend(result), match_end_itr, match_begin_itr);
+        if (match_begin_itr != std::cend(cigar)) {
+            match_end_itr = std::find_if_not(std::next(match_begin_itr), std::end(cigar), is_match);
+            auto match_size = std::accumulate(match_begin_itr, match_end_itr, 0,
+                                              [] (auto curr, const auto& op) { return curr + op.size(); });
+            result.emplace_back(match_size, CigarOperation::Flag::alignmentMatch);
+        }
+    }
+    return result;
+}
+
 bool operator==(const CigarOperation& lhs, const CigarOperation& rhs) noexcept
 {
     return lhs.flag() == rhs.flag() && lhs.size() == rhs.size();
