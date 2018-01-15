@@ -930,7 +930,7 @@ auto decompose_with_aligner(Assembler::Variant v, const VariantRepeatStructure& 
 {
     Model model {4, -6, -8, -1};
     if (is_repetitive(v, repeat_structure)) {
-        model = Model {1, -6, -7, -1};
+        model = Model {4, -6, -7, -1};
     }
     return decompose_with_aligner(std::move(v), model);
 }
