@@ -345,6 +345,7 @@ CoalescentProbabilityGreater::CoalescentProbabilityGreater(CoalescentModel model
 
 bool CoalescentProbabilityGreater::operator()(const Haplotype& lhs, const Haplotype& rhs) const
 {
+    if (have_same_alleles(lhs, rhs)) return true;
     auto cache_itr = cache_.find(lhs);
     if (cache_itr == std::cend(cache_)) {
         buffer_.assign({lhs});
