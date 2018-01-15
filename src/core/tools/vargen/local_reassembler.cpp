@@ -685,22 +685,19 @@ auto find_repeat_blocks(Assembler::NucleotideSequence& sequence, const unsigned 
 {
     auto repeats = find_repeats(sequence, max_period);
     if (repeats.size() < 2) return repeats;
-    std::sort(std::begin(repeats), std::end(repeats), [] (const auto& lhs, const auto& rhs) { return lhs.period < rhs.period; });
-    std::vector<short> mask(sequence.size(), 0);
-    for (const auto& repeat : repeats) {
-        std::fill_n(std::next(std::begin(mask), repeat.pos), repeat.length, repeat.period);
-    }
+    std::sort(std::begin(repeats), std::end(repeats), [] (const auto& lhs, const auto& rhs) { return lhs.period > rhs.period; });
+    std::vector<bool> mask(sequence.size(), false);
     std::vector<tandem::Repeat> result {};
     result.reserve(repeats.size());
-    for (auto block_begin_itr = std::cbegin(mask); block_begin_itr != std::cend(mask); ) {
-        const auto block_end_itr = find_not(std::next(block_begin_itr), std::cend(mask), *block_begin_itr);
-        const auto block_length = std::distance(block_begin_itr, block_end_itr);
-        if (block_length > 1) {
-            const auto block_pos = std::distance(std::cbegin(mask), block_begin_itr);
-            result.emplace_back(block_pos, block_length, *block_begin_itr);
+    for (const auto& repeat : repeats) {
+        const auto mask_begin_itr = std::next(std::begin(mask), repeat.pos);
+        const auto mask_end_itr   = std::next(mask_begin_itr, repeat.length);
+        if (std::find(mask_begin_itr, mask_end_itr, true) == mask_end_itr) {
+            result.push_back(repeat);
+            std::fill(mask_begin_itr, mask_end_itr, true);
         }
-        block_begin_itr = block_end_itr;
     }
+    std::sort(std::begin(result), std::end(result), [] (const auto& lhs, const auto& rhs) { return lhs.pos < rhs.pos; });
     return result;
 }
 
