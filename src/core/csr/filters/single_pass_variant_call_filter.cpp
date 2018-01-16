@@ -21,12 +21,8 @@ SinglePassVariantCallFilter::SinglePassVariantCallFilter(FacetFactory facet_fact
                                                          boost::optional<ProgressMeter&> progress)
 : VariantCallFilter {std::move(facet_factory), measures, std::move(output_config)}
 , progress_ {progress}
-{
-    measure_names_.reserve(measures.size());
-    for (const auto& measure : measures) {
-        measure_names_.push_back(measure.name());
-    }
-}
+, annotate_measures_ {output_config.annotate_measures}
+{}
 
 void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const
 {
@@ -72,19 +68,14 @@ auto get_value(const Measure::ResultType& value)
 
 void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest) const
 {
-    VcfRecord::Builder builder {call};
-    for (std::size_t i {0}; i < measures.size(); ++i) {
-        if (measure_names_[i] != "QUAL") {
-            if (!is_missing(measures[i])) {
-                if (measure_names_[i] == "DP" || measure_names_[i] == "MQ0") {
-                    builder.set_info(measure_names_[i], get_value<int>(measures[i]));
-                } else {
-                    builder.set_info(measure_names_[i], get_value<double>(measures[i]));
-                }
-            }
-        }
+    if (annotate_measures_) {
+        auto annotation_builder = VcfRecord::Builder {call};
+        annotate(annotation_builder, measures);
+        const auto annotated_call = annotation_builder.build_once();
+        write(annotated_call, classify(measures), dest);
+    } else {
+        write(call, classify(measures), dest);
     }
-    write(builder.build_once(), classify(measures), dest);
     log_progress(mapped_region(call));
 }
 

@@ -10,7 +10,7 @@
 #include <numeric>
 #include <cmath>
 
-#include <boost/math/distributions/hypergeometric.hpp>
+#include <boost/range/combine.hpp>
 
 #include "config/common.hpp"
 #include "containers/mappable_flat_set.hpp"
@@ -141,13 +141,38 @@ void VariantCallFilter::write(const VcfRecord& call, const Classification& class
     }
 }
 
+void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& measures) const
+{
+    if (output_config_.clear_info) {
+        call.clear_info();
+    }
+    for (auto p : boost::combine(measures_, measures)) {
+        const MeasureWrapper& measure {p.get<0>()};
+        const Measure::ResultType& measured_value {p.get<1>()};
+        call.set_info(measure.name(), measure.serialise(measured_value));
+    }
+}
+
 // private methods
+
+void add_info(const MeasureWrapper& measure, VcfHeader::Builder& builder)
+{
+    builder.add_info(measure.name(), "1", "String", "CSR measure");
+}
 
 VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
 {
     VcfHeader::Builder builder {source.fetch_header()};
     if (output_config_.emit_sites_only) {
         builder.clear_format();
+    }
+    if (output_config_.clear_info) {
+        builder.clear_info();
+    }
+    if (output_config_.annotate_measures) {
+        for (const auto& measure : measures_) {
+            add_info(measure, builder);
+        }
     }
     annotate(builder);
     return builder.build_once();

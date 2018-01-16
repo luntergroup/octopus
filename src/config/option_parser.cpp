@@ -572,6 +572,16 @@ OptionMap parse_options(const int argc, const char** argv)
     ("keep-unfiltered-calls",
      po::bool_switch()->default_value(false),
      "Keep a copy of unfiltered calls")
+    
+    ("csr-training",
+     po::bool_switch()->default_value(false),
+     "PASS all calls and output all measures to VCF INFO")
+    
+    ("csr-training-measures",
+     po::value<std::vector<std::string>>()->multitoken()
+     ->default_value(std::vector<std::string> {"QUAL", "MQ", "MP", "AF", "SB", "MQD"}, "QUAL MQ MP AF SB MQD")
+     ->composing(),
+     "Measures to use for CSR training")
     ;
     
     po::options_description all("octopus options");

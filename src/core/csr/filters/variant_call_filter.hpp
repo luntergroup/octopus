@@ -37,6 +37,8 @@ public:
     {
         bool emit_sites_only = false;
         bool clear_existing_filters = true;
+        bool annotate_measures = false;
+        bool clear_info = false;
     };
     
     VariantCallFilter() = delete;
@@ -71,6 +73,7 @@ protected:
     MeasureVector measure(const VcfRecord& call) const;
     std::vector<MeasureVector> measure(const std::vector<VcfRecord>& calls) const;
     void write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const;
+    void annotate(VcfRecord::Builder& call, const MeasureVector& measures) const;
     
 private:
     using FacetSet = std::vector<std::string>;
