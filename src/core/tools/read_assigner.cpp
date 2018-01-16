@@ -150,45 +150,4 @@ AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
     return result;
 }
 
-std::vector<CigarString> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
-                                 HaplotypeLikelihoodModel model)
-{
-    const auto& haplotype_region = mapped_region(haplotype);
-    const auto reads_region = encompassing_region(reads);
-    const auto min_flank_pad = HaplotypeLikelihoodModel::pad_requirement();
-    unsigned min_lhs_expansion {min_flank_pad}, min_rhs_expansion {min_flank_pad};
-    if (begins_before(reads_region, haplotype_region)) {
-        min_lhs_expansion += begin_distance(reads_region, haplotype_region);
-    }
-    if (ends_before(haplotype_region, reads_region)) {
-        min_rhs_expansion += end_distance(haplotype_region, reads_region);
-    }
-    auto expansion_size = std::max({min_lhs_expansion, min_rhs_expansion, 20u});
-    if (region_size(haplotype) > sequence_size(haplotype)) {
-        auto diff = static_cast<unsigned>(region_size(haplotype) - sequence_size(haplotype));
-        expansion_size += diff;
-    }
-    const auto read_hashes = compute_read_hashes(reads);
-    static constexpr unsigned char mapperKmerSize {6};
-    auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
-    const auto expanded_haplotype = expand(haplotype, expansion_size);
-    populate_kmer_hash_table<mapperKmerSize>(expanded_haplotype.sequence(), haplotype_hashes);
-    auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
-    model.reset(expanded_haplotype);
-    std::vector<CigarString> result {};
-    result.reserve(reads.size());
-    std::transform(std::cbegin(reads), std::cend(reads), std::cbegin(read_hashes), std::back_inserter(result),
-                   [&] (const auto& read, const auto& read_hash) {
-                       auto mapping_positions = map_query_to_target(read_hash, haplotype_hashes, haplotype_mapping_counts);
-                       reset_mapping_counts(haplotype_mapping_counts);
-                       return model.align(read, mapping_positions).first;
-                   });
-    return result;
-}
-
-std::vector<CigarString> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
-{
-    return realign(reads, haplotype, HaplotypeLikelihoodModel {nullptr, make_indel_error_model()});
-}
-
 } // namespace octopus

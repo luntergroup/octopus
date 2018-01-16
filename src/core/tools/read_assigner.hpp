@@ -34,11 +34,6 @@ HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotyp
 AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
                                         const HaplotypeSupportMap& haplotype_support);
 
-std::vector<CigarString> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
-                                 HaplotypeLikelihoodModel model);
-
-std::vector<CigarString> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
-
 } // namespace octopus
 
 #endif
