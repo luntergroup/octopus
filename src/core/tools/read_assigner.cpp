@@ -10,6 +10,8 @@
 #include <stdexcept>
 #include <cassert>
 
+#include <boost/optional.hpp>
+
 #include "utils/maths.hpp"
 #include "utils/kmer_mapper.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
@@ -40,13 +42,16 @@ auto max_posterior_haplotypes(const std::vector<Haplotype>& haplotypes, const un
 
 auto calculate_support(const std::vector<Haplotype>& haplotypes,
                        const std::vector<AlignedRead>& reads,
-                       const HaplotypeLikelihoods& likelihoods)
+                       const HaplotypeLikelihoods& likelihoods,
+                       boost::optional<std::deque<AlignedRead>&> unassigned)
 {
     HaplotypeSupportMap result {};
     for (unsigned i {0}; i < reads.size(); ++i) {
         const auto top = max_posterior_haplotypes(haplotypes, i, likelihoods);
         if (top.size() == 1) {
             result[haplotypes[top.front()]].push_back(reads[i]);
+        } else if (unassigned) {
+            unassigned->push_back(reads[i]);
         }
     }
     return result;
@@ -114,6 +119,28 @@ auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes,
 }
 
 HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                                              const std::vector<AlignedRead>& reads,
+                                              HaplotypeLikelihoodModel model,
+                                              boost::optional<std::deque<AlignedRead>&> unassigned)
+{
+    if (!genotype.is_homozygous() && !reads.empty()) {
+        const auto unique_haplotypes = genotype.copy_unique();
+        assert(unique_haplotypes.size() > 1);
+        const auto likelihoods = calculate_likelihoods(unique_haplotypes, reads, model);
+        return calculate_support(unique_haplotypes, reads, likelihoods, unassigned);
+    } else {
+        return {};
+    }
+}
+
+HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                                              const std::vector<AlignedRead>& reads,
+                                              std::deque<AlignedRead>& unassigned)
+{
+    return compute_haplotype_support(genotype, reads, HaplotypeLikelihoodModel {nullptr, make_indel_error_model()}, unassigned);
+}
+
+HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
                                               const std::vector<AlignedRead>& reads)
 {
     return compute_haplotype_support(genotype, reads, HaplotypeLikelihoodModel {nullptr, make_indel_error_model()});
@@ -123,14 +150,15 @@ HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotyp
                                               const std::vector<AlignedRead>& reads,
                                               HaplotypeLikelihoodModel model)
 {
-    if (!genotype.is_homozygous() && !reads.empty()) {
-        const auto unique_haplotypes = genotype.copy_unique();
-        assert(unique_haplotypes.size() > 1);
-        const auto likelihoods = calculate_likelihoods(unique_haplotypes, reads, model);
-        return calculate_support(unique_haplotypes, reads, likelihoods);
-    } else {
-        return {};
-    }
+    return compute_haplotype_support(genotype, reads, std::move(model), boost::none);
+}
+
+HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                                              const std::vector<AlignedRead>& reads,
+                                              std::deque<AlignedRead>& unassigned,
+                                              HaplotypeLikelihoodModel model)
+{
+    return compute_haplotype_support(genotype, reads, std::move(model), unassigned);
 }
 
 AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
