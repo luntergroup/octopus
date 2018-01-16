@@ -753,10 +753,24 @@ try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequen
     if (ref_has_rhs_flank) {
         ref_repeat_is_lhs = true;
     } else if (!ref_has_lhs_flank) {
-        ref_repeat_is_lhs = !(equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
-                                    next(cbegin(reference), v.begin_pos + v.ref.size()))
-                              || equal(prev(cend(v.ref), ref_repeat.period), cend(v.ref),
-                                       next(cbegin(reference), v.begin_pos + v.ref.size())));
+        if (ref_repeat.period >= alt_repeat.period) {
+            ref_repeat_is_lhs = !(equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
+                                        next(cbegin(reference), v.begin_pos + v.ref.size()))
+                                  || equal(prev(cend(v.ref), ref_repeat.period), cend(v.ref),
+                                           next(cbegin(reference), v.begin_pos + v.ref.size())));
+        } else {
+            const auto alt_repeat_begin_itr = next(cbegin(v.alt), alt_repeat.pos);
+            const auto alt_repeat_end_itr   = next(alt_repeat_begin_itr, 2 * alt_repeat.period);
+            if (alt_has_lhs_flank) {
+                const auto ref_begin_itr = next(cbegin(reference), v.begin_pos + v.ref.size());
+                const auto ref_end_itr   = next(ref_begin_itr, alt_repeat.period);
+                ref_repeat_is_lhs = std::search(alt_repeat_begin_itr, alt_repeat_end_itr, ref_begin_itr, ref_end_itr) != alt_repeat_end_itr;
+            } else {
+                const auto ref_begin_itr = next(cbegin(reference), v.begin_pos - alt_repeat.period);
+                const auto ref_end_itr   = next(ref_begin_itr, alt_repeat.period);
+                ref_repeat_is_lhs = std::search(alt_repeat_begin_itr, alt_repeat_end_itr, ref_begin_itr, ref_end_itr) == alt_repeat_end_itr;
+            }
+        }
     }
     if (ref_repeat_is_lhs) {
         if (!equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
@@ -769,6 +783,8 @@ try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequen
                 return {};
             }
         }
+    } else if (alt_has_lhs_flank) {
+        return {}; // No left align
     }
     auto deletion_begin_pos = v.begin_pos;
     Assembler::NucleotideSequence deletion {std::move(v.ref)}, insertion {std::move(v.alt)};
