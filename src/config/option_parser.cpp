@@ -315,7 +315,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " By default octopus will automatically determine this value")
     
     ("max-variant-size",
-     po::value<int>()->default_value(2000),
+     po::value<int>()->default_value(75),
      "Maximum candidate variant size to consider (in region space)")
     
     ("kmer-sizes",
