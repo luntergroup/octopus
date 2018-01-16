@@ -82,14 +82,14 @@ auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes,
     const auto& haplotype_region = mapped_region(haplotypes.front());
     const auto reads_region = encompassing_region(reads);
     const auto min_flank_pad = HaplotypeLikelihoodModel::pad_requirement();
-    unsigned min_lhs_expansion {min_flank_pad}, min_rhs_expansion {min_flank_pad};
+    unsigned min_lhs_expansion {2 * min_flank_pad}, min_rhs_expansion {2 * min_flank_pad};
     if (begins_before(reads_region, haplotype_region)) {
         min_lhs_expansion += begin_distance(reads_region, haplotype_region);
     }
     if (ends_before(haplotype_region, reads_region)) {
         min_rhs_expansion += end_distance(haplotype_region, reads_region);
     }
-    const auto min_expansion = std::max({min_lhs_expansion, min_rhs_expansion, 20u}) + max_deletion_size(haplotypes);
+    const auto min_expansion = std::max(min_lhs_expansion, min_rhs_expansion) + max_deletion_size(haplotypes);
     const auto read_hashes = compute_read_hashes(reads);
     static constexpr unsigned char mapperKmerSize {6};
     auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
