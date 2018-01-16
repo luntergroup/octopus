@@ -224,7 +224,7 @@ bool is_left_alignable(const Variant& variant) noexcept;
  to the left while keeping the length of all its alleles constant.
  */
 Variant left_align(const Variant& variant, const ReferenceGenome& reference,
-                   unsigned extension_size = 30);
+                   GenomicRegion::Size extension_size = 30);
 
 /*
  A variant is normalised if and only if it is parsimonious and left aligned.
@@ -254,11 +254,14 @@ std::vector<Variant> parsimonise_each(std::vector<Variant>&& variants,
 std::vector<Variant> parsimonise_together(const std::vector<Variant>& variants,
                                           const ReferenceGenome& reference);
 
-bool is_snp(const Variant& variant) noexcept;
+bool is_snv(const Variant& variant) noexcept;
+bool is_mnv(const Variant& variant) noexcept;
 bool is_insertion(const Variant& variant) noexcept;
 bool is_deletion(const Variant& variant) noexcept;
 bool is_indel(const Variant& variant) noexcept;
-bool is_mnv(const Variant& variant) noexcept;
+bool is_simple_insertion(const Variant& variant) noexcept;
+bool is_simple_deletion(const Variant& variant) noexcept;
+bool is_simple_indel(const Variant& variant) noexcept;
 bool are_same_type(const Variant& lhs, const Variant& rhs) noexcept;
 
 bool is_transition(const Variant& variant) noexcept;

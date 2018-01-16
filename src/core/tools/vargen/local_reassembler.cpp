@@ -11,6 +11,8 @@
 #include <future>
 #include <cassert>
 
+#include "tandem/tandem.hpp"
+
 #include "basics/cigar_string.hpp"
 #include "concepts/mappable_range.hpp"
 #include "utils/mappable_algorithms.hpp"
@@ -450,28 +452,6 @@ std::string LocalReassembler::name() const
 
 // private methods
 
-template <typename MappableTp>
-auto decompose(const MappableTp& mappable, const GenomicRegion::Position n,
-               const GenomicRegion::Size overlap = 0)
-{
-    if (overlap >= n) {
-        throw std::runtime_error {"decompose: overlap must be less than n"};
-    }
-    std::vector<GenomicRegion> result {};
-    if (n == 0) return result;
-    const auto num_elements = region_size(mappable) / (n - overlap);
-    if (num_elements == 0) return result;
-    result.reserve(num_elements);
-    const auto& contig = contig_name(mappable);
-    auto curr = mapped_begin(mappable);
-    std::generate_n(std::back_inserter(result), num_elements, [&contig, &curr, n, overlap] () {
-        auto tmp = curr;
-        curr += (n - overlap);
-        return GenomicRegion {contig, tmp, tmp + n};
-    });
-    return result;
-}
-
 void LocalReassembler::prepare_bins(const GenomicRegion& region)
 {
     assert(bins_.empty() || is_after(region, bins_.back()));
@@ -613,10 +593,12 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     }
 }
 
-auto partition_complex(std::deque<Assembler::Variant>& variants)
+bool is_inversion(const Assembler::Variant& v) noexcept
 {
-    return std::stable_partition(std::begin(variants), std::end(variants),
-                                 [] (const auto& candidate) { return !is_complex(candidate); });
+    return v.ref.size() > 2
+           && utils::are_reverse_complements(v.ref, v.alt)
+           && !utils::is_homopolymer(v.ref)
+           && !std::equal(std::next(std::cbegin(v.ref)), std::prev(std::cend(v.ref)), std::next(std::cbegin(v.alt)));
 }
 
 void trim_reference(Assembler::Variant& v)
@@ -641,40 +623,213 @@ bool is_complex(const Assembler::Variant& v) noexcept
     return (v.ref.size() > 1 && !v.alt.empty()) || (v.alt.size() > 1 && !v.ref.empty());
 }
 
-bool is_mnp(const Assembler::Variant& v) noexcept
+bool is_decomposable(const Assembler::Variant& v) noexcept
 {
-    return v.ref.size() == 2 && v.ref.size() == v.alt.size();
+    return is_complex(v) && !is_inversion(v);
 }
 
-auto split_mnp(Assembler::Variant&& v)
+auto partition_decomposable(std::deque<Assembler::Variant>& variants)
 {
-    assert(v.ref.size() > 1 && v.alt.size() > 1);
-    assert(v.ref.front() != v.alt.front() && v.ref.back() != v.alt.back());
-    
+    return std::stable_partition(std::begin(variants), std::end(variants),
+                                 [] (const auto& candidate) { return !is_decomposable(candidate); });
+}
+
+bool is_mnv(const Assembler::Variant& v) noexcept
+{
+    return v.ref.size() == v.alt.size()
+           && (v.ref.size() <= 2
+               || std::equal(std::next(std::cbegin(v.ref)), std::prev(std::cend(v.ref)), std::next(std::cbegin(v.alt))));
+}
+
+auto split_mnv(Assembler::Variant&& mnv)
+{
+    assert(mnv.ref.size() > 1 && mnv.alt.size() > 1);
+    assert(mnv.ref.front() != mnv.alt.front() && mnv.ref.back() != mnv.alt.back());
     std::vector<Assembler::Variant> result {};
     result.reserve(4);
     // Need to allocate new memory for all but the last SNV
-    result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
-    
-    const auto first_ref_itr       = std::cbegin(v.ref);
-    const auto penultimate_ref_itr = std::prev(std::cend(v.ref));
-    const auto first_alt_itr       = std::cbegin(v.alt);
-    const auto penultimate_alt_itr = std::prev(std::cend(v.alt));
-    
+    result.emplace_back(mnv.begin_pos, mnv.ref.front(), mnv.alt.front());
+    const auto first_ref_itr       = std::cbegin(mnv.ref);
+    const auto penultimate_ref_itr = std::prev(std::cend(mnv.ref));
+    const auto first_alt_itr       = std::cbegin(mnv.alt);
+    const auto penultimate_alt_itr = std::prev(std::cend(mnv.alt));
     auto p = std::mismatch(std::next(first_ref_itr), penultimate_ref_itr, std::next(first_alt_itr));
     while (p.first != penultimate_ref_itr) {
         assert(p.first < penultimate_ref_itr && p.second < penultimate_alt_itr);
-        result.emplace_back(v.begin_pos + std::distance(first_ref_itr, p.first), *p.first, *p.second);
+        result.emplace_back(mnv.begin_pos + std::distance(first_ref_itr, p.first), *p.first, *p.second);
         p = std::mismatch(std::next(p.first), penultimate_ref_itr, std::next(p.second));
     }
-    
     // So just need to remove the unwanted sequence from the last one
-    const auto last_snv_begin = v.begin_pos + v.ref.size() - 1;
-    v.ref.erase(first_ref_itr, penultimate_ref_itr);
-    v.alt.erase(first_alt_itr, penultimate_alt_itr);
-    result.emplace_back(last_snv_begin, std::move(v.ref), std::move(v.alt));
-    
+    const auto last_snv_begin = mnv.begin_pos + mnv.ref.size() - 1;
+    mnv.ref.erase(first_ref_itr, penultimate_ref_itr);
+    mnv.alt.erase(first_alt_itr, penultimate_alt_itr);
+    result.emplace_back(last_snv_begin, std::move(mnv.ref), std::move(mnv.alt));
     return result;
+}
+
+auto find_repeats(Assembler::NucleotideSequence& sequence, const unsigned max_period = 5)
+{
+    sequence.push_back('$');
+    auto result = tandem::extract_exact_tandem_repeats(sequence, 1, max_period);
+    sequence.pop_back();
+    return result;
+}
+
+template <typename InputIt, typename T>
+InputIt find_not(InputIt first, InputIt last, const T& value)
+{
+    return std::find_if_not(first, last, [&] (const auto& x) { return x == value; });
+}
+
+auto find_repeat_blocks(Assembler::NucleotideSequence& sequence, const unsigned max_period = 5)
+{
+    auto repeats = find_repeats(sequence, max_period);
+    if (repeats.size() < 2) return repeats;
+    std::sort(std::begin(repeats), std::end(repeats), [] (const auto& lhs, const auto& rhs) { return lhs.period > rhs.period; });
+    std::vector<bool> mask(sequence.size(), false);
+    std::vector<tandem::Repeat> result {};
+    result.reserve(repeats.size());
+    for (const auto& repeat : repeats) {
+        const auto mask_begin_itr = std::next(std::begin(mask), repeat.pos);
+        const auto mask_end_itr   = std::next(mask_begin_itr, repeat.length);
+        if (std::find(mask_begin_itr, mask_end_itr, true) == mask_end_itr) {
+            result.push_back(repeat);
+            std::fill(mask_begin_itr, mask_end_itr, true);
+        }
+    }
+    std::sort(std::begin(result), std::end(result), [] (const auto& lhs, const auto& rhs) { return lhs.pos < rhs.pos; });
+    return result;
+}
+
+struct VariantRepeatStructure
+{
+    std::vector<tandem::Repeat> ref_repeat_blocks, alt_repeat_blocks;
+};
+
+VariantRepeatStructure find_repeats(Assembler::Variant& v)
+{
+    return {find_repeat_blocks(v.ref), find_repeat_blocks(v.alt)};
+}
+
+bool is_same_repeat(const Assembler::Variant& v, const tandem::Repeat& ref_repeat, const tandem::Repeat& alt_repeat) noexcept
+{
+    if (ref_repeat.period != alt_repeat.period) return false;
+    const auto ref_repeat_period_begin_itr = next(cbegin(v.ref), ref_repeat.pos);
+    const auto ref_repeat_period_end_itr = next(ref_repeat_period_begin_itr, ref_repeat.period);
+    const auto alt_repeat_begin_itr = next(cbegin(v.alt), alt_repeat.pos);
+    assert(alt_repeat.length >= 2 * alt_repeat.period);
+    const auto alt_repeat_end_itr = next(alt_repeat_begin_itr, 2 * alt_repeat.period);
+    return std::search(alt_repeat_begin_itr, alt_repeat_end_itr, ref_repeat_period_begin_itr, ref_repeat_period_end_itr) != alt_repeat_end_itr;
+}
+
+std::vector<Assembler::Variant>
+try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequence& reference,
+                     const VariantRepeatStructure& repeat_structure)
+{
+    if (repeat_structure.ref_repeat_blocks.size() != 1 || repeat_structure.alt_repeat_blocks.size() != 1) {
+        return {};
+    }
+    
+    const auto& ref_repeat = repeat_structure.ref_repeat_blocks.front();
+    const auto& alt_repeat = repeat_structure.alt_repeat_blocks.front();
+    using std::cbegin; using std::cend; using std::next; using std::prev; using std::equal;
+    if (is_same_repeat(v, ref_repeat, alt_repeat)) {
+        return {};
+    }
+    assert(v.begin_pos >= ref_repeat.period);
+    assert(reference.size() > v.begin_pos + v.ref.size() + ref_repeat.period);
+    const bool ref_has_lhs_flank {ref_repeat.pos != 0};
+    const bool ref_has_rhs_flank {!ref_has_lhs_flank && ref_repeat.length < v.ref.size()};
+    const bool alt_has_lhs_flank {alt_repeat.pos != 0};
+    const bool alt_has_rhs_flank {!alt_has_lhs_flank && alt_repeat.length < v.alt.size()};
+    
+    if ((ref_has_lhs_flank && (alt_has_lhs_flank || alt_has_rhs_flank)) || (ref_has_rhs_flank && alt_has_lhs_flank)) {
+        // e.g. NNNNgcgcgcgc > ttttttttNNN, gcgcgcgcNNNN > NNNtttttttt, or NNNNgcgcgcgc > NNNtttttttt
+        // Don't allow cases where both flanks
+        return {};
+    }
+    
+    bool ref_repeat_is_lhs {false};
+    if (ref_has_rhs_flank) {
+        ref_repeat_is_lhs = true;
+    } else if (!ref_has_lhs_flank) {
+        if (ref_repeat.period >= alt_repeat.period) {
+            ref_repeat_is_lhs = !(equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
+                                        next(cbegin(reference), v.begin_pos + v.ref.size()))
+                                  || equal(prev(cend(v.ref), ref_repeat.period), cend(v.ref),
+                                           next(cbegin(reference), v.begin_pos + v.ref.size())));
+        } else {
+            const auto alt_repeat_begin_itr = next(cbegin(v.alt), alt_repeat.pos);
+            const auto alt_repeat_end_itr   = next(alt_repeat_begin_itr, 2 * alt_repeat.period);
+            if (alt_has_lhs_flank) {
+                const auto ref_begin_itr = next(cbegin(reference), v.begin_pos + v.ref.size());
+                const auto ref_end_itr   = next(ref_begin_itr, alt_repeat.period);
+                ref_repeat_is_lhs = std::search(alt_repeat_begin_itr, alt_repeat_end_itr, ref_begin_itr, ref_end_itr) != alt_repeat_end_itr;
+            } else {
+                const auto ref_begin_itr = next(cbegin(reference), v.begin_pos - alt_repeat.period);
+                const auto ref_end_itr   = next(ref_begin_itr, alt_repeat.period);
+                ref_repeat_is_lhs = std::search(alt_repeat_begin_itr, alt_repeat_end_itr, ref_begin_itr, ref_end_itr) == alt_repeat_end_itr;
+            }
+        }
+    }
+    if (ref_repeat_is_lhs) {
+        if (!equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
+                   next(cbegin(reference), v.begin_pos - ref_repeat.period))) {
+            // The reference deletion covers the entire repeat, cannot left align
+            if (!alt_has_lhs_flank && equal(cbegin(v.alt), next(cbegin(v.alt), alt_repeat.period),
+                                            next(cbegin(reference), v.begin_pos - alt_repeat.period))) {
+                return {{v.begin_pos, std::move(v.ref), ""}, {v.begin_pos, "", std::move(v.alt)}};
+            } else {
+                return {};
+            }
+        }
+    } else if (alt_has_lhs_flank) {
+        return {}; // No left align
+    }
+    auto deletion_begin_pos = v.begin_pos;
+    Assembler::NucleotideSequence deletion {std::move(v.ref)}, insertion {std::move(v.alt)};
+    if (ref_has_rhs_flank && alt_has_rhs_flank) {
+        const auto ref_pad_end   = cend(deletion);
+        const auto ref_pad_begin = prev(ref_pad_end, deletion.size() - ref_repeat.length);
+        v.ref.assign(ref_pad_begin, ref_pad_end);
+        deletion.erase(ref_pad_begin, ref_pad_end);
+        const auto alt_pad_end   = cend(insertion);
+        const auto alt_pad_begin = prev(alt_pad_end, insertion.size() - alt_repeat.length);
+        v.alt.assign(alt_pad_begin, alt_pad_end);
+        insertion.erase(alt_pad_begin, alt_pad_end);
+        v.begin_pos += ref_repeat.length;
+    }
+    // Complete any partial repeats on the lhs to ensure the indel can be left aligned properly
+    if (ref_repeat_is_lhs) {
+        const auto ref_partial_repeat_len = ref_repeat.length % ref_repeat.period;
+        if (ref_partial_repeat_len > 0) {
+            const auto num_remaining_repeat_bases = ref_repeat.period - ref_partial_repeat_len;
+            deletion.reserve(deletion.size() + num_remaining_repeat_bases);
+            insertion.reserve(insertion.size() + num_remaining_repeat_bases);
+            const auto repeat_begin_itr = next(cbegin(deletion), ref_repeat.pos + ref_partial_repeat_len);
+            const auto repeat_end_itr   = next(cbegin(deletion), ref_repeat.pos + ref_repeat.period);
+            deletion.insert(cbegin(deletion), repeat_begin_itr, repeat_end_itr);
+            insertion.insert(cbegin(insertion), repeat_begin_itr, repeat_end_itr);
+            deletion_begin_pos  -= num_remaining_repeat_bases;
+        }
+    } else {
+        const auto alt_partial_repeat_len = alt_repeat.length % alt_repeat.period;
+        if (alt_partial_repeat_len > 0) {
+            const auto num_remaining_repeat_bases = alt_repeat.period - alt_partial_repeat_len;
+            deletion.reserve(deletion.size() + num_remaining_repeat_bases);
+            insertion.reserve(insertion.size() + num_remaining_repeat_bases);
+            const auto repeat_begin_itr = next(cbegin(insertion), alt_repeat.pos + alt_partial_repeat_len);
+            const auto repeat_end_itr   = next(cbegin(insertion), alt_repeat.pos + alt_repeat.period);
+            deletion.insert(cbegin(deletion), repeat_begin_itr, repeat_end_itr);
+            insertion.insert(cbegin(insertion), repeat_begin_itr, repeat_end_itr);
+            deletion_begin_pos  -= num_remaining_repeat_bases;
+        }
+    }
+    auto insertion_begin_pos = deletion_begin_pos;
+    if (ref_repeat_is_lhs) {
+        insertion_begin_pos += deletion.size();
+    }
+    return {{deletion_begin_pos, std::move(deletion), ""}, {insertion_begin_pos, "", std::move(insertion)}};
 }
 
 auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler::NucleotideSequence& alt,
@@ -682,14 +837,11 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
 {
     std::vector<Assembler::Variant> result {};
     result.reserve(cigar.size());
-    
     auto ref_itr = std::cbegin(ref);
     auto alt_itr = std::cbegin(alt);
-    
     for (const auto& op : cigar) {
         using Flag = CigarOperation::Flag;
         using NucleotideSequence = Assembler::NucleotideSequence;
-        
         switch(op.flag()) {
             case Flag::sequenceMatch:
             {
@@ -729,25 +881,106 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
         }
         assert(ref_itr <= std::cend(ref) && alt_itr <= std::cend(alt));
     }
-    
     return result;
 }
 
-auto align(const Assembler::Variant& v)
+auto sum_lengths(const std::vector<tandem::Repeat>& repeats) noexcept
 {
-    constexpr Model model {2, -3, -4, -1};
+    return std::accumulate(std::cbegin(repeats), std::cend(repeats), 0,
+                           [] (auto curr, const auto& repeat) { return curr + repeat.length; });
+}
+
+auto calculate_fraction_repetitive(const Assembler::NucleotideSequence& sequence, const std::vector<tandem::Repeat>& repeats) noexcept
+{
+    auto num_repeat_bases = sum_lengths(repeats);
+    return static_cast<double>(num_repeat_bases) / sequence.size();
+}
+
+bool is_repetitive(const Assembler::Variant& v, const VariantRepeatStructure& repeat_structure) noexcept
+{
+    constexpr double min_repeat_frac {0.5};
+    return calculate_fraction_repetitive(v.ref, repeat_structure.ref_repeat_blocks) > min_repeat_frac
+           || calculate_fraction_repetitive(v.alt, repeat_structure.alt_repeat_blocks) > min_repeat_frac;
+}
+
+auto align(Assembler::Variant& v, const Model& model)
+{
     return align(v.ref, v.alt, model).cigar;
 }
 
-auto decompose_complex_indel(Assembler::Variant&& v)
+auto count_variant_types(const CigarString& cigar) noexcept
 {
-    const auto cigar = align(v);
-    return extract_variants(v.ref, v.alt, cigar, v.begin_pos);
+    bool has_snv {false}, has_insertion {false}, has_deletion {false};
+    for (const auto& op : cigar) {
+        switch (op.flag()) {
+            case CigarOperation::Flag::substitution: has_snv = true; break;
+            case CigarOperation::Flag::insertion: has_insertion = true; break;
+            case CigarOperation::Flag::deletion: has_deletion = true; break;
+            default: break;
+        }
+    }
+    return has_snv + has_insertion + has_deletion;
 }
 
-auto decompose_complex(Assembler::Variant&& v)
+bool is_complex_alignment(const CigarString& cigar, const Assembler::Variant& v) noexcept
 {
-    return is_mnp(v) ? split_mnp(std::move(v)) : decompose_complex_indel(std::move(v));
+    const auto min_allele_size = std::min(v.ref.size(), v.alt.size());
+    const auto num_variant_types = count_variant_types(cigar);
+    return (min_allele_size > 5 && cigar.size() >= min_allele_size && num_variant_types > 1)
+           || (min_allele_size > 8 && cigar.size() > 2 * min_allele_size / 3 && num_variant_types > 1)
+           || (min_allele_size > 20 && cigar.size() > min_allele_size / 2 && num_variant_types > 2);
+}
+
+bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) noexcept
+{
+    return !is_complex_alignment(cigar, v);
+}
+
+std::vector<Assembler::Variant> decompose_with_aligner(Assembler::Variant v, const Model& model)
+{
+    const auto cigar = align(v, model);
+    if (is_good_alignment(cigar, v)) {
+        return extract_variants(v.ref, v.alt, cigar, v.begin_pos);
+    } else {
+        return {std::move(v)};
+    }
+}
+
+auto decompose_with_aligner(Assembler::Variant v, const VariantRepeatStructure& repeat_structure)
+{
+    Model model {4, -6, -8, -1};
+    if (is_repetitive(v, repeat_structure)) {
+        model = Model {4, -6, -7, -1};
+    }
+    return decompose_with_aligner(std::move(v), model);
+}
+
+bool is_fully_decomposed(const Assembler::Variant v) noexcept
+{
+    return v.ref.empty() && v.alt.empty();
+}
+
+std::vector<Assembler::Variant> decompose_complex(Assembler::Variant v, const ReferenceGenome::GeneticSequence& reference)
+{
+    auto repeat_structure = find_repeats(v);
+    auto result = try_to_split_repeats(v, reference, repeat_structure);
+    if (!is_fully_decomposed(v)) {
+        if (!result.empty()) {
+            repeat_structure = find_repeats(v);
+        }
+        return decompose_with_aligner(std::move(v), repeat_structure);
+    }
+    return result;
+}
+
+template <typename NucleotideSequence>
+std::vector<Assembler::Variant> decompose(Assembler::Variant v, const NucleotideSequence& reference)
+{
+    if (is_mnv(v)) {
+        return split_mnv(std::move(v));
+    } else {
+        return decompose_complex(std::move(v), reference);
+    }
 }
 
 struct VariantLess
@@ -767,14 +1000,13 @@ struct VariantLess
 
 using VariantIterator = std::deque<Assembler::Variant>::iterator;
 
-auto decompose_complex(VariantIterator first, VariantIterator last)
+auto decompose(VariantIterator first, VariantIterator last, const ReferenceGenome::GeneticSequence& reference)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     std::deque<Assembler::Variant> result {};
-    std::for_each(make_move_iterator(first), make_move_iterator(last),
-                  [&result] (auto&& complex) {
-                      utils::append(decompose_complex(std::move(complex)), result);
-                  });
+    std::for_each(make_move_iterator(first), make_move_iterator(last), [&] (auto&& complex) {
+        utils::append(decompose(std::move(complex), reference), result);
+    });
     std::sort(begin(result), end(result), VariantLess {});
     result.erase(std::unique(begin(result), end(result)), end(result));
     return result;
@@ -803,11 +1035,11 @@ void merge(std::deque<Assembler::Variant>&& decomposed, std::deque<Assembler::Va
     std::inplace_merge(begin(variants), first_complex, end(variants), VariantLess {});
 }
 
-void decompose_complex(std::deque<Assembler::Variant>& variants)
+void decompose(std::deque<Assembler::Variant>& variants, const ReferenceGenome::GeneticSequence& reference)
 {
-    const auto first_complex = partition_complex(variants);
-    if (first_complex != std::end(variants)) {
-        merge(decompose_complex(first_complex, std::end(variants)), variants, first_complex);
+    const auto first_decomposable = partition_decomposable(variants);
+    if (first_decomposable != std::end(variants)) {
+        merge(decompose(first_decomposable, std::end(variants), reference), variants, first_decomposable);
     }
 }
 
@@ -823,9 +1055,7 @@ void add_to_mapped_variants(std::deque<Assembler::Variant>&& variants, std::dequ
 void remove_large_deletions(std::deque<Assembler::Variant>& variants, const unsigned max_size)
 {
     variants.erase(std::remove_if(std::begin(variants), std::end(variants),
-                                  [=] (const auto& variant) {
-                                      return variant.ref.size() >= max_size && variant.alt.empty();
-                                  }),
+                                  [=] (const auto& variant) { return variant.ref.size() >= max_size && variant.alt.empty(); }),
                    std::end(variants));
 }
 
@@ -851,7 +1081,7 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
         trim_reference(variants);
         std::sort(std::begin(variants), std::end(variants), VariantLess {});
         variants.erase(std::unique(std::begin(variants), std::end(variants)), std::end(variants));
-        decompose_complex(variants);
+        decompose(variants, reference_sequence);
         if (status == AssemblerStatus::partial_success) {
             // TODO: Some false positive large deletions are being generated for small kmer sizes.
             // Until Assembler is better able to remove these automatically, filter them here.

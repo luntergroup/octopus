@@ -254,9 +254,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Filters reads marked as secondary alignments")
     
-    ("no-supplementary-alignments",
+    ("allow-supplementary-alignments",
      po::bool_switch()->default_value(false),
-     "Filters reads marked as supplementary alignments")
+     "Allows reads marked as supplementary alignments")
     
     ("consider-reads-with-unmapped-segments",
      po::bool_switch()->default_value(false),
