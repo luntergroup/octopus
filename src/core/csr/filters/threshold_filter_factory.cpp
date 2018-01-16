@@ -69,6 +69,9 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
     filter_names[name<MaxGenotypeQuality>()]       = lowGQ;
     filter_names[name<StrandBias>()]               = strandBias;
+    filter_names[name<FilteredReadFraction>()]     = filteredReadFraction;
+    filter_names[name<GCContent>()]                = highGCRegion;
+    filter_names[name<ClippedReadFraction>()]      = highClippedReadFraction;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)

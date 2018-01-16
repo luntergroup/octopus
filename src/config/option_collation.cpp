@@ -47,6 +47,7 @@
 #include "exceptions/missing_file_error.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
 #include "core/csr/filters/threshold_filter_factory.hpp"
+#include "core/csr/filters/training_filter_factory.hpp"
 
 namespace octopus { namespace options {
 
@@ -1471,12 +1472,30 @@ std::string get_filter_expression(const OptionMap& options)
     return options.at("filter-expression").as<std::string>();
 }
 
+bool is_csr_training(const OptionMap& options)
+{
+    return options.at("csr-training").as<bool>();
+}
+
+std::set<std::string> get_training_measures(const OptionMap& options)
+{
+    std::set<std::string> result {};
+    for (const auto& measure : options.at("csr-training-measures").as<std::vector<std::string>>()) {
+        result.insert(measure);
+    }
+    return result;
+}
+
 std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference,
                                                                    ReadPipe& read_pipe,
                                                                    const OptionMap& options)
 {
     if (is_call_filtering_requested(options)) {
-        return std::make_unique<ThresholdFilterFactory>(get_filter_expression(options));
+        if (is_csr_training(options)) {
+            return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
+        } else {
+            return std::make_unique<ThresholdFilterFactory>(get_filter_expression(options));
+        }
     } else {
         return nullptr;
     }
