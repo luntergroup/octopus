@@ -19,9 +19,14 @@ SinglePassVariantCallFilter::SinglePassVariantCallFilter(FacetFactory facet_fact
                                                          std::vector<MeasureWrapper> measures,
                                                          OutputOptions output_config,
                                                          boost::optional<ProgressMeter&> progress)
-: VariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config)}
+: VariantCallFilter {std::move(facet_factory), measures, std::move(output_config)}
 , progress_ {progress}
-{}
+{
+    measure_names_.reserve(measures.size());
+    for (const auto& measure : measures) {
+        measure_names_.push_back(measure.name());
+    }
+}
 
 void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const
 {
@@ -52,9 +57,34 @@ void SinglePassVariantCallFilter::filter(const std::vector<VcfRecord>& calls, Vc
     }
 }
 
+template <typename T>
+struct MeasureValueVisitor : public boost::static_visitor<T>
+{
+    template <typename _> T operator()(const boost::optional<_>& value) const { return static_cast<T>(*value); }
+    template <typename _> T operator()(const _& value) const noexcept { return static_cast<T>(value); }
+};
+
+template <typename T>
+auto get_value(const Measure::ResultType& value)
+{
+    return boost::apply_visitor(MeasureValueVisitor<T> {}, value);
+}
+
 void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest) const
 {
-    write(call, classify(measures), dest);
+    VcfRecord::Builder builder {call};
+    for (std::size_t i {0}; i < measures.size(); ++i) {
+        if (measure_names_[i] != "QUAL") {
+            if (!is_missing(measures[i])) {
+                if (measure_names_[i] == "DP" || measure_names_[i] == "MQ0") {
+                    builder.set_info(measure_names_[i], get_value<int>(measures[i]));
+                } else {
+                    builder.set_info(measure_names_[i], get_value<double>(measures[i]));
+                }
+            }
+        }
+    }
+    write(builder.build_once(), classify(measures), dest);
     log_progress(mapped_region(call));
 }
 
