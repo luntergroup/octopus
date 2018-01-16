@@ -11,6 +11,7 @@
 
 #include "core/types/haplotype.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/cigar_string.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/allele.hpp"
 

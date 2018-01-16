@@ -1497,7 +1497,6 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     using std::make_unique;
     using namespace readpipe;
     ReadTransformer transformer {};
-    transformer.add(MaskSoftClipped {});
     using ReadFilterer = ReadPipe::ReadFilterer;
     ReadFilterer filterer {};
     filterer.add(make_unique<HasValidBaseQualities>());

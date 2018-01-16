@@ -207,8 +207,6 @@ set(CORE_SOURCES
     core/tools/vcf_header_factory.cpp
     core/tools/vcf_record_factory.hpp
     core/tools/vcf_record_factory.cpp
-    core/tools/read_assigner.hpp
-    core/tools/read_assigner.cpp
 
     core/csr/facets/facet.hpp
     core/csr/facets/facet.cpp
@@ -282,7 +280,6 @@ set(CORE_SOURCES
     
     core/models/genotype/cnv_model.hpp
     core/models/genotype/cnv_model.cpp
-
     core/models/genotype/germline_likelihood_model.hpp
     core/models/genotype/germline_likelihood_model.cpp
     core/models/genotype/individual_model.hpp
@@ -335,6 +332,10 @@ set(CORE_SOURCES
     core/tools/coretools.hpp
     core/tools/haplotype_filter.hpp
     core/tools/haplotype_filter.cpp
+    core/tools/read_assigner.hpp
+    core/tools/read_assigner.cpp
+    core/tools/read_realigner.hpp
+    core/tools/read_realigner.cpp
 
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp
