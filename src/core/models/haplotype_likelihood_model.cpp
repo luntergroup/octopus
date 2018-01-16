@@ -233,15 +233,16 @@ HaplotypeLikelihoodModel::align(const AlignedRead& read, const MappingPositionVe
 }
 
 template <typename InputIt>
-auto compute_optimal_alignment(const AlignedRead& read, const Haplotype& haplotype,
-                               InputIt first_mapping_position, InputIt last_mapping_position,
-                               const hmm::MutationModel& model)
+HaplotypeLikelihoodModel::Alignment
+compute_optimal_alignment(const AlignedRead& read, const Haplotype& haplotype,
+                          InputIt first_mapping_position, InputIt last_mapping_position,
+                          const hmm::MutationModel& model)
 {
     assert(contains(haplotype, read));
     using PositionType = typename std::iterator_traits<InputIt>::value_type;
     const auto original_mapping_position = static_cast<PositionType>(begin_distance(haplotype, read));
-    CigarString best_alignment;
-    auto max_log_probability = std::numeric_limits<double>::lowest();
+    HaplotypeLikelihoodModel::Alignment result {};
+    result.likelihood = std::numeric_limits<double>::lowest();
     bool is_original_position_mapped {false}, has_in_range_mapping_position {false};
     std::for_each(first_mapping_position, last_mapping_position, [&] (const auto position) {
         if (position == original_mapping_position) {
@@ -250,9 +251,10 @@ auto compute_optimal_alignment(const AlignedRead& read, const Haplotype& haploty
         if (is_in_range(position, read, haplotype)) {
             has_in_range_mapping_position = true;
             auto p = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(), position, model);
-            if (p.second > max_log_probability) {
-                max_log_probability = p.second;
-                best_alignment = std::move(p.first);
+            if (p.second > result.likelihood) {
+                result.mapping_position = position;
+                result.likelihood = p.second;
+                result.cigar = std::move(p.first);
             }
         }
     });
@@ -260,9 +262,10 @@ auto compute_optimal_alignment(const AlignedRead& read, const Haplotype& haploty
         has_in_range_mapping_position = true;
         auto p = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(),
                             original_mapping_position, model);
-        if (p.second > max_log_probability) {
-            max_log_probability = p.second;
-            best_alignment = std::move(p.first);
+        if (p.second > result.likelihood) {
+            result.mapping_position = original_mapping_position;
+            result.likelihood = p.second;
+            result.cigar = std::move(p.first);
         }
     }
     if (!has_in_range_mapping_position) {
@@ -282,11 +285,12 @@ auto compute_optimal_alignment(const AlignedRead& read, const Haplotype& haploty
                 throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, required_extension};
             }
         }
-        std::tie(best_alignment, max_log_probability) = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(),
-                                                                   final_mapping_position, model);
+        result.mapping_position = final_mapping_position;
+        std::tie(result.cigar, result.likelihood) = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(),
+                                                               final_mapping_position, model);
     }
-    assert(max_log_probability > std::numeric_limits<double>::lowest() && max_log_probability <= 0);
-    return std::make_pair(std::move(best_alignment), max_log_probability);
+    assert(result.likelihood > std::numeric_limits<double>::lowest() && result.likelihood <= 0);
+    return result;
 }
 
 HaplotypeLikelihoodModel::Alignment
@@ -296,12 +300,9 @@ HaplotypeLikelihoodModel::align(const AlignedRead& read, MappingPositionItr firs
         throw std::runtime_error {"HaplotypeLikelihoodModel: no buffered Haplotype"};
     }
     const auto is_forward = !read.is_marked_reverse_mapped();
-    hmm::MutationModel model {
-    is_forward ? haplotype_snv_forward_mask_ : haplotype_snv_reverse_mask_,
-    is_forward ? haplotype_snv_forward_priors_ : haplotype_snv_reverse_priors_,
-    haplotype_gap_open_penalities_,
-    haplotype_gap_extension_penalty_
-    };
+    hmm::MutationModel model {is_forward ? haplotype_snv_forward_mask_ : haplotype_snv_reverse_mask_,
+                              is_forward ? haplotype_snv_forward_priors_ : haplotype_snv_reverse_priors_,
+                              haplotype_gap_open_penalities_, haplotype_gap_extension_penalty_};
     if (haplotype_flank_state_) {
         model.lhs_flank_size = haplotype_flank_state_->lhs_flank;
         model.rhs_flank_size = haplotype_flank_state_->rhs_flank;
@@ -314,10 +315,10 @@ HaplotypeLikelihoodModel::align(const AlignedRead& read, MappingPositionItr firs
         using octopus::maths::constants::ln10Div10;
         const auto ln_prob_missmapped = -ln10Div10<> * read.mapping_quality();
         const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
-        result.second = maths::log_sum_exp(ln_prob_mapped + result.second, ln_prob_missmapped);
-        result.second = result.second > -1e-15 ? 0.0 : result.second;
+        result.likelihood = maths::log_sum_exp(ln_prob_mapped + result.likelihood, ln_prob_missmapped);
+        result.likelihood = result.likelihood > -1e-15 ? 0.0 : result.likelihood;
     } else {
-        result.second = result.second > -1e-15 ? 0.0 : result.second;
+        result.likelihood = result.likelihood > -1e-15 ? 0.0 : result.likelihood;
     }
     return result;
 }

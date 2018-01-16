@@ -45,7 +45,12 @@ public:
     using MappingPositionVector = std::vector<MappingPosition>;
     using MappingPositionItr    = MappingPositionVector::const_iterator;
     
-    using Alignment = std::pair<CigarString, double>;
+    struct Alignment
+    {
+        MappingPosition mapping_position;
+        CigarString cigar;
+        double likelihood;
+    };
     
     HaplotypeLikelihoodModel();
     
