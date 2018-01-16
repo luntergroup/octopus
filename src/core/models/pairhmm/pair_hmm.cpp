@@ -221,7 +221,7 @@ auto simd_align_with_cigar(const std::string& truth, const std::string& target,
                              model.gap_open.data() + alignment_offset,
                              model.gap_extend, model.nuc_prior,
                              align1.data(), align2.data(), first_pos);
-    if (!use_adjusted_alignment_score(truth, target, target_offset, model)) {
+    if (use_adjusted_alignment_score(truth, target, target_offset, model)) {
         auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
         if (lhs_flank_size < alignment_offset) {
             lhs_flank_size = 0;
@@ -253,7 +253,6 @@ auto simd_align_with_cigar(const std::string& truth, const std::string& target,
         const auto num_explained_bases = target_size - target_mask_size;
         constexpr int min_explained_bases {2};
         if (num_explained_bases < min_explained_bases) flank_score = 0;
-        //assert(flank_score <= score);
         if (flank_score <= score) {
             score -= flank_score;
         } else {
