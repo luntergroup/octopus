@@ -6,6 +6,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <deque>
 #include <functional>
 #include <iosfwd>
 
@@ -29,6 +30,15 @@ HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotyp
 
 HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
                                               const std::vector<AlignedRead>& reads,
+                                              std::deque<AlignedRead>& unassigned);
+
+HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                                              const std::vector<AlignedRead>& reads,
+                                              HaplotypeLikelihoodModel model);
+
+HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                                              const std::vector<AlignedRead>& reads,
+                                              std::deque<AlignedRead>& unassigned,
                                               HaplotypeLikelihoodModel model);
 
 AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
