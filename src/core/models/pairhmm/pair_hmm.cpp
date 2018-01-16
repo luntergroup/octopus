@@ -59,59 +59,56 @@ bool use_adjusted_alignment_score(const std::string& truth, const std::string& t
     return target_overlaps_truth_flank(truth, target, target_offset, model);
 }
 
-auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2)
-{
-    assert(!align1.empty());
-    CigarString result {};
-    result.reserve(align1.size());
-    auto it1 = std::cbegin(align1);
-    auto it2 = std::cbegin(align2);
-    const auto last1 = std::find_if_not(std::crbegin(align1), std::crend(align1),
-                                        [] (const auto x) { return x == 0; }).base();
-    const auto last2 = std::next(it1, std::distance(it1, last1));
-    while (it1 != last1) {
-        const auto p = std::mismatch(it1, last1, it2);
-        if (p.first != it1) {
-            result.emplace_back(std::distance(it1, p.first), CigarOperation::Flag::sequenceMatch);
-            if (p.first == last1) break;
-        }
-        const static auto is_gap = [] (const auto b) { return b == '-'; };
-        if (*p.first == '-') {
-            const auto it3 = std::find_if_not(std::next(p.first), last1, is_gap);
-            const auto n = std::distance(p.first, it3);
-            result.emplace_back(n, CigarOperation::Flag::insertion);
-            it1 = it3;
-            it2 = std::next(p.second, n);
-        } else if (*p.second == '-') {
-            const auto it3 = std::find_if_not(std::next(p.second), last2, is_gap);
-            const auto n = std::distance(p.second, it3);
-            result.emplace_back(n, CigarOperation::Flag::deletion);
-            it1 = std::next(p.first, n);
-            it2 = it3;
-        } else {
-            const auto p2 = std::mismatch(std::next(p.first), last1, std::next(p.second), std::not_equal_to<> {});
-            result.emplace_back(std::distance(p.first, p2.first), CigarOperation::Flag::substitution);
-            std::tie(it1, it2) = p2;
-        }
-    }
-    result.shrink_to_fit();
-    return result;
-}
-
 namespace debug {
 
 void print_alignment(const std::vector<char>& align1, const std::vector<char>& align2)
 {
     const auto isnt_null = [] (const char c) { return c != '\0'; };
-    std::copy_if(std::cbegin(align1), std::cend(align1), std::ostreambuf_iterator<char>(std::cout),
-                 isnt_null);
+    std::copy_if(std::cbegin(align1), std::cend(align1), std::ostreambuf_iterator<char> {std::cout}, isnt_null);
     std::cout << '\n';
-    std::copy_if(std::cbegin(align2), std::cend(align2), std::ostreambuf_iterator<char>(std::cout),
-                 isnt_null);
+    std::copy_if(std::cbegin(align2), std::cend(align2), std::ostreambuf_iterator<char> {std::cout}, isnt_null);
     std::cout << '\n';
 }
 
 } // namespace debug
+
+auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2)
+{
+    assert(!align1.empty() && !align2.empty());
+    auto align1_itr = std::cbegin(align1);
+    auto align2_itr = std::cbegin(align2);
+    const auto last_align1_itr = std::find_if_not(std::crbegin(align1), std::crend(align1), [] (auto x) { return x == 0; }).base();
+    const auto last_align2_itr = std::next(align2_itr, std::distance(align1_itr, last_align1_itr));
+    CigarString result {};
+    result.reserve(std::distance(align1_itr, last_align1_itr));
+    
+    while (align1_itr != last_align1_itr) {
+        const auto p = std::mismatch(align1_itr, last_align1_itr, align2_itr);
+        if (p.first != align1_itr) {
+            result.emplace_back(std::distance(align1_itr, p.first), CigarOperation::Flag::sequenceMatch);
+            if (p.first == last_align1_itr) break;
+        }
+        const static auto is_gap = [] (const auto b) { return b == '-'; };
+        if (*p.first == '-') {
+            const auto align1_gap_itr = std::find_if_not(std::next(p.first), last_align1_itr, is_gap);
+            const auto gap_length = std::distance(p.first, align1_gap_itr);
+            result.emplace_back(gap_length, CigarOperation::Flag::insertion);
+            align1_itr = align1_gap_itr;
+            align2_itr = std::next(p.second, gap_length);
+        } else if (*p.second == '-') {
+            const auto align2_gap_itr = std::find_if_not(std::next(p.second), last_align2_itr, is_gap);
+            const auto gap_length = std::distance(p.second, align2_gap_itr);
+            result.emplace_back(gap_length, CigarOperation::Flag::deletion);
+            align1_itr = std::next(p.first, gap_length);
+            align2_itr = align2_gap_itr;
+        } else {
+            const auto p2 = std::mismatch(std::next(p.first), last_align1_itr, std::next(p.second), std::not_equal_to<> {});
+            result.emplace_back(std::distance(p.first, p2.first), CigarOperation::Flag::substitution);
+            std::tie(align1_itr, align2_itr) = p2;
+        }
+    }
+    return result;
+}
 
 auto simd_align(const std::string& truth, const std::string& target,
                 const std::vector<std::uint8_t>& target_qualities,
