@@ -241,6 +241,8 @@ set(CORE_SOURCES
     core/csr/filters/unsupervised_clustering_filter_factory.cpp
     core/csr/filters/passing_filter.hpp
     core/csr/filters/passing_filter.cpp
+    core/csr/filters/training_filter_factory.hpp
+    core/csr/filters/training_filter_factory.cpp
     
     core/csr/measures/measure.hpp
     core/csr/measures/measure.cpp
