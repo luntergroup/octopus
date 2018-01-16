@@ -711,6 +711,17 @@ VariantRepeatStructure find_repeats(Assembler::Variant& v)
     return {find_repeat_blocks(v.ref), find_repeat_blocks(v.alt)};
 }
 
+bool is_same_repeat(const Assembler::Variant& v, const tandem::Repeat& ref_repeat, const tandem::Repeat& alt_repeat) noexcept
+{
+    if (ref_repeat.period != alt_repeat.period) return false;
+    const auto ref_repeat_period_begin_itr = next(cbegin(v.ref), ref_repeat.pos);
+    const auto ref_repeat_period_end_itr = next(ref_repeat_period_begin_itr, ref_repeat.period);
+    const auto alt_repeat_begin_itr = next(cbegin(v.alt), alt_repeat.pos);
+    assert(alt_repeat.length >= 2 * alt_repeat.period);
+    const auto alt_repeat_end_itr = next(alt_repeat_begin_itr, 2 * alt_repeat.period);
+    return std::search(alt_repeat_begin_itr, alt_repeat_end_itr, ref_repeat_period_begin_itr, ref_repeat_period_end_itr) != alt_repeat_end_itr;
+}
+
 std::vector<Assembler::Variant>
 try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequence& reference,
                      const VariantRepeatStructure& repeat_structure)
@@ -721,6 +732,10 @@ try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequen
     
     const auto& ref_repeat = repeat_structure.ref_repeat_blocks.front();
     const auto& alt_repeat = repeat_structure.alt_repeat_blocks.front();
+    using std::cbegin; using std::cend; using std::next; using std::prev; using std::equal;
+    if (is_same_repeat(v, ref_repeat, alt_repeat)) {
+        return {};
+    }
     assert(v.begin_pos >= ref_repeat.period);
     assert(reference.size() > v.begin_pos + v.ref.size() + ref_repeat.period);
     const bool ref_has_lhs_flank {ref_repeat.pos != 0};
@@ -733,80 +748,72 @@ try_to_split_repeats(Assembler::Variant& v, const ReferenceGenome::GeneticSequen
         // Don't allow cases where both flanks
         return {};
     }
-    using std::cbegin; using std::cend; using std::next; using std::prev;
+    
     bool ref_repeat_is_lhs {false};
     if (ref_has_rhs_flank) {
         ref_repeat_is_lhs = true;
     } else if (!ref_has_lhs_flank) {
-        ref_repeat_is_lhs = !(std::equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
-                                         next(cbegin(reference), v.begin_pos + v.ref.size()))
-                              || std::equal(prev(cend(v.ref), ref_repeat.period), cend(v.ref),
-                                            next(cbegin(reference), v.begin_pos + v.ref.size())));
-        if (ref_repeat_is_lhs && !std::equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
-                                             next(cbegin(reference), v.begin_pos - ref_repeat.period))) {
+        ref_repeat_is_lhs = !(equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
+                                    next(cbegin(reference), v.begin_pos + v.ref.size()))
+                              || equal(prev(cend(v.ref), ref_repeat.period), cend(v.ref),
+                                       next(cbegin(reference), v.begin_pos + v.ref.size())));
+    }
+    if (ref_repeat_is_lhs) {
+        if (!equal(cbegin(v.ref), next(cbegin(v.ref), ref_repeat.period),
+                   next(cbegin(reference), v.begin_pos - ref_repeat.period))) {
             // The reference deletion covers the entire repeat, cannot left align
-            if (!alt_has_lhs_flank && std::equal(cbegin(v.alt), next(cbegin(v.alt), alt_repeat.period),
-                                                 next(cbegin(reference), v.begin_pos - alt_repeat.period))) {
+            if (!alt_has_lhs_flank && equal(cbegin(v.alt), next(cbegin(v.alt), alt_repeat.period),
+                                            next(cbegin(reference), v.begin_pos - alt_repeat.period))) {
                 return {{v.begin_pos, std::move(v.ref), ""}, {v.begin_pos, "", std::move(v.alt)}};
             } else {
                 return {};
             }
         }
     }
-    Assembler::Variant deletion {v.begin_pos, std::move(v.ref), ""}, insertion {v.begin_pos, "", std::move(v.alt)};
+    auto deletion_begin_pos = v.begin_pos;
+    Assembler::NucleotideSequence deletion {std::move(v.ref)}, insertion {std::move(v.alt)};
     if (ref_has_rhs_flank && alt_has_rhs_flank) {
-        const auto ref_pad_end   = cend(deletion.ref);
-        const auto ref_pad_begin = prev(ref_pad_end, deletion.ref.size() - ref_repeat.length);
+        const auto ref_pad_end   = cend(deletion);
+        const auto ref_pad_begin = prev(ref_pad_end, deletion.size() - ref_repeat.length);
         v.ref.assign(ref_pad_begin, ref_pad_end);
-        deletion.ref.erase(ref_pad_begin, ref_pad_end);
-        const auto alt_pad_end   = cend(insertion.alt);
-        const auto alt_pad_begin = prev(alt_pad_end, insertion.alt.size() - alt_repeat.length);
+        deletion.erase(ref_pad_begin, ref_pad_end);
+        const auto alt_pad_end   = cend(insertion);
+        const auto alt_pad_begin = prev(alt_pad_end, insertion.size() - alt_repeat.length);
         v.alt.assign(alt_pad_begin, alt_pad_end);
-        insertion.alt.erase(alt_pad_begin, alt_pad_end);
+        insertion.erase(alt_pad_begin, alt_pad_end);
         v.begin_pos += ref_repeat.length;
     }
-    // Complete any partial repeats (e.g. CAGCAGCA > CAGCAGCAG).
-    // This is to ensure the repeat can be left aligned.
-    const auto ref_partial_repeat_len = deletion.ref.size() % ref_repeat.period;
-    if (ref_partial_repeat_len > 0) {
-        const auto num_remaining_repeat_bases = ref_repeat.period - ref_partial_repeat_len;
-        deletion.ref.reserve(deletion.ref.size() + num_remaining_repeat_bases);
-        insertion.alt.reserve(insertion.alt.size() + num_remaining_repeat_bases);
-        auto ref_insert_itr = cend(deletion.ref);
-        auto alt_insert_itr = cend(insertion.alt);
-        if (ref_repeat_is_lhs) {
-            ref_insert_itr = cbegin(deletion.ref);
-            alt_insert_itr = cbegin(insertion.alt);
-            deletion.begin_pos  -= num_remaining_repeat_bases;
-            insertion.begin_pos -= num_remaining_repeat_bases;
-        }
-        const auto repeat_begin_itr = next(cbegin(deletion.ref), ref_partial_repeat_len);
-        const auto repeat_end_itr   = next(cbegin(deletion.ref), ref_repeat.period);
-        deletion.ref.insert(ref_insert_itr, repeat_begin_itr, repeat_end_itr);
-        insertion.alt.insert(alt_insert_itr, repeat_begin_itr, repeat_end_itr);
-    }
-    const auto alt_partial_repeat_len = insertion.alt.size() % alt_repeat.period;
-    if (alt_partial_repeat_len > 0) {
-        const auto num_remaining_repeat_bases = alt_repeat.period - alt_partial_repeat_len;
-        deletion.ref.reserve(deletion.ref.size() + num_remaining_repeat_bases);
-        insertion.alt.reserve(insertion.alt.size() + num_remaining_repeat_bases);
-        auto ref_insert_itr = cend(deletion.ref);
-        auto alt_insert_itr = cend(insertion.alt);
-        if (!ref_repeat_is_lhs) {
-            ref_insert_itr = cbegin(deletion.ref);
-            alt_insert_itr = cbegin(insertion.alt);
-            deletion.begin_pos  -= num_remaining_repeat_bases;
-            insertion.begin_pos -= num_remaining_repeat_bases;
-        }
-        const auto repeat_begin_itr = next(cbegin(insertion.alt), alt_partial_repeat_len);
-        const auto repeat_end_itr   = next(cbegin(insertion.alt), alt_repeat.period);
-        deletion.ref.insert(ref_insert_itr, repeat_begin_itr, repeat_end_itr);
-        insertion.alt.insert(alt_insert_itr, repeat_begin_itr, repeat_end_itr);
-    }
+    // Complete any partial repeats on the lhs to ensure the indel can be left aligned properly
     if (ref_repeat_is_lhs) {
-        insertion.begin_pos += deletion.ref.size();
+        const auto ref_partial_repeat_len = ref_repeat.length % ref_repeat.period;
+        if (ref_partial_repeat_len > 0) {
+            const auto num_remaining_repeat_bases = ref_repeat.period - ref_partial_repeat_len;
+            deletion.reserve(deletion.size() + num_remaining_repeat_bases);
+            insertion.reserve(insertion.size() + num_remaining_repeat_bases);
+            const auto repeat_begin_itr = next(cbegin(deletion), ref_repeat.pos + ref_partial_repeat_len);
+            const auto repeat_end_itr   = next(cbegin(deletion), ref_repeat.pos + ref_repeat.period);
+            deletion.insert(cbegin(deletion), repeat_begin_itr, repeat_end_itr);
+            insertion.insert(cbegin(insertion), repeat_begin_itr, repeat_end_itr);
+            deletion_begin_pos  -= num_remaining_repeat_bases;
+        }
+    } else {
+        const auto alt_partial_repeat_len = alt_repeat.length % alt_repeat.period;
+        if (alt_partial_repeat_len > 0) {
+            const auto num_remaining_repeat_bases = alt_repeat.period - alt_partial_repeat_len;
+            deletion.reserve(deletion.size() + num_remaining_repeat_bases);
+            insertion.reserve(insertion.size() + num_remaining_repeat_bases);
+            const auto repeat_begin_itr = next(cbegin(insertion), alt_repeat.pos + alt_partial_repeat_len);
+            const auto repeat_end_itr   = next(cbegin(insertion), alt_repeat.pos + alt_repeat.period);
+            deletion.insert(cbegin(deletion), repeat_begin_itr, repeat_end_itr);
+            insertion.insert(cbegin(insertion), repeat_begin_itr, repeat_end_itr);
+            deletion_begin_pos  -= num_remaining_repeat_bases;
+        }
     }
-    return {std::move(deletion), std::move(insertion)};
+    auto insertion_begin_pos = deletion_begin_pos;
+    if (ref_repeat_is_lhs) {
+        insertion_begin_pos += deletion.size();
+    }
+    return {{deletion_begin_pos, std::move(deletion), ""}, {insertion_begin_pos, "", std::move(insertion)}};
 }
 
 auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler::NucleotideSequence& alt,
