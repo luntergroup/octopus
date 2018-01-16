@@ -962,15 +962,17 @@ bool is_fully_decomposed(const Assembler::Variant v) noexcept
 
 std::vector<Assembler::Variant> decompose_complex(Assembler::Variant v, const ReferenceGenome::GeneticSequence& reference)
 {
-    auto repeat_structure = find_repeats(v);
-    auto result = try_to_split_repeats(v, reference, repeat_structure);
-    if (!is_fully_decomposed(v)) {
-        if (!result.empty()) {
-            repeat_structure = find_repeats(v);
-        }
-        return decompose_with_aligner(std::move(v), repeat_structure);
-    }
-    return result;
+    //auto repeat_structure = find_repeats(v);
+    const Model model {4, -6, -8, -1};
+    return decompose_with_aligner(std::move(v), model);
+//    auto result = try_to_split_repeats(v, reference, repeat_structure);
+//    if (!is_fully_decomposed(v)) {
+//        if (!result.empty()) {
+//            repeat_structure = find_repeats(v);
+//        }
+//        return decompose_with_aligner(std::move(v), repeat_structure);
+//    }
+//    return result;
 }
 
 template <typename NucleotideSequence>
