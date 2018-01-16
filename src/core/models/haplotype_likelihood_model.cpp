@@ -110,18 +110,20 @@ double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
 
 namespace {
 
-std::size_t num_out_of_range_bases(const std::size_t mapping_position, const AlignedRead& read,
-                                   const Haplotype& haplotype)
+int num_out_of_range_bases(const std::size_t mapping_position, const AlignedRead& read, const Haplotype& haplotype) noexcept
 {
-    const auto alignment_size = sequence_size(read) + mapping_position + 2 * hmm::min_flank_pad();
-    if (alignment_size > sequence_size(haplotype)) {
-        return alignment_size - sequence_size(haplotype);
+    if (mapping_position < hmm::min_flank_pad()) {
+        return hmm::min_flank_pad() - mapping_position;
     }
-    return 0;
+    const auto mapping_end = mapping_position + sequence_size(read) + hmm::min_flank_pad();
+    if (mapping_end > sequence_size(haplotype)) {
+        return static_cast<int>(sequence_size(haplotype)) - static_cast<int>(mapping_end);
+    } else {
+        return 0;
+    }
 }
 
-bool is_in_range(const std::size_t mapping_position,
-                 const AlignedRead& read, const Haplotype& haplotype)
+bool is_in_range(const std::size_t mapping_position, const AlignedRead& read, const Haplotype& haplotype) noexcept
 {
     return num_out_of_range_bases(mapping_position, read, haplotype) == 0;
 }
@@ -156,11 +158,21 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
     }
     if (!has_in_range_mapping_position) {
         const auto min_shift = num_out_of_range_bases(original_mapping_position, read, haplotype);
-        if (original_mapping_position < min_shift) {
-            auto required_extension = min_shift - original_mapping_position;
-            throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, required_extension};
+        auto final_mapping_position = original_mapping_position;
+        if (min_shift > 0) {
+            final_mapping_position += min_shift;
+            if (!is_in_range(final_mapping_position, read, haplotype)) {
+                throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, static_cast<unsigned>(min_shift)};
+            }
+        } else {
+            const auto min_left_shift = static_cast<unsigned>(min_shift);
+            if (original_mapping_position >= min_left_shift) {
+                final_mapping_position -= min_left_shift;
+            } else {
+                auto required_extension = min_left_shift - original_mapping_position;
+                throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, required_extension};
+            }
         }
-        const auto final_mapping_position = original_mapping_position - min_shift;
         max_log_probability = hmm::evaluate(read.sequence(), haplotype.sequence(), read.base_qualities(),
                                             final_mapping_position, model);
     }
@@ -255,11 +267,21 @@ auto compute_optimal_alignment(const AlignedRead& read, const Haplotype& haploty
     }
     if (!has_in_range_mapping_position) {
         const auto min_shift = num_out_of_range_bases(original_mapping_position, read, haplotype);
-        if (original_mapping_position < min_shift) {
-            auto required_extension = min_shift - original_mapping_position;
-            throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, required_extension};
+        auto final_mapping_position = original_mapping_position;
+        if (min_shift > 0) {
+            final_mapping_position += min_shift;
+            if (!is_in_range(final_mapping_position, read, haplotype)) {
+                throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, static_cast<unsigned>(min_shift)};
+            }
+        } else {
+            const auto min_left_shift = static_cast<unsigned>(min_shift);
+            if (original_mapping_position >= min_left_shift) {
+                final_mapping_position -= min_left_shift;
+            } else {
+                auto required_extension = min_left_shift - original_mapping_position;
+                throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, required_extension};
+            }
         }
-        const auto final_mapping_position = original_mapping_position - min_shift;
         std::tie(best_alignment, max_log_probability) = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(),
                                                                    final_mapping_position, model);
     }
