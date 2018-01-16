@@ -219,6 +219,7 @@ public:
                         std::unordered_map<std::string, std::string> other_values = {});
     Builder& add_contig(std::string id, std::unordered_map<std::string, std::string> other_values = {});
     
+    Builder& clear_info() noexcept;
     Builder& clear_format() noexcept;
     
     VcfHeader build() const;
