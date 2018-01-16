@@ -241,6 +241,7 @@ set(CORE_SOURCES
     core/csr/filters/unsupervised_clustering_filter_factory.cpp
     
     core/csr/measures/measure.hpp
+    core/csr/measures/measure.cpp
     core/csr/measures/quality.hpp
     core/csr/measures/quality.cpp
     core/csr/measures/depth.hpp
