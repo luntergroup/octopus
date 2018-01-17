@@ -21,4 +21,6 @@
 #include "core/csr/measures/is_denovo.hpp"
 #include "core/csr/measures/is_somatic.hpp"
 
+#include "core/csr/measures/realignments.hpp"
+
 #endif

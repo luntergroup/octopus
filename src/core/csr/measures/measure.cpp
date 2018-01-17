@@ -21,6 +21,10 @@ struct MeasureSerialiseVisitor : boost::static_visitor<>
         ss << std::fixed << std::setprecision(3) << value;
         str = ss.str();
     }
+    void operator()(boost::any value)
+    {
+        str = ".";
+    }
     template <typename T>
     void operator()(const T& value)
     {
