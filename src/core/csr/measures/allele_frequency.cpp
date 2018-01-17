@@ -67,6 +67,7 @@ auto get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& samp
             ref.erase(std::cbegin(ref), std::next(std::cbegin(ref), min_removed_bases));
             auto allele_region = expand_lhs(call_region, -min_removed_bases);
             result.emplace_back(std::move(allele_region), std::move(ref));
+            std::rotate(std::rbegin(result), std::next(std::rbegin(result)), std::rend(result));
         }
     } else {
         const auto ref_itr = std::find(std::begin(genotype), std::end(genotype), call.ref());
