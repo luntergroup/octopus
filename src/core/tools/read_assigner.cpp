@@ -21,11 +21,11 @@ namespace octopus {
 
 using HaplotypeLikelihoods = std::vector<std::vector<double>>;
 
-auto max_posterior_haplotypes(const std::vector<Haplotype>& haplotypes, const unsigned read,
-                              const HaplotypeLikelihoods& likelihoods)
+void find_max_likelihood_haplotypes(const std::vector<Haplotype>& haplotypes, const unsigned read,
+                                    const HaplotypeLikelihoods& likelihoods,
+                                    std::vector<unsigned>& result)
 {
-    std::vector<unsigned> result {};
-    result.reserve(haplotypes.size());
+    assert(result.empty());
     auto max_likelihood = std::numeric_limits<double>::lowest();
     for (unsigned k {0}; k < haplotypes.size(); ++k) {
         const auto curr = likelihoods[k][read];
@@ -36,8 +36,6 @@ auto max_posterior_haplotypes(const std::vector<Haplotype>& haplotypes, const un
             max_likelihood = curr;
         }
     }
-    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    return result;
 }
 
 auto calculate_support(const std::vector<Haplotype>& haplotypes,
@@ -46,13 +44,16 @@ auto calculate_support(const std::vector<Haplotype>& haplotypes,
                        boost::optional<std::deque<AlignedRead>&> unassigned)
 {
     HaplotypeSupportMap result {};
+    std::vector<unsigned> top {};
+    top.reserve(haplotypes.size());
     for (unsigned i {0}; i < reads.size(); ++i) {
-        const auto top = max_posterior_haplotypes(haplotypes, i, likelihoods);
+        find_max_likelihood_haplotypes(haplotypes, i, likelihoods, top);
         if (top.size() == 1) {
             result[haplotypes[top.front()]].push_back(reads[i]);
         } else if (unassigned) {
             unassigned->push_back(reads[i]);
         }
+        top.clear();
     }
     return result;
 }
@@ -137,13 +138,13 @@ HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotyp
                                               const std::vector<AlignedRead>& reads,
                                               std::deque<AlignedRead>& unassigned)
 {
-    return compute_haplotype_support(genotype, reads, HaplotypeLikelihoodModel {nullptr, make_indel_error_model()}, unassigned);
+    return compute_haplotype_support(genotype, reads, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false}, unassigned);
 }
 
 HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
                                               const std::vector<AlignedRead>& reads)
 {
-    return compute_haplotype_support(genotype, reads, HaplotypeLikelihoodModel {nullptr, make_indel_error_model()});
+    return compute_haplotype_support(genotype, reads, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false});
 }
 
 HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
