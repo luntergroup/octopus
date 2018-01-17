@@ -11,6 +11,8 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "utils/append.hpp"
+
 namespace octopus {
 
 CigarOperation::CigarOperation(const Size size, const Flag flag) noexcept
@@ -154,17 +156,24 @@ get_soft_clipped_sizes(const CigarString& cigar) noexcept
 template <typename Predicate>
 CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size, Predicate pred)
 {
+    std::cout << "DEBUG" << std::endl;
     CigarString result {};
     result.reserve(cigar.size());
     auto op_it = std::cbegin(cigar);
     const auto last_op = std::cend(cigar);
     
     while (op_it != last_op && (offset >= op_it->size() || !pred(*op_it))) {
-        if (pred(*op_it)) offset -= op_it->size();
+        std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
+        if (pred(*op_it)) {
+            offset -= op_it->size();
+            std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
+        }
         ++op_it;
     }
+    std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
     if (op_it != last_op) {
         const auto remainder = op_it->size() - offset;
+        std::cout << "op = " << *op_it << " remainder = " << remainder << std::endl;
         if (remainder >= size) {
             result.emplace_back(size, op_it->flag());
             result.shrink_to_fit();
@@ -174,13 +183,18 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
         size -= remainder;
         ++op_it;
     }
-    
+    std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
     while (op_it != last_op && size > 0 && (size >= op_it->size() || !pred(*op_it))) {
+        std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
         result.emplace_back(*op_it);
-        if (pred(*op_it)) size -= op_it->size();
+        if (pred(*op_it)) {
+            size -= op_it->size();
+            std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
+        }
         ++op_it;
     }
     if (op_it != last_op && size > 0) {
+        std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
         result.emplace_back(size, op_it->flag());
     }
     
@@ -202,6 +216,16 @@ CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset
 CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
     return copy(cigar, offset, size, [](const auto& op) { return op.advances_sequence(); });
+}
+
+std::vector<CigarOperation::Flag> decompose(const CigarString& cigar)
+{
+    std::vector<CigarOperation::Flag> result {};
+    result.reserve(sum_operation_sizes(cigar));
+    for (const auto& op : cigar) {
+        utils::append(result, op.size(), op.flag());
+    }
+    return result;
 }
 
 CigarString collapse_matches(const CigarString& cigar)

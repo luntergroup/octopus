@@ -136,6 +136,7 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
 CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size);
 CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size);
 
+std::vector<CigarOperation::Flag> decompose(const CigarString& cigar);
 CigarString collapse_matches(const CigarString& cigar);
 
 bool operator==(const CigarOperation& lhs, const CigarOperation& rhs) noexcept;

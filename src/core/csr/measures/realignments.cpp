@@ -133,17 +133,6 @@ struct Pileup
 constexpr std::size_t window_size {61};
 
 using PileupWindow = std::array<Pileup, window_size>;
-using ExpandedCigarString = std::vector<CigarOperation::Flag>;
-
-auto expand_cigar(const CigarString& cigar)
-{
-    ExpandedCigarString result {};
-    result.reserve(sum_operation_sizes(cigar));
-    for (const auto& op : cigar) {
-        utils::append(result, op.size(), op.flag());
-    }
-    return result;
-}
 
 PileupWindow make_pileup(const std::vector<AlignedRead>& reads, const GenomicRegion& region)
 {
@@ -152,7 +141,7 @@ PileupWindow make_pileup(const std::vector<AlignedRead>& reads, const GenomicReg
     for (const auto& read : reads) {
         if (overlaps(read, region)) {
             const auto read_fragment = copy(read, region);
-            const auto expanded_cigar = expand_cigar(read_fragment.cigar());
+            const auto expanded_cigar = decompose(read_fragment.cigar());
             const auto fragment_offset = static_cast<unsigned>(begin_distance(region, read_fragment));
             unsigned read_pos {0}, pileup_pos {fragment_offset};
             for (const auto flag : expanded_cigar) {
