@@ -258,11 +258,13 @@ Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const Facet
     for (const auto& allele : alleles) {
         std::vector<AlignedRead> allele_realignments {};
         for (const auto& h : support) {
-            if (h.first.contains(allele)) {
-                const auto expanded_haplotype = expand_for_realignment(h.first, h.second);
-                auto realignments = realign(h.second, expanded_haplotype);
+            const auto& haplotype = h.first;
+            const auto& supporting_reads = h.second;
+            if (!supporting_reads.empty() && haplotype.contains(allele)) {
+                const auto expanded_haplotype = expand_for_realignment(haplotype, supporting_reads);
+                auto realignments = realign(supporting_reads, expanded_haplotype);
                 for (std::size_t i {0}; i < realignments.size(); ++i) {
-                    const auto& original_read = h.second[i];
+                    const auto& original_read = supporting_reads[i];
                     const auto& realigned_read = realignments[i];
                     if (overlaps(realigned_read, allele)) {
                         assigned_reads.push_back(original_read);
