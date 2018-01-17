@@ -165,7 +165,7 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
                 throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, static_cast<unsigned>(min_shift)};
             }
         } else {
-            const auto min_left_shift = static_cast<unsigned>(min_shift);
+            const auto min_left_shift = static_cast<unsigned>(-min_shift);
             if (original_mapping_position >= min_left_shift) {
                 final_mapping_position -= min_left_shift;
             } else {
@@ -277,7 +277,7 @@ compute_optimal_alignment(const AlignedRead& read, const Haplotype& haplotype,
                 throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, static_cast<unsigned>(min_shift)};
             }
         } else {
-            const auto min_left_shift = static_cast<unsigned>(min_shift);
+            const auto min_left_shift = static_cast<unsigned>(-min_shift);
             if (original_mapping_position >= min_left_shift) {
                 final_mapping_position -= min_left_shift;
             } else {
