@@ -156,50 +156,37 @@ get_soft_clipped_sizes(const CigarString& cigar) noexcept
 template <typename Predicate>
 CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size, Predicate pred)
 {
-    std::cout << "DEBUG" << std::endl;
     CigarString result {};
     result.reserve(cigar.size());
     auto op_it = std::cbegin(cigar);
     const auto last_op = std::cend(cigar);
     
     while (op_it != last_op && (offset >= op_it->size() || !pred(*op_it))) {
-        std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
         if (pred(*op_it)) {
             offset -= op_it->size();
-            std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
         }
         ++op_it;
     }
-    std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
     if (op_it != last_op) {
         const auto remainder = op_it->size() - offset;
-        std::cout << "op = " << *op_it << " remainder = " << remainder << std::endl;
         if (remainder >= size) {
             result.emplace_back(size, op_it->flag());
-            result.shrink_to_fit();
             return result;
         }
         result.emplace_back(remainder, op_it->flag());
         size -= remainder;
         ++op_it;
     }
-    std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
     while (op_it != last_op && size > 0 && (size >= op_it->size() || !pred(*op_it))) {
-        std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
         result.emplace_back(*op_it);
         if (pred(*op_it)) {
             size -= op_it->size();
-            std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
         }
         ++op_it;
     }
     if (op_it != last_op && size > 0) {
-        std::cout << "op = " << *op_it << " offset = " << offset << " size = " << size << std::endl;
         result.emplace_back(size, op_it->flag());
     }
-    
-    result.shrink_to_fit();
-    
     return result;
 }
 
