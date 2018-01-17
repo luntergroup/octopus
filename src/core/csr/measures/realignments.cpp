@@ -261,8 +261,7 @@ Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const Facet
             const auto& haplotype = h.first;
             const auto& supporting_reads = h.second;
             if (!supporting_reads.empty() && haplotype.contains(allele)) {
-                const auto expanded_haplotype = expand_for_realignment(haplotype, supporting_reads);
-                auto realignments = realign(supporting_reads, expanded_haplotype);
+                auto realignments = safe_realign(supporting_reads, haplotype);
                 for (std::size_t i {0}; i < realignments.size(); ++i) {
                     const auto& original_read = supporting_reads[i];
                     const auto& realigned_read = realignments[i];
@@ -287,8 +286,7 @@ Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const Facet
     }
     if (!unassigned_reads.empty()) {
         const auto reference = boost::get<ReferenceContext::ResultType>(facets.at("ReferenceContext").get());
-        const auto expanded_reference = expand_for_realignment(reference, unassigned_reads);
-        auto unassigned_realignments = realign(unassigned_reads, expanded_reference);
+        auto unassigned_realignments = safe_realign(unassigned_reads, reference);
         result.push_back(std::move(unassigned_realignments));
     } else {
         result.push_back(std::move(unassigned_reads));
