@@ -88,7 +88,7 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
             result.emplace_back(std::distance(align1_itr, p.first), CigarOperation::Flag::sequenceMatch);
             if (p.first == last_align1_itr) break;
         }
-        const static auto is_gap = [] (const auto b) { return b == '-'; };
+        const static auto is_gap = [] (const char b) noexcept { return b == '-'; };
         if (*p.first == '-') {
             const auto align1_gap_itr = std::find_if_not(std::next(p.first), last_align1_itr, is_gap);
             const auto gap_length = std::distance(p.first, align1_gap_itr);
@@ -102,7 +102,8 @@ auto make_cigar(const std::vector<char>& align1, const std::vector<char>& align2
             align1_itr = std::next(p.first, gap_length);
             align2_itr = align2_gap_itr;
         } else {
-            const auto p2 = std::mismatch(std::next(p.first), last_align1_itr, std::next(p.second), std::not_equal_to<> {});
+            const static auto is_mismatch = [] (char lhs, char rhs) noexcept { return lhs != rhs && lhs != '-' && rhs != '-'; };
+            const auto p2 = std::mismatch(std::next(p.first), last_align1_itr, std::next(p.second), is_mismatch);
             result.emplace_back(std::distance(p.first, p2.first), CigarOperation::Flag::substitution);
             std::tie(align1_itr, align2_itr) = p2;
         }
