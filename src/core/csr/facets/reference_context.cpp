@@ -18,7 +18,7 @@ ReferenceContext::ReferenceContext(const ReferenceGenome& reference, GenomicRegi
 Facet::ResultType ReferenceContext::do_get() const
 {
     if (!result_) {
-        result_ = reference_.get().fetch_sequence(region_);
+        result_ = Haplotype {region_, reference_};
     }
     return *result_;
 }
