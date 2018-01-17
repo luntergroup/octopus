@@ -704,7 +704,7 @@ auto make_read_filterer(const OptionMap& options)
     if (options.at("no-secondary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSecondaryAlignment>());
     }
-    if (options.at("no-supplementary-alignments").as<bool>()) {
+    if (!options.at("allow-supplementary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSupplementaryAlignment>());
     }
     if (!options.at("consider-reads-with-unmapped-segments").as<bool>()) {
@@ -1474,13 +1474,13 @@ std::string get_filter_expression(const OptionMap& options)
 
 bool is_csr_training(const OptionMap& options)
 {
-    return options.at("csr-training").as<bool>();
+    return !options.at("csr-training").as<std::vector<std::string>>().empty();
 }
 
 std::set<std::string> get_training_measures(const OptionMap& options)
 {
     std::set<std::string> result {};
-    for (const auto& measure : options.at("csr-training-measures").as<std::vector<std::string>>()) {
+    for (const auto& measure : options.at("csr-training").as<std::vector<std::string>>()) {
         result.insert(measure);
     }
     return result;
@@ -1516,7 +1516,6 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     using std::make_unique;
     using namespace readpipe;
     ReadTransformer transformer {};
-    transformer.add(MaskSoftClipped {});
     using ReadFilterer = ReadPipe::ReadFilterer;
     ReadFilterer filterer {};
     filterer.add(make_unique<HasValidBaseQualities>());
@@ -1586,5 +1585,19 @@ bool is_legacy_vcf_requested(const OptionMap& options)
 {
     return options.at("legacy").as<bool>();
 }
+
+bool is_csr_training_mode(const OptionMap& options)
+{
+    return is_csr_training(options);
+}
+
+boost::optional<fs::path> filter_request(const OptionMap& options)
+{
+    if (is_set("filter-vcf", options)) {
+        return resolve_path(options.at("filter-vcf").as<fs::path>(), options);
+    }
+    return boost::none;
+}
+
 } // namespace options
 } // namespace octopus

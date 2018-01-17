@@ -7,14 +7,13 @@
 #include <string>
 #include <functional>
 #include <memory>
+#include <unordered_map>
 
 #include <boost/variant.hpp>
 
 #include "concepts/equitable.hpp"
-
-#include <unordered_map>
-
 #include "config/common.hpp"
+#include "core/types/haplotype.hpp"
 #include "core/tools/read_assigner.hpp"
 
 namespace octopus { namespace csr {
@@ -25,7 +24,8 @@ public:
     using ResultType = boost::variant<ReadMap,
                                       std::unordered_map<SampleName, HaplotypeSupportMap>,
                                       std::string,
-                                      std::vector<std::string>
+                                      std::vector<std::string>,
+                                      Haplotype
                                      >;
     
     Facet() = default;

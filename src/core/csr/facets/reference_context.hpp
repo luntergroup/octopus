@@ -10,6 +10,7 @@
 #include <boost/optional.hpp>
 
 #include "basics/genomic_region.hpp"
+#include "core/types/haplotype.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "facet.hpp"
 
@@ -18,7 +19,7 @@ namespace octopus { namespace csr {
 class ReferenceContext : public Facet
 {
 public:
-    using ResultType = ReferenceGenome::GeneticSequence;
+    using ResultType = Haplotype;
     
     ReferenceContext(const ReferenceGenome& reference, GenomicRegion region);
     

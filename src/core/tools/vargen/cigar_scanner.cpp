@@ -484,7 +484,7 @@ bool is_good(const Variant& variant, const unsigned depth, const unsigned num_fw
     if (is_strongly_strand_biased(num_observations, num_fwd_observations)) {
         return false;
     }
-    if (is_snp(variant)) {
+    if (is_snv(variant)) {
         const auto base_quality_sum = sum(observed_qualities);
         if (depth <= 60) {
             if (num_observations < 2) return false;
@@ -568,7 +568,7 @@ bool SimpleThresholdInclusionPredicate::operator()(const CigarScanner::ObservedV
 
 bool DefaultMatchPredicate::operator()(const Variant& lhs, const Variant& rhs) noexcept
 {
-    if (!are_same_type(lhs, rhs) || is_snp(lhs) || is_mnv(lhs)) {
+    if (!are_same_type(lhs, rhs) || is_snv(lhs) || is_mnv(lhs)) {
         return lhs == rhs;
     }
     if (is_insertion(lhs) && alt_sequence_size(lhs) == alt_sequence_size(rhs)) {

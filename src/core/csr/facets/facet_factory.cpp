@@ -82,7 +82,7 @@ void FacetFactory::setup_facet_makers()
         if (!records.empty()) {
             reads = read_pipe_.fetch_reads(encompassing_region(records));
         }
-        return FacetWrapper {std::make_unique<ReadAssignments>(genotypes, reads)};
+        return FacetWrapper {std::make_unique<ReadAssignments>(reference_, genotypes, reads)};
     };
     facet_makers_["ReferenceContext"] = [this] (const std::vector<VcfRecord>& records) -> FacetWrapper
     {

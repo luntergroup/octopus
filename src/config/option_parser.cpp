@@ -254,9 +254,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Filters reads marked as secondary alignments")
     
-    ("no-supplementary-alignments",
+    ("allow-supplementary-alignments",
      po::bool_switch()->default_value(false),
-     "Filters reads marked as supplementary alignments")
+     "Allows reads marked as supplementary alignments")
     
     ("consider-reads-with-unmapped-segments",
      po::bool_switch()->default_value(false),
@@ -315,7 +315,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " By default octopus will automatically determine this value")
     
     ("max-variant-size",
-     po::value<int>()->default_value(2000),
+     po::value<int>()->default_value(75),
      "Maximum candidate variant size to consider (in region space)")
     
     ("kmer-sizes",
@@ -568,20 +568,18 @@ OptionMap parse_options(const int argc, const char** argv)
     ("use-calling-reads-for-filtering",
      po::value<bool>()->default_value(false),
      "Use the original reads used for variant calling for filtering")
-
+    
     ("keep-unfiltered-calls",
      po::bool_switch()->default_value(false),
      "Keep a copy of unfiltered calls")
     
     ("csr-training",
-     po::bool_switch()->default_value(false),
-     "PASS all calls and output all measures to VCF INFO")
+     po::value<std::vector<std::string>>()->multitoken(),
+     "Activates CSR training mode with the given measures - outputs all calls as PASS and annotates output VCF with measure values")
     
-    ("csr-training-measures",
-     po::value<std::vector<std::string>>()->multitoken()
-     ->default_value(std::vector<std::string> {"QUAL", "MQ", "MP", "AF", "SB", "MQD"}, "QUAL MQ MP AF SB MQD")
-     ->composing(),
-     "Measures to use for CSR training")
+    ("filter-vcf",
+     po::value<fs::path>(),
+     "Filter the given Octopus VCF without calling")
     ;
     
     po::options_description all("octopus options");

@@ -252,7 +252,7 @@ GenomicRegion extend_alleles(NucleotideList& big_allele, NucleotideList& small_a
 } // namespace
 
 Variant left_align(const Variant& variant, const ReferenceGenome& reference,
-                   const unsigned extension_size)
+                   const GenomicRegion::Size extension_size)
 {
     using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
     using std::tie; using std::next; using std::mismatch;
@@ -271,10 +271,9 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     auto small_allele_ritr = crbegin(small_allele);
     
     do {
-        if (current_region.begin() >= extension_size) {
-            current_region = extend_alleles(big_allele, small_allele, reference, current_region, extension_size);
-        } else if (current_region.begin() > 0) {
-            current_region = extend_alleles(big_allele, small_allele, reference, current_region, current_region.begin());
+        if (current_region.begin() > 0) {
+            current_region = extend_alleles(big_allele, small_allele, reference, current_region,
+                                            std::min(extension_size, current_region.begin()));
         } else {
             break;
         }
@@ -435,9 +434,14 @@ std::vector<Variant> parsimonise_together(const std::vector<Variant>& segment,
     return result;
 }
 
-bool is_snp(const Variant& variant) noexcept
+bool is_snv(const Variant& variant) noexcept
 {
     return ref_sequence_size(variant) == 1 && alt_sequence_size(variant) == 1;
+}
+
+bool is_mnv(const Variant& variant) noexcept
+{
+    return ref_sequence_size(variant) == alt_sequence_size(variant) && ref_sequence_size(variant) > 1;
 }
 
 bool is_insertion(const Variant& variant) noexcept
@@ -455,15 +459,25 @@ bool is_indel(const Variant& variant) noexcept
     return is_insertion(variant) || is_deletion(variant);
 }
 
-bool is_mnv(const Variant& variant) noexcept
+bool is_simple_insertion(const Variant& variant) noexcept
 {
-    return ref_sequence_size(variant) == alt_sequence_size(variant) && ref_sequence_size(variant) > 1;
+    return is_insertion(variant) && is_empty_region(variant);
+}
+
+bool is_simple_deletion(const Variant& variant) noexcept
+{
+    return is_deletion(variant) && is_sequence_empty(variant.alt_allele());
+}
+
+bool is_simple_indel(const Variant& variant) noexcept
+{
+    return is_simple_insertion(variant) || is_simple_deletion(variant);
 }
 
 bool are_same_type(const Variant& lhs, const Variant& rhs) noexcept
 {
     if (ref_sequence_size(lhs) == alt_sequence_size(rhs)) {
-        return (ref_sequence_size(lhs) == 1) ? is_snp(rhs) : is_mnv(rhs);
+        return (ref_sequence_size(lhs) == 1) ? is_snv(rhs) : is_mnv(rhs);
     }
     if (is_insertion(lhs)) return is_insertion(rhs);
     return is_deletion(rhs);
@@ -471,7 +485,7 @@ bool are_same_type(const Variant& lhs, const Variant& rhs) noexcept
 
 bool is_transition(const Variant& variant) noexcept
 {
-    return is_snp(variant)
+    return is_snv(variant)
         && ((ref_sequence(variant) == "A" && alt_sequence(variant) == "G")
          || (ref_sequence(variant) == "G" && alt_sequence(variant) == "A")
          || (ref_sequence(variant) == "C" && alt_sequence(variant) == "T")
@@ -480,7 +494,7 @@ bool is_transition(const Variant& variant) noexcept
 
 bool is_transversion(const Variant& variant) noexcept
 {
-    return is_snp(variant) && !is_transition(variant);
+    return is_snv(variant) && !is_transition(variant);
 }
 
 std::vector<Allele::NucleotideSequence> extract_alt_allele_sequences(const std::vector<Variant>& variants)
