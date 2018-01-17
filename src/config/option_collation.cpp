@@ -1585,5 +1585,19 @@ bool is_legacy_vcf_requested(const OptionMap& options)
 {
     return options.at("legacy").as<bool>();
 }
+
+bool is_csr_training_mode(const OptionMap& options)
+{
+    return is_csr_training(options);
+}
+
+boost::optional<fs::path> csr_training_input(const OptionMap& options)
+{
+    if (is_set("csr-training-calls", options)) {
+        return resolve_path(options.at("csr-training-calls").as<fs::path>(), options);
+    }
+    return boost::none;
+}
+
 } // namespace options
 } // namespace octopus

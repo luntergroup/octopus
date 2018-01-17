@@ -64,6 +64,7 @@ public:
     ProgressMeter& progress_meter() noexcept;
     bool sites_only() const noexcept;
     boost::optional<Path> legacy() const;
+    boost::optional<Path> csr_training() const;
     
 private:
     struct Components
@@ -97,6 +98,7 @@ private:
         bool sites_only;
         boost::optional<VcfWriter> filtered_output;
         boost::optional<Path> legacy;
+        boost::optional<Path> csr_training;
         
         void setup_progress_meter(const options::OptionMap& options);
         void set_read_buffer_size(const options::OptionMap& options);

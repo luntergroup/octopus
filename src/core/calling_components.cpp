@@ -154,6 +154,11 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::legacy()
     return components_.legacy;
 }
 
+boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::csr_training() const
+{
+    return components_.csr_training;
+}
+
 bool GenomeCallingComponents::sites_only() const noexcept
 {
     return components_.sites_only;
@@ -425,12 +430,16 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , sites_only {options::call_sites_only(options)}
 , filtered_output {}
 , legacy {}
+, csr_training {}
 {
     drop_unused_samples(this->samples, this->read_manager);
     setup_progress_meter(options);
     set_read_buffer_size(options);
     setup_writers(options);
     setup_filter_read_pipe(options);
+    if (options::is_csr_training_mode(options)) {
+        csr_training = options::csr_training_input(options);
+    }
 }
 
 void GenomeCallingComponents::Components::setup_progress_meter(const options::OptionMap& options)

@@ -582,6 +582,10 @@ OptionMap parse_options(const int argc, const char** argv)
      ->default_value(std::vector<std::string> {"QUAL", "MQ", "MP", "AF", "SB", "MQD"}, "QUAL MQ MP AF SB MQD")
      ->composing(),
      "Measures to use for CSR training")
+    
+    ("csr-training-calls",
+     po::value<fs::path>(),
+     "Octopus VCF file to use for CSR training, disables calling")
     ;
     
     po::options_description all("octopus options");
