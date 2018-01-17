@@ -154,7 +154,7 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::legacy()
     return components_.legacy;
 }
 
-boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::csr_training() const
+boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::filter_request() const
 {
     return components_.csr_training;
 }
@@ -438,7 +438,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
     setup_writers(options);
     setup_filter_read_pipe(options);
     if (options::is_csr_training_mode(options)) {
-        csr_training = options::csr_training_input(options);
+        csr_training = options::filter_request(options);
     }
 }
 

@@ -1256,8 +1256,8 @@ void run_filtering(GenomeCallingComponents& components)
         const auto& filter_factory = components.call_filter_factory();
         const auto& filter_read_pipe = components.filter_read_pipe();
         boost::optional<boost::filesystem::path> input_path {};
-        if (components.csr_training()) {
-            input_path = components.csr_training();
+        if (components.filter_request()) {
+            input_path = components.filter_request();
         } else {
             input_path = components.output().path();
         }
@@ -1348,7 +1348,7 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
     write_caller_output_header(components, command);
     const auto start = std::chrono::system_clock::now();
     try {
-        if (!components.csr_training()) {
+        if (!components.filter_request()) {
             run_calling(components);
         }
     } catch (const ProgramError& e) {

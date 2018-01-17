@@ -64,7 +64,7 @@ public:
     ProgressMeter& progress_meter() noexcept;
     bool sites_only() const noexcept;
     boost::optional<Path> legacy() const;
-    boost::optional<Path> csr_training() const;
+    boost::optional<Path> filter_request() const;
     
 private:
     struct Components

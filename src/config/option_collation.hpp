@@ -77,7 +77,7 @@ bool is_legacy_vcf_requested(const OptionMap& options);
 
 bool is_csr_training_mode(const OptionMap& options);
 
-boost::optional<fs::path> csr_training_input(const OptionMap& options);
+boost::optional<fs::path> filter_request(const OptionMap& options);
 
 } // namespace options
 } // namespace octopus

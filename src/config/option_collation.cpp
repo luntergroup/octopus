@@ -1474,13 +1474,13 @@ std::string get_filter_expression(const OptionMap& options)
 
 bool is_csr_training(const OptionMap& options)
 {
-    return options.at("csr-training").as<bool>();
+    return !options.at("csr-training").as<std::vector<std::string>>().empty();
 }
 
 std::set<std::string> get_training_measures(const OptionMap& options)
 {
     std::set<std::string> result {};
-    for (const auto& measure : options.at("csr-training-measures").as<std::vector<std::string>>()) {
+    for (const auto& measure : options.at("csr-training").as<std::vector<std::string>>()) {
         result.insert(measure);
     }
     return result;
@@ -1591,10 +1591,10 @@ bool is_csr_training_mode(const OptionMap& options)
     return is_csr_training(options);
 }
 
-boost::optional<fs::path> csr_training_input(const OptionMap& options)
+boost::optional<fs::path> filter_request(const OptionMap& options)
 {
-    if (is_set("csr-training-calls", options)) {
-        return resolve_path(options.at("csr-training-calls").as<fs::path>(), options);
+    if (is_set("filter-vcf", options)) {
+        return resolve_path(options.at("filter-vcf").as<fs::path>(), options);
     }
     return boost::none;
 }

@@ -568,24 +568,18 @@ OptionMap parse_options(const int argc, const char** argv)
     ("use-calling-reads-for-filtering",
      po::value<bool>()->default_value(false),
      "Use the original reads used for variant calling for filtering")
-
+    
     ("keep-unfiltered-calls",
      po::bool_switch()->default_value(false),
      "Keep a copy of unfiltered calls")
     
     ("csr-training",
-     po::bool_switch()->default_value(false),
-     "PASS all calls and output all measures to VCF INFO")
+     po::value<std::vector<std::string>>()->multitoken(),
+     "Activates CSR training mode with the given measures - outputs all calls as PASS and annotates output VCF with measure values")
     
-    ("csr-training-measures",
-     po::value<std::vector<std::string>>()->multitoken()
-     ->default_value(std::vector<std::string> {"QUAL", "MQ", "MP", "AF", "SB", "MQD"}, "QUAL MQ MP AF SB MQD")
-     ->composing(),
-     "Measures to use for CSR training")
-    
-    ("csr-training-calls",
+    ("filter-vcf",
      po::value<fs::path>(),
-     "Octopus VCF file to use for CSR training, disables calling")
+     "Filter the given Octopus VCF without calling")
     ;
     
     po::options_description all("octopus options");
