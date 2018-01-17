@@ -20,6 +20,8 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
 
 std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
 
+std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+
 } // namespace
 
 #endif

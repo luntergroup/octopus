@@ -16,6 +16,21 @@ namespace octopus {
 
 namespace {
 
+auto deletion_length(const AlignedRead& read) noexcept
+{
+    return region_size(read) > sequence_size(read) ? sequence_size(read) - region_size(read) : 0;
+}
+
+GenomicRegion::Size max_deletion_length(const std::vector<AlignedRead>& reads) noexcept
+{
+    if (reads.empty()) return 0;
+    auto max_itr = std::max_element(std::cbegin(reads), std::cend(reads),
+                                    [] (const auto& lhs, const auto& rhs) {
+                                        return deletion_length(lhs) < deletion_length(rhs);
+                                    });
+    return deletion_length(*max_itr);
+}
+
 auto safe_expand(const GenomicRegion& region, const GenomicRegion::Size n)
 {
     if (region.begin() < n) {
@@ -32,7 +47,7 @@ Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<A
     const auto reads_region = encompassing_region(reads);
     auto required_flank_pad = 2 * HaplotypeLikelihoodModel::pad_requirement();
     if (region_size(haplotype) > sequence_size(haplotype)) {
-        required_flank_pad += sequence_size(haplotype) - region_size(haplotype);
+        required_flank_pad += region_size(haplotype) - sequence_size(haplotype);
     }
     const auto required_haplotype_region = safe_expand(reads_region, required_flank_pad);
     if (contains(haplotype, required_haplotype_region)) {
@@ -98,6 +113,17 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
 std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
     return realign(reads, haplotype, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false});
+}
+
+std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+{
+    auto expanded_haplotype = expand_for_realignment(haplotype, reads);
+    try {
+        return realign(reads, expanded_haplotype);
+    } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
+        expanded_haplotype = expand(expanded_haplotype, e.required_extension());
+        return realign(reads, expanded_haplotype);
+    }
 }
 
 } // namespace octopus
