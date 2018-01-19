@@ -837,6 +837,108 @@ auto count_overlapped(const Range& mappables, const MappableTp& mappable,
                                     detail::HasMemberCountOverlapped<Range, MappableTp> {});
 }
 
+// max/min_overlapped
+
+// Returns an iterator to element in range with the max/min overlap_size with the given Mappable
+
+namespace detail {
+
+template <typename MappableTp1>
+struct OverlapSizeLess
+{
+    template <typename MappableTp2>
+    bool operator()(const MappableTp2& lhs, const MappableTp2& rhs) const
+    {
+        return overlap_size(mappable, lhs) < overlap_size(mappable, rhs);
+    }
+    OverlapSizeLess(const MappableTp1& mappable) : mappable {mappable} {}
+    const MappableTp1& mappable;
+};
+
+template <typename BidirIt, typename MappableTp>
+auto max_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable)
+{
+    return std::max_element(first, last, OverlapSizeLess<MappableTp> {mappable});
+}
+
+template <typename BidirIt, typename MappableTp>
+auto min_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable)
+{
+    return std::min_element(first, last, OverlapSizeLess<MappableTp> {mappable});
+}
+
+} // namespace detail
+
+template <typename BidirIt, typename MappableTp>
+auto max_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable, ForwardSortedTag)
+{
+    const auto overlapped = overlap_range(first, last, mappable, ForwardSortedTag {});
+    return detail::max_overlapped(std::cbegin(overlapped), std::cend(overlapped), mappable).base();
+}
+
+template <typename BidirIt, typename MappableTp>
+auto max_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable, BidirectionallySortedTag)
+{
+    const auto overlapped = bases(overlap_range(first, last, mappable, BidirectionallySortedTag {}));
+    return detail::max_overlapped(std::cbegin(overlapped), std::cend(overlapped), mappable);
+}
+
+template <typename BidirIt, typename MappableTp>
+auto max_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable,
+                    const typename RegionType<MappableTp>::Position max_mappable_size)
+{
+    const auto overlapped = overlap_range(first, last, mappable, max_mappable_size);
+    return detail::max_overlapped(std::cbegin(overlapped), std::cend(overlapped), mappable).base();
+}
+
+template <typename BidirIt, typename MappableTp>
+auto max_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable)
+{
+    return max_overlapped(first, last, mappable, ForwardSortedTag {});
+}
+
+template <typename Range, typename MappableTp>
+auto max_overlapped(const Range& range, const MappableTp& mappable)
+{
+    const auto overlapped = overlap_range(range, mappable);
+    return detail::max_overlapped(std::cbegin(overlapped), std::cend(overlapped), mappable).base();
+}
+
+template <typename BidirIt, typename MappableTp>
+auto min_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable, ForwardSortedTag)
+{
+    const auto overlapped = overlap_range(first, last, mappable, ForwardSortedTag {});
+    return detail::min_overlapped(std::cbegin(overlapped), std::cend(overlapped), mappable).base();
+}
+
+template <typename BidirIt, typename MappableTp>
+auto min_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable, BidirectionallySortedTag)
+{
+    const auto overlapped = bases(overlap_range(first, last, mappable, BidirectionallySortedTag {}));
+    return detail::min_overlapped(std::cbegin(overlapped), std::cend(overlapped), mappable);
+}
+
+template <typename BidirIt, typename MappableTp>
+auto min_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable,
+                    const typename RegionType<MappableTp>::Position max_mappable_size)
+{
+    const auto overlapped = overlap_range(first, last, mappable, max_mappable_size);
+    return detail::min_overlapped(std::cbegin(overlapped), std::cend(overlapped), mappable).base();
+}
+
+template <typename BidirIt, typename MappableTp>
+auto min_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable)
+{
+    return min_overlapped(first, last, mappable, ForwardSortedTag {});
+}
+
+template <typename Range, typename MappableTp>
+auto min_overlapped(const Range& range, const MappableTp& mappable)
+{
+    const auto overlapped = overlap_range(range, mappable);
+    return detail::min_overlapped(std::cbegin(overlapped), std::cend(overlapped), mappable).base();
+}
+
 // has_exact_overlap
 
 /**
