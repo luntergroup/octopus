@@ -1474,14 +1474,16 @@ std::string get_filter_expression(const OptionMap& options)
 
 bool is_csr_training(const OptionMap& options)
 {
-    return !options.at("csr-training").as<std::vector<std::string>>().empty();
+    return options.count("csr-training") > 0;
 }
 
 std::set<std::string> get_training_measures(const OptionMap& options)
 {
     std::set<std::string> result {};
-    for (const auto& measure : options.at("csr-training").as<std::vector<std::string>>()) {
-        result.insert(measure);
+    if (is_csr_training(options)) {
+        for (const auto& measure : options.at("csr-training").as<std::vector<std::string>>()) {
+            result.insert(measure);
+        }
     }
     return result;
 }
