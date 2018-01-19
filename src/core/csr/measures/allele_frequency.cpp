@@ -86,34 +86,34 @@ Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const Fa
     const auto assignments = boost::get<ReadAssignments::ResultType>(facets.at("ReadAssignments").get());
     boost::optional<double> result {};
     for (const auto& p : assignments) {
-        if (call.is_heterozygous(p.first)) {
-            std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, p.first, true);
-            if (alleles.size() > 1) {
-                // This might not be the case if there are unknown or deleted alleles in the genotype
-                auto allele_support = compute_allele_support(alleles, p.second);
-                std::size_t read_count {0};
-                if (has_ref) {
-                    const auto ref_itr = allele_support.find(alleles.front()); // ref always at front if present
-                    assert(ref_itr != std::cend(allele_support));
-                    read_count += ref_itr->second.size();
-                    allele_support.erase(ref_itr);
-                }
-                std::vector<unsigned> allele_counts(allele_support.size());
-                std::transform(std::cbegin(allele_support), std::cend(allele_support), std::begin(allele_counts),
-                               [&] (const auto& p) {
-                                   read_count += p.second.size();
-                                   return p.second.size();
+        std::vector<Allele> alleles; bool has_ref;
+        std::tie(alleles, has_ref) = get_called_alleles(call, p.first, true);
+        std::size_t read_count {0};
+        std::vector<unsigned> allele_counts(alleles.size());
+        for (const auto& h : p.second) {
+            const auto& haplotype = h.first;
+            const auto& reads = h.second;
+            const auto haplotype_support_depth = count_overlapped(reads, call);
+            if (haplotype_support_depth > 0) {
+                std::transform(std::cbegin(alleles), std::cend(alleles), std::cbegin(allele_counts), std::begin(allele_counts),
+                               [&] (const auto& allele, auto count) {
+                                   if (haplotype.includes(allele)) {
+                                       count += haplotype_support_depth;
+                                   }
+                                   return count;
                                });
-                if (read_count > 0) {
-                    const auto min_count_itr = std::min_element(std::cbegin(allele_counts), std::cend(allele_counts));
-                    const auto maf = static_cast<double>(*min_count_itr) / read_count;
-                    if (result) {
-                        result = std::min(*result, maf);
-                    } else {
-                        result = maf;
-                    }
-                }
+                read_count += haplotype_support_depth;
+            }
+        }
+        if (read_count > 0) {
+            auto first_called_itr = std::cbegin(allele_counts);
+            if (has_ref) ++first_called_itr;
+            const auto min_count_itr = std::min_element(first_called_itr, std::cend(allele_counts));
+            const auto maf = static_cast<double>(*min_count_itr) / read_count;
+            if (result) {
+                result = std::min(*result, maf);
+            } else {
+                result = maf;
             }
         }
     }
