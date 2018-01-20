@@ -86,6 +86,45 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel
     this->reset(haplotype, std::move(flank_state));
 }
 
+HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel& other)
+{
+    if (other.indel_error_model_) {
+        indel_error_model_ = other.indel_error_model_->clone();
+    } else {
+        indel_error_model_ = nullptr;
+    }
+    if (other.snv_error_model_) {
+        snv_error_model_ = other.snv_error_model_->clone();
+    } else {
+        snv_error_model_ = nullptr;
+    }
+    haplotype_ = other.haplotype_;
+    haplotype_flank_state_ = other.haplotype_flank_state_;
+    haplotype_snv_forward_mask_ = other.haplotype_snv_forward_mask_;
+    haplotype_snv_reverse_mask_ = other.haplotype_snv_reverse_mask_;
+    haplotype_snv_forward_priors_ = other.haplotype_snv_forward_priors_;
+    haplotype_snv_reverse_priors_ = other.haplotype_snv_reverse_priors_;
+    haplotype_gap_open_penalities_ = other.haplotype_gap_open_penalities_;
+    haplotype_gap_extension_penalty_ = other.haplotype_gap_extension_penalty_;
+    use_mapping_quality_ = other.use_mapping_quality_;
+}
+
+HaplotypeLikelihoodModel& HaplotypeLikelihoodModel::operator=(HaplotypeLikelihoodModel other)
+{
+    std::swap(indel_error_model_, other.indel_error_model_);
+    std::swap(snv_error_model_, other.snv_error_model_);
+    haplotype_ = other.haplotype_;
+    std::swap(haplotype_flank_state_, other.haplotype_flank_state_);
+    std::swap(haplotype_snv_forward_mask_, other.haplotype_snv_forward_mask_);
+    std::swap(haplotype_snv_reverse_mask_, other.haplotype_snv_reverse_mask_);
+    std::swap(haplotype_snv_forward_priors_, other.haplotype_snv_forward_priors_);
+    std::swap(haplotype_snv_reverse_priors_, other.haplotype_snv_reverse_priors_);
+    std::swap(haplotype_gap_open_penalities_, other.haplotype_gap_open_penalities_);
+    haplotype_gap_extension_penalty_ = other.haplotype_gap_extension_penalty_;
+    use_mapping_quality_ = other.use_mapping_quality_;
+    return *this;
+}
+
 double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read) const
 {
     const static MappingPositionVector empty {};

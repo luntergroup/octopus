@@ -58,10 +58,10 @@ public:
                              boost::optional<FlankState> flank_state = boost::none,
                              bool use_mapping_quality = true);
     
-    HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = delete;
-    HaplotypeLikelihoodModel& operator=(const HaplotypeLikelihoodModel&) = delete;
-    HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)                 = default;
-    HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
+    HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&);
+    HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel);
+    HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)            = default;
+    HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&) = default;
     
     ~HaplotypeLikelihoodModel() = default;
     
@@ -109,7 +109,6 @@ public:
     
 private:
     const Haplotype& haplotype_;
-    
     Length required_extension_;
 };
 
