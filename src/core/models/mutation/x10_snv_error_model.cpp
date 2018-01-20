@@ -15,6 +15,11 @@ namespace octopus {
 
 constexpr decltype(X10SnvErrorModel::maxQualities_) X10SnvErrorModel::maxQualities_;
 
+std::unique_ptr<SnvErrorModel> X10SnvErrorModel::do_clone() const
+{
+    return std::make_unique<X10SnvErrorModel>(*this);
+}
+
 namespace {
 
 auto extract_repeats(const Haplotype& haplotype, const unsigned max_period)

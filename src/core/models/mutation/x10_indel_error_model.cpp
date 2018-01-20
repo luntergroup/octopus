@@ -18,6 +18,11 @@ constexpr decltype(X10IndelErrorModel::homopolymerErrors_) X10IndelErrorModel::t
 constexpr decltype(X10IndelErrorModel::homopolymerErrors_) X10IndelErrorModel::polyNucleotideTandemRepeatErrors_;
 constexpr decltype(X10IndelErrorModel::defaultGapExtension_) X10IndelErrorModel::defaultGapExtension_;
 
+std::unique_ptr<IndelErrorModel> X10IndelErrorModel::do_clone() const
+{
+    return std::make_unique<X10IndelErrorModel>(*this);
+}
+
 namespace {
 
 auto extract_repeats(const Haplotype& haplotype)

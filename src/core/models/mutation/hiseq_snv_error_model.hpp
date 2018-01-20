@@ -42,9 +42,10 @@ private:
      }
      }};
     
+    virtual std::unique_ptr<SnvErrorModel> do_clone() const override;
     virtual void do_evaluate(const Haplotype& haplotype,
                              MutationVector& forward_snv_mask, PenaltyVector& forward_snv_priors,
-                             MutationVector& reverse_snv_mask, PenaltyVector& reverse_snv_priors) const;
+                             MutationVector& reverse_snv_mask, PenaltyVector& reverse_snv_priors) const override ;
 };
     
 } // namespace octopus

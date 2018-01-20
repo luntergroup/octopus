@@ -15,6 +15,11 @@ namespace octopus {
 
 constexpr decltype(HiSeqSnvErrorModel::maxQualities_) HiSeqSnvErrorModel::maxQualities_;
 
+std::unique_ptr<SnvErrorModel> HiSeqSnvErrorModel::do_clone() const
+{
+    return std::make_unique<HiSeqSnvErrorModel>(*this);
+}
+
 namespace {
 
 auto extract_repeats(const Haplotype& haplotype, const unsigned max_period)
@@ -117,7 +122,7 @@ void HiSeqSnvErrorModel::do_evaluate(const Haplotype& haplotype,
     constexpr auto Max_period = maxQualities_.size();
     const auto repeats = extract_repeats(haplotype, Max_period);
     const auto num_bases = sequence_size(haplotype);
-    std::array<std::vector<std::int8_t>, Max_period> repeat_masks{};
+    std::array<std::vector<std::int8_t>, Max_period> repeat_masks {};
     repeat_masks.fill(std::vector<std::int8_t>(num_bases, 0));
     for (const auto& repeat : repeats) {
         std::fill_n(next(begin(repeat_masks[repeat.period - 1]), repeat.pos), repeat.length,

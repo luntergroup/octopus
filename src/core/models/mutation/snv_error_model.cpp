@@ -5,6 +5,11 @@
 
 namespace octopus {
 
+std::unique_ptr<SnvErrorModel> SnvErrorModel::clone() const
+{
+    return do_clone();
+}
+
 void SnvErrorModel::evaluate(const Haplotype& haplotype,
                              MutationVector& forward_snv_mask, PenaltyVector& forward_snv_priors,
                              MutationVector& reverse_snv_mask, PenaltyVector& reverse_snv_priors) const

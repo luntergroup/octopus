@@ -7,6 +7,7 @@
 #include <vector>
 #include <array>
 #include <cstdint>
+#include <memory>
 
 namespace octopus {
 
@@ -18,18 +19,13 @@ public:
     using PenaltyType = std::int8_t;
     using PenaltyVector = std::vector<PenaltyType>;
     
-    IndelErrorModel() = default;
-    
-    IndelErrorModel(const IndelErrorModel&)            = default;
-    IndelErrorModel& operator=(const IndelErrorModel&) = default;
-    IndelErrorModel(IndelErrorModel&&)                 = default;
-    IndelErrorModel& operator=(IndelErrorModel&&)      = default;
-    
     virtual ~IndelErrorModel() = default;
     
+    std::unique_ptr<IndelErrorModel> clone() const;
     PenaltyType evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const;
     
 private:
+    virtual std::unique_ptr<IndelErrorModel> do_clone() const = 0;
     virtual PenaltyType do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const = 0;
 };
 

@@ -18,6 +18,11 @@ constexpr decltype(HiSeqIndelErrorModel::homopolymerErrors_) HiSeqIndelErrorMode
 constexpr decltype(HiSeqIndelErrorModel::homopolymerErrors_) HiSeqIndelErrorModel::polyNucleotideTandemRepeatErrors_;
 constexpr decltype(HiSeqIndelErrorModel::defaultGapExtension_) HiSeqIndelErrorModel::defaultGapExtension_;
 
+std::unique_ptr<IndelErrorModel> HiSeqIndelErrorModel::do_clone() const
+{
+    return std::make_unique<HiSeqIndelErrorModel>(*this);
+}
+
 namespace {
 
 auto extract_repeats(const Haplotype& haplotype)
