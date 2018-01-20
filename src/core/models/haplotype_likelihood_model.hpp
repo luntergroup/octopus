@@ -18,15 +18,15 @@
 #include "config/common.hpp"
 #include "basics/contig_region.hpp"
 #include "core/types/haplotype.hpp"
-#include "mutation/snv_error_model.hpp"
-#include "mutation/indel_error_model.hpp"
+#include "core/models/error/snv_error_model.hpp"
+#include "core/models/error/indel_error_model.hpp"
 #include "pairhmm/pair_hmm.hpp"
 
 #include "timers.hpp"
 
 namespace octopus {
 
-class AlignedRead;    
+class AlignedRead;
 
 class HaplotypeLikelihoodModel
 {

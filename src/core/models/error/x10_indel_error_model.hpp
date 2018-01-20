@@ -4,7 +4,7 @@
 #ifndef x10_indel_error_model_hpp
 #define x10_indel_error_model_hpp
 
-#include "indel_error_model.hpp"
+#include "core/models/error/indel_error_model.hpp"
 
 namespace octopus {
 

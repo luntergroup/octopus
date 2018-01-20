@@ -8,7 +8,7 @@
 #include <limits>
 #include <cassert>
 
-#include "mutation/error_model_factory.hpp"
+#include "core/models/error/error_model_factory.hpp"
 #include "concepts/mappable.hpp"
 #include "basics/aligned_read.hpp"
 #include "utils/maths.hpp"

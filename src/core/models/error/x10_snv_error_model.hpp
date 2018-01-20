@@ -8,7 +8,7 @@
 #include <array>
 #include <cstdint>
 
-#include "snv_error_model.hpp"
+#include "core/models/error/snv_error_model.hpp"
 
 namespace octopus {
 
