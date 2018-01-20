@@ -35,6 +35,8 @@
 #include "basics/pedigree.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/tools/coretools.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
+#include "core/models/error/error_model_factory.hpp"
 #include "core/callers/caller_builder.hpp"
 #include "logging/logging.hpp"
 #include "io/region/region_parser.hpp"
@@ -45,7 +47,6 @@
 #include "exceptions/program_error.hpp"
 #include "exceptions/system_error.hpp"
 #include "exceptions/missing_file_error.hpp"
-#include "core/models/haplotype_likelihood_model.hpp"
 #include "core/csr/filters/threshold_filter_factory.hpp"
 
 namespace octopus { namespace options {
@@ -1358,6 +1359,34 @@ bool allow_flank_scoring(const OptionMap& options)
     return options.at("inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
 }
 
+auto make_indel_error_model(const OptionMap& options)
+{
+    if (is_set("sequence-error-model", options)) {
+        return octopus::make_indel_error_model(options.at("sequence-error-model").as<std::string>());
+    } else {
+        return octopus::make_indel_error_model();
+    }
+}
+
+auto make_snv_error_model(const OptionMap& options)
+{
+    if (is_set("sequence-error-model", options)) {
+        return octopus::make_snv_error_model(options.at("sequence-error-model").as<std::string>());
+    } else {
+        return octopus::make_snv_error_model();
+    }
+}
+
+HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options)
+{
+    auto snv_error_model = make_snv_error_model(options);
+    auto indel_error_model = make_indel_error_model(options);
+    auto model_mapping_quality = options.at("model-mapping-quality").as<bool>();
+    auto use_flank_state = allow_flank_scoring(options);
+    return HaplotypeLikelihoodModel {std::move(snv_error_model), std::move(indel_error_model),
+                                     model_mapping_quality, use_flank_state};
+}
+
 bool allow_model_filtering(const OptionMap& options)
 {
     return options.count("model-posterior") == 1 && options.at("model-posterior").as<bool>();
@@ -1453,11 +1482,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
     }
-    vc_builder.set_flank_scoring(allow_flank_scoring(options));
-    vc_builder.set_model_mapping_quality(options.at("model-mapping-quality").as<bool>());
-    if (is_set("sequence-error-model", options)) {
-        vc_builder.set_sequencer(options.at("sequence-error-model").as<std::string>());
-    }
+    vc_builder.set_likelihood_model(make_likelihood_model(options));
     return CallerFactory {std::move(vc_builder)};
 }
 

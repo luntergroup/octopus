@@ -17,6 +17,7 @@
 #include "basics/pedigree.hpp"
 #include "readpipe/read_pipe.hpp"
 #include "core/tools/coretools.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 #include "caller.hpp"
 #include "cancer_caller.hpp"
 
@@ -52,14 +53,12 @@ public:
     CallerBuilder& set_min_refcall_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_max_haplotypes(unsigned n) noexcept;
     CallerBuilder& set_haplotype_extension_threshold(Phred<double> p) noexcept;
-    CallerBuilder& set_flank_scoring(bool b) noexcept;
     CallerBuilder& set_model_filtering(bool b) noexcept;
     CallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
     CallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_max_joint_genotypes(unsigned max) noexcept;
-    CallerBuilder& set_sequencer(std::string sequencer) noexcept;
-    CallerBuilder& set_model_mapping_quality(bool b) noexcept;
+    CallerBuilder& set_likelihood_model(HaplotypeLikelihoodModel model) noexcept;
     
     // cancer
     CallerBuilder& set_normal_sample(SampleName normal_sample);
@@ -89,6 +88,7 @@ private:
         std::reference_wrapper<const ReadPipe> read_pipe;
         VariantGeneratorBuilder variant_generator_builder;
         HaplotypeGenerator::Builder haplotype_generator_builder;
+        HaplotypeLikelihoodModel likelihood_model;
         Phaser phaser;
     };
     

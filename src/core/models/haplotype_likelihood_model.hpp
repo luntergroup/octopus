@@ -46,26 +46,32 @@ public:
     
     HaplotypeLikelihoodModel();
     
-    HaplotypeLikelihoodModel(bool use_mapping_quality);
+    HaplotypeLikelihoodModel(bool use_mapping_quality, bool use_flank_state = true);
     
     HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
                              std::unique_ptr<IndelErrorModel> indel_model,
-                             bool use_mapping_quality = true);
+                             bool use_mapping_quality = true,
+                             bool use_flank_state = true);
     
     HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
                              std::unique_ptr<IndelErrorModel> indel_model,
                              const Haplotype& haplotype,
                              boost::optional<FlankState> flank_state = boost::none,
-                             bool use_mapping_quality = true);
+                             bool use_mapping_quality = true,
+                             bool use_flank_state = true);
     
     HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&);
-    HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel);
+    HaplotypeLikelihoodModel& operator=(const HaplotypeLikelihoodModel&);
     HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)            = default;
     HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&) = default;
+    
+    friend void swap(HaplotypeLikelihoodModel& lhs, HaplotypeLikelihoodModel& rhs) noexcept;
     
     ~HaplotypeLikelihoodModel() = default;
     
     static unsigned pad_requirement() noexcept;
+    
+    bool can_use_flank_state() const noexcept;
     
     void reset(const Haplotype& haplotype, boost::optional<FlankState> flank_state = boost::none);
     
@@ -92,6 +98,7 @@ private:
     std::vector<Penalty> haplotype_gap_open_penalities_;
     Penalty haplotype_gap_extension_penalty_;
     bool use_mapping_quality_ = true;
+    bool use_flank_state_ = true;
 };
 
 class HaplotypeLikelihoodModel::ShortHaplotypeError : public std::runtime_error

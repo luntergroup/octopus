@@ -98,6 +98,7 @@ public:
         std::reference_wrapper<const ReadPipe> read_pipe;
         VariantGenerator candidate_generator;
         HaplotypeGenerator::Builder haplotype_generator_builder;
+        HaplotypeLikelihoodModel likelihood_model;
         Phaser phaser;
     };
     
@@ -107,10 +108,7 @@ public:
         bool call_sites_only;
         unsigned max_haplotypes;
         Phred<double> haplotype_extension_threshold, saturation_limit;
-        bool allow_inactive_flank_scoring;
         bool allow_model_filtering;
-        boost::optional<std::string> sequencer;
-        bool model_mapping_quality;
     };
     
 private:
@@ -121,6 +119,7 @@ private:
     std::reference_wrapper<const ReadPipe> read_pipe_;
     mutable VariantGenerator candidate_generator_;
     HaplotypeGenerator::Builder haplotype_generator_builder_;
+    HaplotypeLikelihoodModel likelihood_model_;
     Phaser phaser_;
     Parameters parameters_;
         

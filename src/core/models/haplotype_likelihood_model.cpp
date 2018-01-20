@@ -60,13 +60,13 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel()
 : HaplotypeLikelihoodModel {make_snv_error_model(), make_indel_error_model()}
 {}
 
-HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(bool use_mapping_quality)
-: HaplotypeLikelihoodModel {make_snv_error_model(), make_indel_error_model(), use_mapping_quality}
+HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(bool use_mapping_quality, bool use_flank_state)
+: HaplotypeLikelihoodModel {make_snv_error_model(), make_indel_error_model(), use_mapping_quality, use_flank_state}
 {}
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
                                                    std::unique_ptr<IndelErrorModel> indel_model,
-                                                   bool use_mapping_quality)
+                                                   bool use_mapping_quality, bool use_flank_state)
 : snv_error_model_ {std::move(snv_model)}
 , indel_error_model_ {std::move(indel_model)}
 , haplotype_ {nullptr}
@@ -74,14 +74,16 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel
 , haplotype_gap_open_penalities_ {}
 , haplotype_gap_extension_penalty_ {}
 , use_mapping_quality_ {use_mapping_quality}
+, use_flank_state_ {use_flank_state}
 {}
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
                                                    std::unique_ptr<IndelErrorModel> indel_model,
                                                    const Haplotype& haplotype,
                                                    boost::optional<FlankState> flank_state,
-                                                   bool use_mapping_quality)
-: HaplotypeLikelihoodModel {std::move(snv_model), std::move(indel_model), use_mapping_quality}
+                                                   bool use_mapping_quality,
+                                                   bool use_flank_state)
+: HaplotypeLikelihoodModel {std::move(snv_model), std::move(indel_model), use_mapping_quality, use_flank_state}
 {
     this->reset(haplotype, std::move(flank_state));
 }
@@ -107,22 +109,38 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(const HaplotypeLikelihoodMode
     haplotype_gap_open_penalities_ = other.haplotype_gap_open_penalities_;
     haplotype_gap_extension_penalty_ = other.haplotype_gap_extension_penalty_;
     use_mapping_quality_ = other.use_mapping_quality_;
+    use_flank_state_ = other.use_flank_state_;
 }
 
-HaplotypeLikelihoodModel& HaplotypeLikelihoodModel::operator=(HaplotypeLikelihoodModel other)
+HaplotypeLikelihoodModel& HaplotypeLikelihoodModel::operator=(const HaplotypeLikelihoodModel& other)
 {
-    std::swap(indel_error_model_, other.indel_error_model_);
-    std::swap(snv_error_model_, other.snv_error_model_);
-    haplotype_ = other.haplotype_;
-    std::swap(haplotype_flank_state_, other.haplotype_flank_state_);
-    std::swap(haplotype_snv_forward_mask_, other.haplotype_snv_forward_mask_);
-    std::swap(haplotype_snv_reverse_mask_, other.haplotype_snv_reverse_mask_);
-    std::swap(haplotype_snv_forward_priors_, other.haplotype_snv_forward_priors_);
-    std::swap(haplotype_snv_reverse_priors_, other.haplotype_snv_reverse_priors_);
-    std::swap(haplotype_gap_open_penalities_, other.haplotype_gap_open_penalities_);
-    haplotype_gap_extension_penalty_ = other.haplotype_gap_extension_penalty_;
-    use_mapping_quality_ = other.use_mapping_quality_;
+    if (this != &other) {
+        HaplotypeLikelihoodModel tmp {other};
+        std::swap(*this, tmp);
+    }
     return *this;
+}
+
+void swap(HaplotypeLikelihoodModel& lhs, HaplotypeLikelihoodModel& rhs) noexcept
+{
+    using std::swap;
+    swap(lhs.indel_error_model_, rhs.indel_error_model_);
+    swap(lhs.snv_error_model_, rhs.snv_error_model_);
+    swap(lhs.haplotype_, rhs.haplotype_);
+    swap(lhs.haplotype_flank_state_, rhs.haplotype_flank_state_);
+    swap(lhs.haplotype_snv_forward_mask_, rhs.haplotype_snv_forward_mask_);
+    swap(lhs.haplotype_snv_reverse_mask_, rhs.haplotype_snv_reverse_mask_);
+    swap(lhs.haplotype_snv_forward_priors_, rhs.haplotype_snv_forward_priors_);
+    swap(lhs.haplotype_snv_reverse_priors_, rhs.haplotype_snv_reverse_priors_);
+    swap(lhs.haplotype_gap_open_penalities_, rhs.haplotype_gap_open_penalities_);
+    swap(lhs.haplotype_gap_extension_penalty_, rhs.haplotype_gap_extension_penalty_);
+    swap(lhs.use_mapping_quality_, rhs.use_mapping_quality_);
+    swap(lhs.use_flank_state_, rhs.use_flank_state_);
+}
+
+bool HaplotypeLikelihoodModel::can_use_flank_state() const noexcept
+{
+    return use_flank_state_;
 }
 
 double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read) const
