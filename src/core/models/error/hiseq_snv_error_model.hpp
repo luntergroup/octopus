@@ -23,6 +23,11 @@ public:
     
     HiSeqSnvErrorModel() = default;
     
+    HiSeqSnvErrorModel(const HiSeqSnvErrorModel&)            = default;
+    HiSeqSnvErrorModel& operator=(const HiSeqSnvErrorModel&) = default;
+    HiSeqSnvErrorModel(HiSeqSnvErrorModel&&)                 = default;
+    HiSeqSnvErrorModel& operator=(HiSeqSnvErrorModel&&)      = default;
+    
     virtual ~HiSeqSnvErrorModel() = default;
 
 private:
