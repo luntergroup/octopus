@@ -292,8 +292,9 @@ CigarString Haplotype::cigar() const
                         curr_op_size = deletion_size;
                     }
                 }
-            } else {
-                const auto ref_idx = begin_distance(explicit_allele_region_, allele);
+            } else if (!is_empty_region(allele)) {
+                const auto ref_idx = static_cast<std::size_t>(begin_distance(explicit_allele_region_, allele));
+                assert(ref_idx < reference.size());
                 if (region_size(allele) == 1) {
                     if (allele.sequence()[0] == reference[ref_idx]) {
                         allele_op_flag = Flag::sequenceMatch;
@@ -302,6 +303,7 @@ CigarString Haplotype::cigar() const
                     }
                     ++allele_op_size;
                 } else {
+                    assert(reference.size() >= ref_idx + allele.sequence().size());
                     if (std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()),
                                    std::next(std::cbegin(reference), ref_idx))) {
                         allele_op_flag = Flag::sequenceMatch;
@@ -331,6 +333,8 @@ CigarString Haplotype::cigar() const
     } else {
         result.emplace_back(size(region_), Flag::sequenceMatch);
     }
+    assert(octopus::sequence_size(result) == sequence_.size());
+    assert(reference_size(result) == size(region_));
     return result;
 }
 
