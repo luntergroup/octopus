@@ -119,8 +119,9 @@ auto make_substitution_mask(const Haplotype& haplotype)
     std::vector<bool> result(sequence_size(haplotype));
     auto mask_itr = std::begin(result);
     for (const auto& op : cigar) {
-        std::fill(mask_itr, std::next(mask_itr, op.size()), op.flag() == CigarOperation::Flag::substitution);
-        mask_itr += op.size();
+        if (op.advances_sequence()) {
+            mask_itr = std::fill_n(mask_itr, op.size(), op.flag() == CigarOperation::Flag::substitution);
+        }
     }
     return result;
 }
