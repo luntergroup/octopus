@@ -225,23 +225,6 @@ std::vector<Variant> Haplotype::difference(const Haplotype& other) const
     return result;
 }
 
-template <typename InputIt, typename BinaryFunction>
-BinaryFunction for_adjacent_pairs(InputIt first, InputIt last, BinaryFunction f)
-{
-    if (first != last) {
-        for (auto next = first++; next != last; ++first, ++next) {
-            f(*first, *next);
-        }
-    }
-    return f;
-}
-
-template <typename Range, typename BinaryFunction>
-BinaryFunction for_adjacent_pairs(const Range& range, BinaryFunction f)
-{
-    return for_adjacent_pairs(std::cbegin(range), std::cend(range), f);
-}
-
 CigarString Haplotype::cigar() const
 {
     using Flag = CigarOperation::Flag;
