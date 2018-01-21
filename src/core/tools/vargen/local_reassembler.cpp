@@ -723,6 +723,7 @@ auto rotate_right(Range& range, std::size_t n)
 
 void complete_partial_ref_repeat(Assembler::Variant& v, const Repeat& repeat)
 {
+    assert(v.ref.size() > repeat.period);
     const auto partial_repeat_len = v.ref.size() % repeat.period;
     if (partial_repeat_len > 0) {
         const auto num_remaining_repeat_bases = repeat.period - partial_repeat_len;
@@ -740,6 +741,7 @@ void complete_partial_ref_repeat(Assembler::Variant& v, const Repeat& repeat)
 
 void complete_partial_alt_repeat(Assembler::Variant& v, const Repeat& repeat)
 {
+    assert(v.alt.size() > repeat.period);
     const auto partial_repeat_len = v.alt.size() % repeat.period;
     if (partial_repeat_len > 0) {
         const auto num_remaining_repeat_bases = repeat.period - partial_repeat_len;
@@ -758,7 +760,7 @@ std::vector<Assembler::Variant> try_to_split_repeats(Assembler::Variant& v, cons
     const auto ref_repeat_itr = max_overlapped(ref_repeats, v_ref);
     if (ref_repeat_itr == std::cend(ref_repeats)) return {};
     const auto& ref_repeat = *ref_repeat_itr;
-    if (contains(v_ref, ref_repeat)) return {};
+    if (contains(v_ref, ref_repeat) || v.ref.size() < 2 * ref_repeat.period) return {};
     const auto ref_repeat_is_lhs = left_overhang_size(ref_repeat, v_ref) > ref_repeat.period;
     if (ref_repeat_is_lhs) {
         if (ends_before(ref_repeat, v_ref)) return {};
