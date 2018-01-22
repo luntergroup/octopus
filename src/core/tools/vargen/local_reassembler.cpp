@@ -760,7 +760,8 @@ std::vector<Assembler::Variant> try_to_split_repeats(Assembler::Variant& v, cons
     const auto ref_repeat_itr = max_overlapped(ref_repeats, v_ref);
     if (ref_repeat_itr == std::cend(ref_repeats)) return {};
     const auto& ref_repeat = *ref_repeat_itr;
-    if (contains(v_ref, ref_repeat) || v.ref.size() < 2 * ref_repeat.period) return {};
+    if (!contains(ref_repeat, v_ref)) return {};
+    if (v.ref.size() < 2 * ref_repeat.period) return {};
     const auto ref_repeat_is_lhs = left_overhang_size(ref_repeat, v_ref) > ref_repeat.period;
     if (ref_repeat_is_lhs) {
         if (ends_before(ref_repeat, v_ref)) return {};
