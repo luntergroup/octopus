@@ -4,7 +4,6 @@
 #ifndef reference_context_hpp
 #define reference_context_hpp
 
-#include <functional>
 #include <string>
 
 #include <boost/optional.hpp>
@@ -26,9 +25,7 @@ public:
 private:
     static const std::string name_;
     
-    std::reference_wrapper<const ReferenceGenome> reference_;
-    GenomicRegion region_;
-    mutable boost::optional<ResultType> result_;
+    ResultType result_;
     
     const std::string& do_name() const noexcept override { return name_; }
     Facet::ResultType do_get() const override;
