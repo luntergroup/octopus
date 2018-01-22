@@ -49,7 +49,7 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
                                      OutputOptions output_config,
                                      ConcurrencyPolicy threading)
 : facet_factory_ {std::move(facet_factory)}
-, facets_ {get_facets(measures)}
+, facet_names_ {get_facets(measures)}
 , measures_ {std::move(measures)}
 , output_config_ {output_config}
 , threading_ {threading}
@@ -69,7 +69,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
 
 bool VariantCallFilter::can_measure_single_call() const noexcept
 {
-    return facets_.empty();
+    return facet_names_.empty();
 }
 
 bool VariantCallFilter::can_measure_multiple_blocks() const noexcept
@@ -243,23 +243,30 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification 
     }
 }
 
-Measure::FacetMap VariantCallFilter::compute_facets(const CallBlock& calls) const
+auto make_map(const std::vector<std::string>& names, std::vector<FacetWrapper>&& facets)
 {
+    assert(names.size() == facets.size());
     Measure::FacetMap result {};
-    result.reserve(facets_.size());
-    for (const auto& facet : facets_) {
-        result.emplace(facet, facet_factory_.make(facet, calls));
+    result.reserve(names.size());
+    for (auto tup : boost::combine(names, std::move(facets))) {
+        result.emplace(tup.get<0>(), std::move(tup.get<1>()));
     }
     return result;
 }
 
+Measure::FacetMap VariantCallFilter::compute_facets(const CallBlock& calls) const
+{
+    return make_map(facet_names_, facet_factory_.make(facet_names_, calls));
+}
+
 std::vector<Measure::FacetMap> VariantCallFilter::compute_facets(const std::vector<CallBlock>& calls) const
 {
-    // TODO: parallelise
+    const auto threading = is_multithreaded() ? ExecutionPolicy::par : ExecutionPolicy::seq;
+    auto facets = facet_factory_.make(facet_names_, calls, threading);
     std::vector<Measure::FacetMap> result {};
     result.reserve(calls.size());
-    for (const auto& block : calls) {
-        result.push_back(compute_facets(block));
+    for (auto& block : facets) {
+        result.push_back(make_map(facet_names_, std::move(block)));
     }
     return result;
 }

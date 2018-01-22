@@ -87,10 +87,10 @@ protected:
     void annotate(VcfRecord::Builder& call, const MeasureVector& measures) const;
     
 private:
-    using FacetSet = std::vector<std::string>;
+    using FacetNameSet = std::vector<std::string>;
     
     FacetFactory facet_factory_;
-    FacetSet facets_;
+    FacetNameSet facet_names_;
     std::vector<MeasureWrapper> measures_;
     OutputOptions output_config_;
     ConcurrencyPolicy threading_;
