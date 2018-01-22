@@ -49,6 +49,8 @@ public:
     // inaccurate it will likely result in worse performance.
     void hint(std::vector<GenomicRegion> hints) const;
     
+    bool is_cached(const GenomicRegion& region) const noexcept;
+    
 private:
     using RegionMap = MappableSetMap<GenomicRegion::ContigName, GenomicRegion>;
     
@@ -58,7 +60,6 @@ private:
     mutable boost::optional<GenomicRegion> buffered_region_;
     mutable RegionMap hints_;
     
-    bool requires_new_fetch(const GenomicRegion& request) const noexcept ;
     void setup_buffer(const GenomicRegion& request) const;
     GenomicRegion get_max_fetch_region(const GenomicRegion& request) const;
     GenomicRegion get_default_max_fetch_region(const GenomicRegion& request) const;

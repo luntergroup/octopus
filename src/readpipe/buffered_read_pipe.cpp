@@ -59,16 +59,16 @@ void BufferedReadPipe::hint(std::vector<GenomicRegion> hints) const
     }
 }
 
-// private methods
-
-bool BufferedReadPipe::requires_new_fetch(const GenomicRegion& request) const noexcept
+bool BufferedReadPipe::is_cached(const GenomicRegion& region) const noexcept
 {
-    return !buffered_region_ || !contains(*buffered_region_, request);
+    return buffered_region_ && contains(*buffered_region_, region);
 }
+
+// private methods
 
 void BufferedReadPipe::setup_buffer(const GenomicRegion& request) const
 {
-    if (requires_new_fetch(request)) {
+    if (!is_cached(request)) {
         const auto max_region = get_max_fetch_region(request);
         buffered_region_ = source_.get().read_manager().find_covered_subregion(max_region, config_.max_buffer_size);
         buffer_ = source_.get().fetch_reads(expand(*buffered_region_, config_.fetch_expansion));
