@@ -6,8 +6,9 @@
 #include <utility>
 #include <memory>
 #include <algorithm>
+#include <cassert>
 
-#include "utils/genotype_reader.hpp"
+#include "utils/parallel_transform.hpp"
 #include "exceptions/program_error.hpp"
 #include "overlapping_reads.hpp"
 #include "read_assignments.hpp"
@@ -54,51 +55,123 @@ public:
     std::string name_;
 };
 
-FacetWrapper FacetFactory::make(const std::string& name, const std::vector<VcfRecord>& records) const
+FacetWrapper FacetFactory::make(const std::string& name, const CallBlock& block) const
+{
+    const auto block_data = make_block_data({name}, block);
+    return make(name, block_data);
+}
+
+FacetFactory::FacetBlock FacetFactory::make(const std::vector<std::string>& names, const CallBlock& block) const
+{
+    if (names.empty()) return {};
+    const auto block_data = make_block_data(names, block);
+    return make(names, block_data);
+}
+
+std::vector<FacetFactory::FacetBlock> FacetFactory::make(const std::vector<std::string>& names,
+                                                         const std::vector<CallBlock>& blocks,
+                                                         ExecutionPolicy threading) const
+{
+    if (blocks.empty()) return {};
+    std::vector<BlockData> data {};
+    data.reserve(blocks.size());
+    for (const auto& block : blocks) {
+        data.push_back(make_block_data(names, block));
+    }
+    std::vector<FacetBlock> result {};
+    result.reserve(blocks.size());
+    if (threading == ExecutionPolicy::par) {
+        parallel_transform(std::cbegin(data), std::cend(data), std::back_inserter(result),
+                           [&] (const auto& block_data) { return make(names, block_data); });
+    } else {
+        std::transform(std::cbegin(data), std::cend(data), std::back_inserter(result),
+                       [&] (const auto& block_data) { return make(names, block_data); });
+    }
+    return result;
+}
+
+// private methods
+
+void FacetFactory::setup_facet_makers()
+{
+    facet_makers_["OverlappingReads"] = [] (const BlockData& block) -> FacetWrapper
+    {
+        assert(block.reads);
+        return {std::make_unique<OverlappingReads>(*block.reads)};
+    };
+    facet_makers_["ReadAssignments"] = [this] (const BlockData& block) -> FacetWrapper
+    {
+        assert(block.reads && block.genotypes);
+        return {std::make_unique<ReadAssignments>(reference_, *block.genotypes, *block.reads)};
+    };
+    facet_makers_["ReferenceContext"] = [this] (const BlockData& block) -> FacetWrapper
+    {
+        if (block.region) {
+            constexpr GenomicRegion::Size context_size {50};
+            return {std::make_unique<ReferenceContext>(reference_, expand(*block.region, context_size))};
+        } else {
+            return {nullptr};
+        }
+    };
+    facet_makers_["Samples"] = [this] (const BlockData& block) -> FacetWrapper
+    {
+        return {std::make_unique<Samples>(read_pipe_.source().samples())};
+    };
+}
+
+bool requires_reads(const std::string& facet) noexcept
+{
+    return facet == "OverlappingReads" || facet == "ReadAssignments";
+}
+
+bool requires_reads(const std::vector<std::string>& facets) noexcept
+{
+    return std::any_of(std::cbegin(facets), std::cend(facets), [] (const auto& facet) { return requires_reads(facet); });
+}
+
+bool requires_genotypes(const std::string& facet) noexcept
+{
+    return facet == "ReadAssignments";
+}
+
+bool requires_genotypes(const std::vector<std::string>& facets) noexcept
+{
+    return std::any_of(std::cbegin(facets), std::cend(facets), [] (const auto& facet) { return requires_genotypes(facet); });
+}
+
+FacetWrapper FacetFactory::make(const std::string& name, const BlockData& block) const
 {
     if (facet_makers_.count(name) == 1) {
-        return facet_makers_.at(name)(records);
+        return facet_makers_.at(name)(block);
     } else {
         throw UnknownFacet {name};
     }
 }
 
-void FacetFactory::setup_facet_makers()
+FacetFactory::FacetBlock FacetFactory::make(const std::vector<std::string>& names, const BlockData& block) const
 {
-    facet_makers_["OverlappingReads"] = [this] (const std::vector<VcfRecord>& records) -> FacetWrapper
-    {
-        auto samples = read_pipe_.source().samples();
-        ReadMap reads {};
-        if (!records.empty()) {
-            reads = read_pipe_.fetch_reads(encompassing_region(records));
+    FacetBlock result {};
+    result.reserve(names.size());
+    for (const auto& name : names) {
+        result.push_back(make(name, block));
+    }
+    return result;
+}
+
+FacetFactory::BlockData FacetFactory::make_block_data(const std::vector<std::string>& names, const CallBlock& block) const
+{
+    BlockData result {};
+    assert(!names.empty());
+    if (!block.empty()) {
+        result.region = encompassing_region(block);
+        if (requires_reads(names)) {
+            result.reads = read_pipe_.fetch_reads(*result.region);
         }
-        return FacetWrapper {std::make_unique<OverlappingReads>(std::move(reads))};
-    };
-    facet_makers_["ReadAssignments"] = [this] (const std::vector<VcfRecord>& records) -> FacetWrapper
-    {
-        auto samples = read_pipe_.source().samples();
-        auto genotypes = extract_genotypes(records, samples, reference_);
-        ReadMap reads {};
-        if (!records.empty()) {
-            reads = read_pipe_.fetch_reads(encompassing_region(records));
+        if (requires_genotypes(names)) {
+            result.genotypes = extract_genotypes(block, read_pipe_.source().samples(), reference_);
         }
-        return FacetWrapper {std::make_unique<ReadAssignments>(reference_, genotypes, reads)};
-    };
-    facet_makers_["ReferenceContext"] = [this] (const std::vector<VcfRecord>& records) -> FacetWrapper
-    {
-        if (!records.empty()) {
-            auto record_region = encompassing_region(records);
-            constexpr GenomicRegion::Size context_size {50};
-            auto context_region = expand(record_region, context_size);
-            return FacetWrapper {std::make_unique<ReferenceContext>(reference_, std::move(context_region))};
-        } else {
-            return FacetWrapper {nullptr};
-        }
-    };
-    facet_makers_["Samples"] = [this] (const std::vector<VcfRecord>& records) -> FacetWrapper
-    {
-        return FacetWrapper {std::make_unique<Samples>(read_pipe_.source().samples())};
-    };
+    }
+    return result;
 }
 
 } // namespace csr
