@@ -773,6 +773,7 @@ std::vector<Assembler::Variant> try_to_split_repeats(Assembler::Variant& v, cons
             if (matches_rhs(*alt_repeat_ritr, v.alt)) alt_repeat_match_ritr = alt_repeat_ritr;
         }
         if (alt_repeat_match_ritr == std::crend(ref_repeats)) return {};
+        if (v.alt.size() < 2 * alt_repeat_match_ritr->period) return {};
         complete_partial_alt_repeat(v, *alt_repeat_match_ritr);
     }
     Assembler::Variant deletion {v.begin_pos, std::move(v.ref), ""}, insertion {v.begin_pos, "", std::move(v.alt)};
