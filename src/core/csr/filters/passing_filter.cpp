@@ -8,8 +8,9 @@ namespace octopus { namespace csr {
 PassingVariantCallFilter::PassingVariantCallFilter(FacetFactory facet_factory,
                                                    std::vector<MeasureWrapper> measures,
                                                    OutputOptions output_config,
+                                                   ConcurrencyPolicy threading,
                                                    boost::optional<ProgressMeter&> progress)
-: SinglePassVariantCallFilter {std::move(facet_factory), std::move(measures), output_config, progress}
+: SinglePassVariantCallFilter {std::move(facet_factory), std::move(measures), output_config, threading, progress}
 {}
 
 void PassingVariantCallFilter::annotate(VcfHeader::Builder& header) const {}

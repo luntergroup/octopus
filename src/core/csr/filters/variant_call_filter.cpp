@@ -9,8 +9,11 @@
 #include <limits>
 #include <numeric>
 #include <cmath>
+#include <thread>
 
 #include <boost/range/combine.hpp>
+
+#include "utils/parallel_transform.hpp"
 
 #include "config/common.hpp"
 #include "containers/mappable_flat_set.hpp"
@@ -43,11 +46,14 @@ auto get_facets(const std::vector<MeasureWrapper>& measures)
 
 VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
                                      std::vector<MeasureWrapper> measures,
-                                     OutputOptions output_config)
+                                     OutputOptions output_config,
+                                     ConcurrencyPolicy threading)
 : facet_factory_ {std::move(facet_factory)}
 , facets_ {get_facets(measures)}
 , measures_ {std::move(measures)}
 , output_config_ {output_config}
+, threading_ {threading}
+, max_concurrent_blocks_ {max_concurrent_blocks()}
 {}
 
 void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
@@ -64,6 +70,11 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
 bool VariantCallFilter::can_measure_single_call() const noexcept
 {
     return facets_.empty();
+}
+
+bool VariantCallFilter::can_measure_multiple_blocks() const noexcept
+{
+    return is_multithreaded();
 }
 
 namespace {
@@ -100,7 +111,8 @@ std::vector<T> copy_each_first(const std::vector<std::pair<T, _>>& items)
 
 } // namespace
 
-std::vector<VcfRecord> VariantCallFilter::get_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const
+VariantCallFilter::CallBlock
+VariantCallFilter::read_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const
 {
     std::vector<std::pair<VcfRecord, GenomicRegion>> block {};
     for (; first != last; ++first) {
@@ -114,6 +126,24 @@ std::vector<VcfRecord> VariantCallFilter::get_next_block(VcfIterator& first, con
     return copy_each_first(block);
 }
 
+std::vector<VariantCallFilter::CallBlock>
+VariantCallFilter::read_next_blocks(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const
+{
+    std::vector<VariantCallFilter::CallBlock> result {};
+    if (can_measure_multiple_blocks()) {
+        result.reserve(max_concurrent_blocks_);
+        auto remaining_call_allowance = max_concurrent_blocks();
+        while (remaining_call_allowance > 0) {
+            result.push_back(read_next_block(first, last, samples));
+            remaining_call_allowance -= result.back().size();
+            if (first == last || !is_same_contig(*first, result.back().front())) break;
+        }
+    } else {
+        result.push_back(read_next_block(first, last, samples));
+    }
+    return result;
+}
+
 VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& call) const
 {
     MeasureVector result(measures_.size());
@@ -122,13 +152,27 @@ VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& cal
     return result;
 }
 
-std::vector<VariantCallFilter::MeasureVector> VariantCallFilter::measure(const std::vector<VcfRecord>& calls) const
+VariantCallFilter::MeasureBlock VariantCallFilter::measure(const CallBlock& calls) const
 {
     const auto facets = compute_facets(calls);
-    std::vector<MeasureVector> result {};
+    return measure(calls, facets);
+}
+
+std::vector<VariantCallFilter::MeasureBlock> VariantCallFilter::measure(const std::vector<CallBlock>& calls) const
+{
+    std::vector<MeasureBlock> result {};
     result.reserve(calls.size());
-    std::transform(std::cbegin(calls), std::cend(calls), std::back_inserter(result),
-                   [this, &facets] (const auto& call) { return this->measure(call, facets); });
+    if (can_measure_multiple_blocks()) {
+        const auto facets = compute_facets(calls);
+        parallel_transform(std::cbegin(calls), std::cend(calls), std::cbegin(facets), std::back_inserter(result),
+                           [this] (const auto& block, const auto& block_facets) {
+                               return this->measure(block, block_facets);
+                           });
+    } else {
+        for (const CallBlock& block : calls) {
+            result.push_back(measure(block));
+        }
+    }
     return result;
 }
 
@@ -199,12 +243,36 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification 
     }
 }
 
-Measure::FacetMap VariantCallFilter::compute_facets(const std::vector<VcfRecord>& calls) const
+Measure::FacetMap VariantCallFilter::compute_facets(const CallBlock& calls) const
 {
     Measure::FacetMap result {};
     result.reserve(facets_.size());
     for (const auto& facet : facets_) {
         result.emplace(facet, facet_factory_.make(facet, calls));
+    }
+    return result;
+}
+
+std::vector<Measure::FacetMap> VariantCallFilter::compute_facets(const std::vector<CallBlock>& calls) const
+{
+    // TODO: parallelise
+    std::vector<Measure::FacetMap> result {};
+    result.reserve(calls.size());
+    for (const auto& block : calls) {
+        result.push_back(compute_facets(block));
+    }
+    return result;
+}
+
+VariantCallFilter::MeasureBlock VariantCallFilter::measure(const CallBlock& calls, const Measure::FacetMap& facets) const
+{
+    MeasureBlock result(calls.size());
+    if (is_multithreaded()) {
+        parallel_transform(std::cbegin(calls), std::cend(calls), std::begin(result),
+                           [&] (const auto& call) { return measure(call, facets); });
+    } else {
+        std::transform(std::cbegin(calls), std::cend(calls), std::begin(result),
+                       [&] (const auto& call) { return measure(call, facets); });
     }
     return result;
 }
@@ -226,6 +294,29 @@ void VariantCallFilter::fail(VcfRecord::Builder& call, std::vector<std::string> 
 {
     for (auto& reason : reasons) {
         call.add_filter(std::move(reason));
+    }
+}
+
+bool VariantCallFilter::is_multithreaded() const noexcept
+{
+    return !threading_.max_threads || *threading_.max_threads > 1;
+}
+
+int VariantCallFilter::max_concurrent_blocks() const noexcept
+{
+    if (is_multithreaded()) {
+        if (threading_.max_threads) {
+            return *threading_.max_threads;
+        } else {
+            const auto num_cores = std::thread::hardware_concurrency();
+            if (num_cores > 0) {
+                return num_cores;
+            } else {
+                return 100;
+            }
+        }
+    } else {
+        return 1;
     }
 }
 

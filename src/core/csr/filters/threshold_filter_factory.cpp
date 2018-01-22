@@ -149,10 +149,11 @@ std::unique_ptr<VariantCallFilterFactory> ThresholdFilterFactory::do_clone() con
 
 std::unique_ptr<VariantCallFilter> ThresholdFilterFactory::do_make(FacetFactory facet_factory,
                                                                    VariantCallFilter::OutputOptions output_config,
-                                                                   boost::optional<ProgressMeter&> progress) const
+                                                                   boost::optional<ProgressMeter&> progress,
+                                                                   VariantCallFilter::ConcurrencyPolicy threading) const
 {
     return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory), hard_conditions_, soft_conditions_,
-                                                        output_config, progress);
+                                                        output_config, threading, progress);
 }
 
 } // namespace csr

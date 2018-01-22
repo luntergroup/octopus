@@ -34,12 +34,14 @@ std::unique_ptr<VariantCallFilterFactory> TrainingFilterFactory::do_clone() cons
 
 std::unique_ptr<VariantCallFilter> TrainingFilterFactory::do_make(FacetFactory facet_factory,
                                                                   VariantCallFilter::OutputOptions output_config,
-                                                                  boost::optional<ProgressMeter&> progress) const
+                                                                  boost::optional<ProgressMeter&> progress,
+                                                                  VariantCallFilter::ConcurrencyPolicy threading) const
 {
     output_config.annotate_measures = true;
     output_config.clear_info = true;
     output_config.clear_existing_filters = true;
-    return std::make_unique<PassingVariantCallFilter>(std::move(facet_factory), std::move(measures_), output_config, progress);
+    return std::make_unique<PassingVariantCallFilter>(std::move(facet_factory), std::move(measures_),
+                                                      output_config, threading, progress);
 }
 
 } // namespace csr

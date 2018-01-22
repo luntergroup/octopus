@@ -1275,7 +1275,8 @@ void run_filtering(GenomeCallingComponents& components)
         if (components.sites_only()) {
             output_config.emit_sites_only = true;
         }
-        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), output_config, progress);
+        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp),
+                                                output_config, progress, components.num_threads());
         assert(filter);
         const VcfReader in {std::move(*input_path)};
         VcfWriter& out {*components.filtered_output()};

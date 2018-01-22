@@ -41,11 +41,17 @@ public:
         bool clear_info = false;
     };
     
+    struct ConcurrencyPolicy
+    {
+        boost::optional<unsigned> max_threads = boost::none;
+    };
+    
     VariantCallFilter() = delete;
     
     VariantCallFilter(FacetFactory facet_factory,
                       std::vector<MeasureWrapper> measures,
-                      OutputOptions output_config);
+                      OutputOptions output_config,
+                      ConcurrencyPolicy threading);
     
     VariantCallFilter(const VariantCallFilter&)            = delete;
     VariantCallFilter& operator=(const VariantCallFilter&) = delete;
@@ -60,6 +66,8 @@ protected:
     using SampleList    = std::vector<SampleName>;
     using MeasureVector = std::vector<Measure::ResultType>;
     using VcfIterator   = VcfReader::RecordIterator;
+    using CallBlock     = std::vector<VcfRecord>;
+    using MeasureBlock  = std::vector<MeasureVector>;
     
     struct Classification
     {
@@ -69,9 +77,12 @@ protected:
     };
     
     bool can_measure_single_call() const noexcept;
-    std::vector<VcfRecord> get_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const;
+    bool can_measure_multiple_blocks() const noexcept;
+    CallBlock read_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const;
+    std::vector<CallBlock> read_next_blocks(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const;
     MeasureVector measure(const VcfRecord& call) const;
-    std::vector<MeasureVector> measure(const std::vector<VcfRecord>& calls) const;
+    MeasureBlock measure(const CallBlock& calls) const;
+    std::vector<MeasureBlock> measure(const std::vector<CallBlock>& calls) const;
     void write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const;
     void annotate(VcfRecord::Builder& call, const MeasureVector& measures) const;
     
@@ -82,19 +93,23 @@ private:
     FacetSet facets_;
     std::vector<MeasureWrapper> measures_;
     OutputOptions output_config_;
+    ConcurrencyPolicy threading_;
+    int max_concurrent_blocks_;
     
     virtual void annotate(VcfHeader::Builder& header) const = 0;
     virtual void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const = 0;
     
     VcfHeader make_header(const VcfReader& source) const;
-    boost::optional<VcfRecord> filter(const VcfRecord& call) const;
-    std::vector<VcfRecord> filter(const std::vector<VcfRecord>& calls) const;
-    Measure::FacetMap compute_facets(const std::vector<VcfRecord>& calls) const;
+    Measure::FacetMap compute_facets(const CallBlock& calls) const;
+    std::vector<Measure::FacetMap> compute_facets(const std::vector<CallBlock>& calls) const;
+    MeasureBlock measure(const CallBlock& calls, const Measure::FacetMap& facets) const;
     MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;
     VcfRecord::Builder construct_template(const VcfRecord& call) const;
     void annotate(VcfRecord::Builder& call, Classification status) const;
     void pass(VcfRecord::Builder& call) const;
     void fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const;
+    bool is_multithreaded() const noexcept;
+    int max_concurrent_blocks() const noexcept;
 };
 
 } // namespace csr
