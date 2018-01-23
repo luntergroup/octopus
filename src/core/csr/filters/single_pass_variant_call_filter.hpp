@@ -45,9 +45,9 @@ private:
     void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const override;
     
     void filter(const VcfRecord& call, VcfWriter& dest) const;
-    void filter(const CallBlock& calls, VcfWriter& dest) const;
-    void filter(const std::vector<CallBlock>& calls, VcfWriter& dest) const;
-    void filter(const CallBlock& call, const MeasureBlock & measures, VcfWriter& dest) const;
+    void filter(const CallBlock& block, VcfWriter& dest) const;
+    void filter(const std::vector<CallBlock>& blocks, VcfWriter& dest) const;
+    void filter(const CallBlock& block, const MeasureBlock & measures, VcfWriter& dest) const;
     void filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest) const;
     void log_progress(const GenomicRegion& region) const;
 };

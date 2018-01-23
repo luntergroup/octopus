@@ -49,24 +49,24 @@ void SinglePassVariantCallFilter::filter(const VcfRecord& call, VcfWriter& dest)
     filter(call, measure(call), dest);
 }
 
-void SinglePassVariantCallFilter::filter(const CallBlock& calls, VcfWriter& dest) const
+void SinglePassVariantCallFilter::filter(const CallBlock& block, VcfWriter& dest) const
 {
-    filter(calls, measure(calls), dest);
+    filter(block, measure(block), dest);
 }
 
-void SinglePassVariantCallFilter::filter(const std::vector<CallBlock>& calls, VcfWriter& dest) const
+void SinglePassVariantCallFilter::filter(const std::vector<CallBlock>& blocks, VcfWriter& dest) const
 {
-    const auto measures = measure(calls);
-    assert(measures.size() == calls.size());
-    for (auto tup : boost::combine(calls, measures)) {
+    const auto measures = measure(blocks);
+    assert(measures.size() == blocks.size());
+    for (auto tup : boost::combine(blocks, measures)) {
         filter(tup.get<0>(), tup.get<1>(), dest);
     }
 }
 
-void SinglePassVariantCallFilter::filter(const CallBlock& calls, const MeasureBlock& measures, VcfWriter& dest) const
+void SinglePassVariantCallFilter::filter(const CallBlock& block, const MeasureBlock& measures, VcfWriter& dest) const
 {
-    assert(measures.size() == calls.size());
-    for (auto tup : boost::combine(calls, measures)) {
+    assert(measures.size() == block.size());
+    for (auto tup : boost::combine(block, measures)) {
         filter(tup.get<0>(), tup.get<1>(), dest);
     }
 }
