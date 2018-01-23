@@ -9,6 +9,7 @@
 #include <iterator>
 
 #include "utils/mappable_algorithms.hpp"
+#include "utils/read_stats.hpp"
 
 namespace octopus {
 
@@ -69,9 +70,37 @@ bool BufferedReadPipe::is_cached(const GenomicRegion& region) const noexcept
 void BufferedReadPipe::setup_buffer(const GenomicRegion& request) const
 {
     if (!is_cached(request)) {
-        const auto max_region = get_max_fetch_region(request);
-        buffered_region_ = source_.get().read_manager().find_covered_subregion(max_region, config_.max_buffer_size);
+        auto max_region = get_max_fetch_region(request);
+        bool unchecked_fetch {false};
+        if (can_make_unchecked_fetch()) {
+            buffered_region_ = std::move(max_region);
+            unchecked_fetch = true;
+        } else {
+            buffered_region_ = source_.get().read_manager().find_covered_subregion(max_region, config_.max_buffer_size);
+        }
         buffer_ = source_.get().fetch_reads(expand(*buffered_region_, config_.fetch_expansion));
+        if (unchecked_fetch) {
+            const auto fetch_size = count_reads(buffer_);
+            if (fetch_size > config_.max_buffer_size) {
+                if (default_unchecked_fetch_overflowed_) {
+                    adjusted_unchecked_fetch_overflowed_ = true;
+                } else {
+                    default_unchecked_fetch_overflowed_ = true;
+                }
+                // Clear buffer of reads to rhs of request
+                for (auto& p : buffer_) {
+                    const auto last_overlapped = find_first_after(p.second, request);
+                    p.second.erase(last_overlapped, std::cend(p.second));
+                }
+                buffered_region_ = request;
+            }
+        } else {
+            if (min_checked_fetch_size_) {
+                min_checked_fetch_size_ = std::min(size(*buffered_region_), *min_checked_fetch_size_);
+            } else {
+                min_checked_fetch_size_ = size(*buffered_region_);
+            }
+        }
     }
 }
 
@@ -114,9 +143,24 @@ GenomicRegion BufferedReadPipe::get_default_max_fetch_region(const GenomicRegion
 {
     if (config_.max_fetch_size) {
         return expand_rhs(request, *config_.max_fetch_size);
+    } else if (min_checked_fetch_size_) {
+        if (size(request) < *min_checked_fetch_size_) {
+            const auto recommended_expansion = *min_checked_fetch_size_ - size(request);
+            return expand_rhs(request, recommended_expansion);
+        } else {
+            return request;
+        }
     } else {
         return fully_expand_rhs(request);
     }
+}
+
+bool BufferedReadPipe::can_make_unchecked_fetch() const noexcept
+{
+    return config_.allow_unchecked_fetches
+           && !(default_unchecked_fetch_overflowed_ && !min_checked_fetch_size_)
+           && !adjusted_unchecked_fetch_overflowed_
+           && (config_.max_fetch_size || min_checked_fetch_size_);
 }
 
 } // namespace octopus
