@@ -29,21 +29,19 @@
 
 namespace octopus { namespace csr {
 
-
 namespace {
 
-auto default_pool_size()
+unsigned get_pool_size(VariantCallFilter::ConcurrencyPolicy policy)
 {
-    auto num_cores = std::thread::hardware_concurrency();
-    return num_cores > 0 ? num_cores : 8;
-}
-
-auto get_pool_size(VariantCallFilter::ConcurrencyPolicy policy)
-{
+    const auto num_cores = std::thread::hardware_concurrency();
     if (policy.max_threads) {
-        return *policy.max_threads > 1 ? *policy.max_threads : 0;
+        if (*policy.max_threads > 1) {
+            return num_cores > 0 ? std::min(*policy.max_threads, num_cores) : *policy.max_threads;
+        } else {
+            return 0;
+        }
     } else {
-        return default_pool_size();
+        return num_cores > 0 ? num_cores : 8;
     }
 }
 
@@ -330,7 +328,7 @@ bool VariantCallFilter::is_multithreaded() const noexcept
 unsigned VariantCallFilter::max_concurrent_blocks() const noexcept
 {
     if (is_multithreaded()) {
-        return 3 * workers_.size();
+        return std::min(100 * workers_.size(), std::size_t {10'000});
     } else {
         return 1;
     }
