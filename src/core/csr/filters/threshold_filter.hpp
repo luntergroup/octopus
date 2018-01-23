@@ -58,6 +58,7 @@ public:
                                std::vector<Condition> hard_conditions,
                                std::vector<Condition> soft_conditions,
                                OutputOptions output_config,
+                               ConcurrencyPolicy threading,
                                boost::optional<ProgressMeter&> progress = boost::none);
     
     ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;

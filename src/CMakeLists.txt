@@ -168,6 +168,9 @@ set(UTILS_SOURCES
     utils/genotype_reader.hpp
     utils/genotype_reader.cpp
     utils/beta_distribution.hpp
+    utils/parallel_transform.hpp
+    utils/thread_pool.hpp
+    utils/thread_pool.cpp
 )
 
 set(CORE_SOURCES

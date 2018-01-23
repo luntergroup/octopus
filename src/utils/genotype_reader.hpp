@@ -7,10 +7,12 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
+#include <utility>
 
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
+#include "core/types/allele.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "containers/mappable_flat_set.hpp"
@@ -24,6 +26,9 @@ class GenomicRegion;
 
 using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
 
+std::pair<std::vector<Allele>, bool>
+get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, const bool trim_padding = true);
+
 GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls,
                               const std::vector<VcfRecord::SampleName>& samples,
                               const ReferenceGenome& reference,
@@ -31,4 +36,4 @@ GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls,
 
 }
 
-#endif /* genotype_reader_hpp */
+#endif

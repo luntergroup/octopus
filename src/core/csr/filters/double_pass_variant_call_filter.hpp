@@ -24,6 +24,7 @@ public:
     DoublePassVariantCallFilter(FacetFactory facet_factory,
                                 std::vector<MeasureWrapper> measures,
                                 OutputOptions output_config,
+                                ConcurrencyPolicy threading,
                                 boost::optional<ProgressMeter&> progress);
     
     DoublePassVariantCallFilter(const DoublePassVariantCallFilter&)            = delete;

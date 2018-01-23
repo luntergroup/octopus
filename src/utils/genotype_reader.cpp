@@ -28,6 +28,96 @@ namespace octopus {
 
 namespace {
 
+bool is_missing(const VcfRecord::NucleotideSequence& allele) noexcept
+{
+    
+    return allele == vcfspec::missingValue;
+}
+
+bool is_deleted(const VcfRecord::NucleotideSequence& allele) noexcept
+{
+    const std::string deleted_sequence {vcfspec::deletedBase};
+    return allele == deleted_sequence;
+}
+
+void remove_missing_alleles(std::vector<VcfRecord::NucleotideSequence>& genotype)
+{
+    genotype.erase(std::remove_if(std::begin(genotype), std::end(genotype), is_missing), std::end(genotype));
+}
+
+void remove_deleted_alleles(std::vector<VcfRecord::NucleotideSequence>& genotype)
+{
+    genotype.erase(std::remove_if(std::begin(genotype), std::end(genotype), is_deleted), std::end(genotype));
+}
+
+auto num_matching_lhs_bases(const VcfRecord::NucleotideSequence& lhs, const VcfRecord::NucleotideSequence& rhs) noexcept
+{
+    auto p = std::mismatch(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));
+    return static_cast<int>(std::distance(std::cbegin(lhs), p.first));
+}
+
+auto calculate_ref_pad_size(const VcfRecord& call, const VcfRecord::NucleotideSequence& allele) noexcept
+{
+    if (allele == "*") {
+        return 1;
+    } else {
+        return num_matching_lhs_bases(call.ref(), allele);
+    }
+}
+
+} // namespace
+
+std::pair<std::vector<Allele>, bool>
+get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, const bool trim_padding)
+{
+    auto genotype = get_genotype(call, sample);
+    remove_missing_alleles(genotype);
+    if (call.alt().size() > 1) {
+        remove_deleted_alleles(genotype);
+    }
+    std::sort(std::begin(genotype), std::end(genotype));
+    genotype.erase(std::unique(std::begin(genotype), std::end(genotype)), std::end(genotype));
+    const auto call_region = mapped_region(call);
+    std::vector<Allele> result {};
+    result.reserve(genotype.size());
+    bool has_ref {false};
+    if (trim_padding) {
+        auto first_itr = std::begin(genotype);
+        const auto ref_itr = std::find(first_itr, std::end(genotype), call.ref());
+        if (ref_itr != std::end(genotype)) {
+            if (ref_itr != first_itr) std::iter_swap(first_itr, ref_itr);
+            ++first_itr;
+            has_ref = true;
+        }
+        auto min_removed_bases = static_cast<int>(call.ref().size());
+        std::for_each(first_itr, std::end(genotype), [&] (auto& allele) {
+            const auto num_bases_to_remove = calculate_ref_pad_size(call, allele);
+            allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), num_bases_to_remove));
+            auto allele_region = expand_lhs(call_region, -num_bases_to_remove);
+            result.emplace_back(std::move(allele_region), std::move(allele));
+            min_removed_bases = std::min(min_removed_bases, num_bases_to_remove);
+        });
+        if (has_ref) {
+            auto& ref = genotype.front();
+            ref.erase(std::cbegin(ref), std::next(std::cbegin(ref), min_removed_bases));
+            auto allele_region = expand_lhs(call_region, -min_removed_bases);
+            result.emplace_back(std::move(allele_region), std::move(ref));
+            std::rotate(std::rbegin(result), std::next(std::rbegin(result)), std::rend(result));
+        }
+    } else {
+        const auto ref_itr = std::find(std::begin(genotype), std::end(genotype), call.ref());
+        if (ref_itr != std::end(genotype)) {
+            if (ref_itr != std::begin(genotype)) std::iter_swap(std::begin(genotype), ref_itr);
+            has_ref = true;
+        }
+        std::transform(std::cbegin(genotype), std::cend(genotype), std::back_inserter(result),
+                       [&] (const auto& alt_seq) { return Allele {call_region, alt_seq}; });
+    }
+    return std::make_pair(std::move(result), has_ref);
+}
+
+namespace {
+
 auto extract_phase_region(const VcfRecord& call, const SampleName& sample)
 {
     auto result = get_phase_region(call, sample);
@@ -82,20 +172,23 @@ auto mapped_contig_region(const CallWrapper& call)
     return contig_region(call.call.get());
 }
 
-bool is_missing(const VcfRecord::NucleotideSequence& allele)
-{
-    const std::string deleted_sequence {vcfspec::deletedBase};
-    return allele == vcfspec::missingValue || allele == deleted_sequence;
-}
-
 auto make_allele(const ContigRegion& region, const VcfRecord::NucleotideSequence& ref_allele,
                  const VcfRecord::NucleotideSequence& alt_allele)
 {
-    Variant tmp {"$", region.begin(), ref_allele, alt_allele};
-    if (!can_trim(tmp)) {
-        return ContigAllele {region, alt_allele};
+    if (alt_allele == "*") {
+        return ContigAllele {expand_lhs(region, -1), ""};
+    } else {
+        Variant tmp {"$", region.begin(), ref_allele, alt_allele};
+        if (!can_trim(tmp)) {
+            return ContigAllele {region, alt_allele};
+        }
+        return demote(trim(tmp).alt_allele());
     }
-    return demote(trim(tmp).alt_allele());
+}
+
+bool is_extractable_allele(const VcfRecord::NucleotideSequence& allele, const VcfRecord& call) noexcept
+{
+    return !(is_missing(allele) || (is_deleted(allele) && call.alt().size() > 1));
 }
 
 Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_calls,
@@ -107,11 +200,10 @@ Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_call
     assert(contains(region, encompassing_region(phased_calls)));
     const auto ploidy = extract_ploidy(phased_calls, sample);
     std::vector<Haplotype::Builder> haplotypes(ploidy, Haplotype::Builder {region, reference});
-    
     for (const auto& call : phased_calls) {
         const auto& genotype = extract_genotype(call, sample);
         for (unsigned i {0}; i < ploidy; ++i) {
-            if (!is_missing(genotype[i])) {
+            if (is_extractable_allele(genotype[i], call.call.get())) {
                 try {
                     haplotypes[i].push_back(make_allele(mapped_contig_region(call), call.call.get().ref(), genotype[i]));
                 } catch (const std::logic_error& e) {
@@ -120,7 +212,6 @@ Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_call
             }
         }
     }
-    
     return make_genotype(std::move(haplotypes));
 }
 
@@ -175,4 +266,5 @@ GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls,
     
     return result;
 }
+
 } // namespace octopus

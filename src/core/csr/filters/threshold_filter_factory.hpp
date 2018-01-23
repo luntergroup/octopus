@@ -42,7 +42,8 @@ private:
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
     std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,
                                                VariantCallFilter::OutputOptions output_config,
-                                               boost::optional<ProgressMeter&> progress) const override;
+                                               boost::optional<ProgressMeter&> progress,
+                                               VariantCallFilter::ConcurrencyPolicy threading) const override;
 };
 
 } // namespace csr

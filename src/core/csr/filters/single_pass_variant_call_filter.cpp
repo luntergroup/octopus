@@ -18,8 +18,9 @@ namespace octopus { namespace csr {
 SinglePassVariantCallFilter::SinglePassVariantCallFilter(FacetFactory facet_factory,
                                                          std::vector<MeasureWrapper> measures,
                                                          OutputOptions output_config,
+                                                         ConcurrencyPolicy threading,
                                                          boost::optional<ProgressMeter&> progress)
-: VariantCallFilter {std::move(facet_factory), measures, std::move(output_config)}
+: VariantCallFilter {std::move(facet_factory), measures, std::move(output_config), threading}
 , progress_ {progress}
 , annotate_measures_ {output_config.annotate_measures}
 {}
@@ -28,12 +29,16 @@ void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& des
 {
     assert(dest.is_header_written());
     if (progress_) progress_->start();
-    if (can_measure_single_call()) {
+    if (can_measure_multiple_blocks()) {
+        for (auto p = source.iterate(); p.first != p.second;) {
+            filter(read_next_blocks(p.first, p.second, samples), dest);
+        }
+    } else if (can_measure_single_call()) {
         auto p = source.iterate();
         std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { filter(call, dest); });
     } else {
         for (auto p = source.iterate(); p.first != p.second;) {
-            filter(get_next_block(p.first, p.second, samples), dest);
+            filter(read_next_block(p.first, p.second, samples), dest);
         }
     }
     if (progress_) progress_->stop();
@@ -44,26 +49,26 @@ void SinglePassVariantCallFilter::filter(const VcfRecord& call, VcfWriter& dest)
     filter(call, measure(call), dest);
 }
 
-void SinglePassVariantCallFilter::filter(const std::vector<VcfRecord>& calls, VcfWriter& dest) const
+void SinglePassVariantCallFilter::filter(const CallBlock& block, VcfWriter& dest) const
 {
-    const auto measures = measure(calls);
-    assert(measures.size() == calls.size());
-    for (auto tup : boost::combine(calls, measures)) {
+    filter(block, measure(block), dest);
+}
+
+void SinglePassVariantCallFilter::filter(const std::vector<CallBlock>& blocks, VcfWriter& dest) const
+{
+    const auto measures = measure(blocks);
+    assert(measures.size() == blocks.size());
+    for (auto tup : boost::combine(blocks, measures)) {
         filter(tup.get<0>(), tup.get<1>(), dest);
     }
 }
 
-template <typename T>
-struct MeasureValueVisitor : public boost::static_visitor<T>
+void SinglePassVariantCallFilter::filter(const CallBlock& block, const MeasureBlock& measures, VcfWriter& dest) const
 {
-    template <typename _> T operator()(const boost::optional<_>& value) const { return static_cast<T>(*value); }
-    template <typename _> T operator()(const _& value) const noexcept { return static_cast<T>(value); }
-};
-
-template <typename T>
-auto get_value(const Measure::ResultType& value)
-{
-    return boost::apply_visitor(MeasureValueVisitor<T> {}, value);
+    assert(measures.size() == block.size());
+    for (auto tup : boost::combine(block, measures)) {
+        filter(tup.get<0>(), tup.get<1>(), dest);
+    }
 }
 
 void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest) const

@@ -6,6 +6,7 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "facet.hpp"
 
@@ -14,7 +15,9 @@ namespace octopus { namespace csr {
 class Samples : public Facet
 {
 public:
-    using ResultType = std::vector<std::string>;
+    using ResultType = std::reference_wrapper<const std::vector<std::string>>;
+    
+    Samples() = default;
     
     Samples(std::vector<std::string> samples);
 

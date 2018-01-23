@@ -29,9 +29,10 @@ std::unique_ptr<VariantCallFilterFactory> UnsupervisedClusteringFilterFactory::d
 
 std::unique_ptr<VariantCallFilter> UnsupervisedClusteringFilterFactory::do_make(FacetFactory facet_factory,
                                                                                 VariantCallFilter::OutputOptions output_config,
-                                                                                boost::optional<ProgressMeter&> progress) const
+                                                                                boost::optional<ProgressMeter&> progress,
+                                                                                VariantCallFilter::ConcurrencyPolicy threading) const
 {
-    return std::make_unique<UnsupervisedClusteringFilter>(std::move(facet_factory), measures_, output_config, progress);
+    return std::make_unique<UnsupervisedClusteringFilter>(std::move(facet_factory), measures_, output_config, threading, progress);
 }
 
 } // namespace csr

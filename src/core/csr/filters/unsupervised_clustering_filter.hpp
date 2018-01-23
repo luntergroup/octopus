@@ -22,6 +22,7 @@ public:
     UnsupervisedClusteringFilter(FacetFactory facet_factory,
                                  std::vector<MeasureWrapper> measures,
                                  OutputOptions output_config,
+                                 ConcurrencyPolicy threading,
                                  boost::optional<ProgressMeter&> progress = boost::none);
     
     UnsupervisedClusteringFilter(const UnsupervisedClusteringFilter&)            = delete;

@@ -24,6 +24,7 @@ public:
         GenomicRegion::Size fetch_expansion = 0;
         boost::optional<GenomicRegion::Size> max_fetch_size = boost::none;
         boost::optional<GenomicRegion::Size> max_hint_gap = boost::none;
+        bool allow_unchecked_fetches = true;
     };
     
     BufferedReadPipe() = delete;
@@ -49,6 +50,8 @@ public:
     // inaccurate it will likely result in worse performance.
     void hint(std::vector<GenomicRegion> hints) const;
     
+    bool is_cached(const GenomicRegion& region) const noexcept;
+    
 private:
     using RegionMap = MappableSetMap<GenomicRegion::ContigName, GenomicRegion>;
     
@@ -57,11 +60,14 @@ private:
     mutable ReadMap buffer_;
     mutable boost::optional<GenomicRegion> buffered_region_;
     mutable RegionMap hints_;
+    mutable bool default_unchecked_fetch_overflowed_ = false;
+    mutable bool adjusted_unchecked_fetch_overflowed_ = false;
+    mutable boost::optional<GenomicRegion::Size> min_checked_fetch_size_ = boost::none;
     
-    bool requires_new_fetch(const GenomicRegion& request) const noexcept ;
     void setup_buffer(const GenomicRegion& request) const;
     GenomicRegion get_max_fetch_region(const GenomicRegion& request) const;
     GenomicRegion get_default_max_fetch_region(const GenomicRegion& request) const;
+    bool can_make_unchecked_fetch() const noexcept;
 };
 
 } // namespace octopus

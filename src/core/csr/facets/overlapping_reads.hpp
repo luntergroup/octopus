@@ -5,6 +5,7 @@
 #define overlapping_reads_hpp
 
 #include <string>
+#include <functional>
 
 #include "facet.hpp"
 #include "config/common.hpp"
@@ -15,7 +16,9 @@ namespace octopus { namespace csr {
 class OverlappingReads : public Facet
 {
 public:
-    using ResultType = ReadMap;
+    using ResultType = std::reference_wrapper<const ReadMap>;
+    
+    OverlappingReads() = default;
     
     OverlappingReads(ReadMap reads);
 
