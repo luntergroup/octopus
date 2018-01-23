@@ -24,7 +24,7 @@ std::unique_ptr<Measure> AlleleFrequency::do_clone() const
 
 Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).get();
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
     boost::optional<double> result {};
     for (const auto& p : assignments) {
         std::vector<Allele> alleles; bool has_ref;

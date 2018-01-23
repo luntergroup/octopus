@@ -177,7 +177,7 @@ auto compute_realignment_summary(const ReadRealignments& realignments, const Vcf
 
 Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).get();
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
     assert(assignments.size() == 1);
     const auto& sample = assignments.cbegin()->first;
     const auto& support = assignments.cbegin()->second;
@@ -205,7 +205,7 @@ Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const Facet
         }
         result.push_back(std::move(allele_realignments));
     }
-    const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads")).get();
+    const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
     const auto overlapping_reads = overlap_range(reads.at(sample), call);
     std::vector<AlignedRead> unassigned_reads {};
     if (assigned_reads.size() < size(overlapping_reads)) {
@@ -216,7 +216,7 @@ Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const Facet
                             std::back_inserter(unassigned_reads));
     }
     if (!unassigned_reads.empty()) {
-        const auto reference = get_value<ReferenceContext>(facets.at("ReferenceContext")).get();
+        const auto reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
         auto unassigned_realignments = safe_realign(unassigned_reads, reference);
         result.push_back(std::move(unassigned_realignments));
     } else {

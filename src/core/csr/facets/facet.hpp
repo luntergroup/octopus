@@ -71,10 +71,26 @@ private:
 
 bool operator==(const FacetWrapper& lhs, const FacetWrapper& rhs) noexcept;
 
+namespace detail {
+
+template <typename T>
+const T& get_value(std::reference_wrapper<const T> value) noexcept
+{
+    return value.get();
+}
+
+template <typename T>
+T get_value(const T& value)
+{
+    return value;
+}
+
+} // namespace detail
+
 template <typename F>
 decltype(auto) get_value(const FacetWrapper& facet)
 {
-    return boost::get<typename F::ResultType>(facet.get());
+    return detail::get_value(boost::get<typename F::ResultType>(facet.get()));
 }
 
 } // namespace csr

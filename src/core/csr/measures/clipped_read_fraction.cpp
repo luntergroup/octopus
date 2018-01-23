@@ -48,7 +48,7 @@ double clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
 
 Measure::ResultType ClippedReadFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto& reads = boost::get<OverlappingReads::ResultType>(facets.at("OverlappingReads").get());
+    const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
     return clipped_fraction(reads, mapped_region(call));
 }
 
