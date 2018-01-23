@@ -26,21 +26,28 @@
 
 namespace octopus {
 
+namespace {
+
+bool is_missing(const VcfRecord::NucleotideSequence& allele) noexcept
+{
+    
+    return allele == vcfspec::missingValue;
+}
+
+bool is_deleted(const VcfRecord::NucleotideSequence& allele) noexcept
+{
+    const std::string deleted_sequence {vcfspec::deletedBase};
+    return allele == deleted_sequence;
+}
+
 void remove_missing_alleles(std::vector<VcfRecord::NucleotideSequence>& genotype)
 {
-    genotype.erase(std::remove_if(std::begin(genotype), std::end(genotype),
-                                  [] (const auto& seq) { return seq == vcfspec::missingValue; }),
-                   std::end(genotype));
+    genotype.erase(std::remove_if(std::begin(genotype), std::end(genotype), is_missing), std::end(genotype));
 }
 
 void remove_deleted_alleles(std::vector<VcfRecord::NucleotideSequence>& genotype)
 {
-    genotype.erase(std::remove_if(std::begin(genotype), std::end(genotype),
-                                  [] (const auto& seq) {
-                                      static const std::string deleted_sequence {vcfspec::deletedBase};
-                                      return seq == deleted_sequence;
-                                  }),
-                   std::end(genotype));
+    genotype.erase(std::remove_if(std::begin(genotype), std::end(genotype), is_deleted), std::end(genotype));
 }
 
 auto num_matching_lhs_bases(const VcfRecord::NucleotideSequence& lhs, const VcfRecord::NucleotideSequence& rhs) noexcept
@@ -57,6 +64,8 @@ auto calculate_ref_pad_size(const VcfRecord& call, const VcfRecord::NucleotideSe
         return num_matching_lhs_bases(call.ref(), allele);
     }
 }
+
+} // namespace
 
 std::pair<std::vector<Allele>, bool>
 get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, const bool trim_padding)
@@ -163,12 +172,6 @@ auto mapped_contig_region(const CallWrapper& call)
     return contig_region(call.call.get());
 }
 
-bool is_missing(const VcfRecord::NucleotideSequence& allele)
-{
-    const std::string deleted_sequence {vcfspec::deletedBase};
-    return allele == vcfspec::missingValue || allele == deleted_sequence;
-}
-
 auto make_allele(const ContigRegion& region, const VcfRecord::NucleotideSequence& ref_allele,
                  const VcfRecord::NucleotideSequence& alt_allele)
 {
@@ -183,6 +186,11 @@ auto make_allele(const ContigRegion& region, const VcfRecord::NucleotideSequence
     }
 }
 
+bool is_extractable_allele(const VcfRecord::NucleotideSequence& allele, const VcfRecord& call) noexcept
+{
+    return !(is_missing(allele) || (is_deleted(allele) && call.alt().size() > 1));
+}
+
 Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_calls,
                                      const GenomicRegion& region,
                                      const SampleName& sample,
@@ -195,7 +203,7 @@ Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_call
     for (const auto& call : phased_calls) {
         const auto& genotype = extract_genotype(call, sample);
         for (unsigned i {0}; i < ploidy; ++i) {
-            if (!is_missing(genotype[i]) || call.call.get().alt().size() == 1) {
+            if (is_extractable_allele(genotype[i], call.call.get())) {
                 try {
                     haplotypes[i].push_back(make_allele(mapped_contig_region(call), call.call.get().ref(), genotype[i]));
                 } catch (const std::logic_error& e) {
@@ -258,4 +266,5 @@ GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls,
     
     return result;
 }
+
 } // namespace octopus
