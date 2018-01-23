@@ -11,6 +11,7 @@ ThreadPool::ThreadPool(const std::size_t n_threads)
 : stop_ {false}
 , n_idle_ {n_threads}
 {
+    workers_.reserve(n_threads);
     for (std::size_t i {0}; i < n_threads; ++i) {
         workers_.emplace_back([this] {
             std::function<void()> task;
