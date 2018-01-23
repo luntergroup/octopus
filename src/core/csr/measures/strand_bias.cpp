@@ -75,7 +75,7 @@ auto get_direction_counts(const HaplotypeSupportMap& support, const GenomicRegio
 
 auto sample_beta(const DirectionCounts& counts, const std::size_t n)
 {
-    static std::mt19937 generator {};
+    static thread_local std::mt19937 generator {42};
     std::beta_distribution<> beta {static_cast<double>(counts.forward), static_cast<double>(counts.reverse)};
     std::vector<double> result(n);
     std::generate_n(std::begin(result), n, [&] () { return beta(generator); });
