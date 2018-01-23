@@ -16,6 +16,7 @@
 #include "io/reference/reference_genome.hpp"
 #include "readpipe/buffered_read_pipe.hpp"
 #include "utils/genotype_reader.hpp"
+#include "utils/thread_pool.hpp"
 #include "facet.hpp"
 
 namespace octopus { namespace csr {
@@ -40,7 +41,7 @@ public:
     FacetWrapper make(const std::string& name, const CallBlock& block) const;
     FacetBlock make(const std::vector<std::string>& names, const CallBlock& block) const;
     std::vector<FacetBlock> make(const std::vector<std::string>& names, const std::vector<CallBlock>& blocks,
-                                 ExecutionPolicy threading = ExecutionPolicy::seq) const;
+                                 ThreadPool& workers) const;
     
 private:
     struct BlockData

@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <cassert>
 
-#include "utils/parallel_transform.hpp"
 #include "exceptions/program_error.hpp"
+#include "utils/parallel_transform.hpp"
 #include "overlapping_reads.hpp"
 #include "read_assignments.hpp"
 #include "reference_context.hpp"
@@ -70,7 +70,7 @@ FacetFactory::FacetBlock FacetFactory::make(const std::vector<std::string>& name
 
 std::vector<FacetFactory::FacetBlock> FacetFactory::make(const std::vector<std::string>& names,
                                                          const std::vector<CallBlock>& blocks,
-                                                         ExecutionPolicy threading) const
+                                                         ThreadPool& workers) const
 {
     if (blocks.empty()) return {};
     std::vector<BlockData> data {};
@@ -80,9 +80,10 @@ std::vector<FacetFactory::FacetBlock> FacetFactory::make(const std::vector<std::
     }
     std::vector<FacetBlock> result {};
     result.reserve(blocks.size());
-    if (threading == ExecutionPolicy::par) {
-        parallel_transform(std::cbegin(data), std::cend(data), std::back_inserter(result),
-                           [&] (const auto& block_data) { return make(names, block_data); });
+    if (blocks.size() > 1 && !workers.empty()) {
+        transform(std::cbegin(data), std::cend(data), std::back_inserter(result),
+                  [&] (const auto& block_data) { return make(names, block_data); },
+                  workers);
     } else {
         std::transform(std::cbegin(data), std::cend(data), std::back_inserter(result),
                        [&] (const auto& block_data) { return make(names, block_data); });
