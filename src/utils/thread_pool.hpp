@@ -63,7 +63,7 @@ auto ThreadPool::push(F&& f, Args&&... args) -> std::future<std::result_of_t<F(A
     {
         std::lock_guard<std::mutex> lk {mutex_};
         if (stop_) throw std::runtime_error {"ThreadPool: calling push on stopped pool"};
-        tasks_.emplace([task] () mutable { (*task)(); });
+        tasks_.emplace([task] () { (*task)(); });
     }
     cv_.notify_one();
     return result;
