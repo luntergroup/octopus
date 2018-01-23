@@ -18,8 +18,8 @@ std::unique_ptr<Measure> GCContent::do_clone() const
 
 Measure::ResultType GCContent::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto reference = boost::get<ReferenceContext::ResultType>(facets.at("ReferenceContext").get());
-    return utils::gc_content(reference.sequence());
+    const auto reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
+    return utils::gc_content(reference.get().sequence());
 }
 
 std::string GCContent::do_name() const

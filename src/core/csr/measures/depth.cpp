@@ -21,7 +21,7 @@ std::unique_ptr<Measure> Depth::do_clone() const
 Measure::ResultType Depth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (recalculate_) {
-        const auto reads = boost::get<OverlappingReads::ResultType>(facets.at("OverlappingReads").get());
+        const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads")).get();
         return static_cast<std::size_t>(count_overlapped(reads, call));
     } else {
         return static_cast<std::size_t>(std::stoull(call.info_value(vcfspec::info::combinedReadDepth).front()));

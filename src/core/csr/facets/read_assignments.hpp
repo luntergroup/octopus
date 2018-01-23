@@ -6,6 +6,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <functional>
 
 #include <boost/optional.hpp>
 
@@ -22,14 +23,17 @@ class ReadAssignments : public Facet
 {
 public:
     using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
-    using ResultType = std::unordered_map<SampleName, HaplotypeSupportMap>;
+    using SampleSupportMap = std::unordered_map<SampleName, HaplotypeSupportMap>;
+    using ResultType = std::reference_wrapper<const SampleSupportMap>;
+    
+    ReadAssignments() = default;
     
     ReadAssignments(const ReferenceGenome& reference, const GenotypeMap& genotypes, const ReadMap& reads);
     
 private:
     static const std::string name_;
     
-    ResultType result_;
+    SampleSupportMap result_;
     
     const std::string& do_name() const noexcept override { return name_; }
     Facet::ResultType do_get() const override;

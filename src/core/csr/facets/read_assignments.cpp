@@ -58,7 +58,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
 
 Facet::ResultType ReadAssignments::do_get() const
 {
-    return result_;
+    return std::cref(result_);
 }
 
 } // namespace csr

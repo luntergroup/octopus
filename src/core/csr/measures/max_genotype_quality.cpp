@@ -22,7 +22,7 @@ std::unique_ptr<Measure> MaxGenotypeQuality::do_clone() const
 
 Measure::ResultType MaxGenotypeQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto samples = boost::get<Samples::ResultType>(facets.at("Samples").get());
+    const auto& samples = get_value<Samples>(facets.at("Samples")).get();
     boost::optional<double> result {};
     for (const auto& sample : samples) {
         static const std::string gq_field {vcfspec::format::conditionalQuality};

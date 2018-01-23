@@ -21,11 +21,11 @@ namespace octopus { namespace csr {
 class Facet : public Equitable<Facet>
 {
 public:
-    using ResultType = boost::variant<ReadMap,
-                                      std::unordered_map<SampleName, HaplotypeSupportMap>,
-                                      std::string,
-                                      std::vector<std::string>,
-                                      Haplotype
+    using ResultType = boost::variant<std::reference_wrapper<const ReadMap>,
+                                      std::reference_wrapper<const std::unordered_map<SampleName, HaplotypeSupportMap>>,
+                                      std::reference_wrapper<const std::string>,
+                                      std::reference_wrapper<const std::vector<std::string>>,
+                                      std::reference_wrapper<const Haplotype>
                                      >;
     
     Facet() = default;
@@ -70,6 +70,12 @@ private:
 };
 
 bool operator==(const FacetWrapper& lhs, const FacetWrapper& rhs) noexcept;
+
+template <typename F>
+decltype(auto) get_value(const FacetWrapper& facet)
+{
+    return boost::get<typename F::ResultType>(facet.get());
+}
 
 } // namespace csr
 } // namespace octopus

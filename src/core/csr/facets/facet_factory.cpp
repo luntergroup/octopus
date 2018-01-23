@@ -6,6 +6,8 @@
 #include <utility>
 #include <memory>
 #include <algorithm>
+#include <iterator>
+#include <array>
 #include <cassert>
 
 #include "exceptions/program_error.hpp"
@@ -93,19 +95,29 @@ std::vector<FacetFactory::FacetBlock> FacetFactory::make(const std::vector<std::
 
 // private methods
 
+namespace {
+
+template <typename Facet>
+decltype(auto) name() noexcept
+{
+    return Facet().name();
+}
+
+} // namespace
+
 void FacetFactory::setup_facet_makers()
 {
-    facet_makers_["OverlappingReads"] = [] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<OverlappingReads>()] = [] (const BlockData& block) -> FacetWrapper
     {
         assert(block.reads);
         return {std::make_unique<OverlappingReads>(*block.reads)};
     };
-    facet_makers_["ReadAssignments"] = [this] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<ReadAssignments>()] = [this] (const BlockData& block) -> FacetWrapper
     {
         assert(block.reads && block.genotypes);
         return {std::make_unique<ReadAssignments>(reference_, *block.genotypes, *block.reads)};
     };
-    facet_makers_["ReferenceContext"] = [this] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<ReferenceContext>()] = [this] (const BlockData& block) -> FacetWrapper
     {
         if (block.region) {
             constexpr GenomicRegion::Size context_size {50};
@@ -114,7 +126,7 @@ void FacetFactory::setup_facet_makers()
             return {nullptr};
         }
     };
-    facet_makers_["Samples"] = [this] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<Samples>()] = [this] (const BlockData& block) -> FacetWrapper
     {
         return {std::make_unique<Samples>(read_pipe_.source().samples())};
     };
@@ -122,7 +134,8 @@ void FacetFactory::setup_facet_makers()
 
 bool requires_reads(const std::string& facet) noexcept
 {
-    return facet == "OverlappingReads" || facet == "ReadAssignments";
+    const static std::array<std::string, 2> read_facets {name<OverlappingReads>(), name<ReadAssignments>()};
+    return std::find(std::cbegin(read_facets), std::cend(read_facets), facet) != std::cend(read_facets);
 }
 
 bool requires_reads(const std::vector<std::string>& facets) noexcept
@@ -132,7 +145,8 @@ bool requires_reads(const std::vector<std::string>& facets) noexcept
 
 bool requires_genotypes(const std::string& facet) noexcept
 {
-    return facet == "ReadAssignments";
+    const static std::array<std::string, 1> genotype_facets {name<ReadAssignments>()};
+    return std::find(std::cbegin(genotype_facets), std::cend(genotype_facets), facet) != std::cend(genotype_facets);
 }
 
 bool requires_genotypes(const std::vector<std::string>& facets) noexcept

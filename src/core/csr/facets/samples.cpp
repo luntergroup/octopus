@@ -13,7 +13,7 @@ Samples::Samples(std::vector<std::string> samples) : samples_ {std::move(samples
 
 Facet::ResultType Samples::do_get() const
 {
-    return samples_;
+    return std::cref(samples_);
 }
 
 } // namespace csr

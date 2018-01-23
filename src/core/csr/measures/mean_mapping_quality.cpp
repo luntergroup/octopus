@@ -24,7 +24,7 @@ std::unique_ptr<Measure> MeanMappingQuality::do_clone() const
 Measure::ResultType MeanMappingQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (recalculate_) {
-        const auto reads = boost::get<OverlappingReads::ResultType>(facets.at("OverlappingReads").get());
+        const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads")).get();
         assert(!reads.empty());
         return rmq_mapping_quality(reads, mapped_region(call));
     } else {

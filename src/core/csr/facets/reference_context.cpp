@@ -10,12 +10,12 @@ namespace octopus { namespace csr {
 const std::string ReferenceContext::name_ {"ReferenceContext"};
 
 ReferenceContext::ReferenceContext(const ReferenceGenome& reference, GenomicRegion region)
-: result_ {region, reference}
+: result_ {std::make_unique<Haplotype>(region, reference)}
 {}
 
 Facet::ResultType ReferenceContext::do_get() const
 {
-    return result_;
+    return std::cref(*result_);
 }
 
 } // namespace csr
