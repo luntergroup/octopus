@@ -182,6 +182,9 @@ std::vector<VariantCallFilter::MeasureBlock> VariantCallFilter::measure(const st
     result.reserve(blocks.size());
     if (is_multithreaded()) {
         const auto facets = compute_facets(blocks);
+        if (debug_log_) {
+            stream(*debug_log_) << "Measuring " << blocks.size() << " blocks with " << workers_.size() << " threads";
+        }
         transform(std::cbegin(blocks), std::cend(blocks), std::cbegin(facets), std::back_inserter(result),
                   [this] (const auto& block, const auto& block_facets) {
                       return this->measure(block, block_facets);
@@ -290,6 +293,9 @@ std::vector<Measure::FacetMap> VariantCallFilter::compute_facets(const std::vect
 
 VariantCallFilter::MeasureBlock VariantCallFilter::measure(const CallBlock& block, const Measure::FacetMap& facets) const
 {
+    if (debug_log_ && !block.empty()) {
+        stream(*debug_log_) << "Measuring block " << encompassing_region(block) << " containing " << block.size() << " calls";
+    }
     MeasureBlock result(block.size());
     std::transform(std::cbegin(block), std::cend(block), std::begin(result),
                    [&] (const auto& call) { return measure(call, facets); });
