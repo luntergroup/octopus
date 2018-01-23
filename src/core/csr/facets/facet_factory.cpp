@@ -8,10 +8,10 @@
 #include <algorithm>
 #include <iterator>
 #include <array>
+#include <future>
 #include <cassert>
 
 #include "exceptions/program_error.hpp"
-#include "utils/parallel_transform.hpp"
 #include "overlapping_reads.hpp"
 #include "read_assignments.hpp"
 #include "reference_context.hpp"
@@ -51,7 +51,7 @@ class UnknownFacet : public ProgramError
     {
         return std::string {"Trying to make unknown Facet "} + name_;
     }
-    
+
 public:
     UnknownFacet(std::string name) : name_ {std::move(name)} {}
     std::string name_;
@@ -70,31 +70,6 @@ FacetFactory::FacetBlock FacetFactory::make(const std::vector<std::string>& name
     return make(names, block_data);
 }
 
-std::vector<FacetFactory::FacetBlock> FacetFactory::make(const std::vector<std::string>& names,
-                                                         const std::vector<CallBlock>& blocks,
-                                                         ThreadPool& workers) const
-{
-    if (blocks.empty()) return {};
-    std::vector<BlockData> data {};
-    data.reserve(blocks.size());
-    for (const auto& block : blocks) {
-        data.push_back(make_block_data(names, block));
-    }
-    std::vector<FacetBlock> result {};
-    result.reserve(blocks.size());
-    if (blocks.size() > 1 && !workers.empty()) {
-        transform(std::cbegin(data), std::cend(data), std::back_inserter(result),
-                  [&] (const auto& block_data) { return make(names, block_data); },
-                  workers);
-    } else {
-        std::transform(std::cbegin(data), std::cend(data), std::back_inserter(result),
-                       [&] (const auto& block_data) { return make(names, block_data); });
-    }
-    return result;
-}
-
-// private methods
-
 namespace {
 
 template <typename Facet>
@@ -103,7 +78,73 @@ decltype(auto) name() noexcept
     return Facet().name();
 }
 
+bool requires_reads(const std::string& facet) noexcept
+{
+    const static std::array<std::string, 2> read_facets{name<OverlappingReads>(), name<ReadAssignments>()};
+    return std::find(std::cbegin(read_facets), std::cend(read_facets), facet) != std::cend(read_facets);
+}
+
+bool requires_reads(const std::vector<std::string>& facets) noexcept
+{
+    return std::any_of(std::cbegin(facets), std::cend(facets), [](const auto& facet) { return requires_reads(facet); });
+}
+
+bool requires_genotypes(const std::string& facet) noexcept
+{
+    const static std::array<std::string, 1> genotype_facets{name<ReadAssignments>()};
+    return std::find(std::cbegin(genotype_facets), std::cend(genotype_facets), facet) != std::cend(genotype_facets);
+}
+
+bool requires_genotypes(const std::vector<std::string>& facets) noexcept
+{
+    return std::any_of(std::cbegin(facets), std::cend(facets),
+                       [](const auto& facet) { return requires_genotypes(facet); });
+}
+
 } // namespace
+
+std::vector<FacetFactory::FacetBlock> FacetFactory::make(const std::vector<std::string>& names,
+                                                         const std::vector<CallBlock>& blocks,
+                                                         ThreadPool& workers) const
+{
+    if (blocks.empty()) return {};
+    std::vector<FacetBlock> result {};
+    result.reserve(blocks.size());
+    if (blocks.size() > 1 && !workers.empty()) {
+        std::vector<std::future<FacetBlock>> futures {};
+        futures.reserve(blocks.size());
+        const auto fetch_reads = requires_reads(names);
+        const auto fetch_genotypes = requires_genotypes(names);
+        const auto& samples = read_pipe_.source().samples();
+        for (const auto& block : blocks) {
+            // It's faster to fetch reads serially from left to right, so do this outside the thread pool
+            BlockData data {};
+            if (!block.empty()) {
+                data.region = encompassing_region(block);
+                if (fetch_reads) {
+                    data.reads = read_pipe_.fetch_reads(*data.region);
+                }
+            }
+            futures.push_back(workers.push([this, &names, data {std::move(data)}, &block, &samples, fetch_genotypes] () mutable {
+                if (fetch_genotypes) {
+                    data.genotypes = extract_genotypes(block, samples, reference_);
+                }
+                return this->make(names, data);
+            }));
+        }
+        for (auto& fut : futures) {
+            result.push_back(fut.get());
+        }
+    } else {
+        for (const auto& block : blocks) {
+            const auto data = make_block_data(names, block);
+            result.push_back(make(names, data));
+        }
+    }
+    return result;
+}
+
+// private methods
 
 void FacetFactory::setup_facet_makers()
 {
@@ -130,28 +171,6 @@ void FacetFactory::setup_facet_makers()
     {
         return {std::make_unique<Samples>(read_pipe_.source().samples())};
     };
-}
-
-bool requires_reads(const std::string& facet) noexcept
-{
-    const static std::array<std::string, 2> read_facets {name<OverlappingReads>(), name<ReadAssignments>()};
-    return std::find(std::cbegin(read_facets), std::cend(read_facets), facet) != std::cend(read_facets);
-}
-
-bool requires_reads(const std::vector<std::string>& facets) noexcept
-{
-    return std::any_of(std::cbegin(facets), std::cend(facets), [] (const auto& facet) { return requires_reads(facet); });
-}
-
-bool requires_genotypes(const std::string& facet) noexcept
-{
-    const static std::array<std::string, 1> genotype_facets {name<ReadAssignments>()};
-    return std::find(std::cbegin(genotype_facets), std::cend(genotype_facets), facet) != std::cend(genotype_facets);
-}
-
-bool requires_genotypes(const std::vector<std::string>& facets) noexcept
-{
-    return std::any_of(std::cbegin(facets), std::cend(facets), [] (const auto& facet) { return requires_genotypes(facet); });
 }
 
 FacetWrapper FacetFactory::make(const std::string& name, const BlockData& block) const

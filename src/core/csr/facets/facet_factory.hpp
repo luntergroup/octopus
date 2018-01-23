@@ -42,7 +42,7 @@ public:
     FacetBlock make(const std::vector<std::string>& names, const CallBlock& block) const;
     std::vector<FacetBlock> make(const std::vector<std::string>& names, const std::vector<CallBlock>& blocks,
                                  ThreadPool& workers) const;
-    
+
 private:
     struct BlockData
     {
