@@ -84,15 +84,12 @@ constexpr auto base_hash(const char b) noexcept
     }
 }
 
-auto repeat_hash(const Haplotype& haplotype, const tandem::Repeat& repeat)
+auto repeat_hash(const Haplotype& haplotype, const tandem::Repeat& repeat) noexcept
 {
     const auto& sequence = haplotype.sequence();
     const auto first = std::next(std::begin(sequence), repeat.pos);
     const auto last = std::next(first, repeat.period);
-    return std::accumulate(first, last, std::int8_t {0},
-                           [](const auto& curr, const auto b) {
-                               return curr + base_hash(b);
-                           });
+    return std::accumulate(first, last, std::int8_t {0}, [] (const auto& curr, const auto b) { return curr + base_hash(b); });
 }
 
 template <typename C, typename T>
@@ -111,6 +108,19 @@ void set_priors(const std::vector<T1>& run_lengths, std::vector<T2>& result, con
                    });
 }
 
+auto make_substitution_mask(const Haplotype& haplotype)
+{
+    const auto cigar = haplotype.cigar();
+    std::vector<bool> result(sequence_size(haplotype));
+    auto mask_itr = std::begin(result);
+    for (const auto& op : cigar) {
+        if (op.advances_sequence()) {
+            mask_itr = std::fill_n(mask_itr, op.size(), op.flag() == CigarOperation::Flag::substitution);
+        }
+    }
+    return result;
+}
+
 } // namespace
 
 void X10SnvErrorModel::do_evaluate(const Haplotype& haplotype,
@@ -125,11 +135,11 @@ void X10SnvErrorModel::do_evaluate(const Haplotype& haplotype,
     std::array<std::vector<std::int8_t>, Max_period> repeat_masks {};
     repeat_masks.fill(std::vector<std::int8_t>(num_bases, 0));
     for (const auto& repeat : repeats) {
-        std::fill_n(next(begin(repeat_masks[repeat.period - 1]), repeat.pos), repeat.length,
-                    repeat_hash(haplotype, repeat));
+        std::fill_n(next(begin(repeat_masks[repeat.period - 1]), repeat.pos), repeat.length, repeat_hash(haplotype, repeat));
     }
-    forward_snv_priors.assign(num_bases, maxQualities_.front().front());
-    reverse_snv_priors.assign(num_bases, maxQualities_.front().front());
+    const auto max_quality = maxQualities_.front().front();
+    forward_snv_priors.assign(num_bases, max_quality);
+    reverse_snv_priors.assign(num_bases, max_quality);
     std::vector<unsigned> runs(num_bases);
     constexpr unsigned Max_homopolymer_gap {3};
     for (std::int8_t i {1}; i < 5; ++i) {
@@ -148,6 +158,11 @@ void X10SnvErrorModel::do_evaluate(const Haplotype& haplotype,
         count_runs(crbegin(repeat_mask), crend(repeat_mask), rbegin(runs), max_gap);
         set_priors(runs, reverse_snv_priors, maxQualities_[i]);
     }
+    const auto substitution_mask = make_substitution_mask(haplotype);
+    std::transform(std::cbegin(forward_snv_priors), std::cend(forward_snv_priors), std::cbegin(substitution_mask),
+                   std::begin(forward_snv_priors), [=] (auto q, auto b) { return !b ? q : max_quality; });
+    std::transform(std::cbegin(reverse_snv_priors), std::cend(reverse_snv_priors), std::cbegin(substitution_mask),
+                   std::begin(reverse_snv_priors), [=] (auto q, auto b) { return !b ? q : max_quality; });
     const auto& sequence = haplotype.sequence();
     forward_snv_mask.resize(num_bases);
     std::rotate_copy(crbegin(sequence), next(crbegin(sequence)), crend(sequence), rbegin(forward_snv_mask));
