@@ -35,7 +35,7 @@ OutputIt count_runs(ForwardIt first, ForwardIt last, OutputIt result,
     if (first == last) return result;
     auto prev = *first;
     auto count = (prev > 0) ? 1 : 0;
-    unsigned gap{0};
+    unsigned gap {0};
     *result++ = 0;
     return std::transform(std::next(first), last, result,
                           [&count, &gap, &prev, max_gap](const auto x) -> ValueType {
@@ -84,15 +84,12 @@ constexpr auto base_hash(const char b) noexcept
     }
 }
 
-auto repeat_hash(const Haplotype& haplotype, const tandem::Repeat& repeat)
+auto repeat_hash(const Haplotype& haplotype, const tandem::Repeat& repeat) noexcept
 {
     const auto& sequence = haplotype.sequence();
     const auto first = std::next(std::begin(sequence), repeat.pos);
     const auto last = std::next(first, repeat.period);
-    return std::accumulate(first, last, std::int8_t {0},
-                           [](const auto& curr, const auto b) {
-                               return curr + base_hash(b);
-                           });
+    return std::accumulate(first, last, std::int8_t {0}, [] (const auto& curr, const auto b) { return curr + base_hash(b); });
 }
 
 template <typename C, typename T>
@@ -111,8 +108,6 @@ void set_priors(const std::vector<T1>& run_lengths, std::vector<T2>& result, con
                    });
 }
 
-} // namespace
-
 auto make_substitution_mask(const Haplotype& haplotype)
 {
     const auto cigar = haplotype.cigar();
@@ -125,6 +120,8 @@ auto make_substitution_mask(const Haplotype& haplotype)
     }
     return result;
 }
+
+} // namespace
 
 void HiSeqSnvErrorModel::do_evaluate(const Haplotype& haplotype,
                                      MutationVector& forward_snv_mask, PenaltyVector& forward_snv_priors,
