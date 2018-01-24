@@ -756,17 +756,26 @@ bool Caller::refcalls_requested() const noexcept
     return parameters_.refcall_type != RefCallType::none;
 }
 
+bool check_reference(const Variant& v, const ReferenceGenome& reference)
+{
+    return ref_sequence(v) == reference.fetch_sequence(mapped_region(v));
+}
+
+bool check_reference(const std::vector<Variant>& variants, const ReferenceGenome& reference)
+{
+    return std::all_of(std::cbegin(variants), std::cend(variants), [&] (const auto& v) { return check_reference(v, reference); });
+}
+
 MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion& region) const
 {
     if (debug_log_) stream(*debug_log_) << "Generating candidate variants in region " << region;
     auto raw_candidates = candidate_generator_.generate(region);
     if (debug_log_) debug::print_left_aligned_candidates(stream(*debug_log_), raw_candidates, reference_);
     auto final_candidates = unique_left_align(std::move(raw_candidates), reference_);
+    assert(check_reference(final_candidates, reference_));
     candidate_generator_.clear();
-    return MappableFlatSet<Variant> {
-        std::make_move_iterator(std::begin(final_candidates)),
-        std::make_move_iterator(std::end(final_candidates))
-    };
+    return MappableFlatSet<Variant> {std::make_move_iterator(std::begin(final_candidates)),
+                                     std::make_move_iterator(std::end(final_candidates))};
 }
 
 HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
