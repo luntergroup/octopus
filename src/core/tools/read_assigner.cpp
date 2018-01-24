@@ -15,7 +15,7 @@
 #include "utils/maths.hpp"
 #include "utils/kmer_mapper.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
-#include "core/models/mutation/error_model_factory.hpp"
+#include "core/models/error/error_model_factory.hpp"
 
 namespace octopus {
 
