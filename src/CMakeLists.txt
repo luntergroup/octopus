@@ -168,6 +168,9 @@ set(UTILS_SOURCES
     utils/genotype_reader.hpp
     utils/genotype_reader.cpp
     utils/beta_distribution.hpp
+    utils/parallel_transform.hpp
+    utils/thread_pool.hpp
+    utils/thread_pool.cpp
 )
 
 set(CORE_SOURCES
@@ -207,8 +210,6 @@ set(CORE_SOURCES
     core/tools/vcf_header_factory.cpp
     core/tools/vcf_record_factory.hpp
     core/tools/vcf_record_factory.cpp
-    core/tools/read_assigner.hpp
-    core/tools/read_assigner.cpp
 
     core/csr/facets/facet.hpp
     core/csr/facets/facet.cpp
@@ -239,8 +240,13 @@ set(CORE_SOURCES
     core/csr/filters/threshold_filter_factory.cpp
     core/csr/filters/unsupervised_clustering_filter_factory.hpp
     core/csr/filters/unsupervised_clustering_filter_factory.cpp
+    core/csr/filters/passing_filter.hpp
+    core/csr/filters/passing_filter.cpp
+    core/csr/filters/training_filter_factory.hpp
+    core/csr/filters/training_filter_factory.cpp
     
     core/csr/measures/measure.hpp
+    core/csr/measures/measure.cpp
     core/csr/measures/quality.hpp
     core/csr/measures/quality.cpp
     core/csr/measures/depth.hpp
@@ -274,6 +280,10 @@ set(CORE_SOURCES
     core/csr/measures/measures_fwd.hpp
     core/csr/measures/measure_factory.hpp
     core/csr/measures/measure_factory.cpp
+    core/csr/measures/realignments.hpp
+    core/csr/measures/realignments.cpp
+    core/csr/measures/unassigned_read_fraction.hpp
+    core/csr/measures/unassigned_read_fraction.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
@@ -335,6 +345,10 @@ set(CORE_SOURCES
     core/tools/coretools.hpp
     core/tools/haplotype_filter.hpp
     core/tools/haplotype_filter.cpp
+    core/tools/read_assigner.hpp
+    core/tools/read_assigner.cpp
+    core/tools/read_realigner.hpp
+    core/tools/read_realigner.cpp
 
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp

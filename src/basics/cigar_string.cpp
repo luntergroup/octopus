@@ -11,6 +11,8 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "utils/append.hpp"
+
 namespace octopus {
 
 CigarOperation::CigarOperation(const Size size, const Flag flag) noexcept
@@ -160,32 +162,31 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
     const auto last_op = std::cend(cigar);
     
     while (op_it != last_op && (offset >= op_it->size() || !pred(*op_it))) {
-        if (pred(*op_it)) offset -= op_it->size();
+        if (pred(*op_it)) {
+            offset -= op_it->size();
+        }
         ++op_it;
     }
     if (op_it != last_op) {
         const auto remainder = op_it->size() - offset;
         if (remainder >= size) {
             result.emplace_back(size, op_it->flag());
-            result.shrink_to_fit();
             return result;
         }
         result.emplace_back(remainder, op_it->flag());
         size -= remainder;
         ++op_it;
     }
-    
     while (op_it != last_op && size > 0 && (size >= op_it->size() || !pred(*op_it))) {
         result.emplace_back(*op_it);
-        if (pred(*op_it)) size -= op_it->size();
+        if (pred(*op_it)) {
+            size -= op_it->size();
+        }
         ++op_it;
     }
     if (op_it != last_op && size > 0) {
         result.emplace_back(size, op_it->flag());
     }
-    
-    result.shrink_to_fit();
-    
     return result;
 }
 
@@ -202,6 +203,32 @@ CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset
 CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
     return copy(cigar, offset, size, [](const auto& op) { return op.advances_sequence(); });
+}
+
+std::vector<CigarOperation::Flag> decompose(const CigarString& cigar)
+{
+    std::vector<CigarOperation::Flag> result {};
+    result.reserve(sum_operation_sizes(cigar));
+    for (const auto& op : cigar) {
+        utils::append(result, op.size(), op.flag());
+    }
+    return result;
+}
+
+CigarString collapse_matches(const CigarString& cigar)
+{
+    CigarString result {};
+    result.reserve(cigar.size());
+    for (auto match_end_itr = std::begin(cigar); match_end_itr != std::cend(cigar); ) {
+        const auto match_begin_itr = std::find_if(match_end_itr, std::end(cigar), is_match);
+        result.insert(std::cend(result), match_end_itr, match_begin_itr);
+        if (match_begin_itr == std::cend(cigar)) break;
+        match_end_itr = std::find_if_not(std::next(match_begin_itr), std::end(cigar), is_match);
+        auto match_size = std::accumulate(match_begin_itr, match_end_itr, 0,
+                                          [] (auto curr, const auto& op) { return curr + op.size(); });
+        result.emplace_back(match_size, CigarOperation::Flag::alignmentMatch);
+    }
+    return result;
 }
 
 bool operator==(const CigarOperation& lhs, const CigarOperation& rhs) noexcept

@@ -154,6 +154,11 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::legacy()
     return components_.legacy;
 }
 
+boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::filter_request() const
+{
+    return components_.filter_request_;
+}
+
 bool GenomeCallingComponents::sites_only() const noexcept
 {
     return components_.sites_only;
@@ -404,6 +409,42 @@ auto generate_temp_output_path(const fs::path& temp_directory)
     return temp_directory / "octopus_unfiltered.bcf";
 }
 
+bool all_samples_in_vcf(std::vector<SampleName> samples, const VcfReader& in)
+{
+    std::sort(std::begin(samples), std::end(samples));
+    auto vcf_samples = in.fetch_header().samples();
+    std::sort(std::begin(vcf_samples), std::end(vcf_samples));
+    return samples == vcf_samples;
+}
+
+bool all_samples_in_vcf(const std::vector<SampleName>& samples, const fs::path& vcf_in)
+{
+    const VcfReader tmp {vcf_in};
+    return all_samples_in_vcf(samples, tmp);
+}
+
+class InputVCFError : public UserError
+{
+    std::string do_where() const override { return "GenomeCallingComponents"; }
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "the VCF file you specified ";
+        ss << vcf_path_;
+        ss << " contains samples not in the input BAM files";
+        return ss.str();
+    }
+    std::string do_help() const override
+    {
+        return "ensure the input VCF file samples match the input BAM samples";
+    }
+    
+    fs::path vcf_path_;
+
+public:
+    InputVCFError(fs::path vcf_path) : vcf_path_ {std::move(vcf_path)} {}
+};
+
 } // namespace
 
 GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, ReadManager&& read_manager,
@@ -425,12 +466,18 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , sites_only {options::call_sites_only(options)}
 , filtered_output {}
 , legacy {}
+, filter_request_ {}
 {
     drop_unused_samples(this->samples, this->read_manager);
     setup_progress_meter(options);
     set_read_buffer_size(options);
     setup_writers(options);
     setup_filter_read_pipe(options);
+    filter_request_ = options::filter_request(options);
+    if (filter_request_ && !all_samples_in_vcf(samples, *filter_request_)) {
+        if (temp_directory) fs::remove_all(*temp_directory);
+        throw InputVCFError {*filter_request_};
+    }
 }
 
 void GenomeCallingComponents::Components::setup_progress_meter(const options::OptionMap& options)

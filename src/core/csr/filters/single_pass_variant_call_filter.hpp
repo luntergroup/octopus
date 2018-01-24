@@ -22,6 +22,7 @@ public:
     SinglePassVariantCallFilter(FacetFactory facet_factory,
                                 std::vector<MeasureWrapper> measures,
                                 OutputOptions output_config,
+                                ConcurrencyPolicy threading,
                                 boost::optional<ProgressMeter&> progress);
     
     SinglePassVariantCallFilter(const SinglePassVariantCallFilter&)            = delete;
@@ -31,16 +32,22 @@ public:
     
     virtual ~SinglePassVariantCallFilter() override = default;
     
+protected:
+    std::vector<std::string> measure_names_;
+    
 private:
     boost::optional<ProgressMeter&> progress_;
     mutable boost::optional<GenomicRegion::ContigName> current_contig_;
+    bool annotate_measures_;
     
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
     
     void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const override;
     
     void filter(const VcfRecord& call, VcfWriter& dest) const;
-    void filter(const std::vector<VcfRecord>& calls, VcfWriter& dest) const;
+    void filter(const CallBlock& block, VcfWriter& dest) const;
+    void filter(const std::vector<CallBlock>& blocks, VcfWriter& dest) const;
+    void filter(const CallBlock& block, const MeasureBlock & measures, VcfWriter& dest) const;
     void filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest) const;
     void log_progress(const GenomicRegion& region) const;
 };

@@ -48,15 +48,7 @@ double clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
 
 Measure::ResultType ClippedReadFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    auto reads = boost::get<OverlappingReads::ResultType>(facets.at("OverlappingReads").get());
-    // Only use samples genotyped for an ALT allele
-    for (auto itr = std::cbegin(reads); itr != std::cend(reads);) {
-        if (call.is_homozygous_ref(itr->first)) {
-            itr = reads.erase(itr);
-        } else {
-            ++itr;
-        }
-    }
+    const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
     return clipped_fraction(reads, mapped_region(call));
 }
 

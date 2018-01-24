@@ -35,7 +35,9 @@ VCF_SPEC_CONSTANT highMappingQualityZeroCount {"MQ0"};
 VCF_SPEC_CONSTANT lowQualityByDepth {"QD"};
 VCF_SPEC_CONSTANT strandBias {"SB"};
 VCF_SPEC_CONSTANT filteredReadFraction {"FRF"};
+VCF_SPEC_CONSTANT highGCRegion {"GC"};
 VCF_SPEC_CONSTANT lowGQ {"GQ"};
+VCF_SPEC_CONSTANT highClippedReadFraction {"CRF"};
 
 } // namespace filter
 

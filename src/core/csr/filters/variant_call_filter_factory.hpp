@@ -28,15 +28,18 @@ public:
     
     std::unique_ptr<VariantCallFilterFactory> clone() const;
     
-    std::unique_ptr<VariantCallFilter> make(const ReferenceGenome& reference, BufferedReadPipe read_pipe,
+    std::unique_ptr<VariantCallFilter> make(const ReferenceGenome& reference,
+                                            BufferedReadPipe read_pipe,
                                             VariantCallFilter::OutputOptions output_config,
-                                            boost::optional<ProgressMeter&> progress = boost::none) const;
+                                            boost::optional<ProgressMeter&> progress = boost::none,
+                                            boost::optional<unsigned> max_threads = 1) const;
     
 private:
     virtual std::unique_ptr<VariantCallFilterFactory> do_clone() const = 0;
     virtual std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,
                                                        VariantCallFilter::OutputOptions output_config,
-                                                       boost::optional<ProgressMeter&> progress) const = 0;
+                                                       boost::optional<ProgressMeter&> progress,
+                                                       VariantCallFilter::ConcurrencyPolicy threading) const = 0;
 };
 
 } // namespace csr

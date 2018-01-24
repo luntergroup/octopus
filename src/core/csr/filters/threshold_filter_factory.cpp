@@ -69,6 +69,9 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
     filter_names[name<MaxGenotypeQuality>()]       = lowGQ;
     filter_names[name<StrandBias>()]               = strandBias;
+    filter_names[name<FilteredReadFraction>()]     = filteredReadFraction;
+    filter_names[name<GCContent>()]                = highGCRegion;
+    filter_names[name<ClippedReadFraction>()]      = highClippedReadFraction;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)
@@ -146,10 +149,11 @@ std::unique_ptr<VariantCallFilterFactory> ThresholdFilterFactory::do_clone() con
 
 std::unique_ptr<VariantCallFilter> ThresholdFilterFactory::do_make(FacetFactory facet_factory,
                                                                    VariantCallFilter::OutputOptions output_config,
-                                                                   boost::optional<ProgressMeter&> progress) const
+                                                                   boost::optional<ProgressMeter&> progress,
+                                                                   VariantCallFilter::ConcurrencyPolicy threading) const
 {
     return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory), hard_conditions_, soft_conditions_,
-                                                        output_config, progress);
+                                                        output_config, threading, progress);
 }
 
 } // namespace csr

@@ -384,6 +384,16 @@ region_ {region},
 reference_ {reference}
 {}
 
+bool Haplotype::Builder::can_push_back(const ContigAllele& allele) const noexcept
+{
+    return explicit_alleles_.empty() || is_after(allele, explicit_alleles_.back());
+}
+
+bool Haplotype::Builder::can_push_front(const ContigAllele& allele) const noexcept
+{
+    return explicit_alleles_.empty() || is_after(explicit_alleles_.front(), allele);
+}
+
 void Haplotype::Builder::push_back(const ContigAllele& allele)
 {
     if (!explicit_alleles_.empty()) {

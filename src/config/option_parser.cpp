@@ -562,16 +562,24 @@ OptionMap parse_options(const int argc, const char** argv)
      "Enable all variant call filtering")
     
     ("filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 20 | AF < 0.05 | SB > 0.98 | MQD > 0.9"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 20 | AF < 0.05 | SB > 0.98 | MQD > 0.9 | FRF > 1.0 | GC > 1.0 | MQ0 > 100 | GQ < 1 | CRF > 1"),
      "Boolean expression to use to filter variant calls")
     
     ("use-calling-reads-for-filtering",
      po::value<bool>()->default_value(false),
      "Use the original reads used for variant calling for filtering")
-
+    
     ("keep-unfiltered-calls",
      po::bool_switch()->default_value(false),
      "Keep a copy of unfiltered calls")
+    
+    ("csr-training",
+     po::value<std::vector<std::string>>()->multitoken(),
+     "Activates CSR training mode with the given measures - outputs all calls as PASS and annotates output VCF with measure values")
+    
+    ("filter-vcf",
+     po::value<fs::path>(),
+     "Filter the given Octopus VCF without calling")
     ;
     
     po::options_description all("octopus options");

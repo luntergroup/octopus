@@ -564,6 +564,9 @@ auto get_allele_counts(const Call& call, const std::vector<SampleName>& samples)
             }
         }
     }
+    if (ac == 0 && ad > 0) {
+        std::swap(ac, ad); // single ALT deletion with deleted REF base
+    }
     return std::make_tuple(ac, ad, an);
 }
 

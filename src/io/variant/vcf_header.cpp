@@ -354,6 +354,13 @@ VcfHeader::Builder& VcfHeader::Builder::add_contig(std::string id,
     return *this;
 }
 
+VcfHeader::Builder& VcfHeader::Builder::clear_info() noexcept
+{
+    using namespace vcfspec::header::meta;
+    structured_fields_.erase(tag::info);
+    return *this;
+}
+
 VcfHeader::Builder& VcfHeader::Builder::clear_format() noexcept
 {
     using namespace vcfspec::header::meta;

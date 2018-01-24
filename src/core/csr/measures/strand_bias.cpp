@@ -35,22 +35,6 @@ std::unique_ptr<Measure> StrandBias::do_clone() const
     return std::make_unique<StrandBias>(*this);
 }
 
-void remove_non_overlapping_support(ReadAssignments::ResultType::mapped_type& support, const GenomicRegion& region)
-{
-    for (auto& p : support) {
-        auto itr = std::remove_if(std::begin(p.second), std::end(p.second),
-                                  [&] (const auto& read) { return !overlaps(read, region); });
-        p.second.erase(itr, std::end(p.second));
-    }
-}
-
-void remove_non_overlapping_support(ReadAssignments::ResultType& support, const GenomicRegion& region)
-{
-    for (auto& p : support) {
-        remove_non_overlapping_support(p.second, region);
-    }
-}
-
 bool is_forward(const AlignedRead& read) noexcept
 {
     return read.direction() == AlignedRead::Direction::forward;
@@ -62,20 +46,27 @@ struct DirectionCounts
 };
 
 template <typename Container>
-DirectionCounts count_directions(const Container& reads)
+DirectionCounts count_directions(const Container& reads, const GenomicRegion& call_region)
 {
-    auto n_fwd = static_cast<unsigned>(std::count_if(std::cbegin(reads), std::cend(reads),
-                                                     [] (const auto& read) { return is_forward(read); }));
-    return {n_fwd, static_cast<unsigned>(reads.size()) - n_fwd};
+    unsigned n_forward {0}, n_reverse {0};
+    for (const auto& read : overlap_range(reads, call_region)) {
+        if (is_forward(read)) {
+            ++n_forward;
+        } else {
+            ++n_reverse;
+        }
+    }
+    return {n_forward, n_reverse};
 }
+
 using DirectionCountVector = std::vector<DirectionCounts>;
 
-auto get_direction_counts(const HaplotypeSupportMap& support, const unsigned prior = 1)
+auto get_direction_counts(const HaplotypeSupportMap& support, const GenomicRegion& call_region, const unsigned prior = 1)
 {
     DirectionCountVector result {};
     result.reserve(support.size());
     for (const auto& p : support) {
-        result.push_back(count_directions(p.second));
+        result.push_back(count_directions(p.second, call_region));
         result.back().forward += prior;
         result.back().reverse += prior;
     }
@@ -84,7 +75,7 @@ auto get_direction_counts(const HaplotypeSupportMap& support, const unsigned pri
 
 auto sample_beta(const DirectionCounts& counts, const std::size_t n)
 {
-    static std::mt19937 generator {};
+    static thread_local std::mt19937 generator {42};
     std::beta_distribution<> beta {static_cast<double>(counts.forward), static_cast<double>(counts.reverse)};
     std::vector<double> result(n);
     std::generate_n(std::begin(result), n, [&] () { return beta(generator); });
@@ -128,15 +119,15 @@ double calculate_max_prob_different(const DirectionCountVector& direction_counts
 
 Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    auto assignments = boost::get<ReadAssignments::ResultType>(facets.at("ReadAssignments").get());
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
     // TODO: What we should really do here is calculate which reads directly support each allele in the
     // genotype by looking if each supporting read overlaps the allele given the realignment to the called haplotype.
     // The current approach of just removing non-overlapping reads may not work optimally in complex indel regions.
-    remove_non_overlapping_support(assignments, mapped_region(call));
     boost::optional<double> result {};
     for (const auto& p : assignments) {
         if (call.is_heterozygous(p.first)) {
-            const auto direction_counts = get_direction_counts(p.second);
+            const auto& supporting_reads = p.second;
+            const auto direction_counts = get_direction_counts(supporting_reads, mapped_region(call));
             double prob;
             if (use_resampling_) {
                 prob = calculate_max_prob_different(direction_counts, small_sample_size_, min_difference_);

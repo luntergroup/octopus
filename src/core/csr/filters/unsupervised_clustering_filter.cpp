@@ -13,8 +13,9 @@ namespace octopus { namespace csr {
 UnsupervisedClusteringFilter::UnsupervisedClusteringFilter(FacetFactory facet_factory,
                                                            std::vector<MeasureWrapper> measures,
                                                            OutputOptions output_config,
+                                                           ConcurrencyPolicy threading,
                                                            boost::optional<ProgressMeter&> progress)
-: DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), progress}
+: DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading, progress}
 {}
 
 void UnsupervisedClusteringFilter::annotate(VcfHeader::Builder& header) const

@@ -169,24 +169,7 @@ bool requires_masking(const AlignedRead& read, const AlignedRead::BaseQuality go
     return has_low_quality_flank(read, good_quality) || has_low_quality_match(read, good_quality);
 }
 
-using ExpandedCigarString = std::vector<CigarOperation::Flag>;
-
-auto expand_cigar(const CigarString& cigar, const std::size_t size_hint = 0)
-{
-    ExpandedCigarString result {};
-    result.reserve(size_hint);
-    for (const auto& op : cigar) {
-        utils::append(result, op.size(), op.flag());
-    }
-    return result;
-}
-
-auto expand_cigar(const AlignedRead& read)
-{
-    return expand_cigar(read.cigar(), sequence_size(read));
-}
-
-auto find_first_sequence_op(const ExpandedCigarString& cigar) noexcept
+auto find_first_sequence_op(const std::vector<CigarOperation::Flag>& cigar) noexcept
 {
     return std::find_if_not(std::cbegin(cigar), std::cend(cigar),
                             [] (auto op) { return op == CigarOperation::Flag::hardClipped; });
@@ -215,18 +198,19 @@ auto make_optional(bool b, T&& value)
 auto transform_low_quality_matches_to_reference(AlignedRead::NucleotideSequence read_sequence,
                                                 const AlignedRead::BaseQualityVector& base_qualities,
                                                 const AlignedRead::NucleotideSequence& reference_sequence,
-                                                const ExpandedCigarString& cigar,
+                                                const CigarString& cigar,
                                                 const AlignedRead::BaseQuality min_quality)
 {
+    const auto expanded_cigar = decompose(cigar);
     auto ref_itr   = std::cbegin(reference_sequence);
-    auto cigar_itr = find_first_sequence_op(cigar);
+    auto cigar_itr = find_first_sequence_op(expanded_cigar);
     bool has_masked {false};
     std::transform(std::cbegin(read_sequence), std::cend(read_sequence), std::cbegin(base_qualities),
                    std::begin(read_sequence), [&] (const auto read_base, const auto base_quality) {
         using Flag = CigarOperation::Flag;
         // Deletions are excess reference sequence so we need to move the
         // reference iterator to the next non-deleted read base
-        while (cigar_itr != std::cend(cigar) && *cigar_itr == Flag::deletion) {
+        while (cigar_itr != std::cend(expanded_cigar) && *cigar_itr == Flag::deletion) {
             ++cigar_itr;
             ++ref_itr;
         }
@@ -253,7 +237,7 @@ auto transform_low_quality_matches_to_reference(const AlignedRead& read,
 {
     return transform_low_quality_matches_to_reference(read.sequence(), read.base_qualities(),
                                                       reference.fetch_sequence(mapped_region(read)),
-                                                      expand_cigar(read), min_quality);
+                                                      read.cigar(), min_quality);
 }
 
 auto get_removable_flank_sizes(const AlignedRead& read, const AlignedRead::BaseQuality min_quality) noexcept

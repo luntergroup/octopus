@@ -48,6 +48,7 @@
 #include "exceptions/system_error.hpp"
 #include "exceptions/missing_file_error.hpp"
 #include "core/csr/filters/threshold_filter_factory.hpp"
+#include "core/csr/filters/training_filter_factory.hpp"
 
 namespace octopus { namespace options {
 
@@ -1496,12 +1497,32 @@ std::string get_filter_expression(const OptionMap& options)
     return options.at("filter-expression").as<std::string>();
 }
 
+bool is_csr_training(const OptionMap& options)
+{
+    return options.count("csr-training") > 0;
+}
+
+std::set<std::string> get_training_measures(const OptionMap& options)
+{
+    std::set<std::string> result {};
+    if (is_csr_training(options)) {
+        for (const auto& measure : options.at("csr-training").as<std::vector<std::string>>()) {
+            result.insert(measure);
+        }
+    }
+    return result;
+}
+
 std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference,
                                                                    ReadPipe& read_pipe,
                                                                    const OptionMap& options)
 {
     if (is_call_filtering_requested(options)) {
-        return std::make_unique<ThresholdFilterFactory>(get_filter_expression(options));
+        if (is_csr_training(options)) {
+            return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
+        } else {
+            return std::make_unique<ThresholdFilterFactory>(get_filter_expression(options));
+        }
     } else {
         return nullptr;
     }
@@ -1522,7 +1543,6 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     using std::make_unique;
     using namespace readpipe;
     ReadTransformer transformer {};
-    transformer.add(MaskSoftClipped {});
     using ReadFilterer = ReadPipe::ReadFilterer;
     ReadFilterer filterer {};
     filterer.add(make_unique<HasValidBaseQualities>());
@@ -1592,5 +1612,19 @@ bool is_legacy_vcf_requested(const OptionMap& options)
 {
     return options.at("legacy").as<bool>();
 }
+
+bool is_csr_training_mode(const OptionMap& options)
+{
+    return is_csr_training(options);
+}
+
+boost::optional<fs::path> filter_request(const OptionMap& options)
+{
+    if (is_set("filter-vcf", options)) {
+        return resolve_path(options.at("filter-vcf").as<fs::path>(), options);
+    }
+    return boost::none;
+}
+
 } // namespace options
 } // namespace octopus
