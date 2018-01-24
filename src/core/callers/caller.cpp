@@ -37,6 +37,7 @@ Caller::Caller(Components&& components, Parameters parameters)
 , read_pipe_ {components.read_pipe}
 , candidate_generator_ {std::move(components.candidate_generator)}
 , haplotype_generator_builder_ {std::move(components.haplotype_generator_builder)}
+, likelihood_model_ {std::move(components.likelihood_model)}
 , phaser_ {std::move(components.phaser)}
 , parameters_ {std::move(parameters)}
 {
@@ -776,13 +777,7 @@ HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Varian
 
 HaplotypeLikelihoodCache Caller::make_haplotype_likelihood_cache() const
 {
-    if (parameters_.sequencer ) {
-        return HaplotypeLikelihoodCache {make_haplotype_likelihood_model(*parameters_.sequencer, parameters_.model_mapping_quality),
-                                         parameters_.max_haplotypes, samples_};
-    } else {
-        return HaplotypeLikelihoodCache {HaplotypeLikelihoodModel {parameters_.model_mapping_quality},
-                                         parameters_.max_haplotypes, samples_};
-    }
+    return HaplotypeLikelihoodCache {likelihood_model_, parameters_.max_haplotypes, samples_};
 }
 
 VcfRecordFactory Caller::make_record_factory(const ReadMap& reads) const
@@ -842,7 +837,7 @@ bool Caller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
         debug::print_active_candidates(stream(*debug_log_), candidates, active_region);
         stream(*debug_log_) << "Haplotype region is " << haplotype_region(haplotypes);
     }
-    if (parameters_.allow_inactive_flank_scoring) {
+    if (likelihood_model_.can_use_flank_state()) {
         flank_state = calculate_flank_state(haplotypes, active_region, candidates);
         if (debug_log_) {
             debug::print_inactive_flanking_candidates(stream(*debug_log_), candidates, active_region,

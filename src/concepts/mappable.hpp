@@ -688,6 +688,37 @@ auto intervening_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 }
 
 template <typename T>
+auto intervening_region_size(const Mappable<T>& lhs, const ContigRegion& rhs)
+{
+    return intervening_region_size(static_cast<const T&>(lhs).mapped_region(), rhs);
+}
+
+template <typename T>
+auto intervening_region_size(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return intervening_region_size(static_cast<const T&>(lhs).mapped_region(), rhs);
+}
+
+template <typename T>
+auto intervening_region_size(const ContigRegion& lhs, const Mappable<T>& rhs)
+{
+    return intervening_region_size(lhs, static_cast<const T&>(rhs).mapped_region());
+}
+
+template <typename T>
+auto intervening_region_size(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return intervening_region_size(lhs, static_cast<const T&>(rhs).mapped_region());
+}
+
+template <typename T1, typename T2>
+auto intervening_region_size(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return intervening_region_size(static_cast<const T1&>(lhs).mapped_region(),
+                                   static_cast<const T2&>(rhs).mapped_region());
+}
+
+template <typename T>
 auto overlapped_region(const Mappable<T>& lhs, const ContigRegion& rhs)
 {
     return overlapped_region(static_cast<const T&>(lhs).mapped_region(), rhs);

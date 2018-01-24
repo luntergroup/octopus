@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <memory>
 
 namespace octopus {
 
@@ -18,15 +19,15 @@ public:
     using PenaltyType    = std::int8_t;
     using PenaltyVector  = std::vector<PenaltyType>;
     
-    SnvErrorModel() = default;
-    
     virtual ~SnvErrorModel() = default;
     
+    std::unique_ptr<SnvErrorModel> clone() const;
     void evaluate(const Haplotype& haplotype,
                   MutationVector& forward_snv_mask, PenaltyVector& forward_snv_priors,
                   MutationVector& reverse_snv_mask, PenaltyVector& reverse_snv_priors) const;
 
 private:
+    virtual std::unique_ptr<SnvErrorModel> do_clone() const = 0;
     virtual void do_evaluate(const Haplotype& haplotype,
                              MutationVector& forward_snv_mask, PenaltyVector& forward_snv_priors,
                              MutationVector& reverse_snv_mask, PenaltyVector& reverse_snv_priors) const = 0;

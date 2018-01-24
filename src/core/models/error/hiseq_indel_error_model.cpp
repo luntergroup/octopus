@@ -1,7 +1,7 @@
 // Copyright (c) 2017 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "x10_indel_error_model.hpp"
+#include "hiseq_indel_error_model.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -12,11 +12,16 @@
 
 namespace octopus {
 
-constexpr decltype(X10IndelErrorModel::homopolymerErrors_) X10IndelErrorModel::homopolymerErrors_;
-constexpr decltype(X10IndelErrorModel::homopolymerErrors_) X10IndelErrorModel::diNucleotideTandemRepeatErrors_;
-constexpr decltype(X10IndelErrorModel::homopolymerErrors_) X10IndelErrorModel::triNucleotideTandemRepeatErrors_;
-constexpr decltype(X10IndelErrorModel::homopolymerErrors_) X10IndelErrorModel::polyNucleotideTandemRepeatErrors_;
-constexpr decltype(X10IndelErrorModel::defaultGapExtension_) X10IndelErrorModel::defaultGapExtension_;
+constexpr decltype(HiSeqIndelErrorModel::homopolymerErrors_) HiSeqIndelErrorModel::homopolymerErrors_;
+constexpr decltype(HiSeqIndelErrorModel::homopolymerErrors_) HiSeqIndelErrorModel::diNucleotideTandemRepeatErrors_;
+constexpr decltype(HiSeqIndelErrorModel::homopolymerErrors_) HiSeqIndelErrorModel::triNucleotideTandemRepeatErrors_;
+constexpr decltype(HiSeqIndelErrorModel::homopolymerErrors_) HiSeqIndelErrorModel::polyNucleotideTandemRepeatErrors_;
+constexpr decltype(HiSeqIndelErrorModel::defaultGapExtension_) HiSeqIndelErrorModel::defaultGapExtension_;
+
+std::unique_ptr<IndelErrorModel> HiSeqIndelErrorModel::do_clone() const
+{
+    return std::make_unique<HiSeqIndelErrorModel>(*this);
+}
 
 namespace {
 
@@ -45,8 +50,8 @@ auto fill_n_if_less(FordwardIt first, std::size_t n, const Tp& value)
 
 } // namespace
 
-X10IndelErrorModel::PenaltyType
-X10IndelErrorModel::do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalities) const
+HiSeqIndelErrorModel::PenaltyType
+HiSeqIndelErrorModel::do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalities) const
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
     const auto repeats = extract_repeats(haplotype);
@@ -92,11 +97,11 @@ X10IndelErrorModel::do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_o
         }
     }
     switch (max_repeat.period) {
-    case 1: return 2;
-    case 2: return 4;
-    case 3: return 4;
+    case 1: return 3;
+    case 2: return 5;
+    case 3: return 5;
     default: return defaultGapExtension_;
     }
 }
-    
+
 } // namespace octopus
