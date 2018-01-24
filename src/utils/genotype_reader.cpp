@@ -82,6 +82,12 @@ auto calculate_ref_pad_size(const VcfRecord& call, const VcfRecord::NucleotideSe
     }
 }
 
+bool has_indel(const VcfRecord& call) noexcept
+{
+    return std::any_of(std::cbegin(call.alt()), std::cend(call.alt()),
+                       [&] (const auto& allele) { return allele.size() != call.ref().size(); });
+}
+
 boost::optional<ContigAllele> make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence, const int ref_pad)
 {
     if (is_missing(allele_sequence)) {
@@ -102,6 +108,7 @@ boost::optional<ContigAllele> make_allele(const VcfRecord& call, VcfRecord::Nucl
         allele_sequence.erase(std::cbegin(allele_sequence), first_base_itr);
         region = expand_lhs(region, -delete_mask_len);
     } else if (ref_pad > 0) {
+        assert(static_cast<std::size_t>(ref_pad) <= allele_sequence.size());
         allele_sequence.erase(std::cbegin(allele_sequence), std::next(std::cbegin(allele_sequence), ref_pad));
         region = expand_lhs(region, -ref_pad);
     }
@@ -111,7 +118,7 @@ boost::optional<ContigAllele> make_allele(const VcfRecord& call, VcfRecord::Nucl
 auto extract_genotype(const VcfRecord& call, const SampleName& sample)
 {
     auto genotype = get_genotype(call, sample);
-    auto min_ref_pad = static_cast<int>(call.ref().size());
+    boost::optional<int> min_ref_pad {};
     std::vector<std::size_t> unknown_pad_indices {};
     const auto ploidy = genotype.size();
     std::vector<boost::optional<ContigAllele>> result(ploidy, boost::none);
@@ -119,14 +126,21 @@ auto extract_genotype(const VcfRecord& call, const SampleName& sample)
         auto& allele = genotype[i];
         if (is_ref_pad_size_known(allele, call)) {
             const auto allele_pad = num_matching_lhs_bases(call.ref(), allele);
-            min_ref_pad = std::min(min_ref_pad, allele_pad);
+            if (min_ref_pad) {
+                min_ref_pad = std::min(*min_ref_pad, allele_pad);
+            } else {
+                min_ref_pad = allele_pad;
+            }
             result[i] = make_allele(call, std::move(allele), allele_pad);
         } else {
             unknown_pad_indices.push_back(i);
         }
     }
+    if (!min_ref_pad && has_indel(call)) {
+        min_ref_pad = 1;
+    }
     for (auto idx : unknown_pad_indices) {
-        result[idx] = make_allele(call, std::move(genotype[idx]), min_ref_pad);
+        result[idx] = make_allele(call, std::move(genotype[idx]), *min_ref_pad);
     }
     return result;
 }
@@ -156,7 +170,7 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
             has_ref = true;
         }
         std::vector<std::size_t> unknwown_pad_allele_indices {};
-        auto min_ref_pad = static_cast<int>(call.ref().size());
+        boost::optional<int> min_ref_pad {};
         auto allele_idx = std::distance(std::begin(genotype), first_itr);
         std::for_each(first_itr, std::end(genotype), [&] (auto& allele) {
             if (is_ref_pad_size_known(allele, call)) {
@@ -164,24 +178,31 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
                 allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), pad_size));
                 auto allele_region = expand_lhs(call_region, -pad_size);
                 result.emplace_back(std::move(allele_region), std::move(allele));
-                min_ref_pad = std::min(min_ref_pad, pad_size);
+                if (min_ref_pad) {
+                    min_ref_pad = std::min(*min_ref_pad, pad_size);
+                } else {
+                    min_ref_pad = pad_size;
+                }
             } else {
                 unknwown_pad_allele_indices.push_back(allele_idx);
             }
             ++allele_idx;
         });
+        if (!min_ref_pad && has_indel(call)) {
+            min_ref_pad = 1;
+        }
         if (has_ref) {
             auto& ref = genotype.front();
-            ref.erase(std::cbegin(ref), std::next(std::cbegin(ref), min_ref_pad));
-            auto allele_region = expand_lhs(call_region, -min_ref_pad);
+            ref.erase(std::cbegin(ref), std::next(std::cbegin(ref), *min_ref_pad));
+            auto allele_region = expand_lhs(call_region, -*min_ref_pad);
             result.emplace_back(std::move(allele_region), std::move(ref));
             std::rotate(std::rbegin(result), std::next(std::rbegin(result)), std::rend(result));
         }
-        if (min_ref_pad > 0 && !unknwown_pad_allele_indices.empty()) {
+        if (*min_ref_pad > 0 && !unknwown_pad_allele_indices.empty()) {
             for (auto idx : unknwown_pad_allele_indices) {
                 auto& allele = genotype[idx];
-                allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), min_ref_pad));
-                auto allele_region = expand_lhs(call_region, -min_ref_pad);
+                allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), *min_ref_pad));
+                auto allele_region = expand_lhs(call_region, -*min_ref_pad);
                 result.emplace_back(std::move(allele_region), std::move(allele));
             }
             auto alt_alleles_begin_itr = std::begin(result);
