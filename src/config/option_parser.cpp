@@ -250,9 +250,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Allows reads considered duplicates by octopus")
     
-    ("no-secondary-alignments",
+    ("allow-secondary-alignments",
      po::bool_switch()->default_value(false),
-     "Filters reads marked as secondary alignments")
+     "Allows reads marked as secondary alignments")
     
     ("allow-supplementary-alignments",
      po::bool_switch()->default_value(false),

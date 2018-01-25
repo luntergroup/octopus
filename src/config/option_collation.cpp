@@ -702,7 +702,7 @@ auto make_read_filterer(const OptionMap& options)
     if (!options.at("allow-qc-fails").as<bool>()) {
         result.add(make_unique<IsNotMarkedQcFail>());
     }
-    if (options.at("no-secondary-alignments").as<bool>()) {
+    if (!options.at("allow-secondary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSecondaryAlignment>());
     }
     if (!options.at("allow-supplementary-alignments").as<bool>()) {
