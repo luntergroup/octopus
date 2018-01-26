@@ -316,7 +316,9 @@ CigarString Haplotype::cigar() const
             if (allele_op_flag == curr_op_flag) {
                 curr_op_size += allele_op_size;
             } else {
-                result.emplace_back(curr_op_size, curr_op_flag);
+                if (curr_op_size > 0) {
+                    result.emplace_back(curr_op_size, curr_op_flag);
+                }
                 curr_op_flag = allele_op_flag;
                 curr_op_size = allele_op_size;
             }
@@ -329,7 +331,9 @@ CigarString Haplotype::cigar() const
             curr_op_flag = Flag::sequenceMatch;
             curr_op_size = rhs_ref_flank_size;
         }
-        result.emplace_back(curr_op_size, curr_op_flag);
+        if (curr_op_size > 0) {
+            result.emplace_back(curr_op_size, curr_op_flag);
+        }
     } else {
         result.emplace_back(size(region_), Flag::sequenceMatch);
     }
