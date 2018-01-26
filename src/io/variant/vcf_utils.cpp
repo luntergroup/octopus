@@ -57,7 +57,7 @@ bool is_indexable(const boost::filesystem::path& vcf_path)
     return extension == ".bcf" || extension == ".gz";
 }
 
-void index_vcf(const boost::filesystem::path& vcf_path, const int lidx_shift)
+void index_vcf(const boost::filesystem::path& vcf_path)
 {
     auto* const fp = hts_open(vcf_path.c_str(), "r");
     if (fp == nullptr) {
@@ -66,20 +66,20 @@ void index_vcf(const boost::filesystem::path& vcf_path, const int lidx_shift)
     const auto type = *hts_get_format(fp);
     hts_close(fp);
     if (type.format == bcf) {
-        bcf_index_build(vcf_path.c_str(), lidx_shift);
+        bcf_index_build(vcf_path.c_str(), 14);
     } else {
-        tbx_index_build(vcf_path.c_str(), lidx_shift, &tbx_conf_vcf);
+        tbx_index_build(vcf_path.c_str(), 0, &tbx_conf_vcf);
     }
 }
 
-void index_vcf(const VcfReader& reader, const int lidx_shift)
+void index_vcf(const VcfReader& reader)
 {
-    index_vcf(reader.path(), lidx_shift);
+    index_vcf(reader.path());
 }
 
-void index_vcfs(const std::vector<VcfReader>& readers, const int lidx_shift)
+void index_vcfs(const std::vector<VcfReader>& readers)
 {
-    for (const auto& reader : readers) index_vcf(reader, lidx_shift);
+    for (const auto& reader : readers) index_vcf(reader);
 }
 
 std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>&& writers)
