@@ -20,8 +20,6 @@
 #include "basics/genomic_region.hpp"
 #include "vcf_spec.hpp"
 
-#include <iostream>
-
 namespace octopus {
 
 std::vector<std::string> get_contigs(const VcfHeader& header)
@@ -555,9 +553,8 @@ bool is_lhs_ref_flank_snv_duplicate(const VcfRecord& lhs, const VcfRecord& rhs,
     // N    1000   .   C    G   .   .   .   GT  1|0 0|1
     // N    1000    .   C   GT,CTT  .   .   .   GT  1|2 1|0
     //
-    if (!begins_equal(lhs, rhs)) return false;
-    if (!only_snvs(lhs)) return false;
-    if (!only_indels(rhs)) return false;
+    if (!is_same_contig(lhs, rhs) || !begins_equal(lhs, rhs)) return false;
+    if (!only_snvs(lhs) || !only_indels(rhs)) return false;
     bool result {false};
     for (const auto& lhs_alt : lhs.alt()) {
         for (const auto& rhs_alt : rhs.alt()) {
@@ -584,8 +581,6 @@ void convert_to_legacy_dedup(const VcfReader& src, VcfWriter& dst)
         const auto& record = *p.first;
         if (record != prev_record && !is_lhs_ref_flank_snv_duplicate(prev_record, record, samples)) {
             dst << prev_record;
-        } else {
-            std::cout << "DUPLICATE: " << prev_record << std::endl;
         }
         prev_record = record;
     }
