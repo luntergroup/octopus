@@ -524,11 +524,15 @@ unsigned LocalReassembler::try_assemble_with_defaults(const Bin& bin, std::deque
 
 void LocalReassembler::try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result) const
 {
+    auto prev_k = default_kmer_sizes_.back();
     for (const auto k : fallback_kmer_sizes_) {
         const auto status = assemble_bin(k, bin, result);
         switch (status) {
             case AssemblerStatus::success:
                 log_success(debug_log_, "Fallback", k);
+                if (k - prev_k > 5) {
+                    assemble_bin((prev_k + k) / 2, bin, result);
+                }
                 return;
             case AssemblerStatus::partial_success:
                 log_partial_success(debug_log_, "Fallback", k);
@@ -536,6 +540,7 @@ void LocalReassembler::try_assemble_with_fallbacks(const Bin& bin, std::deque<Va
             default:
                 log_failure(debug_log_, "Fallback", k);
         }
+        prev_k = k;
     }
 }
 
