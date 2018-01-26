@@ -13,11 +13,14 @@
 #include <stdexcept>
 #include <numeric>
 
+#include "htslib/vcf.h"
+#include "htslib/tbx.h"
+
 #include "basics/contig_region.hpp"
 #include "basics/genomic_region.hpp"
 #include "vcf_spec.hpp"
-#include "htslib/vcf.h"
-#include "htslib/tbx.h"
+
+#include <iostream>
 
 namespace octopus {
 
@@ -59,15 +62,11 @@ bool is_indexable(const boost::filesystem::path& vcf_path)
 void index_vcf(const boost::filesystem::path& vcf_path, const int lidx_shift)
 {
     auto* const fp = hts_open(vcf_path.c_str(), "r");
-    
     if (fp == nullptr) {
         throw std::ios::failure {vcf_path.c_str()};
     }
-    
     const auto type = *hts_get_format(fp);
-    
     hts_close(fp);
-    
     if (type.format == bcf) {
         bcf_index_build(vcf_path.c_str(), lidx_shift);
     } else {
@@ -89,7 +88,6 @@ std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>&& writers)
 {
     std::vector<VcfReader> result {};
     result.reserve(writers.size());
-    
     for (auto&& writer : writers) {
         auto path = writer.path();
         writer.close();
@@ -97,9 +95,7 @@ std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>&& writers)
             result.emplace_back(std::move(*path));
         }
     }
-    
     writers.clear();
-    
     return result;
 }
 
@@ -108,9 +104,7 @@ void copy(const VcfReader& src, VcfWriter& dst)
     if (!dst.is_header_written()) {
         dst << src.fetch_header();
     }
-    
     constexpr std::size_t maxBufferSize {1000000};
-    
     if (src.count_records() <= maxBufferSize) {
         dst << src.fetch_records();
     } else {
@@ -147,8 +141,7 @@ bool contain_same_samples(const std::vector<VcfHeader>& headers)
 
 bool all_equal(const std::vector<VcfHeader>& headers)
 {
-    return std::adjacent_find(std::cbegin(headers), std::cend(headers),
-                              std::not_equal_to<VcfHeader>()) == std::cend(headers);
+    return std::adjacent_find(std::cbegin(headers), std::cend(headers), std::not_equal_to<VcfHeader>()) == std::cend(headers);
 }
 
 void add_contigs(const std::vector<VcfHeader>& headers, VcfHeader::Builder& hb)
@@ -191,10 +184,8 @@ std::vector<VcfHeader> get_headers(const std::vector<VcfReader>& readers)
 {
     std::vector<VcfHeader> result {};
     result.reserve(readers.size());
-    
     std::transform(std::cbegin(readers), std::cend(readers), std::back_inserter(result),
                    [] (const auto& reader) { return reader.fetch_header(); });
-    
     return result;
 }
 
@@ -229,9 +220,7 @@ auto count_active_contigs(const ContigRecordCountMap& counts)
 bool is_one_contig_per_reader(const ReaderContigRecordCountMap& counts)
 {
     return std::all_of(std::cbegin(counts), std::cend(counts),
-                       [] (const auto& p) {
-                           return count_active_contigs(p.second) == 1;
-                       });
+                       [] (const auto& p) { return count_active_contigs(p.second) == 1; });
 }
 
 auto find_active_contig(ContigRecordCountMap::const_iterator first, ContigRecordCountMap::const_iterator last)
@@ -242,7 +231,6 @@ auto find_active_contig(ContigRecordCountMap::const_iterator first, ContigRecord
 bool is_unique_contig_per_reader(const ReaderContigRecordCountMap& counts)
 {
     std::deque<std::reference_wrapper<const std::string>> contigs {};
-    
     for (const auto& p : counts) {
         const auto it = find_active_contig(std::cbegin(p.second), std::cend(p.second));
         if (it != std::cend(p.second)) {
@@ -252,10 +240,8 @@ bool is_unique_contig_per_reader(const ReaderContigRecordCountMap& counts)
             contigs.emplace_back(it->first);
         }
     }
-    
     std::sort(std::begin(contigs), std::end(contigs),
               [] (const auto& lhs, const auto& rhs) { return lhs.get() < rhs.get(); });
-    
     return std::adjacent_find(std::cbegin(contigs), std::cend(contigs),
                               [] (const auto& lhs, const auto& rhs) {
                                   return lhs.get() == rhs.get();
@@ -271,22 +257,19 @@ std::size_t count_records(const ReaderContigRecordCountMap& counts)
                                                              std::size_t {0},
                                                              [] (const auto r_curr, const auto& p) {
                                                                  return r_curr + p.second;
-                                                             });
-                           });
+                                                             }); });
 }
 
 auto extract_unique_readers(const ReaderContigRecordCountMap& reader_contig_counts)
 {
     std::unordered_map<std::string, VcfReaderRef> result {};
     result.reserve(reader_contig_counts.size());
-    
     for (const auto& p : reader_contig_counts) {
         const auto itr = find_active_contig(std::cbegin(p.second), std::cend(p.second));
         if (itr != std::cend(p.second)) {
             result.emplace(itr->first, p.first);
         }
     }
-    
     return result;
 }
 
@@ -307,13 +290,11 @@ auto make_iterator_map(const std::vector<VcfReader>& sources, const std::string&
 {
     std::unordered_map<VcfReaderRef, VcfReader::RecordIteratorPair> result {};
     result.reserve(reader_contig_counts.size());
-    
     for (const auto& reader : sources) {
         if (reader_contig_counts.at(reader).count(contig) == 1) {
             result.emplace(reader, reader.iterate(contig));
         }
     }
-    
     return result;
 }
 
@@ -350,7 +331,6 @@ void merge_pair(const VcfReader& first, const VcfReader& second,
                 ReaderContigRecordCountMap& reader_contig_counts)
 {
     VcfWriterIterator out {dst};
-    
     for (const auto& contig : contigs) {
         using std::move;
         if (reader_contig_counts[first].count(contig) == 1) {
@@ -387,11 +367,9 @@ struct RecordIteratorCompare
     }
 };
 
-using RecordIteratorQueue = std::priority_queue<
-    VcfReader::RecordIteratorPair,
-    std::deque<VcfReader::RecordIteratorPair>,
-    RecordIteratorCompare
-    >;
+using RecordIteratorQueue = std::priority_queue<VcfReader::RecordIteratorPair,
+                                                std::deque<VcfReader::RecordIteratorPair>,
+                                                RecordIteratorCompare>;
 
 auto make_record_iterator_queue(const std::vector<VcfReader>& sources, const std::string& contig)
 {
@@ -410,13 +388,10 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
         copy(sources.front(), dst);
         return;
     }
-    
     if (!dst.is_header_written()) {
         dst << merge(get_headers(sources));
     }
-    
     auto reader_contig_counts = get_contig_count_map(sources, contigs);
-    
     if (is_unique_contig_per_reader(reader_contig_counts)) {
         merge_contig_unique(sources, dst, contigs, reader_contig_counts);
     } else {
@@ -456,51 +431,179 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst)
     return merge(sources, dst, get_contigs(header));
 }
 
-void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
+namespace {
+
+bool has_deleted(const VcfRecord::NucleotideSequence& allele) noexcept
+{
+    return std::find(std::cbegin(allele), std::cend(allele), vcfspec::deletedBase) != std::cend(allele);
+}
+
+bool is_missing(const VcfRecord::NucleotideSequence& allele) noexcept
+{
+    static const std::string missing {vcfspec::missingValue};
+    return allele == missing;
+}
+
+bool is_missing_or_has_deleted(const VcfRecord::NucleotideSequence& allele) noexcept
+{
+    return is_missing(allele) || has_deleted(allele);
+}
+
+VcfRecord convert_to_legacy(const VcfRecord& record, const std::vector<std::string>& samples)
+{
+    VcfRecord::Builder cb {record};
+    const auto& alt = record.alt();
+    const auto first_deleted_itr = std::find_if(std::cbegin(alt), std::cend(alt), has_deleted);
+    if (first_deleted_itr != std::cend(alt)) {
+        auto new_alt = alt;
+        new_alt.erase(std::next(std::begin(new_alt), std::distance(std::cbegin(alt), first_deleted_itr)));
+        cb.set_alt(std::move(new_alt));
+    }
+    for (const auto& sample : samples) {
+        const auto& gt = record.get_sample_value(sample, vcfspec::format::genotype);
+        const auto first_non_legacy = std::find_if(std::cbegin(gt), std::cend(gt), is_missing_or_has_deleted);
+        if (first_non_legacy != std::cend(gt)) {
+            const auto& ref = record.ref();
+            auto new_gt = gt;
+            auto ref_itr = std::next(std::begin(new_gt), std::distance(std::cbegin(gt), first_non_legacy));
+            *ref_itr = ref;
+            std::replace_if(std::next(ref_itr), std::end(new_gt), is_missing_or_has_deleted, ref);
+            auto phasing = VcfRecord::Builder::Phasing::phased;
+            if (!record.is_sample_phased(sample)) {
+                phasing = VcfRecord::Builder::Phasing::unphased;
+            }
+            cb.set_genotype(sample, std::move(new_gt), phasing);
+        }
+    }
+    return cb.build_once();
+}
+
+void convert_to_legacy_keep_all(const VcfReader& src, VcfWriter& dst)
+{
+    const auto samples = src.fetch_header().samples();
+    for (auto p = src.iterate(); p.first != p.second; ++p.first) {
+        dst << convert_to_legacy(*p.first, samples);
+    }
+}
+
+bool is_snv(const VcfRecord::NucleotideSequence& ref, const VcfRecord::NucleotideSequence& alt) noexcept
+{
+    return ref.size() == 1 && alt.size() == 1 && ref != alt;
+}
+
+bool only_snvs(const VcfRecord& record) noexcept
+{
+    return std::all_of(std::cbegin(record.alt()), std::cend(record.alt()),
+                       [&] (const auto& allele) { return is_snv(record.ref(), allele); });
+}
+
+bool is_indel(const VcfRecord::NucleotideSequence& ref, const VcfRecord::NucleotideSequence& alt) noexcept
+{
+    return ref.size() != alt.size();
+}
+
+bool only_indels(const VcfRecord& record) noexcept
+{
+    return std::any_of(std::cbegin(record.alt()), std::cend(record.alt()),
+                       [&] (const auto& allele) { return is_indel(record.ref(), allele); });
+}
+
+bool contains(const std::vector<VcfRecord::NucleotideSequence>& genotype, const VcfRecord::NucleotideSequence& allele) noexcept
+{
+    return std::find(std::cbegin(genotype), std::cend(genotype), allele) != std::cend(genotype);
+}
+
+bool both_alts_genotyped(const VcfRecord& lhs, const VcfRecord::NucleotideSequence& lhs_alt,
+                         const VcfRecord& rhs, const VcfRecord::NucleotideSequence& rhs_alt,
+                         const std::string& sample) noexcept
+{
+    const auto& lhs_genotype = get_genotype(lhs, sample);
+    if (contains(lhs_genotype, lhs_alt)) {
+        const auto& rhs_genotype = get_genotype(rhs, sample);
+        return contains(rhs_genotype, rhs_alt);
+    }
+    return false;
+}
+
+bool genotyped_in_same_samples(const VcfRecord& lhs, const VcfRecord::NucleotideSequence& lhs_alt,
+                               const VcfRecord& rhs, const VcfRecord::NucleotideSequence& rhs_alt,
+                               const std::vector<std::string>& samples) noexcept
+{
+    return std::all_of(std::cbegin(samples), std::cend(samples),
+                       [&] (const auto& sample) { return both_alts_genotyped(lhs, lhs_alt, rhs, rhs_alt, sample); });
+}
+
+bool is_lhs_ref_flank_snv_duplicate(const VcfRecord& lhs, const VcfRecord& rhs,
+                                    const std::vector<std::string>& samples) noexcept
+{
+    // Positive examples:
+    //
+    // N	1000	.	T	G	.	.	.	GT	1|0
+    // N	1000	.	TCCTTTC	G	.	.	.	GT	1|0
+    //
+    // N    1000   .   C    G   .   .   .   GT  1|0
+    // N    1000    .   C   GT,CTT  .   .   .   GT  1|2
+    //
+    // N    1000   .   C    G   .   .   .   GT  1|0 0|0
+    // N    1000    .   C   GT,CTT  .   .   .   GT  1|2 0|2
+    //
+    // Negative examples:
+    //
+    // N	1000	.	T	G	.	.	.	GT	1|0
+    // N	1000	.	TCCTTTC	T	.	.	.	GT	0|1
+    //
+    // N    1000   .   C    G   .   .   .   GT  1|0 0|1
+    // N    1000    .   C   GT,CTT  .   .   .   GT  1|2 1|0
+    //
+    if (!begins_equal(lhs, rhs)) return false;
+    if (!only_snvs(lhs)) return false;
+    if (!only_indels(rhs)) return false;
+    bool result {false};
+    for (const auto& lhs_alt : lhs.alt()) {
+        for (const auto& rhs_alt : rhs.alt()) {
+            if (lhs_alt[0] == rhs_alt.front()) {
+                if (!genotyped_in_same_samples(lhs, lhs_alt, rhs, rhs_alt, samples)) {
+                    return false;
+                } else {
+                    result = true;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+void convert_to_legacy_dedup(const VcfReader& src, VcfWriter& dst)
+{
+    auto p = src.iterate();
+    if (p.first == p.second) return;
+    const auto samples = src.fetch_header().samples();
+    VcfRecord prev_record {*p.first};
+    ++p.first;
+    for (; p.first != p.second; ++p.first) {
+        const auto& record = *p.first;
+        if (record != prev_record && !is_lhs_ref_flank_snv_duplicate(prev_record, record, samples)) {
+            dst << prev_record;
+        } else {
+            std::cout << "DUPLICATE: " << prev_record << std::endl;
+        }
+        prev_record = record;
+    }
+    dst << prev_record;
+}
+
+} // namespace
+
+void convert_to_legacy(const VcfReader& src, VcfWriter& dst, const bool remove_ref_pad_duplicates)
 {
     if (!dst.is_header_written()) {
         dst << src.fetch_header();
     }
-    
-    static const std::string missing {vcfspec::missingValue};
-    const auto has_deleted = [] (const auto& allele) noexcept {
-        return std::find(std::cbegin(allele), std::cend(allele), vcfspec::deletedBase) != std::cend(allele);
-    };
-    const auto is_missing_or_has_deleted = [&] (const auto& allele) noexcept {
-        return allele == missing || has_deleted(allele);
-    };
-    
-    const auto samples = src.fetch_header().samples();
-    auto p = src.iterate();
-    std::for_each(std::move(p.first), std::move(p.second), [&] (const auto& call) {
-        VcfRecord::Builder cb {call};
-        const auto& alt = call.alt();
-        const auto first_deleted = std::find_if(std::cbegin(alt), std::cend(alt), has_deleted);
-        if (first_deleted != std::cend(alt)) {
-            auto new_alt = alt;
-            new_alt.erase(std::next(std::begin(new_alt), std::distance(std::cbegin(alt), first_deleted)));
-            cb.set_alt(std::move(new_alt));
-        }
-        for (const auto& sample : samples) {
-            const auto& gt = call.get_sample_value(sample, vcfspec::format::genotype);
-            const auto first_non_legacy = std::find_if(std::cbegin(gt), std::cend(gt),
-                                                       is_missing_or_has_deleted);
-            if (first_non_legacy != std::cend(gt)) {
-                const auto& ref = call.ref();
-                auto new_gt = gt;
-                auto iter = std::next(std::begin(new_gt), std::distance(std::cbegin(gt), first_non_legacy));
-                *iter = ref;
-                std::replace_if(std::next(iter), std::end(new_gt),
-                                is_missing_or_has_deleted, ref);
-                auto phasing = VcfRecord::Builder::Phasing::phased;
-                if (!call.is_sample_phased(sample)) {
-                    phasing = VcfRecord::Builder::Phasing::unphased;
-                }
-                cb.set_genotype(sample, std::move(new_gt), phasing);
-            }
-        }
-        dst << cb.build_once();
-    });
+    if (remove_ref_pad_duplicates) {
+        convert_to_legacy_dedup(src, dst);
+    } else {
+        convert_to_legacy_keep_all(src, dst);
+    }
 }
 
 } // namespace octopus

@@ -47,7 +47,7 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
 
 void merge(const std::vector<VcfReader>& sources, VcfWriter& dst);
 
-void convert_to_legacy(const VcfReader& src, VcfWriter& dst);
+void convert_to_legacy(const VcfReader& src, VcfWriter& dst, bool remove_ref_pad_duplicates = true);
 
 } // namespace octopus    
 
