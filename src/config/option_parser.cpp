@@ -324,7 +324,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Kmer sizes to use for local assembly")
     
     ("num-fallback-kmers",
-     po::value<int>()->default_value(7),
+     po::value<int>()->default_value(10),
      "How many local assembly fallback kmer sizes to use if the default sizes fail")
     
     ("fallback-kmer-gap",
