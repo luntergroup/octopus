@@ -580,11 +580,11 @@ void convert_to_legacy_dedup(const VcfReader& src, VcfWriter& dst)
     for (; p.first != p.second; ++p.first) {
         const auto& record = *p.first;
         if (record != prev_record && !is_lhs_ref_flank_snv_duplicate(prev_record, record, samples)) {
-            dst << prev_record;
+            dst << convert_to_legacy(prev_record, samples);
         }
         prev_record = record;
     }
-    dst << prev_record;
+    dst << convert_to_legacy(prev_record, samples);
 }
 
 } // namespace
