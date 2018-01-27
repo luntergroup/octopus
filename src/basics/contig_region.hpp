@@ -271,6 +271,15 @@ inline boost::optional<ContigRegion> intervening_region(const ContigRegion& lhs,
     return ContigRegion {lhs.end(), rhs.begin()};
 }
 
+inline ContigRegion::Size intervening_region_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+{
+    if (begins_before(rhs, lhs) || overlaps(lhs, rhs)) {
+        return 0;
+    } else {
+        return rhs.begin() - lhs.end();
+    }
+}
+
 inline ContigRegion::Size left_overhang_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     return (begins_before(lhs, rhs)) ? (rhs.begin() - lhs.begin()) : 0;

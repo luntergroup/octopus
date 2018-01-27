@@ -688,6 +688,37 @@ auto intervening_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 }
 
 template <typename T>
+auto intervening_region_size(const Mappable<T>& lhs, const ContigRegion& rhs)
+{
+    return intervening_region_size(static_cast<const T&>(lhs).mapped_region(), rhs);
+}
+
+template <typename T>
+auto intervening_region_size(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return intervening_region_size(static_cast<const T&>(lhs).mapped_region(), rhs);
+}
+
+template <typename T>
+auto intervening_region_size(const ContigRegion& lhs, const Mappable<T>& rhs)
+{
+    return intervening_region_size(lhs, static_cast<const T&>(rhs).mapped_region());
+}
+
+template <typename T>
+auto intervening_region_size(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return intervening_region_size(lhs, static_cast<const T&>(rhs).mapped_region());
+}
+
+template <typename T1, typename T2>
+auto intervening_region_size(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return intervening_region_size(static_cast<const T1&>(lhs).mapped_region(),
+                                   static_cast<const T2&>(rhs).mapped_region());
+}
+
+template <typename T>
 auto overlapped_region(const Mappable<T>& lhs, const ContigRegion& rhs)
 {
     return overlapped_region(static_cast<const T&>(lhs).mapped_region(), rhs);
@@ -716,6 +747,68 @@ auto overlapped_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return overlapped_region(static_cast<const T1&>(lhs).mapped_region(),
                              static_cast<const T2&>(rhs).mapped_region());
+}
+
+template <typename T>
+auto left_overhangs(const Mappable<T>& lhs, const ContigRegion& rhs)
+{
+    return left_overhangs(static_cast<const T&>(lhs).mapped_region(), rhs);
+}
+
+template <typename T>
+auto left_overhangs(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return left_overhangs(static_cast<const T&>(lhs).mapped_region(), rhs);
+}
+
+template <typename T>
+auto left_overhangs(const ContigRegion& lhs, const Mappable<T>& rhs)
+{
+    return left_overhangs(lhs, static_cast<const T&>(rhs).mapped_region());
+}
+
+template <typename T>
+auto left_overhangs(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return left_overhangs(lhs, static_cast<const T&>(rhs).mapped_region());
+}
+
+template <typename T1, typename T2>
+auto left_overhangs(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return left_overhangs(static_cast<const T1&>(lhs).mapped_region(),
+                          static_cast<const T2&>(rhs).mapped_region());
+}
+
+template <typename T>
+auto right_overhangs(const Mappable<T>& lhs, const ContigRegion& rhs)
+{
+    return right_overhangs(static_cast<const T&>(lhs).mapped_region(), rhs);
+}
+
+template <typename T>
+auto right_overhangs(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return right_overhangs(static_cast<const T&>(lhs).mapped_region(), rhs);
+}
+
+template <typename T>
+auto right_overhangs(const ContigRegion& lhs, const Mappable<T>& rhs)
+{
+    return right_overhangs(lhs, static_cast<const T&>(rhs).mapped_region());
+}
+
+template <typename T>
+auto right_overhangs(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return right_overhangs(lhs, static_cast<const T&>(rhs).mapped_region());
+}
+
+template <typename T1, typename T2>
+auto right_overhangs(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return right_overhangs(static_cast<const T1&>(lhs).mapped_region(),
+                           static_cast<const T2&>(rhs).mapped_region());
 }
 
 template <typename T>

@@ -225,6 +225,123 @@ std::vector<Variant> Haplotype::difference(const Haplotype& other) const
     return result;
 }
 
+CigarString Haplotype::cigar() const
+{
+    using Flag = CigarOperation::Flag;
+    CigarString result {};
+    if (!explicit_alleles_.empty()) {
+        const auto reference = reference_.get().fetch_sequence(GenomicRegion {region_.contig_name(), explicit_allele_region_});
+        result.reserve(2 * explicit_alleles_.size() + 2);
+        auto curr_op_size = begin_distance(region_.contig_region(), explicit_allele_region_);
+        auto curr_op_flag = Flag::sequenceMatch;
+        for (std::size_t i {0}; i < explicit_alleles_.size(); ++i) {
+            const auto& allele = explicit_alleles_[i];
+            if (i > 0) {
+                const auto& prev_allele = explicit_alleles_[i - 1];
+                if (!are_adjacent(prev_allele, allele)) {
+                    result.emplace_back(curr_op_size, curr_op_flag);
+                    curr_op_flag = Flag::sequenceMatch;
+                    curr_op_size = intervening_region_size(prev_allele, allele);
+                }
+            }
+            auto allele_op_flag = curr_op_flag;
+            CigarOperation::Size allele_op_size {0};
+            if (is_insertion(allele)) {
+                if (is_empty_region(allele)) {
+                    allele_op_flag = Flag::insertion;
+                    allele_op_size += allele.sequence().size();
+                } else {
+                    const auto insertion_size = allele.sequence().size() - region_size(allele);
+                    if (curr_op_flag == Flag::insertion) {
+                        curr_op_size += insertion_size;
+                        result.emplace_back(curr_op_size, curr_op_flag);
+                        curr_op_flag = Flag::deletion;
+                        curr_op_size = region_size(allele);
+                    } else if (curr_op_flag == Flag::deletion) {
+                        curr_op_size += region_size(allele);
+                        result.emplace_back(curr_op_size, curr_op_flag);
+                        curr_op_flag = Flag::insertion;
+                        curr_op_size = insertion_size;
+                    } else {
+                        result.emplace_back(curr_op_size, curr_op_flag);
+                        result.emplace_back(region_size(allele), Flag::deletion);
+                        curr_op_flag = Flag::insertion;
+                        curr_op_size = insertion_size;
+                    }
+                }
+            } else if (is_deletion(allele)) {
+                if (is_sequence_empty(allele)) {
+                    allele_op_flag = Flag::deletion;
+                    allele_op_size += region_size(allele);
+                } else {
+                    const auto deletion_size = region_size(allele) - allele.sequence().size();
+                    if (curr_op_flag == Flag::deletion) {
+                        curr_op_size += deletion_size;
+                        result.emplace_back(curr_op_size, curr_op_flag);
+                        curr_op_flag = Flag::insertion;
+                        curr_op_size = allele.sequence().size();
+                    } else if (curr_op_flag == Flag::insertion) {
+                        curr_op_size += allele.sequence().size();
+                        result.emplace_back(curr_op_size, curr_op_flag);
+                        curr_op_flag = Flag::deletion;
+                        curr_op_size = deletion_size;
+                    } else {
+                        result.emplace_back(curr_op_size, curr_op_flag);
+                        result.emplace_back(allele.sequence().size(), Flag::insertion);
+                        curr_op_flag = Flag::deletion;
+                        curr_op_size = deletion_size;
+                    }
+                }
+            } else if (!is_empty_region(allele)) {
+                const auto ref_idx = static_cast<std::size_t>(begin_distance(explicit_allele_region_, allele));
+                assert(ref_idx < reference.size());
+                if (region_size(allele) == 1) {
+                    if (allele.sequence()[0] == reference[ref_idx]) {
+                        allele_op_flag = Flag::sequenceMatch;
+                    } else {
+                        allele_op_flag = Flag::substitution;
+                    }
+                    ++allele_op_size;
+                } else {
+                    assert(reference.size() >= ref_idx + allele.sequence().size());
+                    if (std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()),
+                                   std::next(std::cbegin(reference), ref_idx))) {
+                        allele_op_flag = Flag::sequenceMatch;
+                    } else {
+                        allele_op_flag = Flag::alignmentMatch;
+                    }
+                    allele_op_size += region_size(allele);
+                }
+            }
+            if (allele_op_flag == curr_op_flag) {
+                curr_op_size += allele_op_size;
+            } else {
+                if (curr_op_size > 0) {
+                    result.emplace_back(curr_op_size, curr_op_flag);
+                }
+                curr_op_flag = allele_op_flag;
+                curr_op_size = allele_op_size;
+            }
+        }
+        const auto rhs_ref_flank_size = end_distance(explicit_allele_region_, region_.contig_region());
+        if (curr_op_flag == Flag::sequenceMatch) {
+            curr_op_size += rhs_ref_flank_size;
+        } else {
+            result.emplace_back(curr_op_size, curr_op_flag);
+            curr_op_flag = Flag::sequenceMatch;
+            curr_op_size = rhs_ref_flank_size;
+        }
+        if (curr_op_size > 0) {
+            result.emplace_back(curr_op_size, curr_op_flag);
+        }
+    } else {
+        result.emplace_back(size(region_), Flag::sequenceMatch);
+    }
+    assert(octopus::sequence_size(result) == sequence_.size());
+    assert(reference_size(result) == size(region_));
+    return result;
+}
+
 std::size_t Haplotype::get_hash() const noexcept
 {
     return cached_hash_;
@@ -270,6 +387,16 @@ Haplotype::Builder::Builder(const GenomicRegion& region, const ReferenceGenome& 
 region_ {region},
 reference_ {reference}
 {}
+
+bool Haplotype::Builder::can_push_back(const ContigAllele& allele) const noexcept
+{
+    return explicit_alleles_.empty() || is_after(allele, explicit_alleles_.back());
+}
+
+bool Haplotype::Builder::can_push_front(const ContigAllele& allele) const noexcept
+{
+    return explicit_alleles_.empty() || is_after(explicit_alleles_.front(), allele);
+}
 
 void Haplotype::Builder::push_back(const ContigAllele& allele)
 {

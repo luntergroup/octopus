@@ -149,7 +149,7 @@ $ test/install.py
 
 ## Examples
 
-Here are some common use-cases to get started. These examples are by no means exhaustive, please consult the documentation for explanations of all options, algorithms, and further examples.
+Here are some common use-cases to get started. These examples are by no means exhaustive, please consult the documentation for explanations of all options, algorithms, and further examples. For a more in depth example, refer to the [whole genome germline calling case study](https://github.com/luntergroup/octopus/blob/master/doc/octopus_wgs_case_study.md).
 
 Note by default octopus will output all calls in VCF format to standard output, in order to write calls to a file (`.vcf`, `.vcf.gz`, and `.bcf` are supported), use the command line option `--output` (`-o`).
 

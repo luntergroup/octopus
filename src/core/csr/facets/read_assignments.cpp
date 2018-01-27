@@ -16,24 +16,40 @@ auto copy_overlapped_to_vector(const ReadContainer& reads, const Mappable& mappa
     return std::vector<AlignedRead> {std::cbegin(overlapped), std::cend(overlapped)};
 }
 
+bool is_homozygous_nonreference(const Genotype<Haplotype>& genotype)
+{
+    return genotype.is_homozygous() && !is_reference(genotype[0]);
+}
+
 } // namespace
 
-ReadAssignments::ReadAssignments(const GenotypeMap& genotypes, const ReadMap& reads)
-: assignments_ {}
+ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const GenotypeMap& genotypes, const ReadMap& reads)
+: result_ {}
 {
-    assignments_.reserve(genotypes.size());
+    result_.reserve(genotypes.size());
     for (const auto& p : genotypes) {
-        assignments_[p.first].reserve(p.second.size());
-        for (const auto& genotype : p.second) {
-            auto local_reads = copy_overlapped_to_vector(reads.at(p.first), genotype);
+        const auto& sample = p.first;
+        const auto& genotypes = p.second;
+        result_[sample].reserve(genotypes.size());
+        for (const auto& genotype : genotypes) {
+            auto local_reads = copy_overlapped_to_vector(reads.at(sample), genotype);
             for (const auto& haplotype : genotype) {
                 // So every called haplotype appears in support map, even if no read support
-                assignments_[p.first][haplotype] = {};
+                result_[sample][haplotype] = {};
             }
             if (!local_reads.empty()) {
-                auto local_assignments = compute_haplotype_support(genotype, local_reads);
-                for (auto s : local_assignments) {
-                    assignments_[p.first][s.first] = s.second;
+                HaplotypeSupportMap genotype_support {};
+                if (!is_homozygous_nonreference(genotype)) {
+                    genotype_support = compute_haplotype_support(genotype, local_reads);
+                } else {
+                    auto augmented_genotype = genotype;
+                    Haplotype ref {mapped_region(genotype), reference};
+                    result_[sample][ref] = {};
+                    augmented_genotype.emplace(std::move(ref));
+                    genotype_support = compute_haplotype_support(augmented_genotype, local_reads);
+                }
+                for (auto& s : genotype_support) {
+                    result_[sample][s.first] = std::move(s.second);
                 }
             }
         }
@@ -42,7 +58,7 @@ ReadAssignments::ReadAssignments(const GenotypeMap& genotypes, const ReadMap& re
 
 Facet::ResultType ReadAssignments::do_get() const
 {
-    return assignments_;
+    return std::cref(result_);
 }
 
 } // namespace csr

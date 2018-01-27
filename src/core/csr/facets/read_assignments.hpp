@@ -6,12 +6,16 @@
 
 #include <unordered_map>
 #include <string>
+#include <functional>
+
+#include <boost/optional.hpp>
 
 #include "facet.hpp"
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/tools/read_assigner.hpp"
+#include "io/reference/reference_genome.hpp"
 
 namespace octopus { namespace csr {
 
@@ -19,15 +23,17 @@ class ReadAssignments : public Facet
 {
 public:
     using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
+    using SampleSupportMap = std::unordered_map<SampleName, HaplotypeSupportMap>;
+    using ResultType = std::reference_wrapper<const SampleSupportMap>;
     
-    using ResultType = std::unordered_map<SampleName, HaplotypeSupportMap>;
+    ReadAssignments() = default;
     
-    ReadAssignments(const GenotypeMap& genotypes, const ReadMap& reads);
+    ReadAssignments(const ReferenceGenome& reference, const GenotypeMap& genotypes, const ReadMap& reads);
     
 private:
     static const std::string name_;
     
-    std::unordered_map<SampleName, HaplotypeSupportMap> assignments_;
+    SampleSupportMap result_;
     
     const std::string& do_name() const noexcept override { return name_; }
     Facet::ResultType do_get() const override;

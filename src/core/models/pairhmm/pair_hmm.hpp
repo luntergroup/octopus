@@ -8,6 +8,9 @@
 #include <vector>
 #include <cstddef>
 #include <cstdint>
+#include <utility>
+
+#include "basics/cigar_string.hpp"
 
 namespace octopus { namespace hmm {
 
@@ -49,6 +52,12 @@ double evaluate(const std::string& target, const std::string& truth,
                 const std::vector<std::uint8_t>& target_qualities,
                 std::size_t target_offset,
                 const MutationModel& model);
+
+std::pair<CigarString, double>
+align(const std::string& target, const std::string& truth,
+      const std::vector<std::uint8_t>& target_qualities,
+      std::size_t target_offset,
+      const MutationModel& model);
 
 // p(target | truth, model)
 //

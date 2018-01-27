@@ -10,6 +10,7 @@
 
 #include <boost/optional.hpp>
 #include <boost/variant.hpp>
+#include <boost/any.hpp>
 
 #include "single_pass_variant_call_filter.hpp"
 #include "logging/progress_meter.hpp"
@@ -57,6 +58,7 @@ public:
                                std::vector<Condition> hard_conditions,
                                std::vector<Condition> soft_conditions,
                                OutputOptions output_config,
+                               ConcurrencyPolicy threading,
                                boost::optional<ProgressMeter&> progress = boost::none);
     
     ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;
@@ -106,6 +108,10 @@ private:
         bool operator()(boost::optional<T_> value) const noexcept
         {
             return !value || (*this)(*value);
+        }
+        bool operator()(boost::any value) const noexcept
+        {
+            return true;
         }
         T target;
         Cmp cmp;

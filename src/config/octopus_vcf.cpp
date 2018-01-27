@@ -58,7 +58,9 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::strandBias, "One of the alternative alleles has strand bias"},
 {spec::filter::lowDepth, "Read depth around variant is low"},
 {spec::filter::filteredReadFraction, "The number of reads filtered for calling is high"},
-{spec::filter::lowGQ, "Sample genotype quality low"}
+{spec::filter::highGCRegion, "The GC content of the region is too high"},
+{spec::filter::lowGQ, "Sample genotype quality low"},
+{spec::filter::highClippedReadFraction, "High fraction of clipped reads covering position"},
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)

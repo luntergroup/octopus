@@ -280,11 +280,18 @@ inline GenomicRegion encompassing_region(const GenomicRegion& lhs, const Genomic
 
 inline boost::optional<GenomicRegion> intervening_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
+    if (!is_same_contig(lhs, rhs)) return boost::none;
     const auto contig_region = intervening_region(lhs.contig_region(),  rhs.contig_region());
     if (contig_region) {
         return GenomicRegion {lhs.contig_name(), *contig_region};
     }
     return boost::none;
+}
+
+inline GenomicRegion::Size intervening_region_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    if (!is_same_contig(lhs, rhs)) return 0;
+    return intervening_region_size(lhs.contig_region(), rhs.contig_region());
 }
 
 inline boost::optional<GenomicRegion> overlapped_region(const GenomicRegion& lhs, const GenomicRegion& rhs)

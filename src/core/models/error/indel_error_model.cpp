@@ -7,6 +7,11 @@
 
 namespace octopus {
 
+std::unique_ptr<IndelErrorModel> IndelErrorModel::clone() const
+{
+    return do_clone();
+}
+
 IndelErrorModel::PenaltyType
 IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalities) const
 {

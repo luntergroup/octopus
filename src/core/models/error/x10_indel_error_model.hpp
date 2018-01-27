@@ -4,7 +4,7 @@
 #ifndef x10_indel_error_model_hpp
 #define x10_indel_error_model_hpp
 
-#include "indel_error_model.hpp"
+#include "core/models/error/indel_error_model.hpp"
 
 namespace octopus {
 
@@ -47,7 +47,8 @@ private:
     
     static constexpr PenaltyType defaultGapExtension_ = 2;
     
-    virtual PenaltyType do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const;
+    virtual std::unique_ptr<IndelErrorModel> do_clone() const override;
+    virtual PenaltyType do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const override;
 };
     
 } // namespace octopus

@@ -14,17 +14,15 @@ namespace octopus {
 
 CallerBuilder::CallerBuilder(const ReferenceGenome& reference, const ReadPipe& read_pipe,
                              VariantGeneratorBuilder vgb, HaplotypeGenerator::Builder hgb)
-: components_ {reference, read_pipe, std::move(vgb), std::move(hgb), Phaser {}}
+: components_ {reference, read_pipe, std::move(vgb), std::move(hgb), HaplotypeLikelihoodModel {}, Phaser {}}
 , params_ {}
 , factory_ {}
 {
-    params_.general.allow_inactive_flank_scoring = true;
     params_.general.refcall_type = Caller::RefCallType::none;
     params_.general.call_sites_only = false;
     params_.general.allow_model_filtering = false;
     params_.general.haplotype_extension_threshold = Phred<> {150.0};
     params_.general.saturation_limit = Phred<> {10.0};
-    params_.general.model_mapping_quality = true;
     params_.general.max_haplotypes = 200;
     factory_ = generate_factory();
 }
@@ -128,12 +126,6 @@ CallerBuilder& CallerBuilder::set_haplotype_extension_threshold(Phred<double> p)
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_flank_scoring(bool b) noexcept
-{
-    params_.general.allow_inactive_flank_scoring = b;
-    return *this;
-}
-
 CallerBuilder& CallerBuilder::set_model_filtering(bool b) noexcept
 {
     params_.general.allow_model_filtering = b;
@@ -164,15 +156,9 @@ CallerBuilder& CallerBuilder::set_max_joint_genotypes(unsigned max) noexcept
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_sequencer(std::string sequencer) noexcept
+CallerBuilder& CallerBuilder::set_likelihood_model(HaplotypeLikelihoodModel model) noexcept
 {
-    params_.general.sequencer = std::move(sequencer);
-    return *this;
-}
-
-CallerBuilder& CallerBuilder::set_model_mapping_quality(bool b) noexcept
-{
-    params_.general.model_mapping_quality = b;
+    components_.likelihood_model = std::move(model);
     return *this;
 }
 
@@ -268,6 +254,7 @@ Caller::Components CallerBuilder::make_components() const
         components_.read_pipe,
         components_.variant_generator_builder.build(components_.reference),
         components_.haplotype_generator_builder,
+        components_.likelihood_model,
         Phaser {params_.min_phase_score}
     };
 }

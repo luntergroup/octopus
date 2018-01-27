@@ -1263,14 +1263,19 @@ void run_filtering(GenomeCallingComponents& components)
         ProgressMeter progress {components.search_regions()};
         const auto& filter_factory = components.call_filter_factory();
         const auto& filter_read_pipe = components.filter_read_pipe();
-        auto unfiltered_output_path = components.output().path();
-        assert(unfiltered_output_path); // cannot be stdout
+        boost::optional<boost::filesystem::path> input_path {};
+        if (components.filter_request()) {
+            input_path = components.filter_request();
+        } else {
+            input_path = components.output().path();
+        }
+        assert(input_path); // cannot be stdout
         BufferedReadPipe::Config buffer_config {components.read_buffer_size()};
         buffer_config.fetch_expansion = 100;
         buffer_config.max_hint_gap = 5'000;
         BufferedReadPipe buffered_rp {filter_read_pipe, buffer_config};
         if (use_unfiltered_call_region_hints_for_filtering(components)) {
-            buffered_rp.hint(extract_call_regions(*unfiltered_output_path));
+            buffered_rp.hint(extract_call_regions(*input_path));
         } else {
             buffered_rp.hint(flatten(components.search_regions()));
         }
@@ -1278,9 +1283,10 @@ void run_filtering(GenomeCallingComponents& components)
         if (components.sites_only()) {
             output_config.emit_sites_only = true;
         }
-        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), output_config, progress);
+        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp),
+                                                output_config, progress, components.num_threads());
         assert(filter);
-        const VcfReader in {std::move(*unfiltered_output_path)};
+        const VcfReader in {std::move(*input_path)};
         VcfWriter& out {*components.filtered_output()};
         filter->filter(in, out);
     }
@@ -1351,7 +1357,9 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
     write_caller_output_header(components, command);
     const auto start = std::chrono::system_clock::now();
     try {
-        run_calling(components);
+        if (!components.filter_request()) {
+            run_calling(components);
+        }
     } catch (const ProgramError& e) {
         try {
             if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";

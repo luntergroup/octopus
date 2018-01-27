@@ -168,6 +168,9 @@ set(UTILS_SOURCES
     utils/genotype_reader.hpp
     utils/genotype_reader.cpp
     utils/beta_distribution.hpp
+    utils/parallel_transform.hpp
+    utils/thread_pool.hpp
+    utils/thread_pool.cpp
 )
 
 set(CORE_SOURCES
@@ -207,8 +210,6 @@ set(CORE_SOURCES
     core/tools/vcf_header_factory.cpp
     core/tools/vcf_record_factory.hpp
     core/tools/vcf_record_factory.cpp
-    core/tools/read_assigner.hpp
-    core/tools/read_assigner.cpp
 
     core/csr/facets/facet.hpp
     core/csr/facets/facet.cpp
@@ -239,8 +240,13 @@ set(CORE_SOURCES
     core/csr/filters/threshold_filter_factory.cpp
     core/csr/filters/unsupervised_clustering_filter_factory.hpp
     core/csr/filters/unsupervised_clustering_filter_factory.cpp
+    core/csr/filters/passing_filter.hpp
+    core/csr/filters/passing_filter.cpp
+    core/csr/filters/training_filter_factory.hpp
+    core/csr/filters/training_filter_factory.cpp
     
     core/csr/measures/measure.hpp
+    core/csr/measures/measure.cpp
     core/csr/measures/quality.hpp
     core/csr/measures/quality.cpp
     core/csr/measures/depth.hpp
@@ -274,6 +280,10 @@ set(CORE_SOURCES
     core/csr/measures/measures_fwd.hpp
     core/csr/measures/measure_factory.hpp
     core/csr/measures/measure_factory.cpp
+    core/csr/measures/realignments.hpp
+    core/csr/measures/realignments.cpp
+    core/csr/measures/unassigned_read_fraction.hpp
+    core/csr/measures/unassigned_read_fraction.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
@@ -282,7 +292,6 @@ set(CORE_SOURCES
     
     core/models/genotype/cnv_model.hpp
     core/models/genotype/cnv_model.cpp
-
     core/models/genotype/germline_likelihood_model.hpp
     core/models/genotype/germline_likelihood_model.cpp
     core/models/genotype/individual_model.hpp
@@ -311,20 +320,21 @@ set(CORE_SOURCES
     core/models/pairhmm/simd_pair_hmm.hpp
     core/models/pairhmm/simd_pair_hmm.cpp
 
-    core/models/mutation/hiseq_indel_error_model.hpp
-    core/models/mutation/hiseq_indel_error_model.cpp
-    core/models/mutation/x10_indel_error_model.hpp
-    core/models/mutation/x10_indel_error_model.cpp
-    core/models/mutation/indel_error_model.hpp
-    core/models/mutation/indel_error_model.cpp
-    core/models/mutation/snv_error_model.hpp
-    core/models/mutation/snv_error_model.cpp
-    core/models/mutation/hiseq_snv_error_model.hpp
-    core/models/mutation/hiseq_snv_error_model.cpp
-    core/models/mutation/x10_snv_error_model.hpp
-    core/models/mutation/x10_snv_error_model.cpp
-    core/models/mutation/error_model_factory.hpp
-    core/models/mutation/error_model_factory.cpp
+    core/models/error/hiseq_indel_error_model.hpp
+    core/models/error/hiseq_indel_error_model.cpp
+    core/models/error/x10_indel_error_model.hpp
+    core/models/error/x10_indel_error_model.cpp
+    core/models/error/indel_error_model.hpp
+    core/models/error/indel_error_model.cpp
+    core/models/error/snv_error_model.hpp
+    core/models/error/snv_error_model.cpp
+    core/models/error/hiseq_snv_error_model.hpp
+    core/models/error/hiseq_snv_error_model.cpp
+    core/models/error/x10_snv_error_model.hpp
+    core/models/error/x10_snv_error_model.cpp
+    core/models/error/error_model_factory.hpp
+    core/models/error/error_model_factory.cpp
+
     core/models/mutation/somatic_mutation_model.hpp
     core/models/mutation/somatic_mutation_model.cpp
     core/models/mutation/coalescent_model.hpp
@@ -335,6 +345,10 @@ set(CORE_SOURCES
     core/tools/coretools.hpp
     core/tools/haplotype_filter.hpp
     core/tools/haplotype_filter.cpp
+    core/tools/read_assigner.hpp
+    core/tools/read_assigner.cpp
+    core/tools/read_realigner.hpp
+    core/tools/read_realigner.cpp
 
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp
@@ -436,6 +450,10 @@ add_compile_options(-Wall -Wextra -Werror ${WarningIgnores})
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
+if (NOT BUILD_SHARED_LIBS)
+    set(HTSlib_USE_STATIC_LIBS ON)
+endif()
+
 if (BUILD_TESTING)
     # Make a library of all octopus non-main.cpp sources so can be used with tests
     add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
@@ -459,7 +477,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
     target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus-debug tandem)
-    if (USE_STATIC_BOOST)
+    if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
     else()
@@ -488,7 +506,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     target_compile_options(octopus-sanitize PRIVATE ${SanitizeFlags})
     target_include_directories(octopus-sanitize PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus-sanitize tandem ${SanitizeFlags})
-    if (USE_STATIC_BOOST)
+    if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
     else()
@@ -516,7 +534,7 @@ else()
     target_compile_options(octopus PRIVATE -ffast-math -funroll-loops -march=native)
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(octopus tandem)
-    if (USE_STATIC_BOOST)
+    if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
     else()
