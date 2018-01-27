@@ -84,7 +84,7 @@ double CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const 
         }
         case 3:
         {
-            const static double ln3 {std::log(2)};
+            const static double ln3 {std::log(3)};
             const auto a = ln_probability_of_somatic_given_haplotype(somatic, germline[0]);
             const auto b = ln_probability_of_somatic_given_haplotype(somatic, germline[1]);
             const auto c = ln_probability_of_somatic_given_haplotype(somatic, germline[3]);
@@ -95,7 +95,7 @@ double CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const 
             std::vector<double> tmp(ploidy);
             std::transform(std::cbegin(germline), std::cend(germline), std::begin(tmp),
                            [this, &somatic] (const auto& haplotype) {
-                               return ln_probability_of_somatic_given_haplotype(somatic, haplotype);
+                               return this->ln_probability_of_somatic_given_haplotype(somatic, haplotype);
                            });
             return maths::log_sum_exp(tmp) - std::log(ploidy);
         }

@@ -14,6 +14,8 @@
 #include <functional>
 #include <random>
 
+#include <boost/optional.hpp>
+
 #include "tandem/tandem.hpp"
 
 #include "basics/contig_region.hpp"
@@ -59,6 +61,11 @@ inline bool is_dna_nucleotide(const char b) noexcept
 inline bool is_rna_nucleotide(const char b) noexcept
 {
     return b == 'A' || b == 'C' || b == 'G' || b == 'U';
+}
+
+inline bool is_dna_or_rna_nucleotide(const char b) noexcept
+{
+    return b == 'A' || b == 'C' || b == 'G' || b == 'T' || b == 'U';
 }
 
 } // namespace detail
@@ -275,19 +282,16 @@ void reverse_complement(SequenceType& sequence)
 }
 
 template <typename InputIt, typename BidirIt>
-bool is_reverse_complement(InputIt first1, InputIt last1, BidirIt first2, BidirIt last2)
+bool are_reverse_complements(InputIt first1, InputIt last1, BidirIt first2, BidirIt last2)
 {
-    return std::equal(first1, last1,
-                      std::make_reverse_iterator(last2), std::make_reverse_iterator(first2),
-                      [] (const char lhs, const char rhs) {
-                          return lhs == complement(rhs);
-                      });
+    return std::equal(first1, last1, std::make_reverse_iterator(last2), std::make_reverse_iterator(first2),
+                      [] (const char lhs, const char rhs) noexcept { return lhs == complement(rhs); });
 }
 
 template <typename SeqType1, typename SeqType2>
-bool is_reverse_complement(const SeqType1& lhs, const SeqType2& rhs)
+bool are_reverse_complements(const SeqType1& lhs, const SeqType2& rhs)
 {
-    return is_reverse_complement(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
+    return are_reverse_complements(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
 }
 
 namespace detail {
@@ -354,6 +358,59 @@ double gc_content(const SequenceType& sequence) noexcept
     const auto gc_count = std::count_if(std::cbegin(sequence), std::cend(sequence),
                                         [] (const char base) { return base == 'G' || base == 'C'; });
     return static_cast<double>(gc_count) / sequence.size();
+}
+
+template <typename ForwardIt>
+bool is_homopolymer(ForwardIt first, ForwardIt last) noexcept
+{
+    return std::distance(first, last) > 0 && detail::is_dna_or_rna_nucleotide(*first)
+           && std::adjacent_find(first, last, std::not_equal_to<> {}) == last;
+}
+
+template <typename SequenceType>
+bool is_homopolymer(const SequenceType& sequence) noexcept
+{
+    return is_homopolymer(std::cbegin(sequence), std::cend(sequence));
+}
+
+template <typename Sequence>
+bool is_tandem_repeat(const Sequence& sequence, const unsigned period) noexcept
+{
+    if (period == 0 || sequence.empty() || period > sequence.size() / 2) {
+        return false;
+    }
+    if (period == 1) {
+        return is_homopolymer(sequence);
+    }
+    const auto num_full_periods = sequence.size() / period;
+    const auto first_unit_begin_itr = std::cbegin(sequence);
+    const auto first_unit_end_itr   = std::next(first_unit_begin_itr, period);
+    for (unsigned i {1}; i < num_full_periods; ++i) {
+        if (!std::equal(first_unit_begin_itr, first_unit_end_itr, std::next(first_unit_begin_itr, i * period))) {
+            return false;
+        }
+    }
+    const auto last_unit_begin_itr = std::next(first_unit_begin_itr, num_full_periods * period);
+    if (last_unit_begin_itr != std::cend(sequence)) {
+        return std::equal(last_unit_begin_itr, std::cend(sequence), first_unit_begin_itr);
+    } else {
+        return true;
+    }
+}
+
+template <typename Sequence>
+boost::optional<unsigned> find_tandem_repeat_period(const Sequence& sequence) noexcept
+{
+    for (unsigned period {1}; period < sequence.size() / 2; ++period) {
+        if (is_tandem_repeat(sequence, period)) return period;
+    }
+    return boost::none;
+}
+
+template <typename Sequence>
+bool is_tandem_repeat(const Sequence& sequence) noexcept
+{
+    return find_tandem_repeat_period(sequence);
 }
 
 } // namespace utils

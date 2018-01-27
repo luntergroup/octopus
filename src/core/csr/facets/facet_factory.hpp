@@ -9,16 +9,24 @@
 #include <functional>
 #include <unordered_map>
 
-#include "facet.hpp"
+#include <boost/optional.hpp>
+
+#include "config/common.hpp"
 #include "io/variant/vcf_record.hpp"
-#include "readpipe/buffered_read_pipe.hpp"
 #include "io/reference/reference_genome.hpp"
+#include "readpipe/buffered_read_pipe.hpp"
+#include "utils/genotype_reader.hpp"
+#include "utils/thread_pool.hpp"
+#include "facet.hpp"
 
 namespace octopus { namespace csr {
 
 class FacetFactory
 {
 public:
+    using CallBlock  = std::vector<VcfRecord>;
+    using FacetBlock = std::vector<FacetWrapper>;
+    
     FacetFactory() = delete;
     
     FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe);
@@ -30,14 +38,28 @@ public:
     
     ~FacetFactory() = default;
     
-    FacetWrapper make(const std::string& name, const std::vector<VcfRecord>& records) const;
-    
+    FacetWrapper make(const std::string& name, const CallBlock& block) const;
+    FacetBlock make(const std::vector<std::string>& names, const CallBlock& block) const;
+    std::vector<FacetBlock> make(const std::vector<std::string>& names, const std::vector<CallBlock>& blocks,
+                                 ThreadPool& workers) const;
+
 private:
+    struct BlockData
+    {
+        boost::optional<GenomicRegion> region;
+        boost::optional<ReadMap> reads;
+        boost::optional<GenotypeMap> genotypes;
+    };
+    
     std::reference_wrapper<const ReferenceGenome> reference_;
     BufferedReadPipe read_pipe_;
-    std::unordered_map<std::string, std::function<FacetWrapper(const std::vector<VcfRecord>& records)>> facet_makers_;
+    
+    std::unordered_map<std::string, std::function<FacetWrapper(const BlockData& data)>> facet_makers_;
     
     void setup_facet_makers();
+    FacetWrapper make(const std::string& name, const BlockData& block) const;
+    FacetBlock make(const std::vector<std::string>& names, const BlockData& block) const;
+    BlockData make_block_data(const std::vector<std::string>& names, const CallBlock& block) const;
 };
 
 } // namespace csr

@@ -20,6 +20,8 @@ RUN apt-get -y install \
     openssl \
     libssl-dev \
     libcrypto++-dev
+
+# Install GCC 7
 RUN apt-get -y install software-properties-common python-software-properties
 RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
 RUN apt-get -y install \
@@ -28,35 +30,35 @@ RUN apt-get -y install \
 
 # Install CMake
 WORKDIR /tmp
-RUN wget https://cmake.org/files/v3.9/cmake-3.9.6.tar.gz
-RUN tar -xzvf cmake-3.9.6.tar.gz
-WORKDIR /tmp/cmake-3.9.6
+RUN wget https://cmake.org/files/v3.10/cmake-3.10.2.tar.gz
+RUN tar -xzvf cmake-3.10.2.tar.gz
+WORKDIR /tmp/cmake-3.10.2
 RUN ./bootstrap --prefix=/usr/local
-RUN make -j4
+RUN make -j2
 RUN make install
 
 # Install Boost
 WORKDIR /tmp
-RUN wget -O boost_1_65_1.tar.gz http://sourceforge.net/projects/boost/files/boost/1.65.1/boost_1_65_1.tar.gz/download
-RUN tar xzvf boost_1_65_1.tar.gz
-WORKDIR /tmp/boost_1_65_1
+RUN wget -O boost_1_66_0.tar.gz http://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.gz/download
+RUN tar xzvf boost_1_66_0.tar.gz
+WORKDIR /tmp/boost_1_66_0
 RUN ./bootstrap.sh --prefix=/usr/local --without-libraries=python,mpi
-RUN ./b2 cxxflags="-std=c++11"
+RUN ./b2 -j2 cxxflags="-std=c++11"
 RUN ./b2 install
 
 # Install htslib
 WORKDIR /tmp
-RUN git clone https://github.com/samtools/htslib.git
+RUN git clone -b master https://github.com/samtools/htslib.git
 WORKDIR /tmp/htslib
 RUN autoheader
 RUN autoconf
 RUN ./configure
-RUN make
+RUN make -j2
 RUN make install
 
 # Install Octopus
 WORKDIR /tmp
-RUN git clone https://github.com/luntergroup/octopus.git
+RUN git clone -b master https://github.com/luntergroup/octopus.git
 WORKDIR /tmp/octopus
 RUN ./install.py --root --threads=2
 

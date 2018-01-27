@@ -86,13 +86,19 @@ $ ./install.py
 otherwise explicitly specify the compiler to use:
 
 ```shell
-$ ./install.py --compiler /path/to/cpp/compiler # or just the compiler name if on your PATH
+$ ./install.py --cxx_compiler /path/to/cpp/compiler # or just the compiler name if on your PATH
 ```
 
 For example, if the requirement instructions above were used:
 
 ```shell
-$ ./install.py --compiler clang++-4.0
+$ ./install.py --cxx_compiler clang++-4.0
+```
+
+On some systems, you may also need to specify a C compiler which is the same version as your C++ compiler, otherwise you'll get lots of link errors. This can be done with the `--c_compiler` option:
+
+```shell
+$ ./install.py --cxx_compiler g++-7 --c_compiler gcc-7 
 ```
 
 By default this installs to `/bin` relative to where you installed octopus. To install to a root directory (e.g. `/usr/local/bin`) use:
@@ -143,7 +149,7 @@ $ test/install.py
 
 ## Examples
 
-Here are some common use-cases to get started. These examples are by no means exhaustive, please consult the documentation for explanations of all options, algorithms, and further examples.
+Here are some common use-cases to get started. These examples are by no means exhaustive, please consult the documentation for explanations of all options, algorithms, and further examples. For a more in depth example, refer to the [whole genome germline calling case study](https://github.com/luntergroup/octopus/blob/master/doc/octopus_wgs_case_study.md).
 
 Note by default octopus will output all calls in VCF format to standard output, in order to write calls to a file (`.vcf`, `.vcf.gz`, and `.bcf` are supported), use the command line option `--output` (`-o`).
 

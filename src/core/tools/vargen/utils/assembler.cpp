@@ -995,7 +995,14 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
                         });
                         if (!reference_tails.empty()) {
                             if (reference_tails.size() == 1) {
-                                cyclic_reference_segments.emplace_back(cycle_sink, reference_tails.front());
+                                const auto& cycle_tail = reference_tails.front();
+                                Edge e; bool present;
+                                std::tie(e, present) = boost::edge(cycle_origin, cycle_tail, graph_);
+                                if (!present) {
+                                    cyclic_reference_segments.emplace_back(cycle_sink, cycle_tail);
+                                } else {
+                                    cyclic_reference_segments.emplace_back(cycle_tail, cycle_sink);
+                                }
                             } else {
                                 // Just add the rightmost reference vertex
                                 auto itr = std::find_first_of(std::crbegin(reference_vertices_), std::crend(reference_vertices_),
@@ -1977,7 +1984,7 @@ void Assembler::print_weighted(const Path& path) const
                        Edge e; bool good;
                        std::tie(e, good) = boost::edge(u, v, graph_);
                        assert(good);
-                       return static_cast<std::string>(kmer_of(v)) + "(" + std::to_string(graph_[e].weight) + ")";
+                       return static_cast<std::string>(this->kmer_of(v)) + "(" + std::to_string(graph_[e].weight) + ")";
                    });
     std::cout << kmer_of(path.back());
 }

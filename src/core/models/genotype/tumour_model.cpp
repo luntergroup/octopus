@@ -89,7 +89,7 @@ namespace {
 template <std::size_t K>
 VBAlpha<K> flatten(const TumourModel::Priors::GenotypeMixturesDirichletAlphas& alpha)
 {
-    VBAlpha<K> result;
+    VBAlpha<K> result {};
     std::copy_n(std::cbegin(alpha), K, std::begin(result));
     return result;
 }
@@ -109,7 +109,7 @@ VBGenotype<K>
 flatten(const CancerGenotype<Haplotype>& genotype, const SampleName& sample,
         const HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
-    VBGenotype<K> result;
+    VBGenotype<K> result {};
     const Genotype<Haplotype>& germline_genotype{genotype.germline_genotype()};
     assert(germline_genotype.ploidy() == (K - 1));
     std::transform(std::cbegin(germline_genotype), std::cend(germline_genotype), std::begin(result),

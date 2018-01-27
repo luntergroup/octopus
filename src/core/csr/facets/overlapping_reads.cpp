@@ -13,7 +13,7 @@ OverlappingReads::OverlappingReads(ReadMap reads) : reads_ {std::move(reads)} {}
 
 Facet::ResultType OverlappingReads::do_get() const
 {
-    return reads_;
+    return std::cref(reads_);
 }
 
 } // namespace csr

@@ -4,6 +4,8 @@ include(CheckIPOSupported)
 
 project(octopus)
 
+option(BUILD_SHARED_LIBS "Build the shared library" ON)
+
 set(CMAKE_COLOR_MAKEFILE ON)
 
 set(CMAKE_CXX_STANDARD 14)

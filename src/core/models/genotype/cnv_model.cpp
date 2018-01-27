@@ -96,7 +96,7 @@ namespace {
 template <std::size_t K>
 VBAlpha<K> flatten(const CNVModel::Priors::GenotypeMixturesDirichletAlphas& alpha)
 {
-    VBAlpha<K> result;
+    VBAlpha<K> result {};
     std::copy_n(std::cbegin(alpha), K, std::begin(result));
     return result;
 }
@@ -116,7 +116,7 @@ VBGenotype<K>
 flatten(const Genotype<Haplotype>& genotype, const SampleName& sample,
         const HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
-    VBGenotype<K> result;
+    VBGenotype<K> result {};
     std::transform(std::cbegin(genotype), std::cend(genotype), std::begin(result),
                    [&sample, &haplotype_likelihoods] (const Haplotype& haplotype)
                    -> std::reference_wrapper<const VBReadLikelihoodArray::BaseType> {

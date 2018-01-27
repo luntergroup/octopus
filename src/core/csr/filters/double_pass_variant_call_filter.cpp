@@ -16,8 +16,9 @@ namespace octopus { namespace csr {
 DoublePassVariantCallFilter::DoublePassVariantCallFilter(FacetFactory facet_factory,
                                                          std::vector<MeasureWrapper> measures,
                                                          OutputOptions output_config,
+                                                         ConcurrencyPolicy threading,
                                                          boost::optional<ProgressMeter&> progress)
-: VariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config)}
+: VariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading}
 , info_log_ {logging::InfoLogger {}}
 , progress_ {progress}
 , current_contig_ {}
@@ -47,7 +48,7 @@ void DoublePassVariantCallFilter::make_registration_pass(const VcfReader& source
     } else {
         std::size_t idx {0};
         for (auto p = source.iterate(); p.first != p.second;) {
-            const auto calls = get_next_block(p.first, p.second, samples);
+            const auto calls = read_next_block(p.first, p.second, samples);
             record(calls, idx);
             idx += calls.size();
         }

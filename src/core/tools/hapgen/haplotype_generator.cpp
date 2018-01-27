@@ -1304,16 +1304,11 @@ void HaplotypeGenerator::resolve_sandwich_insertion()
 }
 
 template <typename Range>
-auto sum_indel_sizes(const Range& alleles)
+auto sum_indel_sizes(const Range& alleles) noexcept
 {
     return std::accumulate(std::cbegin(alleles), std::cend(alleles), std::size_t {0},
-                           [] (const auto curr, const Allele& allele) {
-                               if (is_insertion(allele)) {
-                                   return curr + sequence_size(allele);
-                               } else if (is_deletion(allele)) {
-                                   return curr + region_size(allele);
-                               }
-                               return curr;
+                           [] (const auto curr, const Allele& allele) noexcept {
+                               return curr + reference_distance(allele);
                            });
 }
 

@@ -37,6 +37,7 @@ Caller::Caller(Components&& components, Parameters parameters)
 , read_pipe_ {components.read_pipe}
 , candidate_generator_ {std::move(components.candidate_generator)}
 , haplotype_generator_builder_ {std::move(components.haplotype_generator_builder)}
+, likelihood_model_ {std::move(components.likelihood_model)}
 , phaser_ {std::move(components.phaser)}
 , parameters_ {std::move(parameters)}
 {
@@ -755,17 +756,26 @@ bool Caller::refcalls_requested() const noexcept
     return parameters_.refcall_type != RefCallType::none;
 }
 
+bool check_reference(const Variant& v, const ReferenceGenome& reference)
+{
+    return ref_sequence(v) == reference.fetch_sequence(mapped_region(v));
+}
+
+bool check_reference(const std::vector<Variant>& variants, const ReferenceGenome& reference)
+{
+    return std::all_of(std::cbegin(variants), std::cend(variants), [&] (const auto& v) { return check_reference(v, reference); });
+}
+
 MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion& region) const
 {
     if (debug_log_) stream(*debug_log_) << "Generating candidate variants in region " << region;
     auto raw_candidates = candidate_generator_.generate(region);
     if (debug_log_) debug::print_left_aligned_candidates(stream(*debug_log_), raw_candidates, reference_);
     auto final_candidates = unique_left_align(std::move(raw_candidates), reference_);
+    assert(check_reference(final_candidates, reference_));
     candidate_generator_.clear();
-    return MappableFlatSet<Variant> {
-        std::make_move_iterator(std::begin(final_candidates)),
-        std::make_move_iterator(std::end(final_candidates))
-    };
+    return MappableFlatSet<Variant> {std::make_move_iterator(std::begin(final_candidates)),
+                                     std::make_move_iterator(std::end(final_candidates))};
 }
 
 HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
@@ -776,13 +786,7 @@ HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Varian
 
 HaplotypeLikelihoodCache Caller::make_haplotype_likelihood_cache() const
 {
-    if (parameters_.sequencer ) {
-        return HaplotypeLikelihoodCache {make_haplotype_likelihood_model(*parameters_.sequencer, parameters_.model_mapping_quality),
-                                         parameters_.max_haplotypes, samples_};
-    } else {
-        return HaplotypeLikelihoodCache {HaplotypeLikelihoodModel {parameters_.model_mapping_quality},
-                                         parameters_.max_haplotypes, samples_};
-    }
+    return HaplotypeLikelihoodCache {likelihood_model_, parameters_.max_haplotypes, samples_};
 }
 
 VcfRecordFactory Caller::make_record_factory(const ReadMap& reads) const
@@ -842,7 +846,7 @@ bool Caller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
         debug::print_active_candidates(stream(*debug_log_), candidates, active_region);
         stream(*debug_log_) << "Haplotype region is " << haplotype_region(haplotypes);
     }
-    if (parameters_.allow_inactive_flank_scoring) {
+    if (likelihood_model_.can_use_flank_state()) {
         flank_state = calculate_flank_state(haplotypes, active_region, candidates);
         if (debug_log_) {
             debug::print_inactive_flanking_candidates(stream(*debug_log_), candidates, active_region,

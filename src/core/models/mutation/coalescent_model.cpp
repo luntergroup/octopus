@@ -16,9 +16,22 @@
 
 namespace octopus {
 
+auto find_repeats(const Haplotype& haplotype, const unsigned max_period)
+{
+    if (max_period < 4) {
+        return tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, max_period);
+    } else {
+        thread_local std::vector<char> buffer {};
+        buffer.resize(sequence_size(haplotype) + 1);
+        std::copy(std::cbegin(haplotype.sequence()), std::cend(haplotype.sequence()), std::begin(buffer));
+        buffer.back() = '$';
+        return tandem::extract_exact_tandem_repeats(buffer, 1, max_period);
+    }
+}
+
 auto percent_of_bases_in_repeat(const Haplotype& haplotype)
 {
-    const auto repeats = tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 6);
+    const auto repeats = find_repeats(haplotype, 6);
     if (repeats.empty()) return 0.0;
     std::vector<unsigned> repeat_counts(sequence_size(haplotype), 0);
     for (const auto& repeat : repeats) {
@@ -31,11 +44,10 @@ auto percent_of_bases_in_repeat(const Haplotype& haplotype)
     return static_cast<double>(c) / repeat_counts.size();
 }
 
-auto calculate_base_indel_heterozygosities(const Haplotype& haplotype,
-                                           const double base_indel_heterozygosity)
+auto calculate_base_indel_heterozygosities(const Haplotype& haplotype, const double base_indel_heterozygosity)
 {
     std::vector<double> result(sequence_size(haplotype), base_indel_heterozygosity);
-    const auto repeats = tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 3);
+    const auto repeats = find_repeats(haplotype, 3);
     for (const auto& repeat : repeats) {
         const auto itr1 = std::next(std::begin(result), repeat.pos);
         const auto itr2 = std::next(itr1, repeat.length);
@@ -47,10 +59,8 @@ auto calculate_base_indel_heterozygosities(const Haplotype& haplotype,
     return result;
 }
 
-CoalescentModel::CoalescentModel(Haplotype reference,
-                                 Parameters params,
-                                 std::size_t num_haplotyes_hint,
-                                 CachingStrategy caching)
+CoalescentModel::CoalescentModel(Haplotype reference, Parameters params,
+                                 std::size_t num_haplotyes_hint, CachingStrategy caching)
 : reference_ {std::move(reference)}
 , reference_base_indel_heterozygosities_ {}
 , params_ {params}

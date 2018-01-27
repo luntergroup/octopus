@@ -16,8 +16,9 @@
 #include <boost/optional.hpp>
 
 #include "concepts/comparable.hpp"
-#include "basics/contig_region.hpp"
 #include "concepts/mappable.hpp"
+#include "basics/contig_region.hpp"
+#include "basics/cigar_string.hpp"
 #include "allele.hpp"
 
 namespace octopus {
@@ -89,6 +90,7 @@ public:
     NucleotideSequence::size_type sequence_size(const GenomicRegion& region) const;
     
     std::vector<Variant> difference(const Haplotype& other) const; // w.r.t this
+    CigarString cigar() const; // w.r.t reference
     
     std::size_t get_hash() const noexcept;
     
@@ -203,6 +205,9 @@ public:
     Builder& operator=(Builder&&)      = default;
     
     ~Builder() = default;
+    
+    bool can_push_back(const ContigAllele& allele) const noexcept;
+    bool can_push_front(const ContigAllele& allele) const noexcept;
     
     void push_back(const ContigAllele& allele);
     void push_front(const ContigAllele& allele);

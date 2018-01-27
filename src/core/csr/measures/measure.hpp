@@ -12,6 +12,7 @@
 
 #include <boost/variant.hpp>
 #include <boost/optional.hpp>
+#include <boost/any.hpp>
 
 #include "../facets/facet.hpp"
 
@@ -27,7 +28,8 @@ public:
     using FacetMap = std::unordered_map<std::string, FacetWrapper>;
     using ResultType = boost::variant<double, boost::optional<double>,
                                       std::size_t, boost::optional<std::size_t>,
-                                      bool>;
+                                      bool,
+                                      boost::any>;
     
     Measure() = default;
     
@@ -43,12 +45,14 @@ public:
     ResultType evaluate(const VcfRecord& call, const FacetMap& facets) const { return do_evaluate(call, facets); }
     std::string name() const { return do_name(); }
     std::vector<std::string> requirements() const { return do_requirements(); }
+    std::string serialise(const ResultType& value) const { return do_serialise(value); }
     
 private:
     virtual std::unique_ptr<Measure> do_clone() const = 0;
     virtual ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const = 0;
     virtual std::string do_name() const = 0;
     virtual std::vector<std::string> do_requirements() const { return {}; }
+    virtual std::string do_serialise(const ResultType& value) const;
 };
 
 class MeasureWrapper
@@ -74,6 +78,7 @@ public:
     auto operator()(const VcfRecord& call, const Measure::FacetMap& facets) const { return measure_->evaluate(call, facets); }
     std::string name() const { return measure_->name(); }
     std::vector<std::string> requirements() const { return measure_->requirements(); }
+    std::string serialise(const Measure::ResultType& value) const { return measure_->serialise(value); }
     
 private:
     std::unique_ptr<Measure> measure_;

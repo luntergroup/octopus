@@ -250,13 +250,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Allows reads considered duplicates by octopus")
     
-    ("no-secondary-alignments",
+    ("allow-secondary-alignments",
      po::bool_switch()->default_value(false),
-     "Filters reads marked as secondary alignments")
+     "Allows reads marked as secondary alignments")
     
-    ("no-supplementary-alignments",
+    ("allow-supplementary-alignments",
      po::bool_switch()->default_value(false),
-     "Filters reads marked as supplementary alignments")
+     "Allows reads marked as supplementary alignments")
     
     ("consider-reads-with-unmapped-segments",
      po::bool_switch()->default_value(false),
@@ -324,7 +324,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Kmer sizes to use for local assembly")
     
     ("num-fallback-kmers",
-     po::value<int>()->default_value(7),
+     po::value<int>()->default_value(10),
      "How many local assembly fallback kmer sizes to use if the default sizes fail")
     
     ("fallback-kmer-gap",
@@ -568,10 +568,18 @@ OptionMap parse_options(const int argc, const char** argv)
     ("use-calling-reads-for-filtering",
      po::value<bool>()->default_value(false),
      "Use the original reads used for variant calling for filtering")
-
+    
     ("keep-unfiltered-calls",
      po::bool_switch()->default_value(false),
      "Keep a copy of unfiltered calls")
+    
+    ("csr-training",
+     po::value<std::vector<std::string>>()->multitoken(),
+     "Activates CSR training mode with the given measures - outputs all calls as PASS and annotates output VCF with measure values")
+    
+    ("filter-vcf",
+     po::value<fs::path>(),
+     "Filter the given Octopus VCF without calling")
     ;
     
     po::options_description all("octopus options");

@@ -7,14 +7,13 @@
 #include <string>
 #include <functional>
 #include <memory>
+#include <unordered_map>
 
 #include <boost/variant.hpp>
 
 #include "concepts/equitable.hpp"
-
-#include <unordered_map>
-
 #include "config/common.hpp"
+#include "core/types/haplotype.hpp"
 #include "core/tools/read_assigner.hpp"
 
 namespace octopus { namespace csr {
@@ -22,10 +21,11 @@ namespace octopus { namespace csr {
 class Facet : public Equitable<Facet>
 {
 public:
-    using ResultType = boost::variant<ReadMap,
-                                      std::unordered_map<SampleName, HaplotypeSupportMap>,
-                                      std::string,
-                                      std::vector<std::string>
+    using ResultType = boost::variant<std::reference_wrapper<const ReadMap>,
+                                      std::reference_wrapper<const std::unordered_map<SampleName, HaplotypeSupportMap>>,
+                                      std::reference_wrapper<const std::string>,
+                                      std::reference_wrapper<const std::vector<std::string>>,
+                                      std::reference_wrapper<const Haplotype>
                                      >;
     
     Facet() = default;
@@ -70,6 +70,28 @@ private:
 };
 
 bool operator==(const FacetWrapper& lhs, const FacetWrapper& rhs) noexcept;
+
+namespace detail {
+
+template <typename T>
+const T& get_value(std::reference_wrapper<const T> value) noexcept
+{
+    return value.get();
+}
+
+template <typename T>
+T get_value(const T& value)
+{
+    return value;
+}
+
+} // namespace detail
+
+template <typename F>
+decltype(auto) get_value(const FacetWrapper& facet)
+{
+    return detail::get_value(boost::get<typename F::ResultType>(facet.get()));
+}
 
 } // namespace csr
 } // namespace octopus
