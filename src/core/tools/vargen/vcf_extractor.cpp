@@ -37,11 +37,6 @@ static bool is_canonical(const VcfRecord::NucleotideSequence& allele)
                            [](const auto base) { return base == vcfspec::deletedBase; });
 }
 
-bool is_good_quality(const VcfRecord& record, boost::optional<VcfRecord::QualityType> min_quality) noexcept
-{
-    return !min_quality || (record.qual() && *record.qual() >= *min_quality);
-}
-
 template <typename Iterator>
 auto make_allele(const Iterator first_base, const Iterator last_base)
 {
@@ -89,34 +84,32 @@ void extract_variants(const VcfRecord& record, Container& result)
     }
 }
 
-std::vector<Variant> fetch_variants(const GenomicRegion& region, const VcfReader& reader,
-                                    const boost::optional<VcfRecord::QualityType> min_quality)
+} // namespace
+
+std::vector<Variant> VcfExtractor::do_generate_variants(const GenomicRegion& region)
 {
-    std::deque<Variant> variants{}; // Use deque to prevent reallocating
-    auto p = reader.iterate(region, VcfReader::UnpackPolicy::sites);
-    std::for_each(std::move(p.first), std::move(p.second),
-                  [&variants, min_quality](const auto& record) {
-                      if (is_good_quality(record, min_quality)) {
-                          extract_variants(record, variants);
-                      }
-                  });
-    std::vector<Variant> result{std::make_move_iterator(std::begin(variants)),
-                                std::make_move_iterator(std::end(variants))};
+    std::deque<Variant> variants {};
+    for (auto p = reader_->iterate(region, VcfReader::UnpackPolicy::sites); p.first != p.second; ++p.first) {
+        if (is_good(*p.first)) {
+            extract_variants(*p.first, variants);
+        }
+    }
+    std::vector<Variant> result {std::make_move_iterator(std::begin(variants)),
+                                 std::make_move_iterator(std::end(variants))};
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
 }
 
-} // namespace
-
-std::vector<Variant> VcfExtractor::do_generate_variants(const GenomicRegion& region)
-{
-    return fetch_variants(region, *reader_, options_.min_quality);
-}
-
 std::string VcfExtractor::name() const
 {
     return "VCF extraction";
+}
+
+bool VcfExtractor::is_good(const VcfRecord& record)
+{
+    if (!options_.extract_filtered && is_filtered(record)) return false;
+    return !options_.min_quality || (record.qual() && *record.qual() >= *options_.min_quality);
 }
 
 } // namespace coretools

@@ -927,6 +927,7 @@ auto make_variant_generator_builder(const OptionMap& options)
             if (is_set("min-source-quality", options)) {
                 vcf_options.min_quality = options.at("min-source-quality").as<Phred<double>>().score();
             }
+            vcf_options.extract_filtered = options.at("extract-filtered-source-candidates").as<bool>();
             result.add_vcf_extractor(std::move(source_path), vcf_options);
         }
     }

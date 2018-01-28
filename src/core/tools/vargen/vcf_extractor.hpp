@@ -26,6 +26,7 @@ public:
     struct Options
     {
         Variant::MappingDomain::Size max_variant_size = 100;
+        bool extract_filtered = false;
         boost::optional<VcfRecord::QualityType> min_quality = boost::none;
     };
     
@@ -43,13 +44,13 @@ public:
     
 private:
     std::unique_ptr<VariantGenerator> do_clone() const override;
-    
     std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
-    
     std::string name() const override;
     
     std::shared_ptr<const VcfReader> reader_;
     Options options_;
+    
+    bool is_good(const VcfRecord& record);
 };
 
 } // namespace coretools
