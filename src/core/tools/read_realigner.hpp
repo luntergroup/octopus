@@ -22,6 +22,10 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
 
 std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
 
+CigarString rebase(const CigarString& read_to_haplotype, const CigarString& haplotype_to_reference);
+
+void rebase(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+
 } // namespace
 
 #endif
