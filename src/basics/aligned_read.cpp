@@ -113,6 +113,14 @@ AlignedRead::Flags AlignedRead::flags() const noexcept
     return decompress(flags_);
 }
 
+void AlignedRead::realign(GenomicRegion new_region, CigarString new_cigar) noexcept
+{
+    assert(sequence_size(new_cigar) == sequence_.size());
+    assert(reference_size(new_cigar) == size(new_region));
+    region_ = std::move(new_region);
+    cigar_ = std::move(new_cigar);
+}
+
 bool AlignedRead::is_marked_all_segments_in_read_aligned() const noexcept
 {
     return flags_[0];

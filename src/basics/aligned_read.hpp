@@ -114,6 +114,8 @@ public:
     const Segment& next_segment() const;
     Flags flags() const noexcept;
     
+    void realign(GenomicRegion new_region, CigarString new_cigar) noexcept;
+    
     bool is_marked_all_segments_in_read_aligned() const noexcept;
     bool is_marked_multiple_segment_template() const noexcept;
     bool is_marked_unmapped() const noexcept;
