@@ -48,20 +48,23 @@ public:
     ~CigarOperation() = default;
     
     Flag flag() const noexcept;
-    
     Size size() const noexcept;
-    
-    bool advances_reference() const noexcept;
-        
-    bool advances_sequence() const noexcept;
     
 private:
     Size size_;
     Flag flag_;
 };
 
+bool advances_reference(CigarOperation::Flag flag) noexcept;
+bool advances_reference(const CigarOperation& op) noexcept;
+bool advances_sequence(CigarOperation::Flag flag) noexcept;
+bool advances_sequence(const CigarOperation& op) noexcept;
+
+bool is_match(CigarOperation::Flag flag) noexcept;
 bool is_match(const CigarOperation& op) noexcept;
+bool is_indel(CigarOperation::Flag flag) noexcept;
 bool is_indel(const CigarOperation& op) noexcept;
+bool is_clipping(CigarOperation::Flag flag) noexcept;
 bool is_clipping(const CigarOperation& op) noexcept;
 
 // CigarString
@@ -107,7 +110,7 @@ S reference_size(const CigarString& cigar) noexcept
 {
     return std::accumulate(std::cbegin(cigar), std::cend(cigar), S {0},
                            [] (const S curr, const CigarOperation& op) {
-                               return curr + ((op.advances_reference()) ? op.size() : 0);
+                               return curr + ((advances_reference(op)) ? op.size() : 0);
                            });
 }
 
@@ -116,7 +119,7 @@ S sequence_size(const CigarString& cigar) noexcept
 {
     return std::accumulate(std::cbegin(cigar), std::cend(cigar), S {0},
                            [] (const S curr, const CigarOperation& op) {
-                               return curr + ((op.advances_sequence()) ? op.size() : 0);
+                               return curr + ((advances_sequence(op)) ? op.size() : 0);
                            });
 }
 
@@ -155,41 +158,45 @@ struct CigarHash
 } // namespace octopus
 
 namespace std {
-    template <> struct hash<octopus::CigarOperation>
+
+template <> struct hash<octopus::CigarOperation>
+{
+    size_t operator()(const octopus::CigarOperation& op) const noexcept
     {
-        size_t operator()(const octopus::CigarOperation& op) const noexcept
-        {
-            return octopus::CigarHash()(op);
-        }
-    };
-    
-    template <> struct hash<octopus::CigarString>
+        return octopus::CigarHash()(op);
+    }
+};
+
+template <> struct hash<octopus::CigarString>
+{
+    size_t operator()(const octopus::CigarString& cigar) const noexcept
     {
-        size_t operator()(const octopus::CigarString& cigar) const noexcept
-        {
-            return octopus::CigarHash()(cigar);
-        }
-    };
+        return octopus::CigarHash()(cigar);
+    }
+};
+
 } // namespace std
 
 namespace boost {
-    template <>
-    struct hash<octopus::CigarOperation> : std::unary_function<octopus::CigarOperation, std::size_t>
+
+template <>
+struct hash<octopus::CigarOperation> : std::unary_function<octopus::CigarOperation, std::size_t>
+{
+    std::size_t operator()(const octopus::CigarOperation& op) const noexcept
     {
-        std::size_t operator()(const octopus::CigarOperation& op) const noexcept
-        {
-            return std::hash<octopus::CigarOperation>()(op);
-        }
-    };
-    
-    template <>
-    struct hash<octopus::CigarString> : std::unary_function<octopus::CigarString, std::size_t>
+        return std::hash<octopus::CigarOperation>()(op);
+    }
+};
+
+template <>
+struct hash<octopus::CigarString> : std::unary_function<octopus::CigarString, std::size_t>
+{
+    std::size_t operator()(const octopus::CigarString& cigar) const noexcept
     {
-        std::size_t operator()(const octopus::CigarString& cigar) const noexcept
-        {
-            return std::hash<octopus::CigarString>()(cigar);
-        }
-    };
+        return std::hash<octopus::CigarString>()(cigar);
+    }
+};
+
 } // namespace boost
 
 #endif

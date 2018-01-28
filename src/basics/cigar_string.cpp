@@ -30,16 +30,6 @@ CigarOperation::Size CigarOperation::size() const noexcept
     return size_;
 }
 
-bool CigarOperation::advances_reference() const noexcept
-{
-    return !(flag_ == Flag::insertion || flag_ == Flag::hardClipped || flag_ == Flag::padding);
-}
-
-bool CigarOperation::advances_sequence() const noexcept
-{
-    return !(flag_ == Flag::deletion || flag_ == Flag::hardClipped);
-}
-
 // non-member methods
 
 bool is_valid(const CigarOperation::Flag flag) noexcept
@@ -64,10 +54,32 @@ bool is_valid(const CigarOperation& op) noexcept
     return is_valid(op.flag()) && op.size() > 0;
 }
 
-bool is_match(const CigarOperation& op) noexcept
+bool advances_reference(CigarOperation::Flag flag) noexcept
 {
     using Flag = CigarOperation::Flag;
-    switch (op.flag()) {
+    return !(flag == Flag::insertion || flag == Flag::hardClipped || flag == Flag::padding);
+}
+
+bool advances_reference(const CigarOperation& op) noexcept
+{
+    return advances_reference(op.flag());
+}
+
+bool advances_sequence(CigarOperation::Flag flag) noexcept
+{
+    using Flag = CigarOperation::Flag;
+    return !(flag == Flag::deletion || flag == Flag::hardClipped);
+}
+
+bool advances_sequence(const CigarOperation& op) noexcept
+{
+    return advances_sequence(op.flag());
+}
+
+bool is_match(CigarOperation::Flag flag) noexcept
+{
+    using Flag = CigarOperation::Flag;
+    switch (flag) {
         case Flag::alignmentMatch:
         case Flag::sequenceMatch:
         case Flag::substitution: return true;
@@ -75,16 +87,31 @@ bool is_match(const CigarOperation& op) noexcept
     }
 }
 
-bool is_indel(const CigarOperation& op) noexcept
+bool is_match(const CigarOperation& op) noexcept
+{
+    return is_match(op.flag());
+}
+
+bool is_indel(CigarOperation::Flag flag) noexcept
 {
     using Flag = CigarOperation::Flag;
-    return op.flag() == Flag::insertion || op.flag() == Flag::deletion;
+    return flag == Flag::insertion || flag == Flag::deletion;
+}
+
+bool is_indel(const CigarOperation& op) noexcept
+{
+    return is_indel(op.flag());
+}
+
+bool is_clipping(CigarOperation::Flag flag) noexcept
+{
+    using Flag = CigarOperation::Flag;
+    return flag == Flag::softClipped || flag == Flag::hardClipped;
 }
 
 bool is_clipping(const CigarOperation& op) noexcept
 {
-    using Flag = CigarOperation::Flag;
-    return op.flag() == Flag::softClipped || op.flag() == Flag::hardClipped;
+    return is_clipping(op.flag());
 }
 
 // CigarString
@@ -197,12 +224,12 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
 
 CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
-    return copy(cigar, offset, size, [](const auto& op) { return op.advances_reference(); });
+    return copy(cigar, offset, size, [](const auto& op) { return advances_reference(op); });
 }
 
 CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
-    return copy(cigar, offset, size, [](const auto& op) { return op.advances_sequence(); });
+    return copy(cigar, offset, size, [](const auto& op) { return advances_sequence(op); });
 }
 
 std::vector<CigarOperation::Flag> decompose(const CigarString& cigar)
@@ -220,10 +247,11 @@ CigarString collapse_matches(const CigarString& cigar)
     CigarString result {};
     result.reserve(cigar.size());
     for (auto match_end_itr = std::begin(cigar); match_end_itr != std::cend(cigar); ) {
-        const auto match_begin_itr = std::find_if(match_end_itr, std::end(cigar), is_match);
+        const auto f_is_match = [] (const CigarOperation& op) { return is_match(op); };
+        const auto match_begin_itr = std::find_if(match_end_itr, std::end(cigar), f_is_match);
         result.insert(std::cend(result), match_end_itr, match_begin_itr);
         if (match_begin_itr == std::cend(cigar)) break;
-        match_end_itr = std::find_if_not(std::next(match_begin_itr), std::end(cigar), is_match);
+        match_end_itr = std::find_if_not(std::next(match_begin_itr), std::end(cigar), f_is_match);
         auto match_size = std::accumulate(match_begin_itr, match_end_itr, 0,
                                           [] (auto curr, const auto& op) { return curr + op.size(); });
         result.emplace_back(match_size, CigarOperation::Flag::alignmentMatch);

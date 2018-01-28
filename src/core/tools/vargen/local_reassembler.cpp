@@ -157,7 +157,7 @@ bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuali
                                                          [=] (auto q) { return q < good_quality; });
                                std::advance(quality_itr, op.size());
                                return result;
-                           } else if (op.advances_sequence()) {
+                           } else if (advances_sequence(op)) {
                                std::advance(quality_itr, op.size());
                            }
                            return false;
@@ -173,16 +173,6 @@ auto find_first_sequence_op(const std::vector<CigarOperation::Flag>& cigar) noex
 {
     return std::find_if_not(std::cbegin(cigar), std::cend(cigar),
                             [] (auto op) { return op == CigarOperation::Flag::hardClipped; });
-}
-
-bool is_match(const CigarOperation::Flag op) noexcept
-{
-    switch (op) {
-        case CigarOperation::Flag::alignmentMatch:
-        case CigarOperation::Flag::sequenceMatch:
-        case CigarOperation::Flag::substitution: return true;
-        default: return false;
-    }
 }
 
 template <typename T>
