@@ -74,7 +74,7 @@ public:
     const std::vector<NucleotideSequence>& alt() const noexcept;
     boost::optional<QualityType> qual() const noexcept;
     bool has_filter(const KeyType& filter) const noexcept;
-    const std::vector<KeyType> filter() const noexcept;
+    const std::vector<KeyType>& filter() const noexcept;
     bool has_info(const KeyType& key) const noexcept;
     std::vector<KeyType> info_keys() const;
     const std::vector<ValueType>& info_value(const KeyType& key) const;
@@ -133,6 +133,8 @@ std::vector<VcfRecord::NucleotideSequence> get_genotype(const VcfRecord& record,
 VcfRecord::NucleotideSequence get_ancestral_allele(const VcfRecord& record);
 std::vector<unsigned> get_allele_count(const VcfRecord& record);
 std::vector<double> get_allele_frequency(const VcfRecord& record);
+
+bool is_filtered(const VcfRecord& record) noexcept;
 bool is_dbsnp_member(const VcfRecord& record) noexcept;
 bool is_hapmap2_member(const VcfRecord& record) noexcept;
 bool is_hapmap3_member(const VcfRecord& record) noexcept;

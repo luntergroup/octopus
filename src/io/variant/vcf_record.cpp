@@ -59,7 +59,7 @@ bool VcfRecord::has_filter(const KeyType& filter) const noexcept
     return std::find(std::cbegin(filter_), std::cend(filter_), filter) != std::cend(filter_);
 }
 
-const std::vector<VcfRecord::KeyType> VcfRecord::filter() const noexcept
+const std::vector<VcfRecord::KeyType>& VcfRecord::filter() const noexcept
 {
     return filter_;
 }
@@ -308,6 +308,12 @@ void VcfRecord::print_sample_data(std::ostream& os) const
 std::vector<VcfRecord::NucleotideSequence> get_genotype(const VcfRecord& record, const VcfRecord::SampleName& sample)
 {
     return record.get_sample_value(sample, vcfspec::format::genotype);
+}
+
+bool is_filtered(const VcfRecord& record) noexcept
+{
+    const auto& filters = record.filter();
+    return !filters.empty() && !(filters[0] == vcfspec::filter::pass || filters[0] == vcfspec::missingValue);
 }
 
 bool is_dbsnp_member(const VcfRecord& record) noexcept
