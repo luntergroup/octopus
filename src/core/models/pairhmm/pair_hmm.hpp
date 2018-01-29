@@ -44,6 +44,13 @@ struct FlatGapMutationModel
     short gap_open, gap_extend;
 };
 
+struct Alignment
+{
+    std::size_t target_offset;
+    CigarString cigar;
+    double likelihood;
+};
+
 // p(target | truth, target_qualities, target_offset, model)
 //
 // Warning: The target must be contained by the truth by at least
@@ -53,11 +60,10 @@ double evaluate(const std::string& target, const std::string& truth,
                 std::size_t target_offset,
                 const MutationModel& model);
 
-std::pair<CigarString, double>
-align(const std::string& target, const std::string& truth,
-      const std::vector<std::uint8_t>& target_qualities,
-      std::size_t target_offset,
-      const MutationModel& model);
+Alignment align(const std::string& target, const std::string& truth,
+                const std::vector<std::uint8_t>& target_qualities,
+                std::size_t target_offset,
+                const MutationModel& model);
 
 // p(target | truth, model)
 //
