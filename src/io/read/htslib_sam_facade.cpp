@@ -215,7 +215,6 @@ bool HtslibSamFacade::is_open() const noexcept
 void HtslibSamFacade::open()
 {
     hts_file_.reset(sam_open(file_path_.string().c_str(), "r"));
-    
     if (hts_file_) {
         hts_header_.reset(sam_hdr_read(hts_file_.get()));
         hts_index_.reset(sam_index_load(hts_file_.get(), file_path_.c_str()));
@@ -708,8 +707,7 @@ AlignedRead::NucleotideSequence extract_sequence(const bam1_t* b)
     const auto hts_sequence     = bam_get_seq(b);
     NucleotideSequence result(sequence_length, 'N');
     std::uint32_t i {0};
-    std::generate_n(std::begin(result), sequence_length,
-                    [&i, &hts_sequence] () { return extract_base(hts_sequence, i++); });
+    std::generate_n(std::begin(result), sequence_length, [&] () { return extract_base(hts_sequence, i++); });
     return result;
 }
 
@@ -732,10 +730,8 @@ CigarString extract_cigar_string(const bam1_t* b)
     CigarString result(cigar_length);
     std::transform(cigar_operations, cigar_operations + cigar_length, std::begin(result),
                    [] (const auto op) noexcept {
-                       return CigarOperation {
-                           static_cast<CigarOperation::Size>(bam_cigar_oplen(op)),
-                           static_cast<CigarOperation::Flag>(bam_cigar_opchr(op))
-                       };
+                       return CigarOperation {static_cast<CigarOperation::Size>(bam_cigar_oplen(op)),
+                                              static_cast<CigarOperation::Flag>(bam_cigar_opchr(op))};
                    });
     return result;
 }
@@ -761,12 +757,12 @@ auto mapping_quality(const bam1_core_t& c) noexcept
 {
     return static_cast<AlignedRead::MappingQuality>(c.qual);
 }
-        
+
 bool has_multiple_segments(const bam1_core_t& c) noexcept
 {
     return c.mtid != -1;
 }
-    
+
 auto next_segment_position(const bam1_core_t& c) noexcept
 {
     return static_cast<AlignedRead::MappingDomain::Position>(c.mpos);
@@ -776,7 +772,7 @@ auto template_length(const bam1_core_t& c) noexcept
 {
     return static_cast<AlignedRead::MappingDomain::Size>(std::abs(c.isize));
 }
-    
+
 auto extract_next_segment_flags(const bam1_core_t& c) noexcept
 {
     AlignedRead::Segment::Flags result {};
@@ -788,25 +784,20 @@ auto extract_next_segment_flags(const bam1_core_t& c) noexcept
 AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 {
     using std::begin; using std::end; using std::next; using std::move;
-    
     auto qualities = extract_qualities(hts_bam1_.get());
-    
     if (qualities.empty() || qualities[0] == 0xff) {
         throw InvalidBamRecord {hts_facade_.file_path_, extract_read_name(hts_bam1_.get()), "corrupt sequence data"};
     }
-    
     auto cigar = extract_cigar_string(hts_bam1_.get());
     const auto& info = hts_bam1_->core;
     auto read_begin_tmp = clipped_begin(cigar, info.pos);
     auto sequence = extract_sequence(hts_bam1_.get());
-    
     if (read_begin_tmp < 0) {
         // Then the read hangs off the left of the contig, and we must remove bases, base_qualities, and
         // adjust the cigar string as we cannot have a negative begin position
         const auto overhang_size = static_cast<unsigned>(std::abs(read_begin_tmp));
         sequence.erase(begin(sequence), next(begin(sequence), overhang_size));
         qualities.erase(begin(qualities), next(begin(qualities), overhang_size));
-        
         auto soft_clip_size = cigar.front().size();
         if (overhang_size == soft_clip_size) {
             cigar.erase(begin(cigar));
@@ -815,23 +806,18 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         }
         read_begin_tmp = 0;
     }
-    
     const auto read_begin = static_cast<AlignedRead::MappingDomain::Position>(read_begin_tmp);
     const auto& contig_name = hts_facade_.get_contig_name(info.tid);
-    
     if (has_multiple_segments(info)) {
         return AlignedRead {
             extract_read_name(hts_bam1_.get()),
-            GenomicRegion {
-                contig_name,
-                read_begin,
-                read_begin + octopus::reference_size<AlignedRead::MappingDomain::Position>(cigar)
-            },
+            GenomicRegion {contig_name, read_begin, read_begin + octopus::reference_size<AlignedRead::MappingDomain::Position>(cigar)},
             move(sequence),
             move(qualities),
             move(cigar),
             mapping_quality(info),
             extract_flags(info),
+            read_group(),
             hts_facade_.get_contig_name(info.mtid),
             next_segment_position(info),
             template_length(info),
@@ -840,16 +826,13 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
     } else {
         return AlignedRead {
             extract_read_name(hts_bam1_.get()),
-            GenomicRegion {
-                contig_name,
-                read_begin,
-                read_begin + octopus::reference_size<AlignedRead::MappingDomain::Size>(cigar)
-            },
+            GenomicRegion {contig_name, read_begin, read_begin + octopus::reference_size<AlignedRead::MappingDomain::Size>(cigar)},
             move(sequence),
             move(qualities),
             move(cigar),
             mapping_quality(info),
-            extract_flags(info)
+            extract_flags(info),
+            read_group()
         };
     }
 }
@@ -875,9 +858,7 @@ bool HtslibSamFacade::HtslibIterator::is_good() const noexcept
     if (cigar_length == 0) return false;
     const auto cigar_operations = bam_get_cigar(hts_bam1_.get());
     return std::all_of(cigar_operations, cigar_operations + cigar_length,
-                       [] (const auto op) {
-                           return bam_cigar_oplen(op) > 0;
-                       });
+                       [] (const auto op) { return bam_cigar_oplen(op) > 0; });
 }
 
 std::size_t HtslibSamFacade::HtslibIterator::begin() const noexcept
