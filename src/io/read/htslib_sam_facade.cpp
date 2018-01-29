@@ -12,6 +12,7 @@
 #include <cassert>
 
 #include <boost/filesystem/operations.hpp>
+#include <htslib/sam.h>
 
 #include "basics/cigar_string.hpp"
 #include "basics/genomic_region.hpp"
@@ -19,6 +20,7 @@
 #include "exceptions/missing_file_error.hpp"
 #include "exceptions/missing_index_error.hpp"
 #include "exceptions/malformed_file_error.hpp"
+#include "exceptions/unwritable_file_error.hpp"
 
 namespace octopus { namespace io {
 
@@ -115,6 +117,13 @@ public:
     MalformedCRAMHeader(boost::filesystem::path file) : MalformedFileError {std::move(file)} {}
 };
 
+class UnwritableBAM : public UnwritableFileError
+{
+    std::string do_where() const override { return "HtslibSamFacade"; }
+public:
+    UnwritableBAM(boost::filesystem::path file) : UnwritableFileError {std::move(file), "bam"} {}
+};
+
 class InvalidBamRecord : public std::runtime_error
 {
 public:
@@ -205,6 +214,41 @@ HtslibSamFacade::HtslibSamFacade(Path file_path)
     }
     samples_.shrink_to_fit();
     std::sort(std::begin(samples_), std::end(samples_));
+}
+
+auto open_hts_writable_file(const boost::filesystem::path& path)
+{
+    std::string mode {"[w]"};
+    const auto extension = path.extension();
+    if (extension == ".bam") {
+        mode += "b";
+    }
+    return sam_open(path.c_str(), mode.c_str());
+}
+
+HtslibSamFacade::HtslibSamFacade(Path sam_out, Path sam_template)
+: HtslibSamFacade {std::move(sam_template)}
+{
+    file_path_ = std::move(sam_out);
+    hts_file_.reset(open_hts_writable_file(file_path_));
+    if (!hts_file_) {
+        throw UnwritableBAM {std::move(file_path_)};
+    }
+    hts_index_ = nullptr;
+    if (sam_hdr_write(hts_file_.get(), hts_header_.get()) < 0) {
+        throw UnwritableBAM {std::move(file_path_)};
+    }
+}
+
+HtslibSamFacade::~HtslibSamFacade()
+{
+    if (!hts_index_) {
+        hts_header_.reset(nullptr);
+        hts_file_.reset(nullptr);
+        if (sam_index_build(file_path_.c_str(), 0) < 0) {
+            return;
+        }
+    }
 }
 
 bool HtslibSamFacade::is_open() const noexcept
@@ -547,6 +591,21 @@ boost::optional<std::vector<GenomicRegion::ContigName>> HtslibSamFacade::mapped_
     return result;
 }
 
+void HtslibSamFacade::write(const AlignedRead& read)
+{
+    if (!hts_file_ || !hts_header_) {
+        throw UnwritableBAM {file_path_};
+    }
+    std::unique_ptr<bam1_t, HtsBam1Deleter> record {bam_init1(), HtsBam1Deleter {}};
+    if (!record) {
+        throw UnwritableBAM {file_path_};
+    }
+    write(read, record.get());
+    if (sam_write1(hts_file_.get(), hts_header_.get(), record.get()) < 0) {
+        throw UnwritableBAM {file_path_};
+    }
+}
+
 // private methods
 
 HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_all_reads(const GenomicRegion& region) const
@@ -864,6 +923,175 @@ bool HtslibSamFacade::HtslibIterator::is_good() const noexcept
 std::size_t HtslibSamFacade::HtslibIterator::begin() const noexcept
 {
     return hts_bam1_->core.pos;
+}
+
+namespace {
+
+void set_contig(const std::int32_t tid, bam1_t* result) noexcept
+{
+    result->core.tid = tid;
+}
+
+void set_pos(const AlignedRead& read, bam1_t* result) noexcept
+{
+    result->core.pos = mapped_begin(read);
+}
+
+void set_mapping_quality(const AlignedRead& read, bam1_t* result) noexcept
+{
+    result->core.qual = read.mapping_quality();
+}
+
+void set_flag(bool set, std::uint16_t mask, std::uint16_t& result) noexcept
+{
+    constexpr std::uint16_t zeros {0}, ones = -1;
+    result |= (set ? ones : zeros) & mask;
+}
+
+void set_flags(const AlignedRead& read, bam1_t* result) noexcept
+{
+    const auto flags = read.flags();
+    auto& bitset = result->core.flag;
+    set_flag(flags.multiple_segment_template,    BAM_FPAIRED, bitset);
+    set_flag(flags.all_segments_in_read_aligned, BAM_FPROPER_PAIR, bitset);
+    set_flag(flags.unmapped,                     BAM_FUNMAP, bitset);
+    set_flag(flags.reverse_mapped,               BAM_FREVERSE, bitset);
+    set_flag(flags.secondary_alignment,          BAM_FSECONDARY, bitset);
+    set_flag(flags.qc_fail,                      BAM_FQCFAIL, bitset);
+    set_flag(flags.duplicate,                    BAM_FDUP, bitset);
+    set_flag(flags.supplementary_alignment,      BAM_FSUPPLEMENTARY, bitset);
+    set_flag(flags.first_template_segment,       BAM_FREAD1, bitset);
+    set_flag(flags.last_template_segment,        BAM_FREAD2, bitset);
+}
+
+void set_segment(const AlignedRead& read, const std::int32_t tid, bam1_t* result)
+{
+    const auto& segment = read.next_segment();
+    result->core.mtid = tid;
+    result->core.mpos = segment.begin();
+    result->core.isize = static_cast<std::int32_t>(segment.inferred_template_length());
+    if (segment.begin() < mapped_begin(read)) {
+        result->core.isize *= -1;
+    }
+    set_flag(segment.is_marked_unmapped(),       BAM_FMUNMAP, result->core.flag);
+    set_flag(segment.is_marked_reverse_mapped(), BAM_FMREVERSE, result->core.flag);
+}
+
+void init_variable_length_data(const AlignedRead& read, bam1_t* result)
+{
+    result->m_data = 0;
+    result->m_data += read.name().size() + 1 + read.name().size() % 4;
+    result->m_data += (read.sequence().size() + 1) / 2; // 4 bits per base
+    result->m_data += read.base_qualities().size();
+    result->m_data += 4 * read.cigar().size();
+    if (!read.read_group().empty()) {
+        result->m_data += read.read_group().size() + readGroupTag.size() + 2; // 1 for tag, 1 for '\0'
+    }
+    result->l_data = static_cast<int>(result->m_data);
+    result->data = (std::uint8_t*) std::realloc(result->data, result->m_data);
+    std::fill_n(result->data, result->m_data, 0);
+}
+
+void set_name(const AlignedRead& read, bam1_t* result)
+{
+    const auto& name = read.name();
+    std::copy(std::cbegin(name), std::cend(name), result->data);
+    result->core.l_extranul = name.size() % 4;
+    result->core.l_qname = name.size() + result->core.l_extranul + 1;
+}
+
+void set_cigar(const AlignedRead& read, bam1_t* result) noexcept
+{
+    const auto& cigar = read.cigar();
+    result->core.n_cigar = cigar.size();
+    std::transform(std::cbegin(cigar), std::cend(cigar), bam_get_cigar(result),
+                   [] (const CigarOperation& op) noexcept -> std::uint32_t {
+                       // Lower 4 bits for CIGAR operation and the higher 28 bits for size
+                       std::uint32_t result {op.size()};
+                       result <<= BAM_CIGAR_SHIFT;
+                       using Flag = CigarOperation::Flag;
+                       switch (op.flag()) {
+                           case Flag::alignmentMatch: result |= BAM_CMATCH; break;
+                           case Flag::insertion:      result |= BAM_CINS; break;
+                           case Flag::deletion:       result |= BAM_CDEL; break;
+                           case Flag::skipped:        result |= BAM_CREF_SKIP; break;
+                           case Flag::softClipped:    result |= BAM_CSOFT_CLIP; break;
+                           case Flag::hardClipped:    result |= BAM_CHARD_CLIP; break;
+                           case Flag::padding:        result |= BAM_CPAD; break;
+                           case Flag::sequenceMatch:  result |= BAM_CEQUAL; break;
+                           case Flag::substitution:   result |= BAM_CDIFF; break;
+                       }
+                       return result;
+                   });
+}
+
+static constexpr std::array<std::uint8_t, 128> sam_bases
+{
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 1, 0, 2, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 15,0,
+0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+void set_read_sequence(const AlignedRead& read, bam1_t* result) noexcept
+{
+    const auto& sequence = read.sequence();
+    result->core.l_qseq = sequence.size();
+    // Each base is encoded in 4 bits: 1 for A, 2 for C, 4 for G,
+    // 8 for T and 15 for N. Two bases are packed in one byte with the base
+    // at the higher 4 bits having smaller coordinate on the read.
+    auto bam_seq_itr = bam_get_seq(result);
+    for (std::size_t i {1}; i < sequence.size(); i += 2, ++bam_seq_itr) {
+        *bam_seq_itr = sam_bases[sequence[i - 1]] << 4 | sam_bases[sequence[i]];
+    }
+    if (sequence.size() % 2 == 1) {
+        *bam_seq_itr = sam_bases[sequence.back()] << 4;
+    }
+}
+
+void set_base_qualities(const AlignedRead& read, bam1_t* result) noexcept
+{
+    std::copy(std::cbegin(read.base_qualities()), std::cend(read.base_qualities()), bam_get_qual(result));
+}
+
+void set_aux(const AlignedRead& read, bam1_t* result) noexcept
+{
+    const auto& rg = read.read_group();
+    if (!rg.empty()) {
+        auto aux_itr = std::copy(std::cbegin(readGroupTag), std::cend(readGroupTag), bam_get_aux(result));
+        *aux_itr++ = 'Z';
+        std::copy(std::cbegin(rg), std::cend(rg), aux_itr);
+    }
+}
+
+void set_variable_length_data(const AlignedRead& read, bam1_t* result)
+{
+    init_variable_length_data(read, result);
+    set_name(read, result);
+    set_cigar(read, result);
+    set_read_sequence(read, result);
+    set_base_qualities(read, result);
+    set_aux(read, result);
+}
+
+} // namespace
+
+void HtslibSamFacade::write(const AlignedRead& read, bam1_t* result) const
+{
+    set_contig(hts_targets_.at(contig_name(read)), result);
+    set_pos(read, result);
+    set_mapping_quality(read, result);
+    set_flags(read, result);
+    if (read.has_other_segment()) {
+        set_segment(read, hts_targets_.at(read.next_segment().contig_name()), result);
+    } else {
+        result->core.mtid = '*';
+    }
+    set_variable_length_data(read, result);
 }
 
 } // namespace io
