@@ -246,37 +246,17 @@ CigarString Haplotype::cigar() const
             }
             auto allele_op_flag = curr_op_flag;
             CigarOperation::Size allele_op_size {0};
-            if (is_insertion(allele)) {
-                if (is_empty_region(allele)) {
+            if (is_indel(allele)) {
+                if (is_simple_insertion(allele)) {
                     allele_op_flag = Flag::insertion;
                     allele_op_size += allele.sequence().size();
-                } else {
-                    const auto insertion_size = allele.sequence().size() - region_size(allele);
-                    if (curr_op_flag == Flag::insertion) {
-                        curr_op_size += insertion_size;
-                        result.emplace_back(curr_op_size, curr_op_flag);
-                        curr_op_flag = Flag::deletion;
-                        curr_op_size = region_size(allele);
-                    } else if (curr_op_flag == Flag::deletion) {
-                        curr_op_size += region_size(allele);
-                        result.emplace_back(curr_op_size, curr_op_flag);
-                        curr_op_flag = Flag::insertion;
-                        curr_op_size = insertion_size;
-                    } else {
-                        result.emplace_back(curr_op_size, curr_op_flag);
-                        result.emplace_back(region_size(allele), Flag::deletion);
-                        curr_op_flag = Flag::insertion;
-                        curr_op_size = insertion_size;
-                    }
-                }
-            } else if (is_deletion(allele)) {
-                if (is_sequence_empty(allele)) {
+                } else if (is_simple_deletion(allele)) {
                     allele_op_flag = Flag::deletion;
                     allele_op_size += region_size(allele);
                 } else {
-                    const auto deletion_size = region_size(allele) - allele.sequence().size();
+                    // all complex indels are treated as replacements
                     if (curr_op_flag == Flag::deletion) {
-                        curr_op_size += deletion_size;
+                        curr_op_size += region_size(allele);
                         result.emplace_back(curr_op_size, curr_op_flag);
                         curr_op_flag = Flag::insertion;
                         curr_op_size = allele.sequence().size();
@@ -284,12 +264,14 @@ CigarString Haplotype::cigar() const
                         curr_op_size += allele.sequence().size();
                         result.emplace_back(curr_op_size, curr_op_flag);
                         curr_op_flag = Flag::deletion;
-                        curr_op_size = deletion_size;
+                        curr_op_size = region_size(allele);
                     } else {
-                        result.emplace_back(curr_op_size, curr_op_flag);
-                        result.emplace_back(allele.sequence().size(), Flag::insertion);
-                        curr_op_flag = Flag::deletion;
-                        curr_op_size = deletion_size;
+                        if (curr_op_size > 0) {
+                            result.emplace_back(curr_op_size, curr_op_flag);
+                        }
+                        result.emplace_back(region_size(allele), Flag::deletion);
+                        curr_op_flag = Flag::insertion;
+                        curr_op_size = allele.sequence().size();
                     }
                 }
             } else if (!is_empty_region(allele)) {
