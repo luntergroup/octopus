@@ -71,29 +71,27 @@ auto compute_read_hashes(const std::vector<AlignedRead>& reads)
     return result;
 }
 
-AlignedRead realign(const AlignedRead& read, GenomicRegion region, CigarString cigar)
-{
-    return AlignedRead {read.name(), std::move(region), read.sequence(), read.base_qualities(),
-                        std::move(cigar), read.mapping_quality(), read.flags()};
-}
-
-AlignedRead realign(const AlignedRead& read, const Haplotype& haplotype,
-                    GenomicRegion::Position mapping_position, CigarString alignment)
+void realign(AlignedRead& read, const Haplotype& haplotype,
+             GenomicRegion::Position mapping_position, CigarString alignment)
 {
     const auto remapped_read_begin = mapped_begin(haplotype) + mapping_position;
     const auto remapped_read_end = remapped_read_begin + reference_size(alignment);
-    return realign(read, GenomicRegion {contig_name(read), remapped_read_begin, remapped_read_end}, std::move(alignment));
+    read.realign(GenomicRegion {contig_name(read), remapped_read_begin, remapped_read_end}, std::move(alignment));
 }
 
-AlignedRead realign(const AlignedRead& read, const Haplotype& haplotype, HaplotypeLikelihoodModel::Alignment alignment)
+void realign(AlignedRead& read, const Haplotype& haplotype, HaplotypeLikelihoodModel::Alignment alignment)
 {
-    return realign(read, haplotype, alignment.mapping_position, std::move(alignment.cigar));
+    realign(read, haplotype, alignment.mapping_position, std::move(alignment.cigar));
 }
 
 } // namespace
 
-std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
-                                 HaplotypeLikelihoodModel model)
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+{
+    realign(reads, haplotype, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false});
+}
+
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
 {
     const auto read_hashes = compute_read_hashes(reads);
     static constexpr unsigned char mapperKmerSize {6};
@@ -101,14 +99,18 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
     populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
     auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
     model.reset(haplotype);
-    std::vector<AlignedRead> result {};
-    result.reserve(reads.size());
-    std::transform(std::cbegin(reads), std::cend(reads), std::cbegin(read_hashes), std::back_inserter(result),
-                   [&] (const auto& read, const auto& read_hash) {
-                       auto mapping_positions = map_query_to_target(read_hash, haplotype_hashes, haplotype_mapping_counts);
-                       reset_mapping_counts(haplotype_mapping_counts);
-                       return realign(read, haplotype, model.align(read, mapping_positions));
-                   });
+    for (std::size_t i {0}; i < reads.size(); ++i) {
+        auto mapping_positions = map_query_to_target(read_hashes[i], haplotype_hashes, haplotype_mapping_counts);
+        reset_mapping_counts(haplotype_mapping_counts);
+        realign(reads[i], haplotype, model.align(reads[i], mapping_positions));
+    }
+}
+
+std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+                                 HaplotypeLikelihoodModel model)
+{
+    auto result = reads;
+    realign(result, haplotype, model);
     return result;
 }
 
@@ -117,15 +119,22 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
     return realign(reads, haplotype, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false});
 }
 
-std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
     auto expanded_haplotype = expand_for_realignment(haplotype, reads);
     try {
-        return realign(reads, expanded_haplotype);
+        realign(reads, expanded_haplotype);
     } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
         expanded_haplotype = expand(expanded_haplotype, e.required_extension());
-        return realign(reads, expanded_haplotype);
+        realign(reads, expanded_haplotype);
     }
+}
+
+std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+{
+    auto result = reads;
+    safe_realign(result, haplotype);
+    return result;
 }
 
 namespace {
@@ -204,19 +213,19 @@ bool is_sequence_match(const CigarOperation& op) noexcept
     return op.flag() == CigarOperation::Flag::sequenceMatch;
 }
 
-CigarString match_reference(const GenomicRegion& read_region, const CigarString& read_to_haplotype,
-                            const GenomicRegion& haplotype_region, const CigarString& haplotype_to_reference)
+CigarString pad_reference(const GenomicRegion& read_region, const CigarString& read_to_haplotype,
+                          const GenomicRegion& haplotype_region, const CigarString& haplotype_to_reference)
 {
     assert(overlaps(read_region, haplotype_region));
     assert(!read_to_haplotype.empty() || !haplotype_to_reference.empty());
     CigarString result {};
+    using Flag = CigarOperation::Flag;
     if (read_region == haplotype_region) {
         result = haplotype_to_reference;
     } else if (contains(haplotype_region, read_region)) {
-        result = copy_reference(haplotype_to_reference, left_overhang_size(haplotype_region, read_region), size(read_region));
+        result = copy_sequence(haplotype_to_reference, left_overhang_size(haplotype_region, read_region), sequence_size(haplotype_to_reference));
     } else {
         result.reserve(haplotype_to_reference.size() + 2);
-        using Flag = CigarOperation::Flag;
         if (contains(read_region, haplotype_region)) {
             const auto lhs_pad_size = left_overhang_size(read_region, haplotype_region);
             const auto rhs_pad_size = right_overhang_size(read_region, haplotype_region);
@@ -246,30 +255,19 @@ CigarString match_reference(const GenomicRegion& read_region, const CigarString&
         } else if (begins_before(read_region, haplotype_region)) {
             assert(ends_before(read_region, haplotype_region));
             const auto lhs_pad_size = left_overhang_size(read_region, haplotype_region);
-            auto sub_hap = copy_reference(haplotype_to_reference, 0, overlap_size(read_region, haplotype_region));
-            assert(!sub_hap.empty());
-            if (is_sequence_match(sub_hap.front())) {
-                result.emplace_back(lhs_pad_size + sub_hap.front().size(), Flag::sequenceMatch);
-                result.insert(result.cend(), sub_hap.cbegin() + 1, sub_hap.cend());
+            if (is_sequence_match(haplotype_to_reference.front())) {
+                result.emplace_back(lhs_pad_size + haplotype_to_reference.front().size(), Flag::sequenceMatch);
+                result.insert(result.cend(), haplotype_to_reference.cbegin() + 1, haplotype_to_reference.cend());
             } else {
                 result.emplace_back(lhs_pad_size, Flag::sequenceMatch);
-                utils::append(std::move(sub_hap), result);
+                utils::append(haplotype_to_reference, result);
             }
         } else {
             assert(begins_before(haplotype_region, read_region) && ends_before(haplotype_region, read_region));
             const auto offset = left_overhang_size(haplotype_region, read_region);
             const auto rhs_pad_size = right_overhang_size(read_region, haplotype_region);
-            result = copy_reference(haplotype_to_reference, offset, overlap_size(read_region, haplotype_region));
+            result = copy_sequence(haplotype_to_reference, offset, sequence_size(haplotype_to_reference));
             assert(!result.empty());
-            if (is_sequence_match(result.back())) {
-                result.back() = CigarOperation {result.back().size() + rhs_pad_size, Flag::sequenceMatch};
-            } else {
-                result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
-            }
-        }
-        if (sequence_size(result) < reference_size(read_to_haplotype)) {
-            assert(!result.empty());
-            const auto rhs_pad_size = reference_size(read_to_haplotype) - sequence_size(result);
             if (is_sequence_match(result.back())) {
                 result.back() = CigarOperation {result.back().size() + rhs_pad_size, Flag::sequenceMatch};
             } else {
@@ -277,12 +275,51 @@ CigarString match_reference(const GenomicRegion& read_region, const CigarString&
             }
         }
     }
+    if (sequence_size(result) < reference_size(read_to_haplotype)) {
+        assert(!result.empty());
+        const auto rhs_pad_size = reference_size(read_to_haplotype) - sequence_size(result);
+        if (is_sequence_match(result.back())) {
+            result.back() = CigarOperation {result.back().size() + rhs_pad_size, Flag::sequenceMatch};
+        } else {
+            result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
+        }
+    }
     return result;
 }
 
-auto expand_rhs_from_begin(const GenomicRegion& region, GenomicRegion::Size n)
+bool has_indels(const CigarString& cigar) noexcept
 {
-    return GenomicRegion {region.contig_name(), region.begin(), region.begin() + n};
+    return std::any_of(std::cbegin(cigar), std::cend(cigar), [] (const auto& op) { return is_indel(op); });
+}
+
+auto calculate_rebase_shift(const AlignedRead& read, const GenomicRegion& haplotype_region,
+                            const CigarString& haplotype_to_reference)
+{
+    GenomicRegion::Distance result {0};
+    if (begins_before(haplotype_region, read) && has_indels(haplotype_to_reference)) {
+        auto lhs_flank_length = static_cast<int>(left_overhang_size(haplotype_region, read));
+        for (const auto& op : haplotype_to_reference) {
+            if (lhs_flank_length <= 0) break;
+            if (is_insertion(op)) {
+                result -= std::min(static_cast<int>(op.size()), lhs_flank_length);
+                lhs_flank_length -= op.size();
+            } else if (is_deletion(op)) {
+                result += op.size();
+            } else {
+                lhs_flank_length -= op.size();
+            }
+        }
+    }
+    return result;
+}
+
+void rebase(AlignedRead& read, const GenomicRegion& haplotype_region, const CigarString& haplotype_to_reference)
+{
+    const auto padded_haplotype_cigar = pad_reference(read.mapped_region(), read.cigar(), haplotype_region, haplotype_to_reference);
+    const auto rebase_sift = calculate_rebase_shift(read, haplotype_region, haplotype_to_reference);
+    auto rebased_cigar = rebase(read.cigar(), padded_haplotype_cigar);
+    auto rebased_read_region = expand_rhs(shift(head_region(read), rebase_sift), reference_size(rebased_cigar));
+    read.realign(std::move(rebased_read_region), std::move(rebased_cigar));
 }
 
 } // namespace
@@ -291,12 +328,34 @@ void rebase(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
     const auto haplotype_cigar = haplotype.cigar();
     for (auto& read : reads) {
-        const auto matched_haplotype_cigar = match_reference(read.mapped_region(), read.cigar(),
-                                                             haplotype.mapped_region(), haplotype.cigar());
-        auto rebased_cigar = rebase(read.cigar(), matched_haplotype_cigar);
-        auto rebased_region = expand_rhs_from_begin(read.mapped_region(), reference_size(rebased_cigar));
-        read.realign(std::move(rebased_region), std::move(rebased_cigar));
+        rebase(read, haplotype.mapped_region(), haplotype_cigar);
     }
+}
+
+void realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+{
+    realign(reads, haplotype);
+    rebase(reads, haplotype);
+}
+
+std::vector<AlignedRead> realign_to_reference(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+{
+    auto result = realign(reads, haplotype);
+    rebase(result, haplotype);
+    return result;
+}
+
+void safe_realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+{
+    safe_realign(reads, haplotype);
+    rebase(reads, haplotype);
+}
+
+std::vector<AlignedRead> safe_realign_to_reference(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+{
+    auto result = safe_realign(reads, haplotype);
+    rebase(result, haplotype);
+    return result;
 }
 
 } // namespace octopus

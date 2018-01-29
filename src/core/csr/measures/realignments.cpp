@@ -217,8 +217,8 @@ Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const Facet
     }
     if (!unassigned_reads.empty()) {
         const auto reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
-        auto unassigned_realignments = safe_realign(unassigned_reads, reference);
-        result.push_back(std::move(unassigned_realignments));
+        safe_realign(unassigned_reads, reference);
+        result.push_back(std::move(unassigned_reads));
     } else {
         result.push_back(std::move(unassigned_reads));
     }
