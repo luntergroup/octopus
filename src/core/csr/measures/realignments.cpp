@@ -192,7 +192,7 @@ Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const Facet
             const auto& haplotype = h.first;
             const auto& supporting_reads = h.second;
             if (!supporting_reads.empty() && haplotype.contains(allele)) {
-                auto realignments = safe_realign(supporting_reads, haplotype);
+                auto realignments = safe_realign_to_reference(supporting_reads, haplotype);
                 for (std::size_t i {0}; i < realignments.size(); ++i) {
                     const auto& original_read = supporting_reads[i];
                     const auto& realigned_read = realignments[i];
@@ -217,7 +217,7 @@ Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const Facet
     }
     if (!unassigned_reads.empty()) {
         const auto reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
-        safe_realign(unassigned_reads, reference);
+        safe_realign_to_reference(unassigned_reads, reference);
         result.push_back(std::move(unassigned_reads));
     } else {
         result.push_back(std::move(unassigned_reads));
