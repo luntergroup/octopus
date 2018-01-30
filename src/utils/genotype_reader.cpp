@@ -208,7 +208,7 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
             result.emplace_back(std::move(allele_region), std::move(ref));
             std::rotate(std::rbegin(result), std::next(std::rbegin(result)), std::rend(result));
         }
-        if (*min_ref_pad > 0 && !unknwown_pad_allele_indices.empty()) {
+        if (!unknwown_pad_allele_indices.empty()) {
             for (auto idx : unknwown_pad_allele_indices) {
                 auto& allele = genotype[idx];
                 allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), *min_ref_pad));
