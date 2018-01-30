@@ -139,14 +139,24 @@ std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, con
 
 namespace {
 
+bool is_insertion(CigarOperation::Flag flag) noexcept
+{
+    return flag == CigarOperation::Flag::insertion;
+}
+
 bool is_insertion(const CigarOperation& op) noexcept
 {
-    return op.flag() == CigarOperation::Flag::insertion;
+    return is_insertion(op.flag());
+}
+
+bool is_deletion(CigarOperation::Flag flag) noexcept
+{
+    return flag == CigarOperation::Flag::deletion;
 }
 
 bool is_deletion(const CigarOperation& op) noexcept
 {
-    return op.flag() == CigarOperation::Flag::deletion;
+    return is_deletion(op.flag());
 }
 
 CigarString minimise(const CigarString& cigar)
@@ -166,6 +176,20 @@ CigarString minimise(const CigarString& cigar)
     return result;
 }
 
+auto get_match_type(const CigarOperation::Flag haplotype, const CigarOperation::Flag read) noexcept
+{
+    assert(is_match(haplotype) && is_match(read));
+    using Flag = CigarOperation::Flag;
+    if ((haplotype == Flag::substitution && read == Flag::sequenceMatch)
+        || (haplotype == Flag::sequenceMatch && read == Flag::substitution)) {
+        return Flag::substitution;
+    } else if (haplotype == Flag::sequenceMatch && read == Flag::sequenceMatch) {
+        return Flag::sequenceMatch;
+    } else {
+        return Flag::alignmentMatch;
+    }
+}
+
 } // namespace
 
 CigarString rebase(const CigarString& read_to_haplotype, const CigarString& haplotype_to_reference)
@@ -176,12 +200,12 @@ CigarString rebase(const CigarString& read_to_haplotype, const CigarString& hapl
     CigarString result {};
     result.reserve(haplotypes_ops.size());
     auto hap_flag_itr = std::cbegin(haplotypes_ops);
-    using Flag = CigarOperation::Flag;
     for (const auto& read_op : read_to_haplotype) {
         if (is_match(read_op)) {
             for (unsigned n {0}; n < read_op.size();) {
+                assert(hap_flag_itr != std::cend(haplotypes_ops));
                 if (is_match(*hap_flag_itr)) {
-                    result.emplace_back(1, Flag::alignmentMatch);
+                    result.emplace_back(1, get_match_type(*hap_flag_itr, read_op.flag()));
                     ++n;
                 } else {
                     result.emplace_back(1, *hap_flag_itr);
@@ -196,10 +220,14 @@ CigarString rebase(const CigarString& read_to_haplotype, const CigarString& hapl
         } else { // deletion
             result.push_back(read_op);
             for (unsigned n {0}; n < read_op.size();) {
-                if (advances_sequence(*hap_flag_itr)) {
+                assert(hap_flag_itr != std::cend(haplotypes_ops));
+                if (is_deletion(*hap_flag_itr)) {
+                    result.emplace_back(1, *hap_flag_itr);
+                    ++hap_flag_itr;
+                } else {
+                    ++hap_flag_itr;
                     ++n;
                 }
-                ++hap_flag_itr;
             }
         }
     }
