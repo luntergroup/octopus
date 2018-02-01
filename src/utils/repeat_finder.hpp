@@ -73,7 +73,7 @@ find_exact_tandem_repeats(const SequenceType& sequence, const GenomicRegion& reg
 }
 
 std::vector<TandemRepeat>
-find_exact_repeats(const ReferenceGenome& reference, const GenomicRegion& region, unsigned max_period);
+find_exact_tandem_repeats(const ReferenceGenome& reference, const GenomicRegion& region, unsigned max_period);
 
 std::vector<GenomicRegion>
 find_repeat_regions(std::vector<TandemRepeat>& seeds, const GenomicRegion& region,

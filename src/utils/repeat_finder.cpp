@@ -6,7 +6,7 @@
 namespace octopus {
 
 std::vector<TandemRepeat>
-find_exact_repeats(const ReferenceGenome& reference, const GenomicRegion& region, unsigned max_period)
+find_exact_tandem_repeats(const ReferenceGenome& reference, const GenomicRegion& region, unsigned max_period)
 {
     auto sequence = reference.fetch_sequence(region);
     return find_exact_tandem_repeats(sequence, region, 1, max_period);
