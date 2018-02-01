@@ -51,7 +51,7 @@ private:
     Options options_;
     
     std::vector<Variant> fetch_variants(const GenomicRegion& region) const;
-    bool is_good(const VcfRecord& record);
+    bool is_good(const VcfRecord& record) const;
 };
 
 } // namespace coretools

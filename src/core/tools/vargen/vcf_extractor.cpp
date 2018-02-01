@@ -87,13 +87,11 @@ void extract_variants(const VcfRecord& record, Container& result)
 
 } // namespace
 
-} // namespace
-
 std::vector<Variant> VcfExtractor::do_generate(const RegionSet& regions) const
 {
     std::vector<Variant> result {};
     for (const auto& region : regions) {
-        utils::append(fetch_variants(region, *reader_, options_.min_quality), result);
+        utils::append(fetch_variants(region), result);
     }
     return result;
 }
@@ -118,7 +116,7 @@ std::vector<Variant> VcfExtractor::fetch_variants(const GenomicRegion& region) c
     return result;
 }
 
-bool VcfExtractor::is_good(const VcfRecord& record)
+bool VcfExtractor::is_good(const VcfRecord& record) const
 {
     if (!options_.extract_filtered && is_filtered(record)) return false;
     return !options_.min_quality || (record.qual() && *record.qual() >= *options_.min_quality);
