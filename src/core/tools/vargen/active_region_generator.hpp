@@ -23,7 +23,7 @@ class ActiveRegionGenerator
 public:
     struct Options
     {
-    
+        bool assemble_all = false;
     };
     
     ActiveRegionGenerator() = delete;
@@ -49,10 +49,10 @@ public:
     
 private:
     std::reference_wrapper<const ReferenceGenome> reference_;
-    //Options options_;
-    boost::optional<AssemblerActiveRegionGenerator> assembler_active_region_generator_;
-    
+    Options options_;
     std::string assembler_name_, cigar_scanner_name_;
+    
+    boost::optional<AssemblerActiveRegionGenerator> assembler_active_region_generator_;
     
     bool is_cigar_scanner(const std::string& generator) const noexcept;
     bool is_assembler(const std::string& generator) const noexcept;

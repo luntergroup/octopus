@@ -8,8 +8,6 @@
 
 #include "variant_generator.hpp"
 
-#include "active_region_generator.hpp"
-
 namespace octopus { namespace coretools {
 
 VariantGeneratorBuilder&
@@ -47,9 +45,17 @@ VariantGeneratorBuilder::add_randomiser(Randomiser::Options options)
     return *this;
 }
 
+VariantGeneratorBuilder&
+VariantGeneratorBuilder::set_active_region_generator(ActiveRegionGenerator::Options options)
+{
+    active_region_generator_ = std::move(options);
+    return *this;
+}
+
 VariantGenerator VariantGeneratorBuilder::build(const ReferenceGenome& reference) const
 {
-    VariantGenerator result {ActiveRegionGenerator {reference, {}}};
+    
+    VariantGenerator result {ActiveRegionGenerator {reference, active_region_generator_}};
     if (cigar_scanner_) {
         result.add(std::make_unique<CigarScanner>(reference, *cigar_scanner_));
     }

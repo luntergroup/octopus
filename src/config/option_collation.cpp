@@ -969,7 +969,11 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         result.add_vcf_extractor(std::move(resolved_regenotype_path));
     }
-    
+    ActiveRegionGenerator::Options active_region_options {};
+    if (is_set("assemble-all", options) && options.at("assemble-all").as<bool>()) {
+        active_region_options.assemble_all = true;
+    }
+    result.set_active_region_generator(std::move(active_region_options));
     return result;
 }
 

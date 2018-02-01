@@ -343,7 +343,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(200),
      "The maximum number of bases allowed to overlap assembly regions")
     
-    ("force-assemble",
+    ("assemble-all",
      po::bool_switch()->default_value(false),
      "Forces all regions to be assembled")
     

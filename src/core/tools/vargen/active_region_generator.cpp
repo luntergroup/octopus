@@ -7,15 +7,15 @@ namespace octopus { namespace coretools {
 
 ActiveRegionGenerator::ActiveRegionGenerator(const ReferenceGenome& reference, Options options)
 : reference_ {reference}
-//, options_ {options}
-, assembler_active_region_generator_ {}
+, options_ {options}
 , assembler_name_ {"LocalReassembler"}
 , cigar_scanner_name_ {"CigarScanner"}
+, assembler_active_region_generator_ {}
 {}
 
 void ActiveRegionGenerator::add_generator(const std::string& name)
 {
-    if (is_assembler(name)) {
+    if (is_assembler(name) && !options_.assemble_all) {
         assembler_active_region_generator_ = AssemblerActiveRegionGenerator {reference_};
     }
 }
@@ -29,7 +29,11 @@ std::vector<GenomicRegion> ActiveRegionGenerator::generate(const GenomicRegion& 
 {
     if (using_assembler()) {
         if (is_assembler(generator)) {
-            return assembler_active_region_generator_->generate(region);
+            if (assembler_active_region_generator_) {
+                return assembler_active_region_generator_->generate(region);
+            } else {
+                return {region};
+            }
         } else if (is_cigar_scanner(generator)) {
             return {region};
         }
