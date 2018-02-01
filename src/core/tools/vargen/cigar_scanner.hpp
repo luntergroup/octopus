@@ -54,16 +54,12 @@ public:
         
         using InclusionPredicate = std::function<bool(ObservedVariant)>;
         using MatchPredicate = std::function<bool(const Variant&, const Variant&)>;
-        using RepeatRegionGenerator = std::function<std::vector<GenomicRegion>(const ReferenceGenome&, GenomicRegion)>;
-        using RepeatRegionInclusionPredicate = std::function<bool(const GenomicRegion&, const std::deque<Variant>&)>;
         
         InclusionPredicate include;
         MatchPredicate match = std::equal_to<> {};
         bool use_clipped_coverage_tracking = false;
         Variant::MappingDomain::Size max_variant_size = 2000;
         MisalignmentParameters misalignment_parameters = MisalignmentParameters {};
-        boost::optional<RepeatRegionGenerator> repeat_region_generator = boost::none;
-        RepeatRegionInclusionPredicate include_repeat_region = [] (const auto& region, const auto& variants) { return variants.size() < 100; };
     };
     
     CigarScanner() = delete;
@@ -132,7 +128,6 @@ private:
                                    AlignedRead::Direction support_direction);
     void generate(const GenomicRegion& region, std::vector<Variant>& result) const;
     unsigned sum_base_qualities(const Candidate& candidate) const noexcept;
-    std::vector<GenomicRegion> get_repeat_regions(const GenomicRegion& region) const;
     bool is_likely_misaligned(const AlignedRead& read, double penalty) const;
     ObservedVariant make_observation(CandidateIterator first_match, CandidateIterator last_match) const;
     std::vector<Variant> get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates) const;
