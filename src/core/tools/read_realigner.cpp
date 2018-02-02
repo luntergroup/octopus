@@ -371,6 +371,7 @@ void rebase(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
     for (auto& read : reads) {
         rebase(read, haplotype.mapped_region(), haplotype_cigar);
     }
+    std::sort(std::begin(reads), std::end(reads));
 }
 
 void realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
