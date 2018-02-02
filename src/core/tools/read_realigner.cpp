@@ -218,16 +218,22 @@ CigarString rebase(const CigarString& read_to_haplotype, const CigarString& hapl
         } else if (is_insertion(read_op)) {
             result.push_back(read_op);
         } else { // deletion
-            result.push_back(read_op);
+            auto op_size = read_op.size();
             for (unsigned n {0}; n < read_op.size();) {
                 assert(hap_flag_itr != std::cend(haplotypes_ops));
                 if (is_deletion(*hap_flag_itr)) {
                     result.emplace_back(1, *hap_flag_itr);
                     ++hap_flag_itr;
                 } else {
+                    if (is_insertion(*hap_flag_itr)) {
+                        --op_size;
+                    }
                     ++hap_flag_itr;
                     ++n;
                 }
+            }
+            if (op_size > 0) {
+                result.emplace_back(op_size, read_op.flag());
             }
         }
     }
@@ -327,7 +333,14 @@ auto calculate_rebase_shift(const AlignedRead& read, const GenomicRegion& haplot
     if (begins_before(haplotype_region, read) && has_indels(haplotype_to_reference)) {
         auto lhs_flank_length = static_cast<int>(left_overhang_size(haplotype_region, read));
         for (const auto& op : haplotype_to_reference) {
-            if (lhs_flank_length <= 0) break;
+            if (lhs_flank_length == 0) {
+                if (is_deletion(op)) {
+                    result += op.size();
+                }
+                break;
+            } else if (lhs_flank_length < 0) {
+                break;
+            }
             if (is_insertion(op)) {
                 result -= std::min(static_cast<int>(op.size()), lhs_flank_length);
                 lhs_flank_length -= op.size();
