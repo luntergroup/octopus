@@ -13,22 +13,31 @@ find_exact_tandem_repeats(const ReferenceGenome& reference, const GenomicRegion&
 }
 
 std::vector<GenomicRegion>
-find_repeat_regions(std::vector<TandemRepeat>& seeds, const GenomicRegion& region,
+find_repeat_regions(const std::vector<TandemRepeat>& repeats, const GenomicRegion& region,
                     const InexactRepeatDefinition repeat_definition)
 {
-    auto itr = std::partition(std::begin(seeds), std::end(seeds),
-                              [&] (const auto& repeat) noexcept {
-                                  return region_size(repeat) >= repeat_definition.min_exact_repeat_seed_length;
-                              });
-    itr = std::remove_if(itr, std::end(seeds),
-                         [&] (const auto& small_repeat) {
-                             return std::none_of(std::begin(seeds), itr, [&] (const auto& seed) {
-                                 return std::abs(inner_distance(small_repeat, seed)) <= repeat_definition.max_seed_join_distance;
-                             });
-                         });
-    seeds.erase(itr, std::end(seeds));
-    std::sort(std::begin(seeds), std::end(seeds));
-    return join(extract_covered_regions(seeds), repeat_definition.max_seed_join_distance);
+    assert(std::is_sorted(std::cbegin(repeats), std::cend(repeats)));
+    std::vector<TandemRepeat> seeds {};
+    seeds.reserve(repeats.size());
+    std::copy_if(std::cbegin(repeats), std::cend(repeats), std::back_inserter(seeds),
+                 [&] (const auto& repeat) { return region_size(repeat) >= repeat_definition.min_exact_repeat_seed_length; });
+    auto repeat_begin_itr = std::cbegin(repeats);
+    std::vector<GenomicRegion> hits {};
+    hits.reserve(repeats.size());
+    for (const auto& seed : seeds) {
+        const auto expanded_seed_region = expand(seed.region, repeat_definition.max_seed_join_distance);
+        const auto overlapped_repeats = overlap_range(repeat_begin_itr, std::cend(repeats), expanded_seed_region);
+        for (const auto& repeat : overlapped_repeats) {
+            hits.push_back(repeat.region);
+        }
+        repeat_begin_itr = overlapped_repeats.begin().base();
+    }
+    auto result = join(extract_covered_regions(hits), repeat_definition.max_seed_join_distance);
+    result.erase(std::remove_if(std::begin(result), std::end(result),
+                                [&] (const auto& region) {
+                                    return size(region) < repeat_definition.min_joined_repeat_length;
+                                }), std::end(result));
+    return result;
 }
 
 std::vector<GenomicRegion>

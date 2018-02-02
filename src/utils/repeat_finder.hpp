@@ -36,6 +36,7 @@ struct InexactRepeatDefinition
     unsigned max_exact_repeat_seed_period = 100;
     unsigned min_exact_repeat_seed_length = 100;
     unsigned max_seed_join_distance       = 50;
+    unsigned min_joined_repeat_length     = 200;
 };
 
 template <typename SequenceType>
@@ -76,7 +77,7 @@ std::vector<TandemRepeat>
 find_exact_tandem_repeats(const ReferenceGenome& reference, const GenomicRegion& region, unsigned max_period);
 
 std::vector<GenomicRegion>
-find_repeat_regions(std::vector<TandemRepeat>& seeds, const GenomicRegion& region,
+find_repeat_regions(const std::vector<TandemRepeat>& repeats, const GenomicRegion& region,
                     const InexactRepeatDefinition repeat_definition);
 
 std::vector<GenomicRegion>
