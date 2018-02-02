@@ -356,11 +356,15 @@ auto calculate_rebase_shift(const AlignedRead& read, const GenomicRegion& haplot
 
 void rebase(AlignedRead& read, const GenomicRegion& haplotype_region, const CigarString& haplotype_to_reference)
 {
-    const auto padded_haplotype_cigar = pad_reference(read.mapped_region(), read.cigar(), haplotype_region, haplotype_to_reference);
     const auto rebase_sift = calculate_rebase_shift(read, haplotype_region, haplotype_to_reference);
-    auto rebased_cigar = rebase(read.cigar(), padded_haplotype_cigar);
-    auto rebased_read_region = expand_rhs(shift(head_region(read), rebase_sift), reference_size(rebased_cigar));
-    read.realign(std::move(rebased_read_region), std::move(rebased_cigar));
+    if (overlaps(read, haplotype_region)) {
+        const auto padded_haplotype_cigar = pad_reference(read.mapped_region(), read.cigar(), haplotype_region, haplotype_to_reference);
+        auto rebased_cigar = rebase(read.cigar(), padded_haplotype_cigar);
+        auto rebased_read_region = expand_rhs(shift(head_region(read), rebase_sift), reference_size(rebased_cigar));
+        read.realign(std::move(rebased_read_region), std::move(rebased_cigar));
+    } else if (rebase_sift != 0) {
+        read.realign(shift(mapped_region(read), rebase_sift), read.cigar());
+    }
 }
 
 } // namespace
