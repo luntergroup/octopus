@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <algorithm>
 
 #include <boost/optional.hpp>
 
@@ -48,11 +49,26 @@ public:
     void clear() noexcept;
     
 private:
+    struct RepeatRegions
+    {
+        GenomicRegion request_region;
+        std::vector<GenomicRegion> minisatellites, compound_microsatellites;
+        std::vector<GenomicRegion> assembler_microsatellites;
+    };
+    struct AssemblerActiveRegions
+    {
+        GenomicRegion request_region;
+        std::vector<GenomicRegion> active_regions;
+    };
+    
     std::reference_wrapper<const ReferenceGenome> reference_;
     Options options_;
     std::string assembler_name_, cigar_scanner_name_;
     
     boost::optional<AssemblerActiveRegionGenerator> assembler_active_region_generator_;
+    std::size_t max_read_length_;
+    mutable boost::optional<RepeatRegions> repeats_;
+    mutable boost::optional<AssemblerActiveRegions> assembler_active_regions_;
     
     bool is_cigar_scanner(const std::string& generator) const noexcept;
     bool is_assembler(const std::string& generator) const noexcept;
@@ -63,6 +79,7 @@ template <typename ForwardIterator>
 void ActiveRegionGenerator::add_reads(const SampleName& sample, ForwardIterator first, ForwardIterator last)
 {
     if (assembler_active_region_generator_) assembler_active_region_generator_->add(sample, first, last);
+    std::for_each(first, last, [this] (const auto& read) { max_read_length_ = std::max(max_read_length_, sequence_size(read)); });
 }
 
 } // namespace coretools
