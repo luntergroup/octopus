@@ -348,11 +348,13 @@ void CigarScanner::generate(const GenomicRegion& region, std::vector<Variant>& r
         }
         viable_candidates.advance_begin(num_matches);
     }
-    if (debug_log_) {
+    if (debug_log_ && !likely_misaligned_candidates_.empty()) {
         const auto novel_unique_misaligned_variants = get_novel_likely_misaligned_candidates(result);
-        stream(*debug_log_) << "DynamicCigarScanner: ignoring "
-                            << count_overlapped(novel_unique_misaligned_variants, region)
-                            << " unique candidates in " << region;
+        if (!novel_unique_misaligned_variants.empty()) {
+            stream(*debug_log_) << "DynamicCigarScanner: ignoring "
+                                << count_overlapped(novel_unique_misaligned_variants, region)
+                                << " unique candidates in " << region;
+        }
     }
 }
 
