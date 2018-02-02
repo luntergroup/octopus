@@ -536,7 +536,7 @@ bool is_good(const Variant& variant, const unsigned depth, const unsigned num_fw
         if (region_size(variant) < 10) {
             return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.05;
         } else {
-            return num_observations > 1 && num_observations >= 5;
+            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) > 0.1;
         }
     }
 }
