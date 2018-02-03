@@ -229,6 +229,48 @@ std::size_t count_mapq_zero(const T& reads, const GenomicRegion& region, NonMapT
     return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsMappingQualityZero {});
 }
 
+struct MappingQualityLess
+{
+    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
+    {
+        return lhs.mapping_quality() < rhs.mapping_quality();
+    }
+};
+
+template <typename T>
+auto min_mapping_quality(const T& reads, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    auto result_itr = std::min_element(std::cbegin(reads), std::cend(reads), MappingQualityLess {});
+    return result_itr->mapping_quality();
+}
+
+template <typename T>
+auto min_mapping_quality(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    const auto overlapped = overlap_range(reads, region);
+    auto result_itr = std::min_element(std::cbegin(overlapped), std::cend(overlapped), MappingQualityLess {});
+    return result_itr->mapping_quality();
+}
+
+template <typename T>
+auto max_mapping_quality(const T& reads, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    auto result_itr = std::max_element(std::cbegin(reads), std::cend(reads), MappingQualityLess {});
+    return result_itr->mapping_quality();
+}
+
+template <typename T>
+auto max_mapping_quality(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    const auto overlapped = overlap_range(reads, region);
+    auto result_itr = std::max_element(std::cbegin(overlapped), std::cend(overlapped), MappingQualityLess {});
+    return result_itr->mapping_quality();
+}
+
 template <typename T>
 double rmq_mapping_quality(const T& reads, NonMapTag)
 {
@@ -517,6 +559,46 @@ std::size_t count_mapq_zero(const T& reads, const GenomicRegion& region, MapTag)
 }
 
 template <typename T>
+auto min_mapping_quality(const T& reads, MapTag)
+{
+    auto result = min_mapping_quality(std::cbegin(reads)->second, NonMapTag {});
+    std::for_each(std::next(std::cbegin(reads)), std::cend(reads), [&] (const auto& p) {
+        result = std::min(result, min_mapping_quality(p.second, NonMapTag {}));
+    });
+    return result;
+}
+
+template <typename T>
+auto min_mapping_quality(const T& reads, const GenomicRegion& region, MapTag)
+{
+    auto result = min_mapping_quality(std::cbegin(reads)->second, region, NonMapTag {});
+    std::for_each(std::next(std::cbegin(reads)), std::cend(reads), [&] (const auto& p) {
+        result = std::min(result, min_mapping_quality(p.second, region, NonMapTag {}));
+    });
+    return result;
+}
+
+template <typename T>
+auto max_mapping_quality(const T& reads, MapTag)
+{
+    auto result = max_mapping_quality(std::cbegin(reads)->second, NonMapTag {});
+    std::for_each(std::next(std::cbegin(reads)), std::cend(reads), [&] (const auto& p) {
+        result = std::max(result, max_mapping_quality(p.second, NonMapTag {}));
+    });
+    return result;
+}
+
+template <typename T>
+auto max_mapping_quality(const T& reads, const GenomicRegion& region, MapTag)
+{
+    auto result = max_mapping_quality(std::cbegin(reads)->second, region, NonMapTag {});
+    std::for_each(std::next(std::cbegin(reads)), std::cend(reads), [&] (const auto& p) {
+        result = std::max(result, max_mapping_quality(p.second, region, NonMapTag {}));
+    });
+    return result;
+}
+
+template <typename T>
 double rmq_mapping_quality(const T& reads, MapTag)
 {
     std::vector<double> qualities {};
@@ -739,6 +821,30 @@ template <typename T>
 std::size_t count_mapq_zero(const T& reads, const GenomicRegion& region)
 {
     return detail::count_mapq_zero(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
+auto min_mapping_quality(const T& reads)
+{
+    return detail::min_mapping_quality(reads, MapTagType<T> {});
+}
+
+template <typename T>
+auto min_mapping_quality(const T& reads, const GenomicRegion& region)
+{
+    return detail::min_mapping_quality(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
+auto max_mapping_quality(const T& reads)
+{
+    return detail::max_mapping_quality(reads, MapTagType<T> {});
+}
+
+template <typename T>
+auto max_mapping_quality(const T& reads, const GenomicRegion& region)
+{
+    return detail::max_mapping_quality(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
