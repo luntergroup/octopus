@@ -111,7 +111,7 @@ private:
     std::reference_wrapper<const ReferenceGenome> reference_;
     Options options_;
     std::vector<Candidate> buffer_;
-    std::deque<Candidate> candidates_, likely_misaligned_candidates_;
+    mutable std::deque<Candidate> candidates_, likely_misaligned_candidates_;
     Variant::MappingDomain::Size max_seen_candidate_size_;
     CoverageTracker<GenomicRegion> read_coverage_tracker_, misaligned_tracker_;
     std::unordered_map<SampleName, CoverageTracker<GenomicRegion>> sample_read_coverage_tracker_;

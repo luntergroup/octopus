@@ -91,6 +91,7 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
     std::size_t read_index {0};
     GenomicRegion region;
     double misalignment_penalty {0};
+    buffer_.clear();
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
         switch (cigar_operation.flag()) {
@@ -179,13 +180,10 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
         read_coverage_tracker_.add(read);
         sample_coverage_tracker.add(read);
     }
-    std::sort(std::begin(buffer_), std::end(buffer_));
     if (!is_likely_misaligned(read, misalignment_penalty)) {
-        auto itr = utils::append(std::move(buffer_), candidates_);
-        std::inplace_merge(std::begin(candidates_), itr, std::end(candidates_));
+        utils::append(std::move(buffer_), candidates_);
     } else {
-        auto itr = utils::append(std::move(buffer_), likely_misaligned_candidates_);
-        std::inplace_merge(std::begin(likely_misaligned_candidates_), itr, std::end(likely_misaligned_candidates_));
+        utils::append(std::move(buffer_), likely_misaligned_candidates_);
         misaligned_tracker_.add(clipped_mapped_region(read));
     }
 }
@@ -259,6 +257,8 @@ void choose_push_back(Variant candidate, std::vector<Variant>& final_candidates,
 
 std::vector<Variant> CigarScanner::do_generate(const RegionSet& regions) const
 {
+    std::sort(std::begin(candidates_), std::end(candidates_));
+    std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));
     std::vector<Variant> result {};
     for (const auto& region : regions) {
         generate(region, result);
