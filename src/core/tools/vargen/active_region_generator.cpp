@@ -46,33 +46,35 @@ auto append(const Range& range, std::vector<T>& result)
     return result.insert(std::cend(result), std::cbegin(range), std::cend(range));
 };
 
+auto find_minisatellites(const std::vector<TandemRepeat>& repeats, const GenomicRegion& region,
+                         const std::size_t max_read_length)
+{
+    InexactRepeatDefinition minisatellite_def {};
+    minisatellite_def.min_exact_repeat_seed_length = 2 * max_read_length / 3;
+    minisatellite_def.max_seed_join_distance = max_read_length / 3;
+    minisatellite_def.min_joined_repeat_length = 2 * max_read_length;
+    return join(find_repeat_regions(repeats, region, minisatellite_def), max_read_length / 2);
+}
+
+auto find_compound_microsatellites(const std::vector<TandemRepeat>& repeats, const GenomicRegion& region,
+                                   const std::size_t max_read_length)
+{
+    InexactRepeatDefinition compound_microsatellite_def {};
+    compound_microsatellite_def.max_exact_repeat_seed_period = 6;
+    compound_microsatellite_def.min_exact_repeat_seed_length = 4;
+    compound_microsatellite_def.max_seed_join_distance = 2;
+    compound_microsatellite_def.min_joined_repeat_length = max_read_length / 2;
+    return join(find_repeat_regions(repeats, region, compound_microsatellite_def), max_read_length / 2);
+}
+
 std::vector<GenomicRegion> ActiveRegionGenerator::generate(const GenomicRegion& region, const std::string& generator) const
 {
     if (using_assembler() && max_read_length_ > 0) {
         if (!repeats_ || repeats_->request_region != region) {
             repeats_ = RepeatRegions {region, {}, {}, {}};
             const auto tandem_repeats = find_exact_tandem_repeats(reference_, region, max_read_length_ / 2);
-            InexactRepeatDefinition minisatellite_def {};
-            minisatellite_def.min_exact_repeat_seed_length = 2 * max_read_length_ / 3;
-            minisatellite_def.max_seed_join_distance = max_read_length_ / 3;
-            minisatellite_def.min_joined_repeat_length = 2 * max_read_length_;
-            repeats_->minisatellites = find_repeat_regions(tandem_repeats, region, minisatellite_def);
-            InexactRepeatDefinition compound_microsatellite_def {};
-            compound_microsatellite_def.max_exact_repeat_seed_period = 6;
-            compound_microsatellite_def.min_exact_repeat_seed_length = 4;
-            compound_microsatellite_def.max_seed_join_distance = 2;
-            compound_microsatellite_def.min_joined_repeat_length = max_read_length_ / 2;
-            repeats_->compound_microsatellites = find_repeat_regions(tandem_repeats, region, compound_microsatellite_def);
-            if (!repeats_->minisatellites.empty()) {
-                std::cout << "minisatellites: ";
-                for (const auto& region : repeats_->minisatellites) std::cout << region << " ";
-                std::cout << std::endl;
-            }
-            if (!repeats_->compound_microsatellites.empty()) {
-                std::cout << "compound microsatellites: ";
-                for (const auto& region : repeats_->compound_microsatellites) std::cout << region << " ";
-                std::cout << std::endl;
-            }
+            repeats_->minisatellites = find_minisatellites(tandem_repeats, region, max_read_length_);
+            repeats_->compound_microsatellites = find_compound_microsatellites(tandem_repeats, region, max_read_length_);
         }
         if (assembler_active_region_generator_) {
             if (!assembler_active_regions_ || assembler_active_regions_->request_region != region) {
