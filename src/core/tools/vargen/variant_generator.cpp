@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "utils/append.hpp"
+
 namespace octopus { namespace coretools {
 
 VariantGenerator::VariantGenerator()
@@ -89,11 +91,9 @@ std::vector<Variant> VariantGenerator::generate(const GenomicRegion& region) con
         const auto active_regions = generate_active_regions(region, *generator);
         debug::log_active_regions(active_regions, generator->name(), debug_log_);
         auto generator_result = generator->do_generate(active_regions);
-        assert(std::is_sorted(std::cbegin(generator_result), std::cend(generator_result)));
         debug::log_candidates(generator_result, generator->name(), debug_log_);
-        auto itr = result.insert(std::end(result),
-                                 std::make_move_iterator(std::begin(generator_result)),
-                                 std::make_move_iterator(std::end(generator_result)));
+        assert(std::is_sorted(std::cbegin(generator_result), std::cend(generator_result)));
+        auto itr = utils::append(std::move(generator_result), result);
         std::inplace_merge(std::begin(result), itr, std::end(result));
     }
     // Each generator is guaranteed to return unique variants, but two generators can still
