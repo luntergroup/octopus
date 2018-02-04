@@ -21,6 +21,7 @@
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/callers/caller_factory.hpp"
 #include "core/csr/filters/variant_call_filter_factory.hpp"
+#include "utils/input_reads_profiler.hpp"
 #include "logging/progress_meter.hpp"
 
 namespace octopus {
@@ -86,6 +87,7 @@ private:
         std::vector<SampleName> samples;
         InputRegionMap regions;
         std::vector<GenomicRegion::ContigName> contigs;
+        boost::optional<ReadSetProfile> reads_profile_;
         ReadPipe read_pipe;
         CallerFactory caller_factory;
         std::unique_ptr<VariantCallFilterFactory> call_filter_factory;

@@ -12,7 +12,6 @@
 
 #include "config/config.hpp"
 #include "config/option_collation.hpp"
-#include "utils/read_size_estimator.hpp"
 #include "utils/map_utils.hpp"
 #include "logging/logging.hpp"
 #include "exceptions/user_error.hpp"
@@ -325,21 +324,6 @@ void drop_unused_samples(std::vector<SampleName>& calling_samples, ReadManager& 
     rm.drop_samples(unused_samples);
 }
 
-auto estimate_read_size(const std::vector<SampleName>& samples,
-                        const InputRegionMap& input_regions,
-                        ReadManager& read_manager)
-{
-    auto result = estimate_mean_read_size(samples, input_regions, read_manager);
-    if (!result) {
-        result = default_read_size_estimate();
-        logging::WarningLogger log{};
-        log << "Could not estimate read size from data, resorting to default";
-    }
-    auto debug_log = logging::get_debug_log();
-    if (debug_log) stream(*debug_log) << "Estimated read size is " << *result << " bytes";
-    return *result;
-}
-
 bool is_multithreaded_run(const options::OptionMap& options) noexcept
 {
     const auto num_threads = options::get_num_threads(options);
@@ -371,14 +355,25 @@ boost::optional<fs::path> get_temp_directory(const options::OptionMap& options)
     }
 }
 
-std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes,
-                                    const std::vector<SampleName>& samples,
-                                    const InputRegionMap& input_regions,
-                                    ReadManager& read_manager)
+auto estimate_read_size(const boost::optional<ReadSetProfile>& profile) noexcept
 {
-    if (samples.empty()) return 0;
-    static constexpr std::size_t minBufferBytes{1'000'000};
-    return std::max(max_buffer_bytes, minBufferBytes) / estimate_read_size(samples, input_regions, read_manager);
+    double result;
+    if (profile) {
+        result = profile->mean_read_bytes + profile->read_bytes_stdev;
+    } else {
+        result = default_read_size_estimate();
+        logging::WarningLogger log{};
+        log << "Could not estimate read size from data, resorting to default";
+    }
+    auto debug_log = logging::get_debug_log();
+    if (debug_log) stream(*debug_log) << "Estimated read size is " << result << " bytes";
+    return result;
+}
+
+std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes, const boost::optional<ReadSetProfile>& profile) noexcept
+{
+    static constexpr std::size_t minBufferBytes {1'000'000};
+    return std::max(max_buffer_bytes, minBufferBytes) / estimate_read_size(profile);
 }
 
 auto add_identifier(const fs::path& base, const std::string& identifier)
@@ -454,6 +449,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , samples {extract_samples(options, this->read_manager)}
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
+, reads_profile_ {profile_reads(this->samples, this->regions, this->read_manager)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options)}
 , call_filter_factory {options::make_call_filter_factory(this->reference, this->read_pipe, options)}
@@ -496,7 +492,7 @@ void GenomeCallingComponents::Components::set_read_buffer_size(const options::Op
 {
     if (!samples.empty() && !regions.empty() && read_manager.good()) {
         read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options).num_bytes(),
-                                                   samples, regions, read_manager);
+                                                   reads_profile_);
     }
 }
 

@@ -156,8 +156,8 @@ set(UTILS_SOURCES
     utils/timing.hpp
     utils/type_tricks.hpp
     utils/coverage_tracker.hpp
-    utils/read_size_estimator.hpp
-    utils/read_size_estimator.cpp
+    utils/input_reads_profiler.hpp
+    utils/input_reads_profiler.cpp
     utils/kmer_mapper.hpp
     utils/kmer_mapper.cpp
     utils/memory_footprint.hpp
