@@ -82,16 +82,6 @@ std::vector<GenomicRegion> ActiveRegionGenerator::generate(const GenomicRegion& 
             const auto tandem_repeats = find_exact_tandem_repeats(reference_, region, max_read_length_ / 2);
             repeats_->minisatellites = find_minisatellites(tandem_repeats, region, max_read_length_);
             repeats_->compound_microsatellites = find_compound_microsatellites(tandem_repeats, region, max_read_length_);
-            if (!repeats_->minisatellites.empty()) {
-                std::cout << "minisatellites: ";
-                for (const auto& region : repeats_->minisatellites) std::cout << region << " ";
-                std::cout << std::endl;
-            }
-            if (!repeats_->compound_microsatellites.empty()) {
-                std::cout << "compound microsatellites: ";
-                for (const auto& region : repeats_->compound_microsatellites) std::cout << region << " ";
-                std::cout << std::endl;
-            }
         }
         if (assembler_active_region_generator_) {
             if (!assembler_active_regions_ || assembler_active_regions_->request_region != region) {
