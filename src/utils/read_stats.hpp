@@ -53,6 +53,12 @@ struct IsMappingQualityZero
     }
 };
 
+template <typename Map>
+bool all_empty(const Map& map) noexcept
+{
+    return std::all_of(std::cbegin(map), std::cend(map), [] (const auto& p) { return p.second.empty(); });
+}
+
 template <typename T>
 bool has_coverage(const T& reads, NonMapTag)
 {
@@ -103,10 +109,24 @@ double mean_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
 }
 
 template <typename T>
+double mean_coverage(const T& reads, NonMapTag)
+{
+    if (reads.empty()) return 0;
+    return mean_coverage(reads, encompassing_region(reads), NonMapTag {});
+}
+
+template <typename T>
 double stdev_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
 {
     if (reads.empty() || is_empty(region)) return 0;
     return maths::stdev(calculate_positional_coverage(reads, region));
+}
+
+template <typename T>
+double stdev_coverage(const T& reads, NonMapTag)
+{
+    if (reads.empty()) return 0;
+    return stdev_coverage(reads, encompassing_region(reads), NonMapTag {});
 }
 
 template <typename T>
@@ -388,51 +408,48 @@ unsigned max_coverage(const ReadMap& reads, const GenomicRegion& region, MapTag)
 }
 
 template <typename T>
-double mean_coverage(const T& reads, MapTag)
+auto sum_positional_coverages(const T& reads, const GenomicRegion& region)
 {
-    if (reads.empty()) return 0.0;
-    std::vector<double> sample_mean_coverages(reads.size(), 0.0);
-    std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_mean_coverages),
-                   [] (const auto& sample_reads) {
-                       return mean_coverage(sample_reads.second, NonMapTag {});
-                   });
-    return maths::mean(sample_mean_coverages);
+    const auto num_bases = size(region);
+    std::vector<std::size_t> result(num_bases);
+    for (const auto& p : reads) {
+        const auto sample_coverages = calculate_positional_coverage(p.second, region);
+        assert(sample_coverages.size() == num_bases);
+        for (std::size_t i {0}; i < num_bases; ++i) {
+            result[i] += sample_coverages[i];
+        }
+    }
+    return result;
 }
 
 template <typename T>
 double mean_coverage(const T& reads, const GenomicRegion& region, MapTag)
 {
-    if (reads.empty()) return 0.0;
-    std::vector<double> sample_mean_coverages(reads.size(), 0.0);
-    std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_mean_coverages),
-                   [&region] (const auto& sample_reads) {
-                       return mean_coverage(sample_reads.second, region, NonMapTag {});
-                   });
-    return maths::mean(sample_mean_coverages);
+    if (reads.empty() || is_empty_region(region)) return 0.0;
+    if (reads.size() == 1) return mean_coverage(std::cbegin(reads)->second, region, NonMapTag {});
+    return maths::mean(sum_positional_coverages(reads, region));
 }
 
 template <typename T>
-double stdev_coverage(const T& reads, MapTag)
+double mean_coverage(const T& reads, MapTag)
 {
-    if (reads.empty()) return 0.0;
-    std::vector<double> sample_stdev_coverages(reads.size(), 0.0);
-    std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_stdev_coverages),
-                   [] (const auto& sample_reads) {
-                       return stdev_coverage(sample_reads.second, NonMapTag {});
-                   });
-    return maths::stdev(sample_stdev_coverages);
+    if (reads.empty() || all_empty(reads)) return 0.0;
+    return mean_coverage(reads, encompassing_region(reads), MapTag {});
 }
 
 template <typename T>
 double stdev_coverage(const T& reads, const GenomicRegion& region, MapTag)
 {
-    if (reads.empty()) return 0.0;
-    std::vector<double> sample_stdev_coverages(reads.size(), 0.0);
-    std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_stdev_coverages),
-                   [&region] (const auto& sample_reads) {
-                       return stdev_coverage(sample_reads.second, region, NonMapTag {});
-                   });
-    return maths::stdev(sample_stdev_coverages);
+    if (reads.empty() || is_empty_region(region)) return 0.0;
+    if (reads.size() == 1) return stdev_coverage(std::cbegin(reads)->second, region, NonMapTag {});
+    return maths::stdev(sum_positional_coverages(reads, region));
+}
+
+template <typename T>
+double stdev_coverage(const T& reads, MapTag)
+{
+    if (reads.empty() || all_empty(reads)) return 0.0;
+    return stdev_coverage(reads, encompassing_region(reads), MapTag {});
 }
 
 template <typename T>
