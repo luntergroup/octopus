@@ -81,7 +81,7 @@ std::vector<GenomicRegion> ActiveRegionGenerator::generate(const GenomicRegion& 
                 assembler_active_regions_ = AssemblerActiveRegions {region, {}};
                 assembler_active_regions_->active_regions = assembler_active_region_generator_->generate(region);
             }
-            if (!repeats_->compound_microsatellites.empty()) {
+            if (!repeats_->compound_microsatellites.empty() && repeats_->assembler_microsatellites.empty()) {
                 repeats_->assembler_microsatellites.reserve(repeats_->compound_microsatellites.size());
                 auto microsatellites_begin_itr = std::cbegin(repeats_->compound_microsatellites);
                 const auto microsatellites_end_itr = std::cend(repeats_->compound_microsatellites);
