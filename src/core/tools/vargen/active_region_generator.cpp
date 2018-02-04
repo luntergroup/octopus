@@ -110,15 +110,24 @@ std::vector<GenomicRegion> ActiveRegionGenerator::generate(const GenomicRegion& 
             if (repeats_->minisatellites.empty() && repeats_->assembler_microsatellites.empty()) {
                 return {region};
             } else {
-                std::vector<GenomicRegion> cigar_scanner_ignore {};
-                cigar_scanner_ignore.reserve(repeats_->minisatellites.size());
+                std::vector<GenomicRegion> repeat_regions {};
+                repeat_regions.reserve(repeats_->minisatellites.size() + repeats_->assembler_microsatellites.size());
                 for (const auto& repeat : repeats_->minisatellites) {
-                    cigar_scanner_ignore.push_back(expand(repeat, -static_cast<GenomicRegion::Distance>(max_read_length_ / 2)));
+                    if (size(repeat) > 3 * max_read_length_) {
+                        repeat_regions.push_back(expand(repeat, -static_cast<GenomicRegion::Distance>(max_read_length_)));
+                    } else {
+                        repeat_regions.push_back(expand(repeat, -static_cast<GenomicRegion::Distance>(max_read_length_ / 2)));
+                    }
                 }
-                if (!repeats_->assembler_microsatellites.empty()) {
-                    cigar_scanner_ignore = merge(std::move(cigar_scanner_ignore), repeats_->assembler_microsatellites);
+                for (const auto& repeat : repeats_->assembler_microsatellites) {
+                    if (size(repeat) > 3 * max_read_length_) {
+                        repeat_regions.push_back(expand(repeat, -static_cast<GenomicRegion::Distance>(max_read_length_)));
+                    } else {
+                        repeat_regions.push_back(expand(repeat, -static_cast<GenomicRegion::Distance>(max_read_length_ / 2)));
+                    }
                 }
-                return extract_intervening_regions(cigar_scanner_ignore, region);
+                std::sort(std::begin(repeat_regions), std::end(repeat_regions));
+                return extract_intervening_regions(extract_covered_regions(repeat_regions), region);
             }
         }
     }
