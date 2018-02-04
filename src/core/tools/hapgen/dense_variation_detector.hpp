@@ -11,6 +11,7 @@
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "core/types/variant.hpp"
+#include "utils/input_reads_profiler.hpp"
 
 namespace octopus { namespace coretools {
 
@@ -26,7 +27,8 @@ public:
     
     DenseVariationDetector() = default;
     
-    DenseVariationDetector(double heterozygosity, double heterozygosity_stdev);
+    DenseVariationDetector(double heterozygosity, double heterozygosity_stdev,
+                           boost::optional<ReadSetProfile> = boost::none);
     
     DenseVariationDetector(const DenseVariationDetector&)            = default;
     DenseVariationDetector& operator=(const DenseVariationDetector&) = default;
@@ -39,7 +41,7 @@ public:
 
 private:
     double expected_heterozygosity_, heterozygosity_stdev_;
-    boost::optional<unsigned> expected_coverage_;
+    boost::optional<ReadSetProfile> reads_profile_;
 };
 
 } // namespace coretools

@@ -26,10 +26,11 @@
 
 namespace octopus { namespace coretools {
 
-DenseVariationDetector::DenseVariationDetector(double heterozygosity, double heterozygosity_stdev)
+DenseVariationDetector::DenseVariationDetector(double heterozygosity, double heterozygosity_stdev,
+                                               boost::optional<ReadSetProfile> reads_profile)
 : expected_heterozygosity_ {heterozygosity}
 , heterozygosity_stdev_ {heterozygosity_stdev}
-, expected_coverage_ {}
+, reads_profile_ {std::move(reads_profile)}
 {}
 
 namespace {
@@ -323,15 +324,15 @@ DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const R
     auto joined_dense_regions = join_dense_regions(dense_regions, variants, reads);
     std::vector<DenseRegion> result {};
     result.reserve(joined_dense_regions.size());
-    double expected_coverage {};
-    if (expected_coverage_) {
-        expected_coverage = *expected_coverage_;
+    double max_expected_coverage {};
+    if (reads_profile_) {
+        max_expected_coverage = 2 * reads_profile_->mean_depth + 2 * reads_profile_->depth_stdev;
     } else {
-        expected_coverage = mean_coverage(reads);
+        max_expected_coverage = 2 * mean_coverage(reads);
     }
     for (const auto& region : joined_dense_regions) {
         const auto state = compute_state(region, variants, reads);
-        if (state.variant_count > 100 && size(state.region) > 3 * mean_read_size && state.mean_read_depth > 2 * expected_coverage) {
+        if (state.variant_count > 100 && size(state.region) > 3 * mean_read_size && state.mean_read_depth > max_expected_coverage) {
             result.push_back({region, DenseRegion::RecommendedAction::skip});
         }
     }

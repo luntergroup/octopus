@@ -451,7 +451,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
 , reads_profile_ {profile_reads(this->samples, this->regions, this->read_manager)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)}
-, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options)}
+, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile_)}
 , call_filter_factory {options::make_call_filter_factory(this->reference, this->read_pipe, options)}
 , filter_read_pipe {}
 , output {std::move(output)}
