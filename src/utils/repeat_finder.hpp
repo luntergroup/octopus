@@ -33,10 +33,12 @@ struct TandemRepeat : public Mappable<TandemRepeat>
 
 struct InexactRepeatDefinition
 {
-    unsigned max_exact_repeat_seed_period = 100;
-    unsigned min_exact_repeat_seed_length = 100;
-    unsigned max_seed_join_distance       = 50;
-    unsigned min_joined_repeat_length     = 200;
+    unsigned max_exact_repeat_seed_period  = 6;
+    unsigned min_exact_repeat_seed_length  = 3;
+    unsigned min_exact_repeat_seed_periods = 3;
+    unsigned min_exact_seeds               = 1;
+    unsigned max_seed_join_distance        = 2;
+    unsigned min_joined_repeat_length      = 10;
 };
 
 template <typename SequenceType>
@@ -78,11 +80,11 @@ find_exact_tandem_repeats(const ReferenceGenome& reference, const GenomicRegion&
 
 std::vector<GenomicRegion>
 find_repeat_regions(const std::vector<TandemRepeat>& repeats, const GenomicRegion& region,
-                    const InexactRepeatDefinition repeat_definition);
+                    const InexactRepeatDefinition repeat_def);
 
 std::vector<GenomicRegion>
 find_repeat_regions(const ReferenceGenome& reference, const GenomicRegion& region,
-                    InexactRepeatDefinition repeat_definition = InexactRepeatDefinition {});
+                    InexactRepeatDefinition repeat_def = InexactRepeatDefinition {});
 
 } // namespace octopus
 

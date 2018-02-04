@@ -64,6 +64,7 @@ private:
     std::reference_wrapper<const ReferenceGenome> reference_;
     Options options_;
     std::string assembler_name_, cigar_scanner_name_;
+    bool using_assembler_;
     
     boost::optional<AssemblerActiveRegionGenerator> assembler_active_region_generator_;
     std::size_t max_read_length_;
