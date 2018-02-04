@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include <boost/optional.hpp>
+
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "core/types/variant.hpp"
@@ -37,6 +39,7 @@ public:
 
 private:
     double expected_heterozygosity_, heterozygosity_stdev_;
+    boost::optional<unsigned> expected_coverage_;
 };
 
 } // namespace coretools

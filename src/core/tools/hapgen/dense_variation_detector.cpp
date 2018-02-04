@@ -29,6 +29,7 @@ namespace octopus { namespace coretools {
 DenseVariationDetector::DenseVariationDetector(double heterozygosity, double heterozygosity_stdev)
 : expected_heterozygosity_ {heterozygosity}
 , heterozygosity_stdev_ {heterozygosity_stdev}
+, expected_coverage_ {}
 {}
 
 namespace {
@@ -322,14 +323,16 @@ DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const R
     auto joined_dense_regions = join_dense_regions(dense_regions, variants, reads);
     std::vector<DenseRegion> result {};
     result.reserve(joined_dense_regions.size());
+    double expected_coverage {};
+    if (expected_coverage_) {
+        expected_coverage = *expected_coverage_;
+    } else {
+        expected_coverage = mean_coverage(reads);
+    }
     for (const auto& region : joined_dense_regions) {
-        auto state = compute_state(region, variants, reads);
-        if (state.variant_count > 20 && size(state.region) > 2 * mean_read_size) {
-            if (state.variant_count > 100 || size(state.region) > 3 * mean_read_size || state.rmq_mapping_quality < 30) {
-                result.push_back({region, DenseRegion::RecommendedAction::skip});
-            } else {
-                result.push_back({region, DenseRegion::RecommendedAction::restrict_lagging});
-            }
+        const auto state = compute_state(region, variants, reads);
+        if (state.variant_count > 100 && size(state.region) > 3 * mean_read_size && state.mean_read_depth > 2 * expected_coverage) {
+            result.push_back({region, DenseRegion::RecommendedAction::skip});
         }
     }
     return result;
