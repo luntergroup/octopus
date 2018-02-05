@@ -32,8 +32,40 @@ void MisalignedReadsDetector::add(const SampleName& sample, const AlignedRead& r
     }
 }
 
+namespace {
+
+auto get_regions(const std::vector<bool>& base_mask, const GenomicRegion& region)
+{
+    std::vector<GenomicRegion> result{};
+    auto itr = std::find(std::cbegin(base_mask), std::cend(base_mask), true);
+    for (; itr != std::cend(base_mask);) {
+        const auto itr2 = std::find(itr, std::cend(base_mask), false);
+        const auto begin = region.begin() + std::distance(std::cbegin(base_mask), itr);
+        const auto end = begin + std::distance(itr, itr2);
+        result.emplace_back(region.contig_name(), begin, end);
+        itr = std::find(itr2, std::cend(base_mask), true);
+    }
+    return result;
+}
+
+} // namespace
+
 std::vector<GenomicRegion> MisalignedReadsDetector::generate(const GenomicRegion& region) const
 {
+    if (likely_misaligned_coverage_tracker_.empty()) return {};
+    if (coverage_tracker_.size() == 1) {
+        const auto& sample = std::cbegin(coverage_tracker_)->first;
+        const auto total_coverages = coverage_tracker_.at(sample).coverage(region);
+        const auto misaligned_coverages = likely_misaligned_coverage_tracker_.at(sample).coverage(region);
+        assert(total_coverages.size() == misaligned_coverages.size());
+        std::vector<bool> likely_misaligned_base_mask(total_coverages.size());
+        std::transform(std::cbegin(total_coverages), std::cend(total_coverages), std::cbegin(misaligned_coverages),
+                       std::begin(likely_misaligned_base_mask),
+                       [] (auto depth, auto misaligned_depth) -> bool {
+                           return misaligned_depth > depth / 2;
+                       });
+        return join(get_regions(likely_misaligned_base_mask, region), 30);
+    }
     return {};
 }
 
