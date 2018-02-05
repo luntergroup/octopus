@@ -38,10 +38,8 @@ public:
     
     struct Report
     {
-        std::size_t n_total_reads;
-        std::size_t n_read_assigned;
-        std::size_t n_read_unassigned;
-        std::size_t n_hom_ref_reads;
+        std::size_t n_reads_assigned;
+        std::size_t n_reads_unassigned;
     };
     
     BAMRealigner() = default;
@@ -57,6 +55,11 @@ public:
     Report realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                    const ReferenceGenome& reference, SampleList samples) const;
     Report realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
+                   const ReferenceGenome& reference) const;
+    
+    Report realign(ReadReader& src, VcfReader& variants, std::vector<ReadWriter>& dsts,
+                   const ReferenceGenome& reference, SampleList samples) const;
+    Report realign(ReadReader& src, VcfReader& variants, std::vector<ReadWriter>& dsts,
                    const ReferenceGenome& reference) const;
     
 private:
@@ -77,8 +80,10 @@ private:
                               const ReferenceGenome& reference, const SampleList& samples) const;
 };
 
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
-                             const ReferenceGenome& reference);
+BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants,
+                             io::ReadWriter::Path dst, const ReferenceGenome& reference);
+BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants,
+                             std::vector<io::ReadWriter::Path> dsts, const ReferenceGenome& reference);
 
 } // namespace octopus
 
