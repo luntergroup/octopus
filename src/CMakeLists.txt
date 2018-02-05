@@ -385,6 +385,8 @@ set(CORE_SOURCES
     core/tools/vargen/utils/global_aligner.cpp
     core/tools/vargen/utils/assembler_active_region_generator.hpp
     core/tools/vargen/utils/assembler_active_region_generator.cpp
+    core/tools/vargen/utils/misaligned_reads_detector.hpp
+    core/tools/vargen/utils/misaligned_reads_detector.cpp
 
     core/types/allele.hpp
     core/types/allele.cpp
