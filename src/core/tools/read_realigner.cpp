@@ -277,13 +277,13 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
                     }
                 }
             } else {
-                result.emplace_back(lhs_pad_size, Flag::sequenceMatch);
+                if (lhs_pad_size > 0) result.emplace_back(lhs_pad_size, Flag::sequenceMatch);
                 if (is_sequence_match(haplotype_to_reference.back())) {
                     result.insert(result.cend(), haplotype_to_reference.cbegin(), haplotype_to_reference.cend() - 1);
                     result.emplace_back(haplotype_to_reference.back().size() + rhs_pad_size, Flag::sequenceMatch);
                 } else {
                     utils::append(haplotype_to_reference, result);
-                    result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
+                    if (rhs_pad_size) result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
                 }
             }
         } else if (begins_before(read_region, haplotype_region)) {
@@ -304,7 +304,7 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
             assert(!result.empty());
             if (is_sequence_match(result.back())) {
                 result.back() = CigarOperation {result.back().size() + rhs_pad_size, Flag::sequenceMatch};
-            } else {
+            } else if (rhs_pad_size > 0) {
                 result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
             }
         }
