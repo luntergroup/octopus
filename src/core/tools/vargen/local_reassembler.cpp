@@ -531,7 +531,9 @@ void LocalReassembler::try_assemble_with_fallbacks(const Bin& bin, std::deque<Va
             case AssemblerStatus::success:
                 log_success(debug_log_, "Fallback", k);
                 if (k - prev_k > 5) {
-                    assemble_bin((prev_k + k) / 2, bin, result);
+                    const auto gap = k - prev_k;
+                    assemble_bin(k - gap / 2, bin, result);
+                    assemble_bin(k + gap / 2, bin, result);
                 }
                 return;
             case AssemblerStatus::partial_success:
