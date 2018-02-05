@@ -351,6 +351,8 @@ set(CORE_SOURCES
     core/tools/read_assigner.cpp
     core/tools/read_realigner.hpp
     core/tools/read_realigner.cpp
+    core/tools/bam_realigner.hpp
+    core/tools/bam_realigner.cpp
 
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp
