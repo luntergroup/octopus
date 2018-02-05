@@ -221,8 +221,8 @@ bool is_sequence_empty(const AlignedRead& read) noexcept;
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read) noexcept;
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read, const GenomicRegion& region);
 
-AlignedRead::NucleotideSequence get_sequence(const AlignedRead& read, const GenomicRegion& region);
-AlignedRead::BaseQualityVector get_base_qualities(const AlignedRead& read, const GenomicRegion& region);
+AlignedRead::NucleotideSequence copy_sequence(const AlignedRead& read, const GenomicRegion& region);
+AlignedRead::BaseQualityVector copy_base_qualities(const AlignedRead& read, const GenomicRegion& region);
 
 bool is_soft_clipped(const AlignedRead& read) noexcept;
 bool is_front_soft_clipped(const AlignedRead& read) noexcept;

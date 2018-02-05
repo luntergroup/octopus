@@ -269,14 +269,14 @@ auto get_sequence_offsets(const AlignedRead& read, const GenomicRegion& region)
     return std::make_pair(sequence_offset, static_cast<std::size_t>(sequence_length));
 }
 
-AlignedRead::NucleotideSequence get_sequence(const AlignedRead& read, const GenomicRegion& region)
+AlignedRead::NucleotideSequence copy_sequence(const AlignedRead& read, const GenomicRegion& region)
 {
     auto p = get_sequence_offsets(read, region);
     using std::cbegin; using std::next;
     return {next(cbegin(read.sequence()), p.first), next(cbegin(read.sequence()), p.first + p.second)};
 }
 
-AlignedRead::BaseQualityVector get_base_qualities(const AlignedRead& read, const GenomicRegion& region)
+AlignedRead::BaseQualityVector copy_base_qualities(const AlignedRead& read, const GenomicRegion& region)
 {
     auto p = get_sequence_offsets(read, region);
     using std::cbegin; using std::next;

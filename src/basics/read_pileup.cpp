@@ -9,8 +9,8 @@ auto make_pileup(const ReadContainer& reads, const GenomicRegion& region)
 {
     ReadPileup result {region};
     for (const auto& read : overlap_range(reads, region)) {
-        auto subsequence = get_sequence(read, region);
-        auto base_qualities = get_base_qualities(read, region);
+        auto subsequence = copy_sequence(read, region);
+        auto base_qualities = copy_base_qualities(read, region);
         result.read_sequences[subsequence].push_back({std::move(base_qualities), read.mapping_quality()});
     }
     return result;
