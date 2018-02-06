@@ -531,7 +531,9 @@ void LocalReassembler::try_assemble_with_fallbacks(const Bin& bin, std::deque<Va
             case AssemblerStatus::success:
                 log_success(debug_log_, "Fallback", k);
                 if (k - prev_k > 5) {
-                    assemble_bin((prev_k + k) / 2, bin, result);
+                    const auto gap = k - prev_k;
+                    assemble_bin(k - gap / 2, bin, result);
+                    assemble_bin(k + gap / 2, bin, result);
                 }
                 return;
             case AssemblerStatus::partial_success:
@@ -662,11 +664,16 @@ struct Repeat : public Mappable<Repeat>
 {
     ContigRegion region;
     unsigned period;
+    Assembler::NucleotideSequence::const_iterator begin_itr, end_itr;
     const auto& mapped_region() const noexcept { return region; }
+    auto begin() const noexcept { return begin_itr; }
+    auto end() const noexcept { return end_itr; }
     Repeat() = default;
-    Repeat(const tandem::Repeat& repeat) noexcept
+    Repeat(const tandem::Repeat& repeat, const Assembler::NucleotideSequence& sequence) noexcept
     : region {repeat.pos, repeat.pos + repeat.length}
     , period {repeat.period}
+    , begin_itr {std::next(std::cbegin(sequence), repeat.pos)}
+    , end_itr {std::next(begin_itr, repeat.length)}
     {}
 };
 
@@ -677,7 +684,7 @@ auto find_repeats(Assembler::NucleotideSequence& sequence, const unsigned max_pe
     sequence.pop_back();
     std::vector<Repeat> result(repeats.size());
     std::transform(std::cbegin(repeats), std::cend(repeats), std::begin(result),
-                   [] (auto repeat) { return Repeat {repeat}; });
+                   [&] (auto repeat) { return Repeat {repeat, sequence}; });
     std::sort(std::begin(result), std::end(result));
     return result;
 }
@@ -700,8 +707,18 @@ struct VariantReference : public Mappable<VariantReference>
 
 bool matches_rhs(const Repeat& repeat, const Assembler::NucleotideSequence& sequence) noexcept
 {
-    if (sequence.size() < 2 * repeat.period) return false;
-    return utils::is_tandem_repeat(sequence, repeat.period);
+    if (sequence.size() < repeat.period) return false;
+    if (sequence.size() == repeat.period) {
+        return std::equal(std::cbegin(sequence), std::cend(sequence), std::cbegin(repeat));
+    } else if (utils::is_tandem_repeat(sequence, repeat.period)) {
+        assert(std::distance(std::cbegin(repeat), std::cend(repeat)) >= 2 * repeat.period);
+        const auto repeat_match_end_itr = std::next(std::cbegin(repeat), 2 * repeat.period);
+        auto match_itr = std::search(std::cbegin(repeat), repeat_match_end_itr,
+                                     std::cbegin(sequence), std::next(std::cbegin(sequence), repeat.period));
+        return match_itr != repeat_match_end_itr;
+    } else {
+        return false;
+    }
 }
 
 template <typename Range>
@@ -757,13 +774,13 @@ std::vector<Assembler::Variant> try_to_split_repeats(Assembler::Variant& v, cons
         complete_partial_ref_repeat(v, ref_repeat);
     } else {
         auto alt_repeat_ritr = std::make_reverse_iterator(ref_repeat_itr);
-        auto alt_repeat_match_ritr = alt_repeat_ritr;
+        auto alt_repeat_match_ritr = std::crend(ref_repeats);
         for (; alt_repeat_ritr != std::crend(ref_repeats); ++alt_repeat_ritr) {
             if (is_before(*alt_repeat_ritr, ref_repeat)) break;
             if (matches_rhs(*alt_repeat_ritr, v.alt)) alt_repeat_match_ritr = alt_repeat_ritr;
         }
         if (alt_repeat_match_ritr == std::crend(ref_repeats)) return {};
-        if (v.alt.size() < 2 * alt_repeat_match_ritr->period) return {};
+        if (v.alt.size() < alt_repeat_match_ritr->period) return {};
         complete_partial_alt_repeat(v, *alt_repeat_match_ritr);
     }
     Assembler::Variant deletion {v.begin_pos, std::move(v.ref), ""}, insertion {v.begin_pos, "", std::move(v.alt)};

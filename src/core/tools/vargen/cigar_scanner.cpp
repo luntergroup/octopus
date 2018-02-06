@@ -494,9 +494,10 @@ bool is_good(const Variant& variant, const unsigned depth, const unsigned num_fw
             if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
             partial_sort(observed_qualities, 2);
             return observed_qualities[0] >= 20 && observed_qualities[1] >= 20;
-        } else if (depth < 300) {
+        } else if (depth < 150) {
             if (num_observations < 3) return false;
-            if (base_quality_sum > 150) return true;
+            if (base_quality_sum < 40) return false;
+            if (base_quality_sum > 200) return true;
             erase_below(observed_qualities, 10);
             if (observed_qualities.size() < 3) return false;
             if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
@@ -505,7 +506,7 @@ bool is_good(const Variant& variant, const unsigned depth, const unsigned num_fw
         } else {
             if (num_observations < 8) return false;
             erase_below(observed_qualities, 10);
-            return observed_qualities.size() > 7;
+            return static_cast<double>(observed_qualities.size()) / depth > 0.2;
         }
     } else if (is_insertion(variant)) {
         if (num_observations == 1 && alt_sequence_size(variant) > 8) return false;
@@ -536,7 +537,7 @@ bool is_good(const Variant& variant, const unsigned depth, const unsigned num_fw
         if (region_size(variant) < 10) {
             return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.05;
         } else {
-            return num_observations > 1 && num_observations >= 5;
+            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) > 0.1;
         }
     }
 }
