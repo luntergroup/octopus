@@ -195,7 +195,7 @@ To call germline and de novo mutations in a trio, either specify both maternal (
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -F NA12891
 ```
 
-The trio can also be specified with a PED file:
+or provide a PED file which defines the trio:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam --pedigree ceu_trio.ped
@@ -257,7 +257,7 @@ $ octopus -R hs37d5.fa -I NA12878.bam --threads=4
 
 #### *Fast calling*
 
-By default, octopus is geared towards more accurate variant calling which requires the use of complex (slow) algorithms. However, to acheive faster runtimes (at the cost of decreased calling accuray) many of these features can be disabled. There are two helper commands that setup octopus for faster variant calling, `--fast` and `--very-fast`, e.g.:
+By default, octopus is geared towards more accurate variant calling which requires the use of complex (slow) algorithms. However, to achieve faster runtimes (at the cost of decreased calling accuracy) many of these features can be disabled. There are two helper commands that setup octopus for faster variant calling, `--fast` and `--very-fast`, e.g.:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam --fast
