@@ -212,7 +212,7 @@ $ octopus -R hs37d5.fa -I normal.bam tumour.bam --normal-sample NORMAL
 It is also possible to genotype multiple tumours from the same individual jointly:
 
 ```shell
-$ octopus -R hs37d5.fa -I normal.bam tumourA.bam tumourB --normal-sample NORMAL
+$ octopus -R hs37d5.fa -I normal.bam tumourA.bam tumourB.bam --normal-sample NORMAL
 ```
 
 If a normal sample is not present the cancer calling model must be invoked explicitly:
@@ -238,12 +238,12 @@ Joint calling samples may increase calling power, especially for low coverage se
 To call phased HLA genotypes, increase the default phase level:
 
 ```shell
-$ octopus -R human.fa -I NA12878.bam -t hla-regions.txt -l aggressive
+$ octopus -R hs37d5.fa -I NA12878.bam -t hla-regions.txt -l aggressive
 ```
 
 #### *Multithreaded calling*
 
-Octopus has built in multithreading capacbilities, just add the `--threads` command:
+Octopus has built in multithreading capabilities, just add the `--threads` command:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam --threads
