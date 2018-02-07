@@ -63,6 +63,17 @@ These instructions are replicated in the [user documentation](https://github.com
 
 Octopus can be built and installed on a wide range of operating systems including most Unix based systems (Linux, OS X) and Windows (once MSVC is C++14 feature complete).
 
+#### Conda package
+
+Octopus is available [pre-built for Linux](https://anaconda.org/bioconda/octopus) as part of [Bioconda](https://bioconda.github.io/). To [install in an isolated environment](https://bioconda.github.io/#using-bioconda):
+
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p venv
+    venv/bin/conda install -c conda-forge -c bioconda octopus
+    venv/bin/octopus -h
+
+A package will also be available for OSX once conda-forge and bioconda move to newer versions of gcc and boost.
+
 #### *Quick installation with Python3*
 
 Installing octopus first requires obtaining a copy the source code. In the command line, move to an appropriate install directory and execute:
