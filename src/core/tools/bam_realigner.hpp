@@ -77,13 +77,16 @@ private:
     
     CallBlock read_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const;
     BatchList read_next_batch(VcfIterator& first, const VcfIterator& last, ReadReader& src,
-                              const ReferenceGenome& reference, const SampleList& samples) const;
+                              const ReferenceGenome& reference, const SampleList& samples,
+                              const boost::optional<GenomicRegion>& prev_batch_region) const;
 };
 
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants,
-                             io::ReadWriter::Path dst, const ReferenceGenome& reference);
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants,
-                             std::vector<io::ReadWriter::Path> dsts, const ReferenceGenome& reference);
+BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
+                             const ReferenceGenome& reference);
+BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
+                             const ReferenceGenome& reference, BAMRealigner::Config config);
+BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, std::vector<io::ReadWriter::Path> dsts,
+                             const ReferenceGenome& reference);
 
 } // namespace octopus
 
