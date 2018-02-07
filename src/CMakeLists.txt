@@ -156,8 +156,8 @@ set(UTILS_SOURCES
     utils/timing.hpp
     utils/type_tricks.hpp
     utils/coverage_tracker.hpp
-    utils/read_size_estimator.hpp
-    utils/read_size_estimator.cpp
+    utils/input_reads_profiler.hpp
+    utils/input_reads_profiler.cpp
     utils/kmer_mapper.hpp
     utils/kmer_mapper.cpp
     utils/memory_footprint.hpp
@@ -356,6 +356,8 @@ set(CORE_SOURCES
     core/tools/hapgen/haplotype_generator.cpp
     core/tools/hapgen/haplotype_tree.hpp
     core/tools/hapgen/haplotype_tree.cpp
+    core/tools/hapgen/dense_variation_detector.hpp
+    core/tools/hapgen/dense_variation_detector.cpp
     
     core/tools/phaser/phaser.hpp
     core/tools/phaser/phaser.cpp

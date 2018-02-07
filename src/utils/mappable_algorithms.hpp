@@ -1879,7 +1879,7 @@ auto calculate_positional_coverage(ForwardIt first, ForwardIt last)
 }
 
 template <typename Range,
-          typename = EnableIfMappable<typename Range::value_type>>
+          typename = EnableIfRegionOrMappable<typename Range::value_type>>
 auto calculate_positional_coverage(const Range& mappables)
 {
     return calculate_positional_coverage(std::cbegin(mappables), std::cend(mappables));

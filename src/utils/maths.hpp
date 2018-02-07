@@ -216,7 +216,11 @@ template <typename IntegerType, typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 RealType log_poisson_pmf(const IntegerType k, const RealType mu)
 {
-    return k * std::log(mu) - boost::math::lgamma(k) - mu;
+    if (k > 0) {
+        return k * std::log(mu) - boost::math::lgamma(k) - mu;
+    } else {
+        return -mu;
+    }
 }
 
 template <typename IntegerType, typename RealType,

@@ -20,6 +20,7 @@
 #include "readpipe/read_pipe.hpp"
 #include "core/callers/caller_factory.hpp"
 #include "core/csr/filters/variant_call_filter_factory.hpp"
+#include "utils/input_reads_profiler.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -54,7 +55,8 @@ ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> sampl
 bool call_sites_only(const OptionMap& options);
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
-                                  const InputRegionMap& regions, const OptionMap& options);
+                                  const InputRegionMap& regions, const OptionMap& options,
+                                  boost::optional<ReadSetProfile> input_reads_profile = boost::none);
 
 bool is_call_filtering_requested(const OptionMap& options) noexcept;
 

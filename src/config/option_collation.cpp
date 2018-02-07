@@ -1127,14 +1127,13 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
-auto get_max_expected_log_allele_count_per_base(const OptionMap& options)
+auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
     const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
     const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
-    const auto snp_heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
-    const auto max_log_allele_count_per_base = heterozygosity + 8 * snp_heterozygosity_stdev;
-    return max_log_allele_count_per_base;
+    const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
+    return coretools::DenseVariationDetector {heterozygosity, heterozygosity_stdev, input_reads_profile};
 }
 
 auto get_max_indicator_join_distance() noexcept
@@ -1147,7 +1146,7 @@ auto get_min_flank_pad() noexcept
     return 2 * (2 * HaplotypeLikelihoodModel{}.pad_requirement() - 1);
 }
 
-auto make_haplotype_generator_builder(const OptionMap& options)
+auto make_haplotype_generator_builder(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     const auto lagging_policy    = get_lagging_policy(options);
     const auto max_haplotypes    = get_max_haplotypes(options);
@@ -1158,7 +1157,7 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
     .set_max_indicator_join_distance(get_max_indicator_join_distance())
-    .set_max_expected_log_allele_count_per_base(get_max_expected_log_allele_count_per_base(options))
+    .set_dense_variation_detector(get_dense_variation_detector(options, input_reads_profile))
     .set_min_flank_pad(get_min_flank_pad());
 }
 
@@ -1406,11 +1405,12 @@ auto get_normal_contamination_risk(const OptionMap& options)
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
-                                  const InputRegionMap& regions, const OptionMap& options)
+                                  const InputRegionMap& regions, const OptionMap& options,
+                                  const boost::optional<ReadSetProfile> input_reads_profile)
 {
     CallerBuilder vc_builder {reference, read_pipe,
                               make_variant_generator_builder(options),
-                              make_haplotype_generator_builder(options)};
+                              make_haplotype_generator_builder(options, input_reads_profile)};
 	const auto pedigree = get_pedigree(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
     vc_builder.set_caller(caller);
