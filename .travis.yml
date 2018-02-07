@@ -187,7 +187,7 @@ install:
       git clone https://github.com/samtools/htslib.git;
       cd htslib && autoheader && autoconf && ./configure && make && sudo make install;
     else
-      brew tap homebrew/science && brew install htslib;
+      brew install htslib;
     fi
 
 before_script:
