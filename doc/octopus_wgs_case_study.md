@@ -92,3 +92,46 @@ Threshold  True-pos-baseline  True-pos-call  False-pos  False-neg  Precision  Se
    19.470            3678469        3699288       7611      12392     0.9979       0.9966     0.9973
      None            3679800        3700790       9280      11061     0.9975       0.9970     0.9973
 ```
+
+## Applying the prototype random forest CSR model
+
+To apply the prototype random forest model, we need to jump through a few more hoop's. First, we need to produce an annotated VCF file to give to the random forest:
+
+```
+octopus -R ~/data/reference/hs37d5.fa \
+    -I ~/data/bam/NA12878.platinum.b37.bam \
+    --filter-vcf ~/data/vcf/NA12878.platinum.b37.octopus.vcf.gz \
+    -o ~/data/vcf/NA12878.platinum.b37.octopus.CSR.annotated.vcf.gz \
+    -T 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X \
+    --csr-train AF SB GQ DP QD FRF CRF GC URF MQ MQ0 MQD
+    --threads 15 --legacy
+```
+
+Next we create a VCF file filtered with the random forest. The random forest script and model are both in `octopus/prototypes`:
+
+```
+./random-forst-csr.py ~/data/vcf/NA12878.platinum.b37.octopus.CSR.annotated.legacy.vcf.gz \
+    ~/data/vcf/NA12878.platinum.b37.octopus.random-forest-CSR.legacy.vcf.gz \
+    random_forest_n100_d15_model.pkl --drop_info
+tabix ~/data/vcf/NA12878.platinum.b37.octopus.random-forest-CSR.legacy.vcf.gz
+```
+
+Finally, re-run vcfeval:
+
+```
+rtg vcfeval -t ~/data/reference/hs37d5_sdf \
+            -b ~/data/vcf/giab/HG001_GRCh37_truth.vcf.gz \
+            --evaluation-regions ~/data/vcf/giab/HG001_GRCh37_hiconf.bed \
+            -c ~/data/vcf/NA12878.platinum.b37.octopus.random-forest-CSR.legacy.vcf.gz \
+            -o ~/benchmarks/NA12878.platinum.b37.octopus.random-forest-CSR.eval \
+            --ref-overlap -f QUAL
+```
+
+We see the following results:
+
+```
+Threshold  True-pos-baseline  True-pos-call  False-pos  False-neg  Precision  Sensitivity  F-measure
+----------------------------------------------------------------------------------------------------
+    2.010            3681191        3702271       3906       9670     0.9989       0.9974     0.9982
+     None            3681191        3702271       3906       9670     0.9989       0.9974     0.9982
+```
