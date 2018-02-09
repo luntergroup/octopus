@@ -370,10 +370,21 @@ auto estimate_read_size(const boost::optional<ReadSetProfile>& profile) noexcept
     return result;
 }
 
-std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes, const boost::optional<ReadSetProfile>& profile) noexcept
+std::size_t calculate_max_num_reads(MemoryFootprint max_buffer_size, const boost::optional<ReadSetProfile>& profile) noexcept
 {
-    static constexpr std::size_t minBufferBytes {1'000'000};
-    return std::max(max_buffer_bytes, minBufferBytes) / estimate_read_size(profile);
+    static constexpr MemoryFootprint min_buffer_size {50'000'000}; // 50Mb
+    if (max_buffer_size < min_buffer_size) {
+        static bool warned {false};
+        if (!warned) {
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "Ignoring given maximum read buffer size of " << max_buffer_size
+                             << " as this size is too small. Setting maximum to "
+                             << min_buffer_size << " instead.";
+            warned = true;
+        }
+        max_buffer_size = min_buffer_size;
+    }
+    return max_buffer_size.num_bytes() / estimate_read_size(profile);
 }
 
 auto add_identifier(const fs::path& base, const std::string& identifier)
@@ -491,8 +502,7 @@ void GenomeCallingComponents::Components::setup_progress_meter(const options::Op
 void GenomeCallingComponents::Components::set_read_buffer_size(const options::OptionMap& options)
 {
     if (!samples.empty() && !regions.empty() && read_manager.good()) {
-        read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options).num_bytes(),
-                                                   reads_profile_);
+        read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options), reads_profile_);
     }
 }
 

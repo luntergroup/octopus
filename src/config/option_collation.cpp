@@ -288,11 +288,30 @@ ReferenceGenome make_reference(const OptionMap& options)
 {
     const fs::path input_path {options.at("reference").as<std::string>()};
     auto resolved_path = resolve_path(input_path, options);
-    const auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>().num_bytes();
+    auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>();
+    static constexpr MemoryFootprint min_non_zero_reference_cache_size {1'000}; // 1Kb
+    if (ref_cache_size.num_bytes() > 0 && ref_cache_size < min_non_zero_reference_cache_size) {
+        static bool warned {false};
+        if (!warned) {
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "Ignoring given reference cache size of " << ref_cache_size
+                             << " as this size is too small. The maximum cache size will be set to zero";
+            warned = true;
+        }
+        ref_cache_size = 0;
+    }
+    static constexpr MemoryFootprint min_warn_non_zero_reference_cache_size {1'000'000}; // 1Mb
+    if (ref_cache_size.num_bytes() > 0 && ref_cache_size < min_warn_non_zero_reference_cache_size) {
+        static bool warned {false};
+        if (!warned) {
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "The given reference cache size " << ref_cache_size
+                             << " is very small and may not result in good performance.";
+            warned = true;
+        }
+    }
     try {
-        return octopus::make_reference(std::move(resolved_path),
-                                       ref_cache_size,
-                                       is_threading_allowed(options));
+        return octopus::make_reference(std::move(resolved_path), ref_cache_size, is_threading_allowed(options));
     } catch (MissingFileError& e) {
         e.set_location_specified("the command line option --reference");
         throw;
