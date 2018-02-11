@@ -38,10 +38,11 @@ ForwardIt random_select(ForwardIt first, ForwardIt last)
 auto estimate_dynamic_size(const AlignedRead& read) noexcept
 {
     return read.name().size() * sizeof(char)
+    + read.read_group().size() * sizeof(char)
     + sequence_size(read) * sizeof(char)
     + sequence_size(read) * sizeof(AlignedRead::BaseQuality)
     + read.cigar().size() * sizeof(CigarOperation)
-    + contig_name(read).size()
+    + contig_name(read).size() * sizeof(char)
     + (read.has_other_segment() ? sizeof(AlignedRead::Segment) : 0);
 }
 
