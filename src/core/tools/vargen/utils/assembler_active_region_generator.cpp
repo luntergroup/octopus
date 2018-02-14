@@ -167,20 +167,6 @@ auto compute_base_deletion_probabilities(const std::vector<unsigned>& coverages,
     return result;
 }
 
-auto get_regions(const std::vector<bool>& good_bases, const GenomicRegion& region)
-{
-    std::vector<GenomicRegion> result {};
-    auto itr = std::find(std::cbegin(good_bases), std::cend(good_bases), true);
-    for (; itr != std::cend(good_bases);) {
-        const auto itr2 = std::find(itr, std::cend(good_bases), false);
-        const auto begin = region.begin() + std::distance(std::cbegin(good_bases), itr);
-        const auto end   = begin + std::distance(itr, itr2);
-        result.emplace_back(region.contig_name(), begin, end);
-        itr = std::find(itr2, std::cend(good_bases), true);
-    }
-    return result;
-}
-
 template <typename Container>
 auto expand_each(const Container& regions, const GenomicRegion::Distance n)
 {
@@ -200,7 +186,7 @@ auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<Ge
     std::vector<bool> deletion_bases(deletion_base_probs.size());
     std::transform(std::cbegin(deletion_base_probs), std::cend(deletion_base_probs), std::begin(deletion_bases),
                    [] (const auto p) {  return p > 0.5; });
-    return extract_covered_regions(expand_each(get_regions(deletion_bases, region), 50));
+    return extract_covered_regions(expand_each(select_regions(region, deletion_bases), 50));
 }
 
 auto get_interesting_hotspots(const GenomicRegion& region,
@@ -219,7 +205,7 @@ auto get_interesting_hotspots(const GenomicRegion& region,
                            return 10 * interesting_coverage >= coverage;
                        }
                    });
-    return get_regions(interesting_bases, region);
+    return select_regions(region, interesting_bases);
 }
 
 auto get_interesting_hotspots(const GenomicRegion& region,
