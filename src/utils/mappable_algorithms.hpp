@@ -2059,7 +2059,7 @@ std::vector<Region> select_regions(const Region& region, const ForwardIt first, 
     result.reserve(std::distance(first, last) / 2); // max possible
     auto itr = std::find(first, last, true);
     for (; itr != last;) {
-        const auto itr2 = std::find(itr, last, true);
+        const auto itr2 = std::find(itr, last, false);
         const auto begin = region.begin() + std::distance(first, itr);
         const auto end   = begin + std::distance(itr, itr2);
         detail::append(region, begin, end, result);
@@ -2084,7 +2084,7 @@ std::vector<Region> select_regions(const Region& region, const ForwardIt first, 
     result.reserve(std::distance(first, last) / 2); // max possible
     auto itr = std::find_if(first, last, pred);
     for (; itr != last;) {
-        const auto itr2 = std::find(itr, last, pred);
+        const auto itr2 = std::find_if_not(itr, last, pred);
         const auto begin = region.begin() + std::distance(first, itr);
         const auto end   = begin + std::distance(itr, itr2);
         detail::append(region, begin, end, result);
