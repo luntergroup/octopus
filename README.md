@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/luntergroup/octopus.svg?branch=master)](https://travis-ci.org/luntergroup/octopus)
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
 [![Gitter](https://badges.gitter.im/octopus-caller/Lobby.svg)](https://gitter.im/octopus-caller/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/octopus/badges/installer/conda.svg)](https://conda.anaconda.org/bioconda)
 
 ---
 
@@ -10,7 +11,21 @@
 
 ---
 
-Octopus is a mapping-based variant caller that implements several calling models within a unified haplotype-aware framework. Octopus explicitly stores allele phasing infomation which allows haplotypes to be dynamically excluded and extended. Primarily this means octopus can jointly consider allele sets far exceeding the cardinality of other approaches, but perhaps more importantly, it allows *marginalisation* over posterior distributions in haplotype space at specific loci. In practise this means octopus can achieve far greater allelic genotyping accuracy than other methods, but can also infer conditional or unconditional phase probabilities directly from genotype probability distributions. This allows octopus to report consistent allele event level variant calls *and* independent phase information.
+Octopus is a mapping-based variant caller that implements several calling models within a unified haplotype-aware framework. Octopus takes inspiration from particle filtering by constructing a tree of haplotypes and dynamically pruning and extending the tree based on haplotype posterior probabilities in a sequential manner. This allows octopus to implicitly candider all possible haplotypes at a given loci in reasonable time.
+
+There are currently three calling models implemented:
+
+- An individual model for calling **germline variants** in a single healthy individual.
+- A tumour model for calling germline variants and **somatic mutations** in one or more tumour samples from a single individual.
+- A trio model for calling germline variants and *de novo* mutations in a parent-offspring trio.
+
+Octopus is currently able to call SNVs, small-medium sized indels, small complex rearrangements and micro-inversions.
+
+We hope to implement more calling models in the future, including, but not limited to:
+
+- A population model for calling germline variants from multiple healthy individuals within a population.
+- A pedigree model for calling germline and *de novo* mutations in multiple healthy individuals from a known pedigree.
+- A haploid clonal model for calling polymorphisms in a sample of mixed bacteria isolates.
 
 ## Requirements
 * A C++14 compiler with SSE2 support
@@ -76,19 +91,13 @@ A package will also be available for OSX once conda-forge and bioconda move to n
 
 #### *Quick installation with Python3*
 
-Installing octopus first requires obtaining a copy the source code. In the command line, move to an appropriate install directory and execute:
+First clone the git repository in your preferred directory:
 
 ```shell
-$ git clone https://github.com/luntergroup/octopus.git && cd octopus
+$ git clone -b master https://github.com/luntergroup/octopus.git && cd octopus
 ```
 
-The default branch is develop, which is not always stable. You may prefer to switch to the master branch which always has the latest release:
-
-```shell
-$ git checkout master
-```
-
-Installation is easy using the Python3 install script. If your default compiler satisfies the minimum requirements just execute:
+The easiest way to install octopus from source is with the Python3 install script. If your default compiler satisfies the minimum requirements just execute:
 
 ```shell
 $ ./install.py
@@ -109,7 +118,7 @@ $ ./install.py --cxx_compiler clang++-4.0
 On some systems, you may also need to specify a C compiler which is the same version as your C++ compiler, otherwise you'll get lots of link errors. This can be done with the `--c_compiler` option:
 
 ```shell
-$ ./install.py --cxx_compiler g++-7 --c_compiler gcc-7 
+$ ./install.py -cxx g++-7 -c gcc-7 
 ```
 
 By default this installs to `/bin` relative to where you installed octopus. To install to a root directory (e.g. `/usr/local/bin`) use:
@@ -118,21 +127,19 @@ By default this installs to `/bin` relative to where you installed octopus. To i
 $ ./install.py --root
 ```
 
-this may prompt you to enter a `sudo` password.
-
-If anything goes wrong with the build process and you need to start again, be sure to add the command `--clean`!
+If anything goes wrong with the build process and you need to start again, be sure to add the command `--clean`.
 
 #### *Installing with CMake*
 
 If Python3 isn't available, the binaries can be installed manually with [CMake](https://cmake.org):
 
 ```shell
-$ git clone https://github.com/luntergroup/octopus.git
+$ git clone -b master https://github.com/luntergroup/octopus.git
 $ cd octopus/build
 $ cmake .. && make install
 ```
 
-By default this installs to the `/bin` directory where octopus was installed. To install to root (e.g. `/usr/local/bin`) use the `-D` option:
+To install to root (e.g. `/usr/local/bin`) use the `-D` option:
 
 ```shell
 $ cmake -DINSTALL_ROOT=ON ..
@@ -147,7 +154,7 @@ $ cmake -D CMAKE_C_COMPILER=clang-4.0 -D CMAKE_CXX_COMPILER=clang++-4.0 ..
 You can check installation was successful by executing the command:
 
 ```shell
-$ octopus --help
+$ octopus -h
 ```
 
 ## Running Tests
@@ -186,16 +193,18 @@ $ octopus -R hs37d5.fa -I multi-sample.bam -S NA12878
 
 #### *Targeted calling*
 
-By default, octopus will call all possible regions (as specified in the reference FASTA). In order to select a set of target regions, use the `--regions` (`-T`) option:
+By default, octopus will call all regions specified in the reference index. In order to restrict calling to a subset of regions, either provide a list of zero-indexed regions in the format `chr:start-end` (`--regions`; `-T`), or a file containing a list of regions in either standard format or BED format (`--regions-file`; `-t`):
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam -T 1 2:30,000,000- 3:10,000,000-20,000,000
+$ octopus -R hs37d5.fa -I NA12878.bam -t regions.bed
 ```
 
-Or conversely a set of regions to *exclude* can be given with `--skip-regions` (`-K`):
+Conversely a set of regions to *exclude* can be given explictely (`--skip-regions`;`-K`), or with a file (`--skip-regions-file`; `-k`):
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam -K 1 2:30,000,000- 3:10,000,000-20,000,000
+$ octopus -R hs37d5.fa -I NA12878.bam -k skip-regions.bed
 ```
 
 #### *Calling de novo mutations in a trio*
@@ -234,7 +243,7 @@ $ octopus -R hs37d5.fa -I tumour1.bam tumour2.bam -C cancer
 
 Note however, that without a normal sample, somatic mutation classification power is significantly reduced.
 
-#### *Joint variant calling (in development)*
+#### *Joint variant calling (experimental)*
 
 Multiple samples from the same population, without pedigree information, can be called jointly:
 
@@ -249,7 +258,7 @@ Joint calling samples may increase calling power, especially for low coverage se
 To call phased HLA genotypes, increase the default phase level:
 
 ```shell
-$ octopus -R hs37d5.fa -I NA12878.bam -t hla-regions.txt -l aggressive
+$ octopus -R hs37d5.fa -I NA12878.bam -t hla-regions.bed -l aggressive
 ```
 
 #### *Multithreaded calling*
@@ -263,7 +272,7 @@ $ octopus -R hs37d5.fa -I NA12878.bam --threads
 This will let octopus automatically decide how many threads to use, and is the recommended approach as octopus can dynamically juggle thread usage at an algorithm level. However, a strict upper limit on the number of threads can also be used:
 
 ```shell
-$ octopus -R hs37d5.fa -I NA12878.bam --threads=4
+$ octopus -R hs37d5.fa -I NA12878.bam --threads 4
 ```
 
 #### *Fast calling*
