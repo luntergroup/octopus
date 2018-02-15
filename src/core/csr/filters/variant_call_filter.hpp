@@ -80,6 +80,7 @@ protected:
     };
     using ClassificationList = std::vector<Classification>;
     
+    std::vector<MeasureWrapper> measures_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
     
     bool can_measure_single_call() const noexcept;
@@ -100,7 +101,6 @@ private:
     
     FacetFactory facet_factory_;
     FacetNameSet facet_names_;
-    std::vector<MeasureWrapper> measures_;
     OutputOptions output_config_;
     
     mutable ThreadPool workers_;

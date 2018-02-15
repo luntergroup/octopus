@@ -65,10 +65,10 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
                                      std::vector<MeasureWrapper> measures,
                                      OutputOptions output_config,
                                      ConcurrencyPolicy threading)
-: debug_log_ {logging::get_debug_log()}
+: measures_ {std::move(measures)}
+, debug_log_ {logging::get_debug_log()}
 , facet_factory_ {std::move(facet_factory)}
 , facet_names_ {get_facets(measures)}
-, measures_ {std::move(measures)}
 , output_config_ {output_config}
 , workers_ {get_pool_size(threading)}
 {}
