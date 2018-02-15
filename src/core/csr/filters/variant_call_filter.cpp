@@ -197,9 +197,30 @@ std::vector<VariantCallFilter::MeasureBlock> VariantCallFilter::measure(const st
 
 void VariantCallFilter::write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const
 {
-    if (classification.category != Classification::Category::hard_filtered) {
+    if (!is_hard_filtered(classification)) {
         auto filtered_call = construct_template(call);
         annotate(filtered_call, classification);
+        dest << filtered_call.build_once();
+    }
+}
+
+void VariantCallFilter::write(const VcfRecord& call, const Classification& classification,
+                              const SampleList& samples, const ClassificationList& sample_classifications,
+                              VcfWriter& dest) const
+{
+    if (!is_hard_filtered(classification)) {
+        auto filtered_call = construct_template(call);
+        annotate(filtered_call, classification);
+        assert(samples.size() == sample_classifications.size());
+        for (auto p : boost::combine(samples, sample_classifications)) {
+            const SampleName& sample {p.get<0>()};
+            const Classification& sample_classification {p.get<1>()};
+            if (!is_hard_filtered(sample_classification)) {
+                annotate(filtered_call, sample, sample_classification);
+            } else {
+                filtered_call.clear_format(sample);
+            }
+        }
         dest << filtered_call.build_once();
     }
 }
@@ -251,6 +272,20 @@ VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) 
         result.clear_filter();
     }
     return result;
+}
+
+bool VariantCallFilter::is_hard_filtered(const Classification& classification) const noexcept
+{
+    return classification.category == Classification::Category::hard_filtered;
+}
+
+void VariantCallFilter::annotate(VcfRecord::Builder& call, const SampleName& sample, Classification status) const
+{
+    if (status.category == Classification::Category::unfiltered) {
+        pass(sample, call);
+    } else {
+        fail(sample, call, std::move(status.reasons));
+    }
 }
 
 void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification status) const
@@ -308,9 +343,21 @@ VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& cal
     return result;
 }
 
+void VariantCallFilter::pass(const SampleName& sample, VcfRecord::Builder& call) const
+{
+    call.set_passed(sample);
+}
+
 void VariantCallFilter::pass(VcfRecord::Builder& call) const
 {
     call.set_passed();
+}
+
+void VariantCallFilter::fail(const SampleName& sample, VcfRecord::Builder& call, std::vector<std::string> reasons) const
+{
+    for (auto& reason : reasons) {
+        call.add_filter(sample, std::move(reason));
+    }
 }
 
 void VariantCallFilter::fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const

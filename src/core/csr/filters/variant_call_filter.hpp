@@ -78,6 +78,7 @@ protected:
         std::vector<std::string> reasons = {};
         boost::optional<Phred<double>> quality = boost::none;
     };
+    using ClassificationList = std::vector<Classification>;
     
     mutable boost::optional<logging::DebugLogger> debug_log_;
     
@@ -89,6 +90,9 @@ protected:
     MeasureBlock measure(const CallBlock& block) const;
     std::vector<MeasureBlock> measure(const std::vector<CallBlock>& blocks) const;
     void write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const;
+    void write(const VcfRecord& call, const Classification& classification,
+               const SampleList& samples, const ClassificationList& sample_classifications,
+               VcfWriter& dest) const;
     void annotate(VcfRecord::Builder& call, const MeasureVector& measures) const;
     
 private:
@@ -110,8 +114,12 @@ private:
     MeasureBlock measure(const CallBlock& block, const Measure::FacetMap& facets) const;
     MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;
     VcfRecord::Builder construct_template(const VcfRecord& call) const;
+    bool is_hard_filtered(const Classification& classification) const noexcept;
+    void annotate(VcfRecord::Builder& call, const SampleName& sample, Classification status) const;
     void annotate(VcfRecord::Builder& call, Classification status) const;
+    void pass(const SampleName& sample, VcfRecord::Builder& call) const;
     void pass(VcfRecord::Builder& call) const;
+    void fail(const SampleName& sample, VcfRecord::Builder& call, std::vector<std::string> reasons) const;
     void fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const;
     bool is_multithreaded() const noexcept;
     unsigned max_concurrent_blocks() const noexcept;
