@@ -28,6 +28,11 @@ Measure::ResultType MappingQualityZeroCount::do_evaluate(const VcfRecord& call, 
     }
 }
 
+Measure::ResultCardinality MappingQualityZeroCount::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string MappingQualityZeroCount::do_name() const
 {
     return "MQ0";

@@ -32,6 +32,11 @@ Measure::ResultType MeanMappingQuality::do_evaluate(const VcfRecord& call, const
     }
 }
 
+Measure::ResultCardinality MeanMappingQuality::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string MeanMappingQuality::do_name() const
 {
     return "MQ";

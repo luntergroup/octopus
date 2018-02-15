@@ -155,6 +155,11 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
     return result;
 }
 
+Measure::ResultCardinality StrandBias::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string StrandBias::do_name() const
 {
     return "SB";

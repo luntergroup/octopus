@@ -28,6 +28,11 @@ Measure::ResultType Depth::do_evaluate(const VcfRecord& call, const FacetMap& fa
     }
 }
 
+Measure::ResultCardinality Depth::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string Depth::do_name() const
 {
     return "DP";

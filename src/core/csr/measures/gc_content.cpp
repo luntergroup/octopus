@@ -22,6 +22,11 @@ Measure::ResultType GCContent::do_evaluate(const VcfRecord& call, const FacetMap
     return utils::gc_content(reference.sequence());
 }
 
+Measure::ResultCardinality GCContent::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string GCContent::do_name() const
 {
     return "GC";

@@ -62,6 +62,11 @@ Measure::ResultType UnassignedReadFraction::do_evaluate(const VcfRecord& call, c
     return result;
 }
 
+Measure::ResultCardinality UnassignedReadFraction::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string UnassignedReadFraction::do_name() const
 {
     return "URF";

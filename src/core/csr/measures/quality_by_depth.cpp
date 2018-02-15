@@ -27,6 +27,11 @@ Measure::ResultType QualityByDepth::do_evaluate(const VcfRecord& call, const Fac
     return result;
 }
 
+Measure::ResultCardinality QualityByDepth::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string QualityByDepth::do_name() const
 {
     return "QD";

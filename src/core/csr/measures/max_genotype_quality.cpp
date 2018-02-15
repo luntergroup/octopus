@@ -38,6 +38,11 @@ Measure::ResultType MaxGenotypeQuality::do_evaluate(const VcfRecord& call, const
     return result;
 }
 
+Measure::ResultCardinality MaxGenotypeQuality::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string MaxGenotypeQuality::do_name() const
 {
     return "GQ";

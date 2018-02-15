@@ -21,6 +21,11 @@ Measure::ResultType Quality::do_evaluate(const VcfRecord& call, const FacetMap& 
     return result;
 }
 
+Measure::ResultCardinality Quality::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string Quality::do_name() const
 {
     return "QUAL";

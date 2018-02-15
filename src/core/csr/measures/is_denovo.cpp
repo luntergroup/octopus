@@ -18,6 +18,11 @@ Measure::ResultType IsDenovo::do_evaluate(const VcfRecord& call, const FacetMap&
     return call.has_info(vcf::spec::info::denovo);
 }
 
+Measure::ResultCardinality IsDenovo::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string IsDenovo::do_name() const
 {
     return "DENOVO";

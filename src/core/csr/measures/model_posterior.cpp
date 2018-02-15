@@ -23,6 +23,11 @@ Measure::ResultType ModelPosterior::do_evaluate(const VcfRecord& call, const Fac
     return result;
 }
 
+Measure::ResultCardinality ModelPosterior::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string ModelPosterior::do_name() const
 {
     return "MP";

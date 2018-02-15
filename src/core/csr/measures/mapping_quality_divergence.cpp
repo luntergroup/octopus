@@ -122,6 +122,11 @@ Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call,
     return result;
 }
 
+Measure::ResultCardinality MappingQualityDivergence::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string MappingQualityDivergence::do_name() const
 {
     return "MQD";

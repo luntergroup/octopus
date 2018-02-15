@@ -19,6 +19,7 @@ class Realignments : public Measure
 {
     std::unique_ptr<Measure> do_clone() const override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
+    ResultCardinality do_cardinality() const noexcept override;
     std::string do_name() const override;
     std::vector<std::string> do_requirements() const override;
     std::string do_serialise(const ResultType& value) const override;

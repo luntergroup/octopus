@@ -28,6 +28,11 @@ Measure::ResultType FilteredReadFraction::do_evaluate(const VcfRecord& call, con
     return result;
 }
 
+Measure::ResultCardinality FilteredReadFraction::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string FilteredReadFraction::do_name() const
 {
     return "FRF";
