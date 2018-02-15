@@ -598,6 +598,12 @@ VcfRecord::Builder& VcfRecord::Builder::set_genotype(const SampleName& sample, c
     return set_genotype(sample, tmp, phasing);
 }
 
+VcfRecord::Builder& VcfRecord::Builder::clear_genotype(const SampleName& sample) noexcept
+{
+    genotypes_.erase(sample);
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleName& sample, const KeyType& key, const ValueType& value)
 {
     return this->set_format(sample, key, std::vector<ValueType> {value});

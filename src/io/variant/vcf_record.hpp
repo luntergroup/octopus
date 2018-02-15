@@ -200,6 +200,7 @@ public:
     Builder& reserve_samples(unsigned n);
     Builder& set_genotype(const SampleName& sample, std::vector<NucleotideSequence> alleles, Phasing phasing);
     Builder& set_genotype(const SampleName& sample, const std::vector<boost::optional<unsigned>>& alleles, Phasing is_phased);
+    Builder& clear_genotype(const SampleName& sample) noexcept;
     Builder& set_format(const SampleName& sample, const KeyType& key, const ValueType& value);
     template <typename T>
     Builder& set_format(const SampleName& sample, const KeyType& key, const T& value); // calls std::to_string
