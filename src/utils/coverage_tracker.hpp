@@ -44,6 +44,9 @@ public:
     template <typename MappableType>
     void add(const MappableType& mappable);
     
+    bool any() const noexcept;
+    bool any(const Region& region) const noexcept;
+    
     std::size_t sum() const noexcept;
     std::size_t sum(const Region& region) const noexcept;
     
@@ -94,6 +97,21 @@ void CoverageTracker<Region, T>::add(const MappableType& mappable)
 }
 
 template <typename Region, typename T>
+bool CoverageTracker<Region, T>::any() const noexcept
+{
+    return std::find_if(std::cbegin(coverage_), std::cend(coverage_),
+                        [] (auto depth) noexcept { return depth > 0; }) != std::cend(coverage_);
+}
+
+template <typename Region, typename T>
+bool CoverageTracker<Region, T>::any(const Region& region) const noexcept
+{
+    if (octopus::is_empty(region)) return false;
+    const auto p = range(region);
+    return std::find_if(p.first, p.second, [] (auto depth) noexcept { return depth > 0; }) != p.second;
+}
+
+template <typename Region, typename T>
 std::size_t CoverageTracker<Region, T>::sum() const noexcept
 {
     return std::accumulate(std::cbegin(coverage_), std::cend(coverage_), std::size_t {0});
@@ -104,7 +122,6 @@ std::size_t CoverageTracker<Region, T>::sum(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
-    if (p.first == p.second) return 0;
     return std::accumulate(p.first, p.second, std::size_t {0});
 }
 
