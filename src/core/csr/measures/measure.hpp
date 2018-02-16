@@ -100,20 +100,12 @@ std::string name()
     return Measure().name();
 }
 
-namespace detail {
+bool is_missing(const Measure::ResultType& value) noexcept;
 
-struct IsMissingMeasureVisitor : public boost::static_visitor<bool>
-{
-    template <typename T> bool operator()(const boost::optional<T>& value) const noexcept { return !value; }
-    template <typename T> bool operator()(const T& value) const noexcept { return false; }
-};
-
-} // namespace detail
-
-inline bool is_missing(const Measure::ResultType& value) noexcept
-{
-    return boost::apply_visitor(detail::IsMissingMeasureVisitor {}, value);
-}
+Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, std::size_t sample_idx);
+std::vector<Measure::ResultType> get_sample_values(const std::vector<Measure::ResultType>& values,
+                                                   const std::vector<MeasureWrapper>& measures,
+                                                   std::size_t sample_idx);
 
 } // namespace csr
 } // namespace octopus

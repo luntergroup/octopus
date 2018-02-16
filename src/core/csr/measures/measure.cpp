@@ -6,6 +6,8 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <iterator>
+#include <algorithm>
 
 #include <boost/lexical_cast.hpp>
 
@@ -46,6 +48,44 @@ std::string Measure::do_serialise(const ResultType& value) const
     MeasureSerialiseVisitor vis {};
     boost::apply_visitor(vis, value);
     return vis.str;
+}
+
+struct IsMissingMeasureVisitor : public boost::static_visitor<bool>
+{
+    template <typename T> bool operator()(const boost::optional<T>& value) const noexcept { return !value; }
+    template <typename T> bool operator()(const T& value) const noexcept { return false; }
+};
+
+bool is_missing(const Measure::ResultType& value) noexcept
+{
+    return boost::apply_visitor(IsMissingMeasureVisitor {}, value);
+}
+
+struct VectorIndexGetterVisitor : public boost::static_visitor<Measure::ResultType>
+{
+    VectorIndexGetterVisitor(std::size_t idx) : idx_ {idx} {}
+    template <typename T> T operator()(const std::vector<T>& value) const noexcept { return value[idx_]; }
+    template <typename T> T operator()(const T& value) const noexcept { return value; }
+private:
+    std::size_t idx_;
+};
+
+Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, const std::size_t sample_idx)
+{
+    if (measure.cardinality() == Measure::ResultCardinality::num_samples) {
+        return boost::apply_visitor(VectorIndexGetterVisitor {sample_idx}, value);
+    } else {
+        return value;
+    }
+}
+
+std::vector<Measure::ResultType>
+get_sample_values(const std::vector<Measure::ResultType>& values, const std::vector<MeasureWrapper>& measures, std::size_t sample_idx)
+{
+    std::vector<Measure::ResultType> result(values.size());
+    std::transform(std::cbegin(values), std::cend(values), std::cbegin(measures), std::begin(result),
+                   [&] (const auto& value, const auto& measure) { return get_sample_value(value, measure, sample_idx); });
+    return result;
 }
 
 } // namespace csr
