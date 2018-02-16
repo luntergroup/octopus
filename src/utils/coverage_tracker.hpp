@@ -44,30 +44,31 @@ public:
     template <typename MappableType>
     void add(const MappableType& mappable);
     
-    std::size_t total_coverage() const noexcept;
-    std::size_t total_coverage(const Region& region) const noexcept;
+    std::size_t sum() const noexcept;
+    std::size_t sum(const Region& region) const noexcept;
     
-    DepthType max_coverage() const noexcept;
-    DepthType max_coverage(const Region& region) const noexcept;
+    DepthType max() const noexcept;
+    DepthType max(const Region& region) const noexcept;
     
-    DepthType min_coverage() const noexcept;
-    DepthType min_coverage(const Region& region) const noexcept;
+    DepthType min() const noexcept;
+    DepthType min(const Region& region) const noexcept;
     
-    double mean_coverage() const noexcept;
-    double mean_coverage(const Region& region) const noexcept;
+    double mean() const noexcept;
+    double mean(const Region& region) const noexcept;
     
-    double stdev_coverage() const noexcept;
-    double stdev_coverage(const Region& region) const noexcept;
+    double stdev() const noexcept;
+    double stdev(const Region& region) const noexcept;
     
-    double median_coverage() const;
-    double median_coverage(const Region& region) const;
+    double median() const;
+    double median(const Region& region) const;
     
-    std::vector<DepthType> coverage(const Region& region) const;
+    template <typename OutputIt>
+    OutputIt get(const Region& region, OutputIt result) const;
+    std::vector<DepthType> get(const Region& region) const;
     
     boost::optional<Region> encompassing_region() const;
     bool is_empty() const noexcept;
     std::size_t num_tracked() const noexcept;
-    
     void clear() noexcept;
     
 private:
@@ -93,13 +94,13 @@ void CoverageTracker<Region, T>::add(const MappableType& mappable)
 }
 
 template <typename Region, typename T>
-std::size_t CoverageTracker<Region, T>::total_coverage() const noexcept
+std::size_t CoverageTracker<Region, T>::sum() const noexcept
 {
     return std::accumulate(std::cbegin(coverage_), std::cend(coverage_), std::size_t {0});
 }
 
 template <typename Region, typename T>
-std::size_t CoverageTracker<Region, T>::total_coverage(const Region& region) const noexcept
+std::size_t CoverageTracker<Region, T>::sum(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
@@ -108,14 +109,14 @@ std::size_t CoverageTracker<Region, T>::total_coverage(const Region& region) con
 }
 
 template <typename Region, typename T>
-T CoverageTracker<Region, T>::max_coverage() const noexcept
+T CoverageTracker<Region, T>::max() const noexcept
 {
     if (coverage_.empty()) return 0;
     return *std::max_element(std::cbegin(coverage_), std::cend(coverage_));
 }
 
 template <typename Region, typename T>
-T CoverageTracker<Region, T>::max_coverage(const Region& region) const noexcept
+T CoverageTracker<Region, T>::max(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
@@ -124,14 +125,14 @@ T CoverageTracker<Region, T>::max_coverage(const Region& region) const noexcept
 }
 
 template <typename Region, typename T>
-T CoverageTracker<Region, T>::min_coverage() const noexcept
+T CoverageTracker<Region, T>::min() const noexcept
 {
     if (coverage_.empty()) return 0;
     return *std::min_element(std::cbegin(coverage_), std::cend(coverage_));
 }
 
 template <typename Region, typename T>
-T CoverageTracker<Region, T>::min_coverage(const Region& region) const noexcept
+T CoverageTracker<Region, T>::min(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
@@ -140,14 +141,14 @@ T CoverageTracker<Region, T>::min_coverage(const Region& region) const noexcept
 }
 
 template <typename Region, typename T>
-double CoverageTracker<Region, T>::mean_coverage() const noexcept
+double CoverageTracker<Region, T>::mean() const noexcept
 {
     if (coverage_.empty()) return 0;
     return maths::mean(coverage_);
 }
 
 template <typename Region, typename T>
-double CoverageTracker<Region, T>::mean_coverage(const Region& region) const noexcept
+double CoverageTracker<Region, T>::mean(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
@@ -155,14 +156,14 @@ double CoverageTracker<Region, T>::mean_coverage(const Region& region) const noe
 }
 
 template <typename Region, typename T>
-double CoverageTracker<Region, T>::stdev_coverage() const noexcept
+double CoverageTracker<Region, T>::stdev() const noexcept
 {
     if (coverage_.empty()) return 0;
     return maths::stdev(coverage_);
 }
 
 template <typename Region, typename T>
-double CoverageTracker<Region, T>::stdev_coverage(const Region& region) const noexcept
+double CoverageTracker<Region, T>::stdev(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
@@ -170,32 +171,46 @@ double CoverageTracker<Region, T>::stdev_coverage(const Region& region) const no
 }
 
 template <typename Region, typename T>
-double CoverageTracker<Region, T>::median_coverage() const
+double CoverageTracker<Region, T>::median() const
 {
     if (coverage_.empty()) return 0;
     return maths::median(coverage_);
 }
 
 template <typename Region, typename T>
-double CoverageTracker<Region, T>::median_coverage(const Region& region) const
+double CoverageTracker<Region, T>::median(const Region& region) const
 {
-    auto range_coverage = coverage(region);
+    auto range_coverage = this->get(region);
     if (range_coverage.empty()) return 0;
     return maths::median(range_coverage);
 }
 
 template <typename Region, typename T>
-std::vector<T> CoverageTracker<Region, T>::coverage(const Region& region) const
+template <typename OutputIt>
+OutputIt CoverageTracker<Region, T>::get(const Region& region, OutputIt result) const
 {
-    if (coverage_.empty()) return std::vector<T>(size(region), 0);
-    const auto p = range(region);
-    if (!contains(encompassing_region_, region)) {
-        std::vector<T> result(size(region), 0);
-        const auto d = std::max(begin_distance(region, encompassing_region_), GenomicRegion::Distance {0});
-        std::copy(p.first, p.second, std::next(std::begin(result), d));
-        return result;
+    if (coverage_.empty()) {
+        return std::fill_n(result, size(region), 0);
     }
-    return std::vector<T> {p.first, p.second};
+    const auto p = range(region);
+    if (contains(encompassing_region_, region)) {
+        return std::copy(p.first, p.second, result);
+    } else {
+        using D = typename Region::Distance;
+        const auto lhs_pad = std::max(begin_distance(region, encompassing_region_), D {0});
+        result = std::fill_n(result, lhs_pad, 0);
+        result = std::copy(p.first, p.second, result);
+        const auto rhs_pad = std::max(end_distance(encompassing_region_, region), D {0});
+        return std::fill_n(result, rhs_pad, 0);
+    }
+}
+
+template <typename Region, typename T>
+std::vector<T> CoverageTracker<Region, T>::get(const Region& region) const
+{
+    std::vector<T> result(size(region));
+    this->get(region, std::begin(result));
+    return result;
 }
 
 template <typename Region, typename T>
