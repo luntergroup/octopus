@@ -171,10 +171,7 @@ double CoverageTracker<Region>::median_coverage(const Region& region) const
 {
     auto range_coverage = coverage(region);
     if (range_coverage.empty()) return 0;
-    const auto first = std::begin(range_coverage);
-    const auto nth = std::next(first, range_coverage.size() / 2);
-    std::nth_element(first, nth, std::end(range_coverage));
-    return *nth;
+    return maths::median(range_coverage);
 }
 
 template <typename Region>
