@@ -25,10 +25,13 @@ namespace octopus {
  CoverageTracker provides an efficient method for tracking coverage statistics over a range
  of Mappable objects without having to store the entire collection.
  */
-template <typename Region>
+template <typename Region, typename T = unsigned>
 class CoverageTracker
 {
 public:
+    using RegionType = Region;
+    using DepthType  = T;
+    
     CoverageTracker() = default;
     
     CoverageTracker(const CoverageTracker&)            = default;
@@ -44,11 +47,11 @@ public:
     std::size_t total_coverage() const noexcept;
     std::size_t total_coverage(const Region& region) const noexcept;
     
-    unsigned max_coverage() const noexcept;
-    unsigned max_coverage(const Region& region) const noexcept;
+    DepthType max_coverage() const noexcept;
+    DepthType max_coverage(const Region& region) const noexcept;
     
-    unsigned min_coverage() const noexcept;
-    unsigned min_coverage(const Region& region) const noexcept;
+    DepthType min_coverage() const noexcept;
+    DepthType min_coverage(const Region& region) const noexcept;
     
     double mean_coverage() const noexcept;
     double mean_coverage(const Region& region) const noexcept;
@@ -56,47 +59,47 @@ public:
     double stdev_coverage() const noexcept;
     double stdev_coverage(const Region& region) const noexcept;
     
+    double median_coverage() const;
     double median_coverage(const Region& region) const;
     
-    std::vector<unsigned> coverage(const Region& region) const;
+    std::vector<DepthType> coverage(const Region& region) const;
     
     boost::optional<Region> encompassing_region() const;
-    
     bool is_empty() const noexcept;
-    
     std::size_t num_tracked() const noexcept;
     
     void clear() noexcept;
     
 private:
-    std::deque<unsigned> coverage_ = {};
+    std::deque<DepthType> coverage_ = {};
     Region encompassing_region_;
     std::size_t num_tracked_ = 0;
     
-    using Iterator = typename decltype(coverage_)::const_iterator;
+    using Iterator     = typename decltype(coverage_)::const_iterator;
+    using IteratorPair = std::pair<Iterator, Iterator>;
     
     void do_add(const Region& region);
-    std::pair<Iterator, Iterator> range(const Region& region) const;
+    IteratorPair range(const Region& region) const;
 };
 
 // public methods
 
-template <typename Region>
+template <typename Region, typename T>
 template <typename MappableType>
-void CoverageTracker<Region>::add(const MappableType& mappable)
+void CoverageTracker<Region, T>::add(const MappableType& mappable)
 {
     static_assert(is_region_or_mappable<MappableType>, "MappableType not Mappable");
     do_add(mapped_region(mappable));
 }
 
-template <typename Region>
-std::size_t CoverageTracker<Region>::total_coverage() const noexcept
+template <typename Region, typename T>
+std::size_t CoverageTracker<Region, T>::total_coverage() const noexcept
 {
     return std::accumulate(std::cbegin(coverage_), std::cend(coverage_), std::size_t {0});
 }
 
-template <typename Region>
-std::size_t CoverageTracker<Region>::total_coverage(const Region& region) const noexcept
+template <typename Region, typename T>
+std::size_t CoverageTracker<Region, T>::total_coverage(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
@@ -104,15 +107,15 @@ std::size_t CoverageTracker<Region>::total_coverage(const Region& region) const 
     return std::accumulate(p.first, p.second, std::size_t {0});
 }
 
-template <typename Region>
-unsigned CoverageTracker<Region>::max_coverage() const noexcept
+template <typename Region, typename T>
+T CoverageTracker<Region, T>::max_coverage() const noexcept
 {
     if (coverage_.empty()) return 0;
     return *std::max_element(std::cbegin(coverage_), std::cend(coverage_));
 }
 
-template <typename Region>
-unsigned CoverageTracker<Region>::max_coverage(const Region& region) const noexcept
+template <typename Region, typename T>
+T CoverageTracker<Region, T>::max_coverage(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
@@ -120,15 +123,15 @@ unsigned CoverageTracker<Region>::max_coverage(const Region& region) const noexc
     return *std::max_element(p.first, p.second);
 }
 
-template <typename Region>
-unsigned CoverageTracker<Region>::min_coverage() const noexcept
+template <typename Region, typename T>
+T CoverageTracker<Region, T>::min_coverage() const noexcept
 {
     if (coverage_.empty()) return 0;
     return *std::min_element(std::cbegin(coverage_), std::cend(coverage_));
 }
 
-template <typename Region>
-unsigned CoverageTracker<Region>::min_coverage(const Region& region) const noexcept
+template <typename Region, typename T>
+T CoverageTracker<Region, T>::min_coverage(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
@@ -136,60 +139,67 @@ unsigned CoverageTracker<Region>::min_coverage(const Region& region) const noexc
     return *std::min_element(p.first, p.second);
 }
 
-template <typename Region>
-double CoverageTracker<Region>::mean_coverage() const noexcept
+template <typename Region, typename T>
+double CoverageTracker<Region, T>::mean_coverage() const noexcept
 {
     if (coverage_.empty()) return 0;
     return maths::mean(coverage_);
 }
 
-template <typename Region>
-double CoverageTracker<Region>::mean_coverage(const Region& region) const noexcept
+template <typename Region, typename T>
+double CoverageTracker<Region, T>::mean_coverage(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
     return maths::mean(p.first, p.second);
 }
 
-template <typename Region>
-double CoverageTracker<Region>::stdev_coverage() const noexcept
+template <typename Region, typename T>
+double CoverageTracker<Region, T>::stdev_coverage() const noexcept
 {
     if (coverage_.empty()) return 0;
     return maths::stdev(coverage_);
 }
 
-template <typename Region>
-double CoverageTracker<Region>::stdev_coverage(const Region& region) const noexcept
+template <typename Region, typename T>
+double CoverageTracker<Region, T>::stdev_coverage(const Region& region) const noexcept
 {
     if (octopus::is_empty(region)) return 0;
     const auto p = range(region);
     return maths::stdev(p.first, p.second);
 }
 
-template <typename Region>
-double CoverageTracker<Region>::median_coverage(const Region& region) const
+template <typename Region, typename T>
+double CoverageTracker<Region, T>::median_coverage() const
+{
+    if (coverage_.empty()) return 0;
+    return maths::median(coverage_);
+}
+
+template <typename Region, typename T>
+double CoverageTracker<Region, T>::median_coverage(const Region& region) const
 {
     auto range_coverage = coverage(region);
     if (range_coverage.empty()) return 0;
     return maths::median(range_coverage);
 }
 
-template <typename Region>
-std::vector<unsigned> CoverageTracker<Region>::coverage(const Region& region) const
+template <typename Region, typename T>
+std::vector<T> CoverageTracker<Region, T>::coverage(const Region& region) const
 {
-    if (coverage_.empty()) return std::vector<unsigned>(size(region), 0);
+    if (coverage_.empty()) return std::vector<T>(size(region), 0);
     const auto p = range(region);
     if (!contains(encompassing_region_, region)) {
-        std::vector<unsigned> result(size(region), 0);
+        std::vector<T> result(size(region), 0);
         const auto d = std::max(begin_distance(region, encompassing_region_), GenomicRegion::Distance {0});
         std::copy(p.first, p.second, std::next(std::begin(result), d));
         return result;
     }
-    return std::vector<unsigned> {p.first, p.second};
+    return std::vector<T> {p.first, p.second};
 }
 
-template <typename Region>
-boost::optional<Region> CoverageTracker<Region>::encompassing_region() const
+template <typename Region, typename T>
+boost::optional<Region> CoverageTracker<Region, T>::encompassing_region() const
 {
     if (!is_empty()) {
         return encompassing_region_;
@@ -198,20 +208,20 @@ boost::optional<Region> CoverageTracker<Region>::encompassing_region() const
     }
 }
 
-template <typename Region>
-bool CoverageTracker<Region>::is_empty() const noexcept
+template <typename Region, typename T>
+bool CoverageTracker<Region, T>::is_empty() const noexcept
 {
     return num_tracked_ == 0;
 }
 
-template <typename Region>
-std::size_t CoverageTracker<Region>::num_tracked() const noexcept
+template <typename Region, typename T>
+std::size_t CoverageTracker<Region, T>::num_tracked() const noexcept
 {
     return num_tracked_;
 }
 
-template <typename Region>
-void CoverageTracker<Region>::clear() noexcept
+template <typename Region, typename T>
+void CoverageTracker<Region, T>::clear() noexcept
 {
     coverage_.clear();
     coverage_.shrink_to_fit();
@@ -234,8 +244,8 @@ inline bool is_same_contig_helper(const GenomicRegion& lhs, const GenomicRegion&
 
 } // namespace detail
 
-template <typename Region>
-void CoverageTracker<Region>::do_add(const Region& region)
+template <typename Region, typename T>
+void CoverageTracker<Region, T>::do_add(const Region& region)
 {
     if (octopus::is_empty(region)) return;
     if (num_tracked_ == 0) {
@@ -260,23 +270,22 @@ void CoverageTracker<Region>::do_add(const Region& region)
         const auto first = std::next(std::begin(coverage_), begin_distance(encompassing_region_, region));
         assert(first < std::end(coverage_));
         assert(std::next(first, size(region)) <= std::end(coverage_));
-        std::transform(first, std::next(first, size(region)), first, [] (auto count) { return count + 1; });
+        std::transform(first, std::next(first, size(region)), first, [] (auto count) noexcept { return count + 1; });
     }
     ++num_tracked_;
 }
 
-template <typename Region>
-std::pair<typename CoverageTracker<Region>::Iterator, typename CoverageTracker<Region>::Iterator>
-CoverageTracker<Region>::range(const Region& region) const
+template <typename Region, typename T>
+typename CoverageTracker<Region, T>::IteratorPair CoverageTracker<Region, T>::range(const Region& region) const
 {
     if (coverage_.empty() || !overlaps(region, encompassing_region_)) {
         return {std::end(coverage_), std::end(coverage_)};
     }
-    auto first = std::begin(coverage_);
+    auto range_start_itr = std::begin(coverage_);
     if (begins_before(encompassing_region_, region)) {
-        std::advance(first, begin_distance(encompassing_region_, region));
+        std::advance(range_start_itr, begin_distance(encompassing_region_, region));
     }
-    return {first, std::next(first, overlap_size(region, encompassing_region_))};
+    return {range_start_itr, std::next(range_start_itr, overlap_size(region, encompassing_region_))};
 }
 
 } // namespace octopus
