@@ -24,8 +24,8 @@
 #include <boost/math/special_functions/beta.hpp>
 #include <boost/math/distributions/beta.hpp>
 
-namespace octopus { namespace maths
-{
+namespace octopus { namespace maths {
+
 namespace constants
 {
     template <typename T = double>
@@ -58,14 +58,15 @@ bool almost_one(const T x, const int ulp = 1)
     return almost_equal(x, T {1}, ulp);
 }
 
-
 template <typename RealType>
-constexpr RealType exp_maclaurin(const RealType x) {
+constexpr RealType exp_maclaurin(const RealType x)
+{
     return (6 + x * (6 + x * (3 + x))) * 0.16666666;
 }
 
 template <typename RealType>
-constexpr RealType mercator(const RealType x) {
+constexpr RealType mercator(const RealType x)
+{
     return x - x * x / 2 + x * x * x / 3;
 }
 
@@ -100,6 +101,70 @@ template <typename Container, typename UnaryOperation>
 auto mean(const Container& values, UnaryOperation unary_op)
 {
     return mean(std::cbegin(values), std::cend(values), unary_op);
+}
+
+namespace detail {
+
+template <typename T = double, typename ForwardIt>
+T median_unsorted(ForwardIt first, ForwardIt last)
+{
+    const auto n = std::distance(first, last);
+    assert(n > 0);
+    if (n == 1) return *first;
+    if (n == 2) return static_cast<T>(*first + *std::next(first)) / 2;
+    const auto middle = std::next(first, n / 2);
+    std::nth_element(first, middle, last);
+    if (n % 2 == 1) {
+        return *middle;
+    } else {
+        auto prev_middle_itr = std::max_element(first, middle);
+        return static_cast<T>(*prev_middle_itr + *middle) / 2;
+    }
+}
+
+template <typename T = double, typename ForwardIt>
+auto median_sorted(ForwardIt first, ForwardIt last)
+{
+    const auto n = std::distance(first, last);
+    assert(n > 0);
+    if (n == 1) return *first;
+    const auto middle = std::next(first, n / 2);
+    if (n % 2 == 1) {
+        return *middle;
+    } else {
+        return static_cast<T>(*std::prev(middle) + *middle) / 2;
+    }
+}
+
+template <typename T = double, typename ForwardIt>
+auto median_const(ForwardIt first, ForwardIt last)
+{
+    if (std::is_sorted(first, last)) {
+        return median_sorted<T>(first, last);
+    } else {
+        std::vector<typename std::iterator_traits<ForwardIt>::value_type> tmp {first, last};
+        return median_unsorted<T>(std::begin(tmp), std::end(tmp));
+    }
+}
+
+} // namespace detail
+
+template <typename T = double, typename ForwardIt>
+auto median(ForwardIt first, ForwardIt last)
+{
+    return detail::median_unsorted<T>(first, last);
+}
+
+template <typename T = double, typename Range>
+auto median(Range& values)
+{
+    return median<T>(std::begin(values), std::end(values));
+}
+
+template <typename T = double, typename Range>
+auto median(const Range& values)
+{
+    return detail::median_const<T>(std::cbegin(values), std::cend(values));
 }
 
 template <typename InputIt, typename UnaryOperation>
@@ -602,16 +667,13 @@ template <typename RealType>
 std::pair<RealType, RealType>
 beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
 {
-    static_assert(std::is_floating_point<RealType>::value,
-                  "beta_hdi only works for floating point types");
-    
+    static_assert(std::is_floating_point<RealType>::value, "beta_hdi only works for floating point types");
     if (mass < RealType {0} || mass > RealType {1}) {
         throw std::domain_error {"beta_hdi: given mass not in range [0, 1]"};
     }
     if (a <= RealType {0} || b <= RealType {0}) {
         throw std::domain_error {"beta_hdi: given non-positive parameter"};
     }
-    
     if (mass == RealType {0}) {
         const auto mean = a / (a + b);
         return std::make_pair(mean, mean);
@@ -662,6 +724,7 @@ auto normalise_exp(Container& logs)
     for (auto& p : logs) p = std::exp(p -= norm);
     return norm;
 }
+
 } // namespace maths
 } // namespace octopus
 
