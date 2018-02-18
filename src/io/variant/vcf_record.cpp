@@ -533,6 +533,11 @@ VcfRecord::Builder& VcfRecord::Builder::set_info_flag(KeyType key)
     return this->set_info(std::move(key), {});
 }
 
+VcfRecord::Builder& VcfRecord::Builder::set_info_missing(const KeyType& key)
+{
+    return this->set_info(key, {vcfspec::missingValue});
+}
+
 VcfRecord::Builder& VcfRecord::Builder::clear_info() noexcept
 {
     info_.clear();

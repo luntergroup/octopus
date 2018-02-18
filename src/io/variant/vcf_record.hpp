@@ -190,6 +190,7 @@ public:
     Builder& set_info(const KeyType& key, std::vector<ValueType> values);
     Builder& set_info(const KeyType& key, std::initializer_list<ValueType> values);
     Builder& set_info_flag(KeyType key);
+    Builder& set_info_missing(const KeyType& key);
     Builder& clear_info() noexcept;
     Builder& clear_info(const KeyType& key);
     
