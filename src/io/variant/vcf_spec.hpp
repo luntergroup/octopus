@@ -69,6 +69,25 @@ static constexpr std::array<const char*, 6> order {
 
 } // namespace struc
 
+namespace type {
+
+VCF_SPEC_CONSTANT string {"String"};
+VCF_SPEC_CONSTANT floating {"Float"};
+VCF_SPEC_CONSTANT flag {"Flag"};
+VCF_SPEC_CONSTANT integer {"Integer"};
+VCF_SPEC_CONSTANT character {"Character"};
+
+} // namespace type
+
+namespace number {
+
+VCF_SPEC_CONSTANT per_alt_allele {"A"};
+VCF_SPEC_CONSTANT per_allele {"R"};
+VCF_SPEC_CONSTANT per_genotype {"G"};
+VCF_SPEC_CONSTANT unknown {"."};
+
+} // namespace number
+
 VCF_SPEC_CONSTANT vcfVersion {"fileformat"};
 
 } // namespace meta
