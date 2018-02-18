@@ -276,13 +276,15 @@ VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
 template <typename T>
 VcfRecord::Builder& VcfRecord::Builder::set_info(const KeyType& key, const T& value)
 {
-    return set_info(key, std::to_string(value));
+    using std::to_string;
+    return set_info(key, to_string(value));
 }
 
 template <typename T>
 VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleName& sample, const KeyType& key, const T& value)
 {
-    return set_format(sample, key, std::to_string(value));
+    using std::to_string;
+    return set_format(sample, key, to_string(value));
 }
 
 } // namespace octopus
