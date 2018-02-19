@@ -20,6 +20,8 @@ class Quality : public Measure
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
     ResultCardinality do_cardinality() const noexcept override;
     std::string do_name() const override;
+    std::string do_describe() const override;
+    bool is_required_vcf_field() const noexcept override { return true; }
 };
 
 } // namespace csr

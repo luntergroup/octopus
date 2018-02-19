@@ -28,5 +28,10 @@ std::string IsDenovo::do_name() const
     return "DENOVO";
 }
 
+std::string IsDenovo::do_describe() const
+{
+    return "Is the call marked DENOVO";
+}
+
 } // namespace csr
 } // namespace octopus

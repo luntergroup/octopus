@@ -30,6 +30,11 @@ std::string Quality::do_name() const
 {
     return "QUAL";
 }
+
+std::string Quality::do_describe() const
+{
+    return "Call QUAL";
+}
     
 } // namespace csr
 } // namespace octopus

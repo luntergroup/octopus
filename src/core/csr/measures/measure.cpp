@@ -11,6 +11,8 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "io/variant/vcf_spec.hpp"
+
 namespace octopus { namespace csr {
 
 struct MeasureSerialiseVisitor : boost::static_visitor<>
@@ -41,6 +43,23 @@ struct MeasureSerialiseVisitor : boost::static_visitor<>
             str = ".";
         }
     }
+    template <typename T>
+    void operator()(const std::vector<T>& values)
+    {
+        if (values.empty()) {
+            str = ".";
+        } else {
+            auto tmp_str = std::move(str);
+            std::for_each(std::cbegin(values), std::prev(std::cend(values)), [&] (const auto& value) {
+                (*this)(value);
+                tmp_str += str;
+                tmp_str += ',';
+            });
+            (*this)(values.back());
+            tmp_str += str;
+            str = std::move(tmp_str);
+        }
+    }
 };
 
 std::string Measure::do_serialise(const ResultType& value) const
@@ -49,6 +68,29 @@ std::string Measure::do_serialise(const ResultType& value) const
     boost::apply_visitor(vis, value);
     return vis.str;
 }
+
+void Measure::annotate(VcfHeader::Builder& header) const
+{
+    if (!is_required_vcf_field()) {
+        std::string number;
+        using namespace vcfspec::header::meta::number;
+        switch (this->cardinality()) {
+            case Measure::ResultCardinality::num_samples: number = per_genotype; break;
+            case Measure::ResultCardinality::num_alleles: number = per_allele; break;
+            case Measure::ResultCardinality::one: number = "1"; break;
+        }
+        header.add_info(this->name(), number, "String", this->describe());
+    }
+}
+
+void Measure::annotate(VcfRecord::Builder& record, const ResultType& value) const
+{
+    if (!is_required_vcf_field()) {
+        record.set_info(this->name(), this->serialise(value));
+    }
+}
+
+// non-member methods
 
 struct IsMissingMeasureVisitor : public boost::static_visitor<bool>
 {

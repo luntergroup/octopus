@@ -13,6 +13,7 @@
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
 #include "utils/genotype_reader.hpp"
+#include "../facets/samples.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -24,16 +25,20 @@ std::unique_ptr<Measure> AlleleFrequency::do_clone() const
 
 Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
+    const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    boost::optional<double> result {};
-    for (const auto& p : assignments) {
+    std::vector<boost::optional<double>> result {};
+    result.reserve(samples.size());
+    for (const auto& sample : samples) {
+        const auto& sample_assignments = assignments.at(sample);
+        boost::optional<double> sample_result {};
         std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, p.first, true);
+        std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
         std::size_t read_count {0};
         std::vector<unsigned> allele_counts(alleles.size());
-        for (const auto& h : p.second) {
-            const auto& haplotype = h.first;
-            const auto& reads = h.second;
+        for (const auto& p : sample_assignments) {
+            const auto& haplotype = p.first;
+            const auto& reads = p.second;
             const auto haplotype_support_depth = count_overlapped(reads, call);
             if (haplotype_support_depth > 0) {
                 std::transform(std::cbegin(alleles), std::cend(alleles), std::cbegin(allele_counts), std::begin(allele_counts),
@@ -51,20 +56,16 @@ Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const Fa
             if (has_ref) ++first_called_count_itr;
             assert(first_called_count_itr != std::cend(allele_counts));
             const auto min_count_itr = std::min_element(first_called_count_itr, std::cend(allele_counts));
-            const auto maf = static_cast<double>(*min_count_itr) / read_count;
-            if (result) {
-                result = std::min(*result, maf);
-            } else {
-                result = maf;
-            }
+            sample_result = static_cast<double>(*min_count_itr) / read_count;
         }
+        result.push_back(sample_result);
     }
     return result;
 }
 
 Measure::ResultCardinality AlleleFrequency::do_cardinality() const noexcept
 {
-    return ResultCardinality::one;
+    return ResultCardinality::num_samples;
 }
 
 std::string AlleleFrequency::do_name() const
@@ -72,9 +73,14 @@ std::string AlleleFrequency::do_name() const
     return "AF";
 }
 
+std::string AlleleFrequency::do_describe() const
+{
+    return "Minor allele frequency of ALT alleles";
+}
+
 std::vector<std::string> AlleleFrequency::do_requirements() const
 {
-    return {"ReadAssignments"};
+    return {"Samples", "ReadAssignments"};
 }
 
 } // namespace csr

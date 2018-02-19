@@ -72,6 +72,11 @@ std::string UnassignedReadFraction::do_name() const
     return "URF";
 }
 
+std::string UnassignedReadFraction::do_describe() const
+{
+    return "Fraction of reads overlapping the call that cannot be assigned to a haplotype";
+}
+
 std::vector<std::string> UnassignedReadFraction::do_requirements() const
 {
     return {"Samples", "OverlappingReads", "ReadAssignments"};

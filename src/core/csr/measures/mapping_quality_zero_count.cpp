@@ -38,6 +38,11 @@ std::string MappingQualityZeroCount::do_name() const
     return "MQ0";
 }
 
+std::string MappingQualityZeroCount::do_describe() const
+{
+    return "Number of reads overlapping the call with mapping quality zero";
+}
+
 std::vector<std::string> MappingQualityZeroCount::do_requirements() const
 {
     if (recalculate_) {

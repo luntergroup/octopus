@@ -38,6 +38,11 @@ std::string Depth::do_name() const
     return "DP";
 }
 
+std::string Depth::do_describe() const
+{
+    return "Number of read overlapping the call";
+}
+
 std::vector<std::string> Depth::do_requirements() const
 {
     if (recalculate_) {

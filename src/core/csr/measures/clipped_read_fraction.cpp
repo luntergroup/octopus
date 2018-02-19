@@ -62,6 +62,11 @@ std::string ClippedReadFraction::do_name() const
     return "CRF";
 }
 
+std::string ClippedReadFraction::do_describe() const
+{
+    return "Fraction of clipped reads covering the call";
+}
+
 std::vector<std::string> ClippedReadFraction::do_requirements() const
 {
     return {"OverlappingReads"};

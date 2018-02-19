@@ -42,6 +42,11 @@ std::string MeanMappingQuality::do_name() const
     return "MQ";
 }
 
+std::string MeanMappingQuality::do_describe() const
+{
+    return "Mean mapping quality of reads overlapping the call";
+}
+
 std::vector<std::string> MeanMappingQuality::do_requirements() const
 {
     if (recalculate_) {

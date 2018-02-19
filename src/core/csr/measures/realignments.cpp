@@ -235,6 +235,11 @@ std::string Realignments::do_name() const
     return "RA";
 }
 
+std::string Realignments::do_describe() const
+{
+    return "Realignment information";
+}
+
 std::vector<std::string> Realignments::do_requirements() const
 {
     return {"ReferenceContext", "OverlappingReads", "ReadAssignments"};

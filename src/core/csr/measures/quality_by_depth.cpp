@@ -37,6 +37,11 @@ std::string QualityByDepth::do_name() const
     return "QD";
 }
 
+std::string QualityByDepth::do_describe() const
+{
+    return "QUAL divided by DP";
+}
+
 std::vector<std::string> QualityByDepth::do_requirements() const
 {
     return depth_.requirements();

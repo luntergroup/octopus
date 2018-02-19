@@ -38,6 +38,11 @@ std::string FilteredReadFraction::do_name() const
     return "FRF";
 }
 
+std::string FilteredReadFraction::do_describe() const
+{
+    return "Fraction of reads filtered for calling";
+}
+
 std::vector<std::string> FilteredReadFraction::do_requirements() const
 {
     return filtering_depth_.requirements();

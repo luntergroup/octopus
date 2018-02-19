@@ -27,5 +27,10 @@ std::string IsSomatic::do_name() const
     return "SOMATIC";
 }
 
+std::string IsSomatic::do_describe() const
+{
+    return "Is the call marked SOMATIC";
+}
+
 } // namespace csr
 } // namespace octopus

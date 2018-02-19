@@ -33,5 +33,10 @@ std::string ModelPosterior::do_name() const
     return "MP";
 }
 
+std::string ModelPosterior::do_describe() const
+{
+    return "Model posterior for this haplotype block";
+}
+
 } // namespace csr
 } // namespace octopus
