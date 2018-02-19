@@ -107,6 +107,8 @@ private:
     
     virtual void annotate(VcfHeader::Builder& header) const = 0;
     virtual void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const = 0;
+    virtual boost::optional<std::string> call_quality_name() const { return boost::none; }
+    virtual boost::optional<std::string> genotype_quality_name() const { return boost::none; }
     
     VcfHeader make_header(const VcfReader& source) const;
     Measure::FacetMap compute_facets(const CallBlock& block) const;
@@ -115,6 +117,7 @@ private:
     MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;
     VcfRecord::Builder construct_template(const VcfRecord& call) const;
     bool is_hard_filtered(const Classification& classification) const noexcept;
+    void annotate(VcfRecord::Builder& call, const SampleList& samples, const ClassificationList& sample_classifications) const;
     void annotate(VcfRecord::Builder& call, const SampleName& sample, Classification status) const;
     void annotate(VcfRecord::Builder& call, Classification status) const;
     void pass(const SampleName& sample, VcfRecord::Builder& call) const;

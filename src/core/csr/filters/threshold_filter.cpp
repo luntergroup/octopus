@@ -78,15 +78,6 @@ void ThresholdVariantCallFilter::annotate(VcfHeader::Builder& header) const
     for (const auto& key : vcf_filter_keys_) {
         octopus::vcf::add_filter(header, key);
     }
-    for (const auto& name : measure_names_) {
-        if (name != "QUAL") {
-            if (name == "DP" || name == "MQ0") {
-                header.add_info(name, "1", "Integer", "CSR measure");
-            } else {
-                header.add_info(name, "1", "Float", "CSR measure");
-            }
-        }
-    }
 }
 
 VariantCallFilter::Classification ThresholdVariantCallFilter::classify(const MeasureVector& measures) const

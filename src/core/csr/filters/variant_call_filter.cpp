@@ -26,6 +26,7 @@
 #include "utils/append.hpp"
 #include "utils/parallel_transform.hpp"
 #include "io/variant/vcf_writer.hpp"
+#include "io/variant/vcf_spec.hpp"
 
 namespace octopus { namespace csr {
 
@@ -68,7 +69,7 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
 : measures_ {std::move(measures)}
 , debug_log_ {logging::get_debug_log()}
 , facet_factory_ {std::move(facet_factory)}
-, facet_names_ {get_facets(measures)}
+, facet_names_ {get_facets(measures_)}
 , output_config_ {output_config}
 , workers_ {get_pool_size(threading)}
 {}
@@ -211,16 +212,7 @@ void VariantCallFilter::write(const VcfRecord& call, const Classification& class
     if (!is_hard_filtered(classification)) {
         auto filtered_call = construct_template(call);
         annotate(filtered_call, classification);
-        assert(samples.size() == sample_classifications.size());
-        for (auto p : boost::combine(samples, sample_classifications)) {
-            const SampleName& sample {p.get<0>()};
-            const Classification& sample_classification {p.get<1>()};
-            if (!is_hard_filtered(sample_classification)) {
-                annotate(filtered_call, sample, sample_classification);
-            } else {
-                filtered_call.clear_format(sample);
-            }
-        }
+        annotate(filtered_call, samples, sample_classifications);
         dest << filtered_call.build_once();
     }
 }
@@ -233,16 +225,11 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& 
     for (auto p : boost::combine(measures_, measures)) {
         const MeasureWrapper& measure {p.get<0>()};
         const Measure::ResultType& measured_value {p.get<1>()};
-        call.set_info(measure.name(), measure.serialise(measured_value));
+        measure.annotate(call, measured_value);
     }
 }
 
 // private methods
-
-void add_info(const MeasureWrapper& measure, VcfHeader::Builder& builder)
-{
-    builder.add_info(measure.name(), "1", "String", "CSR measure");
-}
 
 VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
 {
@@ -255,7 +242,7 @@ VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
     }
     if (output_config_.annotate_measures) {
         for (const auto& measure : measures_) {
-            add_info(measure, builder);
+            measure.annotate(builder);
         }
     }
     annotate(builder);
@@ -279,12 +266,45 @@ bool VariantCallFilter::is_hard_filtered(const Classification& classification) c
     return classification.category == Classification::Category::hard_filtered;
 }
 
+void VariantCallFilter::annotate(VcfRecord::Builder& call, const SampleList& samples, const ClassificationList& sample_classifications) const
+{
+    assert(samples.size() == sample_classifications.size());
+    bool all_hard_filtered {true};
+    auto quality_name = this->genotype_quality_name();
+    if (quality_name) {
+        call.add_format(std::move(*quality_name));
+    }
+    for (auto p : boost::combine(samples, sample_classifications)) {
+        const SampleName& sample {p.get<0>()};
+        const Classification& sample_classification {p.get<1>()};
+        if (!is_hard_filtered(sample_classification)) {
+            annotate(call, sample, sample_classification);
+            all_hard_filtered = false;
+        } else {
+            call.clear_format(sample);
+        }
+    }
+    if (all_hard_filtered) {
+        call.clear_format();
+    } else {
+        call.add_format(vcfspec::format::filter);
+    }
+}
+
 void VariantCallFilter::annotate(VcfRecord::Builder& call, const SampleName& sample, Classification status) const
 {
     if (status.category == Classification::Category::unfiltered) {
         pass(sample, call);
     } else {
         fail(sample, call, std::move(status.reasons));
+    }
+    const auto quality_name = this->genotype_quality_name();
+    if (quality_name) {
+        if (status.quality) {
+            call.set_format(sample, *quality_name, *status.quality);
+        } else {
+            call.set_format_missing(sample, *quality_name);
+        }
     }
 }
 
@@ -294,6 +314,15 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification 
         pass(call);
     } else {
         fail(call, std::move(status.reasons));
+    }
+    auto quality_name = this->genotype_quality_name();
+    if (quality_name) {
+        call.add_format(*quality_name);
+        if (status.quality) {
+            call.set_info(*quality_name, *status.quality);
+        } else {
+            call.set_info_missing(*quality_name);
+        }
     }
 }
 
