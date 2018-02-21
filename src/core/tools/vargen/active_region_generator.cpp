@@ -76,77 +76,11 @@ auto find_compound_microsatellites(const std::vector<TandemRepeat>& repeats, con
 
 std::vector<GenomicRegion> ActiveRegionGenerator::generate(const GenomicRegion& region, const std::string& generator) const
 {
-    if (using_assembler() && max_read_length_ > 0) {
-        if (!repeats_ || repeats_->request_region != region) {
-            repeats_ = RepeatRegions {region, {}, {}, {}};
-            const auto tandem_repeats = find_exact_tandem_repeats(reference_, region, max_read_length_ / 2);
-            repeats_->minisatellites = find_minisatellites(tandem_repeats, region, max_read_length_);
-            repeats_->compound_microsatellites = find_compound_microsatellites(tandem_repeats, region, max_read_length_);
-        }
-        if (assembler_active_region_generator_) {
-            if (!assembler_active_regions_ || assembler_active_regions_->request_region != region) {
-                assembler_active_regions_ = AssemblerActiveRegions {region, {}};
-                assembler_active_regions_->active_regions = assembler_active_region_generator_->generate(region);
-            }
-            if (!repeats_->compound_microsatellites.empty() && repeats_->assembler_microsatellites.empty()) {
-                repeats_->assembler_microsatellites.reserve(repeats_->compound_microsatellites.size());
-                auto microsatellites_begin_itr = std::cbegin(repeats_->compound_microsatellites);
-                const auto microsatellites_end_itr = std::cend(repeats_->compound_microsatellites);
-                for (const auto& assembler_region : assembler_active_regions_->active_regions) {
-                    if (microsatellites_begin_itr == microsatellites_end_itr) break;
-                    const auto overlapped_microsatellites = bases(overlap_range(microsatellites_begin_itr, microsatellites_end_itr,
-                                                                                assembler_region, BidirectionallySortedTag {}));
-                    append(overlapped_microsatellites, repeats_->assembler_microsatellites);
-                    microsatellites_begin_itr = overlapped_microsatellites.end();
-                }
-            }
-        }
-        if (is_assembler(generator)) {
-            if (assembler_active_region_generator_) {
-                auto result = merge(std::move(assembler_active_regions_->active_regions), repeats_->minisatellites);
-                assembler_active_regions_ = boost::none;
-                if (repeats_->assembler_microsatellites.empty()) {
-                    return result;
-                } else {
-                    return merge(std::move(result), repeats_->assembler_microsatellites);
-                }
-            } else {
-                return {region};
-            }
-        } else if (is_cigar_scanner(generator)) {
-            if (repeats_->minisatellites.empty() && repeats_->assembler_microsatellites.empty()) {
-                return {region};
-            } else {
-                std::vector<GenomicRegion> repeat_regions {};
-                repeat_regions.reserve(repeats_->minisatellites.size() + repeats_->assembler_microsatellites.size());
-                const auto max_read_distance = static_cast<GenomicRegion::Distance>(max_read_length_);
-                for (const auto& repeat : repeats_->minisatellites) {
-                    if (size(repeat) > 3 * max_read_length_) {
-                        repeat_regions.push_back(expand(repeat, -max_read_distance));
-                    } else {
-                        assert(size(repeat) > 2 * max_read_length_);
-                        repeat_regions.push_back(expand(repeat, -max_read_distance / 2));
-                    }
-                }
-                for (const auto& repeat : repeats_->assembler_microsatellites) {
-                    if (size(repeat) > 3 * max_read_length_) {
-                        repeat_regions.push_back(expand(repeat, -max_read_distance));
-                    } else if (size(repeat) > 2 * max_read_length_) {
-                        repeat_regions.push_back(expand(repeat, -max_read_distance / 2));
-                    } else {
-                        repeat_regions.push_back(repeat);
-                    }
-                }
-                if (!repeat_regions.empty()) {
-                    std::sort(std::begin(repeat_regions), std::end(repeat_regions));
-                    return extract_intervening_regions(extract_covered_regions(repeat_regions), region);
-                } else {
-                    return {region};
-                }
-            }
-        }
+    if (is_assembler(generator) && assembler_active_region_generator_) {
+        return assembler_active_region_generator_->generate(region);
+    } else {
+        return {region};
     }
-    return {region};
 }
 
 void ActiveRegionGenerator::clear() noexcept
