@@ -79,6 +79,26 @@ private:
     std::pair<Iterator, Iterator> range(const Region& region) const;
 };
 
+// non-member methods
+
+template <typename Region>
+std::vector<Region> get_covered_regions(const CoverageTracker<Region>& tracker, const Region& region)
+{
+    const auto depths = tracker.coverage(region);
+    return select_regions(region, depths, [] (unsigned depth) { return depth > 0; });
+}
+
+template <typename Region>
+std::vector<Region> get_covered_regions(const CoverageTracker<Region>& tracker)
+{
+    const auto tracker_region = tracker.encompassing_region();
+    if (tracker_region) {
+        return get_covered_regions(tracker, *tracker_region);
+    } else {
+        return {};
+    }
+}
+
 // public methods
 
 template <typename Region>

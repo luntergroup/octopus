@@ -376,6 +376,8 @@ set(CORE_SOURCES
     core/tools/vargen/vcf_extractor.cpp
     core/tools/vargen/variant_generator_builder.hpp
     core/tools/vargen/variant_generator_builder.cpp
+    core/tools/vargen/active_region_generator.hpp
+    core/tools/vargen/active_region_generator.cpp
     
     core/tools/vargen/utils/assembler.hpp
     core/tools/vargen/utils/assembler.cpp
@@ -383,6 +385,8 @@ set(CORE_SOURCES
     core/tools/vargen/utils/global_aligner.cpp
     core/tools/vargen/utils/assembler_active_region_generator.hpp
     core/tools/vargen/utils/assembler_active_region_generator.cpp
+    core/tools/vargen/utils/misaligned_reads_detector.hpp
+    core/tools/vargen/utils/misaligned_reads_detector.cpp
 
     core/types/allele.hpp
     core/types/allele.cpp

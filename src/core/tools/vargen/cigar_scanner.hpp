@@ -54,16 +54,12 @@ public:
         
         using InclusionPredicate = std::function<bool(ObservedVariant)>;
         using MatchPredicate = std::function<bool(const Variant&, const Variant&)>;
-        using RepeatRegionGenerator = std::function<std::vector<GenomicRegion>(const ReferenceGenome&, GenomicRegion)>;
-        using RepeatRegionInclusionPredicate = std::function<bool(const GenomicRegion&, const std::deque<Variant>&)>;
         
         InclusionPredicate include;
         MatchPredicate match = std::equal_to<> {};
         bool use_clipped_coverage_tracking = false;
         Variant::MappingDomain::Size max_variant_size = 2000;
         MisalignmentParameters misalignment_parameters = MisalignmentParameters {};
-        boost::optional<RepeatRegionGenerator> repeat_region_generator = boost::none;
-        RepeatRegionInclusionPredicate include_repeat_region = [] (const auto& region, const auto& variants) { return variants.size() < 100; };
     };
     
     CigarScanner() = delete;
@@ -77,17 +73,17 @@ public:
     ~CigarScanner() override = default;
     
 private:
-    using VariantGenerator::VectorIterator;
-    using VariantGenerator::FlatSetIterator;
+    using VariantGenerator::ReadVectorIterator;
+    using VariantGenerator::ReadFlatSetIterator;
     
     std::unique_ptr<VariantGenerator> do_clone() const override;
     bool do_requires_reads() const noexcept override;
     void do_add_read(const SampleName& sample, const AlignedRead& read) override;
     void add_read(const SampleName& sample, const AlignedRead& read,
                   CoverageTracker<GenomicRegion>& sample_coverage_tracker);
-    void do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last) override;
-    void do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last) override;
-    std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
+    void do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last) override;
+    void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) override;
+    std::vector<Variant> do_generate(const RegionSet& regions) const override;
     void do_clear() noexcept override;
     std::string name() const override;
     
@@ -115,7 +111,7 @@ private:
     std::reference_wrapper<const ReferenceGenome> reference_;
     Options options_;
     std::vector<Candidate> buffer_;
-    std::deque<Candidate> candidates_, likely_misaligned_candidates_;
+    mutable std::deque<Candidate> candidates_, likely_misaligned_candidates_;
     Variant::MappingDomain::Size max_seen_candidate_size_;
     CoverageTracker<GenomicRegion> read_coverage_tracker_, misaligned_tracker_;
     std::unordered_map<SampleName, CoverageTracker<GenomicRegion>> sample_read_coverage_tracker_;
@@ -130,11 +126,11 @@ private:
                                    const SampleName& origin,
                                    AlignedRead::BaseQualityVector::const_iterator first_quality,
                                    AlignedRead::Direction support_direction);
+    void generate(const GenomicRegion& region, std::vector<Variant>& result) const;
     unsigned sum_base_qualities(const Candidate& candidate) const noexcept;
-    std::vector<GenomicRegion> get_repeat_regions(const GenomicRegion& region) const;
     bool is_likely_misaligned(const AlignedRead& read, double penalty) const;
     ObservedVariant make_observation(CandidateIterator first_match, CandidateIterator last_match) const;
-    std::vector<Variant> get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates);
+    std::vector<Variant> get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates) const;
 };
 
 template <typename T1, typename T2, typename T3, typename T4>

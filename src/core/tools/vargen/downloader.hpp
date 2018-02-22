@@ -39,14 +39,12 @@ public:
     ~Downloader() override = default;
     
 private:
-    std::unique_ptr<VariantGenerator> do_clone() const override;
-    
-    std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
-    
-    std::string name() const override;
-    
     std::reference_wrapper<const ReferenceGenome> reference_;
     Options options_;
+    
+    std::unique_ptr<VariantGenerator> do_clone() const override;
+    std::vector<Variant> do_generate(const RegionSet& regions) const override;
+    std::string name() const override;
 };
 
 } // namespace coretools

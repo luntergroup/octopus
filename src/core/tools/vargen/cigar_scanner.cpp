@@ -91,6 +91,7 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
     std::size_t read_index {0};
     GenomicRegion region;
     double misalignment_penalty {0};
+    buffer_.clear();
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
         switch (cigar_operation.flag()) {
@@ -187,13 +188,13 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
     }
 }
 
-void CigarScanner::do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last)
+void CigarScanner::do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last)
 {
     auto& sample_coverage_tracker = sample_read_coverage_tracker_[sample];
     std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, sample_coverage_tracker); });
 }
 
-void CigarScanner::do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last)
+void CigarScanner::do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last)
 {
     auto& sample_coverage_tracker = sample_read_coverage_tracker_[sample];
     std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, sample_coverage_tracker); });
@@ -254,69 +255,14 @@ void choose_push_back(Variant candidate, std::vector<Variant>& final_candidates,
     }
 }
 
-std::vector<Variant> CigarScanner::do_generate_variants(const GenomicRegion& region)
+std::vector<Variant> CigarScanner::do_generate(const RegionSet& regions) const
 {
-    using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
-    
-    std::sort(begin(candidates_), end(candidates_));
-    auto viable_candidates = overlap_range(candidates_, region, max_seen_candidate_size_);
+    std::sort(std::begin(candidates_), std::end(candidates_));
+    std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));
     std::vector<Variant> result {};
-    if (empty(viable_candidates)) return result;
-    result.reserve(size(viable_candidates, BidirectionallySortedTag {})); // maximum possible
-    const auto repeat_regions = get_repeat_regions(region);
-    auto repeat_buckets = init_variant_buckets(repeat_regions);
-    const auto last_viable_candidate_itr = cend(viable_candidates);
-    
-    while (!viable_candidates.empty()) {
-        const Candidate& candidate {viable_candidates.front()};
-        const auto next_candidate_itr = std::find_if_not(next(cbegin(viable_candidates)), last_viable_candidate_itr,
-                                                         [this, &candidate] (const Candidate& c) {
-                                                             return options_.match(c.variant, candidate.variant);
-                                                         });
-        const auto num_matches = std::distance(cbegin(viable_candidates), next_candidate_itr);
-        const auto observation = make_observation(cbegin(viable_candidates), next_candidate_itr);
-        if (options_.include(observation)) {
-            if (num_matches > 1) {
-                auto unique_itr = cbegin(viable_candidates);
-                while (unique_itr != next_candidate_itr) {
-                    choose_push_back(unique_itr->variant, result, repeat_buckets);
-                    unique_itr = std::find_if_not(next(unique_itr), next_candidate_itr,
-                                                  [unique_itr] (const Candidate& c) {
-                                                      return c.variant == unique_itr->variant;
-                                                  });
-                }
-            } else {
-                choose_push_back(candidate.variant, result, repeat_buckets);
-            }
-        }
-        viable_candidates.advance_begin(num_matches);
+    for (const auto& region : regions) {
+        generate(region, result);
     }
-    const auto novel_unique_misaligned_variants = get_novel_likely_misaligned_candidates(result);
-    if (debug_log_ && !novel_unique_misaligned_variants.empty()) {
-        stream(*debug_log_) << "DynamicCigarScanner: ignoring "
-                            << count_overlapped(novel_unique_misaligned_variants, region)
-                            << " unique candidates in " << region;
-    }
-    for (const auto& candidate : novel_unique_misaligned_variants) {
-        auto bucket = find_contained(repeat_buckets, candidate);
-        if (bucket) bucket->variants.push_back(candidate);
-    }
-    for (auto& bucket : repeat_buckets) {
-        std::sort(begin(bucket.variants), end(bucket.variants));
-    }
-    std::vector<Variant> good_repeat_region_variants {};
-    for (auto& bucket : repeat_buckets) {
-        if (options_.include_repeat_region(bucket.region, bucket.variants)) {
-            utils::append(std::move(bucket.variants), good_repeat_region_variants);
-        } else {
-            if (debug_log_) {
-                stream(*debug_log_) << "DynamicCigarScanner: ignoring " << bucket.variants.size()
-                                    << " candidates in repetitive region " << bucket.region;
-            }
-        }
-    }
-    auto itr = utils::append(std::move(good_repeat_region_variants), result);
-    std::inplace_merge(begin(result), itr, end(result));
     return result;
 }
 
@@ -370,20 +316,53 @@ double CigarScanner::add_snvs_in_match_range(const GenomicRegion& region,
     return misalignment_penalty;
 }
 
+void CigarScanner::generate(const GenomicRegion& region, std::vector<Variant>& result) const
+{
+    using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
+    assert(std::is_sorted(std::cbegin(candidates_), std::cend(candidates_)));
+    auto viable_candidates = overlap_range(candidates_, region, max_seen_candidate_size_);
+    if (empty(viable_candidates)) return;
+    result.reserve(result.size() + size(viable_candidates, BidirectionallySortedTag {})); // maximum possible
+    const auto last_viable_candidate_itr = cend(viable_candidates);
+    while (!viable_candidates.empty()) {
+        const Candidate& candidate {viable_candidates.front()};
+        const auto next_candidate_itr = std::find_if_not(next(cbegin(viable_candidates)), last_viable_candidate_itr,
+                                                         [this, &candidate] (const Candidate& c) {
+                                                             return options_.match(c.variant, candidate.variant);
+                                                         });
+        const auto num_matches = std::distance(cbegin(viable_candidates), next_candidate_itr);
+        const auto observation = make_observation(cbegin(viable_candidates), next_candidate_itr);
+        if (options_.include(observation)) {
+            if (num_matches > 1) {
+                auto unique_itr = cbegin(viable_candidates);
+                while (unique_itr != next_candidate_itr) {
+                    result.push_back(unique_itr->variant);
+                    unique_itr = std::find_if_not(next(unique_itr), next_candidate_itr,
+                                                  [unique_itr] (const Candidate& c) {
+                                                      return c.variant == unique_itr->variant;
+                                                  });
+                }
+            } else {
+                result.push_back(candidate.variant);
+            }
+        }
+        viable_candidates.advance_begin(num_matches);
+    }
+    if (debug_log_ && !likely_misaligned_candidates_.empty()) {
+        const auto novel_unique_misaligned_variants = get_novel_likely_misaligned_candidates(result);
+        if (!novel_unique_misaligned_variants.empty()) {
+            stream(*debug_log_) << "DynamicCigarScanner: ignoring "
+                                << count_overlapped(novel_unique_misaligned_variants, region)
+                                << " unique candidates in " << region;
+        }
+    }
+}
+
 unsigned CigarScanner::sum_base_qualities(const Candidate& candidate) const noexcept
 {
     return std::accumulate(candidate.first_base_quality_iter,
                            std::next(candidate.first_base_quality_iter, alt_sequence_size(candidate.variant)),
                            0u);
-}
-
-std::vector<GenomicRegion> CigarScanner::get_repeat_regions(const GenomicRegion& region) const
-{
-    if (options_.repeat_region_generator) {
-        return (*options_.repeat_region_generator)(reference_, region);
-    } else {
-        return {};
-    }
 }
 
 bool CigarScanner::is_likely_misaligned(const AlignedRead& read, const double penalty) const
@@ -393,6 +372,7 @@ bool CigarScanner::is_likely_misaligned(const AlignedRead& read, const double pe
     auto min_ln_prob_misaligned = options_.misalignment_parameters.min_ln_prob_correctly_aligned;
     return ln_prob_misaligned < min_ln_prob_misaligned;
 }
+
 CigarScanner::ObservedVariant
 CigarScanner::make_observation(const CandidateIterator first_match, const CandidateIterator last_match) const
 {
@@ -426,9 +406,9 @@ CigarScanner::make_observation(const CandidateIterator first_match, const Candid
 }
 
 std::vector<Variant>
-CigarScanner::get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates)
+CigarScanner::get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates) const
 {
-    std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));
+    std::is_sorted(std::cbegin(likely_misaligned_candidates_), std::cend(likely_misaligned_candidates_));
     std::vector<Candidate> unique_misaligned_candidates {};
     unique_misaligned_candidates.reserve(likely_misaligned_candidates_.size());
     std::unique_copy(std::cbegin(likely_misaligned_candidates_), std::cend(likely_misaligned_candidates_),
