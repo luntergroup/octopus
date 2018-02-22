@@ -37,8 +37,8 @@ std::vector<GenomicRegion> MisalignedReadsDetector::generate(const GenomicRegion
     if (likely_misaligned_coverage_tracker_.empty()) return {};
     if (coverage_tracker_.size() == 1) {
         const auto& sample = std::cbegin(coverage_tracker_)->first;
-        const auto total_coverages = coverage_tracker_.at(sample).coverage(region);
-        const auto misaligned_coverages = likely_misaligned_coverage_tracker_.at(sample).coverage(region);
+        const auto total_coverages = coverage_tracker_.at(sample).get(region);
+        const auto misaligned_coverages = likely_misaligned_coverage_tracker_.at(sample).get(region);
         assert(total_coverages.size() == misaligned_coverages.size());
         std::vector<bool> likely_misaligned_base_mask(total_coverages.size());
         std::transform(std::cbegin(total_coverages), std::cend(total_coverages), std::cbegin(misaligned_coverages),
