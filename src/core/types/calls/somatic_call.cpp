@@ -11,16 +11,12 @@ void SomaticCall::decorate(VcfRecord::Builder& record) const
 {
     record.set_somatic();
     record.add_format("SCR");
-    
     for (const auto& p : credible_regions_) {
         if (p.second.somatic) {
             using utils::to_string;
-            record.set_format(p.first, "SCR", {
-                    to_string(p.second.somatic->first, 2),
-                    to_string(p.second.somatic->second, 2)
-            });
+            record.set_format(p.first, "SCR", {to_string(p.second.somatic->first), to_string(p.second.somatic->second)});
         } else {
-            record.set_format(p.first, "SCR", {"0", "0"});
+            record.set_format_missing(p.first, "SCR");
         }
     }
 }
