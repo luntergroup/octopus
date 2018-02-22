@@ -87,6 +87,8 @@ BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants,
                              const ReferenceGenome& reference, BAMRealigner::Config config);
 BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, std::vector<io::ReadWriter::Path> dsts,
                              const ReferenceGenome& reference);
+BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, std::vector<io::ReadWriter::Path> dsts,
+                             const ReferenceGenome& reference, BAMRealigner::Config config);
 
 } // namespace octopus
 

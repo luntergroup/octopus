@@ -298,7 +298,7 @@ BAMRealigner::read_next_batch(VcfIterator& first, const VcfIterator& last, ReadR
         auto reads = src.fetch_reads(samples, reads_region);
         for (const auto& sample : samples) {
             auto& sample_genotypes = genotypes[sample];
-            if (config_.copy_hom_ref_reads && prev_batch_region) {
+            if (prev_batch_region) {
                 erase_overlapped(reads[sample], *prev_batch_region);
             }
             result.push_back({std::move(sample_genotypes), std::move(reads[sample])});
@@ -328,6 +328,12 @@ BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants,
 BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants,
                              std::vector<io::ReadWriter::Path> dsts, const ReferenceGenome& reference)
 {
+    return realign(std::move(src), std::move(variants), std::move(dsts), reference, BAMRealigner::Config {});
+}
+
+BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, std::vector<io::ReadWriter::Path> dsts,
+                             const ReferenceGenome& reference, BAMRealigner::Config config)
+{
     std::vector<io::ReadWriter> dst_bams {};
     dst_bams.reserve(dsts.size());
     for (auto& dst : dsts) {
@@ -335,7 +341,7 @@ BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants,
     }
     io::ReadReader src_bam {std::move(src)};
     VcfReader vcf {std::move(variants)};
-    BAMRealigner realigner {};
+    BAMRealigner realigner {std::move(config)};
     return realigner.realign(src_bam, vcf, dst_bams, reference);
 }
 
