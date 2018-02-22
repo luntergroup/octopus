@@ -13,7 +13,7 @@
 #include "core/csr/measures/model_posterior.hpp"
 #include "core/csr/measures/quality.hpp"
 #include "core/csr/measures/quality_by_depth.hpp"
-#include "core/csr/measures/max_genotype_quality.hpp"
+#include "core/csr/measures/genotype_quality.hpp"
 #include "core/csr/measures/strand_bias.hpp"
 #include "core/csr/measures/gc_content.hpp"
 #include "core/csr/measures/filtered_read_fraction.hpp"

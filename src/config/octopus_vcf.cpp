@@ -28,7 +28,7 @@ VcfHeader::Builder make_header_template()
     
     result.add_format("GT", "1", "String", "Genotype");
     result.add_format("DP", "1", "Integer", "Read depth at this position for this sample");
-    //result.add_format("FT", "1", "String", "Sample genotype filter indicating if this genotype was “called”");
+    result.add_format("FT", "1", "String", "Sample genotype filter indicating if this genotype was “called”");
     //result.add_format("GL", "G", "Float", "log10-scaled genotype likelihoods");
     //result.add_format("GLE", "1", "Integer", "Genotype likelihoods of heterogeneous ploidy");
     //result.add_format("PL", "G", "Integer", "Phred-scaled genotype likelihoods");

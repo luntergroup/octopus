@@ -136,8 +136,8 @@ auto extract_genotype(const VcfRecord& call, const SampleName& sample)
             unknown_pad_indices.push_back(i);
         }
     }
-    if (!min_ref_pad && has_indel(call)) {
-        min_ref_pad = 1;
+    if (!min_ref_pad) {
+        min_ref_pad = has_indel(call) ? 1 : 0;
     }
     for (auto idx : unknown_pad_indices) {
         result[idx] = make_allele(call, std::move(genotype[idx]), *min_ref_pad);
@@ -188,8 +188,8 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
             }
             ++allele_idx;
         });
-        if (!min_ref_pad && has_indel(call)) {
-            min_ref_pad = 1;
+        if (!min_ref_pad) {
+            min_ref_pad = has_indel(call) ? 1 : 0;
         }
         if (has_ref) {
             auto& ref = genotype.front();

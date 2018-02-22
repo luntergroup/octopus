@@ -12,6 +12,7 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
+#include "io/variant/vcf_header.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "readpipe/buffered_read_pipe.hpp"
@@ -29,7 +30,7 @@ public:
     
     FacetFactory() = delete;
     
-    FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe);
+    FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe, VcfHeader input_header);
     
     FacetFactory(const FacetFactory&)            = delete;
     FacetFactory& operator=(const FacetFactory&) = delete;
@@ -53,6 +54,7 @@ private:
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     BufferedReadPipe read_pipe_;
+    VcfHeader input_header_;
     
     std::unordered_map<std::string, std::function<FacetWrapper(const BlockData& data)>> facet_makers_;
     

@@ -78,7 +78,9 @@ protected:
         std::vector<std::string> reasons = {};
         boost::optional<Phred<double>> quality = boost::none;
     };
+    using ClassificationList = std::vector<Classification>;
     
+    std::vector<MeasureWrapper> measures_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
     
     bool can_measure_single_call() const noexcept;
@@ -89,6 +91,9 @@ protected:
     MeasureBlock measure(const CallBlock& block) const;
     std::vector<MeasureBlock> measure(const std::vector<CallBlock>& blocks) const;
     void write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const;
+    void write(const VcfRecord& call, const Classification& classification,
+               const SampleList& samples, const ClassificationList& sample_classifications,
+               VcfWriter& dest) const;
     void annotate(VcfRecord::Builder& call, const MeasureVector& measures) const;
     
 private:
@@ -96,13 +101,14 @@ private:
     
     FacetFactory facet_factory_;
     FacetNameSet facet_names_;
-    std::vector<MeasureWrapper> measures_;
     OutputOptions output_config_;
     
     mutable ThreadPool workers_;
     
     virtual void annotate(VcfHeader::Builder& header) const = 0;
     virtual void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const = 0;
+    virtual boost::optional<std::string> call_quality_name() const { return boost::none; }
+    virtual boost::optional<std::string> genotype_quality_name() const { return boost::none; }
     
     VcfHeader make_header(const VcfReader& source) const;
     Measure::FacetMap compute_facets(const CallBlock& block) const;
@@ -110,8 +116,13 @@ private:
     MeasureBlock measure(const CallBlock& block, const Measure::FacetMap& facets) const;
     MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;
     VcfRecord::Builder construct_template(const VcfRecord& call) const;
+    bool is_hard_filtered(const Classification& classification) const noexcept;
+    void annotate(VcfRecord::Builder& call, const SampleList& samples, const ClassificationList& sample_classifications) const;
+    void annotate(VcfRecord::Builder& call, const SampleName& sample, Classification status) const;
     void annotate(VcfRecord::Builder& call, Classification status) const;
+    void pass(const SampleName& sample, VcfRecord::Builder& call) const;
     void pass(VcfRecord::Builder& call) const;
+    void fail(const SampleName& sample, VcfRecord::Builder& call, std::vector<std::string> reasons) const;
     void fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const;
     bool is_multithreaded() const noexcept;
     unsigned max_concurrent_blocks() const noexcept;

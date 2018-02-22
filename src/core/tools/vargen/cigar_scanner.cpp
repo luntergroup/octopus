@@ -205,12 +205,12 @@ unsigned get_min_depth(const Variant& v, const CoverageTracker<GenomicRegion>& t
     if (is_insertion(v)) {
         const auto& region = mapped_region(v);
         if (region.begin() > 0) {
-            return tracker.min_coverage(expand(region, 1, 1));
+            return tracker.min(expand(region, 1, 1));
         } else {
-            return tracker.min_coverage(expand_rhs(region, 1));
+            return tracker.min(expand_rhs(region, 1));
         }
     } else {
-        return tracker.min_coverage(mapped_region(v));
+        return tracker.min(mapped_region(v));
     }
 }
 

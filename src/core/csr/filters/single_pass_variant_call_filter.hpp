@@ -41,14 +41,15 @@ private:
     bool annotate_measures_;
     
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
+    virtual Classification classify(const std::vector<Classification>& sample_classifications) const;
     
     void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const override;
-    
-    void filter(const VcfRecord& call, VcfWriter& dest) const;
-    void filter(const CallBlock& block, VcfWriter& dest) const;
-    void filter(const std::vector<CallBlock>& blocks, VcfWriter& dest) const;
-    void filter(const CallBlock& block, const MeasureBlock & measures, VcfWriter& dest) const;
-    void filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest) const;
+    void filter(const VcfRecord& call, VcfWriter& dest, const SampleList& samples) const;
+    void filter(const CallBlock& block, VcfWriter& dest, const SampleList& samples) const;
+    void filter(const std::vector<CallBlock>& blocks, VcfWriter& dest, const SampleList& samples) const;
+    void filter(const CallBlock& block, const MeasureBlock & measures, VcfWriter& dest, const SampleList& samples) const;
+    void filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest, const SampleList& samples) const;
+    std::vector<Classification> classify(const MeasureVector& call_measures, const SampleList& samples) const;
     void log_progress(const GenomicRegion& region) const;
 };
 

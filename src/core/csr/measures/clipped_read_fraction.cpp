@@ -52,9 +52,19 @@ Measure::ResultType ClippedReadFraction::do_evaluate(const VcfRecord& call, cons
     return clipped_fraction(reads, mapped_region(call));
 }
 
+Measure::ResultCardinality ClippedReadFraction::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string ClippedReadFraction::do_name() const
 {
     return "CRF";
+}
+
+std::string ClippedReadFraction::do_describe() const
+{
+    return "Fraction of clipped reads covering the call";
 }
 
 std::vector<std::string> ClippedReadFraction::do_requirements() const

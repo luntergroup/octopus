@@ -14,22 +14,23 @@
 #include <boost/optional.hpp>
 #include <boost/any.hpp>
 
+#include "io/variant/vcf_header.hpp"
+#include "io/variant/vcf_record.hpp"
 #include "../facets/facet.hpp"
 
-namespace octopus {
-
-class VcfRecord;
-
-namespace csr {
+namespace octopus { namespace csr {
 
 class Measure
 {
 public:
     using FacetMap = std::unordered_map<std::string, FacetWrapper>;
-    using ResultType = boost::variant<double, boost::optional<double>,
-                                      std::size_t, boost::optional<std::size_t>,
-                                      bool,
+    using ResultType = boost::variant<double, std::vector<double>,
+                                      boost::optional<double>, std::vector<boost::optional<double>>,
+                                      std::size_t, std::vector<std::size_t>,
+                                      boost::optional<std::size_t>, std::vector<boost::optional<std::size_t>>,
+                                      bool, std::vector<bool>,
                                       boost::any>;
+    enum class ResultCardinality { one, num_alleles, num_samples };
     
     Measure() = default;
     
@@ -43,16 +44,23 @@ public:
     std::unique_ptr<Measure> clone() const { return do_clone(); }
     
     ResultType evaluate(const VcfRecord& call, const FacetMap& facets) const { return do_evaluate(call, facets); }
+    ResultCardinality cardinality() const noexcept { return do_cardinality(); }
     std::string name() const { return do_name(); }
+    std::string describe() const { return do_describe(); }
     std::vector<std::string> requirements() const { return do_requirements(); }
     std::string serialise(const ResultType& value) const { return do_serialise(value); }
+    void annotate(VcfHeader::Builder& header) const;
+    void annotate(VcfRecord::Builder& record, const ResultType& value) const;
     
 private:
     virtual std::unique_ptr<Measure> do_clone() const = 0;
     virtual ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const = 0;
+    virtual ResultCardinality do_cardinality() const noexcept = 0;
     virtual std::string do_name() const = 0;
+    virtual std::string do_describe() const = 0;
     virtual std::vector<std::string> do_requirements() const { return {}; }
     virtual std::string do_serialise(const ResultType& value) const;
+    virtual bool is_required_vcf_field() const noexcept { return true; }
 };
 
 class MeasureWrapper
@@ -76,9 +84,13 @@ public:
     const Measure* base() const noexcept { return measure_.get(); }
     auto operator()(const VcfRecord& call) const { return measure_->evaluate(call, {}); }
     auto operator()(const VcfRecord& call, const Measure::FacetMap& facets) const { return measure_->evaluate(call, facets); }
+    Measure::ResultCardinality cardinality() const noexcept { return measure_->cardinality(); }
     std::string name() const { return measure_->name(); }
+    std::string describe() const { return measure_->describe(); }
     std::vector<std::string> requirements() const { return measure_->requirements(); }
     std::string serialise(const Measure::ResultType& value) const { return measure_->serialise(value); }
+    void annotate(VcfHeader::Builder& header) const { measure_->annotate(header); }
+    void annotate(VcfRecord::Builder& record, const Measure::ResultType& value) const { measure_->annotate(record, value); }
     
 private:
     std::unique_ptr<Measure> measure_;
@@ -96,20 +108,12 @@ std::string name()
     return Measure().name();
 }
 
-namespace detail {
+bool is_missing(const Measure::ResultType& value) noexcept;
 
-struct IsMissingMeasureVisitor : public boost::static_visitor<bool>
-{
-    template <typename T> bool operator()(const boost::optional<T>& value) const noexcept { return !value; }
-    template <typename T> bool operator()(const T& value) const noexcept { return false; }
-};
-
-} // namespace detail
-
-inline bool is_missing(const Measure::ResultType& value) noexcept
-{
-    return boost::apply_visitor(detail::IsMissingMeasureVisitor {}, value);
-}
+Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, std::size_t sample_idx);
+std::vector<Measure::ResultType> get_sample_values(const std::vector<Measure::ResultType>& values,
+                                                   const std::vector<MeasureWrapper>& measures,
+                                                   std::size_t sample_idx);
 
 } // namespace csr
 } // namespace octopus

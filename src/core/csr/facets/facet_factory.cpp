@@ -19,9 +19,10 @@
 
 namespace octopus { namespace csr {
 
-FacetFactory::FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe)
+FacetFactory::FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe, VcfHeader input_header)
 : reference_ {reference}
 , read_pipe_ {std::move(read_pipe)}
+, input_header_ {std::move(input_header)}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -30,6 +31,7 @@ FacetFactory::FacetFactory(const ReferenceGenome& reference, BufferedReadPipe re
 FacetFactory::FacetFactory(FacetFactory&& other)
 : reference_ {std::move(other.reference_)}
 , read_pipe_ {std::move(other.read_pipe_)}
+, input_header_ {std::move(other.input_header_)}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -40,6 +42,7 @@ FacetFactory& FacetFactory::operator=(FacetFactory&& other)
     using std::swap;
     swap(reference_, other.reference_);
     swap(read_pipe_, other.read_pipe_);
+    swap(input_header_, other.input_header_);
     setup_facet_makers();
     return *this;
 }
@@ -169,7 +172,7 @@ void FacetFactory::setup_facet_makers()
     };
     facet_makers_[name<Samples>()] = [this] (const BlockData& block) -> FacetWrapper
     {
-        return {std::make_unique<Samples>(read_pipe_.source().samples())};
+        return {std::make_unique<Samples>(input_header_.samples())};
     };
 }
 

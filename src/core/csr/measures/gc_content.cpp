@@ -22,9 +22,19 @@ Measure::ResultType GCContent::do_evaluate(const VcfRecord& call, const FacetMap
     return utils::gc_content(reference.sequence());
 }
 
+Measure::ResultCardinality GCContent::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string GCContent::do_name() const
 {
     return "GC";
+}
+
+std::string GCContent::do_describe() const
+{
+    return "GC bias of the reference in a window centred on the call";
 }
 
 std::vector<std::string> GCContent::do_requirements() const

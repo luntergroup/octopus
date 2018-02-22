@@ -21,10 +21,12 @@ class FilteredReadFraction : public Measure
     Depth calling_depth_, filtering_depth_;
     std::unique_ptr<Measure> do_clone() const override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
+    ResultCardinality do_cardinality() const noexcept override;
     std::string do_name() const override;
+    std::string do_describe() const override;
     std::vector<std::string> do_requirements() const override;
 public:
-    FilteredReadFraction();
+    FilteredReadFraction(bool aggregate_samples = false);
 };
 
 } // namespace csr

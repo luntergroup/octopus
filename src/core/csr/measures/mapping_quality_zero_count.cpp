@@ -28,9 +28,19 @@ Measure::ResultType MappingQualityZeroCount::do_evaluate(const VcfRecord& call, 
     }
 }
 
+Measure::ResultCardinality MappingQualityZeroCount::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string MappingQualityZeroCount::do_name() const
 {
     return "MQ0";
+}
+
+std::string MappingQualityZeroCount::do_describe() const
+{
+    return "Number of reads overlapping the call with mapping quality zero";
 }
 
 std::vector<std::string> MappingQualityZeroCount::do_requirements() const

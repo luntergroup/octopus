@@ -18,6 +18,7 @@
 #include "basics/aligned_read.hpp"
 #include "utils/maths.hpp"
 #include "utils/beta_distribution.hpp"
+#include "../facets/samples.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -119,15 +120,18 @@ double calculate_max_prob_different(const DirectionCountVector& direction_counts
 
 Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
+    const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
     // TODO: What we should really do here is calculate which reads directly support each allele in the
     // genotype by looking if each supporting read overlaps the allele given the realignment to the called haplotype.
     // The current approach of just removing non-overlapping reads may not work optimally in complex indel regions.
-    boost::optional<double> result {};
-    for (const auto& p : assignments) {
-        if (call.is_heterozygous(p.first)) {
-            const auto& supporting_reads = p.second;
-            const auto direction_counts = get_direction_counts(supporting_reads, mapped_region(call));
+    std::vector<boost::optional<double>> result {};
+    result.reserve(samples.size());
+    for (const auto& sample : samples) {
+        boost::optional<double> sample_result {};
+        if (call.is_heterozygous(sample)) {
+            const auto& sample_assignments = assignments.at(sample);
+            const auto direction_counts = get_direction_counts(sample_assignments, mapped_region(call));
             double prob;
             if (use_resampling_) {
                 prob = calculate_max_prob_different(direction_counts, small_sample_size_, min_difference_);
@@ -145,14 +149,16 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
             } else {
                 prob = calculate_max_prob_different(direction_counts, big_sample_size_, min_difference_);
             }
-            if (result) {
-                result = std::max(*result, prob);
-            } else {
-                result = prob;
-            }
+            sample_result = prob;
         }
+        result.push_back(sample_result);
     }
     return result;
+}
+
+Measure::ResultCardinality StrandBias::do_cardinality() const noexcept
+{
+    return ResultCardinality::num_samples;
 }
 
 std::string StrandBias::do_name() const
@@ -160,9 +166,14 @@ std::string StrandBias::do_name() const
     return "SB";
 }
 
+std::string StrandBias::do_describe() const
+{
+    return "Strand bias of reads based on haplotype support";
+}
+
 std::vector<std::string> StrandBias::do_requirements() const
 {
-    return {"ReadAssignments"};
+    return {"Samples", "ReadAssignments"};
 }
 
 } // namespace csr

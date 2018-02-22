@@ -17,9 +17,19 @@ Measure::ResultType IsSomatic::do_evaluate(const VcfRecord& call, const FacetMap
     return is_somatic(call);
 }
 
+Measure::ResultCardinality IsSomatic::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string IsSomatic::do_name() const
 {
     return "SOMATIC";
+}
+
+std::string IsSomatic::do_describe() const
+{
+    return "Is the call marked SOMATIC";
 }
 
 } // namespace csr

@@ -16,11 +16,12 @@ std::unique_ptr<VariantCallFilterFactory> VariantCallFilterFactory::clone() cons
 
 std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const ReferenceGenome& reference,
                                                                   BufferedReadPipe read_pipe,
+                                                                  VcfHeader input_header,
                                                                   VariantCallFilter::OutputOptions output_config,
                                                                   boost::optional<ProgressMeter&> progress,
                                                                   boost::optional<unsigned> max_threads) const
 {
-    FacetFactory facet_factory {reference, std::move(read_pipe)};
+    FacetFactory facet_factory {reference, std::move(read_pipe), std::move(input_header)};
     return do_make(std::move(facet_factory), output_config, progress, {max_threads});
 }
 

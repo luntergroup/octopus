@@ -113,6 +113,11 @@ private:
         {
             return true;
         }
+        template <typename T_>
+        bool operator()(const std::vector<T_>& values) const noexcept
+        {
+            return std::all_of(std::cbegin(values), std::cend(values), [this] (const auto& value) { return (*this)(value); });
+        }
         T target;
         Cmp cmp;
     };

@@ -179,9 +179,9 @@ auto expand_each(const Container& regions, const GenomicRegion::Distance n)
 
 auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<GenomicRegion>& tracker)
 {
-    const auto coverages = tracker.coverage(region);
-    const auto mean_coverage = tracker.mean_coverage(region);
-    const auto stdev_coverage = tracker.stdev_coverage(region);
+    const auto coverages = tracker.get(region);
+    const auto mean_coverage = tracker.mean(region);
+    const auto stdev_coverage = tracker.stdev(region);
     const auto deletion_base_probs = compute_base_deletion_probabilities(coverages, mean_coverage, stdev_coverage);
     std::vector<bool> deletion_bases(deletion_base_probs.size());
     std::transform(std::cbegin(deletion_base_probs), std::cend(deletion_base_probs), std::begin(deletion_bases),
@@ -212,8 +212,8 @@ auto get_interesting_hotspots(const GenomicRegion& region,
                               const CoverageTracker<GenomicRegion>& interesting_read_tracker,
                               const CoverageTracker<GenomicRegion>& tracker)
 {
-    const auto interesting_coverages = interesting_read_tracker.coverage(region);
-    const auto coverages = tracker.coverage(region);
+    const auto interesting_coverages = interesting_read_tracker.get(region);
+    const auto coverages = tracker.get(region);
     return get_interesting_hotspots(region, interesting_coverages, coverages);
 }
 
@@ -241,8 +241,8 @@ get_interesting_hotspots(const GenomicRegion& region,
         std::vector<unsigned> best_sample_interesting_coverage(n), best_sample_coverage(n);
         for (const auto& p : interesting_read_tracker) {
             assert(tracker.count(p.first) == 1);
-            const auto sample_coverage = tracker.at(p.first).coverage(region);
-            const auto sample_interesting_coverage = p.second.coverage(region);
+            const auto sample_coverage = tracker.at(p.first).get(region);
+            const auto sample_interesting_coverage = p.second.get(region);
             assert(sample_coverage.size() == n);
             assert(sample_interesting_coverage.size() == n);
             for (std::size_t i {0}; i < sample_coverage.size(); ++i) {

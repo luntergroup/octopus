@@ -225,9 +225,19 @@ Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const Facet
     return boost::any {compute_realignment_summary(result, call)};
 }
 
+Measure::ResultCardinality Realignments::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string Realignments::do_name() const
 {
     return "RA";
+}
+
+std::string Realignments::do_describe() const
+{
+    return "Realignment information";
 }
 
 std::vector<std::string> Realignments::do_requirements() const
