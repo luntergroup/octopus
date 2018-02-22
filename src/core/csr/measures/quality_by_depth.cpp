@@ -10,7 +10,7 @@
 
 namespace octopus { namespace csr {
 
-QualityByDepth::QualityByDepth(bool recalculate) : depth_ {recalculate} {}
+QualityByDepth::QualityByDepth(bool recalculate) : depth_ {recalculate, true} {}
 
 std::unique_ptr<Measure> QualityByDepth::do_clone() const
 {
@@ -29,7 +29,7 @@ Measure::ResultType QualityByDepth::do_evaluate(const VcfRecord& call, const Fac
 
 Measure::ResultCardinality QualityByDepth::do_cardinality() const noexcept
 {
-    return ResultCardinality::one;
+    return depth_.cardinality();
 }
 
 std::string QualityByDepth::do_name() const

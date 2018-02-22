@@ -26,7 +26,7 @@ class FilteredReadFraction : public Measure
     std::string do_describe() const override;
     std::vector<std::string> do_requirements() const override;
 public:
-    FilteredReadFraction();
+    FilteredReadFraction(bool aggregate_samples = false);
 };
 
 } // namespace csr
