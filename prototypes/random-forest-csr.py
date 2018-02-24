@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.externals import joblib
 import argparse
 import os
+from subprocess import call
 
 # This script implements a prototype Random Forest filter for octopus calls.
 # The input VCF is assumed to be an Octopus VCF file, annotated with at leas the measures
@@ -140,13 +141,8 @@ def filter_vcf(in_path, out_path, classifier, drop_info=False, batch_size=200000
     print("#records FILTER: " + str(num_records_processed - num_passed))
 
 def bgzip(src_vcf_path):
-    src_vcf = VariantFile(src_vcf_path)
-    dst_vcf = VariantFile(src_vcf_path + ".gz", 'w', header=src_vcf.header)
-    for rec in src_vcf:
-        dst_vcf.write(rec)
-    src_vcf.close()
-    dst_vcf.close()
-    
+    call(['bgzip', src_vcf])
+    call(['tabix', src_vcf + ".gz"])
 
 def main(options):
     rf_model = joblib.load(options.model)
