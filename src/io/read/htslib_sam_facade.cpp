@@ -1007,7 +1007,7 @@ void set_cigar(const AlignedRead& read, bam1_t* result) noexcept
     std::transform(std::cbegin(cigar), std::cend(cigar), bam_get_cigar(result),
                    [] (const CigarOperation& op) noexcept -> std::uint32_t {
                        // Lower 4 bits for CIGAR operation and the higher 28 bits for size
-                       std::uint32_t result {op.size()};
+                       std::uint32_t result = op.size();
                        result <<= BAM_CIGAR_SHIFT;
                        using Flag = CigarOperation::Flag;
                        switch (op.flag()) {
