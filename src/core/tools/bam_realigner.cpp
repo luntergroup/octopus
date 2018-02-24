@@ -303,6 +303,16 @@ BAMRealigner::read_next_batch(VcfIterator& first, const VcfIterator& last, ReadR
             }
             result.push_back({std::move(sample_genotypes), std::move(reads[sample])});
         }
+    } else if (prev_batch_region && config_.copy_hom_ref_reads) {
+        const auto contig_region = reference.contig_region(prev_batch_region->contig_name());
+        const auto reads_region = right_overhang_region(contig_region, *prev_batch_region);
+        if (!is_empty(reads_region)) {
+            auto reads = src.fetch_reads(samples, reads_region);
+            for (const auto& sample : samples) {
+                erase_overlapped(reads[sample], *prev_batch_region);
+                result.push_back({{}, std::move(reads[sample])});
+            }
+        }
     }
     return result;
 }
