@@ -141,8 +141,8 @@ def filter_vcf(in_path, out_path, classifier, drop_info=False, batch_size=200000
     print("#records FILTER: " + str(num_records_processed - num_passed))
 
 def bgzip(src_vcf_path):
-    call(['bgzip', src_vcf])
-    call(['tabix', src_vcf + ".gz"])
+    call(['bgzip', src_vcf_path])
+    call(['tabix', src_vcf_path + ".gz"])
 
 def main(options):
     rf_model = joblib.load(options.model)
@@ -153,7 +153,6 @@ def main(options):
     filter_vcf(options.in_vcf, options.out_vcf, rf_model, options.drop_info)
     if compress_output:
         bgzip(options.out_vcf)
-        os.remove(options.out_vcf)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
