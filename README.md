@@ -17,9 +17,9 @@ There are currently three calling models implemented:
 
 - An individual model for calling **germline variants** in a single healthy individual.
 - A tumour model for calling germline variants and **somatic mutations** in one or more tumour samples from a single individual.
-- A trio model for calling germline variants and *de novo* mutations in a parent-offspring trio.
+- A trio model for calling germline variants and **_de novo_** mutations in a parent-offspring trio.
 
-Octopus is currently able to call SNVs, small-medium sized indels, small complex rearrangements and micro-inversions.
+Octopus is currently able to call SNVs, small-medium sized indels, small complex rearrangements, and micro-inversions.
 
 We hope to implement more calling models in the future, including, but not limited to:
 
@@ -76,7 +76,7 @@ These instructions are replicated in the [user documentation](https://github.com
 
 ## Installation
 
-Octopus can be built and installed on a wide range of operating systems including most Unix based systems (Linux, OS X) and Windows (once MSVC is C++14 feature complete).
+Octopus can be built and installed on most Unix based systems (Linux, OS X). Windows has not been tested, but should be compatible.
 
 #### Conda package
 
@@ -241,7 +241,7 @@ If a normal sample is not present the cancer calling model must be invoked expli
 $ octopus -R hs37d5.fa -I tumour1.bam tumour2.bam -C cancer
 ```
 
-Note however, that without a normal sample, somatic mutation classification power is significantly reduced.
+Be aware that without a normal sample, somatic mutation classification power is significantly reduced.
 
 #### *Joint variant calling (experimental)*
 
