@@ -51,7 +51,6 @@ public:
         double cnv_normal_alpha = 10.0, cnv_tumour_alpha = 0.75;
         double somatic_normal_germline_alpha = 10.0, somatic_normal_somatic_alpha = 0.08;
         double somatic_tumour_germline_alpha = 1.0, somatic_tumour_somatic_alpha = 0.8;
-        double germline_weight = 70, cnv_weight = 3, somatic_weight = 2;
     };
     
     CancerCaller() = delete;
@@ -141,7 +140,7 @@ private:
     TumourModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model) const;
     TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const;
     CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
-    ModelPriors get_model_priors() const;
+    ModelPriors get_model_priors(const std::vector<Haplotype>& haplotypes) const;
     ModelPosteriors calculate_model_posteriors(const Latents& latents) const;
     
     GermlineGenotypeProbabilityMap

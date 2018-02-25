@@ -597,14 +597,16 @@ MappableFlatSet<MappableType, Allocator>::erase(const_iterator first, const_iter
     return result;
 }
 
-namespace {
-    template <typename BidirIt, typename T>
-    BidirIt binary_find(BidirIt first, BidirIt last, const T& value)
-    {
-        const auto it = std::lower_bound(first, last, value);
-        return (it != last && *it == value) ? it : last;
-    }
+namespace detail {
+
+template <typename BidirIt, typename T>
+BidirIt binary_find(BidirIt first, BidirIt last, const T& value)
+{
+    const auto it = std::lower_bound(first, last, value);
+    return (it != last && *it == value) ? it : last;
 }
+
+} // namespace detail
 
 template <typename MappableType, typename Allocator>
 template <typename BidirIt>
@@ -626,7 +628,7 @@ MappableFlatSet<MappableType, Allocator>::erase_all(BidirIt first, const BidirIt
     auto last_element = std::end(elements_);
     
     while (first != last) {
-        const auto it = binary_find(first_contained, last_contained, *first);
+        const auto it = detail::binary_find(first_contained, last_contained, *first);
         if (it != last_contained) {
             const auto p = std::mismatch(std::next(it), last_contained, std::next(first), last);
             const auto n = std::distance(p.first, last_contained);
