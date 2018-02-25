@@ -559,6 +559,7 @@ struct GenotypeHash
 };
 
 std::size_t num_genotypes(unsigned num_elements, unsigned ploidy);
+std::size_t max_num_elements(std::size_t num_genotypes, unsigned ploidy);
 std::size_t element_cardinality_in_genotypes(unsigned num_elements, unsigned ploidy);
 
 namespace detail {
