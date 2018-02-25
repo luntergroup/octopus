@@ -98,7 +98,7 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     // Store any intermediate results in Latents for reuse, so the order of model evaluation matters!
-    auto result = std::make_unique<Latents>(haplotypes, samples_, get_model_priors());
+    auto result = std::make_unique<Latents>(haplotypes, samples_, get_model_priors(haplotypes));
     generate_germline_genotypes(*result, haplotypes);
     if (debug_log_) stream(*debug_log_) << "There are " << result->germline_genotypes_.size() << " candidate germline genotypes";
     evaluate_germline_model(*result, haplotype_likelihoods);
@@ -993,10 +993,25 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     return result;
 }
 
-CancerCaller::ModelPriors CancerCaller::get_model_priors() const
+CancerCaller::ModelPriors CancerCaller::get_model_priors(const std::vector<Haplotype>& haplotypes) const
 {
-    const auto s = parameters_.germline_weight + parameters_.cnv_weight + parameters_.somatic_weight;
-    return {parameters_.germline_weight / s, parameters_.cnv_weight / s, parameters_.somatic_weight / s};
+    assert(!haplotypes.empty());
+    const Haplotype reference {octopus::mapped_region(haplotypes.front()), reference_};
+    const SomaticMutationModel somatic_model {parameters_.somatic_mutation_model_params,
+                                              1, SomaticMutationModel::CachingStrategy::none};
+    auto min_somatic_ln_prob = std::numeric_limits<double>::max();
+    for (const auto& haplotype : haplotypes) {
+        if (haplotype != reference) {
+            min_somatic_ln_prob = std::min(min_somatic_ln_prob, somatic_model.evaluate(haplotype, reference));
+        }
+    }
+    const auto local_somatic_rate = std::exp(min_somatic_ln_prob);
+    const auto prior_rate = region_size(reference) * local_somatic_rate;
+    ModelPriors result {};
+    result.somatic  = std::min(maths::poisson_sf(0, prior_rate), 0.25);
+    result.cnv      = result.somatic;
+    result.germline = 1 - (result.somatic + result.cnv);
+    return result;
 }
 
 CancerCaller::ModelPosteriors
@@ -1017,12 +1032,10 @@ CancerCaller::calculate_model_posteriors(const Latents& latents) const
 }
 
 CancerCaller::GermlineGenotypeProbabilityMap
-CancerCaller::calculate_germline_genotype_posteriors(const Latents& latents,
-                                                     const ModelPosteriors& model_posteriors) const
+CancerCaller::calculate_germline_genotype_posteriors(const Latents& latents, const ModelPosteriors& model_posteriors) const
 {
     const auto& germline_genotypes = latents.germline_genotypes_;
     GermlineGenotypeProbabilityMap result {germline_genotypes.size()};
-    
     std::transform(std::cbegin(germline_genotypes), std::cend(germline_genotypes),
                    std::cbegin(latents.germline_model_inferences_.posteriors.genotype_probabilities),
                    std::inserter(result, std::begin(result)),
@@ -1038,7 +1051,6 @@ CancerCaller::calculate_germline_genotype_posteriors(const Latents& latents,
     for (std::size_t i {0}; i < cancer_genotypes.size(); ++i) {
         result[cancer_genotypes[i].germline_genotype()] += model_posteriors.somatic * tumour_posteriors[i];
     }
-    
     return result;
 }
 
@@ -1066,9 +1078,7 @@ Phred<double> CancerCaller::calculate_somatic_probability(const ProbabilityVecto
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
-CancerCaller::call_reference(const std::vector<Allele>& alleles,
-                             const Caller::Latents& latents,
-                             const ReadMap& reads) const
+CancerCaller::call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents, const ReadMap& reads) const
 {
     return {};
 }
@@ -1133,7 +1143,7 @@ auto zip(const T&... containers) -> boost::iterator_range<boost::zip_iterator<de
     return boost::make_iterator_range(zip_begin, zip_end);
 }
 
-}
+} // namespace
 
 void CancerCaller::Latents::compute_haplotype_posteriors() const
 {
