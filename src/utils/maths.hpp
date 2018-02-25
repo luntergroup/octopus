@@ -255,6 +255,13 @@ auto log_sum_exp(const Container& values)
     return log_sum_exp(std::cbegin(values), std::cend(values));
 }
 
+template <typename T, typename IntegerType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
+T factorial(const IntegerType x)
+{
+    return boost::math::factorial<double>(x);
+}
+
 template <typename RealType, typename IntegerType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
