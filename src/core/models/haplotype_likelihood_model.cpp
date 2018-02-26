@@ -319,7 +319,7 @@ compute_optimal_alignment(const AlignedRead& read, const Haplotype& haplotype,
         has_in_range_mapping_position = true;
         auto alignment = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(),
                                     original_mapping_position, model);
-        if (alignment.likelihood > result.likelihood) {
+        if (alignment.likelihood >= result.likelihood) {
             result.mapping_position = alignment.target_offset;
             result.likelihood = alignment.likelihood;
             result.cigar = std::move(alignment.cigar);
