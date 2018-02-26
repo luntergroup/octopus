@@ -273,7 +273,7 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
                         result.emplace_back(haplotype_to_reference.back().size() + rhs_pad_size, Flag::sequenceMatch);
                     } else {
                         result.push_back(haplotype_to_reference.back());
-                        result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
+                        if (rhs_pad_size > 0) result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
                     }
                 }
             } else {
@@ -283,7 +283,7 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
                     result.emplace_back(haplotype_to_reference.back().size() + rhs_pad_size, Flag::sequenceMatch);
                 } else {
                     utils::append(haplotype_to_reference, result);
-                    if (rhs_pad_size) result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
+                    if (rhs_pad_size > 0) result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
                 }
             }
         } else if (begins_before(read_region, haplotype_region)) {
@@ -293,6 +293,7 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
                 result.emplace_back(lhs_pad_size + haplotype_to_reference.front().size(), Flag::sequenceMatch);
                 result.insert(result.cend(), haplotype_to_reference.cbegin() + 1, haplotype_to_reference.cend());
             } else {
+                assert(lhs_pad_size > 0);
                 result.emplace_back(lhs_pad_size, Flag::sequenceMatch);
                 utils::append(haplotype_to_reference, result);
             }
@@ -315,10 +316,36 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
         if (is_sequence_match(result.back())) {
             result.back() = CigarOperation {result.back().size() + rhs_pad_size, Flag::sequenceMatch};
         } else {
+            assert(rhs_pad_size > 0);
             result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
         }
     }
     return result;
+}
+
+CigarString copy_tail(const GenomicRegion& haplotype_region, const CigarString& haplotype_to_reference,
+                      const GenomicRegion& rebased_read_region)
+{
+    const auto offset = left_overhang_size(haplotype_region, rebased_read_region);
+    auto result = copy_reference(haplotype_to_reference, offset, size(haplotype_region));
+    if (sequence_size(result) < size(rebased_read_region)) {
+        const auto rhs_pad_size = size(rebased_read_region) - sequence_size(result);
+        if (is_sequence_match(result.back())) {
+            result.back() = CigarOperation {result.back().size() + rhs_pad_size, CigarOperation::Flag::sequenceMatch};
+        } else {
+            result.emplace_back(rhs_pad_size, CigarOperation::Flag::sequenceMatch);
+        }
+    }
+    return result;
+}
+
+CigarOperation get_tail_op(const GenomicRegion& haplotype_region, const CigarString& haplotype_to_reference,
+                           const GenomicRegion& read_region)
+{
+    auto tail = copy_sequence(haplotype_to_reference, left_overhang_size(haplotype_region, read_region),
+                              haplotype_to_reference.back().size());
+    assert(!tail.empty());
+    return tail.back();
 }
 
 bool has_indels(const CigarString& cigar) noexcept
@@ -356,14 +383,33 @@ auto calculate_rebase_shift(const AlignedRead& read, const GenomicRegion& haplot
 
 void rebase(AlignedRead& read, const GenomicRegion& haplotype_region, const CigarString& haplotype_to_reference)
 {
-    const auto rebase_sift = calculate_rebase_shift(read, haplotype_region, haplotype_to_reference);
+    const auto rebase_shift = calculate_rebase_shift(read, haplotype_region, haplotype_to_reference);
     if (overlaps(read, haplotype_region)) {
         const auto padded_haplotype_cigar = pad_reference(read.mapped_region(), read.cigar(), haplotype_region, haplotype_to_reference);
         auto rebased_cigar = rebase(read.cigar(), padded_haplotype_cigar);
-        auto rebased_read_region = expand_rhs(shift(head_region(read), rebase_sift), reference_size(rebased_cigar));
+        auto rebased_read_region = expand_rhs(shift(head_region(read), rebase_shift), reference_size(rebased_cigar));
         read.realign(std::move(rebased_read_region), std::move(rebased_cigar));
-    } else if (rebase_sift != 0) {
-        read.realign(shift(mapped_region(read), rebase_sift), read.cigar());
+    } else if (rebase_shift != 0) {
+        auto rebased_read_region = shift(mapped_region(read), rebase_shift);
+        if (rebase_shift < 0) {
+            if (overlaps(rebased_read_region, haplotype_region)) {
+                const auto padded_haplotype_cigar = copy_tail(haplotype_region, haplotype_to_reference, rebased_read_region);
+                auto rebased_cigar = rebase(read.cigar(), padded_haplotype_cigar);
+                rebased_read_region = expand_rhs(head_region(rebased_read_region), reference_size(rebased_cigar));
+                read.realign(std::move(rebased_read_region), std::move(rebased_cigar));
+            } else if (are_adjacent(haplotype_region, rebased_read_region) && is_insertion(haplotype_to_reference.back())) {
+                const CigarString padded_haplotype_cigar {get_tail_op(haplotype_region, haplotype_to_reference, mapped_region(read)),
+                                                          CigarOperation {size(rebased_read_region),
+                                                                          CigarOperation::Flag::sequenceMatch}};
+                auto rebased_cigar = rebase(read.cigar(), padded_haplotype_cigar);
+                rebased_read_region = expand_rhs(head_region(rebased_read_region), reference_size(rebased_cigar));
+                read.realign(std::move(rebased_read_region), std::move(rebased_cigar));
+            } else {
+                read.realign(std::move(rebased_read_region), read.cigar());
+            }
+        } else {
+            read.realign(std::move(rebased_read_region), read.cigar());
+        }
     }
 }
 
