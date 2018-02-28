@@ -935,6 +935,9 @@ void set_contig(const std::int32_t tid, bam1_t* result) noexcept
 void set_pos(const AlignedRead& read, bam1_t* result) noexcept
 {
     result->core.pos = mapped_begin(read);
+    if (is_front_soft_clipped(read)) {
+        result->core.pos += get_soft_clipped_sizes(read).first;
+    }
 }
 
 void set_mapping_quality(const AlignedRead& read, bam1_t* result) noexcept
