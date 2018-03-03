@@ -509,15 +509,15 @@ auto calculate_posteriors(const std::vector<Genotype<Haplotype>>& genotypes,
                           const PopulationPriorModel& prior_model)
 {
     std::vector<double> result {};
-    GenotypeLogLikelihoodVector tmp_likelihoods(genotype_likelihoods.size());
-    GenotypeReferenceVector tmp_genotypes {};
+    GenotypeLogLikelihoodVector likelihoods_buffer(genotype_likelihoods.size());
+    GenotypeReferenceVector genotypes_refs {};
     for (const auto& indices : joint_genotypes) {
-        fill(genotype_likelihoods, indices, tmp_likelihoods);
-        fill(genotypes, indices, tmp_genotypes);
-        result.push_back(prior_model.evaluate(tmp_genotypes) + sum(tmp_likelihoods));
+        fill(genotype_likelihoods, indices, likelihoods_buffer);
+        fill(genotypes, indices, genotypes_refs);
+        result.push_back(prior_model.evaluate(genotypes_refs) + sum(likelihoods_buffer));
     }
     const auto norm = maths::normalise_exp(result);
-    return std::make_pair(result, norm);
+    return std::make_pair(std::move(result), norm);
 }
 
 void calculate_posterior_marginals(const std::vector<Genotype<Haplotype>>& genotypes,
