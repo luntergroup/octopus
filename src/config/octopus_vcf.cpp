@@ -14,7 +14,7 @@ VcfHeader::Builder make_header_template()
     
     result.set_file_format(vcfspec::version);
     
-    result.add_info("AA", "1", "String", "Ancestral allele");
+//    result.add_info("AA", "1", "String", "Ancestral allele");
     result.add_info("AC", "A", "Integer", "Allele count in genotypes, for each ALT allele, in the same order as listed");
     //result.add_info("AF", "A", "Float", "Allele Frequency, for each ALT allele, in the same order as listed");
     result.add_info("AN", "1", "Integer", "Total number of alleles in called genotypes");
