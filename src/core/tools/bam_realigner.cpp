@@ -157,12 +157,17 @@ auto split_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Hap
             std::deque<AlignedRead> unassigned_reads {};
             auto support = compute_haplotype_support(genotype, reads, unassigned_reads);
             std::size_t result_idx {0};
-            for (auto& p : support) {
-                if (!p.second.empty()) {
-                    report.n_reads_assigned += p.second.size();
-                    safe_realign_to_reference(p.second, p.first);
-                    result[result_idx] = std::move(p.second);
-                    ++result_idx;
+            for (const auto& haplotype : genotype) {
+                auto support_itr = support.find(haplotype);
+                if (support_itr != std::cend(support)) {
+                    auto& haplotype_support = support_itr->second;
+                    if (!haplotype_support.empty()) {
+                        report.n_reads_assigned += haplotype_support.size();
+                        safe_realign_to_reference(haplotype_support, haplotype);
+                        result[result_idx] = std::move(haplotype_support);
+                        ++result_idx;
+                    }
+                    support.erase(support_itr);
                 }
             }
             if (!unassigned_reads.empty()) {
