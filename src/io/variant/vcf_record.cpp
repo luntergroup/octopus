@@ -91,9 +91,20 @@ bool VcfRecord::has_format(const KeyType& key) const noexcept
     return std::find(std::cbegin(format_), std::cend(format_), key) != std::cend(format_);
 }
 
-unsigned VcfRecord::format_cardinality(const KeyType& key) const noexcept
+boost::optional<unsigned> VcfRecord::format_cardinality(const KeyType& key) const noexcept
 {
-    return (has_format(key)) ? static_cast<unsigned>(std::cbegin(samples_)->second.at(key).size()) : 0;
+    boost::optional<unsigned> result {};
+    if (has_format(key)) {
+        for (const auto& p : samples_) {
+            const auto sample_format_cardinality = p.second.at(key).size();
+            if (result) {
+                if (*result != sample_format_cardinality) return boost::none;
+            } else {
+                result = sample_format_cardinality;
+            }
+        }
+    }
+    return result;
 }
 
 const std::vector<VcfRecord::KeyType>& VcfRecord::format() const noexcept

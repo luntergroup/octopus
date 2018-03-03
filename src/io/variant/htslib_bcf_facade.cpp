@@ -626,9 +626,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
     for (const auto& key : source.info_keys()) {
         const auto& values    = source.info_value(key);
         const auto num_values = static_cast<int>(values.size());
-        
         static constexpr std::size_t defaultBufferCapacity {100};
-        
         switch (bcf_hdr_id2type(header, BCF_HL_INFO, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
             {
@@ -675,7 +673,6 @@ auto extract_format(const bcf_hdr_t* header, const bcf1_t* record)
 {
     std::vector<VcfRecord::KeyType> result {};
     result.reserve(record->n_fmt);
-    
     for (unsigned i {0}; i < record->n_fmt; ++i) {
         const auto key_id = record->d.fmt[i].id;
         if (key_id >= header->n[BCF_DT_ID]) {
@@ -683,7 +680,6 @@ auto extract_format(const bcf_hdr_t* header, const bcf1_t* record)
         }
         result.emplace_back(header->id[BCF_DT_ID][key_id].key);
     }
-    
     return result;
 }
 
@@ -692,17 +688,15 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
     auto format = extract_format(header, record);
     const auto num_samples = record->n_sample;
     builder.reserve_samples(num_samples);
-    
+    auto first_format = std::cbegin(format);
     if (format.front() == vcfspec::format::genotype) { // the first key must be GT if present
         int ngt {}, g {};
         int* gt {nullptr};
         bcf_get_genotypes(header, record, &gt, &ngt); // mallocs gt
         const auto max_ploidy = static_cast<unsigned>(record->d.fmt->n);
-        
         for (unsigned sample {0}, i {0}; sample < num_samples; ++sample, i += max_ploidy) {
             std::vector<VcfRecord::NucleotideSequence> alleles {};
             alleles.reserve(max_ploidy);
-            
             for (unsigned p {0}; p < max_ploidy; ++p) {
                 g = gt[i + p];
                 if (g == bcf_int32_vector_end) {
@@ -719,27 +713,22 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     }
                 }
             }
-            
             using Phasing = VcfRecord::Builder::Phasing;
             builder.set_genotype(header->samples[sample], std::move(alleles),
                                  bcf_gt_is_phased(g) ? Phasing::phased : Phasing::unphased);
         }
-        
         std::free(gt);
+        ++first_format;
     }
-    
     int nintformat {};
     int* intformat {nullptr};
     int nfloatformat {};
     float* floatformat {nullptr};
     int nstringformat {};
     char** stringformat {nullptr};
-    
-    for (auto it = std::next(std::cbegin(format)), end = std::cend(format); it != end; ++it) {
-        const auto& key = *it;
-        
+    for (auto itr = first_format, end = std::cend(format); itr != end; ++itr) {
+        const auto& key = *itr;
         std::vector<std::vector<std::string>> values(num_samples, std::vector<std::string> {});
-        
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
                 if (bcf_get_format_int32(header, record, key.c_str(), &intformat, &nintformat) > 0) {
@@ -760,7 +749,6 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     auto ptr = floatformat;
                     for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
                         values[sample].reserve(num_values_per_sample);
-                        
                         std::transform(ptr, ptr + num_samples, std::back_inserter(values[sample]),
                                        [] (auto v) {
                                            return v != bcf_float_missing ? std::to_string(v) : vcfMissingValue;
@@ -779,14 +767,11 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                 }
                 break;
         }
-        
         for (unsigned sample {0}; sample < num_samples; ++sample) {
             builder.set_format(header->samples[sample], key, std::move(values[sample]));
         }
     }
-    
     builder.set_format(std::move(format));
-    
     if (intformat != nullptr) std::free(intformat);
     if (floatformat != nullptr) std::free(floatformat);
     if (stringformat != nullptr) {
@@ -814,7 +799,6 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     const auto num_samples = static_cast<int>(source.num_samples());
     const auto& format = source.format();
     if (format.empty()) return;
-    
     auto first_format = std::cbegin(format);
     if (*first_format == vcfspec::format::genotype) {
         const auto& alt_alleles = source.alt();
@@ -822,77 +806,91 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
         alleles.reserve(alt_alleles.size() + 1);
         alleles.push_back(source.ref());
         alleles.insert(std::end(alleles), std::cbegin(alt_alleles), std::cend(alt_alleles));
-        
         unsigned max_ploidy {};
         for (const auto& sample : samples) {
             const auto p = source.ploidy(sample);
             if (p > max_ploidy) max_ploidy = p;
         }
-        
         const auto ngt = num_samples * static_cast<int>(max_ploidy);
-        bc::small_vector<int, 1000> genotype(ngt);
-        auto it = std::begin(genotype);
-        
+        bc::small_vector<int, 1'000> genotype(ngt);
+        auto genotype_itr = std::begin(genotype);
         for (const auto& sample : samples) {
             const bool is_phased {source.is_sample_phased(sample)};
             const auto& genotype = source.get_sample_value(sample, vcfspec::format::genotype);
             const auto ploidy = static_cast<unsigned>(genotype.size());
-            
-            it = std::transform(std::cbegin(genotype), std::cend(genotype), it,
-                                [is_phased, &alleles] (const auto& allele) {
-                                    return genotype_number(allele, alleles, is_phased);
-                                });
-            it = std::fill_n(it, max_ploidy - ploidy, bcf_int32_vector_end);
+            genotype_itr = std::transform(std::cbegin(genotype), std::cend(genotype), genotype_itr,
+                                          [is_phased, &alleles] (const auto& allele) {
+                                              return genotype_number(allele, alleles, is_phased);
+                                          });
+            genotype_itr = std::fill_n(genotype_itr, max_ploidy - ploidy, bcf_int32_vector_end);
         }
-        
         bcf_update_genotypes(header, dest, genotype.data(), ngt);
         ++first_format;
     }
-    
     std::for_each(first_format, std::cend(format), [&] (const auto& key) {
-        const auto num_values = num_samples * static_cast<int>(source.format_cardinality(key));
-
-        static constexpr std::size_t defaultValueCapacity {100};
-        
+        const auto key_cardinality = source.format_cardinality(key);
+        boost::optional<int> num_values {};
+        // htslib currently (v1.7) requires FORMAT fields to have the same number of values per sample.
+        // As far as I can tell, this is not required by the VCF specification, and octopus does not
+        // enforce this. For strings, we can squash the values into one value until htslib is updated,
+        // but there's nothing we can do for other types.
+        if (key_cardinality) {
+            num_values = *key_cardinality * num_samples;
+        }
+        static constexpr std::size_t defaultValueCapacity {1'000};
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
           case BCF_HT_INT:
           {
-              bc::small_vector<int, defaultValueCapacity> typed_values(num_values);
-              auto it = std::begin(typed_values);
+              if (!num_values) throw std::runtime_error {"BCF_HT_INT has unequal FORMAT cardinality"};
+              bc::small_vector<int, defaultValueCapacity> typed_values(*num_values);
+              auto value_itr = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
-                  it = std::transform(std::cbegin(values), std::cend(values), it,
-                                      [] (const auto& v) {
-                                          return v != vcfMissingValue ? std::stoi(v) : bcf_int32_missing;
-                                      });
+                  value_itr = std::transform(std::cbegin(values), std::cend(values), value_itr,
+                                             [] (const auto& v) {
+                                                 return v != vcfMissingValue ? std::stoi(v) : bcf_int32_missing;
+                                             });
               }
-              bcf_update_format_int32(header, dest, key.c_str(), typed_values.data(), num_values);
+              bcf_update_format_int32(header, dest, key.c_str(), typed_values.data(), *num_values);
               break;
           }
           case BCF_HT_REAL:
           {
-              bc::small_vector<float, defaultValueCapacity> typed_values(num_values);
-              auto it = std::begin(typed_values);
+              if (!num_values) throw std::runtime_error {"BCF_HT_REAL has unequal FORMAT cardinality"};
+              bc::small_vector<float, defaultValueCapacity> typed_values(*num_values);
+              auto value_itr = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
-                  it = std::transform(std::cbegin(values), std::cend(values), it,
-                                      [] (const auto& v) {
-                                          return v != vcfMissingValue ? std::stof(v) : bcf_float_missing;
-                                      });
+                  value_itr = std::transform(std::cbegin(values), std::cend(values), value_itr,
+                                             [] (const auto& v) {
+                                                 return v != vcfMissingValue ? std::stof(v) : bcf_float_missing;
+                                             });
               }
-              bcf_update_format_float(header, dest, key.c_str(), typed_values.data(), num_values);
+              bcf_update_format_float(header, dest, key.c_str(), typed_values.data(), *num_values);
               break;
           }
           case BCF_HT_STR:
           {
-              bc::small_vector<const char*, defaultValueCapacity> typed_values(num_values);
-              auto it = std::begin(typed_values);
-              for (const auto& sample : samples) {
-                  const auto& values = source.get_sample_value(sample, key);
-                  it = std::transform(std::cbegin(values), std::cend(values), it,
-                                      [] (const auto& value) { return value.c_str(); });
+              if (num_values) {
+                  bc::small_vector<const char*, defaultValueCapacity> typed_values(*num_values);
+                  auto value_itr = std::begin(typed_values);
+                  for (const auto& sample : samples) {
+                      const auto& values = source.get_sample_value(sample, key);
+                      value_itr = std::transform(std::cbegin(values), std::cend(values), value_itr,
+                                                 [] (const auto& value) { return value.c_str(); });
+                  }
+                  bcf_update_format_string(header, dest, key.c_str(), typed_values.data(), *num_values);
+              } else {
+                  std::vector<std::string> buffer {};
+                  buffer.reserve(num_samples);
+                  for (const auto& sample : samples) {
+                      buffer.push_back(utils::join(source.get_sample_value(sample, key), ","));
+                  }
+                  bc::small_vector<const char*, defaultValueCapacity> typed_values(num_samples);
+                  std::transform(std::cbegin(buffer), std::cend(buffer), std::begin(typed_values),
+                                 [] (const auto& value) { return value.c_str(); });
+                  bcf_update_format_string(header, dest, key.c_str(), typed_values.data(), num_samples);
               }
-              bcf_update_format_string(header, dest, key.c_str(), typed_values.data(), num_values);
               break;
           }
         }

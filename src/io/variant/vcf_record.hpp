@@ -83,7 +83,7 @@ public:
     // Sample releated functions
     //
     bool has_format(const KeyType& key) const noexcept;
-    unsigned format_cardinality(const KeyType& key) const noexcept;
+    boost::optional<unsigned> format_cardinality(const KeyType& key) const noexcept;
     const std::vector<KeyType>& format() const noexcept;
     unsigned num_samples() const noexcept;
     bool has_genotypes() const noexcept;
