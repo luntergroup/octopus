@@ -228,20 +228,10 @@ std::unique_ptr<PopulationCaller::Caller::Latents>
 PopulationCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                 const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    const auto prior_model = make_prior_model(haplotypes);
-    const model::PopulationModel model {*prior_model, {parameters_.max_joint_genotypes}, debug_log_};
-//    const auto prior_model = make_independent_prior_model(haplotypes);
-//    const model::IndependentPopulationModel model {*prior_model, debug_log_};
-    if (parameters_.ploidies.size() == 1) {
-        auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidies.front());
-        if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
-        auto inferences = model.evaluate(samples_, genotypes, haplotype_likelihoods);
-        return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
+    if (use_independence_model()) {
+        return infer_latents_with_independence_model(haplotypes, haplotype_likelihoods);
     } else {
-        auto unique_genotypes = generate_unique_genotypes(haplotypes, parameters_.ploidies);
-        auto sample_genotypes = assign_samples_to_genotypes(parameters_.ploidies, unique_genotypes);
-        auto inferences = model.evaluate(samples_, sample_genotypes, haplotype_likelihoods);
-        return std::make_unique<Latents>(samples_, haplotypes, std::move(unique_genotypes), std::move(inferences));
+        return infer_latents_with_joint_model(haplotypes, haplotype_likelihoods);
     }
 }
 
@@ -322,7 +312,7 @@ using GenotypeCalls = std::vector<std::vector<GenotypeCall>>;
 
 // allele posterior calculations
 
-using AlleleBools          = std::deque<bool>; // using std::deque because std::vector<bool> is evil
+using AlleleBools           = std::deque<bool>; // using std::deque because std::vector<bool> is evil
 using GenotypePropertyBools = std::vector<AlleleBools>;
 
 auto marginalise(const GenotypeProbabilityMap& genotype_posteriors,
@@ -720,10 +710,53 @@ PopulationCaller::call_reference(const std::vector<Allele>& alleles,
     return {};
 }
 
-std::unique_ptr<PopulationPriorModel> PopulationCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
+bool PopulationCaller::use_independence_model() const noexcept
+{
+    return !parameters_.prior_model_params;
+}
+
+std::unique_ptr<Caller::Latents>
+PopulationCaller::infer_latents_with_joint_model(const std::vector<Haplotype>& haplotypes,
+                                                 const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    const auto prior_model = make_joint_prior_model(haplotypes);
+    const model::PopulationModel model {*prior_model, {parameters_.max_joint_genotypes}, debug_log_};
+    if (parameters_.ploidies.size() == 1) {
+        auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidies.front());
+        if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
+        auto inferences = model.evaluate(samples_, genotypes, haplotype_likelihoods);
+        return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
+    } else {
+        auto unique_genotypes = generate_unique_genotypes(haplotypes, parameters_.ploidies);
+        auto sample_genotypes = assign_samples_to_genotypes(parameters_.ploidies, unique_genotypes);
+        auto inferences = model.evaluate(samples_, sample_genotypes, haplotype_likelihoods);
+        return std::make_unique<Latents>(samples_, haplotypes, std::move(unique_genotypes), std::move(inferences));
+    }
+}
+
+std::unique_ptr<Caller::Latents>
+PopulationCaller::infer_latents_with_independence_model(const std::vector<Haplotype>& haplotypes,
+                                                        const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    const auto prior_model = make_independent_prior_model(haplotypes);
+    const model::IndependentPopulationModel model {*prior_model, debug_log_};
+    if (parameters_.ploidies.size() == 1) {
+        auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidies.front());
+        if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
+        auto inferences = model.evaluate(samples_, genotypes, haplotype_likelihoods);
+        return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
+    } else {
+        auto unique_genotypes = generate_unique_genotypes(haplotypes, parameters_.ploidies);
+        auto sample_genotypes = assign_samples_to_genotypes(parameters_.ploidies, unique_genotypes);
+        auto inferences = model.evaluate(samples_, sample_genotypes, haplotype_likelihoods);
+        return std::make_unique<Latents>(samples_, haplotypes, std::move(unique_genotypes), std::move(inferences));
+    }
+}
+
+std::unique_ptr<PopulationPriorModel> PopulationCaller::make_joint_prior_model(const std::vector<Haplotype>& haplotypes) const
 {
     if (parameters_.prior_model_params) {
-        return std::make_unique<CoalescentPopulationPriorModel>(CoalescentModel {
+        return std::make_unique<CoalescentPopulationPriorModel>(CoalescentModel{
         Haplotype {mapped_region(haplotypes.front()), reference_},
         *parameters_.prior_model_params
         });

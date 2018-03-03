@@ -75,7 +75,14 @@ private:
     call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
                    const ReadMap& reads) const override;
     
-    std::unique_ptr<PopulationPriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    bool use_independence_model() const noexcept;
+    std::unique_ptr<Caller::Latents>
+    infer_latents_with_joint_model(const std::vector<Haplotype>& haplotypes,
+                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    std::unique_ptr<Caller::Latents>
+    infer_latents_with_independence_model(const std::vector<Haplotype>& haplotypes,
+                                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    std::unique_ptr<PopulationPriorModel> make_joint_prior_model(const std::vector<Haplotype>& haplotypes) const;
     std::unique_ptr<GenotypePriorModel> make_independent_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
 
