@@ -60,7 +60,7 @@ private:
     virtual std::string do_describe() const = 0;
     virtual std::vector<std::string> do_requirements() const { return {}; }
     virtual std::string do_serialise(const ResultType& value) const;
-    virtual bool is_required_vcf_field() const noexcept { return true; }
+    virtual bool is_required_vcf_field() const noexcept { return false; }
 };
 
 class MeasureWrapper
