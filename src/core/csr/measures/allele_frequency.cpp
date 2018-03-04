@@ -25,12 +25,18 @@ std::unique_ptr<Measure> AlleleFrequency::do_clone() const
 
 namespace {
 
+bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept
+{
+    const static VcfRecord::NucleotideSequence deleted_allele {vcfspec::deletedBase};
+    return !(allele == vcfspec::missingValue || allele == deleted_allele);
+}
+
 bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& sample)
 {
     if (!call.has_genotypes()) return true;
     const auto& genotype = get_genotype(call, sample);
-    return !std::all_of(std::cbegin(genotype), std::cend(genotype),
-                        [&] (const auto& allele) { return allele == call.ref() || allele == vcfspec::missingValue; });
+    return std::any_of(std::cbegin(genotype), std::cend(genotype),
+                       [&] (const auto& allele) { return allele != call.ref() && is_canonical(allele); });
 }
 
 bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
