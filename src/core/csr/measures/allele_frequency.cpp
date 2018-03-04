@@ -30,33 +30,35 @@ Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const Fa
     std::vector<boost::optional<double>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        const auto& sample_assignments = assignments.at(sample);
         boost::optional<double> sample_result {};
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
-        std::size_t read_count {0};
-        std::vector<unsigned> allele_counts(alleles.size());
-        for (const auto& p : sample_assignments) {
-            const auto& haplotype = p.first;
-            const auto& reads = p.second;
-            const auto haplotype_support_depth = count_overlapped(reads, call);
-            if (haplotype_support_depth > 0) {
-                std::transform(std::cbegin(alleles), std::cend(alleles), std::cbegin(allele_counts), std::begin(allele_counts),
-                               [&] (const auto& allele, auto count) {
-                                   if (haplotype.includes(allele)) {
-                                       count += haplotype_support_depth;
-                                   }
-                                   return count;
-                               });
-                read_count += haplotype_support_depth;
+        if (!call.is_homozygous_ref(sample)) {
+            const auto& sample_assignments = assignments.at(sample);
+            std::vector<Allele> alleles; bool has_ref;
+            std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
+            std::size_t read_count {0};
+            std::vector<unsigned> allele_counts(alleles.size());
+            for (const auto& p : sample_assignments) {
+                const auto& haplotype = p.first;
+                const auto& reads = p.second;
+                const auto haplotype_support_depth = count_overlapped(reads, call);
+                if (haplotype_support_depth > 0) {
+                    std::transform(std::cbegin(alleles), std::cend(alleles), std::cbegin(allele_counts), std::begin(allele_counts),
+                                   [&] (const auto& allele, auto count) {
+                                       if (haplotype.includes(allele)) {
+                                           count += haplotype_support_depth;
+                                       }
+                                       return count;
+                                   });
+                    read_count += haplotype_support_depth;
+                }
             }
-        }
-        if (read_count > 0) {
-            auto first_called_count_itr = std::cbegin(allele_counts);
-            if (has_ref) ++first_called_count_itr;
-            assert(first_called_count_itr != std::cend(allele_counts));
-            const auto min_count_itr = std::min_element(first_called_count_itr, std::cend(allele_counts));
-            sample_result = static_cast<double>(*min_count_itr) / read_count;
+            if (read_count > 0) {
+                auto first_called_count_itr = std::cbegin(allele_counts);
+                if (has_ref) ++first_called_count_itr;
+                assert(first_called_count_itr != std::cend(allele_counts));
+                const auto min_count_itr = std::min_element(first_called_count_itr, std::cend(allele_counts));
+                sample_result = static_cast<double>(*min_count_itr) / read_count;
+            }
         }
         result.push_back(sample_result);
     }
