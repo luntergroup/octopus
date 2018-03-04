@@ -23,6 +23,23 @@ std::unique_ptr<Measure> AlleleFrequency::do_clone() const
     return std::make_unique<AlleleFrequency>(*this);
 }
 
+namespace {
+
+bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& sample)
+{
+    if (!call.has_genotypes()) return true;
+    const auto& genotype = get_genotype(call, sample);
+    return !std::all_of(std::cbegin(genotype), std::cend(genotype),
+                        [&] (const auto& allele) { return allele == call.ref() || allele == vcfspec::missingValue; });
+}
+
+bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
+{
+    return has_called_alt_allele(call, sample);
+}
+
+} // namespace
+
 Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
@@ -31,10 +48,11 @@ Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const Fa
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         boost::optional<double> sample_result {};
-        if (!call.is_homozygous_ref(sample)) {
+        if (is_evaluable(call, sample)) {
             const auto& sample_assignments = assignments.at(sample);
             std::vector<Allele> alleles; bool has_ref;
             std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
+            assert(!alleles.empty());
             std::size_t read_count {0};
             std::vector<unsigned> allele_counts(alleles.size());
             for (const auto& p : sample_assignments) {
