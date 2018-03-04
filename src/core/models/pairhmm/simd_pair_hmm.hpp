@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke and Gerton Lunter
+// Copyright (c) 2015-2018 Daniel Cooke and Gerton Lunter
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef simd_pair_hmm_hpp
