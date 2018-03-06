@@ -792,6 +792,22 @@ auto genotype_number(const T& allele, const Container& alleles, const bool is_ph
     return (is_phased) ? allele_num + 1 : allele_num;
 }
 
+auto max_format_cardinality(const VcfRecord& record, const VcfRecord::KeyType& key, const std::vector<std::string>& samples)
+{
+    std::size_t result {0};
+    for (const auto& sample : samples) {
+        result = std::max(result, record.get_sample_value(sample, key).size());
+    }
+    return result;
+}
+
+float get_bcf_float_pad() noexcept
+{
+    float result;
+    bcf_float_set_vector_end(result);
+    return result;
+}
+
 void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
                  const std::vector<std::string>& samples)
 {
@@ -827,22 +843,22 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
         bcf_update_genotypes(header, dest, genotype.data(), ngt);
         ++first_format;
     }
+    std::vector<std::string> str_buffer {};
     std::for_each(first_format, std::cend(format), [&] (const auto& key) {
         const auto key_cardinality = source.format_cardinality(key);
-        boost::optional<int> num_values {};
-        // htslib currently (v1.7) requires FORMAT fields to have the same number of values per sample.
-        // As far as I can tell, this is not required by the VCF specification, and octopus does not
-        // enforce this. For strings, we can squash the values into one value until htslib is updated,
-        // but there's nothing we can do for other types.
+        int num_values {};
         if (key_cardinality) {
             num_values = *key_cardinality * num_samples;
+        } else {
+            num_values = max_format_cardinality(source, key, samples) * num_samples;
         }
+        const auto num_values_per_sample = static_cast<std::size_t>(num_values / num_samples);
         static constexpr std::size_t defaultValueCapacity {1'000};
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
           case BCF_HT_INT:
           {
-              if (!num_values) throw std::runtime_error {"BCF_HT_INT has unequal FORMAT cardinality"};
-              bc::small_vector<int, defaultValueCapacity> typed_values(*num_values);
+              static const int pad {bcf_int32_vector_end};
+              bc::small_vector<int, defaultValueCapacity> typed_values(num_values);
               auto value_itr = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
@@ -850,14 +866,16 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
                                              [] (const auto& v) {
                                                  return v != vcfMissingValue ? std::stoi(v) : bcf_int32_missing;
                                              });
+                  assert(values.size() <= num_values_per_sample);
+                  value_itr = std::fill_n(value_itr, num_values_per_sample - values.size(), pad);
               }
-              bcf_update_format_int32(header, dest, key.c_str(), typed_values.data(), *num_values);
+              bcf_update_format_int32(header, dest, key.c_str(), typed_values.data(), num_values);
               break;
           }
           case BCF_HT_REAL:
           {
-              if (!num_values) throw std::runtime_error {"BCF_HT_REAL has unequal FORMAT cardinality"};
-              bc::small_vector<float, defaultValueCapacity> typed_values(*num_values);
+              static const float pad {get_bcf_float_pad()};
+              bc::small_vector<float, defaultValueCapacity> typed_values(num_values);
               auto value_itr = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
@@ -865,32 +883,35 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
                                              [] (const auto& v) {
                                                  return v != vcfMissingValue ? std::stof(v) : bcf_float_missing;
                                              });
+                  assert(values.size() <= num_values_per_sample);
+                  value_itr = std::fill_n(value_itr, num_values_per_sample - values.size(), pad);
               }
-              bcf_update_format_float(header, dest, key.c_str(), typed_values.data(), *num_values);
+              bcf_update_format_float(header, dest, key.c_str(), typed_values.data(), num_values);
               break;
           }
           case BCF_HT_STR:
           {
-              if (num_values) {
-                  bc::small_vector<const char*, defaultValueCapacity> typed_values(*num_values);
+              bc::small_vector<const char*, defaultValueCapacity> typed_values;
+              if (key_cardinality && *key_cardinality <= 1) {
+                  typed_values.resize(num_values);
                   auto value_itr = std::begin(typed_values);
                   for (const auto& sample : samples) {
                       const auto& values = source.get_sample_value(sample, key);
                       value_itr = std::transform(std::cbegin(values), std::cend(values), value_itr,
                                                  [] (const auto& value) { return value.c_str(); });
                   }
-                  bcf_update_format_string(header, dest, key.c_str(), typed_values.data(), *num_values);
               } else {
-                  std::vector<std::string> buffer {};
-                  buffer.reserve(num_samples);
+                  str_buffer.clear();
+                  str_buffer.reserve(num_samples);
                   for (const auto& sample : samples) {
-                      buffer.push_back(utils::join(source.get_sample_value(sample, key), ","));
+                      str_buffer.push_back(utils::join(source.get_sample_value(sample, key), vcfspec::format::valueSeperator));
                   }
-                  bc::small_vector<const char*, defaultValueCapacity> typed_values(num_samples);
-                  std::transform(std::cbegin(buffer), std::cend(buffer), std::begin(typed_values),
+                  num_values = num_samples;
+                  typed_values.resize(num_values);
+                  std::transform(std::cbegin(str_buffer), std::cend(str_buffer), std::begin(typed_values),
                                  [] (const auto& value) { return value.c_str(); });
-                  bcf_update_format_string(header, dest, key.c_str(), typed_values.data(), num_samples);
               }
+              bcf_update_format_string(header, dest, key.c_str(), typed_values.data(), num_values);
               break;
           }
         }
