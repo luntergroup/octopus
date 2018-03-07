@@ -11,6 +11,7 @@
 #include <cassert>
 
 #include "utils/maths.hpp"
+#include "utils/select_top_k.hpp"
 #include "germline_likelihood_model.hpp"
 
 namespace octopus { namespace model {
@@ -276,13 +277,12 @@ void update_genotype_posteriors(GenotypeMarginalPosteriorMatrix& current_genotyp
                                 const GenotypeLogMarginalVector& genotype_log_marginals,
                                 const GenotypeLogLikelihoodMatrix& genotype_log_likilhoods)
 {
-    auto it = std::cbegin(genotype_log_likilhoods);
+    auto likelihood_itr = std::cbegin(genotype_log_likilhoods);
     for (auto& sample_genotype_posteriors : current_genotype_posteriors) {
         std::transform(std::cbegin(genotype_log_marginals), std::cend(genotype_log_marginals),
-                       std::cbegin(*it++),
-                       std::begin(sample_genotype_posteriors),
-                       [] (const auto& log_marginal, const auto& log_likilhood) {
-                           return log_marginal.log_probability + log_likilhood;
+                       std::cbegin(*likelihood_itr++), std::begin(sample_genotype_posteriors),
+                       [] (const auto& log_marginal, const auto& log_likeilhood) {
+                           return log_marginal.log_probability + log_likeilhood;
                        });
         maths::normalise_exp(sample_genotype_posteriors);
     }
@@ -415,63 +415,56 @@ auto generate_all_genotype_combinations(const std::size_t num_genotypes, const s
     return result;
 }
 
-template <typename T>
-auto index(const std::vector<T>& values)
+bool is_homozygous_reference(const Genotype<Haplotype>& genotype)
 {
-    std::vector<std::pair<T, std::size_t>> result(values.size());
-    for (std::size_t i {0}; i < values.size(); ++i) {
-        result[i] = std::make_pair(values[i], i);
+    assert(genotype.ploidy() > 0);
+    return genotype.is_homozygous() && is_reference(genotype[0]);
+}
+
+boost::optional<std::size_t> find_hom_ref_idx(const std::vector<Genotype<Haplotype>>& genotypes)
+{
+    auto itr = std::find_if(std::cbegin(genotypes), std::cend(genotypes),
+                            [] (const auto& g) { return is_homozygous_reference(g); });
+    if (itr != std::cend(genotypes)) {
+        return std::distance(std::cbegin(genotypes), itr);
+    } else {
+        return boost::none;
     }
-    return result;
 }
 
-auto index_and_sort(const GenotypeMarginalPosteriorVector& genotype_posteriors)
-{
-    auto result = index(genotype_posteriors);
-    std::sort(std::begin(result), std::end(result));
-    return result;
-}
-
-auto index_and_sort(const GenotypeMarginalPosteriorMatrix& marginals)
-{
-    std::vector<std::vector<std::pair<double, std::size_t>>> result {};
-    result.reserve(marginals.size());
-    for (const auto& sample_marginals : marginals) {
-        result.push_back(index_and_sort(sample_marginals));
-    }
-    return result;
-}
-
-auto propose_joint_genotypes(const std::size_t num_genotypes,
+auto propose_joint_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
                              const GenotypeMarginalPosteriorMatrix& em_genotype_marginals,
                              const std::size_t max_joint_genotypes)
 {
     const auto num_samples = em_genotype_marginals.size();
-    assert(max_joint_genotypes >= num_samples * num_genotypes);
-    const auto num_joint_genotypes = num_combinations(num_genotypes, num_samples);
+    assert(max_joint_genotypes >= num_samples * genotypes.size());
+    const auto num_joint_genotypes = num_combinations(genotypes.size(), num_samples);
     if (num_joint_genotypes <= max_joint_genotypes) {
-        return generate_all_genotype_combinations(num_genotypes, num_samples);
+        return generate_all_genotype_combinations(genotypes.size(), num_samples);
     }
-    const auto ranked_marginals = index_and_sort(em_genotype_marginals);
-    GenotypeCombinationMatrix result {};
-    result.reserve(max_joint_genotypes);
-    auto remaining_combinations = max_joint_genotypes;
-    std::vector<std::size_t> map_indepedent_joint(num_samples);
-    for (std::size_t s {0}; s < num_samples; ++s) {
-        map_indepedent_joint[s] = ranked_marginals[s].front().second;
-    }
-    // Ensure each genotype is represented at least once for each sample
-    for (std::size_t s {0}; s < num_samples; ++s) {
-        for (std::size_t g = s > 0 ? 1 : 0; g < num_genotypes; ++g) {
-            result.push_back(map_indepedent_joint);
-            result.back()[s] = g;
-            --remaining_combinations;
+    auto result = select_top_k_tuples(em_genotype_marginals, max_joint_genotypes);
+    
+    
+//    std::vector<std::size_t> tmp;
+//    // Ensure each genotype is represented at least once for each sample
+//    auto next_swap_itr = std::rend(result);
+//    for (std::size_t s {0}; s < num_samples; ++s) {
+//        for (std::size_t g = s > 0 ? 1 : 0; g < genotypes.size(); ++g) {
+//            tmp = result.front(); // best combination
+//            tmp[s] = g;
+//            if (std::find(std::cbegin(result), std::cend(result), tmp) == std::cend(result)) {
+//                std::swap(tmp, *next_swap_itr);
+//                ++next_swap_itr;
+//            }
+//        }
+//    }
+    
+    const auto hom_ref_idx = find_hom_ref_idx(genotypes);
+    if (hom_ref_idx) {
+        std::vector<std::size_t> ref_indices(num_samples, *hom_ref_idx);
+        if (std::find(std::cbegin(result), std::cend(result), ref_indices) == std::cend(result)) {
+            result.back() = std::move(ref_indices);
         }
-    }
-    if (remaining_combinations > 0) {
-//        std::generate_n(std::back_inserter(result), remaining_combinations, [&] () {
-//
-//        });
     }
     return result;
 }
@@ -557,7 +550,7 @@ PopulationModel::evaluate(const SampleVector& samples, const GenotypeVector& gen
     } else {
         const EMOptions em_options {options_.max_em_iterations, options_.em_epsilon};
         const auto em_genotype_marginals = compute_approx_genotype_marginal_posteriors(genotypes, genotype_log_likelihoods, em_options);
-        const auto joint_genotypes = propose_joint_genotypes(genotypes.size(), em_genotype_marginals, options_.max_joint_genotypes);
+        const auto joint_genotypes = propose_joint_genotypes(genotypes, em_genotype_marginals, options_.max_joint_genotypes);
         calculate_posterior_marginals(genotypes, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
     }
     return result;

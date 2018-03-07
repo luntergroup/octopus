@@ -171,6 +171,7 @@ set(UTILS_SOURCES
     utils/parallel_transform.hpp
     utils/thread_pool.hpp
     utils/thread_pool.cpp
+    utils/select_top_k.hpp
 )
 
 set(CORE_SOURCES
