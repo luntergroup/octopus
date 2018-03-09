@@ -114,6 +114,18 @@ std::vector<std::reference_wrapper<const Haplotype>> Genotype<Haplotype>::copy_u
     return result;
 }
 
+std::vector<unsigned> Genotype<Haplotype>::unique_counts() const
+{
+    std::vector<unsigned> result {};
+    result.reserve(haplotypes_.size());
+    for (auto itr = std::cbegin(haplotypes_), last = std::cend(haplotypes_); itr != last;) {
+        auto next = std::find_if_not(std::next(itr), last, [itr] (const auto& x) { return *x == **itr; });
+        result.push_back(std::distance(itr, next));
+        itr = next;
+    }
+    return result;
+}
+
 bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const HaplotypePtr& lhs, const HaplotypePtr& rhs) const
 {
     return *lhs < *rhs;
