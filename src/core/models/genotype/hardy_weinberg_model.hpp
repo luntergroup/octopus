@@ -62,7 +62,7 @@ private:
     boost::optional<unsigned> reference_idx_;
     mutable HaplotypeFrequencyMap haplotype_frequencies_;
     mutable HaplotypeFrequencyVector haplotype_idx_frequencies_;
-    bool empirical_;
+    mutable bool empirical_;
 };
 
 } // namespace octopus
