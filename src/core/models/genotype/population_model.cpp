@@ -13,6 +13,7 @@
 #include "utils/maths.hpp"
 #include "utils/select_top_k.hpp"
 #include "germline_likelihood_model.hpp"
+#include "hardy_weinberg_model.hpp"
 
 namespace octopus { namespace model {
 
@@ -91,9 +92,6 @@ auto make_inverse_genotype_table(const std::vector<std::vector<unsigned>>& genot
     return result;
 }
 
-using HaplotypeReference    = std::reference_wrapper<const Haplotype>;
-using HaplotypeFrequencyMap = std::unordered_map<HaplotypeReference, double>;
-
 double calculate_frequency_update_norm(const std::size_t num_samples, const unsigned ploidy)
 {
     return static_cast<double>(num_samples) * ploidy;
@@ -137,77 +135,13 @@ struct ModelConstants
     {}
 };
 
-HaplotypeFrequencyMap
-init_haplotype_frequencies(const ModelConstants& constants)
+HardyWeinbergModel make_hardy_weinberg_model(const ModelConstants& constants)
 {
-    HaplotypeFrequencyMap result {constants.haplotypes.size()};
+    HardyWeinbergModel::HaplotypeFrequencyMap frequencies {constants.haplotypes.size()};
     for (const auto& haplotype : constants.haplotypes) {
-        result.emplace(haplotype, 1.0 / constants.haplotypes.size());
+        frequencies.emplace(haplotype, 1.0 / constants.haplotypes.size());
     }
-    return result;
-}
-
-template <typename Genotype, typename Map>
-double log_hardy_weinberg_haploid(const Genotype& genotype,
-                                  const Map& haplotype_frequencies)
-{
-    return std::log(haplotype_frequencies.at(genotype[0]));
-}
-
-template <typename Genotype, typename Map>
-double log_hardy_weinberg_diploid(const Genotype& genotype,
-                                  const Map& haplotype_frequencies)
-{
-    if (genotype.is_homozygous()) {
-        return 2 * std::log(haplotype_frequencies.at(genotype[0]));
-    }
-    static const double ln2 {std::log(2.0)};
-    return std::log(haplotype_frequencies.at(genotype[0])) + std::log(haplotype_frequencies.at(genotype[1])) + ln2;
-}
-
-template <typename Genotype, typename Map>
-double log_hardy_weinberg_triploid(const Genotype& genotype,
-                                   const Map& haplotype_frequencies)
-{
-    // TODO: optimise this case
-    auto unique_haplotypes = genotype.copy_unique();
-    std::vector<unsigned> occurences {};
-    occurences.reserve(unique_haplotypes.size());
-    double r {0};
-    for (const auto& haplotype : unique_haplotypes) {
-        auto num_occurences = genotype.count(haplotype);
-        occurences.push_back(num_occurences);
-        r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
-    }
-    return maths::log_multinomial_coefficient<double>(occurences) + r;
-}
-
-template <typename Genotype, typename Map>
-double log_hardy_weinberg_polyploid(const Genotype& genotype,
-                                    const Map& haplotype_frequencies)
-{
-    auto unique_haplotypes = genotype.copy_unique();
-    std::vector<unsigned> occurences {};
-    occurences.reserve(unique_haplotypes.size());
-    double r {0};
-    for (const auto& haplotype : unique_haplotypes) {
-        auto num_occurences = genotype.count(haplotype);
-        occurences.push_back(num_occurences);
-        r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
-    }
-    return maths::log_multinomial_coefficient<double>(occurences) + r;
-}
-
-// TODO: improve this, possible bottleneck in EM update at the moment
-template <typename Genotype, typename Map>
-double log_hardy_weinberg(const Genotype& genotype, const Map& haplotype_frequencies)
-{
-    switch (genotype.ploidy()) {
-        case 1 : return log_hardy_weinberg_haploid(genotype, haplotype_frequencies);
-        case 2 : return log_hardy_weinberg_diploid(genotype, haplotype_frequencies);
-        case 3 : return log_hardy_weinberg_triploid(genotype, haplotype_frequencies);
-        default: return log_hardy_weinberg_polyploid(genotype, haplotype_frequencies);
-    }
+    return HardyWeinbergModel {std::move(frequencies)};
 }
 
 GenotypeLogLikelihoodMatrix
@@ -234,23 +168,21 @@ compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
 
 GenotypeLogMarginalVector
 init_genotype_log_marginals(const std::vector<Genotype<Haplotype>>& genotypes,
-                            const HaplotypeFrequencyMap& haplotype_frequencies)
+                            const HardyWeinbergModel& hw_model)
 {
     GenotypeLogMarginalVector result {};
     result.reserve(genotypes.size());
     for (const auto& genotype : genotypes) {
-        result.push_back({genotype, log_hardy_weinberg(genotype, haplotype_frequencies)});
+        result.push_back({genotype, hw_model.evaluate(genotype)});
     }
     return result;
 }
 
 void update_genotype_log_marginals(GenotypeLogMarginalVector& current_log_marginals,
-                                   const HaplotypeFrequencyMap& haplotype_frequencies)
+                                   const HardyWeinbergModel& hw_model)
 {
     std::for_each(std::begin(current_log_marginals), std::end(current_log_marginals),
-                  [&haplotype_frequencies] (auto& p) {
-                      p.log_probability = log_hardy_weinberg(p.genotype, haplotype_frequencies);
-                  });
+                  [&hw_model] (auto& p) { p.log_probability = hw_model.evaluate(p.genotype); });
 }
 
 GenotypeMarginalPosteriorMatrix
@@ -300,13 +232,14 @@ auto collapse_genotype_posteriors(const GenotypeMarginalPosteriorMatrix& genotyp
 }
 
 double update_haplotype_frequencies(const std::vector<Haplotype>& haplotypes,
-                                    HaplotypeFrequencyMap& current_haplotype_frequencies,
+                                    HardyWeinbergModel& hw_model,
                                     const GenotypeMarginalPosteriorMatrix& genotype_posteriors,
                                     const InverseGenotypeTable& genotypes_containing_haplotypes,
                                     const double frequency_update_norm)
 {
     const auto collaped_posteriors = collapse_genotype_posteriors(genotype_posteriors);
     double max_frequency_change {0};
+    auto& current_haplotype_frequencies = hw_model.frequencies();
     for (std::size_t i {0}; i < haplotypes.size(); ++i) {
         auto& current_frequency = current_haplotype_frequencies.at(haplotypes[i]);
         double new_frequency {0};
@@ -324,30 +257,29 @@ double update_haplotype_frequencies(const std::vector<Haplotype>& haplotypes,
 }
 
 double do_em_iteration(GenotypeMarginalPosteriorMatrix& genotype_posteriors,
-                       HaplotypeFrequencyMap& haplotype_frequencies,
+                       HardyWeinbergModel& hw_model,
                        GenotypeLogMarginalVector& genotype_log_marginals,
                        const ModelConstants& constants)
 {
     const auto max_change = update_haplotype_frequencies(constants.haplotypes,
-                                                         haplotype_frequencies,
+                                                         hw_model,
                                                          genotype_posteriors,
                                                          constants.genotypes_containing_haplotypes,
                                                          constants.frequency_update_norm);
-    update_genotype_log_marginals(genotype_log_marginals, haplotype_frequencies);
+    update_genotype_log_marginals(genotype_log_marginals, hw_model);
     update_genotype_posteriors(genotype_posteriors, genotype_log_marginals,
                                constants.genotype_log_likilhoods);
     return max_change;
 }
 
 void run_em(GenotypeMarginalPosteriorMatrix& genotype_posteriors,
-            HaplotypeFrequencyMap& haplotype_frequencies,
+            HardyWeinbergModel& hw_model,
             GenotypeLogMarginalVector& genotype_log_marginals,
             const ModelConstants& constants, const EMOptions options,
             boost::optional<logging::TraceLogger> trace_log = boost::none)
 {
     for (unsigned n {1}; n <= options.max_iterations; ++n) {
-        const auto max_change = do_em_iteration(genotype_posteriors, haplotype_frequencies,
-                                                genotype_log_marginals,constants);
+        const auto max_change = do_em_iteration(genotype_posteriors, hw_model, genotype_log_marginals,constants);
         if (max_change <= options.epsilon) break;
     }
 }
@@ -358,10 +290,10 @@ auto compute_approx_genotype_marginal_posteriors(const std::vector<Haplotype>& h
                                                  const EMOptions options)
 {
     const ModelConstants constants {haplotypes, genotypes, genotype_likelihoods};
-    auto haplotype_frequencies = init_haplotype_frequencies(constants);
-    auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
+    auto hw_model = make_hardy_weinberg_model(constants);
+    auto genotype_log_marginals = init_genotype_log_marginals(genotypes, hw_model);
     auto result = init_genotype_posteriors(genotype_log_marginals, genotype_likelihoods);
-    run_em(result, haplotype_frequencies, genotype_log_marginals, constants, options);
+    run_em(result, hw_model, genotype_log_marginals, constants, options);
     return result;
 }
 
