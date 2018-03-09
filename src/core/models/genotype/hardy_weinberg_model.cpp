@@ -281,8 +281,10 @@ double HardyWeinbergModel::evaluate(const std::vector<Genotype<Haplotype>>& geno
         return joint_evaluate(genotypes, *this);
     } else {
         fill_frequencies(genotypes, haplotype_frequencies_);
+        empirical_ = true;
         auto result = joint_evaluate(genotypes, *this);
         haplotype_frequencies_.clear();
+        empirical_ = false;
         return result;
     }
 }
@@ -293,8 +295,10 @@ double HardyWeinbergModel::evaluate(const GenotypeReferenceVector& genotypes) co
         return joint_evaluate(genotypes, *this);
     } else {
         fill_frequencies(genotypes, haplotype_frequencies_);
+        empirical_ = true;
         auto result = joint_evaluate(genotypes, *this);
         haplotype_frequencies_.clear();
+        empirical_ = false;
         return result;
     }
 }
@@ -305,8 +309,10 @@ double HardyWeinbergModel::evaluate(const IndexGenotypeVector& genotypes) const
         return joint_evaluate(genotypes, *this);
     } else {
         fill_frequencies(genotypes, haplotype_idx_frequencies_);
+        empirical_ = true;
         auto result = joint_evaluate(genotypes, *this);
         haplotype_idx_frequencies_.clear();
+        empirical_ = false;
         return result;
     }
 }
@@ -317,8 +323,10 @@ double HardyWeinbergModel::evaluate(const IndexGenotypeReferenceVector& genotype
         return joint_evaluate(genotypes, *this);
     } else {
         fill_frequencies(genotypes, haplotype_idx_frequencies_);
+        empirical_ = true;
         auto result = joint_evaluate(genotypes, *this);
         haplotype_idx_frequencies_.clear();
+        empirical_ = false;
         return result;
     }
 }
