@@ -12,9 +12,8 @@
 #include <functional>
 
 #include "population_prior_model.hpp"
+#include "hardy_weinberg_model.hpp"
 #include "../mutation/coalescent_model.hpp"
-
-#include "timers.hpp"
 
 namespace octopus {
 
@@ -26,7 +25,8 @@ public:
     
     CoalescentPopulationPriorModel() = delete;
     
-    CoalescentPopulationPriorModel(CoalescentModel model) : model_ {std::move(model)} {}
+    CoalescentPopulationPriorModel(CoalescentModel segregation_model);
+    CoalescentPopulationPriorModel(CoalescentModel segregation_model, HardyWeinbergModel genotype_model);
     
     CoalescentPopulationPriorModel(const CoalescentPopulationPriorModel&)            = default;
     CoalescentPopulationPriorModel& operator=(const CoalescentPopulationPriorModel&) = default;
@@ -38,36 +38,58 @@ public:
 private:
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;
     
-    CoalescentModel model_;
+    CoalescentModel segregation_model_;
+    HardyWeinbergModel genotype_model_;
+    
     mutable std::vector<unsigned> index_buffer_;
-        
+    
     double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
     {
-        return do_evaluate_helper(genotypes);
+        return evaluate_helper(genotypes);
     }
     double do_evaluate(const std::vector<GenotypeReference>& genotypes) const override
     {
-        return do_evaluate_helper(genotypes);
+        return evaluate_helper(genotypes);
     }
-    double do_evaluate(const std::vector<std::vector<unsigned>>& indices) const override;
-    double do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const override;
+    double do_evaluate(const std::vector<std::vector<unsigned>>& indices) const override
+    {
+        return evaluate_helper(indices);
+    }
+    double do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const override
+    {
+        return evaluate_helper(indices);
+    }
     void do_prime(const std::vector<Haplotype>& haplotypes) override
     {
-        model_.prime(haplotypes);
+        segregation_model_.prime(haplotypes);
     }
     void do_unprime() noexcept override
     {
-        model_.unprime();
+        segregation_model_.unprime();
     }
     bool check_is_primed() const noexcept override
     {
-        return model_.is_primed();
+        return segregation_model_.is_primed();
     }
     
-    template <typename Container>
-    double do_evaluate_helper(const Container& genotypes) const;
-    
+    template <typename Range>
+    double evaluate_helper(const Range& genotypes) const;
+    template <typename Range>
+    double evaluate_segregation_model(const Range& genotypes) const;
+    double evaluate_segregation_model(const std::vector<std::vector<unsigned>>& indices) const;
+    double evaluate_segregation_model(const std::vector<GenotypeIndiceVectorReference>& indices) const;
 };
+
+template <typename Range>
+double CoalescentPopulationPriorModel::evaluate_helper(const Range& genotypes) const
+{
+    // p({g_1, ..., g_n}) = p(g_1 u ... u g_n) p({g_1, ..., g_n} | g_1 u ... u g_n)
+    // => ln p({g_1, ..., g_n}) = ln p(g_1 u ... u g_n) + ln p({g_1, ..., g_n} | g_1 u ... u g_n)
+    // i.e The prior probability of observing a particular combination of genotypes is the
+    // probability the haplotypes defined by the set of genotypes segregate, times the probability
+    // of the particular genotypes given the haplotypes segregate.
+    return evaluate_segregation_model(genotypes) + genotype_model_.evaluate(genotypes);
+}
 
 namespace detail {
 
@@ -104,10 +126,10 @@ inline auto ploidy(const Genotype<Haplotype>& genotype) noexcept
 
 } // namespace detail
 
-template <typename Container>
-double CoalescentPopulationPriorModel::do_evaluate_helper(const Container& genotypes) const
+template <typename Range>
+double CoalescentPopulationPriorModel::evaluate_segregation_model(const Range& genotypes) const
 {
-    if (genotypes.size() == 1) return model_.evaluate(detail::get(genotypes.front()));
+    if (genotypes.size() == 1) return segregation_model_.evaluate(detail::get(genotypes.front()));
     if (genotypes.size() == 2) {
         const auto ploidy1 = detail::ploidy(genotypes[0]);
         const auto ploidy2 = detail::ploidy(genotypes[1]);
@@ -115,12 +137,12 @@ double CoalescentPopulationPriorModel::do_evaluate_helper(const Container& genot
             if (ploidy1 == 1) {
                 using detail::get;
                 const std::array<HaplotypeReference, 2> haplotypes {get(genotypes[0], 0), get(genotypes[0], 0)};
-                return  model_.evaluate(haplotypes);
+                return  segregation_model_.evaluate(haplotypes);
             } else if (ploidy1 == 2) {
                 using detail::get;
                 const std::array<HaplotypeReference, 4> haplotypes {get(genotypes[0], 0), get(genotypes[0], 1),
                                                                     get(genotypes[1], 0), get(genotypes[1], 1)};
-                return model_.evaluate(haplotypes);
+                return segregation_model_.evaluate(haplotypes);
             }
         }
     }
@@ -129,7 +151,7 @@ double CoalescentPopulationPriorModel::do_evaluate_helper(const Container& genot
     for (const auto& genotype : genotypes) {
         detail::append(genotype, haplotypes);
     }
-    return model_.evaluate(haplotypes);
+    return segregation_model_.evaluate(haplotypes);
 }
 
 } // namespace octopus
