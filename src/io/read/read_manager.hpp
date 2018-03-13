@@ -50,9 +50,10 @@ public:
     
     friend void swap(ReadManager& lhs, ReadManager& rhs) noexcept;
     
+    void close() const noexcept; // close all readers
     bool good() const noexcept;
     unsigned num_files() const noexcept;
-    
+    std::vector<Path> paths() const; // Managed files
     unsigned num_samples() const noexcept;
     const std::vector<SampleName>& samples() const;
     unsigned drop_samples(std::vector<SampleName> samples);
@@ -84,7 +85,7 @@ private:
     };
     
     using OpenReaderMap           = std::map<Path, ReadReader, FileSizeCompare>;
-    using ClosedReaders           = std::unordered_set<Path, PathHash>;
+    using ClosedReaderSet         = std::unordered_set<Path, PathHash>;
     using SampleIdToReaderPathMap = std::unordered_map<SampleName, std::vector<Path>>;
     using ContigMap               = MappableMap<GenomicRegion::ContigName, ContigRegion>;
     using ReaderRegionsMap        = std::unordered_map<Path, ContigMap, PathHash>;
@@ -92,13 +93,11 @@ private:
     unsigned max_open_files_ = 200;
     unsigned num_files_;
     
-    mutable ClosedReaders closed_readers_;
+    mutable ClosedReaderSet closed_readers_;
     mutable OpenReaderMap open_readers_;
     
     SampleIdToReaderPathMap reader_paths_containing_sample_;
-    
     ReaderRegionsMap possible_regions_in_readers_;
-    
     std::vector<SampleName> samples_;
     
     mutable std::mutex mutex_;
