@@ -87,8 +87,8 @@ PileupWindow make_pileup(const std::vector<AlignedRead>& reads, const GenomicReg
             unsigned read_pos {0}, pileup_pos {fragment_offset};
             for (const auto flag : expanded_cigar) {
                 if (pileup_pos >= result.size() || read_pos >= sequence_size(read_fragment)) break;
+                assert(pileup_pos < result.size());
                 switch (flag) {
-                    assert(pileup_pos < result.size());
                     using Flag = CigarOperation::Flag;
                     case Flag::sequenceMatch:
                     {

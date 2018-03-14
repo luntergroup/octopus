@@ -2054,7 +2054,7 @@ template <typename Region, typename ForwardIt,
 std::vector<Region> select_regions(const Region& region, const ForwardIt first, const ForwardIt last)
 {
     static_assert(is_region<Region>, "must be ContigRegion or GenomicRegion");
-    assert(std::distance(first, last) == size(region));
+    assert(static_cast<typename Region::Size>(std::distance(first, last)) == size(region));
     std::vector<Region> result {};
     result.reserve(std::distance(first, last) / 2); // max possible
     auto itr = std::find(first, last, true);
