@@ -38,6 +38,7 @@ public:
         std::vector<unsigned> ploidies;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
         std::size_t max_joint_genotypes;
+        bool use_independent_genotype_priors = false;
     };
     
     PopulationCaller() = delete;

@@ -712,7 +712,7 @@ PopulationCaller::call_reference(const std::vector<Allele>& alleles,
 
 bool PopulationCaller::use_independence_model() const noexcept
 {
-    return !parameters_.prior_model_params;
+    return parameters_.use_independent_genotype_priors || !parameters_.prior_model_params;
 }
 
 std::unique_ptr<Caller::Latents>

@@ -443,6 +443,10 @@ OptionMap parse_options(const int argc, const char** argv)
     po::bool_switch()->default_value(false),
     "Use a uniform prior model when calculating genotype posteriors")
     
+    ("use-independent-genotype-priors",
+     po::bool_switch()->default_value(false),
+     "Use independent genotype priors for joint calling")
+    
     ("model-posterior",
      po::value<bool>(),
      "Calculate model posteriors for every call")
