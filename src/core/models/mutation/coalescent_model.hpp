@@ -62,7 +62,7 @@ public:
 private:
     using VariantReference = std::reference_wrapper<const Variant>;
     using SiteCountTuple = std::tuple<unsigned, unsigned, unsigned>;
-    using SiteCountIndelTuple = std::tuple<unsigned, unsigned, unsigned, int>;
+    using SiteCountIndelTuple = std::tuple<unsigned, unsigned, unsigned, double>;
     
     struct SiteCountTupleHash
     {
@@ -98,6 +98,7 @@ private:
     
     template <typename Container>
     SiteCountTuple count_segregating_sites(const Container& haplotypes) const;
+    double calculate_buffered_indel_heterozygosity() const;
 };
 
 template <typename Container>

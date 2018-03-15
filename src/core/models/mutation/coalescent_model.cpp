@@ -158,12 +158,10 @@ template <typename ForwardIt>
 auto complex_log_sum_exp(ForwardIt first, ForwardIt last)
 {
     using ComplexType = typename std::iterator_traits<ForwardIt>::value_type;
-    const auto l = [](const auto& lhs, const auto& rhs) { return lhs.real() < rhs.real(); };
+    const auto l = [] (const auto& lhs, const auto& rhs) { return lhs.real() < rhs.real(); };
     const auto max = *std::max_element(first, last, l);
     return max + std::log(std::accumulate(first, last, ComplexType {},
-                                          [max](const auto curr, const auto x) {
-                                              return curr + std::exp(x - max);
-                                          }));
+                                          [max] (const auto curr, const auto x) { return curr + std::exp(x - max); }));
 }
 
 template <typename Container>
@@ -242,21 +240,8 @@ double CoalescentModel::evaluate(const unsigned k_snp, const unsigned n) const
 
 double CoalescentModel::evaluate(const unsigned k_snp, const unsigned k_indel, const unsigned n) const
 {
-    auto indel_heterozygosity = params_.indel_heterozygosity;
-    int max_offset {-1};
-    for (const auto& site : site_buffer1_) {
-        if (is_indel(site)) {
-            const auto offset = begin_distance(reference_, site.get());
-            auto itr = std::next(std::cbegin(reference_base_indel_heterozygosities_), offset);
-            using S = Variant::MappingDomain::Size;
-            itr = std::max_element(itr, std::next(itr, std::max(S {1}, region_size(site.get()))));
-            if (*itr > indel_heterozygosity) {
-                indel_heterozygosity = *itr;
-                max_offset = offset;
-            }
-        }
-    }
-    const auto t = std::make_tuple(k_snp, k_indel, n, max_offset);
+    const auto indel_heterozygosity = calculate_buffered_indel_heterozygosity();
+    const auto t = std::make_tuple(k_snp, k_indel, n, maths::round_sf(indel_heterozygosity, 6));
     auto itr = k_indel_pos_result_cache_.find(t);
     if (itr != std::cend(k_indel_pos_result_cache_)) {
         return itr->second;
@@ -321,6 +306,24 @@ void CoalescentModel::fill_site_buffer_from_address_cache(const Haplotype& haplo
     std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
                    std::cbegin(itr->second), std::cend(itr->second),
                    std::back_inserter(site_buffer2_));
+}
+
+double CoalescentModel::calculate_buffered_indel_heterozygosity() const
+{
+    auto result = params_.indel_heterozygosity;
+    for (const auto& site : site_buffer1_) {
+        if (is_indel(site)) {
+            const auto& segregating_indel = site.get();
+            const auto offset = begin_distance(reference_, segregating_indel);
+            auto itr = std::next(std::cbegin(reference_base_indel_heterozygosities_), offset);
+            using S = Variant::MappingDomain::Size;
+            itr = std::max_element(itr, std::next(itr, std::max(S {1}, region_size(segregating_indel))));
+            if (*itr > result) {
+                result = *itr;
+            }
+        }
+    }
+    return result;
 }
 
 } // namespace octopus
