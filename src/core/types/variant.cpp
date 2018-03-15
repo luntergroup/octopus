@@ -497,6 +497,12 @@ bool is_transversion(const Variant& variant) noexcept
     return is_snv(variant) && !is_transition(variant);
 }
 
+Variant::NucleotideSequence::size_type indel_size(const Variant& variant) noexcept
+{
+    const auto p = std::minmax({ref_sequence_size(variant), alt_sequence_size(variant)});
+    return p.second - p.first;
+}
+
 std::vector<Allele::NucleotideSequence> extract_alt_allele_sequences(const std::vector<Variant>& variants)
 {
     std::vector<Allele::NucleotideSequence> result {};
