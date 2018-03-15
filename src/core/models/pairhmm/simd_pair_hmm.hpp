@@ -20,6 +20,11 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           int truth_len, int target_len,
+          const std::int8_t* gap_open, const std::int8_t* gap_extend,
+          short nuc_prior) noexcept;
+
+int align(const char* truth, const char* target, const std::int8_t* qualities,
+          int truth_len, int target_len,
           const char* snv_mask, const std::int8_t* snv_prior,
           const std::int8_t* gap_open, short gap_extend, short nuc_prior) noexcept;
 

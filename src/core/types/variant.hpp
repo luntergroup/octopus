@@ -263,9 +263,9 @@ bool is_simple_insertion(const Variant& variant) noexcept;
 bool is_simple_deletion(const Variant& variant) noexcept;
 bool is_simple_indel(const Variant& variant) noexcept;
 bool are_same_type(const Variant& lhs, const Variant& rhs) noexcept;
-
 bool is_transition(const Variant& variant) noexcept;
 bool is_transversion(const Variant& variant) noexcept;
+Variant::NucleotideSequence::size_type indel_size(const Variant& variant) noexcept;
 
 std::vector<Allele::NucleotideSequence> extract_alt_allele_sequences(const std::vector<Variant>& variants);
 

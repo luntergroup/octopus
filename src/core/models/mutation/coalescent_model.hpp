@@ -20,6 +20,7 @@
 
 #include "core/types/haplotype.hpp"
 #include "core/types/variant.hpp"
+#include "indel_mutation_model.hpp"
 
 namespace octopus {
 
@@ -62,7 +63,7 @@ public:
 private:
     using VariantReference = std::reference_wrapper<const Variant>;
     using SiteCountTuple = std::tuple<unsigned, unsigned, unsigned>;
-    using SiteCountIndelTuple = std::tuple<unsigned, unsigned, unsigned, int>;
+    using SiteCountIndelTuple = std::tuple<unsigned, unsigned, unsigned, double>;
     
     struct SiteCountTupleHash
     {
@@ -73,7 +74,7 @@ private:
     };
     
     Haplotype reference_;
-    std::vector<double> reference_base_indel_heterozygosities_;
+    IndelMutationModel::ContextIndelModel indel_heterozygosity_model_;
     Parameters params_;
     std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;
@@ -98,6 +99,8 @@ private:
     
     template <typename Container>
     SiteCountTuple count_segregating_sites(const Container& haplotypes) const;
+    double calculate_buffered_indel_heterozygosity() const;
+    double calculate_heterozygosity(const Variant& indel) const;
 };
 
 template <typename Container>
