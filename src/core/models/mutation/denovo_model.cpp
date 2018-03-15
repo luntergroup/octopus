@@ -26,7 +26,7 @@ auto make_flat_hmm_model(const double snv_mutation_rate, const double indel_muta
 {
     auto mutation_penalty = static_cast<std::int8_t>(probability_to_phred(snv_mutation_rate).score());
     auto gap_open_penalty = mutation_penalty;
-    auto gap_extension_penalty = static_cast<std::int8_t>(probability_to_phred(std::min(100 * indel_mutation_rate, max_rate)).score());
+    auto gap_extension_penalty = static_cast<std::int8_t>(probability_to_phred(std::min(10'000 * indel_mutation_rate, max_rate)).score());
     return hmm::FlatGapMutationModel {mutation_penalty, gap_open_penalty, gap_extension_penalty};
 }
 
@@ -60,7 +60,7 @@ auto make_gap_open_model(double indel_mutation_rate, std::size_t max_repeat_numb
 
 auto make_gap_extend_model(double indel_mutation_rate, std::size_t max_repeat_number)
 {
-    return make_exponential_repeat_count_model(100 * indel_mutation_rate, 1.6, max_repeat_number);
+    return make_exponential_repeat_count_model(std::min(10'000 * indel_mutation_rate, 1e-10), 1.6, max_repeat_number);
 }
 
 } // namespace
@@ -83,7 +83,6 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 , use_unguarded_ {false}
 {
     gap_open_penalties_.reserve(1000);
-    min_ln_probability_ = std::log(parameters.snv_mutation_rate) + std::log(parameters.indel_mutation_rate);
     if (caching_ == CachingStrategy::address) {
         address_cache_.reserve(num_haplotypes_hint_ * num_haplotypes_hint_);
     } else if (caching == CachingStrategy::value) {
@@ -191,7 +190,7 @@ auto sequence_length_distance(const Haplotype& lhs, const Haplotype& rhs) noexce
 
 bool can_align_with_hmm(const Haplotype& target, const Haplotype& given) noexcept
 {
-    return sequence_length_distance(target, given) <= 10 * hmm::min_flank_pad();
+    return sequence_length_distance(target, given) <= hmm::min_flank_pad();
 }
 
 template <typename Container>
