@@ -29,7 +29,12 @@ namespace octopus {
 
 namespace {
 
-static const std::string vcfMissingValue {vcfspec::missingValue};
+static const std::string bcf_missing_str {vcfspec::missingValue};
+
+bool is_missing(const std::string& value) noexcept
+{
+    return value == bcf_missing_str;
+}
 
 namespace bc = boost::container;
 
@@ -584,7 +589,7 @@ void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& b
                     values.reserve(nintinfo);
                     std::transform(intinfo, intinfo + nintinfo, std::back_inserter(values),
                                    [] (auto v) {
-                                       return v != bcf_int32_missing ? std::to_string(v) : vcfMissingValue;
+                                       return v != bcf_int32_missing ? std::to_string(v) : bcf_missing_str;
                                    });
                 }
                 break;
@@ -593,7 +598,7 @@ void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& b
                     values.reserve(nfloatinfo);
                     std::transform(floatinfo, floatinfo + nfloatinfo, std::back_inserter(values),
                                    [] (auto v) {
-                                       return v != bcf_float_missing ? std::to_string(v) : vcfMissingValue;
+                                       return v != bcf_float_missing ? std::to_string(v) : bcf_missing_str;
                                    });
                 }
                 break;
@@ -633,7 +638,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
                 bc::small_vector<int, defaultBufferCapacity> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
                                [] (const auto& v) {
-                                   return v != vcfMissingValue ? std::stoi(v) : bcf_int32_missing;
+                                   return v != bcf_missing_str ? std::stoi(v) : bcf_int32_missing;
                                });
                 bcf_update_info_int32(header, dest, key.c_str(), vals.data(), num_values);
                 break;
@@ -643,7 +648,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
                 bc::small_vector<float, defaultBufferCapacity> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
                                [] (const auto& v) {
-                                   return v != vcfMissingValue ? std::stof(v) : bcf_float_missing;
+                                   return v != bcf_missing_str ? std::stof(v) : bcf_float_missing;
                                });
                 bcf_update_info_float(header, dest, key.c_str(), vals.data(), num_values);
                 break;
@@ -703,13 +708,13 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     alleles.shrink_to_fit();
                     break;
                 } else if (bcf_gt_is_missing(g)) {
-                    alleles.push_back(vcfMissingValue);
+                    alleles.push_back(bcf_missing_str);
                 } else {
                     const auto idx = bcf_gt_allele(g);
                     if (idx < record->n_allele) {
                         alleles.emplace_back(record->d.allele[idx]);
                     } else {
-                        alleles.push_back(vcfMissingValue);
+                        alleles.push_back(bcf_missing_str);
                     }
                 }
             }
@@ -738,7 +743,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                         values[sample].reserve(num_values_per_sample);
                         std::transform(ptr, ptr + num_values_per_sample, std::back_inserter(values[sample]),
                                        [] (auto v) {
-                                           return v != bcf_int32_missing ? std::to_string(v) : vcfMissingValue;
+                                           return v != bcf_int32_missing ? std::to_string(v) : bcf_missing_str;
                                        });
                     }
                 }
@@ -751,7 +756,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                         values[sample].reserve(num_values_per_sample);
                         std::transform(ptr, ptr + num_samples, std::back_inserter(values[sample]),
                                        [] (auto v) {
-                                           return v != bcf_float_missing ? std::to_string(v) : vcfMissingValue;
+                                           return v != bcf_float_missing ? std::to_string(v) : bcf_missing_str;
                                        });
                     }
                 }
@@ -784,7 +789,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
 template <typename T, typename Container>
 auto genotype_number(const T& allele, const Container& alleles, const bool is_phased)
 {
-    if (allele == vcfMissingValue) {
+    if (is_missing(allele)) {
         return (is_phased) ? bcf_gt_missing + 1 : bcf_gt_missing;
     }
     const auto it = std::find(std::cbegin(alleles), std::cend(alleles), allele);
@@ -798,6 +803,13 @@ auto max_format_cardinality(const VcfRecord& record, const VcfRecord::KeyType& k
     for (const auto& sample : samples) {
         result = std::max(result, record.get_sample_value(sample, key).size());
     }
+    return result;
+}
+
+float get_bcf_float_missing() noexcept
+{
+    float result;
+    bcf_float_set_missing(result);
     return result;
 }
 
@@ -863,9 +875,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
                   value_itr = std::transform(std::cbegin(values), std::cend(values), value_itr,
-                                             [] (const auto& v) {
-                                                 return v != vcfMissingValue ? std::stoi(v) : bcf_int32_missing;
-                                             });
+                                             [] (const auto& v) { return !is_missing(v) ? std::stoi(v) : bcf_int32_missing; });
                   assert(values.size() <= num_values_per_sample);
                   value_itr = std::fill_n(value_itr, num_values_per_sample - values.size(), pad);
               }
@@ -875,14 +885,13 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
           case BCF_HT_REAL:
           {
               static const float pad {get_bcf_float_pad()};
+              static const float missing {get_bcf_float_missing()};
               bc::small_vector<float, defaultValueCapacity> typed_values(num_values);
               auto value_itr = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
                   value_itr = std::transform(std::cbegin(values), std::cend(values), value_itr,
-                                             [] (const auto& v) {
-                                                 return v != vcfMissingValue ? std::stof(v) : bcf_float_missing;
-                                             });
+                                             [] (const auto& v) { return !is_missing(v) ? std::stof(v) : missing; });
                   assert(values.size() <= num_values_per_sample);
                   value_itr = std::fill_n(value_itr, num_values_per_sample - values.size(), pad);
               }
