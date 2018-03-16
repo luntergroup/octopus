@@ -184,7 +184,6 @@ double calculate_score(const Variant& variant, const Haplotype& context,
     } else {
         return mutation_model.mutation;
     }
-    
 }
 
 double approx_align(const Haplotype& target, const Haplotype& given,
