@@ -21,8 +21,7 @@ double calculate_gap_open_rate(const double base_rate, const unsigned period, co
 double calculate_gap_extend_rate(const double base_rate, const unsigned period, const unsigned num_periods,
                                  const double gap_open_rate)
 {
-    return 1'000 * gap_open_rate;
-//    return base_rate * std::pow(10.0, (3.0 / (6 + std::min(2 * period, 12u))) * (num_periods + 4));
+    return std::max(1'000 * gap_open_rate, 0.7);
 }
 
 } // namespace
