@@ -20,6 +20,7 @@
 
 #include "core/types/haplotype.hpp"
 #include "core/types/variant.hpp"
+#include "indel_mutation_model.hpp"
 
 namespace octopus {
 
@@ -54,15 +55,15 @@ public:
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
-    template <typename Container>
-    double evaluate(const Container& haplotypes) const;
-    
+    // ln p(haplotype(s))
+    double evaluate(const Haplotype& haplotype) const;
+    template <typename Container> double evaluate(const Container& haplotypes) const;
     double evaluate(const std::vector<unsigned>& haplotype_indices) const;
     
 private:
     using VariantReference = std::reference_wrapper<const Variant>;
     using SiteCountTuple = std::tuple<unsigned, unsigned, unsigned>;
-    using SiteCountIndelTuple = std::tuple<unsigned, unsigned, unsigned, int>;
+    using SiteCountIndelTuple = std::tuple<unsigned, unsigned, unsigned, double>;
     
     struct SiteCountTupleHash
     {
@@ -73,7 +74,7 @@ private:
     };
     
     Haplotype reference_;
-    std::vector<double> reference_base_indel_heterozygosities_;
+    IndelMutationModel::ContextIndelModel indel_heterozygosity_model_;
     Parameters params_;
     std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;
@@ -90,21 +91,23 @@ private:
     double evaluate(unsigned k_snp, unsigned n) const;
     double evaluate(unsigned k_snp, unsigned k_indel, unsigned n) const;
     
-    template <typename Container>
-    void fill_site_buffer(const Container& haplotypes) const;
+    void fill_site_buffer(const Haplotype& haplotype) const;
+    template <typename Container> void fill_site_buffer(const Container& haplotypes) const;
     void fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const;
     void fill_site_buffer_from_value_cache(const Haplotype& haplotype) const;
     void fill_site_buffer_from_address_cache(const Haplotype& haplotype) const;
     
-    template <typename Container>
-    SiteCountTuple count_segregating_sites(const Container& haplotypes) const;
+    SiteCountTuple count_segregating_sites(const Haplotype& haplotype) const;
+    template <typename Container> SiteCountTuple count_segregating_sites(const Container& haplotypes) const;
+    SiteCountTuple count_segregating_sites_in_buffer(unsigned num_haplotypes) const;
+    double calculate_buffered_indel_heterozygosity() const;
+    double calculate_heterozygosity(const Variant& indel) const;
 };
 
 template <typename Container>
 double CoalescentModel::evaluate(const Container& haplotypes) const
 {
-    const auto t = count_segregating_sites(haplotypes);
-    return evaluate(t);
+    return evaluate(count_segregating_sites(haplotypes));
 }
 
 // private methods
@@ -141,10 +144,7 @@ CoalescentModel::SiteCountTuple
 CoalescentModel::count_segregating_sites(const Container& haplotypes) const
 {
     fill_site_buffer(haplotypes);
-    const auto num_indels = std::count_if(std::cbegin(site_buffer1_), std::cend(site_buffer1_),
-                                          [] (const auto& v) noexcept { return is_indel(v); });
-    return std::make_tuple(site_buffer1_.size() - num_indels, num_indels,
-                           static_cast<unsigned>(detail::size(haplotypes) + 1));
+    return count_segregating_sites_in_buffer(detail::size(haplotypes));
 }
 
 } // namespace octopus
