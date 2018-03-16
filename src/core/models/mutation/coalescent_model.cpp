@@ -11,58 +11,14 @@
 
 #include <boost/math/special_functions/binomial.hpp>
 
-#include "tandem/tandem.hpp"
 #include "utils/maths.hpp"
 
 namespace octopus {
 
-auto find_repeats(const Haplotype& haplotype, const unsigned max_period)
-{
-    if (max_period < 4) {
-        return tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, max_period);
-    } else {
-        thread_local std::vector<char> buffer {};
-        buffer.resize(sequence_size(haplotype) + 1);
-        std::copy(std::cbegin(haplotype.sequence()), std::cend(haplotype.sequence()), std::begin(buffer));
-        buffer.back() = '$';
-        return tandem::extract_exact_tandem_repeats(buffer, 1, max_period);
-    }
-}
-
-auto percent_of_bases_in_repeat(const Haplotype& haplotype)
-{
-    const auto repeats = find_repeats(haplotype, 6);
-    if (repeats.empty()) return 0.0;
-    std::vector<unsigned> repeat_counts(sequence_size(haplotype), 0);
-    for (const auto& repeat : repeats) {
-        const auto itr1 = std::next(std::begin(repeat_counts), repeat.pos);
-        const auto itr2 = std::next(itr1, repeat.length);
-        std::transform(itr1, itr2, itr1, [] (const auto c) { return c + 1; });
-    }
-    const auto c = std::count_if(std::cbegin(repeat_counts), std::cend(repeat_counts),
-                                 [] (const auto c) { return c > 0; });
-    return static_cast<double>(c) / repeat_counts.size();
-}
-
-auto calculate_base_indel_heterozygosities(const Haplotype& haplotype, const double base_indel_heterozygosity)
-{
-    std::vector<double> result(sequence_size(haplotype), base_indel_heterozygosity);
-    const auto repeats = find_repeats(haplotype, 3);
-    for (const auto& repeat : repeats) {
-        const auto itr1 = std::next(std::begin(result), repeat.pos);
-        const auto itr2 = std::next(itr1, repeat.length);
-        const auto n = repeat.length / repeat.period;
-        // TODO: implement a proper model for this
-        const auto t = std::min(base_indel_heterozygosity * std::pow(n, 2.6), 1.0);
-        std::transform(itr1, itr2, itr1, [t] (const auto h) { return std::max(h, t); });
-    }
-    return result;
-}
-
 CoalescentModel::CoalescentModel(Haplotype reference, Parameters params,
                                  std::size_t num_haplotyes_hint, CachingStrategy caching)
 : reference_ {std::move(reference)}
-, reference_base_indel_heterozygosities_ {}
+, indel_heterozygosity_model_ {make_indel_model(reference_, {params.indel_heterozygosity})}
 , params_ {params}
 , haplotypes_ {}
 , caching_ {caching}
@@ -73,7 +29,6 @@ CoalescentModel::CoalescentModel(Haplotype reference, Parameters params,
     if (params_.snp_heterozygosity <= 0 || params_.indel_heterozygosity <= 0) {
         throw std::domain_error {"CoalescentModel: snp and indel heterozygosity must be > 0"};
     }
-    reference_base_indel_heterozygosities_ = calculate_base_indel_heterozygosities(reference_, params_.indel_heterozygosity);
     site_buffer1_.reserve(128);
     site_buffer2_.reserve(128);
     if (caching == CachingStrategy::address) {
@@ -158,12 +113,10 @@ template <typename ForwardIt>
 auto complex_log_sum_exp(ForwardIt first, ForwardIt last)
 {
     using ComplexType = typename std::iterator_traits<ForwardIt>::value_type;
-    const auto l = [](const auto& lhs, const auto& rhs) { return lhs.real() < rhs.real(); };
+    const auto l = [] (const auto& lhs, const auto& rhs) { return lhs.real() < rhs.real(); };
     const auto max = *std::max_element(first, last, l);
     return max + std::log(std::accumulate(first, last, ComplexType {},
-                                          [max](const auto curr, const auto x) {
-                                              return curr + std::exp(x - max);
-                                          }));
+                                          [max] (const auto curr, const auto x) { return curr + std::exp(x - max); }));
 }
 
 template <typename Container>
@@ -242,21 +195,8 @@ double CoalescentModel::evaluate(const unsigned k_snp, const unsigned n) const
 
 double CoalescentModel::evaluate(const unsigned k_snp, const unsigned k_indel, const unsigned n) const
 {
-    auto indel_heterozygosity = params_.indel_heterozygosity;
-    int max_offset {-1};
-    for (const auto& site : site_buffer1_) {
-        if (is_indel(site)) {
-            const auto offset = begin_distance(reference_, site.get());
-            auto itr = std::next(std::cbegin(reference_base_indel_heterozygosities_), offset);
-            using S = Variant::MappingDomain::Size;
-            itr = std::max_element(itr, std::next(itr, std::max(S {1}, region_size(site.get()))));
-            if (*itr > indel_heterozygosity) {
-                indel_heterozygosity = *itr;
-                max_offset = offset;
-            }
-        }
-    }
-    const auto t = std::make_tuple(k_snp, k_indel, n, max_offset);
+    const auto indel_heterozygosity = calculate_buffered_indel_heterozygosity();
+    const auto t = std::make_tuple(k_snp, k_indel, n, maths::round_sf(indel_heterozygosity, 6));
     auto itr = k_indel_pos_result_cache_.find(t);
     if (itr != std::cend(k_indel_pos_result_cache_)) {
         return itr->second;
@@ -321,6 +261,36 @@ void CoalescentModel::fill_site_buffer_from_address_cache(const Haplotype& haplo
     std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
                    std::cbegin(itr->second), std::cend(itr->second),
                    std::back_inserter(site_buffer2_));
+}
+
+double CoalescentModel::calculate_buffered_indel_heterozygosity() const
+{
+    boost::optional<double> result {};
+    for (const auto& site : site_buffer1_) {
+        if (is_indel(site)) {
+            auto site_heterozygosity = calculate_heterozygosity(site);
+            if (result) {
+                result = std::max(*result, site_heterozygosity);
+            } else {
+                result = site_heterozygosity;
+            }
+        }
+    }
+    return result ? *result : params_.indel_heterozygosity;
+}
+
+double CoalescentModel::calculate_heterozygosity(const Variant& indel) const
+{
+    assert(is_indel(indel));
+    const auto offset = static_cast<std::size_t>(begin_distance(reference_, indel));
+    const auto indel_length = indel_size(indel);
+    assert(offset < indel_heterozygosity_model_.gap_open.size());
+    if (indel_length > 1) {
+        return indel_heterozygosity_model_.gap_open[offset] * (indel_length - 1) * indel_heterozygosity_model_.gap_extend[offset];
+    } else {
+        return indel_heterozygosity_model_.gap_open[offset];
+    }
+    
 }
 
 } // namespace octopus
