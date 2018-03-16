@@ -77,6 +77,11 @@ bool CoalescentModel::is_primed() const noexcept
     return !index_cache_.empty();
 }
 
+double CoalescentModel::evaluate(const Haplotype& haplotype) const
+{
+    return evaluate(count_segregating_sites(haplotype));
+}
+
 double CoalescentModel::evaluate(const std::vector<unsigned>& haplotype_indices) const
 {
     return evaluate(count_segregating_sites(haplotype_indices));
@@ -206,6 +211,19 @@ double CoalescentModel::evaluate(const unsigned k_snp, const unsigned k_indel, c
     return result;
 }
 
+void CoalescentModel::fill_site_buffer(const Haplotype& haplotype) const
+{
+    assert(site_buffer2_.empty());
+    site_buffer1_.clear();
+    if (caching_ == CachingStrategy::address) {
+        fill_site_buffer_from_address_cache(haplotype);
+    } else {
+        fill_site_buffer_from_value_cache(haplotype);
+    }
+    site_buffer1_ = std::move(site_buffer2_);
+    site_buffer2_.clear();
+}
+
 void CoalescentModel::fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const
 {
     site_buffer1_.clear();
@@ -263,6 +281,19 @@ void CoalescentModel::fill_site_buffer_from_address_cache(const Haplotype& haplo
                    std::back_inserter(site_buffer2_));
 }
 
+CoalescentModel::SiteCountTuple CoalescentModel::count_segregating_sites(const Haplotype& haplotype) const
+{
+    fill_site_buffer(haplotype);
+    return count_segregating_sites_in_buffer(1);
+}
+
+CoalescentModel::SiteCountTuple CoalescentModel::count_segregating_sites_in_buffer(const unsigned num_haplotypes) const
+{
+    const auto num_indels = std::count_if(std::cbegin(site_buffer1_), std::cend(site_buffer1_),
+                                          [] (const auto& v) noexcept { return is_indel(v); });
+    return std::make_tuple(site_buffer1_.size() - num_indels, num_indels, num_haplotypes + 1);
+}
+
 double CoalescentModel::calculate_buffered_indel_heterozygosity() const
 {
     boost::optional<double> result {};
@@ -285,12 +316,9 @@ double CoalescentModel::calculate_heterozygosity(const Variant& indel) const
     const auto offset = static_cast<std::size_t>(begin_distance(reference_, indel));
     const auto indel_length = indel_size(indel);
     assert(offset < indel_heterozygosity_model_.gap_open.size());
-    if (indel_length > 1) {
-        return indel_heterozygosity_model_.gap_open[offset] * (indel_length - 1) * indel_heterozygosity_model_.gap_extend[offset];
-    } else {
-        return indel_heterozygosity_model_.gap_open[offset];
-    }
-    
+    constexpr decltype(indel_length) max_indel_length {50};
+    return indel_heterozygosity_model_.gap_open[offset]
+           * std::pow(indel_heterozygosity_model_.gap_extend[offset], std::min(indel_length, max_indel_length) - 1);
 }
 
 } // namespace octopus
