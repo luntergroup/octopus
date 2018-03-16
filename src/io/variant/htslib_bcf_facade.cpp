@@ -885,13 +885,12 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
           case BCF_HT_REAL:
           {
               static const float pad {get_bcf_float_pad()};
-              static const float missing {get_bcf_float_missing()};
               bc::small_vector<float, defaultValueCapacity> typed_values(num_values);
               auto value_itr = std::begin(typed_values);
               for (const auto& sample : samples) {
                   const auto& values = source.get_sample_value(sample, key);
                   value_itr = std::transform(std::cbegin(values), std::cend(values), value_itr,
-                                             [] (const auto& v) { return !is_missing(v) ? std::stof(v) : missing; });
+                                             [] (const auto& v) { return !is_missing(v) ? std::stof(v) : get_bcf_float_missing(); });
                   assert(values.size() <= num_values_per_sample);
                   value_itr = std::fill_n(value_itr, num_values_per_sample - values.size(), pad);
               }
