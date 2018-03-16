@@ -13,15 +13,17 @@ namespace octopus {
 
 namespace {
 
-double calculate_gap_open_rate(const double base_rate, const unsigned period, const unsigned num_periods, const double max_rate = 0.1)
+double calculate_gap_open_rate(const double base_rate, const unsigned period, const unsigned num_periods)
 {
-    return std::min(base_rate * std::pow(10.0, (3.0 / (6 + std::min(2 * period, 12u))) * period * num_periods), max_rate);
+    return base_rate * std::pow(10.0, (3.0 / (6 + std::min(2 * period, 12u))) * period * num_periods);
 }
 
-//double calculate_gap_extend_rate(const double base_rate, const unsigned period, const unsigned num_periods, const double max_rate = 0.1)
-//{
-//    return std::min(base_rate * std::pow(10.0, (3.0 / (6 + std::min(2 * period, 12u))) * (num_periods + 4)), max_rate);
-//}
+double calculate_gap_extend_rate(const double base_rate, const unsigned period, const unsigned num_periods,
+                                 const double gap_open_rate)
+{
+    return 1'000 * gap_open_rate;
+//    return base_rate * std::pow(10.0, (3.0 / (6 + std::min(2 * period, 12u))) * (num_periods + 4));
+}
 
 } // namespace
 
@@ -31,9 +33,10 @@ IndelMutationModel::IndelMutationModel(Parameters params)
 {
     for (unsigned period {0}; period <= params_.max_period; ++period) {
         for (unsigned n {0}; n <= params_.max_periodicity; ++n) {
-            indel_repeat_model_[period][n].open   = calculate_gap_open_rate(params.indel_mutation_rate, period, n);
-            indel_repeat_model_[period][n].extend = std::min(1'000 * indel_repeat_model_[period][n].open, 0.1);
-//            indel_repeat_model_[period][n].extend = calculate_gap_extend_rate(params.indel_mutation_rate, period, n);
+            const auto open_rate = calculate_gap_open_rate(params.indel_mutation_rate, period, n);
+            indel_repeat_model_[period][n].open = std::min(open_rate, params_.max_open_rate);
+            const auto extend_rate = calculate_gap_extend_rate(params.indel_mutation_rate, period, n, open_rate);
+            indel_repeat_model_[period][n].extend = std::min(extend_rate, params_.max_extend_rate);
         }
     }
 }
