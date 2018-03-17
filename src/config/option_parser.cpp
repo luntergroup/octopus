@@ -389,9 +389,13 @@ OptionMap parse_options(const int argc, const char** argv)
     ("extension-level",
      po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
      "Level of haplotype extension. Possible values are: conservative, normal, optimistic, aggressive")
+
+    ("haplotype-extension-threshold,e",
+     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
+     "Haplotypes with posterior probability less than this can be filtered before extension")
     ;
     
-    po::options_description caller("Caller (general)");
+    po::options_description caller("Calling (general)");
     caller.add_options()
     ("caller,C",
      po::value<std::string>()->default_value("population"),
@@ -429,26 +433,44 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("snp-heterozygosity,z",
      po::value<float>()->default_value(0.001, "0.001"),
-     "SNP heterozygosity for the given samples")
+     "Germline SNP heterozygosity for the given samples")
     
     ("snp-heterozygosity-stdev",
      po::value<float>()->default_value(0.01, "0.01"),
-     "Standard deviation of the SNP heterozygosity used for the given samples")
+     "Standard deviation of the germline SNP heterozygosity used for the given samples")
     
     ("indel-heterozygosity,y",
      po::value<float>()->default_value(0.0001, "0.0001"),
-     "Indel heterozygosity for the given samples")
+     "Germline indel heterozygosity for the given samples")
     
     ("use-uniform-genotype-priors",
     po::bool_switch()->default_value(false),
     "Use a uniform prior model when calculating genotype posteriors")
+
+    ("max-joint-genotypes",
+     po::value<int>()->default_value(1000000),
+     "The maximum number of joint genotype vectors to consider when computing joint"
+     " genotype posterior probabilities")
     
     ("model-posterior",
      po::value<bool>(),
      "Calculate model posteriors for every call")
+    
+    ("inactive-flank-scoring",
+     po::value<bool>()->default_value(true),
+     "Disables additional calculation to adjust alignment score when there are inactive"
+     " candidates in haplotype flanking regions")
+    
+    ("model-mapping-quality",
+     po::value<bool>()->default_value(true),
+     "Include the read mapping quality in the haplotype likelihood calculation")
+    
+    ("sequence-error-model",
+     po::value<std::string>()->default_value("HiSeq"),
+     "The sequencer error model to use (HiSeq or xTen)")
     ;
     
-    po::options_description cancer("Caller (cancer)");
+    po::options_description cancer("Calling (cancer)");
     cancer.add_options()
     ("normal-sample,N",
      po::value<std::string>(),
@@ -491,7 +513,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Only emit somatic variant calls")
     ;
     
-    po::options_description trio("Caller (trio)");
+    po::options_description trio("Calling (trio)");
     trio.add_options()
     ("maternal-sample,M",
      po::value<std::string>(),
@@ -534,32 +556,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Computes unconditional phase scores rather than conditioning on called genotypes")
     ;
     
-    po::options_description advanced("Advanced calling algorithm");
-    advanced.add_options()
-    ("haplotype-extension-threshold,e",
-     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
-     "Haplotypes with posterior probability less than this can be filtered before extension")
-    
-    ("inactive-flank-scoring",
-     po::value<bool>()->default_value(true),
-     "Disables additional calculation to adjust alignment score when there are inactive"
-     " candidates in haplotype flanking regions")
-    
-    ("model-mapping-quality",
-     po::value<bool>()->default_value(true),
-     "Include the read mapping quality in the haplotype likelihood calculation")
-    
-    ("max-joint-genotypes",
-     po::value<int>()->default_value(1000000),
-     "The maximum number of joint genotype vectors to consider when computing joint"
-     " genotype posterior probabilities")
-    
-    ("sequence-error-model",
-     po::value<std::string>()->default_value("HiSeq"),
-     "The sequencer error model to use (HiSeq or xTen)")
-    ;
-    
-    po::options_description call_filtering("Callset filtering");
+    po::options_description call_filtering("CSR filtering");
     call_filtering.add_options()
     ("call-filtering,f",
      po::value<bool>()->default_value(true),
@@ -589,7 +586,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description all("octopus options");
     all.add(general).add(backend).add(input).add(transforms).add(filters)
     .add(variant_generation).add(haplotype_generation).add(caller)
-    .add(advanced).add(cancer).add(trio).add(phasing).add(call_filtering);
+    .add(cancer).add(trio).add(phasing).add(call_filtering);
     
     OptionMap vm_init;
     po::store(run(po::command_line_parser(argc, argv).options(general).allow_unregistered()), vm_init);
