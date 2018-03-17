@@ -708,14 +708,14 @@ void set_phase(const SampleName& sample, const Phaser::PhaseSet::PhaseRegion& ph
     }
 }
 
-void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set,
-                 const GenomicRegion& calling_region)
+void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set, const GenomicRegion& calling_region)
 {
     if (!calls.empty()) {
         const auto call_regions = extract_regions(calls);
         for (auto& call : calls) {
             const auto& call_region = mapped_region(call);
             for (const auto& p : phase_set.phase_regions) {
+                const SampleName& sample {p.first};
                 const auto phase = find_phase_region(p.second, call_region);
                 if (phase && overlaps(calling_region, phase->get().region)) {
                     if (begins_before(phase->get().region, calling_region)) {
@@ -726,10 +726,10 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
                             expand_lhs(phase->get().region, begin_distance(output_calls.front(), phase->get().region)),
                             phase->get().score
                             };
-                            set_phase(p.first, clipped_phase, call_regions, call);
+                            set_phase(sample, clipped_phase, call_regions, call);
                         }
                     } else {
-                        set_phase(p.first, *phase, call_regions, call);
+                        set_phase(sample, *phase, call_regions, call);
                     }
                 }
             }

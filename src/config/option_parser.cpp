@@ -459,11 +459,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "Normal sample - all other samples are considered tumour")
     
     ("somatic-snv-mutation-rate",
-     po::value<float>()->default_value(2e-05, "1e-05"),
+     po::value<float>()->default_value(1e-04, "0.0001"),
      "Expected SNV somatic mutation rate, per megabase pair, for this sample")
     
     ("somatic-indel-mutation-rate",
-     po::value<float>()->default_value(5e-06, "1e-05"),
+     po::value<float>()->default_value(1e-05, "0.00001"),
      "Expected INDEL somatic mutation rate, per megabase pair, for this sample")
     
     ("min-expected-somatic-frequency",

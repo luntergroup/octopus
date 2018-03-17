@@ -41,6 +41,15 @@ RealType round(const RealType val, const unsigned precision = 2)
 }
 
 template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
+T round_sf(const T x, const int n)
+{
+    // https://stackoverflow.com/a/13094362/2970186
+    if (x == 0.0) return 0;
+    auto factor = std::pow(10.0, n - std::ceil(std::log10(std::abs(x))));
+    return std::round(x * factor) / factor;
+}
+
+template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
 bool almost_equal(const T lhs, T rhs, const int ulp = 1)
 {
     return lhs == rhs || std::abs(lhs - rhs) < std::numeric_limits<T>::epsilon() * std::abs(lhs + rhs) * ulp;
@@ -56,6 +65,13 @@ template <typename T, typename = typename std::enable_if_t<std::is_floating_poin
 bool almost_one(const T x, const int ulp = 1)
 {
     return almost_equal(x, T {1}, ulp);
+}
+
+template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
+int count_leading_zeros(const T x)
+{
+    if (x == 0.0) return 0;
+    return -std::ceil(std::log10(std::abs(x - std::numeric_limits<T>::epsilon())));
 }
 
 template <typename RealType>

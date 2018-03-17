@@ -997,18 +997,27 @@ CancerCaller::ModelPriors CancerCaller::get_model_priors(const std::vector<Haplo
 {
     assert(!haplotypes.empty());
     const Haplotype reference {octopus::mapped_region(haplotypes.front()), reference_};
-    const SomaticMutationModel somatic_model {parameters_.somatic_mutation_model_params,
-                                              1, SomaticMutationModel::CachingStrategy::none};
-    auto min_somatic_ln_prob = std::numeric_limits<double>::max();
+    const SomaticMutationModel somatic_mutation_model {parameters_.somatic_mutation_model_params};
+    CoalescentModel::Parameters germline_mutation_params {};
+    if (parameters_.germline_prior_model_params) {
+        germline_mutation_params = *parameters_.germline_prior_model_params;
+    } else {
+        germline_mutation_params.snp_heterozygosity = 1.0;
+        germline_mutation_params.indel_heterozygosity = 1.0;
+    }
+    const CoalescentModel germline_mutation_model {reference, germline_mutation_params};
+    auto max_somatic_ln_prob = std::numeric_limits<double>::lowest();
     for (const auto& haplotype : haplotypes) {
         if (haplotype != reference) {
-            min_somatic_ln_prob = std::min(min_somatic_ln_prob, somatic_model.evaluate(haplotype, reference));
+            const auto somatic_ln_prob = somatic_mutation_model.evaluate(haplotype, reference);
+            const auto germline_ln_prob = germline_mutation_model.evaluate(haplotype);
+            max_somatic_ln_prob = std::max(max_somatic_ln_prob, somatic_ln_prob - germline_ln_prob);
         }
     }
-    const auto local_somatic_rate = std::exp(min_somatic_ln_prob);
+    const auto local_somatic_rate = std::exp(max_somatic_ln_prob);
     const auto prior_rate = region_size(reference) * local_somatic_rate;
     ModelPriors result {};
-    result.somatic  = std::min(maths::poisson_sf(0, prior_rate), 0.25);
+    result.somatic  = std::min(maths::poisson_sf(0, prior_rate), 1.0 / 3);
     result.cnv      = result.somatic;
     result.germline = 1 - (result.somatic + result.cnv);
     return result;
