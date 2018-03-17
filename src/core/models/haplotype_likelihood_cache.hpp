@@ -177,17 +177,18 @@ void print_read_haplotype_likelihoods(S&& stream,
                               [] (const auto& lhs, const auto& rhs) {
                                   return lhs.second > rhs.second;
                               });
-            std::for_each(std::begin(likelihoods), mth,
-                          [&] (const auto& p) {
-                              if (is_single_sample) {
-                                  stream << "\t";
-                              } else {
-                                  stream << "\t\t";
-                              }
-                              stream << p.first.get().mapped_region()
-                              << " " << p.first.get().cigar() << ": ";
-                              stream << p.second << '\n';
-                          });
+            std::for_each(std::begin(likelihoods), mth, [&] (const auto& p) {
+                if (is_single_sample) {
+                    stream << "\t";
+                } else {
+                    stream << "\t\t";
+                }
+                const auto& read = p.first.get();
+                stream << read.name() << " "
+                       << mapped_region(read) << " "
+                       << p.first.get().cigar() << ": "
+                       << p.second << '\n';
+            });
         }
     }
 }

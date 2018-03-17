@@ -530,7 +530,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " of runtime speed. Possible values are: minimal, conservative, moderate, normal, aggressive")
     
     ("min-phase-score",
-     po::value<Phred<double>>()->default_value(Phred<double> {20.0}),
+     po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
      "Minimum phase score (phred scale) required to report sites as phased")
     
     ("use-unconditional-phase-score",
