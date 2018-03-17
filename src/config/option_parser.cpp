@@ -594,14 +594,32 @@ OptionMap parse_options(const int argc, const char** argv)
     if (vm_init.count("help") == 1) {
         po::store(run(po::command_line_parser(argc, argv).options(caller).allow_unregistered()), vm_init);
         if (vm_init.count("caller") == 1) {
-            const auto caller = vm_init.at("caller").as<std::string>();
+            const auto selected_caller = vm_init.at("caller").as<std::string>();
             validate_caller(vm_init);
-            if (caller == "individual") {
-                std::cout << all << std::endl;
-            } else if (caller == "population") {
-                std::cout << all << std::endl;
-            } else if (caller == "cancer") {
-                std::cout << all << std::endl;
+            if (selected_caller == "individual") {
+                po::options_description individual_options("octopus individual calling options");
+                individual_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller)
+                .add(phasing).add(call_filtering);
+                std::cout << individual_options << std::endl;
+            } else if (selected_caller == "trio") {
+                po::options_description trio_options("octopus trio calling options");
+                trio_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller).add(trio)
+                .add(phasing).add(call_filtering);
+                std::cout << trio_options << std::endl;
+            } else if (selected_caller == "population") {
+                po::options_description population_options("octopus population calling options");
+                population_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller)
+                .add(phasing).add(call_filtering);
+                std::cout << population_options << std::endl;
+            } else if (selected_caller == "cancer") {
+                po::options_description cancer_options("octopus cancer calling options");
+                cancer_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller).add(cancer)
+                .add(phasing).add(call_filtering);
+                std::cout << cancer_options << std::endl;
             } else {
                 std::cout << all << std::endl;
             }
