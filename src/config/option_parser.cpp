@@ -532,7 +532,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "INDEL de novo mutation rate, per base per generation")
     
     ("min-denovo-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
+     po::value<Phred<double>>()->default_value(Phred<double> {3}),
      "Minimum posterior probability (phred scale) to emit a de novo mutation call")
     
     ("denovos-only",
