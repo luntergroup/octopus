@@ -227,8 +227,8 @@ void DeNovoModel::set_gap_penalties(const unsigned given) const
     assert(given < gap_model_index_cache_.size());
     auto& cached_result = gap_model_index_cache_[given];
     if (cached_result) {
-        gap_open_penalties_ = cached_result->first;
-        gap_open_penalties_ = cached_result->second;
+        gap_open_penalties_   = cached_result->first;
+        gap_extend_penalties_ = cached_result->second;
     } else {
         set_gap_penalties(haplotypes_[given]);
         cached_result = std::make_pair(gap_open_penalties_, gap_extend_penalties_);
@@ -249,6 +249,8 @@ double DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& 
         pad_given(target, given, padded_given_);
         gap_open_penalties_.resize(padded_given_.size(), mutation_model.mutation);
         rotate_right(gap_open_penalties_, hmm::min_flank_pad());
+        gap_extend_penalties_.resize(padded_given_.size(), mutation_model.mutation);
+        rotate_right(gap_extend_penalties_, hmm::min_flank_pad());
         result = hmm::evaluate(target.sequence(), padded_given_, mutation_model);
     } else {
         result = approx_align(target, given, mutation_model);
