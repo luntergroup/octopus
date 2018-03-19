@@ -171,6 +171,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "VCF file specifying calls to regenotype, only sites in this files will appear in the"
      " final output")
+    
+    ("bamout",
+     po::value<fs::path>(),
+     "Output a realigned BAM file")
     ;
     
     po::options_description transforms("Read transformations");

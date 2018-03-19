@@ -81,6 +81,8 @@ bool is_csr_training_mode(const OptionMap& options);
 
 boost::optional<fs::path> filter_request(const OptionMap& options);
 
+boost::optional<fs::path> bamout_request(const OptionMap& options);
+
 } // namespace options
 } // namespace octopus
 

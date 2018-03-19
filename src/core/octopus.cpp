@@ -52,6 +52,7 @@
 #include "csr/filters/variant_call_filter.hpp"
 #include "csr/filters/variant_call_filter_factory.hpp"
 #include "readpipe/buffered_read_pipe.hpp"
+#include "core/tools/bam_realigner.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -1289,6 +1290,7 @@ void run_filtering(GenomeCallingComponents& components)
         const VcfReader in {std::move(*input_path)};
         VcfWriter& out {*components.filtered_output()};
         filter->filter(in, out);
+        out.close();
     }
 }
 
@@ -1347,6 +1349,75 @@ public:
     CallingBug(const std::exception& e) : what_ {e.what()} {}
 };
 
+bool is_bam_realignment_requested(const GenomeCallingComponents& components)
+{
+    return static_cast<bool>(components.bamout());
+}
+
+bool is_stdout_final_output(const GenomeCallingComponents& components)
+{
+    return (components.filtered_output() && !components.filtered_output()->path()) || !components.output().path();
+}
+
+bool check_bam_realign(const GenomeCallingComponents& components)
+{
+    logging::WarningLogger warn_log {};
+    if (components.samples().size() > 1) {
+        warn_log << "BAM realignment currently only supported for single sample";
+        return false;
+    }
+    if (components.read_manager().num_files() > 1) {
+        warn_log << "BAM realignment currently only supported for single input BAM";
+        return false;
+    }
+    if (is_stdout_final_output(components)) {
+        warn_log << "BAM realignment is not supported for stdout calling";
+        return false;
+    }
+    return true;
+}
+
+auto get_bam_realignment_vcf(const GenomeCallingComponents& components)
+{
+    if (components.filtered_output()) {
+        return *components.filtered_output()->path();
+    } else {
+        return *components.output().path();
+    }
+}
+
+bool is_sam_type(const boost::filesystem::path& path)
+{
+    const auto type = path.extension().string();
+    return type == ".bam" || type == ".sam" || type == ".cram";
+}
+
+auto get_bamout_paths(const GenomeCallingComponents& components)
+{
+    namespace fs = boost::filesystem;
+    std::vector<fs::path> result {};
+    auto request = components.bamout();
+    if (!request) return result;
+    if (is_sam_type(*request)) {
+        result.assign({*request});
+    } else {
+        // TODO: use split version - need to get max ploidy
+        result.assign({*request});
+    }
+    return result;
+}
+
+void run_bam_realign(GenomeCallingComponents& components)
+{
+    if (is_bam_realignment_requested(components)) {
+        if (check_bam_realign(components)) {
+            components.read_manager().close();
+            realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
+                    get_bamout_paths(components), components.reference());
+        }
+    }
+}
+
 void run_octopus(GenomeCallingComponents& components, std::string command)
 {
     static auto debug_log = get_debug_log();
@@ -1400,6 +1471,7 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
     stream(info_log) << "Finished calling "
                      << utils::format_with_commas(search_size) << "bp, total runtime "
                      << TimeInterval {start, end};
+    run_bam_realign(components);
     cleanup(components);
 }
 

@@ -185,6 +185,7 @@ auto split_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Hap
 BAMRealigner::Report BAMRealigner::realign(ReadReader& src, VcfReader& variants, std::vector<ReadWriter>& dsts,
                                            const ReferenceGenome& reference, SampleList samples) const
 {
+    if (dsts.size() == 1) return realign(src, variants, dsts.front(), reference, samples);
     Report report {};
     boost::optional<GenomicRegion> batch_region {};
     for (auto p = variants.iterate(); p.first != p.second; ) {
