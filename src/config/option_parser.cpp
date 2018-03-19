@@ -446,7 +446,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("use-uniform-genotype-priors",
     po::bool_switch()->default_value(false),
     "Use a uniform prior model when calculating genotype posteriors")
-
+    
     ("max-joint-genotypes",
      po::value<int>()->default_value(1000000),
      "The maximum number of joint genotype vectors to consider when computing joint"
@@ -507,10 +507,6 @@ OptionMap parse_options(const int argc, const char** argv)
     ("normal-contamination-risk",
      po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
      "The risk the normal sample has contamination from the tumour")
-    
-    ("somatics-only",
-     po::bool_switch()->default_value(false),
-     "Only emit somatic variant calls")
     ;
     
     po::options_description trio("Calling (trio)");
@@ -534,10 +530,6 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-denovo-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {3}),
      "Minimum posterior probability (phred scale) to emit a de novo mutation call")
-    
-    ("denovos-only",
-     po::bool_switch()->default_value(false),
-     "Only emit de novo variant calls")
     ;
     
     po::options_description phasing("Phasing");
