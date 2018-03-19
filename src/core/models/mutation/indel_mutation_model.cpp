@@ -33,9 +33,9 @@ IndelMutationModel::IndelMutationModel(Parameters params)
     for (unsigned period {0}; period <= params_.max_period; ++period) {
         for (unsigned n {0}; n <= params_.max_periodicity; ++n) {
             const auto open_rate = calculate_gap_open_rate(params.indel_mutation_rate, period, n);
-            indel_repeat_model_[period][n].open = std::min(open_rate, params_.max_open_rate);
+            indel_repeat_model_[period][n].open = std::min(open_rate, params_.max_open_probability);
             const auto extend_rate = calculate_gap_extend_rate(params.indel_mutation_rate, period, n, open_rate);
-            indel_repeat_model_[period][n].extend = std::min(extend_rate, params_.max_extend_rate);
+            indel_repeat_model_[period][n].extend = std::min(extend_rate, params_.max_extend_probability);
         }
     }
 }

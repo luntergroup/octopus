@@ -197,11 +197,11 @@ double approx_align(const Haplotype& target, const Haplotype& given,
     return score * -maths::constants::ln10Div10<>;
 }
 
-void rates_to_penalties(const IndelMutationModel::ContextIndelModel::RateVector& rates,
-                        hmm::VariableGapExtendMutationModel::PenaltyVector& penalties)
+void set_penalties(const IndelMutationModel::ContextIndelModel::ProbabilityVector& probabilities,
+                  hmm::VariableGapExtendMutationModel::PenaltyVector& penalties)
 {
-    assert(rates.size() == penalties.size());
-    std::transform(std::cbegin(rates), std::cend(rates), std::begin(penalties),
+    assert(probabilities.size() == penalties.size());
+    std::transform(std::cbegin(probabilities), std::cend(probabilities), std::begin(penalties),
                    [] (auto rate) {
                        static constexpr double max_penalty {127};
                        return std::max(std::min(std::log(rate) / -maths::constants::ln10Div10<>, max_penalty), 1.0);
@@ -216,10 +216,10 @@ void DeNovoModel::set_gap_penalties(const Haplotype& given) const
     const auto num_bases = sequence_size(given);
     assert(contextual_indel_model.gap_open.size() == num_bases);
     gap_open_penalties_.resize(num_bases);
-    rates_to_penalties(contextual_indel_model.gap_open, gap_open_penalties_);
+    set_penalties(contextual_indel_model.gap_open, gap_open_penalties_);
     assert(contextual_indel_model.gap_extend.size() == num_bases);
     gap_extend_penalties_.resize(num_bases);
-    rates_to_penalties(contextual_indel_model.gap_extend, gap_extend_penalties_);
+    set_penalties(contextual_indel_model.gap_extend, gap_extend_penalties_);
 }
 
 void DeNovoModel::set_gap_penalties(const unsigned given) const

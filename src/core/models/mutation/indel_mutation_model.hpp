@@ -19,14 +19,14 @@ public:
     {
         double indel_mutation_rate;
         unsigned max_period = 10, max_periodicity = 20;
-        double max_open_rate = 1.0, max_extend_rate = 1.0;
+        double max_open_probability = 1.0, max_extend_probability = 1.0;
     };
     
     struct ContextIndelModel
     {
-        using Rate = double;
-        using RateVector = std::vector<Rate>;
-        RateVector gap_open, gap_extend;
+        using Probability = double;
+        using ProbabilityVector = std::vector<Probability>;
+        ProbabilityVector gap_open, gap_extend;
     };
     
     IndelMutationModel() = delete;
