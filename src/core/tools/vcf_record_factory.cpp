@@ -271,8 +271,8 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                                               [] (const auto& call) {
                                                   return call->reference().sequence().front() == dummy_base;
                                               });
-        boost::optional<decltype(block_head_end_itr)> base;
-        if (alt_itr != block_head_end_itr)  base = alt_itr;
+        boost::optional<decltype(block_head_end_itr)> base {};
+        if (alt_itr != block_head_end_itr) base = alt_itr;
         std::deque<CallWrapper> duplicates {};
         for_each(block_begin_itr, block_head_end_itr, [this, base, &duplicates] (auto& call) {
             assert(!call->reference().sequence().empty());
@@ -293,11 +293,16 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                         if (old_genotype[i].sequence().front() == dummy_base) {
                             auto new_sequence = old_genotype[i].sequence();
                             if (base) {
-                                const auto& base_sequence = (**base)->get_genotype_call(sample).genotype[i].sequence();
-                                if (!base_sequence.empty()) {
-                                    new_sequence.front() = base_sequence.front();
+                                const auto& base_genotype = (**base)->get_genotype_call(sample).genotype;
+                                if (base_genotype.ploidy() == ploidy) {
+                                    const auto& base_sequence = base_genotype[i].sequence();
+                                    if (!base_sequence.empty()) {
+                                        new_sequence.front() = base_sequence.front();
+                                    } else {
+                                        new_sequence = vcfspec::missingValue;
+                                    }
                                 } else {
-                                    new_sequence = vcfspec::missingValue;
+                                    new_sequence.front() = actual_reference_base;
                                 }
                             } else {
                                 new_sequence.front() = actual_reference_base;
@@ -458,6 +463,9 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     const auto& seq = new_genotype[i].sequence();
                     if (std::find(std::cbegin(seq), std::cend(seq), vcfspec::deletedBase) == std::cend(seq)
                         && block_head_end_itr->call->is_represented(new_genotype[i])) {
+                        if (prev_represented[s].size() <= i) {
+                            prev_represented[s].resize(i + 1, nullptr);
+                        }
                         prev_represented[s][i] = std::addressof(*block_head_end_itr->call);
                     }
                 }
