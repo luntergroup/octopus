@@ -41,7 +41,7 @@ private:
     bool annotate_measures_;
     
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
-    virtual Classification classify(const std::vector<Classification>& sample_classifications) const;
+    virtual Classification merge(const std::vector<Classification>& sample_classifications) const;
     
     void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const override;
     void filter(const VcfRecord& call, VcfWriter& dest, const SampleList& samples) const;

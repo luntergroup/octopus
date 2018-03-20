@@ -44,7 +44,7 @@ bool any_of(const Range& values, UnaryPredicate pred)
 
 } // namespace
 
-VariantCallFilter::Classification SinglePassVariantCallFilter::classify(const std::vector<Classification>& sample_classifications) const
+VariantCallFilter::Classification SinglePassVariantCallFilter::merge(const std::vector<Classification>& sample_classifications) const
 {
     assert(!sample_classifications.empty());
     if (sample_classifications.size() == 1) {
@@ -127,7 +127,7 @@ void SinglePassVariantCallFilter::filter(const CallBlock& block, const MeasureBl
 void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest, const SampleList& samples) const
 {
     const auto sample_classifications = classify(measures, samples);
-    const auto call_classification = classify(sample_classifications);
+    const auto call_classification = merge(sample_classifications);
     if (annotate_measures_) {
         auto annotation_builder = VcfRecord::Builder {call};
         annotate(annotation_builder, measures);
