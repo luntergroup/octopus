@@ -108,6 +108,7 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     if (has_normal_sample()) result->normal_sample_ = std::cref(normal_sample());
     evaluate_tumour_model(*result, haplotype_likelihoods);
     evaluate_noise_model(*result, haplotype_likelihoods);
+    set_model_posteriors(*result);
     return result;
 }
 
@@ -489,6 +490,21 @@ void CancerCaller::evaluate_noise_model(Latents& latents, const HaplotypeLikelih
     }
 }
 
+void CancerCaller::set_model_posteriors(Latents& latents) const
+{
+    const auto& germline_inferences = latents.germline_model_inferences_;
+    const auto& cnv_inferences      = latents.cnv_model_inferences_;
+    const auto& somatic_inferences  = latents.tumour_model_inferences_;
+    const auto& model_priors        = latents.model_priors_;
+    const auto germline_model_jlp = std::log(model_priors.germline) + germline_inferences.log_evidence;
+    const auto cnv_model_jlp      = std::log(model_priors.cnv) + cnv_inferences.approx_log_evidence;
+    const auto somatic_model_jlp  = std::log(model_priors.somatic) + somatic_inferences.approx_log_evidence;
+    const auto norm = maths::log_sum_exp(germline_model_jlp, cnv_model_jlp, somatic_model_jlp);
+    latents.model_posteriors_.germline = std::exp(germline_model_jlp - norm);
+    latents.model_posteriors_.cnv      = std::exp(cnv_model_jlp - norm);
+    latents.model_posteriors_.somatic  = std::exp(somatic_model_jlp - norm);
+}
+
 CancerCaller::CNVModel::Priors
 CancerCaller::get_cnv_model_priors(const GenotypePriorModel& prior_model) const
 {
@@ -856,7 +872,7 @@ std::vector<std::unique_ptr<VariantCall>>
 CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
     // TODO: refactor this into smaller methods!
-    const auto model_posteriors = calculate_model_posteriors(latents);
+    const auto& model_posteriors = latents.model_posteriors_;
     if (debug_log_) {
         stream(*debug_log_) << "Germline model posterior: " << model_posteriors.germline;
         stream(*debug_log_) << "CNV model posterior:      " << model_posteriors.cnv;
@@ -1023,23 +1039,6 @@ CancerCaller::ModelPriors CancerCaller::get_model_priors(const std::vector<Haplo
     return result;
 }
 
-CancerCaller::ModelPosteriors
-CancerCaller::calculate_model_posteriors(const Latents& latents) const
-{
-    const auto& germline_inferences = latents.germline_model_inferences_;
-    const auto& cnv_inferences      = latents.cnv_model_inferences_;
-    const auto& somatic_inferences  = latents.tumour_model_inferences_;
-    const auto& model_priors        = latents.model_priors_;
-    const auto germline_model_jlp = std::log(model_priors.germline) + germline_inferences.log_evidence;
-    const auto cnv_model_jlp      = std::log(model_priors.cnv) + cnv_inferences.approx_log_evidence;
-    const auto somatic_model_jlp  = std::log(model_priors.somatic) + somatic_inferences.approx_log_evidence;
-    const auto norm = maths::log_sum_exp(germline_model_jlp, cnv_model_jlp, somatic_model_jlp);
-    auto germline_model_posterior = std::exp(germline_model_jlp - norm);
-    auto cnv_model_posterior      = std::exp(cnv_model_jlp - norm);
-    auto somatic_model_posterior  = std::exp(somatic_model_jlp - norm);
-    return {germline_model_posterior, cnv_model_posterior, somatic_model_posterior};
-}
-
 CancerCaller::GermlineGenotypeProbabilityMap
 CancerCaller::calculate_germline_genotype_posteriors(const Latents& latents, const ModelPosteriors& model_posteriors) const
 {
@@ -1188,9 +1187,9 @@ void CancerCaller::Latents::compute_haplotype_posteriors() const
         somatic_result.at(p.get<0>().somatic_element()) += p.get<1>();
     }
     for (auto& p : result) {
-        p.second *= model_priors_.germline;
-        p.second += model_priors_.cnv * cnv_result.at(p.first);
-        p.second += model_priors_.somatic * somatic_result.at(p.first);
+        p.second *= model_posteriors_.germline;
+        p.second += model_posteriors_.cnv * cnv_result.at(p.first);
+        p.second += model_posteriors_.somatic * somatic_result.at(p.first);
     }
     haplotype_posteriors_ = std::make_shared<Latents::HaplotypeProbabilityMap>(std::move(result));
 }

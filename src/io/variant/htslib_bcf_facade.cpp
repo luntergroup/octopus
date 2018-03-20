@@ -627,6 +627,13 @@ void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& b
     if (flaginfo != nullptr) std::free(flaginfo);
 }
 
+float get_bcf_float_missing() noexcept
+{
+    float result;
+    bcf_float_set_missing(result);
+    return result;
+}
+
 void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
 {
     for (const auto& key : source.info_keys()) {
@@ -638,9 +645,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             {
                 bc::small_vector<int, defaultBufferCapacity> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
-                               [] (const auto& v) {
-                                   return v != bcf_missing_str ? std::stoi(v) : bcf_int32_missing;
-                               });
+                               [] (const auto& v) { return !is_missing(v) ? std::stoi(v) : bcf_int32_missing; });
                 bcf_update_info_int32(header, dest, key.c_str(), vals.data(), num_values);
                 break;
             }
@@ -648,9 +653,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             {
                 bc::small_vector<float, defaultBufferCapacity> vals(num_values);
                 std::transform(std::cbegin(values), std::cend(values), std::begin(vals),
-                               [] (const auto& v) {
-                                   return v != bcf_missing_str ? std::stof(v) : bcf_float_missing;
-                               });
+                               [] (const auto& v) { return !is_missing(v) ? std::stof(v) : get_bcf_float_missing(); });
                 bcf_update_info_float(header, dest, key.c_str(), vals.data(), num_values);
                 break;
             }
@@ -804,13 +807,6 @@ auto max_format_cardinality(const VcfRecord& record, const VcfRecord::KeyType& k
     for (const auto& sample : samples) {
         result = std::max(result, record.get_sample_value(sample, key).size());
     }
-    return result;
-}
-
-float get_bcf_float_missing() noexcept
-{
-    float result;
-    bcf_float_set_missing(result);
     return result;
 }
 

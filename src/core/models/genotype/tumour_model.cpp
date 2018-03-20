@@ -197,9 +197,7 @@ auto compute_germline_log_likelihoods(const SampleName& sample,
     const GermlineLikelihoodModel likelihood_model {haplotype_log_likelihoods};
     std::vector<double> result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&] (const auto& genotype) {
-                       return likelihood_model.evaluate(genotype.germline_genotype());
-                   });
+                   [&] (const auto& genotype) { return likelihood_model.evaluate(genotype.germline_genotype()); });
     return result;
 }
 
@@ -246,7 +244,7 @@ auto generate_seeds(const std::vector<SampleName>& samples,
     for (const auto& sample : samples) {
         auto log_likelihoods = compute_germline_log_likelihoods(sample, genotypes, haplotype_log_likelihoods);
         result.push_back(compute_germline_log_posteriors(genotype_log_priors, log_likelihoods));
-        maths::normalise_exp(log_likelihoods); // convert to probabilities
+        maths::normalise_logs(log_likelihoods);
         result.push_back(std::move(log_likelihoods));
         result.push_back(compute_log_posteriors_with_germline_model(sample, genotypes, haplotype_log_likelihoods));
     }

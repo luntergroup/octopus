@@ -240,6 +240,7 @@ struct CallWrapper : public Mappable<CallWrapper>
     std::reference_wrapper<const VcfRecord> call;
     GenomicRegion phase_region;
     const GenomicRegion& mapped_region() const noexcept { return phase_region; }
+    const VcfRecord& get() const noexcept { return call.get(); }
 };
 
 auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleName& sample)
@@ -252,10 +253,13 @@ auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleName& sample)
     return result;
 }
 
-auto get_ploidy(const std::vector<CallWrapper>& phased_calls, const SampleName& sample)
+auto get_max_ploidy(const std::vector<CallWrapper>& calls, const SampleName& sample)
 {
-    assert(!phased_calls.empty());
-    return get_genotype(phased_calls.front().call, sample).size();
+    unsigned result {0};
+    for (const auto& call : calls) {
+        result = std::max(result, call.get().ploidy(sample));
+    }
+    return result;
 }
 
 auto make_genotype(std::vector<Haplotype::Builder>&& haplotypes)
@@ -274,12 +278,12 @@ Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_call
 {
     assert(!phased_calls.empty());
     assert(contains(region, encompassing_region(phased_calls)));
-    const auto ploidy = get_ploidy(phased_calls, sample);
-    std::vector<Haplotype::Builder> haplotypes(ploidy, Haplotype::Builder {region, reference});
+    const auto max_ploidy = get_max_ploidy(phased_calls, sample);
+    std::vector<Haplotype::Builder> haplotypes(max_ploidy, Haplotype::Builder {region, reference});
     for (const auto& call : phased_calls) {
         auto genotype = extract_genotype(call.call, sample);
-        assert(genotype.size() == ploidy);
-        for (unsigned i {0}; i < ploidy; ++i) {
+        assert(genotype.size() <= max_ploidy);
+        for (unsigned i {0}; i < genotype.size(); ++i) {
             if (genotype[i] && haplotypes[i].can_push_back(*genotype[i])) {
                 haplotypes[i].push_back(std::move(*genotype[i]));
             }
