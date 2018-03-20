@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
+#include <cmath>
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/optional.hpp>
