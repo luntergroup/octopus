@@ -39,31 +39,36 @@ inline std::ostream& operator<<(std::ostream& os, const TimeInterval& interval)
         return os;
     }
     const auto duration_s = duration<std::chrono::seconds>(interval);
-    if (duration_s.count() < 60) {
-        os << duration_s.count() << 's';
+    const auto secs = duration_s.count();
+    if (secs < 60) {
+        os << secs << 's';
         return os;
     }
     const auto duration_m = duration<std::chrono::minutes>(interval);
-    if (duration_m.count() < 60) {
-        os << duration_m.count() << '.' << std::setw(2) << std::setfill('0')
-           << ((100 * (duration_s.count() % 60)) / 60) << 'm';
+    const auto mins = duration_m.count();
+    if (mins < 60) {
+        os << mins << 'm';
+        const auto remainder_secs = secs % 60;
+        if (remainder_secs > 0) os << ' ' << remainder_secs << 's';
     } else {
         const auto duration_h = duration<std::chrono::hours>(interval);
         if (duration_h.count() <= 24) {
-            os << duration_h.count() << '.' << std::setw(2) << std::setfill('0')
-               << ((100 * (duration_m.count() % 60)) / 60) << 'h';
+            const auto hours = duration_h.count();
+            os << hours << 'h';
+            const auto remainder_mins = mins % 60;
+            if (remainder_mins > 0) os << ' ' << remainder_mins << 'm';
         } else {
             using H = std::chrono::hours::rep;
             constexpr H num_hours_in_day {24};
             const auto days = std::div(duration_h.count(), num_hours_in_day);
             if (days.quot < 7) {
-                os << days.quot << '.' << std::setw(2) << std::setfill('0')
-                   << ((100 * days.rem) / num_hours_in_day) << 'd';
+                os << days.quot << 'd';
+                if (days.rem > 0) os << ' ' << days.rem << 'h';
             } else {
                 constexpr H num_hours_in_week {7 * num_hours_in_day};
                 const auto weeks = std::div(duration_h.count(), num_hours_in_week);
-                os << weeks.quot << '.' << std::setw(2) << std::setfill('0')
-                   << ((100 * weeks.rem) / num_hours_in_week) << 'w';
+                os << weeks.quot << 'w';
+                if (weeks.rem > 0) os << ' ' << weeks.rem << 'd';
             }
         }
         
