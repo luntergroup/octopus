@@ -520,11 +520,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "Paternal sample")
     
     ("snv-denovo-mutation-rate",
-     po::value<float>()->default_value(1e-9, "1e-9"),
+     po::value<float>()->default_value(1.3e-8, "1.3e-8"),
      "SNV de novo mutation rate, per base per generation")
     
     ("indel-denovo-mutation-rate",
-     po::value<float>()->default_value(1e-10, "1e-10"),
+     po::value<float>()->default_value(1e-9, "1e-9"),
      "INDEL de novo mutation rate, per base per generation")
     
     ("min-denovo-posterior",
