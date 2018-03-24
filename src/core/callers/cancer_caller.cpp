@@ -124,7 +124,7 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
 static double calculate_model_posterior(const double normal_germline_model_log_evidence,
                                         const double normal_dummy_model_log_evidence)
 {
-    constexpr double normalModelPrior {0.999};
+    constexpr double normalModelPrior {0.9999999};
     constexpr double dummyModelPrior {1.0 - normalModelPrior};
     const auto normal_model_ljp = std::log(normalModelPrior) + normal_germline_model_log_evidence;
     const auto dummy_model_ljp  = std::log(dummyModelPrior) + normal_dummy_model_log_evidence;
@@ -136,7 +136,7 @@ static double calculate_model_posterior(const double germline_model_log_evidence
                                         const double dummy_model_log_evidence,
                                         const double noise_model_log_evidence)
 {
-    constexpr double normalModelPrior {0.999};
+    constexpr double normalModelPrior {0.9999999};
     constexpr double dummyModelPrior {1.0 - normalModelPrior};
     const auto normal_model_ljp = std::log(normalModelPrior) + germline_model_log_evidence;
     const auto dummy_model_ljp  = std::log(dummyModelPrior) + dummy_model_log_evidence;
