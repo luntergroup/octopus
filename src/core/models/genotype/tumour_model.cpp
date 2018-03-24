@@ -201,7 +201,20 @@ auto compute_germline_log_likelihoods(const SampleName& sample,
     return result;
 }
 
-auto compute_germline_log_posteriors(const LogProbabilityVector& log_priors, const LogProbabilityVector& log_likelihoods)
+auto compute_demoted_log_likelihoods(const SampleName& sample,
+                                     const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+{
+    assert(!genotypes.empty());
+    haplotype_log_likelihoods.prime(sample);
+    const GermlineLikelihoodModel likelihood_model {haplotype_log_likelihoods};
+    std::vector<double> result(genotypes.size());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                   [&] (const auto& genotype) { return likelihood_model.evaluate(demote(genotype)); });
+    return result;
+}
+
+auto compute_log_posteriors(const LogProbabilityVector& log_priors, const LogProbabilityVector& log_likelihoods)
 {
     assert(log_priors.size() == log_likelihoods.size());
     LogProbabilityVector result(log_priors.size());
@@ -211,25 +224,23 @@ auto compute_germline_log_posteriors(const LogProbabilityVector& log_priors, con
     return result;
 }
 
-auto compute_log_posteriors_with_germline_model(const SampleName& sample,
-                                                const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                                const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
-{
-    assert(!genotypes.empty());
-    haplotype_log_likelihoods.prime(sample);
-    const GermlineLikelihoodModel likelihood_model {haplotype_log_likelihoods};
-    std::vector<double> result(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&] (const auto& genotype) {
-                       return likelihood_model.evaluate(demote(genotype));
-                   });
-    maths::normalise_logs(result);
-    return result;
-}
-
 LogProbabilityVector log_uniform_dist(const std::size_t n)
 {
     return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
+}
+
+auto make_point_seed(const std::size_t num_genotypes, const std::size_t n, const double p = 0.99)
+{
+    LogProbabilityVector result(num_genotypes, std::log((1 - p) / (num_genotypes - 1)));
+    result[n] = std::log(p);
+    return result;
+}
+
+auto make_range_seed(const std::size_t num_genotypes, const std::size_t begin, const std::size_t n, const double p = 0.99)
+{
+    LogProbabilityVector result(num_genotypes, std::log((1 - p) / (num_genotypes - n)));
+    std::fill_n(std::next(std::begin(result), begin), n, std::log(p / n));
+    return result;
 }
 
 auto generate_seeds(const std::vector<SampleName>& samples,
@@ -243,10 +254,13 @@ auto generate_seeds(const std::vector<SampleName>& samples,
     result.push_back(log_uniform_dist(genotypes.size()));
     for (const auto& sample : samples) {
         auto log_likelihoods = compute_germline_log_likelihoods(sample, genotypes, haplotype_log_likelihoods);
-        result.push_back(compute_germline_log_posteriors(genotype_log_priors, log_likelihoods));
+        result.push_back(compute_log_posteriors(genotype_log_priors, log_likelihoods));
         maths::normalise_logs(log_likelihoods);
         result.push_back(std::move(log_likelihoods));
-        result.push_back(compute_log_posteriors_with_germline_model(sample, genotypes, haplotype_log_likelihoods));
+        auto demoted_log_likelihoods = compute_demoted_log_likelihoods(sample, genotypes, haplotype_log_likelihoods);
+        result.push_back(compute_log_posteriors(genotype_log_priors, demoted_log_likelihoods));
+        maths::normalise_logs(demoted_log_likelihoods);
+        result.push_back(std::move(demoted_log_likelihoods));
     }
     return result;
 }
