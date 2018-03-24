@@ -376,6 +376,60 @@ auto log_dirichlet(const Container1& alpha, const Container2& pi)
     return log_dirichlet(std::cbegin(alpha), std::cend(alpha), std::cbegin(pi));
 }
 
+template <typename ForwardIt>
+auto dirichlet_expectation(ForwardIt first_alpha, ForwardIt last_alpha)
+{
+    using T = std::decay_t<typename std::iterator_traits<ForwardIt>::value_type>;
+    static_assert(std::is_floating_point<T>::value,
+                  "log_dirichlet is only defined for floating point types.");
+    const auto K = static_cast<std::size_t>(std::distance(first_alpha, last_alpha));
+    const auto a0 = std::accumulate(first_alpha, last_alpha, T {0});
+    std::vector<T> result(K);
+    std::transform(first_alpha, last_alpha, std::begin(result), [a0] (auto a) { return a / a0; });
+    return result;
+}
+
+template <typename Range>
+auto dirichlet_expectation(const Range& values)
+{
+    return dirichlet_expectation(std::cbegin(values), std::cend(values));
+}
+
+template <typename ForwardIt>
+auto dirichlet_expectation(const unsigned i, ForwardIt first_alpha, ForwardIt last_alpha)
+{
+    using T = std::decay_t<typename std::iterator_traits<ForwardIt>::value_type>;
+    static_assert(std::is_floating_point<T>::value,
+                  "log_dirichlet is only defined for floating point types.");
+    assert(i < static_cast<unsigned>(std::distance(first_alpha, last_alpha)));
+    return *std::next(first_alpha, i) / std::accumulate(first_alpha, last_alpha, T {0});
+}
+
+template <typename Range>
+auto dirichlet_expectation(const unsigned i, const Range& values)
+{
+    return dirichlet_expectation(i, std::cbegin(values), std::cend(values));
+}
+
+template <typename ForwardIt>
+auto dirichlet_entropy(ForwardIt first_alpha, ForwardIt last_alpha)
+{
+    using T = std::decay_t<typename std::iterator_traits<ForwardIt>::value_type>;
+    static_assert(std::is_floating_point<T>::value,
+                  "log_dirichlet is only defined for floating point types.");
+    const auto K = static_cast<T>(std::distance(first_alpha, last_alpha));
+    const auto a0 = std::accumulate(first_alpha, last_alpha, T {0});
+    using boost::math::digamma;
+    return log_beta(first_alpha, last_alpha) - (K - a0) * digamma(a0)
+           - std::accumulate(first_alpha, last_alpha, T {0}, [] (auto curr, auto a) { return curr + (a - 1) * digamma(a); });
+}
+
+template <typename Range>
+auto dirichlet_entropy(const Range& values)
+{
+    return dirichlet_entropy(std::cbegin(values), std::cend(values));
+}
+
 template <typename RealType, typename IntegerType>
 inline RealType log_multinomial_coefficient(std::initializer_list<IntegerType> il)
 {
