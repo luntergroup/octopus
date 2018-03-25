@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_parser.hpp"
@@ -347,7 +347,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(200),
      "The maximum number of bases allowed to overlap assembly regions")
     
-    ("force-assemble",
+    ("assemble-all",
      po::bool_switch()->default_value(false),
      "Forces all regions to be assembled")
     
@@ -393,9 +393,13 @@ OptionMap parse_options(const int argc, const char** argv)
     ("extension-level",
      po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
      "Level of haplotype extension. Possible values are: conservative, normal, optimistic, aggressive")
+
+    ("haplotype-extension-threshold,e",
+     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
+     "Haplotypes with posterior probability less than this can be filtered before extension")
     ;
     
-    po::options_description caller("Caller (general)");
+    po::options_description caller("Calling (general)");
     caller.add_options()
     ("caller,C",
      po::value<std::string>()->default_value("population"),
@@ -433,37 +437,55 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("snp-heterozygosity,z",
      po::value<float>()->default_value(0.001, "0.001"),
-     "SNP heterozygosity for the given samples")
+     "Germline SNP heterozygosity for the given samples")
     
     ("snp-heterozygosity-stdev",
      po::value<float>()->default_value(0.01, "0.01"),
-     "Standard deviation of the SNP heterozygosity used for the given samples")
+     "Standard deviation of the germline SNP heterozygosity used for the given samples")
     
     ("indel-heterozygosity,y",
      po::value<float>()->default_value(0.0001, "0.0001"),
-     "Indel heterozygosity for the given samples")
+     "Germline indel heterozygosity for the given samples")
     
     ("use-uniform-genotype-priors",
     po::bool_switch()->default_value(false),
     "Use a uniform prior model when calculating genotype posteriors")
     
+    ("max-joint-genotypes",
+     po::value<int>()->default_value(1000000),
+     "The maximum number of joint genotype vectors to consider when computing joint"
+     " genotype posterior probabilities")
+    
     ("model-posterior",
      po::value<bool>(),
      "Calculate model posteriors for every call")
+    
+    ("inactive-flank-scoring",
+     po::value<bool>()->default_value(true),
+     "Disables additional calculation to adjust alignment score when there are inactive"
+     " candidates in haplotype flanking regions")
+    
+    ("model-mapping-quality",
+     po::value<bool>()->default_value(true),
+     "Include the read mapping quality in the haplotype likelihood calculation")
+    
+    ("sequence-error-model",
+     po::value<std::string>()->default_value("HiSeq"),
+     "The sequencer error model to use (HiSeq or xTen)")
     ;
     
-    po::options_description cancer("Caller (cancer)");
+    po::options_description cancer("Calling (cancer)");
     cancer.add_options()
     ("normal-sample,N",
      po::value<std::string>(),
      "Normal sample - all other samples are considered tumour")
     
     ("somatic-snv-mutation-rate",
-     po::value<float>()->default_value(2e-05, "1e-05"),
+     po::value<float>()->default_value(1e-04, "0.0001"),
      "Expected SNV somatic mutation rate, per megabase pair, for this sample")
     
     ("somatic-indel-mutation-rate",
-     po::value<float>()->default_value(5e-06, "1e-05"),
+     po::value<float>()->default_value(1e-05, "0.00001"),
      "Expected INDEL somatic mutation rate, per megabase pair, for this sample")
     
     ("min-expected-somatic-frequency",
@@ -489,13 +511,9 @@ OptionMap parse_options(const int argc, const char** argv)
     ("normal-contamination-risk",
      po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
      "The risk the normal sample has contamination from the tumour")
-    
-    ("somatics-only",
-     po::bool_switch()->default_value(false),
-     "Only emit somatic variant calls")
     ;
     
-    po::options_description trio("Caller (trio)");
+    po::options_description trio("Calling (trio)");
     trio.add_options()
     ("maternal-sample,M",
      po::value<std::string>(),
@@ -506,20 +524,16 @@ OptionMap parse_options(const int argc, const char** argv)
      "Paternal sample")
     
     ("snv-denovo-mutation-rate",
-     po::value<float>()->default_value(1e-9, "1e-9"),
+     po::value<float>()->default_value(1.3e-8, "1.3e-8"),
      "SNV de novo mutation rate, per base per generation")
     
     ("indel-denovo-mutation-rate",
-     po::value<float>()->default_value(1e-10, "1e-10"),
+     po::value<float>()->default_value(1e-9, "1e-9"),
      "INDEL de novo mutation rate, per base per generation")
     
     ("min-denovo-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
+     po::value<Phred<double>>()->default_value(Phred<double> {3}),
      "Minimum posterior probability (phred scale) to emit a de novo mutation call")
-    
-    ("denovos-only",
-     po::bool_switch()->default_value(false),
-     "Only emit de novo variant calls")
     ;
     
     po::options_description phasing("Phasing");
@@ -530,40 +544,11 @@ OptionMap parse_options(const int argc, const char** argv)
      " of runtime speed. Possible values are: minimal, conservative, moderate, normal, aggressive")
     
     ("min-phase-score",
-     po::value<Phred<double>>()->default_value(Phred<double> {20.0}),
+     po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
      "Minimum phase score (phred scale) required to report sites as phased")
-    
-    ("use-unconditional-phase-score",
-     po::bool_switch()->default_value(false),
-     "Computes unconditional phase scores rather than conditioning on called genotypes")
     ;
     
-    po::options_description advanced("Advanced calling algorithm");
-    advanced.add_options()
-    ("haplotype-extension-threshold,e",
-     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
-     "Haplotypes with posterior probability less than this can be filtered before extension")
-    
-    ("inactive-flank-scoring",
-     po::value<bool>()->default_value(true),
-     "Disables additional calculation to adjust alignment score when there are inactive"
-     " candidates in haplotype flanking regions")
-    
-    ("model-mapping-quality",
-     po::value<bool>()->default_value(true),
-     "Include the read mapping quality in the haplotype likelihood calculation")
-    
-    ("max-joint-genotypes",
-     po::value<int>()->default_value(1000000),
-     "The maximum number of joint genotype vectors to consider when computing joint"
-     " genotype posterior probabilities")
-    
-    ("sequence-error-model",
-     po::value<std::string>()->default_value("HiSeq"),
-     "The sequencer error model to use (HiSeq or xTen)")
-    ;
-    
-    po::options_description call_filtering("Callset filtering");
+    po::options_description call_filtering("CSR filtering");
     call_filtering.add_options()
     ("call-filtering,f",
      po::value<bool>()->default_value(true),
@@ -593,7 +578,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description all("octopus options");
     all.add(general).add(backend).add(input).add(transforms).add(filters)
     .add(variant_generation).add(haplotype_generation).add(caller)
-    .add(advanced).add(cancer).add(trio).add(phasing).add(call_filtering);
+    .add(cancer).add(trio).add(phasing).add(call_filtering);
     
     OptionMap vm_init;
     po::store(run(po::command_line_parser(argc, argv).options(general).allow_unregistered()), vm_init);
@@ -601,14 +586,32 @@ OptionMap parse_options(const int argc, const char** argv)
     if (vm_init.count("help") == 1) {
         po::store(run(po::command_line_parser(argc, argv).options(caller).allow_unregistered()), vm_init);
         if (vm_init.count("caller") == 1) {
-            const auto caller = vm_init.at("caller").as<std::string>();
+            const auto selected_caller = vm_init.at("caller").as<std::string>();
             validate_caller(vm_init);
-            if (caller == "individual") {
-                std::cout << all << std::endl;
-            } else if (caller == "population") {
-                std::cout << all << std::endl;
-            } else if (caller == "cancer") {
-                std::cout << all << std::endl;
+            if (selected_caller == "individual") {
+                po::options_description individual_options("octopus individual calling options");
+                individual_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller)
+                .add(phasing).add(call_filtering);
+                std::cout << individual_options << std::endl;
+            } else if (selected_caller == "trio") {
+                po::options_description trio_options("octopus trio calling options");
+                trio_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller).add(trio)
+                .add(phasing).add(call_filtering);
+                std::cout << trio_options << std::endl;
+            } else if (selected_caller == "population") {
+                po::options_description population_options("octopus population calling options");
+                population_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller)
+                .add(phasing).add(call_filtering);
+                std::cout << population_options << std::endl;
+            } else if (selected_caller == "cancer") {
+                po::options_description cancer_options("octopus cancer calling options");
+                cancer_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller).add(cancer)
+                .add(phasing).add(call_filtering);
+                std::cout << cancer_options << std::endl;
             } else {
                 std::cout << all << std::endl;
             }

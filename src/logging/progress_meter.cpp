@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "progress_meter.hpp"
@@ -461,14 +461,14 @@ std::string ProgressMeter::completed_pad(const std::string& percent_completed) c
 
 std::string ProgressMeter::time_taken_pad(const std::string& time_taken) const
 {
-    if (time_taken.size() >= 16) return {};
-    return std::string(16 - time_taken.size(), ' ');
+    if (time_taken.size() >= 17) return {};
+    return std::string(17 - time_taken.size(), ' ');
 }
 
 std::string ProgressMeter::ttc_pad(const std::string& ttc) const
 {
-    if (ttc.size() >= 16) return {};
-    return std::string(16 - ttc.size(), ' ');
+    if (ttc.size() >= 18) return {};
+    return std::string(18 - ttc.size(), ' ');
 }
 
 void ProgressMeter::update_tick_size()

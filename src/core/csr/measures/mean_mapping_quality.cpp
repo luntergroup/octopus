@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "mean_mapping_quality.hpp"
@@ -32,9 +32,19 @@ Measure::ResultType MeanMappingQuality::do_evaluate(const VcfRecord& call, const
     }
 }
 
+Measure::ResultCardinality MeanMappingQuality::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string MeanMappingQuality::do_name() const
 {
     return "MQ";
+}
+
+std::string MeanMappingQuality::do_describe() const
+{
+    return "Mean mapping quality of reads overlapping the call";
 }
 
 std::vector<std::string> MeanMappingQuality::do_requirements() const

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef single_pass_variant_call_filter_hpp
@@ -41,14 +41,15 @@ private:
     bool annotate_measures_;
     
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
+    virtual Classification merge(const std::vector<Classification>& sample_classifications) const;
     
     void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const override;
-    
-    void filter(const VcfRecord& call, VcfWriter& dest) const;
-    void filter(const CallBlock& block, VcfWriter& dest) const;
-    void filter(const std::vector<CallBlock>& blocks, VcfWriter& dest) const;
-    void filter(const CallBlock& block, const MeasureBlock & measures, VcfWriter& dest) const;
-    void filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest) const;
+    void filter(const VcfRecord& call, VcfWriter& dest, const SampleList& samples) const;
+    void filter(const CallBlock& block, VcfWriter& dest, const SampleList& samples) const;
+    void filter(const std::vector<CallBlock>& blocks, VcfWriter& dest, const SampleList& samples) const;
+    void filter(const CallBlock& block, const MeasureBlock & measures, VcfWriter& dest, const SampleList& samples) const;
+    void filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest, const SampleList& samples) const;
+    std::vector<Classification> classify(const MeasureVector& call_measures, const SampleList& samples) const;
     void log_progress(const GenomicRegion& region) const;
 };
 

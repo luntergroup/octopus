@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef cancer_caller_hpp
@@ -51,7 +51,6 @@ public:
         double cnv_normal_alpha = 10.0, cnv_tumour_alpha = 0.75;
         double somatic_normal_germline_alpha = 10.0, somatic_normal_somatic_alpha = 0.08;
         double somatic_tumour_germline_alpha = 1.0, somatic_tumour_somatic_alpha = 0.8;
-        double germline_weight = 70, cnv_weight = 3, somatic_weight = 2;
     };
     
     CancerCaller() = delete;
@@ -135,14 +134,14 @@ private:
     void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void evaluate_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void set_model_posteriors(Latents& latents) const;
     
     std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const;
     CNVModel::Priors get_cnv_model_priors(const GenotypePriorModel& prior_model) const;
     TumourModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model) const;
     TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const;
     CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
-    ModelPriors get_model_priors() const;
-    ModelPosteriors calculate_model_posteriors(const Latents& latents) const;
+    ModelPriors get_model_priors(const std::vector<Haplotype>& haplotypes) const;
     
     GermlineGenotypeProbabilityMap
     calculate_germline_genotype_posteriors(const Latents& latents, const ModelPosteriors& model_posteriors) const;
@@ -185,6 +184,7 @@ private:
     TumourModel::InferredLatents tumour_model_inferences_;
     boost::optional<TumourModel::InferredLatents> noise_model_inferences_ = boost::none;
     boost::optional<GermlineModel::InferredLatents> normal_germline_inferences_ = boost::none;
+    CancerCaller::ModelPosteriors model_posteriors_;
     
     mutable std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_ = nullptr;
     mutable std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_ = nullptr;

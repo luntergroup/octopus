@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_extractor.hpp"
@@ -11,6 +11,7 @@
 #include "io/variant/vcf_spec.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "utils/sequence_utils.hpp"
+#include "utils/append.hpp"
 
 namespace octopus { namespace coretools {
 
@@ -86,9 +87,23 @@ void extract_variants(const VcfRecord& record, Container& result)
 
 } // namespace
 
-std::vector<Variant> VcfExtractor::do_generate_variants(const GenomicRegion& region)
+std::vector<Variant> VcfExtractor::do_generate(const RegionSet& regions) const
 {
-    std::deque<Variant> variants {};
+    std::vector<Variant> result {};
+    for (const auto& region : regions) {
+        utils::append(fetch_variants(region), result);
+    }
+    return result;
+}
+
+std::string VcfExtractor::name() const
+{
+    return "VCF extraction";
+}
+
+std::vector<Variant> VcfExtractor::fetch_variants(const GenomicRegion& region) const
+{
+  std::deque<Variant> variants {};
     for (auto p = reader_->iterate(region, VcfReader::UnpackPolicy::sites); p.first != p.second; ++p.first) {
         if (is_good(*p.first)) {
             extract_variants(*p.first, variants);
@@ -101,12 +116,7 @@ std::vector<Variant> VcfExtractor::do_generate_variants(const GenomicRegion& reg
     return result;
 }
 
-std::string VcfExtractor::name() const
-{
-    return "VCF extraction";
-}
-
-bool VcfExtractor::is_good(const VcfRecord& record)
+bool VcfExtractor::is_good(const VcfRecord& record) const
 {
     if (!options_.extract_filtered && is_filtered(record)) return false;
     return !options_.min_quality || (record.qual() && *record.qual() >= *options_.min_quality);

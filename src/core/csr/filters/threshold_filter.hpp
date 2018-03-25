@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef threshold_filter_hpp
@@ -112,6 +112,11 @@ private:
         bool operator()(boost::any value) const noexcept
         {
             return true;
+        }
+        template <typename T_>
+        bool operator()(const std::vector<T_>& values) const noexcept
+        {
+            return std::all_of(std::cbegin(values), std::cend(values), [this] (const auto& value) { return (*this)(value); });
         }
         T target;
         Cmp cmp;

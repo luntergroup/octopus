@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "threshold_filter_factory.hpp"
@@ -67,7 +67,7 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<ModelPosterior>()]           = lowModelPosterior;
     filter_names[name<Quality>()]                  = lowQuality;
     filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
-    filter_names[name<MaxGenotypeQuality>()]       = lowGQ;
+    filter_names[name<GenotypeQuality>()]       = lowGQ;
     filter_names[name<StrandBias>()]               = strandBias;
     filter_names[name<FilteredReadFraction>()]     = filteredReadFraction;
     filter_names[name<GCContent>()]                = highGCRegion;

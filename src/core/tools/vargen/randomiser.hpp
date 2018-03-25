@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef randomiser_hpp
@@ -40,16 +40,13 @@ public:
     ~Randomiser() override = default;
     
 private:
-    using VariantGenerator::VectorIterator;
-    using VariantGenerator::FlatSetIterator;
+    using VariantGenerator::ReadVectorIterator;
+    using VariantGenerator::ReadFlatSetIterator;
     
     std::unique_ptr<VariantGenerator> do_clone() const override;
-    
-    void do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last) override;
-    void do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last) override;
-    
-    std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
-    
+    void do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last) override;
+    void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) override;
+    std::vector<Variant> do_generate(const RegionSet& regions) const override;
     std::string name() const override;
     
     std::reference_wrapper<const ReferenceGenome> reference_;

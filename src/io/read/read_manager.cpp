@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_manager.hpp"
@@ -298,7 +298,7 @@ auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker,
     if (position_tracker.num_tracked() <= max_coverage) return region;
     const auto max_region = max_head_region(position_tracker, region);
     if (size(max_region) <= 1) return max_region;
-    auto position_coverage = position_tracker.coverage(max_region.contig_region());
+    auto position_coverage = position_tracker.get(max_region.contig_region());
     std::partial_sum(std::begin(position_coverage), std::end(position_coverage), std::begin(position_coverage));
     const auto last_position = std::upper_bound(std::cbegin(position_coverage), std::cend(position_coverage), max_coverage);
     return expand_rhs(head_region(region), std::distance(std::cbegin(position_coverage), last_position));

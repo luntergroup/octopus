@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "quality.hpp"
@@ -21,9 +21,19 @@ Measure::ResultType Quality::do_evaluate(const VcfRecord& call, const FacetMap& 
     return result;
 }
 
+Measure::ResultCardinality Quality::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string Quality::do_name() const
 {
     return "QUAL";
+}
+
+std::string Quality::do_describe() const
+{
+    return "Call QUAL";
 }
     
 } // namespace csr

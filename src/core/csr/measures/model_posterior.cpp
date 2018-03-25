@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "model_posterior.hpp"
@@ -23,9 +23,19 @@ Measure::ResultType ModelPosterior::do_evaluate(const VcfRecord& call, const Fac
     return result;
 }
 
+Measure::ResultCardinality ModelPosterior::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string ModelPosterior::do_name() const
 {
     return "MP";
+}
+
+std::string ModelPosterior::do_describe() const
+{
+    return "Model posterior for this haplotype block";
 }
 
 } // namespace csr

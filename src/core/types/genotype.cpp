@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "genotype.hpp"
@@ -6,6 +6,8 @@
 #include <iostream>
 
 #include <boost/math/special_functions/binomial.hpp>
+
+#include "utils/maths.hpp"
 
 namespace octopus {
 
@@ -71,19 +73,16 @@ bool Genotype<Haplotype>::is_homozygous() const
 unsigned Genotype<Haplotype>::zygosity() const
 {
     unsigned result {0};
-    
     for (auto it = std::cbegin(haplotypes_), last = std::cend(haplotypes_); it != last; ++result) {
         // naive algorithm faster in practice than binary searching
         it = std::find_if_not(std::next(it), last, [it] (const auto& x) { return *x == **it; });
     }
-    
     return result;
 }
 
 bool Genotype<Haplotype>::contains(const Haplotype& haplotype) const
 {
-    return std::binary_search(std::cbegin(haplotypes_), std::cend(haplotypes_), haplotype,
-                              HaplotypePtrLess {});
+    return std::binary_search(std::cbegin(haplotypes_), std::cend(haplotypes_), haplotype, HaplotypePtrLess {});
 }
 
 unsigned Genotype<Haplotype>::count(const Haplotype& haplotype) const
@@ -97,16 +96,11 @@ std::vector<Haplotype> Genotype<Haplotype>::copy_unique() const
 {
     std::vector<std::reference_wrapper<const HaplotypePtr>> ptr_copy {};
     ptr_copy.reserve(ploidy());
-    
-    std::unique_copy(std::cbegin(haplotypes_), std::cend(haplotypes_), std::back_inserter(ptr_copy),
-                     HaplotypePtrEqual {});
-    
+    std::unique_copy(std::cbegin(haplotypes_), std::cend(haplotypes_), std::back_inserter(ptr_copy), HaplotypePtrEqual {});
     std::vector<Haplotype> result {};
     result.reserve(ptr_copy.size());
-    
     std::transform(std::cbegin(ptr_copy), std::cend(ptr_copy), std::back_inserter(result),
                    [] (const auto& ptr) { return *ptr.get(); });
-    
     return result;
 }
 
@@ -114,47 +108,38 @@ std::vector<std::reference_wrapper<const Haplotype>> Genotype<Haplotype>::copy_u
 {
     std::vector<std::reference_wrapper<const Haplotype>> result {};
     result.reserve(ploidy());
-    
     std::transform(std::cbegin(haplotypes_), std::cend(haplotypes_), std::back_inserter(result),
                    [] (const HaplotypePtr& haplotype) { return std::cref(*haplotype); });
-    
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    
     return result;
 }
 
-bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const HaplotypePtr& lhs,
-                                                       const HaplotypePtr& rhs) const
+bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const HaplotypePtr& lhs, const HaplotypePtr& rhs) const
 {
     return *lhs < *rhs;
 }
 
-bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const Haplotype& lhs,
-                                                       const HaplotypePtr& rhs) const
+bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const Haplotype& lhs, const HaplotypePtr& rhs) const
 {
     return lhs < *rhs;
 }
 
-bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const HaplotypePtr& lhs,
-                                                       const Haplotype& rhs) const
+bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const HaplotypePtr& lhs, const Haplotype& rhs) const
 {
     return *lhs < rhs;
 }
 
-bool Genotype<Haplotype>::HaplotypePtrEqual::operator()(const HaplotypePtr& lhs,
-                                                        const HaplotypePtr& rhs) const
+bool Genotype<Haplotype>::HaplotypePtrEqual::operator()(const HaplotypePtr& lhs, const HaplotypePtr& rhs) const
 {
     return *lhs == *rhs;
 }
 
-bool Genotype<Haplotype>::HaplotypePtrEqual::operator()(const Haplotype& lhs,
-                                                        const HaplotypePtr& rhs) const
+bool Genotype<Haplotype>::HaplotypePtrEqual::operator()(const Haplotype& lhs, const HaplotypePtr& rhs) const
 {
     return lhs == *rhs;
 }
 
-bool Genotype<Haplotype>::HaplotypePtrEqual::operator()(const HaplotypePtr& lhs,
-                                                        const Haplotype& rhs) const
+bool Genotype<Haplotype>::HaplotypePtrEqual::operator()(const HaplotypePtr& lhs, const Haplotype& rhs) const
 {
     return *lhs == rhs;
 }
@@ -207,8 +192,22 @@ bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
 
 std::size_t num_genotypes(const unsigned num_elements, const unsigned ploidy)
 {
-    return static_cast<std::size_t>(boost::math::binomial_coefficient<double>(num_elements + ploidy - 1,
-                                                                              num_elements - 1));
+    return boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, num_elements - 1);
+}
+
+std::size_t max_num_elements(const std::size_t num_genotypes, const unsigned ploidy)
+{
+    if (num_genotypes == 0 || ploidy == 0) return 0;
+    auto y = maths::factorial<std::size_t>(ploidy);
+    if (y >= num_genotypes) return 1;
+    const auto t = num_genotypes * y;
+    unsigned j {1};
+    for (; j < num_genotypes; ++j) {
+        y /= j;
+        y *= j + ploidy;
+        if (y >= t) break;
+    }
+    return j + 1;
 }
 
 std::size_t element_cardinality_in_genotypes(const unsigned num_elements, const unsigned ploidy)
@@ -223,14 +222,17 @@ generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes
 }
 
 namespace debug {
-    void print_alleles(const Genotype<Haplotype>& genotype)
-    {
-        print_alleles(std::cout, genotype);
-    }
 
-    void print_variant_alleles(const Genotype<Haplotype>& genotype)
-    {
-        print_variant_alleles(std::cout, genotype);
-    }
+void print_alleles(const Genotype<Haplotype>& genotype)
+{
+    print_alleles(std::cout, genotype);
+}
+
+void print_variant_alleles(const Genotype<Haplotype>& genotype)
+{
+    print_variant_alleles(std::cout, genotype);
+}
+
 } // namespace debug
+
 } // namespace octopus

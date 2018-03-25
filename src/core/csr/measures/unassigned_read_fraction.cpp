@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "unassigned_read_fraction.hpp"
@@ -62,9 +62,19 @@ Measure::ResultType UnassignedReadFraction::do_evaluate(const VcfRecord& call, c
     return result;
 }
 
+Measure::ResultCardinality UnassignedReadFraction::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string UnassignedReadFraction::do_name() const
 {
     return "URF";
+}
+
+std::string UnassignedReadFraction::do_describe() const
+{
+    return "Fraction of reads overlapping the call that cannot be assigned to a haplotype";
 }
 
 std::vector<std::string> UnassignedReadFraction::do_requirements() const

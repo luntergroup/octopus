@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_record_hpp
@@ -83,7 +83,7 @@ public:
     // Sample releated functions
     //
     bool has_format(const KeyType& key) const noexcept;
-    unsigned format_cardinality(const KeyType& key) const noexcept;
+    boost::optional<unsigned> format_cardinality(const KeyType& key) const noexcept;
     const std::vector<KeyType>& format() const noexcept;
     unsigned num_samples() const noexcept;
     bool has_genotypes() const noexcept;
@@ -166,18 +166,23 @@ public:
     
     Builder& set_chrom(std::string name);
     Builder& set_pos(GenomicRegion::Position pos);
+    
     Builder& set_id(std::string id);
+    
     Builder& set_ref(const char allele);
     Builder& set_ref(NucleotideSequence allele);
     Builder& set_alt(const char allele); // if just one
     Builder& set_alt(NucleotideSequence allele); // if just one
     Builder& set_alt(std::vector<NucleotideSequence> alleles);
+    
     Builder& set_qual(QualityType quality);
+    
     Builder& set_passed();
     Builder& set_filter(std::vector<KeyType> filter);
     Builder& set_filter(std::initializer_list<KeyType> filter);
     Builder& add_filter(KeyType filter);
     Builder& clear_filter() noexcept;
+    
     Builder& reserve_info(unsigned n);
     Builder& add_info(const KeyType& key); // flags
     Builder& set_info(const KeyType& key, const ValueType& value);
@@ -185,8 +190,10 @@ public:
     Builder& set_info(const KeyType& key, std::vector<ValueType> values);
     Builder& set_info(const KeyType& key, std::initializer_list<ValueType> values);
     Builder& set_info_flag(KeyType key);
+    Builder& set_info_missing(const KeyType& key);
     Builder& clear_info() noexcept;
     Builder& clear_info(const KeyType& key);
+    
     Builder& set_format(std::vector<KeyType> format);
     Builder& set_format(std::initializer_list<KeyType> format);
     Builder& add_format(KeyType key);
@@ -194,6 +201,7 @@ public:
     Builder& reserve_samples(unsigned n);
     Builder& set_genotype(const SampleName& sample, std::vector<NucleotideSequence> alleles, Phasing phasing);
     Builder& set_genotype(const SampleName& sample, const std::vector<boost::optional<unsigned>>& alleles, Phasing is_phased);
+    Builder& clear_genotype(const SampleName& sample) noexcept;
     Builder& set_format(const SampleName& sample, const KeyType& key, const ValueType& value);
     template <typename T>
     Builder& set_format(const SampleName& sample, const KeyType& key, const T& value); // calls std::to_string
@@ -201,6 +209,13 @@ public:
     Builder& set_format(const SampleName& sample, const KeyType& key, std::initializer_list<ValueType> values);
     Builder& set_format_missing(const SampleName& sample, const KeyType& key);
     Builder& clear_format() noexcept;
+    Builder& clear_format(const SampleName& sample) noexcept;
+    Builder& clear_format(const SampleName& sample, const KeyType& key) noexcept;
+    Builder& set_passed(const SampleName& sample);
+    Builder& set_filter(const SampleName& sample, std::vector<KeyType> filter);
+    Builder& set_filter(const SampleName& sample, std::initializer_list<KeyType> filter);
+    Builder& add_filter(const SampleName& sample, KeyType filter);
+    Builder& clear_filter(const SampleName& sample) noexcept;
     
     Builder& set_refcall();
     Builder& set_somatic();
@@ -230,10 +245,7 @@ template <typename String1, typename String2, typename Sequence1, typename Seque
 typename Filters, typename Info>
 VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,  Sequence1&& ref, Sequence2&& alt,
                      boost::optional<QualityType> qual, Filters&& filters, Info&& info)
-: region_ {
-    std::forward<String1>(chrom),
-    pos - 1,
-    pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1}
+: region_ {std::forward<String1>(chrom), pos - 1, pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1}
 , id_ {std::forward<String2>(id)}
 , ref_ {std::forward<Sequence1>(ref)}
 , alt_ {std::forward<Sequence2>(alt)}
@@ -250,10 +262,7 @@ typename Filters, typename Info, typename Format, typename Genotypes, typename S
 VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,   Sequence1&& ref, Sequence2&& alt,
                      boost::optional<QualityType> qual, Filters&& filters,
                      Info&& info, Format&& format, Genotypes&& genotypes, Samples&& samples)
-: region_ {
-    std::forward<String1>(chrom),
-    pos - 1,
-    pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1}
+: region_ {std::forward<String1>(chrom), pos - 1, pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1}
 , id_ {std::forward<String2>(id)}
 , ref_ {std::forward<Sequence1>(ref)}
 , alt_ {std::forward<Sequence2>(alt)}
@@ -268,26 +277,29 @@ VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
 template <typename T>
 VcfRecord::Builder& VcfRecord::Builder::set_info(const KeyType& key, const T& value)
 {
-    return set_info(key, std::to_string(value));
+    using std::to_string;
+    return set_info(key, to_string(value));
 }
 
 template <typename T>
-VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleName& sample, const KeyType& key,
-                                                   const T& value)
+VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleName& sample, const KeyType& key, const T& value)
 {
-    return set_format(sample, key, std::to_string(value));
+    using std::to_string;
+    return set_format(sample, key, to_string(value));
 }
 
 } // namespace octopus
 
 namespace std {
-    template <> struct hash<octopus::VcfRecord>
+
+template <> struct hash<octopus::VcfRecord>
+{
+    size_t operator()(const octopus::VcfRecord& record) const
     {
-        size_t operator()(const octopus::VcfRecord& record) const
-        {
-            return hash<string>()(record.id());
-        }
-    };
+        return hash<string>()(record.id());
+    }
+};
+
 } // namespace std
 
 #endif

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "input_reads_profiler.hpp"
@@ -91,7 +91,25 @@ auto draw_sample(const SampleName& sample, const InputRegionMap& regions,
     return source.fetch_reads(sample, test_region);
 }
 
+auto draw_sample_from_begin(const SampleName& sample, const InputRegionMap& regions,
+                            const ReadManager& source, const ReadSetProfileConfig& config)
+{
+    const auto contig_itr = random_select(std::cbegin(regions), std::cend(regions));
+    assert(!contig_itr->second.empty());
+    const auto region_itr = random_select(std::cbegin(contig_itr->second), std::cend(contig_itr->second));
+    auto test_region = source.find_covered_subregion(sample, *region_itr, config.max_sample_size);
+    if (is_empty(test_region)) {
+        test_region = expand_rhs(test_region, 1);
+    }
+    return source.fetch_reads(sample, test_region);
+}
+
 using ReadSetSamples = std::vector<ReadManager::ReadContainer>;
+
+bool all_empty(const ReadSetSamples& samples)
+{
+    return std::all_of(std::cbegin(samples), std::cend(samples), [] (const auto& reads) { return reads.empty(); });
+}
 
 auto draw_samples(const SampleName& sample, const InputRegionMap& regions,
                   const ReadManager& source, const ReadSetProfileConfig& config)
@@ -100,6 +118,9 @@ auto draw_samples(const SampleName& sample, const InputRegionMap& regions,
     result.reserve(config.max_samples_per_sample);
     std::generate_n(std::back_inserter(result), config.max_samples_per_sample,
                     [&] () { return draw_sample(sample, regions, source, config); });
+    if (all_empty(result)) {
+        result.back() = draw_sample_from_begin(sample, regions, source, config);
+    }
     return result;
 }
 
@@ -148,12 +169,20 @@ boost::optional<ReadSetProfile> profile_reads(const std::vector<SampleName>& sam
     for (std::size_t s {0}; s < samples.size(); ++s) {
         std::deque<unsigned> sample_depths {};
         for (const auto& reads : read_sets[s]) {
-            utils::append(calculate_positional_coverage(reads), sample_depths);
+            if (!reads.empty()) {
+                utils::append(calculate_positional_coverage(reads), sample_depths);
+            }
         }
-        result.sample_mean_depth[s] = maths::mean(sample_depths);
-        result.sample_depth_stdev[s] = maths::stdev(sample_depths);
+        if (!sample_depths.empty()) {
+            result.sample_mean_depth[s] = maths::mean(sample_depths);
+            result.sample_depth_stdev[s] = maths::stdev(sample_depths);
+        } else {
+            result.sample_mean_depth[s] = 0;
+            result.sample_depth_stdev[s] = 0;
+        }
         utils::append(std::move(sample_depths), depths);
     }
+    assert(!depths.empty());
     result.mean_depth = maths::mean(depths);
     result.depth_stdev = maths::stdev(depths);
     return result;

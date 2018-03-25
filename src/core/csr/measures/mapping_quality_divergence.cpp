@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "mapping_quality_divergence.hpp"
@@ -122,9 +122,19 @@ Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call,
     return result;
 }
 
+Measure::ResultCardinality MappingQualityDivergence::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string MappingQualityDivergence::do_name() const
 {
     return "MQD";
+}
+
+std::string MappingQualityDivergence::do_describe() const
+{
+    return "Symmetric KL divergence of reads supporting the REF verses ALT alleles";
 }
 
 std::vector<std::string> MappingQualityDivergence::do_requirements() const

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "dense_variation_detector.hpp"
@@ -91,28 +91,13 @@ struct BaseState
     AlignedRead::MappingQuality median_mq;
 };
 
-template <typename T>
-T calculate_median(std::vector<T>& values)
-{
-    if (values.size() == 1) return values.front();
-    if (values.size() == 2) return (values.front() + values.back()) / 2;
-    const auto middle_itr = std::next(std::begin(values), values.size() / 2);
-    std::nth_element(std::begin(values), middle_itr, std::end(values));
-    if (values.size() % 2 == 1) {
-        return *middle_itr;
-    } else {
-        auto prev_middle_itr = std::max_element(std::begin(values), middle_itr);
-        return (*prev_middle_itr + *middle_itr) / 2;
-    }
-}
-
 auto compute_median(std::vector<AlignedRead::MappingQuality>& mapping_qualities)
 {
     if (mapping_qualities.empty()) {
         static constexpr auto max_mapping_quality = std::numeric_limits<AlignedRead::MappingQuality>::max();
         return max_mapping_quality;
     } else {
-        return calculate_median(mapping_qualities);
+        return maths::median<AlignedRead::MappingQuality>(mapping_qualities);
     }
 }
 

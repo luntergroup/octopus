@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variant_call_filter_factory_hpp
@@ -10,6 +10,7 @@
 #include <boost/optional.hpp>
 
 #include "logging/progress_meter.hpp"
+#include "io/variant/vcf_header.hpp"
 #include "variant_call_filter.hpp"
 
 namespace octopus {
@@ -30,6 +31,7 @@ public:
     
     std::unique_ptr<VariantCallFilter> make(const ReferenceGenome& reference,
                                             BufferedReadPipe read_pipe,
+                                            VcfHeader input_header,
                                             VariantCallFilter::OutputOptions output_config,
                                             boost::optional<ProgressMeter&> progress = boost::none,
                                             boost::optional<unsigned> max_threads = 1) const;

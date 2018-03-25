@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "assembler_active_region_generator.hpp"
@@ -167,20 +167,6 @@ auto compute_base_deletion_probabilities(const std::vector<unsigned>& coverages,
     return result;
 }
 
-auto get_regions(const std::vector<bool>& good_bases, const GenomicRegion& region)
-{
-    std::vector<GenomicRegion> result {};
-    auto itr = std::find(std::cbegin(good_bases), std::cend(good_bases), true);
-    for (; itr != std::cend(good_bases);) {
-        const auto itr2 = std::find(itr, std::cend(good_bases), false);
-        const auto begin = region.begin() + std::distance(std::cbegin(good_bases), itr);
-        const auto end   = begin + std::distance(itr, itr2);
-        result.emplace_back(region.contig_name(), begin, end);
-        itr = std::find(itr2, std::cend(good_bases), true);
-    }
-    return result;
-}
-
 template <typename Container>
 auto expand_each(const Container& regions, const GenomicRegion::Distance n)
 {
@@ -193,14 +179,14 @@ auto expand_each(const Container& regions, const GenomicRegion::Distance n)
 
 auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<GenomicRegion>& tracker)
 {
-    const auto coverages = tracker.coverage(region);
-    const auto mean_coverage = tracker.mean_coverage(region);
-    const auto stdev_coverage = tracker.stdev_coverage(region);
+    const auto coverages = tracker.get(region);
+    const auto mean_coverage = tracker.mean(region);
+    const auto stdev_coverage = tracker.stdev(region);
     const auto deletion_base_probs = compute_base_deletion_probabilities(coverages, mean_coverage, stdev_coverage);
     std::vector<bool> deletion_bases(deletion_base_probs.size());
     std::transform(std::cbegin(deletion_base_probs), std::cend(deletion_base_probs), std::begin(deletion_bases),
                    [] (const auto p) {  return p > 0.5; });
-    return extract_covered_regions(expand_each(get_regions(deletion_bases, region), 50));
+    return extract_covered_regions(expand_each(select_regions(region, deletion_bases), 50));
 }
 
 auto get_interesting_hotspots(const GenomicRegion& region,
@@ -219,15 +205,15 @@ auto get_interesting_hotspots(const GenomicRegion& region,
                            return 10 * interesting_coverage >= coverage;
                        }
                    });
-    return get_regions(interesting_bases, region);
+    return select_regions(region, interesting_bases);
 }
 
 auto get_interesting_hotspots(const GenomicRegion& region,
                               const CoverageTracker<GenomicRegion>& interesting_read_tracker,
                               const CoverageTracker<GenomicRegion>& tracker)
 {
-    const auto interesting_coverages = interesting_read_tracker.coverage(region);
-    const auto coverages = tracker.coverage(region);
+    const auto interesting_coverages = interesting_read_tracker.get(region);
+    const auto coverages = tracker.get(region);
     return get_interesting_hotspots(region, interesting_coverages, coverages);
 }
 
@@ -255,8 +241,8 @@ get_interesting_hotspots(const GenomicRegion& region,
         std::vector<unsigned> best_sample_interesting_coverage(n), best_sample_coverage(n);
         for (const auto& p : interesting_read_tracker) {
             assert(tracker.count(p.first) == 1);
-            const auto sample_coverage = tracker.at(p.first).coverage(region);
-            const auto sample_interesting_coverage = p.second.coverage(region);
+            const auto sample_coverage = tracker.at(p.first).get(region);
+            const auto sample_interesting_coverage = p.second.get(region);
             assert(sample_coverage.size() == n);
             assert(sample_interesting_coverage.size() == n);
             for (std::size_t i {0}; i < sample_coverage.size(); ++i) {

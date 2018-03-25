@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef genotype_hpp
@@ -559,6 +559,7 @@ struct GenotypeHash
 };
 
 std::size_t num_genotypes(unsigned num_elements, unsigned ploidy);
+std::size_t max_num_elements(std::size_t num_genotypes, unsigned ploidy);
 std::size_t element_cardinality_in_genotypes(unsigned num_elements, unsigned ploidy);
 
 namespace detail {

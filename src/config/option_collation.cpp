@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_collation.hpp"
@@ -840,14 +840,6 @@ public:
     {}
 };
 
-struct DefaultRepeatGenerator
-{
-    std::vector<GenomicRegion> operator()(const ReferenceGenome& reference, GenomicRegion region) const
-    {
-        return find_repeat_regions(reference, region);
-    }
-};
-
 auto get_max_expected_heterozygosity(const OptionMap& options)
 {
     const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
@@ -881,7 +873,6 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         scanner_options.match = get_default_match_predicate();
         scanner_options.use_clipped_coverage_tracking = true;
-        scanner_options.repeat_region_generator = DefaultRepeatGenerator {};
         CigarScanner::Options::MisalignmentParameters misalign_params {};
         misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
         misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
@@ -969,7 +960,11 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         result.add_vcf_extractor(std::move(resolved_regenotype_path));
     }
-    
+    ActiveRegionGenerator::Options active_region_options {};
+    if (is_set("assemble-all", options) && options.at("assemble-all").as<bool>()) {
+        active_region_options.assemble_all = true;
+    }
+    result.set_active_region_generator(std::move(active_region_options));
     return result;
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "pair_hmm.hpp"
@@ -340,6 +340,38 @@ Alignment align(const std::string& target, const std::string& truth,
     }
 }
 
+double evaluate(const std::string& target, const std::string& truth, const VariableGapExtendMutationModel& model) noexcept
+{
+    assert(truth.size() == model.gap_open.size());
+    using std::cbegin; using std::cend; using std::next; using std::distance;
+    static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
+    const auto truth_begin = next(cbegin(truth), min_flank_pad());
+    const auto m1 = std::mismatch(cbegin(target), cend(target), truth_begin);
+    if (m1.first == cend(target)) {
+        return 0; // sequences are equal, can't do better than this
+    }
+    const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
+    if (m2.first == cend(target)) {
+        // then there is only a single base difference between the sequences, can optimise
+        const auto truth_mismatch_idx = static_cast<std::size_t>(distance(cbegin(truth), m1.second));
+        if (model.mutation <= model.gap_open[truth_mismatch_idx] || !std::equal(next(m1.first), cend(target), m1.second)) {
+            return lnProbability[model.gap_open[truth_mismatch_idx]];
+        }
+        return lnProbability[model.mutation];
+    }
+    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
+    thread_local std::vector<std::int8_t> dummy_qualities;
+    dummy_qualities.assign(target.size(), model.mutation);
+    auto score = simd::align(truth.c_str(), target.c_str(),
+                             dummy_qualities.data(),
+                             truth_alignment_size,
+                             static_cast<int>(target.size()),
+                             model.gap_open.data(),
+                             model.gap_extend.data(),
+                             model.nuc_prior);
+    return -ln10Div10<> * static_cast<double>(score);
+}
+
 double evaluate(const std::string& target, const std::string& truth, const VariableGapOpenMutationModel& model) noexcept
 {
     assert(truth.size() == model.gap_open.size());
@@ -367,7 +399,8 @@ double evaluate(const std::string& target, const std::string& truth, const Varia
                              truth_alignment_size,
                              static_cast<int>(target.size()),
                              model.gap_open.data(),
-                             model.gap_extend, 2);
+                             model.gap_extend,
+                             model.nuc_prior);
     return -ln10Div10<> * static_cast<double>(score);
 }
 
@@ -396,7 +429,8 @@ double evaluate(const std::string& target, const std::string& truth, const FlatG
                              truth_alignment_size,
                              static_cast<int>(target.size()),
                              model.gap_open,
-                             model.gap_extend, 2);
+                             model.gap_extend,
+                             model.nuc_prior);
     return -ln10Div10<> * static_cast<double>(score);
 }
 

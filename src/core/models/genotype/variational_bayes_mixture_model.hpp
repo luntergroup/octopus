@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variational_bayes_mixture_model_hpp
@@ -704,6 +704,7 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                       const VariationalBayesParameters& params,
                       std::vector<LogProbabilityVector> seeds)
 {
+    assert(!seeds.empty());
     auto latents = detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
     return detail::get_max_evidence_latents(prior_alphas, genotype_log_priors, log_likelihoods, std::move(latents));
 }

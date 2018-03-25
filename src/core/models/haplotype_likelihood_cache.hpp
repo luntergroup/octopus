@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef haplotype_likelihood_cache_hpp
@@ -177,17 +177,18 @@ void print_read_haplotype_likelihoods(S&& stream,
                               [] (const auto& lhs, const auto& rhs) {
                                   return lhs.second > rhs.second;
                               });
-            std::for_each(std::begin(likelihoods), mth,
-                          [&] (const auto& p) {
-                              if (is_single_sample) {
-                                  stream << "\t";
-                              } else {
-                                  stream << "\t\t";
-                              }
-                              stream << p.first.get().mapped_region()
-                              << " " << p.first.get().cigar() << ": ";
-                              stream << p.second << '\n';
-                          });
+            std::for_each(std::begin(likelihoods), mth, [&] (const auto& p) {
+                if (is_single_sample) {
+                    stream << "\t";
+                } else {
+                    stream << "\t\t";
+                }
+                const auto& read = p.first.get();
+                stream << read.name() << " "
+                       << mapped_region(read) << " "
+                       << p.first.get().cigar() << ": "
+                       << p.second << '\n';
+            });
         }
     }
 }

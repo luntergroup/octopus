@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "realignments.hpp"
@@ -87,8 +87,8 @@ PileupWindow make_pileup(const std::vector<AlignedRead>& reads, const GenomicReg
             unsigned read_pos {0}, pileup_pos {fragment_offset};
             for (const auto flag : expanded_cigar) {
                 if (pileup_pos >= result.size() || read_pos >= sequence_size(read_fragment)) break;
+                assert(pileup_pos < result.size());
                 switch (flag) {
-                    assert(pileup_pos < result.size());
                     using Flag = CigarOperation::Flag;
                     case Flag::sequenceMatch:
                     {
@@ -225,9 +225,19 @@ Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const Facet
     return boost::any {compute_realignment_summary(result, call)};
 }
 
+Measure::ResultCardinality Realignments::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string Realignments::do_name() const
 {
     return "RA";
+}
+
+std::string Realignments::do_describe() const
+{
+    return "Realignment information";
 }
 
 std::vector<std::string> Realignments::do_requirements() const

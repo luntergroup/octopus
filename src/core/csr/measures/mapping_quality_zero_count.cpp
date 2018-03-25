@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "mapping_quality_zero_count.hpp"
@@ -28,9 +28,19 @@ Measure::ResultType MappingQualityZeroCount::do_evaluate(const VcfRecord& call, 
     }
 }
 
+Measure::ResultCardinality MappingQualityZeroCount::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string MappingQualityZeroCount::do_name() const
 {
     return "MQ0";
+}
+
+std::string MappingQualityZeroCount::do_describe() const
+{
+    return "Number of reads overlapping the call with mapping quality zero";
 }
 
 std::vector<std::string> MappingQualityZeroCount::do_requirements() const

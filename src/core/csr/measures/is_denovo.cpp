@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "is_denovo.hpp"
@@ -18,9 +18,19 @@ Measure::ResultType IsDenovo::do_evaluate(const VcfRecord& call, const FacetMap&
     return call.has_info(vcf::spec::info::denovo);
 }
 
+Measure::ResultCardinality IsDenovo::do_cardinality() const noexcept
+{
+    return ResultCardinality::one;
+}
+
 std::string IsDenovo::do_name() const
 {
     return "DENOVO";
+}
+
+std::string IsDenovo::do_describe() const
+{
+    return "Is the call marked DENOVO";
 }
 
 } // namespace csr

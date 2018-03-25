@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "octopus.hpp"
@@ -1257,7 +1257,7 @@ bool use_unfiltered_call_region_hints_for_filtering(const GenomeCallingComponent
     return true;
 }
 
-void run_filtering(GenomeCallingComponents& components)
+void run_csr(GenomeCallingComponents& components)
 {
     if (apply_csr(components)) {
         log_filtering_info(components);
@@ -1284,10 +1284,10 @@ void run_filtering(GenomeCallingComponents& components)
         if (components.sites_only()) {
             output_config.emit_sites_only = true;
         }
-        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp),
+        const VcfReader in {std::move(*input_path)};
+        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), in.fetch_header(),
                                                 output_config, progress, components.num_threads());
         assert(filter);
-        const VcfReader in {std::move(*input_path)};
         VcfWriter& out {*components.filtered_output()};
         filter->filter(in, out);
         out.close();
@@ -1452,7 +1452,7 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
     }
     components.output().close();
     try {
-        run_filtering(components);
+        run_csr(components);
     } catch (...) {
         try {
             if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";

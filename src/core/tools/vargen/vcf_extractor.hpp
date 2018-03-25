@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_extractor_hpp
@@ -44,13 +44,14 @@ public:
     
 private:
     std::unique_ptr<VariantGenerator> do_clone() const override;
-    std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
+    std::vector<Variant> do_generate(const RegionSet& regions) const override;
     std::string name() const override;
     
     std::shared_ptr<const VcfReader> reader_;
     Options options_;
     
-    bool is_good(const VcfRecord& record);
+    std::vector<Variant> fetch_variants(const GenomicRegion& region) const;
+    bool is_good(const VcfRecord& record) const;
 };
 
 } // namespace coretools

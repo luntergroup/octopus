@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "variant_generator_builder.hpp"
@@ -45,10 +45,17 @@ VariantGeneratorBuilder::add_randomiser(Randomiser::Options options)
     return *this;
 }
 
+VariantGeneratorBuilder&
+VariantGeneratorBuilder::set_active_region_generator(ActiveRegionGenerator::Options options)
+{
+    active_region_generator_ = std::move(options);
+    return *this;
+}
+
 VariantGenerator VariantGeneratorBuilder::build(const ReferenceGenome& reference) const
 {
-    VariantGenerator result {};
     
+    VariantGenerator result {ActiveRegionGenerator {reference, active_region_generator_}};
     if (cigar_scanner_) {
         result.add(std::make_unique<CigarScanner>(reference, *cigar_scanner_));
     }
@@ -64,7 +71,6 @@ VariantGenerator VariantGeneratorBuilder::build(const ReferenceGenome& reference
     for (auto options : randomisers_) {
         result.add(std::make_unique<Randomiser>(reference, options));
     }
-    
     return result;
 }
     
