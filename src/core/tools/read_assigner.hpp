@@ -25,24 +25,38 @@ using HaplotypeSupportMap = std::unordered_map<Haplotype, ReadSupportSet>;
 using ReadRefSupportSet = std::vector<std::reference_wrapper<const AlignedRead>>;
 using AlleleSupportMap = std::unordered_map<Allele, ReadRefSupportSet>;
 
-HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                              const std::vector<AlignedRead>& reads);
+struct AssignmentConfig
+{
+    enum class AmbiguousAction { drop, first, random, all } ambiguous_action = AmbiguousAction::drop;
+};
 
-HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                              const std::vector<AlignedRead>& reads,
-                                              std::deque<AlignedRead>& unassigned);
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          AssignmentConfig config = AssignmentConfig {});
 
-HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                              const std::vector<AlignedRead>& reads,
-                                              HaplotypeLikelihoodModel model);
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          std::deque<AlignedRead>& ambiguous,
+                          AssignmentConfig config = AssignmentConfig {});
 
-HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                              const std::vector<AlignedRead>& reads,
-                                              std::deque<AlignedRead>& unassigned,
-                                              HaplotypeLikelihoodModel model);
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {});
 
-AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
-                                        const HaplotypeSupportMap& haplotype_support);
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          std::deque<AlignedRead>& ambiguous,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {});
+
+AlleleSupportMap
+compute_allele_support(const std::vector<Allele>& alleles,
+                       const HaplotypeSupportMap& haplotype_support);
 
 } // namespace octopus
 
