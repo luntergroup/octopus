@@ -229,14 +229,14 @@ LogProbabilityVector log_uniform_dist(const std::size_t n)
     return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
 }
 
-auto make_point_seed(const std::size_t num_genotypes, const std::size_t n, const double p = 0.99)
+auto make_point_seed(const std::size_t num_genotypes, const std::size_t n, const double p = 0.9999)
 {
-    LogProbabilityVector result(num_genotypes, std::log((1 - p) / (num_genotypes - 1)));
-    result[n] = std::log(p);
+    LogProbabilityVector result(num_genotypes, num_genotypes > 1 ? std::log((1 - p) / (num_genotypes - 1)) : 0);
+    if (num_genotypes > 1) result[n] = std::log(p);
     return result;
 }
 
-auto make_range_seed(const std::size_t num_genotypes, const std::size_t begin, const std::size_t n, const double p = 0.99)
+auto make_range_seed(const std::size_t num_genotypes, const std::size_t begin, const std::size_t n, const double p = 0.9999)
 {
     LogProbabilityVector result(num_genotypes, std::log((1 - p) / (num_genotypes - n)));
     std::fill_n(std::next(std::begin(result), begin), n, std::log(p / n));
@@ -285,14 +285,30 @@ void add_to(const LogProbabilityVector& other, LogProbabilityVector& result)
                    [] (auto a, auto b) { return a + b; });
 }
 
-auto generate_seeds(const std::vector<SampleName>& samples,
-                    const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                    const LogProbabilityVector& genotype_log_priors,
-                    const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                    const TumourModel::Priors& priors)
+auto generate_exhaustive_seeds(const std::size_t n)
 {
     std::vector<LogProbabilityVector> result {};
-    result.reserve(2 + 3 * samples.size());
+    result.reserve(n);
+    for (unsigned i {0}; i < n; ++i) {
+        result.push_back(make_point_seed(n, i));
+    }
+    return result;
+}
+
+auto num_targetted_seeds(const std::vector<SampleName>& samples,
+                         const std::vector<CancerGenotype<Haplotype>>& genotypes) noexcept
+{
+    return 2 + 4 * samples.size() + 2 * (samples.size() > 1);
+}
+
+auto generate_targetted_seeds(const std::vector<SampleName>& samples,
+                              const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                              const LogProbabilityVector& genotype_log_priors,
+                              const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                              const TumourModel::Priors& priors)
+{
+    std::vector<LogProbabilityVector> result {};
+    result.reserve(num_targetted_seeds(samples, genotypes));
     result.push_back(genotype_log_priors);
     result.push_back(log_uniform_dist(genotypes.size()));
     LogProbabilityVector combined_log_likelihoods(genotypes.size(), 0);
@@ -320,6 +336,19 @@ auto generate_seeds(const std::vector<SampleName>& samples,
         result.push_back(std::move(combined_log_likelihoods));
     }
     return result;
+}
+
+auto generate_seeds(const std::vector<SampleName>& samples,
+                    const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                    const LogProbabilityVector& genotype_log_priors,
+                    const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                    const TumourModel::Priors& priors)
+{
+    if (genotypes.size() <= num_targetted_seeds(samples, genotypes)) {
+        return generate_exhaustive_seeds(genotypes.size());
+    } else {
+        return generate_targetted_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods, priors);
+    }
 }
 
 template <std::size_t K>
