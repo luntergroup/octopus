@@ -51,7 +51,7 @@ auto find_short_tandem_repeats(const Haplotype& haplotype)
 template <typename FordwardIt, typename Tp>
 auto fill_if_greater(FordwardIt first, FordwardIt last, const Tp& value)
 {
-    return std::transform(first, last, first, [&] (const auto& x) { return std::min(x, value); });
+    return std::transform(first, last, first, [&] (const auto& x) { return std::max(x, value); });
 }
 
 template <typename FordwardIt, typename Tp>
