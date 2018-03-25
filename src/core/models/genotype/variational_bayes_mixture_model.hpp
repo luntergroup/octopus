@@ -704,6 +704,7 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                       const VariationalBayesParameters& params,
                       std::vector<LogProbabilityVector> seeds)
 {
+    assert(!seeds.empty());
     auto latents = detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
     return detail::get_max_evidence_latents(prior_alphas, genotype_log_priors, log_likelihoods, std::move(latents));
 }
