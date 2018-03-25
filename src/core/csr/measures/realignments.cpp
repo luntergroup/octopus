@@ -177,7 +177,7 @@ auto compute_realignment_summary(const ReadRealignments& realignments, const Vcf
 
 Measure::ResultType Realignments::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
     assert(assignments.size() == 1);
     const auto& sample = assignments.cbegin()->first;
     const auto& support = assignments.cbegin()->second;

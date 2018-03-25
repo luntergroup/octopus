@@ -21,8 +21,17 @@ namespace octopus { namespace csr {
 class Facet : public Equitable<Facet>
 {
 public:
+    using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
+    using SampleSupportMap = std::unordered_map<SampleName, HaplotypeSupportMap>;
+    
+    struct SupportMaps
+    {
+        SampleSupportMap support;
+        ReadMap ambiguous;
+    };
+    
     using ResultType = boost::variant<std::reference_wrapper<const ReadMap>,
-                                      std::reference_wrapper<const std::unordered_map<SampleName, HaplotypeSupportMap>>,
+                                      std::reference_wrapper<const SupportMaps>,
                                       std::reference_wrapper<const std::string>,
                                       std::reference_wrapper<const std::vector<std::string>>,
                                       std::reference_wrapper<const Haplotype>

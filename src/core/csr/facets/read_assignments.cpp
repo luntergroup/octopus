@@ -21,36 +21,47 @@ bool is_homozygous_nonreference(const Genotype<Haplotype>& genotype)
     return genotype.is_homozygous() && !is_reference(genotype[0]);
 }
 
+void move_insert(std::deque<AlignedRead>& reads, const SampleName& sample, ReadMap& result)
+{
+    result[sample].insert(std::make_move_iterator(std::begin(reads)), std::make_move_iterator(std::end(reads)));
+}
+
 } // namespace
 
 ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const GenotypeMap& genotypes, const ReadMap& reads)
 : result_ {}
 {
-    result_.reserve(genotypes.size());
+    AssignmentConfig assigner_config {};
+    assigner_config.ambiguous_action = AssignmentConfig::AmbiguousAction::random;
+    const auto num_samples = genotypes.size();
+    result_.support.reserve(num_samples);
+    result_.ambiguous.reserve(num_samples);
     for (const auto& p : genotypes) {
         const auto& sample = p.first;
-        const auto& genotypes = p.second;
-        result_[sample].reserve(genotypes.size());
-        for (const auto& genotype : genotypes) {
+        const auto& sample_genotypes = p.second;
+        result_.support[sample].reserve(sample_genotypes.size());
+        for (const auto& genotype : sample_genotypes) {
             auto local_reads = copy_overlapped_to_vector(reads.at(sample), genotype);
             for (const auto& haplotype : genotype) {
                 // So every called haplotype appears in support map, even if no read support
-                result_[sample][haplotype] = {};
+                result_.support[sample][haplotype] = {};
             }
             if (!local_reads.empty()) {
                 HaplotypeSupportMap genotype_support {};
+                std::deque<AlignedRead> unassigned {};
                 if (!is_homozygous_nonreference(genotype)) {
-                    genotype_support = compute_haplotype_support(genotype, local_reads);
+                    genotype_support = compute_haplotype_support(genotype, local_reads, unassigned, assigner_config);
                 } else {
                     auto augmented_genotype = genotype;
                     Haplotype ref {mapped_region(genotype), reference};
-                    result_[sample][ref] = {};
+                    result_.support[sample][ref] = {};
                     augmented_genotype.emplace(std::move(ref));
-                    genotype_support = compute_haplotype_support(augmented_genotype, local_reads);
+                    genotype_support = compute_haplotype_support(augmented_genotype, local_reads, unassigned, assigner_config);
                 }
                 for (auto& s : genotype_support) {
-                    result_[sample][s.first] = std::move(s.second);
+                    result_.support[sample][s.first] = std::move(s.second);
                 }
+                move_insert(unassigned, sample, result_.ambiguous);
             }
         }
     }
