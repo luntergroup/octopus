@@ -107,7 +107,7 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     if (debug_log_) stream(*debug_log_) << "There are " << result->cancer_genotypes_.size() << " candidate cancer genotypes";
     if (has_normal_sample()) result->normal_sample_ = std::cref(normal_sample());
     evaluate_tumour_model(*result, haplotype_likelihoods);
-    evaluate_noise_model(*result, haplotype_likelihoods);
+//    evaluate_noise_model(*result, haplotype_likelihoods);
     set_model_posteriors(*result);
     return result;
 }
@@ -549,7 +549,7 @@ CancerCaller::get_noise_model_priors(const CancerGenotypePriorModel& prior_model
     // The noise model is intended to capture noise that may also be present in the normal sample,
     // hence all samples have the same prior alphas.
     using Priors = TumourModel::Priors;
-    Priors::GenotypeMixturesDirichletAlphas noise_alphas(parameters_.ploidy + 1, parameters_.somatic_tumour_germline_alpha);
+    Priors::GenotypeMixturesDirichletAlphas noise_alphas(parameters_.ploidy + 1, parameters_.somatic_normal_germline_alpha);
     noise_alphas.back() = parameters_.somatic_tumour_somatic_alpha;
     Priors::GenotypeMixturesDirichletAlphaMap alphas {};
     alphas.reserve(samples_.size());
