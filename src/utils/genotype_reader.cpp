@@ -82,6 +82,12 @@ auto calculate_ref_pad_size(const VcfRecord& call, const VcfRecord::NucleotideSe
     }
 }
 
+bool has_indel(const VcfRecord& call) noexcept
+{
+    return std::any_of(std::cbegin(call.alt()), std::cend(call.alt()),
+                       [&] (const auto& allele) { return allele.size() != call.ref().size(); });
+}
+
 bool has_simple_indel(const VcfRecord& call) noexcept
 {
     return std::any_of(std::cbegin(call.alt()), std::cend(call.alt()),
