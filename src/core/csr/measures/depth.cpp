@@ -27,6 +27,13 @@ std::unique_ptr<Measure> Depth::do_clone() const
 Measure::ResultType Depth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (aggregate_) {
+        if (recalculate_) {
+            const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
+            return static_cast<std::size_t>(count_overlapped(reads, call));
+        } else {
+            return static_cast<std::size_t>(std::stoull(call.info_value(vcfspec::info::combinedReadDepth).front()));
+        }
+    } else {
         const auto& samples = get_value<Samples>(facets.at("Samples"));
         std::vector<std::size_t> result {};
         result.reserve(samples.size());
@@ -41,13 +48,6 @@ Measure::ResultType Depth::do_evaluate(const VcfRecord& call, const FacetMap& fa
             }
         }
         return result;
-    } else {
-        if (recalculate_) {
-            const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
-            return static_cast<std::size_t>(count_overlapped(reads, call));
-        } else {
-            return static_cast<std::size_t>(std::stoull(call.info_value(vcfspec::info::combinedReadDepth).front()));
-        }
     }
 }
 
@@ -73,12 +73,8 @@ std::string Depth::do_describe() const
 std::vector<std::string> Depth::do_requirements() const
 {
     std::vector<std::string> result {};
-    if (!aggregate_) {
-        result.push_back("Samples");
-    }
-    if (recalculate_) {
-        result.push_back("OverlappingReads");
-    }
+    if (!aggregate_) result.push_back("Samples");
+    if (recalculate_) result.push_back("OverlappingReads");
     return result;
 }
 
