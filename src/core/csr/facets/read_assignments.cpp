@@ -3,6 +3,8 @@
 
 #include "read_assignments.hpp"
 
+#include "core/tools/read_realigner.hpp"
+
 namespace octopus { namespace csr {
 
 const std::string ReadAssignments::name_ {"ReadAssignments"};
@@ -59,6 +61,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
                     genotype_support = compute_haplotype_support(augmented_genotype, local_reads, unassigned, assigner_config);
                 }
                 for (auto& s : genotype_support) {
+                    safe_realign_to_reference(s.second, s.first);
                     result_.support[sample][s.first] = std::move(s.second);
                 }
                 move_insert(unassigned, sample, result_.ambiguous);
