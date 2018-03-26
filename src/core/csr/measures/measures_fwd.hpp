@@ -21,6 +21,7 @@
 #include "core/csr/measures/is_denovo.hpp"
 #include "core/csr/measures/is_somatic.hpp"
 #include "core/csr/measures/unassigned_read_fraction.hpp"
+#include "core/csr/measures/median_base_quality.hpp"
 #include "core/csr/measures/realignments.hpp"
 
 #endif
