@@ -158,6 +158,11 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::filter_r
     return components_.filter_request_;
 }
 
+boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::bamout() const
+{
+    return components_.bamout_;
+}
+
 bool GenomeCallingComponents::sites_only() const noexcept
 {
     return components_.sites_only;
@@ -474,6 +479,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , filtered_output {}
 , legacy {}
 , filter_request_ {}
+, bamout_ {options::bamout_request(options)}
 {
     drop_unused_samples(this->samples, this->read_manager);
     setup_progress_meter(options);

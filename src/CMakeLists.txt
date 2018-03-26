@@ -94,6 +94,8 @@ set(IO_SOURCES
     io/read/read_reader_impl.hpp
     io/read/read_reader.hpp
     io/read/read_reader.cpp
+    io/read/read_writer.hpp
+    io/read/read_writer.cpp
     
     io/variant/htslib_bcf_facade.hpp
     io/variant/htslib_bcf_facade.cpp
@@ -351,6 +353,8 @@ set(CORE_SOURCES
     core/tools/read_assigner.cpp
     core/tools/read_realigner.hpp
     core/tools/read_realigner.cpp
+    core/tools/bam_realigner.hpp
+    core/tools/bam_realigner.cpp
 
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp

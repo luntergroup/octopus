@@ -15,12 +15,23 @@ namespace octopus {
 
 Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads);
 
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);
 std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
                                  HaplotypeLikelihoodModel model);
-
 std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
 
+void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
 std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+
+CigarString rebase(const CigarString& read_to_haplotype, const CigarString& haplotype_to_reference);
+void rebase(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+
+void realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+std::vector<AlignedRead> realign_to_reference(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+
+void safe_realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+std::vector<AlignedRead> safe_realign_to_reference(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
 
 } // namespace
 

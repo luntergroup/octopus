@@ -7,6 +7,7 @@
 #include <iterator>
 #include <algorithm>
 #include <limits>
+#include <random>
 #include <stdexcept>
 #include <cassert>
 
@@ -18,6 +19,8 @@
 #include "core/models/error/error_model_factory.hpp"
 
 namespace octopus {
+
+namespace {
 
 using HaplotypeLikelihoods = std::vector<std::vector<double>>;
 
@@ -38,10 +41,34 @@ void find_max_likelihood_haplotypes(const std::vector<Haplotype>& haplotypes, co
     }
 }
 
+template <typename ForwardIt, typename RandomGenerator>
+ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g)
+{
+    if (first == last) return first;
+    const auto max = static_cast<std::size_t>(std::distance(first, last));
+    std::uniform_int_distribution<std::size_t> dist {0, max - 1};
+    std::advance(first, dist(g));
+    return first;
+}
+
+template <typename ForwardIt>
+ForwardIt random_select(ForwardIt first, ForwardIt last)
+{
+    static std::default_random_engine gen {};
+    return random_select(first, last, gen);
+}
+
+template <typename Range>
+decltype(auto) random_select(const Range& values)
+{
+    return *random_select(std::cbegin(values), std::cend(values));
+}
+
 auto calculate_support(const std::vector<Haplotype>& haplotypes,
                        const std::vector<AlignedRead>& reads,
                        const HaplotypeLikelihoods& likelihoods,
-                       boost::optional<std::deque<AlignedRead>&> unassigned)
+                       boost::optional<std::deque<AlignedRead>&> ambiguous,
+                       AssignmentConfig config)
 {
     HaplotypeSupportMap result {};
     std::vector<unsigned> top {};
@@ -50,8 +77,25 @@ auto calculate_support(const std::vector<Haplotype>& haplotypes,
         find_max_likelihood_haplotypes(haplotypes, i, likelihoods, top);
         if (top.size() == 1) {
             result[haplotypes[top.front()]].push_back(reads[i]);
-        } else if (unassigned) {
-            unassigned->push_back(reads[i]);
+        } else {
+            using UA = AssignmentConfig::AmbiguousAction;
+            switch (config.ambiguous_action) {
+                case UA::first:
+                    result[haplotypes[top.front()]].push_back(reads[i]);
+                    break;
+                case UA::all: {
+                    for (auto idx : top) result[haplotypes[idx]].push_back(reads[i]);
+                    break;
+                }
+                case UA::random: {
+                    result[haplotypes[random_select(top)]].push_back(reads[i]);
+                    break;
+                }
+                case UA::drop:
+                default:
+                    break;
+            }
+            if (ambiguous) ambiguous->push_back(reads[i]);
         }
         top.clear();
     }
@@ -88,7 +132,7 @@ auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes,
     const auto& haplotype_region = mapped_region(haplotypes.front());
     const auto reads_region = encompassing_region(reads);
     const auto min_flank_pad = HaplotypeLikelihoodModel::pad_requirement();
-    unsigned min_lhs_expansion {2 * min_flank_pad}, min_rhs_expansion {2 * min_flank_pad};
+    unsigned min_lhs_expansion{2 * min_flank_pad}, min_rhs_expansion{2 * min_flank_pad};
     if (begins_before(reads_region, haplotype_region)) {
         min_lhs_expansion += begin_distance(reads_region, haplotype_region);
     }
@@ -99,7 +143,7 @@ auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes,
     const auto read_hashes = compute_read_hashes(reads);
     static constexpr unsigned char mapperKmerSize {6};
     auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
-    HaplotypeLikelihoods result {};
+    HaplotypeLikelihoods result{};
     result.reserve(haplotypes.size());
     for (const auto& haplotype : haplotypes) {
         const auto expanded_haplotype = expand(haplotype, min_expansion);
@@ -119,16 +163,19 @@ auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes,
     return result;
 }
 
+} // namespace
+
 HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
                                               const std::vector<AlignedRead>& reads,
                                               HaplotypeLikelihoodModel model,
-                                              boost::optional<std::deque<AlignedRead>&> unassigned)
+                                              boost::optional<std::deque<AlignedRead>&> ambiguous,
+                                              AssignmentConfig config)
 {
     if (!genotype.is_homozygous() && !reads.empty()) {
         const auto unique_haplotypes = genotype.copy_unique();
         assert(unique_haplotypes.size() > 1);
         const auto likelihoods = calculate_likelihoods(unique_haplotypes, reads, model);
-        return calculate_support(unique_haplotypes, reads, likelihoods, unassigned);
+        return calculate_support(unique_haplotypes, reads, likelihoods, ambiguous, config);
     } else {
         return {};
     }
@@ -136,30 +183,34 @@ HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotyp
 
 HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
                                               const std::vector<AlignedRead>& reads,
-                                              std::deque<AlignedRead>& unassigned)
+                                              std::deque<AlignedRead>& ambiguous,
+                                              AssignmentConfig config)
 {
-    return compute_haplotype_support(genotype, reads, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false}, unassigned);
-}
-
-HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                              const std::vector<AlignedRead>& reads)
-{
-    return compute_haplotype_support(genotype, reads, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false});
+    return compute_haplotype_support(genotype, reads, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false}, ambiguous, config);
 }
 
 HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
                                               const std::vector<AlignedRead>& reads,
-                                              HaplotypeLikelihoodModel model)
+                                              AssignmentConfig config)
 {
-    return compute_haplotype_support(genotype, reads, std::move(model), boost::none);
+    return compute_haplotype_support(genotype, reads, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false}, config);
 }
 
 HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
                                               const std::vector<AlignedRead>& reads,
-                                              std::deque<AlignedRead>& unassigned,
-                                              HaplotypeLikelihoodModel model)
+                                              HaplotypeLikelihoodModel model,
+                                              AssignmentConfig config)
 {
-    return compute_haplotype_support(genotype, reads, std::move(model), unassigned);
+    return compute_haplotype_support(genotype, reads, std::move(model), boost::none, config);
+}
+
+HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                                              const std::vector<AlignedRead>& reads,
+                                              std::deque<AlignedRead>& ambiguous,
+                                              HaplotypeLikelihoodModel model,
+                                              AssignmentConfig config)
+{
+    return compute_haplotype_support(genotype, reads, std::move(model), ambiguous, config);
 }
 
 AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,

@@ -1641,5 +1641,13 @@ boost::optional<fs::path> filter_request(const OptionMap& options)
     return boost::none;
 }
 
+boost::optional<fs::path> bamout_request(const OptionMap& options)
+{
+    if (is_set("bamout", options)) {
+        return resolve_path(options.at("bamout").as<fs::path>(), options);
+    }
+    return boost::none;
+}
+
 } // namespace options
 } // namespace octopus

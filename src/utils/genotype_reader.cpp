@@ -88,6 +88,14 @@ bool has_indel(const VcfRecord& call) noexcept
                        [&] (const auto& allele) { return allele.size() != call.ref().size(); });
 }
 
+bool has_simple_indel(const VcfRecord& call) noexcept
+{
+    return std::any_of(std::cbegin(call.alt()), std::cend(call.alt()),
+                       [&] (const auto& allele) {
+                           return allele.size() != call.ref().size() && (allele.size() == 1 || call.ref().size() == 1);
+                       });
+}
+
 boost::optional<ContigAllele> make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence, const int ref_pad)
 {
     if (is_missing(allele_sequence)) {
@@ -198,7 +206,7 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
             result.emplace_back(std::move(allele_region), std::move(ref));
             std::rotate(std::rbegin(result), std::next(std::rbegin(result)), std::rend(result));
         }
-        if (*min_ref_pad > 0 && !unknwown_pad_allele_indices.empty()) {
+        if (!unknwown_pad_allele_indices.empty()) {
             for (auto idx : unknwown_pad_allele_indices) {
                 auto& allele = genotype[idx];
                 allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), *min_ref_pad));

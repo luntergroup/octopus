@@ -49,7 +49,7 @@ bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
 Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
     std::vector<boost::optional<double>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {

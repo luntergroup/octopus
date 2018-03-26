@@ -30,7 +30,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<ClippedReadFraction>()]      = [] () { return make_wrapped_measure<ClippedReadFraction>(); };
     measure_makers[name<IsDenovo>()]                 = [] () { return make_wrapped_measure<IsDenovo>(); };
     measure_makers[name<IsSomatic>()]                = [] () { return make_wrapped_measure<IsSomatic>(); };
-    measure_makers[name<UnassignedReadFraction>()]   = [] () { return make_wrapped_measure<UnassignedReadFraction>(); };
+    measure_makers[name<AmbiguousReadFraction>()]    = [] () { return make_wrapped_measure<AmbiguousReadFraction>(); };
     measure_makers[name<Realignments>()]             = [] () { return make_wrapped_measure<Realignments>(); };
 }
 

@@ -121,7 +121,7 @@ double calculate_max_prob_different(const DirectionCountVector& direction_counts
 Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
     // TODO: What we should really do here is calculate which reads directly support each allele in the
     // genotype by looking if each supporting read overlaps the allele given the realignment to the called haplotype.
     // The current approach of just removing non-overlapping reads may not work optimally in complex indel regions.

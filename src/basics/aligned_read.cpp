@@ -113,6 +113,14 @@ AlignedRead::Flags AlignedRead::flags() const noexcept
     return decompress(flags_);
 }
 
+void AlignedRead::realign(GenomicRegion new_region, CigarString new_cigar) noexcept
+{
+    assert(sequence_size(new_cigar) == sequence_.size());
+    assert(reference_size(new_cigar) == size(new_region));
+    region_ = std::move(new_region);
+    cigar_ = std::move(new_cigar);
+}
+
 bool AlignedRead::is_marked_all_segments_in_read_aligned() const noexcept
 {
     return flags_[0];
@@ -158,7 +166,6 @@ bool AlignedRead::is_marked_supplementary_alignment() const noexcept
 AlignedRead::FlagBits AlignedRead::compress(const Flags& flags) const noexcept
 {
     FlagBits result {};
-    
     result[0] = flags.all_segments_in_read_aligned;
     result[1] = flags.multiple_segment_template;
     result[2] = flags.unmapped;
@@ -167,14 +174,14 @@ AlignedRead::FlagBits AlignedRead::compress(const Flags& flags) const noexcept
     result[5] = flags.qc_fail;
     result[6] = flags.duplicate;
     result[7] = flags.supplementary_alignment;
-    
+    result[8] = flags.first_template_segment;
+    result[9] = flags.last_template_segment;
     return result;
 }
 
 AlignedRead::Flags AlignedRead::decompress(const FlagBits& flags) const noexcept
 {
-    // Note: first_template_segment and last_template_segmenet are not currently used
-    return {flags[0], flags[1], flags[2], flags[3], flags[4], flags[5], flags[6], flags[7], false, false};
+    return {flags[0], flags[1], flags[2], flags[3], flags[4], flags[5], flags[6], flags[7], flags[8], flags[9]};
 }
 
 AlignedRead::Segment::FlagBits AlignedRead::Segment::compress(const Flags& flags)
@@ -188,13 +195,11 @@ AlignedRead::Segment::FlagBits AlignedRead::Segment::compress(const Flags& flags
 std::size_t ReadHash::operator()(const octopus::AlignedRead &read) const
 {
     std::size_t result {};
-    
     using boost::hash_combine;
     hash_combine(result, std::hash<GenomicRegion>()(read.mapped_region()));
     hash_combine(result, std::hash<CigarString>()(read.cigar()));
     hash_combine(result, boost::hash_range(std::cbegin(read.base_qualities()), std::cend(read.base_qualities())));
     hash_combine(result, read.mapping_quality());
-    
     return result;
 }
 
@@ -316,7 +321,7 @@ AlignedRead copy(const AlignedRead& read, const GenomicRegion& region)
     const auto subqualities_end_itr   = next(subqualities_begin_itr, sequence_length);
     AlignedRead::BaseQualityVector sub_qualities {subqualities_begin_itr, subqualities_end_itr};
     return AlignedRead {read.name(), copy_region, std::move(sub_sequence), std::move(sub_qualities),
-                        std::move(contained_cigar_copy), read.mapping_quality(), read.flags()};
+                        std::move(contained_cigar_copy), read.mapping_quality(), read.flags(), read.read_group()};
 }
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
