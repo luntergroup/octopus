@@ -26,6 +26,8 @@ public:
     using FacetMap = std::unordered_map<std::string, FacetWrapper>;
     using ResultType = boost::variant<double, std::vector<double>,
                                       boost::optional<double>, std::vector<boost::optional<double>>,
+                                      int, std::vector<int>,
+                                      boost::optional<int>, std::vector<boost::optional<int>>,
                                       std::size_t, std::vector<std::size_t>,
                                       boost::optional<std::size_t>, std::vector<boost::optional<std::size_t>>,
                                       bool, std::vector<bool>,
