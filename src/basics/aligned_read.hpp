@@ -234,9 +234,10 @@ GenomicRegion clipped_mapped_region(const AlignedRead& read);
 
 // Returns the part of the read cigar string contained by the region
 CigarString copy_cigar(const AlignedRead& read, const GenomicRegion& region);
-    
 // Returns the part of the read (cigar, sequence, base_qualities) contained by the region
 AlignedRead copy(const AlignedRead& read, const GenomicRegion& region);
+AlignedRead::NucleotideSequence copy_sequence(const AlignedRead& read, const GenomicRegion& region);
+AlignedRead::BaseQualityVector copy_base_qualities(const AlignedRead& read, const GenomicRegion& region);
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
