@@ -67,20 +67,24 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<ModelPosterior>()]           = lowModelPosterior;
     filter_names[name<Quality>()]                  = lowQuality;
     filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
-    filter_names[name<GenotypeQuality>()]       = lowGQ;
+    filter_names[name<GenotypeQuality>()]          = lowGQ;
     filter_names[name<StrandBias>()]               = strandBias;
     filter_names[name<FilteredReadFraction>()]     = filteredReadFraction;
     filter_names[name<GCContent>()]                = highGCRegion;
     filter_names[name<ClippedReadFraction>()]      = highClippedReadFraction;
+    filter_names[name<MedianBaseQuality>()]        = lowBaseQuality;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)
 {
     using namespace octopus::vcf::spec::filter;
     // First look for special names
-    if (measure.name() == Quality().name()) {
+    if (measure.name() == name<Quality>()) {
         if (maths::almost_equal(threshold_target, 10.0)) return std::string {q10};
         if (maths::almost_equal(threshold_target, 20.0)) return std::string {q20};
+    }
+    if (measure.name() == name<MedianBaseQuality>()) {
+        if (maths::almost_equal(threshold_target, 10.0)) return std::string {bq10};
     }
     static MeasureToFilterKeyMap default_filter_names {};
     if (default_filter_names.empty()) {

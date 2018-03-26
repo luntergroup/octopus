@@ -61,6 +61,8 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::highGCRegion, "The GC content of the region is too high"},
 {spec::filter::lowGQ, "Sample genotype quality low"},
 {spec::filter::highClippedReadFraction, "High fraction of clipped reads covering position"},
+{spec::filter::bq10, "Median base quality supporting variant is less than 10"},
+{spec::filter::lowBaseQuality, "Median base quality supporting variant is low"}
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)
