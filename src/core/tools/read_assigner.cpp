@@ -216,18 +216,10 @@ HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotyp
 AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
                                         const HaplotypeSupportMap& haplotype_support)
 {
-    AlleleSupportMap result {};
-    result.reserve(alleles.size());
-    for (const auto& allele : alleles) {
-        ReadRefSupportSet allele_support {};
-        for (const auto& p : haplotype_support) {
-            if (p.first.contains(allele)) {
-                allele_support.insert(std::cend(allele_support), std::cbegin(p.second), std::cend(p.second));
-            }
-        }
-        result.emplace(allele, std::move(allele_support));
-    }
-    return result;
+    return compute_allele_support(alleles, haplotype_support,
+                                  [] (const Haplotype& haplotype, const Allele& allele) {
+                                      return haplotype.includes(allele);
+                                  });
 }
 
 } // namespace octopus

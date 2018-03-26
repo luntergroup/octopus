@@ -54,6 +54,26 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           HaplotypeLikelihoodModel model,
                           AssignmentConfig config = AssignmentConfig {});
 
+template <typename BinaryPredicate>
+AlleleSupportMap
+compute_allele_support(const std::vector<Allele>& alleles,
+                       const HaplotypeSupportMap& haplotype_support,
+                       BinaryPredicate inclusion_pred)
+{
+    AlleleSupportMap result {};
+    result.reserve(alleles.size());
+    for (const auto& allele : alleles) {
+        ReadRefSupportSet allele_support {};
+        for (const auto& p : haplotype_support) {
+            if (inclusion_pred(p.first, allele)) {
+                allele_support.insert(std::cend(allele_support), std::cbegin(p.second), std::cend(p.second));
+            }
+        }
+        result.emplace(allele, std::move(allele_support));
+    }
+    return result;
+}
+
 AlleleSupportMap
 compute_allele_support(const std::vector<Allele>& alleles,
                        const HaplotypeSupportMap& haplotype_support);
