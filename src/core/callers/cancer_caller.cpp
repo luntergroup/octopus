@@ -107,7 +107,7 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     if (debug_log_) stream(*debug_log_) << "There are " << result->cancer_genotypes_.size() << " candidate cancer genotypes";
     if (has_normal_sample()) result->normal_sample_ = std::cref(normal_sample());
     evaluate_tumour_model(*result, haplotype_likelihoods);
-//    evaluate_noise_model(*result, haplotype_likelihoods);
+    evaluate_noise_model(*result, haplotype_likelihoods);
     set_model_posteriors(*result);
     return result;
 }
@@ -162,12 +162,14 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
         }
         const auto dummy_genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
         const auto dummy_inferences = germline_model.evaluate(dummy_genotypes, haplotype_likelihoods);
-        auto noise_model_priors = get_normal_noise_model_priors(germline_model.prior_model());
-        const CNVModel noise_model {{normal_sample()}, std::move(noise_model_priors)};
-        auto noise_inferences = noise_model.evaluate(latents.germline_genotypes_, haplotype_likelihoods);
-        return octopus::calculate_model_posterior(normal_inferences.log_evidence,
-                                                  dummy_inferences.log_evidence,
-                                                  noise_inferences.approx_log_evidence);
+        if (latents.noise_model_inferences_) {
+            return octopus::calculate_model_posterior(normal_inferences.log_evidence,
+                                                      dummy_inferences.log_evidence,
+                                                      latents.noise_model_inferences_->approx_log_evidence);
+        } else {
+            return octopus::calculate_model_posterior(normal_inferences.log_evidence,
+                                                      dummy_inferences.log_evidence);
+        }
     } else {
         // TODO
         return boost::none;
@@ -481,10 +483,21 @@ auto get_high_posterior_genotypes(const std::vector<CancerGenotype<Haplotype>>& 
 
 void CancerCaller::evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    if (has_normal_sample()) {
+    if (has_normal_sample() && !has_high_normal_contamination_risk(latents)) {
+        if (!latents.normal_germline_inferences_) {
+            assert(latents.germline_model_);
+            if (latents.germline_genotype_indices_) {
+                latents.normal_germline_inferences_ = latents.germline_model_->evaluate(latents.germline_genotypes_,
+                                                                                        *latents.germline_genotype_indices_,
+                                                                                        haplotype_likelihoods);
+            } else {
+                latents.normal_germline_inferences_ = latents.germline_model_->evaluate(latents.germline_genotypes_,
+                                                                                        haplotype_likelihoods);
+            }
+        }
         assert(latents.cancer_genotype_prior_model_);
         auto noise_model_priors = get_noise_model_priors(*latents.cancer_genotype_prior_model_);
-        const TumourModel noise_model {samples_, noise_model_priors};
+        const TumourModel noise_model {{*parameters_.normal_sample}, noise_model_priors};
         auto noise_genotypes = get_high_posterior_genotypes(latents.cancer_genotypes_, latents.tumour_model_inferences_);
         latents.noise_model_inferences_ = noise_model.evaluate(noise_genotypes, haplotype_likelihoods);
     }
@@ -949,13 +962,16 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                         somatic_samples.push_back(p.first);
                     }
                 }
-                if (has_normal_sample() && latents.noise_model_inferences_) {
-                    // Does the normal sample contain the called somatic variant?
-                    const auto& noisy_alphas = latents.noise_model_inferences_->posteriors.alphas.at(normal_sample());
-                    const auto noise_credible_region = compute_marginal_credible_interval(noisy_alphas, parameters_.credible_mass).back();
-                    const auto somatic_mass = compute_somatic_mass(noisy_alphas, parameters_.min_expected_somatic_frequency);
-                    if (noise_credible_region.first >= parameters_.min_credible_somatic_frequency || somatic_mass > 0.5) {
-                        somatic_samples.clear();
+                if (latents.noise_model_inferences_ && latents.normal_germline_inferences_) {
+                    const auto noise_model_evidence = latents.noise_model_inferences_->approx_log_evidence;
+                    const auto germline_model_evidence = latents.normal_germline_inferences_->log_evidence;
+                    if (noise_model_evidence > germline_model_evidence) {
+                        // Does the normal sample contain the called somatic variant?
+                        const auto& noisy_alphas = latents.noise_model_inferences_->posteriors.alphas.at(normal_sample());
+                        const auto noise_mass = compute_somatic_mass(noisy_alphas, parameters_.min_expected_somatic_frequency);
+                        if (noise_mass > 2 * parameters_.min_credible_somatic_frequency) {
+                            somatic_samples.clear();
+                        }
                     }
                 }
                 if (somatic_samples.empty()) {
