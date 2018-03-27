@@ -71,8 +71,18 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
 , facet_factory_ {std::move(facet_factory)}
 , facet_names_ {get_facets(measures_)}
 , output_config_ {output_config}
+, duplicate_measures_ {}
 , workers_ {get_pool_size(threading)}
-{}
+{
+    std::unordered_map<std::string, int> measure_name_counts {};
+    for (const auto& m : measures_) {
+        ++measure_name_counts[m.name()];
+        if (measure_name_counts[m.name()] == 2) {
+            duplicate_measures_.push_back(m);
+        }
+    }
+    duplicate_measures_.shrink_to_fit();
+}
 
 void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
 {
@@ -164,8 +174,25 @@ VariantCallFilter::read_next_blocks(VcfIterator& first, const VcfIterator& last,
 VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& call) const
 {
     MeasureVector result(measures_.size());
-    std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
-                   [&call] (const MeasureWrapper& f) { return f(call); });
+    if (duplicate_measures_.empty()) {
+        std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
+                       [&call] (const MeasureWrapper& m) { return m(call); });
+    } else {
+        std::unordered_map<std::string, Measure::ResultType> result_buffer {};
+        result_buffer.reserve(duplicate_measures_.size());
+        for (const auto& m : duplicate_measures_) {
+            result_buffer.emplace(m.name(), m(call));
+        }
+        std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
+                       [&call, &result_buffer] (const MeasureWrapper& m) -> Measure::ResultType {
+                           auto itr = result_buffer.find(m.name());
+                           if (itr != std::cend(result_buffer)) {
+                               return std::move(itr->second);
+                           } else {
+                               return m(call);
+                           }
+                       });
+    }
     return result;
 }
 
@@ -367,8 +394,25 @@ VariantCallFilter::MeasureBlock VariantCallFilter::measure(const CallBlock& bloc
 VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& call, const Measure::FacetMap& facets) const
 {
     MeasureVector result(measures_.size());
-    std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
-                   [&] (const MeasureWrapper& measure) { return measure(call, facets); });
+    if (duplicate_measures_.empty()) {
+        std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
+                       [&] (const MeasureWrapper& m) { return m(call, facets); });
+    } else {
+        std::unordered_map<std::string, Measure::ResultType> result_buffer {};
+        result_buffer.reserve(duplicate_measures_.size());
+        for (const auto& m : duplicate_measures_) {
+            result_buffer.emplace(m.name(), m(call, facets));
+        }
+        std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
+                       [&] (const MeasureWrapper& m) -> Measure::ResultType {
+                           auto itr = result_buffer.find(m.name());
+                           if (itr != std::cend(result_buffer)) {
+                               return std::move(itr->second);
+                           } else {
+                               return m(call, facets);
+                           }
+                       });
+    }
     return result;
 }
 

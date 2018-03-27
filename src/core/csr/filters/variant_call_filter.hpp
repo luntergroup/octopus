@@ -102,6 +102,7 @@ private:
     FacetFactory facet_factory_;
     FacetNameSet facet_names_;
     OutputOptions output_config_;
+    std::vector<MeasureWrapper> duplicate_measures_;
     
     mutable ThreadPool workers_;
     

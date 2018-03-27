@@ -14,6 +14,7 @@
 #include <boost/optional.hpp>
 #include <boost/any.hpp>
 
+#include "concepts/equitable.hpp"
 #include "io/variant/vcf_header.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "../facets/facet.hpp"
@@ -65,7 +66,7 @@ private:
     virtual bool is_required_vcf_field() const noexcept { return false; }
 };
 
-class MeasureWrapper
+class MeasureWrapper : public Equitable<MeasureWrapper>
 {
 public:
     MeasureWrapper() = delete;
@@ -98,6 +99,11 @@ private:
     std::unique_ptr<Measure> measure_;
 };
 
+inline bool operator==(const MeasureWrapper& lhs, const MeasureWrapper& rhs)
+{
+    return lhs.name() == rhs.name();
+}
+
 template <typename M, typename... Args>
 MeasureWrapper make_wrapped_measure(Args&&... args)
 {
@@ -119,5 +125,17 @@ std::vector<Measure::ResultType> get_sample_values(const std::vector<Measure::Re
 
 } // namespace csr
 } // namespace octopus
+
+namespace std {
+
+template <> struct hash<octopus::csr::MeasureWrapper>
+{
+    size_t operator()(const octopus::csr::MeasureWrapper& measure) const
+    {
+        return hash<string>{}(measure.name());
+    }
+};
+
+} // namespace std
 
 #endif
