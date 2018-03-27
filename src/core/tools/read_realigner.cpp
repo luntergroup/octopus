@@ -302,8 +302,7 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
             const auto offset = left_overhang_size(haplotype_region, read_region);
             const auto rhs_pad_size = right_overhang_size(read_region, haplotype_region);
             result = copy_sequence(haplotype_to_reference, offset, sequence_size(haplotype_to_reference));
-            assert(!result.empty());
-            if (is_sequence_match(result.back())) {
+            if (!result.empty() && is_sequence_match(result.back())) {
                 result.back() = CigarOperation {result.back().size() + rhs_pad_size, Flag::sequenceMatch};
             } else if (rhs_pad_size > 0) {
                 result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
