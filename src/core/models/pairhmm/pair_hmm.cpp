@@ -317,16 +317,20 @@ double evaluate(const std::string& target, const std::string& truth,
             mispatch_penalty = std::min(target_qualities[target_index],
                                         static_cast<std::uint8_t>(model.snv_priors[truth_mismatch_idx]));
         }
-        if (std::equal(next(m1.first), cend(target), m1.second)) {
-            // target: AAAAGGGG
-            // truth:  AAA GGGGG
-            return lnProbability[model.gap_open[truth_mismatch_idx]];
-        } else if (std::equal(m1.first, cend(target), next(m1.second))) {
-            // target: AAA GGGGG
-            // truth:  AAAAGGGGG
-            return lnProbability[model.gap_open[truth_mismatch_idx]];
-        } else if (mispatch_penalty <= (model.gap_open[truth_mismatch_idx] + model.gap_extend)) {
+        if (mispatch_penalty <= model.gap_open[truth_mismatch_idx]) {
             return lnProbability[mispatch_penalty];
+        } else {
+            if (std::equal(next(m1.first), cend(target), m1.second)) {
+                // target: AAAAGGGG
+                // truth:  AAA GGGGG
+                return lnProbability[model.gap_open[truth_mismatch_idx]];
+            } else if (std::equal(m1.first, cend(target), next(m1.second))) {
+                // target: AAA GGGGG
+                // truth:  AAAAGGGGG
+                return lnProbability[model.gap_open[truth_mismatch_idx]];
+            } else if (mispatch_penalty <= (model.gap_open[truth_mismatch_idx] + model.gap_extend)) {
+                return lnProbability[mispatch_penalty];
+            }
         }
     }
     // TODO: we should be able to optimise the alignment based of the first mismatch postition
