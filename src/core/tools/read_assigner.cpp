@@ -39,6 +39,10 @@ void find_max_likelihood_haplotypes(const std::vector<Haplotype>& haplotypes, co
             max_likelihood = curr;
         }
     }
+    if (result.empty()) {
+        result.resize(haplotypes.size());
+        std::iota(std::begin(result), std::end(result), 0);
+    }
 }
 
 template <typename ForwardIt, typename RandomGenerator>
@@ -46,6 +50,7 @@ ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g)
 {
     if (first == last) return first;
     const auto max = static_cast<std::size_t>(std::distance(first, last));
+    if (max == 1) return first;
     std::uniform_int_distribution<std::size_t> dist {0, max - 1};
     std::advance(first, dist(g));
     return first;
@@ -54,13 +59,14 @@ ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g)
 template <typename ForwardIt>
 ForwardIt random_select(ForwardIt first, ForwardIt last)
 {
-    static std::default_random_engine gen {};
-    return random_select(first, last, gen);
+    static thread_local std::mt19937 generator {42};
+    return random_select(first, last, generator);
 }
 
 template <typename Range>
 decltype(auto) random_select(const Range& values)
 {
+    assert(!values.empty());
     return *random_select(std::cbegin(values), std::cend(values));
 }
 
