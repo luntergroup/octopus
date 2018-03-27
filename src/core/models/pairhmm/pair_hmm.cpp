@@ -305,6 +305,8 @@ double evaluate(const std::string& target, const std::string& truth,
     const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
     if (m2.first == cend(target)) {
         // then there is only a single base difference between the sequences, can optimise
+        // target: ACGTACGT
+        // truth:  ACGTTCGT
         const auto truth_mismatch_idx = distance(offsetted_truth_begin_itr, m1.second) + target_offset;
         if (truth_mismatch_idx < model.lhs_flank_size || truth_mismatch_idx >= (truth.size() - model.rhs_flank_size)) {
             return 0;
@@ -315,11 +317,17 @@ double evaluate(const std::string& target, const std::string& truth,
             mispatch_penalty = std::min(target_qualities[target_index],
                                         static_cast<std::uint8_t>(model.snv_priors[truth_mismatch_idx]));
         }
-        if (mispatch_penalty <= model.gap_open[truth_mismatch_idx]
-            || !std::equal(next(m1.first), cend(target), m1.second)) {
+        if (std::equal(next(m1.first), cend(target), m1.second)) {
+            // target: AAAAGGGG
+            // truth:  AAA GGGGG
+            return lnProbability[model.gap_open[truth_mismatch_idx]];
+        } else if (std::equal(m1.first, cend(target), next(m1.second))) {
+            // target: AAA GGGGG
+            // truth:  AAAAGGGGG
+            return lnProbability[model.gap_open[truth_mismatch_idx]];
+        } else if (mispatch_penalty <= (model.gap_open[truth_mismatch_idx] + model.gap_extend)) {
             return lnProbability[mispatch_penalty];
         }
-        return lnProbability[model.gap_open[truth_mismatch_idx]];
     }
     // TODO: we should be able to optimise the alignment based of the first mismatch postition
     return simd_align(truth, target, target_qualities, target_offset, model);
@@ -352,12 +360,24 @@ double evaluate(const std::string& target, const std::string& truth, const Varia
     }
     const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
     if (m2.first == cend(target)) {
-        // then there is only a single base difference between the sequences, can optimise
+        // target: ACGTACGT
+        // truth:  ACGTTCGT
         const auto truth_mismatch_idx = static_cast<std::size_t>(distance(cbegin(truth), m1.second));
-        if (model.mutation <= model.gap_open[truth_mismatch_idx] || !std::equal(next(m1.first), cend(target), m1.second)) {
-            return lnProbability[model.gap_open[truth_mismatch_idx]];
+        if (model.mutation <= model.gap_open[truth_mismatch_idx]) {
+            return lnProbability[model.mutation];
+        } else {
+            if (std::equal(next(m1.first), cend(target), m1.second)) {
+                // target: AAAAGGGG
+                // truth:  AAA GGGGG
+                return lnProbability[model.gap_open[truth_mismatch_idx]];
+            } else if (std::equal(m1.first, cend(target), next(m1.second))) {
+                // target: AAA GGGGG
+                // truth:  AAAAGGGGG
+                return lnProbability[model.gap_open[truth_mismatch_idx]];
+            } else if (model.mutation <= (model.gap_open[truth_mismatch_idx] + model.gap_extend[truth_mismatch_idx])) {
+                return lnProbability[model.mutation];
+            }
         }
-        return lnProbability[model.mutation];
     }
     const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
@@ -384,12 +404,24 @@ double evaluate(const std::string& target, const std::string& truth, const Varia
     }
     const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
     if (m2.first == cend(target)) {
-        // then there is only a single base difference between the sequences, can optimise
+        // target: ACGTACGT
+        // truth:  ACGTTCGT
         const auto truth_mismatch_idx = static_cast<std::size_t>(distance(cbegin(truth), m1.second));
-        if (model.mutation <= model.gap_open[truth_mismatch_idx] || !std::equal(next(m1.first), cend(target), m1.second)) {
-            return lnProbability[model.gap_open[truth_mismatch_idx]];
+        if (model.mutation <= model.gap_open[truth_mismatch_idx]) {
+            return lnProbability[model.mutation];
+        } else {
+            if (std::equal(next(m1.first), cend(target), m1.second)) {
+                // target: AAAAGGGG
+                // truth:  AAA GGGGG
+                return lnProbability[model.gap_open[truth_mismatch_idx]];
+            } else if (std::equal(m1.first, cend(target), next(m1.second))) {
+                // target: AAA GGGGG
+                // truth:  AAAAGGGGG
+                return lnProbability[model.gap_open[truth_mismatch_idx]];
+            } else if (model.mutation <= (model.gap_open[truth_mismatch_idx] + model.gap_extend)) {
+                return lnProbability[model.mutation];
+            }
         }
-        return lnProbability[model.mutation];
     }
     const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
@@ -415,11 +447,23 @@ double evaluate(const std::string& target, const std::string& truth, const FlatG
     }
     const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
     if (m2.first == cend(target)) {
-        // then there is only a single base difference between the sequences, can optimise
-        if (model.mutation <= model.gap_open || !std::equal(next(m1.first), cend(target), m1.second)) {
-            return lnProbability[model.gap_open];
+        // target: ACGTACGT
+        // truth:  ACGTTCGT
+        if (model.mutation <= model.gap_open) {
+            return lnProbability[model.mutation];
+        } else {
+            if (std::equal(next(m1.first), cend(target), m1.second)) {
+                // target: AAAAGGGG
+                // truth:  AAA GGGGG
+                return lnProbability[model.gap_open];
+            } else if (std::equal(m1.first, cend(target), next(m1.second))) {
+                // target: AAA GGGGG
+                // truth:  AAAAGGGGG
+                return lnProbability[model.gap_open];
+            } else if (model.mutation <= (model.gap_open + model.gap_extend)) {
+                return lnProbability[model.mutation];
+            }
         }
-        return lnProbability[model.mutation];
     }
     const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
