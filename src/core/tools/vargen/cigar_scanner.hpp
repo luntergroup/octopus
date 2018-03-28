@@ -164,6 +164,15 @@ struct DefaultInclusionPredicate
     bool operator()(const CigarScanner::ObservedVariant& candidate);
 };
 
+struct DefaultSomaticInclusionPredicate
+{
+    DefaultSomaticInclusionPredicate() = default;
+    DefaultSomaticInclusionPredicate(SampleName normal) : normal_ {std::move(normal)} {}
+    bool operator()(const CigarScanner::ObservedVariant& candidate);
+private:
+    boost::optional<SampleName> normal_;
+};
+
 struct SimpleThresholdInclusionPredicate
 {
     SimpleThresholdInclusionPredicate(std::size_t min_observations) : min_observations_ {min_observations} {}
