@@ -448,6 +448,7 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
         return false;
     }
     if (is_snv(variant)) {
+        erase_below(observed_qualities, 4);
         const auto base_quality_sum = sum(observed_qualities);
         if (depth <= 60) {
             if (num_observations < 2) return false;
