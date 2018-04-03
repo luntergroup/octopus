@@ -134,6 +134,7 @@ private:
     void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void evaluate_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void set_model_priors(Latents& latents) const;
     void set_model_posteriors(Latents& latents) const;
     
     std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const;
@@ -141,7 +142,6 @@ private:
     TumourModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model) const;
     TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const;
     CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
-    ModelPriors get_model_priors(const std::vector<Haplotype>& haplotypes) const;
     
     GermlineGenotypeProbabilityMap
     calculate_germline_genotype_posteriors(const Latents& latents, const ModelPosteriors& model_posteriors) const;
@@ -159,8 +159,7 @@ public:
     Latents() = delete;
     
     Latents(const std::vector<Haplotype>& haplotypes,
-            const std::vector<SampleName>& samples,
-            CancerCaller::ModelPriors model_priors);
+            const std::vector<SampleName>& samples);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const override;
