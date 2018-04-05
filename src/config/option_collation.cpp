@@ -1520,9 +1520,14 @@ bool is_call_filtering_requested(const OptionMap& options) noexcept
     return options.at("call-filtering").as<bool>();
 }
 
-std::string get_filter_expression(const OptionMap& options)
+std::string get_germline_filter_expression(const OptionMap& options)
 {
     return options.at("filter-expression").as<std::string>();
+}
+
+std::string get_somatic_filter_expression(const OptionMap& options)
+{
+    return options.at("somatic-filter-expression").as<std::string>();
 }
 
 bool is_csr_training(const OptionMap& options)
@@ -1549,7 +1554,13 @@ std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const Referen
         if (is_csr_training(options)) {
             return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
         } else {
-            return std::make_unique<ThresholdFilterFactory>(get_filter_expression(options));
+            auto germline_filter_expression = get_germline_filter_expression(options);
+            if (is_cancer_calling(options)) {
+                return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression, "",
+                                                                get_somatic_filter_expression(options));
+            } else {
+                return std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
+            }
         }
     } else {
         return nullptr;
