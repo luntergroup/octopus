@@ -42,19 +42,22 @@ private:
     mutable boost::optional<ProgressMeter&> progress_;
     mutable boost::optional<GenomicRegion::ContigName> current_contig_;
     
-    virtual void log_registration_pass_start(Log& log) const;
-    virtual void record(std::size_t call_idx, MeasureVector measures) const = 0;
+    virtual void log_registration_pass(Log& log) const;
+    virtual void prepare_for_registration(const SampleList& samples) const {};
+    virtual void record(std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const = 0;
     virtual void prepare_for_classification(boost::optional<Log>& log) const = 0;
     virtual void log_filter_pass_start(Log& log) const;
-    virtual Classification classify(std::size_t call_idx) const = 0;
+    virtual Classification classify(std::size_t call_idx, std::size_t sample_idx) const = 0;
+    virtual Classification merge(const std::vector<Classification>& sample_classifications) const;
     
     void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const override;
     
     void make_registration_pass(const VcfReader& source, const SampleList& samples) const;
-    void record(const VcfRecord& call, std::size_t idx) const;
-    void record(const std::vector<VcfRecord>& calls, std::size_t first_idx) const;
-    void make_filter_pass(const VcfReader& source, VcfWriter& dest) const;
-    void filter(const VcfRecord& call, std::size_t idx, VcfWriter& dest) const;
+    void record(const VcfRecord& call, std::size_t record_idx, const SampleList& samples) const;
+    void record(const std::vector<VcfRecord>& calls, std::size_t record_idx, const SampleList& samples) const;
+    void make_filter_pass(const VcfReader& source, const SampleList& samples, VcfWriter& dest) const;
+    std::vector<Classification> classify(std::size_t call_idx, const SampleList& samples) const;
+    void filter(const VcfRecord& call, std::size_t idx, const SampleList& samples, VcfWriter& dest) const;
     void log_progress(const GenomicRegion& region) const;
 };
 
