@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <iterator>
 #include <algorithm>
+#include <cassert>
 
 #include <boost/lexical_cast.hpp>
 
@@ -124,6 +125,7 @@ Measure::ResultType get_sample_value(const Measure::ResultType& value, const Mea
 std::vector<Measure::ResultType>
 get_sample_values(const std::vector<Measure::ResultType>& values, const std::vector<MeasureWrapper>& measures, std::size_t sample_idx)
 {
+    assert(values.size() == measures.size());
     std::vector<Measure::ResultType> result(values.size());
     std::transform(std::cbegin(values), std::cend(values), std::cbegin(measures), std::begin(result),
                    [&] (const auto& value, const auto& measure) { return get_sample_value(value, measure, sample_idx); });
