@@ -48,6 +48,7 @@
 #include "exceptions/missing_file_error.hpp"
 #include "core/csr/filters/threshold_filter_factory.hpp"
 #include "core/csr/filters/training_filter_factory.hpp"
+#include "core/csr/filters/random_forest_filter_factory.hpp"
 
 namespace octopus { namespace options {
 
@@ -1546,11 +1547,19 @@ std::set<std::string> get_training_measures(const OptionMap& options)
     return result;
 }
 
-std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference,
-                                                                   ReadPipe& read_pipe,
-                                                                   const OptionMap& options)
+std::unique_ptr<VariantCallFilterFactory>
+make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
+                         const OptionMap& options,
+                         boost::optional<fs::path> temp_directory)
 {
-    if (is_call_filtering_requested(options)) {
+    if (is_set("forest-file", options)) {
+        auto forest_file = options.at("forest-file").as<fs::path>();
+        if (temp_directory) {
+            return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+        } else {
+            return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+        }
+    } else if (is_call_filtering_requested(options)) {
         if (is_csr_training(options)) {
             return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
         } else {
