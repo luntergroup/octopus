@@ -15,6 +15,8 @@
 
 namespace octopus { namespace csr {
 
+namespace {
+
 auto extract_measures(std::vector<ThresholdVariantCallFilter::Condition>& conditions)
 {
     std::vector<MeasureWrapper> result {};
@@ -59,6 +61,8 @@ bool are_all_unique(std::vector<std::string> keys)
     return std::adjacent_find(std::cbegin(keys), std::cend(keys)) == std::cend(keys);
 }
 
+} // namespace
+
 ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factory,
                                                        std::vector<Condition> hard_conditions,
                                                        std::vector<Condition> soft_conditions,
@@ -72,6 +76,13 @@ ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factor
 , vcf_filter_keys_ {extract_vcf_filter_keys(soft_conditions)}
 , all_unique_filter_keys_ {are_all_unique(vcf_filter_keys_)}
 {}
+
+bool ThresholdVariantCallFilter::passes_all_filteres(MeasureIterator first_measure, MeasureIterator last_measure,
+                                                     ThresholdIterator first_threshold) const
+{
+    return std::inner_product(first_measure, last_measure, first_threshold, true, std::multiplies<> {},
+                              [] (const auto& measure, const auto& threshold) -> bool { return threshold(measure); });
+}
 
 void ThresholdVariantCallFilter::annotate(VcfHeader::Builder& header) const
 {
@@ -95,23 +106,21 @@ VariantCallFilter::Classification ThresholdVariantCallFilter::classify(const Mea
 
 bool ThresholdVariantCallFilter::passes_all_hard_filters(const MeasureVector& measures) const
 {
-    return std::inner_product(std::cbegin(measures), std::next(std::cbegin(measures), hard_thresholds_.size()),
-                              std::cbegin(hard_thresholds_), true, std::multiplies<> {},
-                              [] (const auto& measure, const auto& threshold) -> bool { return threshold(measure); });
+    return passes_all_filteres(std::cbegin(measures), std::next(std::cbegin(measures), hard_thresholds_.size()),
+                              std::cbegin(hard_thresholds_));
 }
 
 bool ThresholdVariantCallFilter::passes_all_soft_filters(const MeasureVector& measures) const
 {
-    return std::inner_product(std::next(std::cbegin(measures), hard_thresholds_.size()), std::cend(measures),
-                              std::cbegin(soft_thresholds_), true, std::multiplies<> {},
-                              [] (const auto& measure, const auto& threshold) -> bool { return threshold(measure); });
+    return passes_all_filteres(std::next(std::cbegin(measures), hard_thresholds_.size()), std::cend(measures),
+                              std::cbegin(soft_thresholds_));
 }
 
 std::vector<std::string> ThresholdVariantCallFilter::get_failing_vcf_filter_keys(const MeasureVector& measures) const
 {
     std::vector<std::string> result {};
     result.reserve(soft_thresholds_.size());
-    for (std::size_t i {0}; i < measures.size(); ++i) {
+    for (std::size_t i {0}; i < soft_thresholds_.size(); ++i) {
         if (!soft_thresholds_[i](measures[i + hard_thresholds_.size()])) {
             result.push_back(vcf_filter_keys_[i]);
         }
