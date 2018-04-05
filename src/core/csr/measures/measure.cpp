@@ -76,7 +76,7 @@ void Measure::annotate(VcfHeader::Builder& header) const
         std::string number;
         using namespace vcfspec::header::meta::number;
         switch (this->cardinality()) {
-            case Measure::ResultCardinality::num_samples: number = per_genotype; break;
+            case Measure::ResultCardinality::num_samples: number = unknown; break;
             case Measure::ResultCardinality::num_alleles: number = per_allele; break;
             case Measure::ResultCardinality::one: number = "1"; break;
         }
