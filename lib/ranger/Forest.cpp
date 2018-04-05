@@ -67,9 +67,9 @@ void Forest::initCpp(std::string dependent_variable_name, MemoryMode memory_mode
   }
 
   // Load data
-  *verbose_out << "Loading input file: " << input_file << "." << std::endl;
+  if (verbose_out) *verbose_out << "Loading input file: " << input_file << "." << std::endl;
   bool rounding_error = data->loadFromFile(input_file);
-  if (rounding_error) {
+  if (rounding_error && verbose_out) {
     *verbose_out << "Warning: Rounding or Integer overflow occurred. Use FLOAT or DOUBLE precision to avoid this."
         << std::endl;
   }
@@ -296,28 +296,32 @@ void Forest::run(bool verbose) {
 // #nocov start
 void Forest::writeOutput() {
 
-  *verbose_out << std::endl;
+  if (verbose_out) *verbose_out << std::endl;
   writeOutputInternal();
-  *verbose_out << "Dependent variable name:           " << data->getVariableNames()[dependent_varID] << std::endl;
-  *verbose_out << "Dependent variable ID:             " << dependent_varID << std::endl;
-  *verbose_out << "Number of trees:                   " << num_trees << std::endl;
-  *verbose_out << "Sample size:                       " << num_samples << std::endl;
-  *verbose_out << "Number of independent variables:   " << num_independent_variables << std::endl;
-  *verbose_out << "Mtry:                              " << mtry << std::endl;
-  *verbose_out << "Target node size:                  " << min_node_size << std::endl;
-  *verbose_out << "Variable importance mode:          " << importance_mode << std::endl;
-  *verbose_out << "Memory mode:                       " << memory_mode << std::endl;
-  *verbose_out << "Seed:                              " << seed << std::endl;
-  *verbose_out << "Number of threads:                 " << num_threads << std::endl;
-  *verbose_out << std::endl;
+  if (verbose_out) {
+    *verbose_out << "Dependent variable name:           " << data->getVariableNames()[dependent_varID] << std::endl;
+    *verbose_out << "Dependent variable ID:             " << dependent_varID << std::endl;
+    *verbose_out << "Number of trees:                   " << num_trees << std::endl;
+    *verbose_out << "Sample size:                       " << num_samples << std::endl;
+    *verbose_out << "Number of independent variables:   " << num_independent_variables << std::endl;
+    *verbose_out << "Mtry:                              " << mtry << std::endl;
+    *verbose_out << "Target node size:                  " << min_node_size << std::endl;
+    *verbose_out << "Variable importance mode:          " << importance_mode << std::endl;
+    *verbose_out << "Memory mode:                       " << memory_mode << std::endl;
+    *verbose_out << "Seed:                              " << seed << std::endl;
+    *verbose_out << "Number of threads:                 " << num_threads << std::endl;
+    *verbose_out << std::endl;
+  }
 
   if (prediction_mode) {
     writePredictionFile();
   } else {
-    *verbose_out << "Overall OOB prediction error:      " << overall_prediction_error << std::endl;
-    *verbose_out << std::endl;
+    if (verbose_out) {
+      *verbose_out << "Overall OOB prediction error:      " << overall_prediction_error << std::endl;
+      *verbose_out << std::endl;
+    }
 
-    if (!split_select_weights.empty() & !split_select_weights[0].empty()) {
+    if (!split_select_weights.empty() & !split_select_weights[0].empty() && verbose_out) {
       *verbose_out
           << "Warning: Split select weights used. Variable importance measures are only comparable for variables with equal weights."
           << std::endl;
@@ -354,7 +358,7 @@ void Forest::writeImportanceFile() {
   }
 
   importance_file.close();
-  *verbose_out << "Saved variable importance to file " << filename << "." << std::endl;
+  if (verbose_out) *verbose_out << "Saved variable importance to file " << filename << "." << std::endl;
 }
 
 void Forest::saveToFile() {
@@ -385,7 +389,7 @@ void Forest::saveToFile() {
 
   // Close file
   outfile.close();
-  *verbose_out << "Saved forest to file " << filename << "." << std::endl;
+  if (verbose_out) *verbose_out << "Saved forest to file " << filename << "." << std::endl;
 }
 // #nocov end
 
@@ -767,7 +771,7 @@ void Forest::computeTreePermutationImportanceInThread(uint thread_idx, std::vect
 
 // #nocov start
 void Forest::loadFromFile(std::string filename) {
-  *verbose_out << "Loading forest from file " << filename << "." << std::endl;
+  if (verbose_out) *verbose_out << "Loading forest from file " << filename << "." << std::endl;
 
 // Open file for reading
   std::ifstream infile;
