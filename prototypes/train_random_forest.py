@@ -52,6 +52,9 @@ def get_field(field, rec, missing_value=0):
             val = val[0]
         return to_str(val, missing_value)
 
+def subset(vcf_in_path, vcf_out_path, bed_regions):
+    call(['bcftools', 'view', '-R', bed_regions, '-O', 'z', '-o', vcf_out_path, vcf_in_path])
+
 def make_ranger_data(octopus_vcf_path, measures, is_tp, out, missing_value=0):
     vcf = VariantFile(octopus_vcf_path)
     with open(out, 'w') as ranger_dat:
@@ -93,18 +96,26 @@ def main(options):
         rtg_eval_dirs.append(eval_octopus(options.octopus, options.reference, bam_path, options.regions, options.measures, options.threads,
                                       options.rtg, options.sdf, options.truth, options.confident, options.out))
     data_paths = []
+    tmp_paths = []
     for rtg_eval in rtg_eval_dirs:
         tp_vcf_path = join(rtg_eval, "tp.vcf.gz")
-        tp_data_path = tp_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(tp_vcf_path, options.measures, True, tp_data_path)
+        tp_train_vcf_path = tp_vcf_path.replace("tp.vcf", "tp.train.vcf")
+        subset(tp_vcf_path, tp_train_vcf_path, options.regions)
+        tp_data_path = tp_train_vcf_path.replace(".vcf.gz", ".dat")
+        make_ranger_data(tp_train_vcf_path, options.measures, True, tp_data_path)
         data_paths.append(tp_data_path)
         fp_vcf_path = join(rtg_eval, "fp.vcf.gz")
-        fp_data_path = fp_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(fp_vcf_path, options.measures, False, fp_data_path)
+        fp_train_vcf_path = fp_vcf_path.replace("fp.vcf", "fp.train.vcf")
+        subset(fp_vcf_path, fp_train_vcf_path, options.regions)
+        fp_data_path = fp_train_vcf_path.replace(".vcf.gz", ".dat")
+        make_ranger_data(fp_train_vcf_path, options.measures, False, fp_data_path)
         data_paths.append(fp_data_path)
+        tmp_paths += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_path = join(options.out, "ranger_train_master.dat")
     concat(data_paths, master_data_path)
     for path in data_paths:
+        remove(path)
+    for path in tmp_paths:
         remove(path)
     shuffle(master_data_path)
     ranger_header = ' '.join(options.measures + ['TP'])
@@ -148,7 +159,7 @@ if __name__ == '__main__':
                         type=str,
                         required=True,
                         help='RTG Tools binary')
-    parser.add_argument('--sdf', 
+    parser.add_argument('--sdf',
                         type=str,
                         required=True,
                         help='RTG Tools SDF reference index')
