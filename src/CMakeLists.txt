@@ -173,6 +173,7 @@ set(UTILS_SOURCES
     utils/parallel_transform.hpp
     utils/thread_pool.hpp
     utils/thread_pool.cpp
+    utils/concat.hpp
 )
 
 set(CORE_SOURCES
