@@ -32,6 +32,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<IsSomatic>()]                = [] () { return make_wrapped_measure<IsSomatic>(); };
     measure_makers[name<AmbiguousReadFraction>()]    = [] () { return make_wrapped_measure<AmbiguousReadFraction>(); };
     measure_makers[name<MedianBaseQuality>()]        = [] () { return make_wrapped_measure<MedianBaseQuality>(); };
+    measure_makers[name<AltAlleleCount>()]           = [] () { return make_wrapped_measure<AltAlleleCount>(); };
     measure_makers[name<Realignments>()]             = [] () { return make_wrapped_measure<Realignments>(); };
 }
 
