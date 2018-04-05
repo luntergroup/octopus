@@ -14,6 +14,7 @@
 #include "variant_call_filter_factory.hpp"
 #include "variant_call_filter.hpp"
 #include "threshold_filter.hpp"
+#include "somatic_threshold_filter.hpp"
 
 namespace octopus { namespace csr {
 
@@ -26,6 +27,8 @@ public:
     
     ThresholdFilterFactory(std::string soft_expression);
     ThresholdFilterFactory(std::string hard_expression, std::string soft_expression);
+    ThresholdFilterFactory(std::string germline_hard_expression, std::string germline_soft_expression,
+                           std::string somatic_hard_expression, std::string somatic_soft_expression);
     
     ThresholdFilterFactory(const ThresholdFilterFactory&)            = default;
     ThresholdFilterFactory& operator=(const ThresholdFilterFactory&) = default;
@@ -38,6 +41,7 @@ private:
     using Condition = ThresholdVariantCallFilter::Condition;
     
     std::vector<Condition> hard_conditions_, soft_conditions_;
+    std::vector<Condition> somatic_hard_conditions_, somatic_soft_conditions_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
     std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,
