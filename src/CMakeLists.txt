@@ -249,6 +249,10 @@ set(CORE_SOURCES
     core/csr/filters/training_filter_factory.cpp
     core/csr/filters/somatic_threshold_filter.hpp
     core/csr/filters/somatic_threshold_filter.cpp
+    core/csr/filters/random_forest_filter.hpp
+    core/csr/filters/random_forest_filter.cpp
+    core/csr/filters/random_forest_filter_factory.hpp
+    core/csr/filters/random_forest_filter_factory.cpp
     
     core/csr/measures/measure.hpp
     core/csr/measures/measure.cpp
@@ -441,8 +445,9 @@ set(OCTOPUS_SOURCES
 set(INCLUDE_SOURCES
     ${octopus_SOURCE_DIR}/lib/bioio.hpp
     ${octopus_SOURCE_DIR}/lib/tandem/tandem.hpp
-    ${octopus_SOURCE_DIR}//lib/ksp/custom_dijkstra_call.hpp
-    ${octopus_SOURCE_DIR}//lib/ksp/yen_ksp.hpp
+    ${octopus_SOURCE_DIR}/lib/ksp/custom_dijkstra_call.hpp
+    ${octopus_SOURCE_DIR}/lib/ksp/yen_ksp.hpp
+    ${octopus_SOURCE_DIR}/lib/ranger/Forest.h
 )
 
 set(REQUIRED_BOOST_LIBRARIES
@@ -478,7 +483,7 @@ if (BUILD_TESTING)
     add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(Octopus PRIVATE cxx_thread_local)
     target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(Octopus tandem)
+    target_link_libraries(Octopus tandem ranger)
     target_compile_definitions(Octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
@@ -494,7 +499,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
     target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(octopus-debug tandem)
+    target_link_libraries(octopus-debug tandem ranger)
     if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
@@ -522,7 +527,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     target_compile_features(octopus-sanitize PRIVATE cxx_thread_local)
     target_compile_options(octopus-sanitize PRIVATE ${SanitizeFlags})
     target_include_directories(octopus-sanitize PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(octopus-sanitize tandem ${SanitizeFlags})
+    target_link_libraries(octopus-sanitize tandem ranger ${SanitizeFlags})
     if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
@@ -549,7 +554,7 @@ else()
     target_compile_features(octopus PRIVATE cxx_thread_local)
     target_compile_options(octopus PRIVATE -ffast-math -funroll-loops -march=native)
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(octopus tandem)
+    target_link_libraries(octopus tandem ranger)
     if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
