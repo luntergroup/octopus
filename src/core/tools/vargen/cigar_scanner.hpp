@@ -11,6 +11,8 @@
 #include <functional>
 #include <memory>
 
+#include <boost/optional.hpp>
+
 #include "concepts/mappable.hpp"
 #include "concepts/comparable.hpp"
 #include "basics/aligned_read.hpp"
@@ -31,11 +33,13 @@ public:
     struct ObservedVariant
     {
         Variant variant;
-        unsigned num_samples, total_depth;
+        unsigned total_depth;
         struct SampleObservation
         {
+            std::reference_wrapper<const SampleName> sample;
             unsigned depth;
-            std::vector<unsigned> observed_qualities;
+            std::vector<unsigned> observed_base_qualities;
+            std::vector<AlignedRead::MappingQuality> observed_mapping_qualities;
             unsigned num_fwd_observations;
         };
         std::vector<SampleObservation> sample_observations;
@@ -90,14 +94,14 @@ private:
     struct Candidate : public Comparable<Candidate>, public Mappable<Candidate>
     {
         Variant variant;
-        SampleName origin;
-        AlignedRead::BaseQualityVector::const_iterator first_base_quality_iter;
-        AlignedRead::Direction support_direction;
+        std::reference_wrapper<const AlignedRead> source;
+        std::reference_wrapper<const SampleName> origin;
+        std::size_t offset;
         
-        template <typename T1, typename T2, typename T3, typename T4>
-        Candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added, T4&& origin,
-                  AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                  AlignedRead::Direction support_direction);
+        template <typename T1, typename T2, typename T3>
+        Candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
+                  const AlignedRead& source, std::size_t offset,
+                  const SampleName& origin);
         
         const GenomicRegion& mapped_region() const noexcept { return variant.mapped_region(); }
         
@@ -118,14 +122,11 @@ private:
     
     using CandidateIterator = OverlapIterator<decltype(candidates_)::const_iterator>;
     
-    template <typename T1, typename T2, typename T3, typename T4>
-    void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added, T4&& origin,
-                       AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                       AlignedRead::Direction support_direction);
-    double add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base, SequenceIterator last_base,
-                                   const SampleName& origin,
-                                   AlignedRead::BaseQualityVector::const_iterator first_quality,
-                                   AlignedRead::Direction support_direction);
+    template <typename T1, typename T2, typename T3>
+    void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
+                       const AlignedRead& read, std::size_t offset, const SampleName& sample);
+    double add_snvs_in_match_range(const GenomicRegion& region, const AlignedRead& read,
+                                   std::size_t read_index, const SampleName& origin);
     void generate(const GenomicRegion& region, std::vector<Variant>& result) const;
     unsigned sum_base_qualities(const Candidate& candidate) const noexcept;
     bool is_likely_misaligned(const AlignedRead& read, double penalty) const;
@@ -133,30 +134,27 @@ private:
     std::vector<Variant> get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates) const;
 };
 
-template <typename T1, typename T2, typename T3, typename T4>
+template <typename T1, typename T2, typename T3>
 CigarScanner::Candidate::Candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
-                                          T4&& origin,
-                                          AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                                          AlignedRead::Direction support_direction)
+                                   const AlignedRead& source, std::size_t offset,
+                                   const SampleName& origin)
 : variant {std::forward<T1>(region), std::forward<T2>(sequence_removed), std::forward<T3>(sequence_added)}
-, origin {std::forward<T4>(origin)}
-, first_base_quality_iter {first_base_quality}
-, support_direction {support_direction}
+, source {source}
+, origin {origin}
+, offset {offset}
 {}
 
-template <typename T1, typename T2, typename T3, typename T4>
-void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added, T4&& origin,
-                                 AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                                 AlignedRead::Direction support_direction)
+template <typename T1, typename T2, typename T3>
+void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
+                                 const AlignedRead& read, const std::size_t offset,
+                                 const SampleName& sample)
 {
     const auto candidate_size = size(region);
     if (candidate_size <= options_.max_variant_size) {
         buffer_.emplace_back(std::forward<T1>(region),
                              std::forward<T2>(sequence_removed),
                              std::forward<T3>(sequence_added),
-                             std::forward<T4>(origin),
-                             first_base_quality,
-                             support_direction);
+                             read, offset, sample);
         max_seen_candidate_size_ = std::max(max_seen_candidate_size_, candidate_size);
     }
 }
@@ -164,6 +162,15 @@ void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequen
 struct DefaultInclusionPredicate
 {
     bool operator()(const CigarScanner::ObservedVariant& candidate);
+};
+
+struct DefaultSomaticInclusionPredicate
+{
+    DefaultSomaticInclusionPredicate() = default;
+    DefaultSomaticInclusionPredicate(SampleName normal) : normal_ {std::move(normal)} {}
+    bool operator()(const CigarScanner::ObservedVariant& candidate);
+private:
+    boost::optional<SampleName> normal_;
 };
 
 struct SimpleThresholdInclusionPredicate

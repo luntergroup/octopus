@@ -769,21 +769,37 @@ ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> sampl
     }
 }
 
-auto get_default_inclusion_predicate()
+auto get_default_germline_inclusion_predicate()
 {
     return coretools::DefaultInclusionPredicate {};
+}
+
+bool is_cancer_calling(const OptionMap& options)
+{
+    return options.at("caller").as<std::string>() == "cancer" || options.count("normal-sample") == 1;
+}
+
+auto get_default_somatic_inclusion_predicate(boost::optional<SampleName> normal)
+{
+    if (normal) {
+        return coretools::DefaultSomaticInclusionPredicate {*normal};
+    } else {
+        return coretools::DefaultSomaticInclusionPredicate {};
+    }
 }
 
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 {
     using namespace coretools;
     using InclusionPredicate = CigarScanner::Options::InclusionPredicate;
-    const auto caller = options.at("caller").as<std::string>();
-    if (caller == "cancer") {
-        // TODO: specialise for this case; we need to be careful about low frequency somatics.
-        return InclusionPredicate {get_default_inclusion_predicate()};
+    if (is_cancer_calling(options)) {
+        boost::optional<SampleName> normal {};
+        if (is_set("normal-sample", options)) {
+            normal = options.at("normal-sample").as<SampleName>();
+        }
+        return InclusionPredicate {get_default_somatic_inclusion_predicate(normal)};
     } else {
-        return InclusionPredicate {get_default_inclusion_predicate()};
+        return InclusionPredicate {get_default_germline_inclusion_predicate()};
     }
 }
 
@@ -1279,9 +1295,6 @@ public:
 auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples,
 	 				 const boost::optional<Pedigree>& pedigree)
 {
-    // TODO: could think about getting rid of the 'caller' option and just
-    // deduce the caller type directly from the options.
-    // Will need to report an error if conflicting caller options are given anyway.
     auto result = options.at("caller").as<std::string>();
     if (result == "population" && samples.size() == 1) {
         result = "individual";
