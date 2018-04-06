@@ -7,6 +7,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string IsSomatic::name_ = "SOMATIC";
+
 std::unique_ptr<Measure> IsSomatic::do_clone() const
 {
     return std::make_unique<IsSomatic>(*this);
@@ -22,9 +24,9 @@ Measure::ResultCardinality IsSomatic::do_cardinality() const noexcept
     return ResultCardinality::one;
 }
 
-std::string IsSomatic::do_name() const
+const std::string& IsSomatic::do_name() const
 {
-    return "SOMATIC";
+    return name_;
 }
 
 std::string IsSomatic::do_describe() const

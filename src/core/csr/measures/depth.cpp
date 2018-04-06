@@ -12,6 +12,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string Depth::name_ = "DP";
+
 Depth::Depth() : Depth {false, false} {}
 
 Depth::Depth(bool recalculate, bool aggregate_samples)
@@ -60,9 +62,9 @@ Measure::ResultCardinality Depth::do_cardinality() const noexcept
     }
 }
 
-std::string Depth::do_name() const
+const std::string& Depth::do_name() const
 {
-    return "DP";
+    return name_;
 }
 
 std::string Depth::do_describe() const
@@ -76,6 +78,12 @@ std::vector<std::string> Depth::do_requirements() const
     if (!aggregate_) result.push_back("Samples");
     if (recalculate_) result.push_back("OverlappingReads");
     return result;
+}
+
+bool Depth::is_equal(const Measure& other) const noexcept
+{
+    const auto& other_depth = static_cast<const Depth&>(other);
+    return recalculate_ == other_depth.recalculate_ && aggregate_ == other_depth.aggregate_;
 }
 
 } // namespace csr

@@ -144,6 +144,16 @@ ThresholdFilterFactory::ThresholdFilterFactory(std::string soft_expression)
 ThresholdFilterFactory::ThresholdFilterFactory(std::string hard_expression, std::string soft_expression)
 : hard_conditions_ {parse_conditions(std::move(hard_expression))}
 , soft_conditions_ {parse_conditions(std::move(soft_expression))}
+, somatic_hard_conditions_ {}
+, somatic_soft_conditions_ {}
+{}
+
+ThresholdFilterFactory::ThresholdFilterFactory(std::string germline_hard_expression, std::string germline_soft_expression,
+                                               std::string somatic_hard_expression, std::string somatic_soft_expression)
+: hard_conditions_ {parse_conditions(std::move(germline_hard_expression))}
+, soft_conditions_ {parse_conditions(std::move(germline_soft_expression))}
+, somatic_hard_conditions_ {parse_conditions(std::move(somatic_hard_expression))}
+, somatic_soft_conditions_ {parse_conditions(std::move(somatic_soft_expression))}
 {}
 
 std::unique_ptr<VariantCallFilterFactory> ThresholdFilterFactory::do_clone() const
@@ -156,8 +166,16 @@ std::unique_ptr<VariantCallFilter> ThresholdFilterFactory::do_make(FacetFactory 
                                                                    boost::optional<ProgressMeter&> progress,
                                                                    VariantCallFilter::ConcurrencyPolicy threading) const
 {
-    return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory), hard_conditions_, soft_conditions_,
-                                                        output_config, threading, progress);
+    if (somatic_hard_conditions_.empty() && somatic_soft_conditions_.empty()) {
+        return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory),
+                                                            hard_conditions_, soft_conditions_,
+                                                            output_config, threading, progress);
+    } else {
+        return std::make_unique<SomaticThresholdVariantCallFilter>(std::move(facet_factory),
+                                                                   hard_conditions_, soft_conditions_,
+                                                                   somatic_hard_conditions_, somatic_soft_conditions_,
+                                                                   output_config, threading, progress);
+    }
 }
 
 } // namespace csr

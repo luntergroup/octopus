@@ -27,6 +27,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string Realignments::name_ = "RA";
+
 std::unique_ptr<Measure> Realignments::do_clone() const
 {
     return std::make_unique<Realignments>(*this);
@@ -230,9 +232,9 @@ Measure::ResultCardinality Realignments::do_cardinality() const noexcept
     return ResultCardinality::one;
 }
 
-std::string Realignments::do_name() const
+const std::string& Realignments::do_name() const
 {
-    return "RA";
+    return name_;
 }
 
 std::string Realignments::do_describe() const

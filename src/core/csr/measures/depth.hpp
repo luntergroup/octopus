@@ -17,13 +17,15 @@ namespace csr {
 
 class Depth : public Measure
 {
+    const static std::string name_;
     bool recalculate_ = false, aggregate_ = false;
     std::unique_ptr<Measure> do_clone() const override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
     ResultCardinality do_cardinality() const noexcept override;
-    std::string do_name() const override;
+    const std::string& do_name() const override;
     std::string do_describe() const override;
     std::vector<std::string> do_requirements() const override;
+    bool is_equal(const Measure& other) const noexcept override;
 public:
     Depth();
     Depth(bool recalculate, bool aggregate_samples);

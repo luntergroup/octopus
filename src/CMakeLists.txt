@@ -173,6 +173,7 @@ set(UTILS_SOURCES
     utils/parallel_transform.hpp
     utils/thread_pool.hpp
     utils/thread_pool.cpp
+    utils/concat.hpp
 )
 
 set(CORE_SOURCES
@@ -246,6 +247,8 @@ set(CORE_SOURCES
     core/csr/filters/passing_filter.cpp
     core/csr/filters/training_filter_factory.hpp
     core/csr/filters/training_filter_factory.cpp
+    core/csr/filters/somatic_threshold_filter.hpp
+    core/csr/filters/somatic_threshold_filter.cpp
     
     core/csr/measures/measure.hpp
     core/csr/measures/measure.cpp

@@ -74,10 +74,11 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
 , duplicate_measures_ {}
 , workers_ {get_pool_size(threading)}
 {
-    std::unordered_map<std::string, int> measure_name_counts {};
+    std::unordered_map<MeasureWrapper, int> measure_counts {};
+    measure_counts.reserve(measures_.size());
     for (const auto& m : measures_) {
-        ++measure_name_counts[m.name()];
-        if (measure_name_counts[m.name()] == 2) {
+        ++measure_counts[m];
+        if (measure_counts[m] == 2) {
             duplicate_measures_.push_back(m);
         }
     }
@@ -178,16 +179,16 @@ VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& cal
         std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
                        [&call] (const MeasureWrapper& m) { return m(call); });
     } else {
-        std::unordered_map<std::string, Measure::ResultType> result_buffer {};
+        std::unordered_map<MeasureWrapper, Measure::ResultType> result_buffer {};
         result_buffer.reserve(duplicate_measures_.size());
         for (const auto& m : duplicate_measures_) {
-            result_buffer.emplace(m.name(), m(call));
+            result_buffer.emplace(m, m(call));
         }
         std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
                        [&call, &result_buffer] (const MeasureWrapper& m) -> Measure::ResultType {
-                           auto itr = result_buffer.find(m.name());
+                           auto itr = result_buffer.find(m);
                            if (itr != std::cend(result_buffer)) {
-                               return std::move(itr->second);
+                               return itr->second;
                            } else {
                                return m(call);
                            }
@@ -398,16 +399,16 @@ VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& cal
         std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
                        [&] (const MeasureWrapper& m) { return m(call, facets); });
     } else {
-        std::unordered_map<std::string, Measure::ResultType> result_buffer {};
+        std::unordered_map<MeasureWrapper, Measure::ResultType> result_buffer {};
         result_buffer.reserve(duplicate_measures_.size());
         for (const auto& m : duplicate_measures_) {
-            result_buffer.emplace(m.name(), m(call, facets));
+            result_buffer.emplace(m, m(call, facets));
         }
         std::transform(std::cbegin(measures_), std::cend(measures_), std::begin(result),
                        [&] (const MeasureWrapper& m) -> Measure::ResultType {
-                           auto itr = result_buffer.find(m.name());
+                           auto itr = result_buffer.find(m);
                            if (itr != std::cend(result_buffer)) {
-                               return std::move(itr->second);
+                               return itr->second;
                            } else {
                                return m(call, facets);
                            }

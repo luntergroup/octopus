@@ -11,6 +11,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string GCContent::name_ = "GC";
+
 std::unique_ptr<Measure> GCContent::do_clone() const
 {
     return std::make_unique<GCContent>(*this);
@@ -27,9 +29,9 @@ Measure::ResultCardinality GCContent::do_cardinality() const noexcept
     return ResultCardinality::one;
 }
 
-std::string GCContent::do_name() const
+const std::string& GCContent::do_name() const
 {
-    return "GC";
+    return name_;
 }
 
 std::string GCContent::do_describe() const

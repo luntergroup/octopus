@@ -8,6 +8,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string ModelPosterior::name_ = "MP";
+
 std::unique_ptr<Measure> ModelPosterior::do_clone() const
 {
     return std::make_unique<ModelPosterior>(*this);
@@ -28,9 +30,9 @@ Measure::ResultCardinality ModelPosterior::do_cardinality() const noexcept
     return ResultCardinality::one;
 }
 
-std::string ModelPosterior::do_name() const
+const std::string& ModelPosterior::do_name() const
 {
-    return "MP";
+    return name_;
 }
 
 std::string ModelPosterior::do_describe() const

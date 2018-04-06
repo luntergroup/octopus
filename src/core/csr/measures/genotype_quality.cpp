@@ -15,6 +15,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string GenotypeQuality::name_ = "GQ";
+
 std::unique_ptr<Measure> GenotypeQuality::do_clone() const
 {
     return std::make_unique<GenotypeQuality>(*this);
@@ -41,9 +43,9 @@ Measure::ResultCardinality GenotypeQuality::do_cardinality() const noexcept
     return ResultCardinality::num_samples;
 }
 
-std::string GenotypeQuality::do_name() const
+const std::string& GenotypeQuality::do_name() const
 {
-    return "GQ";
+    return name_;
 }
 
 std::string GenotypeQuality::do_describe() const

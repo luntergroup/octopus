@@ -19,6 +19,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string AmbiguousReadFraction::name_ = "ARF";
+
 std::unique_ptr<Measure> AmbiguousReadFraction::do_clone() const
 {
     return std::make_unique<AmbiguousReadFraction>(*this);
@@ -49,9 +51,9 @@ Measure::ResultCardinality AmbiguousReadFraction::do_cardinality() const noexcep
     return ResultCardinality::num_samples;
 }
 
-std::string AmbiguousReadFraction::do_name() const
+const std::string& AmbiguousReadFraction::do_name() const
 {
-    return "ARF";
+    return name_;
 }
 
 std::string AmbiguousReadFraction::do_describe() const

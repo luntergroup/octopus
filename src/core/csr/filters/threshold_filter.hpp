@@ -68,17 +68,25 @@ public:
     
     virtual ~ThresholdVariantCallFilter() override = default;
 
-private:
-    std::vector<ThresholdWrapper> hard_thresholds_, soft_thresholds_;
+protected:
+    using ThresholdVector   = std::vector<ThresholdWrapper>;
+    using ThresholdIterator = ThresholdVector::const_iterator;
+    using MeasureIterator   = MeasureVector::const_iterator;
+    
+    ThresholdVector hard_thresholds_, soft_thresholds_;
     std::vector<std::string> vcf_filter_keys_;
     bool all_unique_filter_keys_;
     
+    bool passes_all_filteres(MeasureIterator first_measure, MeasureIterator last_measure,
+                             ThresholdIterator first_threshold) const;
+    
+private:
     virtual void annotate(VcfHeader::Builder& header) const override;
     virtual Classification classify(const MeasureVector& measures) const override;
     
-    bool passes_all_hard_filters(const MeasureVector& measures) const;
-    bool passes_all_soft_filters(const MeasureVector& measures) const;
-    std::vector<std::string> get_failing_vcf_filter_keys(const MeasureVector& measures) const;
+    virtual bool passes_all_hard_filters(const MeasureVector& measures) const;
+    virtual bool passes_all_soft_filters(const MeasureVector& measures) const;
+    virtual std::vector<std::string> get_failing_vcf_filter_keys(const MeasureVector& measures) const;
 };
 
 template <typename M, typename... Args>

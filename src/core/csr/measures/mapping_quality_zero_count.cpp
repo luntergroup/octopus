@@ -11,6 +11,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string MappingQualityZeroCount::name_ = "MQ0";
+
 MappingQualityZeroCount::MappingQualityZeroCount(bool recalculate) : recalculate_ {recalculate} {}
 
 std::unique_ptr<Measure> MappingQualityZeroCount::do_clone() const
@@ -33,9 +35,9 @@ Measure::ResultCardinality MappingQualityZeroCount::do_cardinality() const noexc
     return ResultCardinality::one;
 }
 
-std::string MappingQualityZeroCount::do_name() const
+const std::string& MappingQualityZeroCount::do_name() const
 {
-    return "MQ0";
+    return name_;
 }
 
 std::string MappingQualityZeroCount::do_describe() const
@@ -50,6 +52,11 @@ std::vector<std::string> MappingQualityZeroCount::do_requirements() const
     } else {
         return {};
     }
+}
+
+bool MappingQualityZeroCount::is_equal(const Measure& other) const noexcept
+{
+    return recalculate_ == static_cast<const MappingQualityZeroCount&>(other).recalculate_;
 }
 
 } // namespace csr
