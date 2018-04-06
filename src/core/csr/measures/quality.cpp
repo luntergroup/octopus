@@ -7,6 +7,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string Quality::name_ = "QUAL";
+
 std::unique_ptr<Measure> Quality::do_clone() const
 {
     return std::make_unique<Quality>(*this);
@@ -26,9 +28,9 @@ Measure::ResultCardinality Quality::do_cardinality() const noexcept
     return ResultCardinality::one;
 }
 
-std::string Quality::do_name() const
+const std::string& Quality::do_name() const
 {
-    return "QUAL";
+    return name_;
 }
 
 std::string Quality::do_describe() const

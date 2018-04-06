@@ -14,6 +14,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string MeanMappingQuality::name_ = "MQ";
+
 MeanMappingQuality::MeanMappingQuality(bool recalculate) : recalculate_ {recalculate} {}
 
 std::unique_ptr<Measure> MeanMappingQuality::do_clone() const
@@ -37,9 +39,9 @@ Measure::ResultCardinality MeanMappingQuality::do_cardinality() const noexcept
     return ResultCardinality::one;
 }
 
-std::string MeanMappingQuality::do_name() const
+const std::string& MeanMappingQuality::do_name() const
 {
-    return "MQ";
+    return name_;
 }
 
 std::string MeanMappingQuality::do_describe() const

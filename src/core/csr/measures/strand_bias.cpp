@@ -25,6 +25,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string StrandBias::name_ = "SB";
+
 StrandBias::StrandBias(const double critical_value)
 : min_medium_trigger_ {critical_value / 2}
 , min_big_trigger_ {critical_value / 8}
@@ -188,9 +190,9 @@ Measure::ResultCardinality StrandBias::do_cardinality() const noexcept
     return ResultCardinality::num_samples;
 }
 
-std::string StrandBias::do_name() const
+const std::string& StrandBias::do_name() const
 {
-    return "SB";
+    return name_;
 }
 
 std::string StrandBias::do_describe() const

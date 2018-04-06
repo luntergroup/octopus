@@ -21,6 +21,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string MedianBaseQuality::name_ = "BQ";
+
 std::unique_ptr<Measure> MedianBaseQuality::do_clone() const
 {
     return std::make_unique<MedianBaseQuality>(*this);
@@ -103,9 +105,9 @@ Measure::ResultCardinality MedianBaseQuality::do_cardinality() const noexcept
     return ResultCardinality::num_samples;
 }
 
-std::string MedianBaseQuality::do_name() const
+const std::string& MedianBaseQuality::do_name() const
 {
-    return "BQ";
+    return name_;
 }
 
 std::string MedianBaseQuality::do_describe() const

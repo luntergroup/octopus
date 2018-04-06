@@ -10,6 +10,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string QualityByDepth::name_ = "QD";
+
 QualityByDepth::QualityByDepth(bool recalculate) : depth_ {recalculate, true} {}
 
 std::unique_ptr<Measure> QualityByDepth::do_clone() const
@@ -32,9 +34,9 @@ Measure::ResultCardinality QualityByDepth::do_cardinality() const noexcept
     return depth_.cardinality();
 }
 
-std::string QualityByDepth::do_name() const
+const std::string& QualityByDepth::do_name() const
 {
-    return "QD";
+    return name_;
 }
 
 std::string QualityByDepth::do_describe() const

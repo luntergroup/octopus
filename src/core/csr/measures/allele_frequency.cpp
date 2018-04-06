@@ -18,6 +18,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string AlleleFrequency::name_ = "AF";
+
 std::unique_ptr<Measure> AlleleFrequency::do_clone() const
 {
     return std::make_unique<AlleleFrequency>(*this);
@@ -94,9 +96,9 @@ Measure::ResultCardinality AlleleFrequency::do_cardinality() const noexcept
     return ResultCardinality::num_samples;
 }
 
-std::string AlleleFrequency::do_name() const
+const std::string& AlleleFrequency::do_name() const
 {
-    return "AF";
+    return name_;
 }
 
 std::string AlleleFrequency::do_describe() const

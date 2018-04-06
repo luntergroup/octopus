@@ -10,6 +10,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string FilteredReadFraction::name_ = "FRF";
+
 FilteredReadFraction::FilteredReadFraction(bool aggregate_samples)
 : calling_depth_ {false, aggregate_samples}
 , filtering_depth_ {true, aggregate_samples}
@@ -46,9 +48,9 @@ Measure::ResultCardinality FilteredReadFraction::do_cardinality() const noexcept
     return filtering_depth_.cardinality();
 }
 
-std::string FilteredReadFraction::do_name() const
+const std::string& FilteredReadFraction::do_name() const
 {
-    return "FRF";
+    return name_;
 }
 
 std::string FilteredReadFraction::do_describe() const

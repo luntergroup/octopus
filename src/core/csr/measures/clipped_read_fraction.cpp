@@ -14,6 +14,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string ClippedReadFraction::name_ = "CRF";
+
 std::unique_ptr<Measure> ClippedReadFraction::do_clone() const
 {
     return std::make_unique<ClippedReadFraction>(*this);
@@ -57,9 +59,9 @@ Measure::ResultCardinality ClippedReadFraction::do_cardinality() const noexcept
     return ResultCardinality::one;
 }
 
-std::string ClippedReadFraction::do_name() const
+const std::string& ClippedReadFraction::do_name() const
 {
-    return "CRF";
+    return name_;
 }
 
 std::string ClippedReadFraction::do_describe() const

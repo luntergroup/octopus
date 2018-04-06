@@ -48,7 +48,7 @@ public:
     
     ResultType evaluate(const VcfRecord& call, const FacetMap& facets) const { return do_evaluate(call, facets); }
     ResultCardinality cardinality() const noexcept { return do_cardinality(); }
-    std::string name() const { return do_name(); }
+    const std::string& name() const { return do_name(); }
     std::string describe() const { return do_describe(); }
     std::vector<std::string> requirements() const { return do_requirements(); }
     std::string serialise(const ResultType& value) const { return do_serialise(value); }
@@ -63,7 +63,7 @@ private:
     virtual std::unique_ptr<Measure> do_clone() const = 0;
     virtual ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const = 0;
     virtual ResultCardinality do_cardinality() const noexcept = 0;
-    virtual std::string do_name() const = 0;
+    virtual const std::string& do_name() const = 0;
     virtual std::string do_describe() const = 0;
     virtual std::vector<std::string> do_requirements() const { return {}; }
     virtual std::string do_serialise(const ResultType& value) const;
@@ -93,7 +93,7 @@ public:
     auto operator()(const VcfRecord& call) const { return measure_->evaluate(call, {}); }
     auto operator()(const VcfRecord& call, const Measure::FacetMap& facets) const { return measure_->evaluate(call, facets); }
     Measure::ResultCardinality cardinality() const noexcept { return measure_->cardinality(); }
-    std::string name() const { return measure_->name(); }
+    const std::string& name() const { return measure_->name(); }
     std::string describe() const { return measure_->describe(); }
     std::vector<std::string> requirements() const { return measure_->requirements(); }
     std::string serialise(const Measure::ResultType& value) const { return measure_->serialise(value); }
@@ -116,7 +116,7 @@ MeasureWrapper make_wrapped_measure(Args&&... args)
 }
 
 template <typename Measure>
-std::string name()
+const std::string& name()
 {
     return Measure().name();
 }

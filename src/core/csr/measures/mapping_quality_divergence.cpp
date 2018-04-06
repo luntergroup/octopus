@@ -17,6 +17,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string MappingQualityDivergence::name_ = "MQD";
+
 std::unique_ptr<Measure> MappingQualityDivergence::do_clone() const
 {
     return std::make_unique<MappingQualityDivergence>(*this);
@@ -127,9 +129,9 @@ Measure::ResultCardinality MappingQualityDivergence::do_cardinality() const noex
     return ResultCardinality::one;
 }
 
-std::string MappingQualityDivergence::do_name() const
+const std::string& MappingQualityDivergence::do_name() const
 {
-    return "MQD";
+    return name_;
 }
 
 std::string MappingQualityDivergence::do_describe() const

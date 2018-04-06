@@ -12,6 +12,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string Depth::name_ = "DP";
+
 Depth::Depth() : Depth {false, false} {}
 
 Depth::Depth(bool recalculate, bool aggregate_samples)
@@ -60,9 +62,9 @@ Measure::ResultCardinality Depth::do_cardinality() const noexcept
     }
 }
 
-std::string Depth::do_name() const
+const std::string& Depth::do_name() const
 {
-    return "DP";
+    return name_;
 }
 
 std::string Depth::do_describe() const

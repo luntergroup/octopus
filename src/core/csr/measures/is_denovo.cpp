@@ -8,6 +8,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string IsDenovo::name_ = "DENOVO";
+
 std::unique_ptr<Measure> IsDenovo::do_clone() const
 {
     return std::make_unique<IsDenovo>(*this);
@@ -23,9 +25,9 @@ Measure::ResultCardinality IsDenovo::do_cardinality() const noexcept
     return ResultCardinality::one;
 }
 
-std::string IsDenovo::do_name() const
+const std::string& IsDenovo::do_name() const
 {
-    return "DENOVO";
+    return name_;
 }
 
 std::string IsDenovo::do_describe() const
