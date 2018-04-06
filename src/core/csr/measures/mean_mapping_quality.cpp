@@ -56,5 +56,10 @@ std::vector<std::string> MeanMappingQuality::do_requirements() const
     }
 }
 
+bool MeanMappingQuality::is_equal(const Measure& other) const noexcept
+{
+    return recalculate_ == static_cast<const MeanMappingQuality&>(other).recalculate_;
+}
+
 } // namespace csr
 } // namespace octopus

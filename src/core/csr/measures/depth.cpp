@@ -78,5 +78,11 @@ std::vector<std::string> Depth::do_requirements() const
     return result;
 }
 
+bool Depth::is_equal(const Measure& other) const noexcept
+{
+    const auto& other_depth = static_cast<const Depth&>(other);
+    return recalculate_ == other_depth.recalculate_ && aggregate_ == other_depth.aggregate_;
+}
+
 } // namespace csr
 } // namespace octopus

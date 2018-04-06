@@ -47,5 +47,10 @@ std::vector<std::string> QualityByDepth::do_requirements() const
     return depth_.requirements();
 }
 
+bool QualityByDepth::is_equal(const Measure& other) const noexcept
+{
+    return depth_ == static_cast<const Depth&>(other);
+}
+
 } // namespace csr
 } // namespace octopus

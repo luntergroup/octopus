@@ -23,6 +23,7 @@ class StrandBias : public Measure
     std::string do_name() const override;
     std::string do_describe() const override;
     std::vector<std::string> do_requirements() const override;
+    bool is_equal(const Measure& other) const noexcept override;
     
     double min_difference_ = 0.25;
     std::size_t small_sample_size_ = 200, medium_sample_size_ = 1'000,

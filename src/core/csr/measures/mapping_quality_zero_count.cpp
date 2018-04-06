@@ -52,5 +52,10 @@ std::vector<std::string> MappingQualityZeroCount::do_requirements() const
     }
 }
 
+bool MappingQualityZeroCount::is_equal(const Measure& other) const noexcept
+{
+    return recalculate_ == static_cast<const MappingQualityZeroCount&>(other).recalculate_;
+}
+
 } // namespace csr
 } // namespace octopus

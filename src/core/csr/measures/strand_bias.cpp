@@ -203,5 +203,10 @@ std::vector<std::string> StrandBias::do_requirements() const
     return {"Samples", "ReadAssignments"};
 }
 
+bool StrandBias::is_equal(const Measure& other) const noexcept
+{
+    return min_medium_trigger_ == static_cast<const StrandBias&>(other).min_medium_trigger_;
+}
+
 } // namespace csr
 } // namespace octopus

@@ -21,7 +21,7 @@
 
 namespace octopus { namespace csr {
 
-class Measure
+class Measure : public Equitable<Measure>
 {
 public:
     using FacetMap = std::unordered_map<std::string, FacetWrapper>;
@@ -54,6 +54,10 @@ public:
     std::string serialise(const ResultType& value) const { return do_serialise(value); }
     void annotate(VcfHeader::Builder& header) const;
     void annotate(VcfRecord::Builder& record, const ResultType& value) const;
+    friend bool operator==(const Measure& lhs, const Measure& rhs) noexcept
+    {
+        return lhs.name() == rhs.name() && lhs.is_equal(rhs);
+    }
     
 private:
     virtual std::unique_ptr<Measure> do_clone() const = 0;
@@ -64,6 +68,7 @@ private:
     virtual std::vector<std::string> do_requirements() const { return {}; }
     virtual std::string do_serialise(const ResultType& value) const;
     virtual bool is_required_vcf_field() const noexcept { return false; }
+    virtual bool is_equal(const Measure& other) const noexcept { return true; }
 };
 
 class MeasureWrapper : public Equitable<MeasureWrapper>
@@ -99,9 +104,9 @@ private:
     std::unique_ptr<Measure> measure_;
 };
 
-inline bool operator==(const MeasureWrapper& lhs, const MeasureWrapper& rhs)
+inline bool operator==(const MeasureWrapper& lhs, const MeasureWrapper& rhs) noexcept
 {
-    return lhs.name() == rhs.name();
+    return *lhs.base() == *rhs.base();
 }
 
 template <typename M, typename... Args>

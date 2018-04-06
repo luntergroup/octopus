@@ -61,5 +61,10 @@ std::vector<std::string> FilteredReadFraction::do_requirements() const
     return filtering_depth_.requirements();
 }
 
+bool FilteredReadFraction::is_equal(const Measure& other) const noexcept
+{
+    return calling_depth_ == static_cast<const FilteredReadFraction&>(other).calling_depth_;
+}
+
 } // namespace csr
 } // namespace octopus
