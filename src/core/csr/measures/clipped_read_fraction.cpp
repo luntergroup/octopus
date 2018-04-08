@@ -34,7 +34,7 @@ bool is_significantly_clipped(const AlignedRead& read) noexcept
     return is_soft_clipped(read) && clip_fraction(read) > 0.25;
 }
 
-double clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
+Measure::ResultType clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
 {
     unsigned num_reads {0}, num_soft_clipped_reads {0};
     for (const auto& p : reads) {
@@ -43,7 +43,11 @@ double clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
             ++num_reads;
         }
     }
-    return static_cast<double>(num_soft_clipped_reads) / num_reads;
+    boost::optional<double> result {};
+    if (num_reads > 0) {
+        result = static_cast<double>(num_soft_clipped_reads) / num_reads;
+    }
+    return result;
 }
 
 } // namespace
