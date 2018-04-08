@@ -46,6 +46,8 @@ def to_str(x, missing_value=0):
 def get_field(field, rec, missing_value=0):
     if field == 'QUAL':
         return to_str(rec.qual, missing_value)
+    elif field == 'GQ':
+        return to_str(rec.samples[0]['GQ'], missing_value)
     else:
         val = rec.info[field]
         if type(val) == tuple:
