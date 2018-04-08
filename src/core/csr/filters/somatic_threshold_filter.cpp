@@ -44,7 +44,6 @@ SomaticThresholdVariantCallFilter::SomaticThresholdVariantCallFilter(FacetFactor
     std::vector<std::string> germline_filter_keys {std::cbegin(vcf_filter_keys_),
                                                    std::next(std::cbegin(vcf_filter_keys_), num_germline_soft_conditions_)};
     all_unique_germline_filter_keys_ = are_all_unique(germline_filter_keys);
-    
     std::vector<std::string> somatic_filter_keys {std::next(std::cbegin(vcf_filter_keys_), num_germline_soft_conditions_),
                                                   std::cend(vcf_filter_keys_)};
     all_unique_somatic_filter_keys_ = are_all_unique(somatic_filter_keys);
@@ -121,6 +120,10 @@ std::vector<std::string> SomaticThresholdVariantCallFilter::get_failing_germline
             result.push_back(vcf_filter_keys_[i]);
         }
     }
+    if (!all_unique_germline_filter_keys_) {
+        std::sort(std::begin(result), std::end(result));
+        result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    }
     return result;
 }
 
@@ -132,8 +135,12 @@ std::vector<std::string> SomaticThresholdVariantCallFilter::get_failing_somatic_
     for (std::size_t i {0}; i < num_somatic_soft_conditions; ++i) {
         const auto j = i + num_germline_soft_conditions_;
         if (!soft_thresholds_[j](measures[j + hard_thresholds_.size()])) {
-            result.push_back(vcf_filter_keys_[i]);
+            result.push_back(vcf_filter_keys_[j]);
         }
+    }
+    if (!all_unique_somatic_filter_keys_) {
+        std::sort(std::begin(result), std::end(result));
+        result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     }
     return result;
 }
