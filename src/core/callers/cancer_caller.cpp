@@ -274,7 +274,8 @@ void CancerCaller::generate_cancer_genotypes(Latents& latents, const HaplotypeLi
     const auto num_haplotypes = latents.haplotypes_.get().size();
     const auto num_germline_genotypes = germline_genotypes.size();
     const auto max_possible_cancer_genotypes = num_haplotypes * num_germline_genotypes;
-    if (max_possible_cancer_genotypes <= parameters_.max_genotypes) {
+    const auto max_allowed_cancer_genotypes = std::max(parameters_.max_genotypes, num_germline_genotypes);
+    if (max_possible_cancer_genotypes <= max_allowed_cancer_genotypes) {
         generate_cancer_genotypes(latents, latents.germline_genotypes_);
     } else if (has_normal_sample()) {
         if (has_high_normal_contamination_risk(latents)) {
@@ -300,7 +301,8 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
         latents.normal_germline_inferences_ = latents.germline_model_->evaluate(germline_genotypes, haplotype_likelihoods);
     }
     const auto& germline_normal_posteriors = latents.normal_germline_inferences_->posteriors.genotype_probabilities;
-    const auto max_germline_genotype_bases = parameters_.max_genotypes / latents.haplotypes_.get().size();
+    const auto max_allowed_cancer_genotypes = std::max(parameters_.max_genotypes, germline_genotypes.size());
+    const auto max_germline_genotype_bases = max_allowed_cancer_genotypes / latents.haplotypes_.get().size();
     if (latents.germline_genotype_indices_) {
         std::vector<Genotype<Haplotype>> germline_bases;
         std::vector<std::vector<unsigned>> germline_bases_indices;
@@ -374,7 +376,8 @@ void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, co
                            [&tmp] (const auto& haplotype) { return tmp.at(haplotype); });
         }
     }
-    const auto max_germline_genotype_bases = parameters_.max_genotypes / latents.haplotypes_.get().size();
+    const auto max_allowed_cancer_genotypes = std::max(parameters_.max_genotypes, germline_genotypes.size());
+    const auto max_germline_genotype_bases = max_allowed_cancer_genotypes / latents.haplotypes_.get().size();
     const auto max_germline_haplotype_bases = max_num_elements(max_germline_genotype_bases, parameters_.ploidy);
     const auto top_haplotypes = extract_greatest_probability_values(haplotypes, germline_model_haplotype_posteriors,
                                                                     max_germline_haplotype_bases);
