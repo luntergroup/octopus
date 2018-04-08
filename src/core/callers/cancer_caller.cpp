@@ -507,12 +507,9 @@ void CancerCaller::evaluate_noise_model(Latents& latents, const HaplotypeLikelih
 
 void CancerCaller::set_model_priors(Latents& latents) const
 {
-    const auto& cancer_genotype_log_priors = latents.tumour_model_inferences_.genotype_log_priors;
-    assert(!cancer_genotype_log_priors.empty());
-    const auto max_somatic_ln_prob = *std::max_element(std::cbegin(cancer_genotype_log_priors), std::cend(cancer_genotype_log_priors));
-    latents.model_priors_.somatic = std::min(std::exp(max_somatic_ln_prob), 1.0 / 3);
-    latents.model_priors_.cnv      = latents.model_priors_.somatic;
-    latents.model_priors_.germline = 1 - (latents.model_priors_.somatic + latents.model_priors_.cnv);
+//    constexpr double third {1.0 / 3};
+//    latents.model_priors_ = {third, third, third};
+    latents.model_priors_ = {1.0 / 4, 1.0 / 4, 2.0 / 4};
 }
 
 void CancerCaller::set_model_posteriors(Latents& latents) const
