@@ -7,6 +7,7 @@ from subprocess import call
 import csv
 from pysam import VariantFile
 import random
+import numpy as np
 
 def run_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads, out_path):
     call([octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed, '-o', out_path, '--threads', str(threads), '--legacy', '--csr-train'] + measures)
@@ -35,7 +36,10 @@ def eval_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads, rt
     return rtf_eval_dir
 
 def is_missing(x):
-    return x == '.'
+    if x == '.':
+        return True
+    x = float(x)
+    return np.isnan(x)
 
 def to_str(x, missing_value=0):
     if is_missing(x):
