@@ -487,6 +487,7 @@ void CancerCaller::evaluate_noise_model(Latents& latents, const HaplotypeLikelih
     if (has_normal_sample() && !has_high_normal_contamination_risk(latents)) {
         if (!latents.normal_germline_inferences_) {
             assert(latents.germline_model_);
+            haplotype_likelihoods.prime(normal_sample());
             if (latents.germline_genotype_indices_) {
                 latents.normal_germline_inferences_ = latents.germline_model_->evaluate(latents.germline_genotypes_,
                                                                                         *latents.germline_genotype_indices_,
