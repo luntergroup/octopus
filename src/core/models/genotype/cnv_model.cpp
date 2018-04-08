@@ -206,9 +206,8 @@ auto generate_seeds(const std::vector<SampleName>& samples,
                     const boost::optional<const std::vector<std::vector<unsigned>>&> genotype_indices = boost::none)
 {
     std::vector<LogProbabilityVector> result {};
-    result.reserve(2 + 2 * samples.size());
+    result.reserve(1 + samples.size());
     result.push_back(genotype_log_priors);
-    result.push_back(log_uniform_dist(genotypes.size()));
     IndividualModel germline_model {priors.genotype_prior_model};
     for (const auto& sample : samples) {
         haplotype_log_likelihoods.prime(sample);
@@ -219,9 +218,6 @@ auto generate_seeds(const std::vector<SampleName>& samples,
             latents = germline_model.evaluate(genotypes, haplotype_log_likelihoods);
         }
         result.push_back(latents.posteriors.genotype_probabilities);
-        maths::log_each(result.back());
-        result.push_back(latents.posteriors.genotype_probabilities);
-        for (auto& p : result.back()) p = 1.0 - p;
         maths::log_each(result.back());
     }
     return result;

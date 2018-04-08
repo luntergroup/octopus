@@ -299,7 +299,7 @@ auto generate_exhaustive_seeds(const std::size_t n)
 auto num_targetted_seeds(const std::vector<SampleName>& samples,
                          const std::vector<CancerGenotype<Haplotype>>& genotypes) noexcept
 {
-    return 2 + 4 * samples.size() + 2 * (samples.size() > 1);
+    return 1 + 4 * samples.size() + 2 * (samples.size() > 1);
 }
 
 auto generate_targetted_seeds(const std::vector<SampleName>& samples,
@@ -311,7 +311,7 @@ auto generate_targetted_seeds(const std::vector<SampleName>& samples,
     std::vector<LogProbabilityVector> result {};
     result.reserve(num_targetted_seeds(samples, genotypes));
     result.push_back(genotype_log_priors);
-    result.push_back(log_uniform_dist(genotypes.size()));
+    maths::normalise_logs(result.back());
     LogProbabilityVector combined_log_likelihoods(genotypes.size(), 0);
     for (const auto& sample : samples) {
         auto log_likelihoods = compute_germline_log_likelihoods(sample, genotypes, haplotype_log_likelihoods);
