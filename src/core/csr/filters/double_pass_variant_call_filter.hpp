@@ -54,7 +54,10 @@ private:
     
     void make_registration_pass(const VcfReader& source, const SampleList& samples) const;
     void record(const VcfRecord& call, std::size_t record_idx, const SampleList& samples) const;
-    void record(const std::vector<VcfRecord>& calls, std::size_t record_idx, const SampleList& samples) const;
+    void record(const CallBlock& block, std::size_t record_idx, const SampleList& samples) const;
+    void record(const std::vector<CallBlock>& blocks, std::size_t record_idx, const SampleList& samples) const;
+    void record(const VcfRecord& call, const MeasureVector& measures, std::size_t record_idx, const SampleList& samples) const;
+    void record(const CallBlock& block, const MeasureBlock& measures, std::size_t record_idx, const SampleList& samples) const;
     void make_filter_pass(const VcfReader& source, const SampleList& samples, VcfWriter& dest) const;
     std::vector<Classification> classify(std::size_t call_idx, const SampleList& samples) const;
     void filter(const VcfRecord& call, std::size_t idx, const SampleList& samples, VcfWriter& dest) const;

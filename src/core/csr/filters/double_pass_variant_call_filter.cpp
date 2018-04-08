@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include <boost/range/combine.hpp>
+
 #include "io/variant/vcf_reader.hpp"
 #include "io/variant/vcf_writer.hpp"
 #include "utils/append.hpp"
@@ -43,24 +45,21 @@ void DoublePassVariantCallFilter::make_registration_pass(const VcfReader& source
     if (info_log_) log_registration_pass(*info_log_);
     prepare_for_registration(samples);
     if (progress_) progress_->start();
+    std::size_t record_idx {0};
     if (can_measure_multiple_blocks()) {
-        std::size_t idx {0};
         for (auto p = source.iterate(); p.first != p.second;) {
-            for (auto block : read_next_blocks(p.first, p.second, samples)) {
-                record(block, idx, samples);
-                idx += block.size();
-            }
+            const auto blocks = read_next_blocks(p.first, p.second, samples);
+            record(blocks, record_idx, samples);
+            for (const auto& block : blocks) record_idx += block.size();
         }
     } else if (can_measure_single_call()) {
         auto p = source.iterate();
-        std::size_t idx {0};
-        std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { record(call, idx++, samples); });
+        std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { record(call, record_idx++, samples); });
     } else {
-        std::size_t idx {0};
         for (auto p = source.iterate(); p.first != p.second;) {
-            const auto calls = read_next_block(p.first, p.second, samples);
-            record(calls, idx, samples);
-            idx += calls.size();
+            const auto block = read_next_block(p.first, p.second, samples);
+            record(block, record_idx, samples);
+            record_idx += block.size();
         }
     }
     if (progress_) progress_->stop();
@@ -68,25 +67,40 @@ void DoublePassVariantCallFilter::make_registration_pass(const VcfReader& source
 
 void DoublePassVariantCallFilter::record(const VcfRecord& call, const std::size_t record_idx, const SampleList& samples) const
 {
-    const auto measures_values = measure(call);
+    record(call, measure(call), record_idx, samples);
+}
+
+void DoublePassVariantCallFilter::record(const CallBlock& block, const std::size_t record_idx, const SampleList& samples) const
+{
+    record(block, measure(block), record_idx, samples);
+}
+
+void DoublePassVariantCallFilter::record(const std::vector<CallBlock>& blocks, std::size_t record_idx, const SampleList& samples) const
+{
+    const auto measures = measure(blocks);
+    assert(measures.size() == blocks.size());
+    for (auto tup : boost::combine(blocks, measures)) {
+        const auto& block = tup.get<0>();
+        record(block, tup.get<1>(), record_idx, samples);
+        record_idx += block.size();
+    }
+}
+
+void DoublePassVariantCallFilter::record(const VcfRecord& call, const MeasureVector& measures,
+                                         const std::size_t record_idx, const SampleList& samples) const
+{
     for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
-        this->record(record_idx, sample_idx, get_sample_values(measures_values, measures_, sample_idx));
+        this->record(record_idx, sample_idx, get_sample_values(measures, measures_, sample_idx));
     }
     log_progress(mapped_region(call));
 }
 
-void DoublePassVariantCallFilter::record(const std::vector<VcfRecord>& calls, std::size_t record_idx, const SampleList& samples) const
+void DoublePassVariantCallFilter::record(const CallBlock& block, const MeasureBlock& measures,
+                                         std::size_t record_idx, const SampleList& samples) const
 {
-    if (!calls.empty()) {
-        const auto measure_values = measure(calls);
-        assert(measure_values.size() == calls.size());
-        for (const auto& values : measure_values) {
-            for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
-                this->record(record_idx, sample_idx, get_sample_values(values, measures_, sample_idx));
-            }
-            ++record_idx;
-        }
-        log_progress(encompassing_region(calls));
+    assert(measures.size() == block.size());
+    for (auto tup : boost::combine(block, measures)) {
+        record(tup.get<0>(), tup.get<1>(), record_idx++, samples);
     }
 }
 
