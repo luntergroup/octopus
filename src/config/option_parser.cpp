@@ -505,7 +505,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum posterior probability (phred scale) to emit a somatic mutation call")
     
     ("max-cancer-genotypes",
-     po::value<int>()->default_value(20000),
+     po::value<int>()->default_value(5000),
      "The maximum number of cancer genotype vectors to evaluate")
     
     ("normal-contamination-risk",
