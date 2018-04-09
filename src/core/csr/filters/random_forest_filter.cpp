@@ -9,6 +9,7 @@
 #include <numeric>
 #include <iostream>
 #include <cassert>
+#include <cmath>
 
 #include <boost/variant.hpp>
 #include <boost/lexical_cast.hpp>
@@ -33,8 +34,16 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
 , data_buffer_ {}
 {}
 
+const std::string RandomForestFilter::call_qual_name_ = "RFQUAL";
+
+boost::optional<std::string> RandomForestFilter::call_quality_name() const
+{
+    return call_qual_name_;
+}
+
 void RandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
+    header.add_info(call_qual_name_, "1", "Float", "Empirical quality score from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
 }
 
@@ -111,6 +120,14 @@ void RandomForestFilter::record(const std::size_t call_idx, std::size_t sample_i
     if (call_idx >= num_records_) ++num_records_;
 }
 
+double get_prob_false(std::string& prediction_line)
+{
+    using std::cbegin; using std::cend;
+    prediction_line.erase(cbegin(prediction_line), std::next(std::find(cbegin(prediction_line), cend(prediction_line), ' ')));
+    prediction_line.erase(std::find(cbegin(prediction_line), cend(prediction_line), ' '), cend(prediction_line));
+    return boost::lexical_cast<double>(prediction_line);
+}
+
 void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
     const Path ranger_prefix {temp_dir_ / "octopus_ranger_temp"};
@@ -130,8 +147,9 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
         std::string line;
         std::size_t i {0};
         while (std::getline(prediction_file, line)) {
-            line.erase(std::find(std::cbegin(line), std::cend(line), ' '), std::cend(line));
-            data_buffer_[i++].push_back(boost::lexical_cast<double>(line));
+            if (!line.empty()) {
+                data_buffer_[i++].push_back(get_prob_false(line));
+            }
         }
         boost::filesystem::remove(file.path);
     }
@@ -143,15 +161,15 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
 VariantCallFilter::Classification RandomForestFilter::classify(const std::size_t call_idx, std::size_t sample_idx) const
 {
     assert(call_idx < data_buffer_.size() && sample_idx < data_buffer_[call_idx].size());
-    const auto prob_true = data_buffer_[call_idx][sample_idx];
+    const auto prob_false = data_buffer_[call_idx][sample_idx];
     Classification result {};
-    if (prob_true >= 0.5) {
+    if (prob_false < 0.5) {
         result.category = Classification::Category::unfiltered;
     } else {
         result.category = Classification::Category::soft_filtered;
         result.reasons.assign({"RF"});
     }
-    result.quality = probability_to_phred(1 - prob_true);
+    result.quality = probability_to_phred(std::max(prob_false, 1e-10));
     return result;
 }
 

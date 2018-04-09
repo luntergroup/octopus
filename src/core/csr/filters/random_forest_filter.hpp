@@ -56,6 +56,9 @@ private:
     mutable std::size_t num_records_;
     mutable std::vector<std::vector<double>> data_buffer_;
     
+    const static std::string call_qual_name_;
+    
+    boost::optional<std::string> call_quality_name() const override;
     void annotate(VcfHeader::Builder& header) const override;
     void prepare_for_registration(const SampleList& samples) const override;
     void record(std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const override;
