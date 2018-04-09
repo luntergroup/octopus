@@ -154,13 +154,15 @@ auto copy_sequence(const BasicAllele<RegionTp>& allele, const RegionTp& region)
     if (mapped_region(allele) == region) return sequence;
     const auto region_offset = static_cast<std::size_t>(begin_distance(allele, region));
     auto first_base_itr = std::cbegin(sequence), last_base_itr = std::cend(sequence);
-    const auto region_size = static_cast<std::size_t>(size(region));
     if (is_deletion(allele)) {
         if (!is_sequence_empty(allele)) {
-            const auto base_offset = std::min(region_offset, sequence_size(allele));
-            first_base_itr = std::next(std::cbegin(allele.sequence()), base_offset);
-            const auto num_remaining_bases = std::min(region_size, sequence_size(allele) - base_offset);
-            last_base_itr = std::next(first_base_itr, num_remaining_bases);
+            first_base_itr = std::cbegin(allele.sequence());
+            const auto num_deleted_based = region_size(allele) - sequence_size(allele);
+            if (size(region) <= num_deleted_based) {
+                last_base_itr = first_base_itr;
+            } else {
+                last_base_itr = std::next(first_base_itr, size(region) - num_deleted_based);
+            }
         }
     } else {
         first_base_itr = std::next(std::cbegin(allele.sequence()), region_offset);
@@ -169,7 +171,7 @@ auto copy_sequence(const BasicAllele<RegionTp>& allele, const RegionTp& region)
             const auto num_subsequence_bases = sequence_size(allele) - region_offset - num_trailing_bases;
             last_base_itr = std::next(first_base_itr, num_subsequence_bases);
         } else {
-            last_base_itr = std::next(first_base_itr, region_size);
+            last_base_itr = std::next(first_base_itr, size(region));
         }
     }
     assert(first_base_itr <= last_base_itr);
