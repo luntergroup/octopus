@@ -6,7 +6,6 @@
 
 #include <memory>
 #include <vector>
-#include <set>
 #include <string>
 
 #include <boost/optional.hpp>

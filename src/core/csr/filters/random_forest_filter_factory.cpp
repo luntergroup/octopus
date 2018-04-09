@@ -9,7 +9,7 @@ namespace octopus { namespace csr {
 
 namespace {
 
-std::vector<MeasureWrapper> parse_measures(const std::set<std::string>& measure_names)
+std::vector<MeasureWrapper> parse_measures(const std::vector<std::string>& measure_names)
 {
     std::vector<MeasureWrapper> result{};
     result.reserve(measure_names.size());
@@ -23,7 +23,7 @@ RandomForestFilterFactory::RandomForestFilterFactory(Path ranger_forest, Path te
 : ranger_forest_ {std::move(ranger_forest)}
 , temp_directory_ {std::move(temp_directory)}
 {
-    measures_ = parse_measures({"QUAL", "AF", "SB", "GQ", "DP", "QD", "FRF", "CRF", "GC", "MQ", "MQ0", "MQD", "GT"});
+    measures_ = parse_measures({"AF", "CRF", "DP", "FRF", "GC", "GQ", "MQ0", "MQ", "BQ", "QUAL", "QD", "SB", "ARF"});
 }
 
 std::unique_ptr<VariantCallFilterFactory> RandomForestFilterFactory::do_clone() const
