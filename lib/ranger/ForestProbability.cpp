@@ -16,6 +16,8 @@ R package "ranger" under GPL3 license.
 #include "TreeProbability.h"
 #include "Data.h"
 
+namespace ranger {
+
 ForestProbability::ForestProbability() {
 }
 
@@ -186,7 +188,9 @@ void ForestProbability::computePredictionErrorInternal() {
 
 // #nocov start
 void ForestProbability::writeOutputInternal() {
-  if (verbose_out) *verbose_out << "Tree type:                         " << "Probability estimation" << std::endl;
+  if (verbose_out) {
+    *verbose_out << "Tree type:                         " << "Probability estimation" << std::endl;
+  }
 }
 
 void ForestProbability::writeConfusionFile() {
@@ -316,3 +320,5 @@ void ForestProbability::loadFromFileInternal(std::ifstream& infile) {
   }
 }
 // #nocov end
+
+} // namespace ranger

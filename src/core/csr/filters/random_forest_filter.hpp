@@ -49,7 +49,7 @@ private:
         File(F&& handle, P&& path) : handle {std::forward<F>(handle)}, path {std::forward<P>(path)} {};
     };
     
-    std::unique_ptr<Forest> forest_;
+    std::unique_ptr<ranger::Forest> forest_;
     Path ranger_forest_, temp_dir_;
     
     mutable std::vector<File> data_;

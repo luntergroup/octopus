@@ -26,6 +26,8 @@ R package "ranger" under GPL3 license.
 #include "DataDouble.h"
 #include "DataFloat.h"
 
+namespace ranger {
+
 Forest::Forest() :
     verbose_out(0), num_trees(DEFAULT_NUM_TREE), mtry(0), min_node_size(0), num_variables(0), num_independent_variables(
         0), seed(0), dependent_varID(0), num_samples(0), prediction_mode(false), memory_mode(MEM_DOUBLE), sample_with_replacement(
@@ -70,8 +72,7 @@ void Forest::initCpp(std::string dependent_variable_name, MemoryMode memory_mode
   if (verbose_out) *verbose_out << "Loading input file: " << input_file << "." << std::endl;
   bool rounding_error = data->loadFromFile(input_file);
   if (rounding_error && verbose_out) {
-    *verbose_out << "Warning: Rounding or Integer overflow occurred. Use FLOAT or DOUBLE precision to avoid this."
-        << std::endl;
+    *verbose_out << "Warning: Rounding or Integer overflow occurred. Use FLOAT or DOUBLE precision to avoid this." << std::endl;
   }
 
   // Set prediction mode
@@ -268,24 +269,24 @@ void Forest::init(std::string dependent_variable_name, MemoryMode memory_mode, D
 void Forest::run(bool verbose) {
 
   if (prediction_mode) {
-    if (verbose) {
+    if (verbose && verbose_out) {
       *verbose_out << "Predicting .." << std::endl;
     }
     predict();
   } else {
-    if (verbose) {
+    if (verbose && verbose_out) {
       *verbose_out << "Growing trees .." << std::endl;
     }
 
     grow();
 
-    if (verbose) {
+    if (verbose && verbose_out) {
       *verbose_out << "Computing prediction error .." << std::endl;
     }
     computePredictionError();
 
     if (importance_mode == IMP_PERM_BREIMAN || importance_mode == IMP_PERM_LIAW || importance_mode == IMP_PERM_RAW) {
-      if (verbose) {
+      if (verbose && verbose_out) {
         *verbose_out << "Computing permutation variable importance .." << std::endl;
       }
       computePermutationImportance();
@@ -321,10 +322,12 @@ void Forest::writeOutput() {
       *verbose_out << std::endl;
     }
 
-    if (!split_select_weights.empty() & !split_select_weights[0].empty() && verbose_out) {
-      *verbose_out
-          << "Warning: Split select weights used. Variable importance measures are only comparable for variables with equal weights."
-          << std::endl;
+    if (!split_select_weights.empty() & !split_select_weights[0].empty()) {
+      if (verbose_out) {
+        *verbose_out
+            << "Warning: Split select weights used. Variable importance measures are only comparable for variables with equal weights."
+            << std::endl;
+      }
     }
 
     if (importance_mode != IMP_NONE) {
@@ -888,8 +891,10 @@ void Forest::showProgress(std::string operation, clock_t start_time, clock_t& la
     double relative_progress = (double) progress / (double) num_trees;
     double time_from_start = (clock() - start_time) / CLOCKS_PER_SEC;
     uint remaining_time = (1 / relative_progress - 1) * time_from_start;
-    *verbose_out << operation << " Progress: " << round(100 * relative_progress) << "%. Estimated remaining time: "
-    << beautifyTime(remaining_time) << "." << std::endl;
+    if (verbose_out) {
+      *verbose_out << operation << " Progress: " << round(100 * relative_progress)
+                   << "%. Estimated remaining time: " << beautifyTime(remaining_time) << "." << std::endl;
+    }
     lap_time = clock();
   }
 }
@@ -922,10 +927,14 @@ void Forest::showProgress(std::string operation, size_t max_progress) {
       double relative_progress = (double) progress / (double) max_progress;
       seconds time_from_start = duration_cast<seconds>(steady_clock::now() - start_time);
       uint remaining_time = (1 / relative_progress - 1) * time_from_start.count();
-      *verbose_out << operation << " Progress: " << round(100 * relative_progress) << "%. Estimated remaining time: "
-          << beautifyTime(remaining_time) << "." << std::endl;
+      if (verbose_out) {
+        *verbose_out << operation << " Progress: " << round(100 * relative_progress)
+                     << "%. Estimated remaining time: " << beautifyTime(remaining_time) << "." << std::endl;
+      }
       last_time = steady_clock::now();
     }
   }
 }
 #endif
+
+} // namespace ranger

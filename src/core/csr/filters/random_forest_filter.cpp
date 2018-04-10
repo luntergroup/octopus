@@ -27,7 +27,7 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
                                        Path ranger_forest, Path temp_directory,
                                        boost::optional<ProgressMeter&> progress)
 : DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading, progress}
-, forest_ {std::make_unique<ForestProbability>()}
+, forest_ {std::make_unique<ranger::ForestProbability>()}
 , ranger_forest_ {std::move(ranger_forest)}
 , temp_dir_ {std::move(temp_directory)}
 , num_records_ {0}
@@ -136,10 +136,11 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
     for (auto& file : data_) {
         file.handle.close();
         std::vector<std::string> tmp {}, cat_vars {};
-        forest_->initCpp("TP", MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
-                         1000, nullptr, 12, 1, ranger_forest_.string(), ImportanceMode::IMP_GINI, 1, "", tmp, "", true,
-                         cat_vars, false, SplitRule::LOGRANK, "", false, 1.0, DEFAULT_ALPHA, DEFAULT_MINPROP, false,
-                         PredictionType::RESPONSE, DEFAULT_NUM_RANDOM_SPLITS);
+        forest_->initCpp("TP", ranger::MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
+                         1000, nullptr, 12, 1, ranger_forest_.string(), ranger::ImportanceMode::IMP_GINI, 1, "",
+                         tmp, "", true, cat_vars, false, ranger::SplitRule::LOGRANK, "", false, 1.0,
+                         ranger::DEFAULT_ALPHA, ranger::DEFAULT_MINPROP, false,
+                         ranger::PredictionType::RESPONSE, ranger::DEFAULT_NUM_RANDOM_SPLITS);
         forest_->run(false);
         forest_->writePredictionFile();
         std::ifstream prediction_file {ranger_prediction_fname.string()};
