@@ -14,6 +14,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string AltAlleleCount::name_ = "AC";
+
 std::unique_ptr<Measure> AltAlleleCount::do_clone() const
 {
     return std::make_unique<AltAlleleCount>(*this);
@@ -45,9 +47,9 @@ Measure::ResultCardinality AltAlleleCount::do_cardinality() const noexcept
     return ResultCardinality::num_samples;
 }
 
-std::string AltAlleleCount::do_name() const
+const std::string& AltAlleleCount::do_name() const
 {
-    return "AC";
+    return name_;
 }
 
 std::string AltAlleleCount::do_describe() const
