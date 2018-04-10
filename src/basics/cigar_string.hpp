@@ -80,9 +80,7 @@ bool is_valid(const CigarString& cigar) noexcept;
 bool is_minimal(const CigarString& cigar) noexcept;
 
 bool is_front_soft_clipped(const CigarString& cigar) noexcept;
-
 bool is_back_soft_clipped(const CigarString& cigar) noexcept;
-
 bool is_soft_clipped(const CigarString& cigar) noexcept;
 
 std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const CigarString& cigar) noexcept;
@@ -134,8 +132,11 @@ CigarOperation get_operation_at_sequence_position(const CigarString& cigar, S po
     return *first;
 }
 
-// Relative to both reference and sequence
-CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size);
+enum class CigarStringCopyPolicy { reference, sequence, both };
+
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size,
+                 CigarStringCopyPolicy offset_policy = CigarStringCopyPolicy::both,
+                 CigarStringCopyPolicy size_policy = CigarStringCopyPolicy::both);
 CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size);
 CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size);
 

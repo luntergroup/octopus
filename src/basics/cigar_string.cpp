@@ -180,56 +180,108 @@ get_soft_clipped_sizes(const CigarString& cigar) noexcept
 
 // non-member functions
 
-template <typename Predicate>
-CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size, Predicate pred)
+namespace {
+
+template <typename Predicate1, typename Predicate2>
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size,
+                 Predicate1 offset_pred, Predicate2 size_pred)
 {
     CigarString result {};
     result.reserve(cigar.size());
-    auto op_it = std::cbegin(cigar);
-    const auto last_op = std::cend(cigar);
-    
-    while (op_it != last_op && (offset >= op_it->size() || !pred(*op_it))) {
-        if (pred(*op_it)) {
-            offset -= op_it->size();
+    auto op_itr = std::cbegin(cigar);
+    const auto last_op_itr = std::cend(cigar);
+    while (op_itr != last_op_itr && (offset >= op_itr->size() || !offset_pred(*op_itr))) {
+        if (offset_pred(*op_itr)) {
+            offset -= op_itr->size();
         }
-        ++op_it;
+        ++op_itr;
     }
-    if (op_it != last_op) {
-        const auto remainder = op_it->size() - offset;
+    if (op_itr != last_op_itr) {
+        const auto remainder = op_itr->size() - offset;
         if (remainder >= size) {
-            result.emplace_back(size, op_it->flag());
+            result.emplace_back(size, op_itr->flag());
             return result;
         }
-        result.emplace_back(remainder, op_it->flag());
+        result.emplace_back(remainder, op_itr->flag());
         size -= remainder;
-        ++op_it;
+        ++op_itr;
     }
-    while (op_it != last_op && size > 0 && (size >= op_it->size() || !pred(*op_it))) {
-        result.emplace_back(*op_it);
-        if (pred(*op_it)) {
-            size -= op_it->size();
+    while (op_itr != last_op_itr && size > 0 && (size >= op_itr->size() || !size_pred(*op_itr))) {
+        result.emplace_back(*op_itr);
+        if (size_pred(*op_itr)) {
+            size -= op_itr->size();
         }
-        ++op_it;
+        ++op_itr;
     }
-    if (op_it != last_op && size > 0) {
-        result.emplace_back(size, op_it->flag());
+    if (op_itr != last_op_itr && size > 0) {
+        result.emplace_back(size, op_itr->flag());
     }
     return result;
 }
 
-CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
+template <typename Predicate>
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size,
+                 Predicate pred)
 {
-    return copy(cigar, offset, size, [](const auto& op) { return true; });
+    return copy(cigar, offset, size, pred, pred);
+}
+
+struct AdvancesReferencePred
+{
+    bool operator()(const CigarOperation& op) const noexcept
+    {
+        return advances_reference(op);
+    }
+};
+struct AdvancesSequencePred
+{
+    bool operator()(const CigarOperation& op) const noexcept
+    {
+        return advances_reference(op);
+    }
+};
+
+template <typename Predicate>
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size,
+                 Predicate offset_pred, const CigarStringCopyPolicy size_policy)
+{
+    using CopyPolicy = CigarStringCopyPolicy;
+    switch (size_policy) {
+        case CopyPolicy::reference:
+            return copy(cigar, offset, size, offset_pred, AdvancesReferencePred {});
+        case CopyPolicy::sequence:
+            return copy(cigar, offset, size, offset_pred, AdvancesSequencePred {});
+        case CopyPolicy::both:
+        default:
+            return copy(cigar, offset, size, offset_pred, [] (const auto& op) { return true; });
+    }
+}
+
+} // namespace
+
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size,
+                 const CigarStringCopyPolicy offset_policy, const CigarStringCopyPolicy size_policy)
+{
+    using CopyPolicy = CigarStringCopyPolicy;
+    switch (offset_policy) {
+        case CopyPolicy::reference:
+            return copy(cigar, offset, size, AdvancesReferencePred {}, size_policy);
+        case CopyPolicy::sequence:
+            return copy(cigar, offset, size, AdvancesSequencePred {}, size_policy);
+        case CopyPolicy::both:
+        default:
+            return copy(cigar, offset, size, [] (const auto& op) { return true; }, size_policy);
+    }
 }
 
 CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
-    return copy(cigar, offset, size, [](const auto& op) { return advances_reference(op); });
+    return copy(cigar, offset, size, AdvancesReferencePred {});
 }
 
 CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
-    return copy(cigar, offset, size, [](const auto& op) { return advances_sequence(op); });
+    return copy(cigar, offset, size, AdvancesSequencePred {});
 }
 
 std::vector<CigarOperation::Flag> decompose(const CigarString& cigar)
