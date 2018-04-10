@@ -257,7 +257,9 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
     if (read_region == haplotype_region) {
         result = haplotype_to_reference;
     } else if (contains(haplotype_region, read_region)) {
-        result = copy_sequence(haplotype_to_reference, left_overhang_size(haplotype_region, read_region), sequence_size(haplotype_to_reference));
+        const auto offset = left_overhang_size(haplotype_region, read_region);
+        const auto copy_length = sequence_size(haplotype_to_reference);
+        result = copy_sequence(haplotype_to_reference, offset, copy_length);
     } else {
         result.reserve(haplotype_to_reference.size() + 2);
         if (contains(read_region, haplotype_region)) {
@@ -310,9 +312,8 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
         }
     }
     if (sequence_size(result) < reference_size(read_to_haplotype)) {
-        assert(!result.empty());
         const auto rhs_pad_size = reference_size(read_to_haplotype) - sequence_size(result);
-        if (is_sequence_match(result.back())) {
+        if (!result.empty() && is_sequence_match(result.back())) {
             result.back() = CigarOperation {result.back().size() + rhs_pad_size, Flag::sequenceMatch};
         } else {
             assert(rhs_pad_size > 0);
