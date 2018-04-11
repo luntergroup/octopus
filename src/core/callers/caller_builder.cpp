@@ -162,6 +162,12 @@ CallerBuilder& CallerBuilder::set_likelihood_model(HaplotypeLikelihoodModel mode
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_model_based_haplotype_dedup(bool use) noexcept
+{
+    params_.deduplicate_haplotypes_with_caller_model = use;
+    return *this;
+}
+
 // cancer
 
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
@@ -314,7 +320,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.ploidies.of(samples.front(), *requested_contig_),
                                                           make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           params_.min_variant_posterior,
-                                                          params_.min_refcall_posterior
+                                                          params_.min_refcall_posterior,
+                                                          params_.deduplicate_haplotypes_with_caller_model
                                                       });
         }},
         {"population", [this, &samples] () {

@@ -397,6 +397,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("haplotype-extension-threshold,e",
      po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
      "Haplotypes with posterior probability less than this can be filtered before extension")
+    
+    ("dedup-haplotypes-with-prior-model",
+     po::bool_switch()->default_value(false),
+     "Deduplicate haplotypes with callers prior model")
     ;
     
     po::options_description caller("Calling (general)");

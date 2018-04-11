@@ -1480,6 +1480,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
         vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
     }
+    vc_builder.set_model_based_haplotype_dedup(options.at("dedup-haplotypes-with-prior-model").as<bool>());
     if (caller == "cancer") {
         if (is_set("normal-sample", options)) {
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());

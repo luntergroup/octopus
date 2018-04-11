@@ -94,6 +94,7 @@ private:
     void fill_site_buffer(const Haplotype& haplotype) const;
     template <typename Container> void fill_site_buffer(const Container& haplotypes) const;
     void fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const;
+    void fill_site_buffer_uncached(const Haplotype& haplotype) const;
     void fill_site_buffer_from_value_cache(const Haplotype& haplotype) const;
     void fill_site_buffer_from_address_cache(const Haplotype& haplotype) const;
     
@@ -118,10 +119,10 @@ void CoalescentModel::fill_site_buffer(const Container& haplotypes) const
     assert(site_buffer2_.empty());
     site_buffer1_.clear();
     for (const Haplotype& haplotype : haplotypes) {
-        if (caching_ == CachingStrategy::address) {
-            fill_site_buffer_from_address_cache(haplotype);
-        } else {
-            fill_site_buffer_from_value_cache(haplotype);
+        switch (caching_) {
+            case CachingStrategy::address: fill_site_buffer_from_address_cache(haplotype); break;
+            case CachingStrategy::value: fill_site_buffer_from_value_cache(haplotype); break;
+            default: fill_site_buffer_uncached(haplotype);
         }
         site_buffer1_ = std::move(site_buffer2_);
         site_buffer2_.clear();
@@ -146,6 +147,18 @@ CoalescentModel::count_segregating_sites(const Container& haplotypes) const
     fill_site_buffer(haplotypes);
     return count_segregating_sites_in_buffer(detail::size(haplotypes));
 }
+
+struct CoalescentProbabilityGreater
+{
+    CoalescentProbabilityGreater(CoalescentModel model);
+    
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const;
+
+private:
+    CoalescentModel model_;
+    mutable std::vector<Haplotype> buffer_;
+    mutable std::unordered_map<Haplotype, double, std::hash<Haplotype>, HaveSameAlleles> cache_;
+};
 
 } // namespace octopus
 
