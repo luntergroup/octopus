@@ -37,6 +37,7 @@ public:
         unsigned ploidy;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
         Phred<double> min_variant_posterior, min_refcall_posterior;
+        bool deduplicate_haplotypes_with_germline_model = false;
     };
     
     IndividualCaller() = delete;
