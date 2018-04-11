@@ -122,14 +122,16 @@ private:
     HaplotypeLikelihoodModel likelihood_model_;
     Phaser phaser_;
     Parameters parameters_;
-        
+    
     // virtual methods
     
     virtual std::string do_name() const = 0;
     virtual CallTypeSet do_call_types() const = 0;
-    
+
+protected:
     virtual std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const;
-    
+
+private:
     virtual std::unique_ptr<Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
