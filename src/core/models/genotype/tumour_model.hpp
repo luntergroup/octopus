@@ -46,6 +46,7 @@ public:
     struct InferredLatents
     {
         Latents posteriors;
+        Latents::ProbabilityVector genotype_log_priors;
         double approx_log_evidence;
     };
     

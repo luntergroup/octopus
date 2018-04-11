@@ -105,14 +105,15 @@ double CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const 
 // non-member methods
 
 template <typename Container>
-auto calculate_log_priors(const Container& genotypes, const CancerGenotypePriorModel& model)
+auto calculate_log_priors(const Container& genotypes, const CancerGenotypePriorModel& model,
+                          const bool normalise = false)
 {
     static_assert(std::is_same<typename Container::value_type, CancerGenotype<Haplotype>>::value,
                   "genotypes must contain CancerGenotype<Haplotype>'s");
     std::vector<double> result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&model] (const auto& genotype) { return model.evaluate(genotype); });
-    maths::normalise_logs(result);
+    if (normalise) maths::normalise_logs(result);
     return result;
 }
 

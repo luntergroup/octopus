@@ -430,10 +430,20 @@ void partial_sort(std::vector<unsigned>& observed_qualities, const unsigned n)
                       std::end(observed_qualities), std::greater<> {});
 }
 
-bool is_strongly_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
+bool is_strongly_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations,
+                               const unsigned min_observations = 20) noexcept
 {
     const auto num_observations = num_fwd_observations + num_rev_observations;
-    return num_observations > 20 && (num_observations == num_fwd_observations || num_fwd_observations == 0);
+    return num_observations > min_observations && (num_observations == num_fwd_observations || num_fwd_observations == 0);
+}
+
+bool is_likely_runthrough_artifact(const unsigned num_fwd_observations, const unsigned num_rev_observations,
+                                   std::vector<unsigned>& observed_qualities)
+{
+    if (!is_strongly_strand_biased(num_fwd_observations, num_rev_observations, 10)) return false;
+    assert(!observed_qualities.empty());
+    const auto median_bq = maths::median(observed_qualities);
+    return median_bq < 15;
 }
 
 bool is_good_germline(const Variant& variant, const unsigned depth, const unsigned num_fwd_observations,
@@ -448,12 +458,12 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
         return false;
     }
     if (is_snv(variant)) {
-        erase_below(observed_qualities, 4);
+        if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
         const auto base_quality_sum = sum(observed_qualities);
         if (depth <= 60) {
             if (num_observations < 2) return false;
             if (base_quality_sum > 100) return true;
-            erase_below(observed_qualities, 5);
+            erase_below(observed_qualities, 8);
             if (observed_qualities.size() < 2) return false;
             if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
             partial_sort(observed_qualities, 2);
@@ -518,7 +528,8 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
         return false;
     }
     if (is_snv(variant)) {
-        erase_below(observed_qualities, 5);
+        if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
+        erase_below(observed_qualities, 10);
         if (depth <= 30) {
             return observed_qualities.size() >= 2;
         } else {
