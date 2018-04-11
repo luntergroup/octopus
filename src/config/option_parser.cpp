@@ -385,6 +385,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("extension-level",
      po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
      "Level of haplotype extension. Possible values are: conservative, normal, optimistic, aggressive")
+    
+    ("dedup-haplotypes-with-prior-model",
+     po::bool_switch()->default_value(false),
+     "Deduplicate haplotypes with callers prior model")
     ;
     
     po::options_description caller("Caller (general)");
