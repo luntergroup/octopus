@@ -458,7 +458,7 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
         return false;
     }
     if (is_snv(variant)) {
-//        if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
+        if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
         const auto base_quality_sum = sum(observed_qualities);
         if (depth <= 60) {
             if (num_observations < 2) return false;
