@@ -83,6 +83,8 @@ protected:
     std::vector<MeasureWrapper> measures_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
     
+    virtual Classification merge(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
+    
     bool can_measure_single_call() const noexcept;
     bool can_measure_multiple_blocks() const noexcept;
     CallBlock read_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const;
@@ -110,6 +112,7 @@ private:
     virtual void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const = 0;
     virtual boost::optional<std::string> call_quality_name() const { return boost::none; }
     virtual boost::optional<std::string> genotype_quality_name() const { return boost::none; }
+    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
     
     VcfHeader make_header(const VcfReader& source) const;
     Measure::FacetMap compute_facets(const CallBlock& block) const;

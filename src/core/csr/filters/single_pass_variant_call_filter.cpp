@@ -13,7 +13,6 @@
 
 #include "io/variant/vcf_reader.hpp"
 #include "io/variant/vcf_writer.hpp"
-#include "utils/append.hpp"
 
 namespace octopus { namespace csr {
 
@@ -26,57 +25,6 @@ SinglePassVariantCallFilter::SinglePassVariantCallFilter(FacetFactory facet_fact
 , progress_ {progress}
 , annotate_measures_ {output_config.annotate_measures}
 {}
-
-namespace {
-
-template <typename Range, typename BinaryPredicate>
-bool all_equal(const Range& values, BinaryPredicate pred)
-{
-    const auto not_pred = [&](const auto& lhs, const auto& rhs) { return !pred(lhs, rhs); };
-    return std::adjacent_find(std::cbegin(values), std::cend(values), not_pred) == std::cend(values);
-}
-
-template <typename Range, typename UnaryPredicate>
-bool any_of(const Range& values, UnaryPredicate pred)
-{
-    return std::any_of(std::cbegin(values), std::cend(values), pred);
-}
-
-} // namespace
-
-VariantCallFilter::Classification SinglePassVariantCallFilter::merge(const std::vector<Classification>& sample_classifications) const
-{
-    assert(!sample_classifications.empty());
-    if (sample_classifications.size() == 1) {
-        return sample_classifications.front();
-    }
-    Classification result {};
-    if (all_equal(sample_classifications, [] (const auto& lhs, const auto& rhs) { return lhs.category == rhs.category; })) {
-        result.category = sample_classifications.front().category;
-    } else if (any_of(sample_classifications, [] (const auto& c) { return c.category == Classification::Category::unfiltered; })) {
-        result.category = Classification::Category::unfiltered;
-    } else {
-        result.category = Classification::Category::soft_filtered;
-    }
-    if (result.category != Classification::Category::unfiltered) {
-        for (const auto& sample_classification : sample_classifications) {
-            utils::append(sample_classification.reasons, result.reasons);
-        }
-        std::sort(std::begin(result.reasons), std::end(result.reasons));
-        result.reasons.erase(std::unique(std::begin(result.reasons), std::end(result.reasons)), std::end(result.reasons));
-        result.reasons.shrink_to_fit();
-    }
-    for (const auto& sample_classification : sample_classifications) {
-        if (sample_classification.quality) {
-            if (result.quality) {
-                result.quality = std::max(*result.quality, *sample_classification.quality);
-            } else {
-                result.quality = sample_classification.quality;
-            }
-        }
-    }
-    return result;
-}
 
 void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const
 {
@@ -127,7 +75,7 @@ void SinglePassVariantCallFilter::filter(const CallBlock& block, const MeasureBl
 void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest, const SampleList& samples) const
 {
     const auto sample_classifications = classify(measures, samples);
-    const auto call_classification = merge(sample_classifications);
+    const auto call_classification = merge(sample_classifications, measures);
     if (annotate_measures_) {
         auto annotation_builder = VcfRecord::Builder {call};
         annotate(annotation_builder, measures);
@@ -139,10 +87,10 @@ void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVec
     log_progress(mapped_region(call));
 }
 
-std::vector<VariantCallFilter::Classification>
+VariantCallFilter::ClassificationList
 SinglePassVariantCallFilter::classify(const MeasureVector& call_measures, const SampleList& samples) const
 {
-    std::vector<Classification> result(samples.size());
+    ClassificationList result(samples.size());
     for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
         result[sample_idx] = this->classify(get_sample_values(call_measures, measures_, sample_idx));
     }

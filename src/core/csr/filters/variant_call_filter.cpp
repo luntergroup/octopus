@@ -6,8 +6,10 @@
 #include <utility>
 #include <unordered_map>
 #include <map>
-#include <limits>
+#include <iterator>
+#include <algorithm>
 #include <numeric>
+#include <limits>
 #include <cmath>
 #include <thread>
 
@@ -95,6 +97,52 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
 }
 
 // protected methods
+
+namespace {
+
+template <typename Range, typename BinaryPredicate>
+bool all_equal(const Range& values, BinaryPredicate pred)
+{
+    const auto not_pred = [&](const auto& lhs, const auto& rhs) { return !pred(lhs, rhs); };
+    return std::adjacent_find(std::cbegin(values), std::cend(values), not_pred) == std::cend(values);
+}
+
+} // namespace
+
+VariantCallFilter::Classification
+VariantCallFilter::merge(const ClassificationList& sample_classifications, const MeasureVector& measures) const
+{
+    assert(!sample_classifications.empty());
+    if (sample_classifications.size() == 1) {
+        return sample_classifications.front();
+    }
+    Classification result {};
+    if (all_equal(sample_classifications, [] (const auto& lhs, const auto& rhs) { return lhs.category == rhs.category; })) {
+        result.category = sample_classifications.front().category;
+    } else if (is_soft_filtered(sample_classifications, measures)) {
+        result.category = Classification::Category::soft_filtered;
+    } else {
+        result.category = Classification::Category::unfiltered;
+    }
+    if (result.category != Classification::Category::unfiltered) {
+        for (const auto& sample_classification : sample_classifications) {
+            utils::append(sample_classification.reasons, result.reasons);
+        }
+        std::sort(std::begin(result.reasons), std::end(result.reasons));
+        result.reasons.erase(std::unique(std::begin(result.reasons), std::end(result.reasons)), std::end(result.reasons));
+        result.reasons.shrink_to_fit();
+    }
+    for (const auto& sample_classification : sample_classifications) {
+        if (sample_classification.quality) {
+            if (result.quality) {
+                result.quality = std::max(*result.quality, *sample_classification.quality);
+            } else {
+                result.quality = sample_classification.quality;
+            }
+        }
+    }
+    return result;
+}
 
 bool VariantCallFilter::can_measure_single_call() const noexcept
 {
@@ -258,6 +306,12 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& 
 }
 
 // private methods
+
+bool VariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const
+{
+    return std::all_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
+                       [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
+}
 
 VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
 {
