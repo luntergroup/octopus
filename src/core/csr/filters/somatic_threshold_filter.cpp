@@ -82,6 +82,13 @@ std::vector<std::string> SomaticThresholdVariantCallFilter::get_failing_vcf_filt
     }
 }
 
+bool SomaticThresholdVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
+                                                         const MeasureVector& measures) const
+{
+    return std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
+                       [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
+}
+
 bool SomaticThresholdVariantCallFilter::passes_all_germline_hard_filters(const MeasureVector& measures) const
 {
     return passes_all_filteres(std::cbegin(measures), std::next(std::cbegin(measures), num_germline_hard_conditions_),

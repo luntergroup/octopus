@@ -44,6 +44,7 @@ private:
     virtual bool passes_all_hard_filters(const MeasureVector& measures) const override;
     virtual bool passes_all_soft_filters(const MeasureVector& measures) const override;
     virtual std::vector<std::string> get_failing_vcf_filter_keys(const MeasureVector& measures) const override;
+    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const override;
     
     bool passes_all_germline_hard_filters(const MeasureVector& measures) const;
     bool passes_all_somatic_hard_filters(const MeasureVector& measures) const;
