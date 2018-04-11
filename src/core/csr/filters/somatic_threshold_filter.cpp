@@ -40,7 +40,7 @@ SomaticThresholdVariantCallFilter::SomaticThresholdVariantCallFilter(FacetFactor
 , num_germline_hard_conditions_ {germline_hard_conditions.size()}
 , num_germline_soft_conditions_ {germline_soft_conditions.size()}
 {
-    measures_.emplace_back(make_wrapped_measure<IsSomatic>());
+    measures_.emplace_back(make_wrapped_measure<IsSomatic>(true));
     std::vector<std::string> germline_filter_keys {std::cbegin(vcf_filter_keys_),
                                                    std::next(std::cbegin(vcf_filter_keys_), num_germline_soft_conditions_)};
     all_unique_germline_filter_keys_ = are_all_unique(germline_filter_keys);
@@ -51,9 +51,7 @@ SomaticThresholdVariantCallFilter::SomaticThresholdVariantCallFilter(FacetFactor
 
 bool SomaticThresholdVariantCallFilter::passes_all_hard_filters(const MeasureVector& measures) const
 {
-    assert(measures.size() > 1);
-    const auto is_somatic = boost::get<bool>(measures.back());
-    if (is_somatic) {
+    if (is_somatic(measures)) {
         return passes_all_somatic_hard_filters(measures);
     } else {
         return passes_all_germline_hard_filters(measures);
@@ -62,9 +60,7 @@ bool SomaticThresholdVariantCallFilter::passes_all_hard_filters(const MeasureVec
 
 bool SomaticThresholdVariantCallFilter::passes_all_soft_filters(const MeasureVector& measures) const
 {
-    assert(measures.size() > 1);
-    const auto is_somatic = boost::get<bool>(measures.back());
-    if (is_somatic) {
+    if (is_somatic(measures)) {
         return passes_all_somatic_soft_filters(measures);
     } else {
         return passes_all_germline_soft_filters(measures);
@@ -73,9 +69,7 @@ bool SomaticThresholdVariantCallFilter::passes_all_soft_filters(const MeasureVec
 
 std::vector<std::string> SomaticThresholdVariantCallFilter::get_failing_vcf_filter_keys(const MeasureVector& measures) const
 {
-    assert(measures.size() > 1);
-    const auto is_somatic = boost::get<bool>(measures.back());
-    if (is_somatic) {
+    if (is_somatic(measures)) {
         return get_failing_somatic_vcf_filter_keys(measures);
     } else {
         return get_failing_germline_vcf_filter_keys(measures);
@@ -87,6 +81,12 @@ bool SomaticThresholdVariantCallFilter::is_soft_filtered(const ClassificationLis
 {
     return std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
                        [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
+}
+
+bool SomaticThresholdVariantCallFilter::is_somatic(const MeasureVector& measures) const
+{
+    assert(measures.size() > 1);
+    return boost::get<bool>(measures.back());
 }
 
 bool SomaticThresholdVariantCallFilter::passes_all_germline_hard_filters(const MeasureVector& measures) const
