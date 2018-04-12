@@ -68,10 +68,10 @@ inline std::ostream& operator<<(std::ostream& os, const TimeInterval& interval)
                 constexpr H num_hours_in_week {7 * num_hours_in_day};
                 const auto weeks = std::div(duration_h.count(), num_hours_in_week);
                 os << weeks.quot << 'w';
-                if (weeks.rem > 0) os << ' ' << weeks.rem << 'd';
+                const auto rem_days = weeks.rem / num_hours_in_day;
+                if (rem_days > 0) os << ' ' << rem_days << 'd';
             }
         }
-        
     }
     return os;
 }
