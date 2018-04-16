@@ -146,7 +146,7 @@ private:
     GenomicRegion find_max_lagged_region() const;
     void update_next_active_region() const;
     void update_lagged_next_active_region() const;
-    void progress(GenomicRegion to);
+    void remove_passed_alleles();
     void populate_tree();
     void populate_tree_with_novel_alleles();
     void populate_tree_with_holdouts();
