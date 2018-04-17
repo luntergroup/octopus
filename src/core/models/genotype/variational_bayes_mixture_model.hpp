@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <utility>
 #include <cassert>
+#include <limits>
 
 #include <boost/math/special_functions/digamma.hpp>
 
@@ -498,8 +499,9 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
     auto posterior_alphas = prior_alphas;
     auto responsabilities = init_responsabilities<K>(posterior_alphas, genotype_posteriors, log_likelihoods2);
     assert(responsabilities.size() == log_likelihoods1.size()); // num samples
-    bool is_converged {false};
-    double max_change {0};
+    auto prev_evidence = std::numeric_limits<double>::lowest();
+    bool is_converged {};
+    double max_change {};
     for (unsigned i {0}; i < params.max_iterations; ++i) {
         update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors, responsabilities, log_likelihoods1);
         exp(genotype_log_posteriors, genotype_posteriors);
@@ -507,6 +509,11 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
         update_responsabilities(responsabilities, posterior_alphas, genotype_posteriors, log_likelihoods2);
         std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas, max_change, params.epsilon);
         if (is_converged) break;
+        auto curr_evidence = calculate_evidence_lower_bound(prior_alphas, posterior_alphas, genotype_log_priors,
+                                                            genotype_posteriors, genotype_log_posteriors, responsabilities,
+                                                            log_likelihoods1);
+        if (curr_evidence <= prev_evidence || (curr_evidence - prev_evidence) < params.epsilon) break;
+        prev_evidence = curr_evidence;
     }
     return VBLatents<K> {
         std::move(genotype_posteriors), std::move(genotype_log_posteriors),
