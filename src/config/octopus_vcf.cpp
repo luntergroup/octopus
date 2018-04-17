@@ -46,6 +46,8 @@ VcfHeader::Builder make_header_template()
 
 static const std::unordered_map<std::string, std::string> filter_descriptions
 {
+{spec::filter::q3, "Variant quality is below 3"},
+{spec::filter::q5, "Variant quality is below 5"},
 {spec::filter::q10, "Variant quality is below 10"},
 {spec::filter::q20, "Variant quality is below 20"},
 {spec::filter::lowQuality, "Variant quality is low"},

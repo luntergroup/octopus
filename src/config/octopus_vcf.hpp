@@ -23,6 +23,8 @@ VCF_SPEC_CONSTANT reversion {"REVERSION"};
 
 namespace filter {
 
+VCF_SPEC_CONSTANT q3 {"q3"};
+VCF_SPEC_CONSTANT q5 {"q5"};
 VCF_SPEC_CONSTANT q10 {"q10"};
 VCF_SPEC_CONSTANT q20 {"q20"};
 VCF_SPEC_CONSTANT lowQuality {"LQ"};
