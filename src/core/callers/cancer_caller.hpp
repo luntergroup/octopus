@@ -50,7 +50,7 @@ public:
         NormalContaminationRisk normal_contamination_risk = NormalContaminationRisk::low;
         double cnv_normal_alpha = 50.0, cnv_tumour_alpha = 0.5;
         double somatic_normal_germline_alpha = 50.0, somatic_normal_somatic_alpha = 0.05;
-        double somatic_tumour_germline_alpha = 1.0, somatic_tumour_somatic_alpha = 0.95;
+        double somatic_tumour_germline_alpha = 1.5, somatic_tumour_somatic_alpha = 1.0;
     };
     
     CancerCaller() = delete;
