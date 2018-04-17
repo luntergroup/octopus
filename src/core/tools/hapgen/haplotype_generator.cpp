@@ -822,8 +822,11 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         const auto ideal_num_new_novel_blocks = get_num_ideal_new_novel_blocks(novel_blocks, indicator_region, alleles_);
         auto num_novel_blocks_added = extend_novel(test_tree, novel_blocks, novel_alleles, ideal_num_new_novel_blocks,
                                                    policies_.haplotype_limits);
-        if (num_novel_blocks_added == 0 && !protected_indicator_blocks.empty()) {
+        if (num_novel_blocks_added == 0 && protected_indicator_blocks.size() > 1) {
+            auto last_block = protected_indicator_blocks.back();
+            protected_indicator_blocks.pop_back();
             prune_indicators(test_tree, protected_indicator_blocks, target_tree_size);
+            protected_indicator_blocks.assign({last_block});
             num_novel_blocks_added = extend_novel(test_tree, novel_blocks, novel_alleles, 1, policies_.haplotype_limits);
         }
         if (num_novel_blocks_added > 0) {
@@ -899,6 +902,7 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
         active_region_ = *next_active_region_;
         return;
     }
+    if (!in_holdout_mode()) remove_passed_alleles();
     auto novel_active_region = *next_active_region_;
     if (!tree_.is_empty()) {
         novel_active_region = right_overhang_region(*next_active_region_, active_region_);
@@ -941,7 +945,6 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
                 next_holdout_region = novel_active_region;
             }
         }
-        assert(!begins_before(active_region_before_holdout, active_region_));
         if (last_added_novel_itr != std::cend(novel_active_alleles)) {
             last_added_novel_itr = extend_tree_until(last_added_novel_itr, std::cend(novel_active_alleles), tree_,
                                                      policies_.haplotype_limits.overflow);
@@ -950,7 +953,6 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
                     active_region_ = encompassing_region(active_region_, tree_.encompassing_region());
                     active_region_ = encompassing_region(active_region_, *holdout_region_);
                 } else {
-                    remove_passed_alleles();
                     active_region_ = tree_.encompassing_region();
                 }
                 throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
@@ -959,7 +961,6 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
             }
         }
     } else {
-        remove_passed_alleles();
         active_region_ = *std::move(next_active_region_);
         reset_next_active_region();
     }
