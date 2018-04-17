@@ -442,7 +442,7 @@ VariantCallFilter::MeasureBlock VariantCallFilter::measure(const CallBlock& bloc
     }
     MeasureBlock result(block.size());
     std::transform(std::cbegin(block), std::cend(block), std::begin(result),
-                   [&] (const auto& call) { return measure(call, facets); });
+                   [&] (const VcfRecord& call) { return this->measure(call, facets); });
     return result;
 }
 

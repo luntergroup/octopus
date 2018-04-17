@@ -180,13 +180,13 @@ expand(const std::vector<SampleName>& samples, VBLatents<K>&& inferred_latents,
 }
 
 auto calculate_log_priors(const std::vector<std::pair<std::vector<unsigned>, unsigned>>& genotype_indices,
-                          const CancerGenotypePriorModel& model)
+                          const CancerGenotypePriorModel& model, const bool normalise = false)
 {
     
     std::vector<double> result(genotype_indices.size());
     std::transform(std::cbegin(genotype_indices), std::cend(genotype_indices), std::begin(result),
                    [&] (const auto& p) { return model.evaluate(p.first, p.second); });
-    maths::normalise_logs(result);
+    if (normalise) maths::normalise_logs(result);
     return result;
 }
 

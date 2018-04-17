@@ -255,13 +255,26 @@ void CoalescentModel::fill_site_buffer(const std::vector<unsigned>& haplotype_in
     }
 }
 
+void CoalescentModel::fill_site_buffer_uncached(const Haplotype& haplotype) const
+{
+    // Although we won't retrieve from the cache, we need to make sure all the variants
+    // stay in existence as we populate the buffers by reference.
+    auto itr = difference_value_cache_.find(reference_);
+    if (itr == std::cend(difference_value_cache_)) {
+        itr = difference_value_cache_.emplace(reference_, haplotype.difference(reference_)).first;
+    } else {
+        itr->second = haplotype.difference(reference_);
+    }
+    std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
+                   std::cbegin(itr->second), std::cend(itr->second),
+                   std::back_inserter(site_buffer2_));
+}
+
 void CoalescentModel::fill_site_buffer_from_value_cache(const Haplotype& haplotype) const
 {
     auto itr = difference_value_cache_.find(haplotype);
     if (itr == std::cend(difference_value_cache_)) {
-        itr = difference_value_cache_.emplace(std::piecewise_construct,
-                                              std::forward_as_tuple(haplotype),
-                                              std::forward_as_tuple(haplotype.difference(reference_))).first;
+        itr = difference_value_cache_.emplace(haplotype, haplotype.difference(reference_)).first;
     }
     std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
                    std::cbegin(itr->second), std::cend(itr->second),
@@ -272,9 +285,7 @@ void CoalescentModel::fill_site_buffer_from_address_cache(const Haplotype& haplo
 {
     auto itr = difference_address_cache_.find(std::addressof(haplotype));
     if (itr == std::cend(difference_address_cache_)) {
-        itr = difference_address_cache_.emplace(std::piecewise_construct,
-                                                std::forward_as_tuple(std::addressof(haplotype)),
-                                                std::forward_as_tuple(haplotype.difference(reference_))).first;
+        itr = difference_address_cache_.emplace(std::addressof(haplotype), haplotype.difference(reference_)).first;
     }
     std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
                    std::cbegin(itr->second), std::cend(itr->second),
@@ -319,6 +330,33 @@ double CoalescentModel::calculate_heterozygosity(const Variant& indel) const
     constexpr decltype(indel_length) max_indel_length {50};
     return indel_heterozygosity_model_.gap_open[offset]
            * std::pow(indel_heterozygosity_model_.gap_extend[offset], std::min(indel_length, max_indel_length) - 1);
+}
+
+CoalescentProbabilityGreater::CoalescentProbabilityGreater(CoalescentModel model)
+: model_ {std::move(model)}
+, buffer_ {}
+, cache_ {}
+{
+    buffer_.reserve(1);
+    cache_.reserve(100);
+}
+
+bool CoalescentProbabilityGreater::operator()(const Haplotype& lhs, const Haplotype& rhs) const
+{
+    if (have_same_alleles(lhs, rhs)) return true;
+    auto cache_itr = cache_.find(lhs);
+    if (cache_itr == std::cend(cache_)) {
+        buffer_.assign({lhs});
+        cache_itr = cache_.emplace(lhs, model_.evaluate(buffer_)).first;
+    }
+    const auto lhs_probability = cache_itr->second;
+    cache_itr = cache_.find(rhs);
+    if (cache_itr == std::cend(cache_)) {
+        buffer_.assign({rhs});
+        cache_itr = cache_.emplace(rhs, model_.evaluate(buffer_)).first;
+    }
+    const auto rhs_probability = cache_itr->second;
+    return lhs_probability > rhs_probability;
 }
 
 } // namespace octopus

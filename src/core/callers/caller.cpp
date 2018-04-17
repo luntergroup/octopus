@@ -339,7 +339,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
 
 std::size_t Caller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
 {
-    return unique_least_complex(haplotypes, Haplotype {haplotype_region(haplotypes), reference_.get()});
+    return octopus::remove_duplicates(haplotypes, Haplotype {haplotype_region(haplotypes), reference_.get()});
 }
 
 Caller::GeneratorStatus
