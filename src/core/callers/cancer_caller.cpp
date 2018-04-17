@@ -146,6 +146,19 @@ static double calculate_model_posterior(const double germline_model_log_evidence
     return std::exp(normal_model_ljp - norm);
 }
 
+namespace {
+
+auto demote(const std::vector<CancerGenotype<Haplotype>>& genotypes)
+{
+    std::vector<Genotype<Haplotype>> result {};
+    result.reserve(genotypes.size());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::back_inserter(result),
+                   [] (const auto& genotype) { return demote(genotype); });
+    return result;
+}
+
+} // namespace
+
 boost::optional<double>
 CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
                                         const HaplotypeLikelihoodCache& haplotype_likelihoods,
@@ -161,7 +174,7 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
         } else {
             normal_inferences = germline_model.evaluate(latents.germline_genotypes_, haplotype_likelihoods);
         }
-        const auto dummy_genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
+        const auto dummy_genotypes = demote(latents.cancer_genotypes_);
         const auto dummy_inferences = germline_model.evaluate(dummy_genotypes, haplotype_likelihoods);
         if (latents.noise_model_inferences_) {
             return octopus::calculate_model_posterior(normal_inferences.log_evidence,
