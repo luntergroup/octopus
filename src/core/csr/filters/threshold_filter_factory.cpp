@@ -80,6 +80,8 @@ auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& compa
     using namespace octopus::vcf::spec::filter;
     // First look for special names
     if (measure.name() == name<Quality>()) {
+        if (maths::almost_equal(threshold_target, 3.0)) return std::string {q3};
+        if (maths::almost_equal(threshold_target, 5.0)) return std::string {q5};
         if (maths::almost_equal(threshold_target, 10.0)) return std::string {q10};
         if (maths::almost_equal(threshold_target, 20.0)) return std::string {q20};
     }
