@@ -521,6 +521,11 @@ void CancerCaller::set_model_posteriors(Latents& latents) const
     const auto& cnv_inferences      = latents.cnv_model_inferences_;
     const auto& somatic_inferences  = latents.tumour_model_inferences_;
     const auto& model_priors        = latents.model_priors_;
+    if (debug_log_) {
+        stream(*debug_log_) << "Germline model evidence: " << germline_inferences.log_evidence;
+        stream(*debug_log_) << "CNV model evidence:      " << cnv_inferences.approx_log_evidence;
+        stream(*debug_log_) << "Somatic model evidence:  " << somatic_inferences.approx_log_evidence;
+    }
     const auto germline_model_jlp = std::log(model_priors.germline) + germline_inferences.log_evidence;
     const auto cnv_model_jlp      = std::log(model_priors.cnv) + cnv_inferences.approx_log_evidence;
     const auto somatic_model_jlp  = std::log(model_priors.somatic) + somatic_inferences.approx_log_evidence;
