@@ -14,6 +14,7 @@
 #include <cassert>
 #include <limits>
 
+#include <boost/optional.hpp>
 #include <boost/math/special_functions/digamma.hpp>
 
 #include "utils/maths.hpp"
@@ -452,22 +453,25 @@ auto calculate_evidence_lower_bound(const VBAlphaVector<K>& prior_alphas,
                                     const ProbabilityVector& genotype_posteriors,
                                     const LogProbabilityVector& genotype_log_posteriors,
                                     const VBResponsabilityMatrix<K>& taus,
-                                    const VBReadLikelihoodMatrix<K>& log_likelihoods)
+                                    const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                                    const boost::optional<double> max_posterior_skip = boost::none)
 {
     const auto G = genotype_log_priors.size();
     const auto S = log_likelihoods.size();
     double result {0};
     for (std::size_t g {0}; g < G; ++g) {
-        auto w = genotype_log_priors[g] - genotype_log_posteriors[g];
-        for (std::size_t s {0}; s < S; ++s) {
-            const auto N_s = taus[s].size();
-            for (std::size_t k {0}; k < K; ++k) {
-                for (std::size_t n {0}; n < N_s; ++n) {
-                    w += taus[s][n][k] * log_likelihoods[s][g][k][n];
+        if (!max_posterior_skip || genotype_posteriors[g] >= *max_posterior_skip) {
+            auto w = genotype_log_priors[g] - genotype_log_posteriors[g];
+            for (std::size_t s {0}; s < S; ++s) {
+                const auto N_s = taus[s].size();
+                for (std::size_t k {0}; k < K; ++k) {
+                    for (std::size_t n {0}; n < N_s; ++n) {
+                        w += taus[s][n][k] * log_likelihoods[s][g][k][n];
+                    }
                 }
             }
+            result += genotype_posteriors[g] * w;
         }
-        result += genotype_posteriors[g] * w;
     }
     for (std::size_t s {0}; s < S; ++s) {
         result += (maths::log_beta(posterior_alphas[s]) - maths::log_beta(prior_alphas[s]));
@@ -511,7 +515,7 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
         if (is_converged) break;
         auto curr_evidence = calculate_evidence_lower_bound(prior_alphas, posterior_alphas, genotype_log_priors,
                                                             genotype_posteriors, genotype_log_posteriors, responsabilities,
-                                                            log_likelihoods1);
+                                                            log_likelihoods1, 1e-10);
         if (curr_evidence <= prev_evidence || (curr_evidence - prev_evidence) < params.epsilon) break;
         prev_evidence = curr_evidence;
     }
