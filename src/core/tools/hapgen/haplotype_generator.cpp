@@ -248,7 +248,8 @@ void HaplotypeGenerator::clear_progress() noexcept
 void HaplotypeGenerator::jump(GenomicRegion region)
 {
     clear_progress();
-    progress(std::move(region));
+    next_active_region_ = std::move(region);
+    remove_passed_alleles();
 }
 
 bool HaplotypeGenerator::removal_has_impact() const
@@ -821,8 +822,11 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         const auto ideal_num_new_novel_blocks = get_num_ideal_new_novel_blocks(novel_blocks, indicator_region, alleles_);
         auto num_novel_blocks_added = extend_novel(test_tree, novel_blocks, novel_alleles, ideal_num_new_novel_blocks,
                                                    policies_.haplotype_limits);
-        if (num_novel_blocks_added == 0 && !protected_indicator_blocks.empty()) {
+        if (num_novel_blocks_added == 0 && protected_indicator_blocks.size() > 1) {
+            auto last_block = protected_indicator_blocks.back();
+            protected_indicator_blocks.pop_back();
             prune_indicators(test_tree, protected_indicator_blocks, target_tree_size);
+            protected_indicator_blocks.assign({last_block});
             num_novel_blocks_added = extend_novel(test_tree, novel_blocks, novel_alleles, 1, policies_.haplotype_limits);
         }
         if (num_novel_blocks_added > 0) {
@@ -838,48 +842,44 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
     }
 }
 
-void HaplotypeGenerator::progress(GenomicRegion to)
+void HaplotypeGenerator::remove_passed_alleles()
 {
-    if (to == active_region_) return;
-    next_active_region_ = std::move(to);
-    if (!in_holdout_mode()) {
-        if (begins_before(active_region_, *next_active_region_)) {
-            auto passed_region = left_overhang_region(active_region_, *next_active_region_);
-            const auto passed_alleles = overlap_range(alleles_, passed_region);
-            if (passed_alleles.empty()) return;
-            if (can_remove_entire_passed_region(active_region_, *next_active_region_, passed_alleles)) {
-                alleles_.erase_overlapped(passed_region);
-                tree_.clear(passed_region);
-            } else if (requires_staged_removal(passed_alleles)) {
-                // We need to be careful here as insertions adjacent to passed_region are
-                // considered overlapped and would be wrongly erased if we erased the whole
-                // region. But, we also want to clear all single base alleles left adjacent with
-                // next_active_region_, as they have truly been passed.
-                
-                // This will erase everything to the left of the adjacent insertion, other than
-                // the single base alleles adjacent with next_active_region_.
-                const auto first_removal_region = expand_rhs(passed_region, -1);
-                alleles_.erase_overlapped(first_removal_region);
-                // This will erase the remaining single base alleles in passed_region, but not the
-                // insertions in next_active_region_.
-                const auto second_removal_region = tail_region(first_removal_region);
-                alleles_.erase_overlapped(second_removal_region);
-                
-                if (is_after(*next_active_region_, active_region_)) {
-                    assert(tree_.is_empty() || contains(active_region_, tree_.encompassing_region()));
-                    tree_.clear();
-                } else {
-                    tree_.clear(first_removal_region);
-                    tree_.clear(second_removal_region);
-                }
+    if (begins_before(active_region_, *next_active_region_)) {
+        auto passed_region = left_overhang_region(active_region_, *next_active_region_);
+        const auto passed_alleles = overlap_range(alleles_, passed_region);
+        if (passed_alleles.empty()) return;
+        if (can_remove_entire_passed_region(active_region_, *next_active_region_, passed_alleles)) {
+            alleles_.erase_overlapped(passed_region);
+            tree_.clear(passed_region);
+        } else if (requires_staged_removal(passed_alleles)) {
+            // We need to be careful here as insertions adjacent to passed_region are
+            // considered overlapped and would be wrongly erased if we erased the whole
+            // region. But, we also want to clear all single base alleles left adjacent with
+            // next_active_region_, as they have truly been passed.
+            
+            // This will erase everything to the left of the adjacent insertion, other than
+            // the single base alleles adjacent with next_active_region_.
+            const auto first_removal_region = expand_rhs(passed_region, -1);
+            alleles_.erase_overlapped(first_removal_region);
+            // This will erase the remaining single base alleles in passed_region, but not the
+            // insertions in next_active_region_.
+            const auto second_removal_region = tail_region(first_removal_region);
+            alleles_.erase_overlapped(second_removal_region);
+            
+            if (is_after(*next_active_region_, active_region_)) {
+                assert(tree_.is_empty() || contains(active_region_, tree_.encompassing_region()));
+                tree_.clear();
             } else {
-                const auto removal_region = expand_rhs(passed_region, -1);
-                alleles_.erase_overlapped(removal_region);
-                tree_.clear(removal_region);
+                tree_.clear(first_removal_region);
+                tree_.clear(second_removal_region);
             }
-            if (overlaps(passed_region, rightmost_allele_) && !alleles_.empty()) {
-                rightmost_allele_ = alleles_.rightmost();
-            }
+        } else {
+            const auto removal_region = expand_rhs(passed_region, -1);
+            alleles_.erase_overlapped(removal_region);
+            tree_.clear(removal_region);
+        }
+        if (overlaps(passed_region, rightmost_allele_) && !alleles_.empty()) {
+            rightmost_allele_ = alleles_.rightmost();
         }
     }
 }
@@ -902,7 +902,7 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
         active_region_ = *next_active_region_;
         return;
     }
-    progress(*next_active_region_);
+    if (!in_holdout_mode()) remove_passed_alleles();
     auto novel_active_region = *next_active_region_;
     if (!tree_.is_empty()) {
         novel_active_region = right_overhang_region(*next_active_region_, active_region_);
@@ -945,7 +945,6 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
                 next_holdout_region = novel_active_region;
             }
         }
-        assert(!begins_before(active_region_before_holdout, active_region_));
         if (last_added_novel_itr != std::cend(novel_active_alleles)) {
             last_added_novel_itr = extend_tree_until(last_added_novel_itr, std::cend(novel_active_alleles), tree_,
                                                      policies_.haplotype_limits.overflow);
