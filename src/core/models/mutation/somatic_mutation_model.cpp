@@ -37,7 +37,7 @@ double SomaticMutationModel::evaluate(const Haplotype& somatic, const Haplotype&
     return model_.evaluate(somatic, germline);
 }
 
-double SomaticMutationModel::evaluate(unsigned somatic, unsigned germline) const noexcept
+double SomaticMutationModel::evaluate(unsigned somatic, unsigned germline) const
 {
     return model_.evaluate(somatic, germline);
 }

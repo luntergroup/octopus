@@ -111,7 +111,7 @@ double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) co
     }
 }
 
-double DeNovoModel::evaluate(const unsigned target, const unsigned given) const noexcept
+double DeNovoModel::evaluate(const unsigned target, const unsigned given) const
 {
     if (use_unguarded_) {
         return unguarded_index_cache_[target][given];

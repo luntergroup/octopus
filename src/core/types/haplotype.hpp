@@ -300,7 +300,7 @@ struct IsLessComplex
 {
     IsLessComplex() = default;
     explicit IsLessComplex(boost::optional<Haplotype> reference);
-    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const noexcept;
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const;
 private:
     boost::optional<Haplotype> reference_;
 };

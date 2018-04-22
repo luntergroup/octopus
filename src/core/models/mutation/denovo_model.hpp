@@ -47,7 +47,7 @@ public:
     
     // ln p(target | given)
     double evaluate(const Haplotype& target, const Haplotype& given) const;
-    double evaluate(unsigned target, unsigned given) const noexcept;
+    double evaluate(unsigned target, unsigned given) const;
     
 private:
     struct AddressPairHash

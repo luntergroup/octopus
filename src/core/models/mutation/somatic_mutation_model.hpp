@@ -38,7 +38,7 @@ public:
     // ln p(somatic | germline)
     double evaluate(const Haplotype& somatic, const Haplotype& germline) const;
     
-    double evaluate(unsigned somatic, unsigned germline) const noexcept;
+    double evaluate(unsigned somatic, unsigned germline) const;
     
 private:
     DeNovoModel model_;

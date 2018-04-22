@@ -647,7 +647,7 @@ bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
 
 IsLessComplex::IsLessComplex(boost::optional<Haplotype> reference) : reference_ {std::move(reference)} {}
 
-bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const noexcept
+bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const
 {
     if (lhs.explicit_alleles_.size() != rhs.explicit_alleles_.size()) {
         return lhs.explicit_alleles_.size() < rhs.explicit_alleles_.size();
