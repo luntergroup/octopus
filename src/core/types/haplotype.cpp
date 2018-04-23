@@ -37,18 +37,19 @@ const GenomicRegion& Haplotype::mapped_region() const
 }
     
 namespace {
-    template <typename BidirIt, typename T>
-    BidirIt binary_find(BidirIt first, BidirIt last, const T& value)
-    {
-        const auto it = std::lower_bound(first, last, value);
-        return (it != last && *it == value) ? it : last;
-    }
+
+template <typename BidirIt, typename T>
+BidirIt binary_find(BidirIt first, BidirIt last, const T& value)
+{
+    const auto itr = std::lower_bound(first, last, value);
+    return (itr != last && *itr == value) ? itr : last;
 }
+
+} // namespace
 
 bool Haplotype::contains(const ContigAllele& allele) const
 {
     using octopus::contains; using std::cbegin; using std::cend;
-    
     if (contains(region_.contig_region(), allele)) {
         if (begins_before(allele, explicit_allele_region_)) {
             if (is_before(allele, explicit_allele_region_)) {
@@ -68,10 +69,10 @@ bool Haplotype::contains(const ContigAllele& allele) const
                 return false;
             }
         }
-        const auto it = binary_find(cbegin(explicit_alleles_), cend(explicit_alleles_), allele.mapped_region());
-        if (it != cend(explicit_alleles_)) {
-            if (*it == allele) return true;
-            if (is_same_region(*it, allele)) {
+        const auto match_itr = binary_find(cbegin(explicit_alleles_), cend(explicit_alleles_), allele.mapped_region());
+        if (match_itr != cend(explicit_alleles_)) {
+            if (*match_itr == allele) return true;
+            if (is_same_region(*match_itr, allele)) {
                 // If the allele is not explcitly contained but the region is then it must be a different
                 // allele, unless it is an insertion, in which case we must check the sequence
                 if (is_insertion(allele)) {
@@ -87,7 +88,6 @@ bool Haplotype::contains(const ContigAllele& allele) const
         }
         return sequence(allele.mapped_region()) == allele.sequence();
     }
-    
     return false;
 }
 
@@ -130,9 +130,9 @@ bool is_in_reference_flank(const ContigRegion& region, const ContigRegion& expli
         return true;
     }
     if (begins_before(region, explicit_allele_region_)) {
-        return !is_insertion(explicit_alleles.front());
+        return !is_simple_insertion(explicit_alleles.front());
     }
-    return !is_insertion(explicit_alleles.back());
+    return !is_simple_insertion(explicit_alleles.back());
 }
 
 Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) const
