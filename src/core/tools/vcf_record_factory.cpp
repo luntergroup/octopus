@@ -393,7 +393,8 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                             Allele new_allele {mapped_region(curr_call), move(new_sequence)};
                             new_genotype.emplace(move(new_allele));
                         } else if (old_genotype[i].sequence().front() == dummy_base) {
-                            if (prev_represented[s][i] && begins_before(*prev_represented[s][i], curr_call)) {
+                            if (prev_represented[s].size() > i && prev_represented[s][i]
+                                && begins_before(*prev_represented[s][i], curr_call)) {
                                 const auto& prev_represented_genotype = prev_represented[s][i]->get_genotype_call(sample);
                                 if (are_in_phase(genotype_call, prev_represented_genotype)) {
                                     const auto& prev_allele = prev_represented_genotype.genotype[i];
