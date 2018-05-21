@@ -168,6 +168,11 @@ bool GenomeCallingComponents::sites_only() const noexcept
     return components_.sites_only;
 }
 
+const PloidyMap& GenomeCallingComponents::ploidies() const noexcept
+{
+    return components_.ploidies;
+}
+
 namespace {
 
 std::vector<ContigName>
@@ -475,6 +480,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , read_buffer_size {}
 , temp_directory {get_temp_directory(options)}
 , progress_meter {regions}
+, ploidies {options::get_ploidy_map(options)}
 , sites_only {options::call_sites_only(options)}
 , filtered_output {}
 , legacy {}
