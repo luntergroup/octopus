@@ -13,14 +13,15 @@
 
 #include "common.hpp"
 #include "option_parser.hpp"
-#include "utils/memory_footprint.hpp"
+#include "basics/ploidy_map.hpp"
+#include "core/callers/caller_factory.hpp"
+#include "core/csr/filters/variant_call_filter_factory.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/read/read_manager.hpp"
 #include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe.hpp"
-#include "core/callers/caller_factory.hpp"
-#include "core/csr/filters/variant_call_filter_factory.hpp"
 #include "utils/input_reads_profiler.hpp"
+#include "utils/memory_footprint.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -53,6 +54,8 @@ ReadManager make_read_manager(const OptionMap& options);
 ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options);
 
 bool call_sites_only(const OptionMap& options);
+
+PloidyMap get_ploidy_map(const OptionMap& options);
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,

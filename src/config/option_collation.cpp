@@ -30,7 +30,6 @@
 #include "basics/phred.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
-#include "basics/ploidy_map.hpp"
 #include "basics/trio.hpp"
 #include "basics/pedigree.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
