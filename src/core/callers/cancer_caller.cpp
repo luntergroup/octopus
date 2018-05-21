@@ -912,6 +912,16 @@ auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotype
 
 } // namespace
 
+namespace debug {
+
+template <typename S, typename T>
+void print_variants(S&& stream, const std::vector<T>& variants)
+{
+    for (const auto& v : variants) stream << v.variant << " " << v.posterior << '\n';
+}
+
+} // namespace debug
+
 std::vector<std::unique_ptr<VariantCall>>
 CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
@@ -1012,6 +1022,10 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                     called_somatic_haplotype = called_cancer_genotype->somatic_element();
                 }
             }
+            if (debug_log_) {
+                *debug_log_ << "Called somatic variants:";
+                debug::print_variants(stream(*debug_log_), somatic_variant_calls);
+            }
             const auto called_somatic_regions = extract_regions(somatic_variant_calls);
             auto cancer_genotype_calls = call_somatic_genotypes(*called_cancer_genotype, called_somatic_regions,
                                                                 latents.cancer_genotypes_, cancer_genotype_posteriors,
@@ -1040,6 +1054,10 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
         } else {
             germline_genotype_calls.emplace_back(std::move(genotype_chunk), probability_to_phred(inv_posterior));
         }
+    }
+    if (debug_log_) {
+        *debug_log_ << "Called germline variants:";
+        debug::print_variants(stream(*debug_log_), germline_variant_calls);
     }
     result.reserve(result.size() + germline_variant_calls.size());
     const auto itr = std::end(result);
