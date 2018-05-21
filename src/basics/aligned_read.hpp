@@ -225,6 +225,9 @@ bool is_sequence_empty(const AlignedRead& read) noexcept;
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read) noexcept;
 AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read, const GenomicRegion& region);
 
+bool is_forward_strand(const AlignedRead& read) noexcept;
+bool is_reverse_strand(const AlignedRead& read) noexcept;
+
 bool is_soft_clipped(const AlignedRead& read) noexcept;
 bool is_front_soft_clipped(const AlignedRead& read) noexcept;
 bool is_back_soft_clipped(const AlignedRead& read) noexcept;

@@ -259,6 +259,16 @@ AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read
     return sequence_size(contained_cigar_copy);
 }
 
+bool is_forward_strand(const AlignedRead& read) noexcept
+{
+    return read.direction() == AlignedRead::Direction::forward;
+}
+
+bool is_reverse_strand(const AlignedRead& read) noexcept
+{
+    return !is_forward_strand(read);
+}
+
 bool is_soft_clipped(const AlignedRead& read) noexcept
 {
     return is_soft_clipped(read.cigar());
