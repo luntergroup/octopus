@@ -109,57 +109,6 @@ void DoublePassVariantCallFilter::log_filter_pass_start(Log& log) const
     log << "CSR: Starting filtering pass";
 }
 
-namespace {
-
-template <typename Range, typename BinaryPredicate>
-bool all_equal(const Range& values, BinaryPredicate pred)
-{
-    const auto not_pred = [&] (const auto& lhs, const auto& rhs) { return !pred(lhs, rhs); };
-    return std::adjacent_find(std::cbegin(values), std::cend(values), not_pred) == std::cend(values);
-}
-
-template <typename Range, typename UnaryPredicate>
-bool any_of(const Range& values, UnaryPredicate pred)
-{
-    return std::any_of(std::cbegin(values), std::cend(values), pred);
-}
-
-} // namespace
-
-VariantCallFilter::Classification DoublePassVariantCallFilter::merge(const std::vector<Classification>& sample_classifications) const
-{
-    assert(!sample_classifications.empty());
-    if (sample_classifications.size() == 1) {
-        return sample_classifications.front();
-    }
-    Classification result {};
-    if (all_equal(sample_classifications, [] (const auto& lhs, const auto& rhs) { return lhs.category == rhs.category; })) {
-        result.category = sample_classifications.front().category;
-    } else if (any_of(sample_classifications, [] (const auto& c) { return c.category == Classification::Category::unfiltered; })) {
-        result.category = Classification::Category::unfiltered;
-    } else {
-        result.category = Classification::Category::soft_filtered;
-    }
-    if (result.category != Classification::Category::unfiltered) {
-        for (const auto& sample_classification : sample_classifications) {
-            utils::append(sample_classification.reasons, result.reasons);
-        }
-        std::sort(std::begin(result.reasons), std::end(result.reasons));
-        result.reasons.erase(std::unique(std::begin(result.reasons), std::end(result.reasons)), std::end(result.reasons));
-        result.reasons.shrink_to_fit();
-    }
-    for (const auto& sample_classification : sample_classifications) {
-        if (sample_classification.quality) {
-            if (result.quality) {
-                result.quality = std::max(*result.quality, *sample_classification.quality);
-            } else {
-                result.quality = sample_classification.quality;
-            }
-        }
-    }
-    return result;
-}
-
 void DoublePassVariantCallFilter::make_filter_pass(const VcfReader& source, const SampleList& samples, VcfWriter& dest) const
 {
     if (info_log_) log_filter_pass_start(*info_log_);

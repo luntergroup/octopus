@@ -84,6 +84,7 @@ protected:
     mutable boost::optional<logging::DebugLogger> debug_log_;
     
     virtual Classification merge(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
+    virtual Classification merge(const ClassificationList& sample_classifications) const;
     
     bool can_measure_single_call() const noexcept;
     bool can_measure_multiple_blocks() const noexcept;

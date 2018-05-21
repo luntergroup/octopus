@@ -48,7 +48,6 @@ private:
     virtual void prepare_for_classification(boost::optional<Log>& log) const = 0;
     virtual void log_filter_pass_start(Log& log) const;
     virtual Classification classify(std::size_t call_idx, std::size_t sample_idx) const = 0;
-    virtual Classification merge(const std::vector<Classification>& sample_classifications) const;
     
     void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const override;
     
