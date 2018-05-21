@@ -11,6 +11,7 @@
 #include <numeric>
 #include <iosfwd>
 #include <functional>
+#include <limits>
 
 #include <boost/functional/hash.hpp>
 
@@ -134,11 +135,14 @@ CigarOperation get_operation_at_sequence_position(const CigarString& cigar, S po
 
 enum class CigarStringCopyPolicy { reference, sequence, both };
 
-CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size,
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset,
+                 CigarOperation::Size size = std::numeric_limits<CigarOperation::Size>::max(),
                  CigarStringCopyPolicy offset_policy = CigarStringCopyPolicy::both,
                  CigarStringCopyPolicy size_policy = CigarStringCopyPolicy::both);
-CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size);
-CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size);
+CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset,
+                           CigarOperation::Size size = std::numeric_limits<CigarOperation::Size>::max());
+CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset,
+                          CigarOperation::Size size = std::numeric_limits<CigarOperation::Size>::max());
 
 std::vector<CigarOperation::Flag> decompose(const CigarString& cigar);
 CigarString collapse_matches(const CigarString& cigar);
