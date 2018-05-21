@@ -28,6 +28,7 @@
 
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
+#include "basics/ploidy_map.hpp"
 #include "concepts/mappable.hpp"
 #include "containers/mappable_flat_multi_set.hpp"
 #include "containers/mappable_map.hpp"
@@ -1392,6 +1393,21 @@ bool is_sam_type(const boost::filesystem::path& path)
     return type == ".bam" || type == ".sam" || type == ".cram";
 }
 
+auto get_max_ploidy(const GenomeCallingComponents& components)
+{
+    return get_max_ploidy(components.samples(), components.contigs(), components.ploidies());
+}
+
+auto get_haplotype_bam_paths(const boost::filesystem::path& prefix, const unsigned max_ploidy)
+{
+    std::vector<boost::filesystem::path> result {};
+    result.reserve(max_ploidy + 1); // + 1 for unassigned reads
+    for (unsigned i {1}; i <= max_ploidy + 1; ++i) {
+        result.emplace_back(prefix.string() + std::to_string(i) + ".bam");
+    }
+    return result;
+}
+
 auto get_bamout_paths(const GenomeCallingComponents& components)
 {
     namespace fs = boost::filesystem;
@@ -1401,8 +1417,7 @@ auto get_bamout_paths(const GenomeCallingComponents& components)
     if (is_sam_type(*request)) {
         result.assign({*request});
     } else {
-        // TODO: use split version - need to get max ploidy
-        result.assign({*request});
+        result = get_haplotype_bam_paths(*request, get_max_ploidy(components));
     }
     return result;
 }
