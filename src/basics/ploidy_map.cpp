@@ -57,4 +57,26 @@ std::vector<unsigned> get_ploidies(const std::vector<SampleName>& samples, const
     return result;
 }
 
+unsigned get_min_ploidy(const std::vector<SampleName>& samples, const std::vector<ContigName>& contigs, const PloidyMap& ploidies)
+{
+    unsigned result = -1;
+    for (const auto& sample : samples) {
+        for (const auto& contig : contigs) {
+            result = std::min(result, ploidies.of(sample, contig));
+        }
+    }
+    return result;
+}
+
+unsigned get_max_ploidy(const std::vector<SampleName>& samples, const std::vector<ContigName>& contigs, const PloidyMap& ploidies)
+{
+    unsigned result {0};
+    for (const auto& sample : samples) {
+        for (const auto& contig : contigs) {
+            result = std::max(result, ploidies.of(sample, contig));
+        }
+    }
+    return result;
+}
+
 } // namespace octopus

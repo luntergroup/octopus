@@ -40,6 +40,9 @@ private:
 
 std::vector<unsigned> get_ploidies(const std::vector<SampleName>& samples, const ContigName& contig, const PloidyMap& ploidies);
 
+unsigned get_min_ploidy(const std::vector<SampleName>& samples, const std::vector<ContigName>& contigs, const PloidyMap& ploidies);
+unsigned get_max_ploidy(const std::vector<SampleName>& samples, const std::vector<ContigName>& contigs, const PloidyMap& ploidies);
+
 } // namespace octopus
 
 #endif
