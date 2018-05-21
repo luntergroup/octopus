@@ -237,7 +237,7 @@ struct AdvancesSequencePred
 {
     bool operator()(const CigarOperation& op) const noexcept
     {
-        return advances_reference(op);
+        return advances_sequence(op);
     }
 };
 
