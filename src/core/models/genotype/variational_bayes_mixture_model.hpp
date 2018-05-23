@@ -510,7 +510,6 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
         update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors, responsabilities, log_likelihoods1);
         exp(genotype_log_posteriors, genotype_posteriors);
         update_alphas(posterior_alphas, prior_alphas, responsabilities);
-        update_responsabilities(responsabilities, posterior_alphas, genotype_posteriors, log_likelihoods2);
         std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas, max_change, params.epsilon);
         if (is_converged) break;
         auto curr_evidence = calculate_evidence_lower_bound(prior_alphas, posterior_alphas, genotype_log_priors,
@@ -518,6 +517,7 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                                                             log_likelihoods1, 1e-10);
         if (curr_evidence <= prev_evidence || (curr_evidence - prev_evidence) < params.epsilon) break;
         prev_evidence = curr_evidence;
+        update_responsabilities(responsabilities, posterior_alphas, genotype_posteriors, log_likelihoods2);
     }
     return VBLatents<K> {
         std::move(genotype_posteriors), std::move(genotype_log_posteriors),
