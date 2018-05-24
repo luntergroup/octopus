@@ -341,6 +341,7 @@ void update_alphas(VBAlphaVector<K>& alphas, const VBAlphaVector<K>& prior_alpha
 
 inline auto marginalise(const VBTau& responsabilities, const VBReadLikelihoodArray& likelihoods) noexcept
 {
+    assert(responsabilities.size() == likelihoods.size()); // num reads
     return std::inner_product(std::cbegin(responsabilities), std::cend(responsabilities), std::cbegin(likelihoods), 0.0);
 }
 
@@ -349,8 +350,6 @@ auto marginalise(const VBResponsabilityVector<K>& responsabilities,
                  const VBGenotype<K>& read_likelihoods) noexcept
 {
     double result {0};
-    assert(responsabilities.size() == read_likelihoods[0].size()); // num reads
-    assert(responsabilities[0].size() == K && read_likelihoods.size() == K);
     for (unsigned k {0}; k < K; ++k) {
         result += marginalise(responsabilities[k], read_likelihoods[k]);
     }
