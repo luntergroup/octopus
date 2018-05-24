@@ -799,8 +799,15 @@ auto call_somatic_variants(const VariantPosteriorVector& somatic_variant_posteri
     return result;
 }
 
-template <typename T>
-auto compute_marginal_credible_interval(const T& alphas, const double mass)
+auto compute_marginal_credible_interval(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+                                        const std::size_t k, const double mass)
+{
+    const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
+    return maths::beta_hdi(alphas[k], a0 - alphas[k], mass);
+}
+
+auto compute_marginal_credible_intervals(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+                                         const double mass)
 {
     const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
     std::vector<std::pair<double, double>> result {};
@@ -813,30 +820,38 @@ auto compute_marginal_credible_interval(const T& alphas, const double mass)
 
 using CredibleRegionMap = std::unordered_map<SampleName, std::vector<std::pair<double, double>>>;
 
-template <typename M>
-auto compute_marginal_credible_intervals(const M& alphas, const double mass)
+auto compute_marginal_credible_intervals(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+                                         const double mass)
 {
     CredibleRegionMap result {};
     result.reserve(alphas.size());
     for (const auto& p : alphas) {
-        result.emplace(p.first, compute_marginal_credible_interval(p.second, mass));
+        result.emplace(p.first, compute_marginal_credible_intervals(p.second, mass));
     }
     return result;
 }
 
-template <typename T>
-auto compute_somatic_mass(const T& alphas, const double c = 0.05)
+auto compute_credible_somatic_mass(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+                                   const double min_credible_somatic_frequency)
 {
-    const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
-    return maths::beta_cdf_complement(alphas.back(), a0 - alphas.back(), c);
+    return maths::dirichlet_marginal_sf(alphas, alphas.size() - 1, min_credible_somatic_frequency);
 }
 
-template <typename T>
+auto compute_credible_somatic_mass(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+                                   const double min_credible_somatic_frequency)
+{
+    double inv_result {1.0};
+    for (const auto& p : alphas) {
+        inv_result *= maths::dirichlet_marginal_cdf(p.second, p.second.size() - 1, min_credible_somatic_frequency);
+    }
+    return 1.0 - inv_result;
+}
+
 auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
                             const std::vector<GenomicRegion>& called_somatic_regions,
                             const std::vector<CancerGenotype<Haplotype>>& genotypes,
                             const std::vector<double>& genotype_posteriors,
-                            const T& credible_regions)
+                            const CredibleRegionMap& credible_regions)
 {
     CancerGenotypeCalls result {};
     result.reserve(called_somatic_regions.size());
@@ -932,9 +947,8 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
         stream(*debug_log_) << "CNV model posterior:      " << model_posteriors.cnv;
         stream(*debug_log_) << "Somatic model posterior:  " << model_posteriors.somatic;
     }
-    const auto sample_somatic_inv_posteriors = calculate_probability_samples_not_somatic(latents);
-    const auto somatic_posterior = calculate_somatic_probability(sample_somatic_inv_posteriors, model_posteriors);
-    const auto germline_genotype_posteriors = calculate_germline_genotype_posteriors(latents, model_posteriors);
+    const auto somatic_posterior = calculate_somatic_probability(latents);
+    const auto germline_genotype_posteriors = calculate_germline_genotype_posteriors(latents);
     const auto& cancer_genotype_posteriors = latents.tumour_model_inferences_.posteriors.genotype_probabilities;
     boost::optional<Genotype<Haplotype>> called_germline_genotype {};
     boost::optional<CancerGenotype<Haplotype>> called_cancer_genotype {};
@@ -1009,7 +1023,8 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                     if (noise_model_evidence > germline_model_evidence) {
                         // Does the normal sample contain the called somatic variant?
                         const auto& noisy_alphas = latents.noise_model_inferences_->posteriors.alphas.at(normal_sample());
-                        const auto noise_mass = compute_somatic_mass(noisy_alphas, parameters_.min_expected_somatic_frequency);
+                        const auto noise_mass = compute_credible_somatic_mass(noisy_alphas,
+                                                                              parameters_.min_expected_somatic_frequency);
                         if (noise_mass > 2 * parameters_.min_credible_somatic_frequency) {
                             somatic_samples.clear();
                         }
@@ -1075,8 +1090,9 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
 }
 
 CancerCaller::GermlineGenotypeProbabilityMap
-CancerCaller::calculate_germline_genotype_posteriors(const Latents& latents, const ModelPosteriors& model_posteriors) const
+CancerCaller::calculate_germline_genotype_posteriors(const Latents& latents) const
 {
+    const auto& model_posteriors = latents.model_posteriors_;
     const auto& germline_genotypes = latents.germline_genotypes_;
     GermlineGenotypeProbabilityMap result {germline_genotypes.size()};
     std::transform(std::cbegin(germline_genotypes), std::cend(germline_genotypes),
@@ -1097,27 +1113,11 @@ CancerCaller::calculate_germline_genotype_posteriors(const Latents& latents, con
     return result;
 }
 
-CancerCaller::ProbabilityVector
-CancerCaller::calculate_probability_samples_not_somatic(const Latents& inferences) const
+Phred<double> CancerCaller::calculate_somatic_probability(const CancerCaller::Latents& latents) const
 {
-    std::vector<double> result(samples_.size());
-    const auto& posterior_alphas = inferences.tumour_model_inferences_.posteriors.alphas;
-    std::transform(std::cbegin(posterior_alphas), std::cend(posterior_alphas),
-                   std::begin(result), [this] (const auto& p) {
-                       const auto a0 = std::accumulate(std::cbegin(p.second), std::prev(std::cend(p.second)), 0.0);
-                       return maths::beta_cdf(p.second.back(), a0, parameters_.min_expected_somatic_frequency);
-                   });
-    return result;
-}
-
-Phred<double> CancerCaller::calculate_somatic_probability(const ProbabilityVector& sample_somatic_posteriors,
-                                                          const ModelPosteriors& model_posteriors) const
-{
-    auto result = 1.0 - std::accumulate(std::cbegin(sample_somatic_posteriors),
-                                        std::cend(sample_somatic_posteriors),
-                                        1.0, std::multiplies<> {});
-    result *= model_posteriors.somatic;
-    return probability_to_phred(1 - result);
+    auto conditional_somatic_mass = compute_credible_somatic_mass(latents.tumour_model_inferences_.posteriors.alphas,
+                                                                  parameters_.min_expected_somatic_frequency);
+    return probability_to_phred(1.0 - latents.model_posteriors_.somatic * conditional_somatic_mass);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>

@@ -143,11 +143,8 @@ private:
     TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const;
     CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
     
-    GermlineGenotypeProbabilityMap
-    calculate_germline_genotype_posteriors(const Latents& latents, const ModelPosteriors& model_posteriors) const;
-    ProbabilityVector calculate_probability_samples_not_somatic(const Latents& inferences) const;
-    Phred<double> calculate_somatic_probability(const ProbabilityVector& sample_somatic_posteriors,
-                                                const ModelPosteriors& model_posteriors) const;
+    GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& latents) const;
+    Phred<double> calculate_somatic_probability(const Latents& latents) const;
 };
 
 class CancerCaller::Latents : public Caller::Latents
