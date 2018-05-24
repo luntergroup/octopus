@@ -562,6 +562,35 @@ std::size_t num_genotypes(unsigned num_elements, unsigned ploidy);
 std::size_t max_num_elements(std::size_t num_genotypes, unsigned ploidy);
 std::size_t element_cardinality_in_genotypes(unsigned num_elements, unsigned ploidy);
 
+template <typename MappableType>
+unsigned count_shared(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs)
+{
+    if (lhs.ploidy() <= rhs.ploidy()) {
+        if (lhs.ploidy() < 2 || (lhs.ploidy() == 2 && !lhs.is_homozygous())) {
+            return std::count_if(std::cbegin(lhs), std::cend(lhs),
+                                 [&rhs] (const auto& element) { return rhs.contains(element); });
+        } else {
+            const auto& lhs_unique = lhs.copy_unique_ref();
+            return std::count_if(std::cbegin(lhs_unique), std::cend(lhs_unique),
+                                 [&rhs] (const auto& element) { return rhs.contains(element); });
+        }
+    } else {
+        return count_shared(rhs, lhs);
+    }
+}
+
+template <typename MappableType>
+bool have_shared(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs)
+{
+    if (lhs.ploidy() <= rhs.ploidy()) {
+        return std::any_of(std::cbegin(lhs), std::cend(lhs), [&rhs] (const auto& element) { return rhs.contains(element); });
+    } else {
+        return have_shared(rhs, lhs);
+    }
+}
+
+using GenotypeIndex = std::vector<unsigned>;
+
 namespace detail {
 
 namespace {
