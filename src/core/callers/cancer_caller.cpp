@@ -1189,40 +1189,27 @@ auto zip(const T&... containers) -> boost::iterator_range<boost::zip_iterator<de
 void CancerCaller::Latents::compute_haplotype_posteriors() const
 {
     Latents::HaplotypeProbabilityMap result {haplotypes_.get().size()};
-    // Contribution from germline model
     for (const auto& haplotype : haplotypes_.get()) {
         result.emplace(haplotype, 0.0);
     }
+    // Contribution from germline model
     for (const auto& p : zip(germline_genotypes_, germline_model_inferences_.posteriors.genotype_probabilities)) {
         for (const auto& haplotype : p.get<0>().copy_unique_ref()) {
-            result.at(haplotype) += p.get<1>();
+            result.at(haplotype) += model_posteriors_.germline * p.get<1>();
         }
     }
     // Contribution from CNV model
-    Latents::HaplotypeProbabilityMap cnv_result {haplotypes_.get().size()};
-    for (const auto& haplotype : haplotypes_.get()) {
-        cnv_result.emplace(haplotype, 0.0);
-    }
     for (const auto& p : zip(germline_genotypes_, cnv_model_inferences_.posteriors.genotype_probabilities)) {
         for (const auto& haplotype : p.get<0>().copy_unique_ref()) {
-            cnv_result.at(haplotype) += p.get<1>();
+            result.at(haplotype) += model_posteriors_.cnv * p.get<1>();
         }
     }
     // Contribution from tumour model
-    Latents::HaplotypeProbabilityMap somatic_result {haplotypes_.get().size()};
-    for (const auto& haplotype : haplotypes_.get()) {
-        somatic_result.emplace(haplotype, 0.0);
-    }
     for (const auto& p : zip(cancer_genotypes_, tumour_model_inferences_.posteriors.genotype_probabilities)) {
         for (const auto& haplotype : p.get<0>().germline_genotype().copy_unique_ref()) {
-            somatic_result.at(haplotype) += p.get<1>();
+            result.at(haplotype) += model_posteriors_.somatic * p.get<1>();
         }
-        somatic_result.at(p.get<0>().somatic_element()) += p.get<1>();
-    }
-    for (auto& p : result) {
-        p.second *= model_posteriors_.germline;
-        p.second += model_posteriors_.cnv * cnv_result.at(p.first);
-        p.second += model_posteriors_.somatic * somatic_result.at(p.first);
+        result.at(p.get<0>().somatic_element()) += model_posteriors_.somatic * p.get<1>();
     }
     haplotype_posteriors_ = std::make_shared<Latents::HaplotypeProbabilityMap>(std::move(result));
 }
