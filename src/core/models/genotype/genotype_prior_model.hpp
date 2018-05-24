@@ -26,11 +26,11 @@ public:
     bool is_primed() const noexcept { return check_is_primed(); }
     
     double evaluate(const Genotype<Haplotype>& genotype) const { return do_evaluate(genotype); }
-    double evaluate(const std::vector<unsigned>& genotype_indices) const { return do_evaluate(genotype_indices); }
+    double evaluate(const GenotypeIndex& genotype) const { return do_evaluate(genotype); }
     
 private:
     virtual double do_evaluate(const Genotype<Haplotype>& genotype) const = 0;
-    virtual double do_evaluate(const std::vector<unsigned>& genotype) const = 0;
+    virtual double do_evaluate(const GenotypeIndex& genotype) const = 0;
     virtual void do_prime(const std::vector<Haplotype>& haplotypes) {};
     virtual void do_unprime() noexcept {};
     virtual bool check_is_primed() const noexcept = 0;

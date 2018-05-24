@@ -684,7 +684,7 @@ auto generate_all_triploid_biallelic_genotypes(const Container& elements)
 }
 
 template <typename Container>
-auto generate_genotype(const Container& elements, const std::vector<unsigned>& element_indicies)
+auto generate_genotype(const Container& elements, const GenotypeIndex& element_indicies)
 {
     GenotypeType<Container> result{static_cast<unsigned>(element_indicies.size())};
     for (const auto i : element_indicies) {
@@ -746,7 +746,7 @@ auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy)
 
 template <typename Container>
 auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy,
-                               std::vector<std::vector<unsigned>>& indices)
+                               std::vector<GenotypeIndex>& indices)
 {
     using GenotypeTp = GenotypeType<Container>;
     using ResultType = std::vector<GenotypeTp>;
@@ -758,7 +758,7 @@ auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy,
     const auto result_size = num_genotypes(num_elements, ploidy);
     result.reserve(result_size);
     indices.reserve(result_size);
-    std::vector<unsigned> element_indicies(ploidy, 0);
+    GenotypeIndex element_indicies(ploidy, 0);
     while (true) {
         if (element_indicies[0] == num_elements) {
             unsigned i {0};
@@ -804,7 +804,7 @@ auto generate_all_genotypes(const std::vector<std::reference_wrapper<const Mappa
 
 template <typename MappableType>
 auto generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
-                            std::vector<std::vector<unsigned>>& indices, std::true_type)
+                            std::vector<GenotypeIndex>& indices, std::true_type)
 {
     std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
     std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
@@ -823,7 +823,7 @@ auto generate_all_genotypes(const std::vector<MappableType>& elements, const uns
 
 template <typename MappableType>
 auto generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
-                            std::vector<std::vector<unsigned>>& indices, std::false_type)
+                            std::vector<GenotypeIndex>& indices, std::false_type)
 {
     return do_generate_all_genotypes(elements, ploidy, indices);
 }
@@ -840,7 +840,7 @@ generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned
 template <typename MappableType>
 std::vector<Genotype<MappableType>>
 generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
-                       std::vector<std::vector<unsigned>>& indices)
+                       std::vector<GenotypeIndex>& indices)
 {
     return detail::generate_all_genotypes(elements, ploidy, indices, detail::RequiresSharedMemory<MappableType> {});
 }

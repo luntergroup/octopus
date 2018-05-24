@@ -19,7 +19,7 @@ auto sum_sizes(const std::vector<std::reference_wrapper<const std::vector<T>>>& 
                            [] (auto curr, const auto& v) noexcept { return curr + v.get().size(); });
 }
 
-double CoalescentPopulationPriorModel::do_evaluate(const std::vector<std::vector<unsigned>>& indices) const
+double CoalescentPopulationPriorModel::do_evaluate(const std::vector<GenotypeIndex>& indices) const
 {
     if (indices.size() == 1) {
         return model_.evaluate(indices.front());

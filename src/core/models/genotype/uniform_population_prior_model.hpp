@@ -38,7 +38,7 @@ private:
     {
         return 1.0;
     }
-    double do_evaluate(const std::vector<std::vector<unsigned>>& indices) const override
+    double do_evaluate(const std::vector<GenotypeIndex>& genotypes) const override
     {
         return 1.0;
     }

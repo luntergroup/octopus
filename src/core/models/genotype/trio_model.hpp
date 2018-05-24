@@ -76,7 +76,7 @@ public:
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
     InferredLatents evaluate(const GenotypeVector& genotypes,
-                             std::vector<std::vector<unsigned>>& genotype_indices,
+                             std::vector<GenotypeIndex>& genotype_indices,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:
