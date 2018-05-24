@@ -460,14 +460,14 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
         erase_below(observed_qualities, 20);
-        return observed_qualities.size() > 2 && static_cast<double>(observed_qualities.size()) / depth > 0.2;
+        return observed_qualities.size() > 2 && static_cast<double>(observed_qualities.size()) / depth > 0.1;
     } else if (is_insertion(variant)) {
         if (num_observations == 1 && alt_sequence_size(variant) > 8) return false;
         if (depth <= 30) {
             return num_observations > 1;
         } else if (depth <= 60) {
             if (num_observations == 1) return false;
-            if (static_cast<double>(num_observations) / depth > 0.4) return true;
+            if (static_cast<double>(num_observations) / depth > 0.3) return true;
             erase_below(observed_qualities, 25);
             if (observed_qualities.size() <= 1) return false;
             if (observed_qualities.size() > 2) return true;
