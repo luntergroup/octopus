@@ -203,7 +203,7 @@ const MappableType& Genotype<MappableType>::operator[](const unsigned n) const
 template <typename MappableType>
 unsigned Genotype<MappableType>::ploidy() const noexcept
 {
-    return static_cast<unsigned>(elements_.size());
+    return elements_.size();
 }
 
 template <typename MappableType>
@@ -221,7 +221,7 @@ unsigned Genotype<MappableType>::zygosity() const
     } else if (ploidy() == 2) {
         return 2;
     }
-    return static_cast<unsigned>(copy_unique().size());
+    return copy_unique().size();
 }
 
 template <typename MappableType>
@@ -233,7 +233,7 @@ bool Genotype<MappableType>::contains(const MappableType& element) const
 template <typename MappableType>
 unsigned Genotype<MappableType>::count(const MappableType& element) const
 {
-    return static_cast<unsigned>(std::count(std::cbegin(elements_), std::cend(elements_), element));
+    return std::count(std::cbegin(elements_), std::cend(elements_), element);
 }
 
 template <typename MappableType>
