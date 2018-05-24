@@ -1488,6 +1488,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             log << "Tumour only calling requested. "
                 "Please note this feature is still under development and results and runtimes may be poor";
         }
+        vc_builder.set_max_somatic_haplotypes(as_unsigned("max-somatic-haplotypes", options));
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
         vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
         vc_builder.set_min_expected_somatic_frequency(options.at("min-expected-somatic-frequency").as<float>());

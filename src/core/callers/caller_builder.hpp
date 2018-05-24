@@ -63,6 +63,7 @@ public:
     
     // cancer
     CallerBuilder& set_normal_sample(SampleName normal_sample);
+    CallerBuilder& set_max_somatic_haplotypes(unsigned n) noexcept;
     CallerBuilder& set_somatic_snv_mutation_rate(double rate) noexcept;
     CallerBuilder& set_somatic_indel_mutation_rate(double rate) noexcept;
     CallerBuilder& set_min_expected_somatic_frequency(double frequency) noexcept;
@@ -106,6 +107,7 @@ private:
         
         // cancer
         boost::optional<SampleName> normal_sample;
+        unsigned max_somatic_haplotypes;
         double somatic_snv_mutation_rate, somatic_indel_mutation_rate;
         double min_expected_somatic_frequency;
         double credible_mass;

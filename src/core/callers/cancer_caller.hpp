@@ -47,6 +47,7 @@ public:
         SomaticMutationModel::Parameters somatic_mutation_model_params;
         double min_expected_somatic_frequency, credible_mass, min_credible_somatic_frequency;
         std::size_t max_genotypes = 20000;
+        unsigned max_somatic_haplotypes = 1;
         NormalContaminationRisk normal_contamination_risk = NormalContaminationRisk::low;
         double cnv_normal_alpha = 50.0, cnv_tumour_alpha = 0.5;
         double somatic_normal_germline_alpha = 50.0, somatic_normal_somatic_alpha = 0.05;
@@ -134,13 +135,16 @@ private:
     void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void evaluate_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     void evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    
     void set_model_priors(Latents& latents) const;
     void set_model_posteriors(Latents& latents) const;
     
+    void fit_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    
     std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const;
     CNVModel::Priors get_cnv_model_priors(const GenotypePriorModel& prior_model) const;
-    TumourModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model) const;
-    TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const;
+    TumourModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
+    TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
     CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
     
     GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& latents) const;
@@ -164,6 +168,7 @@ public:
 private:
     std::reference_wrapper<const std::vector<Haplotype>> haplotypes_;
     std::vector<Genotype<Haplotype>> germline_genotypes_;
+    unsigned somatic_ploidy_ = 1;
     std::vector<CancerGenotype<Haplotype>> cancer_genotypes_;
     boost::optional<std::vector<std::vector<unsigned>>> germline_genotype_indices_ = boost::none;
     boost::optional<std::vector<CancerGenotypeIndex>> cancer_genotype_indices_ = boost::none;

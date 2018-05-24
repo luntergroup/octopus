@@ -176,6 +176,12 @@ CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_max_somatic_haplotypes(unsigned n) noexcept
+{
+    params_.max_somatic_haplotypes = n;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_somatic_snv_mutation_rate(double rate) noexcept
 {
     params_.somatic_snv_mutation_rate = rate;
@@ -350,6 +356,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.credible_mass,
                                                       params_.min_credible_somatic_frequency,
                                                       params_.max_joint_genotypes,
+                                                      params_.max_somatic_haplotypes,
                                                       params_.normal_contamination_risk
                                                   });
         }},

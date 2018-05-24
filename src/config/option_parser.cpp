@@ -484,6 +484,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>(),
      "Normal sample - all other samples are considered tumour")
     
+    ("max-somatic-haplotypes",
+     po::value<int>()->default_value(2),
+     "Maximum number of somatic haplotypes that may be considered")
+    
     ("somatic-snv-mutation-rate",
      po::value<float>()->default_value(1e-04, "0.0001"),
      "Expected SNV somatic mutation rate, per megabase pair, for this sample")
@@ -959,7 +963,7 @@ void validate(const OptionMap& vm)
         "max-open-read-files", "downsample-above", "downsample-target",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
-        "max-joint-genotypes"
+        "max-joint-genotypes", "max-somatic-haplotypes"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
