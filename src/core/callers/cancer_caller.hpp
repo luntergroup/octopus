@@ -166,7 +166,7 @@ private:
     std::vector<Genotype<Haplotype>> germline_genotypes_;
     std::vector<CancerGenotype<Haplotype>> cancer_genotypes_;
     boost::optional<std::vector<std::vector<unsigned>>> germline_genotype_indices_ = boost::none;
-    boost::optional<std::vector<std::pair<std::vector<unsigned>, unsigned>>> cancer_genotype_indices_ = boost::none;
+    boost::optional<std::vector<CancerGenotypeIndex>> cancer_genotype_indices_ = boost::none;
     
     std::reference_wrapper<const std::vector<SampleName>> samples_;
     boost::optional<std::reference_wrapper<const SampleName>> normal_sample_ = boost::none;

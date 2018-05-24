@@ -76,7 +76,7 @@ SomaticCall::SomaticCall(V&& variant,
         if (p.second.somatic) {
             genotype_calls_.emplace(p.first, GenotypeCall {demote(genotype_call), genotype_posterior});
         } else {
-            genotype_calls_.emplace(p.first, GenotypeCall {genotype_call.germline_genotype(), genotype_posterior});
+            genotype_calls_.emplace(p.first, GenotypeCall {genotype_call.germline(), genotype_posterior});
         }
     }
 }
