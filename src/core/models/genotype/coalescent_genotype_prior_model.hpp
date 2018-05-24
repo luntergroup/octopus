@@ -32,7 +32,7 @@ private:
     {
         return model_.evaluate(genotype);
     }
-    double do_evaluate(const std::vector<unsigned>& genotype) const override
+    double do_evaluate(const GenotypeIndex& genotype) const override
     {
         return model_.evaluate(genotype);
     }
