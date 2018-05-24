@@ -383,50 +383,6 @@ void update_genotype_log_posteriors(LogProbabilityVector& result,
     maths::normalise_logs(result);
 }
 
-inline auto max_change(const VBAlpha<2>& lhs, const VBAlpha<2>& rhs) noexcept
-{
-    return std::max(std::abs(lhs.front() - rhs.front()), std::abs(lhs.back() - rhs.back()));
-}
-
-inline auto max_change(const VBAlpha<3>& lhs, const VBAlpha<3>& rhs) noexcept
-{
-    return std::max({std::abs(lhs[0] - rhs[0]), std::abs(lhs[1] - rhs[1]), std::abs(lhs[2] - rhs[2])});
-}
-
-template <std::size_t K>
-auto max_change(const VBAlpha<K>& lhs, const VBAlpha<K>& rhs) noexcept
-{
-    double result {0};
-    for (std::size_t k {0}; k < K; ++k) {
-        const auto curr = std::abs(lhs[k] - rhs[k]);
-        if (curr > result) result = curr;
-    }
-    return result;
-}
-
-template <std::size_t K>
-auto max_change(const VBAlphaVector<K>& prior_alphas, const VBAlphaVector<K>& posterior_alphas) noexcept
-{
-    const auto S = prior_alphas.size();
-    assert(S == posterior_alphas.size());
-    double result {0};
-    for (std::size_t s {0}; s < S; ++s) {
-        const auto curr = max_change(prior_alphas[s], posterior_alphas[s]);
-        if (curr > result) result = curr;
-    }
-    return result;
-}
-
-template <std::size_t K>
-std::pair<bool, double> check_convergence(const VBAlphaVector<K>& prior_alphas,
-                                          const VBAlphaVector<K>& posterior_alphas,
-                                          const double prev_max_change,
-                                          const double epsilon) noexcept
-{
-    const auto new_max_change = max_change(prior_alphas, posterior_alphas);
-    return std::make_pair(std::abs(new_max_change - prev_max_change) < epsilon, new_max_change);
-}
-
 inline auto entropy(const VBTau& tau) noexcept
 {
     return -std::accumulate(std::cbegin(tau), std::cend(tau), 0.0,
@@ -494,14 +450,10 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
     auto responsabilities = init_responsabilities<K>(posterior_alphas, genotype_posteriors, log_likelihoods2);
     assert(responsabilities.size() == log_likelihoods1.size()); // num samples
     auto prev_evidence = std::numeric_limits<double>::lowest();
-    bool is_converged {};
-    double max_change {};
     for (unsigned i {0}; i < params.max_iterations; ++i) {
         update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors, responsabilities, log_likelihoods1);
         exp(genotype_log_posteriors, genotype_posteriors);
         update_alphas(posterior_alphas, prior_alphas, responsabilities);
-        std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas, max_change, params.epsilon);
-        if (is_converged) break;
         auto curr_evidence = calculate_evidence_lower_bound(prior_alphas, posterior_alphas, genotype_log_priors,
                                                             genotype_posteriors, genotype_log_posteriors, responsabilities,
                                                             log_likelihoods1, 1e-10);
