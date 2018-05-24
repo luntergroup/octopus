@@ -1204,12 +1204,13 @@ void CancerCaller::Latents::compute_haplotype_posteriors() const
             result.at(haplotype) += model_posteriors_.cnv * p.get<1>();
         }
     }
+    const auto conditional_somatic_prob = compute_credible_somatic_mass(tumour_model_inferences_.posteriors.alphas, 0.1);
     // Contribution from tumour model
     for (const auto& p : zip(cancer_genotypes_, tumour_model_inferences_.posteriors.genotype_probabilities)) {
         for (const auto& haplotype : p.get<0>().germline_genotype().copy_unique_ref()) {
             result.at(haplotype) += model_posteriors_.somatic * p.get<1>();
         }
-        result.at(p.get<0>().somatic_element()) += model_posteriors_.somatic * p.get<1>();
+        result.at(p.get<0>().somatic_element()) += model_posteriors_.somatic * conditional_somatic_prob * p.get<1>();
     }
     haplotype_posteriors_ = std::make_shared<Latents::HaplotypeProbabilityMap>(std::move(result));
 }
