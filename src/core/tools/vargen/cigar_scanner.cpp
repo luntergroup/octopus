@@ -451,7 +451,7 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
 {
     const auto num_observations = observed_qualities.size();
     if (depth < 4) {
-        return num_observations > 1 || sum(observed_qualities) >= 20 || is_deletion(variant);
+        return num_observations > 1 || sum(observed_qualities) >= 30 || is_deletion(variant);
     }
     const auto num_rev_observations = num_observations - num_fwd_observations;
     if (is_strongly_strand_biased(num_fwd_observations, num_rev_observations)) {
@@ -460,6 +460,7 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
         erase_below(observed_qualities, 20);
+        if (depth <= 10) return observed_qualities.size() > 1;
         return observed_qualities.size() > 2 && static_cast<double>(observed_qualities.size()) / depth > 0.1;
     } else if (is_insertion(variant)) {
         if (num_observations == 1 && alt_sequence_size(variant) > 8) return false;
