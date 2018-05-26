@@ -562,9 +562,9 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
     } else {
         // deletion or mnv
         if (region_size(variant) < 10) {
-            return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.03;
+            return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.02;
         } else {
-            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) > 0.08;
+            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) > 0.04;
         }
     }
 }
