@@ -505,7 +505,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum credible somatic allele frequency that will be reported")
     
     ("credible-mass",
-     po::value<float>()->default_value(0.99, "0.99"),
+     po::value<float>()->default_value(0.9, "0.9"),
      "Mass of the posterior density to use for evaluating allele frequencies")
     
     ("min-somatic-posterior",
