@@ -451,7 +451,7 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
 {
     const auto num_observations = observed_qualities.size();
     if (depth < 4) {
-        return num_observations > 1 || sum(observed_qualities) >= 20 || is_deletion(variant);
+        return num_observations > 1 || sum(observed_qualities) >= 30 || is_deletion(variant);
     }
     const auto num_rev_observations = num_observations - num_fwd_observations;
     if (is_strongly_strand_biased(num_fwd_observations, num_rev_observations)) {
@@ -459,40 +459,16 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
     }
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
-        const auto base_quality_sum = sum(observed_qualities);
-        if (depth <= 60) {
-            if (num_observations < 2) return false;
-            if (base_quality_sum > 100) return true;
-            erase_below(observed_qualities, 8);
-            if (observed_qualities.size() < 2) return false;
-            if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
-            partial_sort(observed_qualities, 2);
-            return observed_qualities[0] >= 20 && observed_qualities[1] >= 20;
-        } else if (depth < 150) {
-            if (num_observations < 3) return false;
-            if (base_quality_sum < 40) return false;
-            if (base_quality_sum > 200) return true;
-            erase_below(observed_qualities, 10);
-            if (observed_qualities.size() < 3) return false;
-            if (static_cast<double>(observed_qualities.size()) / depth > 0.2) return true;
-            partial_sort(observed_qualities, 3);
-            return observed_qualities[0] >= 30 && observed_qualities[1] >= 25 && observed_qualities[2] >= 20;
-        } else {
-            if (num_observations < 8) return false;
-            erase_below(observed_qualities, 10);
-            return static_cast<double>(observed_qualities.size()) / depth > 0.2;
-        }
+        erase_below(observed_qualities, 20);
+        if (depth <= 10) return observed_qualities.size() > 1;
+        return observed_qualities.size() > 2 && static_cast<double>(observed_qualities.size()) / depth > 0.1;
     } else if (is_insertion(variant)) {
         if (num_observations == 1 && alt_sequence_size(variant) > 8) return false;
-        if (depth <= 15) {
-            return num_observations > 1;
-        } else if (depth <= 30) {
-            if (static_cast<double>(num_observations) / depth > 0.45) return true;
-            erase_below(observed_qualities, 20);
+        if (depth <= 30) {
             return num_observations > 1;
         } else if (depth <= 60) {
             if (num_observations == 1) return false;
-            if (static_cast<double>(num_observations) / depth > 0.4) return true;
+            if (static_cast<double>(num_observations) / depth > 0.3) return true;
             erase_below(observed_qualities, 25);
             if (observed_qualities.size() <= 1) return false;
             if (observed_qualities.size() > 2) return true;
