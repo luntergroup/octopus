@@ -155,6 +155,7 @@ void CancerCaller::fit_tumour_model(Latents& latents, const HaplotypeLikelihoodC
             latents.cancer_genotype_indices_ = std::move(prev_cancer_genotype_indices);
         }
     }
+    if (debug_log_) stream(*debug_log_) << "Using tumour model with somatic ploidy " << latents.somatic_ploidy_;
 }
 
 static double calculate_model_posterior(const double normal_germline_model_log_evidence,
