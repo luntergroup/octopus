@@ -563,11 +563,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "Enable all variant call filtering")
     
     ("filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 20 | AF < 0.05 | SB > 0.98 | BQ < 10"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 10"),
      "Boolean expression to use to filter variant calls")
     
     ("somatic-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 40 | MP < 30 | SB > 0.90 | BQ < 15 | DP < 3"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 40 | MP < 10 | SB > 0.90 | BQ < 15 | DP < 3"),
      "Boolean expression to use to filter variant calls")
     
     ("use-calling-reads-for-filtering",
