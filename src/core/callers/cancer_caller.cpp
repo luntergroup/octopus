@@ -1015,6 +1015,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     const auto& cancer_genotype_posteriors = latents.tumour_model_inferences_.posteriors.genotype_probabilities;
     log(latents.germline_genotypes_, germline_genotype_posteriors, latents.cnv_model_inferences_,
         latents.cancer_genotypes_, latents.tumour_model_inferences_);
+    const auto germline_candidate_posteriors = compute_candidate_posteriors(candidates, germline_genotype_posteriors);
     boost::optional<Genotype<Haplotype>> called_germline_genotype {};
     boost::optional<CancerGenotype<Haplotype>> called_cancer_genotype {};
     if (model_posteriors.somatic > model_posteriors.germline && somatic_posterior >= parameters_.min_somatic_posterior) {
@@ -1030,7 +1031,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     GermlineVariantCalls germline_variant_calls;
     std::vector<VariantReference> uncalled_germline_candidates;
     std::tie(germline_variant_calls, uncalled_germline_candidates) = call_candidates(germline_candidate_posteriors,
-                                                                                     called_germline_genotype,
+                                                                                     *called_germline_genotype,
                                                                                      parameters_.min_variant_posterior);
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     Genotype<Haplotype> called_somatic_genotype {};
@@ -1097,11 +1098,11 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     GermlineGenotypeCalls germline_genotype_calls {};
     germline_genotype_calls.reserve(called_germline_regions.size());
     for (const auto& region : called_germline_regions) {
-        auto genotype_chunk = copy<Allele>(called_germline_genotype, region);
+        auto genotype_chunk = copy<Allele>(*called_germline_genotype, region);
         const auto inv_posterior = std::accumulate(std::cbegin(germline_genotype_posteriors),
                                                    std::cend(germline_genotype_posteriors), 0.0,
                                                    [&called_germline_genotype] (const double curr, const auto& p) {
-                                                       return curr + (contains(p.first, called_germline_genotype) ? 0.0 : p.second);
+                                                       return curr + (contains(p.first, *called_germline_genotype) ? 0.0 : p.second);
                                                    });
         if (called_somatic_genotype.ploidy() > 0) {
             germline_genotype_calls.emplace_back(std::move(genotype_chunk),
