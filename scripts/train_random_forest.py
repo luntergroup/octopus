@@ -10,7 +10,8 @@ import random
 import numpy as np
 
 def run_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads, out_path):
-    call([octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed, '-o', out_path, '--threads', str(threads), '--legacy', '--csr-train'] + measures)
+    call([octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed, '-o', out_path, '--threads', str(threads),
+          '--legacy', '--csr-train'] + measures)
 
 def get_reference_id(ref_path):
     return basename(ref_path).replace(".fasta", "")
@@ -27,9 +28,11 @@ def call_variants(octopus, ref_path, bam_path, regions_bed, measures, threads, o
     return legacy_vcf
 
 def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_path, out_dir):
-    call([rtg, 'vcfeval', '-b', truth_vcf_path, '-t', rtg_ref_path, '--evaluation-regions', confident_bed_path, '--ref-overlap', '-c', octopus_vcf_path, '-o', out_dir])
+    call([rtg, 'vcfeval', '-b', truth_vcf_path, '-t', rtg_ref_path, '--evaluation-regions', confident_bed_path,
+          '--ref-overlap', '-c', octopus_vcf_path, '-o', out_dir])
 
-def eval_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads, rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, out_dir):
+def eval_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads,
+                 rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, out_dir):
     octopus_vcf = call_variants(octopus, ref_path, bam_path, regions_bed, measures, threads, out_dir)
     rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".legacy.vcf.gz", ".eval"))
     run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf, rtf_eval_dir)
@@ -91,16 +94,19 @@ def add_header(fname, header):
         f.write(header + '\n')
         f.writelines(lines)
 
-def run_ranger_training(ranger, data_path, threads, out):
-    call([ranger, '--file', data_path, '--depvarname', 'TP', '--probability', '--nthreads', str(threads), '--outprefix', out, '--write', out + '.forest'])
+def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out):
+    call([ranger, '--file', data_path, '--depvarname', 'TP', '--probability',
+          '--ntree', str(n_trees), '--targetpartitionsize', str(min_node_size),
+          '--nthreads', str(threads), '--outprefix', out, '--write', out + '.forest'])
 
 def main(options):
     if not exists(options.out):
         makedirs(options.out)
     rtg_eval_dirs = []
     for bam_path in options.reads:
-        rtg_eval_dirs.append(eval_octopus(options.octopus, options.reference, bam_path, options.regions, options.measures, options.threads,
-                                      options.rtg, options.sdf, options.truth, options.confident, options.out))
+        rtg_eval_dirs.append(eval_octopus(options.octopus, options.reference, bam_path, options.regions, options.measures,
+                                          options.threads, options.rtg, options.sdf, options.truth, options.confident,
+                                          options.out))
     data_paths = []
     tmp_paths = []
     for rtg_eval in rtg_eval_dirs:
@@ -127,7 +133,7 @@ def main(options):
     ranger_header = ' '.join(options.measures + ['TP'])
     add_header(master_data_path, ranger_header)
     ranger_out_prefix = join(options.out, "ranger_octopus")
-    run_ranger_training(options.ranger, master_data_path, options.threads, ranger_out_prefix)
+    run_ranger_training(options.ranger, master_data_path, options.trees, options.threads, ranger_out_prefix)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -173,6 +179,14 @@ if __name__ == '__main__':
                         type=str,
                         required=True,
                         help='Ranger binary')
+    parser.add_argument('--trees',
+                        type=int,
+                        default=300,
+                        help='Number of trees to use in the random forest')
+    parser.add_argument('--min_node_size',
+                        type=int,
+                        default=20,
+                        help='Node size to stop growing trees, implicitly limiting tree depth')
     parser.add_argument('-o', '--out',
                         type=str,
                         help='Output directory')
