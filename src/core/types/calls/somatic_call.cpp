@@ -10,13 +10,13 @@ namespace octopus {
 void SomaticCall::decorate(VcfRecord::Builder& record) const
 {
     record.set_somatic();
-    record.add_format("SCR");
+    record.add_format("VAF_CR");
     for (const auto& p : credible_regions_) {
         if (p.second.somatic) {
             using utils::to_string;
-            record.set_format(p.first, "SCR", {to_string(p.second.somatic->first), to_string(p.second.somatic->second)});
+            record.set_format(p.first, "VAF_CR", {to_string(p.second.somatic->first), to_string(p.second.somatic->second)});
         } else {
-            record.set_format_missing(p.first, "SCR");
+            record.set_format_missing(p.first, "VAF_CR");
         }
     }
 }
