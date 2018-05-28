@@ -49,7 +49,7 @@ private:
     {
         return do_evaluate_helper(genotypes);
     }
-    double do_evaluate(const std::vector<std::vector<unsigned>>& indices) const override;
+    double do_evaluate(const std::vector<GenotypeIndex>& indices) const override;
     double do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const override;
     void do_prime(const std::vector<Haplotype>& haplotypes) override
     {

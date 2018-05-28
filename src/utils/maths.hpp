@@ -704,7 +704,7 @@ RealType beta_cdf(const RealType a, const RealType b, const RealType x)
 }
 
 template <typename RealType>
-RealType beta_cdf_complement(const RealType a, const RealType b, const RealType x)
+RealType beta_sf(const RealType a, const RealType b, const RealType x)
 {
     const boost::math::beta_distribution<> beta_dist {a, b};
     return boost::math::cdf(boost::math::complement(beta_dist, x));
@@ -786,6 +786,20 @@ beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
         return detail::beta_hdi_unbounded_rhs(a, mass);
     }
     return detail::beta_hdi_skewed(a, b, mass);
+}
+
+template <typename RealType>
+RealType dirichlet_marginal_cdf(const std::vector<RealType>& alphas, const std::size_t k, const RealType x)
+{
+    const auto a_0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), RealType {});
+    return beta_cdf(alphas[k], a_0 - alphas[k], x);
+}
+
+template <typename RealType>
+RealType dirichlet_marginal_sf(const std::vector<RealType>& alphas, const std::size_t k, const RealType x)
+{
+    const auto a_0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), RealType {});
+    return beta_sf(alphas[k], a_0 - alphas[k], x);
 }
 
 template <typename Container>

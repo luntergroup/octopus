@@ -25,6 +25,8 @@ set(EXCEPTIONS_SOURCES
     exceptions/missing_index_error.cpp
     exceptions/unwritable_file_error.hpp
     exceptions/unwritable_file_error.cpp
+    exceptions/unimplemented_feature_error.hpp
+    exceptions/unimplemented_feature_error.cpp
 )
 
 set(CONCEPTS_SOURCES

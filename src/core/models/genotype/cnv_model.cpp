@@ -47,7 +47,7 @@ template <std::size_t K>
 CNVModel::InferredLatents
 run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<Genotype<Haplotype>>& genotypes,
-                      const std::vector<std::vector<unsigned>>& genotype_indices,
+                      const std::vector<GenotypeIndex>& genotype_indices,
                       const CNVModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params);
@@ -74,7 +74,7 @@ CNVModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
 
 CNVModel::InferredLatents
 CNVModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
-                   const std::vector<std::vector<unsigned>>& genotype_indices,
+                   const std::vector<GenotypeIndex>& genotype_indices,
                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
@@ -203,7 +203,7 @@ auto generate_seeds(const std::vector<SampleName>& samples,
                     const LogProbabilityVector& genotype_log_priors,
                     const CNVModel::Priors& priors,
                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                    const boost::optional<const std::vector<std::vector<unsigned>>&> genotype_indices = boost::none)
+                    const boost::optional<const std::vector<GenotypeIndex>&> genotype_indices = boost::none)
 {
     std::vector<LogProbabilityVector> result {};
     result.reserve(1 + samples.size());
@@ -259,7 +259,7 @@ template <std::size_t K>
 CNVModel::InferredLatents
 run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<Genotype<Haplotype>>& genotypes,
-                      const std::vector<std::vector<unsigned>>& genotype_indices,
+                      const std::vector<GenotypeIndex>& genotype_indices,
                       const CNVModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params)

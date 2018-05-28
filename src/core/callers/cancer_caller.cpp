@@ -99,16 +99,14 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 {
     // Store any intermediate results in Latents for reuse, so the order of model evaluation matters!
     auto result = std::make_unique<Latents>(haplotypes, samples_);
+    set_model_priors(*result);
+    if (has_normal_sample()) result->normal_sample_ = std::cref(normal_sample());
     generate_germline_genotypes(*result, haplotypes);
     if (debug_log_) stream(*debug_log_) << "There are " << result->germline_genotypes_.size() << " candidate germline genotypes";
     evaluate_germline_model(*result, haplotype_likelihoods);
     evaluate_cnv_model(*result, haplotype_likelihoods);
-    generate_cancer_genotypes(*result, haplotype_likelihoods);
-    if (debug_log_) stream(*debug_log_) << "There are " << result->cancer_genotypes_.size() << " candidate cancer genotypes";
-    if (has_normal_sample()) result->normal_sample_ = std::cref(normal_sample());
-    evaluate_tumour_model(*result, haplotype_likelihoods);
+    fit_tumour_model(*result, haplotype_likelihoods);
     evaluate_noise_model(*result, haplotype_likelihoods);
-    set_model_priors(*result);
     set_model_posteriors(*result);
     return result;
 }
@@ -122,10 +120,47 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
                                      dynamic_cast<const Latents&>(latents));
 }
 
+void CancerCaller::fit_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    model::TumourModel::InferredLatents prev_tumour_latents;
+    std::vector<CancerGenotype<Haplotype>> prev_cancer_genotypes;
+    boost::optional<std::vector<CancerGenotypeIndex>> prev_cancer_genotype_indices;
+    for (unsigned somatic_ploidy {1}; somatic_ploidy <= parameters_.max_somatic_haplotypes; ++somatic_ploidy) {
+        if (debug_log_) stream(*debug_log_) << "Fitting tumour model with somatic ploidy " << somatic_ploidy;
+        latents.somatic_ploidy_ = somatic_ploidy;
+        generate_cancer_genotypes(latents, haplotype_likelihoods);
+        if (debug_log_) stream(*debug_log_) << "There are " << latents.cancer_genotypes_.size() << " candidate cancer genotypes";
+        evaluate_tumour_model(latents, haplotype_likelihoods);
+        if (somatic_ploidy > 1) {
+            if (latents.tumour_model_inferences_.approx_log_evidence <= prev_tumour_latents.approx_log_evidence) {
+                break;
+            }
+        } else if (latents.tumour_model_inferences_.approx_log_evidence < latents.germline_model_inferences_.log_evidence) {
+            break;
+        }
+        if (latents.haplotypes_.get().size() <= somatic_ploidy + 1) break;
+        if (somatic_ploidy < parameters_.max_somatic_haplotypes) {
+            // save previous state
+            prev_tumour_latents = std::move(latents.tumour_model_inferences_);
+            prev_cancer_genotypes = std::move(latents.cancer_genotypes_);
+            prev_cancer_genotype_indices = std::move(latents.cancer_genotype_indices_);
+        }
+    }
+    if (latents.somatic_ploidy_ > 1) {
+        if (latents.tumour_model_inferences_.approx_log_evidence <= prev_tumour_latents.approx_log_evidence) {
+            // load previous state
+            --latents.somatic_ploidy_;
+            latents.tumour_model_inferences_ = std::move(prev_tumour_latents);
+            latents.cancer_genotypes_ = std::move(prev_cancer_genotypes);
+            latents.cancer_genotype_indices_ = std::move(prev_cancer_genotype_indices);
+        }
+    }
+}
+
 static double calculate_model_posterior(const double normal_germline_model_log_evidence,
                                         const double normal_dummy_model_log_evidence)
 {
-    constexpr double normalModelPrior {0.9999999};
+    constexpr double normalModelPrior {0.99};
     constexpr double dummyModelPrior {1.0 - normalModelPrior};
     const auto normal_model_ljp = std::log(normalModelPrior) + normal_germline_model_log_evidence;
     const auto dummy_model_ljp  = std::log(dummyModelPrior) + normal_dummy_model_log_evidence;
@@ -137,7 +172,7 @@ static double calculate_model_posterior(const double germline_model_log_evidence
                                         const double dummy_model_log_evidence,
                                         const double noise_model_log_evidence)
 {
-    constexpr double normalModelPrior {0.9999999};
+    constexpr double normalModelPrior {0.99};
     constexpr double dummyModelPrior {1.0 - normalModelPrior};
     const auto normal_model_ljp = std::log(normalModelPrior) + germline_model_log_evidence;
     const auto dummy_model_ljp  = std::log(dummyModelPrior) + dummy_model_log_evidence;
@@ -205,7 +240,7 @@ void CancerCaller::generate_germline_genotypes(Latents& latents, const std::vect
     if (haplotypes.size() < 4) {
         latents.germline_genotypes_ = generate_all_genotypes(haplotypes, parameters_.ploidy);
     } else {
-        std::vector<std::vector<unsigned>> germline_genotype_indices {};
+        std::vector<GenotypeIndex> germline_genotype_indices {};
         latents.germline_genotypes_ = generate_all_genotypes(haplotypes, parameters_.ploidy, germline_genotype_indices);
         latents.germline_genotype_indices_ = std::move(germline_genotype_indices);
     }
@@ -254,7 +289,7 @@ auto extract_greatest_probability_values(const std::vector<T>& values,
 }
 
 auto extract_greatest_probability_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
-                                            const std::vector<std::vector<unsigned>>& genotype_indices,
+                                            const std::vector<GenotypeIndex>& genotype_indices,
                                             const std::vector<double>& probabilities,
                                             const std::size_t n,
                                             const boost::optional<double> min_include_probability = boost::none,
@@ -262,7 +297,7 @@ auto extract_greatest_probability_genotypes(const std::vector<Genotype<Haplotype
 {
     assert(genotypes.size() == genotype_indices.size());
     using GenotypeReference      = std::reference_wrapper<const Genotype<Haplotype>>;
-    using GenotypeIndexReference = std::reference_wrapper<const std::vector<unsigned>>;
+    using GenotypeIndexReference = std::reference_wrapper<const GenotypeIndex>;
     std::vector<std::pair<GenotypeReference, GenotypeIndexReference>> zipped {};
     zipped.reserve(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(genotype_indices), std::back_inserter(zipped),
@@ -270,7 +305,7 @@ auto extract_greatest_probability_genotypes(const std::vector<Genotype<Haplotype
     auto tmp = extract_greatest_probability_values(zipped, probabilities, n, min_include_probability, max_exclude_probability);
     std::vector<Genotype<Haplotype>> result_genotypes {};
     result_genotypes.reserve(tmp.size());
-    std::vector<std::vector<unsigned>> result_indices {};
+    std::vector<GenotypeIndex> result_indices {};
     result_indices.reserve(tmp.size());
     for (const auto& p : tmp) {
         result_genotypes.push_back(p.first.get());
@@ -301,6 +336,13 @@ void CancerCaller::generate_cancer_genotypes(Latents& latents, const HaplotypeLi
     }
 }
 
+auto calculate_max_germline_genotype_bases(const unsigned max_genotypes, const unsigned num_haplotypes,
+                                           const unsigned somatic_ploidy)
+{
+    const auto num_somatic_genotypes = num_genotypes(num_haplotypes, somatic_ploidy);
+    return max_genotypes / num_somatic_genotypes;
+}
+
 void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     const auto& germline_genotypes = latents.germline_genotypes_;
@@ -315,23 +357,24 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
     }
     const auto& germline_normal_posteriors = latents.normal_germline_inferences_->posteriors.genotype_probabilities;
     const auto max_allowed_cancer_genotypes = std::max(parameters_.max_genotypes, germline_genotypes.size());
-    const auto max_germline_genotype_bases = max_allowed_cancer_genotypes / latents.haplotypes_.get().size();
+    const auto max_germline_genotype_bases = calculate_max_germline_genotype_bases(max_allowed_cancer_genotypes, latents.haplotypes_.get().size(), latents.somatic_ploidy_);
     if (latents.germline_genotype_indices_) {
         std::vector<Genotype<Haplotype>> germline_bases;
-        std::vector<std::vector<unsigned>> germline_bases_indices;
+        std::vector<GenotypeIndex> germline_bases_indices;
         std::tie(germline_bases, germline_bases_indices) = extract_greatest_probability_genotypes(germline_genotypes,
                                                                                                   *latents.germline_genotype_indices_,
                                                                                                   germline_normal_posteriors,
                                                                                                   max_germline_genotype_bases,
                                                                                                   1e-100, 1e-2);
-        std::vector<std::pair<std::vector<unsigned>, unsigned>> cancer_genotype_indices {};
+        std::vector<CancerGenotypeIndex> cancer_genotype_indices {};
         latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_bases, germline_bases_indices,
-                                                                  latents.haplotypes_, cancer_genotype_indices);
+                                                                  latents.haplotypes_, cancer_genotype_indices,
+                                                                  latents.somatic_ploidy_);
         latents.cancer_genotype_indices_ = std::move(cancer_genotype_indices);
     } else {
         auto germline_bases = extract_greatest_probability_values(germline_genotypes, germline_normal_posteriors,
                                                                   max_germline_genotype_bases, 1e-100, 1e-2);
-        latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_bases, latents.haplotypes_);
+        latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_bases, latents.haplotypes_, latents.somatic_ploidy_);
     }
 }
 
@@ -368,7 +411,7 @@ void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, co
     const auto& germline_genotype_posteriors = latents.germline_model_inferences_.posteriors.genotype_probabilities;
     std::vector<double> germline_model_haplotype_posteriors(haplotypes.size());
     if (latents.germline_genotype_indices_) {
-        std::vector<unsigned> buffer {};
+        GenotypeIndex buffer {};
         for (std::size_t g {0}; g < germline_genotypes.size(); ++g) {
             const auto& g_indices = (*latents.germline_genotype_indices_)[g];
             for (auto idx : g_indices) {
@@ -390,13 +433,13 @@ void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, co
         }
     }
     const auto max_allowed_cancer_genotypes = std::max(parameters_.max_genotypes, germline_genotypes.size());
-    const auto max_germline_genotype_bases = max_allowed_cancer_genotypes / latents.haplotypes_.get().size();
+    const auto max_germline_genotype_bases = calculate_max_germline_genotype_bases(max_allowed_cancer_genotypes, latents.haplotypes_.get().size(), latents.somatic_ploidy_);
     const auto max_germline_haplotype_bases = max_num_elements(max_germline_genotype_bases, parameters_.ploidy);
     const auto top_haplotypes = extract_greatest_probability_values(haplotypes, germline_model_haplotype_posteriors,
                                                                     max_germline_haplotype_bases);
     auto germline_bases = generate_all_genotypes(top_haplotypes, parameters_.ploidy);
     if (latents.germline_genotype_indices_) {
-        std::vector<std::vector<unsigned>> germline_bases_indices;
+        std::vector<GenotypeIndex> germline_bases_indices;
         germline_bases_indices.reserve(germline_bases.size());
         if (std::is_sorted(std::cbegin(germline_genotypes), std::cend(germline_genotypes), GenotypeLess {})) {
             std::sort(std::begin(germline_bases), std::end(germline_bases), GenotypeLess {});
@@ -421,24 +464,26 @@ void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, co
                 germline_bases_indices.push_back((*latents.germline_genotype_indices_)[genotype_indices.at(genotype)]);
             }
         }
-        std::vector<std::pair<std::vector<unsigned>, unsigned>> cancer_genotype_indices {};
+        std::vector<CancerGenotypeIndex> cancer_genotype_indices {};
         latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_bases, germline_bases_indices,
-                                                                  latents.haplotypes_, cancer_genotype_indices);
+                                                                  latents.haplotypes_, cancer_genotype_indices,
+                                                                  latents.somatic_ploidy_);
         latents.cancer_genotype_indices_ = std::move(cancer_genotype_indices);
     } else {
-        latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_bases, haplotypes);
+        latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_bases, haplotypes, latents.somatic_ploidy_);
     }
 }
 
 void CancerCaller::generate_cancer_genotypes(Latents& latents, const std::vector<Genotype<Haplotype>>& germline_genotypes) const
 {
     if (latents.germline_genotype_indices_) {
-        std::vector<std::pair<std::vector<unsigned>, unsigned>> cancer_genotype_indices {};
+        std::vector<CancerGenotypeIndex> cancer_genotype_indices {};
         latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_genotypes, *latents.germline_genotype_indices_,
-                                                                  latents.haplotypes_, cancer_genotype_indices);
+                                                                  latents.haplotypes_, cancer_genotype_indices,
+                                                                  latents.somatic_ploidy_);
         latents.cancer_genotype_indices_ = std::move(cancer_genotype_indices);
     } else {
-        latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_genotypes, latents.haplotypes_);
+        latents.cancer_genotypes_ = generate_all_cancer_genotypes(germline_genotypes, latents.haplotypes_, latents.somatic_ploidy_);
     }
 }
 
@@ -481,7 +526,7 @@ void CancerCaller::evaluate_tumour_model(Latents& latents, const HaplotypeLikeli
     assert(latents.germline_prior_model_ && !latents.cancer_genotypes_.empty());
     SomaticMutationModel mutation_model {parameters_.somatic_mutation_model_params};
     latents.cancer_genotype_prior_model_ = CancerGenotypePriorModel {*latents.germline_prior_model_, std::move(mutation_model)};
-    auto somatic_model_priors = get_somatic_model_priors(*latents.cancer_genotype_prior_model_);
+    auto somatic_model_priors = get_somatic_model_priors(*latents.cancer_genotype_prior_model_, latents.somatic_ploidy_);
     const TumourModel somatic_model {samples_, somatic_model_priors};
     if (latents.cancer_genotype_indices_) {
         assert(latents.cancer_genotype_prior_model_->germline_model().is_primed());
@@ -515,7 +560,7 @@ void CancerCaller::evaluate_noise_model(Latents& latents, const HaplotypeLikelih
             }
         }
         assert(latents.cancer_genotype_prior_model_);
-        auto noise_model_priors = get_noise_model_priors(*latents.cancer_genotype_prior_model_);
+        auto noise_model_priors = get_noise_model_priors(*latents.cancer_genotype_prior_model_, latents.somatic_ploidy_);
         const TumourModel noise_model {{*parameters_.normal_sample}, noise_model_priors};
         auto noise_genotypes = get_high_posterior_genotypes(latents.cancer_genotypes_, latents.tumour_model_inferences_);
         latents.noise_model_inferences_ = noise_model.evaluate(noise_genotypes, haplotype_likelihoods);
@@ -567,34 +612,40 @@ CancerCaller::get_cnv_model_priors(const GenotypePriorModel& prior_model) const
     return Priors {prior_model, std::move(cnv_alphas)};
 }
 
+auto make_dirichlet_alphas(unsigned n_germline, double germline, unsigned n_somatic, double somatic)
+{
+    model::TumourModel::Priors::GenotypeMixturesDirichletAlphas result(n_germline + n_somatic);
+    std::fill_n(std::begin(result), n_germline, germline);
+    std::fill_n(std::rbegin(result), n_somatic, somatic);
+    return result;
+}
+
 CancerCaller::TumourModel::Priors
-CancerCaller::get_somatic_model_priors(const CancerGenotypePriorModel& prior_model) const
+CancerCaller::get_somatic_model_priors(const CancerGenotypePriorModel& prior_model, const unsigned somatic_ploidy) const
 {
     using Priors = TumourModel::Priors;
     Priors::GenotypeMixturesDirichletAlphaMap alphas {};
     alphas.reserve(samples_.size());
     for (const auto& sample : samples_) {
         if (has_normal_sample() && sample == normal_sample()) {
-            Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy + 1, parameters_.somatic_normal_germline_alpha);
-            sample_alphas.back() = parameters_.somatic_normal_somatic_alpha;
-            alphas.emplace(sample, std::move(sample_alphas));
+            alphas.emplace(sample, make_dirichlet_alphas(parameters_.ploidy, parameters_.somatic_normal_germline_alpha,
+                                                         somatic_ploidy, parameters_.somatic_normal_somatic_alpha));
         } else {
-            Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy + 1, parameters_.somatic_tumour_germline_alpha);
-            sample_alphas.back() = parameters_.somatic_tumour_somatic_alpha;
-            alphas.emplace(sample, std::move(sample_alphas));
+            alphas.emplace(sample, make_dirichlet_alphas(parameters_.ploidy, parameters_.somatic_tumour_germline_alpha,
+                                                         somatic_ploidy, parameters_.somatic_tumour_somatic_alpha));
         }
     }
     return Priors {prior_model, std::move(alphas)};
 }
 
 CancerCaller::TumourModel::Priors
-CancerCaller::get_noise_model_priors(const CancerGenotypePriorModel& prior_model) const
+CancerCaller::get_noise_model_priors(const CancerGenotypePriorModel& prior_model, const unsigned somatic_ploidy) const
 {
     // The noise model is intended to capture noise that may also be present in the normal sample,
     // hence all samples have the same prior alphas.
     using Priors = TumourModel::Priors;
-    Priors::GenotypeMixturesDirichletAlphas noise_alphas(parameters_.ploidy + 1, parameters_.somatic_normal_germline_alpha);
-    noise_alphas.back() = parameters_.somatic_tumour_somatic_alpha;
+    auto noise_alphas = make_dirichlet_alphas(parameters_.ploidy, parameters_.somatic_normal_germline_alpha,
+                                              somatic_ploidy, parameters_.somatic_tumour_somatic_alpha);
     Priors::GenotypeMixturesDirichletAlphaMap alphas {};
     alphas.reserve(samples_.size());
     for (const auto& sample : samples_) {
@@ -626,6 +677,66 @@ namespace {
 
 using VariantReference  = std::reference_wrapper<const Variant>;
 using VariantPosteriorVector = std::vector<std::pair<VariantReference, Phred<double>>>;
+
+auto compute_marginal_credible_interval(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+                                        const std::size_t k, const double mass)
+{
+    const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
+    return maths::beta_hdi(alphas[k], a0 - alphas[k], mass);
+}
+
+auto compute_marginal_credible_intervals(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+                                         const double mass)
+{
+    const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
+    std::vector<std::pair<double, double>> result {};
+    result.reserve(alphas.size());
+    for (const auto& alpha : alphas) {
+        result.push_back(maths::beta_hdi(alpha, a0 - alpha, mass));
+    }
+    return result;
+}
+
+using CredibleRegionMap = std::unordered_map<SampleName, std::vector<std::pair<double, double>>>;
+
+auto compute_marginal_credible_intervals(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+                                         const double mass)
+{
+    CredibleRegionMap result {};
+    result.reserve(alphas.size());
+    for (const auto& p : alphas) {
+        result.emplace(p.first, compute_marginal_credible_intervals(p.second, mass));
+    }
+    return result;
+}
+
+auto compute_credible_somatic_mass(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+                                   const unsigned somatic_ploidy, const double min_credible_somatic_frequency)
+{
+    if (somatic_ploidy == 1) {
+        return maths::dirichlet_marginal_sf(alphas, alphas.size() - 1, min_credible_somatic_frequency);
+    } else {
+        double inv_result {1.0};
+        for (unsigned i {1}; i <= somatic_ploidy; ++i) {
+            inv_result *= maths::dirichlet_marginal_cdf(alphas, alphas.size() - i, min_credible_somatic_frequency);
+        }
+        return 1.0 - inv_result;
+    }
+}
+
+auto compute_credible_somatic_mass(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+                                   const unsigned somatic_ploidy, const double min_credible_somatic_frequency)
+{
+    double inv_result {1.0};
+    for (const auto& p : alphas) {
+        if (somatic_ploidy == 1) {
+            inv_result *= maths::dirichlet_marginal_cdf(p.second, p.second.size() - 1, min_credible_somatic_frequency);
+        } else {
+            inv_result *= 1.0 - compute_credible_somatic_mass(p.second, somatic_ploidy, min_credible_somatic_frequency);
+        }
+    }
+    return 1.0 - inv_result;
+}
 
 struct GermlineVariantCall : Mappable<GermlineVariantCall>
 {
@@ -678,8 +789,7 @@ struct GermlineGenotypeCall
     , posterior {posterior}
     {}
     
-    Genotype<Allele> genotype;
-    boost::optional<Allele> somatic;
+    Genotype<Allele> genotype, somatic;
     Phred<double> posterior;
 };
 
@@ -693,7 +803,7 @@ struct CancerGenotypeCall
     
     CancerGenotype<Allele> genotype;
     Phred<double> posterior;
-    std::unordered_map<SampleName, std::vector<std::pair<double, double>>> credible_regions;
+    CredibleRegionMap credible_regions;
 };
 
 using CancerGenotypeCalls = std::vector<CancerGenotypeCall>;
@@ -758,6 +868,11 @@ auto call_candidates(const VariantPosteriorVector& candidate_posteriors,
 
 // somatic variant posterior
 
+bool is_somatic(const Allele& allele, const CancerGenotype<Haplotype>& genotype)
+{
+    return contains(genotype.somatic(), allele) && !contains(genotype.germline(), allele);
+}
+
 auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& candidates,
                                         const std::vector<CancerGenotype<Haplotype>>& cancer_genotypes,
                                         const std::vector<double>& cancer_genotype_posteriors,
@@ -766,14 +881,12 @@ auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& can
 {
     VariantPosteriorVector result {};
     result.reserve(candidates.size());
-    
     for (const auto& candidate : candidates) {
         const auto& allele = candidate.get().alt_allele();
         const auto p = std::inner_product(std::cbegin(cancer_genotypes), std::cend(cancer_genotypes),
                                           std::cbegin(cancer_genotype_posteriors), 0.0, std::plus<> {},
                                           [&allele] (const auto& genotype, auto posterior) {
-                                              if (genotype.somatic_element().contains(allele)
-                                                  && !contains(genotype.germline_genotype(), allele)) {
+                                              if (is_somatic(allele, genotype)) {
                                                   return posterior;
                                               } else {
                                                   return 0.0;
@@ -782,7 +895,6 @@ auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& can
         const auto complement = std::min(somatic_model_posterior * p * somatic_posterior, 1.0);
         result.emplace_back(candidate, probability_to_phred(1.0 - complement));
     }
-    
     return result;
 }
 
@@ -799,44 +911,11 @@ auto call_somatic_variants(const VariantPosteriorVector& somatic_variant_posteri
     return result;
 }
 
-template <typename T>
-auto compute_marginal_credible_interval(const T& alphas, const double mass)
-{
-    const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
-    std::vector<std::pair<double, double>> result {};
-    result.reserve(alphas.size());
-    for (const auto& alpha : alphas) {
-        result.push_back(maths::beta_hdi(alpha, a0 - alpha, mass));
-    }
-    return result;
-}
-
-using CredibleRegionMap = std::unordered_map<SampleName, std::vector<std::pair<double, double>>>;
-
-template <typename M>
-auto compute_marginal_credible_intervals(const M& alphas, const double mass)
-{
-    CredibleRegionMap result {};
-    result.reserve(alphas.size());
-    for (const auto& p : alphas) {
-        result.emplace(p.first, compute_marginal_credible_interval(p.second, mass));
-    }
-    return result;
-}
-
-template <typename T>
-auto compute_somatic_mass(const T& alphas, const double c = 0.05)
-{
-    const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
-    return maths::beta_cdf_complement(alphas.back(), a0 - alphas.back(), c);
-}
-
-template <typename T>
 auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
                             const std::vector<GenomicRegion>& called_somatic_regions,
                             const std::vector<CancerGenotype<Haplotype>>& genotypes,
                             const std::vector<double>& genotype_posteriors,
-                            const T& credible_regions)
+                            const CredibleRegionMap& credible_regions)
 {
     CancerGenotypeCalls result {};
     result.reserve(called_somatic_regions.size());
@@ -855,29 +934,33 @@ auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
 
 // output
 
-octopus::VariantCall::GenotypeCall convert(GermlineGenotypeCall call)
+octopus::VariantCall::GenotypeCall demote(GermlineGenotypeCall call)
 {
     return octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
 }
 
 std::unique_ptr<octopus::VariantCall>
 transform_germline_call(GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call,
-                        const std::vector<SampleName>& samples,
-                        const std::vector<SampleName>& somatic_samples)
+                        const std::vector<SampleName>& samples, const std::vector<SampleName>& somatic_samples)
 {
     std::vector<std::pair<SampleName, Call::GenotypeCall>> genotypes {};
     for (const auto& sample : samples) {
         if (std::find(std::cbegin(somatic_samples), std::cend(somatic_samples), sample) == std::cend(somatic_samples)) {
-            genotypes.emplace_back(sample, convert(genotype_call));
+            genotypes.emplace_back(sample, demote(genotype_call));
         } else {
             auto copy = genotype_call;
-            copy.genotype.emplace(*copy.somatic);
-            genotypes.emplace_back(sample, convert(std::move(copy)));
+            for (auto allele : genotype_call.somatic) copy.genotype.emplace(allele);
+            genotypes.emplace_back(sample, demote(std::move(copy)));
         }
     }
-    return std::make_unique<octopus::GermlineVariantCall>(variant_call.variant.get(),
-                                                          std::move(genotypes),
-                                                          variant_call.posterior);
+    return std::make_unique<octopus::GermlineVariantCall>(variant_call.variant.get(), std::move(genotypes), variant_call.posterior);
+}
+
+template <typename Container, typename T>
+auto find_index(const Container& values, const T& value)
+{
+    const auto itr = std::find(std::cbegin(values), std::cend(values), value);
+    return itr != std::cend(values) ? std::distance(std::cbegin(values), itr) : -1;
 }
 
 auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotypeCalls&& genotype_calls,
@@ -885,26 +968,24 @@ auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotype
 {
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     result.reserve(somatic_calls.size());
-    std::transform(std::make_move_iterator(std::begin(somatic_calls)),
-                   std::make_move_iterator(std::end(somatic_calls)),
-                   std::make_move_iterator(std::begin(genotype_calls)),
-                   std::back_inserter(result),
+    std::transform(std::make_move_iterator(std::begin(somatic_calls)), std::make_move_iterator(std::end(somatic_calls)),
+                   std::make_move_iterator(std::begin(genotype_calls)), std::back_inserter(result),
                    [&somatic_samples] (auto&& variant_call, auto&& genotype_call) -> std::unique_ptr<octopus::VariantCall> {
                        std::unordered_map<SampleName, SomaticCall::GenotypeCredibleRegions> credible_regions {};
+                       const auto germline_ploidy = genotype_call.genotype.germline_ploidy();
                        for (const auto& p : genotype_call.credible_regions) {
                            SomaticCall::GenotypeCredibleRegions sample_credible_regions {};
-                           sample_credible_regions.germline.reserve(p.second.size() - 1);
+                           sample_credible_regions.germline.reserve(germline_ploidy);
                            std::copy(std::cbegin(p.second), std::prev(std::cend(p.second)),
                                      std::back_inserter(sample_credible_regions.germline));
                            if (std::find(std::cbegin(somatic_samples), std::cend(somatic_samples), p.first) != std::cend(somatic_samples)) {
-                               sample_credible_regions.somatic = p.second.back();
+                               auto somatic_idx = find_index(genotype_call.genotype.somatic(), variant_call.variant.get().alt_allele());
+                               sample_credible_regions.somatic = p.second[germline_ploidy + somatic_idx];
                            }
                            credible_regions.emplace(p.first, std::move(sample_credible_regions));
                        }
-                       return std::make_unique<SomaticCall>(variant_call.variant.get(),
-                                                            std::move(genotype_call.genotype),
-                                                            genotype_call.posterior,
-                                                            std::move(credible_regions),
+                       return std::make_unique<SomaticCall>(variant_call.variant.get(), std::move(genotype_call.genotype),
+                                                            genotype_call.posterior, std::move(credible_regions),
                                                             variant_call.posterior);
                    });
     return result;
@@ -932,9 +1013,8 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
         stream(*debug_log_) << "CNV model posterior:      " << model_posteriors.cnv;
         stream(*debug_log_) << "Somatic model posterior:  " << model_posteriors.somatic;
     }
-    const auto sample_somatic_inv_posteriors = calculate_probability_samples_not_somatic(latents);
-    const auto somatic_posterior = calculate_somatic_probability(sample_somatic_inv_posteriors, model_posteriors);
-    const auto germline_genotype_posteriors = calculate_germline_genotype_posteriors(latents, model_posteriors);
+    const auto somatic_posterior = calculate_somatic_probability(latents);
+    const auto germline_genotype_posteriors = calculate_germline_genotype_posteriors(latents);
     const auto& cancer_genotype_posteriors = latents.tumour_model_inferences_.posteriors.genotype_probabilities;
     boost::optional<Genotype<Haplotype>> called_germline_genotype {};
     boost::optional<CancerGenotype<Haplotype>> called_cancer_genotype {};
@@ -966,7 +1046,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
             auto cancer_posteriors = zip_cref(latents.cancer_genotypes_, cancer_genotype_posteriors);
             called_cancer_genotype = find_map_genotype(cancer_posteriors)->first;
         }
-        called_germline_genotype = called_cancer_genotype->germline_genotype();
+        called_germline_genotype = called_cancer_genotype->germline();
     } else {
         called_germline_genotype = find_map_genotype(germline_genotype_posteriors)->first;
     }
@@ -976,7 +1056,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                                                                                      *called_germline_genotype,
                                                                                      parameters_.min_variant_posterior);
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
-    boost::optional<Haplotype> called_somatic_haplotype {};
+    Genotype<Haplotype> called_somatic_genotype {};
     std::vector<SampleName> somatic_samples {};
     if (somatic_posterior >= parameters_.min_somatic_posterior) {
         auto somatic_allele_posteriors = compute_somatic_variant_posteriors(uncalled_germline_candidates,
@@ -988,7 +1068,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
             auto cancer_posteriors = zip_cref(latents.cancer_genotypes_, cancer_genotype_posteriors);
             called_cancer_genotype = find_map_genotype(cancer_posteriors)->first.get();
         }
-        if (called_cancer_genotype->germline_genotype() == called_germline_genotype) {
+        if (called_cancer_genotype->germline() == called_germline_genotype) {
             auto somatic_variant_calls = call_somatic_variants(somatic_allele_posteriors, *called_cancer_genotype,
                                                                parameters_.min_somatic_posterior);
             const auto& somatic_alphas = latents.tumour_model_inferences_.posteriors.alphas;
@@ -1009,7 +1089,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                     if (noise_model_evidence > germline_model_evidence) {
                         // Does the normal sample contain the called somatic variant?
                         const auto& noisy_alphas = latents.noise_model_inferences_->posteriors.alphas.at(normal_sample());
-                        const auto noise_mass = compute_somatic_mass(noisy_alphas, parameters_.min_expected_somatic_frequency);
+                        const auto noise_mass = compute_credible_somatic_mass(noisy_alphas, latents.somatic_ploidy_, parameters_.min_expected_somatic_frequency);
                         if (noise_mass > 2 * parameters_.min_credible_somatic_frequency) {
                             somatic_samples.clear();
                         }
@@ -1019,7 +1099,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                     somatic_variant_calls.clear();
                     somatic_variant_calls.shrink_to_fit();
                 } else {
-                    called_somatic_haplotype = called_cancer_genotype->somatic_element();
+                    called_somatic_genotype = called_cancer_genotype->somatic();
                 }
             }
             if (debug_log_) {
@@ -1030,8 +1110,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
             auto cancer_genotype_calls = call_somatic_genotypes(*called_cancer_genotype, called_somatic_regions,
                                                                 latents.cancer_genotypes_, cancer_genotype_posteriors,
                                                                 credible_regions);
-            result = transform_somatic_calls(std::move(somatic_variant_calls), std::move(cancer_genotype_calls),
-                                             somatic_samples);
+            result = transform_somatic_calls(std::move(somatic_variant_calls), std::move(cancer_genotype_calls), somatic_samples);
         } else if (debug_log_) {
             stream(*debug_log_) << "Conflict between called germline genotype and called cancer genotype. Not calling somatics";
         }
@@ -1047,9 +1126,9 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                                                    [&called_germline_genotype] (const double curr, const auto& p) {
                                                        return curr + (contains(p.first, *called_germline_genotype) ? 0.0 : p.second);
                                                    });
-        if (called_somatic_haplotype) {
+        if (called_somatic_genotype.ploidy() > 0) {
             germline_genotype_calls.emplace_back(std::move(genotype_chunk),
-                                                 copy<Allele>(*called_somatic_haplotype, region),
+                                                 copy<Allele>(called_somatic_genotype, region),
                                                  probability_to_phred(inv_posterior));
         } else {
             germline_genotype_calls.emplace_back(std::move(genotype_chunk), probability_to_phred(inv_posterior));
@@ -1075,8 +1154,9 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
 }
 
 CancerCaller::GermlineGenotypeProbabilityMap
-CancerCaller::calculate_germline_genotype_posteriors(const Latents& latents, const ModelPosteriors& model_posteriors) const
+CancerCaller::calculate_germline_genotype_posteriors(const Latents& latents) const
 {
+    const auto& model_posteriors = latents.model_posteriors_;
     const auto& germline_genotypes = latents.germline_genotypes_;
     GermlineGenotypeProbabilityMap result {germline_genotypes.size()};
     std::transform(std::cbegin(germline_genotypes), std::cend(germline_genotypes),
@@ -1092,32 +1172,17 @@ CancerCaller::calculate_germline_genotype_posteriors(const Latents& latents, con
     const auto& cancer_genotypes = latents.cancer_genotypes_;
     const auto& tumour_posteriors = latents.tumour_model_inferences_.posteriors.genotype_probabilities;
     for (std::size_t i {0}; i < cancer_genotypes.size(); ++i) {
-        result[cancer_genotypes[i].germline_genotype()] += model_posteriors.somatic * tumour_posteriors[i];
+        result[cancer_genotypes[i].germline()] += model_posteriors.somatic * tumour_posteriors[i];
     }
     return result;
 }
 
-CancerCaller::ProbabilityVector
-CancerCaller::calculate_probability_samples_not_somatic(const Latents& inferences) const
+Phred<double> CancerCaller::calculate_somatic_probability(const CancerCaller::Latents& latents) const
 {
-    std::vector<double> result(samples_.size());
-    const auto& posterior_alphas = inferences.tumour_model_inferences_.posteriors.alphas;
-    std::transform(std::cbegin(posterior_alphas), std::cend(posterior_alphas),
-                   std::begin(result), [this] (const auto& p) {
-                       const auto a0 = std::accumulate(std::cbegin(p.second), std::prev(std::cend(p.second)), 0.0);
-                       return maths::beta_cdf(p.second.back(), a0, parameters_.min_expected_somatic_frequency);
-                   });
-    return result;
-}
-
-Phred<double> CancerCaller::calculate_somatic_probability(const ProbabilityVector& sample_somatic_posteriors,
-                                                          const ModelPosteriors& model_posteriors) const
-{
-    auto result = 1.0 - std::accumulate(std::cbegin(sample_somatic_posteriors),
-                                        std::cend(sample_somatic_posteriors),
-                                        1.0, std::multiplies<> {});
-    result *= model_posteriors.somatic;
-    return probability_to_phred(1 - result);
+    auto conditional_somatic_mass = compute_credible_somatic_mass(latents.tumour_model_inferences_.posteriors.alphas,
+                                                                  latents.somatic_ploidy_,
+                                                                  parameters_.min_expected_somatic_frequency);
+    return probability_to_phred(1.0 - latents.model_posteriors_.somatic * conditional_somatic_mass);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
@@ -1189,40 +1254,30 @@ auto zip(const T&... containers) -> boost::iterator_range<boost::zip_iterator<de
 void CancerCaller::Latents::compute_haplotype_posteriors() const
 {
     Latents::HaplotypeProbabilityMap result {haplotypes_.get().size()};
-    // Contribution from germline model
     for (const auto& haplotype : haplotypes_.get()) {
         result.emplace(haplotype, 0.0);
     }
+    // Contribution from germline model
     for (const auto& p : zip(germline_genotypes_, germline_model_inferences_.posteriors.genotype_probabilities)) {
         for (const auto& haplotype : p.get<0>().copy_unique_ref()) {
-            result.at(haplotype) += p.get<1>();
+            result.at(haplotype) += model_posteriors_.germline * p.get<1>();
         }
     }
     // Contribution from CNV model
-    Latents::HaplotypeProbabilityMap cnv_result {haplotypes_.get().size()};
-    for (const auto& haplotype : haplotypes_.get()) {
-        cnv_result.emplace(haplotype, 0.0);
-    }
     for (const auto& p : zip(germline_genotypes_, cnv_model_inferences_.posteriors.genotype_probabilities)) {
         for (const auto& haplotype : p.get<0>().copy_unique_ref()) {
-            cnv_result.at(haplotype) += p.get<1>();
+            result.at(haplotype) += model_posteriors_.cnv * p.get<1>();
         }
     }
+    const auto conditional_somatic_prob = compute_credible_somatic_mass(tumour_model_inferences_.posteriors.alphas, somatic_ploidy_, 0.1);
     // Contribution from tumour model
-    Latents::HaplotypeProbabilityMap somatic_result {haplotypes_.get().size()};
-    for (const auto& haplotype : haplotypes_.get()) {
-        somatic_result.emplace(haplotype, 0.0);
-    }
     for (const auto& p : zip(cancer_genotypes_, tumour_model_inferences_.posteriors.genotype_probabilities)) {
-        for (const auto& haplotype : p.get<0>().germline_genotype().copy_unique_ref()) {
-            somatic_result.at(haplotype) += p.get<1>();
+        for (const auto& haplotype : p.get<0>().germline().copy_unique_ref()) {
+            result.at(haplotype) += model_posteriors_.somatic * p.get<1>();
         }
-        somatic_result.at(p.get<0>().somatic_element()) += p.get<1>();
-    }
-    for (auto& p : result) {
-        p.second *= model_posteriors_.germline;
-        p.second += model_posteriors_.cnv * cnv_result.at(p.first);
-        p.second += model_posteriors_.somatic * somatic_result.at(p.first);
+        for (const auto& haplotype : p.get<0>().somatic().copy_unique_ref()) {
+            result.at(haplotype) += model_posteriors_.somatic * conditional_somatic_prob * p.get<1>();
+        }
     }
     haplotype_posteriors_ = std::make_shared<Latents::HaplotypeProbabilityMap>(std::move(result));
 }
