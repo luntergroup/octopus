@@ -213,10 +213,23 @@ auto make_splicer(const ContigAllele& allele, std::stack<V>& candidate_splice_si
     return Splicer<Container, V> {allele, candidate_splice_sites, splice_sites, root};
 }
 
+template <typename V, typename G>
+bool is_possible_splice_site(const ContigAllele& allele, const V& v, const G& tree)
+{
+    // Can allele go before v in the tree?
+    return begins_before(allele, tree[v])
+           || (boost::out_degree(v, tree) == 0 && overlaps(allele, tree[v]))
+           || (begins_equal(allele, tree[v]) && (!is_empty_region(tree[v]) || (is_insertion(tree[v]) && is_deletion(allele))));
+}
+
+bool is_deletion_and_insertion(const ContigAllele& new_allele, const ContigAllele& leaf)
+{
+    return (is_insertion(leaf) && is_deletion(new_allele)) || (is_deletion(leaf) && is_insertion(new_allele));
+}
+
 bool can_add_to_branch(const ContigAllele& new_allele, const ContigAllele& leaf)
 {
-    return !are_adjacent(leaf, new_allele)
-            || !((is_insertion(leaf) && is_deletion(new_allele)) || (is_deletion(leaf) && is_insertion(new_allele)));
+    return !are_adjacent(leaf, new_allele) || !is_deletion_and_insertion(new_allele, leaf);
 }
 
 void HaplotypeTree::splice(const ContigAllele& allele)
@@ -234,9 +247,7 @@ void HaplotypeTree::splice(const ContigAllele& allele)
                              boost::make_assoc_property_map(colours),
                              [&] (const Vertex v, const Tree& tree) -> bool {
                                  if (v != root_) {
-                                     if (begins_before(allele, tree[v])
-                                         || (boost::out_degree(v, tree) == 0 && overlaps(allele, tree[v]))
-                                         || (begins_equal(allele, tree[v]) && !is_empty_region(tree[v]))) {
+                                     if (is_possible_splice_site(allele, v, tree_)) {
                                          const auto p = boost::inv_adjacent_vertices(v, tree);
                                          if (p.first != p.second) {
                                              const auto u = *p.first;
