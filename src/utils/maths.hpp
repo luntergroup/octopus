@@ -492,8 +492,8 @@ inline RealType multinomial_pdf(const std::vector<IntegerType>& z, const std::ve
 template <typename RealType, typename ForwardIt1, typename ForwardIt2>
 inline RealType log_multinomial_pdf(ForwardIt1 first_z, ForwardIt1 last_z, ForwardIt2 first_p)
 {
-    auto r = std::inner_product(first_z, last_z, first_p, RealType {0}, std::multiplies<> {},
-                                [] (auto z_i, auto p_i) { return z_i * std::log(p_i); });
+    auto r = std::inner_product(first_z, last_z, first_p, RealType {0}, std::plus<> {},
+                                [] (auto z_i, auto p_i) { return z_i > 0 ? z_i * std::log(p_i) : 0.0; });
     return log_multinomial_coefficient<RealType>(first_z, last_z) + r;
 }
 
