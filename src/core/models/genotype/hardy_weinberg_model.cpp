@@ -11,6 +11,8 @@
 
 #include "utils/maths.hpp"
 
+#include <iostream>
+
 namespace octopus {
 
 HardyWeinbergModel::HardyWeinbergModel(Haplotype reference)
@@ -100,13 +102,13 @@ auto ln_hardy_weinberg_polyploid(const Genotype<Haplotype>& genotype,
     return maths::log_multinomial_coefficient<double>(occurences) + r;
 }
 
-auto ln_hardy_weinberg_haploid(const HardyWeinbergModel::IndexGenotype& genotype,
+auto ln_hardy_weinberg_haploid(const GenotypeIndex& genotype,
                                const HardyWeinbergModel::HaplotypeFrequencyVector& haplotype_frequencies)
 {
     return std::log(haplotype_frequencies[genotype[0]]);
 }
 
-auto ln_hardy_weinberg_diploid(const HardyWeinbergModel::IndexGenotype& genotype,
+auto ln_hardy_weinberg_diploid(const GenotypeIndex& genotype,
                                const HardyWeinbergModel::HaplotypeFrequencyVector& haplotype_frequencies)
 {
     if (genotype[0] == genotype[1]) {
@@ -116,7 +118,7 @@ auto ln_hardy_weinberg_diploid(const HardyWeinbergModel::IndexGenotype& genotype
     return std::log(haplotype_frequencies[genotype[0]]) + std::log(haplotype_frequencies[genotype[1]]) + ln2;
 }
 
-auto ln_hardy_weinberg_polyploid(const HardyWeinbergModel::IndexGenotype& genotype,
+auto ln_hardy_weinberg_polyploid(const GenotypeIndex& genotype,
                                  const HardyWeinbergModel::HaplotypeFrequencyVector& haplotype_frequencies)
 {
     std::vector<unsigned> counts(haplotype_frequencies.size());
@@ -185,7 +187,7 @@ void unique_counts(const Range& range, std::vector<unsigned>& result)
 
 } // namespace
 
-double HardyWeinbergModel::evaluate(const IndexGenotype& genotype) const
+double HardyWeinbergModel::evaluate(const GenotypeIndex& genotype) const
 {
     assert(!genotype.empty());
     if (empirical_) {
@@ -303,7 +305,7 @@ double HardyWeinbergModel::evaluate(const GenotypeReferenceVector& genotypes) co
     }
 }
 
-double HardyWeinbergModel::evaluate(const IndexGenotypeVector& genotypes) const
+double HardyWeinbergModel::evaluate(const GenotypeIndexVector& genotypes) const
 {
     if (empirical_) {
         return joint_evaluate(genotypes, *this);
@@ -317,7 +319,7 @@ double HardyWeinbergModel::evaluate(const IndexGenotypeVector& genotypes) const
     }
 }
 
-double HardyWeinbergModel::evaluate(const IndexGenotypeReferenceVector& genotypes) const
+double HardyWeinbergModel::evaluate(const GenotypeIndexReferenceVector& genotypes) const
 {
     if (empirical_) {
         return joint_evaluate(genotypes, *this);

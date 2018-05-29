@@ -20,11 +20,9 @@ class HardyWeinbergModel
 public:
     using GenotypeReference            = std::reference_wrapper<const Genotype<Haplotype>>;
     using GenotypeReferenceVector      = std::vector<GenotypeReference>;
-    using HaplotypeIndex               = unsigned;
-    using IndexGenotype                = std::vector<unsigned>;
-    using IndexGenotypeReference       = std::reference_wrapper<const std::vector<HaplotypeIndex>>;
-    using IndexGenotypeVector          = std::vector<IndexGenotype>;
-    using IndexGenotypeReferenceVector = std::vector<IndexGenotypeReference>;
+    using GenotypeIndexReference       = std::reference_wrapper<const GenotypeIndex>;
+    using GenotypeIndexVector          = std::vector<GenotypeIndex>;
+    using GenotypeIndexReferenceVector = std::vector<GenotypeIndexReference>;
     
     using HaplotypeFrequencyMap    = std::unordered_map<Haplotype, double>;
     using HaplotypeFrequencyVector = std::vector<double>;
@@ -50,12 +48,12 @@ public:
     HaplotypeFrequencyVector& index_frequencies() noexcept;
     
     double evaluate(const Genotype<Haplotype>& genotype) const;
-    double evaluate(const IndexGenotype& genotype) const;
+    double evaluate(const GenotypeIndex& genotype) const;
     
     double evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const;
     double evaluate(const GenotypeReferenceVector& genotypes) const;
-    double evaluate(const IndexGenotypeVector& genotypes) const;
-    double evaluate(const IndexGenotypeReferenceVector& genotypes) const;
+    double evaluate(const GenotypeIndexVector& genotypes) const;
+    double evaluate(const GenotypeIndexReferenceVector& genotypes) const;
     
 private:
     boost::optional<Haplotype> reference_;
