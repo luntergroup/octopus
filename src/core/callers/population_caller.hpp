@@ -37,7 +37,8 @@ public:
         Phred<double> min_variant_posterior, min_refcall_posterior;
         std::vector<unsigned> ploidies;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
-        unsigned max_genotypes_per_sample;
+        std::size_t max_joint_genotypes;
+        bool use_independent_genotype_priors = false;
     };
     
     PopulationCaller() = delete;
@@ -75,7 +76,14 @@ private:
     call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
                    const ReadMap& reads) const override;
     
-    std::unique_ptr<PopulationPriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    bool use_independence_model() const noexcept;
+    std::unique_ptr<Caller::Latents>
+    infer_latents_with_joint_model(const std::vector<Haplotype>& haplotypes,
+                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    std::unique_ptr<Caller::Latents>
+    infer_latents_with_independence_model(const std::vector<Haplotype>& haplotypes,
+                                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    std::unique_ptr<PopulationPriorModel> make_joint_prior_model(const std::vector<Haplotype>& haplotypes) const;
     std::unique_ptr<GenotypePriorModel> make_independent_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
 

@@ -176,6 +176,7 @@ set(UTILS_SOURCES
     utils/thread_pool.hpp
     utils/thread_pool.cpp
     utils/concat.hpp
+    utils/select_top_k.hpp
 )
 
 set(CORE_SOURCES
@@ -323,6 +324,8 @@ set(CORE_SOURCES
     core/models/genotype/uniform_population_prior_model.hpp
     core/models/genotype/coalescent_population_prior_model.hpp
     core/models/genotype/coalescent_population_prior_model.cpp
+    core/models/genotype/hardy_weinberg_model.hpp
+    core/models/genotype/hardy_weinberg_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp

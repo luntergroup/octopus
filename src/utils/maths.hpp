@@ -474,14 +474,34 @@ inline IntegerType multinomial_coefficient(const Container& values)
     return multinomial_coefficient<IntegerType, RealType>(std::cbegin(values), std::cend(values));
 }
 
+template <typename RealType, typename ForwardIt1, typename ForwardIt2>
+inline RealType multinomial_pdf(ForwardIt1 first_z, ForwardIt1 last_z, ForwardIt2 first_p)
+{
+    auto r = std::inner_product(first_z, last_z, first_p, RealType {0}, std::multiplies<> {},
+                                [] (auto z_i, auto p_i) { return std::pow(p_i, z_i); });
+    return multinomial_coefficient<RealType>(first_z, last_z) * r;
+}
+
 template <typename IntegerType, typename RealType>
 inline RealType multinomial_pdf(const std::vector<IntegerType>& z, const std::vector<RealType>& p)
 {
-    RealType r {1};
-    for (std::size_t i {0}; i < z.size(); ++i) {
-        r *= std::pow(p[i], z[i]);
-    }
-    return multinomial_coefficient<IntegerType, RealType>(std::cbegin(z), std::cend(z)) * r;
+    assert(z.size() == p.size());
+    return multinomial_pdf<RealType>(std::cbegin(z), std::cend(z), std::cbegin(p));
+}
+
+template <typename RealType, typename ForwardIt1, typename ForwardIt2>
+inline RealType log_multinomial_pdf(ForwardIt1 first_z, ForwardIt1 last_z, ForwardIt2 first_p)
+{
+    auto r = std::inner_product(first_z, last_z, first_p, RealType {0}, std::multiplies<> {},
+                                [] (auto z_i, auto p_i) { return z_i * std::log(p_i); });
+    return log_multinomial_coefficient<RealType>(first_z, last_z) + r;
+}
+
+template <typename IntegerType, typename RealType>
+inline RealType log_multinomial_pdf(const std::vector<IntegerType>& z, const std::vector<RealType>& p)
+{
+    assert(z.size() == p.size());
+    return log_multinomial_pdf<RealType>(std::cbegin(z), std::cend(z), std::cbegin(p));
 }
 
 // Returns approximate y such that digamma(y) = x

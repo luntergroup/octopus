@@ -168,6 +168,12 @@ CallerBuilder& CallerBuilder::set_model_based_haplotype_dedup(bool use) noexcept
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_independent_genotype_prior_flag(bool use_independent) noexcept
+{
+    params_.use_independent_genotype_priors = use_independent;
+    return *this;
+}
+
 // cancer
 
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
@@ -339,6 +345,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           get_ploidies(samples, *requested_contig_, params_.ploidies),
                                                           make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           params_.max_joint_genotypes,
+                                                          params_.use_independent_genotype_priors
                                                       });
         }},
         {"cancer", [this, &samples] () {

@@ -60,6 +60,7 @@ public:
     CallerBuilder& set_max_joint_genotypes(unsigned max) noexcept;
     CallerBuilder& set_likelihood_model(HaplotypeLikelihoodModel model) noexcept;
     CallerBuilder& set_model_based_haplotype_dedup(bool use) noexcept;
+    CallerBuilder& set_independent_genotype_prior_flag(bool use_independent) noexcept;
     
     // cancer
     CallerBuilder& set_normal_sample(SampleName normal_sample);
@@ -104,6 +105,7 @@ private:
         Phred<double> min_phase_score;
         unsigned max_joint_genotypes;
         bool deduplicate_haplotypes_with_caller_model;
+        bool use_independent_genotype_priors;
         
         // cancer
         boost::optional<SampleName> normal_sample;

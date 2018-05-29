@@ -460,6 +460,10 @@ OptionMap parse_options(const int argc, const char** argv)
      "The maximum number of joint genotype vectors to consider when computing joint"
      " genotype posterior probabilities")
     
+    ("use-independent-genotype-priors",
+     po::bool_switch()->default_value(false),
+     "Use independent genotype priors for joint calling")
+    
     ("model-posterior",
      po::value<bool>(),
      "Calculate model posteriors for every call")
