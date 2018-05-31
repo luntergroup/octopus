@@ -414,6 +414,19 @@ void rebase_not_overlapped(AlignedRead& read, const GenomicRegion& haplotype_reg
     }
 }
 
+void rebase_adjacent(AlignedRead& read, const GenomicRegion& haplotype_region, const CigarString& haplotype_to_reference)
+{
+    assert(!haplotype_to_reference.empty());
+    if (is_before(haplotype_region, read) && is_insertion(haplotype_to_reference.back())) {
+        using Flag = CigarOperation::Flag;
+        const CigarString padded_haplotype_cigar {haplotype_to_reference.back(),
+                                                  CigarOperation {region_size(read), Flag::sequenceMatch}};
+        auto rebased_read_cigar = rebase(read.cigar(), padded_haplotype_cigar);
+        auto rebased_read_region = expand_rhs(head_region(read), reference_size(rebased_read_cigar));
+        read.realign(std::move(rebased_read_region), std::move(rebased_read_cigar));
+    }
+}
+
 void rebase(AlignedRead& read, const GenomicRegion& haplotype_region, const CigarString& haplotype_to_reference)
 {
     const auto rebase_shift = calculate_rebase_shift(read, haplotype_region, haplotype_to_reference);
@@ -426,6 +439,8 @@ void rebase(AlignedRead& read, const GenomicRegion& haplotype_region, const Ciga
         } else {
             read.realign(std::move(rebased_read_region), read.cigar());
         }
+    } else if (are_adjacent(haplotype_region, read)) {
+        rebase_adjacent(read, haplotype_region, haplotype_to_reference);
     }
 }
 
