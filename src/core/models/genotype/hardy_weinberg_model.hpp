@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <functional>
 
-#import <boost/optional.hpp>
+#include <boost/optional.hpp>
 
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
