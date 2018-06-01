@@ -100,18 +100,27 @@ bool Haplotype::contains(const Allele& allele) const
 bool Haplotype::includes(const ContigAllele& allele) const
 {
     using octopus::contains;
-    const auto& this_region = region_.contig_region();
-    if (!contains(this_region, allele)) {
+    if (!contains(region_.contig_region(), allele)) {
         return false;
+    } else if (!explicit_alleles_.empty()) {
+        if (contains(explicit_allele_region_, allele)) {
+            return std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele);
+        } else if (overlaps(explicit_allele_region_, allele) || is_indel(allele)) {
+            return false;
+        } else if (is_before(allele, explicit_allele_region_)) {
+            const auto offset = begin_distance(region_.contig_region(), allele);
+            const auto ref_itr = std::next(std::cbegin(sequence_), offset);
+            return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()), ref_itr);
+        } else {
+            const auto offset = end_distance(allele, region_.contig_region());
+            const auto ref_ritr = std::prev(std::crend(sequence_), offset);
+            return std::equal(std::crbegin(allele.sequence()), std::crend(allele.sequence()), ref_ritr);
+        }
+    } else {
+        const auto offset = begin_distance(region_.contig_region(), allele);
+        const auto ref_itr = std::next(std::cbegin(sequence_), offset);
+        return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()), ref_itr);
     }
-    if (contains(explicit_allele_region_, allele)) {
-        return std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele);
-    }
-    if (overlaps(explicit_allele_region_, allele) || is_indel(allele)) {
-        return false;
-    }
-    return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()),
-                      std::next(std::cbegin(sequence_), begin_distance(this_region, allele)));
 }
 
 bool Haplotype::includes(const Allele& allele) const
