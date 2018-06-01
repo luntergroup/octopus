@@ -96,7 +96,8 @@ bool has_simple_indel(const VcfRecord& call) noexcept
                        });
 }
 
-boost::optional<ContigAllele> make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence, const int ref_pad)
+boost::optional<ContigAllele>
+make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence, const int max_ref_pad)
 {
     if (is_missing(allele_sequence)) {
         return boost::none;
@@ -115,10 +116,11 @@ boost::optional<ContigAllele> make_allele(const VcfRecord& call, VcfRecord::Nucl
         auto delete_mask_len = std::distance(std::cbegin(allele_sequence), first_base_itr);
         allele_sequence.erase(std::cbegin(allele_sequence), first_base_itr);
         region = expand_lhs(region, -delete_mask_len);
-    } else if (ref_pad > 0) {
-        assert(static_cast<std::size_t>(ref_pad) <= allele_sequence.size());
-        allele_sequence.erase(std::cbegin(allele_sequence), std::next(std::cbegin(allele_sequence), ref_pad));
-        region = expand_lhs(region, -ref_pad);
+    } else if (max_ref_pad > 0) {
+        auto p = std::mismatch(std::cbegin(call.ref()), std::next(std::cbegin(call.ref()), max_ref_pad),
+                               std::cbegin(allele_sequence), std::cend(allele_sequence));
+        allele_sequence.erase(std::cbegin(allele_sequence), p.second);
+        region = expand_lhs(region, std::distance(p.second, std::cbegin(allele_sequence)));
     }
     return ContigAllele {region, std::move(allele_sequence)};
 }
