@@ -570,9 +570,7 @@ void CancerCaller::evaluate_noise_model(Latents& latents, const HaplotypeLikelih
 
 void CancerCaller::set_model_priors(Latents& latents) const
 {
-//    constexpr double third {1.0 / 3};
-//    latents.model_priors_ = {third, third, third};
-    latents.model_priors_ = {1.0 / 4, 1.0 / 4, 2.0 / 4};
+    latents.model_priors_ = {.09, 0.01, 0.9};
 }
 
 void CancerCaller::set_model_posteriors(Latents& latents) const
