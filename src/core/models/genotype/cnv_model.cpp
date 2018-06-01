@@ -184,12 +184,12 @@ expand(const std::vector<SampleName>& samples, VBLatents<K>&& inferred_latents, 
 }
 
 template <typename Container>
-auto calculate_log_priors(const Container& genotypes, const GenotypePriorModel& model)
+auto calculate_log_priors(const Container& genotypes, const GenotypePriorModel& model, const bool normalise = false)
 {
     std::vector<double> result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&model] (const auto& genotype) { return model.evaluate(genotype); });
-    maths::normalise_logs(result);
+    if (normalise) maths::normalise_logs(result);
     return result;
 }
 
@@ -264,7 +264,6 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params)
 {
-    
     const auto genotype_log_priors = calculate_log_priors(genotype_indices, priors.genotype_prior_model);
     auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, priors, haplotype_log_likelihoods, genotype_indices);
     return run_variational_bayes<K>(samples, genotypes, priors.alphas, genotype_log_priors,
