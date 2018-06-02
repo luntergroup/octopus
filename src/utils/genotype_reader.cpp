@@ -96,6 +96,16 @@ bool has_simple_indel(const VcfRecord& call) noexcept
                        });
 }
 
+bool has_non_complex_indel(const VcfRecord& call) noexcept
+{
+    assert(!call.ref().empty());
+    return std::any_of(std::cbegin(call.alt()), std::cend(call.alt()),
+                       [&] (const auto& allele) {
+                           assert(!allele.empty());
+                           return allele.size() != call.ref().size() && allele.front() == call.ref().front();
+                       });
+}
+
 boost::optional<ContigAllele>
 make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence, const int max_ref_pad)
 {
@@ -147,7 +157,7 @@ auto extract_genotype(const VcfRecord& call, const SampleName& sample)
         }
     }
     if (!min_ref_pad) {
-        min_ref_pad = has_indel(call) ? 1 : 0;
+        min_ref_pad = has_non_complex_indel(call) ? 1 : 0;
     }
     for (auto idx : unknown_pad_indices) {
         result[idx] = make_allele(call, std::move(genotype[idx]), *min_ref_pad);
@@ -199,7 +209,7 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
             ++allele_idx;
         });
         if (!min_ref_pad) {
-            min_ref_pad = has_indel(call) ? 1 : 0;
+            min_ref_pad = has_non_complex_indel(call) ? 1 : 0;
         }
         if (has_ref) {
             auto& ref = genotype.front();
