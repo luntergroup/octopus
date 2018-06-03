@@ -100,25 +100,24 @@ bool Haplotype::contains(const Allele& allele) const
 bool Haplotype::includes(const ContigAllele& allele) const
 {
     using octopus::contains;
-    if (!contains(region_.contig_region(), allele) || explicit_alleles_.empty()) {
+    if (!contains(region_.contig_region(), allele)) {
         return false;
-    } else {
+    } else if (!explicit_alleles_.empty()) {
         if (contains(explicit_allele_region_, allele)) {
             return std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele);
-        } else if (overlaps(explicit_allele_region_, allele) || is_indel(allele)) {
+        } else if (overlaps(explicit_allele_region_, allele)) {
             return false;
-        } else if (is_before(allele, explicit_allele_region_)) {
-            const auto offset = begin_distance(region_.contig_region(), allele);
-            const auto ref_itr = std::next(std::cbegin(sequence_), offset);
-            assert(static_cast<std::size_t>(std::distance(ref_itr, std::cend(sequence_))) >= allele.sequence().size());
-            return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()), ref_itr);
-        } else {
-            const auto offset = end_distance(allele, region_.contig_region());
-            const auto ref_ritr = std::next(std::crbegin(sequence_), offset);
+        } else if (is_after(allele, explicit_allele_region_)) {
+            if (is_indel(allele)) return false;
+            const auto ref_ritr = std::next(std::crbegin(sequence_), end_distance(allele, region_.contig_region()));
             assert(static_cast<std::size_t>(std::distance(ref_ritr, std::crend(sequence_))) >= allele.sequence().size());
             return std::equal(std::crbegin(allele.sequence()), std::crend(allele.sequence()), ref_ritr);
         }
     }
+    if (is_indel(allele)) return false;
+    const auto ref_itr = std::next(std::cbegin(sequence_), begin_distance(region_.contig_region(), allele));
+    assert(static_cast<std::size_t>(std::distance(ref_itr, std::cend(sequence_))) >= allele.sequence().size());
+    return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()), ref_itr);
 }
 
 bool Haplotype::includes(const Allele& allele) const
