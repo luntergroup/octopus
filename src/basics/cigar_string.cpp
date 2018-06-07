@@ -190,7 +190,7 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
     result.reserve(cigar.size());
     auto op_itr = std::cbegin(cigar);
     const auto last_op_itr = std::cend(cigar);
-    while (op_itr != last_op_itr && (offset >= op_itr->size() || !offset_pred(*op_itr))) {
+    while (op_itr != last_op_itr && offset > 0 && (offset >= op_itr->size() || !offset_pred(*op_itr))) {
         if (offset_pred(*op_itr)) {
             offset -= op_itr->size();
         }
@@ -199,7 +199,11 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
     if (op_itr != last_op_itr) {
         const auto remainder = op_itr->size() - offset;
         if (remainder >= size) {
-            result.emplace_back(size, op_itr->flag());
+            if (size_pred(*op_itr)) {
+                result.emplace_back(size, op_itr->flag());
+            } else {
+                result.emplace_back(op_itr->size(), op_itr->flag());
+            }
             return result;
         }
         result.emplace_back(remainder, op_itr->flag());
