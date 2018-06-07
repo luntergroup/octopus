@@ -76,8 +76,8 @@ ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factor
 , all_unique_filter_keys_ {are_all_unique(vcf_filter_keys_)}
 {}
 
-bool ThresholdVariantCallFilter::passes_all_filteres(MeasureIterator first_measure, MeasureIterator last_measure,
-                                                     ThresholdIterator first_threshold) const
+bool ThresholdVariantCallFilter::passes_all_filters(MeasureIterator first_measure, MeasureIterator last_measure,
+                                                    ThresholdIterator first_threshold) const
 {
     return std::inner_product(first_measure, last_measure, first_threshold, true, std::multiplies<> {},
                               [] (const auto& measure, const auto& threshold) -> bool { return threshold(measure); });
@@ -105,13 +105,13 @@ VariantCallFilter::Classification ThresholdVariantCallFilter::classify(const Mea
 
 bool ThresholdVariantCallFilter::passes_all_hard_filters(const MeasureVector& measures) const
 {
-    return passes_all_filteres(std::cbegin(measures), std::next(std::cbegin(measures), hard_thresholds_.size()),
+    return passes_all_filters(std::cbegin(measures), std::next(std::cbegin(measures), hard_thresholds_.size()),
                               std::cbegin(hard_thresholds_));
 }
 
 bool ThresholdVariantCallFilter::passes_all_soft_filters(const MeasureVector& measures) const
 {
-    return passes_all_filteres(std::next(std::cbegin(measures), hard_thresholds_.size()), std::cend(measures),
+    return passes_all_filters(std::next(std::cbegin(measures), hard_thresholds_.size()), std::cend(measures),
                               std::cbegin(soft_thresholds_));
 }
 

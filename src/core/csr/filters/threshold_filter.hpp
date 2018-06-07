@@ -81,8 +81,8 @@ protected:
     std::vector<std::string> vcf_filter_keys_;
     bool all_unique_filter_keys_;
     
-    bool passes_all_filteres(MeasureIterator first_measure, MeasureIterator last_measure,
-                             ThresholdIterator first_threshold) const;
+    bool passes_all_filters(MeasureIterator first_measure, MeasureIterator last_measure,
+                            ThresholdIterator first_threshold) const;
     
 private:
     virtual void annotate(VcfHeader::Builder& header) const override;
