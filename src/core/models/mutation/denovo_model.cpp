@@ -161,7 +161,7 @@ auto sequence_length_distance(const Haplotype& lhs, const Haplotype& rhs) noexce
 
 bool can_align_with_hmm(const Haplotype& target, const Haplotype& given) noexcept
 {
-    return sequence_length_distance(target, given) <= hmm::min_flank_pad();
+    return sequence_length_distance(target, given) < hmm::min_flank_pad();
 }
 
 template <typename Container>
