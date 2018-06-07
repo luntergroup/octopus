@@ -22,10 +22,8 @@ public:
     SomaticThresholdVariantCallFilter() = delete;
     
     SomaticThresholdVariantCallFilter(FacetFactory facet_factory,
-                                      std::vector<Condition> germline_hard_conditions,
-                                      std::vector<Condition> germline_soft_conditions,
-                                      std::vector<Condition> somatic_hard_conditions,
-                                      std::vector<Condition> somatic_soft_conditions,
+                                      ConditionVectorPair germline,
+                                      ConditionVectorPair somatic,
                                       OutputOptions output_config,
                                       ConcurrencyPolicy threading,
                                       boost::optional<ProgressMeter&> progress = boost::none);

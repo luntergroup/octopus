@@ -52,11 +52,15 @@ public:
         std::string vcf_filter_key = ".";
     };
     
+    struct ConditionVectorPair
+    {
+        std::vector<Condition> hard, soft;
+    };
+    
     ThresholdVariantCallFilter() = delete;
     
     ThresholdVariantCallFilter(FacetFactory facet_factory,
-                               std::vector<Condition> hard_conditions,
-                               std::vector<Condition> soft_conditions,
+                               ConditionVectorPair conditions,
                                OutputOptions output_config,
                                ConcurrencyPolicy threading,
                                boost::optional<ProgressMeter&> progress = boost::none);

@@ -39,9 +39,9 @@ public:
 
 private:
     using Condition = ThresholdVariantCallFilter::Condition;
+    using ConditionVectorPair = ThresholdVariantCallFilter::ConditionVectorPair;
     
-    std::vector<Condition> hard_conditions_, soft_conditions_;
-    std::vector<Condition> somatic_hard_conditions_, somatic_soft_conditions_;
+    ConditionVectorPair germline_, somatic_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
     std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,

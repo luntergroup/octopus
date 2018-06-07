@@ -26,19 +26,17 @@ bool are_all_unique(std::vector<std::string> keys)
 } // namespace
 
 SomaticThresholdVariantCallFilter::SomaticThresholdVariantCallFilter(FacetFactory facet_factory,
-                                                                     std::vector<Condition> germline_hard_conditions,
-                                                                     std::vector<Condition> germline_soft_conditions,
-                                                                     std::vector<Condition> somatic_hard_conditions,
-                                                                     std::vector<Condition> somatic_soft_conditions,
+                                                                     ConditionVectorPair germline,
+                                                                     ConditionVectorPair somatic,
                                                                      OutputOptions output_config,
                                                                      ConcurrencyPolicy threading,
                                                                      boost::optional<ProgressMeter&> progress)
 : ThresholdVariantCallFilter {std::move(facet_factory),
-                              concat(germline_hard_conditions, std::move(somatic_hard_conditions)),
-                              concat(germline_soft_conditions, std::move(somatic_soft_conditions)),
+                              {concat(germline.hard, std::move(somatic.hard)),
+                               concat(germline.soft, std::move(germline.soft))},
                               output_config, threading, progress}
-, num_germline_hard_conditions_ {germline_hard_conditions.size()}
-, num_germline_soft_conditions_ {germline_soft_conditions.size()}
+, num_germline_hard_conditions_ {germline.hard.size()}
+, num_germline_soft_conditions_ {germline.soft.size()}
 {
     measures_.emplace_back(make_wrapped_measure<IsSomatic>(true));
     std::vector<std::string> germline_filter_keys {std::cbegin(vcf_filter_keys_),
