@@ -294,6 +294,10 @@ set(CORE_SOURCES
     core/csr/measures/unassigned_read_fraction.cpp
     core/csr/measures/median_base_quality.hpp
     core/csr/measures/median_base_quality.cpp
+    core/csr/measures/mismatch_count.hpp
+    core/csr/measures/mismatch_count.cpp
+    core/csr/measures/mismatch_fraction.hpp
+    core/csr/measures/mismatch_fraction.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
