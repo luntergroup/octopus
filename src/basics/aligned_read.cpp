@@ -319,57 +319,57 @@ AlignedRead copy(const AlignedRead& read, const GenomicRegion& region)
     if (contains(region, read)) return read;
     const auto copy_region = *overlapped_region(read, region);
     const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, copy_region));
-    const auto uncontained_cigar_copy = copy_reference(read.cigar(), 0, reference_offset);
+    auto uncontained_cigar_copy = copy_reference(read.cigar(), 0, reference_offset);
     auto contained_cigar_copy = copy_reference(read.cigar(), reference_offset, region_size(copy_region));
-    const auto sequence_offset = sequence_size(uncontained_cigar_copy);
-    const auto sequence_length = sequence_size(contained_cigar_copy);
-    assert(sequence_offset + sequence_length <= sequence_size(read));
-    const auto subsequence_begin_itr = next(cbegin(read.sequence()), sequence_offset);
-    const auto subsequence_end_itr   = next(subsequence_begin_itr, sequence_length);
+    if (!uncontained_cigar_copy.empty() && !contained_cigar_copy.empty()
+        && uncontained_cigar_copy.back() == contained_cigar_copy.front()) {
+        assert(is_insertion(uncontained_cigar_copy.back()));
+        uncontained_cigar_copy.pop_back();
+    }
+    const auto copy_offset = sequence_size(uncontained_cigar_copy);
+    const auto copy_length = sequence_size(contained_cigar_copy);
+    assert(copy_offset + copy_length <= sequence_size(read));
+    const auto subsequence_begin_itr = next(cbegin(read.sequence()), copy_offset);
+    const auto subsequence_end_itr   = next(subsequence_begin_itr, copy_length);
     AlignedRead::NucleotideSequence sub_sequence {subsequence_begin_itr, subsequence_end_itr};
-    const auto subqualities_begin_itr = next(cbegin(read.base_qualities()), sequence_offset);
-    const auto subqualities_end_itr   = next(subqualities_begin_itr, sequence_length);
+    const auto subqualities_begin_itr = next(cbegin(read.base_qualities()), copy_offset);
+    const auto subqualities_end_itr   = next(subqualities_begin_itr, copy_length);
     AlignedRead::BaseQualityVector sub_qualities {subqualities_begin_itr, subqualities_end_itr};
     return AlignedRead {read.name(), copy_region, std::move(sub_sequence), std::move(sub_qualities),
                         std::move(contained_cigar_copy), read.mapping_quality(), read.flags(), read.read_group()};
 }
 
+template <typename T>
+T copy_helper(const T& sequence, const CigarString& cigar, const GenomicRegion& sequence_region, const GenomicRegion& request_region)
+{
+    if (!overlaps(sequence_region, request_region)) {};
+    if (contains(request_region, sequence_region)) return sequence;
+    const auto copy_region = *overlapped_region(sequence_region, request_region);
+    const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(sequence_region, copy_region));
+    auto uncontained_cigar_copy = copy_reference(cigar, 0, reference_offset);
+    auto contained_cigar_copy = copy_reference(cigar, reference_offset, region_size(copy_region));
+    if (!uncontained_cigar_copy.empty() && !contained_cigar_copy.empty()
+        && uncontained_cigar_copy.back() == contained_cigar_copy.front()) {
+        assert(is_insertion(uncontained_cigar_copy.back()));
+        uncontained_cigar_copy.pop_back();
+    }
+    const auto copy_offset = sequence_size(uncontained_cigar_copy);
+    const auto copy_length = sequence_size(contained_cigar_copy);
+    assert(copy_offset + copy_length <= sequence.size());
+    using std::cbegin; using std::next;
+    const auto subsequence_begin_itr = next(cbegin(sequence), copy_offset);
+    const auto subsequence_end_itr   = next(subsequence_begin_itr, copy_length);
+    return {subsequence_begin_itr, subsequence_end_itr};
+}
+
 AlignedRead::NucleotideSequence copy_sequence(const AlignedRead& read, const GenomicRegion& region)
 {
-    using std::cbegin; using std::next;
-    if (!overlaps(read, region)) {
-        throw std::logic_error {"AlignedRead: trying to copy non-overlapping region"};
-    }
-    if (contains(region, read)) return read.sequence();
-    const auto copy_region = *overlapped_region(read, region);
-    const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, copy_region));
-    const auto uncontained_cigar_copy = copy_reference(read.cigar(), 0, reference_offset);
-    auto contained_cigar_copy = copy_reference(read.cigar(), reference_offset, region_size(copy_region));
-    const auto sequence_offset = sequence_size(uncontained_cigar_copy);
-    const auto sequence_length = sequence_size(contained_cigar_copy);
-    assert(sequence_offset + sequence_length <= sequence_size(read));
-    const auto subsequence_begin_itr = next(cbegin(read.sequence()), sequence_offset);
-    const auto subsequence_end_itr   = next(subsequence_begin_itr, sequence_length);
-    return {subsequence_begin_itr, subsequence_end_itr};
+    return copy_helper(read.sequence(), read.cigar(), read.mapped_region(), region);
 }
 
 AlignedRead::BaseQualityVector copy_base_qualities(const AlignedRead& read, const GenomicRegion& region)
 {
-    using std::cbegin; using std::next;
-    if (!overlaps(read, region)) {
-        throw std::logic_error {"AlignedRead: trying to copy non-overlapping region"};
-    }
-    if (contains(region, read)) return read.base_qualities();
-    const auto copy_region = *overlapped_region(read, region);
-    const auto reference_offset = static_cast<CigarOperation::Size>(begin_distance(read, copy_region));
-    const auto uncontained_cigar_copy = copy_reference(read.cigar(), 0, reference_offset);
-    auto contained_cigar_copy = copy_reference(read.cigar(), reference_offset, region_size(copy_region));
-    const auto sequence_offset = sequence_size(uncontained_cigar_copy);
-    const auto sequence_length = sequence_size(contained_cigar_copy);
-    assert(sequence_offset + sequence_length <= sequence_size(read));
-    const auto subqualities_begin_itr = next(cbegin(read.base_qualities()), sequence_offset);
-    const auto subqualities_end_itr   = next(subqualities_begin_itr, sequence_length);
-    return {subqualities_begin_itr, subqualities_end_itr};
+    return copy_helper(read.base_qualities(), read.cigar(), read.mapped_region(), region);
 }
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
