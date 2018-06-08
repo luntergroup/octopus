@@ -52,7 +52,7 @@ bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
 auto median_base_quality(const ReadRefSupportSet& reads, const Allele& allele)
 {
     boost::optional<AlignedRead::BaseQuality> result {};
-    if (!is_deletion(allele)) {
+    if (!is_indel(allele)) {
         std::vector<AlignedRead::BaseQuality> base_qualities {};
         base_qualities.reserve(reads.size() * sequence_size(allele));
         for (const auto& read : reads) {
