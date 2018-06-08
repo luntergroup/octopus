@@ -262,13 +262,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Allows reads marked as supplementary alignments")
     
-    ("consider-reads-with-unmapped-segments",
+    ("no-reads-with-unmapped-segments",
      po::bool_switch()->default_value(false),
-     "Allows reads with unmapped template segmenets to be used for calling")
+     "Filter reads with unmapped template segmenets to be used for calling")
     
-    ("consider-reads-with-distant-segments",
+    ("no-reads-with-distant-segments",
      po::bool_switch()->default_value(false),
-     "Allows reads with template segmenets that are on different contigs")
+     "Filter reads with template segmenets that are on different contigs")
     
     ("no-adapter-contaminated-reads",
      po::bool_switch()->default_value(false),

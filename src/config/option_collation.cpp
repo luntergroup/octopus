@@ -726,11 +726,11 @@ auto make_read_filterer(const OptionMap& options)
     if (!options.at("allow-supplementary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSupplementaryAlignment>());
     }
-    if (!options.at("consider-reads-with-unmapped-segments").as<bool>()) {
+    if (options.at("no-reads-with-unmapped-segments").as<bool>()) {
         result.add(make_unique<IsNextSegmentMapped>());
         result.add(make_unique<IsProperTemplate>());
     }
-    if (!options.at("consider-reads-with-distant-segments").as<bool>()) {
+    if (options.at("no-reads-with-distant-segments").as<bool>()) {
         result.add(make_unique<IsLocalTemplate>());
     }
     if (options.at("no-adapter-contaminated-reads").as<bool>()) {
