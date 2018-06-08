@@ -17,6 +17,7 @@ namespace octopus {
 
 class ReferenceGenome;
 class BufferedReadPipe;
+class PloidyMap;
 
 namespace csr {
 
@@ -32,6 +33,7 @@ public:
     std::unique_ptr<VariantCallFilter> make(const ReferenceGenome& reference,
                                             BufferedReadPipe read_pipe,
                                             VcfHeader input_header,
+                                            PloidyMap ploidies,
                                             VariantCallFilter::OutputOptions output_config,
                                             boost::optional<ProgressMeter&> progress = boost::none,
                                             boost::optional<unsigned> max_threads = 1) const;

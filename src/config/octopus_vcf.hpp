@@ -13,6 +13,12 @@ namespace octopus { namespace vcf {
 
 namespace spec {
 
+namespace allele {
+
+VCF_SPEC_CONSTANT nonref {"<NON_REF>"};
+
+} // namespace info
+
 namespace info {
 
 VCF_SPEC_CONSTANT modelPosterior {"MP"};
@@ -42,6 +48,9 @@ VCF_SPEC_CONSTANT lowGQ {"GQ"};
 VCF_SPEC_CONSTANT highClippedReadFraction {"CRF"};
 VCF_SPEC_CONSTANT bq10 {"bq10"};
 VCF_SPEC_CONSTANT lowBaseQuality {"LBQ"};
+VCF_SPEC_CONSTANT highMismatchCount {"MC"};
+VCF_SPEC_CONSTANT highMismatchFraction {"MF"};
+VCF_SPEC_CONSTANT somaticContamination {"SC"};
 
 } // namespace filter
 

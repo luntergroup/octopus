@@ -1532,6 +1532,11 @@ std::string get_somatic_filter_expression(const OptionMap& options)
     return options.at("somatic-filter-expression").as<std::string>();
 }
 
+std::string get_refcall_filter_expression(const OptionMap& options)
+{
+    return options.at("refcall-filter-expression").as<std::string>();
+}
+
 bool is_csr_training(const OptionMap& options)
 {
     return options.count("csr-training") > 0;
@@ -1558,8 +1563,9 @@ std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const Referen
         } else {
             auto germline_filter_expression = get_germline_filter_expression(options);
             if (is_cancer_calling(options)) {
-                return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression, "",
-                                                                get_somatic_filter_expression(options));
+                return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                "", get_somatic_filter_expression(options),
+                                                                "", get_refcall_filter_expression(options));
             } else {
                 return std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
             }
@@ -1590,9 +1596,6 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     filterer.add(make_unique<HasWellFormedCigar>());
     filterer.add(make_unique<IsMapped>());
     filterer.add(make_unique<IsNotMarkedQcFail>());
-    filterer.add(make_unique<IsNotMarkedDuplicate>());
-    filterer.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
-    filterer.add(make_unique<IsProperTemplate>());
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }
 

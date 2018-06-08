@@ -227,6 +227,10 @@ set(CORE_SOURCES
     core/csr/facets/read_assignments.cpp
     core/csr/facets/reference_context.hpp
     core/csr/facets/reference_context.cpp
+    core/csr/facets/genotypes.hpp
+    core/csr/facets/genotypes.cpp
+    core/csr/facets/ploidies.hpp
+    core/csr/facets/ploidies.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
 
@@ -250,6 +254,8 @@ set(CORE_SOURCES
     core/csr/filters/passing_filter.cpp
     core/csr/filters/training_filter_factory.hpp
     core/csr/filters/training_filter_factory.cpp
+    core/csr/filters/conditional_threshold_filter.hpp
+    core/csr/filters/conditional_threshold_filter.cpp
     core/csr/filters/somatic_threshold_filter.hpp
     core/csr/filters/somatic_threshold_filter.cpp
     
@@ -288,8 +294,6 @@ set(CORE_SOURCES
     core/csr/measures/measures_fwd.hpp
     core/csr/measures/measure_factory.hpp
     core/csr/measures/measure_factory.cpp
-    core/csr/measures/realignments.hpp
-    core/csr/measures/realignments.cpp
     core/csr/measures/unassigned_read_fraction.hpp
     core/csr/measures/unassigned_read_fraction.cpp
     core/csr/measures/median_base_quality.hpp
@@ -298,6 +302,10 @@ set(CORE_SOURCES
     core/csr/measures/mismatch_count.cpp
     core/csr/measures/mismatch_fraction.hpp
     core/csr/measures/mismatch_fraction.cpp
+    core/csr/measures/is_refcall.hpp
+    core/csr/measures/is_refcall.cpp
+    core/csr/measures/somatic_contamination.hpp
+    core/csr/measures/somatic_contamination.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp

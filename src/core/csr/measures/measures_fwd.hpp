@@ -24,6 +24,7 @@
 #include "core/csr/measures/median_base_quality.hpp"
 #include "core/csr/measures/mismatch_count.hpp"
 #include "core/csr/measures/mismatch_fraction.hpp"
-#include "core/csr/measures/realignments.hpp"
+#include "core/csr/measures/is_refcall.hpp"
+#include "core/csr/measures/somatic_contamination.hpp"
 
 #endif

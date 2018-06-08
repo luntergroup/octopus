@@ -15,6 +15,7 @@
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/tools/read_assigner.hpp"
+#include "basics/ploidy_map.hpp"
 
 namespace octopus { namespace csr {
 
@@ -23,6 +24,7 @@ class Facet : public Equitable<Facet>
 public:
     using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
     using SampleSupportMap = std::unordered_map<SampleName, HaplotypeSupportMap>;
+    using LocalPloidyMap = std::unordered_map<SampleName, unsigned>;
     
     struct SupportMaps
     {
@@ -34,7 +36,9 @@ public:
                                       std::reference_wrapper<const SupportMaps>,
                                       std::reference_wrapper<const std::string>,
                                       std::reference_wrapper<const std::vector<std::string>>,
-                                      std::reference_wrapper<const Haplotype>
+                                      std::reference_wrapper<const Haplotype>,
+                                      std::reference_wrapper<const GenotypeMap>,
+                                      std::reference_wrapper<const LocalPloidyMap>
                                      >;
     
     Facet() = default;

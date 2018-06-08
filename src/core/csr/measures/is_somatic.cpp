@@ -9,6 +9,7 @@
 
 #include "io/variant/vcf_record.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/ploidies.hpp"
 
 namespace octopus { namespace csr {
 
@@ -23,10 +24,15 @@ std::unique_ptr<Measure> IsSomatic::do_clone() const
 
 namespace {
 
-bool is_somatic_sample(const VcfRecord& call, const VcfRecord::SampleName& sample)
+bool is_somatic_sample(const VcfRecord& call, const VcfRecord::SampleName& sample, const unsigned sample_ploidy)
 {
     assert(is_somatic(call));
-    return call.has_alt_allele(sample);
+    const auto observed_sample_ploidy = call.ploidy(sample);
+    if (observed_sample_ploidy > sample_ploidy) {
+        return call.has_alt_allele(sample);
+    } else {
+        return false;
+    }
 }
 
 } // namespace
@@ -37,8 +43,9 @@ Measure::ResultType IsSomatic::do_evaluate(const VcfRecord& call, const FacetMap
         const auto& samples = get_value<Samples>(facets.at("Samples"));
         std::vector<bool> result(samples.size(), false);
         if (is_somatic(call)) {
+            const auto& ploidies = get_value<Ploidies>(facets.at("Ploidies"));
             std::transform(std::cbegin(samples), std::cend(samples), std::begin(result),
-                           [&call] (const auto& sample) { return is_somatic_sample(call, sample); });
+                           [&] (const auto& sample) { return is_somatic_sample(call, sample, ploidies.at(sample)); });
         }
         return result;
     } else {
@@ -72,7 +79,7 @@ std::string IsSomatic::do_describe() const
 std::vector<std::string> IsSomatic::do_requirements() const
 {
     if (report_sample_status_) {
-        return {"Samples"};
+        return {"Samples", "Ploidies"};
     } else {
         return {};
     }

@@ -1287,7 +1287,7 @@ void run_csr(GenomeCallingComponents& components)
         }
         const VcfReader in {std::move(*input_path)};
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), in.fetch_header(),
-                                                output_config, progress, components.num_threads());
+                                                components.ploidies(), output_config, progress, components.num_threads());
         assert(filter);
         VcfWriter& out {*components.filtered_output()};
         filter->filter(in, out);

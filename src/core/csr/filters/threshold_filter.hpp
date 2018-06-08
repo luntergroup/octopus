@@ -52,14 +52,19 @@ public:
         std::string vcf_filter_key = ".";
     };
     
+    struct ConditionVectorPair
+    {
+        std::vector<Condition> hard, soft;
+    };
+    
     ThresholdVariantCallFilter() = delete;
     
     ThresholdVariantCallFilter(FacetFactory facet_factory,
-                               std::vector<Condition> hard_conditions,
-                               std::vector<Condition> soft_conditions,
+                               ConditionVectorPair conditions,
                                OutputOptions output_config,
                                ConcurrencyPolicy threading,
-                               boost::optional<ProgressMeter&> progress = boost::none);
+                               boost::optional<ProgressMeter&> progress = boost::none,
+                               std::vector<MeasureWrapper> other_measures = {});
     
     ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;
     ThresholdVariantCallFilter& operator=(const ThresholdVariantCallFilter&) = delete;
@@ -77,8 +82,8 @@ protected:
     std::vector<std::string> vcf_filter_keys_;
     bool all_unique_filter_keys_;
     
-    bool passes_all_filteres(MeasureIterator first_measure, MeasureIterator last_measure,
-                             ThresholdIterator first_threshold) const;
+    bool passes_all_filters(MeasureIterator first_measure, MeasureIterator last_measure,
+                            ThresholdIterator first_threshold) const;
     
 private:
     virtual void annotate(VcfHeader::Builder& header) const override;
@@ -111,7 +116,7 @@ private:
     {
         explicit UnaryVisitor(T target, Cmp cmp) : target {target}, cmp {cmp} {}
         template <typename T_>
-        bool operator()(T_ value) const noexcept { return cmp(target, value); }
+        bool operator()(T_ value) const noexcept { return !cmp(value, target); }
         template <typename T_>
         bool operator()(boost::optional<T_> value) const noexcept
         {
