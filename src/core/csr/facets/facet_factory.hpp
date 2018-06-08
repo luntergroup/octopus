@@ -12,6 +12,7 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
+#include "basics/ploidy_map.hpp"
 #include "io/variant/vcf_header.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/reference/reference_genome.hpp"
@@ -30,7 +31,7 @@ public:
     
     FacetFactory() = delete;
     
-    FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe, VcfHeader input_header);
+    FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe, VcfHeader input_header, PloidyMap ploidies);
     
     FacetFactory(const FacetFactory&)            = delete;
     FacetFactory& operator=(const FacetFactory&) = delete;
@@ -55,6 +56,7 @@ private:
     std::reference_wrapper<const ReferenceGenome> reference_;
     BufferedReadPipe read_pipe_;
     VcfHeader input_header_;
+    PloidyMap ploidies_;
     
     std::unordered_map<std::string, std::function<FacetWrapper(const BlockData& data)>> facet_makers_;
     

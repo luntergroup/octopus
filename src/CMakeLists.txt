@@ -227,6 +227,10 @@ set(CORE_SOURCES
     core/csr/facets/read_assignments.cpp
     core/csr/facets/reference_context.hpp
     core/csr/facets/reference_context.cpp
+    core/csr/facets/genotypes.hpp
+    core/csr/facets/genotypes.cpp
+    core/csr/facets/ploidies.hpp
+    core/csr/facets/ploidies.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
 
