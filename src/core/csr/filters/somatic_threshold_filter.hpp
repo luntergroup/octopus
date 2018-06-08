@@ -25,6 +25,7 @@ public:
     SomaticThresholdVariantCallFilter(FacetFactory facet_factory,
                                       ConditionVectorPair germline,
                                       ConditionVectorPair somatic,
+                                      ConditionVectorPair reference,
                                       OutputOptions output_config,
                                       ConcurrencyPolicy threading,
                                       boost::optional<ProgressMeter&> progress = boost::none);

@@ -148,12 +148,15 @@ ThresholdFilterFactory::ThresholdFilterFactory(std::string soft_expression)
 ThresholdFilterFactory::ThresholdFilterFactory(std::string hard_expression, std::string soft_expression)
 : germline_ {parse_conditions(std::move(hard_expression)), parse_conditions(std::move(soft_expression))}
 , somatic_ {}
+, reference_ {}
 {}
 
 ThresholdFilterFactory::ThresholdFilterFactory(std::string germline_hard_expression, std::string germline_soft_expression,
-                                               std::string somatic_hard_expression, std::string somatic_soft_expression)
+                                               std::string somatic_hard_expression, std::string somatic_soft_expression,
+                                               std::string refcall_hard_expression, std::string refcall_soft_expression)
 : germline_ {parse_conditions(std::move(germline_hard_expression)), parse_conditions(std::move(germline_soft_expression))}
 , somatic_ {parse_conditions(std::move(somatic_hard_expression)), parse_conditions(std::move(somatic_soft_expression))}
+, reference_ {parse_conditions(std::move(refcall_hard_expression)), parse_conditions(std::move(refcall_soft_expression))}
 {}
 
 std::unique_ptr<VariantCallFilterFactory> ThresholdFilterFactory::do_clone() const
@@ -172,7 +175,7 @@ std::unique_ptr<VariantCallFilter> ThresholdFilterFactory::do_make(FacetFactory 
                                                             output_config, threading, progress);
     } else {
         return std::make_unique<SomaticThresholdVariantCallFilter>(std::move(facet_factory),
-                                                                   germline_, somatic_,
+                                                                   germline_, somatic_, reference_,
                                                                    output_config, threading, progress);
     }
 }

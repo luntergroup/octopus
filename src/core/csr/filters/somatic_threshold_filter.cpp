@@ -11,20 +11,30 @@
 #include <boost/variant.hpp>
 
 #include "../measures/is_somatic.hpp"
+#include "../measures/is_refcall.hpp"
 
 namespace octopus { namespace csr {
 
 SomaticThresholdVariantCallFilter::SomaticThresholdVariantCallFilter(FacetFactory facet_factory,
                                                                      ConditionVectorPair germline,
                                                                      ConditionVectorPair somatic,
+                                                                     ConditionVectorPair reference,
                                                                      OutputOptions output_config,
                                                                      ConcurrencyPolicy threading,
                                                                      boost::optional<ProgressMeter&> progress)
 : ConditionalThresholdVariantCallFilter {
     std::move(facet_factory),
-    {std::move(germline), std::move(somatic)},
-    {make_wrapped_measure<IsSomatic>(true)},
-    [] (const auto& measures) -> std::size_t { return boost::get<bool>(measures.back()); },
+    {std::move(germline), std::move(somatic), std::move(reference)},
+    {make_wrapped_measure<IsSomatic>(true), make_wrapped_measure<IsRefcall>(true)},
+    [] (const MeasureVector& measures) -> std::size_t {
+        assert(measures.size() == 2);
+        if (boost::get<bool>(measures.front())) {
+            return 1;
+        } else if (boost::get<bool>(measures.back())) {
+            return 2;
+        } else {
+            return 0;
+        }},
     output_config, threading, progress
 } {}
 

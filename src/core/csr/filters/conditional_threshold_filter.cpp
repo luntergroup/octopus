@@ -45,24 +45,21 @@ ConditionalThresholdVariantCallFilter::ConditionalThresholdVariantCallFilter(Fac
 , unique_filter_keys_ {}
 , num_chooser_measures_ {chooser_measures.size()}
 {
-    utils::append(chooser_measures, measures_);
+    utils::append(std::move(chooser_measures), measures_);
     measures_.shrink_to_fit();
     hard_ranges_.reserve(conditions.size());
     soft_ranges_.reserve(conditions.size());
+    unique_filter_keys_.reserve(conditions.size());
     std::size_t i {0}, j {0}, k {0};
     for (const auto& p : conditions) {
         hard_ranges_.push_back({i, i + p.hard.size(), j});
         i += p.hard.size(); j += p.hard.size();
         soft_ranges_.push_back({i, i + p.soft.size(), k});
-        i += p.soft.size(); k += p.soft.size();
-    }
-    unique_filter_keys_.reserve(conditions.size());
-    i = 0;
-    for (const auto& p : conditions) {
-        std::vector<std::string> filter_keys {std::next(std::cbegin(vcf_filter_keys_), i),
-                                              std::next(std::cbegin(vcf_filter_keys_), i + p.soft.size())};
-        unique_filter_keys_.push_back(are_all_unique(filter_keys));
         i += p.soft.size();
+        std::vector<std::string> filter_keys {std::next(std::cbegin(vcf_filter_keys_), k),
+                                              std::next(std::cbegin(vcf_filter_keys_), k + p.soft.size())};
+        unique_filter_keys_.push_back(are_all_unique(filter_keys));
+        k += p.soft.size();
     }
 }
 
