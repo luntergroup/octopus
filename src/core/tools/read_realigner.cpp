@@ -139,26 +139,6 @@ std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, con
 
 namespace {
 
-bool is_insertion(CigarOperation::Flag flag) noexcept
-{
-    return flag == CigarOperation::Flag::insertion;
-}
-
-bool is_insertion(const CigarOperation& op) noexcept
-{
-    return is_insertion(op.flag());
-}
-
-bool is_deletion(CigarOperation::Flag flag) noexcept
-{
-    return flag == CigarOperation::Flag::deletion;
-}
-
-bool is_deletion(const CigarOperation& op) noexcept
-{
-    return is_deletion(op.flag());
-}
-
 CigarString minimise(const CigarString& cigar)
 {
     CigarString result {};

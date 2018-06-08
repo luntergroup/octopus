@@ -92,10 +92,29 @@ bool is_match(const CigarOperation& op) noexcept
     return is_match(op.flag());
 }
 
+bool is_insertion(CigarOperation::Flag flag) noexcept
+{
+    return flag == CigarOperation::Flag::insertion;
+}
+
+bool is_insertion(const CigarOperation& op) noexcept
+{
+    return is_insertion(op.flag());
+}
+
+bool is_deletion(CigarOperation::Flag flag) noexcept
+{
+    return flag == CigarOperation::Flag::deletion;
+}
+
+bool is_deletion(const CigarOperation& op) noexcept
+{
+    return is_deletion(op.flag());
+}
+
 bool is_indel(CigarOperation::Flag flag) noexcept
 {
-    using Flag = CigarOperation::Flag;
-    return flag == Flag::insertion || flag == Flag::deletion;
+    return is_insertion(flag) || is_deletion(flag);
 }
 
 bool is_indel(const CigarOperation& op) noexcept
