@@ -39,6 +39,9 @@ auto make_threshold(const std::string& comparator, const T target)
     if (comparator == "==") {
         return make_wrapped_threshold<EqualThreshold<T>>(target);
     }
+    if (comparator == "!=") {
+        return make_wrapped_threshold<NotEqualThreshold<T>>(target);
+    }
     if (comparator == "<") {
         return make_wrapped_threshold<LessThreshold<T>>(target);
     }
@@ -75,6 +78,7 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<MedianBaseQuality>()]        = lowBaseQuality;
     filter_names[name<MismatchCount>()]            = highMismatchCount;
     filter_names[name<MismatchFraction>()]         = highMismatchFraction;
+    filter_names[name<SomaticContamination>()]     = somaticContamination;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)
@@ -112,7 +116,11 @@ auto make_condition(const std::string& measure_name, const std::string& comparat
 auto make_condition(const std::string& measure, const std::string& comparator, const std::string& threshold_target)
 {
     try {
-        return make_condition(measure, comparator, boost::lexical_cast<double>(threshold_target));
+        if (threshold_target.find('.') == std::string::npos) {
+            return make_condition(measure, comparator, boost::lexical_cast<int>(threshold_target));
+        } else {
+            return make_condition(measure, comparator, boost::lexical_cast<double>(threshold_target));
+        }
     } catch (const boost::bad_lexical_cast&) {
         throw BadVariantFilterCondition {};
     }
@@ -127,7 +135,7 @@ auto parse_conditions(std::string expression)
     boost::split(conditions, expression, boost::is_any_of("|"));
     for (const auto& condition : conditions) {
         std::vector<std::string> tokens {};
-        boost::split(tokens, condition, boost::is_any_of("<,>,<=,=>,=="));
+        boost::split(tokens, condition, boost::is_any_of("<,>,<=,=>,==,!="));
         if (tokens.size() == 2) {
             const auto comparitor_pos = tokens.front().size();
             const auto comparitor_length = condition.size() - comparitor_pos - tokens.back().size();
