@@ -13,6 +13,12 @@ namespace octopus { namespace vcf {
 
 namespace spec {
 
+namespace allele {
+
+VCF_SPEC_CONSTANT nonref {"<NON_REF>"};
+
+} // namespace info
+
 namespace info {
 
 VCF_SPEC_CONSTANT modelPosterior {"MP"};

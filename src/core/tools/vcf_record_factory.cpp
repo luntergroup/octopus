@@ -29,6 +29,7 @@
 #include "utils/append.hpp"
 #include "exceptions/program_error.hpp"
 #include "io/variant/vcf_spec.hpp"
+#include "config/octopus_vcf.hpp"
 
 #define _unused(x) ((void)(x))
 
@@ -551,7 +552,7 @@ void set_vcf_genotype(const SampleName& sample, const Call::GenotypeCall& call, 
     auto genotyped_alleles = extract_allele_sequences(call.genotype);
     if (replace_missing_with_non_ref) {
         std::replace(std::begin(genotyped_alleles), std::end(genotyped_alleles),
-                     std::string {vcfspec::missingValue}, std::string {"<NON_REF>"});
+                     std::string {vcfspec::missingValue}, std::string {vcf::spec::allele::nonref});
     }
     record.set_genotype(sample, std::move(genotyped_alleles), VcfRecord::Builder::Phasing::phased);
 }
@@ -613,10 +614,10 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     bool has_non_ref {false};
     auto alts = extract_genotyped_alt_alleles(call.get(), samples_);
     if (alts.empty()) {
-        alts.push_back("<NON_REF>");
+        alts.push_back(vcf::spec::allele::nonref);
         has_non_ref = true;
     } else {
-        has_non_ref = std::find(std::cbegin(alts), std::cend(alts), "<NON_REF>") != std::cend(alts);
+        has_non_ref = std::find(std::cbegin(alts), std::cend(alts), vcf::spec::allele::nonref) != std::cend(alts);
     }
     
     result.set_chrom(contig_name(region));
@@ -765,10 +766,10 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     alt_alleles.erase(itr, std::end(alt_alleles));
     bool has_non_ref {false};
     if (alt_alleles.empty()) {
-        alt_alleles.push_back("<NON_REF>");
+        alt_alleles.push_back(vcf::spec::allele::nonref);
         has_non_ref = true;
     } else {
-        has_non_ref = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), "<NON_REF>") != std::cend(alt_alleles);
+        has_non_ref = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), vcf::spec::allele::nonref) != std::cend(alt_alleles);
     }
     set_allele_counts(alt_alleles, resolved_genotypes, result);
     result.set_alt(std::move(alt_alleles));
@@ -800,7 +801,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
             auto& genotype_call = *sample_itr++;
             if (has_non_ref) {
                 std::replace(std::begin(genotype_call), std::end(genotype_call),
-                             std::string {vcfspec::missingValue}, std::string {"<NON_REF>"});
+                             std::string {vcfspec::missingValue}, std::string {vcf::spec::allele::nonref});
             }
             result.set_genotype(sample, genotype_call, VcfRecord::Builder::Phasing::phased);
             result.set_format(sample, "GQ", std::to_string(gq));
