@@ -38,14 +38,13 @@ ConditionalThresholdVariantCallFilter::ConditionalThresholdVariantCallFilter(Fac
                                                                              OutputOptions output_config,
                                                                              ConcurrencyPolicy threading,
                                                                              boost::optional<ProgressMeter&> progress)
-: ThresholdVariantCallFilter {std::move(facet_factory), concat(conditions), output_config, threading, progress}
+: ThresholdVariantCallFilter {std::move(facet_factory), concat(conditions), output_config, threading, progress, chooser_measures}
 , hard_ranges_ {}
 , soft_ranges_ {}
 , chooser_ {std::move(chooser)}
 , unique_filter_keys_ {}
 , num_chooser_measures_ {chooser_measures.size()}
 {
-    utils::append(std::move(chooser_measures), measures_);
     measures_.shrink_to_fit();
     hard_ranges_.reserve(conditions.size());
     soft_ranges_.reserve(conditions.size());

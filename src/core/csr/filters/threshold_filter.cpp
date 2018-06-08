@@ -11,6 +11,7 @@
 
 #include "io/variant/vcf_header.hpp"
 #include "utils/append.hpp"
+#include "utils/concat.hpp"
 #include "config/octopus_vcf.hpp"
 
 namespace octopus { namespace csr {
@@ -67,8 +68,10 @@ ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factor
                                                        ConditionVectorPair conditions,
                                                        OutputOptions output_config,
                                                        ConcurrencyPolicy threading,
-                                                       boost::optional<ProgressMeter&> progress)
-: SinglePassVariantCallFilter {std::move(facet_factory), extract_measures(conditions.hard, conditions.soft),
+                                                       boost::optional<ProgressMeter&> progress,
+                                                       std::vector<MeasureWrapper> other_measures)
+: SinglePassVariantCallFilter {std::move(facet_factory),
+                               concat(extract_measures(conditions.hard, conditions.soft), std::move(other_measures)),
                                output_config, threading, progress}
 , hard_thresholds_ {extract_thresholds(conditions.hard)}
 , soft_thresholds_ {extract_thresholds(conditions.soft)}

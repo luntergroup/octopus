@@ -63,7 +63,8 @@ public:
                                ConditionVectorPair conditions,
                                OutputOptions output_config,
                                ConcurrencyPolicy threading,
-                               boost::optional<ProgressMeter&> progress = boost::none);
+                               boost::optional<ProgressMeter&> progress = boost::none,
+                               std::vector<MeasureWrapper> other_measures = {});
     
     ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;
     ThresholdVariantCallFilter& operator=(const ThresholdVariantCallFilter&) = delete;
