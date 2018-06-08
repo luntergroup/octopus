@@ -61,21 +61,23 @@ auto get_somatic_alleles(const VcfRecord& somatic, const std::vector<SampleName>
 
 auto get_somatic_haplotypes(const Facet::GenotypeMap& genotypes, const std::vector<Allele>& somatics)
 {
-    const auto allele_region = somatics.front().mapped_region();
     std::vector<Haplotype> result {};
-    for (const auto& p :genotypes) {
-        const auto& overlapped_genotypes = overlap_range(p.second, allele_region);
-        if (size(overlapped_genotypes) == 1) {
-            const auto& genotype = overlapped_genotypes.front();
-            for (const auto& haplotype : genotype) {
-                if (std::any_of(std::cbegin(somatics), std::cend(somatics),
-                                [&] (const auto& somatic) { return haplotype.includes(somatic); })) {
-                    result.push_back(haplotype);
+    if (!somatics.empty()) {
+        const auto allele_region = somatics.front().mapped_region();
+        for (const auto& p :genotypes) {
+            const auto& overlapped_genotypes = overlap_range(p.second, allele_region);
+            if (size(overlapped_genotypes) == 1) {
+                const auto& genotype = overlapped_genotypes.front();
+                for (const auto& haplotype : genotype) {
+                    if (std::any_of(std::cbegin(somatics), std::cend(somatics),
+                                    [&] (const auto& somatic) { return haplotype.includes(somatic); })) {
+                        result.push_back(haplotype);
+                    }
                 }
             }
         }
+        sort_unique(result);
     }
-    sort_unique(result);
     return result;
 }
 
