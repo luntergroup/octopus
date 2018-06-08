@@ -304,6 +304,8 @@ set(CORE_SOURCES
     core/csr/measures/mismatch_fraction.cpp
     core/csr/measures/is_refcall.hpp
     core/csr/measures/is_refcall.cpp
+    core/csr/measures/somatic_contamination.hpp
+    core/csr/measures/somatic_contamination.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
