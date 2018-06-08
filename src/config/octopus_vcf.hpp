@@ -48,6 +48,8 @@ VCF_SPEC_CONSTANT lowGQ {"GQ"};
 VCF_SPEC_CONSTANT highClippedReadFraction {"CRF"};
 VCF_SPEC_CONSTANT bq10 {"bq10"};
 VCF_SPEC_CONSTANT lowBaseQuality {"LBQ"};
+VCF_SPEC_CONSTANT highMismatchCount {"MC"};
+VCF_SPEC_CONSTANT highMismatchFraction {"MF"};
 
 } // namespace filter
 

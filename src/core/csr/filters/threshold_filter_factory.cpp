@@ -73,6 +73,8 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<GCContent>()]                = highGCRegion;
     filter_names[name<ClippedReadFraction>()]      = highClippedReadFraction;
     filter_names[name<MedianBaseQuality>()]        = lowBaseQuality;
+    filter_names[name<MismatchCount>()]            = highMismatchCount;
+    filter_names[name<MismatchFraction>()]         = highMismatchFraction;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)
