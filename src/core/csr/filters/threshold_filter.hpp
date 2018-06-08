@@ -116,7 +116,7 @@ private:
     {
         explicit UnaryVisitor(T target, Cmp cmp) : target {target}, cmp {cmp} {}
         template <typename T_>
-        bool operator()(T_ value) const noexcept { return cmp(target, value); }
+        bool operator()(T_ value) const noexcept { return !cmp(value, target); }
         template <typename T_>
         bool operator()(boost::optional<T_> value) const noexcept
         {
