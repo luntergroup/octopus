@@ -300,6 +300,8 @@ set(CORE_SOURCES
     core/csr/measures/mismatch_count.cpp
     core/csr/measures/mismatch_fraction.hpp
     core/csr/measures/mismatch_fraction.cpp
+    core/csr/measures/is_refcall.hpp
+    core/csr/measures/is_refcall.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
