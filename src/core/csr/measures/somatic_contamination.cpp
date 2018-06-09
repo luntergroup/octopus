@@ -113,12 +113,13 @@ Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, con
         for (const auto& haplotype : somatic_haplotypes) somatic_genotype.emplace(haplotype);
         for (const auto& sample : normal_samples) {
             for (const auto& p : assignments.at(sample)) {
-                if (!p.second.empty()) {
+                const auto overlapped_reads = copy_overlapped(p.second, call);
+                if (!overlapped_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
                     assert(!somatic_genotype.contains(assigned_haplotype));
                     auto dummy = somatic_genotype;
                     dummy.emplace(assigned_haplotype);
-                    const auto support = compute_haplotype_support(dummy, p.second);
+                    const auto support = compute_haplotype_support(dummy, overlapped_reads);
                     for (const auto& somatic : somatic_haplotypes) {
                         if (support.count(somatic) == 1) {
                             *result += support.at(somatic).size();
