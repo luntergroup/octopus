@@ -20,6 +20,7 @@ namespace octopus {
 
 class HaplotypeLikelihoodModel;
 
+using HaplotypeProbabilityMap = std::unordered_map<Haplotype, double>;
 using ReadSupportSet = std::vector<AlignedRead>;
 using HaplotypeSupportMap = std::unordered_map<Haplotype, ReadSupportSet>;
 using ReadRefSupportSet = std::vector<std::reference_wrapper<const AlignedRead>>;
@@ -33,6 +34,19 @@ struct AssignmentConfig
 HaplotypeSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedRead>& reads,
+                          const HaplotypeProbabilityMap& log_priors,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          std::deque<AlignedRead>& ambiguous,
+                          const HaplotypeProbabilityMap& log_priors,
                           AssignmentConfig config = AssignmentConfig {});
 
 HaplotypeSupportMap
@@ -44,6 +58,14 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
 HaplotypeSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedRead>& reads,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          std::deque<AlignedRead>& ambiguous,
+                          const HaplotypeProbabilityMap& log_priors,
                           HaplotypeLikelihoodModel model,
                           AssignmentConfig config = AssignmentConfig {});
 
