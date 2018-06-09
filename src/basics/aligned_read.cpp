@@ -322,8 +322,8 @@ AlignedRead copy(const AlignedRead& read, const GenomicRegion& region)
     auto uncontained_cigar_copy = copy_reference(read.cigar(), 0, reference_offset);
     auto contained_cigar_copy = copy_reference(read.cigar(), reference_offset, region_size(copy_region));
     if (!uncontained_cigar_copy.empty() && !contained_cigar_copy.empty()
-        && uncontained_cigar_copy.back() == contained_cigar_copy.front()) {
-        assert(is_insertion(uncontained_cigar_copy.back()));
+        && uncontained_cigar_copy.back() == contained_cigar_copy.front()
+        && is_insertion(uncontained_cigar_copy.back())) {
         uncontained_cigar_copy.pop_back();
     }
     const auto copy_offset = sequence_size(uncontained_cigar_copy);
@@ -349,8 +349,8 @@ T copy_helper(const T& sequence, const CigarString& cigar, const GenomicRegion& 
     auto uncontained_cigar_copy = copy_reference(cigar, 0, reference_offset);
     auto contained_cigar_copy = copy_reference(cigar, reference_offset, region_size(copy_region));
     if (!uncontained_cigar_copy.empty() && !contained_cigar_copy.empty()
-        && uncontained_cigar_copy.back() == contained_cigar_copy.front()) {
-        assert(is_insertion(uncontained_cigar_copy.back()));
+        && uncontained_cigar_copy.back() == contained_cigar_copy.front()
+        && is_insertion(uncontained_cigar_copy.back())) {
         uncontained_cigar_copy.pop_back();
     }
     const auto copy_offset = sequence_size(uncontained_cigar_copy);
