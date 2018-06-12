@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef population_model_hpp
@@ -22,23 +22,21 @@ namespace octopus { namespace model {
 class PopulationModel
 {
 public:
+    struct Options
+    {
+        std::size_t max_joint_genotypes = 1'000'000;
+        unsigned max_em_iterations = 100;
+        double em_epsilon = 0.001;
+    };
     struct Latents
     {
-        std::vector<std::vector<std::size_t>> genotype_combinations;
-        using GenotypeProbabilityVector = std::vector<double>;
-        GenotypeProbabilityVector joint_genotype_probabilities;
+        using ProbabilityVector = std::vector<double>;
+        std::vector<ProbabilityVector> marginal_genotype_probabilities;
     };
-    
     struct InferredLatents
     {
         Latents posteriors;
         double log_evidence;
-    };
-    
-    struct Options
-    {
-        std::size_t max_combinations_per_sample = 200;
-        unsigned max_em_iterations = 100;
     };
     
     using SampleVector            = std::vector<SampleName>;
@@ -66,7 +64,11 @@ public:
     InferredLatents evaluate(const SampleVector& samples,
                              const GenotypeVector& genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    
+    // All samples have same ploidy
+    InferredLatents evaluate(const SampleVector& samples,
+                             const GenotypeVector& genotypes,
+                             const std::vector<std::vector<unsigned>>& genotype_indices,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     // Samples have different ploidy
     InferredLatents evaluate(const SampleVector& samples,
                              const std::vector<GenotypeVectorReference>& genotypes,

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef haplotype_hpp
@@ -300,15 +300,43 @@ struct IsLessComplex
 {
     IsLessComplex() = default;
     explicit IsLessComplex(boost::optional<Haplotype> reference);
-    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const noexcept;
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const;
 private:
     boost::optional<Haplotype> reference_;
 };
 
-// Erases all duplicates haplotypes (w.r.t operator==) keeping the duplicate which is
-// considered least complex w.r.t IsLessComplex.
-// The optional Haplotype arguement can be used as a basis for the complexity comparison.
-unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optional<Haplotype> = boost::none);
+// Removes all duplicates haplotypes (w.r.t operator==) keeping the duplicate which is considered least complex w.r.t cmp.
+template <typename Cmp>
+unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, const Cmp& cmp)
+{
+    using std::begin; using std::end;
+    std::sort(begin(haplotypes), end(haplotypes));
+    auto first_dup_itr  = begin(haplotypes);
+    const auto last_itr = end(haplotypes);
+    while (true) {
+        first_dup_itr = std::adjacent_find(first_dup_itr, last_itr);
+        if (first_dup_itr == last_itr) break;
+        auto dup_keep_itr = (cmp(*first_dup_itr, *std::next(first_dup_itr))) ? first_dup_itr : std::next(first_dup_itr);
+        auto last_dup_itr = std::next(first_dup_itr, 2);
+        for (; last_dup_itr != last_itr; ++last_dup_itr) {
+            if (*last_dup_itr != *first_dup_itr) {
+                break;
+            }
+            if (cmp(*last_dup_itr, *dup_keep_itr)) {
+                dup_keep_itr = last_dup_itr;
+            }
+        }
+        std::iter_swap(first_dup_itr, dup_keep_itr);
+        first_dup_itr = last_dup_itr;
+    }
+    const auto last_keep_itr = std::unique(begin(haplotypes), end(haplotypes));
+    const auto result = std::distance(last_keep_itr, end(haplotypes));
+    haplotypes.erase(last_keep_itr, last_itr);
+    return static_cast<unsigned>(result);
+}
+
+unsigned remove_duplicates(std::vector<Haplotype>& haplotypes);
+unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, Haplotype reference);
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 

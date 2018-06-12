@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "measure_factory.hpp"
@@ -23,15 +23,19 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<ModelPosterior>()]           = [] () { return make_wrapped_measure<ModelPosterior>(); };
     measure_makers[name<Quality>()]                  = [] () { return make_wrapped_measure<Quality>(); };
     measure_makers[name<QualityByDepth>()]           = [] () { return make_wrapped_measure<QualityByDepth>(); };
-    measure_makers[name<MaxGenotypeQuality>()]       = [] () { return make_wrapped_measure<MaxGenotypeQuality>(); };
+    measure_makers[name<GenotypeQuality>()]          = [] () { return make_wrapped_measure<GenotypeQuality>(); };
     measure_makers[name<StrandBias>()]               = [] () { return make_wrapped_measure<StrandBias>(); };
     measure_makers[name<GCContent>()]                = [] () { return make_wrapped_measure<GCContent>(); };
     measure_makers[name<FilteredReadFraction>()]     = [] () { return make_wrapped_measure<FilteredReadFraction>(); };
     measure_makers[name<ClippedReadFraction>()]      = [] () { return make_wrapped_measure<ClippedReadFraction>(); };
     measure_makers[name<IsDenovo>()]                 = [] () { return make_wrapped_measure<IsDenovo>(); };
     measure_makers[name<IsSomatic>()]                = [] () { return make_wrapped_measure<IsSomatic>(); };
-    measure_makers[name<UnassignedReadFraction>()]   = [] () { return make_wrapped_measure<UnassignedReadFraction>(); };
-    measure_makers[name<Realignments>()]             = [] () { return make_wrapped_measure<Realignments>(); };
+    measure_makers[name<AmbiguousReadFraction>()]    = [] () { return make_wrapped_measure<AmbiguousReadFraction>(); };
+    measure_makers[name<MedianBaseQuality>()]        = [] () { return make_wrapped_measure<MedianBaseQuality>(); };
+    measure_makers[name<MismatchCount>()]            = [] () { return make_wrapped_measure<MismatchCount>(); };
+    measure_makers[name<MismatchFraction>()]         = [] () { return make_wrapped_measure<MismatchFraction>(); };
+    measure_makers[name<IsRefcall>()]                = [] () { return make_wrapped_measure<IsRefcall>(); };
+    measure_makers[name<SomaticContamination>()]     = [] () { return make_wrapped_measure<SomaticContamination>(); };
 }
 
 class UnknownMeasure : public UserError

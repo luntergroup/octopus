@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_manager.hpp"
@@ -68,6 +68,12 @@ void swap(ReadManager& lhs, ReadManager& rhs) noexcept
     swap(lhs.samples_, rhs.samples_);
 }
 
+void ReadManager::close() const noexcept
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    close_readers(num_files_);
+}
+
 bool ReadManager::good() const noexcept
 {
     return std::all_of(std::cbegin(open_readers_), std::cend(open_readers_),
@@ -77,6 +83,21 @@ bool ReadManager::good() const noexcept
 unsigned ReadManager::num_files() const noexcept
 {
     return static_cast<unsigned>(closed_readers_.size() + open_readers_.size());
+}
+
+std::vector<ReadManager::Path> ReadManager::paths() const
+{
+    std::vector<Path> result {};
+    result.reserve(num_files_);
+    std::lock_guard<std::mutex> lock {mutex_};
+    for (const auto& path : closed_readers_) {
+        result.push_back(path);
+    }
+    for (const auto& p : open_readers_) {
+        result.push_back(p.first);
+    }
+    std::sort(std::begin(result), std::end(result));
+    return result;
 }
 
 unsigned ReadManager::num_samples() const noexcept
@@ -277,7 +298,7 @@ auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker,
     if (position_tracker.num_tracked() <= max_coverage) return region;
     const auto max_region = max_head_region(position_tracker, region);
     if (size(max_region) <= 1) return max_region;
-    auto position_coverage = position_tracker.coverage(max_region.contig_region());
+    auto position_coverage = position_tracker.get(max_region.contig_region());
     std::partial_sum(std::begin(position_coverage), std::end(position_coverage), std::begin(position_coverage));
     const auto last_position = std::upper_bound(std::cbegin(position_coverage), std::cend(position_coverage), max_coverage);
     return expand_rhs(head_region(region), std::distance(std::cbegin(position_coverage), last_position));

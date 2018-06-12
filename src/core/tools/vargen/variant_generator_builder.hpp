@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variant_generator_builder_hpp
@@ -16,6 +16,7 @@
 #include "randomiser.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/variant/vcf_reader.hpp"
+#include "active_region_generator.hpp"
 
 namespace octopus {
 namespace coretools {
@@ -40,6 +41,7 @@ public:
                                                VcfExtractor::Options options = VcfExtractor::Options {});
     VariantGeneratorBuilder& add_downloader(Downloader::Options options = Downloader::Options {});
     VariantGeneratorBuilder& add_randomiser(Randomiser::Options options = Randomiser::Options {});
+    VariantGeneratorBuilder& set_active_region_generator(ActiveRegionGenerator::Options options = ActiveRegionGenerator::Options {});
     
     VariantGenerator build(const ReferenceGenome& reference) const;
 
@@ -55,6 +57,7 @@ private:
     std::deque<VcfExtractorPacket> vcf_extractors_;
     std::deque<Downloader::Options> downloaders_;
     std::deque<Randomiser::Options> randomisers_;
+    ActiveRegionGenerator::Options active_region_generator_;
 };
 
 } // namespace coretools

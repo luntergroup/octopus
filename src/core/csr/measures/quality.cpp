@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "quality.hpp"
@@ -6,6 +6,8 @@
 #include "io/variant/vcf_record.hpp"
 
 namespace octopus { namespace csr {
+
+const std::string Quality::name_ = "QUAL";
 
 std::unique_ptr<Measure> Quality::do_clone() const
 {
@@ -21,9 +23,19 @@ Measure::ResultType Quality::do_evaluate(const VcfRecord& call, const FacetMap& 
     return result;
 }
 
-std::string Quality::do_name() const
+Measure::ResultCardinality Quality::do_cardinality() const noexcept
 {
-    return "QUAL";
+    return ResultCardinality::one;
+}
+
+const std::string& Quality::do_name() const
+{
+    return name_;
+}
+
+std::string Quality::do_describe() const
+{
+    return "Call QUAL";
 }
     
 } // namespace csr

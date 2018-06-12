@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef population_prior_model_hpp
@@ -33,15 +33,15 @@ public:
     
     double evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const { return do_evaluate(genotypes); }
     double evaluate(const std::vector<GenotypeReference>& genotypes) const { return do_evaluate(genotypes); }
-    double evaluate(const std::vector<std::vector<unsigned>>& indices) const { return do_evaluate(indices); }
-    double evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const { return do_evaluate(indices); }
+    double evaluate(const std::vector<GenotypeIndex>& indices) const { return do_evaluate(indices); }
+    double evaluate(const std::vector<GenotypeIndiceVectorReference>& genotypes) const { return do_evaluate(genotypes); }
     
 private:
     std::vector<Haplotype> haplotypes_;
     
     virtual double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const = 0;
     virtual double do_evaluate(const std::vector<GenotypeReference>& genotypes) const = 0;
-    virtual double do_evaluate(const std::vector<std::vector<unsigned>>& indices) const = 0;
+    virtual double do_evaluate(const std::vector<GenotypeIndex>& genotypes) const = 0;
     virtual double do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const = 0;
     virtual void do_prime(const std::vector<Haplotype>& haplotypes) {};
     virtual void do_unprime() noexcept {};

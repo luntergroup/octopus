@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef htslib_sam_facade_hpp
@@ -43,14 +43,16 @@ public:
     using ReadGroupIdType = std::string;
     
     HtslibSamFacade() = delete;
+    
     HtslibSamFacade(Path file_path);
+    HtslibSamFacade(Path sam_out, Path sam_template);
     
     HtslibSamFacade(const HtslibSamFacade&)            = delete;
     HtslibSamFacade& operator=(const HtslibSamFacade&) = delete;
     HtslibSamFacade(HtslibSamFacade&&)                 = default;
     HtslibSamFacade& operator=(HtslibSamFacade&&)      = default;
     
-    ~HtslibSamFacade() override = default;
+    ~HtslibSamFacade() override;
     
     bool is_open() const noexcept override;
     void open() override;
@@ -90,10 +92,29 @@ public:
     std::vector<GenomicRegion::ContigName> reference_contigs() const override;
     boost::optional<std::vector<GenomicRegion::ContigName>> mapped_contigs() const override;
     
+    void write(const AlignedRead& read);
+    
 private:
     using HtsTid = std::int32_t;
     
     static constexpr std::size_t defaultReserve_ {10'000'000};
+    
+    struct HtsFileDeleter
+    {
+        void operator()(htsFile* file) const { hts_close(file); }
+    };
+    struct HtsHeaderDeleter
+    {
+        void operator()(bam_hdr_t* header) const { bam_hdr_destroy(header); }
+    };
+    struct HtsIndexDeleter
+    {
+        void operator()(hts_idx_t* index) const { hts_idx_destroy(index); }
+    };
+    struct HtsBam1Deleter
+    {
+        void operator()(bam1_t* b) const { bam_destroy1(b); }
+    };
     
     class HtslibIterator
     {
@@ -115,7 +136,7 @@ private:
         
         bool is_good() const noexcept;
         std::size_t begin() const noexcept;
-        
+    
     private:
         struct HtsIteratorDeleter
         {
@@ -130,19 +151,6 @@ private:
         
         std::unique_ptr<hts_itr_t, HtsIteratorDeleter> hts_iterator_;
         std::unique_ptr<bam1_t, HtsBam1Deleter> hts_bam1_;
-    };
-    
-    struct HtsFileDeleter
-    {
-        void operator()(htsFile* file) const { hts_close(file); }
-    };
-    struct HtsHeaderDeleter
-    {
-        void operator()(bam_hdr_t* header) const { bam_hdr_destroy(header); }
-    };
-    struct HtsIndexDeleter
-    {
-        void operator()(hts_idx_t* index) const { hts_idx_destroy(index); }
     };
     
     Path file_path_;
@@ -162,6 +170,7 @@ private:
     const GenomicRegion::ContigName& get_contig_name(HtsTid target) const;
     std::uint64_t get_num_mapped_reads(const GenomicRegion::ContigName& contig) const;
     ReadContainer fetch_all_reads(const GenomicRegion& region) const;
+    void write(const AlignedRead& read, bam1_t* result) const;
 };
 
 } // namespace io

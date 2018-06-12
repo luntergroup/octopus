@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "config.hpp"
@@ -23,7 +23,7 @@ const std::string BugReport {"https://github.com/luntergroup/octopus/issues"};
 
 const std::vector<std::string> Authors {"Daniel Cooke"};
 
-const std::string CopyrightNotice {"Copyright (c) 2017 University of Oxford"};
+const std::string CopyrightNotice {"Copyright (c) 2015-2018 University of Oxford"};
 
 const unsigned CommandLineWidth {72};
 

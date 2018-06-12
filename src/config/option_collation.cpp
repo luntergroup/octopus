@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_collation.hpp"
@@ -30,7 +30,6 @@
 #include "basics/phred.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
-#include "basics/ploidy_map.hpp"
 #include "basics/trio.hpp"
 #include "basics/pedigree.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
@@ -288,11 +287,30 @@ ReferenceGenome make_reference(const OptionMap& options)
 {
     const fs::path input_path {options.at("reference").as<std::string>()};
     auto resolved_path = resolve_path(input_path, options);
-    const auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>().num_bytes();
+    auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>();
+    static constexpr MemoryFootprint min_non_zero_reference_cache_size {1'000}; // 1Kb
+    if (ref_cache_size.num_bytes() > 0 && ref_cache_size < min_non_zero_reference_cache_size) {
+        static bool warned {false};
+        if (!warned) {
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "Ignoring given reference cache size of " << ref_cache_size
+                             << " as this size is too small. The maximum cache size will be set to zero";
+            warned = true;
+        }
+        ref_cache_size = 0;
+    }
+    static constexpr MemoryFootprint min_warn_non_zero_reference_cache_size {1'000'000}; // 1Mb
+    if (ref_cache_size.num_bytes() > 0 && ref_cache_size < min_warn_non_zero_reference_cache_size) {
+        static bool warned {false};
+        if (!warned) {
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "The given reference cache size " << ref_cache_size
+                             << " is very small and may not result in good performance.";
+            warned = true;
+        }
+    }
     try {
-        return octopus::make_reference(std::move(resolved_path),
-                                       ref_cache_size,
-                                       is_threading_allowed(options));
+        return octopus::make_reference(std::move(resolved_path), ref_cache_size, is_threading_allowed(options));
     } catch (MissingFileError& e) {
         e.set_location_specified("the command line option --reference");
         throw;
@@ -708,11 +726,11 @@ auto make_read_filterer(const OptionMap& options)
     if (!options.at("allow-supplementary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSupplementaryAlignment>());
     }
-    if (!options.at("consider-reads-with-unmapped-segments").as<bool>()) {
+    if (options.at("no-reads-with-unmapped-segments").as<bool>()) {
         result.add(make_unique<IsNextSegmentMapped>());
         result.add(make_unique<IsProperTemplate>());
     }
-    if (!options.at("consider-reads-with-distant-segments").as<bool>()) {
+    if (options.at("no-reads-with-distant-segments").as<bool>()) {
         result.add(make_unique<IsLocalTemplate>());
     }
     if (options.at("no-adapter-contaminated-reads").as<bool>()) {
@@ -750,21 +768,37 @@ ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> sampl
     }
 }
 
-auto get_default_inclusion_predicate()
+auto get_default_germline_inclusion_predicate()
 {
     return coretools::DefaultInclusionPredicate {};
+}
+
+bool is_cancer_calling(const OptionMap& options)
+{
+    return options.at("caller").as<std::string>() == "cancer" || options.count("normal-sample") == 1;
+}
+
+auto get_default_somatic_inclusion_predicate(boost::optional<SampleName> normal)
+{
+    if (normal) {
+        return coretools::DefaultSomaticInclusionPredicate {*normal};
+    } else {
+        return coretools::DefaultSomaticInclusionPredicate {};
+    }
 }
 
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 {
     using namespace coretools;
     using InclusionPredicate = CigarScanner::Options::InclusionPredicate;
-    const auto caller = options.at("caller").as<std::string>();
-    if (caller == "cancer") {
-        // TODO: specialise for this case; we need to be careful about low frequency somatics.
-        return InclusionPredicate {get_default_inclusion_predicate()};
+    if (is_cancer_calling(options)) {
+        boost::optional<SampleName> normal {};
+        if (is_set("normal-sample", options)) {
+            normal = options.at("normal-sample").as<SampleName>();
+        }
+        return InclusionPredicate {get_default_somatic_inclusion_predicate(normal)};
     } else {
-        return InclusionPredicate {get_default_inclusion_predicate()};
+        return InclusionPredicate {get_default_germline_inclusion_predicate()};
     }
 }
 
@@ -821,14 +855,6 @@ public:
     {}
 };
 
-struct DefaultRepeatGenerator
-{
-    std::vector<GenomicRegion> operator()(const ReferenceGenome& reference, GenomicRegion region) const
-    {
-        return find_repeat_regions(reference, region);
-    }
-};
-
 auto get_max_expected_heterozygosity(const OptionMap& options)
 {
     const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
@@ -862,7 +888,6 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         scanner_options.match = get_default_match_predicate();
         scanner_options.use_clipped_coverage_tracking = true;
-        scanner_options.repeat_region_generator = DefaultRepeatGenerator {};
         CigarScanner::Options::MisalignmentParameters misalign_params {};
         misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
         misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
@@ -927,6 +952,7 @@ auto make_variant_generator_builder(const OptionMap& options)
             if (is_set("min-source-quality", options)) {
                 vcf_options.min_quality = options.at("min-source-quality").as<Phred<double>>().score();
             }
+            vcf_options.extract_filtered = options.at("extract-filtered-source-candidates").as<bool>();
             result.add_vcf_extractor(std::move(source_path), vcf_options);
         }
     }
@@ -949,7 +975,11 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         result.add_vcf_extractor(std::move(resolved_regenotype_path));
     }
-    
+    ActiveRegionGenerator::Options active_region_options {};
+    if (is_set("assemble-all", options) && options.at("assemble-all").as<bool>()) {
+        active_region_options.assemble_all = true;
+    }
+    result.set_active_region_generator(std::move(active_region_options));
     return result;
 }
 
@@ -1126,14 +1156,13 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
-auto get_max_expected_log_allele_count_per_base(const OptionMap& options)
+auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
     const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
     const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
-    const auto snp_heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
-    const auto max_log_allele_count_per_base = heterozygosity + 8 * snp_heterozygosity_stdev;
-    return max_log_allele_count_per_base;
+    const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
+    return coretools::DenseVariationDetector {heterozygosity, heterozygosity_stdev, input_reads_profile};
 }
 
 auto get_max_indicator_join_distance() noexcept
@@ -1146,7 +1175,7 @@ auto get_min_flank_pad() noexcept
     return 2 * (2 * HaplotypeLikelihoodModel{}.pad_requirement() - 1);
 }
 
-auto make_haplotype_generator_builder(const OptionMap& options)
+auto make_haplotype_generator_builder(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     const auto lagging_policy    = get_lagging_policy(options);
     const auto max_haplotypes    = get_max_haplotypes(options);
@@ -1157,7 +1186,7 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
     .set_max_indicator_join_distance(get_max_indicator_join_distance())
-    .set_max_expected_log_allele_count_per_base(get_max_expected_log_allele_count_per_base(options))
+    .set_dense_variation_detector(get_dense_variation_detector(options, input_reads_profile))
     .set_min_flank_pad(get_min_flank_pad());
 }
 
@@ -1265,9 +1294,6 @@ public:
 auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples,
 	 				 const boost::optional<Pedigree>& pedigree)
 {
-    // TODO: could think about getting rid of the 'caller' option and just
-    // deduce the caller type directly from the options.
-    // Will need to report an error if conflicting caller options are given anyway.
     auto result = options.at("caller").as<std::string>();
     if (result == "population" && samples.size() == 1) {
         result = "individual";
@@ -1405,11 +1431,12 @@ auto get_normal_contamination_risk(const OptionMap& options)
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
-                                  const InputRegionMap& regions, const OptionMap& options)
+                                  const InputRegionMap& regions, const OptionMap& options,
+                                  const boost::optional<ReadSetProfile> input_reads_profile)
 {
     CallerBuilder vc_builder {reference, read_pipe,
                               make_variant_generator_builder(options),
-                              make_haplotype_generator_builder(options)};
+                              make_haplotype_generator_builder(options, input_reads_profile)};
 	const auto pedigree = get_pedigree(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
     vc_builder.set_caller(caller);
@@ -1452,6 +1479,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
         vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
     }
+    vc_builder.set_model_based_haplotype_dedup(options.at("dedup-haplotypes-with-prior-model").as<bool>());
+    vc_builder.set_independent_genotype_prior_flag(options.at("use-independent-genotype-priors").as<bool>());
     if (caller == "cancer") {
         if (is_set("normal-sample", options)) {
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
@@ -1460,6 +1489,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             log << "Tumour only calling requested. "
                 "Please note this feature is still under development and results and runtimes may be poor";
         }
+        vc_builder.set_max_somatic_haplotypes(as_unsigned("max-somatic-haplotypes", options));
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
         vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
         vc_builder.set_min_expected_somatic_frequency(options.at("min-expected-somatic-frequency").as<float>());
@@ -1492,9 +1522,19 @@ bool is_call_filtering_requested(const OptionMap& options) noexcept
     return options.at("call-filtering").as<bool>();
 }
 
-std::string get_filter_expression(const OptionMap& options)
+std::string get_germline_filter_expression(const OptionMap& options)
 {
     return options.at("filter-expression").as<std::string>();
+}
+
+std::string get_somatic_filter_expression(const OptionMap& options)
+{
+    return options.at("somatic-filter-expression").as<std::string>();
+}
+
+std::string get_refcall_filter_expression(const OptionMap& options)
+{
+    return options.at("refcall-filter-expression").as<std::string>();
 }
 
 bool is_csr_training(const OptionMap& options)
@@ -1521,7 +1561,14 @@ std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const Referen
         if (is_csr_training(options)) {
             return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
         } else {
-            return std::make_unique<ThresholdFilterFactory>(get_filter_expression(options));
+            auto germline_filter_expression = get_germline_filter_expression(options);
+            if (is_cancer_calling(options)) {
+                return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                "", get_somatic_filter_expression(options),
+                                                                "", get_refcall_filter_expression(options));
+            } else {
+                return std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
+            }
         }
     } else {
         return nullptr;
@@ -1549,9 +1596,6 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     filterer.add(make_unique<HasWellFormedCigar>());
     filterer.add(make_unique<IsMapped>());
     filterer.add(make_unique<IsNotMarkedQcFail>());
-    filterer.add(make_unique<IsNotMarkedDuplicate>());
-    filterer.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
-    filterer.add(make_unique<IsProperTemplate>());
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }
 
@@ -1622,6 +1666,14 @@ boost::optional<fs::path> filter_request(const OptionMap& options)
 {
     if (is_set("filter-vcf", options)) {
         return resolve_path(options.at("filter-vcf").as<fs::path>(), options);
+    }
+    return boost::none;
+}
+
+boost::optional<fs::path> bamout_request(const OptionMap& options)
+{
+    if (is_set("bamout", options)) {
+        return resolve_path(options.at("bamout").as<fs::path>(), options);
     }
     return boost::none;
 }

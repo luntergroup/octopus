@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef mappable_algorithms_hpp
@@ -1881,7 +1881,7 @@ auto calculate_positional_coverage(ForwardIt first, ForwardIt last)
 }
 
 template <typename Range,
-          typename = EnableIfMappable<typename Range::value_type>>
+          typename = EnableIfRegionOrMappable<typename Range::value_type>>
 auto calculate_positional_coverage(const Range& mappables)
 {
     return calculate_positional_coverage(std::cbegin(mappables), std::cend(mappables));
@@ -2032,7 +2032,75 @@ auto join(const Range& regions, const GenomicRegion::Distance n)
 {
     return join(std::cbegin(regions), std::cend(regions), n);
 }
-    
+
+namespace detail {
+
+inline void append(const ContigRegion& base, ContigRegion::Position begin, ContigRegion::Position end,
+                   std::vector<ContigRegion>& result)
+{
+    result.emplace_back(begin, end);
+}
+
+inline void append(const GenomicRegion& base, GenomicRegion::Position begin, GenomicRegion::Position end,
+                   std::vector<GenomicRegion>& result)
+{
+    result.emplace_back(base.contig_name(), begin, end);
+}
+
+} // namespace detail
+
+// select_regions: returns minimal subset of regions defined by each element in a range.
+
+template <typename Region, typename ForwardIt,
+          typename = std::enable_if_t<std::is_same<typename std::iterator_traits<ForwardIt>::value_type, bool>::value>>
+std::vector<Region> select_regions(const Region& region, const ForwardIt first, const ForwardIt last)
+{
+    static_assert(is_region<Region>, "must be ContigRegion or GenomicRegion");
+    assert(static_cast<typename Region::Size>(std::distance(first, last)) == size(region));
+    std::vector<Region> result {};
+    result.reserve(std::distance(first, last) / 2); // max possible
+    auto itr = std::find(first, last, true);
+    for (; itr != last;) {
+        const auto itr2 = std::find(itr, last, false);
+        const auto begin = region.begin() + std::distance(first, itr);
+        const auto end   = begin + std::distance(itr, itr2);
+        detail::append(region, begin, end, result);
+        itr = std::find(itr2, last, true);
+    }
+    return result;
+}
+
+template <typename Region, typename Range,
+          typename = std::enable_if_t<std::is_same<typename Range::value_type, bool>::value>>
+auto select_regions(const Region& region, const Range& selections)
+{
+    return select_regions(region, std::cbegin(selections), std::cend(selections));
+}
+
+template <typename Region, typename ForwardIt, typename UnaryPredicate>
+std::vector<Region> select_regions(const Region& region, const ForwardIt first, const ForwardIt last, UnaryPredicate pred)
+{
+    static_assert(is_region<Region>, "must be ContigRegion or GenomicRegion");
+    assert(std::distance(first, last) == size(region));
+    std::vector<Region> result {};
+    result.reserve(std::distance(first, last) / 2); // max possible
+    auto itr = std::find_if(first, last, pred);
+    for (; itr != last;) {
+        const auto itr2 = std::find_if_not(itr, last, pred);
+        const auto begin = region.begin() + std::distance(first, itr);
+        const auto end   = begin + std::distance(itr, itr2);
+        detail::append(region, begin, end, result);
+        itr = std::find_if(itr2, last, pred);
+    }
+    return result;
+}
+
+template <typename Region, typename Range, typename UnaryPredicate>
+auto select_regions(const Region& region, const Range& values, UnaryPredicate pred)
+{
+    return select_regions(region, std::cbegin(values), std::cend(values), std::move(pred));
+}
+
 } // namespace octopus
 
 #endif

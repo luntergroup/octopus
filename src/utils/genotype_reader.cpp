@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "genotype_reader.hpp"
@@ -88,7 +88,26 @@ bool has_indel(const VcfRecord& call) noexcept
                        [&] (const auto& allele) { return allele.size() != call.ref().size(); });
 }
 
-boost::optional<ContigAllele> make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence, const int ref_pad)
+bool has_simple_indel(const VcfRecord& call) noexcept
+{
+    return std::any_of(std::cbegin(call.alt()), std::cend(call.alt()),
+                       [&] (const auto& allele) {
+                           return allele.size() != call.ref().size() && (allele.size() == 1 || call.ref().size() == 1);
+                       });
+}
+
+bool has_non_complex_indel(const VcfRecord& call) noexcept
+{
+    assert(!call.ref().empty());
+    return std::any_of(std::cbegin(call.alt()), std::cend(call.alt()),
+                       [&] (const auto& allele) {
+                           assert(!allele.empty());
+                           return allele.size() != call.ref().size() && allele.front() == call.ref().front();
+                       });
+}
+
+boost::optional<ContigAllele>
+make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence, const int max_ref_pad)
 {
     if (is_missing(allele_sequence)) {
         return boost::none;
@@ -107,10 +126,11 @@ boost::optional<ContigAllele> make_allele(const VcfRecord& call, VcfRecord::Nucl
         auto delete_mask_len = std::distance(std::cbegin(allele_sequence), first_base_itr);
         allele_sequence.erase(std::cbegin(allele_sequence), first_base_itr);
         region = expand_lhs(region, -delete_mask_len);
-    } else if (ref_pad > 0) {
-        assert(static_cast<std::size_t>(ref_pad) <= allele_sequence.size());
-        allele_sequence.erase(std::cbegin(allele_sequence), std::next(std::cbegin(allele_sequence), ref_pad));
-        region = expand_lhs(region, -ref_pad);
+    } else if (max_ref_pad > 0) {
+        auto p = std::mismatch(std::cbegin(call.ref()), std::next(std::cbegin(call.ref()), max_ref_pad),
+                               std::cbegin(allele_sequence), std::cend(allele_sequence));
+        allele_sequence.erase(std::cbegin(allele_sequence), p.second);
+        region = expand_lhs(region, std::distance(p.second, std::cbegin(allele_sequence)));
     }
     return ContigAllele {region, std::move(allele_sequence)};
 }
@@ -118,7 +138,7 @@ boost::optional<ContigAllele> make_allele(const VcfRecord& call, VcfRecord::Nucl
 auto extract_genotype(const VcfRecord& call, const SampleName& sample)
 {
     auto genotype = get_genotype(call, sample);
-    boost::optional<int> min_ref_pad {};
+    boost::optional<int> max_ref_pad {};
     std::vector<std::size_t> unknown_pad_indices {};
     const auto ploidy = genotype.size();
     std::vector<boost::optional<ContigAllele>> result(ploidy, boost::none);
@@ -126,21 +146,21 @@ auto extract_genotype(const VcfRecord& call, const SampleName& sample)
         auto& allele = genotype[i];
         if (is_ref_pad_size_known(allele, call)) {
             const auto allele_pad = num_matching_lhs_bases(call.ref(), allele);
-            if (min_ref_pad) {
-                min_ref_pad = std::min(*min_ref_pad, allele_pad);
+            if (max_ref_pad) {
+                max_ref_pad = std::min(*max_ref_pad, allele_pad);
             } else {
-                min_ref_pad = allele_pad;
+                max_ref_pad = allele_pad;
             }
             result[i] = make_allele(call, std::move(allele), allele_pad);
         } else {
             unknown_pad_indices.push_back(i);
         }
     }
-    if (!min_ref_pad && has_indel(call)) {
-        min_ref_pad = 1;
+    if (!max_ref_pad) {
+        max_ref_pad = has_non_complex_indel(call) ? 1 : 0;
     }
     for (auto idx : unknown_pad_indices) {
-        result[idx] = make_allele(call, std::move(genotype[idx]), *min_ref_pad);
+        result[idx] = make_allele(call, std::move(genotype[idx]), *max_ref_pad);
     }
     return result;
 }
@@ -170,7 +190,7 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
             has_ref = true;
         }
         std::vector<std::size_t> unknwown_pad_allele_indices {};
-        boost::optional<int> min_ref_pad {};
+        boost::optional<int> max_ref_pad {};
         auto allele_idx = std::distance(std::begin(genotype), first_itr);
         std::for_each(first_itr, std::end(genotype), [&] (auto& allele) {
             if (is_ref_pad_size_known(allele, call)) {
@@ -178,31 +198,33 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
                 allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), pad_size));
                 auto allele_region = expand_lhs(call_region, -pad_size);
                 result.emplace_back(std::move(allele_region), std::move(allele));
-                if (min_ref_pad) {
-                    min_ref_pad = std::min(*min_ref_pad, pad_size);
+                if (max_ref_pad) {
+                    max_ref_pad = std::min(*max_ref_pad, pad_size);
                 } else {
-                    min_ref_pad = pad_size;
+                    max_ref_pad = pad_size;
                 }
             } else {
                 unknwown_pad_allele_indices.push_back(allele_idx);
             }
             ++allele_idx;
         });
-        if (!min_ref_pad && has_indel(call)) {
-            min_ref_pad = 1;
+        if (!max_ref_pad) {
+            max_ref_pad = has_non_complex_indel(call) ? 1 : 0;
         }
         if (has_ref) {
             auto& ref = genotype.front();
-            ref.erase(std::cbegin(ref), std::next(std::cbegin(ref), *min_ref_pad));
-            auto allele_region = expand_lhs(call_region, -*min_ref_pad);
+            ref.erase(std::cbegin(ref), std::next(std::cbegin(ref), *max_ref_pad));
+            auto allele_region = expand_lhs(call_region, -*max_ref_pad);
             result.emplace_back(std::move(allele_region), std::move(ref));
             std::rotate(std::rbegin(result), std::next(std::rbegin(result)), std::rend(result));
         }
-        if (*min_ref_pad > 0 && !unknwown_pad_allele_indices.empty()) {
+        if (!unknwown_pad_allele_indices.empty()) {
             for (auto idx : unknwown_pad_allele_indices) {
                 auto& allele = genotype[idx];
-                allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), *min_ref_pad));
-                auto allele_region = expand_lhs(call_region, -*min_ref_pad);
+                auto p = std::mismatch(std::cbegin(call.ref()), std::next(std::cbegin(call.ref()), *max_ref_pad),
+                                       std::cbegin(allele), std::cend(allele));
+                allele.erase(std::cbegin(allele), p.second);
+                auto allele_region = expand_lhs(call_region, std::distance(p.second, std::cbegin(allele)));
                 result.emplace_back(std::move(allele_region), std::move(allele));
             }
             auto alt_alleles_begin_itr = std::begin(result);
@@ -240,6 +262,7 @@ struct CallWrapper : public Mappable<CallWrapper>
     std::reference_wrapper<const VcfRecord> call;
     GenomicRegion phase_region;
     const GenomicRegion& mapped_region() const noexcept { return phase_region; }
+    const VcfRecord& get() const noexcept { return call.get(); }
 };
 
 auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleName& sample)
@@ -252,10 +275,13 @@ auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleName& sample)
     return result;
 }
 
-auto get_ploidy(const std::vector<CallWrapper>& phased_calls, const SampleName& sample)
+auto get_max_ploidy(const std::vector<CallWrapper>& calls, const SampleName& sample)
 {
-    assert(!phased_calls.empty());
-    return get_genotype(phased_calls.front().call, sample).size();
+    unsigned result {0};
+    for (const auto& call : calls) {
+        result = std::max(result, call.get().ploidy(sample));
+    }
+    return result;
 }
 
 auto make_genotype(std::vector<Haplotype::Builder>&& haplotypes)
@@ -274,12 +300,12 @@ Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_call
 {
     assert(!phased_calls.empty());
     assert(contains(region, encompassing_region(phased_calls)));
-    const auto ploidy = get_ploidy(phased_calls, sample);
-    std::vector<Haplotype::Builder> haplotypes(ploidy, Haplotype::Builder {region, reference});
+    const auto max_ploidy = get_max_ploidy(phased_calls, sample);
+    std::vector<Haplotype::Builder> haplotypes(max_ploidy, Haplotype::Builder {region, reference});
     for (const auto& call : phased_calls) {
         auto genotype = extract_genotype(call.call, sample);
-        assert(genotype.size() == ploidy);
-        for (unsigned i {0}; i < ploidy; ++i) {
+        assert(genotype.size() <= max_ploidy);
+        for (unsigned i {0}; i < genotype.size(); ++i) {
             if (genotype[i] && haplotypes[i].can_push_back(*genotype[i])) {
                 haplotypes[i].push_back(std::move(*genotype[i]));
             }

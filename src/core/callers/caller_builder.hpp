@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef caller_builder_hpp
@@ -59,9 +59,12 @@ public:
     CallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_max_joint_genotypes(unsigned max) noexcept;
     CallerBuilder& set_likelihood_model(HaplotypeLikelihoodModel model) noexcept;
+    CallerBuilder& set_model_based_haplotype_dedup(bool use) noexcept;
+    CallerBuilder& set_independent_genotype_prior_flag(bool use_independent) noexcept;
     
     // cancer
     CallerBuilder& set_normal_sample(SampleName normal_sample);
+    CallerBuilder& set_max_somatic_haplotypes(unsigned n) noexcept;
     CallerBuilder& set_somatic_snv_mutation_rate(double rate) noexcept;
     CallerBuilder& set_somatic_indel_mutation_rate(double rate) noexcept;
     CallerBuilder& set_min_expected_somatic_frequency(double frequency) noexcept;
@@ -101,9 +104,12 @@ private:
         boost::optional<double> snp_heterozygosity, indel_heterozygosity;
         Phred<double> min_phase_score;
         unsigned max_joint_genotypes;
+        bool deduplicate_haplotypes_with_caller_model;
+        bool use_independent_genotype_priors;
         
         // cancer
         boost::optional<SampleName> normal_sample;
+        unsigned max_somatic_haplotypes;
         double somatic_snv_mutation_rate, somatic_indel_mutation_rate;
         double min_expected_somatic_frequency;
         double credible_mass;

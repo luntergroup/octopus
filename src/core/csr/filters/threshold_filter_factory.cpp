@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "threshold_filter_factory.hpp"
@@ -39,6 +39,9 @@ auto make_threshold(const std::string& comparator, const T target)
     if (comparator == "==") {
         return make_wrapped_threshold<EqualThreshold<T>>(target);
     }
+    if (comparator == "!=") {
+        return make_wrapped_threshold<NotEqualThreshold<T>>(target);
+    }
     if (comparator == "<") {
         return make_wrapped_threshold<LessThreshold<T>>(target);
     }
@@ -67,20 +70,29 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<ModelPosterior>()]           = lowModelPosterior;
     filter_names[name<Quality>()]                  = lowQuality;
     filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
-    filter_names[name<MaxGenotypeQuality>()]       = lowGQ;
+    filter_names[name<GenotypeQuality>()]          = lowGQ;
     filter_names[name<StrandBias>()]               = strandBias;
     filter_names[name<FilteredReadFraction>()]     = filteredReadFraction;
     filter_names[name<GCContent>()]                = highGCRegion;
     filter_names[name<ClippedReadFraction>()]      = highClippedReadFraction;
+    filter_names[name<MedianBaseQuality>()]        = lowBaseQuality;
+    filter_names[name<MismatchCount>()]            = highMismatchCount;
+    filter_names[name<MismatchFraction>()]         = highMismatchFraction;
+    filter_names[name<SomaticContamination>()]     = somaticContamination;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)
 {
     using namespace octopus::vcf::spec::filter;
     // First look for special names
-    if (measure.name() == Quality().name()) {
+    if (measure.name() == name<Quality>()) {
+        if (maths::almost_equal(threshold_target, 3.0)) return std::string {q3};
+        if (maths::almost_equal(threshold_target, 5.0)) return std::string {q5};
         if (maths::almost_equal(threshold_target, 10.0)) return std::string {q10};
         if (maths::almost_equal(threshold_target, 20.0)) return std::string {q20};
+    }
+    if (measure.name() == name<MedianBaseQuality>()) {
+        if (maths::almost_equal(threshold_target, 10.0)) return std::string {bq10};
     }
     static MeasureToFilterKeyMap default_filter_names {};
     if (default_filter_names.empty()) {
@@ -104,7 +116,11 @@ auto make_condition(const std::string& measure_name, const std::string& comparat
 auto make_condition(const std::string& measure, const std::string& comparator, const std::string& threshold_target)
 {
     try {
-        return make_condition(measure, comparator, boost::lexical_cast<double>(threshold_target));
+        if (threshold_target.find('.') == std::string::npos) {
+            return make_condition(measure, comparator, boost::lexical_cast<int>(threshold_target));
+        } else {
+            return make_condition(measure, comparator, boost::lexical_cast<double>(threshold_target));
+        }
     } catch (const boost::bad_lexical_cast&) {
         throw BadVariantFilterCondition {};
     }
@@ -119,7 +135,7 @@ auto parse_conditions(std::string expression)
     boost::split(conditions, expression, boost::is_any_of("|"));
     for (const auto& condition : conditions) {
         std::vector<std::string> tokens {};
-        boost::split(tokens, condition, boost::is_any_of("<,>,<=,=>,=="));
+        boost::split(tokens, condition, boost::is_any_of("<,>,<=,=>,==,!="));
         if (tokens.size() == 2) {
             const auto comparitor_pos = tokens.front().size();
             const auto comparitor_length = condition.size() - comparitor_pos - tokens.back().size();
@@ -138,8 +154,17 @@ ThresholdFilterFactory::ThresholdFilterFactory(std::string soft_expression)
 {}
 
 ThresholdFilterFactory::ThresholdFilterFactory(std::string hard_expression, std::string soft_expression)
-: hard_conditions_ {parse_conditions(std::move(hard_expression))}
-, soft_conditions_ {parse_conditions(std::move(soft_expression))}
+: germline_ {parse_conditions(std::move(hard_expression)), parse_conditions(std::move(soft_expression))}
+, somatic_ {}
+, reference_ {}
+{}
+
+ThresholdFilterFactory::ThresholdFilterFactory(std::string germline_hard_expression, std::string germline_soft_expression,
+                                               std::string somatic_hard_expression, std::string somatic_soft_expression,
+                                               std::string refcall_hard_expression, std::string refcall_soft_expression)
+: germline_ {parse_conditions(std::move(germline_hard_expression)), parse_conditions(std::move(germline_soft_expression))}
+, somatic_ {parse_conditions(std::move(somatic_hard_expression)), parse_conditions(std::move(somatic_soft_expression))}
+, reference_ {parse_conditions(std::move(refcall_hard_expression)), parse_conditions(std::move(refcall_soft_expression))}
 {}
 
 std::unique_ptr<VariantCallFilterFactory> ThresholdFilterFactory::do_clone() const
@@ -152,8 +177,15 @@ std::unique_ptr<VariantCallFilter> ThresholdFilterFactory::do_make(FacetFactory 
                                                                    boost::optional<ProgressMeter&> progress,
                                                                    VariantCallFilter::ConcurrencyPolicy threading) const
 {
-    return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory), hard_conditions_, soft_conditions_,
-                                                        output_config, threading, progress);
+    if (somatic_.hard.empty() && somatic_.soft.empty()) {
+        return std::make_unique<ThresholdVariantCallFilter>(std::move(facet_factory),
+                                                            germline_,
+                                                            output_config, threading, progress);
+    } else {
+        return std::make_unique<SomaticThresholdVariantCallFilter>(std::move(facet_factory),
+                                                                   germline_, somatic_, reference_,
+                                                                   output_config, threading, progress);
+    }
 }
 
 } // namespace csr

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "genome_walker.hpp"
@@ -49,8 +49,22 @@ bool is_indel_boundary(BidirIt first, BidirIt allele, BidirIt last)
 {
     if (allele != first && allele != last && std::next(allele) != last && is_indel(*allele)) {
         auto itr = std::find_if(std::make_reverse_iterator(std::prev(allele)), std::make_reverse_iterator(first),
-                                [&] (const auto& a) { return !overlaps(a, *allele) || is_indel(a); });
+                                [allele] (const auto& a) { return !overlaps(a, *allele) || is_indel(a); });
         return itr != std::make_reverse_iterator(first) && overlaps(*itr, *allele) && is_indel(*itr);
+    } else {
+        return false;
+    }
+}
+
+template <typename BidirIt>
+bool is_interacting_indel(BidirIt first, BidirIt allele, BidirIt last,
+                          const GenomicRegion::Size max_gap = 3)
+{
+    if (allele != first && allele != last && std::next(allele) != last && is_indel(*allele)) {
+        const auto interaction_region = expand_lhs(mapped_region(*allele), std::min(reference_distance(*allele), max_gap));
+        auto itr = std::find_if(std::make_reverse_iterator(std::prev(allele)), std::make_reverse_iterator(first),
+                                [&interaction_region] (const auto& a) { return overlaps(a, interaction_region); });
+        return itr != std::make_reverse_iterator(first);
     } else {
         return false;
     }
@@ -60,7 +74,8 @@ template <typename BidirIt>
 bool is_good_indicator_begin(BidirIt first_possible, BidirIt allele_itr, BidirIt last_possible)
 {
     return !(is_sandwich_allele(first_possible, allele_itr, last_possible)
-             || is_indel_boundary(first_possible, allele_itr, last_possible));
+             || is_indel_boundary(first_possible, allele_itr, last_possible)
+             || is_interacting_indel(first_possible, allele_itr, last_possible));
 }
 
 template <typename BidirIt>

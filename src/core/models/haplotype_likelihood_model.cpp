@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "haplotype_likelihood_model.hpp"
@@ -307,22 +307,22 @@ compute_optimal_alignment(const AlignedRead& read, const Haplotype& haplotype,
         }
         if (is_in_range(position, read, haplotype)) {
             has_in_range_mapping_position = true;
-            auto p = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(), position, model);
-            if (p.second > result.likelihood) {
-                result.mapping_position = position;
-                result.likelihood = p.second;
-                result.cigar = std::move(p.first);
+            auto alignment = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(), position, model);
+            if (alignment.likelihood > result.likelihood) {
+                result.mapping_position = alignment.target_offset;
+                result.likelihood = alignment.likelihood;
+                result.cigar = std::move(alignment.cigar);
             }
         }
     });
     if (!is_original_position_mapped && is_in_range(original_mapping_position, read, haplotype)) {
         has_in_range_mapping_position = true;
-        auto p = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(),
-                            original_mapping_position, model);
-        if (p.second > result.likelihood) {
-            result.mapping_position = original_mapping_position;
-            result.likelihood = p.second;
-            result.cigar = std::move(p.first);
+        auto alignment = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(),
+                                    original_mapping_position, model);
+        if (alignment.likelihood >= result.likelihood) {
+            result.mapping_position = alignment.target_offset;
+            result.likelihood = alignment.likelihood;
+            result.cigar = std::move(alignment.cigar);
         }
     }
     if (!has_in_range_mapping_position) {
@@ -342,9 +342,11 @@ compute_optimal_alignment(const AlignedRead& read, const Haplotype& haplotype,
                 throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, required_extension};
             }
         }
-        result.mapping_position = final_mapping_position;
-        std::tie(result.cigar, result.likelihood) = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(),
-                                                               final_mapping_position, model);
+        auto alignment = hmm::align(read.sequence(), haplotype.sequence(), read.base_qualities(),
+                                    final_mapping_position, model);
+        result.likelihood = alignment.likelihood;
+        result.cigar = std::move(alignment.cigar);
+        result.mapping_position = alignment.target_offset;
     }
     assert(result.likelihood > std::numeric_limits<double>::lowest() && result.likelihood <= 0);
     return result;

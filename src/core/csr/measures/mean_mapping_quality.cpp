@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "mean_mapping_quality.hpp"
@@ -13,6 +13,8 @@
 #include "../facets/overlapping_reads.hpp"
 
 namespace octopus { namespace csr {
+
+const std::string MeanMappingQuality::name_ = "MQ";
 
 MeanMappingQuality::MeanMappingQuality(bool recalculate) : recalculate_ {recalculate} {}
 
@@ -32,9 +34,19 @@ Measure::ResultType MeanMappingQuality::do_evaluate(const VcfRecord& call, const
     }
 }
 
-std::string MeanMappingQuality::do_name() const
+Measure::ResultCardinality MeanMappingQuality::do_cardinality() const noexcept
 {
-    return "MQ";
+    return ResultCardinality::one;
+}
+
+const std::string& MeanMappingQuality::do_name() const
+{
+    return name_;
+}
+
+std::string MeanMappingQuality::do_describe() const
+{
+    return "Mean mapping quality of reads overlapping the call";
 }
 
 std::vector<std::string> MeanMappingQuality::do_requirements() const
@@ -44,6 +56,11 @@ std::vector<std::string> MeanMappingQuality::do_requirements() const
     } else {
         return {};
     }
+}
+
+bool MeanMappingQuality::is_equal(const Measure& other) const noexcept
+{
+    return recalculate_ == static_cast<const MeanMappingQuality&>(other).recalculate_;
 }
 
 } // namespace csr

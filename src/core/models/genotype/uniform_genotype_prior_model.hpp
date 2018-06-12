@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef uniform_genotype_prior_model_hpp
@@ -22,7 +22,7 @@ public:
     
 private:
     virtual double do_evaluate(const Genotype<Haplotype>& genotype) const override { return 1.0; }
-    virtual double do_evaluate(const std::vector<unsigned>& genotype) const override { return 1.0; }
+    virtual double do_evaluate(const GenotypeIndex& genotype) const override { return 1.0; }
     bool check_is_primed() const noexcept override { return true; }
 };
 

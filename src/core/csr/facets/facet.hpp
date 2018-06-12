@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef facet_hpp
@@ -15,17 +15,30 @@
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/tools/read_assigner.hpp"
+#include "basics/ploidy_map.hpp"
 
 namespace octopus { namespace csr {
 
 class Facet : public Equitable<Facet>
 {
 public:
+    using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
+    using SampleSupportMap = std::unordered_map<SampleName, HaplotypeSupportMap>;
+    using LocalPloidyMap = std::unordered_map<SampleName, unsigned>;
+    
+    struct SupportMaps
+    {
+        SampleSupportMap support;
+        ReadMap ambiguous;
+    };
+    
     using ResultType = boost::variant<std::reference_wrapper<const ReadMap>,
-                                      std::reference_wrapper<const std::unordered_map<SampleName, HaplotypeSupportMap>>,
+                                      std::reference_wrapper<const SupportMaps>,
                                       std::reference_wrapper<const std::string>,
                                       std::reference_wrapper<const std::vector<std::string>>,
-                                      std::reference_wrapper<const Haplotype>
+                                      std::reference_wrapper<const Haplotype>,
+                                      std::reference_wrapper<const GenotypeMap>,
+                                      std::reference_wrapper<const LocalPloidyMap>
                                      >;
     
     Facet() = default;

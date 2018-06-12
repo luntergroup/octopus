@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "trio_model.hpp"
@@ -46,7 +46,7 @@ void clear(Container& c)
 }
 
 using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-using GenotypeIndiceVector = std::vector<unsigned>;
+using GenotypeIndiceVector = GenotypeIndex;
 using GenotypeIndiceVectorReference = std::reference_wrapper<const GenotypeIndiceVector>;
 
 bool operator==(const GenotypeReference lhs, const GenotypeReference rhs)
@@ -422,17 +422,17 @@ auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& maternal,
     return result;
 }
 
-bool is_haploid(const std::vector<unsigned>& genotype) noexcept
+bool is_haploid(const GenotypeIndex& genotype) noexcept
 {
     return genotype.size() == 1;
 }
 
-bool is_diploid(const std::vector<unsigned>& genotype) noexcept
+bool is_diploid(const GenotypeIndex& genotype) noexcept
 {
     return genotype.size() == 2;
 }
 
-bool is_triploid(const std::vector<unsigned>& genotype) noexcept
+bool is_triploid(const GenotypeIndex& genotype) noexcept
 {
     return genotype.size() == 3;
 }
@@ -735,7 +735,7 @@ TrioModel::evaluate(const GenotypeVector& genotypes, const HaplotypeLikelihoodCa
 }
 
 TrioModel::InferredLatents
-TrioModel::evaluate(const GenotypeVector& genotypes, std::vector<std::vector<unsigned>>& genotype_indices,
+TrioModel::evaluate(const GenotypeVector& genotypes, std::vector<GenotypeIndex>& genotype_indices,
                     const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(prior_model_.is_primed() && mutation_model_.is_primed());

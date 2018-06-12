@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variational_bayes_mixture_model_hpp
@@ -12,7 +12,9 @@
 #include <cstddef>
 #include <utility>
 #include <cassert>
+#include <limits>
 
+#include <boost/optional.hpp>
 #include <boost/math/special_functions/digamma.hpp>
 
 #include "utils/maths.hpp"
@@ -77,10 +79,9 @@ using VBGenotypeVector = std::vector<VBGenotype<K>>; // Per element per genotype
 template <std::size_t K>
 using VBReadLikelihoodMatrix = std::vector<VBGenotypeVector<K>>; // One element per sample
 
+using VBTau = std::vector<double>; // One element per read
 template <std::size_t K>
-using VBTau = std::array<double, K>; // One element per haplotype in genotype (i.e. K)
-template <std::size_t K>
-using VBResponsabilityVector = std::vector<VBTau<K>>; // One element per genotype
+using VBResponsabilityVector = std::array<VBTau, K>; // One element per haplotype in genotype (i.e. K)
 template <std::size_t K>
 using VBResponsabilityMatrix = std::vector<VBResponsabilityVector<K>>; // One element per sample
 
@@ -244,7 +245,8 @@ init_responsabilities(const VBAlpha<K>& prior_alphas,
         al[k] = digamma_diff(prior_alphas[k], a0);
     }
     const auto N = count_reads(read_likelihoods);
-    VBResponsabilityVector<K> result(N);
+    VBResponsabilityVector<K> result {};
+    for (auto& tau : result) tau.resize(N);
     std::array<T, K> ln_rho;
     for (std::size_t n {0}; n < N; ++n) {
         for (unsigned k {0}; k < K; ++k) {
@@ -252,7 +254,7 @@ init_responsabilities(const VBAlpha<K>& prior_alphas,
         }
         const auto ln_rho_norm = log_sum_exp(ln_rho);
         for (unsigned k {0}; k < K; ++k) {
-            result[n][k] = std::exp(ln_rho[k] - ln_rho_norm);
+            result[k][n] = std::exp(ln_rho[k] - ln_rho_norm);
         }
     }
     return result;
@@ -293,7 +295,7 @@ void update_responsabilities(VBResponsabilityVector<K>& result,
         }
         const auto ln_rho_norm = log_sum_exp(ln_rho);
         for (unsigned k {0}; k < K; ++k) {
-            result[n][k] = std::exp(ln_rho[k] - ln_rho_norm);
+            result[k][n] = std::exp(ln_rho[k] - ln_rho_norm);
         }
     }
 }
@@ -311,13 +313,10 @@ void update_responsabilities(VBResponsabilityMatrix<K>& result,
     }
 }
 
-template <std::size_t K>
-auto sum(const VBResponsabilityVector<K>& taus, const unsigned k) noexcept
+template <typename T>
+inline auto sum(const std::vector<T>& values) noexcept
 {
-    return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
-                           [k] (const auto curr, const auto& tau) noexcept {
-                               return curr + tau[k];
-                           });
+    return std::accumulate(std::cbegin(values), std::cend(values), T {});
 }
 
 template <std::size_t K>
@@ -325,7 +324,7 @@ void update_alpha(VBAlpha<K>& alpha, const VBAlpha<K>& prior_alpha,
                   const VBResponsabilityVector<K>& taus) noexcept
 {
     for (unsigned k {0}; k < K; ++k) {
-        alpha[k] = prior_alpha[k] + sum(taus, k);
+        alpha[k] = prior_alpha[k] + sum(taus[k]);
     }
 }
 
@@ -340,20 +339,19 @@ void update_alphas(VBAlphaVector<K>& alphas, const VBAlphaVector<K>& prior_alpha
     }
 }
 
+inline auto marginalise(const VBTau& responsabilities, const VBReadLikelihoodArray& likelihoods) noexcept
+{
+    assert(responsabilities.size() == likelihoods.size()); // num reads
+    return std::inner_product(std::cbegin(responsabilities), std::cend(responsabilities), std::cbegin(likelihoods), 0.0);
+}
+
 template <std::size_t K>
 auto marginalise(const VBResponsabilityVector<K>& responsabilities,
-                 const VBGenotypeVector<K>& read_likelihoods,
-                 const std::size_t g) noexcept
+                 const VBGenotype<K>& read_likelihoods) noexcept
 {
     double result {0};
-    const auto N = read_likelihoods[0][0].size(); // num reads in sample s
-    assert(responsabilities.size() == N);
-    assert(responsabilities[0].size() == K && read_likelihoods[g].size() == K);
     for (unsigned k {0}; k < K; ++k) {
-        const auto& k_likelihoods = read_likelihoods[g][k];
-        for (std::size_t n {0}; n < N; ++n) {
-            result += responsabilities[n][k] * k_likelihoods[n];
-        }
+        result += marginalise(responsabilities[k], read_likelihoods[k]);
     }
     return result;
 }
@@ -367,7 +365,7 @@ auto marginalise(const VBResponsabilityMatrix<K>& responsabilities,
     const auto S = read_likelihoods.size(); // num samples
     assert(S == responsabilities.size());
     for (std::size_t s {0}; s < S; ++s) {
-        result += marginalise(responsabilities[s], read_likelihoods[s], g);
+        result += marginalise(responsabilities[s], read_likelihoods[s][g]);
     }
     return result;
 }
@@ -385,206 +383,46 @@ void update_genotype_log_posteriors(LogProbabilityVector& result,
     maths::normalise_logs(result);
 }
 
-inline auto max_change(const VBAlpha<2>& lhs, const VBAlpha<2>& rhs) noexcept
+inline auto entropy(const VBTau& tau) noexcept
 {
-    return std::max(std::abs(lhs.front() - rhs.front()), std::abs(lhs.back() - rhs.back()));
-}
-
-inline auto max_change(const VBAlpha<3>& lhs, const VBAlpha<3>& rhs) noexcept
-{
-    return std::max({std::abs(lhs[0] - rhs[0]), std::abs(lhs[1] - rhs[1]), std::abs(lhs[2] - rhs[2])});
-}
-
-template <std::size_t K>
-auto max_change(const VBAlpha<K>& lhs, const VBAlpha<K>& rhs) noexcept
-{
-    double result {0};
-    for (std::size_t k {0}; k < K; ++k) {
-        const auto curr = std::abs(lhs[k] - rhs[k]);
-        if (curr > result) result = curr;
-    }
-    return result;
-}
-
-template <std::size_t K>
-auto max_change(const VBAlphaVector<K>& prior_alphas, const VBAlphaVector<K>& posterior_alphas) noexcept
-{
-    const auto S = prior_alphas.size();
-    assert(S == posterior_alphas.size());
-    double result {0};
-    for (std::size_t s {0}; s < S; ++s) {
-        const auto curr = max_change(prior_alphas[s], posterior_alphas[s]);
-        if (curr > result) result = curr;
-    }
-    return result;
-}
-
-template <std::size_t K>
-std::pair<bool, double> check_convergence(const VBAlphaVector<K>& prior_alphas,
-                                          const VBAlphaVector<K>& posterior_alphas,
-                                          const double prev_max_change,
-                                          const double epsilon) noexcept
-{
-    const auto new_max_change = max_change(prior_alphas, posterior_alphas);
-    return std::make_pair(std::abs(new_max_change - prev_max_change) < epsilon, new_max_change);
-}
-
-// lower-bound calculation
-
-inline auto expectation(const ProbabilityVector& genotype_posteriors,
-                        const LogProbabilityVector& genotype_log_priors) noexcept
-{
-    return std::inner_product(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                              std::cbegin(genotype_log_priors), 0.0);
-}
-
-template <std::size_t K>
-auto dirichlet_expectation(const VBAlpha<K>& priors, const VBAlpha<K>& posteriors)
-{
-    using boost::math::digamma;
-    const auto da0 = digamma(sum(posteriors));
-    return std::inner_product(std::cbegin(priors), std::cend(priors),
-                              std::cbegin(posteriors), 0.0, std::plus<> {},
-                              [da0] (const auto& prior, const auto& post) {
-                                  return (prior - 1) * (digamma(post) - da0);
-                              }) - maths::log_beta(priors);
-}
-
-template <std::size_t K>
-auto expectation(const VBAlphaVector<K>& priors, const VBAlphaVector<K>& posteriors)
-{
-    return std::inner_product(std::cbegin(priors), std::cend(priors),
-                              std::cbegin(posteriors), 0.0, std::plus<> {},
-                              [] (const auto& prior, const auto& post) {
-                                  return dirichlet_expectation(prior, post);
-                              });
-}
-
-// E[ln p(Z_s | pi_s)]
-template <std::size_t K>
-auto expectation(const VBResponsabilityVector<K>& taus, const VBAlpha<K>& alpha)
-{
-    using boost::math::digamma;
-    const auto das = digamma(sum(alpha));
-    double result {0};
-    for (unsigned k {0}; k < K; ++k) {
-        result += (digamma(alpha[k]) - das) * sum(taus, k);
-    }
-    return result;
-}
-
-// sum s E[ln p(Z_s | pi_s)]
-template <std::size_t K>
-auto expectation(const VBResponsabilityMatrix<K>& taus, const VBAlphaVector<K>& alphas)
-{
-    return std::inner_product(std::cbegin(taus), std::cend(taus), std::cbegin(alphas), 0.0, std::plus<> {},
-                              [] (const auto& tau, const auto& alpha) {
-                                  return expectation(tau, alpha);
-                              });
-}
-
-template <std::size_t K>
-auto expectation(const VBResponsabilityMatrix<K>& taus,
-                 const VBReadLikelihoodMatrix<K>& log_likelihoods,
-                 const std::size_t g)
-{
-    double result {0};
-    for (std::size_t s {0}; s < taus.size(); ++s) {
-        for (std::size_t n {0}; n < taus[s].size(); ++n) {
-            for (unsigned k {0}; k < K; ++k) {
-                result += taus[s][n][k] * log_likelihoods[s][g][k][n];
-            }
-        }
-    }
-    return result;
-}
-
-// E[ln p(R | Z, g)]
-template <std::size_t K>
-auto expectation(const ProbabilityVector& genotype_posteriors,
-                 const VBResponsabilityMatrix<K>& taus,
-                 const VBReadLikelihoodMatrix<K>& log_likelihoods)
-{
-    double result {0};
-    for (std::size_t g {0}; g < genotype_posteriors.size(); ++g) {
-        result += genotype_posteriors[g] * expectation(taus, log_likelihoods, g);
-    }
-    return result;
-}
-
-template <std::size_t K>
-auto dirichlet_expectation(const VBAlpha<K>& posterior)
-{
-    using boost::math::digamma;
-    const auto da0 = digamma(sum(posterior));
-    return std::accumulate(std::cbegin(posterior), std::cend(posterior), 0.0,
-                           [da0] (const auto curr, const auto a) {
-                               return curr + ((a - 1) * (digamma(a) - da0));
-                           }) - maths::log_beta(posterior);
-}
-
-template <std::size_t K>
-auto expectation(const VBAlphaVector<K>& posteriors)
-{
-    return std::accumulate(std::cbegin(posteriors), std::cend(posteriors), 0.0,
-                           [] (const auto curr, const auto& posterior) {
-                               return curr + dirichlet_expectation(posterior);
-                           });
-}
-
-template <std::size_t K>
-auto q_expectation(const VBTau<K>& tau) noexcept
-{
-    return std::accumulate(std::cbegin(tau), std::cend(tau), 0.0,
-                           [] (const auto curr, const auto t) noexcept {
-                               return curr + (t * std::log(t));
-                           });
-}
-
-template <>
-inline auto q_expectation<2>(const VBTau<2>& tau) noexcept
-{
-    return tau[0] * std::log(tau[0]) + tau[1] * std::log(tau[1]);
+    return -std::accumulate(std::cbegin(tau), std::cend(tau), 0.0,
+                            [] (const auto curr, const auto t) noexcept { return curr + (t * std::log(t)); });
 }
 
 // E [ln q(Z_s)]
 template <std::size_t K>
-auto q_expectation(const VBResponsabilityVector<K>& taus) noexcept
+auto sum_entropies(const VBResponsabilityVector<K>& taus) noexcept
 {
     return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
-                           [] (const auto curr, const auto& tau) noexcept {
-                               return curr + q_expectation(tau);
-                           });
-}
-
-// sum s E [ln q(Z_s)]
-template <std::size_t K>
-auto q_expectation(const VBResponsabilityMatrix<K>& taus) noexcept
-{
-    return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
-                           [] (const auto curr, const auto& t) noexcept {
-                               return curr + q_expectation(t);
-                           });
+                           [] (const auto curr, const auto& tau) noexcept { return curr + entropy(tau); });
 }
 
 template <std::size_t K>
-auto calculate_lower_bound(const VBAlphaVector<K>& prior_alphas,
-                           const LogProbabilityVector& genotype_log_priors,
-                           const VBReadLikelihoodMatrix<K>& log_likelihoods,
-                           const VBLatents<K>& latents)
+auto calculate_evidence_lower_bound(const VBAlphaVector<K>& prior_alphas,
+                                    const VBAlphaVector<K>& posterior_alphas,
+                                    const LogProbabilityVector& genotype_log_priors,
+                                    const ProbabilityVector& genotype_posteriors,
+                                    const LogProbabilityVector& genotype_log_posteriors,
+                                    const VBResponsabilityMatrix<K>& taus,
+                                    const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                                    const boost::optional<double> max_posterior_skip = boost::none)
 {
-    const auto& genotype_posteriors     = latents.genotype_posteriors;
-    const auto& genotype_log_posteriors = latents.genotype_log_posteriors;
-    const auto& posterior_alphas        = latents.alphas;
-    const auto& taus                    = latents.responsabilities;
+    const auto G = genotype_log_priors.size();
+    const auto S = log_likelihoods.size();
     double result {0};
-    result += expectation(genotype_posteriors, genotype_log_priors);
-    result += expectation(prior_alphas, posterior_alphas);
-    result += expectation(taus, posterior_alphas);
-    result += expectation(genotype_posteriors, taus, log_likelihoods);
-    result -= expectation(genotype_posteriors, genotype_log_posteriors);
-    result -= expectation(posterior_alphas);
-    result -= q_expectation(taus);
+    for (std::size_t g {0}; g < G; ++g) {
+        if (!max_posterior_skip || genotype_posteriors[g] >= *max_posterior_skip) {
+            auto w = genotype_log_priors[g] - genotype_log_posteriors[g];
+            for (std::size_t s {0}; s < S; ++s) {
+                w += marginalise(taus[s], log_likelihoods[s][g]);
+            }
+            result += genotype_posteriors[g] * w;
+        }
+    }
+    for (std::size_t s {0}; s < S; ++s) {
+        result += (maths::log_beta(posterior_alphas[s]) - maths::log_beta(prior_alphas[s]));
+        result += sum_entropies(taus[s]);
+    }
     return result;
 }
 
@@ -611,15 +449,17 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
     auto posterior_alphas = prior_alphas;
     auto responsabilities = init_responsabilities<K>(posterior_alphas, genotype_posteriors, log_likelihoods2);
     assert(responsabilities.size() == log_likelihoods1.size()); // num samples
-    bool is_converged {false};
-    double max_change {0};
+    auto prev_evidence = std::numeric_limits<double>::lowest();
     for (unsigned i {0}; i < params.max_iterations; ++i) {
         update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors, responsabilities, log_likelihoods1);
         exp(genotype_log_posteriors, genotype_posteriors);
         update_alphas(posterior_alphas, prior_alphas, responsabilities);
+        auto curr_evidence = calculate_evidence_lower_bound(prior_alphas, posterior_alphas, genotype_log_priors,
+                                                            genotype_posteriors, genotype_log_posteriors, responsabilities,
+                                                            log_likelihoods1, 1e-10);
+        if (curr_evidence <= prev_evidence || (curr_evidence - prev_evidence) < params.epsilon) break;
+        prev_evidence = curr_evidence;
         update_responsabilities(responsabilities, posterior_alphas, genotype_posteriors, log_likelihoods2);
-        std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas, max_change, params.epsilon);
-        if (is_converged) break;
     }
     return VBLatents<K> {
         std::move(genotype_posteriors), std::move(genotype_log_posteriors),
@@ -677,6 +517,20 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
     return result;
 }
 
+// lower-bound calculation
+
+template <std::size_t K>
+auto calculate_evidence_lower_bound(const VBAlphaVector<K>& prior_alphas,
+                                    const LogProbabilityVector& genotype_log_priors,
+                                    const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                                    const VBLatents<K>& latents)
+{
+    return calculate_evidence_lower_bound(prior_alphas, latents.alphas, genotype_log_priors,
+                                          latents.genotype_posteriors, latents.genotype_log_posteriors,
+                                          latents.responsabilities, log_likelihoods);
+    
+}
+
 template <std::size_t K>
 std::pair<VBLatents<K>, double>
 get_max_evidence_latents(const VBAlphaVector<K>& prior_alphas,
@@ -687,7 +541,7 @@ get_max_evidence_latents(const VBAlphaVector<K>& prior_alphas,
     std::vector<double> seed_evidences(latents.size());
     std::transform(std::cbegin(latents), std::cend(latents), std::begin(seed_evidences),
                    [&] (const auto& seed_latents) {
-                       return calculate_lower_bound(prior_alphas, genotype_log_priors, log_likelihoods, seed_latents);
+                       return calculate_evidence_lower_bound(prior_alphas, genotype_log_priors, log_likelihoods, seed_latents);
                    });
     const auto max_itr = std::max_element(std::cbegin(seed_evidences), std::cend(seed_evidences));
     const auto max_idx = std::distance(std::cbegin(seed_evidences), max_itr);
@@ -704,6 +558,7 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                       const VariationalBayesParameters& params,
                       std::vector<LogProbabilityVector> seeds)
 {
+    assert(!seeds.empty());
     auto latents = detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
     return detail::get_max_evidence_latents(prior_alphas, genotype_log_priors, log_likelihoods, std::move(latents));
 }

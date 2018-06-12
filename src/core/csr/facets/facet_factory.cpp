@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "facet_factory.hpp"
@@ -16,12 +16,16 @@
 #include "read_assignments.hpp"
 #include "reference_context.hpp"
 #include "samples.hpp"
+#include "genotypes.hpp"
+#include "ploidies.hpp"
 
 namespace octopus { namespace csr {
 
-FacetFactory::FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe)
+FacetFactory::FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe, VcfHeader input_header, PloidyMap ploidies)
 : reference_ {reference}
 , read_pipe_ {std::move(read_pipe)}
+, input_header_ {std::move(input_header)}
+, ploidies_ {std::move(ploidies)}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -30,6 +34,8 @@ FacetFactory::FacetFactory(const ReferenceGenome& reference, BufferedReadPipe re
 FacetFactory::FacetFactory(FacetFactory&& other)
 : reference_ {std::move(other.reference_)}
 , read_pipe_ {std::move(other.read_pipe_)}
+, input_header_ {std::move(other.input_header_)}
+, ploidies_ {std::move(other.ploidies_)}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -40,6 +46,8 @@ FacetFactory& FacetFactory::operator=(FacetFactory&& other)
     using std::swap;
     swap(reference_, other.reference_);
     swap(read_pipe_, other.read_pipe_);
+    swap(ploidies_, other.ploidies_);
+    swap(input_header_, other.input_header_);
     setup_facet_makers();
     return *this;
 }
@@ -169,7 +177,16 @@ void FacetFactory::setup_facet_makers()
     };
     facet_makers_[name<Samples>()] = [this] (const BlockData& block) -> FacetWrapper
     {
-        return {std::make_unique<Samples>(read_pipe_.source().samples())};
+        return {std::make_unique<Samples>(input_header_.samples())};
+    };
+    facet_makers_[name<Genotypes>()] = [] (const BlockData& block) -> FacetWrapper
+    {
+        assert(block.genotypes);
+        return {std::make_unique<Genotypes>(*block.genotypes)};
+    };
+    facet_makers_[name<Ploidies>()] = [this] (const BlockData& block) -> FacetWrapper
+    {
+        return {std::make_unique<Ploidies>(ploidies_, *block.region, input_header_.samples())};
     };
 }
 

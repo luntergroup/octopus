@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_record_factory.hpp"
@@ -29,6 +29,7 @@
 #include "utils/append.hpp"
 #include "exceptions/program_error.hpp"
 #include "io/variant/vcf_spec.hpp"
+#include "config/octopus_vcf.hpp"
 
 #define _unused(x) ((void)(x))
 
@@ -167,61 +168,73 @@ void resolve_indel_genotypes(std::vector<CallWrapper>& calls, const std::vector<
     }
 }
 
+bool is_modified_phase_boundary(const CallWrapper& call, const std::vector<SampleName>& samples)
+{
+    return std::none_of(std::cbegin(samples), std::cend(samples),
+                        [&call] (const auto& sample) {
+                            const auto& old_phase = call->get_genotype_call(sample).phase;
+                            return old_phase && begins_before(call, old_phase->region());
+                        });
+}
+
+template <typename Iterator>
+void resolve_phase(CallWrapper& call, const SampleName& sample,
+                   const Iterator first_phase_boundary_itr, const Iterator last_phase_boundary_itr)
+{
+    const auto& phase = call->get_genotype_call(sample).phase;
+    if (phase) {
+        auto overlapped = overlap_range(first_phase_boundary_itr, last_phase_boundary_itr, phase->region());
+        if (overlapped.empty()) {
+            overlapped = overlap_range(first_phase_boundary_itr, last_phase_boundary_itr, expand_lhs(phase->region(), 1));
+            if (!overlapped.empty() && begin_distance(overlapped.front(), phase->region()) != 1) {
+                overlapped.advance_begin(1);
+            }
+        }
+        if (!overlapped.empty() && overlapped.front() != call) {
+            const auto& old_phase = call->get_genotype_call(sample).phase;
+            auto new_phase_region = encompassing_region(overlapped.front(), old_phase->region());
+            Call::PhaseCall new_phase {std::move(new_phase_region), old_phase->score()};
+            call->set_phase(sample, std::move(new_phase));
+        }
+    }
+}
+
 void pad_indels(std::vector<CallWrapper>& calls, const std::vector<SampleName>& samples)
 {
-    using std::begin; using std::end; using std::move;
-    const auto first_modified = std::stable_partition(begin(calls), end(calls),
-                                                      [] (const auto& call) { return !call->parsimonise(dummy_base); });
-    if (first_modified != end(calls)) {
-        const auto last = end(calls);
-        const auto first_phase_adjusted = std::partition(first_modified, last,
-                                                         [&samples] (const auto& call) {
-                                                             return std::none_of(begin(samples), cend(samples),
-                                                                                 [&call] (const auto& sample) {
-                                                                                     const auto& old_phase = call->get_genotype_call(sample).phase;
-                                                                                     return old_phase && begins_before(mapped_region(call), old_phase->region());
-                                                                                 });
-                                                         });
-        if (first_phase_adjusted != last) {
-            std::sort(first_phase_adjusted, last);
-            for_each(first_phase_adjusted, last,
-                     [&samples] (auto& call) {
-                         for (const auto& sample : samples) {
-                             const auto& old_phase = call->get_genotype_call(sample).phase;
-                             if (old_phase && begins_before(mapped_region(call), old_phase->region())) {
-                                 auto new_phase_region = expand_lhs(old_phase->region(), 1);
-                                 Call::PhaseCall new_phase {move(new_phase_region), old_phase->score()};
-                                 call->set_phase(sample, move(new_phase));
-                             }
-                         }
-                     });
-            for_each(begin(calls), first_phase_adjusted,
-                     [&samples, first_phase_adjusted, last] (auto& call) {
-                         for (const auto& sample : samples) {
-                             const auto& phase = call->get_genotype_call(sample).phase;
-                             if (phase) {
-                                 auto overlapped = overlap_range(first_phase_adjusted, last, phase->region());
-                                 if (overlapped.empty()) {
-                                     overlapped = overlap_range(first_phase_adjusted, last, expand_lhs(phase->region(), 1));
-                                     if (!overlapped.empty()) {
-                                         if (begin_distance(overlapped.front(), phase->region()) != 1) {
-                                             overlapped.advance_begin(1);
-                                         }
-                                     }
-                                 }
-                                 if (!overlapped.empty() && overlapped.front() != call) {
-                                     const auto& old_phase = call->get_genotype_call(sample).phase;
-                                     auto new_phase_region = encompassing_region(overlapped.front(), old_phase->region());
-                                     Call::PhaseCall new_phase {move(new_phase_region), old_phase->score()};
-                                     call->set_phase(sample, move(new_phase));
-                                 }
-                             }
-                         }
-                     });
+    using std::begin; using std::end;
+    const auto first_modified_itr = std::stable_partition(begin(calls), end(calls),
+                                                          [] (const auto& call) { return !call->parsimonise(dummy_base); });
+    if (first_modified_itr != end(calls)) {
+        const auto last_call_itr = end(calls);
+        const auto first_phase_adjusted_itr = std::partition(first_modified_itr, last_call_itr,
+                                                             [&samples] (const auto& call) {
+                                                                 return is_modified_phase_boundary(call, samples); });
+        if (first_phase_adjusted_itr != last_call_itr) {
+            std::sort(first_phase_adjusted_itr, last_call_itr);
+            for (auto call_itr = first_phase_adjusted_itr; call_itr != last_call_itr; ++call_itr) {
+                auto& call = *call_itr;
+                for (const auto& sample : samples) {
+                    const auto& old_phase = call->get_genotype_call(sample).phase;
+                    if (old_phase) {
+                        if (begins_before(call, old_phase->region())) {
+                            auto new_phase_region = expand_lhs(old_phase->region(), 1);
+                            Call::PhaseCall new_phase {std::move(new_phase_region), old_phase->score()};
+                            call->set_phase(sample, std::move(new_phase));
+                        } else {
+                            resolve_phase(call, sample, first_phase_adjusted_itr, call_itr);
+                        }
+                    }
+                }
+            }
+            for_each(begin(calls), first_phase_adjusted_itr, [&samples, first_phase_adjusted_itr, last_call_itr] (auto& call) {
+                for (const auto& sample : samples) {
+                    resolve_phase(call, sample, first_phase_adjusted_itr, last_call_itr);
+                }
+            });
         }
-        std::sort(first_modified, first_phase_adjusted);
-        std::inplace_merge(first_modified, first_phase_adjusted, last);
-        std::inplace_merge(begin(calls), first_modified, last);
+        std::sort(first_modified_itr, first_phase_adjusted_itr);
+        std::inplace_merge(first_modified_itr, first_phase_adjusted_itr, last_call_itr);
+        std::inplace_merge(begin(calls), first_modified_itr, last_call_itr);
     }
 }
 
@@ -240,7 +253,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
         const auto block_begin_itr = adjacent_overlap_find(call_itr, end(calls));
         transform(std::make_move_iterator(call_itr), std::make_move_iterator(block_begin_itr), std::back_inserter(result),
                   [this] (CallWrapper&& call) {
-                      call->replace(dummy_base, reference_.fetch_sequence(head_position(call->mapped_region())).front());
+                      call->replace(dummy_base, reference_.fetch_sequence(head_position(call)).front());
                       // We may still have uncalled genotyped alleles here if the called genotype
                       // did not have a high posterior
                       call->replace_uncalled_genotype_alleles(Allele {call->mapped_region(), vcfspec::missingValue}, 'N');
@@ -259,8 +272,8 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                                               [] (const auto& call) {
                                                   return call->reference().sequence().front() == dummy_base;
                                               });
-        boost::optional<decltype(block_head_end_itr)> base;
-        if (alt_itr != block_head_end_itr)  base = alt_itr;
+        boost::optional<decltype(block_head_end_itr)> base {};
+        if (alt_itr != block_head_end_itr) base = alt_itr;
         std::deque<CallWrapper> duplicates {};
         for_each(block_begin_itr, block_head_end_itr, [this, base, &duplicates] (auto& call) {
             assert(!call->reference().sequence().empty());
@@ -281,11 +294,16 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                         if (old_genotype[i].sequence().front() == dummy_base) {
                             auto new_sequence = old_genotype[i].sequence();
                             if (base) {
-                                const auto& base_sequence = (**base)->get_genotype_call(sample).genotype[i].sequence();
-                                if (!base_sequence.empty()) {
-                                    new_sequence.front() = base_sequence.front();
+                                const auto& base_genotype = (**base)->get_genotype_call(sample).genotype;
+                                if (base_genotype.ploidy() == ploidy) {
+                                    const auto& base_sequence = base_genotype[i].sequence();
+                                    if (!base_sequence.empty()) {
+                                        new_sequence.front() = base_sequence.front();
+                                    } else {
+                                        new_sequence = vcfspec::missingValue;
+                                    }
                                 } else {
-                                    new_sequence = vcfspec::missingValue;
+                                    new_sequence.front() = actual_reference_base;
                                 }
                             } else {
                                 new_sequence.front() = actual_reference_base;
@@ -376,7 +394,8 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                             Allele new_allele {mapped_region(curr_call), move(new_sequence)};
                             new_genotype.emplace(move(new_allele));
                         } else if (old_genotype[i].sequence().front() == dummy_base) {
-                            if (prev_represented[s][i] && begins_before(*prev_represented[s][i], curr_call)) {
+                            if (prev_represented[s].size() > i && prev_represented[s][i]
+                                && begins_before(*prev_represented[s][i], curr_call)) {
                                 const auto& prev_represented_genotype = prev_represented[s][i]->get_genotype_call(sample);
                                 if (are_in_phase(genotype_call, prev_represented_genotype)) {
                                     const auto& prev_allele = prev_represented_genotype.genotype[i];
@@ -446,6 +465,9 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     const auto& seq = new_genotype[i].sequence();
                     if (std::find(std::cbegin(seq), std::cend(seq), vcfspec::deletedBase) == std::cend(seq)
                         && block_head_end_itr->call->is_represented(new_genotype[i])) {
+                        if (prev_represented[s].size() <= i) {
+                            prev_represented[s].resize(i + 1, nullptr);
+                        }
                         prev_represented[s][i] = std::addressof(*block_head_end_itr->call);
                     }
                 }
@@ -530,7 +552,7 @@ void set_vcf_genotype(const SampleName& sample, const Call::GenotypeCall& call, 
     auto genotyped_alleles = extract_allele_sequences(call.genotype);
     if (replace_missing_with_non_ref) {
         std::replace(std::begin(genotyped_alleles), std::end(genotyped_alleles),
-                     std::string {vcfspec::missingValue}, std::string {"<NON_REF>"});
+                     std::string {vcfspec::missingValue}, std::string {vcf::spec::allele::nonref});
     }
     record.set_genotype(sample, std::move(genotyped_alleles), VcfRecord::Builder::Phasing::phased);
 }
@@ -592,10 +614,10 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     bool has_non_ref {false};
     auto alts = extract_genotyped_alt_alleles(call.get(), samples_);
     if (alts.empty()) {
-        alts.push_back("<NON_REF>");
+        alts.push_back(vcf::spec::allele::nonref);
         has_non_ref = true;
     } else {
-        has_non_ref = std::find(std::cbegin(alts), std::cend(alts), "<NON_REF>") != std::cend(alts);
+        has_non_ref = std::find(std::cbegin(alts), std::cend(alts), vcf::spec::allele::nonref) != std::cend(alts);
     }
     
     result.set_chrom(contig_name(region));
@@ -744,10 +766,10 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     alt_alleles.erase(itr, std::end(alt_alleles));
     bool has_non_ref {false};
     if (alt_alleles.empty()) {
-        alt_alleles.push_back("<NON_REF>");
+        alt_alleles.push_back(vcf::spec::allele::nonref);
         has_non_ref = true;
     } else {
-        has_non_ref = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), "<NON_REF>") != std::cend(alt_alleles);
+        has_non_ref = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), vcf::spec::allele::nonref) != std::cend(alt_alleles);
     }
     set_allele_counts(alt_alleles, resolved_genotypes, result);
     result.set_alt(std::move(alt_alleles));
@@ -779,7 +801,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
             auto& genotype_call = *sample_itr++;
             if (has_non_ref) {
                 std::replace(std::begin(genotype_call), std::end(genotype_call),
-                             std::string {vcfspec::missingValue}, std::string {"<NON_REF>"});
+                             std::string {vcfspec::missingValue}, std::string {vcf::spec::allele::nonref});
             }
             result.set_genotype(sample, genotype_call, VcfRecord::Builder::Phasing::phased);
             result.set_format(sample, "GQ", std::to_string(gq));

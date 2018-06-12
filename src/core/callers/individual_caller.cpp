@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "individual_caller.hpp"
@@ -51,6 +51,21 @@ std::string IndividualCaller::do_name() const
 IndividualCaller::CallTypeSet IndividualCaller::do_call_types() const
 {
     return {std::type_index(typeid(GermlineVariantCall))};
+}
+
+std::size_t IndividualCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+{
+    if (parameters_.deduplicate_haplotypes_with_germline_model) {
+        if (haplotypes.size() < 2) return 0;
+        CoalescentModel::Parameters model_params {};
+        if (parameters_.prior_model_params) model_params = *parameters_.prior_model_params;
+        Haplotype reference {mapped_region(haplotypes.front()), reference_.get()};
+        CoalescentModel model {std::move(reference), model_params, haplotypes.size(), CoalescentModel::CachingStrategy::none};
+        const CoalescentProbabilityGreater cmp {std::move(model)};
+        return octopus::remove_duplicates(haplotypes, cmp);
+    } else {
+        return Caller::do_remove_duplicates(haplotypes);
+    }
 }
 
 // IndividualCaller::Latents public methods

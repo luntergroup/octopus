@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef individual_caller_hpp
@@ -37,6 +37,7 @@ public:
         unsigned ploidy;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
         Phred<double> min_variant_posterior, min_refcall_posterior;
+        bool deduplicate_haplotypes_with_germline_model = false;
     };
     
     IndividualCaller() = delete;
@@ -59,6 +60,8 @@ private:
     
     std::string do_name() const override;
     CallTypeSet do_call_types() const override;
+    
+    std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const override;
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,

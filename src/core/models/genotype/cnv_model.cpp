@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "cnv_model.hpp"
@@ -47,7 +47,7 @@ template <std::size_t K>
 CNVModel::InferredLatents
 run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<Genotype<Haplotype>>& genotypes,
-                      const std::vector<std::vector<unsigned>>& genotype_indices,
+                      const std::vector<GenotypeIndex>& genotype_indices,
                       const CNVModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params);
@@ -74,7 +74,7 @@ CNVModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
 
 CNVModel::InferredLatents
 CNVModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
-                   const std::vector<std::vector<unsigned>>& genotype_indices,
+                   const std::vector<GenotypeIndex>& genotype_indices,
                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
@@ -184,12 +184,12 @@ expand(const std::vector<SampleName>& samples, VBLatents<K>&& inferred_latents, 
 }
 
 template <typename Container>
-auto calculate_log_priors(const Container& genotypes, const GenotypePriorModel& model)
+auto calculate_log_priors(const Container& genotypes, const GenotypePriorModel& model, const bool normalise = false)
 {
     std::vector<double> result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&model] (const auto& genotype) { return model.evaluate(genotype); });
-    maths::normalise_logs(result);
+    if (normalise) maths::normalise_logs(result);
     return result;
 }
 
@@ -203,12 +203,11 @@ auto generate_seeds(const std::vector<SampleName>& samples,
                     const LogProbabilityVector& genotype_log_priors,
                     const CNVModel::Priors& priors,
                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                    const boost::optional<const std::vector<std::vector<unsigned>>&> genotype_indices = boost::none)
+                    const boost::optional<const std::vector<GenotypeIndex>&> genotype_indices = boost::none)
 {
     std::vector<LogProbabilityVector> result {};
-    result.reserve(2 + 2 * samples.size());
+    result.reserve(1 + samples.size());
     result.push_back(genotype_log_priors);
-    result.push_back(log_uniform_dist(genotypes.size()));
     IndividualModel germline_model {priors.genotype_prior_model};
     for (const auto& sample : samples) {
         haplotype_log_likelihoods.prime(sample);
@@ -219,9 +218,6 @@ auto generate_seeds(const std::vector<SampleName>& samples,
             latents = germline_model.evaluate(genotypes, haplotype_log_likelihoods);
         }
         result.push_back(latents.posteriors.genotype_probabilities);
-        maths::log_each(result.back());
-        result.push_back(latents.posteriors.genotype_probabilities);
-        for (auto& p : result.back()) p = 1.0 - p;
         maths::log_each(result.back());
     }
     return result;
@@ -263,12 +259,11 @@ template <std::size_t K>
 CNVModel::InferredLatents
 run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<Genotype<Haplotype>>& genotypes,
-                      const std::vector<std::vector<unsigned>>& genotype_indices,
+                      const std::vector<GenotypeIndex>& genotype_indices,
                       const CNVModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params)
 {
-    
     const auto genotype_log_priors = calculate_log_priors(genotype_indices, priors.genotype_prior_model);
     auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, priors, haplotype_log_likelihoods, genotype_indices);
     return run_variational_bayes<K>(samples, genotypes, priors.alphas, genotype_log_priors,

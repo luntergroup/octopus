@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "downloader.hpp"
@@ -19,7 +19,7 @@ std::unique_ptr<VariantGenerator> Downloader::do_clone() const
     return std::make_unique<Downloader>(*this);
 }
 
-std::vector<Variant> Downloader::do_generate_variants(const GenomicRegion& region)
+std::vector<Variant> Downloader::do_generate(const RegionSet& regions) const
 {
     //namespace http = boost::network::http;
     

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef read_assigner_hpp
@@ -20,29 +20,85 @@ namespace octopus {
 
 class HaplotypeLikelihoodModel;
 
+using HaplotypeProbabilityMap = std::unordered_map<Haplotype, double>;
 using ReadSupportSet = std::vector<AlignedRead>;
 using HaplotypeSupportMap = std::unordered_map<Haplotype, ReadSupportSet>;
 using ReadRefSupportSet = std::vector<std::reference_wrapper<const AlignedRead>>;
 using AlleleSupportMap = std::unordered_map<Allele, ReadRefSupportSet>;
 
-HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                              const std::vector<AlignedRead>& reads);
+struct AssignmentConfig
+{
+    enum class AmbiguousAction { drop, first, random, all } ambiguous_action = AmbiguousAction::drop;
+};
 
-HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                              const std::vector<AlignedRead>& reads,
-                                              std::deque<AlignedRead>& unassigned);
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          const HaplotypeProbabilityMap& log_priors,
+                          AssignmentConfig config = AssignmentConfig {});
 
-HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                              const std::vector<AlignedRead>& reads,
-                                              HaplotypeLikelihoodModel model);
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          AssignmentConfig config = AssignmentConfig {});
 
-HaplotypeSupportMap compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                                              const std::vector<AlignedRead>& reads,
-                                              std::deque<AlignedRead>& unassigned,
-                                              HaplotypeLikelihoodModel model);
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          std::deque<AlignedRead>& ambiguous,
+                          const HaplotypeProbabilityMap& log_priors,
+                          AssignmentConfig config = AssignmentConfig {});
 
-AlleleSupportMap compute_allele_support(const std::vector<Allele>& alleles,
-                                        const HaplotypeSupportMap& haplotype_support);
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          std::deque<AlignedRead>& ambiguous,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          std::deque<AlignedRead>& ambiguous,
+                          const HaplotypeProbabilityMap& log_priors,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          std::deque<AlignedRead>& ambiguous,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {});
+
+template <typename BinaryPredicate>
+AlleleSupportMap
+compute_allele_support(const std::vector<Allele>& alleles,
+                       const HaplotypeSupportMap& haplotype_support,
+                       BinaryPredicate inclusion_pred)
+{
+    AlleleSupportMap result {};
+    result.reserve(alleles.size());
+    for (const auto& allele : alleles) {
+        ReadRefSupportSet allele_support {};
+        for (const auto& p : haplotype_support) {
+            if (inclusion_pred(p.first, allele)) {
+                allele_support.insert(std::cend(allele_support), std::cbegin(p.second), std::cend(p.second));
+            }
+        }
+        result.emplace(allele, std::move(allele_support));
+    }
+    return result;
+}
+
+AlleleSupportMap
+compute_allele_support(const std::vector<Allele>& alleles,
+                       const HaplotypeSupportMap& haplotype_support);
 
 } // namespace octopus
 

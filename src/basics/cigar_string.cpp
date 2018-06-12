@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "cigar_string.hpp"
@@ -30,16 +30,6 @@ CigarOperation::Size CigarOperation::size() const noexcept
     return size_;
 }
 
-bool CigarOperation::advances_reference() const noexcept
-{
-    return !(flag_ == Flag::insertion || flag_ == Flag::hardClipped || flag_ == Flag::padding);
-}
-
-bool CigarOperation::advances_sequence() const noexcept
-{
-    return !(flag_ == Flag::deletion || flag_ == Flag::hardClipped);
-}
-
 // non-member methods
 
 bool is_valid(const CigarOperation::Flag flag) noexcept
@@ -64,10 +54,32 @@ bool is_valid(const CigarOperation& op) noexcept
     return is_valid(op.flag()) && op.size() > 0;
 }
 
-bool is_match(const CigarOperation& op) noexcept
+bool advances_reference(CigarOperation::Flag flag) noexcept
 {
     using Flag = CigarOperation::Flag;
-    switch (op.flag()) {
+    return !(flag == Flag::insertion || flag == Flag::hardClipped || flag == Flag::padding);
+}
+
+bool advances_reference(const CigarOperation& op) noexcept
+{
+    return advances_reference(op.flag());
+}
+
+bool advances_sequence(CigarOperation::Flag flag) noexcept
+{
+    using Flag = CigarOperation::Flag;
+    return !(flag == Flag::deletion || flag == Flag::hardClipped);
+}
+
+bool advances_sequence(const CigarOperation& op) noexcept
+{
+    return advances_sequence(op.flag());
+}
+
+bool is_match(CigarOperation::Flag flag) noexcept
+{
+    using Flag = CigarOperation::Flag;
+    switch (flag) {
         case Flag::alignmentMatch:
         case Flag::sequenceMatch:
         case Flag::substitution: return true;
@@ -75,16 +87,50 @@ bool is_match(const CigarOperation& op) noexcept
     }
 }
 
+bool is_match(const CigarOperation& op) noexcept
+{
+    return is_match(op.flag());
+}
+
+bool is_insertion(CigarOperation::Flag flag) noexcept
+{
+    return flag == CigarOperation::Flag::insertion;
+}
+
+bool is_insertion(const CigarOperation& op) noexcept
+{
+    return is_insertion(op.flag());
+}
+
+bool is_deletion(CigarOperation::Flag flag) noexcept
+{
+    return flag == CigarOperation::Flag::deletion;
+}
+
+bool is_deletion(const CigarOperation& op) noexcept
+{
+    return is_deletion(op.flag());
+}
+
+bool is_indel(CigarOperation::Flag flag) noexcept
+{
+    return is_insertion(flag) || is_deletion(flag);
+}
+
 bool is_indel(const CigarOperation& op) noexcept
 {
+    return is_indel(op.flag());
+}
+
+bool is_clipping(CigarOperation::Flag flag) noexcept
+{
     using Flag = CigarOperation::Flag;
-    return op.flag() == Flag::insertion || op.flag() == Flag::deletion;
+    return flag == Flag::softClipped || flag == Flag::hardClipped;
 }
 
 bool is_clipping(const CigarOperation& op) noexcept
 {
-    using Flag = CigarOperation::Flag;
-    return op.flag() == Flag::softClipped || op.flag() == Flag::hardClipped;
+    return is_clipping(op.flag());
 }
 
 // CigarString
@@ -153,56 +199,112 @@ get_soft_clipped_sizes(const CigarString& cigar) noexcept
 
 // non-member functions
 
-template <typename Predicate>
-CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size, Predicate pred)
+namespace {
+
+template <typename Predicate1, typename Predicate2>
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size,
+                 Predicate1 offset_pred, Predicate2 size_pred)
 {
     CigarString result {};
     result.reserve(cigar.size());
-    auto op_it = std::cbegin(cigar);
-    const auto last_op = std::cend(cigar);
-    
-    while (op_it != last_op && (offset >= op_it->size() || !pred(*op_it))) {
-        if (pred(*op_it)) {
-            offset -= op_it->size();
+    auto op_itr = std::cbegin(cigar);
+    const auto last_op_itr = std::cend(cigar);
+    while (op_itr != last_op_itr && offset > 0 && (offset >= op_itr->size() || !offset_pred(*op_itr))) {
+        if (offset_pred(*op_itr)) {
+            offset -= op_itr->size();
         }
-        ++op_it;
+        ++op_itr;
     }
-    if (op_it != last_op) {
-        const auto remainder = op_it->size() - offset;
+    if (op_itr != last_op_itr) {
+        const auto remainder = op_itr->size() - offset;
         if (remainder >= size) {
-            result.emplace_back(size, op_it->flag());
+            if (size_pred(*op_itr)) {
+                result.emplace_back(size, op_itr->flag());
+            } else {
+                result.emplace_back(op_itr->size(), op_itr->flag());
+            }
             return result;
         }
-        result.emplace_back(remainder, op_it->flag());
+        result.emplace_back(remainder, op_itr->flag());
         size -= remainder;
-        ++op_it;
+        ++op_itr;
     }
-    while (op_it != last_op && size > 0 && (size >= op_it->size() || !pred(*op_it))) {
-        result.emplace_back(*op_it);
-        if (pred(*op_it)) {
-            size -= op_it->size();
+    while (op_itr != last_op_itr && size > 0 && (size >= op_itr->size() || !size_pred(*op_itr))) {
+        result.emplace_back(*op_itr);
+        if (size_pred(*op_itr)) {
+            size -= op_itr->size();
         }
-        ++op_it;
+        ++op_itr;
     }
-    if (op_it != last_op && size > 0) {
-        result.emplace_back(size, op_it->flag());
+    if (op_itr != last_op_itr && size > 0) {
+        result.emplace_back(size, op_itr->flag());
     }
     return result;
 }
 
-CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
+template <typename Predicate>
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size,
+                 Predicate pred)
 {
-    return copy(cigar, offset, size, [](const auto& op) { return true; });
+    return copy(cigar, offset, size, pred, pred);
+}
+
+struct AdvancesReferencePred
+{
+    bool operator()(const CigarOperation& op) const noexcept
+    {
+        return advances_reference(op);
+    }
+};
+struct AdvancesSequencePred
+{
+    bool operator()(const CigarOperation& op) const noexcept
+    {
+        return advances_sequence(op);
+    }
+};
+
+template <typename Predicate>
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size,
+                 Predicate offset_pred, const CigarStringCopyPolicy size_policy)
+{
+    using CopyPolicy = CigarStringCopyPolicy;
+    switch (size_policy) {
+        case CopyPolicy::reference:
+            return copy(cigar, offset, size, offset_pred, AdvancesReferencePred {});
+        case CopyPolicy::sequence:
+            return copy(cigar, offset, size, offset_pred, AdvancesSequencePred {});
+        case CopyPolicy::both:
+        default:
+            return copy(cigar, offset, size, offset_pred, [] (const auto& op) { return true; });
+    }
+}
+
+} // namespace
+
+CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size,
+                 const CigarStringCopyPolicy offset_policy, const CigarStringCopyPolicy size_policy)
+{
+    using CopyPolicy = CigarStringCopyPolicy;
+    switch (offset_policy) {
+        case CopyPolicy::reference:
+            return copy(cigar, offset, size, AdvancesReferencePred {}, size_policy);
+        case CopyPolicy::sequence:
+            return copy(cigar, offset, size, AdvancesSequencePred {}, size_policy);
+        case CopyPolicy::both:
+        default:
+            return copy(cigar, offset, size, [] (const auto& op) { return true; }, size_policy);
+    }
 }
 
 CigarString copy_reference(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
-    return copy(cigar, offset, size, [](const auto& op) { return op.advances_reference(); });
+    return copy(cigar, offset, size, AdvancesReferencePred {});
 }
 
 CigarString copy_sequence(const CigarString& cigar, CigarOperation::Size offset, CigarOperation::Size size)
 {
-    return copy(cigar, offset, size, [](const auto& op) { return op.advances_sequence(); });
+    return copy(cigar, offset, size, AdvancesSequencePred {});
 }
 
 std::vector<CigarOperation::Flag> decompose(const CigarString& cigar)
@@ -220,10 +322,11 @@ CigarString collapse_matches(const CigarString& cigar)
     CigarString result {};
     result.reserve(cigar.size());
     for (auto match_end_itr = std::begin(cigar); match_end_itr != std::cend(cigar); ) {
-        const auto match_begin_itr = std::find_if(match_end_itr, std::end(cigar), is_match);
+        const auto f_is_match = [] (const CigarOperation& op) { return is_match(op); };
+        const auto match_begin_itr = std::find_if(match_end_itr, std::end(cigar), f_is_match);
         result.insert(std::cend(result), match_end_itr, match_begin_itr);
         if (match_begin_itr == std::cend(cigar)) break;
-        match_end_itr = std::find_if_not(std::next(match_begin_itr), std::end(cigar), is_match);
+        match_end_itr = std::find_if_not(std::next(match_begin_itr), std::end(cigar), f_is_match);
         auto match_size = std::accumulate(match_begin_itr, match_end_itr, 0,
                                           [] (auto curr, const auto& op) { return curr + op.size(); });
         result.emplace_back(match_size, CigarOperation::Flag::alignmentMatch);

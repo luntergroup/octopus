@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "caller_builder.hpp"
@@ -162,11 +162,29 @@ CallerBuilder& CallerBuilder::set_likelihood_model(HaplotypeLikelihoodModel mode
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_model_based_haplotype_dedup(bool use) noexcept
+{
+    params_.deduplicate_haplotypes_with_caller_model = use;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_independent_genotype_prior_flag(bool use_independent) noexcept
+{
+    params_.use_independent_genotype_priors = use_independent;
+    return *this;
+}
+
 // cancer
 
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
 {
     params_.normal_sample = std::move(normal_sample);
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_max_somatic_haplotypes(unsigned n) noexcept
+{
+    params_.max_somatic_haplotypes = n;
     return *this;
 }
 
@@ -314,7 +332,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.ploidies.of(samples.front(), *requested_contig_),
                                                           make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           params_.min_variant_posterior,
-                                                          params_.min_refcall_posterior
+                                                          params_.min_refcall_posterior,
+                                                          params_.deduplicate_haplotypes_with_caller_model
                                                       });
         }},
         {"population", [this, &samples] () {
@@ -326,6 +345,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           get_ploidies(samples, *requested_contig_, params_.ploidies),
                                                           make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           params_.max_joint_genotypes,
+                                                          params_.use_independent_genotype_priors
                                                       });
         }},
         {"cancer", [this, &samples] () {
@@ -343,6 +363,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.credible_mass,
                                                       params_.min_credible_somatic_frequency,
                                                       params_.max_joint_genotypes,
+                                                      params_.max_somatic_haplotypes,
                                                       params_.normal_contamination_risk
                                                   });
         }},

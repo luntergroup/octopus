@@ -1,9 +1,19 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "coalescent_population_prior_model.hpp"
 
 namespace octopus {
+
+CoalescentPopulationPriorModel::CoalescentPopulationPriorModel(CoalescentModel segregation_model)
+: segregation_model_ {std::move(segregation_model)}
+, genotype_model_ {}
+{}
+
+CoalescentPopulationPriorModel::CoalescentPopulationPriorModel(CoalescentModel segregation_model, HardyWeinbergModel genotype_model)
+: segregation_model_ {std::move(segregation_model)}
+, genotype_model_ {std::move(genotype_model)}
+{}
 
 template <typename T>
 auto sum_sizes(const std::vector<std::vector<T>>& values) noexcept
@@ -19,10 +29,10 @@ auto sum_sizes(const std::vector<std::reference_wrapper<const std::vector<T>>>& 
                            [] (auto curr, const auto& v) noexcept { return curr + v.get().size(); });
 }
 
-double CoalescentPopulationPriorModel::do_evaluate(const std::vector<std::vector<unsigned>>& indices) const
+double CoalescentPopulationPriorModel::evaluate_segregation_model(const std::vector<GenotypeIndex>& indices) const
 {
     if (indices.size() == 1) {
-        return model_.evaluate(indices.front());
+        return segregation_model_.evaluate(indices.front());
     }
     const auto num_indices = sum_sizes(indices);
     index_buffer_.resize(num_indices);
@@ -30,13 +40,13 @@ double CoalescentPopulationPriorModel::do_evaluate(const std::vector<std::vector
     for (const auto& i : indices) {
         itr = std::copy(std::cbegin(i), std::cend(i), itr);
     }
-    return model_.evaluate(index_buffer_);
+    return segregation_model_.evaluate(index_buffer_);
 }
 
-double CoalescentPopulationPriorModel::do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const
+double CoalescentPopulationPriorModel::evaluate_segregation_model(const std::vector<GenotypeIndiceVectorReference>& indices) const
 {
     if (indices.size() == 1) {
-        return model_.evaluate(indices.front().get());
+        return segregation_model_.evaluate(indices.front().get());
     }
     const auto num_indices = sum_sizes(indices);
     index_buffer_.resize(num_indices);
@@ -44,7 +54,7 @@ double CoalescentPopulationPriorModel::do_evaluate(const std::vector<GenotypeInd
     for (const auto& i : indices) {
         itr = std::copy(std::cbegin(i.get()), std::cend(i.get()), itr);
     }
-    return model_.evaluate(index_buffer_);
+    return segregation_model_.evaluate(index_buffer_);
 }
 
 } // namespace
