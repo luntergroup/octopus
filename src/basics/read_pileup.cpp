@@ -3,15 +3,50 @@
 
 #include "read_pileup.hpp"
 
+#include <iterator>
+#include <numeric>
+
 namespace octopus {
 
-auto make_pileup(const ReadContainer& reads, const GenomicRegion& region)
+ReadPileup::ReadPileup(ContigRegion::Position position) : region_ {position, position + 1} {}
+
+const ContigRegion& ReadPileup::mapped_region() const noexcept
 {
-    ReadPileup result {region};
-    for (const auto& read : overlap_range(reads, region)) {
-        auto subsequence = copy_sequence(read, region);
-        auto base_qualities = copy_base_qualities(read, region);
-        result.read_sequences[subsequence].push_back({std::move(base_qualities), read.mapping_quality()});
+    return region_;
+}
+
+unsigned ReadPileup::depth() const noexcept
+{
+    return std::accumulate(std::cbegin(summaries_), std::cend(summaries_), 0u,
+                           [] (auto curr, const auto& p) { return curr + p.second.size(); });
+}
+
+void ReadPileup::add(const AlignedRead& read)
+{
+    const GenomicRegion region {contig_name(read), region_};
+    summaries_[copy_sequence(read, region)].push_back({copy_base_qualities(read, region), read.mapping_quality()});
+}
+
+namespace {
+
+auto overlap_range(std::vector<ReadPileup>& pileups, const AlignedRead& read)
+{
+    return overlap_range(std::begin(pileups), std::end(pileups), contig_region(read), BidirectionallySortedTag {});
+}
+
+} // namespace
+
+ReadPileups make_pileups(const ReadContainer& reads, const GenomicRegion& region)
+{
+    ReadPileups result {};
+    result.reserve(size(region));
+    for (auto position = region.begin(); position < region.end(); ++position) {
+        result.emplace_back(position);
+    }
+    for (const AlignedRead& read : overlap_range(reads, region)) {
+        for (ReadPileup& pileup : overlap_range(result, read)) {
+            pileup.add(read);
+        }
     }
     return result;
 }

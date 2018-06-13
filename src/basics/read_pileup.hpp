@@ -10,28 +10,52 @@
 
 #include "config/common.hpp"
 #include "concepts/mappable.hpp"
-#include "genomic_region.hpp"
+#include "contig_region.hpp"
 #include "aligned_read.hpp"
 
 namespace octopus {
 
-struct ReadPileup : public Mappable<ReadPileup>
+class ReadPileup : public Mappable<ReadPileup>
 {
+public:
     using NucleotideSequence = AlignedRead::NucleotideSequence;
     using BaseQuality        = AlignedRead::BaseQuality;
     using MappingQuality     = AlignedRead::MappingQuality;
+    
     struct ReadSummary
     {
         std::vector<BaseQuality> base_qualities;
         MappingQuality mapping_quality;
     };
-    std::map<NucleotideSequence, std::vector<ReadSummary>> read_sequences;
-    GenomicRegion region;
-    ReadPileup(GenomicRegion region) : region { std::move(region) } {}
-    const GenomicRegion& mapped_region() const noexcept { return region; }
+    using ReadSummaries = std::vector<ReadSummary>;
+    
+    ReadPileup() = delete;
+    
+    ReadPileup(ContigRegion::Position position);
+    
+    ReadPileup(const ReadPileup&)            = default;
+    ReadPileup& operator=(const ReadPileup&) = default;
+    ReadPileup(ReadPileup&&)                 = default;
+    ReadPileup& operator=(ReadPileup&&)      = default;
+    
+    ~ReadPileup() = default;
+    
+    const ContigRegion& mapped_region() const noexcept;
+    
+    unsigned depth() const noexcept;
+    
+    void add(const AlignedRead& read);
+    
+    //const ReadSummaries&
+
+private:
+    std::map<NucleotideSequence, ReadSummaries> summaries_;
+    ContigRegion region_;
 };
 
-auto make_pileup(const ReadContainer& reads, const GenomicRegion& region);
+using ReadPileups = std::vector<ReadPileup>;
+
+ReadPileups make_pileups(const ReadContainer& reads, const GenomicRegion& region);
 
 } // namespace octopus
 
