@@ -43,10 +43,13 @@ public:
     const ContigRegion& mapped_region() const noexcept;
     
     unsigned depth() const noexcept;
+    unsigned depth(const NucleotideSequence& sequence) const noexcept;
     
     void add(const AlignedRead& read);
     
-    //const ReadSummaries&
+    const ReadSummaries& summaries(const NucleotideSequence& sequence) const;
+    
+    unsigned sum_base_qualities(const NucleotideSequence& sequence) const;
 
 private:
     std::map<NucleotideSequence, ReadSummaries> summaries_;

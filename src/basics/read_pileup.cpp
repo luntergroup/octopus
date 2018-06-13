@@ -8,7 +8,12 @@
 
 namespace octopus {
 
-ReadPileup::ReadPileup(ContigRegion::Position position) : region_ {position, position + 1} {}
+ReadPileup::ReadPileup(ContigRegion::Position position)
+: summaries_ {}
+, region_ {position, position + 1}
+{
+    summaries_.emplace("$", ReadSummaries {});
+}
 
 const ContigRegion& ReadPileup::mapped_region() const noexcept
 {
@@ -21,10 +26,34 @@ unsigned ReadPileup::depth() const noexcept
                            [] (auto curr, const auto& p) { return curr + p.second.size(); });
 }
 
+unsigned ReadPileup::depth(const NucleotideSequence& sequence) const noexcept
+{
+    return this->summaries(sequence).size();
+}
+
 void ReadPileup::add(const AlignedRead& read)
 {
     const GenomicRegion region {contig_name(read), region_};
     summaries_[copy_sequence(read, region)].push_back({copy_base_qualities(read, region), read.mapping_quality()});
+}
+
+const ReadPileup::ReadSummaries& ReadPileup::summaries(const NucleotideSequence& sequence) const
+{
+    const auto itr = summaries_.find(sequence);
+    if (itr != std::cend(summaries_)) {
+        return itr->second;
+    } else {
+        return summaries_.at("$");
+    }
+}
+
+unsigned ReadPileup::sum_base_qualities(const NucleotideSequence& sequence) const
+{
+    const auto& sequence_summaries = this->summaries(sequence);
+    return std::accumulate(std::cbegin(sequence_summaries), std::cend(sequence_summaries), 0u,
+                           [] (auto curr, const ReadSummary& summary) {
+        return curr + std::accumulate(std::cbegin(summary.base_qualities), std::cend(summary.base_qualities), 0u);
+    });
 }
 
 namespace {
