@@ -1162,7 +1162,7 @@ Phred<double> CancerCaller::calculate_somatic_probability(const CancerCaller::La
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
-CancerCaller::call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents, const ReadMap& reads) const
+CancerCaller::call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents, const ReadPileupMap& pileups) const
 {
     return {};
 }

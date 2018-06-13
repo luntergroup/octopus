@@ -25,6 +25,9 @@
 
 #include "timers.hpp"
 
+#include "core/tools/read_assigner.hpp"
+#include "core/tools/read_realigner.hpp"
+
 namespace octopus {
 
 // public methods
@@ -163,10 +166,17 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     if (debug_log_) stream(*debug_log_) << "Converting " << calls.size() << " calls made in " << call_region << " to VCF";
     return convert_to_vcf(std::move(calls), record_factory, call_region);
 }
-    
+
 std::vector<VcfRecord> Caller::regenotype(const std::vector<Variant>& variants, ProgressMeter& progress_meter) const
 {
     return {}; // TODO
+}
+
+auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Haplotype>& genotype)
+{
+    auto result = compute_haplotype_support(genotype, reads, {AssignmentConfig::AmbiguousAction::first});
+    for (auto& p : result) realign_to_reference(p.second, p.first);
+    return result;
 }
 
 // private methods
@@ -647,8 +657,9 @@ void Caller::call_variants(const GenomicRegion& active_region,
         }
         if (refcalls_requested()) {
             const auto refcall_region = right_overhang_region(uncalled_region, completed_region);
+            const auto pileups = make_pileups(reads, latents, refcall_region);
             auto alleles = generate_reference_alleles(refcall_region, active_candidates, calls);
-            auto reference_calls = wrap(call_reference(alleles, latents, reads));
+            auto reference_calls = wrap(call_reference(alleles, latents, pileups));
             const auto itr = utils::append(std::move(reference_calls), calls);
             std::inplace_merge(std::begin(calls), itr, std::end(calls));
         }
@@ -980,8 +991,9 @@ std::vector<CallWrapper> Caller::call_reference(const GenomicRegion& region, con
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
     haplotype_likelihoods.populate(active_reads, haplotypes);
     const auto latents = infer_latents(haplotypes, haplotype_likelihoods);
+    const auto pileups = make_pileups(active_reads, *latents, region);
     const auto alleles = generate_reference_alleles(region);
-    return wrap(call_reference(alleles, *latents, active_reads));
+    return wrap(call_reference(alleles, *latents, pileups));
 }
 
 namespace {
@@ -1066,6 +1078,50 @@ Caller::generate_reference_alleles(const GenomicRegion& region,
 std::vector<Allele> Caller::generate_reference_alleles(const GenomicRegion& region) const
 {
     return generate_reference_alleles(region, {}, {});
+}
+
+namespace {
+
+auto overlap_range(std::vector<ReadPileup>& pileups, const AlignedRead& read)
+{
+    return overlap_range(std::begin(pileups), std::end(pileups), contig_region(read), BidirectionallySortedTag {});
+}
+
+} // namespace
+
+auto make_pileups(const std::vector<AlignedRead>& reads, const Genotype<Haplotype>& genotype, const GenomicRegion& region)
+{
+    const auto realignments = assign_and_realign(reads, genotype);
+    ReadPileups result {};
+    result.reserve(size(region));
+    for (auto position = region.begin(); position < region.end(); ++position) {
+        result.emplace_back(position);
+    }
+    for (const auto& p : realignments) {
+        for (const auto& read : p.second) {
+            for (ReadPileup& pileup : overlap_range(result, read)) {
+                pileup.add(read);
+            }
+        }
+    }
+    return result;
+}
+
+auto make_pileups(const ReadContainer& reads, const Genotype<Haplotype>& genotype, const GenomicRegion& region)
+{
+    const std::vector<AlignedRead> copy {std::cbegin(reads), std::cend(reads)};
+    return make_pileups(copy, genotype, region);
+}
+
+Caller::ReadPileupMap Caller::make_pileups(const ReadMap& reads, const Latents& latents, const GenomicRegion& region) const
+{
+    ReadPileupMap result {};
+    result.reserve(samples_.size());
+    for (const auto& sample : samples_) {
+        const auto called_genotype = call_genotype(latents, sample);
+        result.emplace(sample, octopus::make_pileups(reads.at(sample), called_genotype, region));
+    }
+    return result;
 }
 
 namespace debug {

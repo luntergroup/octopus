@@ -112,7 +112,7 @@ private:
     
     std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
-                   const ReadMap& reads) const override;
+                   const ReadPileupMap& pileups) const override;
     
     bool has_normal_sample() const noexcept;
     const SampleName& normal_sample() const;

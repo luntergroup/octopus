@@ -423,26 +423,32 @@ auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& 
     return probability_to_phred(p);
 }
 
+auto mean_depth(const ReadPileups& pileups, const GenomicRegion& region)
+{
+    const auto overlapped = overlap_range(pileups, region.contig_region());
+    return maths::mean(overlapped, [] (const auto& pileup) { return pileup.depth(); });
+}
+
 auto compute_homozygous_posterior(const Allele& allele,
                                   const GenotypeProbabilityMap& genotype_posteriors,
-                                  const ReadMap::mapped_type& reads)
+                                  const ReadPileups& pileups)
 {
     if (has_variation(allele, genotype_posteriors)) {
         return marginalise_homozygous(allele, genotype_posteriors);
     } else {
-        const auto coverage = mean_coverage(reads, mapped_region(allele));
+        const auto coverage = mean_depth(pileups, mapped_region(allele));
         return Phred<double> {2 * static_cast<double>(coverage)};
     }
 }
 
 auto call_reference(const std::vector<Allele>& reference_alleles,
                     const GenotypeProbabilityMap& genotype_posteriors,
-                    const ReadMap::mapped_type& reads,
+                    const ReadPileups& pileups,
                     const Phred<double> min_call_posterior)
 {
     std::vector<RefCall> result {};
     for (const auto& allele : reference_alleles) {
-        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, reads);
+        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, pileups);
         if (posterior >= min_call_posterior) {
             result.push_back({allele, posterior});
         }
@@ -468,18 +474,18 @@ auto transform_calls(std::vector<RefCall>&& calls, const SampleName& sample, con
 std::vector<std::unique_ptr<ReferenceCall>>
 IndividualCaller::call_reference(const std::vector<Allele>& alleles,
                                  const Caller::Latents& latents,
-                                 const ReadMap& reads) const
+                                 const ReadPileupMap& pileups) const
 {
-    return call_reference(alleles, dynamic_cast<const Latents&>(latents), reads);
+    return call_reference(alleles, dynamic_cast<const Latents&>(latents), pileups);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
 IndividualCaller::call_reference(const std::vector<Allele>& alleles,
                                  const Latents& latents,
-                                 const ReadMap& reads) const
+                                 const ReadPileupMap& pileups) const
 {
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
-    auto calls = octopus::call_reference(alleles, genotype_posteriors, reads.at(sample()),
+    auto calls = octopus::call_reference(alleles, genotype_posteriors, pileups.at(sample()),
                                          parameters_.min_refcall_posterior);
     return transform_calls(std::move(calls), sample(), parameters_.ploidy);
 }
