@@ -1083,6 +1083,9 @@ public:
 
 PloidyMap get_ploidy_map(const OptionMap& options)
 {
+    if (options.at("caller").as<std::string>() == "prokaryote") {
+        return PloidyMap {1};
+    }
     std::vector<ContigPloidy> flat_plodies {};
     if (is_set("contig-ploidies-file", options)) {
         const fs::path input_path {options.at("contig-ploidies-file").as<std::string>()};
@@ -1308,6 +1311,33 @@ auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& sa
     return result;
 }
 
+class BadSampleCount : public UserError
+{
+    std::string do_where() const override
+    {
+        return "check_caller";
+    }
+    
+    std::string do_why() const override
+    {
+        return "The number of samples is not accepted by the chosen caller";
+    }
+    
+    std::string do_help() const override
+    {
+        return "Check the caller documentation for the required number of samples";
+    }
+};
+
+void check_caller(const std::string& caller, const std::vector<SampleName>& samples, const OptionMap& options)
+{
+    if (caller == "prokaryote") {
+        if (samples.size() != 1) {
+            throw BadSampleCount {};
+        }
+    }
+}
+
 auto get_child_from_trio(std::vector<SampleName> trio, const Pedigree& pedigree)
 {
 	if (is_parent_of(trio[0], trio[1], pedigree)) return trio[1];
@@ -1439,11 +1469,12 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
                               make_haplotype_generator_builder(options, input_reads_profile)};
 	const auto pedigree = get_pedigree(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
+    check_caller(caller, read_pipe.samples(), options);
     vc_builder.set_caller(caller);
     
-    if (caller == "population") {
+    if (caller == "population" || caller == "prokaryote") {
         logging::WarningLogger log {};
-        log << "The population calling model is currently under development and may not function as expected";
+        stream(log) << "The " << caller << " calling model is an experimental feature and may not function as expected";
     }
     
     if (is_set("refcall", options)) {
@@ -1512,6 +1543,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     }
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
+    }
+    if (caller == "prokaryote") {
+        vc_builder.set_max_clones(as_unsigned("max-clones", options));
     }
     vc_builder.set_likelihood_model(make_likelihood_model(options));
     return CallerFactory {std::move(vc_builder)};

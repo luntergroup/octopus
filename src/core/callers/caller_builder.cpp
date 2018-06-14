@@ -255,6 +255,12 @@ CallerBuilder& CallerBuilder::set_indel_denovo_mutation_rate(double rate) noexce
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_max_clones(unsigned n) noexcept
+{
+    params_.max_clones = n;
+    return *this;
+}
+
 std::unique_ptr<Caller> CallerBuilder::build(const ContigName& contig) const
 {
     if (factory_.count(caller_) == 0) {
@@ -391,7 +397,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
-                                                          params_.deduplicate_haplotypes_with_caller_model
+                                                          params_.deduplicate_haplotypes_with_caller_model,
+                                                          params_.max_clones
                                                       });
         }}
     };
