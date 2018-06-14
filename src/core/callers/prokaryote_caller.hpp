@@ -104,6 +104,9 @@ private:
     const SampleName& sample() const noexcept;
     
     std::unique_ptr<GenotypePriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    
+    // debug
+    void log(const Latents& latents) const;
 };
 
 class ProkaryoteCaller::Latents : public Caller::Latents
