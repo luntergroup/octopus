@@ -56,8 +56,14 @@ public:
 
 private:
     class Latents;
+    friend Latents;
     
     Parameters parameters_;
+    
+    struct ModelProbabilities
+    {
+        double clonal, subclonal;
+    };
     
     std::string do_name() const override;
     CallTypeSet do_call_types() const override;
@@ -100,21 +106,32 @@ private:
 class ProkaryoteCaller::Latents : public Caller::Latents
 {
 public:
-    using ModelInferences = model::IndividualModel::InferredLatents;
+    using HaploidModelInferences = model::IndividualModel::InferredLatents;
+    using SubloneModelInferences = model::SubcloneModel::InferredLatents;
     
     using Caller::Latents::HaplotypeProbabilityMap;
     using Caller::Latents::GenotypeProbabilityMap;
     
-    friend ProkaryoteCaller;
-    
     Latents() = delete;
+    
+    Latents(std::vector<Genotype<Haplotype>> haploid_genotypes, std::vector<Genotype<Haplotype>> polyploid_genotypes,
+            HaploidModelInferences haploid_model_inferences, SubloneModelInferences subclone_model_inferences,
+            const SampleName& sample);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
 private:
-    std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
-    std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
+    std::vector<Genotype<Haplotype>> haploid_genotypes_, polyploid_genotypes_;
+    HaploidModelInferences haploid_model_inferences_;
+    SubloneModelInferences subclone_model_inferences_;
+    ProkaryoteCaller::ModelProbabilities model_posteriors_;
+    SampleName sample_;
+    
+    mutable std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
+    mutable std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
+    
+    friend ProkaryoteCaller;
 };
 
 } // namespace octopus
