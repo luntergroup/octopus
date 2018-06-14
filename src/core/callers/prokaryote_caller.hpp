@@ -17,7 +17,7 @@
 #include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/genotype/genotype_prior_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
-#include "core/models/genotype/cnv_model.hpp"
+#include "core/models/genotype/subclone_model.hpp"
 #include "caller.hpp"
 
 namespace octopus {
