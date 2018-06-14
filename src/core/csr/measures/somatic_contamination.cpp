@@ -110,7 +110,12 @@ Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, con
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
         const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
         Genotype<Haplotype> somatic_genotype {static_cast<unsigned>(somatic_haplotypes.size() + 1)};
-        for (const auto& haplotype : somatic_haplotypes) somatic_genotype.emplace(haplotype);
+        HaplotypeProbabilityMap haplotype_priors {};
+        haplotype_priors.reserve(somatic_haplotypes.size() + 1);
+        for (const auto& haplotype : somatic_haplotypes) {
+            somatic_genotype.emplace(haplotype);
+            haplotype_priors[haplotype] = -3;
+        }
         for (const auto& sample : normal_samples) {
             for (const auto& p : assignments.at(sample)) {
                 const auto overlapped_reads = copy_overlapped(p.second, call);
@@ -119,7 +124,9 @@ Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, con
                     assert(!somatic_genotype.contains(assigned_haplotype));
                     auto dummy = somatic_genotype;
                     dummy.emplace(assigned_haplotype);
-                    const auto support = compute_haplotype_support(dummy, overlapped_reads);
+                    haplotype_priors[assigned_haplotype] = 0;
+                    const auto support = compute_haplotype_support(dummy, overlapped_reads, haplotype_priors);
+                    haplotype_priors.erase(assigned_haplotype);
                     for (const auto& somatic : somatic_haplotypes) {
                         if (support.count(somatic) == 1) {
                             *result += support.at(somatic).size();
