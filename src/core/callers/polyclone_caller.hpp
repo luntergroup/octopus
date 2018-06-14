@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef prokaryote_caller_hpp
-#define prokaryote_caller_hpp
+#ifndef polyclone_caller_hpp
+#define polyclone_caller_hpp
 
 #include <vector>
 #include <string>
@@ -30,7 +30,7 @@ class Variant;
 class HaplotypeLikelihoodCache;
 class VariantCall;
 
-class ProkaryoteCaller : public Caller
+class PolycloneCaller : public Caller
 {
 public:
     using Caller::CallTypeSet;
@@ -44,18 +44,18 @@ public:
         std::function<double(unsigned)> clonality_prior = [] (unsigned clonality) { return maths::geometric_pdf(clonality, 0.5); };
     };
     
-    ProkaryoteCaller() = delete;
+    PolycloneCaller() = delete;
     
-    ProkaryoteCaller(Caller::Components&& components,
-                     Caller::Parameters general_parameters,
-                     Parameters specific_parameters);
+    PolycloneCaller(Caller::Components&& components,
+                    Caller::Parameters general_parameters,
+                    Parameters specific_parameters);
     
-    ProkaryoteCaller(const ProkaryoteCaller&)            = delete;
-    ProkaryoteCaller& operator=(const ProkaryoteCaller&) = delete;
-    ProkaryoteCaller(ProkaryoteCaller&&)                 = delete;
-    ProkaryoteCaller& operator=(ProkaryoteCaller&&)      = delete;
+    PolycloneCaller(const PolycloneCaller&)            = delete;
+    PolycloneCaller& operator=(const PolycloneCaller&) = delete;
+    PolycloneCaller(PolycloneCaller&&)                 = delete;
+    PolycloneCaller& operator=(PolycloneCaller&&)      = delete;
     
-    ~ProkaryoteCaller() = default;
+    ~PolycloneCaller() = default;
 
 private:
     class Latents;
@@ -109,7 +109,7 @@ private:
     void log(const Latents& latents) const;
 };
 
-class ProkaryoteCaller::Latents : public Caller::Latents
+class PolycloneCaller::Latents : public Caller::Latents
 {
 public:
     using HaploidModelInferences = model::IndividualModel::InferredLatents;
@@ -131,13 +131,13 @@ private:
     std::vector<Genotype<Haplotype>> haploid_genotypes_, polyploid_genotypes_;
     HaploidModelInferences haploid_model_inferences_;
     SubloneModelInferences subclone_model_inferences_;
-    ProkaryoteCaller::ModelProbabilities model_posteriors_;
+    PolycloneCaller::ModelProbabilities model_posteriors_;
     SampleName sample_;
     
     mutable std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
     mutable std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
     
-    friend ProkaryoteCaller;
+    friend PolycloneCaller;
 };
 
 } // namespace octopus

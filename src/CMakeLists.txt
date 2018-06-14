@@ -194,8 +194,8 @@ set(CORE_SOURCES
     core/callers/population_caller.cpp
     core/callers/trio_caller.hpp
     core/callers/trio_caller.cpp
-    core/callers/prokaryote_caller.hpp
-    core/callers/prokaryote_caller.cpp
+    core/callers/polyclone_caller.hpp
+    core/callers/polyclone_caller.cpp
 
     core/types/calls/call_types.hpp
     core/types/calls/call.hpp

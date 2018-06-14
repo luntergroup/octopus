@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "prokaryote_caller.hpp"
+#include "polyclone_caller.hpp"
 
 #include <typeinfo>
 #include <unordered_map>
@@ -28,28 +28,28 @@
 
 namespace octopus {
 
-ProkaryoteCaller::ProkaryoteCaller(Caller::Components&& components,
-                                   Caller::Parameters general_parameters,
-                                   Parameters specific_parameters)
+PolycloneCaller::PolycloneCaller(Caller::Components&& components,
+                                 Caller::Parameters general_parameters,
+                                 Parameters specific_parameters)
 : Caller {std::move(components), std::move(general_parameters)}
 , parameters_ {std::move(specific_parameters)}
 {
     if (parameters_.max_clones < 1) {
-        throw std::logic_error {"ProkaryoteCaller: max_clones must be > 1"};
+        throw std::logic_error {"PolycloneCaller: max_clones must be > 1"};
     }
 }
 
-std::string ProkaryoteCaller::do_name() const
+std::string PolycloneCaller::do_name() const
 {
-    return "prokaryote";
+    return "polyclone";
 }
 
-ProkaryoteCaller::CallTypeSet ProkaryoteCaller::do_call_types() const
+PolycloneCaller::CallTypeSet PolycloneCaller::do_call_types() const
 {
     return {std::type_index(typeid(GermlineVariantCall))};
 }
 
-std::size_t ProkaryoteCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+std::size_t PolycloneCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
 {
     if (parameters_.deduplicate_haplotypes_with_germline_model) {
         if (haplotypes.size() < 2) return 0;
@@ -64,9 +64,9 @@ std::size_t ProkaryoteCaller::do_remove_duplicates(std::vector<Haplotype>& haplo
     }
 }
 
-// ProkaryoteCaller::Latents public methods
+// PolycloneCaller::Latents public methods
 
-ProkaryoteCaller::Latents::Latents(std::vector<Genotype<Haplotype>> haploid_genotypes, std::vector<Genotype<Haplotype>> polyploid_genotypes,
+PolycloneCaller::Latents::Latents(std::vector<Genotype<Haplotype>> haploid_genotypes, std::vector<Genotype<Haplotype>> polyploid_genotypes,
                                    HaploidModelInferences haploid_model_inferences, SubloneModelInferences subclone_model_inferences,
                                    const SampleName& sample, const std::function<double(unsigned)>& clonality_prior)
 : haploid_genotypes_ {std::move(haploid_genotypes)}
@@ -91,8 +91,8 @@ ProkaryoteCaller::Latents::Latents(std::vector<Genotype<Haplotype>> haploid_geno
     }
 }
 
-std::shared_ptr<ProkaryoteCaller::Latents::HaplotypeProbabilityMap>
-ProkaryoteCaller::Latents::haplotype_posteriors() const noexcept
+std::shared_ptr<PolycloneCaller::Latents::HaplotypeProbabilityMap>
+PolycloneCaller::Latents::haplotype_posteriors() const noexcept
 {
     if (haplotype_posteriors_ == nullptr) {
         haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>();
@@ -105,8 +105,8 @@ ProkaryoteCaller::Latents::haplotype_posteriors() const noexcept
     return haplotype_posteriors_;
 }
 
-std::shared_ptr<ProkaryoteCaller::Latents::GenotypeProbabilityMap>
-ProkaryoteCaller::Latents::genotype_posteriors() const noexcept
+std::shared_ptr<PolycloneCaller::Latents::GenotypeProbabilityMap>
+PolycloneCaller::Latents::genotype_posteriors() const noexcept
 {
     if (genotype_posteriors_ == nullptr) {
         const auto genotypes = concat(haploid_genotypes_, polyploid_genotypes_);
@@ -123,7 +123,7 @@ ProkaryoteCaller::Latents::genotype_posteriors() const noexcept
     return genotype_posteriors_;
 }
 
-// ProkaryoteCaller::Latents private methods
+// PolycloneCaller::Latents private methods
 
 namespace {
 
@@ -198,9 +198,8 @@ void fit_sublone_model(const std::vector<Haplotype>& haplotypes, const Haplotype
 
 } // namespace
 
-std::unique_ptr<ProkaryoteCaller::Caller::Latents>
-ProkaryoteCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
-                                const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+std::unique_ptr<PolycloneCaller::Caller::Latents>
+PolycloneCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     auto haploid_genotypes = generate_all_genotypes(haplotypes, 1);
     if (debug_log_) stream(*debug_log_) << "There are " << haploid_genotypes.size() << " candidate haploid genotypes";
@@ -222,23 +221,23 @@ ProkaryoteCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 }
 
 boost::optional<double>
-ProkaryoteCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                            const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                            const Caller::Latents& latents) const
+PolycloneCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+                                           const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                           const Caller::Latents& latents) const
 {
     return calculate_model_posterior(haplotypes, haplotype_likelihoods, dynamic_cast<const Latents&>(latents));
 }
 
 boost::optional<double>
-ProkaryoteCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                            const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                            const Latents& latents) const
+PolycloneCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+                                           const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                           const Latents& latents) const
 {
     return boost::none;
 }
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
-ProkaryoteCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
+PolycloneCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
@@ -408,8 +407,7 @@ transform_call(const SampleName& sample, VariantCall&& variant_call, GenotypeCal
     return result;
 }
 
-auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
-                     GenotypeCalls&& genotype_calls)
+auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls, GenotypeCalls&& genotype_calls)
 {
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     result.reserve(variant_calls.size());
@@ -441,7 +439,7 @@ void log(const Genotype<Haplotype>& called_genotype,
 } // namespace debug
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
-ProkaryoteCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
+PolycloneCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
     log(latents);
     const auto& genotype_posteriors = (*latents.genotype_posteriors())[sample()];
@@ -457,23 +455,23 @@ ProkaryoteCaller::call_variants(const std::vector<Variant>& candidates, const La
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
-ProkaryoteCaller::call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents, const ReadMap& reads) const
+PolycloneCaller::call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents, const ReadMap& reads) const
 {
     return call_reference(alleles, dynamic_cast<const Latents&>(latents), reads);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
-ProkaryoteCaller::call_reference(const std::vector<Allele>& alleles, const Latents& latents, const ReadMap& reads) const
+PolycloneCaller::call_reference(const std::vector<Allele>& alleles, const Latents& latents, const ReadMap& reads) const
 {
     return {};
 }
 
-const SampleName& ProkaryoteCaller::sample() const noexcept
+const SampleName& PolycloneCaller::sample() const noexcept
 {
     return samples_.front();
 }
 
-std::unique_ptr<GenotypePriorModel> ProkaryoteCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
+std::unique_ptr<GenotypePriorModel> PolycloneCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
 {
     if (parameters_.prior_model_params) {
         return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
@@ -485,7 +483,7 @@ std::unique_ptr<GenotypePriorModel> ProkaryoteCaller::make_prior_model(const std
     }
 }
 
-void ProkaryoteCaller::log(const Latents& latents) const
+void PolycloneCaller::log(const Latents& latents) const
 {
     if (debug_log_) {
         stream(*debug_log_) << "Clonal model posterior is " << latents.model_posteriors_.clonal

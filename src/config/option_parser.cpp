@@ -548,8 +548,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum posterior probability (phred scale) to emit a de novo mutation call")
     ;
     
-    po::options_description prokaryote("Calling (prokaryote)");
-    prokaryote.add_options()
+    po::options_description polyclone("Calling (polyclone)");
+    polyclone.add_options()
     ("max-clones",
      po::value<int>()->default_value(3),
      "Maximum number of unique clones to consider")
@@ -605,7 +605,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description all("octopus options");
     all.add(general).add(backend).add(input).add(transforms).add(filters)
     .add(variant_generation).add(haplotype_generation).add(caller)
-    .add(cancer).add(trio).add(prokaryote).add(phasing).add(call_filtering);
+    .add(cancer).add(trio).add(polyclone).add(phasing).add(call_filtering);
     
     OptionMap vm_init;
     po::store(run(po::command_line_parser(argc, argv).options(general).allow_unregistered()), vm_init);
@@ -639,12 +639,12 @@ OptionMap parse_options(const int argc, const char** argv)
                 .add(variant_generation).add(haplotype_generation).add(caller).add(cancer)
                 .add(phasing).add(call_filtering);
                 std::cout << cancer_options << std::endl;
-            } else if (selected_caller == "prokaryote") {
-                po::options_description prokaryote_options("octopus prokaryote calling options");
-                prokaryote_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller).add(prokaryote)
+            } else if (selected_caller == "polyclone") {
+                po::options_description polyclone_options("octopus polyclone calling options");
+                polyclone_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller).add(polyclone)
                 .add(phasing).add(call_filtering);
-                std::cout << prokaryote_options << std::endl;
+                std::cout << polyclone_options << std::endl;
             } else {
                 std::cout << all << std::endl;
             }
@@ -939,7 +939,7 @@ void validate_caller(const OptionMap& vm)
     if (vm.count("caller") == 1) {
         const auto caller = vm.at("caller").as<std::string>();
         static const std::array<std::string, 5> validCallers {
-            "individual", "population", "cancer", "trio", "prokaryote"
+            "individual", "population", "cancer", "trio", "polyclone"
         };
         if (std::find(std::cbegin(validCallers), std::cend(validCallers), caller) == std::cend(validCallers)) {
             throw po::validation_error {po::validation_error::kind_t::invalid_option_value, caller, "caller"};

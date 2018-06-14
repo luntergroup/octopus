@@ -1083,7 +1083,7 @@ public:
 
 PloidyMap get_ploidy_map(const OptionMap& options)
 {
-    if (options.at("caller").as<std::string>() == "prokaryote") {
+    if (options.at("caller").as<std::string>() == "polyclone") {
         return PloidyMap {1};
     }
     std::vector<ContigPloidy> flat_plodies {};
@@ -1331,7 +1331,7 @@ class BadSampleCount : public UserError
 
 void check_caller(const std::string& caller, const std::vector<SampleName>& samples, const OptionMap& options)
 {
-    if (caller == "prokaryote") {
+    if (caller == "polyclone") {
         if (samples.size() != 1) {
             throw BadSampleCount {};
         }
@@ -1472,7 +1472,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     check_caller(caller, read_pipe.samples(), options);
     vc_builder.set_caller(caller);
     
-    if (caller == "population" || caller == "prokaryote") {
+    if (caller == "population" || caller == "polyclone") {
         logging::WarningLogger log {};
         stream(log) << "The " << caller << " calling model is an experimental feature and may not function as expected";
     }
@@ -1544,7 +1544,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
     }
-    if (caller == "prokaryote") {
+    if (caller == "polyclone") {
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
     }
     vc_builder.set_likelihood_model(make_likelihood_model(options));
