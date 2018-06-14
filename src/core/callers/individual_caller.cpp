@@ -165,9 +165,8 @@ IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplot
 
 namespace {
 
-using GM = model::IndividualModel;
 using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
-using VariantReference  = std::reference_wrapper<const Variant>;
+using VariantReference = std::reference_wrapper<const Variant>;
 using VariantPosteriorVector = std::vector<std::pair<VariantReference, Phred<double>>>;
 
 struct VariantCall : Mappable<VariantCall>
@@ -248,13 +247,10 @@ VariantCalls call_candidates(const VariantPosteriorVector& candidate_posteriors,
 {
     VariantCalls result {};
     result.reserve(candidate_posteriors.size());
-    
-    std::copy_if(std::cbegin(candidate_posteriors), std::cend(candidate_posteriors),
-                 std::back_inserter(result),
+    std::copy_if(std::cbegin(candidate_posteriors), std::cend(candidate_posteriors), std::back_inserter(result),
                  [&genotype_call, min_posterior] (const auto& p) {
                      return p.second >= min_posterior && contains_alt(genotype_call, p.first);
                  });
-    
     return result;
 }
 
@@ -326,13 +322,9 @@ octopus::VariantCall::GenotypeCall convert(GenotypeCall&& call)
 std::unique_ptr<octopus::VariantCall>
 transform_call(const SampleName& sample, VariantCall&& variant_call, GenotypeCall&& genotype_call)
 {
-    std::vector<std::pair<SampleName, Call::GenotypeCall>> tmp {
-        std::make_pair(sample, convert(std::move(genotype_call)))
-    };
-    std::unique_ptr<octopus::VariantCall> result {
-        std::make_unique<GermlineVariantCall>(variant_call.variant.get(), std::move(tmp),
-                                              variant_call.posterior)
-    };
+    std::vector<std::pair<SampleName, Call::GenotypeCall>> tmp {std::make_pair(sample, convert(std::move(genotype_call)))};
+    std::unique_ptr<octopus::VariantCall> result {std::make_unique<GermlineVariantCall>(variant_call.variant.get(), std::move(tmp),
+                                                                                        variant_call.posterior)};
     return result;
 }
 
@@ -341,10 +333,8 @@ auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
 {
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     result.reserve(variant_calls.size());
-    std::transform(std::make_move_iterator(std::begin(variant_calls)),
-                   std::make_move_iterator(std::end(variant_calls)),
-                   std::make_move_iterator(std::begin(genotype_calls)),
-                   std::back_inserter(result),
+    std::transform(std::make_move_iterator(std::begin(variant_calls)), std::make_move_iterator(std::end(variant_calls)),
+                   std::make_move_iterator(std::begin(genotype_calls)), std::back_inserter(result),
                    [&sample] (VariantCall&& variant_call, GenotypeCall&& genotype_call) {
                        return transform_call(sample, std::move(variant_call), std::move(genotype_call));
                    });
