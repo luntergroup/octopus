@@ -7,6 +7,7 @@
 #include "individual_caller.hpp"
 #include "population_caller.hpp"
 #include "trio_caller.hpp"
+#include "prokaryote_caller.hpp"
 
 namespace octopus {
 
@@ -382,6 +383,16 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.min_refcall_posterior,
                                                     params_.max_joint_genotypes
                                                 });
+        }},
+        {"prokaryote", [this] () {
+            return std::make_unique<ProkaryoteCaller>(make_components(),
+                                                      params_.general,
+                                                      ProkaryoteCaller::Parameters {
+                                                          make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
+                                                          params_.min_variant_posterior,
+                                                          params_.min_refcall_posterior,
+                                                          params_.deduplicate_haplotypes_with_caller_model
+                                                      });
         }}
     };
 }
