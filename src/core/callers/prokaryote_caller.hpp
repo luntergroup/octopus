@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <functional>
 
 #include <boost/optional.hpp>
 
@@ -18,6 +19,7 @@
 #include "core/models/genotype/genotype_prior_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
 #include "core/models/genotype/subclone_model.hpp"
+#include "utils/maths.hpp"
 #include "caller.hpp"
 
 namespace octopus {
@@ -38,7 +40,8 @@ public:
         boost::optional<CoalescentModel::Parameters> prior_model_params;
         Phred<double> min_variant_posterior, min_refcall_posterior;
         bool deduplicate_haplotypes_with_germline_model = false;
-        unsigned max_clones = 5;
+        unsigned max_clones = 3;
+        std::function<double(unsigned)> clonality_prior = [] (unsigned clonality) { return maths::geometric_pdf(clonality, 0.5); };
     };
     
     ProkaryoteCaller() = delete;
@@ -116,7 +119,7 @@ public:
     
     Latents(std::vector<Genotype<Haplotype>> haploid_genotypes, std::vector<Genotype<Haplotype>> polyploid_genotypes,
             HaploidModelInferences haploid_model_inferences, SubloneModelInferences subclone_model_inferences,
-            const SampleName& sample);
+            const SampleName& sample, const std::function<double(unsigned)>& clonality_prior);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
