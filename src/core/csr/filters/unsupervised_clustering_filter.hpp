@@ -37,9 +37,9 @@ private:
     mutable std::vector<Classification> classifications_;
     
     void annotate(VcfHeader::Builder& header) const override;
-    void record(std::size_t call_idx, MeasureVector measures) const override;
+    void record(std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const override;
     void prepare_for_classification(boost::optional<Log>& log) const override;
-    Classification classify(std::size_t call_idx) const override;
+    Classification classify(std::size_t call_idx, std::size_t sample_idx) const override;
     
     bool all_missing(const MeasureVector& measures) const noexcept;
     void remove_missing_features() const;

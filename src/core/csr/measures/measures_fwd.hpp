@@ -27,5 +27,6 @@
 #include "core/csr/measures/is_refcall.hpp"
 #include "core/csr/measures/somatic_contamination.hpp"
 #include "core/csr/measures/read_position_bias.hpp"
+#include "core/csr/measures/alt_allele_count.hpp"
 
 #endif

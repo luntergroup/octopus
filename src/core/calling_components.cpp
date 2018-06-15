@@ -470,15 +470,15 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , samples {extract_samples(options, this->read_manager)}
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
+, temp_directory {get_temp_directory(options)}
 , reads_profile_ {profile_reads(this->samples, this->regions, this->read_manager)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile_)}
-, call_filter_factory {options::make_call_filter_factory(this->reference, this->read_pipe, options)}
+, call_filter_factory {options::make_call_filter_factory(this->reference, this->read_pipe, options, this->temp_directory)}
 , filter_read_pipe {}
 , output {std::move(output)}
 , num_threads {options::get_num_threads(options)}
 , read_buffer_size {}
-, temp_directory {get_temp_directory(options)}
 , progress_meter {regions}
 , ploidies {options::get_ploidy_map(options)}
 , sites_only {options::call_sites_only(options)}

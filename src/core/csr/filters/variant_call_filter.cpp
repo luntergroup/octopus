@@ -144,6 +144,11 @@ VariantCallFilter::merge(const ClassificationList& sample_classifications, const
     return result;
 }
 
+VariantCallFilter::Classification VariantCallFilter::merge(const ClassificationList& sample_classifications) const
+{
+    return this->merge(sample_classifications, {});
+}
+
 bool VariantCallFilter::can_measure_single_call() const noexcept
 {
     return facet_names_.empty();
@@ -397,9 +402,9 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification 
     } else {
         fail(call, std::move(status.reasons));
     }
-    auto quality_name = this->genotype_quality_name();
+    auto quality_name = this->call_quality_name();
     if (quality_name) {
-        call.add_format(*quality_name);
+        call.add_info(*quality_name);
         if (status.quality) {
             call.set_info(*quality_name, *status.quality);
         } else {
