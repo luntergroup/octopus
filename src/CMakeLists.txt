@@ -196,6 +196,8 @@ set(CORE_SOURCES
     core/callers/population_caller.cpp
     core/callers/trio_caller.hpp
     core/callers/trio_caller.cpp
+    core/callers/polyclone_caller.hpp
+    core/callers/polyclone_caller.cpp
 
     core/types/calls/call_types.hpp
     core/types/calls/call.hpp
@@ -315,9 +317,9 @@ set(CORE_SOURCES
     core/models/haplotype_likelihood_cache.cpp
     core/models/haplotype_likelihood_model.hpp
     core/models/haplotype_likelihood_model.cpp
-    
-    core/models/genotype/cnv_model.hpp
-    core/models/genotype/cnv_model.cpp
+
+    core/models/genotype/subclone_model.hpp
+    core/models/genotype/subclone_model.cpp
     core/models/genotype/germline_likelihood_model.hpp
     core/models/genotype/germline_likelihood_model.cpp
     core/models/genotype/individual_model.hpp

@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef cnv_model_hpp
-#define cnv_model_hpp
+#ifndef subclone_model_hpp
+#define subclone_model_hpp
 
 #include <vector>
 #include <unordered_map>
@@ -16,7 +16,7 @@
 
 namespace octopus { namespace model {
 
-class CNVModel
+class SubcloneModel
 {
 public:
     struct AlgorithmParameters
@@ -50,17 +50,17 @@ public:
         double approx_log_evidence;
     };
     
-    CNVModel() = delete;
+    SubcloneModel() = delete;
     
-    CNVModel(std::vector<SampleName> samples, Priors priors);
-    CNVModel(std::vector<SampleName> samples, Priors priors, AlgorithmParameters parameters);
+    SubcloneModel(std::vector<SampleName> samples, Priors priors);
+    SubcloneModel(std::vector<SampleName> samples, Priors priors, AlgorithmParameters parameters);
     
-    CNVModel(const CNVModel&)            = default;
-    CNVModel& operator=(const CNVModel&) = default;
-    CNVModel(CNVModel&&)                 = default;
-    CNVModel& operator=(CNVModel&&)      = default;
+    SubcloneModel(const SubcloneModel&)            = default;
+    SubcloneModel& operator=(const SubcloneModel&) = default;
+    SubcloneModel(SubcloneModel&&)                 = default;
+    SubcloneModel& operator=(SubcloneModel&&)      = default;
     
-    ~CNVModel() = default;
+    ~SubcloneModel() = default;
     
     const Priors& priors() const noexcept;
     

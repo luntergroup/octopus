@@ -23,6 +23,8 @@
 #include <boost/math/special_functions/digamma.hpp>
 #include <boost/math/special_functions/beta.hpp>
 #include <boost/math/distributions/beta.hpp>
+#include <boost/math/distributions/geometric.hpp>
+#include <boost/math/distributions/binomial.hpp>
 
 namespace octopus { namespace maths {
 
@@ -297,6 +299,24 @@ RealType log_factorial(IntegerType x)
                        [] (IntegerType a) { return std::log(static_cast<RealType>(a)); });
         return std::accumulate(std::cbegin(tx), std::cend(tx), RealType {0});
     }
+}
+
+template <typename IntegerType, typename RealType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType geometric_pdf(const IntegerType k, const RealType p)
+{
+    boost::math::geometric_distribution<RealType> dist {p};
+    return boost::math::pdf(dist, k);
+}
+
+template <typename IntegerType, typename RealType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType binomial_pdf(const IntegerType k, const IntegerType n, const RealType p)
+{
+    boost::math::binomial_distribution<RealType> dist {static_cast<RealType>(n), p};
+    return boost::math::pdf(dist, k);
 }
 
 template <typename IntegerType, typename RealType,

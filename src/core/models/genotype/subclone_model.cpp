@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "cnv_model.hpp"
+#include "subclone_model.hpp"
 
 #include <algorithm>
 #include <numeric>
@@ -18,17 +18,17 @@
 
 namespace octopus { namespace model {
 
-CNVModel::CNVModel(std::vector<SampleName> samples, Priors priors)
-: CNVModel {std::move(samples), std::move(priors), AlgorithmParameters {}}
+SubcloneModel::SubcloneModel(std::vector<SampleName> samples, Priors priors)
+: SubcloneModel {std::move(samples), std::move(priors), AlgorithmParameters {}}
 {}
 
-CNVModel::CNVModel(std::vector<SampleName> samples, Priors priors, AlgorithmParameters parameters)
+SubcloneModel::SubcloneModel(std::vector<SampleName> samples, Priors priors, AlgorithmParameters parameters)
 : samples_ {std::move(samples)}
 , priors_ {std::move(priors)}
 , parameters_ {parameters}
 {}
 
-const CNVModel::Priors& CNVModel::priors() const noexcept
+const SubcloneModel::Priors& SubcloneModel::priors() const noexcept
 {
     return priors_;
 }
@@ -36,26 +36,26 @@ const CNVModel::Priors& CNVModel::priors() const noexcept
 namespace {
 
 template <std::size_t K>
-CNVModel::InferredLatents
+SubcloneModel::InferredLatents
 run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<Genotype<Haplotype>>& genotypes,
-                      const CNVModel::Priors& priors,
+                      const SubcloneModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params);
 
 template <std::size_t K>
-CNVModel::InferredLatents
+SubcloneModel::InferredLatents
 run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<Genotype<Haplotype>>& genotypes,
                       const std::vector<GenotypeIndex>& genotype_indices,
-                      const CNVModel::Priors& priors,
+                      const SubcloneModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params);
 
 } // namespace
 
-CNVModel::InferredLatents
-CNVModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+SubcloneModel::InferredLatents
+SubcloneModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
@@ -72,8 +72,8 @@ CNVModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
     }
 }
 
-CNVModel::InferredLatents
-CNVModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+SubcloneModel::InferredLatents
+SubcloneModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
                    const std::vector<GenotypeIndex>& genotype_indices,
                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
@@ -94,7 +94,7 @@ CNVModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
 namespace {
 
 template <std::size_t K>
-VBAlpha<K> flatten(const CNVModel::Priors::GenotypeMixturesDirichletAlphas& alpha)
+VBAlpha<K> flatten(const SubcloneModel::Priors::GenotypeMixturesDirichletAlphas& alpha)
 {
     VBAlpha<K> result {};
     std::copy_n(std::cbegin(alpha), K, std::begin(result));
@@ -102,7 +102,7 @@ VBAlpha<K> flatten(const CNVModel::Priors::GenotypeMixturesDirichletAlphas& alph
 }
 
 template <std::size_t K>
-VBAlphaVector<K> flatten(const CNVModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+VBAlphaVector<K> flatten(const SubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
                          const std::vector<SampleName>& samples)
 {
     VBAlphaVector<K> result(samples.size());
@@ -154,16 +154,16 @@ flatten(const std::vector<Genotype<Haplotype>>& genotypes,
 }
 
 template <std::size_t K>
-CNVModel::Latents::GenotypeMixturesDirichletAlphas expand(VBAlpha<K>& alpha)
+SubcloneModel::Latents::GenotypeMixturesDirichletAlphas expand(VBAlpha<K>& alpha)
 {
-    return CNVModel::Latents::GenotypeMixturesDirichletAlphas(std::begin(alpha), std::end(alpha));
+    return SubcloneModel::Latents::GenotypeMixturesDirichletAlphas(std::begin(alpha), std::end(alpha));
 }
 
 template <std::size_t K>
-CNVModel::Latents::GenotypeMixturesDirichletAlphaMap
+SubcloneModel::Latents::GenotypeMixturesDirichletAlphaMap
 expand(const std::vector<SampleName>& samples, VBAlphaVector<K>&& alphas)
 {
-    CNVModel::Latents::GenotypeMixturesDirichletAlphaMap result {};
+    SubcloneModel::Latents::GenotypeMixturesDirichletAlphaMap result {};
     std::transform(std::cbegin(samples), std::cend(samples), std::begin(alphas),
                    std::inserter(result, std::begin(result)),
                    [] (const auto& sample, auto&& vb_alpha) {
@@ -173,10 +173,10 @@ expand(const std::vector<SampleName>& samples, VBAlphaVector<K>&& alphas)
 }
 
 template <std::size_t K>
-CNVModel::InferredLatents
+SubcloneModel::InferredLatents
 expand(const std::vector<SampleName>& samples, VBLatents<K>&& inferred_latents, double evidence)
 {
-    CNVModel::Latents posterior_latents {
+    SubcloneModel::Latents posterior_latents {
         std::move(inferred_latents.genotype_posteriors),
         expand(samples, std::move(inferred_latents.alphas))
     };
@@ -201,7 +201,7 @@ LogProbabilityVector log_uniform_dist(const std::size_t n)
 auto generate_seeds(const std::vector<SampleName>& samples,
                     const std::vector<Genotype<Haplotype>>& genotypes,
                     const LogProbabilityVector& genotype_log_priors,
-                    const CNVModel::Priors& priors,
+                    const SubcloneModel::Priors& priors,
                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                     const boost::optional<const std::vector<GenotypeIndex>&> genotype_indices = boost::none)
 {
@@ -224,10 +224,10 @@ auto generate_seeds(const std::vector<SampleName>& samples,
 }
 
 template <std::size_t K>
-CNVModel::InferredLatents
+SubcloneModel::InferredLatents
 run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<Genotype<Haplotype>>& genotypes,
-                      const CNVModel::Priors::GenotypeMixturesDirichletAlphaMap& prior_alphas,
+                      const SubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& prior_alphas,
                       const std::vector<double>& genotype_log_priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params,
@@ -242,10 +242,10 @@ run_variational_bayes(const std::vector<SampleName>& samples,
 // Main entry point
 
 template <std::size_t K>
-CNVModel::InferredLatents
+SubcloneModel::InferredLatents
 run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<Genotype<Haplotype>>& genotypes,
-                      const CNVModel::Priors& priors,
+                      const SubcloneModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params)
 {
@@ -256,11 +256,11 @@ run_variational_bayes(const std::vector<SampleName>& samples,
 }
 
 template <std::size_t K>
-CNVModel::InferredLatents
+SubcloneModel::InferredLatents
 run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<Genotype<Haplotype>>& genotypes,
                       const std::vector<GenotypeIndex>& genotype_indices,
-                      const CNVModel::Priors& priors,
+                      const SubcloneModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                       const VariationalBayesParameters& params)
 {

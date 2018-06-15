@@ -20,7 +20,7 @@
 #include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/mutation/somatic_mutation_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
-#include "core/models/genotype/cnv_model.hpp"
+#include "core/models/genotype/subclone_model.hpp"
 #include "core/models/genotype/tumour_model.hpp"
 #include "basics/phred.hpp"
 #include "caller.hpp"
@@ -69,7 +69,7 @@ public:
     
 private:
     using GermlineModel = model::IndividualModel;
-    using CNVModel      = model::CNVModel;
+    using CNVModel      = model::SubcloneModel;
     using TumourModel   = model::TumourModel;
     
     class Latents;

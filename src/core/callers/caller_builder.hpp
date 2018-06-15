@@ -79,6 +79,9 @@ public:
     CallerBuilder& set_snv_denovo_mutation_rate(double rate) noexcept;
     CallerBuilder& set_indel_denovo_mutation_rate(double rate) noexcept;
     
+    // prokaryote
+    CallerBuilder& set_max_clones(unsigned n) noexcept;
+    
     // pedigree
     CallerBuilder& set_pedigree(Pedigree pedigree);
     
@@ -122,6 +125,9 @@ private:
         boost::optional<Trio> trio;
         Phred<double> min_denovo_posterior;
         boost::optional<double> snv_denovo_mutation_rate, indel_denovo_mutation_rate;
+        
+        // prokaryote
+        unsigned max_clones;
         
         // pedigree
         boost::optional<Pedigree> pedigree;

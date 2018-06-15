@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "individual_caller.hpp"
+#include "polyclone_caller.hpp"
 
 #include <typeinfo>
 #include <unordered_map>
@@ -9,51 +9,47 @@
 #include <algorithm>
 #include <numeric>
 #include <iterator>
-#include <functional>
 #include <utility>
 #include <stdexcept>
 #include <iostream>
 
 #include "basics/genomic_region.hpp"
+#include "containers/probability_matrix.hpp"
 #include "core/types/allele.hpp"
 #include "core/types/variant.hpp"
-#include "utils/maths.hpp"
-#include "utils/mappable_algorithms.hpp"
-#include "utils/read_stats.hpp"
-#include "containers/probability_matrix.hpp"
-#include "logging/logging.hpp"
 #include "core/types/calls/germline_variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
-
 #include "core/models/genotype/uniform_genotype_prior_model.hpp"
 #include "core/models/genotype/coalescent_genotype_prior_model.hpp"
-
-#include "timers.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/read_stats.hpp"
+#include "utils/concat.hpp"
+#include "logging/logging.hpp"
 
 namespace octopus {
 
-IndividualCaller::IndividualCaller(Caller::Components&& components,
-                                   Caller::Parameters general_parameters,
-                                   Parameters specific_parameters)
+PolycloneCaller::PolycloneCaller(Caller::Components&& components,
+                                 Caller::Parameters general_parameters,
+                                 Parameters specific_parameters)
 : Caller {std::move(components), std::move(general_parameters)}
 , parameters_ {std::move(specific_parameters)}
 {
-    if (parameters_.ploidy == 0) {
-        throw std::logic_error {"IndividualCaller: ploidy must be > 0"};
+    if (parameters_.max_clones < 1) {
+        throw std::logic_error {"PolycloneCaller: max_clones must be > 1"};
     }
 }
 
-std::string IndividualCaller::do_name() const
+std::string PolycloneCaller::do_name() const
 {
-    return "individual";
+    return "polyclone";
 }
 
-IndividualCaller::CallTypeSet IndividualCaller::do_call_types() const
+PolycloneCaller::CallTypeSet PolycloneCaller::do_call_types() const
 {
     return {std::type_index(typeid(GermlineVariantCall))};
 }
 
-std::size_t IndividualCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+std::size_t PolycloneCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
 {
     if (parameters_.deduplicate_haplotypes_with_germline_model) {
         if (haplotypes.size() < 2) return 0;
@@ -68,99 +64,182 @@ std::size_t IndividualCaller::do_remove_duplicates(std::vector<Haplotype>& haplo
     }
 }
 
-// IndividualCaller::Latents public methods
+// PolycloneCaller::Latents public methods
 
-IndividualCaller::Latents::Latents(const SampleName& sample,
-                                   const std::vector<Haplotype>& haplotypes,
-                                   std::vector<Genotype<Haplotype>>&& genotypes,
-                                   ModelInferences&& inferences)
-: genotype_posteriors_ {}
-, haplotype_posteriors_ {}
-, model_log_evidence_ {inferences.log_evidence}
+PolycloneCaller::Latents::Latents(std::vector<Genotype<Haplotype>> haploid_genotypes, std::vector<Genotype<Haplotype>> polyploid_genotypes,
+                                   HaploidModelInferences haploid_model_inferences, SubloneModelInferences subclone_model_inferences,
+                                   const SampleName& sample, const std::function<double(unsigned)>& clonality_prior)
+: haploid_genotypes_ {std::move(haploid_genotypes)}
+, polyploid_genotypes_ {std::move(polyploid_genotypes)}
+, haploid_model_inferences_ {std::move(haploid_model_inferences)}
+, subclone_model_inferences_ {std::move(subclone_model_inferences)}
+, model_posteriors_ {}
+, sample_ {sample}
 {
-    GenotypeProbabilityMap genotype_posteriors {
-        std::make_move_iterator(std::begin(genotypes)),
-        std::make_move_iterator(std::end(genotypes))
-    };
-    insert_sample(sample, inferences.posteriors.genotype_probabilities, genotype_posteriors);
-    genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
-    haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
+    if (!polyploid_genotypes_.empty()) {
+        const auto haploid_model_prior = std::log(clonality_prior(1));
+        const auto called_subclonality = polyploid_genotypes_.front().ploidy();
+        const auto subclone_model_prior = std::log(clonality_prior(called_subclonality));
+        const auto haploid_model_jp = haploid_model_prior + haploid_model_inferences_.log_evidence;
+        const auto subclone_model_jp = subclone_model_prior + subclone_model_inferences_.approx_log_evidence;
+        const auto norm = maths::log_sum_exp({haploid_model_jp, subclone_model_jp});
+        model_posteriors_.clonal = std::exp(haploid_model_jp - norm);
+        model_posteriors_.subclonal = std::exp(subclone_model_jp - norm);
+    } else {
+        model_posteriors_.clonal = 1.0;
+        model_posteriors_.subclonal = 0.0;
+    }
 }
 
-std::shared_ptr<IndividualCaller::Latents::HaplotypeProbabilityMap>
-IndividualCaller::Latents::haplotype_posteriors() const noexcept
+std::shared_ptr<PolycloneCaller::Latents::HaplotypeProbabilityMap>
+PolycloneCaller::Latents::haplotype_posteriors() const noexcept
 {
+    if (haplotype_posteriors_ == nullptr) {
+        haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>();
+        for (const auto& p : (*(this->genotype_posteriors()))[sample_]) {
+            for (const auto& haplotype : p.first.copy_unique_ref()) {
+                (*haplotype_posteriors_)[haplotype] += p.second;
+            }
+        }
+    }
     return haplotype_posteriors_;
 }
 
-std::shared_ptr<IndividualCaller::Latents::GenotypeProbabilityMap>
-IndividualCaller::Latents::genotype_posteriors() const noexcept
+std::shared_ptr<PolycloneCaller::Latents::GenotypeProbabilityMap>
+PolycloneCaller::Latents::genotype_posteriors() const noexcept
 {
+    if (genotype_posteriors_ == nullptr) {
+        const auto genotypes = concat(haploid_genotypes_, polyploid_genotypes_);
+        auto posteriors = concat(haploid_model_inferences_.posteriors.genotype_probabilities,
+                                 subclone_model_inferences_.posteriors.genotype_probabilities);
+        std::for_each(std::begin(posteriors), std::next(std::begin(posteriors), haploid_genotypes_.size()),
+                      [this] (auto& p) { p *= model_posteriors_.clonal; });
+        std::for_each(std::next(std::begin(posteriors), haploid_genotypes_.size()), std::end(posteriors),
+                      [this] (auto& p) { p *= model_posteriors_.subclonal; });
+        genotype_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::make_move_iterator(std::begin(genotypes)),
+                                                                        std::make_move_iterator(std::end(genotypes)));
+        insert_sample(sample_, posteriors, *genotype_posteriors_);
+    }
     return genotype_posteriors_;
 }
 
-// IndividualCaller::Latents private methods
+// PolycloneCaller::Latents private methods
 
-IndividualCaller::Latents::HaplotypeProbabilityMap
-IndividualCaller::Latents::calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes)
+namespace {
+
+auto make_sublone_model_mixture_prior_map(const SampleName& sample, const unsigned num_clones, const double alpha = 0.5)
 {
-    assert(genotype_posteriors_ != nullptr);
-    HaplotypeProbabilityMap result {haplotypes.size()};
-    for (const auto& haplotype : haplotypes) {
-        result.emplace(haplotype, 0.0);
-    }
-    const auto& sample = std::cbegin(*genotype_posteriors_)->first;
-    for (const auto& p : (*genotype_posteriors_)[sample]) {
-        for (const auto& haplotype : p.first.copy_unique_ref()) {
-            result.at(haplotype) += p.second;
-        }
-    }
+    model::SubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap result {};
+    model::SubcloneModel::Priors::GenotypeMixturesDirichletAlphas alphas(num_clones, alpha);
+    result.emplace(sample, std::move(alphas));
     return result;
 }
 
-std::unique_ptr<IndividualCaller::Caller::Latents>
-IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
-                                const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+template <typename T>
+T nth_greatest_value(std::vector<T> values, const std::size_t n)
 {
-    auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
-    if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
-    const auto prior_model = make_prior_model(haplotypes);
-    const model::IndividualModel model {*prior_model, debug_log_};
+    auto nth_itr = std::next(std::begin(values), n);
+    std::nth_element(std::begin(values), nth_itr, std::end(values), std::greater<> {});
+    return *nth_itr;
+}
+
+template <typename T>
+void erase_indices(std::vector<T>& v, const std::vector<std::size_t>& indices)
+{
+    assert(std::is_sorted(std::cbegin(indices), std::cend(indices)));
+    std::for_each(std::crbegin(indices), std::crend(indices), [&v] (auto idx) { v.erase(std::next(std::cbegin(v), idx)); });
+}
+
+void reduce(std::vector<Genotype<Haplotype>>& genotypes, const GenotypePriorModel& genotype_prior_model,
+            const HaplotypeLikelihoodCache& haplotype_likelihoods, const std::size_t n)
+{
+    if (genotypes.size() <= n) return;
+    const model::IndividualModel approx_model {genotype_prior_model};
+    const auto approx_posteriors = approx_model.evaluate(genotypes, haplotype_likelihoods).posteriors.genotype_probabilities;
+    const auto min_posterior = nth_greatest_value(approx_posteriors, n + 1);
+    std::size_t idx {0};
+    genotypes.erase(std::remove_if(std::begin(genotypes), std::end(genotypes),
+                                   [&] (const auto& genotype) { return approx_posteriors[idx++] <= min_posterior; }),
+                    std::end(genotypes));
+}
+
+void fit_sublone_model(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                       const GenotypePriorModel& genotype_prior_model, const SampleName& sample, const unsigned max_clones,
+                       const double haploid_model_evidence, const std::function<double(unsigned)>& clonality_prior,
+                       const std::size_t max_genotypes, std::vector<Genotype<Haplotype>>& polyploid_genotypes,
+                       model::SubcloneModel::InferredLatents& sublonal_inferences,
+                       boost::optional<logging::DebugLogger>& debug_log)
+{
+    const auto haploid_prior = std::log(clonality_prior(1));
+    for (unsigned num_clones {2}; num_clones <= max_clones; ++num_clones) {
+        const auto clonal_model_prior = clonality_prior(num_clones);
+        if (clonal_model_prior == 0.0) break;
+        auto genotypes = generate_all_full_rank_genotypes(haplotypes, num_clones);
+        reduce(genotypes, genotype_prior_model, haplotype_likelihoods, max_genotypes);
+        if (debug_log) stream(*debug_log) << "Generated " << genotypes.size() << " genotypes with clonality " << num_clones;
+        if (genotypes.empty()) break;
+        model::SubcloneModel::Priors subclonal_model_priors {genotype_prior_model, make_sublone_model_mixture_prior_map(sample, num_clones)};
+        model::SubcloneModel subclonal_model {{sample}, subclonal_model_priors};
+        auto inferences = subclonal_model.evaluate(genotypes, haplotype_likelihoods);
+        if (debug_log) stream(*debug_log) << "Evidence for model with clonality " << num_clones << " is " << inferences.approx_log_evidence;
+        if (num_clones == 2) {
+            polyploid_genotypes = std::move(genotypes);
+            sublonal_inferences = std::move(inferences);
+            if ((std::log(clonal_model_prior) + sublonal_inferences.approx_log_evidence)
+                < (haploid_prior + haploid_model_evidence)) break;
+        } else {
+            if ((std::log(clonal_model_prior) + inferences.approx_log_evidence)
+                <= (std::log(clonality_prior(num_clones - 1)) + sublonal_inferences.approx_log_evidence))  break;
+            polyploid_genotypes = std::move(genotypes);
+            sublonal_inferences = std::move(inferences);
+        }
+    }
+}
+
+} // namespace
+
+std::unique_ptr<PolycloneCaller::Caller::Latents>
+PolycloneCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    auto haploid_genotypes = generate_all_genotypes(haplotypes, 1);
+    if (debug_log_) stream(*debug_log_) << "There are " << haploid_genotypes.size() << " candidate haploid genotypes";
+    const auto genotype_prior_model = make_prior_model(haplotypes);
+    const model::IndividualModel haploid_model {*genotype_prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
-    auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
-    return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
+    auto haploid_inferences = haploid_model.evaluate(haploid_genotypes, haplotype_likelihoods);
+    if (debug_log_) stream(*debug_log_) << "Evidence for haploid model is " << haploid_inferences.log_evidence;
+    std::vector<Genotype<Haplotype>> polyploid_genotypes; model::SubcloneModel::InferredLatents sublonal_inferences;
+    constexpr std::size_t max_genotypes {10'000};
+    fit_sublone_model(haplotypes, haplotype_likelihoods, *genotype_prior_model, sample(), parameters_.max_clones,
+                      haploid_inferences.log_evidence, parameters_.clonality_prior, max_genotypes, polyploid_genotypes,
+                      sublonal_inferences, debug_log_);
+    if (debug_log_) stream(*debug_log_) << "There are " << polyploid_genotypes.size() << " candidate polyploid genotypes";
+    using std::move;
+    return std::make_unique<Latents>(move(haploid_genotypes), move(polyploid_genotypes),
+                                     move(haploid_inferences), move(sublonal_inferences),
+                                     sample(), parameters_.clonality_prior);
 }
 
 boost::optional<double>
-IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                            const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                            const Caller::Latents& latents) const
+PolycloneCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+                                           const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                           const Caller::Latents& latents) const
 {
     return calculate_model_posterior(haplotypes, haplotype_likelihoods, dynamic_cast<const Latents&>(latents));
 }
 
-static auto calculate_model_posterior(const double normal_model_log_evidence,
-                                      const double dummy_model_log_evidence)
+boost::optional<double>
+PolycloneCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+                                           const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                           const Latents& latents) const
 {
-    constexpr double normalModelPrior {0.9999999};
-    constexpr double dummyModelPrior {1.0 - normalModelPrior};
-    const auto normal_model_ljp = std::log(normalModelPrior) + normal_model_log_evidence;
-    const auto dummy_model_ljp  = std::log(dummyModelPrior) + dummy_model_log_evidence;
-    const auto norm = maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
-    return std::exp(normal_model_ljp - norm);
+    return boost::none;
 }
 
-boost::optional<double>
-IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                            const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                            const Latents& latents) const
+std::vector<std::unique_ptr<octopus::VariantCall>>
+PolycloneCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
 {
-    const auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
-    const auto prior_model = make_prior_model(haplotypes);
-    const model::IndividualModel model {*prior_model, debug_log_};
-    haplotype_likelihoods.prime(sample());
-    const auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
-    return octopus::calculate_model_posterior(latents.model_log_evidence_, inferences.log_evidence);
+    return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
 
 namespace {
@@ -212,8 +291,8 @@ auto compute_posterior(const Allele& allele, const GenotypeProbabilityMap& genot
 {
     auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
                              0.0, [&allele] (const auto curr, const auto& p) {
-                                 return curr + (contains(p.first, allele) ? 0.0 : p.second);
-                             });
+        return curr + (contains(p.first, allele) ? 0.0 : p.second);
+    });
     return probability_to_phred(p);
 }
 
@@ -328,8 +407,7 @@ transform_call(const SampleName& sample, VariantCall&& variant_call, GenotypeCal
     return result;
 }
 
-auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
-                     GenotypeCalls&& genotype_calls)
+auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls, GenotypeCalls&& genotype_calls)
 {
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     result.reserve(variant_calls.size());
@@ -343,32 +421,28 @@ auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
 
 } // namespace
 
-std::vector<std::unique_ptr<octopus::VariantCall>>
-IndividualCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
-{
-    return call_variants(candidates, dynamic_cast<const Latents&>(latents));
-}
-
-namespace debug {
+namespace debug { namespace {
 
 void log(const GenotypeProbabilityMap& genotype_posteriors,
          boost::optional<logging::DebugLogger>& debug_log,
          boost::optional<logging::TraceLogger>& trace_log);
+
 void log(const VariantPosteriorVector& candidate_posteriors,
          boost::optional<logging::DebugLogger>& debug_log,
          boost::optional<logging::TraceLogger>& trace_log,
          Phred<double> min_posterior);
+
 void log(const Genotype<Haplotype>& called_genotype,
          boost::optional<logging::DebugLogger>& debug_log);
 
+} // namespace
 } // namespace debug
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
-IndividualCaller::call_variants(const std::vector<Variant>& candidates,
-                                const Latents& latents) const
+PolycloneCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
-    if (parameters_.ploidy == 0) return {};
-    const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
+    log(latents);
+    const auto& genotype_posteriors = (*latents.genotype_posteriors())[sample()];
     debug::log(genotype_posteriors, debug_log_, trace_log_);
     const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
     debug::log(candidate_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
@@ -380,114 +454,24 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
     return transform_calls(sample(), std::move(variant_calls), std::move(genotype_calls));
 }
 
-namespace {
-
-// reference genotype calling
-
-struct RefCall
-{
-    Allele reference_allele;
-    Phred<double> posterior;
-};
-
-const GenomicRegion& mapped_region(const GenotypeProbabilityMap& genotype_posteriors)
-{
-    return mapped_region(std::cbegin(genotype_posteriors)->first);
-}
-
-bool has_variation(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
-{
-    if (!genotype_posteriors.empty() && !contains(mapped_region(genotype_posteriors), allele)) {
-        return false;
-    }
-    return std::any_of(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                       [&allele] (const auto& p) {
-                           return !is_homozygous(p.first, allele);
-                       });
-}
-
-auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
-{
-    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
-                             [&] (const auto curr, const auto& p) {
-                                 return curr + (is_homozygous(p.first, allele) ? 0.0 : p.second);
-                             });
-    return probability_to_phred(p);
-}
-
-auto mean_depth(const ReadPileups& pileups, const GenomicRegion& region)
-{
-    const auto overlapped = overlap_range(pileups, region.contig_region());
-    return maths::mean(overlapped, [] (const auto& pileup) { return pileup.depth(); });
-}
-
-auto compute_homozygous_posterior(const Allele& allele,
-                                  const GenotypeProbabilityMap& genotype_posteriors,
-                                  const ReadPileups& pileups)
-{
-    if (has_variation(allele, genotype_posteriors)) {
-        return marginalise_homozygous(allele, genotype_posteriors);
-    } else {
-        const auto coverage = mean_depth(pileups, mapped_region(allele));
-        return Phred<double> {2 * static_cast<double>(coverage)};
-    }
-}
-
-auto call_reference(const std::vector<Allele>& reference_alleles,
-                    const GenotypeProbabilityMap& genotype_posteriors,
-                    const ReadPileups& pileups,
-                    const Phred<double> min_call_posterior)
-{
-    std::vector<RefCall> result {};
-    for (const auto& allele : reference_alleles) {
-        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, pileups);
-        if (posterior >= min_call_posterior) {
-            result.push_back({allele, posterior});
-        }
-    }
-    return result;
-}
-
-auto transform_calls(std::vector<RefCall>&& calls, const SampleName& sample, const unsigned ploidy)
-{
-    std::vector<std::unique_ptr<ReferenceCall>> result {};
-    result.reserve(calls.size());
-    std::transform(std::make_move_iterator(std::begin(calls)), std::make_move_iterator(std::end(calls)),
-                   std::back_inserter(result),
-                   [&] (auto&& call) {
-                       std::map<SampleName, ReferenceCall::GenotypeCall> genotype {{sample, {ploidy, call.posterior}}};
-                       return std::make_unique<ReferenceCall>(std::move(call.reference_allele), call.posterior, std::move(genotype));
-                   });
-    return result;
-}
-
-} // namespace
-
 std::vector<std::unique_ptr<ReferenceCall>>
-IndividualCaller::call_reference(const std::vector<Allele>& alleles,
-                                 const Caller::Latents& latents,
-                                 const ReadPileupMap& pileups) const
+PolycloneCaller::call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents, const ReadMap& reads) const
 {
-    return call_reference(alleles, dynamic_cast<const Latents&>(latents), pileups);
+    return call_reference(alleles, dynamic_cast<const Latents&>(latents), reads);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
-IndividualCaller::call_reference(const std::vector<Allele>& alleles,
-                                 const Latents& latents,
-                                 const ReadPileupMap& pileups) const
+PolycloneCaller::call_reference(const std::vector<Allele>& alleles, const Latents& latents, const ReadMap& reads) const
 {
-    const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
-    auto calls = octopus::call_reference(alleles, genotype_posteriors, pileups.at(sample()),
-                                         parameters_.min_refcall_posterior);
-    return transform_calls(std::move(calls), sample(), parameters_.ploidy);
+    return {};
 }
 
-const SampleName& IndividualCaller::sample() const noexcept
+const SampleName& PolycloneCaller::sample() const noexcept
 {
     return samples_.front();
 }
 
-std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
+std::unique_ptr<GenotypePriorModel> PolycloneCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
 {
     if (parameters_.prior_model_params) {
         return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
@@ -499,7 +483,18 @@ std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const std
     }
 }
 
-namespace debug {
+void PolycloneCaller::log(const Latents& latents) const
+{
+    if (debug_log_) {
+        stream(*debug_log_) << "Clonal model posterior is " << latents.model_posteriors_.clonal
+                            << " and subclonal model posterior is " << latents.model_posteriors_.subclonal;
+        if (latents.model_posteriors_.subclonal > latents.model_posteriors_.clonal) {
+            stream(*debug_log_) << "Detected subclonality is " << latents.polyploid_genotypes_.front().ploidy();
+        }
+    }
+}
+
+namespace debug { namespace {
 
 template <typename S>
 void print_genotype_posteriors(S&& stream,
@@ -587,5 +582,7 @@ void log(const VariantPosteriorVector& candidate_posteriors,
     }
 }
 
+} // namespace
 } // namespace debug
+
 } // namespace octopus
