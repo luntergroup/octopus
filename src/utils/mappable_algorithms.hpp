@@ -1675,10 +1675,12 @@ template <typename ForwardIt, typename MappableTp>
 auto extract_intervening_regions(ForwardIt first, ForwardIt last, const MappableTp& mappable)
 {
     using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
-    static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
-                  "Mappable required");
+    static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>, "Mappable required");
     std::vector<RegionType<MappableTp>> result {};
-    if (first == last) return result;
+    if (first == last) {
+        result.assign({mapped_region(mappable)});
+        return result;
+    }
     result.reserve(std::distance(first, last) + 1);
     if (begins_before(mappable, *first)) {
         result.push_back(left_overhang_region(mappable, *first));

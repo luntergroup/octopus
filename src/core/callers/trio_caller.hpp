@@ -79,11 +79,11 @@ private:
     
     std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
-                   const ReadMap& reads) const override;
+                   const ReadPileupMap& pileups) const override;
     
     std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Latents& latents,
-                   const ReadMap& reads) const;
+                   const ReadPileupMap& pileups) const;
     
     std::unique_ptr<PopulationPriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };

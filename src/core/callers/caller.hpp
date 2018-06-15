@@ -28,6 +28,7 @@
 #include "logging/logging.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "core/tools/vcf_record_factory.hpp"
+#include "basics/read_pileup.hpp"
 
 namespace octopus {
 
@@ -130,6 +131,8 @@ private:
 
 protected:
     virtual std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const;
+    
+    using ReadPileupMap = std::unordered_map<SampleName, ReadPileups>;
 
 private:
     virtual std::unique_ptr<Latents>
@@ -148,7 +151,7 @@ private:
     
     virtual std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Latents& latents,
-                   const ReadMap& reads) const = 0;
+                   const ReadPileupMap& pileups) const = 0;
     
     // helper methods
     
@@ -202,11 +205,13 @@ private:
     void set_phasing(std::vector<CallWrapper>& calls, const Latents& latents,
                      const std::vector<Haplotype>& haplotypes, const GenomicRegion& call_region) const;
     bool done_calling(const GenomicRegion& region) const noexcept;
+    std::vector<CallWrapper> call_reference(const GenomicRegion& region, const ReadMap& reads) const;
     std::vector<Allele>
-    generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates) const;
-    std::vector<Allele>
-    generate_candidate_reference_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates,
-                                         const std::vector<GenomicRegion>& called_regions) const;
+    generate_reference_alleles(const GenomicRegion& region,
+                               const std::vector<Variant>& candidates,
+                               const std::vector<CallWrapper>& calls) const;
+    std::vector<Allele> generate_reference_alleles(const GenomicRegion& region) const;
+    ReadPileupMap make_pileups(const ReadMap& reads, const Latents& latents, const GenomicRegion& region) const;
 };
 
 } // namespace octopus

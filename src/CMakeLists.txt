@@ -51,6 +51,8 @@ set(BASICS_SOURCES
     basics/pedigree.cpp
     basics/trio.hpp
     basics/trio.cpp
+    basics/read_pileup.hpp
+    basics/read_pileup.cpp
 )
 
 set(CONTAINERS_SOURCES
@@ -370,6 +372,10 @@ set(CORE_SOURCES
     core/models/mutation/indel_mutation_model.hpp
     core/models/mutation/indel_mutation_model.cpp
     
+
+    core/models/reference/individual_reference_likelihood_model.hpp
+    core/models/reference/individual_reference_likelihood_model.cpp
+
     core/tools/coretools.hpp
     core/tools/haplotype_filter.hpp
     core/tools/haplotype_filter.cpp

@@ -854,14 +854,14 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
 
 std::vector<std::unique_ptr<ReferenceCall>>
 TrioCaller::call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
-                           const ReadMap& reads) const
+                           const ReadPileupMap& pileups) const
 {
-    return call_reference(alleles, dynamic_cast<const Latents&>(latents), reads);
+    return call_reference(alleles, dynamic_cast<const Latents&>(latents), pileups);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
 TrioCaller::call_reference(const std::vector<Allele>& alleles, const Latents& latents,
-                            const ReadMap& reads) const
+                           const ReadPileupMap& pileups) const
 {
     return {};
 }

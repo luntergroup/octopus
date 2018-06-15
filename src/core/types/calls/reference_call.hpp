@@ -4,6 +4,7 @@
 #ifndef reference_call_hpp
 #define reference_call_hpp
 
+#include <map>
 #include <utility>
 
 #include "call.hpp"
@@ -15,8 +16,14 @@ class ReferenceCall : public Call
 public:
     ReferenceCall() = delete;
     
+    struct GenotypeCall
+    {
+        unsigned ploidy;
+        Phred<double> posterior;
+    };
+    
     template <typename A>
-    ReferenceCall(A&& reference, Phred<double> quality);
+    ReferenceCall(A&& reference, Phred<double> quality, std::map<SampleName, GenotypeCall> genotypes);
     
     ReferenceCall(const ReferenceCall&)            = default;
     ReferenceCall& operator=(const ReferenceCall&) = default;
@@ -44,10 +51,17 @@ private:
 };
 
 template <typename A>
-ReferenceCall::ReferenceCall(A&& reference, Phred<double> quality)
+ReferenceCall::ReferenceCall(A&& reference, Phred<double> quality, std::map<SampleName, GenotypeCall> genotypes)
 : Call {quality}
 , reference_ {std::forward<A>(reference)}
-{}
+{
+    genotype_calls_.reserve(genotypes.size());
+    for (const auto& p : genotypes) {
+        genotype_calls_.emplace(std::piecewise_construct,
+                                std::forward_as_tuple(p.first),
+                                std::forward_as_tuple(Genotype<Allele> {p.second.ploidy, reference_}, p.second.posterior));
+    }
+}
 
 } // namespace octopus
 

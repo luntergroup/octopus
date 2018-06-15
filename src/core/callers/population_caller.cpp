@@ -704,8 +704,8 @@ using RefCalls = std::vector<RefCall>;
 
 std::vector<std::unique_ptr<ReferenceCall>>
 PopulationCaller::call_reference(const std::vector<Allele>& alleles,
-                                        const Caller::Latents& latents,
-                                        const ReadMap& reads) const
+                                 const Caller::Latents& latents,
+                                 const ReadPileupMap& pileups) const
 {
     return {};
 }

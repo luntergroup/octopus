@@ -197,15 +197,20 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           boost::optional<std::deque<AlignedRead>&> ambiguous,
                           AssignmentConfig config)
 {
-    if (!genotype.is_homozygous() && !reads.empty()) {
-        const auto unique_haplotypes = genotype.copy_unique();
-        assert(unique_haplotypes.size() > 1);
-        const auto priors = get_priors(unique_haplotypes, log_priors);
-        const auto likelihoods = calculate_likelihoods(unique_haplotypes, reads, model);
-        return calculate_support(unique_haplotypes, reads, priors, likelihoods, ambiguous, config);
-    } else {
-        return {};
+    if (!reads.empty()) {
+        if (!genotype.is_homozygous()) {
+            const auto unique_haplotypes = genotype.copy_unique();
+            assert(unique_haplotypes.size() > 1);
+            const auto priors = get_priors(unique_haplotypes, log_priors);
+            const auto likelihoods = calculate_likelihoods(unique_haplotypes, reads, model);
+            return calculate_support(unique_haplotypes, reads, priors, likelihoods, ambiguous, config);
+        } else if (config.ambiguous_action != AssignmentConfig::AmbiguousAction::drop) {
+            HaplotypeSupportMap result {};
+            result.emplace(genotype[0], reads);
+            return result;
+        }
     }
+    return {};
 }
 
 HaplotypeSupportMap

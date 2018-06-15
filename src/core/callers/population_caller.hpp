@@ -74,7 +74,7 @@ private:
     
     std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
-                   const ReadMap& reads) const override;
+                   const ReadPileupMap& pileups) const override;
     
     bool use_independence_model() const noexcept;
     std::unique_ptr<Caller::Latents>

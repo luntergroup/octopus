@@ -248,13 +248,11 @@ VariantCalls call_candidates(const VariantPosteriorVector& candidate_posteriors,
 {
     VariantCalls result {};
     result.reserve(candidate_posteriors.size());
-    
     std::copy_if(std::cbegin(candidate_posteriors), std::cend(candidate_posteriors),
                  std::back_inserter(result),
                  [&genotype_call, min_posterior] (const auto& p) {
                      return p.second >= min_posterior && contains_alt(genotype_call, p.first);
                  });
-    
     return result;
 }
 
@@ -394,81 +392,102 @@ namespace {
 
 // reference genotype calling
 
-struct RefCall : public Mappable<RefCall>
+struct RefCall
 {
-    RefCall() = default;
-    
-    template <typename A>
-    RefCall(A&& reference_allele, double posterior)
-    : reference_allele {std::forward<A>(reference_allele)}
-    , posterior {posterior}
-    {}
-    
-    const GenomicRegion& mapped_region() const noexcept { return reference_allele.mapped_region(); }
-    
     Allele reference_allele;
-    double posterior;
+    Phred<double> posterior;
 };
 
-using RefCalls = std::vector<RefCall>;
+const GenomicRegion& mapped_region(const GenotypeProbabilityMap& genotype_posteriors)
+{
+    return mapped_region(std::cbegin(genotype_posteriors)->first);
+}
 
-//    double marginalise_reference_genotype(const Allele& reference_allele,
-//                                          const GenotypeProbabilityMap& sample_genotype_posteriors)
-//    {
-//        double result {0};
-//        
-//        for (const auto& genotype_posterior : sample_genotype_posteriors) {
-//            if (is_homozygous(genotype_posterior.first, reference_allele)) {
-//                result += genotype_posterior.second;
-//            }
-//        }
-//        
-//        return result;
-//    }
+bool has_variation(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
+{
+    if (!genotype_posteriors.empty() && !contains(mapped_region(genotype_posteriors), allele)) {
+        return false;
+    }
+    return std::any_of(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                       [&allele] (const auto& p) {
+                           return !is_homozygous(p.first, allele);
+                       });
+}
 
-//    RefCalls call_reference(const GenotypeProbabilityMap& genotype_posteriors,
-//                            const std::vector<Allele>& reference_alleles,
-//                            const ReadMap::mapped_type& reads, const double min_call_posterior)
-//    {
-//        RefCalls result {};
-//        
-//        if (reference_alleles.empty()) return result;
-//        
-//        result.reserve(reference_alleles.size());
-//        
-//        for (const auto& reference_allele : reference_alleles) {
-//            double posterior {0};
-//            
-//            if (has_coverage(reads, mapped_region(reference_allele))) {
-//                posterior = marginalise_reference_genotype(reference_allele,
-//                                                           genotype_posteriors);
-//            }
-//            
-//            if (posterior >= min_call_posterior) {
-//                result.emplace_back(reference_allele, posterior);
-//            }
-//        }
-//        
-//        result.shrink_to_fit();
-//        
-//        return result;
-//    }
+auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
+{
+    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
+                             [&] (const auto curr, const auto& p) {
+                                 return curr + (is_homozygous(p.first, allele) ? 0.0 : p.second);
+                             });
+    return probability_to_phred(p);
+}
+
+auto mean_depth(const ReadPileups& pileups, const GenomicRegion& region)
+{
+    const auto overlapped = overlap_range(pileups, region.contig_region());
+    return maths::mean(overlapped, [] (const auto& pileup) { return pileup.depth(); });
+}
+
+auto compute_homozygous_posterior(const Allele& allele,
+                                  const GenotypeProbabilityMap& genotype_posteriors,
+                                  const ReadPileups& pileups)
+{
+    if (has_variation(allele, genotype_posteriors)) {
+        return marginalise_homozygous(allele, genotype_posteriors);
+    } else {
+        const auto coverage = mean_depth(pileups, mapped_region(allele));
+        return Phred<double> {2 * static_cast<double>(coverage)};
+    }
+}
+
+auto call_reference(const std::vector<Allele>& reference_alleles,
+                    const GenotypeProbabilityMap& genotype_posteriors,
+                    const ReadPileups& pileups,
+                    const Phred<double> min_call_posterior)
+{
+    std::vector<RefCall> result {};
+    for (const auto& allele : reference_alleles) {
+        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, pileups);
+        if (posterior >= min_call_posterior) {
+            result.push_back({allele, posterior});
+        }
+    }
+    return result;
+}
+
+auto transform_calls(std::vector<RefCall>&& calls, const SampleName& sample, const unsigned ploidy)
+{
+    std::vector<std::unique_ptr<ReferenceCall>> result {};
+    result.reserve(calls.size());
+    std::transform(std::make_move_iterator(std::begin(calls)), std::make_move_iterator(std::end(calls)),
+                   std::back_inserter(result),
+                   [&] (auto&& call) {
+                       std::map<SampleName, ReferenceCall::GenotypeCall> genotype {{sample, {ploidy, call.posterior}}};
+                       return std::make_unique<ReferenceCall>(std::move(call.reference_allele), call.posterior, std::move(genotype));
+                   });
+    return result;
+}
 
 } // namespace
 
 std::vector<std::unique_ptr<ReferenceCall>>
 IndividualCaller::call_reference(const std::vector<Allele>& alleles,
                                  const Caller::Latents& latents,
-                                 const ReadMap& reads) const
+                                 const ReadPileupMap& pileups) const
 {
-    return call_reference(alleles, dynamic_cast<const Latents&>(latents), reads);
+    return call_reference(alleles, dynamic_cast<const Latents&>(latents), pileups);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
-IndividualCaller::call_reference(const std::vector<Allele>& alleles, const Latents& latents,
-                                 const ReadMap& reads) const
+IndividualCaller::call_reference(const std::vector<Allele>& alleles,
+                                 const Latents& latents,
+                                 const ReadPileupMap& pileups) const
 {
-    return {};
+    const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
+    auto calls = octopus::call_reference(alleles, genotype_posteriors, pileups.at(sample()),
+                                         parameters_.min_refcall_posterior);
+    return transform_calls(std::move(calls), sample(), parameters_.ploidy);
 }
 
 const SampleName& IndividualCaller::sample() const noexcept
