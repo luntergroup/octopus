@@ -119,7 +119,8 @@ BAMRealigner::Report BAMRealigner::realign(ReadReader& src, VcfReader& variants,
             std::vector<AlignedRead> genotype_reads {}, realigned_reads {};
             auto sample_reads_itr = std::begin(sample.reads);
             for (const auto& genotype : sample.genotypes) {
-                const auto overlapped_reads = bases(overlap_range(sample_reads_itr, std::end(sample.reads), genotype));
+                const auto padded_genotype_region = expand(mapped_region(genotype), 1);
+                const auto overlapped_reads = bases(overlap_range(sample_reads_itr, std::end(sample.reads), padded_genotype_region));
                 genotype_reads.assign(std::make_move_iterator(overlapped_reads.begin()),
                                       std::make_move_iterator(overlapped_reads.end()));
                 sample_reads_itr = sample.reads.erase(overlapped_reads.begin(), overlapped_reads.end());
@@ -301,7 +302,7 @@ BAMRealigner::read_next_batch(VcfIterator& first, const VcfIterator& last, ReadR
                 reads_region = expand_lhs(reads_region, reads_region.begin());
             }
         }
-        auto reads = src.fetch_reads(samples, reads_region);
+        auto reads = src.fetch_reads(samples, expand(reads_region, 1));
         for (const auto& sample : samples) {
             auto& sample_genotypes = genotypes[sample];
             if (prev_batch_region) {
