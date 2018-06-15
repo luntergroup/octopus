@@ -13,11 +13,12 @@
 
 Octopus is a mapping-based variant caller that implements several calling models within a unified haplotype-aware framework. Octopus takes inspiration from particle filtering by constructing a tree of haplotypes and dynamically pruning and extending the tree based on haplotype posterior probabilities in a sequential manner. This allows octopus to implicitly consider all possible haplotypes at a given loci in reasonable time.
 
-There are currently three calling models implemented:
+There are currently four calling models implemented:
 
 - An individual model for calling **germline variants** in a single healthy individual.
 - A tumour model for calling germline variants and **somatic mutations** in one or more tumour samples from a single individual.
 - A trio model for calling germline variants and **_de novo_** mutations in a parent-offspring trio.
+- A polyclone model for calling variants in samples with an unknown mixture of haploid clones, such a bacteria or viral samples.
 
 Octopus is currently able to call SNVs, small-medium sized indels, small complex rearrangements, and micro-inversions.
 
@@ -25,7 +26,6 @@ We hope to implement more calling models in the future, including, but not limit
 
 - A population model for calling germline variants from multiple healthy individuals within a population.
 - A pedigree model for calling germline and *de novo* mutations in multiple healthy individuals from a known pedigree.
-- A haploid clonal model for calling polymorphisms in a sample of mixed bacteria isolates.
 
 ## Requirements
 * A C++14 compiler with SSE2 support
@@ -252,6 +252,16 @@ $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
 ```
 
 Joint calling samples may increase calling power, especially for low coverage sequencing.
+
+#### *Calling variants in mixed haploid samples (experimental)*
+
+If your sample contains an unknown mix of haploid clones (e.g. some bacteria or viral samples), use the `polyclone` calling model:
+
+```shell
+$ octopus -R H37Rv.fa -I mycobacterium_tuberculosis.bam -C polyclone
+```
+
+This model will automatically detect the number of subclones in your sample (up to the maximum given by `--max-clones`).
 
 #### *HLA genotyping*
 
