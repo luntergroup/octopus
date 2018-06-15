@@ -67,7 +67,8 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::lowBaseQuality, "Median base quality supporting variant is low"},
 {spec::filter::highMismatchFraction, "Count of reads containing mismatch to called allele is high"},
 {spec::filter::highMismatchFraction, "Fraction of reads containing mismatch to called allele is high"},
-{spec::filter::somaticContamination, "Somatic contamination detected in a called normal sample"}
+{spec::filter::somaticContamination, "Somatic contamination detected in a called normal sample"},
+{spec::filter::readPositionBias, "Position of variant in supporting reads is biased"}
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)

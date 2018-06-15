@@ -51,6 +51,7 @@ VCF_SPEC_CONSTANT lowBaseQuality {"LBQ"};
 VCF_SPEC_CONSTANT highMismatchCount {"MC"};
 VCF_SPEC_CONSTANT highMismatchFraction {"MF"};
 VCF_SPEC_CONSTANT somaticContamination {"SC"};
+VCF_SPEC_CONSTANT readPositionBias {"RPB"};
 
 } // namespace filter
 
