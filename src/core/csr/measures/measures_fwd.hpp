@@ -26,5 +26,6 @@
 #include "core/csr/measures/mismatch_fraction.hpp"
 #include "core/csr/measures/is_refcall.hpp"
 #include "core/csr/measures/somatic_contamination.hpp"
+#include "core/csr/measures/read_position_bias.hpp"
 
 #endif

@@ -36,6 +36,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<MismatchFraction>()]         = [] () { return make_wrapped_measure<MismatchFraction>(); };
     measure_makers[name<IsRefcall>()]                = [] () { return make_wrapped_measure<IsRefcall>(); };
     measure_makers[name<SomaticContamination>()]     = [] () { return make_wrapped_measure<SomaticContamination>(); };
+    measure_makers[name<ReadPositionBias>()]         = [] () { return make_wrapped_measure<ReadPositionBias>(); };
 }
 
 class UnknownMeasure : public UserError

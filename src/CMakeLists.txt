@@ -306,6 +306,8 @@ set(CORE_SOURCES
     core/csr/measures/is_refcall.cpp
     core/csr/measures/somatic_contamination.hpp
     core/csr/measures/somatic_contamination.cpp
+    core/csr/measures/read_position_bias.hpp
+    core/csr/measures/read_position_bias.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
