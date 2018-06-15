@@ -26,7 +26,7 @@ class IsRefcall : public Measure
     std::string do_describe() const override;
     std::vector<std::string> do_requirements() const override;
 public:
-    IsRefcall(bool report_sample_status = false);
+    IsRefcall(bool report_sample_status = true);
 };
 
 } // namespace csr
