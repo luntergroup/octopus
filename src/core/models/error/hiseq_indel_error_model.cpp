@@ -97,10 +97,10 @@ HiSeqIndelErrorModel::do_evaluate(const Haplotype& haplotype, PenaltyVector& gap
         }
     }
     switch (max_repeat.period) {
-    case 1: return 3;
-    case 2: return 5;
-    case 3: return 5;
-    default: return defaultGapExtension_;
+        case 1: return 3;
+        case 2: return 2;
+        case 3: return 1;
+        default: return defaultGapExtension_;
     }
 }
 
