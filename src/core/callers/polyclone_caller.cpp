@@ -455,13 +455,13 @@ PolycloneCaller::call_variants(const std::vector<Variant>& candidates, const Lat
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
-PolycloneCaller::call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents, const ReadMap& reads) const
+PolycloneCaller::call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents, const ReadPileupMap& pileup) const
 {
-    return call_reference(alleles, dynamic_cast<const Latents&>(latents), reads);
+    return call_reference(alleles, dynamic_cast<const Latents&>(latents), pileup);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>
-PolycloneCaller::call_reference(const std::vector<Allele>& alleles, const Latents& latents, const ReadMap& reads) const
+PolycloneCaller::call_reference(const std::vector<Allele>& alleles, const Latents& latents, const ReadPileupMap& pileup) const
 {
     return {};
 }
