@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef repeat_finer_hpp
-#define repeat_finer_hpp
+#ifndef repeat_finder_hpp
+#define repeat_finder_hpp
 
 #include <vector>
 #include <iterator>
