@@ -171,7 +171,7 @@ Here are some common use-cases to get started. These examples are by no means ex
 
 Note by default octopus will output all calls in VCF format to standard output, in order to write calls to a file (`.vcf`, `.vcf.gz`, and `.bcf` are supported), use the command line option `--output` (`-o`).
 
-#### *Calling germline variants in an individual*
+#### Calling germline variants in an individual
 
 This is the simplest case, if the file `NA12878.bam` contains a single sample, octopus will default to its individual calling model:
 
@@ -191,7 +191,7 @@ By default, octopus automatically detects and calls all samples contained in the
 $ octopus -R hs37d5.fa -I multi-sample.bam -S NA12878
 ```
 
-#### *Targeted calling*
+#### Targeted calling
 
 By default, octopus will call all regions specified in the reference index. In order to restrict calling to a subset of regions, either provide a list of zero-indexed regions in the format `chr:start-end` (`--regions`; `-T`), or a file containing a list of regions in either standard format or BED format (`--regions-file`; `-t`):
 
@@ -207,7 +207,7 @@ $ octopus -R hs37d5.fa -I NA12878.bam -K 1 2:30,000,000- 3:10,000,000-20,000,000
 $ octopus -R hs37d5.fa -I NA12878.bam -k skip-regions.bed
 ```
 
-#### *Calling de novo mutations in a trio*
+#### Calling de novo mutations in a trio
 
 To call germline and de novo mutations in a trio, either specify both maternal (`--maternal-sample`; `-M`) and paternal (`--paternal-sample`; `-F`) samples:
 
@@ -221,7 +221,7 @@ or provide a PED file which defines the trio:
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam --pedigree ceu_trio.ped
 ```
 
-#### *Calling somatic mutations in tumours*
+#### Calling somatic mutations in tumours
 
 To call germline and somatic mutations in a paired tumour-normal sample, just specify which sample is the normal (`--normal-sample`; `-N`):
 
@@ -243,7 +243,7 @@ $ octopus -R hs37d5.fa -I tumour1.bam tumour2.bam -C cancer
 
 Be aware that without a normal sample, somatic mutation classification power is significantly reduced.
 
-#### *Joint variant calling (experimental)*
+#### Joint variant calling (experimental)
 
 Multiple samples from the same population, without pedigree information, can be called jointly:
 
@@ -253,7 +253,7 @@ $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
 
 Joint calling samples may increase calling power, especially for low coverage sequencing.
 
-#### *Calling variants in mixed haploid samples (experimental)*
+#### Calling variants in mixed haploid samples (experimental)
 
 If your sample contains an unknown mix of haploid clones (e.g. some bacteria or viral samples), use the `polyclone` calling model:
 
@@ -263,7 +263,7 @@ $ octopus -R H37Rv.fa -I mycobacterium_tuberculosis.bam -C polyclone
 
 This model will automatically detect the number of subclones in your sample (up to the maximum given by `--max-clones`).
 
-#### *HLA genotyping*
+#### HLA genotyping
 
 To call phased HLA genotypes, increase the default phase level:
 
@@ -271,7 +271,7 @@ To call phased HLA genotypes, increase the default phase level:
 $ octopus -R hs37d5.fa -I NA12878.bam -t hla-regions.bed -l aggressive
 ```
 
-#### *Multithreaded calling*
+#### Multithreaded calling
 
 Octopus has built in multithreading capabilities, just add the `--threads` command:
 
@@ -285,7 +285,7 @@ This will let octopus automatically decide how many threads to use, and is the r
 $ octopus -R hs37d5.fa -I NA12878.bam --threads 4
 ```
 
-#### *Fast calling*
+#### Fast calling
 
 By default, octopus is geared towards more accurate variant calling which requires the use of complex (slow) algorithms. However, to achieve faster runtimes (at the cost of decreased calling accuracy) many of these features can be disabled. There are two helper commands that setup octopus for faster variant calling, `--fast` and `--very-fast`, e.g.:
 
@@ -294,6 +294,22 @@ $ octopus -R hs37d5.fa -I NA12878.bam --fast
 ```
 
 Note this does not turn on multithreading or increase buffer sizes.
+
+#### Making evidence BAMs
+
+Octopus can generate 'evidence' BAMs for single sample calling. To generate a single BAM file containing realigned reads supporting called variants use the `--bamout` option:
+
+```shell
+$ octopus -R hs37d5.fa -I NA12878.bam -o octopus.vcf --bamout octopus.bam
+```
+
+To generate split BAM files (one for each called haplotype) use the `--bamout` option, but specify only the file prefix:
+
+```shell
+$ octopus -R hs37d5.fa -I NA12878.bam -o octopus.vcf --bamout octopus
+```
+
+Octopus will generate BAM files (`octopus1.bam`, `octopus2.bam`, ...) for the number of haplotypes in the sample. Note that although each split BAM is haploid, the variants in each are only phased according to the phase sets called in the output VCF.
 
 ## Output format
 
