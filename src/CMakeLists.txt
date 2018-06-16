@@ -318,6 +318,8 @@ set(CORE_SOURCES
     core/csr/measures/read_position_bias.cpp
     core/csr/measures/alt_allele_count.hpp
     core/csr/measures/alt_allele_count.cpp
+    core/csr/measures/overlaps_tandem_repeat.hpp
+    core/csr/measures/overlaps_tandem_repeat.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp

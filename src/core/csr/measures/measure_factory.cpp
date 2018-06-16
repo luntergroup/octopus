@@ -38,6 +38,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<SomaticContamination>()]     = [] () { return make_wrapped_measure<SomaticContamination>(); };
     measure_makers[name<ReadPositionBias>()]         = [] () { return make_wrapped_measure<ReadPositionBias>(); };
     measure_makers[name<AltAlleleCount>()]           = [] () { return make_wrapped_measure<AltAlleleCount>(); };
+    measure_makers[name<OverlapsTandemRepeat>()]     = [] () { return make_wrapped_measure<OverlapsTandemRepeat>(); };
 }
 
 class UnknownMeasure : public UserError
