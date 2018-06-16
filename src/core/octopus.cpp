@@ -1393,9 +1393,50 @@ bool is_sam_type(const boost::filesystem::path& path)
     return type == ".bam" || type == ".sam" || type == ".cram";
 }
 
+bool is_called_ploidy_known(const GenomeCallingComponents& components)
+{
+    const auto contigs = components.contigs();
+    return std::all_of(std::cbegin(contigs), std::cend(contigs), [&] (const auto& contig) {
+        const auto caller = components.caller_factory().make(components.contigs().front());
+        return caller->min_callable_ploidy() == caller->max_callable_ploidy();
+    });
+}
+
+auto get_max_called_ploidy(VcfReader& vcf)
+{
+    const auto samples = vcf.fetch_header().samples();
+    unsigned result {0};
+    for (auto p = vcf.iterate(); p.first != p.second; ++p.first) {
+        for (const auto& sample : samples) {
+            result = std::max(p.first->ploidy(sample), result);
+        }
+    }
+    return result;
+}
+
+auto get_max_called_ploidy(const boost::filesystem::path& output_vcf)
+{
+    VcfReader vcf {output_vcf};
+    return get_max_called_ploidy(vcf);
+}
+
+auto get_final_output_path(const GenomeCallingComponents& components)
+{
+    if (apply_csr(components)) {
+        return components.filtered_output()->path();
+    } else {
+        return components.output().path();
+    }
+}
+
 auto get_max_ploidy(const GenomeCallingComponents& components)
 {
-    return get_max_ploidy(components.samples(), components.contigs(), components.ploidies());
+    if (is_called_ploidy_known(components)) {
+        return get_max_ploidy(components.samples(), components.contigs(), components.ploidies());
+    } else {
+        assert(get_final_output_path(components));
+        return get_max_called_ploidy(*get_final_output_path(components));
+    }
 }
 
 auto get_haplotype_bam_paths(const boost::filesystem::path& prefix, const unsigned max_ploidy)
