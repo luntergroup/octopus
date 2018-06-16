@@ -1,13 +1,13 @@
 /*-------------------------------------------------------------------------------
-This file is part of ranger.
+ This file is part of ranger.
 
-Copyright (c) [2014-2018] [Marvin N. Wright]
+ Copyright (c) [2014-2018] [Marvin N. Wright]
 
-This software may be modified and distributed under the terms of the MIT license.
+ This software may be modified and distributed under the terms of the MIT license.
 
-Please note that the C++ core of ranger is distributed under MIT license and the
-R package "ranger" under GPL3 license.
-#-------------------------------------------------------------------------------*/
+ Please note that the C++ core of ranger is distributed under MIT license and the
+ R package "ranger" under GPL3 license.
+ #-------------------------------------------------------------------------------*/
 
 #include <fstream>
 #include <sstream>
@@ -21,22 +21,16 @@ R package "ranger" under GPL3 license.
 namespace ranger {
 
 Data::Data() :
-    num_rows(0), num_rows_rounded(0), num_cols(0), snp_data(0), num_cols_no_snp(0), externalData(true), index_data(
-        0), max_num_unique_values(0) {
+    num_rows(0), num_rows_rounded(0), num_cols(0), snp_data(0), num_cols_no_snp(0), externalData(true), index_data(0), max_num_unique_values(
+        0), order_snps(false) {
 }
 
-Data::~Data() {
-  if (index_data != 0) {
-    delete[] index_data;
-  }
-}
-
-size_t Data::getVariableID(std::string variable_name) {
-  std::vector<std::string>::iterator it = std::find(variable_names.begin(), variable_names.end(), variable_name);
-  if (it == variable_names.end()) {
+size_t Data::getVariableID(const std::string& variable_name) const {
+  auto it = std::find(variable_names.cbegin(), variable_names.cend(), variable_name);
+  if (it == variable_names.cend()) {
     throw std::runtime_error("Variable " + variable_name + " not found.");
   }
-  return (std::distance(variable_names.begin(), it));
+  return (std::distance(variable_names.cbegin(), it));
 }
 
 void Data::addSnpData(unsigned char* snp_data, size_t num_cols_snp) {
@@ -154,7 +148,7 @@ bool Data::loadFromFileOther(std::ifstream& input_file, std::string header_line,
 }
 // #nocov end
 
-void Data::getAllValues(std::vector<double>& all_values, std::vector<size_t>& sampleIDs, size_t varID) {
+void Data::getAllValues(std::vector<double>& all_values, std::vector<size_t>& sampleIDs, size_t varID) const {
 
   // All values for varID (no duplicates) for given sampleIDs
   if (getUnpermutedVarID(varID) < num_cols_no_snp) {
@@ -164,14 +158,14 @@ void Data::getAllValues(std::vector<double>& all_values, std::vector<size_t>& sa
       all_values.push_back(get(sampleIDs[i], varID));
     }
     std::sort(all_values.begin(), all_values.end());
-    all_values.erase(unique(all_values.begin(), all_values.end()), all_values.end());
+    all_values.erase(std::unique(all_values.begin(), all_values.end()), all_values.end());
   } else {
     // If GWA data just use 0, 1, 2
     all_values = std::vector<double>( { 0, 1, 2 });
   }
 }
 
-void Data::getMinMaxValues(double& min, double&max, std::vector<size_t>& sampleIDs, size_t varID) {
+void Data::getMinMaxValues(double& min, double&max, std::vector<size_t>& sampleIDs, size_t varID) const {
   if (sampleIDs.size() > 0) {
     min = get(sampleIDs[0], varID);
     max = min;
@@ -190,7 +184,7 @@ void Data::getMinMaxValues(double& min, double&max, std::vector<size_t>& sampleI
 void Data::sort() {
 
   // Reserve memory
-  index_data = new size_t[num_cols_no_snp * num_rows];
+  index_data.resize(num_cols_no_snp * num_rows);
 
   // For all columns, get unique values and save index for each observation
   for (size_t col = 0; col < num_cols_no_snp; ++col) {
@@ -217,4 +211,62 @@ void Data::sort() {
   }
 }
 
+// TODO: Implement ordering for multiclass and survival
+void Data::orderSnpLevels(std::string dependent_variable_name, bool corrected_importance) {
+  // Stop if now SNP data
+  if (snp_data == 0) {
+    return;
+  }
+
+  size_t dependent_varID = getVariableID(dependent_variable_name);
+  size_t num_snps;
+  if (corrected_importance) {
+    num_snps = 2 * (num_cols - num_cols_no_snp);
+  } else {
+    num_snps = num_cols - num_cols_no_snp;
+  }
+
+  // Reserve space
+  snp_order.resize(num_snps, std::vector<size_t>(3));
+
+  // For each SNP
+  for (size_t i = 0; i < num_snps; ++i) {
+    size_t col = i;
+    if (i >= (num_cols - num_cols_no_snp)) {
+      // Get unpermuted SNP ID
+      col = i - num_cols + num_cols_no_snp;
+    }
+
+    // Order by mean response
+    std::vector<double> means(3, 0);
+    std::vector<double> counts(3, 0);
+    for (size_t row = 0; row < num_rows; ++row) {
+      size_t row_permuted = row;
+      if (i >= (num_cols - num_cols_no_snp)) {
+        row_permuted = getPermutedSampleID(row);
+      }
+      size_t idx = col * num_rows_rounded + row_permuted;
+      size_t value = (((snp_data[idx / 4] & mask[idx % 4]) >> offset[idx % 4]) - 1);
+
+      // TODO: Better way to treat missing values?
+      if (value > 2) {
+        value = 0;
+      }
+
+      means[value] += get(row, dependent_varID);
+      ++counts[value];
+    }
+
+    for (size_t value = 0; value < 3; ++value) {
+      means[value] /= counts[value];
+    }
+
+    // Save order
+    snp_order[i] = order(means, false);
+  }
+
+  order_snps = true;
+}
+
 } // namespace ranger
+

@@ -1,13 +1,13 @@
 /*-------------------------------------------------------------------------------
-This file is part of ranger.
+ This file is part of ranger.
 
-Copyright (c) [2014-2018] [Marvin N. Wright]
+ Copyright (c) [2014-2018] [Marvin N. Wright]
 
-This software may be modified and distributed under the terms of the MIT license.
+ This software may be modified and distributed under the terms of the MIT license.
 
-Please note that the C++ core of ranger is distributed under MIT license and the
-R package "ranger" under GPL3 license.
-#-------------------------------------------------------------------------------*/
+ Please note that the C++ core of ranger is distributed under MIT license and the
+ R package "ranger" under GPL3 license.
+ #-------------------------------------------------------------------------------*/
 
 #include <iterator>
 
@@ -33,10 +33,7 @@ Tree::Tree(std::vector<std::vector<size_t>>& child_nodeIDs, std::vector<size_t>&
         DEFAULT_SPLITRULE), alpha(DEFAULT_ALPHA), minprop(DEFAULT_MINPROP), num_random_splits(DEFAULT_NUM_RANDOM_SPLITS) {
 }
 
-Tree::~Tree() {
-}
-
-void Tree::init(Data* data, uint mtry, size_t dependent_varID, size_t num_samples, uint seed,
+void Tree::init(const Data* data, uint mtry, size_t dependent_varID, size_t num_samples, uint seed,
     std::vector<size_t>* deterministic_varIDs, std::vector<size_t>* split_select_varIDs,
     std::vector<double>* split_select_weights, ImportanceMode importance_mode, uint min_node_size,
     bool sample_with_replacement, bool memory_saving_splitting, SplitRule splitrule, std::vector<double>* case_weights,
@@ -177,7 +174,7 @@ void Tree::predict(const Data* prediction_data, bool oob_prediction) {
   }
 }
 
-void Tree::computePermutationImportance(std::vector<double>* forest_importance, std::vector<double>* forest_variance) {
+void Tree::computePermutationImportance(std::vector<double>& forest_importance, std::vector<double>& forest_variance) {
 
   size_t num_independent_variables = data->getNumCols() - data->getNoSplitVariables().size();
 
@@ -205,13 +202,13 @@ void Tree::computePermutationImportance(std::vector<double>* forest_importance, 
     permuteAndPredictOobSamples(varID, permutations);
     double accuracy_permuted = computePredictionAccuracyInternal();
     double accuracy_difference = accuracy_normal - accuracy_permuted;
-    (*forest_importance)[i] += accuracy_difference;
+    forest_importance[i] += accuracy_difference;
 
     // Compute variance
     if (importance_mode == IMP_PERM_BREIMAN) {
-      (*forest_variance)[i] += accuracy_difference * accuracy_difference;
+      forest_variance[i] += accuracy_difference * accuracy_difference;
     } else if (importance_mode == IMP_PERM_LIAW) {
-      (*forest_variance)[i] += accuracy_difference * accuracy_difference * num_samples_oob;
+      forest_variance[i] += accuracy_difference * accuracy_difference * num_samples_oob;
     }
   }
 }

@@ -1,13 +1,13 @@
 /*-------------------------------------------------------------------------------
-This file is part of ranger.
+ This file is part of ranger.
 
-Copyright (c) [2014-2018] [Marvin N. Wright]
+ Copyright (c) [2014-2018] [Marvin N. Wright]
 
-This software may be modified and distributed under the terms of the MIT license.
+ This software may be modified and distributed under the terms of the MIT license.
 
-Please note that the C++ core of ranger is distributed under MIT license and the
-R package "ranger" under GPL3 license.
-#-------------------------------------------------------------------------------*/
+ Please note that the C++ core of ranger is distributed under MIT license and the
+ R package "ranger" under GPL3 license.
+ #-------------------------------------------------------------------------------*/
 
 #ifndef DATA_H_
 #define DATA_H_
@@ -25,14 +25,15 @@ namespace ranger {
 class Data {
 public:
   Data();
-  virtual ~Data();
-  
-  Data(const Data&)            = delete;
+
+  Data(const Data&) = delete;
   Data& operator=(const Data&) = delete;
+
+  virtual ~Data() = default;
 
   virtual double get(size_t row, size_t col) const = 0;
 
-  size_t getVariableID(std::string variable_name);
+  size_t getVariableID(const std::string& variable_name) const;
 
   virtual void reserveMemory() = 0;
   virtual void set(size_t col, size_t row, double value, bool& error) = 0;
@@ -43,12 +44,13 @@ public:
   bool loadFromFileWhitespace(std::ifstream& input_file, std::string header_line);
   bool loadFromFileOther(std::ifstream& input_file, std::string header_line, char seperator);
 
-  void getAllValues(std::vector<double>& all_values, std::vector<size_t>& sampleIDs, size_t varID);
+  void getAllValues(std::vector<double>& all_values, std::vector<size_t>& sampleIDs, size_t varID) const;
 
-  void getMinMaxValues(double& min, double&max, std::vector<size_t>& sampleIDs, size_t varID);
+  void getMinMaxValues(double& min, double&max, std::vector<size_t>& sampleIDs, size_t varID) const;
 
   size_t getIndex(size_t row, size_t col) const {
     // Use permuted data for corrected impurity importance
+    size_t col_permuted = col;
     if (col >= num_cols) {
       col = getUnpermutedVarID(col);
       row = getPermutedSampleID(row);
@@ -57,17 +59,29 @@ public:
     if (col < num_cols_no_snp) {
       return index_data[col * num_rows + row];
     } else {
-      // Get data out of snp storage. -1 because of GenABEL coding.
-      size_t idx = (col - num_cols_no_snp) * num_rows_rounded + row;
-      size_t result = (((snp_data[idx / 4] & mask[idx % 4]) >> offset[idx % 4]) - 1);
+      return getSnp(row, col, col_permuted);
+    }
+  }
 
-      // TODO: Better way to treat missing values?
-      if (result > 2) {
-        return 0;
+  size_t getSnp(size_t row, size_t col, size_t col_permuted) const {
+    // Get data out of snp storage. -1 because of GenABEL coding.
+    size_t idx = (col - num_cols_no_snp) * num_rows_rounded + row;
+    size_t result = ((snp_data[idx / 4] & mask[idx % 4]) >> offset[idx % 4]) - 1;
+
+    // TODO: Better way to treat missing values?
+    if (result > 2) {
+      result = 0;
+    }
+
+    // Order SNPs
+    if (order_snps) {
+      if (col_permuted >= num_cols) {
+        result = snp_order[col_permuted + no_split_variables.size() - 2 * num_cols_no_snp][result];
       } else {
-        return result;
+        result = snp_order[col - num_cols_no_snp][result];
       }
     }
+    return result;
   }
 
   double getUniqueDataValue(size_t varID, size_t index) const {
@@ -100,6 +114,8 @@ public:
 
   void sort();
 
+  void orderSnpLevels(std::string dependent_variable_name, bool corrected_importance);
+
   const std::vector<std::string>& getVariableNames() const {
     return variable_names;
   }
@@ -120,7 +136,7 @@ public:
     }
   }
 
-  std::vector<size_t>& getNoSplitVariables() {
+  const std::vector<size_t>& getNoSplitVariables() const noexcept {
     return no_split_variables;
   }
 
@@ -129,11 +145,11 @@ public:
     std::sort(no_split_variables.begin(), no_split_variables.end());
   }
 
-  std::vector<bool>& getIsOrderedVariable() {
+  std::vector<bool>& getIsOrderedVariable() noexcept {
     return is_ordered_variable;
   }
 
-  void setIsOrderedVariable(std::vector<std::string>& unordered_variable_names) {
+  void setIsOrderedVariable(const std::vector<std::string>& unordered_variable_names) {
     is_ordered_variable.resize(num_cols, true);
     for (auto& variable_name : unordered_variable_names) {
       size_t varID = getVariableID(variable_name);
@@ -176,6 +192,15 @@ public:
     return varID;
   }
 
+  const std::vector<std::vector<size_t>>& getSnpOrder() const {
+    return snp_order;
+  }
+
+  void setSnpOrder(std::vector<std::vector<size_t>>& snp_order) {
+    this->snp_order = snp_order;
+    order_snps = true;
+  }
+
 protected:
   std::vector<std::string> variable_names;
   size_t num_rows;
@@ -187,7 +212,7 @@ protected:
 
   bool externalData;
 
-  size_t* index_data;
+  std::vector<size_t> index_data;
   std::vector<std::vector<double>> unique_data_values;
   size_t max_num_unique_values;
 
@@ -199,6 +224,10 @@ protected:
 
   // Permuted samples for corrected impurity importance
   std::vector<size_t> permuted_sampleIDs;
+
+  // Order of 0/1/2 for ordered splitting
+  std::vector<std::vector<size_t>> snp_order;
+  bool order_snps;
 };
 
 } // namespace ranger

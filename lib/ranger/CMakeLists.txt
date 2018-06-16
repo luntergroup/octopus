@@ -4,7 +4,6 @@ set(RANGER_SOURCES
     DataChar.h
     DataChar.cpp
     DataDouble.h
-    DataDouble.cpp
     DataFloat.h
     DataFloat.cpp
     Forest.h
