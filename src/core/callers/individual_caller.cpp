@@ -53,6 +53,11 @@ IndividualCaller::CallTypeSet IndividualCaller::do_call_types() const
     return {std::type_index(typeid(GermlineVariantCall))};
 }
 
+unsigned IndividualCaller::do_min_callable_ploidy() const
+{
+    return parameters_.ploidy;
+}
+
 std::size_t IndividualCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
 {
     if (parameters_.deduplicate_haplotypes_with_germline_model) {

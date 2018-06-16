@@ -54,6 +54,16 @@ Caller::CallTypeSet TrioCaller::do_call_types() const
             std::type_index(typeid(DenovoReferenceReversionCall))};
 }
 
+unsigned TrioCaller::do_min_callable_ploidy() const
+{
+    return std::max({parameters_.maternal_ploidy, parameters_.paternal_ploidy, parameters_.child_ploidy});
+}
+
+unsigned TrioCaller::do_max_callable_ploidy() const
+{
+    return std::max({parameters_.maternal_ploidy, parameters_.paternal_ploidy, parameters_.child_ploidy});
+}
+
 // TrioCaller::Latents
 
 TrioCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,

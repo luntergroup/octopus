@@ -60,6 +60,16 @@ PopulationCaller::CallTypeSet PopulationCaller::do_call_types() const
     return {std::type_index(typeid(GermlineVariantCall))};
 }
 
+unsigned PopulationCaller::do_min_callable_ploidy() const
+{
+    return *std::min_element(std::cbegin(parameters_.ploidies), std::cend(parameters_.ploidies));
+}
+
+unsigned PopulationCaller::do_max_callable_ploidy() const
+{
+    return *std::max_element(std::cbegin(parameters_.ploidies), std::cend(parameters_.ploidies));
+}
+
 // IndividualCaller::Latents public methods
 
 namespace {

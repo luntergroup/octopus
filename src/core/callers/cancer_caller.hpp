@@ -89,6 +89,8 @@ private:
     
     std::string do_name() const override;
     CallTypeSet do_call_types() const override;
+    unsigned do_min_callable_ploidy() const override;
+    unsigned do_max_callable_ploidy() const override;
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,

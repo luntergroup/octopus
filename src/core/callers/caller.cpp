@@ -65,6 +65,16 @@ Caller::CallTypeSet Caller::call_types() const
     return do_call_types();
 }
 
+unsigned Caller::min_callable_ploidy() const
+{
+    return do_min_callable_ploidy();
+}
+
+unsigned Caller::max_callable_ploidy() const
+{
+    return do_max_callable_ploidy();
+}
+
 namespace debug {
 
 template <typename S>

@@ -68,6 +68,8 @@ CancerCaller::CancerCaller(Caller::Components&& components,
     }
 }
 
+// private methods
+
 std::string CancerCaller::do_name() const
 {
     return "cancer";
@@ -81,7 +83,15 @@ CancerCaller::CallTypeSet CancerCaller::do_call_types() const
     };
 }
 
-// private methods
+unsigned CancerCaller::do_min_callable_ploidy() const
+{
+    return parameters_.ploidy;
+}
+
+unsigned CancerCaller::do_max_callable_ploidy() const
+{
+    return parameters_.ploidy + parameters_.max_somatic_haplotypes;
+}
 
 bool CancerCaller::has_normal_sample() const noexcept
 {
