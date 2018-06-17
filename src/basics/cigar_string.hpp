@@ -59,6 +59,9 @@ private:
     Flag flag_;
 };
 
+void increment_size(CigarOperation& op, CigarOperation::Size n = 1) noexcept;
+void decrement_size(CigarOperation& op, CigarOperation::Size n = 1) noexcept;
+
 bool advances_reference(CigarOperation::Flag flag) noexcept;
 bool advances_reference(const CigarOperation& op) noexcept;
 bool advances_sequence(CigarOperation::Flag flag) noexcept;

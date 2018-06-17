@@ -64,6 +64,16 @@ bool is_valid(const CigarOperation& op) noexcept
     return is_valid(op.flag()) && op.size() > 0;
 }
 
+void increment_size(CigarOperation& op, CigarOperation::Size n) noexcept
+{
+    op.set_size(op.size() + n);
+}
+
+void decrement_size(CigarOperation& op, CigarOperation::Size n) noexcept
+{
+    op.set_size(op.size() - n);
+}
+
 bool advances_reference(CigarOperation::Flag flag) noexcept
 {
     using Flag = CigarOperation::Flag;
