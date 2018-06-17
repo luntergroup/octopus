@@ -61,11 +61,6 @@ bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
     return has_called_alt_allele(call, sample) && call.is_heterozygous(sample);
 }
 
-bool is_forward(const AlignedRead& read) noexcept
-{
-    return read.direction() == AlignedRead::Direction::forward;
-}
-
 struct DirectionCounts
 {
     unsigned forward, reverse;
@@ -77,7 +72,7 @@ DirectionCounts count_directions(const Container& reads, const GenomicRegion& ca
     unsigned n_forward {0}, n_reverse {0};
     for (const auto& read : reads) {
         if (overlaps(read.get(), call_region)) {
-            if (is_forward(read)) {
+            if (is_forward_strand(read)) {
                 ++n_forward;
             } else {
                 ++n_reverse;
