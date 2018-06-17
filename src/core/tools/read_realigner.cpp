@@ -285,7 +285,7 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
             const auto rhs_pad_size = right_overhang_size(read_region, haplotype_region);
             result = copy_sequence(haplotype_to_reference, offset);
             if (!result.empty() && is_sequence_match(result.back())) {
-                result.back() = CigarOperation {result.back().size() + rhs_pad_size, Flag::sequenceMatch};
+                increment_size(result.back(), rhs_pad_size);
             } else if (rhs_pad_size > 0) {
                 result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
             }
@@ -294,7 +294,7 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
     if (sequence_size(result) < reference_size(read_to_haplotype)) {
         const auto rhs_pad_size = reference_size(read_to_haplotype) - sequence_size(result);
         if (!result.empty() && is_sequence_match(result.back())) {
-            result.back() = CigarOperation {result.back().size() + rhs_pad_size, Flag::sequenceMatch};
+            increment_size(result.back(), rhs_pad_size);
         } else {
             assert(rhs_pad_size > 0);
             result.emplace_back(rhs_pad_size, Flag::sequenceMatch);
@@ -311,7 +311,7 @@ CigarString copy_tail(const GenomicRegion& haplotype_region, const CigarString& 
     if (sequence_size(result) < size(rebased_read_region)) {
         const auto rhs_pad_size = size(rebased_read_region) - sequence_size(result);
         if (is_sequence_match(result.back())) {
-            result.back() = CigarOperation {result.back().size() + rhs_pad_size, CigarOperation::Flag::sequenceMatch};
+            increment_size(result.back(), rhs_pad_size);
         } else {
             result.emplace_back(rhs_pad_size, CigarOperation::Flag::sequenceMatch);
         }
@@ -373,7 +373,31 @@ void rebase_not_overlapped(AlignedRead& read, const GenomicRegion& haplotype_reg
                            GenomicRegion rebased_read_region)
 {
     if (overlaps(rebased_read_region, haplotype_region)) {
-        const auto padded_haplotype_cigar = copy_tail(haplotype_region, haplotype_to_reference, rebased_read_region);
+        auto padded_haplotype_cigar = copy_tail(haplotype_region, haplotype_to_reference, rebased_read_region);
+        assert(!padded_haplotype_cigar.empty());
+        if (is_insertion(padded_haplotype_cigar.front())) {
+            const auto called_insertion_size = padded_haplotype_cigar.front().size();
+            const auto supported_insertion_size = called_insertion_size - begin_distance(rebased_read_region, read);
+            assert(supported_insertion_size <= padded_haplotype_cigar.front().size());
+            if (supported_insertion_size > 0) {
+                padded_haplotype_cigar.front().set_size(supported_insertion_size);
+                if (is_match(padded_haplotype_cigar.back())) {
+                    increment_size(padded_haplotype_cigar.back(), supported_insertion_size);
+                } else {
+                    padded_haplotype_cigar.emplace_back(supported_insertion_size, CigarOperation::Flag::sequenceMatch);
+                }
+            } else {
+                padded_haplotype_cigar.erase(std::cbegin(padded_haplotype_cigar));
+            }
+        }
+        if (reference_size(read.cigar()) > sequence_size(padded_haplotype_cigar)) {
+            const auto pad = reference_size(read.cigar()) - sequence_size(padded_haplotype_cigar);
+            if (is_match(padded_haplotype_cigar.back())) {
+                increment_size(padded_haplotype_cigar.back(), pad);
+            } else {
+                padded_haplotype_cigar.emplace_back(pad, CigarOperation::Flag::sequenceMatch);
+            }
+        }
         auto rebased_cigar = rebase(read.cigar(), padded_haplotype_cigar);
         rebased_read_region = expand_rhs(head_region(rebased_read_region), reference_size(rebased_cigar));
         read.realign(std::move(rebased_read_region), std::move(rebased_cigar));
