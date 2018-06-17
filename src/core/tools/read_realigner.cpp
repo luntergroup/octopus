@@ -238,7 +238,7 @@ CigarString pad_reference(const GenomicRegion& read_region, const CigarString& r
         result = haplotype_to_reference;
     } else if (contains(haplotype_region, read_region)) {
         const auto offset = left_overhang_size(haplotype_region, read_region);
-        const auto copy_length = sequence_size(haplotype_to_reference);
+        const auto copy_length = std::max(sequence_size(read_to_haplotype), sequence_size(haplotype_to_reference));
         result = copy_sequence(haplotype_to_reference, offset, copy_length);
     } else {
         result.reserve(haplotype_to_reference.size() + 2);
@@ -363,7 +363,11 @@ auto calculate_rebase_shift(const AlignedRead& read, const GenomicRegion& haplot
 void rebase_overlapped(AlignedRead& read, const GenomicRegion& haplotype_region, const CigarString& haplotype_to_reference,
                        const GenomicRegion::Distance rebase_shift)
 {
-    const auto padded_haplotype_cigar = pad_reference(read.mapped_region(), read.cigar(), haplotype_region, haplotype_to_reference);
+    auto padded_haplotype_cigar = pad_reference(read.mapped_region(), read.cigar(), haplotype_region, haplotype_to_reference);
+    assert(!padded_haplotype_cigar.empty());
+    if (is_deletion(padded_haplotype_cigar.front())) {
+        padded_haplotype_cigar.erase(std::cbegin(padded_haplotype_cigar));
+    }
     auto rebased_cigar = rebase(read.cigar(), padded_haplotype_cigar);
     auto rebased_read_region = expand_rhs(shift(head_region(read), rebase_shift), reference_size(rebased_cigar));
     read.realign(std::move(rebased_read_region), std::move(rebased_cigar));
