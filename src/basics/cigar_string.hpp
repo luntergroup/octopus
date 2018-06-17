@@ -48,6 +48,9 @@ public:
     
     ~CigarOperation() = default;
     
+    void set_flag(Flag type) noexcept;
+    void set_size(Size size) noexcept;
+    
     Flag flag() const noexcept;
     Size size() const noexcept;
     

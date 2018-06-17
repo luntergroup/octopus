@@ -20,6 +20,16 @@ CigarOperation::CigarOperation(const Size size, const Flag flag) noexcept
 , flag_ {flag}
 {}
 
+void CigarOperation::set_flag(Flag type) noexcept
+{
+    flag_ = type;
+}
+
+void CigarOperation::set_size(Size size) noexcept
+{
+    size_ = size;
+}
+
 CigarOperation::Flag CigarOperation::flag() const noexcept
 {
     return flag_;
