@@ -28,6 +28,8 @@
 #include "core/csr/measures/somatic_contamination.hpp"
 #include "core/csr/measures/read_position_bias.hpp"
 #include "core/csr/measures/alt_allele_count.hpp"
-#include "overlaps_tandem_repeat.hpp"
+#include "core/csr/measures/overlaps_tandem_repeat.hpp"
+#include "core/csr/measures/str_length.hpp"
+
 
 #endif

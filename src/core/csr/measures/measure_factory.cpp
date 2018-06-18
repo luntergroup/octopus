@@ -39,6 +39,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<ReadPositionBias>()]         = [] () { return make_wrapped_measure<ReadPositionBias>(); };
     measure_makers[name<AltAlleleCount>()]           = [] () { return make_wrapped_measure<AltAlleleCount>(); };
     measure_makers[name<OverlapsTandemRepeat>()]     = [] () { return make_wrapped_measure<OverlapsTandemRepeat>(); };
+    measure_makers[name<STRLength>()]                = [] () { return make_wrapped_measure<STRLength>(); };
 }
 
 class UnknownMeasure : public UserError

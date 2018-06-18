@@ -320,6 +320,8 @@ set(CORE_SOURCES
     core/csr/measures/alt_allele_count.cpp
     core/csr/measures/overlaps_tandem_repeat.hpp
     core/csr/measures/overlaps_tandem_repeat.cpp
+    core/csr/measures/str_length.hpp
+    core/csr/measures/str_length.cpp
     
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
