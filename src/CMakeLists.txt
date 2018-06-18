@@ -322,7 +322,9 @@ set(CORE_SOURCES
     core/csr/measures/overlaps_tandem_repeat.cpp
     core/csr/measures/str_length.hpp
     core/csr/measures/str_length.cpp
-    
+    core/csr/measures/str_period.hpp
+    core/csr/measures/str_period.cpp
+
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
     core/models/haplotype_likelihood_model.hpp
