@@ -628,8 +628,6 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     const auto call_reads = copy_overlapped(reads_, region);
     result.set_info("NS",  count_samples_with_coverage(call_reads));
     result.set_info("DP",  sum_max_coverages(call_reads));
-    result.set_info("SB",  utils::to_string(strand_bias(call_reads), 2));
-    result.set_info("BQ",  static_cast<unsigned>(rmq_base_quality(call_reads)));
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
     result.set_info("MQ0", count_mapq_zero(call_reads));
     set_allele_counts(*call, samples_, result);
@@ -640,9 +638,9 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     
     if (!sites_only_) {
         if (call->all_phased()) {
-            result.set_format({"GT", "GQ", "DP", "BQ", "MQ", "PS", "PQ"});
+            result.set_format({"GT", "GQ", "DP", "MQ", "PS", "PQ"});
         } else {
-            result.set_format({"GT", "GQ", "DP", "BQ", "MQ"});
+            result.set_format({"GT", "GQ", "DP", "MQ"});
         }
         for (const auto& sample : samples_) {
             const auto& genotype_call = call->get_genotype_call(sample);
@@ -650,7 +648,6 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
             set_vcf_genotype(sample, genotype_call, result, has_non_ref);
             result.set_format(sample, "GQ", std::to_string(gq));
             result.set_format(sample, "DP", max_coverage(call_reads.at(sample)));
-            result.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(call_reads.at(sample))));
             result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(call_reads.at(sample))));
             if (call->is_phased(sample)) {
                 const auto& phase = *genotype_call.phase;
@@ -778,8 +775,6 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     result.set_qual(std::min(max_qual, maths::round(q->get()->quality().score(), 2)));
     result.set_info("NS",  count_samples_with_coverage(reads_, region));
     result.set_info("DP",  sum_max_coverages(reads_, region));
-    result.set_info("SB",  utils::to_string(strand_bias(reads_, region), 2));
-    result.set_info("BQ",  static_cast<unsigned>(rmq_base_quality(reads_, region)));
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
     result.set_info("MQ0", count_mapq_zero(reads_, region));
     
@@ -789,9 +784,9 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     }
     if (!sites_only_) {
         if (calls.front()->all_phased()) {
-            result.set_format({"GT", "GQ", "DP", "BQ", "MQ", "PS", "PQ"});
+            result.set_format({"GT", "GQ", "DP", "MQ", "PS", "PQ"});
         } else {
-            result.set_format({"GT", "GQ", "DP", "BQ", "MQ"});
+            result.set_format({"GT", "GQ", "DP", "MQ"});
         }
         
         auto sample_itr = std::begin(resolved_genotypes);
@@ -806,7 +801,6 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
             result.set_genotype(sample, genotype_call, VcfRecord::Builder::Phasing::phased);
             result.set_format(sample, "GQ", std::to_string(gq));
             result.set_format(sample, "DP", max_coverage(reads_.at(sample), region));
-            result.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region)));
             result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region)));
             if (calls.front()->is_phased(sample)) {
                 const auto phase = *calls.front()->get_genotype_call(sample).phase;
