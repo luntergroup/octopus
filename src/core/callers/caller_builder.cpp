@@ -394,7 +394,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.min_variant_posterior,
                                                     params_.min_denovo_posterior,
                                                     params_.min_refcall_posterior,
-                                                    params_.max_joint_genotypes
+                                                    params_.max_joint_genotypes,
+                                                    params_.deduplicate_haplotypes_with_caller_model
                                                 });
         }},
         {"polyclone", [this] () {

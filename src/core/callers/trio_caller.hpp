@@ -34,6 +34,7 @@ public:
         DeNovoModel::Parameters denovo_model_params;
         Phred<double> min_variant_posterior, min_denovo_posterior, min_refcall_posterior;
         unsigned max_joint_genotypes;
+        bool deduplicate_haplotypes_with_germline_model = true;
     };
     
     TrioCaller() = delete;
@@ -58,6 +59,8 @@ private:
     CallTypeSet do_call_types() const override;
     unsigned do_min_callable_ploidy() const override;
     unsigned do_max_callable_ploidy() const override;
+    
+    std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const override;
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,

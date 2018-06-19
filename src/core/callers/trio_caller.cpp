@@ -79,6 +79,21 @@ unsigned TrioCaller::do_max_callable_ploidy() const
     return std::max({parameters_.maternal_ploidy, parameters_.paternal_ploidy, parameters_.child_ploidy});
 }
 
+std::size_t TrioCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+{
+    if (parameters_.deduplicate_haplotypes_with_germline_model) {
+        if (haplotypes.size() < 2) return 0;
+        CoalescentModel::Parameters model_params {};
+        if (parameters_.germline_prior_model_params) model_params = *parameters_.germline_prior_model_params;
+        Haplotype reference {mapped_region(haplotypes.front()), reference_.get()};
+        CoalescentModel model {std::move(reference), model_params, haplotypes.size(), CoalescentModel::CachingStrategy::none};
+        const CoalescentProbabilityGreater cmp {std::move(model)};
+        return octopus::remove_duplicates(haplotypes, cmp);
+    } else {
+        return Caller::do_remove_duplicates(haplotypes);
+    }
+}
+
 // TrioCaller::Latents
 
 TrioCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
