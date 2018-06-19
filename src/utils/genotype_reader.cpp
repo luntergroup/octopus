@@ -147,7 +147,7 @@ auto extract_genotype(const VcfRecord& call, const SampleName& sample)
         if (is_ref_pad_size_known(allele, call)) {
             const auto allele_pad = num_matching_lhs_bases(call.ref(), allele);
             if (max_ref_pad) {
-                max_ref_pad = std::min(*max_ref_pad, allele_pad);
+                max_ref_pad = std::max(*max_ref_pad, allele_pad);
             } else {
                 max_ref_pad = allele_pad;
             }
@@ -199,7 +199,7 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
                 auto allele_region = expand_lhs(call_region, -pad_size);
                 result.emplace_back(std::move(allele_region), std::move(allele));
                 if (max_ref_pad) {
-                    max_ref_pad = std::min(*max_ref_pad, pad_size);
+                    max_ref_pad = std::max(*max_ref_pad, pad_size);
                 } else {
                     max_ref_pad = pad_size;
                 }
