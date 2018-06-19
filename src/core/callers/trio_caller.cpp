@@ -26,10 +26,21 @@
 #include "utils/map_utils.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/maths.hpp"
-
-#include "timers.hpp"
+#include "exceptions/unimplemented_feature_error.hpp"
 
 namespace octopus {
+
+class BadPloidy : public UnimplementedFeatureError
+{
+    std::string do_help() const override
+    {
+        return "Use the population caller and/or submit a feature request";
+    }
+public:
+    BadPloidy(unsigned max_ploidy)
+    : UnimplementedFeatureError {"trio calling with ploidies greater than " + std::to_string(max_ploidy), "TrioCaller"}
+    {}
+};
 
 TrioCaller::TrioCaller(Caller::Components&& components,
                        Caller::Parameters general_parameters,
@@ -37,8 +48,12 @@ TrioCaller::TrioCaller(Caller::Components&& components,
 : Caller {std::move(components), std::move(general_parameters)}
 , parameters_ {std::move(specific_parameters)}
 {
-    if (parameters_.maternal_ploidy == 0) {
-        throw std::logic_error {"IndividualCaller: ploidy must be > 0"};
+    if (parameters_.maternal_ploidy == 0 || parameters_.paternal_ploidy == 0 || parameters_.child_ploidy == 0) {
+        throw std::logic_error {"TrioCaller: ploidy must be > 0"};
+    }
+    const auto max_ploidy = model::TrioModel::max_ploidy();
+    if (parameters_.maternal_ploidy > max_ploidy || parameters_.paternal_ploidy > max_ploidy || parameters_.child_ploidy > max_ploidy) {
+        throw BadPloidy {max_ploidy};
     }
 }
 
@@ -305,16 +320,20 @@ TrioCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
                                       const Latents& latents) const
 {
     const auto max_ploidy = std::max({parameters_.maternal_ploidy, parameters_.paternal_ploidy, parameters_.child_ploidy});
-    std::vector<std::vector<unsigned>> genotype_indices {};
-    const auto genotypes = generate_all_genotypes(haplotypes, max_ploidy + 1, genotype_indices);
-    const auto germline_prior_model = make_prior_model(haplotypes);
-    DeNovoModel denovo_model {parameters_.denovo_model_params};
-    germline_prior_model->prime(haplotypes);
-    denovo_model.prime(haplotypes);
-    const model::TrioModel model {parameters_.trio, *germline_prior_model, denovo_model,
-                                  TrioModel::Options {parameters_.max_joint_genotypes}};
-    const auto inferences = model.evaluate(genotypes, genotype_indices, haplotype_likelihoods);
-    return octopus::calculate_model_posterior(latents.model_latents.log_evidence, inferences.log_evidence);
+    if (max_ploidy + 1 <= model::TrioModel::max_ploidy()) {
+        std::vector<std::vector<unsigned>> genotype_indices {};
+        const auto genotypes = generate_all_genotypes(haplotypes, max_ploidy + 1, genotype_indices);
+        const auto germline_prior_model = make_prior_model(haplotypes);
+        DeNovoModel denovo_model {parameters_.denovo_model_params};
+        germline_prior_model->prime(haplotypes);
+        denovo_model.prime(haplotypes);
+        const model::TrioModel model {parameters_.trio, *germline_prior_model, denovo_model,
+                                      TrioModel::Options {parameters_.max_joint_genotypes}};
+        const auto inferences = model.evaluate(genotypes, genotype_indices, haplotype_likelihoods);
+        return octopus::calculate_model_posterior(latents.model_latents.log_evidence, inferences.log_evidence);
+    } else {
+        return boost::none;
+    }
 }
 
 std::vector<std::unique_ptr<VariantCall>>
