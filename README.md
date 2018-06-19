@@ -37,7 +37,7 @@ We hope to implement more calling models in the future, including, but not limit
 * Optional:
     * Python3 or greater
 
-#### *Obtaining requirements on OS X*
+#### Obtaining requirements on OS X
 
 On OS X, Clang is recommended. All requirements can be installed using the package manager [Homebrew](http://brew.sh/index.html):
 
@@ -54,7 +54,7 @@ $ brew install python3
 
 Note if you already have any of these packages installed via Homebrew on your system the command will fail, but you can update to the latest version using `brew upgrade`.
 
-#### *Obtaining requirements on Ubuntu*
+#### Obtaining requirements on Ubuntu
 
 Depending on your Ubuntu distribution, some requirements can be installed with `apt-get`. It may be preferable to use GCC as this will simplify installing Boost:
 
@@ -89,7 +89,7 @@ Octopus is available [pre-built for Linux](https://anaconda.org/bioconda/octopus
 
 A package will also be available for OSX once conda-forge and bioconda move to newer versions of gcc and boost.
 
-#### *Quick installation with Python3*
+#### Quick installation with Python3
 
 First clone the git repository in your preferred directory:
 
@@ -129,7 +129,7 @@ $ ./install.py --root
 
 If anything goes wrong with the build process and you need to start again, be sure to add the command `--clean`.
 
-#### *Installing with CMake*
+#### Installing with CMake
 
 If Python3 isn't available, the binaries can be installed manually with [CMake](https://cmake.org):
 
