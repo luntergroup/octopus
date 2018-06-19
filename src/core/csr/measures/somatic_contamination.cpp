@@ -121,16 +121,20 @@ Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, con
                 const auto overlapped_reads = copy_overlapped(p.second, call);
                 if (!overlapped_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
-                    assert(!somatic_genotype.contains(assigned_haplotype));
-                    auto dummy = somatic_genotype;
-                    dummy.emplace(assigned_haplotype);
-                    haplotype_priors[assigned_haplotype] = 0;
-                    const auto support = compute_haplotype_support(dummy, overlapped_reads, haplotype_priors);
-                    haplotype_priors.erase(assigned_haplotype);
-                    for (const auto& somatic : somatic_haplotypes) {
-                        if (support.count(somatic) == 1) {
-                            *result += support.at(somatic).size();
+                    if (!somatic_genotype.contains(assigned_haplotype)) {
+                        auto dummy = somatic_genotype;
+                        dummy.emplace(assigned_haplotype);
+                        haplotype_priors[assigned_haplotype] = 0;
+                        const auto support = compute_haplotype_support(dummy, overlapped_reads, haplotype_priors);
+                        haplotype_priors.erase(assigned_haplotype);
+                        for (const auto& somatic : somatic_haplotypes) {
+                            if (support.count(somatic) == 1) {
+                                *result += support.at(somatic).size();
+                            }
                         }
+                    } else {
+                        // This could happen if we don't call all 'somatic' alleles on the called somatic haplotype.
+                        *result += overlapped_reads.size();
                     }
                 }
             }
