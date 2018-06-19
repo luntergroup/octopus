@@ -730,11 +730,13 @@ PopulationCaller::infer_latents_with_joint_model(const std::vector<Haplotype>& h
                                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     const auto prior_model = make_joint_prior_model(haplotypes);
+    prior_model->prime(haplotypes);
     const model::PopulationModel model {*prior_model, {parameters_.max_joint_genotypes}, debug_log_};
     if (parameters_.ploidies.size() == 1) {
-        auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidies.front());
+        std::vector<GenotypeIndex> genotype_indices;
+        auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidies.front(), genotype_indices);
         if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
-        auto inferences = model.evaluate(samples_, genotypes, haplotype_likelihoods);
+        auto inferences = model.evaluate(samples_, genotypes, genotype_indices, haplotypes, haplotype_likelihoods);
         return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
     } else {
         auto unique_genotypes = generate_unique_genotypes(haplotypes, parameters_.ploidies);
