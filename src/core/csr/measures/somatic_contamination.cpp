@@ -114,7 +114,7 @@ Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, con
         haplotype_priors.reserve(somatic_haplotypes.size() + 1);
         for (const auto& haplotype : somatic_haplotypes) {
             somatic_genotype.emplace(haplotype);
-            haplotype_priors[haplotype] = -3;
+            haplotype_priors[haplotype] = -1;
         }
         for (const auto& sample : normal_samples) {
             for (const auto& p : assignments.at(sample)) {
