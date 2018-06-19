@@ -19,7 +19,7 @@ std::string UnimplementedFeatureError::do_why() const
 
 std::string UnimplementedFeatureError::do_help() const
 {
-    return "ensure the specified path is correct and the file is readable";
+    return "submit a feature request";
 }
 
 std::string UnimplementedFeatureError::do_where() const
