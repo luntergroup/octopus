@@ -19,6 +19,11 @@
 
 namespace octopus { namespace model {
 
+unsigned TrioModel::max_ploidy() noexcept
+{
+    return 3;
+}
+
 TrioModel::TrioModel(const Trio& trio,
                      const PopulationPriorModel& prior_model,
                      const DeNovoModel& mutation_model,

@@ -64,6 +64,8 @@ public:
     
     ~TrioModel() = default;
     
+    static unsigned max_ploidy() noexcept;
+    
     const PopulationPriorModel& prior_model() const noexcept;
     
     InferredLatents evaluate(const GenotypeVector& maternal_genotypes,
