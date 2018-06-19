@@ -960,10 +960,10 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
                     bad_kmers.insert(cycle_origin);
                     cycle_origin = *boost::inv_adjacent_vertices(cycle_origin, graph_).first;
                 }
-                bool refererence_origin {false};
+                bool is_reference_origin {false};
                 if (is_reference(cycle_origin)) {
                     reference_origins.insert(cycle_origin);
-                    refererence_origin = true;
+                    is_reference_origin = true;
                 } else {
                     bad_kmers.insert(cycle_origin);
                 }
@@ -974,7 +974,7 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
                 }
                 if (is_reference(cycle_sink)) {
                     reference_sinks.insert(cycle_sink);
-                    if (refererence_origin) {
+                    if (is_reference_origin) {
                         cyclic_reference_segments.emplace_back(cycle_sink, cycle_origin);
                     } else if (boost::out_degree(cycle_origin, graph_) > 1) {
                         const auto p = boost::out_edges(cycle_origin, graph_);
@@ -994,21 +994,24 @@ void Assembler::remove_all_nonreference_cycles(const bool break_chains)
                             }
                         });
                         if (!reference_tails.empty()) {
+                            Vertex cycle_tail;
                             if (reference_tails.size() == 1) {
-                                const auto& cycle_tail = reference_tails.front();
-                                Edge e; bool present;
-                                std::tie(e, present) = boost::edge(cycle_origin, cycle_tail, graph_);
-                                if (!present) {
-                                    cyclic_reference_segments.emplace_back(cycle_sink, cycle_tail);
-                                } else {
-                                    cyclic_reference_segments.emplace_back(cycle_tail, cycle_sink);
-                                }
+                                cycle_tail = reference_tails.front();
                             } else {
                                 // Just add the rightmost reference vertex
                                 auto itr = std::find_first_of(std::crbegin(reference_vertices_), std::crend(reference_vertices_),
                                                               std::cbegin(reference_tails), std::cend(reference_tails));
                                 assert(itr != std::crend(reference_vertices_));
-                                cyclic_reference_segments.emplace_back(cycle_sink, *itr);
+                                cycle_tail = *itr;
+                            }
+                            const std::array<Vertex, 2> cycle_vertices {cycle_sink, cycle_tail};
+                            auto itr = std::find_first_of(std::cbegin(reference_vertices_), std::cend(reference_vertices_),
+                                                          std::cbegin(cycle_vertices), std::cend(cycle_vertices));
+                            assert(itr != std::cend(reference_vertices_));
+                            if (*itr == cycle_vertices.front()) {
+                                cyclic_reference_segments.emplace_back(cycle_sink, cycle_tail);
+                            } else {
+                                cyclic_reference_segments.emplace_back(cycle_tail, cycle_sink);
                             }
                         }
                     }
