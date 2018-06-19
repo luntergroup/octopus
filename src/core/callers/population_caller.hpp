@@ -39,6 +39,7 @@ public:
         boost::optional<CoalescentModel::Parameters> prior_model_params;
         std::size_t max_joint_genotypes;
         bool use_independent_genotype_priors = false;
+        bool deduplicate_haplotypes_with_germline_model = true;
     };
     
     PopulationCaller() = delete;
@@ -63,6 +64,8 @@ private:
     CallTypeSet do_call_types() const override;
     unsigned do_min_callable_ploidy() const override;
     unsigned do_max_callable_ploidy() const override;
+    
+    std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const override;
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,

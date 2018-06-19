@@ -70,6 +70,21 @@ unsigned PopulationCaller::do_max_callable_ploidy() const
     return *std::max_element(std::cbegin(parameters_.ploidies), std::cend(parameters_.ploidies));
 }
 
+std::size_t PopulationCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+{
+    if (parameters_.deduplicate_haplotypes_with_germline_model) {
+        if (haplotypes.size() < 2) return 0;
+        CoalescentModel::Parameters model_params {};
+        if (parameters_.prior_model_params) model_params = *parameters_.prior_model_params;
+        Haplotype reference {mapped_region(haplotypes.front()), reference_.get()};
+        CoalescentModel model {std::move(reference), model_params, haplotypes.size(), CoalescentModel::CachingStrategy::none};
+        const CoalescentProbabilityGreater cmp {std::move(model)};
+        return octopus::remove_duplicates(haplotypes, cmp);
+    } else {
+        return Caller::do_remove_duplicates(haplotypes);
+    }
+}
+
 // IndividualCaller::Latents public methods
 
 namespace {
