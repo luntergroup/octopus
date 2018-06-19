@@ -377,7 +377,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.min_credible_somatic_frequency,
                                                       params_.max_genotypes,
                                                       params_.max_somatic_haplotypes,
-                                                      params_.normal_contamination_risk
+                                                      params_.normal_contamination_risk,
+                                                      params_.deduplicate_haplotypes_with_caller_model
                                                   });
         }},
         {"trio", [this] () {

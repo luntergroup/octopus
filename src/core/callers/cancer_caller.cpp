@@ -103,6 +103,21 @@ const SampleName& CancerCaller::normal_sample() const
     return *parameters_.normal_sample;
 }
 
+std::size_t CancerCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+{
+    if (parameters_.deduplicate_haplotypes_with_germline_model) {
+        if (haplotypes.size() < 2) return 0;
+        CoalescentModel::Parameters model_params {};
+        if (parameters_.germline_prior_model_params) model_params = *parameters_.germline_prior_model_params;
+        Haplotype reference {mapped_region(haplotypes.front()), reference_.get()};
+        CoalescentModel model {std::move(reference), model_params, haplotypes.size(), CoalescentModel::CachingStrategy::none};
+        const CoalescentProbabilityGreater cmp {std::move(model)};
+        return octopus::remove_duplicates(haplotypes, cmp);
+    } else {
+        return Caller::do_remove_duplicates(haplotypes);
+    }
+}
+
 std::unique_ptr<CancerCaller::Caller::Latents>
 CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const
