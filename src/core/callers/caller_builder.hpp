@@ -57,6 +57,7 @@ public:
     CallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
     CallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
+    CallerBuilder& set_max_genotypes(unsigned max) noexcept;
     CallerBuilder& set_max_joint_genotypes(unsigned max) noexcept;
     CallerBuilder& set_likelihood_model(HaplotypeLikelihoodModel model) noexcept;
     CallerBuilder& set_model_based_haplotype_dedup(bool use) noexcept;
@@ -106,7 +107,7 @@ private:
         Phred<double> min_variant_posterior, min_refcall_posterior;
         boost::optional<double> snp_heterozygosity, indel_heterozygosity;
         Phred<double> min_phase_score;
-        unsigned max_joint_genotypes;
+        unsigned max_genotypes, max_joint_genotypes;
         bool deduplicate_haplotypes_with_caller_model;
         bool use_independent_genotype_priors;
         

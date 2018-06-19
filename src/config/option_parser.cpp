@@ -455,6 +455,10 @@ OptionMap parse_options(const int argc, const char** argv)
     po::bool_switch()->default_value(false),
     "Use a uniform prior model when calculating genotype posteriors")
     
+    ("max-genotypes",
+     po::value<int>()->default_value(5000),
+     "The maximum number of genotypes to evaluate")
+    
     ("max-joint-genotypes",
      po::value<int>()->default_value(1000000),
      "The maximum number of joint genotype vectors to consider when computing joint"
@@ -515,10 +519,6 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-somatic-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
      "Minimum posterior probability (phred scale) to emit a somatic mutation call")
-    
-    ("max-cancer-genotypes",
-     po::value<int>()->default_value(5000),
-     "The maximum number of cancer genotype vectors to evaluate")
     
     ("normal-contamination-risk",
      po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
@@ -987,7 +987,7 @@ void validate(const OptionMap& vm)
         "max-open-read-files", "downsample-above", "downsample-target",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
-        "max-joint-genotypes", "max-somatic-haplotypes", "max-clones"
+        "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",

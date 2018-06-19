@@ -219,9 +219,8 @@ PolycloneCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const H
     auto haploid_inferences = haploid_model.evaluate(haploid_genotypes, haplotype_likelihoods);
     if (debug_log_) stream(*debug_log_) << "Evidence for haploid model is " << haploid_inferences.log_evidence;
     std::vector<Genotype<Haplotype>> polyploid_genotypes; model::SubcloneModel::InferredLatents sublonal_inferences;
-    constexpr std::size_t max_genotypes {10'000};
     fit_sublone_model(haplotypes, haplotype_likelihoods, *genotype_prior_model, sample(), parameters_.max_clones,
-                      haploid_inferences.log_evidence, parameters_.clonality_prior, max_genotypes, polyploid_genotypes,
+                      haploid_inferences.log_evidence, parameters_.clonality_prior, parameters_.max_genotypes, polyploid_genotypes,
                       sublonal_inferences, debug_log_);
     if (debug_log_) stream(*debug_log_) << "There are " << polyploid_genotypes.size() << " candidate polyploid genotypes";
     using std::move;

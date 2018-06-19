@@ -1535,18 +1535,14 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_snv_denovo_mutation_rate(options.at("snv-denovo-mutation-rate").as<float>());
         vc_builder.set_indel_denovo_mutation_rate(options.at("indel-denovo-mutation-rate").as<float>());
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
+    } else if (caller == "polyclone") {
+        vc_builder.set_max_clones(as_unsigned("max-clones", options));
     }
     vc_builder.set_model_filtering(allow_model_filtering(options));
-    if (caller == "cancer") {
-        vc_builder.set_max_joint_genotypes(as_unsigned("max-cancer-genotypes", options));
-    } else {
-        vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
-    }
+    vc_builder.set_max_genotypes(as_unsigned("max-genotypes", options));
+    vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
-    }
-    if (caller == "polyclone") {
-        vc_builder.set_max_clones(as_unsigned("max-clones", options));
     }
     vc_builder.set_likelihood_model(make_likelihood_model(options));
     return CallerFactory {std::move(vc_builder)};

@@ -151,6 +151,12 @@ CallerBuilder& CallerBuilder::set_indel_heterozygosity(double heterozygosity) no
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_max_genotypes(unsigned max) noexcept
+{
+    params_.max_genotypes = max;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_max_joint_genotypes(unsigned max) noexcept
 {
     params_.max_joint_genotypes = max;
@@ -369,7 +375,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.min_expected_somatic_frequency,
                                                       params_.credible_mass,
                                                       params_.min_credible_somatic_frequency,
-                                                      params_.max_joint_genotypes,
+                                                      params_.max_genotypes,
                                                       params_.max_somatic_haplotypes,
                                                       params_.normal_contamination_risk
                                                   });
@@ -398,7 +404,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                          params_.min_variant_posterior,
                                                          params_.min_refcall_posterior,
                                                          params_.deduplicate_haplotypes_with_caller_model,
-                                                         params_.max_clones
+                                                         params_.max_clones,
+                                                         params_.max_genotypes
                                                      });
         }}
     };
