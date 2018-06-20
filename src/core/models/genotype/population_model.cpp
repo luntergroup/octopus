@@ -80,10 +80,12 @@ auto make_inverse_genotype_table(const std::vector<Haplotype>& haplotypes,
 auto make_inverse_genotype_table(const std::vector<GenotypeIndex>& genotype_indices, const std::size_t num_haplotypes)
 {
     InverseGenotypeTable result(num_haplotypes);
-    for (const auto& genotype : genotype_indices) {
-        for (auto idx : genotype) {
-            if (result[idx].empty() || result[idx].back() != idx) {
-                result[idx].push_back(idx);
+    const auto num_genotypes = genotype_indices.size();
+    for (auto& entry : result) entry.reserve(num_genotypes / 2);
+    for (std::size_t genotype_idx {0}; genotype_idx < num_genotypes; ++genotype_idx) {
+        for (auto idx : genotype_indices[genotype_idx]) {
+            if (result[idx].empty() || result[idx].back() != genotype_idx) {
+                result[idx].push_back(genotype_idx);
             }
         }
     }
@@ -123,7 +125,7 @@ struct ModelConstants
     {}
     ModelConstants(const std::vector<Haplotype>& haplotypes,
                    const std::vector<Genotype<Haplotype>>& genotypes,
-                   const std::vector<std::vector<unsigned>>& genotype_indices,
+                   const std::vector<GenotypeIndex>& genotype_indices,
                    const GenotypeLogLikelihoodMatrix& genotype_log_likilhoods)
     : haplotypes {haplotypes}
     , genotypes {genotypes}
