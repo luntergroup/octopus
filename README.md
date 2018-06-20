@@ -13,19 +13,15 @@
 
 Octopus is a mapping-based variant caller that implements several calling models within a unified haplotype-aware framework. Octopus takes inspiration from particle filtering by constructing a tree of haplotypes and dynamically pruning and extending the tree based on haplotype posterior probabilities in a sequential manner. This allows octopus to implicitly consider all possible haplotypes at a given loci in reasonable time.
 
-There are currently four calling models implemented:
+There are currently five calling models implemented:
 
-- An individual model for calling **germline variants** in a single healthy individual.
-- A tumour model for calling germline variants and **somatic mutations** in one or more tumour samples from a single individual.
-- A trio model for calling germline variants and **_de novo_** mutations in a parent-offspring trio.
-- A polyclone model for calling variants in samples with an unknown mixture of haploid clones, such a bacteria or viral samples.
+- **individual**: call germline variants in a single healthy individual.
+- **population**: jointly call germline variants in small cohorts.
+- **cancer**: call germline and somatic mutations tumour samples.
+- **trio**: call germline and _de novo_ mutations in a parent-offspring trio.
+- **polyclone**: call variants in samples with an unknown mixture of haploid clones, such a bacteria or viral samples.
 
 Octopus is currently able to call SNVs, small-medium sized indels, small complex rearrangements, and micro-inversions.
-
-We hope to implement more calling models in the future, including, but not limited to:
-
-- A population model for calling germline variants from multiple healthy individuals within a population.
-- A pedigree model for calling germline and *de novo* mutations in multiple healthy individuals from a known pedigree.
 
 ## Requirements
 * A C++14 compiler with SSE2 support
