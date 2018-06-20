@@ -1540,7 +1540,11 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     }
     vc_builder.set_model_filtering(allow_model_filtering(options));
     vc_builder.set_max_genotypes(as_unsigned("max-genotypes", options));
-    vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
+    if (is_fast_mode(options)) {
+        vc_builder.set_max_joint_genotypes(10'000);
+    } else {
+        vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
+    }
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
     }
