@@ -64,16 +64,14 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
 bool is_call_filtering_requested(const OptionMap& options) noexcept;
 
 std::unique_ptr<VariantCallFilterFactory>
-make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
-                         const OptionMap& options,
+make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
                          boost::optional<fs::path> temp_directory = boost::none);
 
 bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept;
 
 bool keep_unfiltered_calls(const OptionMap& options) noexcept;
 
-ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
-                                    const OptionMap& options);
+ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options);
 
 boost::optional<fs::path> get_output_path(const OptionMap& options);
 
@@ -86,6 +84,8 @@ bool is_csr_training_mode(const OptionMap& options);
 boost::optional<fs::path> filter_request(const OptionMap& options);
 
 boost::optional<fs::path> bamout_request(const OptionMap& options);
+
+unsigned estimate_max_open_files(const OptionMap& options);
 
 } // namespace options
 } // namespace octopus

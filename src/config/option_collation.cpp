@@ -543,7 +543,7 @@ public:
     MissingReadPathFile(fs::path p) : MissingFileError {std::move(p), "read path"} {};
 };
 
-void log_and_remove_duplicates(std::vector<fs::path>& paths, const std::string& type)
+void remove_duplicates(std::vector<fs::path>& paths, const std::string& type, const bool log = true)
 {
     std::sort(std::begin(paths), std::end(paths));
     const auto first_duplicate = std::adjacent_find(std::begin(paths), std::end(paths));
@@ -559,24 +559,26 @@ void log_and_remove_duplicates(std::vector<fs::path>& paths, const std::string& 
         paths.erase(std::unique(first_duplicate, std::end(paths)), std::end(paths));
         const auto num_unique_paths = paths.size();
         const auto num_duplicate_paths = num_paths - num_unique_paths;
-        logging::WarningLogger warn_log {};
-        auto warn_log_stream = stream(warn_log);
-        warn_log_stream << "Ignoring " << num_duplicate_paths << " duplicate " << type << " path";
-        if (num_duplicate_paths > 1) {
-            warn_log_stream << 's';
-        }
-        warn_log_stream << ": ";
-        std::for_each(std::cbegin(duplicates), std::prev(std::cend(duplicates)), [&] (const auto& path) {
-            warn_log_stream << path << ", ";
-        });
-        warn_log_stream << duplicates.back();
-        if (num_duplicate_paths > duplicates.size()) {
-            warn_log_stream << " (showing unique duplicates)";
+        if (log) {
+            logging::WarningLogger warn_log {};
+            auto warn_log_stream = stream(warn_log);
+            warn_log_stream << "Ignoring " << num_duplicate_paths << " duplicate " << type << " path";
+            if (num_duplicate_paths > 1) {
+                warn_log_stream << 's';
+            }
+            warn_log_stream << ": ";
+            std::for_each(std::cbegin(duplicates), std::prev(std::cend(duplicates)), [&] (const auto& path) {
+                warn_log_stream << path << ", ";
+            });
+            warn_log_stream << duplicates.back();
+            if (num_duplicate_paths > duplicates.size()) {
+                warn_log_stream << " (showing unique duplicates)";
+            }
         }
     }
 }
 
-std::vector<fs::path> get_read_paths(const OptionMap& options)
+std::vector<fs::path> get_read_paths(const OptionMap& options, const bool log = true)
 {
     using namespace utils;
     std::vector<fs::path> result {};
@@ -594,7 +596,7 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
                 throw e;
             }
             auto paths = get_resolved_paths_from_file(path_to_read_paths, options);
-            if (paths.empty()) {
+            if (log && paths.empty()) {
                 logging::WarningLogger log {};
                 stream(log) << "The read path file you specified " << path_to_read_paths
                             << " in the command line option '--reads-file' is empty";
@@ -602,8 +604,13 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
             append(std::move(paths), result);
         }
     }
-    log_and_remove_duplicates(result, "read");
+    remove_duplicates(result, "read", log);
     return result;
+}
+
+unsigned count_read_paths(const OptionMap& options)
+{
+    return get_read_paths(options, false).size();
 }
 
 ReadManager make_read_manager(const OptionMap& options)
@@ -940,7 +947,7 @@ auto make_variant_generator_builder(const OptionMap& options)
                 utils::append(std::move(file_sources_paths), source_paths);
             }
         }
-        log_and_remove_duplicates(source_paths, "source variant");
+        remove_duplicates(source_paths, "source variant");
         for (const auto& source_path : source_paths) {
             if (!fs::exists(source_path)) {
                 throw MissingSourceVariantFile {source_path};
@@ -1589,8 +1596,7 @@ std::set<std::string> get_training_measures(const OptionMap& options)
 }
 
 std::unique_ptr<VariantCallFilterFactory>
-make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
-                         const OptionMap& options,
+make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
                          boost::optional<fs::path> temp_directory)
 {
     if (is_set("forest-file", options)) {
@@ -1642,8 +1648,7 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }
 
-ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
-                                    const OptionMap& options)
+ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options)
 {
     if (use_calling_read_pipe_for_call_filtering(options)) {
         return make_read_pipe(read_manager, std::move(samples), options);
@@ -1719,6 +1724,23 @@ boost::optional<fs::path> bamout_request(const OptionMap& options)
         return resolve_path(options.at("bamout").as<fs::path>(), options);
     }
     return boost::none;
+}
+
+unsigned max_open_read_files(const OptionMap& options)
+{
+    return 2 * std::min(as_unsigned("max-open-read-files", options), count_read_paths(options));
+}
+
+unsigned estimate_max_open_files(const OptionMap& options)
+{
+    unsigned result {0};
+    result += max_open_read_files(options);
+    if (get_output_path(options)) result += 2;
+    result += is_debug_mode(options);
+    result += is_trace_mode(options);
+    result += is_call_filtering_requested(options);
+    result += is_legacy_vcf_requested(options);
+    return result;
 }
 
 } // namespace options
