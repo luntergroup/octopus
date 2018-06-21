@@ -179,6 +179,8 @@ set(UTILS_SOURCES
     utils/thread_pool.cpp
     utils/concat.hpp
     utils/select_top_k.hpp
+    utils/system_utils.hpp
+    utils/system_utils.cpp
 )
 
 set(CORE_SOURCES
