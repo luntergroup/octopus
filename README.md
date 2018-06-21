@@ -96,31 +96,31 @@ $ git clone -b master https://github.com/luntergroup/octopus.git && cd octopus
 The easiest way to install octopus from source is with the Python3 install script. If your default compiler satisfies the minimum requirements just execute:
 
 ```shell
-$ ./install.py
+$ ./scripts/install.py
 ```
 
 otherwise explicitly specify the compiler to use:
 
 ```shell
-$ ./install.py --cxx_compiler /path/to/cpp/compiler # or just the compiler name if on your PATH
+$ ./scripts/install.py --cxx_compiler /path/to/cpp/compiler # or just the compiler name if on your PATH
 ```
 
 For example, if the requirement instructions above were used:
 
 ```shell
-$ ./install.py --cxx_compiler clang++-4.0
+$ ./scripts/install.py --cxx_compiler clang++-4.0
 ```
 
 On some systems, you may also need to specify a C compiler which is the same version as your C++ compiler, otherwise you'll get lots of link errors. This can be done with the `--c_compiler` option:
 
 ```shell
-$ ./install.py -cxx g++-7 -c gcc-7 
+$ ./scripts/install.py -cxx g++-7 -c gcc-7 
 ```
 
 By default this installs to `/bin` relative to where you installed octopus. To install to a root directory (e.g. `/usr/local/bin`) use:
 
 ```shell
-$ ./install.py --root
+$ ./scripts/install.py --root
 ```
 
 If anything goes wrong with the build process and you need to start again, be sure to add the command `--clean`.
