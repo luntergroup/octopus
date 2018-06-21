@@ -225,11 +225,19 @@ auto marginalise(const ProbabilityVector& distribution, const VBGenotypeVector<K
                               });
 }
 
+template <typename T1, typename T2>
+auto inner_product(const T1& lhs, const T2& rhs) noexcept
+{
+    assert(std::distance(std::cbegin(lhs), std::cend(lhs)) == std::distance(std::cbegin(rhs), std::cend(rhs)));
+    using T = typename T1::value_type;
+    return std::inner_product(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), T {0});
+}
+
 template <std::size_t K>
 auto marginalise(const ProbabilityVector& distribution, const VBInverseGenotypeVector<K>& likelihoods,
                  const unsigned k, const std::size_t n) noexcept
 {
-    return std::inner_product(std::cbegin(distribution), std::cend(distribution), std::cbegin(likelihoods[k][n]), 0.0);
+    return inner_product(distribution, likelihoods[k][n]);
 }
 
 template <std::size_t K, typename VBLikelihoodVector_>
@@ -342,7 +350,7 @@ void update_alphas(VBAlphaVector<K>& alphas, const VBAlphaVector<K>& prior_alpha
 inline auto marginalise(const VBTau& responsabilities, const VBReadLikelihoodArray& likelihoods) noexcept
 {
     assert(responsabilities.size() == likelihoods.size()); // num reads
-    return std::inner_product(std::cbegin(responsabilities), std::cend(responsabilities), std::cbegin(likelihoods), 0.0);
+    return inner_product(responsabilities, likelihoods);
 }
 
 template <std::size_t K>
