@@ -160,7 +160,8 @@ void CancerCaller::fit_tumour_model(Latents& latents, const HaplotypeLikelihoodC
             if (latents.tumour_model_inferences_.approx_log_evidence <= prev_tumour_latents.approx_log_evidence) {
                 break;
             }
-        } else if (latents.tumour_model_inferences_.approx_log_evidence < latents.germline_model_inferences_.log_evidence) {
+        } else if (latents.tumour_model_inferences_.approx_log_evidence < std::max(latents.germline_model_inferences_.log_evidence,
+                                                                                   latents.cnv_model_inferences_.approx_log_evidence)) {
             break;
         }
         if (latents.haplotypes_.get().size() <= somatic_ploidy + 1) break;
