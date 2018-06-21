@@ -14,6 +14,7 @@
 #include "config/option_collation.hpp"
 #include "core/octopus.hpp"
 #include "utils/timing.hpp"
+#include "utils/system_utils.hpp"
 #include "utils/string_utils.hpp"
 #include "exceptions/error.hpp"
 #include "logging/error_handler.hpp"
@@ -52,6 +53,19 @@ std::string to_string(const int argc, const char** argv)
     return utils::join(arguements, ' ');
 }
 
+bool could_exceed_open_file_limit(const OptionMap& options)
+{
+    return options::estimate_max_open_files(options) >= get_max_open_files();
+}
+
+void sanity_check(const OptionMap& options)
+{
+    logging::WarningLogger warn_log {};
+    if (could_exceed_open_file_limit(options)) {
+        warn_log << "Detected potential to exceed open file limit. Consult your OS documentation if errors occur!";
+    }
+}
+
 } // namespace
 
 int main(const int argc, const char** argv)
@@ -68,13 +82,13 @@ int main(const int argc, const char** argv)
         log_program_end();
         return EXIT_FAILURE;
     }
-    
     if (is_run_command(options)) {
         try {
             init_common(options);
             log_program_startup();
             logging::InfoLogger info_log {};
             const auto start = std::chrono::system_clock::now();
+            sanity_check(options);
             auto components = collate_genome_calling_components(options);
             auto end = std::chrono::system_clock::now();
             using utils::TimeInterval;
@@ -94,6 +108,5 @@ int main(const int argc, const char** argv)
             return EXIT_FAILURE;
         }
     }
-    
     return EXIT_SUCCESS;
 }
