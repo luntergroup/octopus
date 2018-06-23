@@ -5,13 +5,14 @@
 #define error_handler_hpp
 
 #include <exception>
+#include <new>
 
 #include "exceptions/error.hpp"
 
 namespace octopus {
 
 void log_error(const Error& error);
-
+void log_error(const std::bad_alloc& error);
 void log_error(const std::exception& error);
 
 void log_unknown_error();

@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cctype>
 
+#include "exceptions/system_error.hpp"
 #include "config/config.hpp"
 #include "utils/string_utils.hpp"
 #include "logging.hpp"
@@ -95,6 +96,22 @@ void log_error(const Error& error)
     log_error_details(error, log);
     log_empty_line(log);
     log_error_help(error, log);
+}
+
+class BadAlloc : public SystemError
+{
+    std::string do_where() const override { return "unknown"; }
+    std::string do_why() const override { return "system could not satisfy memory request"; }
+    std::string do_help() const override
+    {
+        return "ensure the system sufficient resources or submit an error report";
+    }
+};
+
+void log_error(const std::bad_alloc& error)
+{
+    const BadAlloc e {};
+    log_error(e);
 }
 
 class UnclassifiedError : public Error
