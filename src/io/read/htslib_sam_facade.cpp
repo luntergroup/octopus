@@ -488,6 +488,24 @@ HtslibSamFacade::extract_read_positions(const std::vector<SampleName>& samples, 
 
 // fetch_reads
 
+namespace {
+
+template <typename Container>
+bool try_reserve(Container& c, const std::size_t max, const std::size_t min)
+{
+    assert(max >= min);
+    if (max == 0) return true;
+    for (auto curr = max; curr >= min; curr /= 2) {
+        try {
+            c.reserve(curr);
+            return true;
+        } catch (const std::bad_alloc& e) {}
+    }
+    return false;
+}
+
+} // namespace
+
 HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion& region) const
 {
     SampleReadMap result {samples_.size()};
@@ -497,7 +515,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
     HtslibIterator it {*this, region};
     for (const auto& sample : samples_) {
         auto p = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
-        p.first->second.reserve(defaultReserve_);
+        try_reserve(p.first->second, defaultReserve_, defaultReserve_ / 10);
     }
     while (++it) {
         try {
@@ -518,7 +536,7 @@ HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleName& sa
     if (samples_.size() == 1) return fetch_all_reads(region);
     HtslibIterator it {*this, region};
     ReadContainer result {};
-    result.reserve(defaultReserve_);
+    try_reserve(result, defaultReserve_, defaultReserve_ / 10);
     while (++it) {
         if (sample_names_.at(it.read_group()) == sample) {
             try {
@@ -547,7 +565,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
             auto p = result.emplace(std::piecewise_construct,
                                     std::forward_as_tuple(sample),
                                     std::forward_as_tuple());
-            p.first->second.reserve(defaultReserve_);
+            try_reserve(p.first->second, defaultReserve_, defaultReserve_ / 10);
         }
     }
     if (result.empty()) return result; // no matching samples
@@ -612,7 +630,7 @@ HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_all_reads(const GenomicReg
 {
     HtslibIterator it {*this, region};
     ReadContainer result {};
-    result.reserve(defaultReserve_);
+    try_reserve(result, defaultReserve_, defaultReserve_ / 10);
     while (++it) {
         try {
             result.emplace_back(*it);
