@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef unassigned_read_fraction_hpp
-#define unassigned_read_fraction_hpp
+#ifndef ambiguous_read_fraction_hpp
+#define ambiguous_read_fraction_hpp
 
 #include <string>
 #include <vector>

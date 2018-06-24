@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "unassigned_read_fraction.hpp"
+#include "ambiguous_read_fraction.hpp"
 
 #include <algorithm>
 #include <iterator>

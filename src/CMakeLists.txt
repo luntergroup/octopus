@@ -304,8 +304,8 @@ set(CORE_SOURCES
     core/csr/measures/measures_fwd.hpp
     core/csr/measures/measure_factory.hpp
     core/csr/measures/measure_factory.cpp
-    core/csr/measures/unassigned_read_fraction.hpp
-    core/csr/measures/unassigned_read_fraction.cpp
+    core/csr/measures/ambiguous_read_fraction.hpp
+    core/csr/measures/ambiguous_read_fraction.cpp
     core/csr/measures/median_base_quality.hpp
     core/csr/measures/median_base_quality.cpp
     core/csr/measures/mismatch_count.hpp

@@ -20,7 +20,7 @@
 #include "core/csr/measures/clipped_read_fraction.hpp"
 #include "core/csr/measures/is_denovo.hpp"
 #include "core/csr/measures/is_somatic.hpp"
-#include "core/csr/measures/unassigned_read_fraction.hpp"
+#include "core/csr/measures/ambiguous_read_fraction.hpp"
 #include "core/csr/measures/median_base_quality.hpp"
 #include "core/csr/measures/mismatch_count.hpp"
 #include "core/csr/measures/mismatch_fraction.hpp"
