@@ -381,8 +381,9 @@ void rebase_not_overlapped(AlignedRead& read, const GenomicRegion& haplotype_reg
         assert(!padded_haplotype_cigar.empty());
         if (is_insertion(padded_haplotype_cigar.front())) {
             const auto called_insertion_size = padded_haplotype_cigar.front().size();
-            const auto supported_insertion_size = called_insertion_size - begin_distance(rebased_read_region, read);
-            assert(supported_insertion_size <= padded_haplotype_cigar.front().size());
+            const auto rebase_shift = static_cast<GenomicRegion::Size>(begin_distance(rebased_read_region, read));
+            const auto supported_insertion_size = called_insertion_size - std::min(rebase_shift, called_insertion_size);
+            assert(supported_insertion_size <= called_insertion_size);
             if (supported_insertion_size > 0) {
                 padded_haplotype_cigar.front().set_size(supported_insertion_size);
                 if (is_match(padded_haplotype_cigar.back())) {
