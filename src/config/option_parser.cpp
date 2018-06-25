@@ -501,7 +501,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Expected SNV somatic mutation rate, per megabase pair, for this sample")
     
     ("somatic-indel-mutation-rate",
-     po::value<float>()->default_value(1e-05, "0.00001"),
+     po::value<float>()->default_value(1e-06, "0.000001"),
      "Expected INDEL somatic mutation rate, per megabase pair, for this sample")
     
     ("min-expected-somatic-frequency",
