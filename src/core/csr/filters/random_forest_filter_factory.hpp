@@ -29,6 +29,8 @@ public:
     RandomForestFilterFactory() = default;
     
     RandomForestFilterFactory(Path ranger_forest, Path temp_directory = "/tmp");
+    RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path refcall_ranger_forest,
+                              Path temp_directory = "/tmp");
     
     RandomForestFilterFactory(const RandomForestFilterFactory&)            = default;
     RandomForestFilterFactory& operator=(const RandomForestFilterFactory&) = default;
@@ -39,7 +41,8 @@ public:
 
 private:
     std::vector<MeasureWrapper> measures_;
-    Path ranger_forest_, temp_directory_;
+    std::vector<Path> ranger_forests_;
+    Path temp_directory_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
     std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,
