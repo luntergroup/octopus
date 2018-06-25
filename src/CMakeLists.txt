@@ -270,6 +270,8 @@ set(CORE_SOURCES
     core/csr/filters/random_forest_filter_factory.cpp
     core/csr/filters/conditional_random_forest_filter.hpp
     core/csr/filters/conditional_random_forest_filter.cpp
+    core/csr/filters/somatic_random_forest_filter.hpp
+    core/csr/filters/somatic_random_forest_filter.cpp
     
     core/csr/measures/measure.hpp
     core/csr/measures/measure.cpp
