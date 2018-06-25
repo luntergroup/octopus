@@ -133,7 +133,7 @@ def main(options):
     ranger_header = ' '.join(options.measures + ['TP'])
     add_header(master_data_path, ranger_header)
     ranger_out_prefix = join(options.out, "ranger_octopus")
-    run_ranger_training(options.ranger, master_data_path, options.trees, options.threads, ranger_out_prefix)
+    run_ranger_training(options.ranger, master_data_path, options.trees, options.min_node_size, options.threads, ranger_out_prefix)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
