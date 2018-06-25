@@ -8,6 +8,7 @@
 
 #include "measures_fwd.hpp"
 #include "exceptions/user_error.hpp"
+#include "utils/map_utils.hpp"
 
 namespace octopus { namespace csr {
 
@@ -69,6 +70,15 @@ MeasureWrapper make_measure(const std::string& name)
         throw UnknownMeasure {name};
     }
     return measure_makers.at(name)();
+}
+
+std::vector<std::string> get_all_measure_names()
+{
+    static MeasureMakerMap measure_makers {};
+    if (measure_makers.empty()) {
+        init(measure_makers);
+    }
+    return extract_sorted_keys(measure_makers);
 }
 
 } // namespace csr
