@@ -12,7 +12,7 @@ namespace octopus { namespace csr {
 
 SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
                                                                            std::vector<MeasureWrapper> measures,
-                                                                           Path germline_forest, Path somatic_forest, Path refcall_forest,
+                                                                           Path germline_forest, Path somatic_forest,
                                                                            OutputOptions output_config,
                                                                            ConcurrencyPolicy threading,
                                                                            Path temp_directory,
@@ -26,11 +26,11 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
         if (boost::get<bool>(measures.front())) {
             return 1;
         } else if (boost::get<bool>(measures.back())) {
-            return 2;
+            return 1;
         } else {
             return 0;
         }},
-    {std::move(germline_forest), std::move(somatic_forest), std::move(refcall_forest)},
+    {std::move(germline_forest), std::move(somatic_forest)},
     std::move(output_config),
     std::move(threading),
     std::move(temp_directory),

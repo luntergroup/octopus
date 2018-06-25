@@ -28,9 +28,8 @@ public:
     
     RandomForestFilterFactory() = default;
     
-    RandomForestFilterFactory(Path ranger_forest, Path temp_directory = "/tmp");
-    RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path refcall_ranger_forest,
-                              Path temp_directory = "/tmp");
+    RandomForestFilterFactory(Path ranger_forest, Path temp_directory);
+    RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path temp_directory);
     
     RandomForestFilterFactory(const RandomForestFilterFactory&)            = default;
     RandomForestFilterFactory& operator=(const RandomForestFilterFactory&) = default;

@@ -25,7 +25,7 @@ public:
     
     SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
                                          std::vector<MeasureWrapper> measures,
-                                         Path germline_forest, Path somatic_forest, Path refcall_forest,
+                                         Path germline_forest, Path somatic_forest,
                                          OutputOptions output_config,
                                          ConcurrencyPolicy threading,
                                          Path temp_directory = "/tmp",
