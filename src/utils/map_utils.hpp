@@ -45,25 +45,35 @@ auto extract_values(const MapType& map)
     return result;
 }
 
+template <typename K, typename T>
+auto extract_sorted_keys(const std::map<K, T>& map)
+{
+    return extract_keys(map);
+}
+
+template <typename MapType>
+auto extract_sorted_keys(const MapType& map)
+{
+    static_assert(is_map<MapType>, "MapType must be a map type");
+    auto result = extract_keys(map);
+    std::sort(std::begin(result), std::end(result));
+    return result;
+}
+
 template <typename MapType>
 auto extract_value_sorted_keys(const MapType& map)
 {
     static_assert(is_map<MapType>, "MapType must be a map type");
-    
     std::vector<std::pair<typename MapType::mapped_type, typename MapType::key_type>> pairs {};
     pairs.reserve(map.size());
-    
     std::transform(std::cbegin(map), std::cend(map), std::back_inserter(pairs),
                    [] (const auto& p) { return std::make_pair(p.second, p.first); });
     std::sort(std::begin(pairs), std::end(pairs),
               [] (const auto& lhs, const auto& rhs) { return lhs.first > rhs.first; });
-    
     std::vector<typename MapType::key_type> result {};
     result.reserve(pairs.size());
-    
     std::transform(std::cbegin(pairs), std::cend(pairs), std::back_inserter(result),
                    [] (const auto& p) { return p.second; });
-    
     return result;
 }
 
