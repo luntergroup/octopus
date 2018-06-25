@@ -120,13 +120,30 @@ void RandomForestFilter::record(const std::size_t call_idx, std::size_t sample_i
     if (call_idx >= num_records_) ++num_records_;
 }
 
-double get_prob_false(std::string& prediction_line)
+namespace {
+
+bool read_header(std::ifstream& prediction_file)
+{
+    skip_lines(prediction_file);
+    std::string order;
+    std::getline(prediction_file, order);
+    skip_lines(prediction_file);
+    return order.front() == '1';
+}
+
+static double get_prob_false(std::string& prediction_line, const bool tp_first)
 {
     using std::cbegin; using std::cend;
-    prediction_line.erase(cbegin(prediction_line), std::next(std::find(cbegin(prediction_line), cend(prediction_line), ' ')));
-    prediction_line.erase(std::find(cbegin(prediction_line), cend(prediction_line), ' '), cend(prediction_line));
+    if (tp_first) {
+        prediction_line.erase(cbegin(prediction_line), std::next(std::find(cbegin(prediction_line), cend(prediction_line), ' ')));
+        prediction_line.erase(std::find(cbegin(prediction_line), cend(prediction_line), ' '), cend(prediction_line));
+    } else {
+        prediction_line.erase(std::find(cbegin(prediction_line), cend(prediction_line), ' '), cend(prediction_line));
+    }
     return boost::lexical_cast<double>(prediction_line);
 }
+
+} // namespace
 
 void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
@@ -144,12 +161,12 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
         forest_->run(false);
         forest_->writePredictionFile();
         std::ifstream prediction_file {ranger_prediction_fname.string()};
-        skip_lines(prediction_file, 3); // header
+        const auto tp_first = read_header(prediction_file);
         std::string line;
         std::size_t i {0};
         while (std::getline(prediction_file, line)) {
             if (!line.empty()) {
-                data_buffer_[i++].push_back(get_prob_false(line));
+                data_buffer_[i++].push_back(get_prob_false(line, tp_first));
             }
         }
         boost::filesystem::remove(file.path);
