@@ -44,13 +44,13 @@ def is_missing(x):
     x = float(x)
     return np.isnan(x)
 
-def to_str(x, missing_value=0):
+def to_str(x, missing_value):
     if is_missing(x):
         return str(missing_value)
     else:
         return str(x)
 
-def get_field(field, rec, missing_value=0):
+def get_field(field, rec, missing_value):
     if field == 'QUAL':
         return to_str(rec.qual, missing_value)
     elif field == 'GQ':
@@ -64,7 +64,7 @@ def get_field(field, rec, missing_value=0):
 def subset(vcf_in_path, vcf_out_path, bed_regions):
     call(['bcftools', 'view', '-R', bed_regions, '-O', 'z', '-o', vcf_out_path, vcf_in_path])
 
-def make_ranger_data(octopus_vcf_path, measures, is_tp, out, missing_value=0):
+def make_ranger_data(octopus_vcf_path, measures, is_tp, out, missing_value):
     vcf = VariantFile(octopus_vcf_path)
     with open(out, 'w') as ranger_dat:
         datwriter = csv.writer(ranger_dat, delimiter=' ')
@@ -114,13 +114,13 @@ def main(options):
         tp_train_vcf_path = tp_vcf_path.replace("tp.vcf", "tp.train.vcf")
         subset(tp_vcf_path, tp_train_vcf_path, options.regions)
         tp_data_path = tp_train_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(tp_train_vcf_path, options.measures, True, tp_data_path)
+        make_ranger_data(tp_train_vcf_path, options.measures, True, tp_data_path, options.missing_value)
         data_paths.append(tp_data_path)
         fp_vcf_path = join(rtg_eval, "fp.vcf.gz")
         fp_train_vcf_path = fp_vcf_path.replace("fp.vcf", "fp.train.vcf")
         subset(fp_vcf_path, fp_train_vcf_path, options.regions)
         fp_data_path = fp_train_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(fp_train_vcf_path, options.measures, False, fp_data_path)
+        make_ranger_data(fp_train_vcf_path, options.measures, False, fp_data_path, options.missing_value)
         data_paths.append(fp_data_path)
         tmp_paths += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_path = join(options.out, "ranger_train_master.dat")
@@ -134,6 +134,7 @@ def main(options):
     add_header(master_data_path, ranger_header)
     ranger_out_prefix = join(options.out, "ranger_octopus")
     run_ranger_training(options.ranger, master_data_path, options.trees, options.min_node_size, options.threads, ranger_out_prefix)
+    remove(ranger_out_prefix + ".confusion")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -146,7 +147,7 @@ if __name__ == '__main__':
                         type=str,
                         required=True,
                         help='Input BAM files')
-    parser.add_argument('--regions',
+    parser.add_argument('-T', '--regions',
                         type=str,
                         required=True,
                         help='BED files containing regions to call')
@@ -194,5 +195,9 @@ if __name__ == '__main__':
                         type=int,
                         default=1,
                         help='Number of threads for octopus')
+    parser.add_argument('--missing_value',
+                        type=float,
+                        default=-1,
+                        help='Value for missing measures')
     parsed, unparsed = parser.parse_known_args()
     main(parsed)

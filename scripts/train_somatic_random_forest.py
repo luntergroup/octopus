@@ -91,13 +91,13 @@ def is_missing(x):
     x = float(x)
     return np.isnan(x)
 
-def to_str(x, missing_value=0):
+def to_str(x, missing_value):
     if is_missing(x):
         return str(missing_value)
     else:
         return str(x)
 
-def get_data(rec, features, n_samples, missing_value=0):
+def get_data(rec, features, n_samples, missing_value):
     result = [[] for _ in range(n_samples)]
     for feature in features:
         value = get_value(rec, feature)
@@ -110,9 +110,10 @@ def get_data(rec, features, n_samples, missing_value=0):
                 d.append(value_str)
     return result
 
-def make_ranger_data(octopus_vcf_path, measures, is_tp, out, missing_value=0):
+def make_ranger_data(octopus_vcf_path, measures, is_tp, out, missing_value):
     vcf = VariantFile(octopus_vcf_path)
     n_samples = len(vcf.header.samples)
+    n_records = 0
     with open(out, 'a') as ranger_dat:
         datwriter = csv.writer(ranger_dat, delimiter=' ')
         for rec in vcf:
@@ -122,6 +123,8 @@ def make_ranger_data(octopus_vcf_path, measures, is_tp, out, missing_value=0):
                 else:
                     row.append('0')
                 datwriter.writerow(row)
+                n_records += 1
+    return n_records
 
 def concat(filenames, outpath):
     with open(outpath, 'w') as outfile:
@@ -156,13 +159,18 @@ def main(options):
     remove(somatic_vcf_path)
     remove(somatic_vcf_path + ".tbi")
     master_data_path = join(options.out, "ranger_train_master.dat")
-    make_ranger_data(tp_vcf_path, options.measures, True, master_data_path)
-    make_ranger_data(fp_vcf_path, options.measures, False, master_data_path)
+    num_tps = make_ranger_data(tp_vcf_path, options.measures, True, master_data_path, options.missing_value)
+    num_fps = make_ranger_data(fp_vcf_path, options.measures, False, master_data_path, options.missing_value)
+    remove(tp_vcf_path)
+    remove(fp_vcf_path)
+    print("Number of TP examples: " + str(num_tps))
+    print("Number of FP examples: " + str(num_fps))
     shuffle(master_data_path)
     ranger_header = ' '.join(options.measures + ['TP'])
     add_header(master_data_path, ranger_header)
     ranger_out_prefix = join(options.out, "ranger_octopus")
     run_ranger_training(options.ranger, master_data_path, options.trees, options.min_node_size, options.threads, ranger_out_prefix)
+    remove(ranger_out_prefix + ".confusion")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -202,5 +210,9 @@ if __name__ == '__main__':
                         type=int,
                         default=1,
                         help='Number of threads for octopus')
+    parser.add_argument('--missing_value',
+                        type=float,
+                        default=-1,
+                        help='Value for missing measures')
     parsed, unparsed = parser.parse_known_args()
     main(parsed)

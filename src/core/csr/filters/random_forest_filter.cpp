@@ -47,6 +47,17 @@ void RandomForestFilter::annotate(VcfHeader::Builder& header) const
     header.add_filter("RF", "Random Forest filtered");
 }
 
+namespace {
+
+template <typename T>
+static void write_line(const std::vector<T>& data, std::ostream& out)
+{
+    std::copy(std::cbegin(data), std::prev(std::cend(data)), std::ostream_iterator<T> {out, " "});
+    out << data.back() << '\n';
+}
+
+} // namespace
+
 void RandomForestFilter::prepare_for_registration(const SampleList& samples) const
 {
     std::vector<std::string> data_header {};
@@ -61,9 +72,7 @@ void RandomForestFilter::prepare_for_registration(const SampleList& samples) con
         Path fname {"octopus_ranger_temp_forest_data_" + sample + ".dat"};
         data_path /= fname;
         data_.emplace_back(data_path.string(), data_path);
-        std::copy(std::cbegin(data_header), std::prev(std::cend(data_header)),
-                  std::ostream_iterator<std::string> {data_.back().handle, " "});
-        data_.back().handle << data_header.back() << '\n';
+        write_line(data_header, data_.back().handle);
     }
     data_buffer_.resize(samples.size());
 }
@@ -82,7 +91,7 @@ struct MeasureDoubleVisitor : boost::static_visitor<>
         if (value) {
             (*this)(*value);
         } else {
-            result = 0;
+            result = -1;
         }
     }
     template <typename T> void operator()(const std::vector<T>& values)
@@ -113,9 +122,8 @@ void RandomForestFilter::record(const std::size_t call_idx, std::size_t sample_i
 {
     assert(!measures.empty());
     std::transform(std::cbegin(measures), std::cend(measures), std::back_inserter(data_buffer_[sample_idx]), cast_to_double);
-    std::copy(std::cbegin(data_buffer_[sample_idx]), std::cend(data_buffer_[sample_idx]),
-              std::ostream_iterator<double> {data_[sample_idx].handle, " "});
-    data_[sample_idx].handle << 0 << '\n'; // dummy TP value
+    data_buffer_[sample_idx].push_back(0); // dummy TP value
+    write_line(data_buffer_[sample_idx], data_[sample_idx].handle);
     data_buffer_[sample_idx].clear();
     if (call_idx >= num_records_) ++num_records_;
 }
@@ -163,10 +171,10 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
         std::ifstream prediction_file {ranger_prediction_fname.string()};
         const auto tp_first = read_header(prediction_file);
         std::string line;
-        std::size_t i {0};
+        std::size_t record_idx {0};
         while (std::getline(prediction_file, line)) {
             if (!line.empty()) {
-                data_buffer_[i++].push_back(get_prob_false(line, tp_first));
+                data_buffer_[record_idx++].push_back(get_prob_false(line, tp_first));
             }
         }
         boost::filesystem::remove(file.path);

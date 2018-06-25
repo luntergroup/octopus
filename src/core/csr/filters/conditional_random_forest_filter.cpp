@@ -108,7 +108,7 @@ struct MeasureDoubleVisitor : boost::static_visitor<>
         if (value) {
             (*this)(*value);
         } else {
-            result = 0;
+            result = -1;
         }
     }
     template <typename T> void operator()(const std::vector<T>& values)
