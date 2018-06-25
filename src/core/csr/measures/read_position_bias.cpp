@@ -116,10 +116,13 @@ Measure::ResultType ReadPositionBias::do_evaluate(const VcfRecord& call, const F
     for (const auto& sample : samples) {
         std::vector<Allele> alleles; bool has_ref;
         std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
-        assert(!alleles.empty());
-        const auto allele_support = compute_allele_support(alleles, assignments.at(sample));
-        auto position_bias = calculate_position_bias(allele_support);
-        result.push_back(position_bias);
+        if (!alleles.empty()) {
+            const auto allele_support = compute_allele_support(alleles, assignments.at(sample));
+            auto position_bias = calculate_position_bias(allele_support);
+            result.push_back(position_bias);
+        } else {
+            result.push_back(0);
+        }
     }
     return result;
 }
