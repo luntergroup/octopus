@@ -604,6 +604,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("forest-file",
      po::value<fs::path>(),
      "Trained Ranger random forest file")
+
+    ("somatic-forest-file",
+     po::value<fs::path>(),
+     "Trained Ranger random forest file for somatic variants")
     ;
     
     po::options_description all("octopus options");

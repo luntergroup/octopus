@@ -1600,9 +1600,11 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                          boost::optional<fs::path> temp_directory)
 {
     if (is_set("forest-file", options)) {
-        auto forest_file = options.at("forest-file").as<fs::path>();
-        if (temp_directory) {
-            return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+        auto forest_file = resolve_path(options.at("forest-file").as<fs::path>(), options);
+        if (!temp_directory) temp_directory = "/tmp";
+        if (is_set("somatic-forest-file", options)) {
+            auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
+            return std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
         } else {
             return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
         }
