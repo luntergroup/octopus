@@ -63,26 +63,30 @@ std::size_t ConditionalRandomForestFilter::choose_forest(const MeasureVector& me
     return chooser_(chooser_measures);
 }
 
+template <typename T>
+static void write_line(const std::vector<T>& data, std::ostream& out)
+{
+    std::copy(std::cbegin(data), std::prev(std::cend(data)), std::ostream_iterator<T> {out, " "});
+    out << data.back() << '\n';
+}
+
 void ConditionalRandomForestFilter::prepare_for_registration(const SampleList& samples) const
 {
     std::vector<std::string> data_header {};
-    data_header.reserve(measures_.size());
-    for (const auto& measure : measures_) {
-        data_header.push_back(measure.name());
-    }
+    data_header.reserve(measures_.size() - num_chooser_measures_);
+    std::transform(std::cbegin(measures_), std::prev(std::cend(measures_), num_chooser_measures_), std::back_inserter(data_header),
+                   [] (const auto& measure) { return measure.name(); });
     data_header.push_back("TP");
     const auto num_forests = forest_paths_.size();
     data_.resize(num_forests);
-    for (std::size_t i {0}; i < num_forests; ++i) {
-        data_[i].reserve(samples.size());
+    for (std::size_t forest_idx {0}; forest_idx < num_forests; ++forest_idx) {
+        data_[forest_idx].reserve(samples.size());
         for (const auto& sample : samples) {
             auto data_path = temp_dir_;
-            Path fname {"octopus_ranger_temp_forest_data_" + std::to_string(i) + "_" + sample + ".dat"};
+            Path fname {"octopus_ranger_temp_forest_data_" + std::to_string(forest_idx) + "_" + sample + ".dat"};
             data_path /= fname;
-            data_[i].emplace_back(data_path.string(), data_path);
-            std::copy(std::cbegin(data_header), std::prev(std::cend(data_header)),
-                      std::ostream_iterator<std::string> {data_[i].back().handle, " "});
-            data_[i].back().handle << data_header.back() << '\n';
+            data_[forest_idx].emplace_back(data_path.string(), data_path);
+            write_line(data_header, data_[forest_idx].back().handle);
         }
     }
     data_buffer_.resize(num_forests);
@@ -135,24 +139,40 @@ void ConditionalRandomForestFilter::record(const std::size_t call_idx, std::size
 {
     assert(!measures.empty());
     const auto forest_idx = choose_forest(measures);
-    auto& buffer = data_buffer_[forest_idx];
+    auto& buffer = data_buffer_[forest_idx][sample_idx];
     std::transform(std::cbegin(measures), std::prev(std::cend(measures), num_chooser_measures_),
-                   std::back_inserter(buffer[sample_idx]), cast_to_double);
-    std::copy(std::cbegin(buffer[sample_idx]), std::cend(buffer[sample_idx]),
-              std::ostream_iterator<double> {data_[forest_idx][sample_idx].handle, " "});
-    data_[forest_idx][sample_idx].handle << 0 << '\n'; // dummy TP value
-    buffer[sample_idx].clear();
+                   std::back_inserter(buffer), cast_to_double);
+    buffer.push_back(0); // dummy TP value
+    write_line(buffer, data_[forest_idx][sample_idx].handle);
+    buffer.clear();
     if (call_idx >= num_records_) ++num_records_;
     if (!choices_.empty()) choices_[sample_idx].push_back(forest_idx);
 }
 
-static double get_prob_false(std::string& prediction_line)
+namespace {
+
+bool read_header(std::ifstream& prediction_file)
+{
+    skip_lines(prediction_file);
+    std::string order;
+    std::getline(prediction_file, order);
+    skip_lines(prediction_file);
+    return order.front() == '1';
+}
+
+static double get_prob_false(std::string& prediction_line, const bool tp_first)
 {
     using std::cbegin; using std::cend;
-    prediction_line.erase(cbegin(prediction_line), std::next(std::find(cbegin(prediction_line), cend(prediction_line), ' ')));
-    prediction_line.erase(std::find(cbegin(prediction_line), cend(prediction_line), ' '), cend(prediction_line));
+    if (tp_first) {
+        prediction_line.erase(cbegin(prediction_line), std::next(std::find(cbegin(prediction_line), cend(prediction_line), ' ')));
+        prediction_line.erase(std::find(cbegin(prediction_line), cend(prediction_line), ' '), cend(prediction_line));
+    } else {
+        prediction_line.erase(std::find(cbegin(prediction_line), cend(prediction_line), ' '), cend(prediction_line));
+    }
     return boost::lexical_cast<double>(prediction_line);
 }
+
+} // namespace
 
 void ConditionalRandomForestFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
@@ -178,15 +198,14 @@ void ConditionalRandomForestFilter::prepare_for_classification(boost::optional<L
                 forest->run(false);
                 forest->writePredictionFile();
                 std::ifstream prediction_file {ranger_prediction_fname.string()};
-                skip_lines(prediction_file, 3); // header
+                const auto tp_first = read_header(prediction_file);
                 std::string line;
                 while (std::getline(prediction_file, line)) {
                     if (!line.empty()) {
                         const auto record_idx = std::distance(std::cbegin(choices_[sample_idx]), forest_choice_itr);
-                        predictions[record_idx].push_back(get_prob_false(line));
+                        predictions[record_idx].push_back(get_prob_false(line, tp_first));
                         assert(forest_choice_itr != std::cend(choices_[sample_idx]));
                         forest_choice_itr = std::find(std::next(forest_choice_itr), std::cend(choices_[sample_idx]), forest_idx);
-                        
                     }
                 }
                 boost::filesystem::remove(file.path);
