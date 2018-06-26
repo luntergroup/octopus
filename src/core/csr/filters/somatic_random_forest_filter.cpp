@@ -38,5 +38,12 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
 }
 {}
 
+bool SomaticRandomForestVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
+                                                            const MeasureVector& measures) const
+{
+    return std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
+                       [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
+}
+
 } // namespace csr
 } // namespace octopus

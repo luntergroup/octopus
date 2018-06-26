@@ -37,6 +37,9 @@ public:
     SomaticRandomForestVariantCallFilter& operator=(SomaticRandomForestVariantCallFilter&&)      = default;
     
     virtual ~SomaticRandomForestVariantCallFilter() override = default;
+
+private:
+    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const override;
 };
 
 } // namespace csr
