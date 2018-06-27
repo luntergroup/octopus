@@ -29,6 +29,13 @@ public:
                                       OutputOptions output_config,
                                       ConcurrencyPolicy threading,
                                       boost::optional<ProgressMeter&> progress = boost::none);
+    // Hard filter germline
+    SomaticThresholdVariantCallFilter(FacetFactory facet_factory,
+                                      ConditionVectorPair somatic,
+                                      ConditionVectorPair reference,
+                                      OutputOptions output_config,
+                                      ConcurrencyPolicy threading,
+                                      boost::optional<ProgressMeter&> progress = boost::none);
     
     SomaticThresholdVariantCallFilter(const SomaticThresholdVariantCallFilter&)            = delete;
     SomaticThresholdVariantCallFilter& operator=(const SomaticThresholdVariantCallFilter&) = delete;

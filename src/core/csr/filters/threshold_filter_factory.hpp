@@ -30,6 +30,9 @@ public:
     ThresholdFilterFactory(std::string germline_hard_expression, std::string germline_soft_expression,
                            std::string somatic_hard_expression, std::string somatic_soft_expression,
                            std::string refcall_hard_expression, std::string refcall_soft_expression);
+    ThresholdFilterFactory(std::string somatic_hard_expression, std::string somatic_soft_expression,
+                           std::string refcall_hard_expression, std::string refcall_soft_expression,
+                           bool somatics_only = true);
     
     ThresholdFilterFactory(const ThresholdFilterFactory&)            = default;
     ThresholdFilterFactory& operator=(const ThresholdFilterFactory&) = default;
@@ -43,6 +46,7 @@ private:
     using ConditionVectorPair = ThresholdVariantCallFilter::ConditionVectorPair;
     
     ConditionVectorPair germline_, somatic_, reference_;
+    bool hard_filter_germline_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
     std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,
