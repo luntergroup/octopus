@@ -21,10 +21,22 @@
 
 namespace octopus { namespace csr {
 
-FacetFactory::FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe, VcfHeader input_header, PloidyMap ploidies)
-: reference_ {reference}
+FacetFactory::FacetFactory(VcfHeader input_header)
+: input_header_ {std::move(input_header)}
+, samples_ {input_header_.samples()}
+, reference_ {}
+, read_pipe_ {}
+, ploidies_ {}
+, facet_makers_ {}
+{
+    setup_facet_makers();
+}
+
+FacetFactory::FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies)
+: input_header_ {std::move(input_header)}
+, samples_ {input_header_.samples()}
+, reference_ {reference}
 , read_pipe_ {std::move(read_pipe)}
-, input_header_ {std::move(input_header)}
 , ploidies_ {std::move(ploidies)}
 , facet_makers_ {}
 {
@@ -32,9 +44,10 @@ FacetFactory::FacetFactory(const ReferenceGenome& reference, BufferedReadPipe re
 }
 
 FacetFactory::FacetFactory(FacetFactory&& other)
-: reference_ {std::move(other.reference_)}
+: input_header_ {std::move(other.input_header_)}
+, samples_ {std::move(other.samples_)}
+, reference_ {std::move(other.reference_)}
 , read_pipe_ {std::move(other.read_pipe_)}
-, input_header_ {std::move(other.input_header_)}
 , ploidies_ {std::move(other.ploidies_)}
 , facet_makers_ {}
 {
@@ -44,10 +57,11 @@ FacetFactory::FacetFactory(FacetFactory&& other)
 FacetFactory& FacetFactory::operator=(FacetFactory&& other)
 {
     using std::swap;
+    swap(input_header_, other.input_header_);
+    swap(samples_, other.samples_);
     swap(reference_, other.reference_);
     swap(read_pipe_, other.read_pipe_);
     swap(ploidies_, other.ploidies_);
-    swap(input_header_, other.input_header_);
     setup_facet_makers();
     return *this;
 }
@@ -67,6 +81,7 @@ public:
 
 FacetWrapper FacetFactory::make(const std::string& name, const CallBlock& block) const
 {
+    check_requirements(name);
     const auto block_data = make_block_data({name}, block);
     return make(name, block_data);
 }
@@ -74,6 +89,7 @@ FacetWrapper FacetFactory::make(const std::string& name, const CallBlock& block)
 FacetFactory::FacetBlock FacetFactory::make(const std::vector<std::string>& names, const CallBlock& block) const
 {
     if (names.empty()) return {};
+    check_requirements(names);
     const auto block_data = make_block_data(names, block);
     return make(names, block_data);
 }
@@ -84,6 +100,17 @@ template <typename Facet>
 decltype(auto) name() noexcept
 {
     return Facet().name();
+}
+
+bool requires_reference(const std::string& facet) noexcept
+{
+    const static std::array<std::string, 2> read_facets{name<ReferenceContext>(), name<ReadAssignments>()};
+    return std::find(std::cbegin(read_facets), std::cend(read_facets), facet) != std::cend(read_facets);
+}
+
+bool requires_reference(const std::vector<std::string>& facets) noexcept
+{
+    return std::any_of(std::cbegin(facets), std::cend(facets), [](const auto& facet) { return requires_reference(facet); });
 }
 
 bool requires_reads(const std::string& facet) noexcept
@@ -105,17 +132,45 @@ bool requires_genotypes(const std::string& facet) noexcept
 
 bool requires_genotypes(const std::vector<std::string>& facets) noexcept
 {
-    return std::any_of(std::cbegin(facets), std::cend(facets),
-                       [](const auto& facet) { return requires_genotypes(facet); });
+    return std::any_of(std::cbegin(facets), std::cend(facets), [](const auto& facet) { return requires_genotypes(facet); });
+}
+
+bool requires_ploidies(const std::string& facet) noexcept
+{
+    const static std::array<std::string, 1> genotype_facets{name<Ploidies>()};
+    return std::find(std::cbegin(genotype_facets), std::cend(genotype_facets), facet) != std::cend(genotype_facets);
+}
+
+bool requires_ploidies(const std::vector<std::string>& facets) noexcept
+{
+    return std::any_of(std::cbegin(facets), std::cend(facets), [](const auto& facet) { return requires_ploidies(facet); });
 }
 
 } // namespace
 
-std::vector<FacetFactory::FacetBlock> FacetFactory::make(const std::vector<std::string>& names,
-                                                         const std::vector<CallBlock>& blocks,
-                                                         ThreadPool& workers) const
+class BadFacetFactoryRequest : public ProgramError
+{
+    std::string facet_;
+    std::string do_where() const override { return "FacetFactory"; }
+    std::string do_why() const override
+    {
+        return "Could not make facet " + facet_ + " due to an unmet requirement";
+    }
+    std::string do_help() const override
+    {
+        return "submit an error report";
+    }
+public:
+    BadFacetFactoryRequest(std::string facet) : facet_ {std::move(facet)} {}
+};
+
+std::vector<FacetFactory::FacetBlock>
+FacetFactory::make(const std::vector<std::string>& names,
+                   const std::vector<CallBlock>& blocks,
+                   ThreadPool& workers) const
 {
     if (blocks.empty()) return {};
+    check_requirements(names);
     std::vector<FacetBlock> result {};
     result.reserve(blocks.size());
     if (blocks.size() > 1 && !workers.empty()) {
@@ -123,19 +178,18 @@ std::vector<FacetFactory::FacetBlock> FacetFactory::make(const std::vector<std::
         futures.reserve(blocks.size());
         const auto fetch_reads = requires_reads(names);
         const auto fetch_genotypes = requires_genotypes(names);
-        const auto& samples = read_pipe_.source().samples();
         for (const auto& block : blocks) {
             // It's faster to fetch reads serially from left to right, so do this outside the thread pool
             BlockData data {};
             if (!block.empty()) {
                 data.region = encompassing_region(block);
                 if (fetch_reads) {
-                    data.reads = read_pipe_.fetch_reads(*data.region);
+                    data.reads = read_pipe_->fetch_reads(*data.region);
                 }
             }
-            futures.push_back(workers.push([this, &names, data {std::move(data)}, &block, &samples, fetch_genotypes] () mutable {
+            futures.push_back(workers.push([this, &names, data {std::move(data)}, &block, fetch_genotypes] () mutable {
                 if (fetch_genotypes) {
-                    data.genotypes = extract_genotypes(block, samples, reference_);
+                    data.genotypes = extract_genotypes(block, samples_, *reference_);
                 }
                 return this->make(names, data);
             }));
@@ -164,20 +218,20 @@ void FacetFactory::setup_facet_makers()
     facet_makers_[name<ReadAssignments>()] = [this] (const BlockData& block) -> FacetWrapper
     {
         assert(block.reads && block.genotypes);
-        return {std::make_unique<ReadAssignments>(reference_, *block.genotypes, *block.reads)};
+        return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads)};
     };
     facet_makers_[name<ReferenceContext>()] = [this] (const BlockData& block) -> FacetWrapper
     {
         if (block.region) {
             constexpr GenomicRegion::Size context_size {50};
-            return {std::make_unique<ReferenceContext>(reference_, expand(*block.region, context_size))};
+            return {std::make_unique<ReferenceContext>(*reference_, expand(*block.region, context_size))};
         } else {
             return {nullptr};
         }
     };
     facet_makers_[name<Samples>()] = [this] (const BlockData& block) -> FacetWrapper
     {
-        return {std::make_unique<Samples>(input_header_.samples())};
+        return {std::make_unique<Samples>(this->samples_)};
     };
     facet_makers_[name<Genotypes>()] = [] (const BlockData& block) -> FacetWrapper
     {
@@ -186,8 +240,28 @@ void FacetFactory::setup_facet_makers()
     };
     facet_makers_[name<Ploidies>()] = [this] (const BlockData& block) -> FacetWrapper
     {
-        return {std::make_unique<Ploidies>(ploidies_, *block.region, input_header_.samples())};
+        return {std::make_unique<Ploidies>(*ploidies_, *block.region, input_header_.samples())};
     };
+}
+
+void FacetFactory::check_requirements(const std::string& name) const
+{
+    if (!read_pipe_ && requires_reads(name)) {
+        throw BadFacetFactoryRequest {name};
+    }
+    if (!reference_ && requires_reference(name)) {
+        throw BadFacetFactoryRequest {name};
+    }
+    if (!ploidies_ && requires_ploidies(name)) {
+        throw BadFacetFactoryRequest {name};
+    }
+}
+
+void FacetFactory::check_requirements(const std::vector<std::string>& names) const
+{
+    for (const auto& name : names) {
+        check_requirements(name);
+    }
 }
 
 FacetWrapper FacetFactory::make(const std::string& name, const BlockData& block) const
@@ -216,10 +290,10 @@ FacetFactory::BlockData FacetFactory::make_block_data(const std::vector<std::str
     if (!block.empty()) {
         result.region = encompassing_region(block);
         if (requires_reads(names)) {
-            result.reads = read_pipe_.fetch_reads(*result.region);
+            result.reads = read_pipe_->fetch_reads(*result.region);
         }
         if (requires_genotypes(names)) {
-            result.genotypes = extract_genotypes(block, read_pipe_.source().samples(), reference_);
+            result.genotypes = extract_genotypes(block, samples_, *reference_);
         }
     }
     return result;
