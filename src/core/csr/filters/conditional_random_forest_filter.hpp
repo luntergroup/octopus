@@ -30,7 +30,7 @@ public:
     ConditionalRandomForestFilter(FacetFactory facet_factory,
                                   std::vector<MeasureWrapper> measures,
                                   std::vector<MeasureWrapper> chooser_measures,
-                                  std::function<std::size_t(std::vector<Measure::ResultType>)> chooser,
+                                  std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
                                   std::vector<Path> ranger_forests,
                                   OutputOptions output_config,
                                   ConcurrencyPolicy threading,
@@ -56,21 +56,24 @@ private:
     std::vector<Path> forest_paths_;
     Path temp_dir_;
     std::vector<std::unique_ptr<ranger::Forest>> forests_;
-    std::function<std::size_t(std::vector<Measure::ResultType>)> chooser_;
+    std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser_;
     std::size_t num_chooser_measures_;
     
     mutable std::vector<std::vector<File>> data_;
     mutable std::size_t num_records_;
     mutable std::vector<std::vector<std::vector<double>>> data_buffer_;
-    mutable std::vector<std::deque<std::size_t>> choices_;
+    mutable std::vector<std::deque<std::int8_t>> choices_;
+    mutable std::deque<std::size_t> hard_filtered_record_indices_;
+    mutable std::vector<bool> hard_filtered_;
     
     const static std::string call_qual_name_;
     
     boost::optional<std::string> call_quality_name() const override;
     void annotate(VcfHeader::Builder& header) const override;
-    std::size_t choose_forest(const MeasureVector& measures) const;
+    std::int8_t choose_forest(const MeasureVector& measures) const;
     void prepare_for_registration(const SampleList& samples) const override;
     void record(std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const override;
+    void close_data_files() const;
     void prepare_for_classification(boost::optional<Log>& log) const override;
     std::size_t get_forest_choice(std::size_t call_idx, std::size_t sample_idx) const;
     Classification classify(std::size_t call_idx, std::size_t sample_idx) const override;

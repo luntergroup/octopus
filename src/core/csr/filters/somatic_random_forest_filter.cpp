@@ -21,7 +21,7 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
     std::move(facet_factory),
     std::move(measures),
     {make_wrapped_measure<IsSomatic>(true), make_wrapped_measure<IsRefcall>(true)},
-    [] (const MeasureVector& measures) -> std::size_t {
+    [] (const MeasureVector& measures) -> std::int8_t {
         assert(measures.size() == 2);
         if (boost::get<bool>(measures.front())) {
             return 1;
@@ -35,8 +35,29 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
     std::move(threading),
     std::move(temp_directory),
     progress
-}
-{}
+} {}
+
+SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
+                                                                           std::vector<MeasureWrapper> measures,
+                                                                           Path somatic_forest,
+                                                                           OutputOptions output_config,
+                                                                           ConcurrencyPolicy threading,
+                                                                           Path temp_directory,
+                                                                           boost::optional<ProgressMeter&> progress)
+: ConditionalRandomForestFilter {
+    std::move(facet_factory),
+    std::move(measures),
+    {make_wrapped_measure<IsSomatic>(false)},
+    [] (const MeasureVector& measures) -> std::int8_t {
+        assert(measures.size() == 1);
+        return !boost::get<bool>(measures.front());
+        },
+    {std::move(somatic_forest)},
+    std::move(output_config),
+    std::move(threading),
+    std::move(temp_directory),
+    progress
+} {}
 
 bool SomaticRandomForestVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
                                                             const MeasureVector& measures) const

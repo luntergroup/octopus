@@ -25,10 +25,11 @@ class RandomForestFilterFactory : public VariantCallFilterFactory
 {
 public:
     using Path = RandomForestFilter::Path;
+    enum class ForestType { germline, somatic };
     
     RandomForestFilterFactory() = default;
     
-    RandomForestFilterFactory(Path ranger_forest, Path temp_directory);
+    RandomForestFilterFactory(Path ranger_forest, Path temp_directory, ForestType type = ForestType::germline);
     RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path temp_directory);
     
     RandomForestFilterFactory(const RandomForestFilterFactory&)            = default;
@@ -41,6 +42,7 @@ public:
 private:
     std::vector<MeasureWrapper> measures_;
     std::vector<Path> ranger_forests_;
+    std::vector<ForestType> forest_types_;
     Path temp_directory_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
