@@ -25,6 +25,7 @@ class IsRefcall : public Measure
     const std::string& do_name() const override;
     std::string do_describe() const override;
     std::vector<std::string> do_requirements() const override;
+    bool is_equal(const Measure& other) const noexcept override;
 public:
     IsRefcall(bool report_sample_status = true);
 };

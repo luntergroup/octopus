@@ -85,5 +85,10 @@ std::vector<std::string> IsSomatic::do_requirements() const
     }
 }
 
+bool IsSomatic::is_equal(const Measure& other) const noexcept
+{
+    return report_sample_status_ == static_cast<const IsSomatic&>(other).report_sample_status_;
+}
+
 } // namespace csr
 } // namespace octopus

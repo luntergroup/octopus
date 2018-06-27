@@ -72,5 +72,10 @@ std::vector<std::string> IsRefcall::do_requirements() const
     }
 }
 
+bool IsRefcall::is_equal(const Measure& other) const noexcept
+{
+    return report_sample_status_ == static_cast<const IsRefcall&>(other).report_sample_status_;
+}
+
 } // namespace csr
 } // namespace octopus
