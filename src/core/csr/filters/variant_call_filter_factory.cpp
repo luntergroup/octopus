@@ -22,7 +22,7 @@ std::unique_ptr<VariantCallFilter> VariantCallFilterFactory::make(const Referenc
                                                                   boost::optional<ProgressMeter&> progress,
                                                                   boost::optional<unsigned> max_threads) const
 {
-    FacetFactory facet_factory {reference, std::move(read_pipe), std::move(input_header), std::move(ploidies)};
+    FacetFactory facet_factory {std::move(input_header), reference, std::move(read_pipe), std::move(ploidies)};
     return do_make(std::move(facet_factory), output_config, progress, {max_threads});
 }
 

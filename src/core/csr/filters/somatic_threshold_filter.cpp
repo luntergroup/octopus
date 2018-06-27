@@ -38,6 +38,28 @@ SomaticThresholdVariantCallFilter::SomaticThresholdVariantCallFilter(FacetFactor
     output_config, threading, progress
 } {}
 
+SomaticThresholdVariantCallFilter::SomaticThresholdVariantCallFilter(FacetFactory facet_factory,
+                                                                     ConditionVectorPair somatic,
+                                                                     ConditionVectorPair reference,
+                                                                     OutputOptions output_config,
+                                                                     ConcurrencyPolicy threading,
+                                                                     boost::optional<ProgressMeter&> progress)
+: ConditionalThresholdVariantCallFilter {
+    std::move(facet_factory),
+    {{{{make_wrapped_measure<IsSomatic>(false), make_wrapped_threshold<EqualThreshold<bool>>(false)}}, {}}, std::move(somatic), std::move(reference)},
+    {make_wrapped_measure<IsSomatic>(true), make_wrapped_measure<IsRefcall>(true)},
+    [] (const MeasureVector& measures) -> std::size_t {
+        assert(measures.size() == 2);
+        if (boost::get<bool>(measures.front())) {
+            return 1;
+        } else if (boost::get<bool>(measures.back())) {
+            return 2;
+        } else {
+            return 0;
+        }},
+    output_config, threading, progress
+} {}
+
 bool SomaticThresholdVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
                                                          const MeasureVector& measures) const
 {

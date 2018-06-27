@@ -168,6 +168,15 @@ ThresholdFilterFactory::ThresholdFilterFactory(std::string germline_hard_express
 , reference_ {parse_conditions(std::move(refcall_hard_expression)), parse_conditions(std::move(refcall_soft_expression))}
 {}
 
+ThresholdFilterFactory::ThresholdFilterFactory(std::string somatic_hard_expression, std::string somatic_soft_expression,
+                                               std::string refcall_hard_expression, std::string refcall_soft_expression,
+                                               bool somatics_only)
+: germline_ {}
+, somatic_ {parse_conditions(std::move(somatic_hard_expression)), parse_conditions(std::move(somatic_soft_expression))}
+, reference_ {parse_conditions(std::move(refcall_hard_expression)), parse_conditions(std::move(refcall_soft_expression))}
+, hard_filter_germline_ {somatics_only}
+{}
+
 std::unique_ptr<VariantCallFilterFactory> ThresholdFilterFactory::do_clone() const
 {
     return std::make_unique<ThresholdFilterFactory>(*this);
@@ -183,9 +192,15 @@ std::unique_ptr<VariantCallFilter> ThresholdFilterFactory::do_make(FacetFactory 
                                                             germline_,
                                                             output_config, threading, progress);
     } else {
-        return std::make_unique<SomaticThresholdVariantCallFilter>(std::move(facet_factory),
-                                                                   germline_, somatic_, reference_,
-                                                                   output_config, threading, progress);
+        if (hard_filter_germline_) {
+            return std::make_unique<SomaticThresholdVariantCallFilter>(std::move(facet_factory),
+                                                                       somatic_, reference_,
+                                                                       output_config, threading, progress);
+        } else {
+            return std::make_unique<SomaticThresholdVariantCallFilter>(std::move(facet_factory),
+                                                                       germline_, somatic_, reference_,
+                                                                       output_config, threading, progress);
+        }
     }
 }
 

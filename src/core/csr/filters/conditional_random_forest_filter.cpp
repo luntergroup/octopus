@@ -24,7 +24,7 @@ namespace octopus { namespace csr {
 ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_factory,
                                                              std::vector<MeasureWrapper> measures,
                                                              std::vector<MeasureWrapper> chooser_measures,
-                                                             std::function<std::size_t(std::vector<Measure::ResultType>)> chooser,
+                                                             std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
                                                              std::vector<Path> ranger_forests,
                                                              OutputOptions output_config,
                                                              ConcurrencyPolicy threading,
@@ -57,7 +57,7 @@ void ConditionalRandomForestFilter::annotate(VcfHeader::Builder& header) const
     header.add_filter("RF", "Random Forest filtered");
 }
 
-std::size_t ConditionalRandomForestFilter::choose_forest(const MeasureVector& measures) const
+std::int8_t ConditionalRandomForestFilter::choose_forest(const MeasureVector& measures) const
 {
     const MeasureVector chooser_measures(std::prev(std::cend(measures), num_chooser_measures_), std::cend(measures));
     return chooser_(chooser_measures);
@@ -91,7 +91,7 @@ void ConditionalRandomForestFilter::prepare_for_registration(const SampleList& s
     }
     data_buffer_.resize(num_forests);
     for (auto& buffer : data_buffer_) buffer.resize(samples.size());
-    if (num_forests > 1) choices_.resize(samples.size());
+    choices_.resize(samples.size());
 }
 
 namespace {
@@ -139,14 +139,28 @@ void ConditionalRandomForestFilter::record(const std::size_t call_idx, std::size
 {
     assert(!measures.empty());
     const auto forest_idx = choose_forest(measures);
-    auto& buffer = data_buffer_[forest_idx][sample_idx];
-    std::transform(std::cbegin(measures), std::prev(std::cend(measures), num_chooser_measures_),
-                   std::back_inserter(buffer), cast_to_double);
-    buffer.push_back(0); // dummy TP value
-    write_line(buffer, data_[forest_idx][sample_idx].handle);
-    buffer.clear();
+    const auto num_forests = static_cast<decltype(forest_idx)>( data_buffer_.size());
+    if (forest_idx >= 0 && forest_idx < num_forests) {
+        auto& buffer = data_buffer_[forest_idx][sample_idx];
+        std::transform(std::cbegin(measures), std::prev(std::cend(measures), num_chooser_measures_),
+                       std::back_inserter(buffer), cast_to_double);
+        buffer.push_back(0); // dummy TP value
+        write_line(buffer, data_[forest_idx][sample_idx].handle);
+        buffer.clear();
+    } else {
+        hard_filtered_record_indices_.push_back(call_idx);
+    }
     if (call_idx >= num_records_) ++num_records_;
-    if (!choices_.empty()) choices_[sample_idx].push_back(forest_idx);
+    choices_[sample_idx].push_back(forest_idx);
+}
+
+void ConditionalRandomForestFilter::close_data_files() const
+{
+    for (auto& forest : data_) {
+        for (auto& sample : forest) {
+            sample.handle.close();
+        }
+    }
 }
 
 namespace {
@@ -176,6 +190,7 @@ static double get_prob_false(std::string& prediction_line, const bool tp_first)
 
 void ConditionalRandomForestFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
+    close_data_files();
     const Path ranger_prefix {temp_dir_ / "octopus_ranger_temp"};
     const Path ranger_prediction_fname {ranger_prefix.string() + ".prediction"};
     data_buffer_.resize(1);
@@ -186,8 +201,7 @@ void ConditionalRandomForestFilter::prepare_for_classification(boost::optional<L
         for (std::size_t sample_idx {0}; sample_idx < num_samples; ++sample_idx) {
             auto forest_choice_itr = std::find(std::cbegin(choices_[sample_idx]), std::cend(choices_[sample_idx]), forest_idx);
             if (forest_choice_itr != std::cend(choices_[sample_idx])) {
-                auto& file = data_[forest_idx][sample_idx];
-                file.handle.close();
+                const auto& file = data_[forest_idx][sample_idx];
                 std::vector<std::string> tmp {}, cat_vars {};
                 auto& forest = forests_[forest_idx];
                 forest->initCpp("TP", ranger::MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
@@ -215,6 +229,16 @@ void ConditionalRandomForestFilter::prepare_for_classification(boost::optional<L
     boost::filesystem::remove(ranger_prediction_fname);
     data_.clear();
     data_.shrink_to_fit();
+    choices_.clear();
+    choices_.shrink_to_fit();
+    if (!hard_filtered_record_indices_.empty()) {
+        hard_filtered_.resize(num_records_, false);
+        for (auto idx : hard_filtered_record_indices_) {
+            hard_filtered_[idx] = true;
+        }
+        hard_filtered_record_indices_.clear();
+        hard_filtered_record_indices_.shrink_to_fit();
+    }
 }
 
 std::size_t ConditionalRandomForestFilter::get_forest_choice(std::size_t call_idx, std::size_t sample_idx) const
@@ -224,17 +248,21 @@ std::size_t ConditionalRandomForestFilter::get_forest_choice(std::size_t call_id
 
 VariantCallFilter::Classification ConditionalRandomForestFilter::classify(const std::size_t call_idx, std::size_t sample_idx) const
 {
-    const auto& predictions = data_buffer_[0];
-    assert(call_idx < predictions.size() && sample_idx < predictions[call_idx].size());
-    const auto prob_false = predictions[call_idx][sample_idx];
     Classification result {};
-    if (prob_false < 0.5) {
-        result.category = Classification::Category::unfiltered;
+    if (hard_filtered_.empty() || !hard_filtered_[call_idx]) {
+        const auto& predictions = data_buffer_[0];
+        assert(call_idx < predictions.size() && sample_idx < predictions[call_idx].size());
+        const auto prob_false = predictions[call_idx][sample_idx];
+        if (prob_false < 0.5) {
+            result.category = Classification::Category::unfiltered;
+        } else {
+            result.category = Classification::Category::soft_filtered;
+            result.reasons.assign({"RF"});
+        }
+        result.quality = probability_to_phred(std::max(prob_false, 1e-10));
     } else {
-        result.category = Classification::Category::soft_filtered;
-        result.reasons.assign({"RF"});
+        result.category = Classification::Category::hard_filtered;
     }
-    result.quality = probability_to_phred(std::max(prob_false, 1e-10));
     return result;
 }
 

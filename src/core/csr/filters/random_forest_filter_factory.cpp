@@ -23,8 +23,9 @@ std::vector<MeasureWrapper> parse_measures(const std::vector<std::string>& measu
 
 static const auto default_measure_names = utils::split("AC AF ARF BQ CRF DP FRF GC GQ MC MF MP MQ MQ0 MQD QD QUAL REFCALL RPB SB SC SOMATIC STR_LENGTH STR_PERIOD", ' ');
 
-RandomForestFilterFactory::RandomForestFilterFactory(Path ranger_forest, Path temp_directory)
+RandomForestFilterFactory::RandomForestFilterFactory(Path ranger_forest, Path temp_directory, ForestType type)
 : ranger_forests_ {std::move(ranger_forest)}
+, forest_types_ {type}
 , temp_directory_ {std::move(temp_directory)}
 {
     measures_ = parse_measures(default_measure_names);
@@ -32,6 +33,7 @@ RandomForestFilterFactory::RandomForestFilterFactory(Path ranger_forest, Path te
 
 RandomForestFilterFactory::RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path temp_directory)
 : ranger_forests_ {std::move(germline_ranger_forest), std::move(somatic_ranger_forest)}
+, forest_types_ {ForestType::germline, ForestType::somatic}
 , temp_directory_ {std::move(temp_directory)}
 {
     measures_ = parse_measures(default_measure_names);
@@ -48,8 +50,14 @@ std::unique_ptr<VariantCallFilter> RandomForestFilterFactory::do_make(FacetFacto
                                                                       VariantCallFilter::ConcurrencyPolicy threading) const
 {
     if (ranger_forests_.size() == 1) {
-        return std::make_unique<RandomForestFilter>(std::move(facet_factory), measures_, output_config, threading,
-                                                    ranger_forests_[0], temp_directory_, progress);
+        assert(forest_types_.size() == 1);
+        if (forest_types_.front() == ForestType::germline) {
+            return std::make_unique<RandomForestFilter>(std::move(facet_factory), measures_, output_config, threading,
+                                                        ranger_forests_[0], temp_directory_, progress);
+        } else {
+            return std::make_unique<SomaticRandomForestVariantCallFilter>(std::move(facet_factory), measures_, ranger_forests_[0],
+                                                                          output_config, threading, temp_directory_, progress);
+        }
     } else {
         assert(ranger_forests_.size() == 2);
         return std::make_unique<SomaticRandomForestVariantCallFilter>(std::move(facet_factory), measures_,

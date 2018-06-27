@@ -31,7 +31,8 @@ public:
     
     FacetFactory() = delete;
     
-    FacetFactory(const ReferenceGenome& reference, BufferedReadPipe read_pipe, VcfHeader input_header, PloidyMap ploidies);
+    FacetFactory(VcfHeader input_header);
+    FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies);
     
     FacetFactory(const FacetFactory&)            = delete;
     FacetFactory& operator=(const FacetFactory&) = delete;
@@ -42,8 +43,7 @@ public:
     
     FacetWrapper make(const std::string& name, const CallBlock& block) const;
     FacetBlock make(const std::vector<std::string>& names, const CallBlock& block) const;
-    std::vector<FacetBlock> make(const std::vector<std::string>& names, const std::vector<CallBlock>& blocks,
-                                 ThreadPool& workers) const;
+    std::vector<FacetBlock> make(const std::vector<std::string>& names, const std::vector<CallBlock>& blocks, ThreadPool& workers) const;
 
 private:
     struct BlockData
@@ -53,14 +53,17 @@ private:
         boost::optional<GenotypeMap> genotypes;
     };
     
-    std::reference_wrapper<const ReferenceGenome> reference_;
-    BufferedReadPipe read_pipe_;
     VcfHeader input_header_;
-    PloidyMap ploidies_;
+    std::vector<std::string> samples_;
+    boost::optional<std::reference_wrapper<const ReferenceGenome>> reference_;
+    boost::optional<BufferedReadPipe> read_pipe_;
+    boost::optional<PloidyMap> ploidies_;
     
     std::unordered_map<std::string, std::function<FacetWrapper(const BlockData& data)>> facet_makers_;
     
     void setup_facet_makers();
+    void check_requirements(const std::string& name) const;
+    void check_requirements(const std::vector<std::string>& names) const;
     FacetWrapper make(const std::string& name, const BlockData& block) const;
     FacetBlock make(const std::vector<std::string>& names, const BlockData& block) const;
     BlockData make_block_data(const std::vector<std::string>& names, const CallBlock& block) const;
