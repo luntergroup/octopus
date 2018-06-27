@@ -523,6 +523,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("normal-contamination-risk",
      po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
      "The risk the normal sample has contamination from the tumour")
+
+    ("somatics-only",
+     po::bool_switch()->default_value(false),
+     "Only emit SOMATIC mutations")
     ;
     
     po::options_description trio("Calling (trio)");
