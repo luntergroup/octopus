@@ -97,7 +97,7 @@ def add_header(fname, header):
 def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out):
     call([ranger, '--file', data_path, '--depvarname', 'TP', '--probability',
           '--ntree', str(n_trees), '--targetpartitionsize', str(min_node_size),
-          '--nthreads', str(threads), '--outprefix', out, '--write', out + '.forest'])
+          '--nthreads', str(threads), '--outprefix', out, '--write', '--verbose'])
 
 def main(options):
     if not exists(options.out):
@@ -123,7 +123,7 @@ def main(options):
         make_ranger_data(fp_train_vcf_path, options.measures, False, fp_data_path, options.missing_value)
         data_paths.append(fp_data_path)
         tmp_paths += [tp_train_vcf_path, fp_train_vcf_path]
-    master_data_path = join(options.out, "ranger_train_master.dat")
+    master_data_path = join(options.out, options.prefix + ".dat")
     concat(data_paths, master_data_path)
     for path in data_paths:
         remove(path)
@@ -132,7 +132,7 @@ def main(options):
     shuffle(master_data_path)
     ranger_header = ' '.join(options.measures + ['TP'])
     add_header(master_data_path, ranger_header)
-    ranger_out_prefix = join(options.out, "ranger_octopus")
+    ranger_out_prefix = join(options.out, options.prefix)
     run_ranger_training(options.ranger, master_data_path, options.trees, options.min_node_size, options.threads, ranger_out_prefix)
     remove(ranger_out_prefix + ".confusion")
 
@@ -191,6 +191,10 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--out',
                         type=str,
                         help='Output directory')
+    parser.add_argument('--prefix',
+                        type=str,
+                        default='ranger_octopus',
+                        help='Output files prefix')
     parser.add_argument('-t', '--threads',
                         type=int,
                         default=1,
