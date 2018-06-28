@@ -13,13 +13,38 @@
 
 #include <boost/variant.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem/operations.hpp>
 
 #include "ranger/ForestProbability.h"
 
 #include "basics/phred.hpp"
 #include "utils/concat.hpp"
+#include "exceptions/missing_file_error.hpp"
+#include "exceptions/program_error.hpp"
+#include "exceptions/malformed_file_error.hpp"
 
 namespace octopus { namespace csr {
+
+
+namespace {
+
+class MissingForestFile : public MissingFileError
+{
+    std::string do_where() const override { return "ConditionalRandomForestFilter"; }
+public:
+    MissingForestFile(boost::filesystem::path p) : MissingFileError {std::move(p), ".forest"} {};
+};
+
+void check_all_exists(const std::vector<ConditionalRandomForestFilter::Path>& forests)
+{
+    for (const auto& forest : forests) {
+        if (!boost::filesystem::exists(forest)) {
+            throw MissingForestFile {forest};
+        }
+    }
+}
+
+} // namespace
 
 ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_factory,
                                                              std::vector<MeasureWrapper> measures,
@@ -39,6 +64,7 @@ ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_
 , num_records_ {0}
 , data_buffer_ {}
 {
+    check_all_exists(forest_paths_);
     forests_.reserve(forest_paths_.size());
     std::generate_n(std::back_inserter(forests_), forest_paths_.size(),
                     [] () { return std::make_unique<ranger::ForestProbability>(); });
@@ -128,6 +154,20 @@ auto cast_to_double(const Measure::ResultType& value)
     return vis.result;
 }
 
+class NanMeasure : public ProgramError
+{
+    std::string do_where() const override { return "ConditionalRandomForestFilter"; }
+    std::string do_why() const override { return "detected a nan measure"; }
+    std::string do_help() const override { return "submit an error report"; }
+};
+
+void check_nan(const std::vector<double>& values)
+{
+    if (std::any_of(std::cbegin(values), std::cend(values), [] (auto v) { return std::isnan(v); })) {
+        throw NanMeasure {};
+    }
+}
+
 void skip_lines(std::istream& in, int n = 1)
 {
     for (; n > 0; --n) in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -145,6 +185,7 @@ void ConditionalRandomForestFilter::record(const std::size_t call_idx, std::size
         std::transform(std::cbegin(measures), std::prev(std::cend(measures), num_chooser_measures_),
                        std::back_inserter(buffer), cast_to_double);
         buffer.push_back(0); // dummy TP value
+        check_nan(buffer);
         write_line(buffer, data_[forest_idx][sample_idx].handle);
         buffer.clear();
     } else {
@@ -188,6 +229,17 @@ static double get_prob_false(std::string& prediction_line, const bool tp_first)
 
 } // namespace
 
+class MalformedForestFile : public MalformedFileError
+{
+    std::string do_where() const override { return "ConditionalRandomForestFilter"; }
+    std::string do_help() const override
+    {
+        return "make sure the forest was trained with the same measures and in the same order as the prediction measures";
+    }
+public:
+    MalformedForestFile(boost::filesystem::path file) : MalformedFileError {std::move(file)} {}
+};
+
 void ConditionalRandomForestFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
     close_data_files();
@@ -204,11 +256,15 @@ void ConditionalRandomForestFilter::prepare_for_classification(boost::optional<L
                 const auto& file = data_[forest_idx][sample_idx];
                 std::vector<std::string> tmp {}, cat_vars {};
                 auto& forest = forests_[forest_idx];
-                forest->initCpp("TP", ranger::MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
-                                1000, nullptr, 12, 1, forest_paths_[forest_idx].string(), ranger::ImportanceMode::IMP_GINI, 1, "",
-                                tmp, "", true, cat_vars, false, ranger::SplitRule::LOGRANK, "", false, 1.0,
-                                ranger::DEFAULT_ALPHA, ranger::DEFAULT_MINPROP, false,
-                                ranger::PredictionType::RESPONSE, ranger::DEFAULT_NUM_RANDOM_SPLITS);
+                try {
+                    forest->initCpp("TP", ranger::MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
+                                    1000, nullptr, 12, 1, forest_paths_[forest_idx].string(), ranger::ImportanceMode::IMP_GINI, 1, "",
+                                    tmp, "", true, cat_vars, false, ranger::SplitRule::LOGRANK, "", false, 1.0,
+                                    ranger::DEFAULT_ALPHA, ranger::DEFAULT_MINPROP, false,
+                                    ranger::PredictionType::RESPONSE, ranger::DEFAULT_NUM_RANDOM_SPLITS);
+                } catch (const std::runtime_error& e) {
+                    throw MalformedForestFile {forest_paths_[forest_idx]};
+                }
                 forest->run(false);
                 forest->writePredictionFile();
                 std::ifstream prediction_file {ranger_prediction_fname.string()};
