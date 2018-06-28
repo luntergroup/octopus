@@ -33,7 +33,7 @@ Measure::ResultType MismatchFraction::do_evaluate(const VcfRecord& call, const F
     assert(depths.size() == mismatch_counts.size());
     std::vector<double> result(depths.size());
     std::transform(std::cbegin(mismatch_counts), std::cend(mismatch_counts), std::cbegin(depths), std::begin(result),
-                   [] (auto mismatches, auto depth) { return static_cast<double>(mismatches) / depth; });
+                   [] (auto mismatches, auto depth) { return depth > 0 ? static_cast<double>(mismatches) / depth : 0.0; });
     return result;
 }
 
