@@ -880,10 +880,8 @@ auto call_candidates(const VariantPosteriorVector& candidate_posteriors,
     calls.reserve(candidate_posteriors.size());
     std::vector<VariantReference> uncalled {};
     for (const auto& p : candidate_posteriors) {
-        if (p.second >= min_posterior) {
-            if (contains_alt(genotype_call, p.first)) {
-                calls.emplace_back(p.first, p.second);
-            }
+        if (p.second >= min_posterior && contains_alt(genotype_call, p.first)) {
+            calls.emplace_back(p.first, p.second);
         } else {
             uncalled.emplace_back(p.first);
         }
