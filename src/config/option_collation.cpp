@@ -1609,55 +1609,56 @@ std::unique_ptr<VariantCallFilterFactory>
 make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
                          boost::optional<fs::path> temp_directory)
 {
-    if (is_set("forest-file", options)) {
-        auto forest_file = resolve_path(options.at("forest-file").as<fs::path>(), options);
-        if (!fs::exists(forest_file)) {
-            throw MissingForestFile {forest_file, "forest-file"};
-        }
-        if (!temp_directory) temp_directory = "/tmp";
-        if (is_set("somatic-forest-file", options)) {
-            auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
-            if (!fs::exists(somatic_forest_file)) {
-                throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
+    if (is_call_filtering_requested(options)) {
+        if (is_set("forest-file", options)) {
+            auto forest_file = resolve_path(options.at("forest-file").as<fs::path>(), options);
+            if (!fs::exists(forest_file)) {
+                throw MissingForestFile {forest_file, "forest-file"};
             }
-            return std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
-        } else {
-            return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
-        }
-    } else if (is_set("somatic-forest-file", options)) {
-        if (options.at("somatics-only").as<bool>()) {
-            auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
-            if (!fs::exists(somatic_forest_file)) {
-                throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
-            }
-            return std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
-                                                               RandomForestFilterFactory::ForestType::somatic);
-        } else {
-            logging::WarningLogger log {};
-            log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
-            return nullptr;
-        }
-    } else if (is_call_filtering_requested(options)) {
-        if (is_csr_training(options)) {
-            return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
-        } else {
-            auto germline_filter_expression = get_germline_filter_expression(options);
-            if (is_cancer_calling(options)) {
-                if (options.at("somatics-only").as<bool>()) {
-                    return std::make_unique<ThresholdFilterFactory>("", get_somatic_filter_expression(options),
-                                                                    "", get_refcall_filter_expression(options));
-                } else {
-                    return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
-                                                                    "", get_somatic_filter_expression(options),
-                                                                    "", get_refcall_filter_expression(options));
+            if (!temp_directory) temp_directory = "/tmp";
+            if (is_set("somatic-forest-file", options)) {
+                auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
+                if (!fs::exists(somatic_forest_file)) {
+                    throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
                 }
+                return std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
             } else {
-                return std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
+                return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+            }
+        } else if (is_set("somatic-forest-file", options)) {
+            if (options.at("somatics-only").as<bool>()) {
+                auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
+                if (!fs::exists(somatic_forest_file)) {
+                    throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
+                }
+                return std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
+                                                                   RandomForestFilterFactory::ForestType::somatic);
+            } else {
+                logging::WarningLogger log {};
+                log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
+                return nullptr;
+            }
+        } else if (is_call_filtering_requested(options)) {
+            if (is_csr_training(options)) {
+                return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
+            } else {
+                auto germline_filter_expression = get_germline_filter_expression(options);
+                if (is_cancer_calling(options)) {
+                    if (options.at("somatics-only").as<bool>()) {
+                        return std::make_unique<ThresholdFilterFactory>("", get_somatic_filter_expression(options),
+                                                                        "", get_refcall_filter_expression(options));
+                    } else {
+                        return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                        "", get_somatic_filter_expression(options),
+                                                                        "", get_refcall_filter_expression(options));
+                    }
+                } else {
+                    return std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
+                }
             }
         }
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
@@ -1748,7 +1749,7 @@ bool is_csr_training_mode(const OptionMap& options)
 
 boost::optional<fs::path> filter_request(const OptionMap& options)
 {
-    if (is_set("filter-vcf", options)) {
+    if (is_call_filtering_requested(options) && is_set("filter-vcf", options)) {
         return resolve_path(options.at("filter-vcf").as<fs::path>(), options);
     }
     return boost::none;
