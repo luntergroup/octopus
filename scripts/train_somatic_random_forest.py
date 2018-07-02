@@ -147,7 +147,7 @@ def add_header(fname, header):
 def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out):
     call([ranger, '--file', data_path, '--depvarname', 'TP', '--probability',
           '--ntree', str(n_trees), '--targetpartitionsize', str(min_node_size),
-          '--nthreads', str(threads), '--outprefix', out, '--write', '--verbose])
+          '--nthreads', str(threads), '--outprefix', out, '--write', '--verbose'])
 
 def main(options):
     if not exists(options.out):
