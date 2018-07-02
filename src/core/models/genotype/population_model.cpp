@@ -377,6 +377,55 @@ boost::optional<std::size_t> find_hom_ref_idx(const std::vector<Genotype<Haploty
     }
 }
 
+template <typename T>
+auto zip_index(const std::vector<T>& v)
+{
+    std::vector<std::pair<T, unsigned>> result(v.size());
+    for (unsigned idx {0}; idx < v.size(); ++idx) {
+        result[idx] = std::make_pair(v[idx], idx);
+    }
+    return result;
+}
+
+std::vector<unsigned>
+select_top_k_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+                       const GenotypeMarginalPosteriorMatrix& em_genotype_marginals,
+                       const std::size_t k)
+{
+    if (genotypes.size() <= k) {
+        std::vector<unsigned> result(genotypes.size());
+        std::iota(std::begin(result), std::end(result), 0);
+        return result;
+    } else {
+        std::vector<std::vector<std::pair<double, unsigned>>> indexed_marginals {};
+        indexed_marginals.reserve(em_genotype_marginals.size());
+        for (const auto& marginals : em_genotype_marginals) {
+            auto tmp = zip_index(marginals);
+            std::nth_element(std::begin(tmp), std::next(std::begin(tmp), k), std::end(tmp), std::greater<> {});
+            indexed_marginals.push_back(std::move(tmp));
+        }
+        std::vector<unsigned> result {}, top(genotypes.size(), 0u);
+        result.reserve(k);
+        for (std::size_t j {0}; j <= k; ++j) {
+            for (const auto& marginals : indexed_marginals) {
+                ++top[marginals.front().second];
+            }
+            const auto max_itr = std::max_element(std::begin(top), std::end(top));
+            const auto max_idx = static_cast<unsigned>(std::distance(std::begin(top), max_itr));
+            if (std::find(std::cbegin(result), std::cend(result), max_idx) == std::cend(result)) {
+                result.push_back(max_idx);
+            }
+            *max_itr = 0;
+            for (auto& marginals : indexed_marginals) {
+                if (marginals.front().second == max_idx) {
+                    marginals.erase(std::cbegin(marginals));
+                }
+            }
+        }
+        return result;
+    }
+}
+
 auto propose_joint_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
                              const GenotypeMarginalPosteriorMatrix& em_genotype_marginals,
                              const std::size_t max_joint_genotypes)
@@ -388,6 +437,18 @@ auto propose_joint_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
         return generate_all_genotype_combinations(genotypes.size(), num_samples);
     }
     auto result = select_top_k_tuples(em_genotype_marginals, max_joint_genotypes);
+    const auto top_k_genotype_indices = select_top_k_genotypes(genotypes, em_genotype_marginals, num_samples / 2);
+    for (const auto genotype_idx : top_k_genotype_indices) {
+        for (std::size_t sample_idx {0}; sample_idx < num_samples; ++sample_idx) {
+            if (result.front()[sample_idx] != genotype_idx) {
+                auto tmp = result.front();
+                tmp[sample_idx] = genotype_idx;
+                if (std::find(std::cbegin(result), std::cend(result), tmp) == std::cend(result)) {
+                    result.push_back(std::move(tmp));
+                }
+            }
+        }
+    }
     const auto hom_ref_idx = find_hom_ref_idx(genotypes);
     if (hom_ref_idx) {
         std::vector<std::size_t> ref_indices(num_samples, *hom_ref_idx);
