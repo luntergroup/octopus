@@ -16,6 +16,7 @@
 #include "config/option_parser.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/ploidy_map.hpp"
+#include "basics/pedigree.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/read/read_manager.hpp"
 #include "io/variant/vcf_writer.hpp"
@@ -66,6 +67,7 @@ public:
     ProgressMeter& progress_meter() noexcept;
     bool sites_only() const noexcept;
     const PloidyMap& ploidies() const noexcept;
+    boost::optional<Pedigree> pedigree() const;
     boost::optional<Path> legacy() const;
     boost::optional<Path> filter_request() const;
     boost::optional<Path> bamout() const;
@@ -101,6 +103,7 @@ private:
         std::size_t read_buffer_size;
         ProgressMeter progress_meter;
         PloidyMap ploidies;
+        boost::optional<Pedigree> pedigree;
         bool sites_only;
         boost::optional<VcfWriter> filtered_output;
         boost::optional<Path> legacy;
