@@ -1201,14 +1201,14 @@ auto make_haplotype_generator_builder(const OptionMap& options, const boost::opt
     .set_min_flank_pad(get_min_flank_pad());
 }
 
-boost::optional<Pedigree> get_pedigree(const OptionMap& options)
+boost::optional<Pedigree> read_ped_file(const OptionMap& options)
 {
-	if (is_set("pedigree", options)) {
-		const auto ped_file = resolve_path(options.at("pedigree").as<fs::path>(), options);
-		return io::read_pedigree(ped_file);
-	} else {
-		return boost::none;
-	}
+    if (is_set("pedigree", options)) {
+        const auto ped_file = resolve_path(options.at("pedigree").as<fs::path>(), options);
+        return io::read_pedigree(ped_file);
+    } else {
+        return boost::none;
+    }
 }
 
 class BadTrioSampleSet : public UserError
@@ -1394,6 +1394,22 @@ Trio make_trio(std::vector<SampleName> samples, const OptionMap& options,
         Trio::Father {std::move(father)},
         Trio::Child  {std::move(children.front())}
     };
+}
+
+boost::optional<Pedigree> get_pedigree(const OptionMap& options, const std::vector<SampleName>& samples)
+{
+    auto result = read_ped_file(options);
+    if (!result) {
+        if (samples.size() == 3 && is_set("maternal-sample", options) && is_set("paternal-sample", options)) {
+            const auto trio = make_trio(samples, options, boost::none);
+            result = Pedigree {};
+            using Sex = Pedigree::Member::Sex;
+            result->add_founder(Pedigree::Member {trio.mother(), Sex::female});
+            result->add_founder(Pedigree::Member {trio.father(), Sex::male});
+            result->add_descendant(Pedigree::Member {trio.child(), Sex::hermaphroditic}, trio.mother(), trio.father());
+        }
+    }
+    return result;
 }
 
 class UnimplementedCaller : public ProgramError
