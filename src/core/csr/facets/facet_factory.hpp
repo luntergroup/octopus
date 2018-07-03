@@ -12,6 +12,7 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
+#include "basics/pedigree.hpp"
 #include "basics/ploidy_map.hpp"
 #include "io/variant/vcf_header.hpp"
 #include "io/variant/vcf_record.hpp"
@@ -33,6 +34,8 @@ public:
     
     FacetFactory(VcfHeader input_header);
     FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies);
+    FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies,
+                 octopus::Pedigree pedigree);
     
     FacetFactory(const FacetFactory&)            = delete;
     FacetFactory& operator=(const FacetFactory&) = delete;
@@ -58,6 +61,7 @@ private:
     boost::optional<std::reference_wrapper<const ReferenceGenome>> reference_;
     boost::optional<BufferedReadPipe> read_pipe_;
     boost::optional<PloidyMap> ploidies_;
+    boost::optional<octopus::Pedigree> pedigree_;
     
     std::unordered_map<std::string, std::function<FacetWrapper(const BlockData& data)>> facet_makers_;
     

@@ -16,6 +16,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/tools/read_assigner.hpp"
 #include "basics/ploidy_map.hpp"
+#include "basics/pedigree.hpp"
 
 namespace octopus { namespace csr {
 
@@ -38,7 +39,8 @@ public:
                                       std::reference_wrapper<const std::vector<std::string>>,
                                       std::reference_wrapper<const Haplotype>,
                                       std::reference_wrapper<const GenotypeMap>,
-                                      std::reference_wrapper<const LocalPloidyMap>
+                                      std::reference_wrapper<const LocalPloidyMap>,
+                                      std::reference_wrapper<const octopus::Pedigree>
                                      >;
     
     Facet() = default;

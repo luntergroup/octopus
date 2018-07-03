@@ -18,6 +18,7 @@ namespace octopus {
 class ReferenceGenome;
 class BufferedReadPipe;
 class PloidyMap;
+class Pedigree;
 
 namespace csr {
 
@@ -30,20 +31,24 @@ public:
     
     std::unique_ptr<VariantCallFilterFactory> clone() const;
     
-    std::unique_ptr<VariantCallFilter> make(const ReferenceGenome& reference,
-                                            BufferedReadPipe read_pipe,
-                                            VcfHeader input_header,
-                                            PloidyMap ploidies,
-                                            VariantCallFilter::OutputOptions output_config,
-                                            boost::optional<ProgressMeter&> progress = boost::none,
-                                            boost::optional<unsigned> max_threads = 1) const;
+    std::unique_ptr<VariantCallFilter>
+    make(const ReferenceGenome& reference,
+         BufferedReadPipe read_pipe,
+         VcfHeader input_header,
+         PloidyMap ploidies,
+         boost::optional<Pedigree> pedigree,
+         VariantCallFilter::OutputOptions output_config,
+         boost::optional<ProgressMeter&> progress = boost::none,
+         boost::optional<unsigned> max_threads = 1) const;
     
 private:
     virtual std::unique_ptr<VariantCallFilterFactory> do_clone() const = 0;
-    virtual std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,
-                                                       VariantCallFilter::OutputOptions output_config,
-                                                       boost::optional<ProgressMeter&> progress,
-                                                       VariantCallFilter::ConcurrencyPolicy threading) const = 0;
+    virtual
+    std::unique_ptr<VariantCallFilter>
+    do_make(FacetFactory facet_factory,
+            VariantCallFilter::OutputOptions output_config,
+            boost::optional<ProgressMeter&> progress,
+            VariantCallFilter::ConcurrencyPolicy threading) const = 0;
 };
 
 } // namespace csr

@@ -57,6 +57,8 @@ bool call_sites_only(const OptionMap& options);
 
 PloidyMap get_ploidy_map(const OptionMap& options);
 
+boost::optional<Pedigree> get_pedigree(const OptionMap& options, const std::vector<SampleName>& samples);
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   boost::optional<ReadSetProfile> input_reads_profile = boost::none);

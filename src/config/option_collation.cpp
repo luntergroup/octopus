@@ -1201,14 +1201,14 @@ auto make_haplotype_generator_builder(const OptionMap& options, const boost::opt
     .set_min_flank_pad(get_min_flank_pad());
 }
 
-boost::optional<Pedigree> get_pedigree(const OptionMap& options)
+boost::optional<Pedigree> read_ped_file(const OptionMap& options)
 {
-	if (is_set("pedigree", options)) {
-		const auto ped_file = resolve_path(options.at("pedigree").as<fs::path>(), options);
-		return io::read_pedigree(ped_file);
-	} else {
-		return boost::none;
-	}
+    if (is_set("pedigree", options)) {
+        const auto ped_file = resolve_path(options.at("pedigree").as<fs::path>(), options);
+        return io::read_pedigree(ped_file);
+    } else {
+        return boost::none;
+    }
 }
 
 class BadTrioSampleSet : public UserError
@@ -1396,6 +1396,22 @@ Trio make_trio(std::vector<SampleName> samples, const OptionMap& options,
     };
 }
 
+boost::optional<Pedigree> get_pedigree(const OptionMap& options, const std::vector<SampleName>& samples)
+{
+    auto result = read_ped_file(options);
+    if (!result) {
+        if (samples.size() == 3 && is_set("maternal-sample", options) && is_set("paternal-sample", options)) {
+            const auto trio = make_trio(samples, options, boost::none);
+            result = Pedigree {};
+            using Sex = Pedigree::Member::Sex;
+            result->add_founder(Pedigree::Member {trio.mother(), Sex::female});
+            result->add_founder(Pedigree::Member {trio.father(), Sex::male});
+            result->add_descendant(Pedigree::Member {trio.child(), Sex::hermaphroditic}, trio.mother(), trio.father());
+        }
+    }
+    return result;
+}
+
 class UnimplementedCaller : public ProgramError
 {
     std::string do_where() const override
@@ -1475,7 +1491,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     CallerBuilder vc_builder {reference, read_pipe,
                               make_variant_generator_builder(options),
                               make_haplotype_generator_builder(options, input_reads_profile)};
-	const auto pedigree = get_pedigree(options);
+	const auto pedigree = read_ped_file(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
     check_caller(caller, read_pipe.samples(), options);
     vc_builder.set_caller(caller);
@@ -1605,23 +1621,45 @@ public:
     MissingForestFile(fs::path p, std::string type) : MissingFileError {std::move(p), std::move(type)} {};
 };
 
+auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
+{
+    return get_caller_type(options, samples, get_pedigree(options, samples));
+}
+
 std::unique_ptr<VariantCallFilterFactory>
 make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
                          boost::optional<fs::path> temp_directory)
 {
     if (is_call_filtering_requested(options)) {
+        const auto caller = get_caller_type(options, read_pipe.samples());
         if (is_set("forest-file", options)) {
             auto forest_file = resolve_path(options.at("forest-file").as<fs::path>(), options);
             if (!fs::exists(forest_file)) {
                 throw MissingForestFile {forest_file, "forest-file"};
             }
             if (!temp_directory) temp_directory = "/tmp";
-            if (is_set("somatic-forest-file", options)) {
-                auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
-                if (!fs::exists(somatic_forest_file)) {
-                    throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
+            if (caller == "cancer") {
+                if (is_set("somatic-forest-file", options)) {
+                    auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
+                    if (!fs::exists(somatic_forest_file)) {
+                        throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
+                    }
+                    return std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
+                } else if (options.at("somatics-only").as<bool>()) {
+                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                       RandomForestFilterFactory::ForestType::somatic);
+                } else {
+                    logging::WarningLogger log {};
+                    log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
+                    return nullptr;
                 }
-                return std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
+            } else if (caller == "trio") {
+                if (options.at("denovos-only").as<bool>()) {
+                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                       RandomForestFilterFactory::ForestType::denovo);
+                } else {
+                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+                }
             } else {
                 return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
             }
@@ -1638,12 +1676,12 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                 log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
                 return nullptr;
             }
-        } else if (is_call_filtering_requested(options)) {
+        } else {
             if (is_csr_training(options)) {
                 return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
             } else {
                 auto germline_filter_expression = get_germline_filter_expression(options);
-                if (is_cancer_calling(options)) {
+                if (caller == "cancer") {
                     if (options.at("somatics-only").as<bool>()) {
                         return std::make_unique<ThresholdFilterFactory>("", get_somatic_filter_expression(options),
                                                                         "", get_refcall_filter_expression(options));
@@ -1652,6 +1690,10 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                                                                         "", get_somatic_filter_expression(options),
                                                                         "", get_refcall_filter_expression(options));
                     }
+                } else if (caller == "trio" && options.at("denovos-only").as<bool>()) {
+                    return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                    "", get_refcall_filter_expression(options),
+                                                                    true, ThresholdFilterFactory::Type::denovo);
                 } else {
                     return std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
                 }
