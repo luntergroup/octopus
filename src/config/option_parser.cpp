@@ -550,6 +550,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-denovo-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {3}),
      "Minimum posterior probability (phred scale) to emit a de novo mutation call")
+    
+    ("denovos-only",
+     po::bool_switch()->default_value(false),
+     "Only emit DENOVO mutations")
     ;
     
     po::options_description polyclone("Calling (polyclone)");
