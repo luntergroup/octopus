@@ -14,7 +14,6 @@
 #include "variant_call_filter_factory.hpp"
 #include "variant_call_filter.hpp"
 #include "threshold_filter.hpp"
-#include "somatic_threshold_filter.hpp"
 
 namespace octopus { namespace csr {
 
@@ -23,16 +22,19 @@ class FacetFactory;
 class ThresholdFilterFactory : public VariantCallFilterFactory
 {
 public:
+    enum class Type { somatic, denovo };
+    
     ThresholdFilterFactory() = default;
     
     ThresholdFilterFactory(std::string soft_expression);
     ThresholdFilterFactory(std::string hard_expression, std::string soft_expression);
     ThresholdFilterFactory(std::string germline_hard_expression, std::string germline_soft_expression,
                            std::string somatic_hard_expression, std::string somatic_soft_expression,
-                           std::string refcall_hard_expression, std::string refcall_soft_expression);
+                           std::string refcall_hard_expression, std::string refcall_soft_expression,
+                           Type type = Type::somatic);
     ThresholdFilterFactory(std::string somatic_hard_expression, std::string somatic_soft_expression,
                            std::string refcall_hard_expression, std::string refcall_soft_expression,
-                           bool somatics_only = true);
+                           bool somatics_only = true, Type type = Type::somatic);
     
     ThresholdFilterFactory(const ThresholdFilterFactory&)            = default;
     ThresholdFilterFactory& operator=(const ThresholdFilterFactory&) = default;
@@ -46,6 +48,7 @@ private:
     using ConditionVectorPair = ThresholdVariantCallFilter::ConditionVectorPair;
     
     ConditionVectorPair germline_, somatic_, reference_;
+    Type type_;
     bool hard_filter_germline_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;

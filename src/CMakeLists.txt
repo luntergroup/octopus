@@ -266,6 +266,8 @@ set(CORE_SOURCES
     core/csr/filters/conditional_threshold_filter.cpp
     core/csr/filters/somatic_threshold_filter.hpp
     core/csr/filters/somatic_threshold_filter.cpp
+    core/csr/filters/denovo_threshold_filter.hpp
+    core/csr/filters/denovo_threshold_filter.cpp
     core/csr/filters/random_forest_filter.hpp
     core/csr/filters/random_forest_filter.cpp
     core/csr/filters/random_forest_filter_factory.hpp
