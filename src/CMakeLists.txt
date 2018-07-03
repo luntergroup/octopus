@@ -237,6 +237,8 @@ set(CORE_SOURCES
     core/csr/facets/genotypes.cpp
     core/csr/facets/ploidies.hpp
     core/csr/facets/ploidies.cpp
+    core/csr/facets/pedigree.hpp
+    core/csr/facets/pedigree.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
 

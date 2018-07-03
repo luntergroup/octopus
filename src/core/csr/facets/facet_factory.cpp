@@ -18,6 +18,7 @@
 #include "samples.hpp"
 #include "genotypes.hpp"
 #include "ploidies.hpp"
+#include "pedigree.hpp"
 
 namespace octopus { namespace csr {
 
@@ -27,6 +28,7 @@ FacetFactory::FacetFactory(VcfHeader input_header)
 , reference_ {}
 , read_pipe_ {}
 , ploidies_ {}
+, pedigree_ {}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -38,6 +40,20 @@ FacetFactory::FacetFactory(VcfHeader input_header, const ReferenceGenome& refere
 , reference_ {reference}
 , read_pipe_ {std::move(read_pipe)}
 , ploidies_ {std::move(ploidies)}
+, pedigree_ {}
+, facet_makers_ {}
+{
+    setup_facet_makers();
+}
+
+FacetFactory::FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies,
+                           octopus::Pedigree pedigree)
+: input_header_ {std::move(input_header)}
+, samples_ {input_header_.samples()}
+, reference_ {reference}
+, read_pipe_ {std::move(read_pipe)}
+, ploidies_ {std::move(ploidies)}
+, pedigree_ {std::move(pedigree)}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -49,6 +65,7 @@ FacetFactory::FacetFactory(FacetFactory&& other)
 , reference_ {std::move(other.reference_)}
 , read_pipe_ {std::move(other.read_pipe_)}
 , ploidies_ {std::move(other.ploidies_)}
+, pedigree_ {std::move(other.pedigree_)}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -62,6 +79,7 @@ FacetFactory& FacetFactory::operator=(FacetFactory&& other)
     swap(reference_, other.reference_);
     swap(read_pipe_, other.read_pipe_);
     swap(ploidies_, other.ploidies_);
+    swap(pedigree_, other.pedigree_);
     setup_facet_makers();
     return *this;
 }
@@ -144,6 +162,17 @@ bool requires_ploidies(const std::string& facet) noexcept
 bool requires_ploidies(const std::vector<std::string>& facets) noexcept
 {
     return std::any_of(std::cbegin(facets), std::cend(facets), [](const auto& facet) { return requires_ploidies(facet); });
+}
+
+bool requires_pedigree(const std::string& facet) noexcept
+{
+    const static std::array<std::string, 1> genotype_facets{name<Pedigree>()};
+    return std::find(std::cbegin(genotype_facets), std::cend(genotype_facets), facet) != std::cend(genotype_facets);
+}
+
+bool requires_pedigree(const std::vector<std::string>& facets) noexcept
+{
+    return std::any_of(std::cbegin(facets), std::cend(facets), [](const auto& facet) { return requires_pedigree(facet); });
 }
 
 } // namespace
@@ -242,6 +271,10 @@ void FacetFactory::setup_facet_makers()
     {
         return {std::make_unique<Ploidies>(*ploidies_, *block.region, input_header_.samples())};
     };
+    facet_makers_[name<Pedigree>()] = [this] (const BlockData& block) -> FacetWrapper
+    {
+        return {std::make_unique<Pedigree>(*pedigree_)};
+    };
 }
 
 void FacetFactory::check_requirements(const std::string& name) const
@@ -253,6 +286,9 @@ void FacetFactory::check_requirements(const std::string& name) const
         throw BadFacetFactoryRequest {name};
     }
     if (!ploidies_ && requires_ploidies(name)) {
+        throw BadFacetFactoryRequest {name};
+    }
+    if (!pedigree_ && requires_pedigree(name)) {
         throw BadFacetFactoryRequest {name};
     }
 }
