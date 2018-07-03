@@ -276,6 +276,8 @@ set(CORE_SOURCES
     core/csr/filters/conditional_random_forest_filter.cpp
     core/csr/filters/somatic_random_forest_filter.hpp
     core/csr/filters/somatic_random_forest_filter.cpp
+    core/csr/filters/denovo_random_forest_filter.hpp
+    core/csr/filters/denovo_random_forest_filter.cpp
     core/csr/filters/variant_filter_utils.hpp
     core/csr/filters/variant_filter_utils.cpp
     

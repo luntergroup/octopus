@@ -25,7 +25,7 @@ class RandomForestFilterFactory : public VariantCallFilterFactory
 {
 public:
     using Path = RandomForestFilter::Path;
-    enum class ForestType { germline, somatic };
+    enum class ForestType { germline, somatic, denovo };
     
     RandomForestFilterFactory() = default;
     
