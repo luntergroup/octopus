@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef memory_footprint_hpp
@@ -11,14 +11,16 @@
 
 #include <boost/optional.hpp>
 
+#include "concepts/comparable.hpp"
+
 namespace octopus {
 
-class MemoryFootprint
+class MemoryFootprint : public Comparable<MemoryFootprint>
 {
 public:
     MemoryFootprint() = default;
     
-    MemoryFootprint(std::size_t num_bytes) noexcept;
+    constexpr MemoryFootprint(std::size_t num_bytes) noexcept : num_bytes_ {num_bytes} {}
     
     MemoryFootprint(const MemoryFootprint&)            = default;
     MemoryFootprint& operator=(const MemoryFootprint&) = default;
@@ -26,12 +28,15 @@ public:
     MemoryFootprint& operator=(MemoryFootprint&&)      = default;
     
     ~MemoryFootprint() = default;
-        
-    std::size_t num_bytes() const noexcept;
+    
+    constexpr std::size_t num_bytes() const noexcept { return num_bytes_; }
     
 private:
     std::size_t num_bytes_;
 };
+
+bool operator==(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept;
+bool operator<(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept;
 
 std::ostream& operator<<(std::ostream& os, MemoryFootprint footprint);
 std::istream& operator>>(std::istream& is, MemoryFootprint& result);

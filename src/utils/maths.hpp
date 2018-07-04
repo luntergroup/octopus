@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef maths_hpp
@@ -23,9 +23,11 @@
 #include <boost/math/special_functions/digamma.hpp>
 #include <boost/math/special_functions/beta.hpp>
 #include <boost/math/distributions/beta.hpp>
+#include <boost/math/distributions/geometric.hpp>
+#include <boost/math/distributions/binomial.hpp>
 
-namespace octopus { namespace maths
-{
+namespace octopus { namespace maths {
+
 namespace constants
 {
     template <typename T = double>
@@ -38,6 +40,15 @@ RealType round(const RealType val, const unsigned precision = 2)
 {
     const auto factor = std::pow(RealType {10.0}, precision);
     return std::round(val * factor) / factor;
+}
+
+template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
+T round_sf(const T x, const int n)
+{
+    // https://stackoverflow.com/a/13094362/2970186
+    if (x == 0.0) return 0;
+    auto factor = std::pow(10.0, n - std::ceil(std::log10(std::abs(x))));
+    return std::round(x * factor) / factor;
 }
 
 template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
@@ -58,14 +69,22 @@ bool almost_one(const T x, const int ulp = 1)
     return almost_equal(x, T {1}, ulp);
 }
 
+template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
+int count_leading_zeros(const T x)
+{
+    if (x == 0.0) return 0;
+    return -std::ceil(std::log10(std::abs(x - std::numeric_limits<T>::epsilon())));
+}
 
 template <typename RealType>
-constexpr RealType exp_maclaurin(const RealType x) {
+constexpr RealType exp_maclaurin(const RealType x)
+{
     return (6 + x * (6 + x * (3 + x))) * 0.16666666;
 }
 
 template <typename RealType>
-constexpr RealType mercator(const RealType x) {
+constexpr RealType mercator(const RealType x)
+{
     return x - x * x / 2 + x * x * x / 3;
 }
 
@@ -100,6 +119,70 @@ template <typename Container, typename UnaryOperation>
 auto mean(const Container& values, UnaryOperation unary_op)
 {
     return mean(std::cbegin(values), std::cend(values), unary_op);
+}
+
+namespace detail {
+
+template <typename T = double, typename ForwardIt>
+T median_unsorted(ForwardIt first, ForwardIt last)
+{
+    const auto n = std::distance(first, last);
+    assert(n > 0);
+    if (n == 1) return *first;
+    if (n == 2) return static_cast<T>(*first + *std::next(first)) / 2;
+    const auto middle = std::next(first, n / 2);
+    std::nth_element(first, middle, last);
+    if (n % 2 == 1) {
+        return *middle;
+    } else {
+        auto prev_middle_itr = std::max_element(first, middle);
+        return static_cast<T>(*prev_middle_itr + *middle) / 2;
+    }
+}
+
+template <typename T = double, typename ForwardIt>
+auto median_sorted(ForwardIt first, ForwardIt last)
+{
+    const auto n = std::distance(first, last);
+    assert(n > 0);
+    if (n == 1) return *first;
+    const auto middle = std::next(first, n / 2);
+    if (n % 2 == 1) {
+        return *middle;
+    } else {
+        return static_cast<T>(*std::prev(middle) + *middle) / 2;
+    }
+}
+
+template <typename T = double, typename ForwardIt>
+auto median_const(ForwardIt first, ForwardIt last)
+{
+    if (std::is_sorted(first, last)) {
+        return median_sorted<T>(first, last);
+    } else {
+        std::vector<typename std::iterator_traits<ForwardIt>::value_type> tmp {first, last};
+        return median_unsorted<T>(std::begin(tmp), std::end(tmp));
+    }
+}
+
+} // namespace detail
+
+template <typename T = double, typename ForwardIt>
+auto median(ForwardIt first, ForwardIt last)
+{
+    return detail::median_unsorted<T>(first, last);
+}
+
+template <typename T = double, typename Range>
+auto median(Range& values)
+{
+    return median<T>(std::begin(values), std::end(values));
+}
+
+template <typename T = double, typename Range>
+auto median(const Range& values)
+{
+    return detail::median_const<T>(std::cbegin(values), std::cend(values));
 }
 
 template <typename InputIt, typename UnaryOperation>
@@ -190,6 +273,13 @@ auto log_sum_exp(const Container& values)
     return log_sum_exp(std::cbegin(values), std::cend(values));
 }
 
+template <typename T, typename IntegerType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
+T factorial(const IntegerType x)
+{
+    return boost::math::factorial<double>(x);
+}
+
 template <typename RealType, typename IntegerType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
@@ -214,9 +304,31 @@ RealType log_factorial(IntegerType x)
 template <typename IntegerType, typename RealType,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType geometric_pdf(const IntegerType k, const RealType p)
+{
+    boost::math::geometric_distribution<RealType> dist {p};
+    return boost::math::pdf(dist, k);
+}
+
+template <typename IntegerType, typename RealType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType binomial_pdf(const IntegerType k, const IntegerType n, const RealType p)
+{
+    boost::math::binomial_distribution<RealType> dist {static_cast<RealType>(n), p};
+    return boost::math::pdf(dist, k);
+}
+
+template <typename IntegerType, typename RealType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 RealType log_poisson_pmf(const IntegerType k, const RealType mu)
 {
-    return k * std::log(mu) - boost::math::lgamma(k) - mu;
+    if (k > 0) {
+        return k * std::log(mu) - std::lgamma(k) - mu;
+    } else {
+        return -mu;
+    }
 }
 
 template <typename IntegerType, typename RealType,
@@ -257,10 +369,8 @@ auto log_beta(const ForwardIt first, const ForwardIt last)
     using T = std::decay_t<typename std::iterator_traits<ForwardIt>::value_type>;
     static_assert(std::is_floating_point<T>::value,
                   "log_beta is only defined for floating point types.");
-    return std::accumulate(first, last, T {0},
-                           [] (const auto curr, const auto x) {
-                               return curr + boost::math::lgamma(x);
-                           }) - boost::math::lgamma(std::accumulate(first, last, T {0}));
+    return std::accumulate(first, last, T {0}, [] (const auto curr, const auto x) { return curr + std::lgamma(x); })
+           - std::lgamma(std::accumulate(first, last, T {0}));
 }
 
 template <typename Container>
@@ -275,7 +385,7 @@ auto log_dirichlet(ForwardIt1 firstalpha, ForwardIt1 lastalpha, ForwardIt2 first
     using T = std::decay_t<typename std::iterator_traits<ForwardIt1>::value_type>;
     static_assert(std::is_floating_point<T>::value,
                   "log_dirichlet is only defined for floating point types.");
-    return std::inner_product(firstalpha, lastalpha, firstpi, T {0}, std::plus<void> {},
+    return std::inner_product(firstalpha, lastalpha, firstpi, T {0}, std::plus<> {},
                               [] (const auto a, const auto p) { return (a - 1) * std::log(p); })
             - log_beta(firstalpha, lastalpha);
 }
@@ -284,6 +394,60 @@ template <typename Container1, typename Container2>
 auto log_dirichlet(const Container1& alpha, const Container2& pi)
 {
     return log_dirichlet(std::cbegin(alpha), std::cend(alpha), std::cbegin(pi));
+}
+
+template <typename ForwardIt>
+auto dirichlet_expectation(ForwardIt first_alpha, ForwardIt last_alpha)
+{
+    using T = std::decay_t<typename std::iterator_traits<ForwardIt>::value_type>;
+    static_assert(std::is_floating_point<T>::value,
+                  "log_dirichlet is only defined for floating point types.");
+    const auto K = static_cast<std::size_t>(std::distance(first_alpha, last_alpha));
+    const auto a0 = std::accumulate(first_alpha, last_alpha, T {0});
+    std::vector<T> result(K);
+    std::transform(first_alpha, last_alpha, std::begin(result), [a0] (auto a) { return a / a0; });
+    return result;
+}
+
+template <typename Range>
+auto dirichlet_expectation(const Range& values)
+{
+    return dirichlet_expectation(std::cbegin(values), std::cend(values));
+}
+
+template <typename ForwardIt>
+auto dirichlet_expectation(const unsigned i, ForwardIt first_alpha, ForwardIt last_alpha)
+{
+    using T = std::decay_t<typename std::iterator_traits<ForwardIt>::value_type>;
+    static_assert(std::is_floating_point<T>::value,
+                  "log_dirichlet is only defined for floating point types.");
+    assert(i < static_cast<unsigned>(std::distance(first_alpha, last_alpha)));
+    return *std::next(first_alpha, i) / std::accumulate(first_alpha, last_alpha, T {0});
+}
+
+template <typename Range>
+auto dirichlet_expectation(const unsigned i, const Range& values)
+{
+    return dirichlet_expectation(i, std::cbegin(values), std::cend(values));
+}
+
+template <typename ForwardIt>
+auto dirichlet_entropy(ForwardIt first_alpha, ForwardIt last_alpha)
+{
+    using T = std::decay_t<typename std::iterator_traits<ForwardIt>::value_type>;
+    static_assert(std::is_floating_point<T>::value,
+                  "log_dirichlet is only defined for floating point types.");
+    const auto K = static_cast<T>(std::distance(first_alpha, last_alpha));
+    const auto a0 = std::accumulate(first_alpha, last_alpha, T {0});
+    using boost::math::digamma;
+    return log_beta(first_alpha, last_alpha) - (K - a0) * digamma(a0)
+           - std::accumulate(first_alpha, last_alpha, T {0}, [] (auto curr, auto a) { return curr + (a - 1) * digamma(a); });
+}
+
+template <typename Range>
+auto dirichlet_entropy(const Range& values)
+{
+    return dirichlet_entropy(std::cbegin(values), std::cend(values));
 }
 
 template <typename RealType, typename IntegerType>
@@ -330,14 +494,34 @@ inline IntegerType multinomial_coefficient(const Container& values)
     return multinomial_coefficient<IntegerType, RealType>(std::cbegin(values), std::cend(values));
 }
 
+template <typename RealType, typename ForwardIt1, typename ForwardIt2>
+inline RealType multinomial_pdf(ForwardIt1 first_z, ForwardIt1 last_z, ForwardIt2 first_p)
+{
+    auto r = std::inner_product(first_z, last_z, first_p, RealType {0}, std::multiplies<> {},
+                                [] (auto z_i, auto p_i) { return std::pow(p_i, z_i); });
+    return multinomial_coefficient<RealType>(first_z, last_z) * r;
+}
+
 template <typename IntegerType, typename RealType>
 inline RealType multinomial_pdf(const std::vector<IntegerType>& z, const std::vector<RealType>& p)
 {
-    RealType r {1};
-    for (std::size_t i {0}; i < z.size(); ++i) {
-        r *= std::pow(p[i], z[i]);
-    }
-    return multinomial_coefficient<IntegerType, RealType>(std::cbegin(z), std::cend(z)) * r;
+    assert(z.size() == p.size());
+    return multinomial_pdf<RealType>(std::cbegin(z), std::cend(z), std::cbegin(p));
+}
+
+template <typename RealType, typename ForwardIt1, typename ForwardIt2>
+inline RealType log_multinomial_pdf(ForwardIt1 first_z, ForwardIt1 last_z, ForwardIt2 first_p)
+{
+    auto r = std::inner_product(first_z, last_z, first_p, RealType {0}, std::plus<> {},
+                                [] (auto z_i, auto p_i) { return z_i > 0 ? z_i * std::log(p_i) : 0.0; });
+    return log_multinomial_coefficient<RealType>(first_z, last_z) + r;
+}
+
+template <typename IntegerType, typename RealType>
+inline RealType log_multinomial_pdf(const std::vector<IntegerType>& z, const std::vector<RealType>& p)
+{
+    assert(z.size() == p.size());
+    return log_multinomial_pdf<RealType>(std::cbegin(z), std::cend(z), std::cbegin(p));
 }
 
 // Returns approximate y such that digamma(y) = x
@@ -353,16 +537,38 @@ inline RealType digamma_inv(const RealType x, const RealType epsilon = 10e-8)
     return y;
 }
 
+namespace detail {
+
+template <typename T, typename RealType>
+T ifactorial(RealType x, std::true_type)
+{
+    return factorial<T, unsigned>(x);
+}
+
+template <typename T, typename RealType>
+T ifactorial(RealType x, std::false_type)
+{
+    return factorial<T>(x);
+}
+
+template <typename T, typename RealType>
+T ifactorial(RealType x)
+{
+    return ifactorial<T>(x, std::is_floating_point<RealType> {});
+}
+
+} // namespace detail
+
 template <typename RealType>
 RealType dirichlet_multinomial(const RealType z1, const RealType z2, const RealType a1, const RealType a2)
 {
     auto z_0 = z1 + z2;
     auto a_0 = a1 + a2;
-    auto z_m = boost::math::factorial<RealType>(z1) * boost::math::factorial<RealType>(z2);
-    return (boost::math::factorial<RealType>(z_0) / z_m) *
-            (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) *
-            (boost::math::tgamma<RealType>(z1 + a1) * boost::math::tgamma<RealType>(z2 + a2)) /
-            (boost::math::tgamma<RealType>(a1) + boost::math::tgamma<RealType>(a2));
+    using detail::ifactorial;
+    auto z_m = ifactorial<RealType>(z1) * ifactorial<RealType>(z2);
+    return (ifactorial<RealType>(z_0) / z_m) *
+            (std::tgamma(a_0) / std::tgamma(z_0 + a_0)) *
+            (std::tgamma(z1 + a1) * std::tgamma(z2 + a2)) / (std::tgamma(a1) + std::tgamma(a2));
 }
 
 template <typename RealType>
@@ -371,13 +577,12 @@ RealType dirichlet_multinomial(const RealType z1, const RealType z2, const RealT
 {
     auto z_0 = z1 + z2 + z3;
     auto a_0 = a1 + a2 + a3;
-    auto z_m = boost::math::factorial<RealType>(z1) * boost::math::factorial<RealType>(z2) *
-                boost::math::factorial<RealType>(z3);
-    return (boost::math::factorial<RealType>(z_0) / z_m) *
-            (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) *
-            (boost::math::tgamma<RealType>(z1 + a1) * boost::math::tgamma<RealType>(z2 + a2) *
-             boost::math::tgamma<RealType>(z3 + a3)) /
-            (boost::math::tgamma<RealType>(a1) + boost::math::tgamma<RealType>(a2) + boost::math::tgamma<RealType>(a3));
+    using detail::ifactorial;
+    auto z_m = ifactorial<RealType>(z1) * ifactorial<RealType>(z2) * ifactorial<RealType>(z3);
+    return (ifactorial<RealType>(z_0) / z_m) *
+            (std::tgamma(a_0) / std::tgamma(z_0 + a_0)) *
+            (std::tgamma(z1 + a1) * std::tgamma(z2 + a2) *
+            std::tgamma(z3 + a3)) / (std::tgamma(a1) + std::tgamma(a2) + std::tgamma(a3));
 }
 
 template <typename RealType>
@@ -386,16 +591,15 @@ RealType dirichlet_multinomial(const std::vector<RealType>& z, const std::vector
     auto z_0 = std::accumulate(std::cbegin(z), std::cend(z), RealType {0});
     auto a_0 = std::accumulate(std::cbegin(a), std::cend(a), RealType {0});
     RealType z_m {1};
+    using detail::ifactorial;
     for (auto z_i : z) {
-        z_m *= boost::math::factorial<RealType>(z_i);
+        z_m *= ifactorial<RealType>(z_i);
     }
     RealType g {1};
     for (std::size_t i {0}; i < z.size(); ++i) {
-        g *= boost::math::tgamma<RealType>(z[i] + a[i]) / boost::math::tgamma<RealType>(a[i]);
+        g *= std::tgamma(z[i] + a[i]) / std::tgamma(a[i]);
     }
-    
-    return (boost::math::factorial<RealType>(z_0) / z_m) *
-            (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) * g;
+    return (ifactorial<RealType>(z_0) / z_m) * (std::tgamma(a_0) / std::tgamma(z_0 + a_0)) * g;
 }
 
 template <typename RealType>
@@ -405,16 +609,18 @@ RealType beta_binomial(const RealType k, const RealType n, const RealType alpha,
 }
 
 namespace detail {
-    template <typename RealType>
-    bool is_mldp_converged(std::vector<RealType>& lhs, const std::vector<RealType>& rhs,
-                           const RealType epsilon)
-    {
-        std::transform(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::begin(lhs),
-                       [] (const auto a, const auto b) { return std::abs(a - b); });
-        return std::all_of(std::cbegin(lhs), std::cend(lhs),
-                           [epsilon] (const auto x) { return x < epsilon; });
-    }
+
+template <typename RealType>
+bool is_mldp_converged(std::vector<RealType>& lhs, const std::vector<RealType>& rhs,
+                       const RealType epsilon)
+{
+    std::transform(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::begin(lhs),
+                   [] (const auto a, const auto b) { return std::abs(a - b); });
+    return std::all_of(std::cbegin(lhs), std::cend(lhs),
+                       [epsilon] (const auto x) { return x < epsilon; });
 }
+
+} // namespace detail
 
 template <typename RealType>
 std::vector<RealType>
@@ -423,11 +629,9 @@ dirichlet_mle(std::vector<RealType> pi, const RealType precision,
 {
     std::transform(std::cbegin(pi), std::cend(pi), std::begin(pi),
                    [] (const auto p) { return std::log(p); });
-    
     const auto l = pi.size();
     const RealType u {RealType {1} / l};
     std::vector<RealType> result(l, u), curr_result(l, u), means(l, u);
-    
     for (unsigned n {0}; n < max_iterations; ++n) {
         RealType v {0};
         for (std::size_t j {0}; j < l; ++j) {
@@ -435,16 +639,13 @@ dirichlet_mle(std::vector<RealType> pi, const RealType precision,
         }
         for (std::size_t k {0}; k < l; ++k) {
             curr_result[k] = digamma_inv<RealType>(pi[k] - v);
-            means[k]       = curr_result[k] / std::accumulate(std::cbegin(curr_result),
-                                                              std::cend(curr_result),
-                                                              RealType {0});
+            means[k] = curr_result[k] / std::accumulate(std::cbegin(curr_result), std::cend(curr_result), RealType {0});
         }
         if (detail::is_mldp_converged(result, curr_result, epsilon)) {
             return curr_result;
         }
         result = curr_result;
     }
-    
     return result;
 }
 
@@ -452,7 +653,7 @@ template <typename NumericType = float, typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 NumericType probability_to_phred(const RealType p)
 {
-    return static_cast<NumericType>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon())));
+    return -10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon()));
 }
 
 template <typename NumericType = float, typename RealType,
@@ -543,7 +744,7 @@ RealType beta_cdf(const RealType a, const RealType b, const RealType x)
 }
 
 template <typename RealType>
-RealType beta_cdf_complement(const RealType a, const RealType b, const RealType x)
+RealType beta_sf(const RealType a, const RealType b, const RealType x)
 {
     const boost::math::beta_distribution<> beta_dist {a, b};
     return boost::math::cdf(boost::math::complement(beta_dist, x));
@@ -588,8 +789,7 @@ std::pair<RealType, RealType>
 beta_hdi_skewed(const RealType a, const RealType b, const RealType mass)
 {
     const auto c = (RealType {1} - mass) / 2;
-    return std::make_pair(boost::math::ibeta_inv(a, b, c),
-                          boost::math::ibeta_inv(a, b, c + mass));
+    return std::make_pair(boost::math::ibeta_inv(a, b, c), boost::math::ibeta_inv(a, b, c + mass));
 }
 
 } // namespace detail
@@ -598,16 +798,13 @@ template <typename RealType>
 std::pair<RealType, RealType>
 beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
 {
-    static_assert(std::is_floating_point<RealType>::value,
-                  "beta_hdi only works for floating point types");
-    
+    static_assert(std::is_floating_point<RealType>::value, "beta_hdi only works for floating point types");
     if (mass < RealType {0} || mass > RealType {1}) {
         throw std::domain_error {"beta_hdi: given mass not in range [0, 1]"};
     }
     if (a <= RealType {0} || b <= RealType {0}) {
         throw std::domain_error {"beta_hdi: given non-positive parameter"};
     }
-    
     if (mass == RealType {0}) {
         const auto mean = a / (a + b);
         return std::make_pair(mean, mean);
@@ -629,6 +826,20 @@ beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
         return detail::beta_hdi_unbounded_rhs(a, mass);
     }
     return detail::beta_hdi_skewed(a, b, mass);
+}
+
+template <typename RealType>
+RealType dirichlet_marginal_cdf(const std::vector<RealType>& alphas, const std::size_t k, const RealType x)
+{
+    const auto a_0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), RealType {});
+    return beta_cdf(alphas[k], a_0 - alphas[k], x);
+}
+
+template <typename RealType>
+RealType dirichlet_marginal_sf(const std::vector<RealType>& alphas, const std::size_t k, const RealType x)
+{
+    const auto a_0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), RealType {});
+    return beta_sf(alphas[k], a_0 - alphas[k], x);
 }
 
 template <typename Container>
@@ -658,6 +869,7 @@ auto normalise_exp(Container& logs)
     for (auto& p : logs) p = std::exp(p -= norm);
     return norm;
 }
+
 } // namespace maths
 } // namespace octopus
 

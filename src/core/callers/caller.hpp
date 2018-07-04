@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef caller_hpp
@@ -28,6 +28,7 @@
 #include "logging/logging.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "core/tools/vcf_record_factory.hpp"
+#include "basics/read_pileup.hpp"
 
 namespace octopus {
 
@@ -62,6 +63,9 @@ public:
     std::string name() const;
     
     CallTypeSet call_types() const;
+    
+    unsigned min_callable_ploidy() const;
+    unsigned max_callable_ploidy() const;
     
     std::deque<VcfRecord> call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const;
     
@@ -122,14 +126,20 @@ private:
     HaplotypeLikelihoodModel likelihood_model_;
     Phaser phaser_;
     Parameters parameters_;
-        
+    
     // virtual methods
     
     virtual std::string do_name() const = 0;
     virtual CallTypeSet do_call_types() const = 0;
-    
+    virtual unsigned do_min_callable_ploidy() const { return 1; }
+    virtual unsigned do_max_callable_ploidy() const { return max_callable_ploidy(); };
+
+protected:
     virtual std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const;
     
+    using ReadPileupMap = std::unordered_map<SampleName, ReadPileups>;
+
+private:
     virtual std::unique_ptr<Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
@@ -146,7 +156,7 @@ private:
     
     virtual std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Latents& latents,
-                   const ReadMap& reads) const = 0;
+                   const ReadPileupMap& pileups) const = 0;
     
     // helper methods
     
@@ -200,11 +210,13 @@ private:
     void set_phasing(std::vector<CallWrapper>& calls, const Latents& latents,
                      const std::vector<Haplotype>& haplotypes, const GenomicRegion& call_region) const;
     bool done_calling(const GenomicRegion& region) const noexcept;
+    std::vector<CallWrapper> call_reference(const GenomicRegion& region, const ReadMap& reads) const;
     std::vector<Allele>
-    generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates) const;
-    std::vector<Allele>
-    generate_candidate_reference_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates,
-                                         const std::vector<GenomicRegion>& called_regions) const;
+    generate_reference_alleles(const GenomicRegion& region,
+                               const std::vector<Variant>& candidates,
+                               const std::vector<CallWrapper>& calls) const;
+    std::vector<Allele> generate_reference_alleles(const GenomicRegion& region) const;
+    ReadPileupMap make_pileups(const ReadMap& reads, const Latents& latents, const GenomicRegion& region) const;
 };
 
 } // namespace octopus

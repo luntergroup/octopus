@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef somatic_mutation_model_hpp
@@ -38,7 +38,7 @@ public:
     // ln p(somatic | germline)
     double evaluate(const Haplotype& somatic, const Haplotype& germline) const;
     
-    double evaluate(unsigned somatic, unsigned germline) const noexcept;
+    double evaluate(unsigned somatic, unsigned germline) const;
     
 private:
     DeNovoModel model_;

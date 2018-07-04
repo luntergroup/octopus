@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "octopus_vcf.hpp"
@@ -14,30 +14,20 @@ VcfHeader::Builder make_header_template()
     
     result.set_file_format(vcfspec::version);
     
-    result.add_info("AA", "1", "String", "Ancestral allele");
     result.add_info("AC", "A", "Integer", "Allele count in genotypes, for each ALT allele, in the same order as listed");
-    //result.add_info("AF", "A", "Float", "Allele Frequency, for each ALT allele, in the same order as listed");
     result.add_info("AN", "1", "Integer", "Total number of alleles in called genotypes");
-    result.add_info("BQ", "1", "Integer", "RMS base quality at this position");
     result.add_info("DP", "1", "Integer", "Combined depth across samples");
-    //result.add_info("END", "1", "Integer", "End position of the variant described in this record");
     result.add_info("MQ", "1", "Integer", "RMS mapping quality");
     result.add_info("MQ0", "1", "Integer", "Number of MAPQ == 0 reads covering this record");
     result.add_info("NS", "1", "Integer", "Number of samples with data");
-    result.add_info("SB", "1", "Float", "Strand bias at this position");
     
     result.add_format("GT", "1", "String", "Genotype");
     result.add_format("DP", "1", "Integer", "Read depth at this position for this sample");
-    //result.add_format("FT", "1", "String", "Sample genotype filter indicating if this genotype was “called”");
-    //result.add_format("GL", "G", "Float", "log10-scaled genotype likelihoods");
-    //result.add_format("GLE", "1", "Integer", "Genotype likelihoods of heterogeneous ploidy");
-    //result.add_format("PL", "G", "Integer", "Phred-scaled genotype likelihoods");
-    //result.add_format("GP", "G", "Float", "Phred-scaled genotype posterior probabilities");
+    result.add_format("FT", "1", "String", "Sample genotype filter indicating if this genotype was “called”");
     result.add_format("GQ", "1", "Integer", "Conditional genotype quality (phred-scaled)");
     result.add_format("PS", "1", "String", "Phase set");
     result.add_format("PQ", "1", "Integer", "Phasing quality");
     result.add_format("MQ", "1", "Integer", "RMS mapping quality");
-    result.add_format("BQ", "1", "Integer", "RMS base quality at this position");
     
     result.add_filter("PASS", "All filters passed");
     
@@ -46,6 +36,8 @@ VcfHeader::Builder make_header_template()
 
 static const std::unordered_map<std::string, std::string> filter_descriptions
 {
+{spec::filter::q3, "Variant quality is below 3"},
+{spec::filter::q5, "Variant quality is below 5"},
 {spec::filter::q10, "Variant quality is below 10"},
 {spec::filter::q20, "Variant quality is below 20"},
 {spec::filter::lowQuality, "Variant quality is low"},
@@ -61,6 +53,13 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::highGCRegion, "The GC content of the region is too high"},
 {spec::filter::lowGQ, "Sample genotype quality low"},
 {spec::filter::highClippedReadFraction, "High fraction of clipped reads covering position"},
+{spec::filter::bq10, "Median base quality supporting variant is less than 10"},
+{spec::filter::lowBaseQuality, "Median base quality supporting variant is low"},
+{spec::filter::highMismatchFraction, "Count of reads containing mismatch to called allele is high"},
+{spec::filter::highMismatchFraction, "Fraction of reads containing mismatch to called allele is high"},
+{spec::filter::somaticContamination, "Somatic contamination detected in a called normal sample"},
+{spec::filter::deNovoContamination, "De novo allele detected in the offsprings parents"},
+{spec::filter::readPositionBias, "Position of variant in supporting reads is biased"}
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)

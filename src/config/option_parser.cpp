@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_parser.hpp"
@@ -171,6 +171,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "VCF file specifying calls to regenotype, only sites in this files will appear in the"
      " final output")
+    
+    ("bamout",
+     po::value<fs::path>(),
+     "Output a realigned BAM file")
     ;
     
     po::options_description transforms("Read transformations");
@@ -258,13 +262,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Allows reads marked as supplementary alignments")
     
-    ("consider-reads-with-unmapped-segments",
+    ("no-reads-with-unmapped-segments",
      po::bool_switch()->default_value(false),
-     "Allows reads with unmapped template segmenets to be used for calling")
+     "Filter reads with unmapped template segmenets to be used for calling")
     
-    ("consider-reads-with-distant-segments",
+    ("no-reads-with-distant-segments",
      po::bool_switch()->default_value(false),
-     "Allows reads with template segmenets that are on different contigs")
+     "Filter reads with template segmenets that are on different contigs")
     
     ("no-adapter-contaminated-reads",
      po::bool_switch()->default_value(false),
@@ -304,6 +308,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-source-quality",
      po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
      "Only variants with quality above this value are considered for candidate generation")
+
+    ("extract-filtered-source-candidates",
+     po::value<bool>()->default_value(false),
+     "Extract variants from source VCF records that have been filtered")
     
     ("min-base-quality",
      po::value<int>()->default_value(20),
@@ -339,7 +347,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(200),
      "The maximum number of bases allowed to overlap assembly regions")
     
-    ("force-assemble",
+    ("assemble-all",
      po::bool_switch()->default_value(false),
      "Forces all regions to be assembled")
     
@@ -385,9 +393,17 @@ OptionMap parse_options(const int argc, const char** argv)
     ("extension-level",
      po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
      "Level of haplotype extension. Possible values are: conservative, normal, optimistic, aggressive")
+    
+    ("haplotype-extension-threshold,e",
+     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
+     "Haplotypes with posterior probability less than this can be filtered before extension")
+    
+    ("dedup-haplotypes-with-prior-model",
+     po::value<bool>()->default_value(true),
+     "Remove duplicate haplotypes using mutation prior model")
     ;
     
-    po::options_description caller("Caller (general)");
+    po::options_description caller("Calling (general)");
     caller.add_options()
     ("caller,C",
      po::value<std::string>()->default_value("population"),
@@ -425,116 +441,36 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("snp-heterozygosity,z",
      po::value<float>()->default_value(0.001, "0.001"),
-     "SNP heterozygosity for the given samples")
+     "Germline SNP heterozygosity for the given samples")
     
     ("snp-heterozygosity-stdev",
      po::value<float>()->default_value(0.01, "0.01"),
-     "Standard deviation of the SNP heterozygosity used for the given samples")
+     "Standard deviation of the germline SNP heterozygosity used for the given samples")
     
     ("indel-heterozygosity,y",
      po::value<float>()->default_value(0.0001, "0.0001"),
-     "Indel heterozygosity for the given samples")
+     "Germline indel heterozygosity for the given samples")
     
     ("use-uniform-genotype-priors",
     po::bool_switch()->default_value(false),
     "Use a uniform prior model when calculating genotype posteriors")
     
+    ("max-genotypes",
+     po::value<int>()->default_value(5000),
+     "The maximum number of genotypes to evaluate")
+    
+    ("max-joint-genotypes",
+     po::value<int>()->default_value(1000000),
+     "The maximum number of joint genotype vectors to consider when computing joint"
+     " genotype posterior probabilities")
+    
+    ("use-independent-genotype-priors",
+     po::bool_switch()->default_value(false),
+     "Use independent genotype priors for joint calling")
+    
     ("model-posterior",
      po::value<bool>(),
      "Calculate model posteriors for every call")
-    ;
-    
-    po::options_description cancer("Caller (cancer)");
-    cancer.add_options()
-    ("normal-sample,N",
-     po::value<std::string>(),
-     "Normal sample - all other samples are considered tumour")
-    
-    ("somatic-snv-mutation-rate",
-     po::value<float>()->default_value(2e-05, "1e-05"),
-     "Expected SNV somatic mutation rate, per megabase pair, for this sample")
-    
-    ("somatic-indel-mutation-rate",
-     po::value<float>()->default_value(5e-06, "1e-05"),
-     "Expected INDEL somatic mutation rate, per megabase pair, for this sample")
-    
-    ("min-expected-somatic-frequency",
-     po::value<float>()->default_value(0.05, "0.05"),
-     "Minimum expected somatic allele frequency in the sample")
-    
-    ("min-credible-somatic-frequency",
-     po::value<float>()->default_value(0.01, "0.01"),
-     "Minimum credible somatic allele frequency that will be reported")
-    
-    ("credible-mass",
-     po::value<float>()->default_value(0.99, "0.99"),
-     "Mass of the posterior density to use for evaluating allele frequencies")
-    
-    ("min-somatic-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
-     "Minimum posterior probability (phred scale) to emit a somatic mutation call")
-    
-    ("max-cancer-genotypes",
-     po::value<int>()->default_value(20000),
-     "The maximum number of cancer genotype vectors to evaluate")
-    
-    ("normal-contamination-risk",
-     po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
-     "The risk the normal sample has contamination from the tumour")
-    
-    ("somatics-only",
-     po::bool_switch()->default_value(false),
-     "Only emit somatic variant calls")
-    ;
-    
-    po::options_description trio("Caller (trio)");
-    trio.add_options()
-    ("maternal-sample,M",
-     po::value<std::string>(),
-     "Maternal sample")
-    
-    ("paternal-sample,F",
-     po::value<std::string>(),
-     "Paternal sample")
-    
-    ("snv-denovo-mutation-rate",
-     po::value<float>()->default_value(1e-9, "1e-9"),
-     "SNV de novo mutation rate, per base per generation")
-    
-    ("indel-denovo-mutation-rate",
-     po::value<float>()->default_value(1e-10, "1e-10"),
-     "INDEL de novo mutation rate, per base per generation")
-    
-    ("min-denovo-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
-     "Minimum posterior probability (phred scale) to emit a de novo mutation call")
-    
-    ("denovos-only",
-     po::bool_switch()->default_value(false),
-     "Only emit de novo variant calls")
-    ;
-    
-    po::options_description phasing("Phasing");
-    phasing.add_options()
-    ("phasing-level,l",
-     po::value<PhasingLevel>()->default_value(PhasingLevel::normal),
-     "Level of phasing - longer range phasing can improve calling accuracy at the cost"
-     " of runtime speed. Possible values are: minimal, conservative, moderate, normal, aggressive")
-    
-    ("min-phase-score",
-     po::value<Phred<double>>()->default_value(Phred<double> {20.0}),
-     "Minimum phase score (phred scale) required to report sites as phased")
-    
-    ("use-unconditional-phase-score",
-     po::bool_switch()->default_value(false),
-     "Computes unconditional phase scores rather than conditioning on called genotypes")
-    ;
-    
-    po::options_description advanced("Advanced calling algorithm");
-    advanced.add_options()
-    ("haplotype-extension-threshold,e",
-     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
-     "Haplotypes with posterior probability less than this can be filtered before extension")
     
     ("inactive-flank-scoring",
      po::value<bool>()->default_value(true),
@@ -545,25 +481,121 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Include the read mapping quality in the haplotype likelihood calculation")
     
-    ("max-joint-genotypes",
-     po::value<int>()->default_value(1000000),
-     "The maximum number of joint genotype vectors to consider when computing joint"
-     " genotype posterior probabilities")
-    
     ("sequence-error-model",
      po::value<std::string>()->default_value("HiSeq"),
      "The sequencer error model to use (HiSeq or xTen)")
     ;
     
-    po::options_description call_filtering("Callset filtering");
+    po::options_description cancer("Calling (cancer)");
+    cancer.add_options()
+    ("normal-sample,N",
+     po::value<std::string>(),
+     "Normal sample - all other samples are considered tumour")
+    
+    ("max-somatic-haplotypes",
+     po::value<int>()->default_value(2),
+     "Maximum number of somatic haplotypes that may be considered")
+    
+    ("somatic-snv-mutation-rate",
+     po::value<float>()->default_value(1e-04, "0.0001"),
+     "Expected SNV somatic mutation rate, per megabase pair, for this sample")
+    
+    ("somatic-indel-mutation-rate",
+     po::value<float>()->default_value(1e-06, "0.000001"),
+     "Expected INDEL somatic mutation rate, per megabase pair, for this sample")
+    
+    ("min-expected-somatic-frequency",
+     po::value<float>()->default_value(0.03, "0.03"),
+     "Minimum expected somatic allele frequency in the sample")
+    
+    ("min-credible-somatic-frequency",
+     po::value<float>()->default_value(0.01, "0.01"),
+     "Minimum credible somatic allele frequency that will be reported")
+    
+    ("credible-mass",
+     po::value<float>()->default_value(0.9, "0.9"),
+     "Mass of the posterior density to use for evaluating allele frequencies")
+    
+    ("min-somatic-posterior",
+     po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
+     "Minimum posterior probability (phred scale) to emit a somatic mutation call")
+    
+    ("normal-contamination-risk",
+     po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
+     "The risk the normal sample has contamination from the tumour")
+
+    ("somatics-only",
+     po::bool_switch()->default_value(false),
+     "Only emit SOMATIC mutations")
+    ;
+    
+    po::options_description trio("Calling (trio)");
+    trio.add_options()
+    ("maternal-sample,M",
+     po::value<std::string>(),
+     "Maternal sample")
+    
+    ("paternal-sample,F",
+     po::value<std::string>(),
+     "Paternal sample")
+    
+    ("snv-denovo-mutation-rate",
+     po::value<float>()->default_value(1.3e-8, "1.3e-8"),
+     "SNV de novo mutation rate, per base per generation")
+    
+    ("indel-denovo-mutation-rate",
+     po::value<float>()->default_value(1e-9, "1e-9"),
+     "INDEL de novo mutation rate, per base per generation")
+    
+    ("min-denovo-posterior",
+     po::value<Phred<double>>()->default_value(Phred<double> {3}),
+     "Minimum posterior probability (phred scale) to emit a de novo mutation call")
+    
+    ("denovos-only",
+     po::bool_switch()->default_value(false),
+     "Only emit DENOVO mutations")
+    ;
+    
+    po::options_description polyclone("Calling (polyclone)");
+    polyclone.add_options()
+    ("max-clones",
+     po::value<int>()->default_value(3),
+     "Maximum number of unique clones to consider")
+    ;
+    
+    po::options_description phasing("Phasing");
+    phasing.add_options()
+    ("phasing-level,l",
+     po::value<PhasingLevel>()->default_value(PhasingLevel::normal),
+     "Level of phasing - longer range phasing can improve calling accuracy at the cost"
+     " of runtime speed. Possible values are: minimal, conservative, moderate, normal, aggressive")
+    
+    ("min-phase-score",
+     po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
+     "Minimum phase score (phred scale) required to report sites as phased")
+    ;
+    
+    po::options_description call_filtering("CSR filtering");
     call_filtering.add_options()
     ("call-filtering,f",
      po::value<bool>()->default_value(true),
      "Enable all variant call filtering")
     
     ("filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 20 | AF < 0.05 | SB > 0.98 | MQD > 0.9"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | RPB > 0.99"),
      "Boolean expression to use to filter variant calls")
+    
+    ("somatic-filter-expression",
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SB > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | SC > 1 | FRF > 0.5"),
+     "Boolean expression to use to filter somatic variant calls")
+    
+    ("denovo-filter-expression",
+     po::value<std::string>()->default_value("QUAL < 10 | GQ < 20 | MQ < 30 | SB > 0.9 | BQ < 20 | DP < 3 | DC > 1 | MF > 0.2 | FRF > 0.5"),
+     "Boolean expression to use to filter somatic variant calls")
+    
+    ("refcall-filter-expression",
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 5 | MF > 0.2"),
+     "Boolean expression to use to filter homozygous reference calls")
     
     ("use-calling-reads-for-filtering",
      po::value<bool>()->default_value(false),
@@ -580,12 +612,20 @@ OptionMap parse_options(const int argc, const char** argv)
     ("filter-vcf",
      po::value<fs::path>(),
      "Filter the given Octopus VCF without calling")
+    
+    ("forest-file",
+     po::value<fs::path>(),
+     "Trained Ranger random forest file")
+
+    ("somatic-forest-file",
+     po::value<fs::path>(),
+     "Trained Ranger random forest file for somatic variants")
     ;
     
     po::options_description all("octopus options");
     all.add(general).add(backend).add(input).add(transforms).add(filters)
     .add(variant_generation).add(haplotype_generation).add(caller)
-    .add(advanced).add(cancer).add(trio).add(phasing).add(call_filtering);
+    .add(cancer).add(trio).add(polyclone).add(phasing).add(call_filtering);
     
     OptionMap vm_init;
     po::store(run(po::command_line_parser(argc, argv).options(general).allow_unregistered()), vm_init);
@@ -593,14 +633,38 @@ OptionMap parse_options(const int argc, const char** argv)
     if (vm_init.count("help") == 1) {
         po::store(run(po::command_line_parser(argc, argv).options(caller).allow_unregistered()), vm_init);
         if (vm_init.count("caller") == 1) {
-            const auto caller = vm_init.at("caller").as<std::string>();
+            const auto selected_caller = vm_init.at("caller").as<std::string>();
             validate_caller(vm_init);
-            if (caller == "individual") {
-                std::cout << all << std::endl;
-            } else if (caller == "population") {
-                std::cout << all << std::endl;
-            } else if (caller == "cancer") {
-                std::cout << all << std::endl;
+            if (selected_caller == "individual") {
+                po::options_description individual_options("octopus individual calling options");
+                individual_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller)
+                .add(phasing).add(call_filtering);
+                std::cout << individual_options << std::endl;
+            } else if (selected_caller == "trio") {
+                po::options_description trio_options("octopus trio calling options");
+                trio_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller).add(trio)
+                .add(phasing).add(call_filtering);
+                std::cout << trio_options << std::endl;
+            } else if (selected_caller == "population") {
+                po::options_description population_options("octopus population calling options");
+                population_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller)
+                .add(phasing).add(call_filtering);
+                std::cout << population_options << std::endl;
+            } else if (selected_caller == "cancer") {
+                po::options_description cancer_options("octopus cancer calling options");
+                cancer_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller).add(cancer)
+                .add(phasing).add(call_filtering);
+                std::cout << cancer_options << std::endl;
+            } else if (selected_caller == "polyclone") {
+                po::options_description polyclone_options("octopus polyclone calling options");
+                polyclone_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(variant_generation).add(haplotype_generation).add(caller).add(polyclone)
+                .add(phasing).add(call_filtering);
+                std::cout << polyclone_options << std::endl;
             } else {
                 std::cout << all << std::endl;
             }
@@ -894,12 +958,11 @@ void validate_caller(const OptionMap& vm)
 {
     if (vm.count("caller") == 1) {
         const auto caller = vm.at("caller").as<std::string>();
-        static const std::array<std::string, 4> validCallers {
-            "individual", "population", "cancer", "trio"
+        static const std::array<std::string, 5> validCallers {
+            "individual", "population", "cancer", "trio", "polyclone"
         };
         if (std::find(std::cbegin(validCallers), std::cend(validCallers), caller) == std::cend(validCallers)) {
-            throw po::validation_error {po::validation_error::kind_t::invalid_option_value, caller,
-                "caller"};
+            throw po::validation_error {po::validation_error::kind_t::invalid_option_value, caller, "caller"};
         }
     }
 }
@@ -940,7 +1003,7 @@ void validate(const OptionMap& vm)
         "max-open-read-files", "downsample-above", "downsample-target",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
-        "max-joint-genotypes"
+        "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",

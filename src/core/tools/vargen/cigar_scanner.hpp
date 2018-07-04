@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef cigar_scanner_hpp
@@ -10,6 +10,8 @@
 #include <utility>
 #include <functional>
 #include <memory>
+
+#include <boost/optional.hpp>
 
 #include "concepts/mappable.hpp"
 #include "concepts/comparable.hpp"
@@ -31,11 +33,13 @@ public:
     struct ObservedVariant
     {
         Variant variant;
-        unsigned num_samples, total_depth;
+        unsigned total_depth;
         struct SampleObservation
         {
+            std::reference_wrapper<const SampleName> sample;
             unsigned depth;
-            std::vector<unsigned> observed_qualities;
+            std::vector<unsigned> observed_base_qualities;
+            std::vector<AlignedRead::MappingQuality> observed_mapping_qualities;
             unsigned num_fwd_observations;
         };
         std::vector<SampleObservation> sample_observations;
@@ -54,16 +58,12 @@ public:
         
         using InclusionPredicate = std::function<bool(ObservedVariant)>;
         using MatchPredicate = std::function<bool(const Variant&, const Variant&)>;
-        using RepeatRegionGenerator = std::function<std::vector<GenomicRegion>(const ReferenceGenome&, GenomicRegion)>;
-        using RepeatRegionInclusionPredicate = std::function<bool(const GenomicRegion&, const std::deque<Variant>&)>;
         
         InclusionPredicate include;
         MatchPredicate match = std::equal_to<> {};
         bool use_clipped_coverage_tracking = false;
         Variant::MappingDomain::Size max_variant_size = 2000;
         MisalignmentParameters misalignment_parameters = MisalignmentParameters {};
-        boost::optional<RepeatRegionGenerator> repeat_region_generator = boost::none;
-        RepeatRegionInclusionPredicate include_repeat_region = [] (const auto& region, const auto& variants) { return variants.size() < 100; };
     };
     
     CigarScanner() = delete;
@@ -77,31 +77,31 @@ public:
     ~CigarScanner() override = default;
     
 private:
-    using VariantGenerator::VectorIterator;
-    using VariantGenerator::FlatSetIterator;
+    using VariantGenerator::ReadVectorIterator;
+    using VariantGenerator::ReadFlatSetIterator;
     
     std::unique_ptr<VariantGenerator> do_clone() const override;
     bool do_requires_reads() const noexcept override;
     void do_add_read(const SampleName& sample, const AlignedRead& read) override;
     void add_read(const SampleName& sample, const AlignedRead& read,
                   CoverageTracker<GenomicRegion>& sample_coverage_tracker);
-    void do_add_reads(const SampleName& sample, VectorIterator first, VectorIterator last) override;
-    void do_add_reads(const SampleName& sample, FlatSetIterator first, FlatSetIterator last) override;
-    std::vector<Variant> do_generate_variants(const GenomicRegion& region) override;
+    void do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last) override;
+    void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) override;
+    std::vector<Variant> do_generate(const RegionSet& regions) const override;
     void do_clear() noexcept override;
     std::string name() const override;
     
     struct Candidate : public Comparable<Candidate>, public Mappable<Candidate>
     {
         Variant variant;
-        SampleName origin;
-        AlignedRead::BaseQualityVector::const_iterator first_base_quality_iter;
-        AlignedRead::Direction support_direction;
+        std::reference_wrapper<const AlignedRead> source;
+        std::reference_wrapper<const SampleName> origin;
+        std::size_t offset;
         
-        template <typename T1, typename T2, typename T3, typename T4>
-        Candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added, T4&& origin,
-                  AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                  AlignedRead::Direction support_direction);
+        template <typename T1, typename T2, typename T3>
+        Candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
+                  const AlignedRead& source, std::size_t offset,
+                  const SampleName& origin);
         
         const GenomicRegion& mapped_region() const noexcept { return variant.mapped_region(); }
         
@@ -115,52 +115,46 @@ private:
     std::reference_wrapper<const ReferenceGenome> reference_;
     Options options_;
     std::vector<Candidate> buffer_;
-    std::deque<Candidate> candidates_, likely_misaligned_candidates_;
+    mutable std::deque<Candidate> candidates_, likely_misaligned_candidates_;
     Variant::MappingDomain::Size max_seen_candidate_size_;
     CoverageTracker<GenomicRegion> read_coverage_tracker_, misaligned_tracker_;
     std::unordered_map<SampleName, CoverageTracker<GenomicRegion>> sample_read_coverage_tracker_;
     
     using CandidateIterator = OverlapIterator<decltype(candidates_)::const_iterator>;
     
-    template <typename T1, typename T2, typename T3, typename T4>
-    void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added, T4&& origin,
-                       AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                       AlignedRead::Direction support_direction);
-    double add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base, SequenceIterator last_base,
-                                   const SampleName& origin,
-                                   AlignedRead::BaseQualityVector::const_iterator first_quality,
-                                   AlignedRead::Direction support_direction);
+    template <typename T1, typename T2, typename T3>
+    void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
+                       const AlignedRead& read, std::size_t offset, const SampleName& sample);
+    double add_snvs_in_match_range(const GenomicRegion& region, const AlignedRead& read,
+                                   std::size_t read_index, const SampleName& origin);
+    void generate(const GenomicRegion& region, std::vector<Variant>& result) const;
     unsigned sum_base_qualities(const Candidate& candidate) const noexcept;
-    std::vector<GenomicRegion> get_repeat_regions(const GenomicRegion& region) const;
     bool is_likely_misaligned(const AlignedRead& read, double penalty) const;
     ObservedVariant make_observation(CandidateIterator first_match, CandidateIterator last_match) const;
-    std::vector<Variant> get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates);
+    std::vector<Variant> get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates) const;
 };
 
-template <typename T1, typename T2, typename T3, typename T4>
+template <typename T1, typename T2, typename T3>
 CigarScanner::Candidate::Candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
-                                          T4&& origin,
-                                          AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                                          AlignedRead::Direction support_direction)
+                                   const AlignedRead& source, std::size_t offset,
+                                   const SampleName& origin)
 : variant {std::forward<T1>(region), std::forward<T2>(sequence_removed), std::forward<T3>(sequence_added)}
-, origin {std::forward<T4>(origin)}
-, first_base_quality_iter {first_base_quality}
-, support_direction {support_direction}
+, source {source}
+, origin {origin}
+, offset {offset}
 {}
 
-template <typename T1, typename T2, typename T3, typename T4>
-void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added, T4&& origin,
-                                 AlignedRead::BaseQualityVector::const_iterator first_base_quality,
-                                 AlignedRead::Direction support_direction)
+template <typename T1, typename T2, typename T3>
+void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added,
+                                 const AlignedRead& read, const std::size_t offset,
+                                 const SampleName& sample)
 {
     const auto candidate_size = size(region);
     if (candidate_size <= options_.max_variant_size) {
         buffer_.emplace_back(std::forward<T1>(region),
                              std::forward<T2>(sequence_removed),
                              std::forward<T3>(sequence_added),
-                             std::forward<T4>(origin),
-                             first_base_quality,
-                             support_direction);
+                             read, offset, sample);
         max_seen_candidate_size_ = std::max(max_seen_candidate_size_, candidate_size);
     }
 }
@@ -168,6 +162,15 @@ void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequen
 struct DefaultInclusionPredicate
 {
     bool operator()(const CigarScanner::ObservedVariant& candidate);
+};
+
+struct DefaultSomaticInclusionPredicate
+{
+    DefaultSomaticInclusionPredicate() = default;
+    DefaultSomaticInclusionPredicate(SampleName normal) : normal_ {std::move(normal)} {}
+    bool operator()(const CigarScanner::ObservedVariant& candidate);
+private:
+    boost::optional<SampleName> normal_;
 };
 
 struct SimpleThresholdInclusionPredicate

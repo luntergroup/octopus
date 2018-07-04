@@ -1,8 +1,9 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "single_pass_variant_call_filter.hpp"
 
+#include <functional>
 #include <utility>
 #include <iterator>
 #include <algorithm>
@@ -31,57 +32,69 @@ void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& des
     if (progress_) progress_->start();
     if (can_measure_multiple_blocks()) {
         for (auto p = source.iterate(); p.first != p.second;) {
-            filter(read_next_blocks(p.first, p.second, samples), dest);
+            filter(read_next_blocks(p.first, p.second, samples), dest, samples);
         }
     } else if (can_measure_single_call()) {
         auto p = source.iterate();
-        std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { filter(call, dest); });
+        std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { filter(call, dest, samples); });
     } else {
         for (auto p = source.iterate(); p.first != p.second;) {
-            filter(read_next_block(p.first, p.second, samples), dest);
+            filter(read_next_block(p.first, p.second, samples), dest, samples);
         }
     }
     if (progress_) progress_->stop();
 }
 
-void SinglePassVariantCallFilter::filter(const VcfRecord& call, VcfWriter& dest) const
+void SinglePassVariantCallFilter::filter(const VcfRecord& call, VcfWriter& dest, const SampleList& samples) const
 {
-    filter(call, measure(call), dest);
+    filter(call, measure(call), dest, samples);
 }
 
-void SinglePassVariantCallFilter::filter(const CallBlock& block, VcfWriter& dest) const
+void SinglePassVariantCallFilter::filter(const CallBlock& block, VcfWriter& dest, const SampleList& samples) const
 {
-    filter(block, measure(block), dest);
+    filter(block, measure(block), dest, samples);
 }
 
-void SinglePassVariantCallFilter::filter(const std::vector<CallBlock>& blocks, VcfWriter& dest) const
+void SinglePassVariantCallFilter::filter(const std::vector<CallBlock>& blocks, VcfWriter& dest, const SampleList& samples) const
 {
     const auto measures = measure(blocks);
     assert(measures.size() == blocks.size());
     for (auto tup : boost::combine(blocks, measures)) {
-        filter(tup.get<0>(), tup.get<1>(), dest);
+        filter(tup.get<0>(), tup.get<1>(), dest, samples);
     }
 }
 
-void SinglePassVariantCallFilter::filter(const CallBlock& block, const MeasureBlock& measures, VcfWriter& dest) const
+void SinglePassVariantCallFilter::filter(const CallBlock& block, const MeasureBlock& measures, VcfWriter& dest, const SampleList& samples) const
 {
     assert(measures.size() == block.size());
     for (auto tup : boost::combine(block, measures)) {
-        filter(tup.get<0>(), tup.get<1>(), dest);
+        filter(tup.get<0>(), tup.get<1>(), dest, samples);
     }
 }
 
-void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest) const
+void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest, const SampleList& samples) const
 {
+    const auto sample_classifications = classify(measures, samples);
+    const auto call_classification = merge(sample_classifications, measures);
     if (annotate_measures_) {
         auto annotation_builder = VcfRecord::Builder {call};
         annotate(annotation_builder, measures);
         const auto annotated_call = annotation_builder.build_once();
-        write(annotated_call, classify(measures), dest);
+        write(annotated_call, call_classification, samples, sample_classifications, dest);
     } else {
-        write(call, classify(measures), dest);
+        write(call, call_classification, samples, sample_classifications, dest);
     }
     log_progress(mapped_region(call));
+}
+
+VariantCallFilter::ClassificationList
+SinglePassVariantCallFilter::classify(const MeasureVector& call_measures, const SampleList& samples) const
+{
+    ClassificationList result(samples.size());
+    for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
+        result[sample_idx] = this->classify(get_sample_values(call_measures, measures_, sample_idx));
+    }
+    return result;
 }
 
 static auto expand_lhs_to_zero(const GenomicRegion& region)

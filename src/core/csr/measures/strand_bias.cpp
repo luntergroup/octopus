@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "strand_bias.hpp"
@@ -15,12 +15,17 @@
 #include <boost/math/special_functions/digamma.hpp>
 
 #include "io/variant/vcf_record.hpp"
+#include "io/variant/vcf_spec.hpp"
 #include "basics/aligned_read.hpp"
 #include "utils/maths.hpp"
 #include "utils/beta_distribution.hpp"
+#include "utils/genotype_reader.hpp"
+#include "../facets/samples.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
+
+const std::string StrandBias::name_ = "SB";
 
 StrandBias::StrandBias(const double critical_value)
 : min_medium_trigger_ {critical_value / 2}
@@ -35,9 +40,25 @@ std::unique_ptr<Measure> StrandBias::do_clone() const
     return std::make_unique<StrandBias>(*this);
 }
 
-bool is_forward(const AlignedRead& read) noexcept
+namespace {
+
+bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept
 {
-    return read.direction() == AlignedRead::Direction::forward;
+    const static VcfRecord::NucleotideSequence deleted_allele {vcfspec::deletedBase};
+    return !(allele == vcfspec::missingValue || allele == deleted_allele);
+}
+
+bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& sample)
+{
+    if (!call.has_genotypes()) return true;
+    const auto& genotype = get_genotype(call, sample);
+    return std::any_of(std::cbegin(genotype), std::cend(genotype),
+                       [&] (const auto& allele) { return allele != call.ref() && is_canonical(allele); });
+}
+
+bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
+{
+    return has_called_alt_allele(call, sample) && call.is_heterozygous(sample);
 }
 
 struct DirectionCounts
@@ -49,11 +70,13 @@ template <typename Container>
 DirectionCounts count_directions(const Container& reads, const GenomicRegion& call_region)
 {
     unsigned n_forward {0}, n_reverse {0};
-    for (const auto& read : overlap_range(reads, call_region)) {
-        if (is_forward(read)) {
-            ++n_forward;
-        } else {
-            ++n_reverse;
+    for (const auto& read : reads) {
+        if (overlaps(read.get(), call_region)) {
+            if (is_forward_strand(read)) {
+                ++n_forward;
+            } else {
+                ++n_reverse;
+            }
         }
     }
     return {n_forward, n_reverse};
@@ -61,7 +84,7 @@ DirectionCounts count_directions(const Container& reads, const GenomicRegion& ca
 
 using DirectionCountVector = std::vector<DirectionCounts>;
 
-auto get_direction_counts(const HaplotypeSupportMap& support, const GenomicRegion& call_region, const unsigned prior = 1)
+auto get_direction_counts(const AlleleSupportMap& support, const GenomicRegion& call_region, const unsigned prior = 1)
 {
     DirectionCountVector result {};
     result.reserve(support.size());
@@ -117,17 +140,22 @@ double calculate_max_prob_different(const DirectionCountVector& direction_counts
     return result;
 }
 
+} // namespace
+
 Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    // TODO: What we should really do here is calculate which reads directly support each allele in the
-    // genotype by looking if each supporting read overlaps the allele given the realignment to the called haplotype.
-    // The current approach of just removing non-overlapping reads may not work optimally in complex indel regions.
-    boost::optional<double> result {};
-    for (const auto& p : assignments) {
-        if (call.is_heterozygous(p.first)) {
-            const auto& supporting_reads = p.second;
-            const auto direction_counts = get_direction_counts(supporting_reads, mapped_region(call));
+    const auto& samples = get_value<Samples>(facets.at("Samples"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
+    std::vector<boost::optional<double>> result {};
+    result.reserve(samples.size());
+    for (const auto& sample : samples) {
+        boost::optional<double> sample_result {};
+        if (is_evaluable(call, sample)) {
+            std::vector<Allele> alleles; bool has_ref;
+            std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
+            assert(!alleles.empty());
+            const auto sample_allele_support = compute_allele_support(alleles, assignments.at(sample));
+            const auto direction_counts = get_direction_counts(sample_allele_support, mapped_region(call));
             double prob;
             if (use_resampling_) {
                 prob = calculate_max_prob_different(direction_counts, small_sample_size_, min_difference_);
@@ -145,24 +173,36 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
             } else {
                 prob = calculate_max_prob_different(direction_counts, big_sample_size_, min_difference_);
             }
-            if (result) {
-                result = std::max(*result, prob);
-            } else {
-                result = prob;
-            }
+            sample_result = prob;
         }
+        result.push_back(sample_result);
     }
     return result;
 }
 
-std::string StrandBias::do_name() const
+Measure::ResultCardinality StrandBias::do_cardinality() const noexcept
 {
-    return "SB";
+    return ResultCardinality::num_samples;
+}
+
+const std::string& StrandBias::do_name() const
+{
+    return name_;
+}
+
+std::string StrandBias::do_describe() const
+{
+    return "Strand bias of reads based on haplotype support";
 }
 
 std::vector<std::string> StrandBias::do_requirements() const
 {
-    return {"ReadAssignments"};
+    return {"Samples", "ReadAssignments"};
+}
+
+bool StrandBias::is_equal(const Measure& other) const noexcept
+{
+    return min_medium_trigger_ == static_cast<const StrandBias&>(other).min_medium_trigger_;
 }
 
 } // namespace csr

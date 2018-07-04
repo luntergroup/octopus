@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "octopus.hpp"
@@ -28,6 +28,7 @@
 
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
+#include "basics/ploidy_map.hpp"
 #include "concepts/mappable.hpp"
 #include "containers/mappable_flat_multi_set.hpp"
 #include "containers/mappable_map.hpp"
@@ -52,6 +53,7 @@
 #include "csr/filters/variant_call_filter.hpp"
 #include "csr/filters/variant_call_filter_factory.hpp"
 #include "readpipe/buffered_read_pipe.hpp"
+#include "core/tools/bam_realigner.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -1256,7 +1258,7 @@ bool use_unfiltered_call_region_hints_for_filtering(const GenomeCallingComponent
     return true;
 }
 
-void run_filtering(GenomeCallingComponents& components)
+void run_csr(GenomeCallingComponents& components)
 {
     if (apply_csr(components)) {
         log_filtering_info(components);
@@ -1283,12 +1285,14 @@ void run_filtering(GenomeCallingComponents& components)
         if (components.sites_only()) {
             output_config.emit_sites_only = true;
         }
-        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp),
+        const VcfReader in {std::move(*input_path)};
+        const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), in.fetch_header(),
+                                                components.ploidies(), components.pedigree(),
                                                 output_config, progress, components.num_threads());
         assert(filter);
-        const VcfReader in {std::move(*input_path)};
         VcfWriter& out {*components.filtered_output()};
         filter->filter(in, out);
+        out.close();
     }
 }
 
@@ -1347,6 +1351,130 @@ public:
     CallingBug(const std::exception& e) : what_ {e.what()} {}
 };
 
+bool is_bam_realignment_requested(const GenomeCallingComponents& components)
+{
+    return static_cast<bool>(components.bamout());
+}
+
+bool is_stdout_final_output(const GenomeCallingComponents& components)
+{
+    return (components.filtered_output() && !components.filtered_output()->path()) || !components.output().path();
+}
+
+bool check_bam_realign(const GenomeCallingComponents& components)
+{
+    logging::WarningLogger warn_log {};
+    if (components.samples().size() > 1) {
+        warn_log << "BAM realignment currently only supported for single sample";
+        return false;
+    }
+    if (components.read_manager().num_files() > 1) {
+        warn_log << "BAM realignment currently only supported for single input BAM";
+        return false;
+    }
+    if (is_stdout_final_output(components)) {
+        warn_log << "BAM realignment is not supported for stdout calling";
+        return false;
+    }
+    return true;
+}
+
+auto get_bam_realignment_vcf(const GenomeCallingComponents& components)
+{
+    if (components.filtered_output()) {
+        return *components.filtered_output()->path();
+    } else {
+        return *components.output().path();
+    }
+}
+
+bool is_sam_type(const boost::filesystem::path& path)
+{
+    const auto type = path.extension().string();
+    return type == ".bam" || type == ".sam" || type == ".cram";
+}
+
+bool is_called_ploidy_known(const GenomeCallingComponents& components)
+{
+    const auto contigs = components.contigs();
+    return std::all_of(std::cbegin(contigs), std::cend(contigs), [&] (const auto& contig) {
+        const auto caller = components.caller_factory().make(components.contigs().front());
+        return caller->min_callable_ploidy() == caller->max_callable_ploidy();
+    });
+}
+
+auto get_max_called_ploidy(VcfReader& vcf)
+{
+    const auto samples = vcf.fetch_header().samples();
+    unsigned result {0};
+    for (auto p = vcf.iterate(); p.first != p.second; ++p.first) {
+        for (const auto& sample : samples) {
+            result = std::max(p.first->ploidy(sample), result);
+        }
+    }
+    return result;
+}
+
+auto get_max_called_ploidy(const boost::filesystem::path& output_vcf)
+{
+    VcfReader vcf {output_vcf};
+    return get_max_called_ploidy(vcf);
+}
+
+auto get_final_output_path(const GenomeCallingComponents& components)
+{
+    if (apply_csr(components)) {
+        return components.filtered_output()->path();
+    } else {
+        return components.output().path();
+    }
+}
+
+auto get_max_ploidy(const GenomeCallingComponents& components)
+{
+    if (is_called_ploidy_known(components)) {
+        return get_max_ploidy(components.samples(), components.contigs(), components.ploidies());
+    } else {
+        assert(get_final_output_path(components));
+        return get_max_called_ploidy(*get_final_output_path(components));
+    }
+}
+
+auto get_haplotype_bam_paths(const boost::filesystem::path& prefix, const unsigned max_ploidy)
+{
+    std::vector<boost::filesystem::path> result {};
+    result.reserve(max_ploidy + 1); // + 1 for unassigned reads
+    for (unsigned i {1}; i <= max_ploidy + 1; ++i) {
+        result.emplace_back(prefix.string() + std::to_string(i) + ".bam");
+    }
+    return result;
+}
+
+auto get_bamout_paths(const GenomeCallingComponents& components)
+{
+    namespace fs = boost::filesystem;
+    std::vector<fs::path> result {};
+    auto request = components.bamout();
+    if (!request) return result;
+    if (is_sam_type(*request)) {
+        result.assign({*request});
+    } else {
+        result = get_haplotype_bam_paths(*request, get_max_ploidy(components));
+    }
+    return result;
+}
+
+void run_bam_realign(GenomeCallingComponents& components)
+{
+    if (is_bam_realignment_requested(components)) {
+        if (check_bam_realign(components)) {
+            components.read_manager().close();
+            realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
+                    get_bamout_paths(components), components.reference());
+        }
+    }
+}
+
 void run_octopus(GenomeCallingComponents& components, std::string command)
 {
     static auto debug_log = get_debug_log();
@@ -1381,7 +1509,7 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
     }
     components.output().close();
     try {
-        run_filtering(components);
+        run_csr(components);
     } catch (...) {
         try {
             if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
@@ -1400,6 +1528,7 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
     stream(info_log) << "Finished calling "
                      << utils::format_with_commas(search_size) << "bp, total runtime "
                      << TimeInterval {start, end};
+    run_bam_realign(components);
     cleanup(components);
 }
 

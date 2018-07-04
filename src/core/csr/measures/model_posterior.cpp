@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "model_posterior.hpp"
@@ -7,6 +7,8 @@
 #include "config/octopus_vcf.hpp"
 
 namespace octopus { namespace csr {
+
+const std::string ModelPosterior::name_ = "MP";
 
 std::unique_ptr<Measure> ModelPosterior::do_clone() const
 {
@@ -23,9 +25,19 @@ Measure::ResultType ModelPosterior::do_evaluate(const VcfRecord& call, const Fac
     return result;
 }
 
-std::string ModelPosterior::do_name() const
+Measure::ResultCardinality ModelPosterior::do_cardinality() const noexcept
 {
-    return "MP";
+    return ResultCardinality::one;
+}
+
+const std::string& ModelPosterior::do_name() const
+{
+    return name_;
+}
+
+std::string ModelPosterior::do_describe() const
+{
+    return "Model posterior for this haplotype block";
 }
 
 } // namespace csr

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "mapping_quality_divergence.hpp"
@@ -16,6 +16,8 @@
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
+
+const std::string MappingQualityDivergence::name_ = "MQD";
 
 std::unique_ptr<Measure> MappingQualityDivergence::do_clone() const
 {
@@ -106,7 +108,7 @@ double calculate_max_pairwise_kl_divergence(const std::vector<MappingQualityVect
 
 Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
     boost::optional<double> result {0};
     for (const auto& p : assignments) {
         if (call.is_heterozygous(p.first)) {
@@ -122,9 +124,19 @@ Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call,
     return result;
 }
 
-std::string MappingQualityDivergence::do_name() const
+Measure::ResultCardinality MappingQualityDivergence::do_cardinality() const noexcept
 {
-    return "MQD";
+    return ResultCardinality::one;
+}
+
+const std::string& MappingQualityDivergence::do_name() const
+{
+    return name_;
+}
+
+std::string MappingQualityDivergence::do_describe() const
+{
+    return "Symmetric KL divergence of reads supporting the REF verses ALT alleles";
 }
 
 std::vector<std::string> MappingQualityDivergence::do_requirements() const

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "somatic_mutation_model.hpp"
@@ -37,7 +37,7 @@ double SomaticMutationModel::evaluate(const Haplotype& somatic, const Haplotype&
     return model_.evaluate(somatic, germline);
 }
 
-double SomaticMutationModel::evaluate(unsigned somatic, unsigned germline) const noexcept
+double SomaticMutationModel::evaluate(unsigned somatic, unsigned germline) const
 {
     return model_.evaluate(somatic, germline);
 }

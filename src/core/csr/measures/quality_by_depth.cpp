@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "quality_by_depth.hpp"
@@ -10,7 +10,9 @@
 
 namespace octopus { namespace csr {
 
-QualityByDepth::QualityByDepth(bool recalculate) : depth_ {recalculate} {}
+const std::string QualityByDepth::name_ = "QD";
+
+QualityByDepth::QualityByDepth(bool recalculate) : depth_ {recalculate, true} {}
 
 std::unique_ptr<Measure> QualityByDepth::do_clone() const
 {
@@ -27,14 +29,29 @@ Measure::ResultType QualityByDepth::do_evaluate(const VcfRecord& call, const Fac
     return result;
 }
 
-std::string QualityByDepth::do_name() const
+Measure::ResultCardinality QualityByDepth::do_cardinality() const noexcept
 {
-    return "QD";
+    return depth_.cardinality();
+}
+
+const std::string& QualityByDepth::do_name() const
+{
+    return name_;
+}
+
+std::string QualityByDepth::do_describe() const
+{
+    return "QUAL divided by DP";
 }
 
 std::vector<std::string> QualityByDepth::do_requirements() const
 {
     return depth_.requirements();
+}
+
+bool QualityByDepth::is_equal(const Measure& other) const noexcept
+{
+    return depth_ == static_cast<const Depth&>(other);
 }
 
 } // namespace csr

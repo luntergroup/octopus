@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef matrix_map_hpp
@@ -495,6 +495,7 @@ public:
         ZipIterator cbegin() const { return begin_; }
         ZipIterator cend() const { return end_; }
         
+        bool empty() const noexcept  { return key2_indices_.get().empty(); }
         IndexSizeType size() const noexcept { return key2_indices_.get().size(); }
         
         //        T& operator[](const Key2& key)

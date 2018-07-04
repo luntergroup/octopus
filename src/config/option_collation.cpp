@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_collation.hpp"
@@ -30,7 +30,6 @@
 #include "basics/phred.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
-#include "basics/ploidy_map.hpp"
 #include "basics/trio.hpp"
 #include "basics/pedigree.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
@@ -49,6 +48,7 @@
 #include "exceptions/missing_file_error.hpp"
 #include "core/csr/filters/threshold_filter_factory.hpp"
 #include "core/csr/filters/training_filter_factory.hpp"
+#include "core/csr/filters/random_forest_filter_factory.hpp"
 
 namespace octopus { namespace options {
 
@@ -288,11 +288,30 @@ ReferenceGenome make_reference(const OptionMap& options)
 {
     const fs::path input_path {options.at("reference").as<std::string>()};
     auto resolved_path = resolve_path(input_path, options);
-    const auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>().num_bytes();
+    auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>();
+    static constexpr MemoryFootprint min_non_zero_reference_cache_size {1'000}; // 1Kb
+    if (ref_cache_size.num_bytes() > 0 && ref_cache_size < min_non_zero_reference_cache_size) {
+        static bool warned {false};
+        if (!warned) {
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "Ignoring given reference cache size of " << ref_cache_size
+                             << " as this size is too small. The maximum cache size will be set to zero";
+            warned = true;
+        }
+        ref_cache_size = 0;
+    }
+    static constexpr MemoryFootprint min_warn_non_zero_reference_cache_size {1'000'000}; // 1Mb
+    if (ref_cache_size.num_bytes() > 0 && ref_cache_size < min_warn_non_zero_reference_cache_size) {
+        static bool warned {false};
+        if (!warned) {
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "The given reference cache size " << ref_cache_size
+                             << " is very small and may not result in good performance.";
+            warned = true;
+        }
+    }
     try {
-        return octopus::make_reference(std::move(resolved_path),
-                                       ref_cache_size,
-                                       is_threading_allowed(options));
+        return octopus::make_reference(std::move(resolved_path), ref_cache_size, is_threading_allowed(options));
     } catch (MissingFileError& e) {
         e.set_location_specified("the command line option --reference");
         throw;
@@ -524,7 +543,7 @@ public:
     MissingReadPathFile(fs::path p) : MissingFileError {std::move(p), "read path"} {};
 };
 
-void log_and_remove_duplicates(std::vector<fs::path>& paths, const std::string& type)
+void remove_duplicates(std::vector<fs::path>& paths, const std::string& type, const bool log = true)
 {
     std::sort(std::begin(paths), std::end(paths));
     const auto first_duplicate = std::adjacent_find(std::begin(paths), std::end(paths));
@@ -540,24 +559,26 @@ void log_and_remove_duplicates(std::vector<fs::path>& paths, const std::string& 
         paths.erase(std::unique(first_duplicate, std::end(paths)), std::end(paths));
         const auto num_unique_paths = paths.size();
         const auto num_duplicate_paths = num_paths - num_unique_paths;
-        logging::WarningLogger warn_log {};
-        auto warn_log_stream = stream(warn_log);
-        warn_log_stream << "Ignoring " << num_duplicate_paths << " duplicate " << type << " path";
-        if (num_duplicate_paths > 1) {
-            warn_log_stream << 's';
-        }
-        warn_log_stream << ": ";
-        std::for_each(std::cbegin(duplicates), std::prev(std::cend(duplicates)), [&] (const auto& path) {
-            warn_log_stream << path << ", ";
-        });
-        warn_log_stream << duplicates.back();
-        if (num_duplicate_paths > duplicates.size()) {
-            warn_log_stream << " (showing unique duplicates)";
+        if (log) {
+            logging::WarningLogger warn_log {};
+            auto warn_log_stream = stream(warn_log);
+            warn_log_stream << "Ignoring " << num_duplicate_paths << " duplicate " << type << " path";
+            if (num_duplicate_paths > 1) {
+                warn_log_stream << 's';
+            }
+            warn_log_stream << ": ";
+            std::for_each(std::cbegin(duplicates), std::prev(std::cend(duplicates)), [&] (const auto& path) {
+                warn_log_stream << path << ", ";
+            });
+            warn_log_stream << duplicates.back();
+            if (num_duplicate_paths > duplicates.size()) {
+                warn_log_stream << " (showing unique duplicates)";
+            }
         }
     }
 }
 
-std::vector<fs::path> get_read_paths(const OptionMap& options)
+std::vector<fs::path> get_read_paths(const OptionMap& options, const bool log = true)
 {
     using namespace utils;
     std::vector<fs::path> result {};
@@ -575,7 +596,7 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
                 throw e;
             }
             auto paths = get_resolved_paths_from_file(path_to_read_paths, options);
-            if (paths.empty()) {
+            if (log && paths.empty()) {
                 logging::WarningLogger log {};
                 stream(log) << "The read path file you specified " << path_to_read_paths
                             << " in the command line option '--reads-file' is empty";
@@ -583,8 +604,13 @@ std::vector<fs::path> get_read_paths(const OptionMap& options)
             append(std::move(paths), result);
         }
     }
-    log_and_remove_duplicates(result, "read");
+    remove_duplicates(result, "read", log);
     return result;
+}
+
+unsigned count_read_paths(const OptionMap& options)
+{
+    return get_read_paths(options, false).size();
 }
 
 ReadManager make_read_manager(const OptionMap& options)
@@ -708,11 +734,11 @@ auto make_read_filterer(const OptionMap& options)
     if (!options.at("allow-supplementary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSupplementaryAlignment>());
     }
-    if (!options.at("consider-reads-with-unmapped-segments").as<bool>()) {
+    if (options.at("no-reads-with-unmapped-segments").as<bool>()) {
         result.add(make_unique<IsNextSegmentMapped>());
         result.add(make_unique<IsProperTemplate>());
     }
-    if (!options.at("consider-reads-with-distant-segments").as<bool>()) {
+    if (options.at("no-reads-with-distant-segments").as<bool>()) {
         result.add(make_unique<IsLocalTemplate>());
     }
     if (options.at("no-adapter-contaminated-reads").as<bool>()) {
@@ -750,21 +776,37 @@ ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> sampl
     }
 }
 
-auto get_default_inclusion_predicate()
+auto get_default_germline_inclusion_predicate()
 {
     return coretools::DefaultInclusionPredicate {};
+}
+
+bool is_cancer_calling(const OptionMap& options)
+{
+    return options.at("caller").as<std::string>() == "cancer" || options.count("normal-sample") == 1;
+}
+
+auto get_default_somatic_inclusion_predicate(boost::optional<SampleName> normal)
+{
+    if (normal) {
+        return coretools::DefaultSomaticInclusionPredicate {*normal};
+    } else {
+        return coretools::DefaultSomaticInclusionPredicate {};
+    }
 }
 
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 {
     using namespace coretools;
     using InclusionPredicate = CigarScanner::Options::InclusionPredicate;
-    const auto caller = options.at("caller").as<std::string>();
-    if (caller == "cancer") {
-        // TODO: specialise for this case; we need to be careful about low frequency somatics.
-        return InclusionPredicate {get_default_inclusion_predicate()};
+    if (is_cancer_calling(options)) {
+        boost::optional<SampleName> normal {};
+        if (is_set("normal-sample", options)) {
+            normal = options.at("normal-sample").as<SampleName>();
+        }
+        return InclusionPredicate {get_default_somatic_inclusion_predicate(normal)};
     } else {
-        return InclusionPredicate {get_default_inclusion_predicate()};
+        return InclusionPredicate {get_default_germline_inclusion_predicate()};
     }
 }
 
@@ -821,14 +863,6 @@ public:
     {}
 };
 
-struct DefaultRepeatGenerator
-{
-    std::vector<GenomicRegion> operator()(const ReferenceGenome& reference, GenomicRegion region) const
-    {
-        return find_repeat_regions(reference, region);
-    }
-};
-
 auto get_max_expected_heterozygosity(const OptionMap& options)
 {
     const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
@@ -862,7 +896,6 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         scanner_options.match = get_default_match_predicate();
         scanner_options.use_clipped_coverage_tracking = true;
-        scanner_options.repeat_region_generator = DefaultRepeatGenerator {};
         CigarScanner::Options::MisalignmentParameters misalign_params {};
         misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
         misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
@@ -914,7 +947,7 @@ auto make_variant_generator_builder(const OptionMap& options)
                 utils::append(std::move(file_sources_paths), source_paths);
             }
         }
-        log_and_remove_duplicates(source_paths, "source variant");
+        remove_duplicates(source_paths, "source variant");
         for (const auto& source_path : source_paths) {
             if (!fs::exists(source_path)) {
                 throw MissingSourceVariantFile {source_path};
@@ -927,6 +960,7 @@ auto make_variant_generator_builder(const OptionMap& options)
             if (is_set("min-source-quality", options)) {
                 vcf_options.min_quality = options.at("min-source-quality").as<Phred<double>>().score();
             }
+            vcf_options.extract_filtered = options.at("extract-filtered-source-candidates").as<bool>();
             result.add_vcf_extractor(std::move(source_path), vcf_options);
         }
     }
@@ -949,7 +983,11 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         result.add_vcf_extractor(std::move(resolved_regenotype_path));
     }
-    
+    ActiveRegionGenerator::Options active_region_options {};
+    if (is_set("assemble-all", options) && options.at("assemble-all").as<bool>()) {
+        active_region_options.assemble_all = true;
+    }
+    result.set_active_region_generator(std::move(active_region_options));
     return result;
 }
 
@@ -1053,6 +1091,9 @@ public:
 
 PloidyMap get_ploidy_map(const OptionMap& options)
 {
+    if (options.at("caller").as<std::string>() == "polyclone") {
+        return PloidyMap {1};
+    }
     std::vector<ContigPloidy> flat_plodies {};
     if (is_set("contig-ploidies-file", options)) {
         const fs::path input_path {options.at("contig-ploidies-file").as<std::string>()};
@@ -1126,14 +1167,13 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
-auto get_max_expected_log_allele_count_per_base(const OptionMap& options)
+auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
     const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
     const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
-    const auto snp_heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
-    const auto max_log_allele_count_per_base = heterozygosity + 8 * snp_heterozygosity_stdev;
-    return max_log_allele_count_per_base;
+    const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
+    return coretools::DenseVariationDetector {heterozygosity, heterozygosity_stdev, input_reads_profile};
 }
 
 auto get_max_indicator_join_distance() noexcept
@@ -1146,7 +1186,7 @@ auto get_min_flank_pad() noexcept
     return 2 * (2 * HaplotypeLikelihoodModel{}.pad_requirement() - 1);
 }
 
-auto make_haplotype_generator_builder(const OptionMap& options)
+auto make_haplotype_generator_builder(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     const auto lagging_policy    = get_lagging_policy(options);
     const auto max_haplotypes    = get_max_haplotypes(options);
@@ -1157,18 +1197,18 @@ auto make_haplotype_generator_builder(const OptionMap& options)
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
     .set_max_indicator_join_distance(get_max_indicator_join_distance())
-    .set_max_expected_log_allele_count_per_base(get_max_expected_log_allele_count_per_base(options))
+    .set_dense_variation_detector(get_dense_variation_detector(options, input_reads_profile))
     .set_min_flank_pad(get_min_flank_pad());
 }
 
-boost::optional<Pedigree> get_pedigree(const OptionMap& options)
+boost::optional<Pedigree> read_ped_file(const OptionMap& options)
 {
-	if (is_set("pedigree", options)) {
-		const auto ped_file = resolve_path(options.at("pedigree").as<fs::path>(), options);
-		return io::read_pedigree(ped_file);
-	} else {
-		return boost::none;
-	}
+    if (is_set("pedigree", options)) {
+        const auto ped_file = resolve_path(options.at("pedigree").as<fs::path>(), options);
+        return io::read_pedigree(ped_file);
+    } else {
+        return boost::none;
+    }
 }
 
 class BadTrioSampleSet : public UserError
@@ -1265,9 +1305,6 @@ public:
 auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples,
 	 				 const boost::optional<Pedigree>& pedigree)
 {
-    // TODO: could think about getting rid of the 'caller' option and just
-    // deduce the caller type directly from the options.
-    // Will need to report an error if conflicting caller options are given anyway.
     auto result = options.at("caller").as<std::string>();
     if (result == "population" && samples.size() == 1) {
         result = "individual";
@@ -1280,6 +1317,33 @@ auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& sa
         result = "cancer";
     }
     return result;
+}
+
+class BadSampleCount : public UserError
+{
+    std::string do_where() const override
+    {
+        return "check_caller";
+    }
+    
+    std::string do_why() const override
+    {
+        return "The number of samples is not accepted by the chosen caller";
+    }
+    
+    std::string do_help() const override
+    {
+        return "Check the caller documentation for the required number of samples";
+    }
+};
+
+void check_caller(const std::string& caller, const std::vector<SampleName>& samples, const OptionMap& options)
+{
+    if (caller == "polyclone") {
+        if (samples.size() != 1) {
+            throw BadSampleCount {};
+        }
+    }
 }
 
 auto get_child_from_trio(std::vector<SampleName> trio, const Pedigree& pedigree)
@@ -1330,6 +1394,22 @@ Trio make_trio(std::vector<SampleName> samples, const OptionMap& options,
         Trio::Father {std::move(father)},
         Trio::Child  {std::move(children.front())}
     };
+}
+
+boost::optional<Pedigree> get_pedigree(const OptionMap& options, const std::vector<SampleName>& samples)
+{
+    auto result = read_ped_file(options);
+    if (!result) {
+        if (samples.size() == 3 && is_set("maternal-sample", options) && is_set("paternal-sample", options)) {
+            const auto trio = make_trio(samples, options, boost::none);
+            result = Pedigree {};
+            using Sex = Pedigree::Member::Sex;
+            result->add_founder(Pedigree::Member {trio.mother(), Sex::female});
+            result->add_founder(Pedigree::Member {trio.father(), Sex::male});
+            result->add_descendant(Pedigree::Member {trio.child(), Sex::hermaphroditic}, trio.mother(), trio.father());
+        }
+    }
+    return result;
 }
 
 class UnimplementedCaller : public ProgramError
@@ -1405,18 +1485,20 @@ auto get_normal_contamination_risk(const OptionMap& options)
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
-                                  const InputRegionMap& regions, const OptionMap& options)
+                                  const InputRegionMap& regions, const OptionMap& options,
+                                  const boost::optional<ReadSetProfile> input_reads_profile)
 {
     CallerBuilder vc_builder {reference, read_pipe,
                               make_variant_generator_builder(options),
-                              make_haplotype_generator_builder(options)};
-	const auto pedigree = get_pedigree(options);
+                              make_haplotype_generator_builder(options, input_reads_profile)};
+	const auto pedigree = read_ped_file(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
+    check_caller(caller, read_pipe.samples(), options);
     vc_builder.set_caller(caller);
     
-    if (caller == "population") {
+    if (caller == "population" || caller == "polyclone") {
         logging::WarningLogger log {};
-        log << "The population calling model is currently under development and may not function as expected";
+        stream(log) << "The " << caller << " calling model is an experimental feature and may not function as expected";
     }
     
     if (is_set("refcall", options)) {
@@ -1452,6 +1534,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
         vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
     }
+    vc_builder.set_model_based_haplotype_dedup(options.at("dedup-haplotypes-with-prior-model").as<bool>());
+    vc_builder.set_independent_genotype_prior_flag(options.at("use-independent-genotype-priors").as<bool>());
     if (caller == "cancer") {
         if (is_set("normal-sample", options)) {
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
@@ -1460,6 +1544,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             log << "Tumour only calling requested. "
                 "Please note this feature is still under development and results and runtimes may be poor";
         }
+        vc_builder.set_max_somatic_haplotypes(as_unsigned("max-somatic-haplotypes", options));
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
         vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
         vc_builder.set_min_expected_somatic_frequency(options.at("min-expected-somatic-frequency").as<float>());
@@ -1473,10 +1558,13 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_snv_denovo_mutation_rate(options.at("snv-denovo-mutation-rate").as<float>());
         vc_builder.set_indel_denovo_mutation_rate(options.at("indel-denovo-mutation-rate").as<float>());
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
+    } else if (caller == "polyclone") {
+        vc_builder.set_max_clones(as_unsigned("max-clones", options));
     }
     vc_builder.set_model_filtering(allow_model_filtering(options));
-    if (caller == "cancer") {
-        vc_builder.set_max_joint_genotypes(as_unsigned("max-cancer-genotypes", options));
+    vc_builder.set_max_genotypes(as_unsigned("max-genotypes", options));
+    if (is_fast_mode(options)) {
+        vc_builder.set_max_joint_genotypes(10'000);
     } else {
         vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
     }
@@ -1492,9 +1580,24 @@ bool is_call_filtering_requested(const OptionMap& options) noexcept
     return options.at("call-filtering").as<bool>();
 }
 
-std::string get_filter_expression(const OptionMap& options)
+std::string get_germline_filter_expression(const OptionMap& options)
 {
     return options.at("filter-expression").as<std::string>();
+}
+
+std::string get_somatic_filter_expression(const OptionMap& options)
+{
+    return options.at("somatic-filter-expression").as<std::string>();
+}
+
+std::string get_denovo_filter_expression(const OptionMap& options)
+{
+    return options.at("denovo-filter-expression").as<std::string>();
+}
+
+std::string get_refcall_filter_expression(const OptionMap& options)
+{
+    return options.at("refcall-filter-expression").as<std::string>();
 }
 
 bool is_csr_training(const OptionMap& options)
@@ -1513,19 +1616,104 @@ std::set<std::string> get_training_measures(const OptionMap& options)
     return result;
 }
 
-std::unique_ptr<VariantCallFilterFactory> make_call_filter_factory(const ReferenceGenome& reference,
-                                                                   ReadPipe& read_pipe,
-                                                                   const OptionMap& options)
+class MissingForestFile : public MissingFileError
+{
+    std::string do_where() const override
+    {
+        return "make_call_filter_factory";
+    }
+public:
+    MissingForestFile(fs::path p, std::string type) : MissingFileError {std::move(p), std::move(type)} {};
+};
+
+auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
+{
+    return get_caller_type(options, samples, get_pedigree(options, samples));
+}
+
+std::unique_ptr<VariantCallFilterFactory>
+make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
+                         boost::optional<fs::path> temp_directory)
 {
     if (is_call_filtering_requested(options)) {
-        if (is_csr_training(options)) {
-            return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
+        const auto caller = get_caller_type(options, read_pipe.samples());
+        if (is_set("forest-file", options)) {
+            auto forest_file = resolve_path(options.at("forest-file").as<fs::path>(), options);
+            if (!fs::exists(forest_file)) {
+                throw MissingForestFile {forest_file, "forest-file"};
+            }
+            if (!temp_directory) temp_directory = "/tmp";
+            if (caller == "cancer") {
+                if (is_set("somatic-forest-file", options)) {
+                    auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
+                    if (!fs::exists(somatic_forest_file)) {
+                        throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
+                    }
+                    return std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
+                } else if (options.at("somatics-only").as<bool>()) {
+                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                       RandomForestFilterFactory::ForestType::somatic);
+                } else {
+                    logging::WarningLogger log {};
+                    log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
+                    return nullptr;
+                }
+            } else if (caller == "trio") {
+                if (options.at("denovos-only").as<bool>()) {
+                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                       RandomForestFilterFactory::ForestType::denovo);
+                } else {
+                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+                }
+            } else {
+                return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+            }
+        } else if (is_set("somatic-forest-file", options)) {
+            if (options.at("somatics-only").as<bool>()) {
+                auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
+                if (!fs::exists(somatic_forest_file)) {
+                    throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
+                }
+                return std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
+                                                                   RandomForestFilterFactory::ForestType::somatic);
+            } else {
+                logging::WarningLogger log {};
+                log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
+                return nullptr;
+            }
         } else {
-            return std::make_unique<ThresholdFilterFactory>(get_filter_expression(options));
+            if (is_csr_training(options)) {
+                return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
+            } else {
+                auto germline_filter_expression = get_germline_filter_expression(options);
+                if (caller == "cancer") {
+                    if (options.at("somatics-only").as<bool>()) {
+                        return std::make_unique<ThresholdFilterFactory>("", get_somatic_filter_expression(options),
+                                                                        "", get_refcall_filter_expression(options));
+                    } else {
+                        return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                        "", get_somatic_filter_expression(options),
+                                                                        "", get_refcall_filter_expression(options));
+                    }
+                } else if (caller == "trio") {
+                    auto denovo_filter_expression = get_denovo_filter_expression(options);
+                    if (options.at("denovos-only").as<bool>()) {
+                        return std::make_unique<ThresholdFilterFactory>("", denovo_filter_expression,
+                                                                        "", get_refcall_filter_expression(options),
+                                                                        true, ThresholdFilterFactory::Type::denovo);
+                    } else {
+                        return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                        "", denovo_filter_expression,
+                                                                        "", get_refcall_filter_expression(options),
+                                                                        ThresholdFilterFactory::Type::denovo);
+                    }
+                } else {
+                    return std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
+                }
+            }
         }
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
@@ -1549,14 +1737,10 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     filterer.add(make_unique<HasWellFormedCigar>());
     filterer.add(make_unique<IsMapped>());
     filterer.add(make_unique<IsNotMarkedQcFail>());
-    filterer.add(make_unique<IsNotMarkedDuplicate>());
-    filterer.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
-    filterer.add(make_unique<IsProperTemplate>());
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }
 
-ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples,
-                                    const OptionMap& options)
+ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options)
 {
     if (use_calling_read_pipe_for_call_filtering(options)) {
         return make_read_pipe(read_manager, std::move(samples), options);
@@ -1620,10 +1804,35 @@ bool is_csr_training_mode(const OptionMap& options)
 
 boost::optional<fs::path> filter_request(const OptionMap& options)
 {
-    if (is_set("filter-vcf", options)) {
+    if (is_call_filtering_requested(options) && is_set("filter-vcf", options)) {
         return resolve_path(options.at("filter-vcf").as<fs::path>(), options);
     }
     return boost::none;
+}
+
+boost::optional<fs::path> bamout_request(const OptionMap& options)
+{
+    if (is_set("bamout", options)) {
+        return resolve_path(options.at("bamout").as<fs::path>(), options);
+    }
+    return boost::none;
+}
+
+unsigned max_open_read_files(const OptionMap& options)
+{
+    return 2 * std::min(as_unsigned("max-open-read-files", options), count_read_paths(options));
+}
+
+unsigned estimate_max_open_files(const OptionMap& options)
+{
+    unsigned result {0};
+    result += max_open_read_files(options);
+    if (get_output_path(options)) result += 2;
+    result += is_debug_mode(options);
+    result += is_trace_mode(options);
+    result += is_call_filtering_requested(options);
+    result += is_legacy_vcf_requested(options);
+    return result;
 }
 
 } // namespace options

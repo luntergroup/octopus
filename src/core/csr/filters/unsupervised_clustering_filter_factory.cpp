@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "unsupervised_clustering_filter_factory.hpp"
@@ -10,13 +10,17 @@
 
 namespace octopus { namespace csr {
 
+namespace {
+
 std::vector<MeasureWrapper> parse_measures(const std::set<std::string>& measure_names)
 {
-    std::vector<MeasureWrapper> result {};
+    std::vector<MeasureWrapper> result{};
     result.reserve(measure_names.size());
     std::transform(std::cbegin(measure_names), std::cend(measure_names), std::back_inserter(result), make_measure);
     return result;
 }
+
+} // namespace
 
 UnsupervisedClusteringFilterFactory::UnsupervisedClusteringFilterFactory(const std::set<std::string>& measure_names)
 : measures_ {parse_measures(measure_names)}

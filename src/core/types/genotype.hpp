@@ -1,10 +1,11 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef genotype_hpp
 #define genotype_hpp
 
 #include <vector>
+#include <deque>
 #include <memory>
 #include <initializer_list>
 #include <unordered_map>
@@ -122,6 +123,7 @@ public:
     
     std::vector<Haplotype> copy_unique() const;
     std::vector<std::reference_wrapper<const Haplotype>> copy_unique_ref() const;
+    std::vector<unsigned> unique_counts() const;
     
 private:
     using HaplotypePtr  = std::shared_ptr<Haplotype>;
@@ -203,7 +205,7 @@ const MappableType& Genotype<MappableType>::operator[](const unsigned n) const
 template <typename MappableType>
 unsigned Genotype<MappableType>::ploidy() const noexcept
 {
-    return static_cast<unsigned>(elements_.size());
+    return elements_.size();
 }
 
 template <typename MappableType>
@@ -221,7 +223,7 @@ unsigned Genotype<MappableType>::zygosity() const
     } else if (ploidy() == 2) {
         return 2;
     }
-    return static_cast<unsigned>(copy_unique().size());
+    return copy_unique().size();
 }
 
 template <typename MappableType>
@@ -233,7 +235,7 @@ bool Genotype<MappableType>::contains(const MappableType& element) const
 template <typename MappableType>
 unsigned Genotype<MappableType>::count(const MappableType& element) const
 {
-    return static_cast<unsigned>(std::count(std::cbegin(elements_), std::cend(elements_), element));
+    return std::count(std::cbegin(elements_), std::cend(elements_), element);
 }
 
 template <typename MappableType>
@@ -559,7 +561,37 @@ struct GenotypeHash
 };
 
 std::size_t num_genotypes(unsigned num_elements, unsigned ploidy);
+std::size_t max_num_elements(std::size_t num_genotypes, unsigned ploidy);
 std::size_t element_cardinality_in_genotypes(unsigned num_elements, unsigned ploidy);
+
+template <typename MappableType>
+unsigned count_shared(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs)
+{
+    if (lhs.ploidy() <= rhs.ploidy()) {
+        if (lhs.ploidy() < 2 || (lhs.ploidy() == 2 && !lhs.is_homozygous())) {
+            return std::count_if(std::cbegin(lhs), std::cend(lhs),
+                                 [&rhs] (const auto& element) { return rhs.contains(element); });
+        } else {
+            const auto& lhs_unique = lhs.copy_unique_ref();
+            return std::count_if(std::cbegin(lhs_unique), std::cend(lhs_unique),
+                                 [&rhs] (const auto& element) { return rhs.contains(element); });
+        }
+    } else {
+        return count_shared(rhs, lhs);
+    }
+}
+
+template <typename MappableType>
+bool have_shared(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs)
+{
+    if (lhs.ploidy() <= rhs.ploidy()) {
+        return std::any_of(std::cbegin(lhs), std::cend(lhs), [&rhs] (const auto& element) { return rhs.contains(element); });
+    } else {
+        return have_shared(rhs, lhs);
+    }
+}
+
+using GenotypeIndex = std::vector<unsigned>;
 
 namespace detail {
 
@@ -654,7 +686,7 @@ auto generate_all_triploid_biallelic_genotypes(const Container& elements)
 }
 
 template <typename Container>
-auto generate_genotype(const Container& elements, const std::vector<unsigned>& element_indicies)
+auto generate_genotype(const Container& elements, const GenotypeIndex& element_indicies)
 {
     GenotypeType<Container> result{static_cast<unsigned>(element_indicies.size())};
     for (const auto i : element_indicies) {
@@ -716,7 +748,7 @@ auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy)
 
 template <typename Container>
 auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy,
-                               std::vector<std::vector<unsigned>>& indices)
+                               std::vector<GenotypeIndex>& indices)
 {
     using GenotypeTp = GenotypeType<Container>;
     using ResultType = std::vector<GenotypeTp>;
@@ -728,7 +760,7 @@ auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy,
     const auto result_size = num_genotypes(num_elements, ploidy);
     result.reserve(result_size);
     indices.reserve(result_size);
-    std::vector<unsigned> element_indicies(ploidy, 0);
+    GenotypeIndex element_indicies(ploidy, 0);
     while (true) {
         if (element_indicies[0] == num_elements) {
             unsigned i {0};
@@ -744,6 +776,54 @@ auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy,
     return result;
 }
 
+template <typename Container, typename UnaryPredicate, typename OutputIterator>
+auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy,
+                               UnaryPredicate pred, OutputIterator result_itr)
+{
+    if (ploidy == 0 || elements.empty()) return result_itr;
+    const auto num_elements = static_cast<unsigned>(elements.size());
+    std::vector<unsigned> element_indicies(ploidy, 0);
+    while (true) {
+        if (element_indicies[0] == num_elements) {
+            unsigned i {0};
+            while (++i < ploidy && element_indicies[i] == num_elements - 1);
+            if (i == ploidy) break;
+            ++element_indicies[i];
+            std::fill_n(std::begin(element_indicies), i + 1, element_indicies[i]);
+        }
+        auto genotype = detail::generate_genotype(elements, element_indicies);
+        if (pred(genotype)) *result_itr++ = std::move(genotype);
+        ++element_indicies[0];
+    }
+    return result_itr;
+}
+
+template <typename Container, typename UnaryPredicate, typename OutputIterator>
+auto do_generate_all_genotypes(const Container& elements, const unsigned ploidy,
+                               UnaryPredicate pred, OutputIterator result_itr,
+                               std::vector<GenotypeIndex>& indices)
+{
+    if (ploidy == 0 || elements.empty()) return result_itr;
+    const auto num_elements = static_cast<unsigned>(elements.size());
+    std::vector<unsigned> element_indicies(ploidy, 0);
+    while (true) {
+        if (element_indicies[0] == num_elements) {
+            unsigned i {0};
+            while (++i < ploidy && element_indicies[i] == num_elements - 1);
+            if (i == ploidy) break;
+            ++element_indicies[i];
+            std::fill_n(std::begin(element_indicies), i + 1, element_indicies[i]);
+        }
+        auto genotype = detail::generate_genotype(elements, element_indicies);
+        if (pred(genotype)) {
+            *result_itr++ = std::move(genotype);
+            indices.push_back(element_indicies);
+        }
+        ++element_indicies[0];
+    }
+    return result_itr;
+}
+
 template <typename MappableType>
 struct RequiresSharedMemory : public std::is_same<MappableType, Haplotype> {};
 
@@ -753,9 +833,7 @@ auto generate_all_genotypes(const std::vector<MappableType>& elements, const uns
 {
     std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
     std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
-                   [] (const auto& element) {
-                       return std::make_shared<MappableType>(element);
-                   });
+                   [] (const auto& element) { return std::make_shared<MappableType>(element); });
     return do_generate_all_genotypes(temp_pointers, ploidy);
 }
 
@@ -766,21 +844,17 @@ auto generate_all_genotypes(const std::vector<std::reference_wrapper<const Mappa
 {
     std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
     std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
-                   [] (const auto& element) {
-                       return std::make_shared<MappableType>(element.get());
-                   });
+                   [] (const auto& element) { return std::make_shared<MappableType>(element.get()); });
     return do_generate_all_genotypes(temp_pointers, ploidy);
 }
 
 template <typename MappableType>
 auto generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
-                            std::vector<std::vector<unsigned>>& indices, std::true_type)
+                            std::vector<GenotypeIndex>& indices, std::true_type)
 {
     std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
     std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
-                   [] (const auto& element) {
-                       return std::make_shared<MappableType>(element);
-                   });
+                   [] (const auto& element) { return std::make_shared<MappableType>(element); });
     return do_generate_all_genotypes(temp_pointers, ploidy, indices);
 }
 
@@ -793,9 +867,51 @@ auto generate_all_genotypes(const std::vector<MappableType>& elements, const uns
 
 template <typename MappableType>
 auto generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
-                            std::vector<std::vector<unsigned>>& indices, std::false_type)
+                            std::vector<GenotypeIndex>& indices, std::false_type)
 {
     return do_generate_all_genotypes(elements, ploidy, indices);
+}
+
+template <typename MappableType, typename UnaryPredicate, typename OutputIterator>
+OutputIterator
+generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
+                       UnaryPredicate selector, OutputIterator result_itr,
+                       std::true_type)
+{
+    std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
+    std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
+                   [] (const auto& element) { return std::make_shared<MappableType>(element); });
+    return do_generate_all_genotypes(temp_pointers, ploidy, selector, result_itr);
+}
+
+template <typename MappableType, typename UnaryPredicate, typename OutputIterator>
+OutputIterator
+generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
+                       UnaryPredicate selector, OutputIterator result_itr, std::vector<GenotypeIndex>& indices,
+                       std::true_type)
+{
+    std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
+    std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
+                   [] (const auto& element) { return std::make_shared<MappableType>(element); });
+    return do_generate_all_genotypes(temp_pointers, ploidy, selector, result_itr, indices);
+}
+
+template <typename MappableType, typename UnaryPredicate, typename OutputIterator>
+OutputIterator
+generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
+                       UnaryPredicate selector, OutputIterator result_itr,
+                       std::false_type)
+{
+    return do_generate_all_genotypes(elements, ploidy, selector, result_itr);
+}
+
+template <typename MappableType, typename UnaryPredicate, typename OutputIterator>
+OutputIterator
+generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
+                       UnaryPredicate selector, OutputIterator result_itr, std::vector<GenotypeIndex>& indices,
+                       std::false_type)
+{
+    return do_generate_all_genotypes(elements, ploidy, selector, result_itr, indices);
 }
 
 } // namespace detail
@@ -810,9 +926,25 @@ generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned
 template <typename MappableType>
 std::vector<Genotype<MappableType>>
 generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
-                       std::vector<std::vector<unsigned>>& indices)
+                       std::vector<GenotypeIndex>& indices)
 {
     return detail::generate_all_genotypes(elements, ploidy, indices, detail::RequiresSharedMemory<MappableType> {});
+}
+
+template <typename MappableType, typename UnaryPredicate, typename OutputIterator>
+OutputIterator
+generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
+                       UnaryPredicate selector, OutputIterator result_itr)
+{
+    return detail::generate_all_genotypes(elements, ploidy, selector, result_itr, detail::RequiresSharedMemory<MappableType> {});
+}
+
+template <typename MappableType, typename UnaryPredicate, typename OutputIterator>
+OutputIterator
+generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
+                       UnaryPredicate selector, OutputIterator result_itr, std::vector<GenotypeIndex>& indices)
+{
+    return detail::generate_all_genotypes(elements, ploidy, selector, result_itr, indices, detail::RequiresSharedMemory<MappableType> {});
 }
 
 template <typename MappableType>
@@ -825,6 +957,29 @@ generate_all_genotypes(const std::vector<std::reference_wrapper<const MappableTy
 
 std::vector<Genotype<Haplotype>>
 generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, unsigned ploidy);
+
+template <typename MappableType>
+std::vector<Genotype<MappableType>>
+generate_all_full_rank_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy)
+{
+    if (elements.size() < ploidy) return {};
+    std::deque<Genotype<MappableType>> tmp {};
+    generate_all_genotypes(elements, ploidy, [ploidy] (const auto& genotype) { return genotype.zygosity() == ploidy; },
+                           std::back_inserter(tmp));
+    return {std::make_move_iterator(std::begin(tmp)), std::make_move_iterator(std::end(tmp))};
+}
+
+template <typename MappableType>
+std::vector<Genotype<MappableType>>
+generate_all_full_rank_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
+                                 std::vector<GenotypeIndex>& indices)
+{
+    if (elements.size() < ploidy) return {};
+    std::deque<Genotype<MappableType>> tmp {};
+    generate_all_genotypes(elements, ploidy, [ploidy] (const auto& genotype) { return genotype.zygosity() == ploidy; },
+                           std::back_inserter(tmp), indices);
+    return {std::make_move_iterator(std::begin(tmp)), std::make_move_iterator(std::end(tmp))};
+}
 
 namespace detail {
 

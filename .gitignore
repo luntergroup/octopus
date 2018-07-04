@@ -40,6 +40,7 @@ CTestTestfile.cmake
 
 build/src
 build/test
+resources/forests
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

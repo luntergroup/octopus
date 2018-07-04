@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "haplotype.hpp"
@@ -37,18 +37,19 @@ const GenomicRegion& Haplotype::mapped_region() const
 }
     
 namespace {
-    template <typename BidirIt, typename T>
-    BidirIt binary_find(BidirIt first, BidirIt last, const T& value)
-    {
-        const auto it = std::lower_bound(first, last, value);
-        return (it != last && *it == value) ? it : last;
-    }
+
+template <typename BidirIt, typename T>
+BidirIt binary_find(BidirIt first, BidirIt last, const T& value)
+{
+    const auto itr = std::lower_bound(first, last, value);
+    return (itr != last && *itr == value) ? itr : last;
 }
+
+} // namespace
 
 bool Haplotype::contains(const ContigAllele& allele) const
 {
     using octopus::contains; using std::cbegin; using std::cend;
-    
     if (contains(region_.contig_region(), allele)) {
         if (begins_before(allele, explicit_allele_region_)) {
             if (is_before(allele, explicit_allele_region_)) {
@@ -68,10 +69,10 @@ bool Haplotype::contains(const ContigAllele& allele) const
                 return false;
             }
         }
-        const auto it = binary_find(cbegin(explicit_alleles_), cend(explicit_alleles_), allele.mapped_region());
-        if (it != cend(explicit_alleles_)) {
-            if (*it == allele) return true;
-            if (is_same_region(*it, allele)) {
+        const auto match_itr = binary_find(cbegin(explicit_alleles_), cend(explicit_alleles_), allele.mapped_region());
+        if (match_itr != cend(explicit_alleles_)) {
+            if (*match_itr == allele) return true;
+            if (is_same_region(*match_itr, allele)) {
                 // If the allele is not explcitly contained but the region is then it must be a different
                 // allele, unless it is an insertion, in which case we must check the sequence
                 if (is_insertion(allele)) {
@@ -87,7 +88,6 @@ bool Haplotype::contains(const ContigAllele& allele) const
         }
         return sequence(allele.mapped_region()) == allele.sequence();
     }
-    
     return false;
 }
 
@@ -100,18 +100,24 @@ bool Haplotype::contains(const Allele& allele) const
 bool Haplotype::includes(const ContigAllele& allele) const
 {
     using octopus::contains;
-    const auto& this_region = region_.contig_region();
-    if (!contains(this_region, allele)) {
+    if (!contains(region_.contig_region(), allele)) {
         return false;
+    } else if (!explicit_alleles_.empty()) {
+        if (contains(explicit_allele_region_, allele)) {
+            return std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele);
+        } else if (overlaps(explicit_allele_region_, allele)) {
+            return false;
+        } else if (is_after(allele, explicit_allele_region_)) {
+            if (is_indel(allele)) return false;
+            const auto ref_ritr = std::next(std::crbegin(sequence_), end_distance(allele, region_.contig_region()));
+            assert(static_cast<std::size_t>(std::distance(ref_ritr, std::crend(sequence_))) >= allele.sequence().size());
+            return std::equal(std::crbegin(allele.sequence()), std::crend(allele.sequence()), ref_ritr);
+        }
     }
-    if (contains(explicit_allele_region_, allele)) {
-        return std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele);
-    }
-    if (overlaps(explicit_allele_region_, allele) || is_indel(allele)) {
-        return false;
-    }
-    return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()),
-                      std::next(std::cbegin(sequence_), begin_distance(this_region, allele)));
+    if (is_indel(allele)) return false;
+    const auto ref_itr = std::next(std::cbegin(sequence_), begin_distance(region_.contig_region(), allele));
+    assert(static_cast<std::size_t>(std::distance(ref_itr, std::cend(sequence_))) >= allele.sequence().size());
+    return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()), ref_itr);
 }
 
 bool Haplotype::includes(const Allele& allele) const
@@ -130,9 +136,9 @@ bool is_in_reference_flank(const ContigRegion& region, const ContigRegion& expli
         return true;
     }
     if (begins_before(region, explicit_allele_region_)) {
-        return !is_insertion(explicit_alleles.front());
+        return !is_simple_insertion(explicit_alleles.front());
     }
-    return !is_insertion(explicit_alleles.back());
+    return !is_simple_insertion(explicit_alleles.back());
 }
 
 Haplotype::NucleotideSequence Haplotype::sequence(const ContigRegion& region) const
@@ -246,37 +252,17 @@ CigarString Haplotype::cigar() const
             }
             auto allele_op_flag = curr_op_flag;
             CigarOperation::Size allele_op_size {0};
-            if (is_insertion(allele)) {
-                if (is_empty_region(allele)) {
+            if (is_indel(allele)) {
+                if (is_simple_insertion(allele)) {
                     allele_op_flag = Flag::insertion;
                     allele_op_size += allele.sequence().size();
-                } else {
-                    const auto insertion_size = allele.sequence().size() - region_size(allele);
-                    if (curr_op_flag == Flag::insertion) {
-                        curr_op_size += insertion_size;
-                        result.emplace_back(curr_op_size, curr_op_flag);
-                        curr_op_flag = Flag::deletion;
-                        curr_op_size = region_size(allele);
-                    } else if (curr_op_flag == Flag::deletion) {
-                        curr_op_size += region_size(allele);
-                        result.emplace_back(curr_op_size, curr_op_flag);
-                        curr_op_flag = Flag::insertion;
-                        curr_op_size = insertion_size;
-                    } else {
-                        result.emplace_back(curr_op_size, curr_op_flag);
-                        result.emplace_back(region_size(allele), Flag::deletion);
-                        curr_op_flag = Flag::insertion;
-                        curr_op_size = insertion_size;
-                    }
-                }
-            } else if (is_deletion(allele)) {
-                if (is_sequence_empty(allele)) {
+                } else if (is_simple_deletion(allele)) {
                     allele_op_flag = Flag::deletion;
                     allele_op_size += region_size(allele);
                 } else {
-                    const auto deletion_size = region_size(allele) - allele.sequence().size();
+                    // all complex indels are treated as replacements
                     if (curr_op_flag == Flag::deletion) {
-                        curr_op_size += deletion_size;
+                        curr_op_size += region_size(allele);
                         result.emplace_back(curr_op_size, curr_op_flag);
                         curr_op_flag = Flag::insertion;
                         curr_op_size = allele.sequence().size();
@@ -284,12 +270,14 @@ CigarString Haplotype::cigar() const
                         curr_op_size += allele.sequence().size();
                         result.emplace_back(curr_op_size, curr_op_flag);
                         curr_op_flag = Flag::deletion;
-                        curr_op_size = deletion_size;
+                        curr_op_size = region_size(allele);
                     } else {
-                        result.emplace_back(curr_op_size, curr_op_flag);
-                        result.emplace_back(allele.sequence().size(), Flag::insertion);
-                        curr_op_flag = Flag::deletion;
-                        curr_op_size = deletion_size;
+                        if (curr_op_size > 0) {
+                            result.emplace_back(curr_op_size, curr_op_flag);
+                        }
+                        result.emplace_back(region_size(allele), Flag::deletion);
+                        curr_op_flag = Flag::insertion;
+                        curr_op_size = allele.sequence().size();
                     }
                 }
             } else if (!is_empty_region(allele)) {
@@ -665,7 +653,7 @@ bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
 
 IsLessComplex::IsLessComplex(boost::optional<Haplotype> reference) : reference_ {std::move(reference)} {}
 
-bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const noexcept
+bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const
 {
     if (lhs.explicit_alleles_.size() != rhs.explicit_alleles_.size()) {
         return lhs.explicit_alleles_.size() < rhs.explicit_alleles_.size();
@@ -674,10 +662,8 @@ bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const
         return lhs.difference(*reference_).size() < rhs.difference(*reference_).size();
     }
     // otherwise prefer the sequence with the least amount of indels
-    auto score = std::inner_product(std::cbegin(lhs.explicit_alleles_),
-                                    std::cend(lhs.explicit_alleles_),
-                                    std::cbegin(rhs.explicit_alleles_), 0, 
-                                    std::plus<void> {},
+    auto score = std::inner_product(std::cbegin(lhs.explicit_alleles_), std::cend(lhs.explicit_alleles_),
+                                    std::cbegin(rhs.explicit_alleles_), 0, std::plus<> {},
                                     [] (const auto& lhs, const auto& rhs) {
                                         if (lhs == rhs) {
                                             return 0;
@@ -694,6 +680,17 @@ bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const
                                         }
                                     });
     return score >= 0;
+}
+
+unsigned remove_duplicates(std::vector<Haplotype>& haplotypes)
+{
+    return remove_duplicates(haplotypes, IsLessComplex {});
+}
+
+unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, Haplotype reference)
+{
+    IsLessComplex cmp {std::move(reference)};
+    return remove_duplicates(haplotypes, cmp);
 }
 
 unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optional<Haplotype> reference)

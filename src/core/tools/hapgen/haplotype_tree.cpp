@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "haplotype_tree.hpp"
@@ -213,10 +213,23 @@ auto make_splicer(const ContigAllele& allele, std::stack<V>& candidate_splice_si
     return Splicer<Container, V> {allele, candidate_splice_sites, splice_sites, root};
 }
 
+template <typename V, typename G>
+bool is_possible_splice_site(const ContigAllele& allele, const V& v, const G& tree)
+{
+    // Can allele go before v in the tree?
+    return begins_before(allele, tree[v])
+           || (boost::out_degree(v, tree) == 0 && overlaps(allele, tree[v]))
+           || (begins_equal(allele, tree[v]) && (!is_empty_region(tree[v]) || (is_insertion(tree[v]) && is_deletion(allele))));
+}
+
+bool is_deletion_and_insertion(const ContigAllele& new_allele, const ContigAllele& leaf)
+{
+    return (is_insertion(leaf) && is_deletion(new_allele)) || (is_deletion(leaf) && is_insertion(new_allele));
+}
+
 bool can_add_to_branch(const ContigAllele& new_allele, const ContigAllele& leaf)
 {
-    return !are_adjacent(leaf, new_allele)
-            || !((is_insertion(leaf) && is_deletion(new_allele)) || (is_deletion(leaf) && is_insertion(new_allele)));
+    return !are_adjacent(leaf, new_allele) || !is_deletion_and_insertion(new_allele, leaf);
 }
 
 void HaplotypeTree::splice(const ContigAllele& allele)
@@ -233,19 +246,19 @@ void HaplotypeTree::splice(const ContigAllele& allele)
                              make_splicer(allele, candidate_splice_sites, splice_sites, root_),
                              boost::make_assoc_property_map(colours),
                              [&] (const Vertex v, const Tree& tree) -> bool {
-                                 if (v != root_ && (begins_before(allele, tree[v])
-                                                    || (begins_equal(allele, tree[v]) && !is_empty_region(tree[v])))) {
-                                     const auto p = boost::inv_adjacent_vertices(v, tree);
-                                     if (p.first != p.second) {
-                                         const auto u = *p.first;
-                                         if (candidate_splice_sites.empty() || candidate_splice_sites.top() != u) {
-                                             candidate_splice_sites.push(u);
+                                 if (v != root_) {
+                                     if (is_possible_splice_site(allele, v, tree_)) {
+                                         const auto p = boost::inv_adjacent_vertices(v, tree);
+                                         if (p.first != p.second) {
+                                             const auto u = *p.first;
+                                             if (candidate_splice_sites.empty() || candidate_splice_sites.top() != u) {
+                                                 candidate_splice_sites.push(u);
+                                             }
                                          }
+                                         return true;
                                      }
-                                     return true;
-                                 } else {
-                                     return false;
                                  }
+                                 return false;
                              });
     assert(candidate_splice_sites.empty());
     for (const auto v : splice_sites) {

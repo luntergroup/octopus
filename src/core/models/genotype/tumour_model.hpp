@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef tumour_model_hpp
@@ -46,6 +46,7 @@ public:
     struct InferredLatents
     {
         Latents posteriors;
+        Latents::ProbabilityVector genotype_log_priors;
         double approx_log_evidence;
     };
     
@@ -67,7 +68,7 @@ public:
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
     InferredLatents evaluate(const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                             const std::vector<std::pair<std::vector<unsigned>, unsigned>>& genotype_indices,
+                             const std::vector<CancerGenotypeIndex>& genotype_indices,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:

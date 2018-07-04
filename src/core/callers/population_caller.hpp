@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef population_caller_hpp
@@ -37,7 +37,9 @@ public:
         Phred<double> min_variant_posterior, min_refcall_posterior;
         std::vector<unsigned> ploidies;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
-        unsigned max_genotypes_per_sample;
+        std::size_t max_joint_genotypes;
+        bool use_independent_genotype_priors = false;
+        bool deduplicate_haplotypes_with_germline_model = true;
     };
     
     PopulationCaller() = delete;
@@ -60,6 +62,10 @@ private:
     
     std::string do_name() const override;
     CallTypeSet do_call_types() const override;
+    unsigned do_min_callable_ploidy() const override;
+    unsigned do_max_callable_ploidy() const override;
+    
+    std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const override;
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
@@ -73,9 +79,16 @@ private:
     
     std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Caller::Latents& latents,
-                   const ReadMap& reads) const override;
+                   const ReadPileupMap& pileups) const override;
     
-    std::unique_ptr<PopulationPriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    bool use_independence_model() const noexcept;
+    std::unique_ptr<Caller::Latents>
+    infer_latents_with_joint_model(const std::vector<Haplotype>& haplotypes,
+                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    std::unique_ptr<Caller::Latents>
+    infer_latents_with_independence_model(const std::vector<Haplotype>& haplotypes,
+                                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    std::unique_ptr<PopulationPriorModel> make_joint_prior_model(const std::vector<Haplotype>& haplotypes) const;
     std::unique_ptr<GenotypePriorModel> make_independent_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef trio_model_hpp
@@ -64,6 +64,8 @@ public:
     
     ~TrioModel() = default;
     
+    static unsigned max_ploidy() noexcept;
+    
     const PopulationPriorModel& prior_model() const noexcept;
     
     InferredLatents evaluate(const GenotypeVector& maternal_genotypes,
@@ -76,7 +78,7 @@ public:
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
     InferredLatents evaluate(const GenotypeVector& genotypes,
-                             std::vector<std::vector<unsigned>>& genotype_indices,
+                             std::vector<GenotypeIndex>& genotype_indices,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
 private:

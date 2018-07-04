@@ -25,6 +25,8 @@ set(EXCEPTIONS_SOURCES
     exceptions/missing_index_error.cpp
     exceptions/unwritable_file_error.hpp
     exceptions/unwritable_file_error.cpp
+    exceptions/unimplemented_feature_error.hpp
+    exceptions/unimplemented_feature_error.cpp
 )
 
 set(CONCEPTS_SOURCES
@@ -49,6 +51,8 @@ set(BASICS_SOURCES
     basics/pedigree.cpp
     basics/trio.hpp
     basics/trio.cpp
+    basics/read_pileup.hpp
+    basics/read_pileup.cpp
 )
 
 set(CONTAINERS_SOURCES
@@ -94,6 +98,8 @@ set(IO_SOURCES
     io/read/read_reader_impl.hpp
     io/read/read_reader.hpp
     io/read/read_reader.cpp
+    io/read/read_writer.hpp
+    io/read/read_writer.cpp
     
     io/variant/htslib_bcf_facade.hpp
     io/variant/htslib_bcf_facade.cpp
@@ -156,8 +162,8 @@ set(UTILS_SOURCES
     utils/timing.hpp
     utils/type_tricks.hpp
     utils/coverage_tracker.hpp
-    utils/read_size_estimator.hpp
-    utils/read_size_estimator.cpp
+    utils/input_reads_profiler.hpp
+    utils/input_reads_profiler.cpp
     utils/kmer_mapper.hpp
     utils/kmer_mapper.cpp
     utils/memory_footprint.hpp
@@ -171,6 +177,10 @@ set(UTILS_SOURCES
     utils/parallel_transform.hpp
     utils/thread_pool.hpp
     utils/thread_pool.cpp
+    utils/concat.hpp
+    utils/select_top_k.hpp
+    utils/system_utils.hpp
+    utils/system_utils.cpp
 )
 
 set(CORE_SOURCES
@@ -188,6 +198,8 @@ set(CORE_SOURCES
     core/callers/population_caller.cpp
     core/callers/trio_caller.hpp
     core/callers/trio_caller.cpp
+    core/callers/polyclone_caller.hpp
+    core/callers/polyclone_caller.cpp
 
     core/types/calls/call_types.hpp
     core/types/calls/call.hpp
@@ -221,6 +233,12 @@ set(CORE_SOURCES
     core/csr/facets/read_assignments.cpp
     core/csr/facets/reference_context.hpp
     core/csr/facets/reference_context.cpp
+    core/csr/facets/genotypes.hpp
+    core/csr/facets/genotypes.cpp
+    core/csr/facets/ploidies.hpp
+    core/csr/facets/ploidies.cpp
+    core/csr/facets/pedigree.hpp
+    core/csr/facets/pedigree.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
 
@@ -244,6 +262,24 @@ set(CORE_SOURCES
     core/csr/filters/passing_filter.cpp
     core/csr/filters/training_filter_factory.hpp
     core/csr/filters/training_filter_factory.cpp
+    core/csr/filters/conditional_threshold_filter.hpp
+    core/csr/filters/conditional_threshold_filter.cpp
+    core/csr/filters/somatic_threshold_filter.hpp
+    core/csr/filters/somatic_threshold_filter.cpp
+    core/csr/filters/denovo_threshold_filter.hpp
+    core/csr/filters/denovo_threshold_filter.cpp
+    core/csr/filters/random_forest_filter.hpp
+    core/csr/filters/random_forest_filter.cpp
+    core/csr/filters/random_forest_filter_factory.hpp
+    core/csr/filters/random_forest_filter_factory.cpp
+    core/csr/filters/conditional_random_forest_filter.hpp
+    core/csr/filters/conditional_random_forest_filter.cpp
+    core/csr/filters/somatic_random_forest_filter.hpp
+    core/csr/filters/somatic_random_forest_filter.cpp
+    core/csr/filters/denovo_random_forest_filter.hpp
+    core/csr/filters/denovo_random_forest_filter.cpp
+    core/csr/filters/variant_filter_utils.hpp
+    core/csr/filters/variant_filter_utils.cpp
     
     core/csr/measures/measure.hpp
     core/csr/measures/measure.cpp
@@ -253,8 +289,8 @@ set(CORE_SOURCES
     core/csr/measures/depth.cpp
     core/csr/measures/quality_by_depth.hpp
     core/csr/measures/quality_by_depth.cpp
-    core/csr/measures/max_genotype_quality.hpp
-    core/csr/measures/max_genotype_quality.cpp
+    core/csr/measures/genotype_quality.hpp
+    core/csr/measures/genotype_quality.cpp
     core/csr/measures/mapping_quality_zero_count.hpp
     core/csr/measures/mapping_quality_zero_count.cpp
     core/csr/measures/mean_mapping_quality.hpp
@@ -280,18 +316,38 @@ set(CORE_SOURCES
     core/csr/measures/measures_fwd.hpp
     core/csr/measures/measure_factory.hpp
     core/csr/measures/measure_factory.cpp
-    core/csr/measures/realignments.hpp
-    core/csr/measures/realignments.cpp
-    core/csr/measures/unassigned_read_fraction.hpp
-    core/csr/measures/unassigned_read_fraction.cpp
-    
+    core/csr/measures/ambiguous_read_fraction.hpp
+    core/csr/measures/ambiguous_read_fraction.cpp
+    core/csr/measures/median_base_quality.hpp
+    core/csr/measures/median_base_quality.cpp
+    core/csr/measures/mismatch_count.hpp
+    core/csr/measures/mismatch_count.cpp
+    core/csr/measures/mismatch_fraction.hpp
+    core/csr/measures/mismatch_fraction.cpp
+    core/csr/measures/is_refcall.hpp
+    core/csr/measures/is_refcall.cpp
+    core/csr/measures/somatic_contamination.hpp
+    core/csr/measures/somatic_contamination.cpp
+    core/csr/measures/denovo_contamination.hpp
+    core/csr/measures/denovo_contamination.cpp
+    core/csr/measures/read_position_bias.hpp
+    core/csr/measures/read_position_bias.cpp
+    core/csr/measures/alt_allele_count.hpp
+    core/csr/measures/alt_allele_count.cpp
+    core/csr/measures/overlaps_tandem_repeat.hpp
+    core/csr/measures/overlaps_tandem_repeat.cpp
+    core/csr/measures/str_length.hpp
+    core/csr/measures/str_length.cpp
+    core/csr/measures/str_period.hpp
+    core/csr/measures/str_period.cpp
+
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
     core/models/haplotype_likelihood_model.hpp
     core/models/haplotype_likelihood_model.cpp
-    
-    core/models/genotype/cnv_model.hpp
-    core/models/genotype/cnv_model.cpp
+
+    core/models/genotype/subclone_model.hpp
+    core/models/genotype/subclone_model.cpp
     core/models/genotype/germline_likelihood_model.hpp
     core/models/genotype/germline_likelihood_model.cpp
     core/models/genotype/individual_model.hpp
@@ -314,6 +370,8 @@ set(CORE_SOURCES
     core/models/genotype/uniform_population_prior_model.hpp
     core/models/genotype/coalescent_population_prior_model.hpp
     core/models/genotype/coalescent_population_prior_model.cpp
+    core/models/genotype/hardy_weinberg_model.hpp
+    core/models/genotype/hardy_weinberg_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
@@ -341,7 +399,13 @@ set(CORE_SOURCES
     core/models/mutation/coalescent_model.cpp
     core/models/mutation/denovo_model.hpp
     core/models/mutation/denovo_model.cpp
+    core/models/mutation/indel_mutation_model.hpp
+    core/models/mutation/indel_mutation_model.cpp
     
+
+    core/models/reference/individual_reference_likelihood_model.hpp
+    core/models/reference/individual_reference_likelihood_model.cpp
+
     core/tools/coretools.hpp
     core/tools/haplotype_filter.hpp
     core/tools/haplotype_filter.cpp
@@ -349,6 +413,8 @@ set(CORE_SOURCES
     core/tools/read_assigner.cpp
     core/tools/read_realigner.hpp
     core/tools/read_realigner.cpp
+    core/tools/bam_realigner.hpp
+    core/tools/bam_realigner.cpp
 
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp
@@ -356,6 +422,8 @@ set(CORE_SOURCES
     core/tools/hapgen/haplotype_generator.cpp
     core/tools/hapgen/haplotype_tree.hpp
     core/tools/hapgen/haplotype_tree.cpp
+    core/tools/hapgen/dense_variation_detector.hpp
+    core/tools/hapgen/dense_variation_detector.cpp
     
     core/tools/phaser/phaser.hpp
     core/tools/phaser/phaser.cpp
@@ -374,6 +442,8 @@ set(CORE_SOURCES
     core/tools/vargen/vcf_extractor.cpp
     core/tools/vargen/variant_generator_builder.hpp
     core/tools/vargen/variant_generator_builder.cpp
+    core/tools/vargen/active_region_generator.hpp
+    core/tools/vargen/active_region_generator.cpp
     
     core/tools/vargen/utils/assembler.hpp
     core/tools/vargen/utils/assembler.cpp
@@ -381,6 +451,8 @@ set(CORE_SOURCES
     core/tools/vargen/utils/global_aligner.cpp
     core/tools/vargen/utils/assembler_active_region_generator.hpp
     core/tools/vargen/utils/assembler_active_region_generator.cpp
+    core/tools/vargen/utils/misaligned_reads_detector.hpp
+    core/tools/vargen/utils/misaligned_reads_detector.cpp
 
     core/types/allele.hpp
     core/types/allele.cpp
@@ -422,8 +494,9 @@ set(OCTOPUS_SOURCES
 set(INCLUDE_SOURCES
     ${octopus_SOURCE_DIR}/lib/bioio.hpp
     ${octopus_SOURCE_DIR}/lib/tandem/tandem.hpp
-    ${octopus_SOURCE_DIR}//lib/ksp/custom_dijkstra_call.hpp
-    ${octopus_SOURCE_DIR}//lib/ksp/yen_ksp.hpp
+    ${octopus_SOURCE_DIR}/lib/ksp/custom_dijkstra_call.hpp
+    ${octopus_SOURCE_DIR}/lib/ksp/yen_ksp.hpp
+    ${octopus_SOURCE_DIR}/lib/ranger/Forest.h
 )
 
 set(REQUIRED_BOOST_LIBRARIES
@@ -459,14 +532,13 @@ if (BUILD_TESTING)
     add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(Octopus PRIVATE cxx_thread_local)
     target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(Octopus tandem)
+    target_link_libraries(Octopus tandem ranger)
     target_compile_definitions(Octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     if (Boost_FOUND)
         target_include_directories (Octopus PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (Octopus ${Boost_LIBRARIES})
     endif (Boost_FOUND)
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
     find_package (HTSlib 1.4 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (Octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
@@ -476,7 +548,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
     target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(octopus-debug tandem)
+    target_link_libraries(octopus-debug tandem ranger)
     if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
@@ -489,7 +561,6 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
         target_include_directories (octopus-debug PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (octopus-debug ${Boost_LIBRARIES})
     endif (Boost_FOUND)
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
     find_package (HTSlib 1.4 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (octopus-debug PUBLIC ${HTSlib_INCLUDE_DIRS})
@@ -505,7 +576,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     target_compile_features(octopus-sanitize PRIVATE cxx_thread_local)
     target_compile_options(octopus-sanitize PRIVATE ${SanitizeFlags})
     target_include_directories(octopus-sanitize PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(octopus-sanitize tandem ${SanitizeFlags})
+    target_link_libraries(octopus-sanitize tandem ranger ${SanitizeFlags})
     if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
@@ -518,7 +589,6 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
         target_include_directories (octopus-sanitize PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (octopus-sanitize ${Boost_LIBRARIES} ${SanitizeFlags})
     endif (Boost_FOUND)
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
     find_package (HTSlib 1.4 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (octopus-sanitize PUBLIC ${HTSlib_INCLUDE_DIRS})
@@ -533,7 +603,7 @@ else()
     target_compile_features(octopus PRIVATE cxx_thread_local)
     target_compile_options(octopus PRIVATE -ffast-math -funroll-loops -march=native)
     target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(octopus tandem)
+    target_link_libraries(octopus tandem ranger)
     if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
@@ -546,7 +616,6 @@ else()
         target_include_directories (octopus PUBLIC ${Boost_INCLUDE_DIR})
         target_link_libraries (octopus ${Boost_LIBRARIES})
     endif (Boost_FOUND)
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
     find_package (HTSlib 1.4 REQUIRED)
     if (HTSlib_FOUND)
         target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})

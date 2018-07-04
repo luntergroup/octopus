@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "calling_components.hpp"
@@ -12,7 +12,6 @@
 
 #include "config/config.hpp"
 #include "config/option_collation.hpp"
-#include "utils/read_size_estimator.hpp"
 #include "utils/map_utils.hpp"
 #include "logging/logging.hpp"
 #include "exceptions/user_error.hpp"
@@ -159,9 +158,24 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::filter_r
     return components_.filter_request_;
 }
 
+boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::bamout() const
+{
+    return components_.bamout_;
+}
+
 bool GenomeCallingComponents::sites_only() const noexcept
 {
     return components_.sites_only;
+}
+
+const PloidyMap& GenomeCallingComponents::ploidies() const noexcept
+{
+    return components_.ploidies;
+}
+
+boost::optional<Pedigree> GenomeCallingComponents::pedigree() const
+{
+    return components_.pedigree;
 }
 
 namespace {
@@ -325,21 +339,6 @@ void drop_unused_samples(std::vector<SampleName>& calling_samples, ReadManager& 
     rm.drop_samples(unused_samples);
 }
 
-auto estimate_read_size(const std::vector<SampleName>& samples,
-                        const InputRegionMap& input_regions,
-                        ReadManager& read_manager)
-{
-    auto result = estimate_mean_read_size(samples, input_regions, read_manager);
-    if (!result) {
-        result = default_read_size_estimate();
-        logging::WarningLogger log{};
-        log << "Could not estimate read size from data, resorting to default";
-    }
-    auto debug_log = logging::get_debug_log();
-    if (debug_log) stream(*debug_log) << "Estimated read size is " << *result << " bytes";
-    return *result;
-}
-
 bool is_multithreaded_run(const options::OptionMap& options) noexcept
 {
     const auto num_threads = options::get_num_threads(options);
@@ -371,14 +370,36 @@ boost::optional<fs::path> get_temp_directory(const options::OptionMap& options)
     }
 }
 
-std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes,
-                                    const std::vector<SampleName>& samples,
-                                    const InputRegionMap& input_regions,
-                                    ReadManager& read_manager)
+auto estimate_read_size(const boost::optional<ReadSetProfile>& profile) noexcept
 {
-    if (samples.empty()) return 0;
-    static constexpr std::size_t minBufferBytes{1'000'000};
-    return std::max(max_buffer_bytes, minBufferBytes) / estimate_read_size(samples, input_regions, read_manager);
+    double result;
+    if (profile) {
+        result = profile->mean_read_bytes + profile->read_bytes_stdev;
+    } else {
+        result = default_read_size_estimate();
+        logging::WarningLogger log{};
+        log << "Could not estimate read size from data, resorting to default";
+    }
+    auto debug_log = logging::get_debug_log();
+    if (debug_log) stream(*debug_log) << "Estimated read size is " << result << " bytes";
+    return result;
+}
+
+std::size_t calculate_max_num_reads(MemoryFootprint max_buffer_size, const boost::optional<ReadSetProfile>& profile) noexcept
+{
+    static constexpr MemoryFootprint min_buffer_size {50'000'000}; // 50Mb
+    if (max_buffer_size < min_buffer_size) {
+        static bool warned {false};
+        if (!warned) {
+            logging::WarningLogger warn_log {};
+            stream(warn_log) << "Ignoring given maximum read buffer size of " << max_buffer_size
+                             << " as this size is too small. Setting maximum to "
+                             << min_buffer_size << " instead.";
+            warned = true;
+        }
+        max_buffer_size = min_buffer_size;
+    }
+    return max_buffer_size.num_bytes() / estimate_read_size(profile);
 }
 
 auto add_identifier(const fs::path& base, const std::string& identifier)
@@ -454,19 +475,23 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , samples {extract_samples(options, this->read_manager)}
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
+, temp_directory {get_temp_directory(options)}
+, reads_profile_ {profile_reads(this->samples, this->regions, this->read_manager)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)}
-, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options)}
-, call_filter_factory {options::make_call_filter_factory(this->reference, this->read_pipe, options)}
+, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile_)}
+, call_filter_factory {options::make_call_filter_factory(this->reference, this->read_pipe, options, this->temp_directory)}
 , filter_read_pipe {}
 , output {std::move(output)}
 , num_threads {options::get_num_threads(options)}
 , read_buffer_size {}
-, temp_directory {get_temp_directory(options)}
 , progress_meter {regions}
+, ploidies {options::get_ploidy_map(options)}
+, pedigree {options::get_pedigree(options, samples)}
 , sites_only {options::call_sites_only(options)}
 , filtered_output {}
 , legacy {}
 , filter_request_ {}
+, bamout_ {options::bamout_request(options)}
 {
     drop_unused_samples(this->samples, this->read_manager);
     setup_progress_meter(options);
@@ -495,8 +520,7 @@ void GenomeCallingComponents::Components::setup_progress_meter(const options::Op
 void GenomeCallingComponents::Components::set_read_buffer_size(const options::OptionMap& options)
 {
     if (!samples.empty() && !regions.empty() && read_manager.good()) {
-        read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options).num_bytes(),
-                                                   samples, regions, read_manager);
+        read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options), reads_profile_);
     }
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef haplotype_generator_hpp
@@ -21,6 +21,7 @@
 #include "core/types/allele.hpp"
 #include "genome_walker.hpp"
 #include "haplotype_tree.hpp"
+#include "dense_variation_detector.hpp"
 
 namespace octopus {
 
@@ -57,7 +58,8 @@ public:
     HaplotypeGenerator(const ReferenceGenome& reference,
                        const MappableFlatSet<Variant>& candidates,
                        const ReadMap& reads,
-                       Policies policies);
+                       Policies policies,
+                       DenseVariationDetector dense_variation_detector);
     
     HaplotypeGenerator(const HaplotypeGenerator&)            = default;
     HaplotypeGenerator& operator=(const HaplotypeGenerator&) = default;
@@ -144,7 +146,7 @@ private:
     GenomicRegion find_max_lagged_region() const;
     void update_next_active_region() const;
     void update_lagged_next_active_region() const;
-    void progress(GenomicRegion to);
+    void remove_passed_alleles();
     void populate_tree();
     void populate_tree_with_novel_alleles();
     void populate_tree_with_holdouts();
@@ -222,18 +224,14 @@ public:
     
     Builder& set_lagging_policy(Policies::Lagging policy) noexcept;
     Builder& set_extension_policy(Policies::Extension policy) noexcept;
-    
     Builder& set_target_limit(unsigned n) noexcept;
     Builder& set_holdout_limit(unsigned n) noexcept;
     Builder& set_overflow_limit(unsigned n) noexcept;
-    
     Builder& set_max_holdout_depth(unsigned n) noexcept;
-    
     Builder& set_min_flank_pad(Haplotype::MappingDomain::Size n) noexcept;
-    
     Builder& set_max_indicator_join_distance(Haplotype::NucleotideSequence::size_type n) noexcept;
-    
     Builder& set_max_expected_log_allele_count_per_base(double v) noexcept;
+    Builder& set_dense_variation_detector(DenseVariationDetector detector) noexcept;
     
     HaplotypeGenerator build(const ReferenceGenome& reference,
                              const MappableFlatSet<Variant>& candidates,
@@ -241,6 +239,7 @@ public:
     
 private:
     Policies policies_;
+    DenseVariationDetector dense_variation_detector_;
 };
 
 } // namespace coretools

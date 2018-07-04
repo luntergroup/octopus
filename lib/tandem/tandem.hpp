@@ -1,6 +1,6 @@
 /*  MIT License
  
- Copyright (c) 2017 Daniel Cooke
+ Copyright (c) 2017-2018 Daniel Cooke
  
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -148,11 +148,8 @@ make_lcp_array(const T& str, const std::vector<I>& suffix_array,
                const size_t extra_capacity = 0)
 {
     static_assert(std::is_integral<I>::value, "Integer required");
-    
     const auto rank = make_rank_array(suffix_array, extra_capacity);
-    
     std::vector<I> result(suffix_array.size() + extra_capacity);
-    
     for (I i {0}, h {0}; i < (suffix_array.size() - extra_capacity); ++i) {
         if (rank[i] > 0) {
             h += detail::forward_lce(str, i + h, suffix_array[rank[i] - 1] + h);
@@ -160,7 +157,6 @@ make_lcp_array(const T& str, const std::vector<I>& suffix_array,
             if (h > 0) --h;
         }
     }
-    
     return result;
 }
 
@@ -198,45 +194,39 @@ template <typename T>
 std::vector<LZBlock> lempel_ziv_factorisation(const T& str)
 {
     if (str.empty()) return {};
-    
     const auto lpf = make_lpf_array(str);
-    
     std::vector<LZBlock> result {};
     result.reserve(str.size()); // max possible blocks
     std::uint32_t end {1};  // start at 1 because the first element of lpf is sentinel
     result.emplace_back(0, end);
-    
     while (end < str.size()) {
         const auto m = std::max(std::uint32_t {1}, lpf[end]);
         result.emplace_back(end, m);
         end += m;
     }
-    
-    result.shrink_to_fit();
-    
     return result;
 }
 
 // Implementation of algorithm found in Crochemore et al. (2008)
 template <typename T>
-std::pair<std::vector<LZBlock>, std::vector<uint32_t>>
+std::pair<std::vector<LZBlock>, std::vector<std::uint32_t>>
 lempel_ziv_factorisation_with_prev_block_occurences(const T& str)
 {
     if (str.empty()) return {{}, {}};
     
-    std::vector<uint32_t> lpf, prev_occ;
+    std::vector<std::uint32_t> lpf, prev_occ;
     std::tie(lpf, prev_occ) = make_lpf_and_prev_occ_arrays(str);
     std::vector<LZBlock> lz_blocks {};
     lz_blocks.reserve(str.size()); // max possible blocks
-    std::vector<uint32_t> prev_lz_block_occurrence {};
+    std::vector<std::uint32_t> prev_lz_block_occurrence {};
     prev_lz_block_occurrence.reserve(str.size());
     
     std::uint32_t end {1}; // start at 1 because the first element of lpf is sentinel
     lz_blocks.emplace_back(0, end);
-    prev_lz_block_occurrence.emplace_back(-1);
+    prev_lz_block_occurrence.push_back(std::numeric_limits<std::uint32_t>::max());
     
     while (end < str.size()) {
-        const auto m = std::max(uint32_t {1}, lpf[end]);
+        const auto m = std::max(std::uint32_t {1}, lpf[end]);
         lz_blocks.emplace_back(end, m);
         prev_lz_block_occurrence.emplace_back(prev_occ[end]);
         end += m;
@@ -250,43 +240,52 @@ lempel_ziv_factorisation_with_prev_block_occurences(const T& str)
 
 namespace detail {
 
-// Implements Mains algorithm found in Main (1989). Obscure notation as in paper.
+using LMRVector = std::deque<Repeat>;
+
 template <typename T>
-std::deque<Repeat>
-find_leftmost_maximal_repetitions(const T& str, const std::vector<LZBlock>& lz_blocks,
-                                  const std::uint32_t min_period = 1, const std::uint32_t max_period = -1)
+void add_maximal_periodicities(const T& str, const LZBlock& prev_block, const LZBlock& block,
+                               const std::uint32_t min_period, const std::uint32_t max_period,
+                               LMRVector& result)
 {
-    std::deque<Repeat> result {};
-    
-    for (std::size_t h {1}; h < lz_blocks.size(); ++h) {
-        const auto u   = lz_blocks[h].pos;
-        const auto n   = lz_blocks[h].length;
-        const auto m   = std::min(u, 2 * lz_blocks[h - 1].length + n);
-        const auto t   = u - m;
-        const auto end = u + n;
-        // rightmax periodicities
-        for (auto j = min_period; j <= std::min(n, max_period); ++j) {
-            const auto ls = detail::backward_lce(str, u - 1, u + j - 1, t);
-            const auto lp = detail::forward_lce(str, u + j, u, end);
-            if (ls > 0 && ls + lp >= j && j + lp < n) {
-                result.emplace_back(u - ls, j + lp + ls, j);
-            }
-        }
-        // leftmax periodicities
-        for (auto j = min_period; j < std::min(m, max_period); ++j) {
-            const auto ls = detail::backward_lce(str, u - j - 1, u - 1, t);
-            const auto lp = detail::forward_lce(str, u, u - j, end);
-            if (ls + lp >= j) {
-                result.emplace_back(u - (ls + j), j + lp + ls, j);
-            }
+    const auto u   = block.pos;
+    const auto n   = block.length;
+    const auto m   = std::min(u, 2 * prev_block.length + n);
+    const auto t   = u - m;
+    const auto end = u + n;
+    // rightmax periodicities
+    for (auto j = min_period; j <= std::min(n, max_period); ++j) {
+        const auto ls = backward_lce(str, u - 1, u + j - 1, t);
+        const auto lp = forward_lce(str, u + j, u, end);
+        if (ls + lp >= j && j + lp < n) {
+            result.emplace_back(u - ls, j + lp + ls, j);
         }
     }
-    
+    // leftmax periodicities
+    for (auto j = min_period; j < std::min(m, max_period); ++j) {
+        const auto ls = backward_lce(str, u - j - 1, u - 1, t);
+        const auto lp = forward_lce(str, u, u - j, end);
+        if (ls + lp >= j) {
+            result.emplace_back(u - (ls + j), j + lp + ls, j);
+        }
+    }
+}
+
+// Implements Mains algorithm found in Main (1989). Obscure notation as in paper.
+template <typename T>
+auto
+find_leftmost_maximal_repetitions(const T& str, const std::vector<LZBlock>& lz_blocks,
+                                  const std::uint32_t min_period = 1,
+                                  const std::uint32_t max_period = std::numeric_limits<std::uint32_t>::max())
+{
+    LMRVector result {};
+    for (std::size_t h {1}; h < lz_blocks.size(); ++h) {
+        add_maximal_periodicities(str, lz_blocks[h - 1], lz_blocks[h], min_period, max_period, result);
+    }
     return result;
 }
 
 // just reserves enough space to avoid reallocations
-std::vector<std::vector<Repeat>> get_init_buckets(std::size_t n, const std::deque<Repeat>& lmrs);
+std::vector<std::vector<Repeat>> get_init_buckets(std::size_t n, const LMRVector& lmrs);
 
 template <typename T>
 std::vector<std::vector<Repeat>>
@@ -333,18 +332,21 @@ extract_maximal_repetitions(const T& str, const std::uint32_t min_period, const 
     std::vector<LZBlock> lz_blocks;
     std::vector<std::uint32_t> prev_lz_block_occurrence;
     std::tie(lz_blocks, prev_lz_block_occurrence) = lempel_ziv_factorisation_with_prev_block_occurences(str);
-    
     auto sorted_buckets = get_sorted_buckets(str, lz_blocks, min_period, max_period);
-    
     for (std::size_t k {0}; k < lz_blocks.size(); ++k) {
         const auto& block = lz_blocks[k];
         const auto block_end = block.pos + block.length;
         static constexpr auto sentinal = std::numeric_limits<std::uint32_t>::max();
         const auto delta = block.pos - ((prev_lz_block_occurrence[k] != sentinal) ? prev_lz_block_occurrence[k] : 0);
-        const auto v = block_end - delta;
+        const auto max_target_end = block_end - delta;
         for (auto j = block.pos; j < block_end; ++j) {
-            const auto& target = sorted_buckets[j - delta];
-            const auto last_target_itr = std::lower_bound(std::cbegin(target), std::cend(target), v,
+            const auto target_start = j - delta;
+            const auto& target = sorted_buckets[target_start];
+            auto target_end = max_target_end;
+            if (!sorted_buckets[j].empty()) {
+                target_end = std::min(target_start + sorted_buckets[j].front().length, max_target_end);
+            }
+            const auto last_target_itr = std::lower_bound(std::cbegin(target), std::cend(target), target_end,
                                                           [] (const auto& run, const auto val) noexcept {
                                                               return run.pos + run.length < val;
                                                           });
@@ -360,7 +362,6 @@ extract_maximal_repetitions(const T& str, const std::uint32_t min_period, const 
             }
         }
     }
-    
     return sorted_buckets;
 }
 
@@ -373,13 +374,27 @@ auto count_runs(const std::vector<T>& buckets) noexcept
                            });
 }
 
+template <typename T>
+std::vector<Repeat>
+extract_exact_tandem_repeats_lz(const T& str, const std::uint32_t min_period, const std::uint32_t max_period)
+{
+    auto sorted_buckets = detail::extract_maximal_repetitions(str, min_period, max_period);
+    std::vector<Repeat> result {};
+    result.reserve(detail::count_runs(sorted_buckets));
+    for (auto& bucket : sorted_buckets) {
+        result.insert(std::end(result), std::cbegin(bucket), std::cend(bucket));
+        bucket.clear();
+        bucket.shrink_to_fit();
+    }
+    return result;
+}
+
 template <typename ForwardIt>
 std::vector<Repeat>
 extract_homopolymers(const ForwardIt first, const ForwardIt last, const std::size_t reserve_hint = 0)
 {
     std::vector<Repeat> result {};
     result.reserve(reserve_hint);
-    
     for (auto curr = first; curr != last; ) {
         const auto it = std::adjacent_find(curr, last);
         if (it == last) break;
@@ -390,9 +405,6 @@ extract_homopolymers(const ForwardIt first, const ForwardIt last, const std::siz
                             std::uint32_t {1});
         curr = it2;
     }
-    
-    result.shrink_to_fit();
-    
     return result;
 }
 
@@ -401,13 +413,11 @@ std::vector<Repeat>
 extract_exact_tandem_repeats(const ForwardIt first, const ForwardIt last)
 {
     std::vector<Repeat> result {};
-    
     const auto length = static_cast<std::size_t>(std::distance(first, last));
     if (length < 2 * N) return result;
     auto it1 = std::adjacent_find(first, last, std::not_equal_to<void> {});
     if (it1 == last) return result;
     result.reserve(std::min(length / N, std::size_t {1024}));
-    
     for (auto it2 = std::next(it1, N); it2 < last; ) {
         const auto p = std::mismatch(it2, last, it1);
         if (p.second >= it2) {
@@ -422,9 +432,6 @@ extract_exact_tandem_repeats(const ForwardIt first, const ForwardIt last)
         if (it1 == last) break;
         it2 = std::next(it1, N);
     }
-    
-    result.shrink_to_fit();
-    
     return result;
 }
 
@@ -458,53 +465,51 @@ void merge(Container2&& src, Container1& dst)
                        });
 }
 
+template <typename T>
+std::vector<Repeat>
+extract_exact_tandem_repeats_naive(const T& str, std::uint32_t min_period, const std::uint32_t max_period)
+{
+    assert(max_period <= 3);
+    if (min_period == max_period) {
+        switch(min_period) {
+            case 1: return detail::extract_homopolymers(str);
+            case 2: return detail::extract_exact_dinucleotide_tandem_repeats(str);
+            case 3: return detail::extract_exact_trinucleotide_tandem_repeats(str);
+        }
+    }
+    using detail::merge;
+    if (min_period == 1) { // known max_period >= 2
+        auto result = detail::extract_homopolymers(str);
+        merge(detail::extract_exact_dinucleotide_tandem_repeats(str), result);
+        if (max_period == 3) {
+            merge(detail::extract_exact_trinucleotide_tandem_repeats(str), result);
+        }
+        return result;
+    } else { // min_period == 2 && max_period == 3
+        auto result = detail::extract_exact_dinucleotide_tandem_repeats(str);
+        merge(detail::extract_exact_trinucleotide_tandem_repeats(str), result);
+        return result;
+    }
+}
+
 } // namespace detail
 
 template <typename T>
 std::vector<Repeat>
-extract_exact_tandem_repeats(const T& str, std::uint32_t min_period = 1, const std::uint32_t max_period = -1)
+extract_exact_tandem_repeats(const T& str,
+                             std::uint32_t min_period = 1,
+                             const std::uint32_t max_period = std::numeric_limits<std::uint32_t>::max())
 {
     if (min_period == 0) ++min_period;
     if (str.empty() || str.size() < min_period) return {};
     if (min_period > max_period) {
         throw std::domain_error {"find_maximal_repetitions: given unsatisfiable condition min_period > max_period"};
     }
-    
     if (max_period <= 3) { // The naive algorithm is faster in these cases
-        if (min_period == max_period) {
-            switch(min_period) {
-                case 1: return detail::extract_homopolymers(str);
-                case 2: return detail::extract_exact_dinucleotide_tandem_repeats(str);
-                case 3: return detail::extract_exact_trinucleotide_tandem_repeats(str);
-            }
-        }
-        using detail::merge;
-        if (min_period == 1) { // known max_period >= 2
-            auto result = detail::extract_homopolymers(str);
-            merge(detail::extract_exact_dinucleotide_tandem_repeats(str), result);
-            if (max_period == 3) {
-                merge(detail::extract_exact_trinucleotide_tandem_repeats(str), result);
-            }
-            return result;
-        } else { // min_period == 2 && max_period == 3
-            auto result = detail::extract_exact_dinucleotide_tandem_repeats(str);
-            merge(detail::extract_exact_trinucleotide_tandem_repeats(str), result);
-            return result;
-        }
+        return detail::extract_exact_tandem_repeats_naive(str, min_period, max_period);
+    } else {
+        return detail::extract_exact_tandem_repeats_lz(str, min_period, max_period);
     }
-    
-    auto sorted_buckets = detail::extract_maximal_repetitions(str, min_period, max_period);
-    
-    std::vector<Repeat> result {};
-    result.reserve(detail::count_runs(sorted_buckets));
-    
-    for (auto& bucket : sorted_buckets) {
-        result.insert(std::end(result), std::cbegin(bucket), std::cend(bucket));
-        bucket.clear();
-        bucket.shrink_to_fit();
-    }
-    
-    return result;
 }
 
 /**
@@ -526,7 +531,6 @@ std::map<std::size_t, std::size_t> collapse(SequenceType& sequence, const char c
     std::map<std::size_t, std::size_t> result {};
     const auto last = std::end(sequence);
     std::size_t position {0}, num_removed {0};
-    
     for (auto first = std::begin(sequence); first != last;) {
         const auto it1 = std::adjacent_find(first, last,
                                             [c] (const char lhs, const char rhs) noexcept {
@@ -539,7 +543,6 @@ std::map<std::size_t, std::size_t> collapse(SequenceType& sequence, const char c
         result.emplace(position, num_removed);
         first = it2;
     }
-    
     if (!result.empty()) {
         sequence.erase(std::unique(std::next(std::begin(sequence), std::cbegin(result)->first), last,
                                    [c] (const char lhs, const char rhs) noexcept {
@@ -547,7 +550,6 @@ std::map<std::size_t, std::size_t> collapse(SequenceType& sequence, const char c
                                    }),
                        last);
     }
-    
     return result;
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "call.hpp"
@@ -6,6 +6,10 @@
 #include <algorithm>
 
 namespace octopus {
+
+Call::Call(Phred<double> quality)
+: quality_ {quality}
+{}
 
 std::unique_ptr<Call> Call::clone() const
 {

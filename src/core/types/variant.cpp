@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "variant.hpp"
@@ -495,6 +495,12 @@ bool is_transition(const Variant& variant) noexcept
 bool is_transversion(const Variant& variant) noexcept
 {
     return is_snv(variant) && !is_transition(variant);
+}
+
+Variant::NucleotideSequence::size_type indel_size(const Variant& variant) noexcept
+{
+    const auto p = std::minmax({ref_sequence_size(variant), alt_sequence_size(variant)});
+    return p.second - p.first;
 }
 
 std::vector<Allele::NucleotideSequence> extract_alt_allele_sequences(const std::vector<Variant>& variants)

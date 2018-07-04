@@ -177,7 +177,7 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       sudo apt-get install python3 -qy;
     else
-      brew install python3;
+      brew upgrade python;
     fi
 
   ############################################################################
@@ -187,7 +187,7 @@ install:
       git clone https://github.com/samtools/htslib.git;
       cd htslib && autoheader && autoconf && ./configure && make && sudo make install;
     else
-      brew tap homebrew/science && brew install htslib;
+      brew install htslib;
     fi
 
 before_script:
@@ -197,7 +197,7 @@ before_script:
   - echo "BOOST_ROOT = " ${BOOST_ROOT};
 
 script:
-  - ./install.py --cxx_compiler=${COMPILER}
+  - ./scripts/install.py --cxx_compiler=${COMPILER}
 
 notifications:
   email: false

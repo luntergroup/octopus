@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "individual_model.hpp"
@@ -93,7 +93,7 @@ IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
 
 IndividualModel::InferredLatents
 IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
-                          const std::vector<std::vector<unsigned>>& genotype_indices,
+                          const std::vector<GenotypeIndex>& genotype_indices,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_manager.hpp"
@@ -44,15 +44,16 @@ ReadManager::ReadManager(std::initializer_list<Path> read_file_paths)
 {}
 
 ReadManager::ReadManager(ReadManager&& other)
-:
-num_files_ {std::move(other.num_files_)}
 {
     std::lock_guard<std::mutex> lock {other.mutex_};
-    closed_readers_                 = std::move(other.closed_readers_);
-    open_readers_                   = std::move(other.open_readers_);
-    reader_paths_containing_sample_ = std::move(other.reader_paths_containing_sample_);
-    possible_regions_in_readers_    = std::move(other.possible_regions_in_readers_);
-    samples_                        = std::move(other.samples_);
+    using std::move;
+    max_open_files_                 = move(other.max_open_files_);
+    num_files_                      = move(other.num_files_);
+    closed_readers_                 = move(other.closed_readers_);
+    open_readers_                   = move(other.open_readers_);
+    reader_paths_containing_sample_ = move(other.reader_paths_containing_sample_);
+    possible_regions_in_readers_    = move(other.possible_regions_in_readers_);
+    samples_                        = move(other.samples_);
 }
 
 void swap(ReadManager& lhs, ReadManager& rhs) noexcept
@@ -61,11 +62,19 @@ void swap(ReadManager& lhs, ReadManager& rhs) noexcept
     std::lock(lhs.mutex_, rhs.mutex_);
     std::lock_guard<std::mutex> lock_lhs {lhs.mutex_, std::adopt_lock}, lock_rhs {rhs.mutex_, std::adopt_lock};
     using std::swap;
+    swap(lhs.max_open_files_,                 rhs.max_open_files_);
+    swap(lhs.num_files_,                      rhs.num_files_);
     swap(lhs.closed_readers_,                 rhs.closed_readers_);
     swap(lhs.open_readers_,                   rhs.open_readers_);
     swap(lhs.reader_paths_containing_sample_, rhs.reader_paths_containing_sample_);
     swap(lhs.possible_regions_in_readers_,    rhs.possible_regions_in_readers_);
-    swap(lhs.samples_, rhs.samples_);
+    swap(lhs.samples_,                        rhs.samples_);
+}
+
+void ReadManager::close() const noexcept
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    close_readers(num_files_);
 }
 
 bool ReadManager::good() const noexcept
@@ -77,6 +86,21 @@ bool ReadManager::good() const noexcept
 unsigned ReadManager::num_files() const noexcept
 {
     return static_cast<unsigned>(closed_readers_.size() + open_readers_.size());
+}
+
+std::vector<ReadManager::Path> ReadManager::paths() const
+{
+    std::vector<Path> result {};
+    result.reserve(num_files_);
+    std::lock_guard<std::mutex> lock {mutex_};
+    for (const auto& path : closed_readers_) {
+        result.push_back(path);
+    }
+    for (const auto& p : open_readers_) {
+        result.push_back(p.first);
+    }
+    std::sort(std::begin(result), std::end(result));
+    return result;
 }
 
 unsigned ReadManager::num_samples() const noexcept
@@ -277,7 +301,7 @@ auto max_head_region(const CoverageTracker<ContigRegion>& position_tracker,
     if (position_tracker.num_tracked() <= max_coverage) return region;
     const auto max_region = max_head_region(position_tracker, region);
     if (size(max_region) <= 1) return max_region;
-    auto position_coverage = position_tracker.coverage(max_region.contig_region());
+    auto position_coverage = position_tracker.get(max_region.contig_region());
     std::partial_sum(std::begin(position_coverage), std::end(position_coverage), std::begin(position_coverage));
     const auto last_position = std::upper_bound(std::cbegin(position_coverage), std::cend(position_coverage), max_coverage);
     return expand_rhs(head_region(region), std::distance(std::cbegin(position_coverage), last_position));
@@ -359,7 +383,7 @@ ReadManager::ReadContainer ReadManager::fetch_reads(const SampleName& sample, co
 ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleName>& samples, const GenomicRegion& region) const
 {
     SampleReadMap result {samples.size()};
-    // Populate here so we can do unchcked access
+    // Populate here so we can make unchecked access
     for (const auto& sample : samples) {
         result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
     }

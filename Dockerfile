@@ -61,5 +61,6 @@ WORKDIR /tmp
 RUN git clone -b master https://github.com/luntergroup/octopus.git
 WORKDIR /tmp/octopus
 RUN ./install.py --root --threads=2
+RUN ldconfig
 
 WORKDIR /home

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef uniform_population_prior_model_hpp
@@ -38,7 +38,7 @@ private:
     {
         return 1.0;
     }
-    double do_evaluate(const std::vector<std::vector<unsigned>>& indices) const override
+    double do_evaluate(const std::vector<GenotypeIndex>& genotypes) const override
     {
         return 1.0;
     }

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "x10_indel_error_model.hpp"
@@ -97,10 +97,9 @@ X10IndelErrorModel::do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_o
         }
     }
     switch (max_repeat.period) {
-    case 1: return 2;
-    case 2: return 4;
-    case 3: return 4;
-    default: return defaultGapExtension_;
+        case 2:
+        case 3: return 1;
+        default: return defaultGapExtension_;
     }
 }
     

@@ -1,24 +1,10 @@
-/*  MIT License
+/*  tandem.cpp
  
- Copyright (c) 2017 Daniel Cooke
+ Copyright (C) 2017-2018 University of Oxford.
  
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+ Author: Daniel Cooke <dcooke@well.ox.ac.uk>
  
- The above copyright notice and this permission notice shall be included in all
- copies or substantial portions of the Software.
- 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- SOFTWARE.  */
+ Use of this source code is governed by the MIT license that can be found in the LICENSE file. */
 
 #include "tandem.hpp"
 
@@ -115,37 +101,38 @@ make_lpf_and_prev_occ_arrays(std::vector<std::uint32_t> sa, std::vector<std::uin
     return std::make_pair(std::move(lpf), std::move(prev_occ));
 }
 
-namespace detail
+namespace detail {
+
+std::vector<std::vector<Repeat>>
+get_init_buckets(const std::size_t n, const LMRVector& lmrs)
 {
-    std::vector<std::vector<Repeat>>
-    get_init_buckets(const std::size_t n, const std::deque<Repeat>& lmrs)
-    {
-        std::vector<std::uint32_t> counts(n, 0);
-        for (const auto& run : lmrs) {
-            ++counts[run.pos + run.length - 1];
-        }
-        std::vector<std::vector<Repeat>> result(n, std::vector<Repeat> {});
-        for (std::size_t i {0}; i < n; ++i) {
-            result[i].reserve(counts[i]);
-        }
-        return result;
+    std::vector<std::uint32_t> counts(n, 0);
+    for (const auto& run : lmrs) {
+        ++counts[run.pos + run.length - 1];
     }
-    
-    std::vector<std::vector<Repeat>>
-    get_init_buckets(const std::size_t n, const std::vector<std::vector<Repeat>>& end_buckets)
-    {
-        std::vector<std::uint32_t> counts(n, 0);
-        for (const auto& bucket : end_buckets) {
-            for (const auto& run : bucket) {
-                ++counts[run.pos];
-            }
-        }
-        std::vector<std::vector<Repeat>> result(n, std::vector<Repeat> {});
-        for (std::size_t i {0}; i < n; ++i) {
-            result[i].reserve(counts[i]);
-        }
-        return result;
+    std::vector<std::vector<Repeat>> result(n, std::vector<Repeat> {});
+    for (std::size_t i {0}; i < n; ++i) {
+        result[i].reserve(counts[i]);
     }
+    return result;
+}
+
+std::vector<std::vector<Repeat>>
+get_init_buckets(const std::size_t n, const std::vector<std::vector<Repeat>>& end_buckets)
+{
+    std::vector<std::uint32_t> counts(n, 0);
+    for (const auto& bucket : end_buckets) {
+        for (const auto& run : bucket) {
+            ++counts[run.pos];
+        }
+    }
+    std::vector<std::vector<Repeat>> result(n, std::vector<Repeat> {});
+    for (std::size_t i {0}; i < n; ++i) {
+        result[i].reserve(counts[i]);
+    }
+    return result;
+}
+
 } // namespace detail
 
 void rebase(std::vector<tandem::Repeat>& runs, const std::map<std::size_t, std::size_t>& shift_map)

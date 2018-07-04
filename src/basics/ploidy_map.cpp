@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "ploidy_map.hpp"
@@ -53,6 +53,28 @@ std::vector<unsigned> get_ploidies(const std::vector<SampleName>& samples, const
         result.reserve(samples.size());
         std::transform(std::cbegin(samples), std::cend(samples), std::back_inserter(result),
                        [&] (const auto& sample) { return ploidies.of(sample, contig); });
+    }
+    return result;
+}
+
+unsigned get_min_ploidy(const std::vector<SampleName>& samples, const std::vector<ContigName>& contigs, const PloidyMap& ploidies)
+{
+    unsigned result = -1;
+    for (const auto& sample : samples) {
+        for (const auto& contig : contigs) {
+            result = std::min(result, ploidies.of(sample, contig));
+        }
+    }
+    return result;
+}
+
+unsigned get_max_ploidy(const std::vector<SampleName>& samples, const std::vector<ContigName>& contigs, const PloidyMap& ploidies)
+{
+    unsigned result {0};
+    for (const auto& sample : samples) {
+        for (const auto& contig : contigs) {
+            result = std::max(result, ploidies.of(sample, contig));
+        }
     }
     return result;
 }

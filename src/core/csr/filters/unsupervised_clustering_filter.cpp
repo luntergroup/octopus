@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "unsupervised_clustering_filter.hpp"
@@ -23,7 +23,7 @@ void UnsupervisedClusteringFilter::annotate(VcfHeader::Builder& header) const
     // TODO
 }
 
-void UnsupervisedClusteringFilter::record(const std::size_t call_idx, MeasureVector measures) const
+void UnsupervisedClusteringFilter::record(const std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const
 {
     if (data_.size() == call_idx) {
         data_.push_back(std::move(measures));
@@ -48,7 +48,7 @@ void UnsupervisedClusteringFilter::prepare_for_classification(boost::optional<Lo
     classifications_.resize(num_calls);
 }
 
-VariantCallFilter::Classification UnsupervisedClusteringFilter::classify(std::size_t call_idx) const
+VariantCallFilter::Classification UnsupervisedClusteringFilter::classify(std::size_t call_idx, std::size_t sample_idx) const
 {
     return classifications_[call_idx];
 }

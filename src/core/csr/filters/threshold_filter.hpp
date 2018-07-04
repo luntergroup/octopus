@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef threshold_filter_hpp
@@ -52,14 +52,19 @@ public:
         std::string vcf_filter_key = ".";
     };
     
+    struct ConditionVectorPair
+    {
+        std::vector<Condition> hard, soft;
+    };
+    
     ThresholdVariantCallFilter() = delete;
     
     ThresholdVariantCallFilter(FacetFactory facet_factory,
-                               std::vector<Condition> hard_conditions,
-                               std::vector<Condition> soft_conditions,
+                               ConditionVectorPair conditions,
                                OutputOptions output_config,
                                ConcurrencyPolicy threading,
-                               boost::optional<ProgressMeter&> progress = boost::none);
+                               boost::optional<ProgressMeter&> progress = boost::none,
+                               std::vector<MeasureWrapper> other_measures = {});
     
     ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;
     ThresholdVariantCallFilter& operator=(const ThresholdVariantCallFilter&) = delete;
@@ -68,17 +73,25 @@ public:
     
     virtual ~ThresholdVariantCallFilter() override = default;
 
-private:
-    std::vector<ThresholdWrapper> hard_thresholds_, soft_thresholds_;
+protected:
+    using ThresholdVector   = std::vector<ThresholdWrapper>;
+    using ThresholdIterator = ThresholdVector::const_iterator;
+    using MeasureIterator   = MeasureVector::const_iterator;
+    
+    ThresholdVector hard_thresholds_, soft_thresholds_;
     std::vector<std::string> vcf_filter_keys_;
     bool all_unique_filter_keys_;
     
+    bool passes_all_filters(MeasureIterator first_measure, MeasureIterator last_measure,
+                            ThresholdIterator first_threshold) const;
+    
+private:
     virtual void annotate(VcfHeader::Builder& header) const override;
     virtual Classification classify(const MeasureVector& measures) const override;
     
-    bool passes_all_hard_filters(const MeasureVector& measures) const;
-    bool passes_all_soft_filters(const MeasureVector& measures) const;
-    std::vector<std::string> get_failing_vcf_filter_keys(const MeasureVector& measures) const;
+    virtual bool passes_all_hard_filters(const MeasureVector& measures) const;
+    virtual bool passes_all_soft_filters(const MeasureVector& measures) const;
+    virtual std::vector<std::string> get_failing_vcf_filter_keys(const MeasureVector& measures) const;
 };
 
 template <typename M, typename... Args>
@@ -103,7 +116,7 @@ private:
     {
         explicit UnaryVisitor(T target, Cmp cmp) : target {target}, cmp {cmp} {}
         template <typename T_>
-        bool operator()(T_ value) const noexcept { return cmp(target, value); }
+        bool operator()(T_ value) const noexcept { return !cmp(value, target); }
         template <typename T_>
         bool operator()(boost::optional<T_> value) const noexcept
         {
@@ -112,6 +125,11 @@ private:
         bool operator()(boost::any value) const noexcept
         {
             return true;
+        }
+        template <typename T_>
+        bool operator()(const std::vector<T_>& values) const noexcept
+        {
+            return std::all_of(std::cbegin(values), std::cend(values), [this] (const auto& value) { return (*this)(value); });
         }
         T target;
         Cmp cmp;

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "clipped_read_fraction.hpp"
@@ -13,6 +13,8 @@
 #include "../facets/overlapping_reads.hpp"
 
 namespace octopus { namespace csr {
+
+const std::string ClippedReadFraction::name_ = "CRF";
 
 std::unique_ptr<Measure> ClippedReadFraction::do_clone() const
 {
@@ -32,7 +34,7 @@ bool is_significantly_clipped(const AlignedRead& read) noexcept
     return is_soft_clipped(read) && clip_fraction(read) > 0.25;
 }
 
-double clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
+Measure::ResultType clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
 {
     unsigned num_reads {0}, num_soft_clipped_reads {0};
     for (const auto& p : reads) {
@@ -41,7 +43,11 @@ double clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
             ++num_reads;
         }
     }
-    return static_cast<double>(num_soft_clipped_reads) / num_reads;
+    boost::optional<double> result {};
+    if (num_reads > 0) {
+        result = static_cast<double>(num_soft_clipped_reads) / num_reads;
+    }
+    return result;
 }
 
 } // namespace
@@ -52,9 +58,19 @@ Measure::ResultType ClippedReadFraction::do_evaluate(const VcfRecord& call, cons
     return clipped_fraction(reads, mapped_region(call));
 }
 
-std::string ClippedReadFraction::do_name() const
+Measure::ResultCardinality ClippedReadFraction::do_cardinality() const noexcept
 {
-    return "CRF";
+    return ResultCardinality::one;
+}
+
+const std::string& ClippedReadFraction::do_name() const
+{
+    return name_;
+}
+
+std::string ClippedReadFraction::do_describe() const
+{
+    return "Fraction of clipped reads covering the call";
 }
 
 std::vector<std::string> ClippedReadFraction::do_requirements() const

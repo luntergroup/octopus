@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef calling_components_hpp
@@ -15,12 +15,15 @@
 #include "config/common.hpp"
 #include "config/option_parser.hpp"
 #include "basics/genomic_region.hpp"
+#include "basics/ploidy_map.hpp"
+#include "basics/pedigree.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/read/read_manager.hpp"
 #include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/callers/caller_factory.hpp"
 #include "core/csr/filters/variant_call_filter_factory.hpp"
+#include "utils/input_reads_profiler.hpp"
 #include "logging/progress_meter.hpp"
 
 namespace octopus {
@@ -63,8 +66,11 @@ public:
     const ReadPipe& filter_read_pipe() const noexcept;
     ProgressMeter& progress_meter() noexcept;
     bool sites_only() const noexcept;
+    const PloidyMap& ploidies() const noexcept;
+    boost::optional<Pedigree> pedigree() const;
     boost::optional<Path> legacy() const;
     boost::optional<Path> filter_request() const;
+    boost::optional<Path> bamout() const;
     
 private:
     struct Components
@@ -86,6 +92,8 @@ private:
         std::vector<SampleName> samples;
         InputRegionMap regions;
         std::vector<GenomicRegion::ContigName> contigs;
+        boost::optional<Path> temp_directory;
+        boost::optional<ReadSetProfile> reads_profile_;
         ReadPipe read_pipe;
         CallerFactory caller_factory;
         std::unique_ptr<VariantCallFilterFactory> call_filter_factory;
@@ -93,12 +101,14 @@ private:
         VcfWriter output;
         boost::optional<unsigned> num_threads;
         std::size_t read_buffer_size;
-        boost::optional<Path> temp_directory;
         ProgressMeter progress_meter;
+        PloidyMap ploidies;
+        boost::optional<Pedigree> pedigree;
         bool sites_only;
         boost::optional<VcfWriter> filtered_output;
         boost::optional<Path> legacy;
         boost::optional<Path> filter_request_;
+        boost::optional<Path> bamout_;
         
         void setup_progress_meter(const options::OptionMap& options);
         void set_read_buffer_size(const options::OptionMap& options);

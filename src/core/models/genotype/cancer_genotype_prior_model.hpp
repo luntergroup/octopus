@@ -1,10 +1,9 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef cancer_genotype_prior_model_hpp
 #define cancer_genotype_prior_model_hpp
 
-#include <type_traits>
 #include <functional>
 #include <cmath>
 #include <iterator>
@@ -40,7 +39,7 @@ public:
     const SomaticMutationModel& mutation_model() const noexcept;
     
     double evaluate(const CancerGenotype<Haplotype>& genotype) const;
-    double evaluate(const std::vector<unsigned>& germline_indices, unsigned somatic_index) const;
+    double evaluate(const CancerGenotypeIndex& genotype) const;
 
 private:
     std::reference_wrapper<const GenotypePriorModel> germline_model_;
@@ -60,9 +59,9 @@ inline auto get_ploidy(const Genotype<Haplotype>& genotype) noexcept
     return genotype.ploidy();
 }
 
-inline auto get_ploidy(const std::vector<unsigned>& genotype_indices) noexcept
+inline auto get_ploidy(const GenotypeIndex& genotype) noexcept
 {
-    return static_cast<unsigned>(genotype_indices.size());
+    return static_cast<unsigned>(genotype.size());
 }
 
 } // namespace detail
@@ -105,14 +104,13 @@ double CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const 
 // non-member methods
 
 template <typename Container>
-auto calculate_log_priors(const Container& genotypes, const CancerGenotypePriorModel& model)
+auto calculate_log_priors(const Container& genotypes, const CancerGenotypePriorModel& model,
+                          const bool normalise = false)
 {
-    static_assert(std::is_same<typename Container::value_type, CancerGenotype<Haplotype>>::value,
-                  "genotypes must contain CancerGenotype<Haplotype>'s");
     std::vector<double> result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&model] (const auto& genotype) { return model.evaluate(genotype); });
-    maths::normalise_logs(result);
+    if (normalise) maths::normalise_logs(result);
     return result;
 }
 

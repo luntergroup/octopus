@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke and Gerton Lunter
+// Copyright (c) 2015-2018 Daniel Cooke and Gerton Lunter
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef simd_pair_hmm_hpp
@@ -17,6 +17,11 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           int truth_len, int target_len,
           const std::int8_t* gap_open, short gap_extend, short nuc_prior) noexcept;
+
+int align(const char* truth, const char* target, const std::int8_t* qualities,
+          int truth_len, int target_len,
+          const std::int8_t* gap_open, const std::int8_t* gap_extend,
+          short nuc_prior) noexcept;
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,
           int truth_len, int target_len,

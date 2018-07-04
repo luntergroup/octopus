@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "progress_meter.hpp"
@@ -227,14 +227,10 @@ ProgressMeter::~ProgressMeter()
     if (!done_ && !target_regions_.empty() && num_bp_completed_ > 0) {
         const TimeInterval duration {start_, std::chrono::system_clock::now()};
         const auto time_taken = to_string(duration);
-        stream(log_) << std::string(position_tab_length_ - 4, ' ')
-                     << "-"
-                     << completed_pad("100%")
-                     << "100%"
-                     << time_taken_pad(time_taken)
-                     << time_taken
-                     << ttc_pad("-")
-                     << "-";
+        stream(log_) << std::string(position_tab_length_ - 4, ' ') << "-"
+                     << completed_pad("100%", position_tab_length_ - 3) << "100%"
+                     << time_taken_pad(time_taken) << time_taken
+                     << ttc_pad("-") << "-";
     }
 }
 
@@ -271,14 +267,10 @@ void ProgressMeter::stop()
     if (!done_ && !target_regions_.empty()) {
         const TimeInterval duration {start_, std::chrono::system_clock::now()};
         const auto time_taken = to_string(duration);
-        stream(log_) << std::string(position_tab_length_ - 4, ' ')
-        << "-"
-        << completed_pad("100%")
-        << "100%"
-        << time_taken_pad(time_taken)
-        << time_taken
-        << ttc_pad("-")
-        << "-";
+        stream(log_) << std::string(position_tab_length_ - 4, ' ') << "-"
+                     << completed_pad("100%", position_tab_length_ - 3) << "100%"
+                     << time_taken_pad(time_taken) << time_taken
+                     << ttc_pad("-") << "-";
     }
     done_ = true;
 }
@@ -426,14 +418,12 @@ void ProgressMeter::output_log(const GenomicRegion& region)
         }
     }
     const auto percent_completed = percent_completed_str(num_bp_completed_, num_bp_to_search_);
-    stream(log_) << position_pad(region)
-                 << region.contig_name() << ':' << region.end()
-                 << completed_pad(percent_completed)
-                 << percent_completed
-                 << time_taken_pad(time_taken)
-                 << time_taken
-                 << ttc_pad(ttc)
-                 << ttc;
+    const auto position_tick = region.contig_name() + ":" + std::to_string(region.end());
+    const auto position_str = position_pad(region) + position_tick;
+    stream(log_) << position_str
+                 << completed_pad(percent_completed, position_str.size()) << percent_completed
+                 << time_taken_pad(time_taken) << time_taken
+                 << ttc_pad(ttc) << ttc;
     tick_durations_.emplace_back(now - last_tick_);
     last_tick_            = now;
     percent_until_tick_   = curr_tick_size_;
@@ -453,22 +443,24 @@ std::string ProgressMeter::position_pad(const GenomicRegion& completed_region) c
     return "";
 }
 
-std::string ProgressMeter::completed_pad(const std::string& percent_completed) const
+std::string ProgressMeter::completed_pad(const std::string& percent_completed, const std::size_t position_tick_size) const
 {
-    if (percent_completed.size() >= 17) return {};
-    return std::string(std::size_t {17} - percent_completed.size(), ' ');
+    std::size_t pad {1};
+    pad += position_tab_length_ - position_tick_size;
+    if (percent_completed.size() < 13) pad += 13 - percent_completed.size();
+    return std::string(pad, ' ');
 }
 
 std::string ProgressMeter::time_taken_pad(const std::string& time_taken) const
 {
-    if (time_taken.size() >= 16) return {};
-    return std::string(16 - time_taken.size(), ' ');
+    if (time_taken.size() >= 17) return {};
+    return std::string(17 - time_taken.size(), ' ');
 }
 
 std::string ProgressMeter::ttc_pad(const std::string& ttc) const
 {
-    if (ttc.size() >= 16) return {};
-    return std::string(16 - ttc.size(), ' ');
+    if (ttc.size() >= 18) return {};
+    return std::string(18 - ttc.size(), ' ');
 }
 
 void ProgressMeter::update_tick_size()

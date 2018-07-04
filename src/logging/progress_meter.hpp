@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef progress_meter_hpp
@@ -69,7 +69,7 @@ private:
     void output_log(const GenomicRegion& region);
     
     std::string position_pad(const GenomicRegion& completed_region) const;
-    std::string completed_pad(const std::string& percent_completed) const;
+    std::string completed_pad(const std::string& percent_completed, std::size_t position_tick_size) const;
     std::string time_taken_pad(const std::string& time_taken) const;
     std::string ttc_pad(const std::string& ttc) const;
     void update_tick_size();
