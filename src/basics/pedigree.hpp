@@ -21,7 +21,7 @@ class Pedigree
 public:
     struct Member
     {
-        enum class Sex { male, female };
+        enum class Sex { male, female, hermaphroditic };
         SampleName name;
         Sex sex;
     };

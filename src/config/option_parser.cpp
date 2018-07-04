@@ -550,6 +550,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-denovo-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {3}),
      "Minimum posterior probability (phred scale) to emit a de novo mutation call")
+    
+    ("denovos-only",
+     po::bool_switch()->default_value(false),
+     "Only emit DENOVO mutations")
     ;
     
     po::options_description polyclone("Calling (polyclone)");
@@ -585,8 +589,12 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SB > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | SC > 1 | FRF > 0.5"),
      "Boolean expression to use to filter somatic variant calls")
     
+    ("denovo-filter-expression",
+     po::value<std::string>()->default_value("QUAL < 10 | GQ < 20 | MQ < 30 | SB > 0.9 | BQ < 20 | DP < 3 | DC > 1 | MF > 0.2 | FRF > 0.5"),
+     "Boolean expression to use to filter somatic variant calls")
+    
     ("refcall-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 3 | MF > 0.2"),
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 5 | MF > 0.2"),
      "Boolean expression to use to filter homozygous reference calls")
     
     ("use-calling-reads-for-filtering",

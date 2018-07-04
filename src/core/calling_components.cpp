@@ -173,6 +173,11 @@ const PloidyMap& GenomeCallingComponents::ploidies() const noexcept
     return components_.ploidies;
 }
 
+boost::optional<Pedigree> GenomeCallingComponents::pedigree() const
+{
+    return components_.pedigree;
+}
+
 namespace {
 
 std::vector<ContigName>
@@ -481,6 +486,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , read_buffer_size {}
 , progress_meter {regions}
 , ploidies {options::get_ploidy_map(options)}
+, pedigree {options::get_pedigree(options, samples)}
 , sites_only {options::call_sites_only(options)}
 , filtered_output {}
 , legacy {}

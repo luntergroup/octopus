@@ -6,6 +6,7 @@
 #include "utils/string_utils.hpp"
 #include "../measures/measure_factory.hpp"
 #include "somatic_random_forest_filter.hpp"
+#include "denovo_random_forest_filter.hpp"
 
 namespace octopus { namespace csr {
 
@@ -44,19 +45,25 @@ std::unique_ptr<VariantCallFilterFactory> RandomForestFilterFactory::do_clone() 
     return std::make_unique<RandomForestFilterFactory>(*this);
 }
 
-std::unique_ptr<VariantCallFilter> RandomForestFilterFactory::do_make(FacetFactory facet_factory,
-                                                                      VariantCallFilter::OutputOptions output_config,
-                                                                      boost::optional<ProgressMeter&> progress,
-                                                                      VariantCallFilter::ConcurrencyPolicy threading) const
+std::unique_ptr<VariantCallFilter>
+RandomForestFilterFactory::do_make(FacetFactory facet_factory,
+                                   VariantCallFilter::OutputOptions output_config,
+                                   boost::optional<ProgressMeter&> progress,
+                                   VariantCallFilter::ConcurrencyPolicy threading) const
 {
     if (ranger_forests_.size() == 1) {
         assert(forest_types_.size() == 1);
-        if (forest_types_.front() == ForestType::germline) {
-            return std::make_unique<RandomForestFilter>(std::move(facet_factory), measures_, output_config, threading,
-                                                        ranger_forests_[0], temp_directory_, progress);
-        } else {
-            return std::make_unique<SomaticRandomForestVariantCallFilter>(std::move(facet_factory), measures_, ranger_forests_[0],
-                                                                          output_config, threading, temp_directory_, progress);
+        switch (forest_types_.front()) {
+            case ForestType::somatic:
+                return std::make_unique<SomaticRandomForestVariantCallFilter>(std::move(facet_factory), measures_, ranger_forests_[0],
+                                                                              output_config, threading, temp_directory_, progress);
+            case ForestType::denovo:
+                return std::make_unique<DeNovoRandomForestVariantCallFilter>(std::move(facet_factory), measures_, ranger_forests_[0],
+                                                                             output_config, threading, temp_directory_, progress);
+            case ForestType::germline:
+            default:
+                return std::make_unique<RandomForestFilter>(std::move(facet_factory), measures_, output_config, threading,
+                                                            ranger_forests_[0], temp_directory_, progress);
         }
     } else {
         assert(ranger_forests_.size() == 2);
