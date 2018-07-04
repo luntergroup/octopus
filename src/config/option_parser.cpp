@@ -594,7 +594,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Boolean expression to use to filter somatic variant calls")
     
     ("refcall-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 3 | MF > 0.2"),
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 5 | MF > 0.2"),
      "Boolean expression to use to filter homozygous reference calls")
     
     ("use-calling-reads-for-filtering",
