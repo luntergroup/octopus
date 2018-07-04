@@ -556,24 +556,63 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
     }
 }
 
+bool is_good_germline(const Variant& v, const CigarScanner::ObservedVariant::SampleObservation& observation)
+{
+    return is_good_germline(v, observation.depth, observation.num_fwd_observations, observation.observed_base_qualities);
+}
+
+bool any_good_germline_samples(const CigarScanner::ObservedVariant& candidate)
+{
+    return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
+                       [&] (const auto& observation) { return is_good_germline(candidate.variant, observation); });
+}
+
+auto count_forward_observations(const CigarScanner::ObservedVariant& candidate)
+{
+    return std::accumulate(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations), 0u,
+                           [&] (auto curr, const auto& observation) { return curr + observation.num_fwd_observations; });
+}
+
+auto concat_observed_base_qualities(const CigarScanner::ObservedVariant& candidate)
+{
+    std::size_t num_base_qualities {0};
+    for (const auto& observation : candidate.sample_observations) {
+        num_base_qualities += observation.observed_base_qualities.size();
+    }
+    std::vector<unsigned> result {};
+    result.reserve(num_base_qualities);
+    for (const auto& observation : candidate.sample_observations) {
+        utils::append(observation.observed_base_qualities, result);
+    }
+    return result;
+}
+
+bool is_good_germline_pooled(const CigarScanner::ObservedVariant& candidate)
+{
+    return is_good_germline(candidate.variant, candidate.total_depth, count_forward_observations(candidate),
+                            concat_observed_base_qualities(candidate));
+}
+
+bool is_good_somatic(const Variant& v, const CigarScanner::ObservedVariant::SampleObservation& observation)
+{
+    return is_good_somatic(v, observation.depth, observation.num_fwd_observations, observation.observed_base_qualities);
+}
+
 } // namespace
 
 bool DefaultInclusionPredicate::operator()(const CigarScanner::ObservedVariant& candidate)
 {
-    return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
-                       [&] (const auto& o) {
-                           return is_good_germline(candidate.variant, o.depth, o.num_fwd_observations, o.observed_base_qualities);
-                       });
+    return any_good_germline_samples(candidate) || (candidate.sample_observations.size() > 1 && is_good_germline_pooled(candidate));
 }
 
 bool DefaultSomaticInclusionPredicate::operator()(const CigarScanner::ObservedVariant& candidate)
 {
     return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
-                       [&] (const auto& o) {
-                           if (normal_ && o.sample.get() == *normal_) {
-                               return is_good_germline(candidate.variant, o.depth, o.num_fwd_observations, o.observed_base_qualities);
+                       [&] (const auto& observation) {
+                           if (normal_ && observation.sample.get() == *normal_) {
+                               return is_good_germline(candidate.variant, observation);
                            } else {
-                               return is_good_somatic(candidate.variant, o.depth, o.num_fwd_observations, o.observed_base_qualities);
+                               return is_good_somatic(candidate.variant, observation);
                            }
                        });
 }
