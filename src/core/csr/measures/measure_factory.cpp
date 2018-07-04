@@ -37,6 +37,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<MismatchFraction>()]         = [] () { return make_wrapped_measure<MismatchFraction>(); };
     measure_makers[name<IsRefcall>()]                = [] () { return make_wrapped_measure<IsRefcall>(); };
     measure_makers[name<SomaticContamination>()]     = [] () { return make_wrapped_measure<SomaticContamination>(); };
+    measure_makers[name<DeNovoContamination>()]      = [] () { return make_wrapped_measure<DeNovoContamination>(); };
     measure_makers[name<ReadPositionBias>()]         = [] () { return make_wrapped_measure<ReadPositionBias>(); };
     measure_makers[name<AltAlleleCount>()]           = [] () { return make_wrapped_measure<AltAlleleCount>(); };
     measure_makers[name<OverlapsTandemRepeat>()]     = [] () { return make_wrapped_measure<OverlapsTandemRepeat>(); };

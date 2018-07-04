@@ -328,6 +328,8 @@ set(CORE_SOURCES
     core/csr/measures/is_refcall.cpp
     core/csr/measures/somatic_contamination.hpp
     core/csr/measures/somatic_contamination.cpp
+    core/csr/measures/denovo_contamination.hpp
+    core/csr/measures/denovo_contamination.cpp
     core/csr/measures/read_position_bias.hpp
     core/csr/measures/read_position_bias.cpp
     core/csr/measures/alt_allele_count.hpp
