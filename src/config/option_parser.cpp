@@ -589,6 +589,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SB > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | SC > 1 | FRF > 0.5"),
      "Boolean expression to use to filter somatic variant calls")
     
+    ("denovo-filter-expression",
+     po::value<std::string>()->default_value("QUAL < 10 | GQ < 20 | MQ < 30 | SB > 0.9 | BQ < 20 | DP < 3 | DC > 1 | MF > 0.2 | FRF > 0.5"),
+     "Boolean expression to use to filter somatic variant calls")
+    
     ("refcall-filter-expression",
      po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 3 | MF > 0.2"),
      "Boolean expression to use to filter homozygous reference calls")

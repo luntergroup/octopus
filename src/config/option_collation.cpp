@@ -1590,6 +1590,11 @@ std::string get_somatic_filter_expression(const OptionMap& options)
     return options.at("somatic-filter-expression").as<std::string>();
 }
 
+std::string get_denovo_filter_expression(const OptionMap& options)
+{
+    return options.at("denovo-filter-expression").as<std::string>();
+}
+
 std::string get_refcall_filter_expression(const OptionMap& options)
 {
     return options.at("refcall-filter-expression").as<std::string>();
@@ -1690,10 +1695,18 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                                                                         "", get_somatic_filter_expression(options),
                                                                         "", get_refcall_filter_expression(options));
                     }
-                } else if (caller == "trio" && options.at("denovos-only").as<bool>()) {
-                    return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
-                                                                    "", get_refcall_filter_expression(options),
-                                                                    true, ThresholdFilterFactory::Type::denovo);
+                } else if (caller == "trio") {
+                    auto denovo_filter_expression = get_denovo_filter_expression(options);
+                    if (options.at("denovos-only").as<bool>()) {
+                        return std::make_unique<ThresholdFilterFactory>("", denovo_filter_expression,
+                                                                        "", get_refcall_filter_expression(options),
+                                                                        true, ThresholdFilterFactory::Type::denovo);
+                    } else {
+                        return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                        "", denovo_filter_expression,
+                                                                        "", get_refcall_filter_expression(options),
+                                                                        ThresholdFilterFactory::Type::denovo);
+                    }
                 } else {
                     return std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
                 }
