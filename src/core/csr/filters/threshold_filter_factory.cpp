@@ -81,6 +81,7 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<MismatchCount>()]            = highMismatchCount;
     filter_names[name<MismatchFraction>()]         = highMismatchFraction;
     filter_names[name<SomaticContamination>()]     = somaticContamination;
+    filter_names[name<DeNovoContamination>()]      = deNovoContamination;
     filter_names[name<ReadPositionBias>()]         = readPositionBias;
 }
 
