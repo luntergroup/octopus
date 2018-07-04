@@ -171,6 +171,7 @@ ThresholdFilterFactory::ThresholdFilterFactory(std::string germline_hard_express
 , somatic_ {parse_conditions(std::move(somatic_hard_expression)), parse_conditions(std::move(somatic_soft_expression))}
 , reference_ {parse_conditions(std::move(refcall_hard_expression)), parse_conditions(std::move(refcall_soft_expression))}
 , type_ {type}
+, hard_filter_germline_ {}
 {}
 
 ThresholdFilterFactory::ThresholdFilterFactory(std::string somatic_hard_expression, std::string somatic_soft_expression,

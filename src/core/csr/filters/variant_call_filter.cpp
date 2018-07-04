@@ -388,7 +388,7 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const SampleName& sam
     const auto quality_name = this->genotype_quality_name();
     if (quality_name) {
         if (status.quality) {
-            call.set_format(sample, *quality_name, *status.quality);
+            call.set_format(sample, *quality_name, utils::to_string(status.quality->score(), 2));
         } else {
             call.set_format_missing(sample, *quality_name);
         }
@@ -406,7 +406,7 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification 
     if (quality_name) {
         call.add_info(*quality_name);
         if (status.quality) {
-            call.set_info(*quality_name, *status.quality);
+            call.set_info(*quality_name, utils::to_string(status.quality->score(), 2));
         } else {
             call.set_info_missing(*quality_name);
         }
