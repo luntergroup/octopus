@@ -540,6 +540,15 @@ auto calculate_evidence_lower_bound(const VBAlphaVector<K>& prior_alphas,
 }
 
 template <std::size_t K>
+void check_normalisation(VBLatents<K>& latents)
+{
+    const auto total_posterior = std::accumulate(std::cbegin(latents.genotype_posteriors), std::cend(latents.genotype_posteriors), 0.0);
+    if (total_posterior > 1.0) {
+        for (auto& p : latents.genotype_posteriors) p /= total_posterior;
+    }
+}
+
+template <std::size_t K>
 std::pair<VBLatents<K>, double>
 get_max_evidence_latents(const VBAlphaVector<K>& prior_alphas,
                          const LogProbabilityVector& genotype_log_priors,
@@ -568,7 +577,9 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
 {
     assert(!seeds.empty());
     auto latents = detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
-    return detail::get_max_evidence_latents(prior_alphas, genotype_log_priors, log_likelihoods, std::move(latents));
+    auto result = detail::get_max_evidence_latents(prior_alphas, genotype_log_priors, log_likelihoods, std::move(latents));
+    detail::check_normalisation(result.first);
+    return result;
 }
 
 inline VBReadLikelihoodArray::VBReadLikelihoodArray(const BaseType& underlying_likelihoods)
