@@ -21,8 +21,8 @@ class IndividualModel
 public:
     struct Latents
     {
-        using GenotypeProbabilityVector = std::vector<double>;
-        GenotypeProbabilityVector genotype_probabilities;
+        using ProbabilityVector = std::vector<double>;
+        ProbabilityVector genotype_probabilities;
     };
     
     struct InferredLatents
