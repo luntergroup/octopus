@@ -9,6 +9,8 @@
 #include <vector>
 #include <utility>
 
+#include <boost/optional.hpp>
+
 #include "core/types/allele.hpp"
 
 namespace octopus {
@@ -22,7 +24,8 @@ public:
     GermlineVariantCall() = delete;
     
     template <typename V, typename T>
-    GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality);
+    GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality,
+                        boost::optional<Phred<double>> posterior = boost::none);
     
     GermlineVariantCall(const GermlineVariantCall&)            = default;
     GermlineVariantCall& operator=(const GermlineVariantCall&) = default;
@@ -38,8 +41,9 @@ private:
 };
 
 template <typename V, typename T>
-GermlineVariantCall::GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality)
-: VariantCall {std::forward<V>(variant), std::forward<T>(genotype_calls), quality}
+GermlineVariantCall::GermlineVariantCall(V&& variant, T&& genotype_calls, Phred<double> quality,
+                                         boost::optional<Phred<double>> posterior)
+: VariantCall {std::forward<V>(variant), std::forward<T>(genotype_calls), quality, posterior}
 {}
 
 } // namespace octopus

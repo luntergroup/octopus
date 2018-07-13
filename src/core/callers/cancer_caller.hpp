@@ -153,7 +153,8 @@ private:
     CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
     
     GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& latents) const;
-    Phred<double> calculate_somatic_probability(const Latents& latents) const;
+    double calculate_somatic_mass(const Latents& latents) const;
+    Phred<double> calculate_segregation_probability(const Variant& variant, const Latents& latents, double somatic_mass) const;
     
     // logging
     void log(const ModelPosteriors& model_posteriors) const;

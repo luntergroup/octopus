@@ -21,6 +21,7 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
     }},
     {std::type_index(typeid(SomaticCall)), [] (auto& hb) {
         hb.add_info("SOMATIC", "0", "Flag", "Indicates that the record is a somatic mutation, for cancer genomics");
+        hb.add_info("PP", "1", "Float", "Posterior probability for assertions made in ALT and FORMAT (Phred scale)");
         hb.add_format("VAF_CR", "2", "Float", "Credible region for the Variant Allele Frequency");
         hb.add_info("MP", "1", "Float", "Model posterior");
     }},
