@@ -10,6 +10,9 @@ namespace octopus {
 void SomaticCall::decorate(VcfRecord::Builder& record) const
 {
     record.set_somatic();
+    if (posterior_) {
+        record.set_info("PP", utils::to_string(posterior_->score()));
+    }
     record.add_format("VAF_CR");
     for (const auto& p : credible_regions_) {
         if (p.second.somatic) {

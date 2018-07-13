@@ -35,7 +35,8 @@ public:
     
     template <typename V, typename C>
     SomaticCall(V&& variant, const CancerGenotype<Allele>& genotype_call,
-                Phred<double> genotype_posterior, C&& credible_regions, Phred<double> quality);
+                Phred<double> genotype_posterior, C&& credible_regions,
+                Phred<double> quality, boost::optional<Phred<double>> posterior = boost::none);
     
     SomaticCall(const SomaticCall&)            = default;
     SomaticCall& operator=(const SomaticCall&) = default;
@@ -43,9 +44,7 @@ public:
     SomaticCall& operator=(SomaticCall&&)      = default;
     
     virtual ~SomaticCall() = default;
-    
     virtual void decorate(VcfRecord::Builder& record) const override;
-    
     virtual bool requires_model_evaluation() const noexcept override { return true; }
     
 protected:
@@ -59,8 +58,8 @@ SomaticCall::SomaticCall(V&& variant,
                          const CancerGenotype<Allele>& genotype_call,
                          Phred<double> genotype_posterior,
                          C&& credible_regions,
-                         Phred<double> quality)
-: VariantCall {std::forward<V>(variant), decltype(genotype_calls_) {}, quality}
+                         Phred<double> quality, boost::optional<Phred<double>> posterior)
+: VariantCall {std::forward<V>(variant), decltype(genotype_calls_) {}, quality, posterior}
 , credible_regions_ {std::forward<C>(credible_regions)}
 {
     if (variant_.ref_allele() == variant_.alt_allele()) {
