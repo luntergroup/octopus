@@ -894,10 +894,14 @@ BigFloat marginalise(const Allele& allele, const std::vector<CancerGenotype<Hapl
 {
     assert(genotypes.size() == probabilities.size());
     assert(std::accumulate(std::cbegin(probabilities), std::cend(probabilities), 0.0) <= 1.0);
-    auto result_complement = std::inner_product(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(probabilities),
-                                                0.0, std::plus<> {}, [&] (const auto& genotype, const auto probability) {
-        return contains(genotype, allele) ? (is_somatic(allele, genotype) ? somatic_mass_complement : 0.0) : probability; });
-    return BigFloat {1.0} - BigFloat {result_complement};
+    const BigFloat contained_complement {std::inner_product(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(probabilities),
+                                                  0.0, std::plus<> {}, [&] (const auto& genotype, const auto probability) {
+        return contains(genotype, allele) ? 0.0 : probability; })};
+    BigFloat somatic_complement {std::inner_product(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(probabilities),
+                                                 0.0, std::plus<> {}, [&] (const auto& genotype, const auto probability) {
+        return is_somatic(allele, genotype) ? probability : 0.0; })};
+    somatic_complement *= somatic_mass_complement;
+    return BigFloat {1.0} - (contained_complement + somatic_complement);
 }
 
 Phred<double> probability_true_to_phred(const BigFloat& probability_true)
@@ -905,6 +909,7 @@ Phred<double> probability_true_to_phred(const BigFloat& probability_true)
     const BigFloat probability_false {BigFloat {1.0} - probability_true};
     const BigFloat ln_probability_false {boost::multiprecision::log(probability_false)};
     const BigFloat phred_probability_false {ln_probability_false / -maths::constants::ln10Div10<>};
+    assert(phred_probability_false >= 0.0);
     return Phred<double> {phred_probability_false.convert_to<double>()};
 }
 
@@ -948,6 +953,13 @@ calculate_segregation_probability(const Allele& allele,
     return calculate_segregation_probability(allele, germline_genotypes, cancer_genotypes,
                                              germline_genotype_probabilities, cnv_genotype_probabilities,cancer_genotype_probabilities,
                                              germline_bf, cnv_bf, tumour_bf, somatic_mass);
+}
+
+Phred<double> calculate_somatic_posterior(const double somatic_model_posterior, const double somatic_mass)
+{
+    BigFloat somatic_posterior {somatic_model_posterior};
+    somatic_posterior *= somatic_mass;
+    return probability_true_to_phred(somatic_posterior);
 }
 
 // germline variant calling
@@ -1125,7 +1137,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     const auto conditional_somatic_mass = calculate_somatic_mass(latents);
     const auto& model_posteriors = latents.model_posteriors_;
     log(model_posteriors);
-    const auto somatic_posterior = probability_to_phred(1.0 - latents.model_posteriors_.somatic * conditional_somatic_mass);
+    const auto somatic_posterior = calculate_somatic_posterior(latents.model_posteriors_.somatic, conditional_somatic_mass);
     const auto germline_genotype_posteriors = calculate_germline_genotype_posteriors(latents);
     const auto& cancer_genotype_posteriors = latents.tumour_model_inferences_.posteriors.genotype_probabilities;
     log(latents.germline_genotypes_, germline_genotype_posteriors, latents.cnv_model_inferences_,
