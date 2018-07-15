@@ -767,7 +767,6 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         return;
     }
     const auto max_lagged_region = find_max_lagged_region();
-    assert(has_contained(alleles_, max_lagged_region));
     if (!overlaps(active_region_, max_lagged_region)) {
         next_active_region_ = std::move(max_lagged_region);
     } else {

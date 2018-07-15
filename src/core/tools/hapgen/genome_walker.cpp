@@ -148,7 +148,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
     auto first_previous_itr = cbegin(previous_alleles);
     auto included_itr       = cend(previous_alleles);
     if (included_itr == last_allele_itr) {
-        return shift(tail_region(previous_region), 2);
+        return shift(tail_region(rightmost_region(alleles)), 1);
     }
     if (max_included_ == 0) {
         if (included_itr != last_allele_itr) {
