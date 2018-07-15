@@ -103,6 +103,14 @@ auto get_denovo_haplotypes(const VcfRecord& denovo, const Facet::GenotypeMap& ge
     return get_denovo_haplotypes(genotypes, denovo_alleles);
 }
 
+template <typename Container, typename MappableType>
+void remove_not_contained(Container& reads, const MappableType& mappable)
+{
+    reads.erase(std::remove_if(std::begin(reads), std::end(reads),
+                               [&mappable] (const auto& read) { return !contains(mappable, read); }),
+                std::end(reads));
+}
+
 } // namespace
 
 Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
@@ -127,23 +135,28 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
         const std::array<SampleName, 2> parents {trio.mother(), trio.father()};
         for (const auto& sample : parents) {
             for (const auto& p : assignments.at(sample)) {
-                const auto overlapped_reads = copy_overlapped(p.second, call);
-                if (!overlapped_reads.empty()) {
+                auto supporting_reads = copy_overlapped(p.second, call);
+                if (!supporting_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
                     if (!denovo_genotype.contains(assigned_haplotype)) {
-                        auto dummy = denovo_genotype;
-                        dummy.emplace(assigned_haplotype);
-                        haplotype_priors[assigned_haplotype] = 0;
-                        const auto support = compute_haplotype_support(dummy, overlapped_reads, haplotype_priors);
-                        haplotype_priors.erase(assigned_haplotype);
-                        for (const auto& denovo : denovo_haplotypes) {
-                            if (support.count(denovo) == 1) {
-                                *result += support.at(denovo).size();
+                        if (!is_same_region(assigned_haplotype, denovo_genotype)) {
+                            remove_not_contained(supporting_reads, assigned_haplotype);
+                        }
+                        if (!supporting_reads.empty()) {
+                            auto dummy = denovo_genotype;
+                            dummy.emplace(assigned_haplotype);
+                            haplotype_priors[assigned_haplotype] = 0;
+                            const auto support = compute_haplotype_support(dummy, supporting_reads, haplotype_priors);
+                            haplotype_priors.erase(assigned_haplotype);
+                            for (const auto& denovo : denovo_haplotypes) {
+                                if (support.count(denovo) == 1) {
+                                    *result += support.at(denovo).size();
+                                }
                             }
                         }
                     } else {
                         // This could happen if we don't call all 'de novo' alleles on the called de novo haplotype.
-                        *result += overlapped_reads.size();
+                        *result += supporting_reads.size();
                     }
                 }
             }
