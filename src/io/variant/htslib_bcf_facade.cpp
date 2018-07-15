@@ -758,7 +758,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     auto ptr = floatformat;
                     for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
                         values[sample].reserve(num_values_per_sample);
-                        std::transform(ptr, ptr + num_samples, std::back_inserter(values[sample]),
+                        std::transform(ptr, ptr + num_values_per_sample, std::back_inserter(values[sample]),
                                        [] (auto v) {
                                            return v != bcf_float_missing ? std::to_string(v) : bcf_missing_str;
                                        });
