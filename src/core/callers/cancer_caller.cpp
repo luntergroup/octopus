@@ -770,6 +770,29 @@ auto compute_credible_somatic_mass(const model::TumourModel::Priors::GenotypeMix
     return 1.0 - inv_result;
 }
 
+auto compute_map_somatic_vaf(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+                             const unsigned somatic_ploidy)
+{
+    double result {0.0};
+    for (unsigned i {1}; i <= somatic_ploidy; ++i) {
+        result = std::max(maths::dirichlet_expectation(alphas.size() - i, alphas), result);
+    }
+    return result;
+}
+
+using SomaticVAFMap = std::unordered_map<SampleName, double>;
+
+auto compute_map_somatic_vafs(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+                              const unsigned somatic_ploidy)
+{
+    SomaticVAFMap result {};
+    result.reserve(alphas.size());
+    for (const auto& p : alphas) {
+        result.emplace(p.first, compute_map_somatic_vaf(p.second, somatic_ploidy));
+    }
+    return result;
+}
+
 struct GermlineVariantCall : Mappable<GermlineVariantCall>
 {
     GermlineVariantCall() = delete;
@@ -836,6 +859,7 @@ struct CancerGenotypeCall
     CancerGenotype<Allele> genotype;
     Phred<double> posterior;
     CredibleRegionMap credible_regions;
+    SomaticVAFMap somatic_map_vafs;
 };
 
 using CancerGenotypeCalls = std::vector<CancerGenotypeCall>;
@@ -877,7 +901,6 @@ using BigFloat = boost::multiprecision::number<boost::multiprecision::cpp_dec_fl
 BigFloat marginalise(const Allele& allele, const std::vector<Genotype<Haplotype>>& genotypes, const std::vector<double>& probabilities)
 {
     assert(genotypes.size() == probabilities.size());
-    assert(std::accumulate(std::cbegin(probabilities), std::cend(probabilities), 0.0) <= 1.0);
     auto inv_result = std::inner_product(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(probabilities),
                                          0.0, std::plus<> {}, [&allele] (const auto& genotype, const auto probability) {
         return contains(genotype, allele) ? 0.0 : probability; });
@@ -1052,7 +1075,8 @@ auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
                             const std::vector<GenomicRegion>& called_somatic_regions,
                             const std::vector<CancerGenotype<Haplotype>>& genotypes,
                             const std::vector<double>& genotype_posteriors,
-                            const CredibleRegionMap& credible_regions)
+                            const CredibleRegionMap& credible_regions,
+                            const SomaticVAFMap& somatic_vafs)
 {
     CancerGenotypeCalls result {};
     result.reserve(called_somatic_regions.size());
@@ -1061,6 +1085,7 @@ auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
         auto posterior = marginalise(genotype_chunk, genotypes, genotype_posteriors);
         result.emplace_back(std::move(genotype_chunk), posterior);
         result.back().credible_regions = credible_regions;
+        result.back().somatic_map_vafs = somatic_vafs;
     }
     return result;
 }
@@ -1120,6 +1145,7 @@ auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotype
                        }
                        return std::make_unique<SomaticCall>(variant_call.variant.get(), std::move(genotype_call.genotype),
                                                             genotype_call.posterior, std::move(credible_regions),
+                                                            genotype_call.somatic_map_vafs,
                                                             variant_call.segregation_quality, variant_call.posterior);
                    });
     return result;
@@ -1236,10 +1262,11 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                 *debug_log_ << "Called somatic variants:";
                 debug::print_variants(stream(*debug_log_), somatic_variant_calls);
             }
+            const auto somatic_vafs = compute_map_somatic_vafs(somatic_alphas, latents.somatic_ploidy_);
             const auto called_somatic_regions = extract_regions(somatic_variant_calls);
             auto cancer_genotype_calls = call_somatic_genotypes(*called_cancer_genotype, called_somatic_regions,
                                                                 latents.cancer_genotypes_, cancer_genotype_posteriors,
-                                                                credible_regions);
+                                                                credible_regions, somatic_vafs);
             result = transform_somatic_calls(std::move(somatic_variant_calls), std::move(cancer_genotype_calls), somatic_samples);
         } else if (debug_log_) {
             stream(*debug_log_) << "Conflict between called germline genotype and called cancer genotype. Not calling somatics";
@@ -1447,6 +1474,11 @@ void CancerCaller::log(const GenotypeVector& germline_genotypes,
         somatic_log << "MAP cancer genotype: ";
         debug::print_variant_alleles(somatic_log, map_cancer_genotype);
         somatic_log << ' ' << map_somatic->second;
+        auto map_marginal_germline = find_map_genotype(germline_genotype_posteriors);
+        auto marginal_germline_log = stream(*debug_log_);
+        marginal_germline_log << "MAP marginal germline genotype: ";
+        debug::print_variant_alleles(marginal_germline_log, map_marginal_germline->first);
+        marginal_germline_log << ' ' << map_marginal_germline->second;
     }
 }
 
