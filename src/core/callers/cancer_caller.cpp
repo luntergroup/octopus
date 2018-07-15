@@ -890,10 +890,9 @@ bool is_somatic(const Allele& allele, const CancerGenotype<Haplotype>& genotype)
 }
 
 BigFloat marginalise(const Allele& allele, const std::vector<CancerGenotype<Haplotype>>& genotypes, const std::vector<double>& probabilities,
-                     const double somatic_mass_complement)
+                     const BigFloat somatic_mass_complement)
 {
     assert(genotypes.size() == probabilities.size());
-    assert(std::accumulate(std::cbegin(probabilities), std::cend(probabilities), 0.0) <= 1.0);
     const BigFloat contained_complement {std::inner_product(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(probabilities),
                                                   0.0, std::plus<> {}, [&] (const auto& genotype, const auto probability) {
         return contains(genotype, allele) ? 0.0 : probability; })};
@@ -901,11 +900,16 @@ BigFloat marginalise(const Allele& allele, const std::vector<CancerGenotype<Hapl
                                                  0.0, std::plus<> {}, [&] (const auto& genotype, const auto probability) {
         return is_somatic(allele, genotype) ? probability : 0.0; })};
     somatic_complement *= somatic_mass_complement;
-    return BigFloat {1.0} - (contained_complement + somatic_complement);
+    const BigFloat result_complement {contained_complement + somatic_complement};
+    assert(result_complement >= 0.0 && result_complement <= 1.0);
+    return BigFloat {1.0} - result_complement;
 }
 
-Phred<double> probability_true_to_phred(const BigFloat& probability_true)
+Phred<double> probability_true_to_phred(BigFloat probability_true)
 {
+    using boost::multiprecision::nextafter;
+    if (probability_true <= 0.0) probability_true = nextafter(BigFloat {0.0}, BigFloat {1.0});
+    if (probability_true >= 1.0) probability_true = nextafter(BigFloat {1.0}, BigFloat {0.0});
     const BigFloat probability_false {BigFloat {1.0} - probability_true};
     const BigFloat ln_probability_false {boost::multiprecision::log(probability_false)};
     const BigFloat phred_probability_false {ln_probability_false / -maths::constants::ln10Div10<>};
@@ -920,16 +924,16 @@ calculate_segregation_probability(const Allele& allele,
                                   const std::vector<double>& germline_genotype_probabilities,
                                   const std::vector<double>& cnv_genotype_probabilities,
                                   const std::vector<double>& cancer_genotype_probabilities,
-                                  const BigFloat& germline_probability,
-                                  const BigFloat& cnv_probability,
-                                  const BigFloat& tumour_probability,
-                                  const double somatic_mass)
+                                  const BigFloat germline_probability,
+                                  const BigFloat cnv_probability,
+                                  const BigFloat tumour_probability,
+                                  const BigFloat somatic_mass)
 {
     auto prob_germline_segregates = marginalise(allele, germline_genotypes, germline_genotype_probabilities);
     prob_germline_segregates *= germline_probability;
     auto prob_cnv_segregates = marginalise(allele, germline_genotypes, cnv_genotype_probabilities);
     prob_cnv_segregates *= cnv_probability;
-    auto prob_tumour_segregates = marginalise(allele, cancer_genotypes, cancer_genotype_probabilities, 1.0 - somatic_mass);
+    auto prob_tumour_segregates = marginalise(allele, cancer_genotypes, cancer_genotype_probabilities, BigFloat {1.0} - somatic_mass);
     prob_tumour_segregates *= tumour_probability;
     const BigFloat prob_segregates {prob_germline_segregates + prob_cnv_segregates + prob_tumour_segregates};
     return probability_true_to_phred(prob_segregates);
@@ -951,8 +955,8 @@ calculate_segregation_probability(const Allele& allele,
     const BigFloat norm {germline_bf + cnv_bf + tumour_bf};
     germline_bf /= norm; cnv_bf /= norm; tumour_bf /= norm;
     return calculate_segregation_probability(allele, germline_genotypes, cancer_genotypes,
-                                             germline_genotype_probabilities, cnv_genotype_probabilities,cancer_genotype_probabilities,
-                                             germline_bf, cnv_bf, tumour_bf, somatic_mass);
+                                             germline_genotype_probabilities, cnv_genotype_probabilities, cancer_genotype_probabilities,
+                                             germline_bf, cnv_bf, tumour_bf, BigFloat {somatic_mass});
 }
 
 Phred<double> calculate_somatic_posterior(const double somatic_model_posterior, const double somatic_mass)
@@ -988,29 +992,37 @@ auto call_candidates(const VariantPosteriorVector& candidate_posteriors,
 
 // somatic variant posterior
 
+BigFloat marginalise_somatic(const Allele& allele, const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                             const std::vector<double>& probabilities)
+{
+    BigFloat result_complement {std::inner_product(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(probabilities),
+                                                   0.0, std::plus<> {}, [&allele] (const auto& genotype, auto probability) {
+        return is_somatic(allele, genotype) ? 0.0 : probability; })};
+    return BigFloat {1.0} - result_complement;
+}
+
 auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& candidates,
                                         const std::vector<CancerGenotype<Haplotype>>& cancer_genotypes,
                                         const std::vector<double>& cancer_genotype_posteriors,
-                                        const double somatic_posterior,
-                                        const double somatic_model_posterior)
+                                        const BigFloat somatic_posterior)
 {
     VariantPosteriorVector result {};
     result.reserve(candidates.size());
     for (const auto& candidate : candidates) {
-        const auto& allele = candidate.get().alt_allele();
-        const auto p = std::inner_product(std::cbegin(cancer_genotypes), std::cend(cancer_genotypes),
-                                          std::cbegin(cancer_genotype_posteriors), 0.0, std::plus<> {},
-                                          [&allele] (const auto& genotype, auto posterior) {
-                                              if (is_somatic(allele, genotype)) {
-                                                  return posterior;
-                                              } else {
-                                                  return 0.0;
-                                              }
-                                          });
-        const auto complement = std::min(somatic_model_posterior * p * somatic_posterior, 1.0);
-        result.emplace_back(candidate, probability_to_phred(1.0 - complement));
+        auto p = marginalise_somatic(candidate.get().alt_allele(), cancer_genotypes, cancer_genotype_posteriors);
+        p *= somatic_posterior;
+        result.emplace_back(candidate, probability_true_to_phred(p));
     }
     return result;
+}
+
+auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& candidates,
+                                        const std::vector<CancerGenotype<Haplotype>>& cancer_genotypes,
+                                        const std::vector<double>& cancer_genotype_posteriors,
+                                        const Phred<double> somatic_posterior)
+{
+    return compute_somatic_variant_posteriors(candidates, cancer_genotypes, cancer_genotype_posteriors,
+                                              BigFloat {somatic_posterior.probability_true().value});
 }
 
 auto call_somatic_variants(const VariantPosteriorVector& somatic_variant_posteriors,
@@ -1026,6 +1038,16 @@ auto call_somatic_variants(const VariantPosteriorVector& somatic_variant_posteri
     return result;
 }
 
+Phred<double>
+marginalise(const CancerGenotype<Allele>& genotype, const std::vector<CancerGenotype<Haplotype>>& genotypes,
+            const std::vector<double>& genotype_posteriors)
+{
+    auto p = std::inner_product(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(genotype_posteriors),
+                                0.0, std::plus<> {},  [&genotype] (const auto& g, auto probability) {
+                                    return contains(g, genotype) ? 0.0 : probability; });
+    return probability_to_phred(p);
+}
+
 auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
                             const std::vector<GenomicRegion>& called_somatic_regions,
                             const std::vector<CancerGenotype<Haplotype>>& genotypes,
@@ -1036,12 +1058,8 @@ auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
     result.reserve(called_somatic_regions.size());
     for (const auto& region : called_somatic_regions) {
         auto genotype_chunk = copy<Allele>(called_genotype, region);
-        const auto inv_posterior = std::inner_product(std::cbegin(genotypes), std::cend(genotypes),
-                                                      std::cbegin(genotype_posteriors), 0.0, std::plus<> {},
-                                                      [&genotype_chunk] (const auto& g, auto p) {
-                                                          return contains(g, genotype_chunk) ? 0.0 : p;
-                                                      });
-        result.emplace_back(std::move(genotype_chunk), probability_to_phred(inv_posterior));
+        auto posterior = marginalise(genotype_chunk, genotypes, genotype_posteriors);
+        result.emplace_back(std::move(genotype_chunk), posterior);
         result.back().credible_regions = credible_regions;
     }
     return result;
@@ -1140,7 +1158,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     const auto somatic_posterior = calculate_somatic_posterior(latents.model_posteriors_.somatic, conditional_somatic_mass);
     const auto germline_genotype_posteriors = calculate_germline_genotype_posteriors(latents);
     const auto& cancer_genotype_posteriors = latents.tumour_model_inferences_.posteriors.genotype_probabilities;
-    log(latents.germline_genotypes_, germline_genotype_posteriors, latents.cnv_model_inferences_,
+    log(latents.germline_genotypes_, germline_genotype_posteriors, latents.germline_model_inferences_, latents.cnv_model_inferences_,
         latents.cancer_genotypes_, latents.tumour_model_inferences_);
     const auto germline_candidate_posteriors = compute_candidate_posteriors(candidates, germline_genotype_posteriors);
     boost::optional<Genotype<Haplotype>> called_germline_genotype {};
@@ -1163,17 +1181,15 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     
     for (auto& v : germline_variant_calls) {
         v.segregation_quality = calculate_segregation_probability(v.variant, latents, conditional_somatic_mass);
+        if (v.posterior > v.segregation_quality) v.posterior = v.segregation_quality;
     }
     
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     Genotype<Haplotype> called_somatic_genotype {};
     std::vector<SampleName> somatic_samples {};
     if (somatic_posterior >= parameters_.min_somatic_posterior) {
-        auto somatic_allele_posteriors = compute_somatic_variant_posteriors(uncalled_germline_candidates,
-                                                                            latents.cancer_genotypes_,
-                                                                            cancer_genotype_posteriors,
-                                                                            somatic_posterior.probability_true(),
-                                                                            model_posteriors.somatic);
+        auto somatic_allele_posteriors = compute_somatic_variant_posteriors(uncalled_germline_candidates, latents.cancer_genotypes_,
+                                                                            cancer_genotype_posteriors, somatic_posterior);
         if (!called_cancer_genotype) {
             auto cancer_posteriors = zip_cref(latents.cancer_genotypes_, cancer_genotype_posteriors);
             called_cancer_genotype = find_map_genotype(cancer_posteriors)->first.get();
@@ -1213,6 +1229,7 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                 }
                 for (auto& v : somatic_variant_calls) {
                     v.segregation_quality = calculate_segregation_probability(v.variant, latents, conditional_somatic_mass);
+                    if (v.posterior > v.segregation_quality) v.posterior = v.segregation_quality;
                 }
             }
             if (debug_log_) {
@@ -1405,20 +1422,24 @@ void CancerCaller::log(const ModelPosteriors& model_posteriors) const
 
 void CancerCaller::log(const GenotypeVector& germline_genotypes,
                        const GermlineGenotypeProbabilityMap& germline_genotype_posteriors,
+                       const GermlineModel::InferredLatents& germline_inferences,
                        const CNVModel::InferredLatents& cnv_inferences,
                        const CancerGenotypeVector& cancer_genotypes,
                        const TumourModel::InferredLatents& tumour_inferences) const
 {
     if (debug_log_) {
-        auto map_germline = find_map_genotype(germline_genotype_posteriors);
+        auto germline_posteriors = zip_cref(germline_genotypes, germline_inferences.posteriors.genotype_probabilities);
+        auto map_germline = find_map_genotype(germline_posteriors);
         auto germline_log = stream(*debug_log_);
         germline_log << "MAP germline genotype: ";
         debug::print_variant_alleles(germline_log, map_germline->first);
+        germline_log << ' ' << map_germline->second;
         auto cnv_posteriors = zip_cref(germline_genotypes, cnv_inferences.posteriors.genotype_probabilities);
         auto map_cnv = find_map_genotype(cnv_posteriors);
         auto cnv_log = stream(*debug_log_);
         cnv_log << "MAP CNV genotype: ";
         debug::print_variant_alleles(cnv_log, map_cnv->first);
+        cnv_log << ' ' << map_cnv->second;
         auto somatic_log = stream(*debug_log_);
         auto cancer_posteriors = zip_cref(cancer_genotypes, tumour_inferences.posteriors.genotype_probabilities);
         auto map_somatic = find_map_genotype(cancer_posteriors);

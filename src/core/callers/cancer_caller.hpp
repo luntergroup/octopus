@@ -160,6 +160,7 @@ private:
     void log(const ModelPosteriors& model_posteriors) const;
     void log(const GenotypeVector& germline_genotypes,
              const GermlineGenotypeProbabilityMap& germline_genotype_posteriors,
+             const GermlineModel::InferredLatents& germline_inferences,
              const CNVModel::InferredLatents& cnv_inferences,
              const CancerGenotypeVector& cancer_genotypes,
              const TumourModel::InferredLatents& tumour_inferences) const;
