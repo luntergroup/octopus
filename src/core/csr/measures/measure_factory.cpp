@@ -43,6 +43,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<OverlapsTandemRepeat>()]     = [] () { return make_wrapped_measure<OverlapsTandemRepeat>(); };
     measure_makers[name<STRLength>()]                = [] () { return make_wrapped_measure<STRLength>(); };
     measure_makers[name<STRPeriod>()]                = [] () { return make_wrapped_measure<STRPeriod>(); };
+    measure_makers[name<PosteriorProbability>()]     = [] () { return make_wrapped_measure<PosteriorProbability>(); };
 }
 
 class UnknownMeasure : public UserError
