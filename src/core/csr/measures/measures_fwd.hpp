@@ -33,5 +33,6 @@
 #include "core/csr/measures/str_length.hpp"
 #include "core/csr/measures/str_period.hpp"
 #include "core/csr/measures/posterior_probability.hpp"
+#include "core/csr/measures/classification_confidence.hpp"
 
 #endif

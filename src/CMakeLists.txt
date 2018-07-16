@@ -342,6 +342,8 @@ set(CORE_SOURCES
     core/csr/measures/str_period.cpp
     core/csr/measures/posterior_probability.hpp
     core/csr/measures/posterior_probability.cpp
+    core/csr/measures/classification_confidence.hpp
+    core/csr/measures/classification_confidence.cpp
 
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp

@@ -44,6 +44,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<STRLength>()]                = [] () { return make_wrapped_measure<STRLength>(); };
     measure_makers[name<STRPeriod>()]                = [] () { return make_wrapped_measure<STRPeriod>(); };
     measure_makers[name<PosteriorProbability>()]     = [] () { return make_wrapped_measure<PosteriorProbability>(); };
+    measure_makers[name<ClassificationConfidence>()] = [] () { return make_wrapped_measure<ClassificationConfidence>(); };
 }
 
 class UnknownMeasure : public UserError
