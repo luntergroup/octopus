@@ -117,13 +117,15 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
 {
     boost::optional<int> result {};
     if (is_denovo(call, facets)) {
-        result = 0;
         const auto& samples = get_value<Samples>(facets.at("Samples"));
         const auto& pedigree = get_value<Pedigree>(facets.at("Pedigree"));
         assert(is_trio(samples, pedigree)); // TODO: Implement for general pedigree
         const auto trio = *make_trio(samples[find_child_idx(samples, pedigree)], pedigree);
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto denovo_haplotypes = get_denovo_haplotypes(call, genotypes, trio);
+        if (denovo_haplotypes.empty()) {
+            return result;
+        }
         const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
         Genotype<Haplotype> denovo_genotype {static_cast<unsigned>(denovo_haplotypes.size() + 1)};
         HaplotypeProbabilityMap haplotype_priors {};
@@ -133,6 +135,7 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
             haplotype_priors[haplotype] = -1;
         }
         const std::array<SampleName, 2> parents {trio.mother(), trio.father()};
+        result = 0;
         for (const auto& sample : parents) {
             for (const auto& p : assignments.at(sample)) {
                 auto supporting_reads = copy_overlapped(p.second, call);
