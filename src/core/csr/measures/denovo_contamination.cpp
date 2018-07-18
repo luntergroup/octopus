@@ -103,14 +103,6 @@ auto get_denovo_haplotypes(const VcfRecord& denovo, const Facet::GenotypeMap& ge
     return get_denovo_haplotypes(genotypes, denovo_alleles);
 }
 
-template <typename Container, typename MappableType>
-void remove_not_contained(Container& reads, const MappableType& mappable)
-{
-    reads.erase(std::remove_if(std::begin(reads), std::end(reads),
-                               [&mappable] (const auto& read) { return !contains(mappable, read); }),
-                std::end(reads));
-}
-
 } // namespace
 
 Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
@@ -131,6 +123,7 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
         HaplotypeProbabilityMap haplotype_priors {};
         haplotype_priors.reserve(denovo_haplotypes.size() + 1);
         for (const auto& haplotype : denovo_haplotypes) {
+            assert(is_same_region(haplotype, denovo_haplotypes.front()));
             denovo_genotype.emplace(haplotype);
             haplotype_priors[haplotype] = -1;
         }
@@ -142,19 +135,14 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
                 if (!supporting_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
                     if (!denovo_genotype.contains(assigned_haplotype)) {
-                        if (!is_same_region(assigned_haplotype, denovo_genotype)) {
-                            remove_not_contained(supporting_reads, assigned_haplotype);
-                        }
-                        if (!supporting_reads.empty()) {
-                            auto dummy = denovo_genotype;
-                            dummy.emplace(assigned_haplotype);
-                            haplotype_priors[assigned_haplotype] = 0;
-                            const auto support = compute_haplotype_support(dummy, supporting_reads, haplotype_priors);
-                            haplotype_priors.erase(assigned_haplotype);
-                            for (const auto& denovo : denovo_haplotypes) {
-                                if (support.count(denovo) == 1) {
-                                    *result += support.at(denovo).size();
-                                }
+                        auto dummy = denovo_genotype;
+                        dummy.emplace(assigned_haplotype);
+                        haplotype_priors[assigned_haplotype] = 0;
+                        const auto support = compute_haplotype_support(dummy, supporting_reads, haplotype_priors);
+                        haplotype_priors.erase(assigned_haplotype);
+                        for (const auto& denovo : denovo_haplotypes) {
+                            if (support.count(denovo) == 1) {
+                                *result += support.at(denovo).size();
                             }
                         }
                     } else {
