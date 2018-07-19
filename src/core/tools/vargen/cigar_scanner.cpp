@@ -516,7 +516,7 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
     }
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
-        erase_below(observed_qualities, 10);
+        erase_below(observed_qualities, 15);
         return observed_qualities.size() >= 2 && static_cast<double>(observed_qualities.size()) / depth >= min_expected_vaf;
     } else if (is_insertion(variant)) {
         if (num_observations == 1 && alt_sequence_size(variant) > 8) return false;
