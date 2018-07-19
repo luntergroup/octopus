@@ -344,6 +344,8 @@ set(CORE_SOURCES
     core/csr/measures/posterior_probability.cpp
     core/csr/measures/classification_confidence.hpp
     core/csr/measures/classification_confidence.cpp
+    core/csr/measures/somatic_haplotype_count.hpp
+    core/csr/measures/somatic_haplotype_count.cpp
 
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp

@@ -45,6 +45,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<STRPeriod>()]                = [] () { return make_wrapped_measure<STRPeriod>(); };
     measure_makers[name<PosteriorProbability>()]     = [] () { return make_wrapped_measure<PosteriorProbability>(); };
     measure_makers[name<ClassificationConfidence>()] = [] () { return make_wrapped_measure<ClassificationConfidence>(); };
+    measure_makers[name<SomaticHaplotypeCount>()]    = [] () { return make_wrapped_measure<SomaticHaplotypeCount>(); };
 }
 
 class UnknownMeasure : public UserError
