@@ -806,6 +806,17 @@ auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::op
     }
 }
 
+double get_min_clone_vaf(const OptionMap& options)
+{
+    return options.at("min-clone-frequency").as<float>();
+}
+
+auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
+{
+    const auto min_vaf = get_min_clone_vaf(options);
+    return coretools::DefaultSomaticInclusionPredicate {min_vaf};
+}
+
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 {
     using namespace coretools;
@@ -815,9 +826,9 @@ auto get_default_inclusion_predicate(const OptionMap& options) noexcept
         if (is_set("normal-sample", options)) {
             normal = options.at("normal-sample").as<SampleName>();
         }
-        return InclusionPredicate{get_default_somatic_inclusion_predicate(options, normal)};
+        return InclusionPredicate {get_default_somatic_inclusion_predicate(options, normal)};
     } else if (is_polyclone_calling(options)) {
-        return InclusionPredicate{get_default_somatic_inclusion_predicate(options)};
+        return InclusionPredicate {get_default_somatic_inclusion_predicate(options)};
     } else {
         return InclusionPredicate {get_default_germline_inclusion_predicate()};
     }

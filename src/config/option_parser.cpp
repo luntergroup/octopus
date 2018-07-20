@@ -308,7 +308,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-source-quality",
      po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
      "Only variants with quality above this value are considered for candidate generation")
-
+    
     ("extract-filtered-source-candidates",
      po::value<bool>()->default_value(false),
      "Extract variants from source VCF records that have been filtered")
@@ -561,6 +561,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-clones",
      po::value<int>()->default_value(3),
      "Maximum number of unique clones to consider")
+    
+    ("min-clone-frequency",
+     po::value<float>()->default_value(0.01, "0.01"),
+     "Minimum expected clone frequency in the sample")
     ;
     
     po::options_description phasing("Phasing");
