@@ -16,6 +16,7 @@
 
 #include "ranger/Forest.h"
 
+#include "basics/phred.hpp"
 #include "double_pass_variant_call_filter.hpp"
 
 namespace octopus { namespace csr {
@@ -32,6 +33,17 @@ public:
                                   std::vector<MeasureWrapper> chooser_measures,
                                   std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
                                   std::vector<Path> ranger_forests,
+                                  OutputOptions output_config,
+                                  ConcurrencyPolicy threading,
+                                  Path temp_directory = "/tmp",
+                                  boost::optional<ProgressMeter&> progress = boost::none);
+    
+    ConditionalRandomForestFilter(FacetFactory facet_factory,
+                                  std::vector<MeasureWrapper> measures,
+                                  std::vector<MeasureWrapper> chooser_measures,
+                                  std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
+                                  std::vector<Path> ranger_forests,
+                                  Phred<double> min_forest_quality,
                                   OutputOptions output_config,
                                   ConcurrencyPolicy threading,
                                   Path temp_directory = "/tmp",
@@ -61,6 +73,7 @@ private:
     std::vector<std::unique_ptr<ranger::Forest>> forests_;
     std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser_;
     std::size_t num_chooser_measures_;
+    Phred<double> min_forest_quality_ = probability_to_phred(0.5);
     
     mutable std::vector<std::vector<File>> data_;
     mutable std::size_t num_records_;

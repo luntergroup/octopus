@@ -18,7 +18,6 @@
 
 #include "ranger/ForestProbability.h"
 
-#include "basics/phred.hpp"
 #include "utils/concat.hpp"
 #include "utils/maths.hpp"
 #include "exceptions/missing_file_error.hpp"
@@ -56,11 +55,26 @@ ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_
                                                              ConcurrencyPolicy threading,
                                                              Path temp_directory,
                                                              boost::optional<ProgressMeter&> progress)
+: ConditionalRandomForestFilter {std::move(facet_factory), std::move(measures), std::move(chooser_measures),
+                                 std::move(chooser), std::move(ranger_forests), probability_to_phred(0.5),
+                                 std::move(output_config), threading, std::move(temp_directory), progress} {}
+
+ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_factory,
+                                                             std::vector<MeasureWrapper> measures,
+                                                             std::vector<MeasureWrapper> chooser_measures,
+                                                             std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
+                                                             std::vector<Path> ranger_forests,
+                                                             Phred<double> min_forest_quality,
+                                                             OutputOptions output_config,
+                                                             ConcurrencyPolicy threading,
+                                                             Path temp_directory,
+                                                             boost::optional<ProgressMeter&> progress)
 : DoublePassVariantCallFilter {std::move(facet_factory), concat(std::move(measures), chooser_measures),
                                std::move(output_config), threading, std::move(temp_directory), progress}
 , forest_paths_ {std::move(ranger_forests)}
 , chooser_ {std::move(chooser)}
 , num_chooser_measures_ {chooser_measures.size()}
+, min_forest_quality_ {min_forest_quality}
 , num_records_ {0}
 , data_buffer_ {}
 {
@@ -326,13 +340,13 @@ VariantCallFilter::Classification ConditionalRandomForestFilter::classify(const 
         const auto& predictions = data_buffer_[0];
         assert(call_idx < predictions.size() && sample_idx < predictions[call_idx].size());
         const auto prob_false = predictions[call_idx][sample_idx];
-        if (prob_false < 0.5) {
+        result.quality = probability_to_phred(std::max(prob_false, 1e-10));
+        if (result.quality >= min_forest_quality_) {
             result.category = Classification::Category::unfiltered;
         } else {
             result.category = Classification::Category::soft_filtered;
             result.reasons.assign({"RF"});
         }
-        result.quality = probability_false_to_phred(std::max(prob_false, 1e-10));
     } else {
         result.category = Classification::Category::hard_filtered;
     }
