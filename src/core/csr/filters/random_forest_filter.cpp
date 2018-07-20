@@ -23,14 +23,27 @@ namespace octopus { namespace csr {
 
 RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
                                        std::vector<MeasureWrapper> measures,
+                                       Path ranger_forest,
                                        OutputOptions output_config,
                                        ConcurrencyPolicy threading,
-                                       Path ranger_forest, Path temp_directory,
+                                       Path temp_directory,
                                        boost::optional<ProgressMeter&> progress)
-: DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures),
-                               std::move(output_config), threading, std::move(temp_directory), progress}
+: RandomForestFilter {std::move(facet_factory), std::move(measures), std::move(ranger_forest), probability_to_phred(0.5),
+                      std::move(output_config), threading, std::move(temp_directory), progress} {}
+
+RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
+                                       std::vector<MeasureWrapper> measures,
+                                       Path ranger_forest,
+                                       Phred<double> min_forest_quality,
+                                       OutputOptions output_config,
+                                       ConcurrencyPolicy threading,
+                                       Path temp_directory,
+                                       boost::optional<ProgressMeter&> progress)
+: DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading, progress}
 , forest_ {std::make_unique<ranger::ForestProbability>()}
 , ranger_forest_ {std::move(ranger_forest)}
+, temp_dir_ {std::move(temp_directory)}
+, min_forest_quality_ {min_forest_quality}
 , num_records_ {0}
 , data_buffer_ {}
 {}
@@ -207,13 +220,13 @@ VariantCallFilter::Classification RandomForestFilter::classify(const std::size_t
     assert(call_idx < data_buffer_.size() && sample_idx < data_buffer_[call_idx].size());
     const auto prob_false = data_buffer_[call_idx][sample_idx];
     Classification result {};
-    if (prob_false < 0.5) {
+    result.quality = probability_to_phred(std::max(prob_false, 1e-10));
+    if (result.quality >= min_forest_quality_) {
         result.category = Classification::Category::unfiltered;
     } else {
         result.category = Classification::Category::soft_filtered;
         result.reasons.assign({"RF"});
     }
-    result.quality = probability_false_to_phred(std::max(prob_false, 1e-10));
     return result;
 }
 

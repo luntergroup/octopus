@@ -27,9 +27,18 @@ public:
     
     RandomForestFilter(FacetFactory facet_factory,
                        std::vector<MeasureWrapper> measures,
+                       Path ranger_forest,
                        OutputOptions output_config,
                        ConcurrencyPolicy threading,
+                       Path temp_directory = "/tmp",
+                       boost::optional<ProgressMeter&> progress = boost::none);
+    
+    RandomForestFilter(FacetFactory facet_factory,
+                       std::vector<MeasureWrapper> measures,
                        Path ranger_forest,
+                       Phred<double> min_forest_quality,
+                       OutputOptions output_config,
+                       ConcurrencyPolicy threading,
                        Path temp_directory = "/tmp",
                        boost::optional<ProgressMeter&> progress = boost::none);
     
@@ -51,6 +60,7 @@ private:
     
     std::unique_ptr<ranger::Forest> forest_;
     Path ranger_forest_, temp_dir_;
+    Phred<double> min_forest_quality_ = probability_to_phred(0.5);
     
     mutable std::vector<File> data_;
     mutable std::size_t num_records_;
