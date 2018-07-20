@@ -431,6 +431,11 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst)
 
 namespace {
 
+VcfHeader to_legacy(const VcfHeader& native)
+{
+    return VcfHeader::Builder(native).set_file_format("VCFv4.2").build_once();
+}
+
 bool has_deleted(const VcfRecord::NucleotideSequence& allele) noexcept
 {
     return std::find(std::cbegin(allele), std::cend(allele), vcfspec::deletedBase) != std::cend(allele);
@@ -592,7 +597,7 @@ void convert_to_legacy_dedup(const VcfReader& src, VcfWriter& dst)
 void convert_to_legacy(const VcfReader& src, VcfWriter& dst, const bool remove_ref_pad_duplicates)
 {
     if (!dst.is_header_written()) {
-        dst << src.fetch_header();
+        dst << to_legacy(src.fetch_header());
     }
     if (remove_ref_pad_duplicates) {
         convert_to_legacy_dedup(src, dst);
