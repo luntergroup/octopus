@@ -48,6 +48,11 @@ RandomForestFilterFactory::RandomForestFilterFactory(Path germline_ranger_forest
     measures_ = parse_measures(default_measure_names);
 }
 
+void RandomForestFilterFactory::set_min_forest_quality(Phred<double> quality)
+{
+    min_forest_quality_ = quality;
+}
+
 std::unique_ptr<VariantCallFilterFactory> RandomForestFilterFactory::do_clone() const
 {
     return std::make_unique<RandomForestFilterFactory>(*this);
@@ -75,8 +80,8 @@ RandomForestFilterFactory::do_make(FacetFactory facet_factory,
                                                                              output_config, threading, temp_directory_, progress);
             case ForestType::germline:
             default:
-                return std::make_unique<RandomForestFilter>(std::move(facet_factory), measures_, output_config, threading,
-                                                            ranger_forests_[0], temp_directory_, progress);
+                return std::make_unique<RandomForestFilter>(std::move(facet_factory), measures_, ranger_forests_[0],
+                                                            output_config, threading, temp_directory_, progress);
         }
     } else {
         assert(ranger_forests_.size() == 2);

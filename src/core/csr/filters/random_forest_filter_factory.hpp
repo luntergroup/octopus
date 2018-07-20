@@ -11,6 +11,7 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 
+#include "basics/phred.hpp"
 #include "logging/progress_meter.hpp"
 #include "../measures/measure.hpp"
 #include "variant_call_filter_factory.hpp"
@@ -39,12 +40,15 @@ public:
     ~RandomForestFilterFactory() = default;
     
     std::vector<MeasureWrapper> measures() const;
+    
+    void set_min_forest_quality(Phred<double> quality);
 
 private:
     std::vector<MeasureWrapper> measures_;
     std::vector<Path> ranger_forests_;
     std::vector<ForestType> forest_types_;
     Path temp_directory_;
+    boost::optional<Phred<double>> min_forest_quality_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
     std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,
