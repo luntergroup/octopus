@@ -791,13 +791,30 @@ bool is_polyclone_calling(const OptionMap& options)
     return options.at("caller").as<std::string>() == "polyclone";
 }
 
-auto get_default_somatic_inclusion_predicate(boost::optional<SampleName> normal = boost::none)
+double get_min_somatic_vaf(const OptionMap& options)
 {
+    return std::min(options.at("min-expected-somatic-frequency").as<float>(), options.at("min-credible-somatic-frequency").as<float>());
+}
+
+auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::optional<SampleName> normal = boost::none)
+{
+    const auto min_vaf = get_min_somatic_vaf(options);
     if (normal) {
-        return coretools::DefaultSomaticInclusionPredicate {*normal};
+        return coretools::DefaultSomaticInclusionPredicate {*normal, min_vaf};
     } else {
-        return coretools::DefaultSomaticInclusionPredicate {};
+        return coretools::DefaultSomaticInclusionPredicate {min_vaf};
     }
+}
+
+double get_min_clone_vaf(const OptionMap& options)
+{
+    return options.at("min-clone-frequency").as<float>();
+}
+
+auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
+{
+    const auto min_vaf = get_min_clone_vaf(options);
+    return coretools::DefaultSomaticInclusionPredicate {min_vaf};
 }
 
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
@@ -809,9 +826,9 @@ auto get_default_inclusion_predicate(const OptionMap& options) noexcept
         if (is_set("normal-sample", options)) {
             normal = options.at("normal-sample").as<SampleName>();
         }
-        return InclusionPredicate{get_default_somatic_inclusion_predicate(normal)};
+        return InclusionPredicate {get_default_somatic_inclusion_predicate(options, normal)};
     } else if (is_polyclone_calling(options)) {
-        return InclusionPredicate{get_default_somatic_inclusion_predicate()};
+        return InclusionPredicate {get_default_somatic_inclusion_predicate(options)};
     } else {
         return InclusionPredicate {get_default_germline_inclusion_predicate()};
     }

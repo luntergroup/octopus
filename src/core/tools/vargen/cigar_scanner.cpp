@@ -504,7 +504,7 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
 }
 
 bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigned num_fwd_observations,
-                     std::vector<unsigned> observed_qualities)
+                     std::vector<unsigned> observed_qualities, const double min_expected_vaf)
 {
     const auto num_observations = observed_qualities.size();
     if (depth < 4) {
@@ -516,12 +516,8 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
     }
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
-        erase_below(observed_qualities, 10);
-        if (depth <= 30) {
-            return observed_qualities.size() >= 2;
-        } else {
-            return static_cast<double>(observed_qualities.size()) / depth > 0.03;
-        }
+        erase_below(observed_qualities, 15);
+        return observed_qualities.size() >= 2 && static_cast<double>(observed_qualities.size()) / depth >= min_expected_vaf;
     } else if (is_insertion(variant)) {
         if (num_observations == 1 && alt_sequence_size(variant) > 8) return false;
         if (depth <= 10) {
@@ -549,9 +545,9 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
     } else {
         // deletion or mnv
         if (region_size(variant) < 10) {
-            return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.02;
+            return num_observations > 1 && static_cast<double>(num_observations) / depth >= min_expected_vaf;
         } else {
-            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) > 0.04;
+            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) >= min_expected_vaf;
         }
     }
 }
@@ -593,9 +589,9 @@ bool is_good_germline_pooled(const CigarScanner::ObservedVariant& candidate)
                             concat_observed_base_qualities(candidate));
 }
 
-bool is_good_somatic(const Variant& v, const CigarScanner::ObservedVariant::SampleObservation& observation)
+bool is_good_somatic(const Variant& v, const CigarScanner::ObservedVariant::SampleObservation& observation, double min_expected_vaf)
 {
-    return is_good_somatic(v, observation.depth, observation.num_fwd_observations, observation.observed_base_qualities);
+    return is_good_somatic(v, observation.depth, observation.num_fwd_observations, observation.observed_base_qualities, min_expected_vaf);
 }
 
 } // namespace
@@ -612,7 +608,7 @@ bool DefaultSomaticInclusionPredicate::operator()(const CigarScanner::ObservedVa
                            if (normal_ && observation.sample.get() == *normal_) {
                                return is_good_germline(candidate.variant, observation);
                            } else {
-                               return is_good_somatic(candidate.variant, observation);
+                               return is_good_somatic(candidate.variant, observation, min_expected_vaf_);
                            }
                        });
 }

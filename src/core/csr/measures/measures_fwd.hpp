@@ -34,5 +34,6 @@
 #include "core/csr/measures/str_period.hpp"
 #include "core/csr/measures/posterior_probability.hpp"
 #include "core/csr/measures/classification_confidence.hpp"
+#include "core/csr/measures/somatic_haplotype_count.hpp"
 
 #endif

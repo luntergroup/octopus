@@ -174,23 +174,22 @@ public:
     
     Latents() = delete;
     
-    Latents(const std::vector<Haplotype>& haplotypes,
-            const std::vector<SampleName>& samples);
+    Latents(const std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& samples,
+            const CancerCaller::Parameters& parameters);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const override;
     
 private:
     std::reference_wrapper<const std::vector<Haplotype>> haplotypes_;
+    std::reference_wrapper<const std::vector<SampleName>> samples_;
+    std::reference_wrapper<const CancerCaller::Parameters> parameters_;
+    
     std::vector<Genotype<Haplotype>> germline_genotypes_;
     unsigned somatic_ploidy_ = 1;
     std::vector<CancerGenotype<Haplotype>> cancer_genotypes_;
     boost::optional<std::vector<std::vector<unsigned>>> germline_genotype_indices_ = boost::none;
     boost::optional<std::vector<CancerGenotypeIndex>> cancer_genotype_indices_ = boost::none;
-    
-    std::reference_wrapper<const std::vector<SampleName>> samples_;
-    boost::optional<std::reference_wrapper<const SampleName>> normal_sample_ = boost::none;
-    
     CancerCaller::ModelPriors model_priors_;
     std::unique_ptr<GenotypePriorModel> germline_prior_model_ = nullptr;
     boost::optional<CancerGenotypePriorModel> cancer_genotype_prior_model_ = boost::none;

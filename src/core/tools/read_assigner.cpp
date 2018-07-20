@@ -126,14 +126,16 @@ auto calculate_support(const std::vector<Haplotype>& haplotypes,
     return result;
 }
 
+GenomicRegion::Size max_deletion_size(const Haplotype& haplotype)
+{
+    return region_size(haplotype) > sequence_size(haplotype) ? (region_size(haplotype) - sequence_size(haplotype)) : 0u;
+}
+
 auto max_deletion_size(const std::vector<Haplotype>& haplotypes)
 {
-    unsigned result {0};
+    GenomicRegion::Size result {0};
     for (const auto& haplotype : haplotypes) {
-        if (region_size(haplotype) > sequence_size(haplotype)) {
-            auto diff = static_cast<unsigned>(region_size(haplotype) - sequence_size(haplotype));
-            result = std::max(result, diff);
-        }
+        result = std::max(result, max_deletion_size(haplotype));
     }
     return result;
 }
@@ -148,29 +150,33 @@ auto compute_read_hashes(const std::vector<AlignedRead>& reads)
     return result;
 }
 
-auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes,
-                           const std::vector<AlignedRead>& reads,
-                           HaplotypeLikelihoodModel& model)
+auto expand_for_alignment(const Haplotype& haplotype, const GenomicRegion& reads_region)
 {
-    assert(!haplotypes.empty());
-    const auto& haplotype_region = mapped_region(haplotypes.front());
-    const auto reads_region = encompassing_region(reads);
-    const auto min_flank_pad = HaplotypeLikelihoodModel::pad_requirement();
-    unsigned min_lhs_expansion{2 * min_flank_pad}, min_rhs_expansion{2 * min_flank_pad};
+    const auto min_flank_pad = 2 * HaplotypeLikelihoodModel::pad_requirement();
+    const auto& haplotype_region = mapped_region(haplotype);
+    unsigned min_lhs_expansion {min_flank_pad}, min_rhs_expansion {min_flank_pad};
     if (begins_before(reads_region, haplotype_region)) {
         min_lhs_expansion += begin_distance(reads_region, haplotype_region);
     }
     if (ends_before(haplotype_region, reads_region)) {
         min_rhs_expansion += end_distance(haplotype_region, reads_region);
     }
-    const auto min_expansion = std::max(min_lhs_expansion, min_rhs_expansion) + max_deletion_size(haplotypes);
+    const auto min_expansion = std::max(min_lhs_expansion, min_rhs_expansion) + max_deletion_size(haplotype);
+    return expand(haplotype, min_expansion);
+}
+
+auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes, const std::vector<AlignedRead>& reads,
+                           HaplotypeLikelihoodModel& model)
+{
+    assert(!haplotypes.empty());
+    const auto reads_region = encompassing_region(reads);
     const auto read_hashes = compute_read_hashes(reads);
     static constexpr unsigned char mapperKmerSize {6};
     auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
-    HaplotypeLikelihoods result{};
+    HaplotypeLikelihoods result {};
     result.reserve(haplotypes.size());
     for (const auto& haplotype : haplotypes) {
-        const auto expanded_haplotype = expand(haplotype, min_expansion);
+        const auto expanded_haplotype = expand_for_alignment(haplotype, reads_region);
         populate_kmer_hash_table<mapperKmerSize>(expanded_haplotype.sequence(), haplotype_hashes);
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
         model.reset(expanded_haplotype);

@@ -124,9 +124,8 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     // Store any intermediate results in Latents for reuse, so the order of model evaluation matters!
-    auto result = std::make_unique<Latents>(haplotypes, samples_);
+    auto result = std::make_unique<Latents>(haplotypes, samples_, parameters_);
     set_model_priors(*result);
-    if (has_normal_sample()) result->normal_sample_ = std::cref(normal_sample());
     generate_germline_genotypes(*result, haplotypes);
     if (debug_log_) stream(*debug_log_) << "There are " << result->germline_genotypes_.size() << " candidate germline genotypes";
     evaluate_germline_model(*result, haplotype_likelihoods);
@@ -1359,10 +1358,11 @@ std::unique_ptr<GenotypePriorModel> CancerCaller::make_germline_prior_model(cons
 
 // CancerCaller::Latents
 
-CancerCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
-                               const std::vector<SampleName>& samples)
+CancerCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& samples,
+                               const CancerCaller::Parameters& parameters)
 : haplotypes_ {haplotypes}
 , samples_ {samples}
+, parameters_ {parameters}
 {}
 
 std::shared_ptr<CancerCaller::Latents::HaplotypeProbabilityMap>
@@ -1423,7 +1423,8 @@ void CancerCaller::Latents::compute_haplotype_posteriors() const
             result.at(haplotype) += model_posteriors_.cnv * p.get<1>();
         }
     }
-    const auto conditional_somatic_prob = compute_credible_somatic_mass(tumour_model_inferences_.posteriors.alphas, somatic_ploidy_, 0.1);
+    const auto conditional_somatic_prob = compute_credible_somatic_mass(tumour_model_inferences_.posteriors.alphas, somatic_ploidy_,
+    3 * parameters_.get().min_expected_somatic_frequency);
     // Contribution from tumour model
     for (const auto& p : zip(cancer_genotypes_, tumour_model_inferences_.posteriors.genotype_probabilities)) {
         for (const auto& haplotype : p.get<0>().germline().copy_unique_ref()) {

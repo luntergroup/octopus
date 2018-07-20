@@ -25,13 +25,14 @@ class Measure : public Equitable<Measure>
 {
 public:
     using FacetMap = std::unordered_map<std::string, FacetWrapper>;
-    using ResultType = boost::variant<double, std::vector<double>,
-                                      boost::optional<double>, std::vector<boost::optional<double>>,
-                                      int, std::vector<int>,
-                                      boost::optional<int>, std::vector<boost::optional<int>>,
-                                      std::size_t, std::vector<std::size_t>,
-                                      boost::optional<std::size_t>, std::vector<boost::optional<std::size_t>>,
-                                      bool, std::vector<bool>,
+    using ResultType = boost::variant<double, boost::optional<double>,
+                                      std::vector<double>, std::vector<boost::optional<double>>,
+                                      int, boost::optional<int>,
+                                      std::vector<int>, boost::optional<std::vector<int>>, std::vector<boost::optional<int>>,
+                                      std::size_t, boost::optional<std::size_t>,
+                                      std::vector<std::size_t>, std::vector<boost::optional<std::size_t>>,
+                                      bool,
+                                      std::vector<bool>,
                                       boost::any>;
     enum class ResultCardinality { one, num_alleles, num_samples };
     
