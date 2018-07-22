@@ -32,6 +32,13 @@ VariantGeneratorBuilder::add_vcf_extractor(boost::filesystem::path file, VcfExtr
 }
 
 VariantGeneratorBuilder&
+VariantGeneratorBuilder::set_repeat_scanner(RepeatScanner::Options options)
+{
+    repeat_scanner_ = std::move(options);
+    return *this;
+}
+
+VariantGeneratorBuilder&
 VariantGeneratorBuilder::add_downloader(Downloader::Options options)
 {
     downloaders_.push_back(std::move(options));
@@ -64,6 +71,9 @@ VariantGenerator VariantGeneratorBuilder::build(const ReferenceGenome& reference
     }
     for (auto packet : vcf_extractors_) {
         result.add(std::make_unique<VcfExtractor>(std::make_unique<VcfReader>(packet.file), packet.options));
+    }
+    if (repeat_scanner_) {
+        result.add(std::make_unique<RepeatScanner>(reference, *repeat_scanner_));
     }
     for (auto options : downloaders_) {
         result.add(std::make_unique<Downloader>(reference, options));

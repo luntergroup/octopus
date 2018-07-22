@@ -450,6 +450,8 @@ set(CORE_SOURCES
     core/tools/vargen/variant_generator_builder.cpp
     core/tools/vargen/active_region_generator.hpp
     core/tools/vargen/active_region_generator.cpp
+    core/tools/vargen/repeat_scanner.hpp
+    core/tools/vargen/repeat_scanner.cpp
     
     core/tools/vargen/utils/assembler.hpp
     core/tools/vargen/utils/assembler.cpp
