@@ -232,7 +232,7 @@ find_adjacent_tandem_repeats(const ReferenceGenome& reference, const GenomicRegi
             const auto possible_adjacents = overlap_range(std::next(lhs_itr), std::cend(repeats), expand_rhs(tail_region(*lhs_itr), 1));
             for (const auto& rhs_repeat : possible_adjacents) {
                 if (are_adjacent(*lhs_itr, rhs_repeat)
-                    || overlap_size(*lhs_itr, rhs_repeat) < std::max(lhs_itr->period, rhs_repeat.period)) {
+                    || static_cast<unsigned>(overlap_size(*lhs_itr, rhs_repeat)) < std::max(lhs_itr->period, rhs_repeat.period)) {
                     result.emplace_back(*lhs_itr, rhs_repeat);
                 }
             }
