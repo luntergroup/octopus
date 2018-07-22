@@ -931,6 +931,9 @@ auto make_variant_generator_builder(const OptionMap& options)
         scanner_options.misalignment_parameters = misalign_params;
         result.set_cigar_scanner(std::move(scanner_options));
     }
+    if (options.at("repeat-candidate-generator").as<bool>()) {
+        result.set_repeat_scanner(RepeatScanner::Options {});
+    }
     if (use_assembler) {
         LocalReassembler::Options reassembler_options {};
         const auto kmer_sizes = options.at("kmer-sizes").as<std::vector<int>>();

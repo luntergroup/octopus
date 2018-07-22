@@ -264,11 +264,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("no-reads-with-unmapped-segments",
      po::bool_switch()->default_value(false),
-     "Filter reads with unmapped template segmenets to be used for calling")
+     "Filter reads with unmapped template segments to be used for calling")
     
     ("no-reads-with-distant-segments",
      po::bool_switch()->default_value(false),
-     "Filter reads with template segmenets that are on different contigs")
+     "Filter reads with template segments that are on different contigs")
     
     ("no-adapter-contaminated-reads",
      po::bool_switch()->default_value(false),
@@ -292,6 +292,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("raw-cigar-candidate-generator,g",
      po::value<bool>()->default_value(true),
      "Enable candidate generation from raw read alignments (CIGAR strings)")
+    
+    ("repeat-candidate-generator",
+     po::value<bool>()->default_value(true),
+     "Enable candidate generation from adjusted read alignments (CIGAR strings) around tandem repeats")
     
     ("assembly-candidate-generator,a",
      po::value<bool>()->default_value(true),
