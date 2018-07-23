@@ -264,11 +264,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("no-reads-with-unmapped-segments",
      po::bool_switch()->default_value(false),
-     "Filter reads with unmapped template segmenets to be used for calling")
+     "Filter reads with unmapped template segments to be used for calling")
     
     ("no-reads-with-distant-segments",
      po::bool_switch()->default_value(false),
-     "Filter reads with template segmenets that are on different contigs")
+     "Filter reads with template segments that are on different contigs")
     
     ("no-adapter-contaminated-reads",
      po::bool_switch()->default_value(false),
@@ -292,6 +292,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("raw-cigar-candidate-generator,g",
      po::value<bool>()->default_value(true),
      "Enable candidate generation from raw read alignments (CIGAR strings)")
+    
+    ("repeat-candidate-generator",
+     po::value<bool>()->default_value(true),
+     "Enable candidate generation from adjusted read alignments (CIGAR strings) around tandem repeats")
     
     ("assembly-candidate-generator,a",
      po::value<bool>()->default_value(true),
@@ -586,7 +590,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Enable all variant call filtering")
     
     ("filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | RPB > 0.99"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | RPB > 0.99 | DP < 1"),
      "Boolean expression to use to filter variant calls")
     
     ("somatic-filter-expression",

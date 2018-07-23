@@ -12,6 +12,7 @@
 #include "cigar_scanner.hpp"
 #include "local_reassembler.hpp"
 #include "vcf_extractor.hpp"
+#include "repeat_scanner.hpp"
 #include "downloader.hpp"
 #include "randomiser.hpp"
 #include "io/reference/reference_genome.hpp"
@@ -39,6 +40,7 @@ public:
     VariantGeneratorBuilder& set_local_reassembler(LocalReassembler::Options options);
     VariantGeneratorBuilder& add_vcf_extractor(boost::filesystem::path reader,
                                                VcfExtractor::Options options = VcfExtractor::Options {});
+    VariantGeneratorBuilder& set_repeat_scanner(RepeatScanner::Options options);
     VariantGeneratorBuilder& add_downloader(Downloader::Options options = Downloader::Options {});
     VariantGeneratorBuilder& add_randomiser(Randomiser::Options options = Randomiser::Options {});
     VariantGeneratorBuilder& set_active_region_generator(ActiveRegionGenerator::Options options = ActiveRegionGenerator::Options {});
@@ -55,6 +57,7 @@ private:
     boost::optional<CigarScanner::Options> cigar_scanner_;
     boost::optional<LocalReassembler::Options> local_reassembler_;
     std::deque<VcfExtractorPacket> vcf_extractors_;
+    boost::optional<RepeatScanner::Options> repeat_scanner_;
     std::deque<Downloader::Options> downloaders_;
     std::deque<Randomiser::Options> randomisers_;
     ActiveRegionGenerator::Options active_region_generator_;
