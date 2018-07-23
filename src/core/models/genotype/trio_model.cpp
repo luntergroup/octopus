@@ -282,32 +282,96 @@ bool operator>(const UniformPriorJointProbabilityHelper& lhs, const UniformPrior
     return lhs.probability > rhs.probability;
 }
 
-auto reduce(std::vector<ParentsProbabilityPair>& zipped, const TrioModel::Options& options)
+template <typename Iterator, typename UnaryOperation>
+auto index_zip(Iterator first, const Iterator last, UnaryOperation op)
+{
+    using T = typename std::iterator_traits<Iterator>::value_type;
+    using R = std::result_of_t<UnaryOperation(const T&)>;
+    const auto n = static_cast<std::size_t>(std::distance(first, last));
+    std::vector<std::pair<R, std::size_t>> result(n);
+    for (std::size_t idx {0}; idx < n; ++idx) {
+        result[idx] = std::make_pair(op(*first++), idx);
+    }
+    return result;
+}
+
+template <typename Iterator>
+auto order_indices_by_probability(const Iterator first, const Iterator last, std::size_t k)
+{
+    auto zipped = index_zip(first, last, [] (const auto& pair) { return pair.probability; });
+    k = std::min(zipped.size(), k);
+    const auto kth = std::next(std::begin(zipped), k);
+    std::partial_sort(std::begin(zipped), kth, std::end(zipped), std::greater<> {});
+    std::vector<std::size_t> result(k);
+    std::transform(std::begin(zipped), kth, std::begin(result), [] (const auto& p) { return p.second; });
+    return result;
+}
+
+template <typename Iterator>
+auto select_top_k_haplotypes(const Iterator first, Iterator last, const std::size_t k)
+{
+    const auto top_pair_indices = order_indices_by_probability(first, last, k);
+    std::set<Haplotype> result {};
+    for (const auto idx : top_pair_indices) {
+        if (result.size() >= k) break;
+        const auto& genotype = std::next(first, idx)->genotype.get();
+        std::copy(std::cbegin(genotype), std::cend(genotype), std::inserter(result, std::begin(result)));
+    }
+    return result;
+}
+
+using ChildReductionMap = ReducedVectorMap<GenotypeRefProbabilityPair>;
+
+auto select_top_k_haplotypes(const ChildReductionMap& child, const std::size_t k)
+{
+    return select_top_k_haplotypes(child.first, child.last_to_join, k);
+}
+
+using ParentsProbabilityPairIterator = std::vector<ParentsProbabilityPair>::iterator;
+
+bool is_represented(const Haplotype& haplotype, const ParentsProbabilityPair& parent)
+{
+    return parent.maternal.get().contains(haplotype) || parent.paternal.get().contains(haplotype);
+}
+
+bool is_represented(const Haplotype& haplotype,
+                    const ParentsProbabilityPairIterator first_parent,
+                    const ParentsProbabilityPairIterator last_parent)
+{
+    return std::any_of(first_parent, last_parent, [&] (const auto& parent) { return is_represented(haplotype, parent); });
+}
+
+auto find_represented(const Haplotype& haplotype,
+                      const ParentsProbabilityPairIterator first_parent,
+                      const ParentsProbabilityPairIterator last_parent)
+{
+    return std::find_if(first_parent, last_parent, [&] (const auto& parent) { return is_represented(haplotype, parent); });
+}
+
+auto reduce(std::vector<ParentsProbabilityPair>& parents, const ChildReductionMap& child, const TrioModel::Options& options)
 {
     const auto reduction_count = get_sample_reduction_count(options.max_joint_genotypes);
-    auto last_to_join = reduce(zipped, reduction_count, options.max_joint_mass_loss);
-    if (last_to_join != std::cend(zipped)) {
-        std::vector<UniformPriorJointProbabilityHelper> likelihood_zipped(zipped.size());
-        for (std::size_t i {0}; i < zipped.size(); ++i) {
-            likelihood_zipped[i].index = i;
-            likelihood_zipped[i].probability = zipped[i].maternal_likelihood + zipped[i].paternal_likelihood;
+    auto last_to_join = reduce(parents, reduction_count, options.max_joint_mass_loss);
+    if (last_to_join != std::cend(parents)) {
+        std::vector<UniformPriorJointProbabilityHelper> uniform_parents(parents.size());
+        for (std::size_t i {0}; i < parents.size(); ++i) {
+            uniform_parents[i].index = i;
+            uniform_parents[i].probability = parents[i].maternal_likelihood + parents[i].paternal_likelihood;
         }
-        likelihood_zipped.erase(reduce(likelihood_zipped, reduction_count, options.max_joint_mass_loss),
-                                std::cend(likelihood_zipped));
+        uniform_parents.erase(reduce(uniform_parents, reduction_count, options.max_joint_mass_loss), std::cend(uniform_parents));
         std::deque<std::size_t> new_indices {};
-        const auto num_posterior_joined = static_cast<std::size_t>(std::distance(std::begin(zipped), last_to_join));
-        for (const auto& p : likelihood_zipped) {
+        const auto num_posterior_joined = static_cast<std::size_t>(std::distance(std::begin(parents), last_to_join));
+        for (const auto& p : uniform_parents) {
             if (p.index >= num_posterior_joined) {
                 new_indices.push_back(p.index);
             }
         }
-        likelihood_zipped.clear();
+        uniform_parents.clear();
         if (!new_indices.empty()) {
             std::sort(std::begin(new_indices), std::end(new_indices));
             auto curr_index = num_posterior_joined;
-            // Can use std::partition as it must do a single left-to-right pass due to ForwardIterator
-            // and complexity requirements
-            last_to_join = std::partition(last_to_join, std::end(zipped), [&] (const auto& p) {
+            // Can use std::partition as it must do a single left-to-right pass due to ForwardIterator and complexity requirements
+            last_to_join = std::partition(last_to_join, std::end(parents), [&] (const auto& p) {
                 if (!new_indices.empty() && curr_index++ == new_indices.front()) {
                     new_indices.pop_front();
                     return true;
@@ -317,8 +381,19 @@ auto reduce(std::vector<ParentsProbabilityPair>& zipped, const TrioModel::Option
             });
             assert(new_indices.empty());
         }
+        // We want to make sure haplotypes that the child may have are survive to avoid false positive de novo child haplotypes
+        const auto top_child_haplotypes = select_top_k_haplotypes(child, 4);
+        for (const auto& haplotype : top_child_haplotypes) {
+            if (!is_represented(haplotype, std::begin(parents), last_to_join)) {
+                const auto first_represented_parent = find_represented(haplotype, last_to_join, std::end(parents));
+                if (first_represented_parent != std::end(parents)) {
+                    std::iter_swap(first_represented_parent, last_to_join);
+                    ++last_to_join;
+                }
+            }
+        }
     }
-    return make_reduction_map(zipped, last_to_join, options);
+    return make_reduction_map(parents, last_to_join, options);
 }
 
 bool are_same_ploidy(const std::vector<GenotypeRefProbabilityPair>& maternal,
@@ -761,7 +836,7 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
     const auto reduced_child_likelihoods    = reduce(child_likelihoods, prior_model_, options_);
     auto parental_likelihoods = join(reduced_maternal_likelihoods, reduced_paternal_likelihoods, prior_model_);
     if (debug_log_) debug::print(stream(*debug_log_), parental_likelihoods);
-    const auto reduced_parental_likelihoods = reduce(parental_likelihoods, options_);
+    const auto reduced_parental_likelihoods = reduce(parental_likelihoods, reduced_child_likelihoods, options_);
     auto joint_likelihoods = join(reduced_parental_likelihoods, reduced_child_likelihoods, mutation_model_);
     if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
     const auto evidence = normalise_exp(joint_likelihoods);
@@ -801,7 +876,7 @@ TrioModel::evaluate(const GenotypeVector& genotypes, std::vector<GenotypeIndex>&
     const auto reduced_child_likelihoods    = reduce(child_likelihoods, prior_model_, options_);
     auto parental_likelihoods = join(reduced_maternal_likelihoods, reduced_paternal_likelihoods, prior_model_);
     if (debug_log_) debug::print(stream(*debug_log_), parental_likelihoods);
-    const auto reduced_parental_likelihoods = reduce(parental_likelihoods, options_);
+    const auto reduced_parental_likelihoods = reduce(parental_likelihoods, reduced_child_likelihoods, options_);
     auto joint_likelihoods = join(reduced_parental_likelihoods, reduced_child_likelihoods, mutation_model_);
     if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
     const auto evidence = normalise_exp(joint_likelihoods);
