@@ -264,11 +264,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("no-reads-with-unmapped-segments",
      po::bool_switch()->default_value(false),
-     "Filter reads with unmapped template segmenets to be used for calling")
+     "Filter reads with unmapped template segments to be used for calling")
     
     ("no-reads-with-distant-segments",
      po::bool_switch()->default_value(false),
-     "Filter reads with template segmenets that are on different contigs")
+     "Filter reads with template segments that are on different contigs")
     
     ("no-adapter-contaminated-reads",
      po::bool_switch()->default_value(false),
@@ -292,6 +292,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("raw-cigar-candidate-generator,g",
      po::value<bool>()->default_value(true),
      "Enable candidate generation from raw read alignments (CIGAR strings)")
+    
+    ("repeat-candidate-generator",
+     po::value<bool>()->default_value(true),
+     "Enable candidate generation from adjusted read alignments (CIGAR strings) around tandem repeats")
     
     ("assembly-candidate-generator,a",
      po::value<bool>()->default_value(true),
@@ -539,11 +543,11 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>(),
      "Paternal sample")
     
-    ("snv-denovo-mutation-rate",
+    ("denovo-snv-mutation-rate",
      po::value<float>()->default_value(1.3e-8, "1.3e-8"),
      "SNV de novo mutation rate, per base per generation")
     
-    ("indel-denovo-mutation-rate",
+    ("denovo-indel-mutation-rate",
      po::value<float>()->default_value(1e-9, "1e-9"),
      "INDEL de novo mutation rate, per base per generation")
     
@@ -586,7 +590,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Enable all variant call filtering")
     
     ("filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | RPB > 0.99"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | RPB > 0.99 | DP < 1"),
      "Boolean expression to use to filter variant calls")
     
     ("somatic-filter-expression",
@@ -594,11 +598,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "Boolean expression to use to filter somatic variant calls")
     
     ("denovo-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | GQ < 20 | MQ < 30 | SB > 0.9 | BQ < 20 | DP < 3 | DC > 1 | MF > 0.2 | FRF > 0.5"),
+     po::value<std::string>()->default_value("QUAL < 20 | GQ < 20 | MQ < 30 | SB > 0.95 | BQ < 20 | DP < 3 | DC > 1 | MF > 0.2 | FRF > 0.5"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("refcall-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 5 | MF > 0.2"),
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 6 | MF > 0.2"),
      "Boolean expression to use to filter homozygous reference calls")
     
     ("use-calling-reads-for-filtering",
@@ -1012,7 +1016,7 @@ void validate(const OptionMap& vm)
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
         "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "credible-mass",
-        "snv-denovo-mutation-rate", "indel-denovo-mutation-rate"
+        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");

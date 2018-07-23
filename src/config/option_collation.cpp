@@ -931,6 +931,9 @@ auto make_variant_generator_builder(const OptionMap& options)
         scanner_options.misalignment_parameters = misalign_params;
         result.set_cigar_scanner(std::move(scanner_options));
     }
+    if (options.at("repeat-candidate-generator").as<bool>()) {
+        result.set_repeat_scanner(RepeatScanner::Options {});
+    }
     if (use_assembler) {
         LocalReassembler::Options reassembler_options {};
         const auto kmer_sizes = options.at("kmer-sizes").as<std::vector<int>>();
@@ -1579,8 +1582,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_normal_contamination_risk(get_normal_contamination_risk(options));
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
-        vc_builder.set_snv_denovo_mutation_rate(options.at("snv-denovo-mutation-rate").as<float>());
-        vc_builder.set_indel_denovo_mutation_rate(options.at("indel-denovo-mutation-rate").as<float>());
+        vc_builder.set_snv_denovo_mutation_rate(options.at("denovo-snv-mutation-rate").as<float>());
+        vc_builder.set_indel_denovo_mutation_rate(options.at("denovo-indel-mutation-rate").as<float>());
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     } else if (caller == "polyclone") {
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
