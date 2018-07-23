@@ -539,11 +539,11 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>(),
      "Paternal sample")
     
-    ("snv-denovo-mutation-rate",
+    ("denovo-snv-mutation-rate",
      po::value<float>()->default_value(1.3e-8, "1.3e-8"),
      "SNV de novo mutation rate, per base per generation")
     
-    ("indel-denovo-mutation-rate",
+    ("denovo-indel-mutation-rate",
      po::value<float>()->default_value(1e-9, "1e-9"),
      "INDEL de novo mutation rate, per base per generation")
     
@@ -1012,7 +1012,7 @@ void validate(const OptionMap& vm)
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
         "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "credible-mass",
-        "snv-denovo-mutation-rate", "indel-denovo-mutation-rate"
+        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");
