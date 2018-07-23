@@ -312,7 +312,7 @@ double CoalescentModel::calculate_buffered_indel_heterozygosity() const
         if (is_indel(site)) {
             auto site_heterozygosity = calculate_heterozygosity(site);
             if (result) {
-                result = std::min(*result, site_heterozygosity);
+                result = std::max(*result, site_heterozygosity);
             } else {
                 result = site_heterozygosity;
             }
