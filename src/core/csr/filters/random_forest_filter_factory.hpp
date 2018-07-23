@@ -30,7 +30,11 @@ public:
     
     RandomForestFilterFactory();
     RandomForestFilterFactory(Path ranger_forest, Path temp_directory, ForestType type = ForestType::germline);
+    RandomForestFilterFactory(Path ranger_forest, Path temp_directory, Phred<double> min_forest_quality,
+                              ForestType type = ForestType::germline);
     RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path temp_directory);
+    RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path temp_directory,
+                              Phred<double> min_forest_quality);
     
     RandomForestFilterFactory(const RandomForestFilterFactory&)            = default;
     RandomForestFilterFactory& operator=(const RandomForestFilterFactory&) = default;

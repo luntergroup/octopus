@@ -30,10 +30,26 @@ public:
                                         ConcurrencyPolicy threading,
                                         Path temp_directory = "/tmp",
                                         boost::optional<ProgressMeter&> progress = boost::none);
+    DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
+                                        std::vector<MeasureWrapper> measures,
+                                        Path germline_forest, Path denovo_forest,
+                                        Phred<double> min_forest_quality,
+                                        OutputOptions output_config,
+                                        ConcurrencyPolicy threading,
+                                        Path temp_directory = "/tmp",
+                                        boost::optional<ProgressMeter&> progress = boost::none);
     // De novo only
     DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
                                         std::vector<MeasureWrapper> measures,
                                         Path denovo_forest,
+                                        OutputOptions output_config,
+                                        ConcurrencyPolicy threading,
+                                        Path temp_directory = "/tmp",
+                                        boost::optional<ProgressMeter&> progress = boost::none);
+    DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
+                                        std::vector<MeasureWrapper> measures,
+                                        Path denovo_forest,
+                                        Phred<double> min_forest_quality,
                                         OutputOptions output_config,
                                         ConcurrencyPolicy threading,
                                         Path temp_directory = "/tmp",

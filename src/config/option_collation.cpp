@@ -1962,21 +1962,43 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                     }
                     result = std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
                 } else if (options.at("somatics-only").as<bool>()) {
-                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
-                                                                         RandomForestFilterFactory::ForestType::somatic);
+                    if (is_set("min-forest-quality", options)) {
+                        return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                           options.at("min-forest-quality").as<Phred<double>>(),
+                                                                           RandomForestFilterFactory::ForestType::somatic);
+                    } else {
+                        return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                           RandomForestFilterFactory::ForestType::somatic);
+                    }
                 } else {
                     logging::WarningLogger log {};
                     log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
                 }
             } else if (caller == "trio") {
                 if (options.at("denovos-only").as<bool>()) {
-                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
-                                                                         RandomForestFilterFactory::ForestType::denovo);
+                    if (is_set("min-forest-quality", options)) {
+                        return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                           options.at("min-forest-quality").as<Phred<double>>(),
+                                                                           RandomForestFilterFactory::ForestType::denovo);
+                    } else {
+                        return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                           RandomForestFilterFactory::ForestType::denovo);
+                    }
+                } else {
+                    if (is_set("min-forest-quality", options)) {
+                        return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                           options.at("min-forest-quality").as<Phred<double>>());
+                    } else {
+                        return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+                    }
+                }
+            } else {
+                if (is_set("min-forest-quality", options)) {
+                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                       options.at("min-forest-quality").as<Phred<double>>());
                 } else {
                     result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
                 }
-            } else {
-                result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
             }
         } else if (is_set("somatic-forest-file", options)) {
             if (options.at("somatics-only").as<bool>()) {
@@ -1984,8 +2006,14 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                 if (!fs::exists(somatic_forest_file)) {
                     throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
                 }
-                result = std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
-                                                                     RandomForestFilterFactory::ForestType::somatic);
+                if (is_set("min-forest-quality", options)) {
+                    return std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
+                                                                       options.at("min-forest-quality").as<Phred<double>>(),
+                                                                       RandomForestFilterFactory::ForestType::somatic);
+                } else {
+                    return std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
+                                                                       RandomForestFilterFactory::ForestType::somatic);
+                }
             } else {
                 logging::WarningLogger log {};
                 log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";

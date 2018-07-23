@@ -30,10 +30,26 @@ public:
                                          ConcurrencyPolicy threading,
                                          Path temp_directory = "/tmp",
                                          boost::optional<ProgressMeter&> progress = boost::none);
+    SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
+                                         std::vector<MeasureWrapper> measures,
+                                         Path germline_forest, Path somatic_forest,
+                                         Phred<double> min_forest_quality,
+                                         OutputOptions output_config,
+                                         ConcurrencyPolicy threading,
+                                         Path temp_directory = "/tmp",
+                                         boost::optional<ProgressMeter&> progress = boost::none);
     // Somatics only
     SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
                                          std::vector<MeasureWrapper> measures,
                                          Path somatic_forest,
+                                         OutputOptions output_config,
+                                         ConcurrencyPolicy threading,
+                                         Path temp_directory = "/tmp",
+                                         boost::optional<ProgressMeter&> progress = boost::none);
+    SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
+                                         std::vector<MeasureWrapper> measures,
+                                         Path somatic_forest,
+                                         Phred<double> min_forest_quality,
                                          OutputOptions output_config,
                                          ConcurrencyPolicy threading,
                                          Path temp_directory = "/tmp",
