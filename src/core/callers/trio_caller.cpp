@@ -11,6 +11,8 @@
 #include <map>
 #include <utility>
 
+#include <boost/multiprecision/cpp_dec_float.hpp>
+
 #include "basics/genomic_region.hpp"
 #include "concepts/mappable.hpp"
 #include "containers/probability_matrix.hpp"
@@ -436,44 +438,91 @@ bool contains(const JointProbability& trio, const Allele& allele,
            || contains(trio.child, allele, haplotype_cache, genotype_cache);
 }
 
-auto compute_posterior_uncached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+template <typename T>
+bool is_highest(const Phred<T> phred) noexcept
 {
-    auto p = std::accumulate(std::cbegin(trio_posteriors), std::cend(trio_posteriors),
-                             0.0, [&] (const auto curr, const auto& trio) {
-        return curr + (contains(trio, allele) ? 0.0 : trio.probability);
-    });
-    return probability_to_phred(p);
+    static const typename Phred<T>::Probability lowest_probability {std::nextafter(T {0.0}, T {1.0})};
+    static const Phred<T> highest {lowest_probability};
+    return phred.score() >= highest.score() || maths::almost_equal(phred.score(), highest.score());
 }
 
-auto compute_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+using BigFloat = boost::multiprecision::number<boost::multiprecision::cpp_dec_float<1000>>;
+
+template <typename T = double>
+Phred<T> probability_false_to_phred(BigFloat p)
+{
+    using boost::multiprecision::nextafter;
+    if (p <= 0.0) p = nextafter(BigFloat {0.0}, BigFloat {1.0});
+    if (p >= 1.0) p = nextafter(BigFloat {1.0}, BigFloat {0.0});
+    const BigFloat ln_p {boost::multiprecision::log(p)};
+    const BigFloat phred_p {ln_p / -maths::constants::ln10Div10<>};
+    assert(phred_p >= 0.0);
+    return Phred<double> {phred_p.convert_to<double>()};
+}
+
+template <typename T = double>
+T compute_segregation_posterior_complement_uncached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+{
+    static const T zero {0.0};
+    return std::accumulate(std::cbegin(trio_posteriors), std::cend(trio_posteriors),
+                           zero, [&] (const auto curr, const auto& trio) {
+        return curr + (contains(trio, allele) ? zero : trio.probability);
+    });
+}
+
+auto compute_segregation_posterior_uncached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+{
+    const auto p = compute_segregation_posterior_complement_uncached(allele, trio_posteriors);
+    auto result = probability_to_phred(p);
+    if (is_highest(result)) {
+        auto p_bf = compute_segregation_posterior_complement_uncached<BigFloat>(allele, trio_posteriors);
+        result = probability_false_to_phred(p_bf);
+    }
+    return result;
+}
+
+template <typename T = double>
+T compute_segregation_posterior_complement_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors,
+                                                  HaplotypePtrBoolMap& haplotype_cache, GenotypePtrBoolMap& genotype_cache)
+{
+    static const T zero {0.0};
+    return std::accumulate(std::cbegin(trio_posteriors), std::cend(trio_posteriors),
+                             zero, [&] (const auto curr, const auto& p) {
+        return curr + (contains(p, allele, haplotype_cache, genotype_cache) ? zero : p.probability);
+    });
+}
+
+auto compute_segregation_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
 {
     HaplotypePtrBoolMap haplotype_cache {};
     haplotype_cache.reserve(trio_posteriors.size());
     GenotypePtrBoolMap genotype_cache {};
     genotype_cache.reserve(trio_posteriors.size());
-    auto p = std::accumulate(std::cbegin(trio_posteriors), std::cend(trio_posteriors),
-                             0.0, [&] (const auto curr, const auto& p) {
-        return curr + (contains(p, allele, haplotype_cache, genotype_cache) ? 0.0 : p.probability);
-    });
-    return probability_to_phred(p);
+    const auto p = compute_segregation_posterior_complement_cached(allele, trio_posteriors, haplotype_cache, genotype_cache);
+    auto result = probability_to_phred(p);
+    if (is_highest(result)) {
+        auto p_bf = compute_segregation_posterior_complement_cached<BigFloat>(allele, trio_posteriors, haplotype_cache, genotype_cache);
+        result = probability_false_to_phred(p_bf);
+    }
+    return result;
 }
 
-auto compute_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+auto compute_segregation_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
 {
     if (trio_posteriors.size() >= 500) {
-        return compute_posterior_cached(allele, trio_posteriors);
+        return compute_segregation_posterior_cached(allele, trio_posteriors);
     } else {
-        return compute_posterior_uncached(allele, trio_posteriors);
+        return compute_segregation_posterior_uncached(allele, trio_posteriors);
     }
 }
 
 using AllelePosteriorMap = std::map<Allele, Phred<double>>;
 
-auto compute_posteriors(const std::vector<Allele>& alleles, const TrioProbabilityVector& trio_posteriors)
+auto compute_segregation_posteriors(const std::vector<Allele>& alleles, const TrioProbabilityVector& trio_posteriors)
 {
     AllelePosteriorMap result {};
     for (const auto& allele : alleles) {
-        result.emplace(allele, compute_posterior(allele, trio_posteriors));
+        result.emplace(allele, compute_segregation_posterior(allele, trio_posteriors));
     }
     return result;
 }
@@ -877,7 +926,7 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     const auto alleles = decompose(candidates);
     const auto& trio_posteriors = latents.model_latents.posteriors.joint_genotype_probabilities;
     debug::log(trio_posteriors, debug_log_, trace_log_);
-    const auto allele_posteriors = compute_posteriors(alleles, trio_posteriors);
+    const auto allele_posteriors = compute_segregation_posteriors(alleles, trio_posteriors);
     debug::log(allele_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
     const auto called_alleles = call_alleles(allele_posteriors, parameters_.min_variant_posterior);
     const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors);
