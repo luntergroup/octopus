@@ -71,6 +71,7 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<MeanMappingQuality>()]       = lowMappingQuality;
     filter_names[name<ModelPosterior>()]           = lowModelPosterior;
     filter_names[name<Quality>()]                  = lowQuality;
+    filter_names[name<PosteriorProbability>()]     = lowPosteriorProbability;
     filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
     filter_names[name<GenotypeQuality>()]          = lowGQ;
     filter_names[name<StrandBias>()]               = strandBias;

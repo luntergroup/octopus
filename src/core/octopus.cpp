@@ -1466,13 +1466,24 @@ auto get_bamout_paths(const GenomeCallingComponents& components)
 
 void run_bam_realign(GenomeCallingComponents& components)
 {
-    if (is_bam_realignment_requested(components)) {
-        if (check_bam_realign(components)) {
-            components.read_manager().close();
-            realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
-                    get_bamout_paths(components), components.reference());
-        }
-    }
+//    if (is_bam_realignment_requested(components)) {
+//        if (check_bam_realign(components)) {
+//            components.read_manager().close();
+//            realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
+//                    get_bamout_paths(components), components.reference());
+//        }
+//    }
+//    boost::filesystem::path mother_bam {"/Users/dcooke/Genomics/illumina/wgs500/bam/AW_SC_4654.wgs500.bwa-mem.b37.bam"};
+//    boost::filesystem::path father_bam {"/Users/dcooke/Genomics/illumina/wgs500/bam/AW_SC_4655.wgs500.bwa-mem.b37.bam"};
+//    boost::filesystem::path child_bam {"/Users/dcooke/Genomics/illumina/wgs500/bam/AW_SC_4659.wgs500.bwa-mem.b37.bam"};
+//    boost::filesystem::path mother_bam_out {"/Users/dcooke/Genomics/analysis/denovo/wgs500/analysis/validation/realign/AW_SC_4654.wgs500.bwa-mem.b37.bam"};
+//    boost::filesystem::path father_bam_out {"/Users/dcooke/Genomics/analysis/denovo/wgs500/analysis/validation/realign/AW_SC_4655.wgs500.bwa-mem.b37.bam"};
+//    boost::filesystem::path child_bam_out {"/Users/dcooke/Genomics/analysis/denovo/wgs500/analysis/validation/realign/AW_SC_4659.wgs500.bwa-mem.b37.bam"};
+//    auto vcf = get_bam_realignment_vcf(components);
+    
+//    realign(mother_bam, vcf, mother_bam_out, components.reference());
+//    realign(father_bam, vcf, father_bam_out, components.reference());
+//    realign(child_bam, vcf, child_bam_out, components.reference());
 }
 
 void run_octopus(GenomeCallingComponents& components, std::string command)
