@@ -473,12 +473,7 @@ T compute_segregation_posterior_complement_uncached(const Allele& allele, const 
 auto compute_segregation_posterior_uncached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
 {
     const auto p = compute_segregation_posterior_complement_uncached(allele, trio_posteriors);
-    auto result = probability_to_phred(p);
-    if (is_highest(result)) {
-        auto p_bf = compute_segregation_posterior_complement_uncached<BigFloat>(allele, trio_posteriors);
-        result = probability_false_to_phred(p_bf);
-    }
-    return result;
+    return probability_to_phred(p);
 }
 
 template <typename T = double>
@@ -499,12 +494,7 @@ auto compute_segregation_posterior_cached(const Allele& allele, const TrioProbab
     GenotypePtrBoolMap genotype_cache {};
     genotype_cache.reserve(trio_posteriors.size());
     const auto p = compute_segregation_posterior_complement_cached(allele, trio_posteriors, haplotype_cache, genotype_cache);
-    auto result = probability_to_phred(p);
-    if (is_highest(result)) {
-        auto p_bf = compute_segregation_posterior_complement_cached<BigFloat>(allele, trio_posteriors, haplotype_cache, genotype_cache);
-        result = probability_false_to_phred(p_bf);
-    }
-    return result;
+    return probability_to_phred(p);
 }
 
 auto compute_segregation_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
