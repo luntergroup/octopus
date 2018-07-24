@@ -34,6 +34,7 @@ VCF_SPEC_CONSTANT q5 {"q5"};
 VCF_SPEC_CONSTANT q10 {"q10"};
 VCF_SPEC_CONSTANT q20 {"q20"};
 VCF_SPEC_CONSTANT lowQuality {"LQ"};
+VCF_SPEC_CONSTANT lowPosteriorProbability {"LPP"};
 VCF_SPEC_CONSTANT lowDepth {"DP"};
 VCF_SPEC_CONSTANT highMappingQualityDivergence {"MQD"};
 VCF_SPEC_CONSTANT alleleBias {"AFB"};

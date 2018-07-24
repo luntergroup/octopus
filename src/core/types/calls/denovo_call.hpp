@@ -19,7 +19,7 @@ public:
     DenovoCall() = delete;
     
     template <typename V, typename T>
-    DenovoCall(V&& variant, T&& genotype_calls, Phred<double> quality);
+    DenovoCall(V&& variant, T&& genotype_calls, Phred<double> quality, Phred<double> posterior);
     
     DenovoCall(const DenovoCall&)            = default;
     DenovoCall& operator=(const DenovoCall&) = default;
@@ -37,8 +37,8 @@ private:
 };
 
 template <typename V, typename T>
-DenovoCall::DenovoCall(V&& variant, T&& genotype_calls, Phred<double> quality)
-: VariantCall {std::forward<V>(variant), std::forward<T>(genotype_calls), quality}
+DenovoCall::DenovoCall(V&& variant, T&& genotype_calls, Phred<double> quality, Phred<double> posterior)
+: VariantCall {std::forward<V>(variant), std::forward<T>(genotype_calls), quality, posterior}
 {}
 
 } // namespace octopus

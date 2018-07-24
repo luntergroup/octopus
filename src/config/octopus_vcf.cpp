@@ -41,6 +41,7 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::q10, "Variant quality is below 10"},
 {spec::filter::q20, "Variant quality is below 20"},
 {spec::filter::lowQuality, "Variant quality is low"},
+{spec::filter::lowPosteriorProbability, "Variant posterior probability is low"},
 {spec::filter::highMappingQualityDivergence, "High Kullback–Leibler divergence between REF and ALT mapping quality distributions"},
 {spec::filter::alleleBias, "The called allele frequencies are not as expected for the given ploidy"},
 {spec::filter::lowModelPosterior, "Variant failed model posterior filter"},
