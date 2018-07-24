@@ -361,7 +361,7 @@ namespace {
 
 bool contains_helper(const Haplotype& haplotype, const Allele& allele)
 {
-    if (!is_insertion(allele)) {
+    if (!is_indel(allele)) {
         return haplotype.contains(allele);
     } else {
         return haplotype.includes(allele);
@@ -370,7 +370,7 @@ bool contains_helper(const Haplotype& haplotype, const Allele& allele)
 
 bool contains_helper(const Genotype<Haplotype>& genotype, const Allele& allele)
 {
-    if (!is_insertion(allele)) {
+    if (!is_indel(allele)) {
         return contains(genotype, allele);
     } else {
         return includes(genotype, allele);
