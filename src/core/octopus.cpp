@@ -1364,12 +1364,8 @@ bool is_stdout_final_output(const GenomeCallingComponents& components)
 bool check_bam_realign(const GenomeCallingComponents& components)
 {
     logging::WarningLogger warn_log {};
-    if (components.samples().size() > 1) {
-        warn_log << "BAM realignment currently only supported for single sample";
-        return false;
-    }
-    if (components.read_manager().num_files() > 1) {
-        warn_log << "BAM realignment currently only supported for single input BAM";
+    if (components.read_manager().num_files() != components.samples().size()) {
+        warn_log << "BAM realignment currently only supported for single sample BAMs";
         return false;
     }
     if (is_stdout_final_output(components)) {
@@ -1469,8 +1465,36 @@ void run_bam_realign(GenomeCallingComponents& components)
     if (is_bam_realignment_requested(components)) {
         if (check_bam_realign(components)) {
             components.read_manager().close();
-            realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
-                    get_bamout_paths(components), components.reference());
+            if (components.read_manager().paths().size() == 1) {
+                realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
+                        get_bamout_paths(components), components.reference());
+            } else {
+                namespace fs = boost::filesystem;
+                const auto bamout_directory = *components.bamout();
+                if (fs::exists(bamout_directory)) {
+                    if (!fs::is_directory(bamout_directory)) {
+                        logging::ErrorLogger error_log {};
+                        stream(error_log) << "The given evidence bam directory " << bamout_directory << " is not a directory";
+                        return;
+                    }
+                } else {
+                    if (!fs::create_directory(bamout_directory)) {
+                        logging::ErrorLogger error_log {};
+                        stream(error_log) << "Failed to create temporary directory " << bamout_directory << " - check permissions";
+                        return;
+                    }
+                }
+                for (const auto& bamin_path : components.read_manager().paths()) {
+                    auto bamout_path = bamout_directory;
+                    bamout_path /= bamin_path.filename();
+                    if (bamin_path != bamout_path) {
+                        realign(bamin_path, get_bam_realignment_vcf(components), bamout_path, components.reference());
+                    } else {
+                        logging::WarningLogger warn_log {};
+                        stream(warn_log) << "Cannot make evidence bam " << bamout_path << " as it is an input bam";
+                    }
+                }
+            }
         }
     }
 }
