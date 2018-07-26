@@ -40,7 +40,7 @@ const std::string& ClassificationConfidence::do_name() const
 
 std::string ClassificationConfidence::do_describe() const
 {
-    return "Posterior probability that call classification is correct";
+    return "PP divided by QUAL";
 }
 
 } // namespace csr
