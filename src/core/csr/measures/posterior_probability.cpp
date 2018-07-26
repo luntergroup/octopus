@@ -4,6 +4,7 @@
 #include "posterior_probability.hpp"
 
 #include "io/variant/vcf_record.hpp"
+#include "io/variant/vcf_spec.hpp"
 
 namespace octopus { namespace csr {
 
@@ -18,7 +19,10 @@ Measure::ResultType PosteriorProbability::do_evaluate(const VcfRecord& call, con
 {
     boost::optional<double> result {};
     if (call.has_info("PP")) {
-        result = std::stod(call.info_value("PP").front());
+        const auto& pp = call.info_value("PP");
+        if (pp.size() == 1 && pp.front() != vcfspec::missingValue) {
+            result = std::stod(pp.front());
+        }
     }
     return result;
 }
