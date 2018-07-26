@@ -303,10 +303,13 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         status = generate_active_haplotypes(call_region, haplotype_generator, active_region,
                                             next_active_region, haplotypes, next_haplotypes);
         if (status == GeneratorStatus::done) {
-            assert(prev_called_region);
-            if (refcalls_requested() && ends_before(*prev_called_region, call_region)) {
-                const auto final_refcall_region = right_overhang_region(call_region, *prev_called_region);
-                utils::append(call_reference(final_refcall_region, reads), result);
+            if (refcalls_requested()) {
+                if (!prev_called_region) {
+                    utils::append(call_reference(call_region, reads), result);
+                } else if (ends_before(*prev_called_region, call_region)) {
+                    const auto final_refcall_region = right_overhang_region(call_region, *prev_called_region);
+                    utils::append(call_reference(final_refcall_region, reads), result);
+                }
             }
             progress_meter.log_completed(active_region);
             break;
