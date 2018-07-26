@@ -25,13 +25,13 @@ DeNovoThresholdVariantCallFilter::DeNovoThresholdVariantCallFilter(FacetFactory 
 : ConditionalThresholdVariantCallFilter {
     std::move(facet_factory),
     {std::move(germline), std::move(denovo), std::move(reference)},
-    {make_wrapped_measure<IsDenovo>(true), make_wrapped_measure<IsRefcall>(true)},
+    {make_wrapped_measure<IsRefcall>(true), make_wrapped_measure<IsDenovo>(false)},
     [] (const MeasureVector& measures) -> std::size_t {
         assert(measures.size() == 2);
-        if (boost::get<bool>(measures.front())) {
-            return 1; // DENOVO sample
-        } else if (boost::get<bool>(measures.back())) {
+        if (boost::get<bool>(measures[0])) {
             return 2; // REFCALL sample
+        } else if (boost::get<bool>(measures[1])) {
+            return 1; // DENOVO call
         } else {
             return 0; // germline variant sample
         }},
@@ -47,14 +47,14 @@ DeNovoThresholdVariantCallFilter::DeNovoThresholdVariantCallFilter(FacetFactory 
 : ConditionalThresholdVariantCallFilter {
     std::move(facet_factory),
     {{{{make_wrapped_measure<IsDenovo>(false), make_wrapped_threshold<EqualThreshold<bool>>(false)}}, {}}, std::move(denovo), std::move(reference)},
-    {make_wrapped_measure<IsDenovo>(false), make_wrapped_measure<IsDenovo>(true), make_wrapped_measure<IsRefcall>(true)},
+    {make_wrapped_measure<IsRefcall>(true), make_wrapped_measure<IsDenovo>(true), make_wrapped_measure<IsDenovo>(false)},
     [] (const MeasureVector& measures) -> std::size_t {
         assert(measures.size() == 3);
-        if (!boost::get<bool>(measures[0])) {
+        if (!boost::get<bool>(measures[2])) {
             return 0; // Not DENOVO call
         } else if (boost::get<bool>(measures[1])) {
             return 1; // DENOVO sample
-        } else if (boost::get<bool>(measures[2])) {
+        } else if (boost::get<bool>(measures[0])) {
             return 2; // DENOVO call REFCALL parent
         } else {
             return 1; // DENOVO call non-REFCALL parent
