@@ -348,6 +348,8 @@ set(CORE_SOURCES
     core/csr/measures/classification_confidence.cpp
     core/csr/measures/somatic_haplotype_count.hpp
     core/csr/measures/somatic_haplotype_count.cpp
+    core/csr/measures/median_somatic_mapping_quality.hpp
+    core/csr/measures/median_somatic_mapping_quality.cpp
 
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
