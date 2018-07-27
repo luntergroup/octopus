@@ -108,6 +108,14 @@ struct VectorIndexGetterVisitor : public boost::static_visitor<Measure::ResultTy
 {
     VectorIndexGetterVisitor(std::size_t idx) : idx_ {idx} {}
     template <typename T> T operator()(const std::vector<T>& value) const noexcept { return value[idx_]; }
+    template <typename T> boost::optional<T> operator()(const boost::optional<std::vector<T>>& value) const noexcept
+    {
+        if (value) {
+            return (*value)[idx_];
+        } else {
+            return boost::none;
+        }
+    }
     template <typename T> T operator()(const T& value) const noexcept { return value; }
 private:
     std::size_t idx_;
