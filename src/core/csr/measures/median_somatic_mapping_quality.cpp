@@ -110,7 +110,7 @@ Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& ca
         if (somatic_samples.empty()) return result;
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
-        if (!somatic_haplotypes.empty()) return result;
+        if (somatic_haplotypes.empty()) return result;
         const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
         std::transform(std::cbegin(samples), std::cend(samples), std::begin(result), [&] (const auto& sample) -> boost::optional<int> {
             if (normal_samples.empty()
