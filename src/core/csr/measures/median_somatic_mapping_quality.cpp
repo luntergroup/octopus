@@ -95,7 +95,7 @@ auto get_somatic_haplotypes(const VcfRecord& somatic, const Facet::GenotypeMap& 
 Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    std::vector<boost::optional<int>> result(samples.size());
+    std::vector<boost::optional<int>> result(samples.size(), boost::none);
     if (is_somatic(call)) {
         const auto somatic_status = boost::get<std::vector<bool>>(IsSomatic(true).evaluate(call, facets));
         std::vector<SampleName> somatic_samples {}, normal_samples {};
@@ -107,26 +107,27 @@ Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& ca
                 normal_samples.push_back(tup.get<0>());
             }
         }
+        if (somatic_samples.empty()) return result;
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
-        if (!somatic_haplotypes.empty()) {
-            const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
-            std::transform(std::cbegin(samples), std::cend(samples), std::begin(result), [&] (const auto& sample) -> boost::optional<int> {
-                if (normal_samples.empty()
-                    || std::find(std::cbegin(somatic_samples), std::cend(somatic_samples), sample) != std::cend(somatic_samples)) {
-                    std::vector<AlignedRead::MappingQuality> somatic_mqs {};
-                    for (const auto& haplotype : somatic_haplotypes) {
-                        const auto& somatic_support = assignments.at(sample).at(haplotype);
-                        somatic_mqs.reserve(somatic_mqs.size() + somatic_support.size());
-                        std::transform(std::cbegin(somatic_support), std::cend(somatic_support), std::back_inserter(somatic_mqs),
-                                       [] (const AlignedRead& read) { return read.mapping_quality(); });
-                    }
-                    return maths::median(somatic_mqs);
-                } else {
-                    return boost::none;
+        if (!somatic_haplotypes.empty()) return result;
+        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
+        std::transform(std::cbegin(samples), std::cend(samples), std::begin(result), [&] (const auto& sample) -> boost::optional<int> {
+            if (normal_samples.empty()
+                || std::find(std::cbegin(somatic_samples), std::cend(somatic_samples), sample) != std::cend(somatic_samples)) {
+                std::vector<AlignedRead::MappingQuality> somatic_mqs {};
+                for (const auto& haplotype : somatic_haplotypes) {
+                    const auto& somatic_support = assignments.at(sample).at(haplotype);
+                    somatic_mqs.reserve(somatic_mqs.size() + somatic_support.size());
+                    std::transform(std::cbegin(somatic_support), std::cend(somatic_support), std::back_inserter(somatic_mqs),
+                                   [] (const AlignedRead& read) { return read.mapping_quality(); });
                 }
-            });
-        }
+                if (!somatic_mqs.empty()) {
+                    return maths::median(somatic_mqs);
+                }
+            }
+            return boost::none;
+        });
     }
     return result;
 }
