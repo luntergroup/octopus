@@ -134,7 +134,7 @@ Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& ca
 
 Measure::ResultCardinality MedianSomaticMappingQuality::do_cardinality() const noexcept
 {
-    return ResultCardinality::one;
+    return ResultCardinality::num_samples;
 }
 
 const std::string& MedianSomaticMappingQuality::do_name() const
