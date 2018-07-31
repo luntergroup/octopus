@@ -933,10 +933,17 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
             reset_next_active_region();
             novel_active_region = right_overhang_region(active_region_, active_region_before_holdout);
             if (begins_before(novel_active_region, novel_region_before_holdout)) {
-                assert(!is_before(novel_active_region, novel_region_before_holdout));
-                novel_active_region = closed_region(novel_region_before_holdout, novel_active_region);
+                if (!is_before(novel_active_region, novel_region_before_holdout)) {
+                    novel_active_region = closed_region(novel_region_before_holdout, novel_active_region);
+                }
             }
             novel_active_alleles = overlap_range(alleles_, novel_active_region);
+            assert(!empty(novel_active_alleles));
+            while (begins_before(novel_active_alleles.front(), active_region_before_holdout)
+                   && ends_before(novel_active_alleles.front(), novel_active_region)) {
+                novel_active_alleles.advance_begin(1);
+                assert(!empty(novel_active_alleles));
+            }
             last_added_novel_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
             if (overlaps(active_region_, top_holdout_region())) {
                 next_holdout_region = *overlapped_region(active_region_, top_holdout_region());
