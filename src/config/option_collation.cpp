@@ -400,14 +400,80 @@ InputRegionMap extract_search_regions(const ReferenceGenome& reference,
 {
     return extract_search_regions(get_all_contig_regions(reference), skip_regions);
 }
-        
-std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparsed_regions,
-                                         const ReferenceGenome& reference)
+
+bool is_region_range(const std::vector<std::string>& unparsed_regions, const ReferenceGenome& reference)
+{
+    return unparsed_regions.size() == 3 && unparsed_regions[1] == "to" && !reference.has_contig("to");
+}
+
+class BadRegionRange : public UserError
+{
+    std::string do_where() const override
+    {
+        return "make_region_range";
+    }
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "The region " << lhs_ << " is after " << rhs_;
+        if (!is_same_contig(lhs_, rhs_)) {
+            ss << " in reference index";
+        }
+        return ss.str();
+    }
+    std::string do_help() const override
+    {
+        return "Ensure the region range format is <lhs> to <rhs> where lhs occurs before rhs in the reference index";
+    }
+    
+    GenomicRegion lhs_, rhs_;
+public:
+    BadRegionRange(GenomicRegion lhs, GenomicRegion rhs) : lhs_ {lhs}, rhs_ {rhs} {}
+};
+
+std::vector<GenomicRegion> make_region_range(GenomicRegion lhs, GenomicRegion rhs, const ReferenceGenome& reference)
+{
+    assert(reference.has_contig(lhs.contig_name()) && reference.has_contig(rhs.contig_name()));
+    std::vector<GenomicRegion> result {};
+    if (is_same_contig(lhs, rhs)) {
+        if (lhs == rhs || (begins_before(lhs, rhs) && ends_before(lhs, rhs))) {
+            result.push_back(closed_region(lhs, rhs));
+        } else {
+            throw BadRegionRange {lhs, rhs};
+        }
+    } else {
+        auto reference_contigs = reference.contig_names();
+        const auto lhs_itr = std::find(std::cbegin(reference_contigs), std::cend(reference_contigs), lhs.contig_name());
+        assert(lhs_itr != std::cend(reference_contigs));
+        const auto rhs_itr = std::find(std::next(lhs_itr), std::cend(reference_contigs), rhs.contig_name());
+        if (rhs_itr != std::cend(reference_contigs)) {
+            result.reserve(std::distance(lhs_itr, rhs_itr) + 1);
+            result.emplace_back(lhs.contig_name(), lhs.begin(), reference.contig_region(lhs.contig_name()).end());
+            std::transform(std::next(lhs_itr), rhs_itr, std::back_inserter(result),
+                           [&] (const auto& contig) { return reference.contig_region(contig); });
+            result.emplace_back(rhs.contig_name(), 0, rhs.end());
+        } else {
+            throw BadRegionRange {lhs, rhs};
+        }
+    }
+    return result;
+}
+
+std::vector<GenomicRegion> parse_region_range(const std::string& lhs, const std::string& rhs, const ReferenceGenome& reference)
+{
+    return make_region_range(io::parse_region(lhs, reference), io::parse_region(rhs, reference), reference);
+}
+
+std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparsed_regions, const ReferenceGenome& reference)
 {
     std::vector<GenomicRegion> result {};
-    result.reserve(unparsed_regions.size());
-    for (const auto& unparsed_region : unparsed_regions) {
-        result.push_back(io::parse_region(unparsed_region, reference));
+    if (is_region_range(unparsed_regions, reference)) {
+        result = parse_region_range(unparsed_regions.front(), unparsed_regions.back(), reference);
+    } else {
+        result.reserve(unparsed_regions.size());
+        for (const auto& unparsed_region : unparsed_regions) {
+            result.push_back(io::parse_region(unparsed_region, reference));
+        }
     }
     return result;
 }
