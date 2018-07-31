@@ -36,5 +36,6 @@
 #include "core/csr/measures/posterior_probability_by_depth.hpp"
 #include "core/csr/measures/classification_confidence.hpp"
 #include "core/csr/measures/somatic_haplotype_count.hpp"
+#include "core/csr/measures/median_somatic_mapping_quality.hpp"
 
 #endif

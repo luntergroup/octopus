@@ -47,6 +47,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<PosteriorProbabilityByDepth>()] = [] () { return make_wrapped_measure<PosteriorProbabilityByDepth>(); };
     measure_makers[name<ClassificationConfidence>()]    = [] () { return make_wrapped_measure<ClassificationConfidence>(); };
     measure_makers[name<SomaticHaplotypeCount>()]       = [] () { return make_wrapped_measure<SomaticHaplotypeCount>(); };
+    measure_makers[name<MedianSomaticMappingQuality>()] = [] () { return make_wrapped_measure<MedianSomaticMappingQuality>(); };
 }
 
 class UnknownMeasure : public UserError
