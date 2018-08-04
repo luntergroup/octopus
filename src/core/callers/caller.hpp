@@ -132,7 +132,7 @@ private:
     virtual std::string do_name() const = 0;
     virtual CallTypeSet do_call_types() const = 0;
     virtual unsigned do_min_callable_ploidy() const { return 1; }
-    virtual unsigned do_max_callable_ploidy() const { return max_callable_ploidy(); };
+    virtual unsigned do_max_callable_ploidy() const { return min_callable_ploidy(); };
 
 protected:
     virtual std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const;
