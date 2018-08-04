@@ -10,6 +10,7 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
+#include "basics/aligned_read.hpp"
 #include "io/read/read_manager.hpp"
 #include "readpipe/read_pipe.hpp"
 
@@ -27,17 +28,21 @@ struct ReadSetProfile
     std::size_t mean_depth, depth_stdev;
     std::vector<std::size_t> sample_mean_depth;
     std::vector<std::size_t> sample_depth_stdev;
+    AlignedRead::NucleotideSequence::size_type max_read_length, median_read_length;
+    AlignedRead::MappingQuality max_mapping_quality;
 };
 
-boost::optional<ReadSetProfile> profile_reads(const std::vector<SampleName>& samples,
-                                              const InputRegionMap& input_regions,
-                                              const ReadManager& source,
-                                              ReadSetProfileConfig config = ReadSetProfileConfig {});
+boost::optional<ReadSetProfile>
+profile_reads(const std::vector<SampleName>& samples,
+              const InputRegionMap& input_regions,
+              const ReadManager& source,
+              ReadSetProfileConfig config = ReadSetProfileConfig {});
 
-boost::optional<std::size_t> estimate_mean_read_size(const std::vector<SampleName>& samples,
-                                                     const InputRegionMap& input_regions,
-                                                     ReadManager& read_manager,
-                                                     unsigned max_sample_size = 1000);
+boost::optional<std::size_t>
+estimate_mean_read_size(const std::vector<SampleName>& samples,
+                        const InputRegionMap& input_regions,
+                        ReadManager& read_manager,
+                        unsigned max_sample_size = 1000);
 
 std::size_t default_read_size_estimate() noexcept;
 
