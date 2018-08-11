@@ -12,6 +12,7 @@
 #include <type_traits>
 
 #include <boost/range/algorithm.hpp>
+#include <boost/optional.hpp>
 
 #include "basics/aligned_read.hpp"
 #include "containers/mappable_map.hpp"
@@ -169,6 +170,44 @@ std::size_t count_reverse(const T& reads, const GenomicRegion& region, NonMapTag
     static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
     const auto overlapped = overlap_range(reads, region);
     return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsReverse {});
+}
+
+struct IsShorter
+{
+    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
+    {
+        return sequence_size(lhs) < sequence_size(rhs);
+    }
+};
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type min_read_length(const T& reads, NonMapTag)
+{
+    if (reads.empty()) return 0;
+    return sequence_size(*std::min_element(std::cbegin(reads), std::cend(reads), IsShorter {}));
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type min_read_length(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    const auto overlapped = overlap_range(reads, region);
+    if (empty(overlapped)) return 0;
+    return sequence_size(*std::min_element(std::cbegin(overlapped), std::cend(overlapped), IsShorter {}));
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type max_read_length(const T& reads, NonMapTag)
+{
+    if (reads.empty()) return 0;
+    return sequence_size(*std::min_element(std::cbegin(reads), std::cend(reads), IsShorter {}));
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type max_read_length(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    const auto overlapped = overlap_range(reads, region);
+    if (empty(overlapped)) return 0;
+    return sequence_size(*std::max_element(std::cbegin(overlapped), std::cend(overlapped), IsShorter {}));
 }
 
 template <typename T>
@@ -504,6 +543,90 @@ std::size_t count_reverse(const T& reads, const GenomicRegion& region, MapTag)
 }
 
 template <typename T>
+AlignedRead::NucleotideSequence::size_type min_read_length(const T& reads, MapTag)
+{
+    boost::optional<AlignedRead::NucleotideSequence::size_type> min_length {};
+    for (const auto& p : reads) {
+        if (!p.second.empty()) {
+            auto l = min_read_length(p.second, NonMapTag {});
+            if (min_length) {
+                min_length = std::min(*min_length, l);
+            } else {
+                min_length = l;
+            }
+        }
+    }
+    if (min_length) {
+        return *min_length;
+    } else {
+        return 0;
+    }
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type min_read_length(const T& reads, const GenomicRegion& region, MapTag)
+{
+    boost::optional<AlignedRead::NucleotideSequence::size_type> min_length {};
+    for (const auto& p : reads) {
+        if (!p.second.empty()) {
+            auto l = min_read_length(p.second, region, NonMapTag {});
+            if (min_length) {
+                min_length = std::min(*min_length, l);
+            } else {
+                min_length = l;
+            }
+        }
+    }
+    if (min_length) {
+        return *min_length;
+    } else {
+        return 0;
+    }
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type max_read_length(const T& reads, MapTag)
+{
+    boost::optional<AlignedRead::NucleotideSequence::size_type> max_length {};
+    for (const auto& p : reads) {
+        if (!p.second.empty()) {
+            auto l = max_read_length(p.second, NonMapTag {});
+            if (max_length) {
+                max_length = std::min(*max_length, l);
+            } else {
+                max_length = l;
+            }
+        }
+    }
+    if (max_length) {
+        return *max_length;
+    } else {
+        return 0;
+    }
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type max_read_length(const T& reads, const GenomicRegion& region, MapTag)
+{
+    boost::optional<AlignedRead::NucleotideSequence::size_type> max_length {};
+    for (const auto& p : reads) {
+        if (!p.second.empty()) {
+            auto l = max_read_length(p.second, region, NonMapTag {});
+            if (max_length) {
+                max_length = std::min(*max_length, l);
+            } else {
+                max_length = l;
+            }
+        }
+    }
+    if (max_length) {
+        return *max_length;
+    } else {
+        return 0;
+    }
+}
+
+template <typename T>
 std::size_t count_base_pairs(const T& reads, MapTag)
 {
     return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
@@ -772,6 +895,30 @@ template <typename T>
 std::size_t count_reverse(const T& reads, const GenomicRegion& region)
 {
     return detail::count_reverse(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type min_read_length(const T& reads)
+{
+    return detail::min_read_length(reads, MapTagType<T> {});
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type min_read_length(const T& reads, const GenomicRegion& region)
+{
+    return detail::min_read_length(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type max_read_length(const T& reads)
+{
+    return detail::max_read_length(reads, MapTagType<T> {});
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type max_read_length(const T& reads, const GenomicRegion& region)
+{
+    return detail::max_read_length(reads, region, MapTagType<T> {});
 }
 
 template <typename T>

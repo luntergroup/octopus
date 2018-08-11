@@ -84,11 +84,18 @@ void realign(AlignedRead& read, const Haplotype& haplotype, HaplotypeLikelihoodM
     realign(read, haplotype, alignment.mapping_position, std::move(alignment.cigar));
 }
 
+HaplotypeLikelihoodModel make_default_haplotype_likelihood_model()
+{
+    HaplotypeLikelihoodModel::Config config {};
+    config.use_mapping_quality = false;
+    return {nullptr, make_indel_error_model(), config};
+}
+
 } // namespace
 
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
-    realign(reads, haplotype, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false});
+    realign(reads, haplotype, make_default_haplotype_likelihood_model());
 }
 
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
@@ -116,7 +123,7 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
 
 std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
-    return realign(reads, haplotype, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false});
+    return realign(reads, haplotype, make_default_haplotype_likelihood_model());
 }
 
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)

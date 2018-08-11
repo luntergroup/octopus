@@ -243,6 +243,13 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
     return compute_haplotype_support(genotype, reads, ambiguous, {}, model, config);
 }
 
+static HaplotypeLikelihoodModel make_default_haplotype_likelihood_model()
+{
+    HaplotypeLikelihoodModel::Config config {};
+    config.use_mapping_quality = false;
+    return {nullptr, make_indel_error_model(), config};
+}
+
 HaplotypeSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedRead>& reads,
@@ -250,7 +257,7 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const HaplotypeProbabilityMap& log_priors,
                           AssignmentConfig config)
 {
-    HaplotypeLikelihoodModel model {nullptr, make_indel_error_model(), false};
+    auto model = make_default_haplotype_likelihood_model();
     return compute_haplotype_support(genotype, reads, log_priors, model, ambiguous, config);
 }
 
@@ -260,7 +267,7 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           std::deque<AlignedRead>& ambiguous,
                           AssignmentConfig config)
 {
-    HaplotypeLikelihoodModel model {nullptr, make_indel_error_model(), false};
+    auto model = make_default_haplotype_likelihood_model();
     return compute_haplotype_support(genotype, reads, model, ambiguous, config);
 }
 
@@ -270,7 +277,7 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const HaplotypeProbabilityMap& log_priors,
                           AssignmentConfig config)
 {
-    HaplotypeLikelihoodModel model {nullptr, make_indel_error_model(), false};
+    auto model = make_default_haplotype_likelihood_model();
     return compute_haplotype_support(genotype, reads, log_priors, model, boost::none, config);
 }
 
@@ -279,7 +286,7 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedRead>& reads,
                           AssignmentConfig config)
 {
-    HaplotypeLikelihoodModel model {nullptr, make_indel_error_model(), false};
+    auto model = make_default_haplotype_likelihood_model();
     return compute_haplotype_support(genotype, reads, model, config);
 }
 

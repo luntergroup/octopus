@@ -13,6 +13,7 @@
 #include "mappable_algorithms.hpp"
 #include "maths.hpp"
 #include "append.hpp"
+#include "read_stats.hpp"
 
 namespace octopus {
 
@@ -148,10 +149,11 @@ auto get_read_bytes(const std::vector<ReadSetSamples>& read_sets)
 
 } // namespace
 
-boost::optional<ReadSetProfile> profile_reads(const std::vector<SampleName>& samples,
-                                              const InputRegionMap& input_regions,
-                                              const ReadManager& source,
-                                              ReadSetProfileConfig config)
+boost::optional<ReadSetProfile>
+profile_reads(const std::vector<SampleName>& samples,
+              const InputRegionMap& input_regions,
+              const ReadManager& source,
+              ReadSetProfileConfig config)
 {
     if (input_regions.empty()) return boost::none;
     const auto sampling_regions = get_covered_sample_regions(samples, input_regions, source);
@@ -165,12 +167,17 @@ boost::optional<ReadSetProfile> profile_reads(const std::vector<SampleName>& sam
     result.read_bytes_stdev = maths::stdev(bytes);
     result.sample_mean_depth.resize(samples.size());
     result.sample_depth_stdev.resize(samples.size());
+    result.max_mapping_quality = 0;
     std::deque<unsigned> depths {};
+    std::vector<unsigned> read_lengths {};
     for (std::size_t s {0}; s < samples.size(); ++s) {
         std::deque<unsigned> sample_depths {};
         for (const auto& reads : read_sets[s]) {
             if (!reads.empty()) {
                 utils::append(calculate_positional_coverage(reads), sample_depths);
+                read_lengths.reserve(read_lengths.size() + reads.size());
+                std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(read_lengths),
+                               [] (const auto& read) { return sequence_size(read); });
             }
         }
         if (!sample_depths.empty()) {
@@ -185,13 +192,16 @@ boost::optional<ReadSetProfile> profile_reads(const std::vector<SampleName>& sam
     assert(!depths.empty());
     result.mean_depth = maths::mean(depths);
     result.depth_stdev = maths::stdev(depths);
+    result.max_read_length = *std::max_element(std::cbegin(read_lengths), std::cend(read_lengths));
+    result.median_read_length = maths::median(read_lengths);
     return result;
 }
 
-boost::optional<std::size_t> estimate_mean_read_size(const std::vector<SampleName>& samples,
-                                                     const InputRegionMap& input_regions,
-                                                     ReadManager& read_manager,
-                                                     const unsigned max_sample_size)
+boost::optional<std::size_t>
+estimate_mean_read_size(const std::vector<SampleName>& samples,
+                        const InputRegionMap& input_regions,
+                        ReadManager& read_manager,
+                        const unsigned max_sample_size)
 {
     if (input_regions.empty()) return boost::none;
     const auto sample_regions = get_covered_sample_regions(samples, input_regions, read_manager);

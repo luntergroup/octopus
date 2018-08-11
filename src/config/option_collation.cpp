@@ -1551,14 +1551,42 @@ auto make_snv_error_model(const OptionMap& options)
     }
 }
 
-HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options)
+AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+{
+    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
+    if (read_profile) {
+        if (read_profile->median_read_length > 200) {
+            return 2 * minimum;
+        } else {
+            return std::max(read_profile->max_mapping_quality, minimum);
+        }
+    } else {
+        return minimum;
+    }
+}
+
+AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+{
+    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
+    if (read_profile) {
+        return std::max(read_profile->max_mapping_quality, minimum);
+    } else {
+        return minimum;
+    }
+}
+
+HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
     auto snv_error_model = make_snv_error_model(options);
     auto indel_error_model = make_indel_error_model(options);
-    auto model_mapping_quality = options.at("model-mapping-quality").as<bool>();
-    auto use_flank_state = allow_flank_scoring(options);
-    return HaplotypeLikelihoodModel {std::move(snv_error_model), std::move(indel_error_model),
-                                     model_mapping_quality, use_flank_state};
+    HaplotypeLikelihoodModel::Config config {};
+    config.use_mapping_quality = options.at("model-mapping-quality").as<bool>();
+    config.use_flank_state = allow_flank_scoring(options);
+    if (config.use_mapping_quality) {
+        config.mapping_quality_cap = calculate_mapping_quality_cap(options, read_profile);
+        config.mapping_quality_cap_trigger = calculate_mapping_quality_cap_trigger(options, read_profile);
+    }
+    return HaplotypeLikelihoodModel {std::move(snv_error_model), std::move(indel_error_model), config};
 }
 
 bool allow_model_filtering(const OptionMap& options)
@@ -1579,11 +1607,11 @@ auto get_normal_contamination_risk(const OptionMap& options)
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
-                                  const boost::optional<ReadSetProfile> input_reads_profile)
+                                  const boost::optional<ReadSetProfile> read_profile)
 {
     CallerBuilder vc_builder {reference, read_pipe,
                               make_variant_generator_builder(options),
-                              make_haplotype_generator_builder(options, input_reads_profile)};
+                              make_haplotype_generator_builder(options, read_profile)};
 	const auto pedigree = read_ped_file(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
     check_caller(caller, read_pipe.samples(), options);
@@ -1664,7 +1692,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
     }
-    vc_builder.set_likelihood_model(make_likelihood_model(options));
+    vc_builder.set_likelihood_model(make_likelihood_model(options, read_profile));
     return CallerFactory {std::move(vc_builder)};
 }
 
