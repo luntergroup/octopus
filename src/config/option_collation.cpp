@@ -1551,20 +1551,21 @@ auto make_snv_error_model(const OptionMap& options)
     }
 }
 
-auto calculate_mapping_quality_cap(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
+    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
     if (read_profile) {
         if (read_profile->median_read_length > 200) {
-            return 120;
+            return 2 * minimum;
         } else {
-            return 80;
+            return std::max(read_profile->max_mapping_quality, minimum);
         }
     } else {
-        return 60;
+        return minimum;
     }
 }
 
-auto calculate_mapping_quality_cap_trigger(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
     constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
     if (read_profile) {
