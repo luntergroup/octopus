@@ -35,7 +35,7 @@ def get_value(rec, feature):
     elif feature in rec.info:
         val = rec.info[feature]
         if type(val) == tuple:
-            return to_float(val[0]), to_float(val[1])
+            return tuple([to_float(v) for v in val])
         else:
             return to_float(val)
     elif feature in rec.samples[0]:
@@ -152,17 +152,19 @@ def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out)
 def main(options):
     if not exists(options.out):
         makedirs(options.out)
-    somatic_vcf_path = join(options.out, basename(options.variants).replace('.vcf', 'SOMATIC.tmp.vcf'))
-    filter_somatic(options.variants, somatic_vcf_path)
-    call(['tabix', somatic_vcf_path])
-    tp_vcf_path, fp_vcf_path = classify_calls(somatic_vcf_path, options.truth, options.out, options.regions)
-    remove(somatic_vcf_path)
-    remove(somatic_vcf_path + ".tbi")
     master_data_path = join(options.out, options.prefix + ".dat")
-    num_tps = make_ranger_data(tp_vcf_path, options.measures, True, master_data_path, options.missing_value)
-    num_fps = make_ranger_data(fp_vcf_path, options.measures, False, master_data_path, options.missing_value)
-    remove(tp_vcf_path)
-    remove(fp_vcf_path)
+    num_tps, num_fps = 0, 0
+    for callset in options.variants:
+        somatic_vcf_path = join(options.out, basename(callset).replace('.vcf', 'SOMATIC.tmp.vcf'))
+        filter_somatic(callset, somatic_vcf_path)
+        call(['tabix', somatic_vcf_path])
+        tp_vcf_path, fp_vcf_path = classify_calls(somatic_vcf_path, options.truth, options.out, options.regions)
+        remove(somatic_vcf_path)
+        remove(somatic_vcf_path + ".tbi")
+        num_tps += make_ranger_data(tp_vcf_path, options.measures, True, master_data_path, options.missing_value)
+        num_fps += make_ranger_data(fp_vcf_path, options.measures, False, master_data_path, options.missing_value)
+        remove(tp_vcf_path)
+        remove(fp_vcf_path)
     print("Number of TP examples: " + str(num_tps))
     print("Number of FP examples: " + str(num_fps))
     shuffle(master_data_path)
@@ -176,8 +178,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-V', '--variants',
                         type=str,
+                        nargs='+',
                         required=True,
-                        help='Octopus calls with CSR annotations')
+                        help='Octopus cancer calling model calls with CSR annotations')
     parser.add_argument('-T', '--regions',
                         type=str,
                         required=True,
@@ -195,6 +198,10 @@ if __name__ == '__main__':
                         type=str,
                         required=True,
                         help='Ranger binary')
+    parser.add_argument('-o', '--out',
+                        type=str,
+                        required=True,
+                        help='Output directory')
     parser.add_argument('--trees',
                         type=int,
                         default=300,
@@ -203,9 +210,6 @@ if __name__ == '__main__':
                         type=int,
                         default=20,
                         help='Node size to stop growing trees, implicitly limiting tree depth')
-    parser.add_argument('-o', '--out',
-                        type=str,
-                        help='Output directory')
     parser.add_argument('--prefix',
                         type=str,
                         default='ranger_octopus',
