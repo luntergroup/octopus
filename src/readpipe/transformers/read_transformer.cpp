@@ -41,7 +41,7 @@ struct ReadTemplateLess
 {
     bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
     {
-        return lhs.name() < rhs.name();
+        return lhs.name() == rhs.name() ? lhs < rhs : lhs.name() < rhs.name();
     }
 };
 
