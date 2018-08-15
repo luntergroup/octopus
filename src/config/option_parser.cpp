@@ -420,7 +420,8 @@ OptionMap parse_options(const int argc, const char** argv)
     ("contig-ploidies,p",
      po::value<std::vector<ContigPloidy>>()->multitoken()
      ->default_value(std::vector<ContigPloidy> {
-        {boost::none, "Y", 1}, {boost::none, "MT", 1}}, "Y=1 MT=1")
+        {boost::none, "Y", 1}, {boost::none, "chrY", 1},
+        {boost::none, "MT", 1}, {boost::none, "chrM", 1}}, "Y=1 chrY=1 MT=1 chrM=1")
      ->composing(),
      "Space-separated list of contig (contig=ploidy) or sample contig"
      " (sample:contig=ploidy) ploidies")
