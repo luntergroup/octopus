@@ -651,7 +651,7 @@ auto find_rightmost_expanded(const std::vector<GenomicRegion>& blocks, const Map
 auto expand_lhs_by_max_ref_dist(const GenomicRegion& region, const MappableFlatSet<Allele>& alleles, const HaplotypeTree tree)
 {
     const auto max_ref_dist = max_ref_distance(region, alleles, tree);
-    return expand_lhs(region, std::min(max_ref_dist, static_cast<decltype(max_ref_dist)>(region.begin())));
+    return expand_lhs(region, std::min(max_ref_dist, static_cast<std::remove_const_t<decltype(max_ref_dist)>>(region.begin())));
 }
 
 auto get_leftmost_expanded(const std::vector<GenomicRegion>& blocks, const MappableFlatSet<Allele>& alleles,
