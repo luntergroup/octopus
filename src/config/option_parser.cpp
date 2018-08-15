@@ -405,6 +405,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("dedup-haplotypes-with-prior-model",
      po::value<bool>()->default_value(true),
      "Remove duplicate haplotypes using mutation prior model")
+    
+    ("protect-reference-haplotype",
+     po::value<bool>()->default_value(true),
+     "Protect the reference haplotype from filtering")
     ;
     
     po::options_description caller("Calling (general)");

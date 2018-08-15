@@ -277,6 +277,24 @@ void merge_unique(std::vector<T>&& src, std::vector<T>& dst)
     dst.erase(std::unique(std::begin(dst), std::end(dst)), std::end(dst));
 }
 
+template <typename T>
+auto insert_sorted(const T& val, std::deque<T>& dst)
+{
+    return dst.insert(std::upper_bound(std::begin(dst), std::end(dst), val), val);
+}
+
+template <typename Container>
+auto find_reference(const Container& haplotypes)
+{
+    return std::find_if(std::cbegin(haplotypes), std::cend(haplotypes), [] (const auto& haplotype) { return is_reference(haplotype); });
+}
+
+template <typename Container>
+bool has_reference(const Container& haplotypes)
+{
+    return find_reference(haplotypes) != std::cend(haplotypes);
+}
+
 } // namespace
 
 std::deque<CallWrapper>
@@ -335,6 +353,12 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
             std::sort(std::begin(haplotypes), std::end(haplotypes));
             remap_each(protected_haplotypes, haplotype_region(haplotypes));
             std::sort(std::begin(protected_haplotypes), std::end(protected_haplotypes));
+        }
+        if (parameters_.protect_reference_haplotype && !has_reference(protected_haplotypes)) {
+            const auto reference_haplotype_itr = find_reference(haplotypes);
+            if (reference_haplotype_itr != std::cend(haplotypes)) {
+                insert_sorted(*reference_haplotype_itr, protected_haplotypes);
+            }
         }
         auto has_removal_impact = filter_haplotypes(haplotypes, haplotype_generator, haplotype_likelihoods, protected_haplotypes);
         if (haplotypes.empty()) continue;
@@ -965,9 +989,18 @@ Caller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
                                  const Caller::Latents::HaplotypeProbabilityMap& haplotype_posteriors,
                                  const std::deque<Haplotype>& protected_haplotypes, const unsigned max_to_remove) const
 {
+    if (debug_log_) {
+        stream(*debug_log_) << "Protecting " << protected_haplotypes.size() << " haplotypes from filtering";
+    }
     if (protected_haplotypes.empty()) {
         return extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
                                  max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
+    } else if (protected_haplotypes.size() == 1 && parameters_.protect_reference_haplotype && is_reference(protected_haplotypes.front())) {
+        auto result = extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
+                                        max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
+        auto reference_itr = find_reference(result);
+        if (reference_itr != std::cend(result)) result.erase(reference_itr);
+        return result;
     } else {
         std::vector<Haplotype> removable_haplotypes {};
         removable_haplotypes.reserve(haplotypes.size());
@@ -976,6 +1009,9 @@ Caller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
         std::set_difference(std::cbegin(haplotypes), std::cend(haplotypes),
                             std::cbegin(protected_haplotypes), std::cend(protected_haplotypes),
                             std::back_inserter(removable_haplotypes));
+        if (debug_log_) {
+            stream(*debug_log_) << "There are " << removable_haplotypes.size() << " removable haplotypes";
+        }
         return extract_removable(removable_haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
                                  max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
     }
