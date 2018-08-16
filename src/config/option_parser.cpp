@@ -405,6 +405,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("dedup-haplotypes-with-prior-model",
      po::value<bool>()->default_value(true),
      "Remove duplicate haplotypes using mutation prior model")
+    
+    ("protect-reference-haplotype",
+     po::value<bool>()->default_value(true),
+     "Protect the reference haplotype from filtering")
     ;
     
     po::options_description caller("Calling (general)");
@@ -420,7 +424,8 @@ OptionMap parse_options(const int argc, const char** argv)
     ("contig-ploidies,p",
      po::value<std::vector<ContigPloidy>>()->multitoken()
      ->default_value(std::vector<ContigPloidy> {
-        {boost::none, "Y", 1}, {boost::none, "MT", 1}}, "Y=1 MT=1")
+        {boost::none, "Y", 1}, {boost::none, "chrY", 1},
+        {boost::none, "MT", 1}, {boost::none, "chrM", 1}}, "Y=1 chrY=1 MT=1 chrM=1")
      ->composing(),
      "Space-separated list of contig (contig=ploidy) or sample contig"
      " (sample:contig=ploidy) ploidies")

@@ -113,6 +113,7 @@ public:
         unsigned max_haplotypes;
         Phred<double> haplotype_extension_threshold, saturation_limit;
         bool allow_model_filtering;
+        bool protect_reference_haplotype;
     };
     
 private:

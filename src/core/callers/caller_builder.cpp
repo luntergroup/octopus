@@ -103,6 +103,12 @@ CallerBuilder& CallerBuilder::set_sites_only() noexcept
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_reference_haplotype_protection(bool b) noexcept
+{
+    params_.general.protect_reference_haplotype = b;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_min_variant_posterior(Phred<double> posterior) noexcept
 {
     params_.min_variant_posterior = posterior;

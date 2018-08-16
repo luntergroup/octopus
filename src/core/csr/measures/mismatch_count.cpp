@@ -49,7 +49,7 @@ Measure::ResultType MismatchCount::do_evaluate(const VcfRecord& call, const Face
         std::vector<Allele> alleles; bool has_ref;
         std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
         int sample_result {0};
-        if (alleles.empty()) {
+        if (!alleles.empty()) {
             const auto sample_allele_support = compute_allele_support(alleles, assignments.support.at(sample));
             for (const auto& p : sample_allele_support) {
                 for (const auto& read : p.second) {

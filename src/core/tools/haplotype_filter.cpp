@@ -383,11 +383,14 @@ extract_removable(const std::vector<Haplotype>& haplotypes,
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::back_inserter;
     std::vector<std::pair<HaplotypeReference, double>> sorted {};
     sorted.reserve(haplotypes.size());
-    std::copy(cbegin(haplotype_posteriors), cend(haplotype_posteriors), back_inserter(sorted));
-    auto first_safe = std::partition(begin(sorted), end(sorted),
-                                     [min_posterior] (const auto& p) {
-                                         return p.second < min_posterior;
-                                     });
+    if (haplotypes.size() == haplotype_posteriors.size()) {
+        std::copy(cbegin(haplotype_posteriors), cend(haplotype_posteriors), back_inserter(sorted));
+    } else {
+        for (const auto& haplotype : haplotypes) {
+            sorted.push_back(*haplotype_posteriors.find(haplotype));
+        }
+    }
+    auto first_safe = std::partition(begin(sorted), end(sorted), [=] (const auto& p) { return p.second < min_posterior; });
     auto num_unsafe = static_cast<std::size_t>(std::distance(begin(sorted), first_safe));
     const auto extractor = [] (const auto& p) { return p.first; };
     if (static_cast<std::size_t>(std::distance(begin(sorted), first_safe)) > max_to_remove) {
