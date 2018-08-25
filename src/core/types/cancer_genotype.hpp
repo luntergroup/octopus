@@ -227,7 +227,7 @@ Genotype<MappableType> demote(const CancerGenotype<MappableType>& genotype)
     }
     return result;
 }
-    
+
 template <typename MappableType>
 bool operator==(const CancerGenotype<MappableType>& lhs, const CancerGenotype<MappableType>& rhs)
 {

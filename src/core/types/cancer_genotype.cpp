@@ -33,12 +33,17 @@ bool is_proper_somatic_genotype(const Genotype<Haplotype>& genotype)
     return genotype.zygosity() == genotype.ploidy();
 }
 
+bool is_improper_somatic_genotype(const Genotype<Haplotype>& genotype)
+{
+    return !is_proper_somatic_genotype(genotype);
+}
+
 std::vector<Genotype<Haplotype>> generate_somatic_genotypes(const std::vector<Haplotype>& haplotypes,
                                                             const unsigned ploidy)
 {
     auto result = generate_all_genotypes(haplotypes, ploidy);
     if (ploidy > 1) {
-        auto itr = std::remove_if(std::begin(result), std::end(result), is_proper_somatic_genotype);
+        auto itr = std::remove_if(std::begin(result), std::end(result), is_improper_somatic_genotype);
         result.erase(itr, std::end(result));
     }
     return result;
