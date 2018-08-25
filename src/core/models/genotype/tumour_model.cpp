@@ -386,18 +386,9 @@ auto generate_targetted_seeds(const std::vector<CancerGenotype<Haplotype>>& geno
         }
         std::transform(dummy_block_start_itr, dummy_block_end_itr, std::back_inserter(selected_germline_genotypes),
                        [&] (const auto& p) { return genotypes[p.second].germline(); });
-//        selected_germline_genotypes.push_back(genotypes[dummy_block_start_itr->second].germline());
         break; // TODO: how many germline genotypes to use?
         dummy_block_start_itr = dummy_block_end_itr;
     }
-    
-//    if (genotypes.size() == 8327) {
-//        std::cout << "Top 200 genotype likelihoods:" << std::endl;
-//        std::for_each(std::cbegin(dummy_log_likelihoods), std::next(std::cbegin(dummy_log_likelihoods), 200), [&] (const auto& p) {
-//            std::cout << p.second << ": "; octopus::debug::print_variant_alleles(genotypes[p.second]); std::cout << " " << p.first << std::endl;
-//        });
-//    }
-    
     for (const auto& germline : selected_germline_genotypes) {
         result.push_back(make_range_seed(genotypes, germline));
         --n;
