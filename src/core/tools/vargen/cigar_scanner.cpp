@@ -550,7 +550,7 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
         erase_below(observed_qualities, 15);
-        const auto vaf = static_cast<double>(observed_qualities.size()) / depth;
+        const auto vaf = static_cast<double>(observed_qualities.size()) / (depth - std::sqrt(depth));
         if (observed_qualities.size() >= 2 && vaf >= min_expected_vaf) {
             if (vaf < 0.01 && is_completely_strand_biased(num_fwd_observations, num_rev_observations)) {
                 return false;
@@ -565,14 +565,14 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
         if (alt_sequence_size(variant) < 10) {
             return observed_qualities.size() >= 2 && static_cast<double>(num_observations) / (depth - std::sqrt(depth)) >= min_expected_vaf;
         } else {
-            return observed_qualities.size() >= 2 && static_cast<double>(num_observations) / (depth - std::sqrt(depth)) >= min_expected_vaf / 2;
+            return observed_qualities.size() >= 2 && static_cast<double>(num_observations) / (depth - std::sqrt(depth)) >= min_expected_vaf / 3;
         }
     } else {
         // deletion or mnv
         if (region_size(variant) < 10) {
             return num_observations > 1 && static_cast<double>(num_observations) / depth >= min_expected_vaf;
         } else {
-            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) >= min_expected_vaf / 2;
+            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) >= min_expected_vaf / 3;
         }
     }
 }
