@@ -57,6 +57,14 @@ CancerCaller::CancerCaller(Caller::Components&& components,
             throw std::invalid_argument {"CancerCaller: normal sample is not a valid sample"};
         }
     }
+    if (parameters_.cnv_normal_alpha <= 0.0
+        || parameters_.cnv_tumour_alpha <= 0.0
+        || parameters_.somatic_normal_germline_alpha <= 0.0
+        || parameters_.somatic_normal_somatic_alpha <= 0.0
+        || parameters_.somatic_tumour_germline_alpha <= 0.0
+        || parameters_.somatic_tumour_somatic_alpha <= 0.0) {
+        throw std::invalid_argument {"CancerCaller: concentration parameters must be positive"};
+    }
     if (parameters_.min_variant_posterior == Phred<double> {0}) {
         logging::WarningLogger wlog {};
         wlog << "Having no germline variant posterior threshold means no somatic variants will be called";

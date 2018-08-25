@@ -525,6 +525,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<float>()->default_value(0.01, "0.01"),
      "Minimum credible somatic allele frequency that will be reported")
     
+     ("tumour-germline-concentration",
+     po::value<float>()->default_value(1.5, "1.5"),
+     "Concentration parameter for germline haplotypes in tumour samples")
+     
     ("credible-mass",
      po::value<float>()->default_value(0.9, "0.9"),
      "Mass of the posterior density to use for evaluating allele frequencies")

@@ -73,6 +73,7 @@ public:
     CallerBuilder& set_min_expected_somatic_frequency(double frequency) noexcept;
     CallerBuilder& set_credible_mass(double mass) noexcept;
     CallerBuilder& set_min_credible_somatic_frequency(double frequency) noexcept;
+    CallerBuilder& set_tumour_germline_concentration(double concentration) noexcept;
     CallerBuilder& set_min_somatic_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_normal_contamination_risk(NormalContaminationRisk risk) noexcept;
     
@@ -121,6 +122,7 @@ private:
         double min_expected_somatic_frequency;
         double credible_mass;
         double min_credible_somatic_frequency;
+        double tumour_germline_concentration;
         Phred<double> min_somatic_posterior;
         NormalContaminationRisk normal_contamination_risk;
         bool call_somatics_only;
