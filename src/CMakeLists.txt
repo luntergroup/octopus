@@ -394,6 +394,8 @@ set(CORE_SOURCES
     core/models/error/hiseq_indel_error_model.cpp
     core/models/error/x10_indel_error_model.hpp
     core/models/error/x10_indel_error_model.cpp
+    core/models/error/umi_indel_error_model.hpp
+    core/models/error/umi_indel_error_model.cpp
     core/models/error/indel_error_model.hpp
     core/models/error/indel_error_model.cpp
     core/models/error/snv_error_model.hpp
@@ -402,6 +404,8 @@ set(CORE_SOURCES
     core/models/error/hiseq_snv_error_model.cpp
     core/models/error/x10_snv_error_model.hpp
     core/models/error/x10_snv_error_model.cpp
+    core/models/error/umi_snv_error_model.hpp
+    core/models/error/umi_snv_error_model.cpp
     core/models/error/error_model_factory.hpp
     core/models/error/error_model_factory.cpp
 
