@@ -859,7 +859,13 @@ bool is_polyclone_calling(const OptionMap& options)
 
 double get_min_somatic_vaf(const OptionMap& options)
 {
-    return std::min(options.at("min-expected-somatic-frequency").as<float>(), options.at("min-credible-somatic-frequency").as<float>());
+    const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
+    const auto min_expected_frequency = options.at("min-expected-somatic-frequency").as<float>();
+    if (std::min(min_credible_frequency, min_expected_frequency) <= 1.0) {
+        return std::max(min_credible_frequency, min_expected_frequency);
+    } else {
+        return std::min(min_credible_frequency, min_expected_frequency);
+    }
 }
 
 auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::optional<SampleName> normal = boost::none)
