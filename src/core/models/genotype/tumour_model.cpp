@@ -219,11 +219,26 @@ auto make_point_seed(const std::size_t num_genotypes, const std::size_t n, const
     return result;
 }
 
+void make_point_seeds(const std::size_t num_genotypes, const std::vector<std::size_t>& ns,
+                      std::vector<LogProbabilityVector>& result, const double p = 0.9999)
+{
+    result.reserve(result.size() + ns.size());
+    std::transform(std::cbegin(ns), std::cend(ns), std::back_inserter(result),
+                   [=] (auto n) { return make_point_seed(num_genotypes, n, p); });
+}
+
 auto make_range_seed(const std::size_t num_genotypes, const std::size_t begin, const std::size_t n, const double p = 0.9999)
 {
     LogProbabilityVector result(num_genotypes, std::log((1 - p) / (num_genotypes - n)));
     std::fill_n(std::next(std::begin(result), begin), n, std::log(p / n));
     return result;
+}
+
+auto make_range_seed(const std::vector<CancerGenotype<Haplotype>>& genotypes, const Genotype<Haplotype>& germline, const double p = 0.9999)
+{
+    auto itr1 = std::find_if(std::cbegin(genotypes), std::cend(genotypes), [&] (const auto& g) { return g.germline() == germline; });
+    auto itr2 = std::find_if_not(std::next(itr1), std::cend(genotypes), [&] (const auto& g) { return g.germline() == germline; });
+    return make_range_seed(genotypes.size(), std::distance(std::cbegin(genotypes), itr1), std::distance(itr1, itr2));
 }
 
 namespace debug {
@@ -278,20 +293,19 @@ auto generate_exhaustive_seeds(const std::size_t n)
     return result;
 }
 
-auto num_targetted_seeds(const std::vector<SampleName>& samples,
-                         const std::vector<CancerGenotype<Haplotype>>& genotypes) noexcept
+auto num_weighted_seeds(const std::vector<SampleName>& samples, const std::vector<CancerGenotype<Haplotype>>& genotypes) noexcept
 {
     return 1 + 4 * samples.size() + 2 * (samples.size() > 1);
 }
 
-auto generate_targetted_seeds(const std::vector<SampleName>& samples,
-                              const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                              const LogProbabilityVector& genotype_log_priors,
-                              const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                              const TumourModel::Priors& priors)
+auto generate_weighted_seeds(const std::vector<SampleName>& samples,
+                             const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                             const LogProbabilityVector& genotype_log_priors,
+                             const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                             const TumourModel::Priors& priors)
 {
     std::vector<LogProbabilityVector> result {};
-    result.reserve(num_targetted_seeds(samples, genotypes));
+    result.reserve(num_weighted_seeds(samples, genotypes));
     result.push_back(genotype_log_priors);
     maths::normalise_logs(result.back());
     LogProbabilityVector combined_log_likelihoods(genotypes.size(), 0);
@@ -321,6 +335,112 @@ auto generate_targetted_seeds(const std::vector<SampleName>& samples,
     return result;
 }
 
+//auto estimate_haplotype_frequencies(const std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& samples,
+//                                    const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+//{
+//    std::vector<double> result(haplotypes.size());
+//    const GermlineLikelihoodModel likelihood_model {haplotype_log_likelihoods};
+//    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(result), [&] (const auto& haplotype) {
+//        const Genotype<Haplotype> haploid_dummy {haplotype};
+//        return std::accumulate(std::cbegin(samples), std::cend(samples), 0.0, [&] (auto curr, const auto& sample) {
+//            return curr + likelihood_model.evaluate(haploid_dummy);
+//        });
+//    });
+//    maths::normalise_exp(result);
+//    return result;
+//}
+//
+//auto order_by_estimated_frequency(const std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& samples,
+//                                  const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+//{
+//    const auto estimated_frequencies = estimate_haplotype_frequencies(haplotypes, )
+//}
+
+auto generate_targetted_seeds(const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                              const LogProbabilityVector& approx_log_likelihoods,
+                              const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                              const TumourModel::Priors& priors,
+                              std::size_t n, std::vector<LogProbabilityVector>& result)
+{
+    if (n == 0) return;
+    if (n >= genotypes.size()) {
+        for (std::size_t i {0}; i < genotypes.size(); ++i) {
+            result.push_back(make_point_seed(genotypes.size(), i));
+        }
+    }
+    std::vector<std::pair<double, std::size_t>> dummy_log_likelihoods {};
+    dummy_log_likelihoods.reserve(genotypes.size());
+    for (std::size_t i {0}; i < genotypes.size(); ++i) {
+        dummy_log_likelihoods.push_back({approx_log_likelihoods[i], i});
+    }
+    std::sort(std::begin(dummy_log_likelihoods), std::end(dummy_log_likelihoods), std::greater<> {});
+    std::vector<Genotype<Haplotype>> selected_germline_genotypes {};
+    auto dummy_block_start_itr = std::begin(dummy_log_likelihoods);
+    while (true) {
+        auto dummy_block_end_itr = std::find_if_not(std::next(dummy_block_start_itr), std::end(dummy_log_likelihoods),
+                                                    [=] (const auto& p) { return p.first == dummy_block_start_itr->first; });
+        if (dummy_block_end_itr != std::next(dummy_block_start_itr)) {
+            std::sort(dummy_block_start_itr, dummy_block_end_itr, [&] (const auto& lhs, const auto& rhs) {
+                return priors.genotype_prior_model.evaluate(genotypes[lhs.second]) > priors.genotype_prior_model.evaluate(genotypes[rhs.second]);
+            });
+        }
+        std::transform(dummy_block_start_itr, dummy_block_end_itr, std::back_inserter(selected_germline_genotypes),
+                       [&] (const auto& p) { return genotypes[p.second].germline(); });
+//        selected_germline_genotypes.push_back(genotypes[dummy_block_start_itr->second].germline());
+        break; // TODO: how many germline genotypes to use?
+        dummy_block_start_itr = dummy_block_end_itr;
+    }
+    
+//    if (genotypes.size() == 8327) {
+//        std::cout << "Top 200 genotype likelihoods:" << std::endl;
+//        std::for_each(std::cbegin(dummy_log_likelihoods), std::next(std::cbegin(dummy_log_likelihoods), 200), [&] (const auto& p) {
+//            std::cout << p.second << ": "; octopus::debug::print_variant_alleles(genotypes[p.second]); std::cout << " " << p.first << std::endl;
+//        });
+//    }
+    
+    for (const auto& germline : selected_germline_genotypes) {
+        result.push_back(make_range_seed(genotypes, germline));
+        --n;
+        if (n == 0) break;
+    }
+    if (n > 0 && genotypes.front().somatic_ploidy() > 1) {
+        std::vector<std::size_t> point_seeds {};
+        point_seeds.reserve(n);
+        // Genotype likelihoods will generally be dominated by a single haplotype and therefore appear in 'runs'
+        std::vector<Haplotype> dominant_haplotypes {}, buffer {};
+        for (const auto& p : dummy_log_likelihoods) {
+            if (genotypes[p.second].germline() != selected_germline_genotypes.front()) {
+                break;
+            }
+            const auto& somatics = genotypes[p.second].somatic();
+            if (dominant_haplotypes.empty()) {
+                dominant_haplotypes.assign(std::cbegin(somatics), std::cend(somatics));
+            } else {
+                std::set_difference(std::cbegin(dominant_haplotypes), std::cend(dominant_haplotypes),
+                                    std::cbegin(somatics), std::cend(somatics), std::back_inserter(buffer));
+                std::swap(buffer, dominant_haplotypes);
+                buffer.clear();
+                if (dominant_haplotypes.empty()) {
+                    point_seeds.push_back(p.second);
+                    --n;
+                    if (n == 0) break;
+                }
+            }
+        }
+        if (n > 0) {
+            for (const auto& p : dummy_log_likelihoods) {
+                if (genotypes[p.second].germline() == selected_germline_genotypes.front()
+                    && std::find(std::cbegin(point_seeds), std::cend(point_seeds), p.second) == std::cend(point_seeds)) {
+                    point_seeds.push_back(p.second);
+                    --n;
+                    if (n == 0) break;
+                }
+            }
+        }
+        make_point_seeds(genotypes.size(), point_seeds, result);
+    }
+}
+
 auto generate_seeds(const std::vector<SampleName>& samples,
                     const std::vector<CancerGenotype<Haplotype>>& genotypes,
                     const LogProbabilityVector& genotype_log_priors,
@@ -328,10 +448,15 @@ auto generate_seeds(const std::vector<SampleName>& samples,
                     const TumourModel::Priors& priors,
                     const std::size_t max_seeds)
 {
-    if (genotypes.size() <= num_targetted_seeds(samples, genotypes)) {
+    if (genotypes.size() <= std::min(max_seeds, num_weighted_seeds(samples, genotypes))) {
         return generate_exhaustive_seeds(genotypes.size());
     } else {
-        return generate_targetted_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods, priors);
+        auto result = generate_weighted_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods, priors);
+        if (result.size() < max_seeds) {
+            result.reserve(max_seeds);
+            generate_targetted_seeds(genotypes, result.back(), haplotype_log_likelihoods, priors, max_seeds - result.size(), result);
+        }
+        return result;
     }
 }
 
