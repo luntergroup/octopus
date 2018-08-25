@@ -28,6 +28,7 @@ public:
         std::vector<TriggerType> trigger_types;
         AlignedRead::BaseQuality trigger_quality;
         AlignedRead::MappingDomain::Size trigger_clip_size;
+        double min_expected_mutation_frequency = 0.1;
     };
     
     AssemblerActiveRegionGenerator() = delete;
@@ -58,6 +59,7 @@ private:
     bool snvs_interesting_ = false, indels_interesting_ = true, structual_interesting_ = false;
     AlignedRead::BaseQuality trigger_quality_ = 10;
     AlignedRead::MappingDomain::Size trigger_clip_size_ = 2;
+    double min_expected_mutation_frequency_;
     CoverageTrackerMap coverage_tracker_, interesting_read_coverages_, clipped_coverage_tracker_;
     
     bool is_interesting(const AlignedRead& read) const;
