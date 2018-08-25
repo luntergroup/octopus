@@ -83,19 +83,22 @@ private:
     
     struct Bin : public Mappable<Bin>
     {
+        using ReadReferenceStash = std::deque<std::reference_wrapper<const NucleotideSequence>>;
+        
         Bin(GenomicRegion region);
         
         const GenomicRegion& mapped_region() const noexcept;
         
         void add(const AlignedRead& read);
-        void add(const GenomicRegion& read_region, const NucleotideSequence& read_sequence);
+        void add(const AlignedRead& read, const NucleotideSequence& masked_sequence);
         
         void clear() noexcept;
+        std::size_t size() const noexcept;
         bool empty() const noexcept;
         
         GenomicRegion region;
         boost::optional<ContigRegion> read_region;
-        std::deque<std::reference_wrapper<const NucleotideSequence>> read_sequences;
+        ReadReferenceStash forward_read_sequences, reverse_read_sequences;
     };
     
     using BinList = std::deque<Bin>;
@@ -119,6 +122,7 @@ private:
     unsigned try_assemble_with_defaults(const Bin& bin, std::deque<Variant>& result) const;
     void try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result) const;
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;
+    void load(const Bin& bin, Assembler& assembler) const;
     AssemblerStatus assemble_bin(unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const;
     AssemblerStatus try_assemble_region(Assembler& assembler, const NucleotideSequence& reference_sequence,
                                         const GenomicRegion& reference_region, std::deque<Variant>& result) const;
