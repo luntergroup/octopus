@@ -431,17 +431,44 @@ void partial_sort(std::vector<unsigned>& observed_qualities, const unsigned n)
                       std::end(observed_qualities), std::greater<> {});
 }
 
-bool is_strongly_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations,
-                               const unsigned min_observations = 20) noexcept
+bool is_completely_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
 {
     const auto num_observations = num_fwd_observations + num_rev_observations;
-    return num_observations > min_observations && (num_observations == num_fwd_observations || num_fwd_observations == 0);
+    return num_observations > 0 && (num_fwd_observations == 0 || num_fwd_observations == num_observations);
+}
+
+bool is_almost_completely_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
+{
+    const auto num_observations = num_fwd_observations + num_rev_observations;
+    return num_observations > 0 && (num_fwd_observations <= 1 || num_fwd_observations >= (num_observations - 1));
+}
+
+bool overlaps(const std::pair<double, double>& lhs, const std::pair<double, double>& rhs) noexcept
+{
+    return std::min(lhs.second, rhs.second) - std::max(lhs.first, rhs.first) > 0.0;
+}
+
+bool is_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations, const double credible_mass) noexcept
+{
+    const auto credible_region = maths::beta_hdi(num_fwd_observations + 1.0, num_rev_observations + 1.0, credible_mass);
+    return !overlaps(credible_region, {0.4, 0.6});
+}
+
+bool is_strongly_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
+{
+    return is_strand_biased(num_fwd_observations, num_rev_observations, 0.999);
+}
+
+bool is_weakly_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
+{
+    return is_strand_biased(num_fwd_observations, num_rev_observations, 0.95);
 }
 
 bool is_likely_runthrough_artifact(const unsigned num_fwd_observations, const unsigned num_rev_observations,
                                    std::vector<unsigned>& observed_qualities)
 {
-    if (!is_strongly_strand_biased(num_fwd_observations, num_rev_observations, 10)) return false;
+    const auto num_observations = num_fwd_observations + num_rev_observations;
+    if (num_observations < 10 || !is_completely_strand_biased(num_fwd_observations, num_rev_observations)) return false;
     assert(!observed_qualities.empty());
     const auto median_bq = maths::median(observed_qualities);
     return median_bq < 15;
@@ -463,7 +490,7 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
         return num_observations > 1 || sum(observed_qualities) >= 30 || is_deletion(variant);
     }
     const auto num_rev_observations = num_observations - num_fwd_observations;
-    if (is_strongly_strand_biased(num_fwd_observations, num_rev_observations)) {
+    if (num_observations > 20 && is_completely_strand_biased(num_fwd_observations, num_rev_observations)) {
         return false;
     }
     if (is_snv(variant)) {
@@ -511,43 +538,41 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
         return num_observations > 1 || sum(observed_qualities) >= 20 || is_deletion(variant);
     }
     const auto num_rev_observations = num_observations - num_fwd_observations;
-    if (is_strongly_strand_biased(num_fwd_observations, num_rev_observations)) {
+    if (num_observations > 15 && is_completely_strand_biased(num_fwd_observations, num_rev_observations)) {
+        return false;
+    }
+    if (num_observations > 25 && is_almost_completely_strand_biased(num_fwd_observations, num_rev_observations)) {
+        return false;
+    }
+    if (num_observations > 50 && is_strongly_strand_biased(num_fwd_observations, num_rev_observations)) {
         return false;
     }
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
         erase_below(observed_qualities, 15);
-        return observed_qualities.size() >= 2 && static_cast<double>(observed_qualities.size()) / depth >= min_expected_vaf;
+        const auto vaf = static_cast<double>(observed_qualities.size()) / depth;
+        if (observed_qualities.size() >= 2 && vaf >= min_expected_vaf) {
+            if (vaf < 0.01 && is_completely_strand_biased(num_fwd_observations, num_rev_observations)) {
+                return false;
+            }
+            return true;
+        } else {
+            return false;
+        }
     } else if (is_insertion(variant)) {
         if (num_observations == 1 && alt_sequence_size(variant) > 8) return false;
-        if (depth <= 10) {
-            return num_observations > 1 || (alt_sequence_size(variant) > 3 && is_tandem_repeat(variant.alt_allele()));
-        } else if (depth <= 30) {
-            if (static_cast<double>(num_observations) / depth > 0.35) return true;
-            erase_below(observed_qualities, 20);
-            return num_observations > 1;
-        } else if (depth <= 60) {
-            if (num_observations == 1) return false;
-            if (static_cast<double>(num_observations) / depth > 0.3) return true;
-            erase_below(observed_qualities, 25);
-            if (observed_qualities.size() <= 1) return false;
-            if (observed_qualities.size() > 2) return true;
-            partial_sort(observed_qualities, 2);
-            return static_cast<double>(observed_qualities[0]) / alt_sequence_size(variant) > 20;
+        erase_below(observed_qualities, 15);
+        if (alt_sequence_size(variant) < 10) {
+            return observed_qualities.size() >= 2 && static_cast<double>(num_observations) / (depth - std::sqrt(depth)) >= min_expected_vaf;
         } else {
-            if (num_observations == 1) return false;
-            if (static_cast<double>(num_observations) / depth > 0.25) return true;
-            erase_below(observed_qualities, 20);
-            if (observed_qualities.size() <= 1) return false;
-            if (observed_qualities.size() > 3) return true;
-            return static_cast<double>(observed_qualities[0]) / alt_sequence_size(variant) > 20;
+            return observed_qualities.size() >= 2 && static_cast<double>(num_observations) / (depth - std::sqrt(depth)) >= min_expected_vaf / 2;
         }
     } else {
         // deletion or mnv
         if (region_size(variant) < 10) {
             return num_observations > 1 && static_cast<double>(num_observations) / depth >= min_expected_vaf;
         } else {
-            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) >= min_expected_vaf;
+            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) >= min_expected_vaf / 2;
         }
     }
 }
