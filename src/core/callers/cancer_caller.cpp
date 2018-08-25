@@ -1228,7 +1228,13 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
             const auto credible_regions = compute_marginal_credible_intervals(somatic_alphas, parameters_.credible_mass);
             if (!somatic_variant_calls.empty()) {
                 for (const auto& p : credible_regions) {
-                    if (p.second.back().first >= parameters_.min_credible_somatic_frequency) {
+                    if (debug_log_) {
+                        auto ss = stream(*debug_log_);
+                        ss << p.first << " somatic credible regions: ";
+                        for (auto cr : p.second) ss << '(' << cr.first << ' ' << cr.second << ") ";
+                    }
+                    if (std::any_of(std::next(std::cbegin(p.second), parameters_.ploidy), std::cend(p.second),
+                        [this] (const auto& credible_region) { return credible_region.first >= parameters_.min_credible_somatic_frequency; })) {
                         if (has_normal_sample() && p.first == normal_sample()) {
                             somatic_samples.clear();
                             break;
