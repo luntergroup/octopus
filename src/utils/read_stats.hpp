@@ -34,7 +34,7 @@ struct IsForward
 {
     bool operator()(const AlignedRead& read) const
     {
-        return !read.is_marked_reverse_mapped();
+        return is_forward_strand(read);
     }
 };
 
@@ -42,7 +42,7 @@ struct IsReverse
 {
     bool operator()(const AlignedRead& read) const
     {
-        return read.is_marked_reverse_mapped();
+        return is_reverse_strand(read);
     }
 };
 
@@ -170,6 +170,23 @@ std::size_t count_reverse(const T& reads, const GenomicRegion& region, NonMapTag
     static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
     const auto overlapped = overlap_range(reads, region);
     return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsReverse {});
+}
+
+template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    const auto num_forward = std::count_if(std::cbegin(reads), std::cend(reads), IsForward {});
+    return std::make_pair(num_forward, reads.size() - num_forward);
+}
+
+template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    const auto overlapped = overlap_range(reads, region);
+    const auto num_forward = std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsForward {});
+    return std::make_pair(num_forward, size(overlapped) - num_forward);
 }
 
 struct IsShorter
@@ -543,6 +560,28 @@ std::size_t count_reverse(const T& reads, const GenomicRegion& region, MapTag)
 }
 
 template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads, MapTag)
+{
+    std::pair<std::size_t, std::size_t> result {};
+    for (const auto& p : reads) {
+        const auto sample_counts = count_directions(p.second, NonMapTag {});
+        result.first += sample_counts.first; result.second += sample_counts.second;
+    }
+    return result;
+}
+
+template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads, const GenomicRegion& region, MapTag)
+{
+    std::pair<std::size_t, std::size_t> result {};
+    for (const auto& p : reads) {
+        const auto sample_counts = count_directions(p.second, region, NonMapTag {});
+        result.first += sample_counts.first; result.second += sample_counts.second;
+    }
+    return result;
+}
+
+template <typename T>
 AlignedRead::NucleotideSequence::size_type min_read_length(const T& reads, MapTag)
 {
     boost::optional<AlignedRead::NucleotideSequence::size_type> min_length {};
@@ -895,6 +934,18 @@ template <typename T>
 std::size_t count_reverse(const T& reads, const GenomicRegion& region)
 {
     return detail::count_reverse(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads)
+{
+    return detail::count_directions(reads, MapTagType<T> {});
+}
+
+template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads, const GenomicRegion& region)
+{
+    return detail::count_directions(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
