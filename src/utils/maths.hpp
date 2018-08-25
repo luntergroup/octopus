@@ -750,6 +750,12 @@ RealType beta_sf(const RealType a, const RealType b, const RealType x)
     return boost::math::cdf(boost::math::complement(beta_dist, x));
 }
 
+template <typename RealType>
+RealType beta_tail_probability(const RealType a, const RealType b, const RealType x)
+{
+    return beta_cdf(a, b, x) + beta_sf(a, b, RealType {1} - x);
+}
+
 namespace detail {
 
 template <typename RealType>
