@@ -905,6 +905,21 @@ auto get_default_match_predicate() noexcept
     return coretools::DefaultMatchPredicate {};
 }
 
+auto get_assembler_region_generator_frequency_trigger(const OptionMap& options)
+{
+    if (is_cancer_calling(options)) {
+        return get_min_somatic_vaf(options);
+    } else if (is_polyclone_calling(options)) {
+        return get_min_clone_vaf(options);
+    } else {
+        if (options.at("organism-ploidy").as<int>() < 4) {
+            return 0.1;
+        } else {
+            return 0.05;
+        }
+    }
+}
+
 class MissingSourceVariantFile : public MissingFileError
 {
     std::string do_where() const override
@@ -1079,6 +1094,10 @@ auto make_variant_generator_builder(const OptionMap& options)
     ActiveRegionGenerator::Options active_region_options {};
     if (is_set("assemble-all", options) && options.at("assemble-all").as<bool>()) {
         active_region_options.assemble_all = true;
+    } else {
+        AssemblerActiveRegionGenerator::Options assembler_region_options {};
+        assembler_region_options.min_expected_mutation_frequency = get_assembler_region_generator_frequency_trigger(options);
+        active_region_options.assembler_active_region_generator_options = assembler_region_options;
     }
     result.set_active_region_generator(std::move(active_region_options));
     return result;

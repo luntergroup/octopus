@@ -25,6 +25,7 @@ public:
     struct Options
     {
         bool assemble_all = false;
+        boost::optional<AssemblerActiveRegionGenerator::Options> assembler_active_region_generator_options = boost::none;
     };
     
     ActiveRegionGenerator() = delete;

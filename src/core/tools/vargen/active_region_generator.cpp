@@ -26,7 +26,11 @@ void ActiveRegionGenerator::add_generator(const std::string& name)
     if (is_assembler(name)) {
         using_assembler_ = true;
         if (!options_.assemble_all) {
-            assembler_active_region_generator_ = AssemblerActiveRegionGenerator {reference_};
+            if (options_.assembler_active_region_generator_options) {
+                assembler_active_region_generator_ = AssemblerActiveRegionGenerator {reference_, *options_.assembler_active_region_generator_options};
+            } else {
+                assembler_active_region_generator_ = AssemblerActiveRegionGenerator {reference_};
+            }
         }
     }
 }
