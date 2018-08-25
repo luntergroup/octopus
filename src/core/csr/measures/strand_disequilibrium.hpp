@@ -24,6 +24,8 @@ class StrandDisequilibrium : public Measure
     const std::string& do_name() const override;
     std::string do_describe() const override;
     std::vector<std::string> do_requirements() const override;
+    
+    double tail_mass_ = 0.01;
 };
 
 } // namespace csr

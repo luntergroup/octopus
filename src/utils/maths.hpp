@@ -301,6 +301,51 @@ RealType log_factorial(IntegerType x)
     }
 }
 
+template <typename InputIt>
+auto entropy(InputIt first, InputIt last)
+{
+    using RealType = typename std::iterator_traits<InputIt>::value_type;
+    static_assert(std::is_floating_point<RealType>::value,
+                  "entropy is only defined for floating point values");
+    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log(p); });
+}
+
+template <typename Container>
+auto entropy(const Container& values)
+{
+    return entropy(std::cbegin(values), std::cend(values));
+}
+
+template <typename InputIt>
+auto entropy2(InputIt first, InputIt last)
+{
+    using RealType = typename std::iterator_traits<InputIt>::value_type;
+    static_assert(std::is_floating_point<RealType>::value,
+                  "entropy2 is only defined for floating point values");
+    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log2(p); });
+}
+
+template <typename Container>
+auto entropy2(const Container& values)
+{
+    return entropy2(std::cbegin(values), std::cend(values));
+}
+
+template <typename InputIt>
+auto entropy10(InputIt first, InputIt last)
+{
+    using RealType = typename std::iterator_traits<InputIt>::value_type;
+    static_assert(std::is_floating_point<RealType>::value,
+                  "entropy10 is only defined for floating point values");
+    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log10(p); });
+}
+
+template <typename Container>
+auto entropy10(const Container& values)
+{
+    return entropy10(std::cbegin(values), std::cend(values));
+}
+
 template <typename IntegerType, typename RealType,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
@@ -440,7 +485,7 @@ auto dirichlet_entropy(ForwardIt first_alpha, ForwardIt last_alpha)
     const auto K = static_cast<T>(std::distance(first_alpha, last_alpha));
     const auto a0 = std::accumulate(first_alpha, last_alpha, T {0});
     using boost::math::digamma;
-    return log_beta(first_alpha, last_alpha) - (K - a0) * digamma(a0)
+    return log_beta(first_alpha, last_alpha) + (a0 - K) * digamma(a0)
            - std::accumulate(first_alpha, last_alpha, T {0}, [] (auto curr, auto a) { return curr + (a - 1) * digamma(a); });
 }
 
@@ -802,7 +847,7 @@ beta_hdi_skewed(const RealType a, const RealType b, const RealType mass)
 
 template <typename RealType>
 std::pair<RealType, RealType>
-beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
+beta_hdi(RealType a, RealType b, const RealType mass)
 {
     static_assert(std::is_floating_point<RealType>::value, "beta_hdi only works for floating point types");
     if (mass < RealType {0} || mass > RealType {1}) {

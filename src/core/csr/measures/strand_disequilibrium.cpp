@@ -20,38 +20,6 @@ std::unique_ptr<Measure> StrandDisequilibrium::do_clone() const
     return std::make_unique<StrandDisequilibrium>(*this);
 }
 
-namespace {
-
-bool includes(const std::pair<double, double>& credible_region, const double x)
-{
-    return credible_region.first <= x && x <= credible_region.second;
-}
-
-auto calculate_required_balance_mass(const double a, const double b, const double tolerance = 0.01)
-{
-    // TODO: can we do this analytically?
-    double result {tolerance};
-    while (result <= 1.0) {
-        const auto credible_region = maths::beta_hdi(a, b, result);
-        if (includes(credible_region, 0.5)) break;
-        result *= 2;
-    }
-    return std::min(result, 1.0);
-}
-
-auto calculate_distance_to_half(const std::pair<double, double>& credible_region)
-{
-    if (includes(credible_region, 0.5)) {
-        return 0.0;
-    } else if (credible_region.second < 0.5) {
-        return 0.5 - credible_region.second;
-    } else {
-        return credible_region.second - 0.5;
-    }
-}
-
-} // namespace
-
 Measure::ResultType StrandDisequilibrium::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
@@ -60,8 +28,8 @@ Measure::ResultType StrandDisequilibrium::do_evaluate(const VcfRecord& call, con
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         const auto direction_counts = count_directions(reads.at(sample), mapped_region(call));
-        const auto credible_region = maths::beta_hdi(direction_counts.first + 0.5, direction_counts.second + 0.5);
-        result.push_back(calculate_distance_to_half(credible_region));
+        const auto tail_probability = maths::beta_tail_probability(direction_counts.first + 0.5, direction_counts.second + 0.5, tail_mass_);
+        result.push_back(tail_probability);
     }
     return result;
 }
@@ -78,7 +46,7 @@ const std::string& StrandDisequilibrium::do_name() const
 
 std::string StrandDisequilibrium::do_describe() const
 {
-    return "Strand bias of reads overlapping the site; probability mass required to include 0.5 in credible interval";
+    return "Strand bias of reads overlapping the site; probability mass in tails of Beta distribution";
 }
 
 std::vector<std::string> StrandDisequilibrium::do_requirements() const
