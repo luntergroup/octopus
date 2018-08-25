@@ -1501,7 +1501,10 @@ void CancerCaller::Latents::compute_haplotype_posteriors() const
             result.at(haplotype) += model_posteriors_.cnv * p.get<1>();
         }
     }
-    const auto credible_frequency = parameters_.get().min_expected_somatic_frequency;
+    auto credible_frequency = parameters_.get().min_expected_somatic_frequency;
+    const auto genotype_posterior_entropy = maths::entropy(tumour_model_inferences_.posteriors.genotype_probabilities);
+    credible_frequency *= (1 + genotype_posterior_entropy);
+    credible_frequency = std::min(credible_frequency, 1.0);
     const auto conditional_somatic_prob = compute_credible_somatic_mass(tumour_model_inferences_.posteriors.alphas, somatic_ploidy_, credible_frequency);
     // Contribution from tumour model
     for (const auto& p : zip(cancer_genotypes_, tumour_model_inferences_.posteriors.genotype_probabilities)) {
