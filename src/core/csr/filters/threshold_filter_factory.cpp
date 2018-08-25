@@ -84,6 +84,7 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<SomaticContamination>()]     = somaticContamination;
     filter_names[name<DeNovoContamination>()]      = deNovoContamination;
     filter_names[name<ReadPositionBias>()]         = readPositionBias;
+    filter_names[name<StrandDisequilibrium>()]     = strandDisequilibrium;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)

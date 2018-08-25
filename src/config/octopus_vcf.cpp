@@ -60,7 +60,8 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::highMismatchFraction, "Fraction of reads containing mismatch to called allele is high"},
 {spec::filter::somaticContamination, "Somatic contamination detected in a called normal sample"},
 {spec::filter::deNovoContamination, "De novo allele detected in the offsprings parents"},
-{spec::filter::readPositionBias, "Position of variant in supporting reads is biased"}
+{spec::filter::readPositionBias, "Position of variant in supporting reads is biased"},
+{spec::filter::strandDisequilibrium, "Reads overlapping the site are biased to one strand"}
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)
