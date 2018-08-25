@@ -145,8 +145,15 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
                                      dynamic_cast<const Latents&>(latents));
 }
 
+void CancerCaller::set_cancer_genotype_prior_model(Latents& latents) const
+{
+    SomaticMutationModel mutation_model {parameters_.somatic_mutation_model_params};
+    latents.cancer_genotype_prior_model_ = CancerGenotypePriorModel {*latents.germline_prior_model_, std::move(mutation_model)};
+}
+
 void CancerCaller::fit_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
+    set_cancer_genotype_prior_model(latents);
     model::TumourModel::InferredLatents prev_tumour_latents;
     std::vector<CancerGenotype<Haplotype>> prev_cancer_genotypes;
     boost::optional<std::vector<CancerGenotypeIndex>> prev_cancer_genotype_indices;
@@ -551,15 +558,16 @@ void CancerCaller::evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoo
 void CancerCaller::evaluate_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(latents.germline_prior_model_ && !latents.cancer_genotypes_.empty());
-    SomaticMutationModel mutation_model {parameters_.somatic_mutation_model_params};
-    latents.cancer_genotype_prior_model_ = CancerGenotypePriorModel {*latents.germline_prior_model_, std::move(mutation_model)};
+    assert(latents.cancer_genotype_prior_model_);
     auto somatic_model_priors = get_somatic_model_priors(*latents.cancer_genotype_prior_model_, latents.somatic_ploidy_);
     TumourModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
     const TumourModel somatic_model {samples_, somatic_model_priors, params};
     if (latents.cancer_genotype_indices_) {
         assert(latents.cancer_genotype_prior_model_->germline_model().is_primed());
-        latents.cancer_genotype_prior_model_->mutation_model().prime(latents.haplotypes_);
+        if (!latents.cancer_genotype_prior_model_->mutation_model().is_primed()) {
+            latents.cancer_genotype_prior_model_->mutation_model().prime(latents.haplotypes_);
+        }
         latents.tumour_model_inferences_ = somatic_model.evaluate(latents.cancer_genotypes_, *latents.cancer_genotype_indices_,
                                                                   haplotype_likelihoods);
     } else {

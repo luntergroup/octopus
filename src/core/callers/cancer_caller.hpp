@@ -144,7 +144,8 @@ private:
     
     void set_model_priors(Latents& latents) const;
     void set_model_posteriors(Latents& latents) const;
-    
+
+    void set_cancer_genotype_prior_model(Latents& latents) const;
     void fit_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
     std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const;
