@@ -61,7 +61,8 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::somaticContamination, "Somatic contamination detected in a called normal sample"},
 {spec::filter::deNovoContamination, "De novo allele detected in the offsprings parents"},
 {spec::filter::readPositionBias, "Position of variant in supporting reads is biased"},
-{spec::filter::strandDisequilibrium, "Reads overlapping the site are biased to one strand"}
+{spec::filter::strandDisequilibrium, "Reads overlapping the site are biased to one strand"},
+{spec::filter::lowClassificationConfidence, "Classification confidence is low"}
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)

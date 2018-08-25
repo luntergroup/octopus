@@ -55,6 +55,7 @@ VCF_SPEC_CONSTANT somaticContamination {"SC"};
 VCF_SPEC_CONSTANT deNovoContamination {"DC"};
 VCF_SPEC_CONSTANT readPositionBias {"RPB"};
 VCF_SPEC_CONSTANT strandDisequilibrium {"SD"};
+VCF_SPEC_CONSTANT lowClassificationConfidence {"CC"};
 
 } // namespace filter
 
