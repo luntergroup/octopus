@@ -554,7 +554,9 @@ void CancerCaller::evaluate_tumour_model(Latents& latents, const HaplotypeLikeli
     SomaticMutationModel mutation_model {parameters_.somatic_mutation_model_params};
     latents.cancer_genotype_prior_model_ = CancerGenotypePriorModel {*latents.germline_prior_model_, std::move(mutation_model)};
     auto somatic_model_priors = get_somatic_model_priors(*latents.cancer_genotype_prior_model_, latents.somatic_ploidy_);
-    const TumourModel somatic_model {samples_, somatic_model_priors};
+    TumourModel::AlgorithmParameters params {};
+    if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
+    const TumourModel somatic_model {samples_, somatic_model_priors, params};
     if (latents.cancer_genotype_indices_) {
         assert(latents.cancer_genotype_prior_model_->germline_model().is_primed());
         latents.cancer_genotype_prior_model_->mutation_model().prime(latents.haplotypes_);

@@ -50,6 +50,7 @@ public:
         unsigned max_somatic_haplotypes = 1;
         NormalContaminationRisk normal_contamination_risk = NormalContaminationRisk::low;
         bool deduplicate_haplotypes_with_germline_model = true;
+        boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
         double cnv_normal_alpha = 50.0, cnv_tumour_alpha = 0.5;
         double somatic_normal_germline_alpha = 50.0, somatic_normal_somatic_alpha = 0.05;
         double somatic_tumour_germline_alpha = 1.5, somatic_tumour_somatic_alpha = 1.0;

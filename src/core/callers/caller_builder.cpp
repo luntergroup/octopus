@@ -187,6 +187,12 @@ CallerBuilder& CallerBuilder::set_independent_genotype_prior_flag(bool use_indep
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_max_vb_seeds(unsigned n) noexcept
+{
+    params_.max_vb_seeds = n;
+    return *this;
+}
+
 // cancer
 
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
@@ -385,7 +391,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.max_genotypes,
                                                       params_.max_somatic_haplotypes,
                                                       params_.normal_contamination_risk,
-                                                      params_.deduplicate_haplotypes_with_caller_model
+                                                      params_.deduplicate_haplotypes_with_caller_model,
+                                                      params_.max_vb_seeds
                                                   });
         }},
         {"trio", [this] () {

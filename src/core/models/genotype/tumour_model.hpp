@@ -23,6 +23,7 @@ public:
     {
         unsigned max_iterations = 1000;
         double epsilon          = 0.05;
+        unsigned max_seeds      = 10;
     };
     
     struct Priors

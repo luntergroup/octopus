@@ -493,6 +493,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("sequence-error-model",
      po::value<std::string>()->default_value("HiSeq"),
      "The sequencer error model to use (HiSeq or xTen)")
+    
+    ("max-vb-seeds",
+     po::value<int>(),
+     "Maximum number of seeds to use for Variational Bayes algorithms")
     ;
     
     po::options_description cancer("Calling (cancer)");
@@ -532,7 +536,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("normal-contamination-risk",
      po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
      "The risk the normal sample has contamination from the tumour")
-
+    
     ("somatics-only",
      po::bool_switch()->default_value(false),
      "Only emit SOMATIC mutations")
