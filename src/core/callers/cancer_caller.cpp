@@ -1501,8 +1501,8 @@ void CancerCaller::Latents::compute_haplotype_posteriors() const
             result.at(haplotype) += model_posteriors_.cnv * p.get<1>();
         }
     }
-    const auto conditional_somatic_prob = compute_credible_somatic_mass(tumour_model_inferences_.posteriors.alphas, somatic_ploidy_,
-    3 * parameters_.get().min_expected_somatic_frequency);
+    const auto credible_frequency = parameters_.get().min_expected_somatic_frequency;
+    const auto conditional_somatic_prob = compute_credible_somatic_mass(tumour_model_inferences_.posteriors.alphas, somatic_ploidy_, credible_frequency);
     // Contribution from tumour model
     for (const auto& p : zip(cancer_genotypes_, tumour_model_inferences_.posteriors.genotype_probabilities)) {
         for (const auto& haplotype : p.get<0>().germline().copy_unique_ref()) {
