@@ -829,6 +829,13 @@ beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
 }
 
 template <typename RealType>
+RealType dirichlet_variance(const std::vector<RealType>& alphas, const std::size_t k)
+{
+    const auto a_0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), RealType {});
+    return (alphas[k] * (a_0 - alphas[k])) / (a_0 * a_0 * (a_0 + 1));
+}
+
+template <typename RealType>
 RealType dirichlet_marginal_cdf(const std::vector<RealType>& alphas, const std::size_t k, const RealType x)
 {
     const auto a_0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), RealType {});
