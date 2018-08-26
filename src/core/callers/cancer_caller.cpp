@@ -182,10 +182,10 @@ void CancerCaller::fit_tumour_model(Latents& latents, const HaplotypeLikelihoodC
         }
         if (latents.haplotypes_.get().size() <= somatic_ploidy + 1) break;
         if (somatic_ploidy < parameters_.max_somatic_haplotypes) {
-            // save previous state
-            prev_tumour_latents = std::move(latents.tumour_model_inferences_);
-            prev_cancer_genotypes = std::move(latents.cancer_genotypes_);
-            prev_cancer_genotype_indices = std::move(latents.cancer_genotype_indices_);
+            // save previous state, but don't move as next cancer genotype generation may use this information
+            prev_tumour_latents = latents.tumour_model_inferences_;
+            prev_cancer_genotypes = latents.cancer_genotypes_;
+            prev_cancer_genotype_indices = latents.cancer_genotype_indices_;
         }
     }
     if (latents.somatic_ploidy_ > 1) {
@@ -291,6 +291,14 @@ void CancerCaller::generate_germline_genotypes(Latents& latents, const std::vect
 }
 
 namespace {
+
+template <typename... T>
+auto zip(const T&... containers) -> boost::iterator_range<boost::zip_iterator<decltype(boost::make_tuple(std::begin(containers)...))>>
+{
+    auto zip_begin = boost::make_zip_iterator(boost::make_tuple(std::begin(containers)...));
+    auto zip_end   = boost::make_zip_iterator(boost::make_tuple(std::end(containers)...));
+    return boost::make_iterator_range(zip_begin, zip_end);
+}
 
 template <typename Genotype_>
 auto zip_cref(const std::vector<Genotype_>& genotypes, const std::vector<double>& probabilities)
@@ -495,37 +503,58 @@ void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, co
 {
     const auto& haplotypes = latents.haplotypes_.get();
     const auto& germline_genotypes = latents.germline_genotypes_;
-    const auto& germline_genotype_posteriors = latents.germline_model_inferences_.posteriors.genotype_probabilities;
-    std::vector<double> germline_model_haplotype_posteriors(haplotypes.size());
-    if (latents.germline_genotype_indices_) {
-        GenotypeIndex buffer {};
-        for (std::size_t g {0}; g < germline_genotypes.size(); ++g) {
-            const auto& g_indices = (*latents.germline_genotype_indices_)[g];
-            for (auto idx : g_indices) {
-                if (std::find(std::cbegin(buffer), std::cend(buffer), idx) == std::cend(buffer)) {
-                    germline_model_haplotype_posteriors[idx] += germline_genotype_posteriors[g];
-                }
-            }
-            buffer.clear();
-        }
-    } else {
-        std::unordered_map<HaplotypeReference, double> tmp {};
-        tmp.reserve(haplotypes.size());
-        for (std::size_t g {0}; g < germline_genotypes.size(); ++g) {
-            for (const auto& haplotype : germline_genotypes[g].copy_unique_ref()) {
-                tmp[haplotype] += germline_genotype_posteriors[g];
-            }
-            std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(germline_model_haplotype_posteriors),
-                           [&tmp] (const auto& haplotype) { return tmp.at(haplotype); });
-        }
-    }
     const auto max_allowed_cancer_genotypes = std::max(parameters_.max_genotypes, germline_genotypes.size());
     const auto max_germline_genotype_bases = calculate_max_germline_genotype_bases(max_allowed_cancer_genotypes, latents.haplotypes_.get().size(),
                                                                                    latents.somatic_ploidy_);
-    const auto max_germline_haplotype_bases = max_num_elements(max_germline_genotype_bases, parameters_.ploidy);
-    const auto top_haplotypes = copy_greatest_probability_values(haplotypes, germline_model_haplotype_posteriors,
-                                                                 max_germline_haplotype_bases);
-    auto germline_bases = generate_all_genotypes(top_haplotypes, parameters_.ploidy);
+    std::vector<Genotype<Haplotype>> germline_bases;
+    if (latents.cancer_genotypes_.empty()) {
+        const auto& germline_genotype_posteriors = latents.germline_model_inferences_.posteriors.genotype_probabilities;
+        std::vector<double> germline_model_haplotype_posteriors(haplotypes.size());
+        if (latents.germline_genotype_indices_) {
+            GenotypeIndex buffer {};
+            for (std::size_t g {0}; g < germline_genotypes.size(); ++g) {
+                const auto& g_indices = (*latents.germline_genotype_indices_)[g];
+                for (auto idx : g_indices) {
+                    if (std::find(std::cbegin(buffer), std::cend(buffer), idx) == std::cend(buffer)) {
+                        germline_model_haplotype_posteriors[idx] += germline_genotype_posteriors[g];
+                    }
+                }
+                buffer.clear();
+            }
+        } else {
+            std::unordered_map<HaplotypeReference, double> tmp {};
+            tmp.reserve(haplotypes.size());
+            for (std::size_t g {0}; g < germline_genotypes.size(); ++g) {
+                for (const auto& haplotype : germline_genotypes[g].copy_unique_ref()) {
+                    tmp[haplotype] += germline_genotype_posteriors[g];
+                }
+                std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(germline_model_haplotype_posteriors),
+                               [&tmp] (const auto& haplotype) { return tmp.at(haplotype); });
+            }
+        }
+        const auto max_germline_haplotype_bases = max_num_elements(max_germline_genotype_bases, parameters_.ploidy);
+        const auto top_haplotypes = copy_greatest_probability_values(haplotypes, germline_model_haplotype_posteriors,
+                                                                     max_germline_haplotype_bases);
+        germline_bases = generate_all_genotypes(top_haplotypes, parameters_.ploidy);
+    } else {
+        // If the tumour model has already been run then use marginal germline genotype probabilities from that
+        assert(latents.tumour_model_inferences_.posteriors.genotype_probabilities.size() == latents.cancer_genotypes_.size());
+        GermlineGenotypeProbabilityMap germline_genotype_probabilities {};
+        germline_genotype_probabilities.reserve(germline_genotypes.size());
+        for (const auto& p : zip(latents.cancer_genotypes_, latents.tumour_model_inferences_.posteriors.genotype_probabilities)) {
+            germline_genotype_probabilities[p.get<0>().germline()] += p.get<1>();
+        }
+        std::vector<double> flat_germline_genotype_probabilities(germline_genotypes.size());
+        std::transform(std::cbegin(germline_genotypes), std::cend(germline_genotypes),
+                       std::begin(flat_germline_genotype_probabilities),
+                       [&] (const auto& genotype) {
+            auto itr = germline_genotype_probabilities.find(genotype);
+            return itr != std::cend(germline_genotype_probabilities) ? itr->second : 0.0;
+        });
+        germline_bases = copy_greatest_probability_values(germline_genotypes, flat_germline_genotype_probabilities, max_germline_genotype_bases);
+        latents.cancer_genotypes_.clear();
+        if (latents.cancer_genotype_indices_) latents.cancer_genotype_indices_->clear();
+    }
     if (latents.germline_genotype_indices_) {
         std::vector<GenotypeIndex> germline_bases_indices;
         germline_bases_indices.reserve(germline_bases.size());
@@ -1470,18 +1499,6 @@ void CancerCaller::Latents::compute_genotype_posteriors() const
     }
     genotype_posteriors_ = std::make_shared<Latents::GenotypeProbabilityMap>(std::move(genotype_posteriors));
 }
-
-namespace {
-
-template <typename... T>
-auto zip(const T&... containers) -> boost::iterator_range<boost::zip_iterator<decltype(boost::make_tuple(std::begin(containers)...))>>
-{
-    auto zip_begin = boost::make_zip_iterator(boost::make_tuple(std::begin(containers)...));
-    auto zip_end   = boost::make_zip_iterator(boost::make_tuple(std::end(containers)...));
-    return boost::make_iterator_range(zip_begin, zip_end);
-}
-
-} // namespace
 
 void CancerCaller::Latents::compute_haplotype_posteriors() const
 {
