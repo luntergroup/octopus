@@ -443,25 +443,19 @@ bool is_almost_completely_strand_biased(const unsigned num_fwd_observations, con
     return num_observations > 0 && (num_fwd_observations <= 1 || num_fwd_observations >= (num_observations - 1));
 }
 
-bool overlaps(const std::pair<double, double>& lhs, const std::pair<double, double>& rhs) noexcept
+bool is_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations, const double tail_mass) noexcept
 {
-    return std::min(lhs.second, rhs.second) - std::max(lhs.first, rhs.first) > 0.0;
-}
-
-bool is_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations, const double credible_mass) noexcept
-{
-    const auto credible_region = maths::beta_hdi(num_fwd_observations + 1.0, num_rev_observations + 1.0, credible_mass);
-    return !overlaps(credible_region, {0.4, 0.6});
+    return maths::beta_tail_probability(num_fwd_observations + 0.5, num_rev_observations + 0.5, tail_mass) >= 0.99;
 }
 
 bool is_strongly_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
 {
-    return is_strand_biased(num_fwd_observations, num_rev_observations, 0.999);
+    return is_strand_biased(num_fwd_observations, num_rev_observations, 0.01);
 }
 
 bool is_weakly_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
 {
-    return is_strand_biased(num_fwd_observations, num_rev_observations, 0.95);
+    return is_strand_biased(num_fwd_observations, num_rev_observations, 0.05);
 }
 
 bool is_likely_runthrough_artifact(const unsigned num_fwd_observations, const unsigned num_rev_observations,
@@ -552,10 +546,7 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
         erase_below(observed_qualities, 15);
         const auto vaf = static_cast<double>(observed_qualities.size()) / (depth - std::sqrt(depth));
         if (observed_qualities.size() >= 2 && vaf >= min_expected_vaf) {
-            if (vaf < 0.01 && is_completely_strand_biased(num_fwd_observations, num_rev_observations)) {
-                return false;
-            }
-            return true;
+            return vaf >= 0.01 || !is_completely_strand_biased(num_fwd_observations, num_rev_observations);
         } else {
             return false;
         }
