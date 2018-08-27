@@ -76,6 +76,9 @@ CancerCaller::CancerCaller(Caller::Components&& components,
             *debug_log_ << "There is no normal sample";
         }
     }
+    if (!has_normal_sample()) {
+        parameters_.cnv_tumour_alpha = parameters_.somatic_tumour_germline_alpha;
+    }
 }
 
 // private methods
