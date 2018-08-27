@@ -1701,10 +1701,6 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (caller == "cancer") {
         if (is_set("normal-sample", options)) {
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
-        } else {
-            logging::WarningLogger log {};
-            log << "Tumour only calling requested. "
-                "Please note this feature is still under development and results and runtimes may be poor";
         }
         vc_builder.set_max_somatic_haplotypes(as_unsigned("max-somatic-haplotypes", options));
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
