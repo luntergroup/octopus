@@ -26,8 +26,8 @@ public:
 private:
     static constexpr std::array<PenaltyType, 50> homopolymerErrors_ =
     {{
-     60,60,48,42,35,22,16,12,8,6,4,2,1,1,1,1,1,1,1,1,
-     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+     60,60,49,44,38,34,26,22,19,17,16,15,15,15,14,13,12,11,11,10,
+     9,9,8,8,7,7,7,6,6,6,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1
      }};
     static constexpr std::array<PenaltyType, 50> diNucleotideTandemRepeatErrors_ =
     {{
@@ -46,7 +46,7 @@ private:
      9,9,8,8,7,7,7,6,6,6,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1
      }};
     
-    static constexpr PenaltyType defaultGapExtension_ = 3;
+    static constexpr PenaltyType defaultGapExtension_ = 2;
     
     virtual std::unique_ptr<IndelErrorModel> do_clone() const override;
     virtual PenaltyType do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const override;
