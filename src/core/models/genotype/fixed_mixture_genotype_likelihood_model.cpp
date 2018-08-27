@@ -59,7 +59,7 @@ void FixedMixtureGenotypeLikelihoodModel::prime(const std::vector<Haplotype>& ha
 {
     assert(likelihoods_.is_primed());
     indexed_likelihoods_.reserve(haplotypes.size());
-    std::transform(std::next(std::cbegin(haplotypes)), std::cend(haplotypes), std::back_inserter(indexed_likelihoods_),
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(indexed_likelihoods_),
                    [this] (const auto& haplotype) -> const HaplotypeLikelihoodCache::LikelihoodVector& {
                        return likelihoods_[haplotype]; });
 }
