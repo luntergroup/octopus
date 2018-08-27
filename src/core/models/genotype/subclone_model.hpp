@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <boost/optional.hpp>
+
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
@@ -23,6 +25,8 @@ public:
     {
         unsigned max_iterations = 1000;
         double epsilon          = 0.05;
+        unsigned max_seeds      = 8;
+        boost::optional<MemoryFootprint> target_max_memory = boost::none;
     };
     
     struct Priors
@@ -64,6 +68,10 @@ public:
     
     const Priors& priors() const noexcept;
     
+    void prime(const std::vector<Haplotype>& haplotypes);
+    void unprime() noexcept;
+    bool is_primed() const noexcept;
+    
     InferredLatents evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
@@ -75,8 +83,9 @@ private:
     std::vector<SampleName> samples_;
     Priors priors_;
     AlgorithmParameters parameters_;
+    const std::vector<Haplotype>* haplotypes_;
 };
-    
+
 } // namespace model
 } // namespace octopus
 
