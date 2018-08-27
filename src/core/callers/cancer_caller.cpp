@@ -57,12 +57,12 @@ CancerCaller::CancerCaller(Caller::Components&& components,
             throw std::invalid_argument {"CancerCaller: normal sample is not a valid sample"};
         }
     }
-    if (parameters_.cnv_normal_alpha <= 0.0
-        || parameters_.cnv_tumour_alpha <= 0.0
-        || parameters_.somatic_normal_germline_alpha <= 0.0
-        || parameters_.somatic_normal_somatic_alpha <= 0.0
-        || parameters_.somatic_tumour_germline_alpha <= 0.0
-        || parameters_.somatic_tumour_somatic_alpha <= 0.0) {
+    if (parameters_.concentrations.cnv.normal <= 0.0
+        || parameters_.concentrations.cnv.tumour <= 0.0
+        || parameters_.concentrations.somatic.normal_germline <= 0.0
+        || parameters_.concentrations.somatic.normal_somatic <= 0.0
+        || parameters_.concentrations.somatic.tumour_germline <= 0.0
+        || parameters_.concentrations.somatic.tumour_somatic <= 0.0) {
         throw std::invalid_argument {"CancerCaller: concentration parameters must be positive"};
     }
     if (parameters_.min_variant_posterior == Phred<double> {0}) {
@@ -77,7 +77,7 @@ CancerCaller::CancerCaller(Caller::Components&& components,
         }
     }
     if (!has_normal_sample()) {
-        parameters_.cnv_tumour_alpha = parameters_.somatic_tumour_germline_alpha;
+        parameters_.concentrations.cnv.tumour = parameters_.concentrations.somatic.tumour_germline;
     }
 }
 
@@ -763,10 +763,10 @@ CancerCaller::get_cnv_model_priors(const GenotypePriorModel& prior_model) const
     cnv_alphas.reserve(samples_.size());
     for (const auto& sample : samples_) {
         if (has_normal_sample() && sample == normal_sample()) {
-            Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy, parameters_.cnv_normal_alpha);
+            Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy, parameters_.concentrations.cnv.normal);
             cnv_alphas.emplace(sample, std::move(sample_alphas));
         } else {
-            Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy, parameters_.cnv_tumour_alpha);
+            Priors::GenotypeMixturesDirichletAlphas sample_alphas(parameters_.ploidy, parameters_.concentrations.cnv.tumour);
             cnv_alphas.emplace(sample, std::move(sample_alphas));
         }
     }
@@ -789,11 +789,11 @@ CancerCaller::get_somatic_model_priors(const CancerGenotypePriorModel& prior_mod
     alphas.reserve(samples_.size());
     for (const auto& sample : samples_) {
         if (has_normal_sample() && sample == normal_sample()) {
-            alphas.emplace(sample, make_dirichlet_alphas(parameters_.ploidy, parameters_.somatic_normal_germline_alpha,
-                                                         somatic_ploidy, parameters_.somatic_normal_somatic_alpha));
+            alphas.emplace(sample, make_dirichlet_alphas(parameters_.ploidy, parameters_.concentrations.somatic.normal_germline,
+                                                         somatic_ploidy, parameters_.concentrations.somatic.normal_somatic));
         } else {
-            alphas.emplace(sample, make_dirichlet_alphas(parameters_.ploidy, parameters_.somatic_tumour_germline_alpha,
-                                                         somatic_ploidy, parameters_.somatic_tumour_somatic_alpha));
+            alphas.emplace(sample, make_dirichlet_alphas(parameters_.ploidy, parameters_.concentrations.somatic.tumour_germline,
+                                                         somatic_ploidy, parameters_.concentrations.somatic.tumour_somatic));
         }
     }
     return Priors {prior_model, std::move(alphas)};
@@ -805,8 +805,8 @@ CancerCaller::get_noise_model_priors(const CancerGenotypePriorModel& prior_model
     // The noise model is intended to capture noise that may also be present in the normal sample,
     // hence all samples have the same prior alphas.
     using Priors = SomaticModel::Priors;
-    auto noise_alphas = make_dirichlet_alphas(parameters_.ploidy, parameters_.somatic_normal_germline_alpha,
-                                              somatic_ploidy, parameters_.somatic_tumour_somatic_alpha);
+    auto noise_alphas = make_dirichlet_alphas(parameters_.ploidy, parameters_.concentrations.somatic.normal_germline,
+                                              somatic_ploidy, parameters_.concentrations.somatic.tumour_somatic);
     Priors::GenotypeMixturesDirichletAlphaMap alphas {};
     alphas.reserve(samples_.size());
     for (const auto& sample : samples_) {

@@ -404,7 +404,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                 params_.deduplicate_haplotypes_with_caller_model,
                 params_.max_vb_seeds
             };
-            cancer_params.somatic_tumour_germline_alpha = params_.tumour_germline_concentration;
+            cancer_params.concentrations.somatic.tumour_germline = params_.tumour_germline_concentration;
             return std::make_unique<CancerCaller>(make_components(), params_.general, std::move(cancer_params));
         }},
         {"trio", [this] () {

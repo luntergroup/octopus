@@ -39,6 +39,22 @@ public:
     struct Parameters
     {
         enum class NormalContaminationRisk { high, low };
+        
+        struct Concentrations
+        {
+            struct CNVModelConcentrations
+            {
+                double normal = 50., tumour = .5;
+            };
+            struct SomaticModelConcentrations
+            {
+                double normal_germline = 50., normal_somatic = .05, tumour_germline = 1.5, tumour_somatic = 1.;
+            };
+            
+            CNVModelConcentrations cnv;
+            SomaticModelConcentrations somatic;
+        };
+        
         Phred<double> min_variant_posterior, min_somatic_posterior, min_refcall_posterior;
         unsigned ploidy;
         boost::optional<SampleName> normal_sample;
@@ -50,9 +66,7 @@ public:
         NormalContaminationRisk normal_contamination_risk = NormalContaminationRisk::low;
         bool deduplicate_haplotypes_with_germline_model = true;
         boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
-        double cnv_normal_alpha = 50.0, cnv_tumour_alpha = 0.5;
-        double somatic_normal_germline_alpha = 50.0, somatic_normal_somatic_alpha = 0.05;
-        double somatic_tumour_germline_alpha = 1.5, somatic_tumour_somatic_alpha = 1.0;
+        Concentrations concentrations = Concentrations {};
     };
     
     CancerCaller() = delete;
