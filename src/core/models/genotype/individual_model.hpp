@@ -46,6 +46,10 @@ public:
     
     const GenotypePriorModel& prior_model() const noexcept;
     
+    void prime(const std::vector<Haplotype>& haplotypes);
+    void unprime() noexcept;
+    bool is_primed() const noexcept;
+    
     InferredLatents evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
@@ -55,6 +59,7 @@ public:
     
 private:
     const GenotypePriorModel& genotype_prior_model_;
+    const std::vector<Haplotype>* haplotypes_;
     
     mutable boost::optional<logging::DebugLogger> debug_log_;
     mutable boost::optional<logging::TraceLogger> trace_log_;

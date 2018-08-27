@@ -18,6 +18,7 @@ IndividualModel::IndividualModel(const GenotypePriorModel& genotype_prior_model,
                                  boost::optional<logging::DebugLogger> debug_log,
                                  boost::optional<logging::TraceLogger> trace_log)
 : genotype_prior_model_ {genotype_prior_model}
+, haplotypes_ {}
 , debug_log_ {debug_log}
 , trace_log_ {trace_log}
 {}
@@ -25,6 +26,21 @@ IndividualModel::IndividualModel(const GenotypePriorModel& genotype_prior_model,
 const GenotypePriorModel& IndividualModel::prior_model() const noexcept
 {
     return genotype_prior_model_;
+}
+
+void IndividualModel::prime(const std::vector<Haplotype>& haplotypes)
+{
+    haplotypes_ = std::addressof(haplotypes);
+}
+
+void IndividualModel::unprime() noexcept
+{
+    haplotypes_ = nullptr;
+}
+
+bool IndividualModel::is_primed() const noexcept
+{
+    return haplotypes_;
 }
 
 namespace debug {
@@ -66,12 +82,18 @@ IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
 {
     assert(!genotypes.empty());
     assert(genotypes.size() == genotype_indices.size());
-    const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
-    auto posteriors = octopus::model::evaluate(genotypes, likelihood_model);
-    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, posteriors);
-    octopus::evaluate(genotype_indices, genotype_prior_model_, posteriors, false, true);
-    const auto log_evidence = maths::normalise_exp(posteriors);
-    return {{std::move(posteriors)}, log_evidence};
+    GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
+    InferredLatents result {};
+    if (is_primed()) {
+        likelihood_model.prime(*haplotypes_);
+        result.posteriors.genotype_probabilities = octopus::model::evaluate(genotype_indices, likelihood_model);
+    } else {
+        result.posteriors.genotype_probabilities = octopus::model::evaluate(genotypes, likelihood_model);
+    }
+    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, result.posteriors.genotype_probabilities);
+    octopus::evaluate(genotype_indices, genotype_prior_model_, result.posteriors.genotype_probabilities, false, true);
+    result.log_evidence = maths::normalise_exp(result.posteriors.genotype_probabilities);
+    return result;
 }
 
 namespace debug {
