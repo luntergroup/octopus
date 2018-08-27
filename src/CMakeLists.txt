@@ -368,8 +368,6 @@ set(CORE_SOURCES
     core/models/genotype/independent_population_model.cpp
     core/models/genotype/population_model.hpp
     core/models/genotype/population_model.cpp
-    core/models/genotype/tumour_model.hpp
-    core/models/genotype/tumour_model.cpp
     core/models/genotype/variational_bayes_mixture_model.hpp
     core/models/genotype/trio_model.hpp
     core/models/genotype/trio_model.cpp

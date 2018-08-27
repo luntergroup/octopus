@@ -163,7 +163,7 @@ void CancerCaller::set_cancer_genotype_prior_model(Latents& latents) const
 void CancerCaller::fit_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     set_cancer_genotype_prior_model(latents);
-    model::TumourModel::InferredLatents prev_tumour_latents;
+    SomaticModel::InferredLatents prev_tumour_latents;
     std::vector<CancerGenotype<Haplotype>> prev_cancer_genotypes;
     boost::optional<std::vector<CancerGenotypeIndex>> prev_cancer_genotype_indices;
     for (unsigned somatic_ploidy {1}; somatic_ploidy <= parameters_.max_somatic_haplotypes; ++somatic_ploidy) {
@@ -654,10 +654,10 @@ void CancerCaller::evaluate_tumour_model(Latents& latents, const HaplotypeLikeli
     assert(latents.germline_prior_model_ && !latents.cancer_genotypes_.empty());
     assert(latents.cancer_genotype_prior_model_);
     auto somatic_model_priors = get_somatic_model_priors(*latents.cancer_genotype_prior_model_, latents.somatic_ploidy_);
-    TumourModel::AlgorithmParameters params {};
+    SomaticModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
     params.target_max_memory = this->target_max_memory();
-    TumourModel model {samples_, somatic_model_priors, params};
+    SomaticModel model {samples_, somatic_model_priors, params};
     if (latents.cancer_genotype_indices_) {
         assert(latents.cancer_genotype_prior_model_->germline_model().is_primed());
         if (!latents.cancer_genotype_prior_model_->mutation_model().is_primed()) {
@@ -671,7 +671,7 @@ void CancerCaller::evaluate_tumour_model(Latents& latents, const HaplotypeLikeli
 }
 
 auto get_high_posterior_genotypes(const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                  const model::TumourModel::InferredLatents& latents)
+                                  const model::SomaticSubcloneModel::InferredLatents& latents)
 {
     return copy_greatest_probability_values(genotypes, latents.posteriors.genotype_probabilities, 10, 1e-3);
 }
@@ -693,7 +693,7 @@ void CancerCaller::evaluate_noise_model(Latents& latents, const HaplotypeLikelih
         }
         assert(latents.cancer_genotype_prior_model_);
         auto noise_model_priors = get_noise_model_priors(*latents.cancer_genotype_prior_model_, latents.somatic_ploidy_);
-        const TumourModel noise_model {{*parameters_.normal_sample}, noise_model_priors};
+        const SomaticModel noise_model {{*parameters_.normal_sample}, noise_model_priors};
         auto noise_genotypes = get_high_posterior_genotypes(latents.cancer_genotypes_, latents.tumour_model_inferences_);
         latents.noise_model_inferences_ = noise_model.evaluate(noise_genotypes, haplotype_likelihoods);
     }
@@ -750,16 +750,16 @@ CancerCaller::get_cnv_model_priors(const GenotypePriorModel& prior_model) const
 
 auto make_dirichlet_alphas(unsigned n_germline, double germline, unsigned n_somatic, double somatic)
 {
-    model::TumourModel::Priors::GenotypeMixturesDirichletAlphas result(n_germline + n_somatic);
+    model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphas result(n_germline + n_somatic);
     std::fill_n(std::begin(result), n_germline, germline);
     std::fill_n(std::rbegin(result), n_somatic, somatic);
     return result;
 }
 
-CancerCaller::TumourModel::Priors
+CancerCaller::SomaticModel::Priors
 CancerCaller::get_somatic_model_priors(const CancerGenotypePriorModel& prior_model, const unsigned somatic_ploidy) const
 {
-    using Priors = TumourModel::Priors;
+    using Priors = SomaticModel::Priors;
     Priors::GenotypeMixturesDirichletAlphaMap alphas {};
     alphas.reserve(samples_.size());
     for (const auto& sample : samples_) {
@@ -774,12 +774,12 @@ CancerCaller::get_somatic_model_priors(const CancerGenotypePriorModel& prior_mod
     return Priors {prior_model, std::move(alphas)};
 }
 
-CancerCaller::TumourModel::Priors
+CancerCaller::SomaticModel::Priors
 CancerCaller::get_noise_model_priors(const CancerGenotypePriorModel& prior_model, const unsigned somatic_ploidy) const
 {
     // The noise model is intended to capture noise that may also be present in the normal sample,
     // hence all samples have the same prior alphas.
-    using Priors = TumourModel::Priors;
+    using Priors = SomaticModel::Priors;
     auto noise_alphas = make_dirichlet_alphas(parameters_.ploidy, parameters_.somatic_normal_germline_alpha,
                                               somatic_ploidy, parameters_.somatic_tumour_somatic_alpha);
     Priors::GenotypeMixturesDirichletAlphaMap alphas {};
@@ -814,14 +814,14 @@ namespace {
 using VariantReference  = std::reference_wrapper<const Variant>;
 using VariantPosteriorVector = std::vector<std::pair<VariantReference, Phred<double>>>;
 
-auto compute_marginal_credible_interval(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+auto compute_marginal_credible_interval(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
                                         const std::size_t k, const double mass)
 {
     const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
     return maths::beta_hdi(alphas[k], a0 - alphas[k], mass);
 }
 
-auto compute_marginal_credible_intervals(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+auto compute_marginal_credible_intervals(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
                                          const double mass)
 {
     const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
@@ -835,7 +835,7 @@ auto compute_marginal_credible_intervals(const model::TumourModel::Priors::Genot
 
 using CredibleRegionMap = std::unordered_map<SampleName, std::vector<std::pair<double, double>>>;
 
-auto compute_marginal_credible_intervals(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+auto compute_marginal_credible_intervals(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
                                          const double mass)
 {
     CredibleRegionMap result {};
@@ -846,7 +846,7 @@ auto compute_marginal_credible_intervals(const model::TumourModel::Priors::Genot
     return result;
 }
 
-auto compute_credible_somatic_mass(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+auto compute_credible_somatic_mass(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
                                    const unsigned somatic_ploidy, const double min_credible_somatic_frequency)
 {
     if (somatic_ploidy == 1) {
@@ -860,7 +860,7 @@ auto compute_credible_somatic_mass(const model::TumourModel::Priors::GenotypeMix
     }
 }
 
-auto compute_credible_somatic_mass(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+auto compute_credible_somatic_mass(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
                                    const unsigned somatic_ploidy, const double min_credible_somatic_frequency)
 {
     double inv_result {1.0};
@@ -874,7 +874,7 @@ auto compute_credible_somatic_mass(const model::TumourModel::Priors::GenotypeMix
     return 1.0 - inv_result;
 }
 
-auto compute_map_somatic_vaf(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+auto compute_map_somatic_vaf(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
                              const unsigned somatic_ploidy)
 {
     double result {0.0};
@@ -886,7 +886,7 @@ auto compute_map_somatic_vaf(const model::TumourModel::Priors::GenotypeMixturesD
 
 using SomaticVAFMap = std::unordered_map<SampleName, double>;
 
-auto compute_map_somatic_vafs(const model::TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+auto compute_map_somatic_vafs(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
                               const unsigned somatic_ploidy)
 {
     SomaticVAFMap result {};
@@ -1555,7 +1555,7 @@ void CancerCaller::log(const GenotypeVector& germline_genotypes,
                        const GermlineModel::InferredLatents& germline_inferences,
                        const CNVModel::InferredLatents& cnv_inferences,
                        const CancerGenotypeVector& cancer_genotypes,
-                       const TumourModel::InferredLatents& tumour_inferences) const
+                       const SomaticModel::InferredLatents& tumour_inferences) const
 {
     if (debug_log_) {
         auto germline_posteriors = zip_cref(germline_genotypes, germline_inferences.posteriors.genotype_probabilities);

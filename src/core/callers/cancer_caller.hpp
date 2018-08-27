@@ -21,7 +21,6 @@
 #include "core/models/mutation/somatic_mutation_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
 #include "core/models/genotype/subclone_model.hpp"
-#include "core/models/genotype/tumour_model.hpp"
 #include "basics/phred.hpp"
 #include "caller.hpp"
 
@@ -72,7 +71,7 @@ public:
 private:
     using GermlineModel = model::IndividualModel;
     using CNVModel      = model::SubcloneModel;
-    using TumourModel   = model::TumourModel;
+    using SomaticModel  = model::SomaticSubcloneModel;
     
     class Latents;
     friend Latents;
@@ -150,8 +149,8 @@ private:
     
     std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const;
     CNVModel::Priors get_cnv_model_priors(const GenotypePriorModel& prior_model) const;
-    TumourModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
-    TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
+    SomaticModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
+    SomaticModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
     CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
     
     GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& latents) const;
@@ -165,7 +164,7 @@ private:
              const GermlineModel::InferredLatents& germline_inferences,
              const CNVModel::InferredLatents& cnv_inferences,
              const CancerGenotypeVector& cancer_genotypes,
-             const TumourModel::InferredLatents& tumour_inferences) const;
+             const SomaticModel::InferredLatents& tumour_inferences) const;
 };
 
 class CancerCaller::Latents : public Caller::Latents
@@ -198,8 +197,8 @@ private:
     std::unique_ptr<GermlineModel> germline_model_ = nullptr;
     GermlineModel::InferredLatents germline_model_inferences_;
     CNVModel::InferredLatents cnv_model_inferences_;
-    TumourModel::InferredLatents tumour_model_inferences_;
-    boost::optional<TumourModel::InferredLatents> noise_model_inferences_ = boost::none;
+    SomaticModel::InferredLatents tumour_model_inferences_;
+    boost::optional<SomaticModel::InferredLatents> noise_model_inferences_ = boost::none;
     boost::optional<GermlineModel::InferredLatents> normal_germline_inferences_ = boost::none;
     CancerCaller::ModelPosteriors model_posteriors_;
     
