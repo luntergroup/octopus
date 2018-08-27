@@ -374,14 +374,22 @@ CigarScanner::make_observation(const CandidateIterator first_match, const Candid
                        [] (const Candidate& c) noexcept { return c.source.get().mapping_quality(); });
         const auto num_fwd_support = std::accumulate(observation_itr, next_itr, 0u,
                                                      [] (unsigned curr, const Candidate& c) noexcept {
-                                                         if (c.source.get().direction() == AlignedRead::Direction::forward) {
+                                                         if (is_forward_strand(c.source.get())) {
                                                              ++curr;
                                                          }
                                                          return curr;
                                                      });
+        const auto num_edge_support = std::accumulate(observation_itr, next_itr, 0u,
+                                                      [] (unsigned curr, const Candidate& c) noexcept {
+                                                          if (begins_equal(c, c.source.get()) || ends_equal(c, c.source.get())) {
+                                                              ++curr;
+                                                          }
+                                                          return curr;
+                                                      });
         const auto depth = get_min_depth(candidate.variant, sample_read_coverage_tracker_.at(origin));
         result.sample_observations.push_back({origin, depth, std::move(observed_base_qualities),
-                                              std::move(observed_mapping_qualities), num_fwd_support});
+                                              std::move(observed_mapping_qualities),
+                                              num_fwd_support, num_edge_support});
         observation_itr = next_itr;
     }
     return result;
@@ -525,7 +533,8 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
 }
 
 bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigned num_fwd_observations,
-                     std::vector<unsigned> observed_qualities, const double min_expected_vaf)
+                     const unsigned num_edge_observations, std::vector<unsigned> observed_qualities,
+                     const double min_expected_vaf)
 {
     const auto num_observations = observed_qualities.size();
     if (depth < 4) {
@@ -545,7 +554,7 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
         if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
         erase_below(observed_qualities, 15);
         const auto vaf = static_cast<double>(observed_qualities.size()) / (depth - std::sqrt(depth));
-        if (observed_qualities.size() >= 2 && vaf >= min_expected_vaf) {
+        if (observed_qualities.size() >= 2 && vaf >= min_expected_vaf && num_edge_observations < num_observations) {
             return vaf >= 0.01 || !is_completely_strand_biased(num_fwd_observations, num_rev_observations);
         } else {
             return false;
@@ -607,7 +616,8 @@ bool is_good_germline_pooled(const CigarScanner::ObservedVariant& candidate)
 
 bool is_good_somatic(const Variant& v, const CigarScanner::ObservedVariant::SampleObservation& observation, double min_expected_vaf)
 {
-    return is_good_somatic(v, observation.depth, observation.num_fwd_observations, observation.observed_base_qualities, min_expected_vaf);
+    return is_good_somatic(v, observation.depth, observation.num_fwd_observations, observation.num_edge_observations,
+                           observation.observed_base_qualities, min_expected_vaf);
 }
 
 } // namespace
