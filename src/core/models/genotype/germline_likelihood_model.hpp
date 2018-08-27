@@ -15,6 +15,8 @@ namespace octopus { namespace model {
 class GermlineLikelihoodModel
 {
 public:
+    using LogProbability = double;
+    
     GermlineLikelihoodModel() = delete;
     
     GermlineLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods);
@@ -33,25 +35,26 @@ public:
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
-    double evaluate(const Genotype<Haplotype>& genotype) const;
-    double evaluate(const GenotypeIndex& genotype) const;
+    LogProbability evaluate(const Genotype<Haplotype>& genotype) const;
+    LogProbability evaluate(const GenotypeIndex& genotype) const;
     
 private:
     const HaplotypeLikelihoodCache& likelihoods_;
     std::vector<HaplotypeLikelihoodCache::LikelihoodVectorRef> indexed_likelihoods_;
-    mutable std::vector<double> buffer_;
+    mutable std::vector<HaplotypeLikelihoodCache::LikelihoodVectorRef> likelihood_refs_;
+    mutable std::vector<LogProbability> buffer_;
     
     // These are just for optimisation
-    double evaluate_haploid(const Genotype<Haplotype>& genotype) const;
-    double evaluate_diploid(const Genotype<Haplotype>& genotype) const;
-    double evaluate_triploid(const Genotype<Haplotype>& genotype) const;
-    double evaluate_tetraploid(const Genotype<Haplotype>& genotype) const;
-    double evaluate_polyploid(const Genotype<Haplotype>& genotype) const;
+    LogProbability evaluate_haploid(const Genotype<Haplotype>& genotype) const;
+    LogProbability evaluate_diploid(const Genotype<Haplotype>& genotype) const;
+    LogProbability evaluate_triploid(const Genotype<Haplotype>& genotype) const;
+    LogProbability evaluate_tetraploid(const Genotype<Haplotype>& genotype) const;
+    LogProbability evaluate_polyploid(const Genotype<Haplotype>& genotype) const;
 };
 
-template <typename G>
-std::vector<double>&
-evaluate(const std::vector<G>& genotypes, const GermlineLikelihoodModel& model, std::vector<double>& result)
+template <typename Container1, typename Container2>
+Container2&
+evaluate(const Container1& genotypes, const GermlineLikelihoodModel& model, Container2& result)
 {
     result.resize(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
@@ -59,11 +62,10 @@ evaluate(const std::vector<G>& genotypes, const GermlineLikelihoodModel& model, 
     return result;
 }
 
-template <typename G>
-std::vector<double>
-evaluate(const std::vector<G>& genotypes, const GermlineLikelihoodModel& model)
+template <typename Container>
+auto evaluate(const Container& genotypes, const GermlineLikelihoodModel& model)
 {
-    std::vector<double> result {};
+    std::vector<GermlineLikelihoodModel::LogProbability> result {};
     evaluate(genotypes, model, result);
     return result;
 }

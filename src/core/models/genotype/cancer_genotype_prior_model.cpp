@@ -32,7 +32,7 @@ const SomaticMutationModel& CancerGenotypePriorModel::mutation_model() const noe
     return mutation_model_;
 }
 
-double CancerGenotypePriorModel::evaluate(const CancerGenotype<Haplotype>& genotype) const
+CancerGenotypePriorModel::LogProbability CancerGenotypePriorModel::evaluate(const CancerGenotype<Haplotype>& genotype) const
 {
     const auto& germline_genotype = genotype.germline();
     auto result = germline_model_.get().evaluate(germline_genotype);
@@ -43,7 +43,7 @@ double CancerGenotypePriorModel::evaluate(const CancerGenotype<Haplotype>& genot
     return result;
 }
 
-double CancerGenotypePriorModel::evaluate(const CancerGenotypeIndex& genotype) const
+CancerGenotypePriorModel::LogProbability CancerGenotypePriorModel::evaluate(const CancerGenotypeIndex& genotype) const
 {
     const auto germline_indices = genotype.germline;
     auto result = germline_model_.get().evaluate(germline_indices);
@@ -54,12 +54,14 @@ double CancerGenotypePriorModel::evaluate(const CancerGenotypeIndex& genotype) c
     return result;
 }
 
-double CancerGenotypePriorModel::ln_probability_of_somatic_given_haplotype(const Haplotype& somatic, const Haplotype& germline) const
+CancerGenotypePriorModel::LogProbability
+CancerGenotypePriorModel::ln_probability_of_somatic_given_haplotype(const Haplotype& somatic, const Haplotype& germline) const
 {
     return mutation_model_.evaluate(somatic, germline);
 }
 
-double CancerGenotypePriorModel::ln_probability_of_somatic_given_haplotype(unsigned somatic_index, unsigned germline_index) const
+CancerGenotypePriorModel::LogProbability
+CancerGenotypePriorModel::ln_probability_of_somatic_given_haplotype(unsigned somatic_index, unsigned germline_index) const
 {
     return mutation_model_.evaluate(somatic_index, germline_index);
 }

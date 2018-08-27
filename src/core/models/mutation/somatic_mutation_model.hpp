@@ -15,6 +15,7 @@ namespace octopus {
 class SomaticMutationModel
 {
 public:
+    using LogProbability  = DeNovoModel::LogProbability;
     using Parameters      = DeNovoModel::Parameters;
     using CachingStrategy = DeNovoModel::CachingStrategy;
     
@@ -36,9 +37,8 @@ public:
     bool is_primed() const noexcept;
     
     // ln p(somatic | germline)
-    double evaluate(const Haplotype& somatic, const Haplotype& germline) const;
-    
-    double evaluate(unsigned somatic, unsigned germline) const;
+    LogProbability evaluate(const Haplotype& somatic, const Haplotype& germline) const;
+    LogProbability evaluate(unsigned somatic, unsigned germline) const;
     
 private:
     DeNovoModel model_;

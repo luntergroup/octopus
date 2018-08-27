@@ -65,7 +65,7 @@ void DeNovoModel::prime(std::vector<Haplotype> haplotypes)
     haplotypes_ = std::move(haplotypes);
     gap_model_index_cache_.resize(haplotypes_.size());
     if (haplotypes_.size() <= max_unguardered) {
-        unguarded_index_cache_.assign(haplotypes_.size(), std::vector<double>(haplotypes_.size(), 0));
+        unguarded_index_cache_.assign(haplotypes_.size(), std::vector<LogProbability>(haplotypes_.size(), 0));
         for (unsigned target {0}; target < haplotypes_.size(); ++target) {
             for (unsigned given {0}; given < haplotypes_.size(); ++given) {
                 if (target != given) {
@@ -75,7 +75,7 @@ void DeNovoModel::prime(std::vector<Haplotype> haplotypes)
         }
         use_unguarded_ = true;
     } else {
-        guarded_index_cache_.assign(haplotypes_.size(), std::vector<boost::optional<double>>(haplotypes_.size()));
+        guarded_index_cache_.assign(haplotypes_.size(), std::vector<boost::optional<LogProbability>>(haplotypes_.size()));
     }
 }
 
@@ -101,7 +101,7 @@ bool DeNovoModel::is_primed() const noexcept
     return !guarded_index_cache_.empty() || !unguarded_index_cache_.empty();
 }
 
-double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) const
+DeNovoModel::LogProbability DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) const
 {
     switch (caching_) {
         case CachingStrategy::address: return evaluate_address_cache(target, given);
@@ -111,7 +111,7 @@ double DeNovoModel::evaluate(const Haplotype& target, const Haplotype& given) co
     }
 }
 
-double DeNovoModel::evaluate(const unsigned target, const unsigned given) const
+DeNovoModel::LogProbability DeNovoModel::evaluate(const unsigned target, const unsigned given) const
 {
     if (use_unguarded_) {
         return unguarded_index_cache_[target][given];
@@ -240,11 +240,12 @@ hmm::VariableGapExtendMutationModel DeNovoModel::make_hmm_model_from_cache() con
     return {flat_mutation_model_.mutation, gap_open_penalties_, gap_extend_penalties_};
 }
 
-double DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given, const bool gap_penalties_cached) const
+DeNovoModel::LogProbability
+DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given, const bool gap_penalties_cached) const
 {
     if (!gap_penalties_cached) set_gap_penalties(given);
     const auto mutation_model = make_hmm_model_from_cache();
-    double result;
+    LogProbability result;
     if (can_align_with_hmm(target, given)) {
         pad_given(target, given, padded_given_);
         gap_open_penalties_.resize(padded_given_.size(), mutation_model.mutation);
@@ -258,13 +259,15 @@ double DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& 
     return min_ln_probability_ ? std::max(result, *min_ln_probability_) : result;
 }
 
-double DeNovoModel::evaluate_uncached(const unsigned target_idx, const unsigned given_idx) const
+DeNovoModel::LogProbability
+DeNovoModel::evaluate_uncached(const unsigned target_idx, const unsigned given_idx) const
 {
     set_gap_penalties(given_idx);
     return evaluate_uncached(haplotypes_[target_idx], haplotypes_[given_idx], true);
 }
 
-double DeNovoModel::evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const
+DeNovoModel::LogProbability
+DeNovoModel::evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const
 {
     const auto target_iter = value_cache_.find(target);
     if (target_iter != std::cend(value_cache_)) {
@@ -286,7 +289,8 @@ double DeNovoModel::evaluate_basic_cache(const Haplotype& target, const Haplotyp
     return result;
 }
 
-double DeNovoModel::evaluate_address_cache(const Haplotype& target, const Haplotype& given) const
+DeNovoModel::LogProbability
+DeNovoModel::evaluate_address_cache(const Haplotype& target, const Haplotype& given) const
 {
     const auto p = std::make_pair(std::addressof(target), std::addressof(given));
     const auto itr = address_cache_.find(p);
