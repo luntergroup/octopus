@@ -18,6 +18,7 @@
 #include <boost/math/special_functions/digamma.hpp>
 
 #include "utils/maths.hpp"
+#include "utils/memory_footprint.hpp"
 #include "core/models/haplotype_likelihood_cache.hpp"
 
 /**
@@ -33,8 +34,9 @@ namespace octopus { namespace model {
 
 struct VariationalBayesParameters
 {
-    double epsilon;
-    unsigned max_iterations;
+    double epsilon = 0.05;
+    unsigned max_iterations = 1000;
+    double save_memory = false;
 };
 
 using ProbabilityVector    = std::vector<double>;
@@ -95,14 +97,6 @@ struct VBLatents
 };
 
 // Main VB method
-
-template <std::size_t K>
-std::pair<VBLatents<K>, double>
-run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
-                      const LogProbabilityVector& genotype_log_priors,
-                      const VBReadLikelihoodMatrix<K>& log_likelihoods,
-                      const VariationalBayesParameters& params,
-                      std::vector<LogProbabilityVector> seeds);
 
 namespace detail {
 
@@ -495,7 +489,7 @@ bool run_vb_with_matrix_inversion(const VBReadLikelihoodMatrix<K>& log_likelihoo
                                   const VariationalBayesParameters& params,
                                   const std::vector<LogProbabilityVector>& seeds) noexcept
 {
-    return true;
+    return !params.save_memory;
 }
 
 template <std::size_t K>
@@ -614,6 +608,40 @@ inline double VBReadLikelihoodArray::operator[](const std::size_t n) const noexc
 {
     return likelihoods->operator[](n);
 }
+
+template <std::size_t K>
+std::pair<VBLatents<K>, double>
+run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
+                      const LogProbabilityVector& genotype_log_priors,
+                      const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                      const VariationalBayesParameters& params,
+                      std::vector<LogProbabilityVector> seeds);
+
+template <std::size_t K>
+MemoryFootprint
+estimate_memory_requirement(const std::vector<SampleName>& samples,
+                            const HaplotypeLikelihoodCache& likelihoods,
+                            const std::size_t num_genotypes,
+                            VariationalBayesParameters params)
+{
+    std::size_t bytes {};
+    for (const auto& sample : samples) {
+        bytes += sizeof(VBReadLikelihoodMatrix<K>);
+        bytes += sizeof(VBGenotypeVector<K>) * num_genotypes;
+        bytes += sizeof(VBResponsabilityMatrix<K>);
+        const auto num_likelihoods = likelihoods.num_likelihoods(sample);
+        const auto tau_bytes = num_likelihoods * sizeof(VBTau::value_type);
+        bytes += tau_bytes * K + sizeof(VBResponsabilityVector<K>);
+        if (!params.save_memory) {
+            bytes += sizeof(detail::VBInverseReadLikelihoodMatrix<K>);
+            auto inverse_bytes = sizeof(detail::VBInverseLikelihood::value_type) * num_genotypes + sizeof(detail::VBInverseLikelihood);
+            inverse_bytes *= num_likelihoods;
+            inverse_bytes += sizeof(detail::VBInverseGenotype);
+            bytes += K * inverse_bytes + sizeof(detail::VBInverseGenotypeVector<K>);
+        }
+    }
+    return MemoryFootprint {bytes};
+};
 
 } // namespace model
 } // namespace octopus
