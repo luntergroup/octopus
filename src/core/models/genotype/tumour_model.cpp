@@ -534,12 +534,19 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& prior_alphas,
                       std::vector<double> genotype_log_priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                      const VariationalBayesParameters& params,
+                      const TumourModel::AlgorithmParameters& params,
                       std::vector<std::vector<double>>&& seeds)
 {
+    VariationalBayesParameters vb_params {params.epsilon, params.max_iterations};
+    if (params.target_max_memory) {
+        const auto estimated_memory_default = estimate_memory_requirement<K>(samples, haplotype_log_likelihoods, genotypes.size(), vb_params);
+        if (estimated_memory_default > *params.target_max_memory) {
+            vb_params.save_memory = true;
+        }
+    }
     const auto vb_prior_alphas = flatten<K>(prior_alphas, samples);
     const auto log_likelihoods = flatten<K>(genotypes, samples, haplotype_log_likelihoods);
-    auto p = run_variational_bayes(vb_prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
+    auto p = run_variational_bayes(vb_prior_alphas, genotype_log_priors, log_likelihoods, vb_params, std::move(seeds));
     return expand(samples, std::move(p.first), std::move(genotype_log_priors), p.second);
 }
 
@@ -552,24 +559,27 @@ run_variational_bayes_helper(const std::vector<SampleName>& samples,
                              const TumourModel::AlgorithmParameters& params,
                              std::vector<std::vector<double>>&& seeds)
 {
-    const VariationalBayesParameters vb_params {params.epsilon, params.max_iterations};
     using std::move;
     switch (genotypes.front().ploidy()) {
         case 2: return run_variational_bayes<2>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                haplotype_log_likelihoods, vb_params, move(seeds));
+                                                haplotype_log_likelihoods, params, move(seeds));
         case 3: return run_variational_bayes<3>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                haplotype_log_likelihoods, vb_params, move(seeds));
+                                                haplotype_log_likelihoods, params, move(seeds));
         case 4: return run_variational_bayes<4>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                haplotype_log_likelihoods, vb_params, move(seeds));
+                                                haplotype_log_likelihoods, params, move(seeds));
         case 5: return run_variational_bayes<5>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                haplotype_log_likelihoods, vb_params, move(seeds));
+                                                haplotype_log_likelihoods, params, move(seeds));
         case 6: return run_variational_bayes<6>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                haplotype_log_likelihoods, vb_params, move(seeds));
+                                                haplotype_log_likelihoods, params, move(seeds));
         case 7: return run_variational_bayes<7>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                haplotype_log_likelihoods, vb_params, move(seeds));
+                                                haplotype_log_likelihoods, params, move(seeds));
         case 8: return run_variational_bayes<8>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                haplotype_log_likelihoods, vb_params, move(seeds));
-        default: throw UnimplementedFeatureError {"tumour model ploidies above 8", "TumourModel"};
+                                                haplotype_log_likelihoods, params, move(seeds));
+        case 9: return run_variational_bayes<9>(samples, genotypes, prior_alphas, move(genotype_log_priors),
+                                                haplotype_log_likelihoods, params, move(seeds));
+        case 10: return run_variational_bayes<10>(samples, genotypes, prior_alphas, move(genotype_log_priors),
+                                                  haplotype_log_likelihoods, params, move(seeds));
+        default: throw UnimplementedFeatureError {"tumour model ploidies above 10", "TumourModel"};
     }
 }
 

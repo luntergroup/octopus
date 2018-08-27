@@ -29,6 +29,7 @@
 #include "io/variant/vcf_record.hpp"
 #include "core/tools/vcf_record_factory.hpp"
 #include "basics/read_pileup.hpp"
+#include "utils/memory_footprint.hpp"
 
 namespace octopus {
 
@@ -114,6 +115,7 @@ public:
         Phred<double> haplotype_extension_threshold, saturation_limit;
         bool allow_model_filtering;
         bool protect_reference_haplotype;
+        boost::optional<MemoryFootprint> target_max_memory;
     };
     
 private:
@@ -139,6 +141,8 @@ protected:
     virtual std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const;
     
     using ReadPileupMap = std::unordered_map<SampleName, ReadPileups>;
+    
+    boost::optional<MemoryFootprint> target_max_memory() const noexcept;
 
 private:
     virtual std::unique_ptr<Latents>

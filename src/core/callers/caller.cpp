@@ -401,6 +401,11 @@ std::size_t Caller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) con
     return octopus::remove_duplicates(haplotypes, Haplotype {haplotype_region(haplotypes), reference_.get()});
 }
 
+boost::optional<MemoryFootprint> Caller::target_max_memory() const noexcept
+{
+    return parameters_.target_max_memory;
+}
+
 Caller::GeneratorStatus
 Caller::generate_active_haplotypes(const GenomicRegion& call_region,
                                    HaplotypeGenerator& haplotype_generator,

@@ -109,6 +109,12 @@ CallerBuilder& CallerBuilder::set_reference_haplotype_protection(bool b) noexcep
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_target_memory_footprint(MemoryFootprint memory) noexcept
+{
+    params_.general.target_max_memory = memory;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_min_variant_posterior(Phred<double> posterior) noexcept
 {
     params_.min_variant_posterior = posterior;

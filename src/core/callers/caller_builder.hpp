@@ -18,6 +18,7 @@
 #include "readpipe/read_pipe.hpp"
 #include "core/tools/coretools.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
+#include "utils/memory_footprint.hpp"
 #include "caller.hpp"
 #include "cancer_caller.hpp"
 
@@ -50,6 +51,8 @@ public:
     CallerBuilder& set_refcall_type(Caller::RefCallType type) noexcept;
     CallerBuilder& set_sites_only() noexcept;
     CallerBuilder& set_reference_haplotype_protection(bool b) noexcept;
+    CallerBuilder& set_target_memory_footprint(MemoryFootprint memory) noexcept;
+    
     CallerBuilder& set_min_variant_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_min_refcall_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_max_haplotypes(unsigned n) noexcept;

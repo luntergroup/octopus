@@ -652,6 +652,7 @@ void CancerCaller::evaluate_tumour_model(Latents& latents, const HaplotypeLikeli
     auto somatic_model_priors = get_somatic_model_priors(*latents.cancer_genotype_prior_model_, latents.somatic_ploidy_);
     TumourModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
+    params.target_max_memory = this->target_max_memory();
     TumourModel model {samples_, somatic_model_priors, params};
     if (latents.cancer_genotype_indices_) {
         assert(latents.cancer_genotype_prior_model_->germline_model().is_primed());

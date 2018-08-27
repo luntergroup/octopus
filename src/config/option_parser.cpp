@@ -94,6 +94,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-open-read-files",
      po::value<int>()->default_value(250),
      "Limits the number of read files that can be open simultaneously")
+    
+     ("target-working-memory",
+     po::value<MemoryFootprint>(),
+     "Target working memory footprint for analysis not including read or reference footprint")
     ;
     
     po::options_description input("I/O");

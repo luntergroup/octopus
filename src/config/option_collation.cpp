@@ -1630,6 +1630,21 @@ auto get_normal_contamination_risk(const OptionMap& options)
     return result;
 }
 
+auto get_target_working_memory(const OptionMap& options)
+{
+    boost::optional<MemoryFootprint> result {};
+    if (is_set("target-working-memory", options)) {
+        static const MemoryFootprint min_target_memory {*parse_footprint("100M")};
+        result = options.at("target-working-memory").as<MemoryFootprint>();
+        auto num_threads = get_num_threads(options);
+        if (!num_threads) {
+            num_threads = std::thread::hardware_concurrency();
+        }
+        result = MemoryFootprint {std::max(result->num_bytes() / *num_threads, min_target_memory.num_bytes())};
+    }
+    return result;
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<ReadSetProfile> read_profile)
@@ -1721,6 +1736,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_sites_only();
     }
     vc_builder.set_likelihood_model(make_likelihood_model(options, read_profile));
+    const auto target_working_memory = get_target_working_memory(options);
+    if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     return CallerFactory {std::move(vc_builder)};
 }
 
