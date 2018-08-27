@@ -3,6 +3,8 @@
 
 #include "strand_disequilibrium.hpp"
 
+#include <boost/lexical_cast.hpp>
+
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
 #include "basics/aligned_read.hpp"
@@ -18,6 +20,21 @@ const std::string StrandDisequilibrium::name_ = "SD";
 std::unique_ptr<Measure> StrandDisequilibrium::do_clone() const
 {
     return std::make_unique<StrandDisequilibrium>(*this);
+}
+
+void StrandDisequilibrium::do_set_parameters(std::vector<std::string> params)
+{
+    if (params.size() != 1) {
+        throw BadMeasureParameters {this->name(), "only has one parameter (tail mass)"};
+    }
+    try {
+        tail_mass_ = boost::lexical_cast<decltype(tail_mass_)>(params.front());
+    } catch (const boost::bad_lexical_cast&) {
+        throw BadMeasureParameters {this->name(), "given parameter \"" + params.front() + "\" cannot be parsed"};
+    }
+    if (tail_mass_ < 0 || tail_mass_ > 1) {
+        throw BadMeasureParameters {this->name(), "tail mass must be between 0 and 1"};
+    }
 }
 
 Measure::ResultType StrandDisequilibrium::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
@@ -52,6 +69,11 @@ std::string StrandDisequilibrium::do_describe() const
 std::vector<std::string> StrandDisequilibrium::do_requirements() const
 {
     return {"Samples", "OverlappingReads"};
+}
+
+bool StrandDisequilibrium::is_equal(const Measure& other) const noexcept
+{
+    return tail_mass_ == static_cast<const StrandDisequilibrium&>(other).tail_mass_;
 }
 
 } // namespace csr
