@@ -627,6 +627,7 @@ void CancerCaller::evaluate_germline_model(Latents& latents, const HaplotypeLike
     const auto pooled_likelihoods = pool_likelihood(samples_,  latents.haplotypes_, haplotype_likelihoods);
     if (latents.germline_genotype_indices_) {
         latents.germline_prior_model_->prime(latents.haplotypes_);
+        latents.germline_model_->prime(latents.haplotypes_);
         latents.germline_model_inferences_ = latents.germline_model_->evaluate(latents.germline_genotypes_,
                                                                                *latents.germline_genotype_indices_,
                                                                                pooled_likelihoods);
@@ -655,16 +656,16 @@ void CancerCaller::evaluate_tumour_model(Latents& latents, const HaplotypeLikeli
     auto somatic_model_priors = get_somatic_model_priors(*latents.cancer_genotype_prior_model_, latents.somatic_ploidy_);
     TumourModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
-    const TumourModel somatic_model {samples_, somatic_model_priors, params};
+    TumourModel model {samples_, somatic_model_priors, params};
     if (latents.cancer_genotype_indices_) {
         assert(latents.cancer_genotype_prior_model_->germline_model().is_primed());
         if (!latents.cancer_genotype_prior_model_->mutation_model().is_primed()) {
             latents.cancer_genotype_prior_model_->mutation_model().prime(latents.haplotypes_);
         }
-        latents.tumour_model_inferences_ = somatic_model.evaluate(latents.cancer_genotypes_, *latents.cancer_genotype_indices_,
-                                                                  haplotype_likelihoods);
+        model.prime(latents.haplotypes_);
+        latents.tumour_model_inferences_ = model.evaluate(latents.cancer_genotypes_, *latents.cancer_genotype_indices_, haplotype_likelihoods);
     } else {
-        latents.tumour_model_inferences_ = somatic_model.evaluate(latents.cancer_genotypes_, haplotype_likelihoods);
+        latents.tumour_model_inferences_ = model.evaluate(latents.cancer_genotypes_, haplotype_likelihoods);
     }
 }
 
