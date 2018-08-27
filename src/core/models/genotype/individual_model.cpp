@@ -12,8 +12,6 @@
 #include "utils/maths.hpp"
 #include "germline_likelihood_model.hpp"
 
-#include "timers.hpp"
-
 namespace octopus { namespace model {
 
 IndividualModel::IndividualModel(const GenotypePriorModel& genotype_prior_model,
@@ -48,47 +46,17 @@ void print_genotype_likelihoods(const std::vector<Genotype<Haplotype>>& genotype
 
 } // namespace debug
 
-namespace {
-
-using ProbabilityVector = std::vector<double>;
-
-auto compute_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-                         const HaplotypeLikelihoodCache& haplotype_likelihoods)
-{
-    assert(haplotype_likelihoods.is_primed());
-    const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
-    ProbabilityVector result(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&likelihood_model] (const auto& genotype) {
-                       return likelihood_model.evaluate(genotype);
-                   });
-    return result;
-}
-
-template <typename Container>
-void add_priors(const Container& genotypes,
-                ProbabilityVector& genotype_likelihoods,
-                const GenotypePriorModel& genotype_prior_model)
-{
-    std::transform(std::cbegin(genotypes), std::cend(genotypes),
-                   std::cbegin(genotype_likelihoods), std::begin(genotype_likelihoods),
-                   [&] (const auto& genotype, const auto likelihood) {
-                       return genotype_prior_model.evaluate(genotype) + likelihood;
-                   });
-}
-
-} // namespace
-
 IndividualModel::InferredLatents
 IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
-    auto result = compute_likelihoods(genotypes, haplotype_likelihoods);
-    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, result);
-    add_priors(genotypes, result, genotype_prior_model_);
-    const auto log_evidence = maths::normalise_exp(result);
-    return {{std::move(result)}, log_evidence};
+    const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
+    auto posteriors = octopus::model::evaluate(genotypes, likelihood_model);
+    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, posteriors);
+    octopus::evaluate(genotypes, genotype_prior_model_, posteriors, false, true);
+    const auto log_evidence = maths::normalise_exp(posteriors);
+    return {{std::move(posteriors)}, log_evidence};
 }
 
 IndividualModel::InferredLatents
@@ -98,11 +66,12 @@ IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
 {
     assert(!genotypes.empty());
     assert(genotypes.size() == genotype_indices.size());
-    auto result = compute_likelihoods(genotypes, haplotype_likelihoods);
-    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, result);
-    add_priors(genotype_indices, result, genotype_prior_model_);
-    const auto log_evidence = maths::normalise_exp(result);
-    return {{std::move(result)}, log_evidence};
+    const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
+    auto posteriors = octopus::model::evaluate(genotypes, likelihood_model);
+    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, posteriors);
+    octopus::evaluate(genotype_indices, genotype_prior_model_, posteriors, false, true);
+    const auto log_evidence = maths::normalise_exp(posteriors);
+    return {{std::move(posteriors)}, log_evidence};
 }
 
 namespace debug {
