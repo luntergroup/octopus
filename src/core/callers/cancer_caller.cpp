@@ -176,9 +176,11 @@ void CancerCaller::fit_tumour_model(Latents& latents, const HaplotypeLikelihoodC
             if (latents.tumour_model_inferences_.approx_log_evidence <= prev_tumour_latents.approx_log_evidence) {
                 break;
             }
-        } else if (latents.tumour_model_inferences_.approx_log_evidence < std::max(latents.germline_model_inferences_.log_evidence,
-                                                                                   latents.cnv_model_inferences_.approx_log_evidence)) {
-            break;
+        } else {
+            set_model_posteriors(latents);
+            if (latents.model_posteriors_.somatic < std::max(latents.model_posteriors_.germline, latents.model_posteriors_.cnv)) {
+                break;
+            }
         }
         if (latents.haplotypes_.get().size() <= somatic_ploidy + 1) break;
         if (somatic_ploidy < parameters_.max_somatic_haplotypes) {
@@ -373,7 +375,7 @@ auto calculate_posteriors_with_germline_likelihood_model(const std::vector<Cance
                                                          const model::GermlineLikelihoodModel likelihood_model,
                                                          const std::vector<SampleName>& samples)
 {
-    auto result = calculate_log_priors(indices, prior_model);
+    auto result = evaluate(indices, prior_model);
     GenotypeIndex flattened_index(genotypes.front().ploidy());
     for (const auto& sample : samples) {
         likelihood_model.cache().prime(sample);
