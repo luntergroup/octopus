@@ -24,11 +24,8 @@
 #include "logging/logging.hpp"
 #include "core/types/calls/germline_variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
-
 #include "core/models/genotype/uniform_genotype_prior_model.hpp"
 #include "core/models/genotype/coalescent_genotype_prior_model.hpp"
-
-#include "timers.hpp"
 
 namespace octopus {
 
@@ -130,6 +127,7 @@ IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     const auto prior_model = make_prior_model(haplotypes);
+    
     const model::IndividualModel model {*prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
     auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
