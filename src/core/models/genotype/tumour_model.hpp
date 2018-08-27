@@ -65,6 +65,10 @@ public:
     
     const Priors& priors() const noexcept;
     
+    void prime(const std::vector<Haplotype>& haplotypes);
+    void unprime() noexcept;
+    bool is_primed() const noexcept;
+    
     InferredLatents evaluate(const std::vector<CancerGenotype<Haplotype>>& genotypes,
                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
@@ -76,6 +80,7 @@ private:
     std::vector<SampleName> samples_;
     Priors priors_;
     AlgorithmParameters parameters_;
+    const std::vector<Haplotype>* haplotypes_;
 };
 
 } // namespace model

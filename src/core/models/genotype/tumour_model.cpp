@@ -28,6 +28,7 @@ TumourModel::TumourModel(std::vector<SampleName> samples, Priors priors, Algorit
 : samples_ {std::move(samples)}
 , priors_ {std::move(priors)}
 , parameters_ {parameters}
+, haplotypes_ {}
 {}
 
 const TumourModel::Priors& TumourModel::priors() const noexcept
@@ -35,22 +36,36 @@ const TumourModel::Priors& TumourModel::priors() const noexcept
     return priors_;
 }
 
+void TumourModel::prime(const std::vector<Haplotype>& haplotypes)
+{
+    haplotypes_ = std::addressof(haplotypes);
+}
+
+void TumourModel::unprime() noexcept
+{
+    haplotypes_ = nullptr;
+}
+
+bool TumourModel::is_primed() const noexcept
+{
+    return haplotypes_;
+}
+
 namespace {
 
-TumourModel::InferredLatents
-run_variational_bayes(const std::vector<SampleName>& samples,
-                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                      const TumourModel::Priors& priors,
-                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                      const TumourModel::AlgorithmParameters& params);
+struct IndexData
+{
+    const std::vector<CancerGenotypeIndex>& genotype_indices;
+    const std::vector<Haplotype>* haplotypes;
+};
 
 TumourModel::InferredLatents
 run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                      const std::vector<CancerGenotypeIndex>& genotype_indices,
                       const TumourModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                      const TumourModel::AlgorithmParameters& params);
+                      const TumourModel::AlgorithmParameters& params,
+                      boost::optional<IndexData> index_data = boost::none);
 
 } // namespace
 
@@ -69,10 +84,21 @@ TumourModel::evaluate(const std::vector<CancerGenotype<Haplotype>>& genotypes,
 {
     assert(!genotypes.empty());
     assert(genotypes.size() == genotype_indices.size());
-    return run_variational_bayes(samples_, genotypes, genotype_indices, priors_, haplotype_likelihoods, parameters_);
+    const IndexData index_data {genotype_indices, haplotypes_};
+    return run_variational_bayes(samples_, genotypes, priors_, haplotype_likelihoods, parameters_, index_data);
 }
 
 namespace {
+
+auto evaluate_genotype_priors(const std::vector<CancerGenotype<Haplotype>>& genotypes, const TumourModel::Priors& priors,
+                              const boost::optional<IndexData> index_data)
+{
+    if (index_data) {
+        return evaluate(index_data->genotype_indices, priors.genotype_prior_model);
+    } else {
+        return evaluate(genotypes, priors.genotype_prior_model);
+    }
+}
 
 template <std::size_t K>
 VBAlpha<K> flatten(const TumourModel::Priors::GenotypeMixturesDirichletAlphas& alpha)
@@ -250,13 +276,6 @@ void print_top(const std::vector<CancerGenotype<Haplotype>>& genotypes,
 
 } // namespace debug
 
-bool is_somatic_expected(const SampleName& sample, const TumourModel::Priors& priors)
-{
-    const auto& alphas = priors.alphas.at(sample);
-    auto e = maths::dirichlet_expectation(alphas.size() - 1, alphas);
-    return e > 0.05;
-}
-
 void add_to(const LogProbabilityVector& other, LogProbabilityVector& result)
 {
     std::transform(std::cbegin(other), std::cend(other), std::cbegin(result), std::begin(result),
@@ -277,9 +296,11 @@ std::vector<LogProbabilityVector>
 compute_genotype_likelihoods_with_fixed_mixture_model(const std::vector<SampleName>& samples,
                                                       const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                                                      const TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& priors)
+                                                      const TumourModel::Priors::GenotypeMixturesDirichletAlphaMap& priors,
+                                                      boost::optional<IndexData> index_data = boost::none)
 {
     FixedMixtureGenotypeLikelihoodModel model {haplotype_log_likelihoods};
+    if (index_data && index_data->haplotypes) model.prime(*index_data->haplotypes);
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
@@ -307,9 +328,11 @@ LogProbabilityVector evaluate(const std::vector<CancerGenotype<Haplotype>>& geno
 std::vector<LogProbabilityVector>
 compute_genotype_likelihoods_with_germline_model(const std::vector<SampleName>& samples,
                                                  const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                                 const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+                                                 const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                                                 boost::optional<IndexData> index_data = boost::none)
 {
-    const GermlineLikelihoodModel model {haplotype_log_likelihoods};
+    GermlineLikelihoodModel model {haplotype_log_likelihoods};
+    if (index_data && index_data->haplotypes) model.prime(*index_data->haplotypes);
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
@@ -338,9 +361,11 @@ LogProbabilityVector evaluate_germlines(const std::vector<CancerGenotype<Haploty
 std::vector<LogProbabilityVector>
 compute_germline_genotype_likelihoods_with_germline_model(const std::vector<SampleName>& samples,
                                                           const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                                          const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+                                                          const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                                                          boost::optional<IndexData> index_data = boost::none)
 {
-    const GermlineLikelihoodModel model {haplotype_log_likelihoods};
+    GermlineLikelihoodModel model {haplotype_log_likelihoods};
+    if (index_data && index_data->haplotypes) model.prime(*index_data->haplotypes);
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
@@ -386,7 +411,8 @@ auto generate_seeds(const std::vector<SampleName>& samples,
                     const LogProbabilityVector& genotype_log_priors,
                     const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                     const TumourModel::Priors& priors,
-                    std::size_t max_seeds)
+                    std::size_t max_seeds,
+                    boost::optional<IndexData> index_data = boost::none)
 {
     if (genotypes.size() <= max_seeds) {
         return generate_exhaustive_seeds(genotypes.size());
@@ -394,13 +420,13 @@ auto generate_seeds(const std::vector<SampleName>& samples,
     std::vector<LogProbabilityVector> result {};
     result.reserve(max_seeds);
     if (max_seeds == 0) return result;
-    auto sample_prior_mixture_likelihoods = compute_genotype_likelihoods_with_fixed_mixture_model(samples, genotypes, haplotype_log_likelihoods, priors.alphas);
+    auto sample_prior_mixture_likelihoods = compute_genotype_likelihoods_with_fixed_mixture_model(samples, genotypes, haplotype_log_likelihoods, priors.alphas, index_data);
     auto prior_mixture_likelihoods = add_all_and_normalise(sample_prior_mixture_likelihoods);
     auto prior_mixture_posteriors = add_and_normalise(genotype_log_priors, prior_mixture_likelihoods);
     result.push_back(prior_mixture_posteriors); // 1
     --max_seeds;
     if (max_seeds == 0) return result;
-    auto sample_normal_likelihoods = compute_genotype_likelihoods_with_germline_model(samples, genotypes, haplotype_log_likelihoods);
+    auto sample_normal_likelihoods = compute_genotype_likelihoods_with_germline_model(samples, genotypes, haplotype_log_likelihoods, index_data);
     auto normal_likelihoods = add_all_and_normalise(sample_prior_mixture_likelihoods);
     auto normal_posteriors = add_and_normalise(genotype_log_priors, normal_likelihoods);
     result.push_back(normal_posteriors); // 2
@@ -416,7 +442,7 @@ auto generate_seeds(const std::vector<SampleName>& samples,
     if (max_seeds == 0) return result;
     result.push_back(combined_model_likelihoods); // 6
     if (max_seeds == 0) return result;
-    auto sample_germline_likelihoods = compute_germline_genotype_likelihoods_with_germline_model(samples, genotypes, haplotype_log_likelihoods);
+    auto sample_germline_likelihoods = compute_germline_genotype_likelihoods_with_germline_model(samples, genotypes, haplotype_log_likelihoods, index_data);
     result.push_back(add_all_and_normalise(sample_germline_likelihoods)); // 7
     --max_seeds;
     if (max_seeds == 0) return result;
@@ -508,24 +534,11 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const std::vector<CancerGenotype<Haplotype>>& genotypes,
                       const TumourModel::Priors& priors,
                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                      const TumourModel::AlgorithmParameters& params)
+                      const TumourModel::AlgorithmParameters& params,
+                      const boost::optional<IndexData> index_data)
 {
-    auto genotype_log_priors = evaluate(genotypes, priors.genotype_prior_model);
-    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods, priors, params.max_seeds);
-    return run_variational_bayes_helper(samples, genotypes, priors.alphas, std::move(genotype_log_priors),
-                                        haplotype_log_likelihoods, params, std::move(seeds));
-}
-
-TumourModel::InferredLatents
-run_variational_bayes(const std::vector<SampleName>& samples,
-                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                      const std::vector<CancerGenotypeIndex>& genotype_indices,
-                      const TumourModel::Priors& priors,
-                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                      const TumourModel::AlgorithmParameters& params)
-{
-    auto genotype_log_priors = evaluate(genotype_indices, priors.genotype_prior_model);
-    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods, priors, params.max_seeds);
+    auto genotype_log_priors = evaluate_genotype_priors(genotypes, priors, index_data);
+    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods, priors, params.max_seeds, index_data);
     return run_variational_bayes_helper(samples, genotypes, priors.alphas, std::move(genotype_log_priors),
                                         haplotype_log_likelihoods, params, std::move(seeds));
 }
