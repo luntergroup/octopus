@@ -50,8 +50,10 @@ public:
     
     const MappableType& operator[](unsigned n) const;
     
-    const Genotype<MappableType>& germline() const;
-    const Genotype<MappableType>& somatic() const;
+    const Genotype<MappableType>& germline() const noexcept;
+    Genotype<MappableType>& germline() noexcept;
+    const Genotype<MappableType>& somatic() const noexcept;
+    Genotype<MappableType>& somatic() noexcept;
     
     unsigned germline_ploidy() const noexcept;
     unsigned somatic_ploidy() const noexcept;
@@ -113,13 +115,25 @@ const MappableType& CancerGenotype<MappableType>::operator[](unsigned n) const
 }
 
 template <typename MappableType>
-const Genotype<MappableType>& CancerGenotype<MappableType>::germline() const
+const Genotype<MappableType>& CancerGenotype<MappableType>::germline() const noexcept
 {
     return germline_;
 }
 
 template <typename MappableType>
-const Genotype<MappableType>& CancerGenotype<MappableType>::somatic() const
+Genotype<MappableType>& CancerGenotype<MappableType>::germline() noexcept
+{
+    return germline_;
+}
+
+template <typename MappableType>
+const Genotype<MappableType>& CancerGenotype<MappableType>::somatic() const noexcept
+{
+    return somatic_;
+}
+
+template <typename MappableType>
+Genotype<MappableType>& CancerGenotype<MappableType>::somatic() noexcept
 {
     return somatic_;
 }
@@ -214,6 +228,18 @@ generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_g
                               const std::vector<Haplotype>& somatic_haplotypes,
                               std::vector<CancerGenotypeIndex>& cancer_genotype_indices,
                               unsigned somatic_ploidy = 1, bool allow_shared = false);
+
+std::vector<CancerGenotype<Haplotype>>
+extend_somatic_genotypes(const std::vector<CancerGenotype<Haplotype>>& old_genotypes,
+                         const std::vector<Haplotype>& somatic_haplotypes,
+                         bool allow_shared = false);
+
+std::vector<CancerGenotype<Haplotype>>
+extend_somatic_genotypes(const std::vector<CancerGenotype<Haplotype>>& old_genotypes,
+                         const std::vector<CancerGenotypeIndex>& old_genotype_indices,
+                         const std::vector<Haplotype>& somatic_haplotypes,
+                         std::vector<CancerGenotypeIndex>& new_genotype_indices,
+                         bool allow_shared = false);
 
 template <typename MappableType>
 Genotype<MappableType> demote(const CancerGenotype<MappableType>& genotype)

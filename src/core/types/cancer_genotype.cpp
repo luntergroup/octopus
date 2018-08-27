@@ -117,6 +117,65 @@ generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_g
     return result;
 }
 
+std::vector<CancerGenotype<Haplotype>>
+extend_somatic_genotypes(const std::vector<CancerGenotype<Haplotype>>& old_genotypes,
+                         const std::vector<Haplotype>& somatic_haplotypes,
+                         const bool allow_shared)
+{
+    std::vector<std::shared_ptr<Haplotype>> temp_pointers(somatic_haplotypes.size());
+    std::transform(std::cbegin(somatic_haplotypes), std::cend(somatic_haplotypes), std::begin(temp_pointers),
+                   [] (const auto& haplotype) { return std::make_shared<Haplotype>(haplotype); });
+    std::vector<CancerGenotype<Haplotype>> result {};
+    result.reserve(old_genotypes.size() * somatic_haplotypes.size());
+    for (const auto& old_genotype : old_genotypes) {
+        for (const auto& haplotype_ptr : temp_pointers) {
+            if (allow_shared || !old_genotype.germline().contains(*haplotype_ptr)) {
+                auto new_somatic_genotype = old_genotype.somatic();
+                new_somatic_genotype.emplace(haplotype_ptr);
+                if (is_proper_somatic_genotype(new_somatic_genotype)) {
+                    result.emplace_back(old_genotype.germline(), std::move(new_somatic_genotype));
+                }
+            }
+        }
+    }
+    return result;
+}
+
+std::vector<CancerGenotype<Haplotype>>
+extend_somatic_genotypes(const std::vector<CancerGenotype<Haplotype>>& old_genotypes,
+                         const std::vector<CancerGenotypeIndex>& old_genotype_indices,
+                         const std::vector<Haplotype>& somatic_haplotypes,
+                         std::vector<CancerGenotypeIndex>& new_genotype_indices,
+                         const bool allow_shared)
+{
+    assert(old_genotypes.size() == old_genotype_indices.size());
+    std::vector<std::shared_ptr<Haplotype>> temp_pointers(somatic_haplotypes.size());
+    std::transform(std::cbegin(somatic_haplotypes), std::cend(somatic_haplotypes), std::begin(temp_pointers),
+                   [] (const auto& haplotype) { return std::make_shared<Haplotype>(haplotype); });
+    std::vector<CancerGenotype<Haplotype>> result {};
+    const auto max_new_genotypes = old_genotypes.size() * somatic_haplotypes.size();
+    result.reserve(max_new_genotypes);
+    new_genotype_indices.clear();
+    new_genotype_indices.reserve(max_new_genotypes);
+    for (std::size_t g {0}; g < old_genotypes.size(); ++g) {
+        const auto& old_genotype = old_genotypes[g];
+        for (std::size_t h {0}; h < somatic_haplotypes.size(); ++h) {
+            const auto& haplotype_ptr = temp_pointers[h];
+            if (allow_shared || !old_genotype.germline().contains(*haplotype_ptr)) {
+                auto new_somatic_genotype = old_genotype.somatic();
+                new_somatic_genotype.emplace(haplotype_ptr);
+                if (is_proper_somatic_genotype(new_somatic_genotype)) {
+                    result.emplace_back(old_genotype.germline(), std::move(new_somatic_genotype));
+                    auto new_genotype_index = old_genotype_indices[g];
+                    new_genotype_index.somatic.push_back(h);
+                    new_genotype_indices.push_back(std::move(new_genotype_index));
+                }
+            }
+        }
+    }
+    return result;
+}
+
 namespace debug {
 
 void print_alleles(const CancerGenotype<Haplotype>& genotype)
