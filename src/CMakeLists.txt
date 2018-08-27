@@ -384,6 +384,8 @@ set(CORE_SOURCES
     core/models/genotype/coalescent_population_prior_model.cpp
     core/models/genotype/hardy_weinberg_model.hpp
     core/models/genotype/hardy_weinberg_model.cpp
+    core/models/genotype/fixed_mixture_genotype_likelihood_model.hpp
+    core/models/genotype/fixed_mixture_genotype_likelihood_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
