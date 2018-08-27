@@ -16,6 +16,13 @@
 
 namespace octopus { namespace csr {
 
+void Measure::do_set_parameters(std::vector<std::string> params)
+{
+    if (!params.empty()) {
+        throw BadMeasureParameters {this->name()};
+    }
+}
+
 struct MeasureSerialiseVisitor : boost::static_visitor<>
 {
     std::string str;

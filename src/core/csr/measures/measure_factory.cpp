@@ -5,10 +5,12 @@
 
 #include <unordered_map>
 #include <functional>
+#include <algorithm>
 
 #include "measures_fwd.hpp"
 #include "exceptions/user_error.hpp"
 #include "utils/map_utils.hpp"
+#include "utils/string_utils.hpp"
 
 namespace octopus { namespace csr {
 
@@ -52,6 +54,22 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<StrandDisequilibrium>()]        = [] () { return make_wrapped_measure<StrandDisequilibrium>(); };
 }
 
+class BadParameterList : public UserError
+{
+    std::string name_;
+    std::string do_where() const override { return "make_measure"; }
+    std::string do_why() const override
+    {
+        return name_ + std::string {" does not list parameters in required format"};
+    }
+    std::string do_help() const override
+    {
+        return "Format is MEASURE[param1,param2,...,paramn]";
+    }
+public:
+    BadParameterList(std::string name) : name_ {std::move(name)} {}
+};
+
 class UnknownMeasure : public UserError
 {
     std::string name_;
@@ -68,16 +86,44 @@ public:
     UnknownMeasure(std::string name) : name_ {std::move(name)} {}
 };
 
-MeasureWrapper make_measure(const std::string& name)
+bool has_parameters(const std::string& name) noexcept
+{
+    assert(!name.empty());
+    return name.back() == ']';
+}
+
+std::vector<std::string> parse_parameters(std::string& name)
+{
+    assert(has_parameters(name));
+    const auto parameter_list_begin = name.find('[');
+    if (parameter_list_begin == std::string::npos) {
+        throw BadParameterList {name};
+    }
+    auto parameter_list_str = name.substr(parameter_list_begin + 1, name.size() - parameter_list_begin - 2);
+    parameter_list_str.erase(std::remove(parameter_list_str.begin(), parameter_list_str.end(), ' '), parameter_list_str.end());
+    auto result = utils::split(parameter_list_str, ',');
+    name.erase(parameter_list_begin);
+    return result;
+}
+
+MeasureWrapper make_measure(std::string name)
 {
     static MeasureMakerMap measure_makers {};
     if (measure_makers.empty()) {
         init(measure_makers);
     }
+    std::vector<std::string> params {};
+    if (has_parameters(name)) {
+        params = parse_parameters(name);
+    }
     if (measure_makers.count(name) == 0) {
         throw UnknownMeasure {name};
     }
-    return measure_makers.at(name)();
+    auto result = measure_makers.at(name)();
+    if (!params.empty()) {
+        result.set_parameters(std::move(params));
+    }
+    return result;
 }
 
 std::vector<std::string> get_all_measure_names()

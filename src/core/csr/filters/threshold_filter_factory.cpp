@@ -113,7 +113,7 @@ template <typename T>
 auto make_condition(const std::string& measure_name, const std::string& comparator, const T threshold_target)
 {
     auto measure = make_measure(measure_name);
-    if (measure_name == name<StrandBias>()) {
+    if (measure.name() == name<StrandBias>()) {
         measure = make_wrapped_measure<StrandBias>(threshold_target);
     }
     auto threshold = make_threshold(comparator, threshold_target);
