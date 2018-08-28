@@ -20,6 +20,7 @@ class StrandDisequilibrium : public Measure
     const static std::string name_;
     std::unique_ptr<Measure> do_clone() const override;
     void do_set_parameters(std::vector<std::string> params) override;
+    std::vector<std::string> do_parameters() const override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
     ResultCardinality do_cardinality() const noexcept override;
     const std::string& do_name() const override;

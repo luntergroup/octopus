@@ -100,6 +100,21 @@ void Measure::annotate(VcfRecord::Builder& record, const ResultType& value) cons
 
 // non-member methods
 
+std::string long_name(const Measure& measure)
+{
+    auto result = measure.name();
+    const auto params = measure.parameters();
+    if (!params.empty()) {
+        result += '[' + utils::join(params, ',') + ']';
+    }
+    return result;
+}
+
+std::string long_name(const MeasureWrapper& measure)
+{
+    return long_name(*measure.base());
+}
+
 struct IsMissingMeasureVisitor : public boost::static_visitor<bool>
 {
     template <typename T> bool operator()(const boost::optional<T>& value) const noexcept { return !value; }

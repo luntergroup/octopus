@@ -49,7 +49,7 @@ public:
     std::unique_ptr<Measure> clone() const { return do_clone(); }
     
     void set_parameters(std::vector<std::string> params) { do_set_parameters(std::move(params)); }
-    
+    std::vector<std::string> parameters() const { return do_parameters(); }
     ResultType evaluate(const VcfRecord& call, const FacetMap& facets) const { return do_evaluate(call, facets); }
     ResultCardinality cardinality() const noexcept { return do_cardinality(); }
     const std::string& name() const { return do_name(); }
@@ -64,8 +64,9 @@ public:
     }
     
 private:
-    virtual void do_set_parameters(std::vector<std::string> params);
     virtual std::unique_ptr<Measure> do_clone() const = 0;
+    virtual void do_set_parameters(std::vector<std::string> params);
+    virtual std::vector<std::string> do_parameters() const { return {}; }
     virtual ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const = 0;
     virtual ResultCardinality do_cardinality() const noexcept = 0;
     virtual const std::string& do_name() const = 0;
@@ -97,6 +98,7 @@ public:
     Measure* base() noexcept { return measure_.get(); }
     const Measure* base() const noexcept { return measure_.get(); }
     void set_parameters(std::vector<std::string> params) { measure_->set_parameters(std::move(params)); }
+    std::vector<std::string> parameters() const { return measure_->parameters(); }
     auto operator()(const VcfRecord& call) const { return measure_->evaluate(call, {}); }
     auto operator()(const VcfRecord& call, const Measure::FacetMap& facets) const { return measure_->evaluate(call, facets); }
     Measure::ResultCardinality cardinality() const noexcept { return measure_->cardinality(); }
@@ -155,6 +157,9 @@ const std::string& name()
 {
     return Measure().name();
 }
+
+std::string long_name(const Measure& measure);
+std::string long_name(const MeasureWrapper& measure);
 
 bool is_missing(const Measure::ResultType& value) noexcept;
 

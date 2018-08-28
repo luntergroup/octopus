@@ -37,6 +37,11 @@ void StrandDisequilibrium::do_set_parameters(std::vector<std::string> params)
     }
 }
 
+std::vector<std::string> StrandDisequilibrium::do_parameters() const
+{
+    return {utils::to_string(tail_mass_, 2)};
+}
+
 Measure::ResultType StrandDisequilibrium::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
