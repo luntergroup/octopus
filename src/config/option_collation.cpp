@@ -698,6 +698,10 @@ auto make_read_transformers(const OptionMap& options)
     prefilter_transformer.add(CapitaliseBases {});
     prefilter_transformer.add(CapBaseQualities {125});
     if (options.at("read-transforms").as<bool>()) {
+        if (is_set("mask-tails", options)) {
+            const auto mask_length = static_cast<MaskTail::Length>(options.at("mask-tails").as<int>());
+            prefilter_transformer.add(MaskTail {mask_length});
+        }
         if (is_set("mask-low-quality-tails", options)) {
             const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-low-quality-tails", options));
             prefilter_transformer.add(MaskLowQualityTails {threshold});

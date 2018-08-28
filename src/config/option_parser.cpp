@@ -190,7 +190,11 @@ OptionMap parse_options(const int argc, const char** argv)
     ("mask-low-quality-tails",
      po::value<int>()->implicit_value(3),
      "Masks read tail bases with base quality less than this")
-    
+     
+     ("mask-tails",
+     po::value<int>()->implicit_value(1),
+     "Unconditionally mask this many read tail sbases")
+     
     ("soft-clip-masking",
      po::value<bool>()->default_value(true),
      "Turn on or off soft clip base recalibration")
@@ -1018,7 +1022,7 @@ po::parsed_options run(po::command_line_parser& parser)
 void validate(const OptionMap& vm)
 {
     const std::vector<std::string> positive_int_options {
-        "threads", "mask-low-quality-tails", "soft-clip-mask-threshold", "mask-soft-clipped-boundary-bases",
+        "threads", "mask-low-quality-tails", "mask-tails", "soft-clip-mask-threshold", "mask-soft-clipped-boundary-bases",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
