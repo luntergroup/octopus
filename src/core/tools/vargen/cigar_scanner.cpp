@@ -537,9 +537,6 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
                      const double min_expected_vaf)
 {
     const auto num_observations = observed_qualities.size();
-    if (depth < 4) {
-        return num_observations > 1 || sum(observed_qualities) >= 20 || is_deletion(variant);
-    }
     const auto num_rev_observations = num_observations - num_fwd_observations;
     if (num_observations > 15 && is_completely_strand_biased(num_fwd_observations, num_rev_observations)) {
         return false;
