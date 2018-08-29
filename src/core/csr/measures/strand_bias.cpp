@@ -166,7 +166,7 @@ double calculate_max_prob_different(const DirectionCountVector& direction_counts
 Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
     std::vector<boost::optional<double>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
@@ -175,7 +175,7 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
             std::vector<Allele> alleles; bool has_ref;
             std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
             assert(!alleles.empty());
-            const auto sample_allele_support = compute_allele_support(alleles, assignments.at(sample));
+            const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
             const auto direction_counts = get_direction_counts(sample_allele_support, mapped_region(call));
             double prob;
             if (use_resampling_) {
