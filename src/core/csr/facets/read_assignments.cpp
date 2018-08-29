@@ -28,8 +28,6 @@ void move_insert(std::deque<AlignedRead>& reads, const SampleName& sample, ReadM
 ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const GenotypeMap& genotypes, const ReadMap& reads)
 : result_ {}
 {
-    AssignmentConfig assigner_config {};
-    assigner_config.ambiguous_action = AssignmentConfig::AmbiguousAction::random;
     const auto num_samples = genotypes.size();
     result_.support.reserve(num_samples);
     result_.ambiguous.reserve(num_samples);
@@ -47,7 +45,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
                 HaplotypeSupportMap genotype_support {};
                 std::deque<AlignedRead> unassigned {};
                 if (!genotype.is_homozygous()) {
-                    genotype_support = compute_haplotype_support(genotype, local_reads, unassigned, assigner_config);
+                    genotype_support = compute_haplotype_support(genotype, local_reads, unassigned);
                 } else {
                     if (is_reference(genotype[0])) {
                         genotype_support[genotype[0]] = std::move(local_reads);
@@ -56,7 +54,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
                         Haplotype ref {mapped_region(genotype), reference};
                         result_.support[sample][ref] = {};
                         augmented_genotype.emplace(std::move(ref));
-                        genotype_support = compute_haplotype_support(augmented_genotype, local_reads, unassigned, assigner_config);
+                        genotype_support = compute_haplotype_support(augmented_genotype, local_reads, unassigned);
                     }
                 }
                 for (auto& s : genotype_support) {
