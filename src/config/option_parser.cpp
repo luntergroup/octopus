@@ -503,7 +503,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "The sequencer error model to use (HiSeq or xTen)")
     
     ("max-vb-seeds",
-     po::value<int>(),
+     po::value<int>()->default_value(12),
      "Maximum number of seeds to use for Variational Bayes algorithms")
     ;
     
@@ -1032,7 +1032,8 @@ void validate(const OptionMap& vm)
         "max-open-read-files", "downsample-above", "downsample-target",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
-        "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones"
+        "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",
+        "max-vb-seeds"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",

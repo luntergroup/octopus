@@ -30,7 +30,7 @@ public:
     {
         unsigned max_iterations = 1000;
         double epsilon          = 0.05;
-        unsigned max_seeds      = 8;
+        unsigned max_seeds      = 12;
         boost::optional<MemoryFootprint> target_max_memory = boost::none;
     };
     
