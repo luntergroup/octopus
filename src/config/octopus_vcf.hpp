@@ -38,7 +38,7 @@ VCF_SPEC_CONSTANT lowPosteriorProbability {"LPP"};
 VCF_SPEC_CONSTANT lowDepth {"DP"};
 VCF_SPEC_CONSTANT highMappingQualityDivergence {"MQD"};
 VCF_SPEC_CONSTANT alleleBias {"AFB"};
-VCF_SPEC_CONSTANT alleleCount {"EAC"};
+VCF_SPEC_CONSTANT alleleDepth {"AD"};
 VCF_SPEC_CONSTANT lowModelPosterior {"MP"};
 VCF_SPEC_CONSTANT lowMappingQuality {"MQ"};
 VCF_SPEC_CONSTANT highMappingQualityZeroCount {"MQ0"};

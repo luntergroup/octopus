@@ -18,7 +18,7 @@ using MeasureMakerMap = std::unordered_map<std::string, std::function<MeasureWra
 
 void init(MeasureMakerMap& measure_makers)
 {
-    measure_makers[name<AlleleCount>()]                 = [] () { return make_wrapped_measure<AlleleCount>(); };
+    measure_makers[name<AlleleDepth>()]                 = [] () { return make_wrapped_measure<AlleleDepth>(); };
     measure_makers[name<AlleleFrequency>()]             = [] () { return make_wrapped_measure<AlleleFrequency>(); };
     measure_makers[name<Depth>()]                       = [] () { return make_wrapped_measure<Depth>(); };
     measure_makers[name<MappingQualityDivergence>()]    = [] () { return make_wrapped_measure<MappingQualityDivergence>(); };

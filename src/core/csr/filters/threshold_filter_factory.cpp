@@ -86,7 +86,7 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<ReadPositionBias>()]         = readPositionBias;
     filter_names[name<StrandDisequilibrium>()]     = strandDisequilibrium;
     filter_names[name<ClassificationConfidence>()] = lowClassificationConfidence;
-    filter_names[name<AlleleCount>()]              = alleleCount;
+    filter_names[name<AlleleDepth>()]              = alleleDepth;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)

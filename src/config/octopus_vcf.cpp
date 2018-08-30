@@ -63,7 +63,7 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::readPositionBias, "Position of variant in supporting reads is biased"},
 {spec::filter::strandDisequilibrium, "Reads overlapping the site are biased to one strand"},
 {spec::filter::lowClassificationConfidence, "Classification confidence is low"},
-{spec::filter::alleleCount, "Low empirical allele count"}
+{spec::filter::alleleDepth, "Low empirical allele depth"}
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)

@@ -15,7 +15,7 @@ class VcfRecord;
 
 namespace csr {
 
-class AlleleCount : public Measure
+class AlleleDepth : public Measure
 {
     const static std::string name_;
     std::unique_ptr<Measure> do_clone() const override;

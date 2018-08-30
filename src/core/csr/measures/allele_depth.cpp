@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "allele_count.hpp"
+#include "allele_depth.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -18,11 +18,11 @@
 
 namespace octopus { namespace csr {
 
-const std::string AlleleCount::name_ = "EAC";
+const std::string AlleleDepth::name_ = "AD";
 
-std::unique_ptr<Measure> AlleleCount::do_clone() const
+std::unique_ptr<Measure> AlleleDepth::do_clone() const
 {
-    return std::make_unique<AlleleCount>(*this);
+    return std::make_unique<AlleleDepth>(*this);
 }
 
 namespace {
@@ -48,7 +48,7 @@ bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
 
 } // namespace
 
-Measure::ResultType AlleleCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
+Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
@@ -86,22 +86,22 @@ Measure::ResultType AlleleCount::do_evaluate(const VcfRecord& call, const FacetM
     return result;
 }
 
-Measure::ResultCardinality AlleleCount::do_cardinality() const noexcept
+Measure::ResultCardinality AlleleDepth::do_cardinality() const noexcept
 {
     return ResultCardinality::num_samples;
 }
 
-const std::string& AlleleCount::do_name() const
+const std::string& AlleleDepth::do_name() const
 {
     return name_;
 }
 
-std::string AlleleCount::do_describe() const
+std::string AlleleDepth::do_describe() const
 {
-    return "Minor empirical allele count of ALT alleles";
+    return "Minor empirical alt allele depth";
 }
 
-std::vector<std::string> AlleleCount::do_requirements() const
+std::vector<std::string> AlleleDepth::do_requirements() const
 {
     return {"Samples", "ReadAssignments"};
 }
