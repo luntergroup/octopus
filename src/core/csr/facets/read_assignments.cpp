@@ -68,7 +68,20 @@ Facet::ResultType ReadAssignments::do_get() const
 AlleleSupportMap
 compute_allele_support(const std::vector<Allele>& alleles, const Facet::SupportMaps& assignments, const SampleName& sample)
 {
-    return compute_allele_support(alleles, assignments.support.at(sample), assignments.ambiguous.at(sample));
+    if (assignments.support.count(sample) == 1) {
+        if (assignments.ambiguous.count(sample) == 1) {
+            return compute_allele_support(alleles, assignments.support.at(sample), assignments.ambiguous.at(sample));
+        } else {
+            return compute_allele_support(alleles, assignments.support.at(sample));
+        }
+    } else {
+        if (assignments.ambiguous.count(sample) == 1) {
+            const HaplotypeSupportMap empty {};
+            return compute_allele_support(alleles, empty, assignments.ambiguous.at(sample));
+        } else {
+            return {};
+        }
+    }
 }
 
 } // namespace csr
