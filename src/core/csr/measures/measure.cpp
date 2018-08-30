@@ -13,6 +13,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "io/variant/vcf_spec.hpp"
+#include "utils/append.hpp"
 
 namespace octopus { namespace csr {
 
@@ -124,6 +125,18 @@ struct IsMissingMeasureVisitor : public boost::static_visitor<bool>
 bool is_missing(const Measure::ResultType& value) noexcept
 {
     return boost::apply_visitor(IsMissingMeasureVisitor {}, value);
+}
+
+std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>& measures)
+{
+    std::vector<std::string> result {};
+    result.reserve(3 * measures.size()); // Just a guess
+    for (const auto& measure : measures) {
+        utils::append(measure.requirements(), result);
+    }
+    std::sort(std::begin(result), std::end(result));
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    return result;
 }
 
 struct VectorIndexGetterVisitor : public boost::static_visitor<Measure::ResultType>

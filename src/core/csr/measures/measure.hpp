@@ -163,6 +163,8 @@ std::string long_name(const MeasureWrapper& measure);
 
 bool is_missing(const Measure::ResultType& value) noexcept;
 
+std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>& measures);
+
 Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, std::size_t sample_idx);
 std::vector<Measure::ResultType> get_sample_values(const std::vector<Measure::ResultType>& values,
                                                    const std::vector<MeasureWrapper>& measures,
