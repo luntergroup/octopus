@@ -354,20 +354,30 @@ bool have_common_alleles(const std::vector<Haplotype>& haplotypes, const std::ve
     return std::adjacent_find(std::cbegin(haplotypes), std::cend(haplotypes), HaveDifferentAlleles {alleles}) == std::cend(haplotypes);
 }
 
+void sort_and_merge(std::deque<AlignedReadConstReference>& src, ReadRefSupportSet& dst)
+{
+    std::sort(std::begin(src), std::end(src));
+    auto itr = dst.insert(std::end(dst), std::begin(src), std::end(src));
+    std::inplace_merge(std::begin(dst), itr, std::end(dst));
+}
+
 std::size_t
 try_assign_ambiguous_reads_to_alleles(const std::vector<Allele>& alleles,
                                       const AmbiguousReadList& ambiguous_reads,
                                       AlleleSupportMap& allele_support)
 {
     std::size_t num_assigned {0};
+    std::unordered_map<Allele, std::deque<AlignedReadConstReference>> assigned {};
+    assigned.reserve(alleles.size());
     for (const auto& ambiguous_read : ambiguous_reads) {
         if (ambiguous_read.haplotypes && have_common_alleles(*ambiguous_read.haplotypes, alleles)) {
             const auto supported_alleles = copy_included(alleles, ambiguous_read.haplotypes->front());
             for (const auto& allele : supported_alleles) {
-                allele_support[allele].insert(AlignedReadConstReference {ambiguous_read.read});
+                assigned[allele].emplace_back(ambiguous_read.read);
             }
         }
     }
+    for (auto& p : assigned) sort_and_merge(p.second, allele_support[p.first]);
     return num_assigned;
 }
 

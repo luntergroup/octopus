@@ -16,7 +16,6 @@
 #include "basics/mappable_reference_wrapper.hpp"
 #include "basics/aligned_read.hpp"
 #include "basics/cigar_string.hpp"
-#include "containers/mappable_flat_multi_set.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/allele.hpp"
@@ -29,7 +28,7 @@ using HaplotypeProbabilityMap = std::unordered_map<Haplotype, double>;
 using ReadSupportSet = std::vector<AlignedRead>;
 using HaplotypeSupportMap = std::unordered_map<Haplotype, ReadSupportSet>;
 using AlignedReadConstReference = MappableReferenceWrapper<const AlignedRead>;
-using ReadRefSupportSet = MappableFlatMultiSet<AlignedReadConstReference>;
+using ReadRefSupportSet = std::vector<AlignedReadConstReference>;
 using AlleleSupportMap = std::unordered_map<Allele, ReadRefSupportSet>;
 
 struct AmbiguousRead : public Mappable<AmbiguousRead>
@@ -106,9 +105,10 @@ compute_allele_support(const std::vector<Allele>& alleles,
         ReadRefSupportSet allele_support {};
         for (const auto& p : haplotype_support) {
             if (inclusion_pred(p.first, allele)) {
-                allele_support.insert(std::cbegin(p.second), std::cend(p.second));
+                allele_support.insert(std::cend(allele_support), std::cbegin(p.second), std::cend(p.second));
             }
         }
+        std::sort(std::begin(allele_support), std::end(allele_support));
         result.emplace(allele, std::move(allele_support));
     }
     return result;
