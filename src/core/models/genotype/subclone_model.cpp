@@ -124,7 +124,6 @@ compute_genotype_likelihoods_with_fixed_mixture_model(const std::vector<SampleNa
 {
     FixedMixtureGenotypeLikelihoodModel model {haplotype_log_likelihoods};
     const bool use_genotype_indices {index_data && index_data->haplotypes};
-    if (use_genotype_indices) model.prime(*index_data->haplotypes);
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
@@ -132,7 +131,9 @@ compute_genotype_likelihoods_with_fixed_mixture_model(const std::vector<SampleNa
         model.set_mixtures(maths::dirichlet_expectation(sample_priors));
         model.cache().prime(sample);
         if (use_genotype_indices) {
+            model.prime(*index_data->haplotypes);
             result.push_back(evaluate(index_data->genotype_indices, model));
+            model.unprime();
         } else {
             result.push_back(evaluate(genotypes, model));
         }
@@ -167,13 +168,14 @@ compute_genotype_likelihoods_with_germline_model(const std::vector<SampleName>& 
 {
     GermlineLikelihoodModel model {haplotype_log_likelihoods};
     const bool use_genotype_indices {index_data && index_data->haplotypes};
-    if (use_genotype_indices) model.prime(*index_data->haplotypes);
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         model.cache().prime(sample);
         if (use_genotype_indices) {
+            model.prime(*index_data->haplotypes);
             result.push_back(evaluate(index_data->genotype_indices, model));
+            model.unprime();
         } else {
             result.push_back(evaluate(genotypes, model));
         }
@@ -229,13 +231,14 @@ compute_germline_genotype_likelihoods_with_germline_model(const std::vector<Samp
 {
     GermlineLikelihoodModel model {haplotype_log_likelihoods};
     const bool use_genotype_indices {index_data && index_data->haplotypes};
-    if (use_genotype_indices) model.prime(*index_data->haplotypes);
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         model.cache().prime(sample);
         if (use_genotype_indices) {
+            model.prime(*index_data->haplotypes);
             result.push_back(evaluate_germlines(index_data->genotype_indices, model));
+            model.unprime();
         } else {
             result.push_back(evaluate_germlines(genotypes, model));
         }
