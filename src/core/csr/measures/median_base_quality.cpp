@@ -83,8 +83,8 @@ Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const 
             if (has_ref) alleles.erase(std::cbegin(alleles));
             if (!alleles.empty()) {
                 const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
-                for (const auto& allele : alleles) {
-                    const auto median_bq = median_base_quality(sample_allele_support.at(allele), allele);
+                for (const auto& p : sample_allele_support) {
+                    const auto median_bq = median_base_quality(p.second, p.first);
                     if (median_bq) {
                         if (sample_result) {
                             sample_result = std::min(*sample_result, static_cast<int>(*median_bq));
