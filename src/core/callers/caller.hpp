@@ -163,10 +163,11 @@ private:
     
     std::deque<CallWrapper>
     call_variants(const GenomicRegion& call_region,  const MappableFlatSet<Variant>& candidates,
-                  const ReadMap& reads, ProgressMeter& progress_meter) const;
+                  const ReadMap& reads, const ReadPipe::Report& read_report, ProgressMeter& progress_meter) const;
     bool refcalls_requested() const noexcept;
     MappableFlatSet<Variant> generate_candidate_variants(const GenomicRegion& region) const;
-    HaplotypeGenerator make_haplotype_generator(const MappableFlatSet<Variant>& candidates, const ReadMap& reads) const;
+    HaplotypeGenerator make_haplotype_generator(const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
+                                                const ReadPipe::Report& read_report) const;
     HaplotypeLikelihoodCache make_haplotype_likelihood_cache() const;
     VcfRecordFactory make_record_factory(const ReadMap& reads) const;
     std::vector<Haplotype>

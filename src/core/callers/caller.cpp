@@ -23,8 +23,6 @@
 #include "core/types/calls/variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
 
-#include "timers.hpp"
-
 #include "core/tools/read_assigner.hpp"
 #include "core/tools/read_realigner.hpp"
 
@@ -145,10 +143,10 @@ auto convert_to_vcf(std::deque<CallWrapper>&& calls, const VcfRecordFactory& fac
 
 std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
 {
-    resume(init_timer);
+    ReadPipe::Report reads_report {};
     ReadMap reads;
     if (candidate_generator_.requires_reads()) {
-        reads = read_pipe_.get().fetch_reads(expand(call_region, 100));
+        reads = read_pipe_.get().fetch_reads(expand(call_region, 100), reads_report);
         add_reads(reads, candidate_generator_);
         if (!refcalls_requested() && all_empty(reads)) {
             if (debug_log_) stream(*debug_log_) << "Stopping early as no reads found in call region " << call_region;
@@ -165,10 +163,9 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     }
     if (!candidate_generator_.requires_reads()) {
         // as we didn't fetch them earlier
-        reads = read_pipe_.get().fetch_reads(call_region);
+        reads = read_pipe_.get().fetch_reads(call_region, reads_report);
     }
-    pause(init_timer);
-    auto calls = call_variants(call_region, candidates, reads, progress_meter);
+    auto calls = call_variants(call_region, candidates, reads, reads_report, progress_meter);
     candidates.clear();
     candidates.shrink_to_fit();
     progress_meter.log_completed(call_region);
@@ -299,7 +296,8 @@ bool has_reference(const Container& haplotypes)
 
 std::deque<CallWrapper>
 Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Variant>& candidates,
-                      const ReadMap& reads, ProgressMeter& progress_meter) const
+                      const ReadMap& reads, const ReadPipe::Report& read_report,
+                      ProgressMeter& progress_meter) const
 {
     std::deque<CallWrapper> result {};
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
@@ -310,7 +308,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         progress_meter.log_completed(call_region);
         return result;
     }
-    auto haplotype_generator = make_haplotype_generator(candidates, reads);
+    auto haplotype_generator = make_haplotype_generator(candidates, reads, read_report);
     GeneratorStatus status;
     std::vector<Haplotype> haplotypes {}, next_haplotypes {};
     GenomicRegion active_region;
@@ -362,9 +360,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         }
         auto has_removal_impact = filter_haplotypes(haplotypes, haplotype_generator, haplotype_likelihoods, protected_haplotypes);
         if (haplotypes.empty()) continue;
-        resume(latent_timer);
         const auto caller_latents = infer_latents(haplotypes, haplotype_likelihoods);
-        pause(latent_timer);
         if (trace_log_) {
             debug::print_haplotype_posteriors(stream(*trace_log_), *caller_latents->haplotype_posteriors(), -1);
         } else if (debug_log_) {
@@ -684,9 +680,7 @@ void Caller::call_variants(const GenomicRegion& active_region,
         std::vector<CallWrapper> calls {};
         if (!active_candidates.empty()) {
             if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
-            resume(calling_timer);
             calls = wrap(call_variants(active_candidates, latents));
-            pause(calling_timer);
             if (!calls.empty()) {
                 set_model_posteriors(calls, latents, haplotypes, haplotype_likelihoods);
                 set_phasing(calls, latents, haplotypes, call_region);
@@ -739,9 +733,7 @@ void Caller::set_model_posteriors(std::vector<CallWrapper>& calls, const Latents
                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     if (parameters_.allow_model_filtering || requires_model_evaluation(calls)) {
-        resume(latent_timer);
         const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods, latents);
-        pause(latent_timer);
         if (mp) {
             for (auto& call : calls) {
                 call->set_model_posterior(probability_to_phred(1 - *mp));
@@ -804,10 +796,8 @@ void Caller::set_phasing(std::vector<CallWrapper>& calls, const Latents& latents
                          const std::vector<Haplotype>& haplotypes,
                          const GenomicRegion& call_region) const
 {
-    resume(phasing_timer);
     const auto phase = phaser_.force_phase(haplotypes, *latents.genotype_posteriors(),
                                            extract_regions(calls), get_genotype_calls(latents));
-    pause(phasing_timer);
     if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phase);
     octopus::set_phasing(calls, phase, call_region);
 }
@@ -840,9 +830,9 @@ MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion
 }
 
 HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
-                                                    const ReadMap& reads) const
+                                                    const ReadMap& reads, const ReadPipe::Report& read_report) const
 {
-    return haplotype_generator_builder_.build(reference_, candidates, reads);
+    return haplotype_generator_builder_.build(reference_, candidates, reads, read_report);
 }
 
 HaplotypeLikelihoodCache Caller::make_haplotype_likelihood_cache() const
@@ -915,9 +905,7 @@ bool Caller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
         }
     }
     try {
-        resume(haplotype_likelihood_timer);
         haplotype_likelihoods.populate(active_reads, haplotypes, std::move(flank_state));
-        pause(haplotype_likelihood_timer);
     } catch(const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
         if (debug_log_) {
             stream(*debug_log_) << "Skipping " << active_region << " as a haplotype was too short by "
