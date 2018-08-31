@@ -2016,6 +2016,11 @@ boost::optional<fs::path> filter_request(const OptionMap& options)
     return boost::none;
 }
 
+bool annotate_filter_output(const OptionMap& options)
+{
+    return is_set("annotate-filtered-calls", options);
+}
+
 boost::optional<fs::path> bamout_request(const OptionMap& options)
 {
     if (is_set("bamout", options)) {

@@ -1329,9 +1329,8 @@ void run_csr(GenomeCallingComponents& components)
             buffered_rp.hint(flatten(components.search_regions()));
         }
         VariantCallFilter::OutputOptions output_config {};
-        if (components.sites_only()) {
-            output_config.emit_sites_only = true;
-        }
+        output_config.emit_sites_only = components.sites_only();
+        output_config.annotate_measures = components.annotate_filter_output();
         const VcfReader in {std::move(*input_path)};
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), in.fetch_header(),
                                                 components.ploidies(), components.pedigree(),

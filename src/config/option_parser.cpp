@@ -656,6 +656,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("keep-unfiltered-calls",
      po::bool_switch()->default_value(false),
      "Keep a copy of unfiltered calls")
+     
+     ("annotate-filtered-calls",
+     po::bool_switch()->default_value(false),
+     "Annotate filtered VCF with measure values used for filtering ")
     
     ("training-annotations",
      po::value<std::vector<std::string>>()->multitoken(),
