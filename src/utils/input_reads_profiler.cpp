@@ -166,6 +166,7 @@ profile_reads(const std::vector<SampleName>& samples,
     result.mean_read_bytes = maths::mean(bytes);
     result.read_bytes_stdev = maths::stdev(bytes);
     result.sample_mean_depth.resize(samples.size());
+    result.sample_median_depth.resize(samples.size());
     result.sample_depth_stdev.resize(samples.size());
     result.max_mapping_quality = 0;
     std::deque<unsigned> depths {};
@@ -182,15 +183,18 @@ profile_reads(const std::vector<SampleName>& samples,
         }
         if (!sample_depths.empty()) {
             result.sample_mean_depth[s] = maths::mean(sample_depths);
+            result.sample_median_depth[s] = maths::median(sample_depths);
             result.sample_depth_stdev[s] = maths::stdev(sample_depths);
         } else {
             result.sample_mean_depth[s] = 0;
+            result.sample_median_depth[s] = 0;
             result.sample_depth_stdev[s] = 0;
         }
         utils::append(std::move(sample_depths), depths);
     }
     assert(!depths.empty());
     result.mean_depth = maths::mean(depths);
+    result.median_depth = maths::median(depths);
     result.depth_stdev = maths::stdev(depths);
     result.max_read_length = *std::max_element(std::cbegin(read_lengths), std::cend(read_lengths));
     result.median_read_length = maths::median(read_lengths);
