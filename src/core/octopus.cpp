@@ -1356,6 +1356,11 @@ bool is_bam_realignment_requested(const GenomeCallingComponents& components)
     return static_cast<bool>(components.bamout());
 }
 
+bool is_split_bam_realignment_requested(const GenomeCallingComponents& components)
+{
+    return static_cast<bool>(components.split_bamout());
+}
+
 bool is_stdout_final_output(const GenomeCallingComponents& components)
 {
     return (components.filtered_output() && !components.filtered_output()->path()) || !components.output().path();
@@ -1399,9 +1404,8 @@ bool is_called_ploidy_known(const GenomeCallingComponents& components)
     });
 }
 
-auto get_max_called_ploidy(VcfReader& vcf)
+auto get_max_called_ploidy(VcfReader& vcf, const std::vector<VcfRecord::SampleName>& samples)
 {
-    const auto samples = vcf.fetch_header().samples();
     unsigned result {0};
     for (auto p = vcf.iterate(); p.first != p.second; ++p.first) {
         for (const auto& sample : samples) {
@@ -1411,11 +1415,38 @@ auto get_max_called_ploidy(VcfReader& vcf)
     return result;
 }
 
+auto get_max_called_ploidy(VcfReader& vcf)
+{
+    return get_max_called_ploidy(vcf, vcf.fetch_header().samples());
+}
+
 auto get_max_called_ploidy(const boost::filesystem::path& output_vcf)
 {
     VcfReader vcf {output_vcf};
     return get_max_called_ploidy(vcf);
 }
+
+auto get_bam_sampltes(const boost::filesystem::path& bam_path)
+{
+    io::ReadReader bam {bam_path};
+    return bam.extract_samples();
+}
+
+auto get_max_called_ploidy(const boost::filesystem::path& output_vcf, const boost::filesystem::path& in_bam)
+{
+    auto bam_samples = get_bam_sampltes(in_bam);
+    std::sort(std::begin(bam_samples), std::end(bam_samples));
+    VcfReader vcf {output_vcf};
+    auto vcf_samples = vcf.fetch_header().samples();
+    std::sort(std::begin(vcf_samples), std::end(vcf_samples));
+    std::vector<VcfRecord::SampleName> usable_samples {};
+    usable_samples.reserve(std::min(bam_samples.size(), vcf_samples.size()));
+    std::set_intersection(std::cbegin(bam_samples), std::cend(bam_samples),
+                          std::cbegin(vcf_samples), std::cend(vcf_samples),
+                          std::back_inserter(usable_samples));
+    return get_max_called_ploidy(vcf, usable_samples);
+}
+
 
 auto get_final_output_path(const GenomeCallingComponents& components)
 {
@@ -1441,21 +1472,7 @@ auto get_haplotype_bam_paths(const boost::filesystem::path& prefix, const unsign
     std::vector<boost::filesystem::path> result {};
     result.reserve(max_ploidy + 1); // + 1 for unassigned reads
     for (unsigned i {1}; i <= max_ploidy + 1; ++i) {
-        result.emplace_back(prefix.string() + std::to_string(i) + ".bam");
-    }
-    return result;
-}
-
-auto get_bamout_paths(const GenomeCallingComponents& components)
-{
-    namespace fs = boost::filesystem;
-    std::vector<fs::path> result {};
-    auto request = components.bamout();
-    if (!request) return result;
-    if (is_sam_type(*request)) {
-        result.assign({*request});
-    } else {
-        result = get_haplotype_bam_paths(*request, get_max_ploidy(components));
+        result.emplace_back(prefix.string() + "_" + std::to_string(i) + ".bam");
     }
     return result;
 }
@@ -1467,7 +1484,7 @@ void run_bam_realign(GenomeCallingComponents& components)
             components.read_manager().close();
             if (components.read_manager().paths().size() == 1) {
                 realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
-                        get_bamout_paths(components), components.reference());
+                        *components.bamout(), components.reference());
             } else {
                 namespace fs = boost::filesystem;
                 const auto bamout_directory = *components.bamout();
@@ -1493,6 +1510,40 @@ void run_bam_realign(GenomeCallingComponents& components)
                         logging::WarningLogger warn_log {};
                         stream(warn_log) << "Cannot make evidence bam " << bamout_path << " as it is an input bam";
                     }
+                }
+            }
+        }
+    }
+    if (is_split_bam_realignment_requested(components)) {
+        if (check_bam_realign(components)) {
+            components.read_manager().close();
+            if (components.read_manager().paths().size() == 1) {
+                auto out_paths = get_haplotype_bam_paths(*components.split_bamout(), get_max_ploidy(components));
+                realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
+                        std::move(out_paths), components.reference());
+            } else {
+                namespace fs = boost::filesystem;
+                const auto bamout_directory = *components.split_bamout();
+                if (fs::exists(bamout_directory)) {
+                    if (!fs::is_directory(bamout_directory)) {
+                        logging::ErrorLogger error_log {};
+                        stream(error_log) << "The given evidence bam directory " << bamout_directory << " is not a directory";
+                        return;
+                    }
+                } else {
+                    if (!fs::create_directory(bamout_directory)) {
+                        logging::ErrorLogger error_log {};
+                        stream(error_log) << "Failed to create temporary directory " << bamout_directory << " - check permissions";
+                        return;
+                    }
+                }
+                const auto realignment_vcf = get_bam_realignment_vcf(components);
+                for (const auto& bamin_path : components.read_manager().paths()) {
+                    auto bamout_prefix = bamout_directory;
+                    bamout_prefix /= bamin_path.filename().stem();
+                    const auto max_ploidy = get_max_called_ploidy(realignment_vcf, bamin_path);
+                    auto bamout_paths = get_haplotype_bam_paths(bamout_prefix, max_ploidy);
+                    realign(bamin_path, realignment_vcf, std::move(bamout_paths), components.reference());
                 }
             }
         }

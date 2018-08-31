@@ -174,7 +174,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("bamout",
      po::value<fs::path>(),
-     "Output a realigned BAM file")
+     "Output realigned BAM files")
+    
+     ("split-bamout",
+      po::value<fs::path>(),
+      "Output split realigned BAM files")
     ;
     
     po::options_description transforms("Read transformations");
