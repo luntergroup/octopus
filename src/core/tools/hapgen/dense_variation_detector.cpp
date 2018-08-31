@@ -299,7 +299,8 @@ auto join_dense_regions(const MappableFlatSet<GenomicRegion>& dense_regions,
 } // namespace
 
 std::vector<DenseVariationDetector::DenseRegion>
-DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads) const
+DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads,
+                               boost::optional<const ReadPipe::Report&> reads_report) const
 {
     const auto mean_read_size = mean_mapped_region_size(reads);
     auto expected_log_count = get_max_expected_log_allele_count_per_base(expected_heterozygosity_, heterozygosity_stdev_);
@@ -311,13 +312,19 @@ DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const R
     result.reserve(joined_dense_regions.size());
     double max_expected_coverage {};
     if (reads_profile_) {
-        max_expected_coverage = 2 * reads_profile_->mean_depth + 2 * reads_profile_->depth_stdev;
+        max_expected_coverage = 2 * std::max(reads_profile_->mean_depth, reads_profile_->median_depth) + 2 * reads_profile_->depth_stdev;
     } else {
         max_expected_coverage = 2 * mean_coverage(reads);
     }
     for (const auto& region : joined_dense_regions) {
         const auto state = compute_state(region, variants, reads);
-        if (state.variant_count > 100 && size(state.region) > 3 * mean_read_size && state.mean_read_depth > max_expected_coverage) {
+        auto total_mean_depth = state.mean_read_depth;
+        if (reads_report) {
+            const auto num_downsampled_reads = count_downsampled_reads(reads_report->downsample_report, region);
+            const auto mean_downsample_depth = static_cast<double>(num_downsampled_reads) / size(state.region);
+            total_mean_depth += mean_downsample_depth;
+        }
+        if (state.variant_count > 100 && size(state.region) > mean_read_size && total_mean_depth > max_expected_coverage) {
             result.push_back({region, DenseRegion::RecommendedAction::skip});
         }
     }

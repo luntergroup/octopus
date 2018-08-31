@@ -11,6 +11,7 @@
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "core/types/variant.hpp"
+#include "readpipe/read_pipe.hpp"
 #include "utils/input_reads_profiler.hpp"
 
 namespace octopus { namespace coretools {
@@ -37,7 +38,8 @@ public:
     
     ~DenseVariationDetector() = default;
     
-    std::vector<DenseRegion> detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads) const;
+    std::vector<DenseRegion> detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads,
+                                    boost::optional<const ReadPipe::Report&> reads_report = boost::none) const;
 
 private:
     double expected_heterozygosity_, heterozygosity_stdev_;
