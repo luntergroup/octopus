@@ -14,6 +14,7 @@
 #include "basics/cigar_string.hpp"
 #include "utils/genotype_reader.hpp"
 #include "io/variant/vcf_record.hpp"
+#include "io/variant/vcf_header.hpp"
 #include "utils/append.hpp"
 #include "read_assigner.hpp"
 #include "read_realigner.hpp"
@@ -217,10 +218,29 @@ BAMRealigner::Report BAMRealigner::realign(ReadReader& src, VcfReader& variants,
     return report;
 }
 
+namespace {
+
+auto get_sample_intersection(const io::ReadReader& bam, const VcfReader& vcf)
+{
+    auto bam_samples = bam.extract_samples();
+    std::sort(std::begin(bam_samples), std::end(bam_samples));
+    auto vcf_samples = vcf.fetch_header().samples();
+    std::sort(std::begin(vcf_samples), std::end(vcf_samples));
+    std::vector<VcfRecord::SampleName> result {};
+    result.reserve(std::min(bam_samples.size(), vcf_samples.size()));
+    std::set_intersection(std::cbegin(bam_samples), std::cend(bam_samples),
+                          std::cbegin(vcf_samples), std::cend(vcf_samples),
+                          std::back_inserter(result));
+    return result;
+}
+
+} // namespace
+
 BAMRealigner::Report BAMRealigner::realign(ReadReader& src, VcfReader& variants, std::vector<ReadWriter>& dsts,
                                            const ReferenceGenome& reference) const
 {
-    return realign(src, variants, dsts, reference, src.extract_samples());
+    auto samples = get_sample_intersection(src, variants);
+    return realign(src, variants, dsts, reference, std::move(samples));
 }
 
 // private methods
