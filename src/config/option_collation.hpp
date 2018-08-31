@@ -86,6 +86,7 @@ bool is_csr_training_mode(const OptionMap& options);
 boost::optional<fs::path> filter_request(const OptionMap& options);
 
 boost::optional<fs::path> bamout_request(const OptionMap& options);
+boost::optional<fs::path> split_bamout_request(const OptionMap& options);
 
 unsigned estimate_max_open_files(const OptionMap& options);
 
