@@ -1940,6 +1940,14 @@ boost::optional<fs::path> bamout_request(const OptionMap& options)
     return boost::none;
 }
 
+boost::optional<fs::path> split_bamout_request(const OptionMap& options)
+{
+    if (is_set("split-bamout", options)) {
+        return resolve_path(options.at("split-bamout").as<fs::path>(), options);
+    }
+    return boost::none;
+}
+
 unsigned max_open_read_files(const OptionMap& options)
 {
     return 2 * std::min(as_unsigned("max-open-read-files", options), count_read_paths(options));
