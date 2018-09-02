@@ -291,6 +291,8 @@ set(CORE_SOURCES
     core/csr/measures/quality_by_depth.cpp
     core/csr/measures/genotype_quality.hpp
     core/csr/measures/genotype_quality.cpp
+    core/csr/measures/genotype_quality_by_depth.hpp
+    core/csr/measures/genotype_quality_by_depth.cpp
     core/csr/measures/mapping_quality_zero_count.hpp
     core/csr/measures/mapping_quality_zero_count.cpp
     core/csr/measures/mean_mapping_quality.hpp
