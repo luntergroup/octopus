@@ -88,6 +88,17 @@ auto get_somatic_haplotypes(const VcfRecord& somatic, const Facet::GenotypeMap& 
     return get_somatic_haplotypes(genotypes, somatic_alleles);
 }
 
+template <typename MappableType>
+auto copy_overlapped_to_vector(const AmbiguousReadList& reads, const MappableType& mappable)
+{
+    const auto overlapped = overlap_range(reads, mappable);
+    std::vector<AlignedRead> result {};
+    result.reserve(size(overlapped));
+    std::transform(std::cbegin(overlapped), std::cend(overlapped), std::back_inserter(result),
+                   [] (const auto& read) { return read.read; });
+    return result;
+}
+
 } // namespace
 
 Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
@@ -108,7 +119,7 @@ Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, con
         }
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
-        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
+        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
         Genotype<Haplotype> somatic_genotype {static_cast<unsigned>(somatic_haplotypes.size() + 1)};
         HaplotypeProbabilityMap haplotype_priors {};
         haplotype_priors.reserve(somatic_haplotypes.size() + 1);
@@ -117,7 +128,7 @@ Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, con
             haplotype_priors[haplotype] = -1;
         }
         for (const auto& sample : normal_samples) {
-            for (const auto& p : assignments.at(sample)) {
+            for (const auto& p : assignments.support.at(sample)) {
                 const auto overlapped_reads = copy_overlapped(p.second, call);
                 if (!overlapped_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
@@ -135,6 +146,31 @@ Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, con
                     } else {
                         // This could happen if we don't call all 'somatic' alleles on the called somatic haplotype.
                         *result += overlapped_reads.size();
+                    }
+                }
+            }
+            if (assignments.ambiguous.count(sample) == 1 && !assignments.ambiguous.at(sample).empty()) {
+                const auto ambiguous_reads = copy_overlapped_to_vector(assignments.ambiguous.at(sample), call);
+                if (!ambiguous_reads.empty()) {
+                    const auto overlapped_genotypes = overlap_range(genotypes.at(sample), call);
+                    if (size(overlapped_genotypes) == 1) {
+                        const auto& called_genotype = overlapped_genotypes.front();
+                        auto dummy = called_genotype;
+                        for (const auto& haplotype : somatic_haplotypes) {
+                            dummy.emplace(haplotype);
+                        }
+                        for (const auto& haplptype : called_genotype) {
+                            haplotype_priors[haplptype] = 0;
+                        }
+                        const auto support = compute_haplotype_support(dummy, ambiguous_reads, haplotype_priors);
+                        for (const auto& haplotype : called_genotype) {
+                            haplotype_priors.erase(haplotype);
+                        }
+                        for (const auto& somatic : somatic_haplotypes) {
+                            if (support.count(somatic) == 1) {
+                                *result += support.at(somatic).size();
+                            }
+                        }
                     }
                 }
             }
