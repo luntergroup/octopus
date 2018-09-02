@@ -18,67 +18,12 @@ bool includes(const CancerGenotype<Haplotype>& genotype, const Allele& allele)
     return includes(genotype.germline(), allele) || includes(genotype.somatic(), allele);
 }
 
-namespace {
-
-auto make_all_shared(const std::vector<Haplotype>& elements)
-{
-    std::vector<std::shared_ptr<Haplotype>> result(elements.size());
-    std::transform(std::cbegin(elements), std::cend(elements), std::begin(result),
-                   [] (const auto& element) { return std::make_shared<Haplotype>(element); });
-    return result;
-}
-
-bool is_proper_somatic_genotype(const Genotype<Haplotype>& genotype)
-{
-    return genotype.zygosity() == genotype.ploidy();
-}
-
-bool is_improper_somatic_genotype(const Genotype<Haplotype>& genotype)
-{
-    return !is_proper_somatic_genotype(genotype);
-}
-
-std::vector<Genotype<Haplotype>> generate_somatic_genotypes(const std::vector<Haplotype>& haplotypes,
-                                                            const unsigned ploidy)
-{
-    auto result = generate_all_genotypes(haplotypes, ploidy);
-    if (ploidy > 1) {
-        auto itr = std::remove_if(std::begin(result), std::end(result), is_improper_somatic_genotype);
-        result.erase(itr, std::end(result));
-    }
-    return result;
-}
-
-std::vector<Genotype<Haplotype>> generate_somatic_genotypes(const std::vector<Haplotype>& haplotypes,
-                                                            const unsigned ploidy,
-                                                            std::vector<GenotypeIndex>& germline_genotype_indices)
-{
-    std::vector<GenotypeIndex> all_genotype_indices {};
-    auto all_genotypes = generate_all_genotypes(haplotypes, ploidy, all_genotype_indices);
-    if (ploidy > 1) {
-        std::vector<Genotype<Haplotype>> result {};
-        result.reserve(all_genotypes.size());
-        for (std::size_t i {0}; i < all_genotypes.size(); ++i) {
-            if (is_proper_somatic_genotype(all_genotypes[i])) {
-                result.push_back(std::move(all_genotypes[i]));
-                germline_genotype_indices.push_back(std::move(all_genotype_indices[i]));
-            }
-        }
-        return result;
-    } else {
-        germline_genotype_indices = std::move(all_genotype_indices);
-        return all_genotypes;
-    }
-}
-
-} // namespace
-
 std::vector<CancerGenotype<Haplotype>>
 generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_genotypes,
                               const std::vector<Haplotype>& somatic_haplotypes,
                               const unsigned somatic_ploidy, const bool allow_shared)
 {
-    const auto somatic_genotypes = generate_somatic_genotypes(somatic_haplotypes, somatic_ploidy);
+    const auto somatic_genotypes = generate_all_max_zygosity_genotypes(somatic_haplotypes, somatic_ploidy);
     std::vector<CancerGenotype<Haplotype>> result {};
     result.reserve(germline_genotypes.size() * somatic_genotypes.size());
     for (const auto& germline : germline_genotypes) {
@@ -100,7 +45,8 @@ generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_g
 {
     assert(germline_genotypes.size() == germline_genotype_indices.size());
     std::vector<GenotypeIndex> somatic_genotype_indices {};
-    const auto somatic_genotypes = generate_somatic_genotypes(somatic_haplotypes, somatic_ploidy, somatic_genotype_indices);
+    const auto somatic_genotypes = generate_all_max_zygosity_genotypes(somatic_haplotypes, somatic_ploidy,
+                                                                       somatic_genotype_indices);
     std::vector<CancerGenotype<Haplotype>> result {};
     const auto max_cancer_genotypes = germline_genotypes.size() * somatic_genotypes.size();
     result.reserve(max_cancer_genotypes);
@@ -132,7 +78,7 @@ extend_somatic_genotypes(const std::vector<CancerGenotype<Haplotype>>& old_genot
             if (allow_shared || !old_genotype.germline().contains(*haplotype_ptr)) {
                 auto new_somatic_genotype = old_genotype.somatic();
                 new_somatic_genotype.emplace(haplotype_ptr);
-                if (is_proper_somatic_genotype(new_somatic_genotype)) {
+                if (is_max_zygosity(new_somatic_genotype)) {
                     result.emplace_back(old_genotype.germline(), std::move(new_somatic_genotype));
                 }
             }
@@ -164,7 +110,7 @@ extend_somatic_genotypes(const std::vector<CancerGenotype<Haplotype>>& old_genot
             if (allow_shared || !old_genotype.germline().contains(*haplotype_ptr)) {
                 auto new_somatic_genotype = old_genotype.somatic();
                 new_somatic_genotype.emplace(haplotype_ptr);
-                if (is_proper_somatic_genotype(new_somatic_genotype)) {
+                if (is_max_zygosity(new_somatic_genotype)) {
                     result.emplace_back(old_genotype.germline(), std::move(new_somatic_genotype));
                     auto new_genotype_index = old_genotype_indices[g];
                     new_genotype_index.somatic.push_back(h);

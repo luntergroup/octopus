@@ -959,26 +959,36 @@ std::vector<Genotype<Haplotype>>
 generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, unsigned ploidy);
 
 template <typename MappableType>
+bool is_max_zygosity(const Genotype<MappableType>& genotype)
+{
+    return genotype.zygosity() == genotype.ploidy();
+}
+
+std::size_t num_max_zygosity_genotypes(unsigned num_elements, unsigned ploidy);
+
+template <typename MappableType>
 std::vector<Genotype<MappableType>>
-generate_all_full_rank_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy)
+generate_all_max_zygosity_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy)
 {
     if (elements.size() < ploidy) return {};
-    std::deque<Genotype<MappableType>> tmp {};
+    std::vector<Genotype<MappableType>> result {};
+    result.reserve(num_max_zygosity_genotypes(elements.size(), ploidy));
     generate_all_genotypes(elements, ploidy, [ploidy] (const auto& genotype) { return genotype.zygosity() == ploidy; },
-                           std::back_inserter(tmp));
-    return {std::make_move_iterator(std::begin(tmp)), std::make_move_iterator(std::end(tmp))};
+                           std::back_inserter(result));
+    return result;
 }
 
 template <typename MappableType>
 std::vector<Genotype<MappableType>>
-generate_all_full_rank_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
-                                 std::vector<GenotypeIndex>& indices)
+generate_all_max_zygosity_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
+                                    std::vector<GenotypeIndex>& indices)
 {
     if (elements.size() < ploidy) return {};
-    std::deque<Genotype<MappableType>> tmp {};
+    std::vector<Genotype<MappableType>> result {};
+    result.reserve(num_max_zygosity_genotypes(elements.size(), ploidy));
     generate_all_genotypes(elements, ploidy, [ploidy] (const auto& genotype) { return genotype.zygosity() == ploidy; },
-                           std::back_inserter(tmp), indices);
-    return {std::make_move_iterator(std::begin(tmp)), std::make_move_iterator(std::end(tmp))};
+                           std::back_inserter(result), indices);
+    return result;
 }
 
 namespace detail {

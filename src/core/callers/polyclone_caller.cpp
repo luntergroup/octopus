@@ -184,7 +184,7 @@ void fit_sublone_model(const std::vector<Haplotype>& haplotypes, const Haplotype
     for (unsigned num_clones {2}; num_clones <= max_clones; ++num_clones) {
         const auto clonal_model_prior = clonality_prior(num_clones);
         if (clonal_model_prior == 0.0) break;
-        auto genotypes = generate_all_full_rank_genotypes(haplotypes, num_clones);
+        auto genotypes = generate_all_max_zygosity_genotypes(haplotypes, num_clones);
         reduce(genotypes, genotype_prior_model, haplotype_likelihoods, max_genotypes);
         if (debug_log) stream(*debug_log) << "Generated " << genotypes.size() << " genotypes with clonality " << num_clones;
         if (genotypes.empty()) break;
