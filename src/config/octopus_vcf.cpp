@@ -53,6 +53,7 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::filteredReadFraction, "The number of reads filtered for calling is high"},
 {spec::filter::highGCRegion, "The GC content of the region is too high"},
 {spec::filter::lowGQ, "Sample genotype quality low"},
+{spec::filter::lowGQD, "Sample GQD is low"},
 {spec::filter::highClippedReadFraction, "High fraction of clipped reads covering position"},
 {spec::filter::bq10, "Median base quality supporting variant is less than 10"},
 {spec::filter::lowBaseQuality, "Median base quality supporting variant is low"},

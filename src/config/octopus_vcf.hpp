@@ -47,6 +47,7 @@ VCF_SPEC_CONSTANT strandBias {"SB"};
 VCF_SPEC_CONSTANT filteredReadFraction {"FRF"};
 VCF_SPEC_CONSTANT highGCRegion {"GC"};
 VCF_SPEC_CONSTANT lowGQ {"GQ"};
+VCF_SPEC_CONSTANT lowGQD {"GQD"};
 VCF_SPEC_CONSTANT highClippedReadFraction {"CRF"};
 VCF_SPEC_CONSTANT bq10 {"bq10"};
 VCF_SPEC_CONSTANT lowBaseQuality {"LBQ"};
