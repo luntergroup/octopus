@@ -144,10 +144,13 @@ def add_header(fname, header):
         f.write(header + '\n')
         f.writelines(lines)
 
-def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out):
-    call([ranger, '--file', data_path, '--depvarname', 'TP', '--probability',
-          '--ntree', str(n_trees), '--targetpartitionsize', str(min_node_size),
-          '--nthreads', str(threads), '--outprefix', out, '--write', '--verbose'])
+def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out, mtry=None):
+    ranger_cmd = [ranger, '--file', data_path, '--depvarname', 'TP', '--probability',
+                  '--ntree', str(n_trees), '--targetpartitionsize', str(min_node_size),
+                  '--nthreads', str(threads), '--outprefix', out, '--write', '--verbose']
+    if mtry is not None:
+        ranger_cmd += ['--mtry', str(mtry)]
+    call(ranger_cmd)
 
 def main(options):
     if not exists(options.out):
@@ -171,7 +174,7 @@ def main(options):
     ranger_header = ' '.join(options.measures + ['TP'])
     add_header(master_data_path, ranger_header)
     ranger_out_prefix = join(options.out, options.prefix)
-    run_ranger_training(options.ranger, master_data_path, options.trees, options.min_node_size, options.threads, ranger_out_prefix)
+    run_ranger_training(options.ranger, master_data_path, options.trees, options.min_node_size, options.threads, ranger_out_prefix, mtry=options.mtry)
     remove(ranger_out_prefix + ".confusion")
 
 if __name__ == '__main__':
@@ -210,6 +213,10 @@ if __name__ == '__main__':
                         type=int,
                         default=20,
                         help='Node size to stop growing trees, implicitly limiting tree depth')
+    parser.add_argument('--mtry',
+                        type=int,
+                        default=None,
+                        help='Number of variables to possibly split at in each node')
     parser.add_argument('--prefix',
                         type=str,
                         default='ranger_octopus',
