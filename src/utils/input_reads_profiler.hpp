@@ -29,7 +29,7 @@ struct ReadSetProfile
     std::vector<std::size_t> sample_mean_depth;
     std::vector<std::size_t> sample_depth_stdev;
     AlignedRead::NucleotideSequence::size_type max_read_length, median_read_length;
-    AlignedRead::MappingQuality max_mapping_quality;
+    AlignedRead::MappingQuality max_mapping_quality, median_mapping_quality, rmq_mapping_quality;
 };
 
 boost::optional<ReadSetProfile>
