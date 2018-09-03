@@ -12,21 +12,18 @@
 #include <iostream>
 
 #include "concepts/mappable.hpp"
-#include "utils/mappable_algorithms.hpp"
-#include "utils/read_stats.hpp"
-#include "utils/maths.hpp"
-#include "utils/append.hpp"
-#include "core/models/haplotype_likelihood_model.hpp"
-#include "core/tools/haplotype_filter.hpp"
 #include "core/types/calls/call.hpp"
 #include "core/types/calls/call_wrapper.hpp"
 #include "core/types/calls/variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
-
-#include "timers.hpp"
-
+#include "core/models/haplotype_likelihood_model.hpp"
+#include "core/tools/haplotype_filter.hpp"
 #include "core/tools/read_assigner.hpp"
 #include "core/tools/read_realigner.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/read_stats.hpp"
+#include "utils/maths.hpp"
+#include "utils/append.hpp"
 
 namespace octopus {
 
@@ -145,7 +142,6 @@ auto convert_to_vcf(std::deque<CallWrapper>&& calls, const VcfRecordFactory& fac
 
 std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
 {
-    resume(init_timer);
     ReadMap reads;
     if (candidate_generator_.requires_reads()) {
         reads = read_pipe_.get().fetch_reads(expand(call_region, 100));
@@ -167,7 +163,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         // as we didn't fetch them earlier
         reads = read_pipe_.get().fetch_reads(call_region);
     }
-    pause(init_timer);
     auto calls = call_variants(call_region, candidates, reads, progress_meter);
     candidates.clear();
     candidates.shrink_to_fit();
@@ -362,9 +357,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         }
         auto has_removal_impact = filter_haplotypes(haplotypes, haplotype_generator, haplotype_likelihoods, protected_haplotypes);
         if (haplotypes.empty()) continue;
-        resume(latent_timer);
         const auto caller_latents = infer_latents(haplotypes, haplotype_likelihoods);
-        pause(latent_timer);
         if (trace_log_) {
             debug::print_haplotype_posteriors(stream(*trace_log_), *caller_latents->haplotype_posteriors(), -1);
         } else if (debug_log_) {
@@ -689,7 +682,6 @@ void Caller::call_variants(const GenomicRegion& active_region,
         std::vector<CallWrapper> calls {};
         if (!active_candidates.empty()) {
             if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
-            resume(calling_timer);
             calls = wrap(call_variants(active_candidates, latents));
             pause(calling_timer);
             if (!calls.empty()) {
@@ -744,7 +736,6 @@ void Caller::set_model_posteriors(std::vector<CallWrapper>& calls, const Latents
                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     if (parameters_.allow_model_filtering || requires_model_evaluation(calls)) {
-        resume(latent_timer);
         const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods, latents);
         pause(latent_timer);
         if (mp) {
@@ -809,10 +800,8 @@ void Caller::set_phasing(std::vector<CallWrapper>& calls, const Latents& latents
                          const std::vector<Haplotype>& haplotypes,
                          const GenomicRegion& call_region) const
 {
-    resume(phasing_timer);
     const auto phase = phaser_.force_phase(haplotypes, *latents.genotype_posteriors(),
                                            extract_regions(calls), get_genotype_calls(latents));
-    pause(phasing_timer);
     if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phase);
     octopus::set_phasing(calls, phase, call_region);
 }
@@ -920,7 +909,6 @@ bool Caller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
         }
     }
     try {
-        resume(haplotype_likelihood_timer);
         haplotype_likelihoods.populate(active_reads, haplotypes, std::move(flank_state));
         pause(haplotype_likelihood_timer);
     } catch(const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
