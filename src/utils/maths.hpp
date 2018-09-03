@@ -213,7 +213,7 @@ auto stdev(const Container& values, UnaryOperation unary_op)
     return stdev(std::cbegin(values), std::cend(values), unary_op);
 }
 
-template <typename RealType, typename InputIt>
+template <typename RealType = double, typename InputIt>
 RealType rmq(InputIt first, InputIt last)
 {
     if (first == last) return 0.0;
@@ -221,7 +221,7 @@ RealType rmq(InputIt first, InputIt last)
                      / static_cast<RealType>(std::distance(first, last)));
 }
 
-template <typename RealType, typename Container>
+template <typename RealType = double, typename Container>
 RealType rmq(const Container& values)
 {
     return rmq<RealType>(std::cbegin(values), std::cend(values));
