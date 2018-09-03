@@ -101,6 +101,19 @@ std::string to_lower(const std::string& str)
 	return result;
 }
 
+std::string& strip_leading_zeroes(std::string& str)
+{
+    str.erase(0, str.find_first_not_of("0"));
+    return str;
+}
+
+std::string strip_leading_zeroes(const std::string& str)
+{
+    auto result = str;
+    strip_leading_zeroes(result);
+    return result;
+}
+
 bool is_vowel(const char c)
 {
     static constexpr std::array<char, 5> vowels {'a', 'e', 'i', 'o', 'u'};

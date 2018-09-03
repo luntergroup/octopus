@@ -21,6 +21,8 @@ namespace octopus {
 class DeNovoModel
 {
 public:
+    using LogProbability = double;
+    
     struct Parameters
     {
         double snv_mutation_rate, indel_mutation_rate;
@@ -46,8 +48,8 @@ public:
     bool is_primed() const noexcept;
     
     // ln p(target | given)
-    double evaluate(const Haplotype& target, const Haplotype& given) const;
-    double evaluate(unsigned target, unsigned given) const;
+    LogProbability evaluate(const Haplotype& target, const Haplotype& given) const;
+    LogProbability evaluate(unsigned target, unsigned given) const;
     
 private:
     struct AddressPairHash
@@ -65,27 +67,27 @@ private:
     
     hmm::FlatGapMutationModel flat_mutation_model_;
     IndelMutationModel indel_model_;
-    boost::optional<double> min_ln_probability_;
+    boost::optional<LogProbability> min_ln_probability_;
     std::size_t num_haplotypes_hint_;
     std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;
     
     mutable PenaltyVector gap_open_penalties_, gap_extend_penalties_;
     mutable std::vector<boost::optional<GapPenaltyModel>> gap_model_index_cache_;
-    mutable std::unordered_map<Haplotype, std::unordered_map<Haplotype, double>> value_cache_;
-    mutable std::unordered_map<std::pair<const Haplotype*, const Haplotype*>, double, AddressPairHash> address_cache_;
+    mutable std::unordered_map<Haplotype, std::unordered_map<Haplotype, LogProbability>> value_cache_;
+    mutable std::unordered_map<std::pair<const Haplotype*, const Haplotype*>, LogProbability, AddressPairHash> address_cache_;
     mutable std::vector<std::vector<boost::optional<double>>> guarded_index_cache_;
-    mutable std::vector<std::vector<double>> unguarded_index_cache_;
+    mutable std::vector<std::vector<LogProbability>> unguarded_index_cache_;
     mutable std::string padded_given_;
     mutable bool use_unguarded_;
     
     void set_gap_penalties(const Haplotype& given) const;
     void set_gap_penalties(unsigned given) const;
     hmm::VariableGapExtendMutationModel make_hmm_model_from_cache() const;
-    double evaluate_uncached(const Haplotype& target, const Haplotype& given, bool gap_penalties_cached = false) const;
-    double evaluate_uncached(unsigned target, unsigned given) const;
-    double evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const;
-    double evaluate_address_cache(const Haplotype& target, const Haplotype& given) const;
+    LogProbability evaluate_uncached(const Haplotype& target, const Haplotype& given, bool gap_penalties_cached = false) const;
+    LogProbability evaluate_uncached(unsigned target, unsigned given) const;
+    LogProbability evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const;
+    LogProbability evaluate_address_cache(const Haplotype& target, const Haplotype& given) const;
 };
 
 } // namespace octopus

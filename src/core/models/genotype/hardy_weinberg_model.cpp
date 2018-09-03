@@ -133,18 +133,19 @@ auto sum(const Range& values) noexcept
     return std::accumulate(std::cbegin(values), std::cend(values), T {0});
 }
 
-std::vector<double> to_frequencies(const std::vector<unsigned>& counts)
+template <typename T>
+std::vector<T> to_frequencies(const std::vector<unsigned>& counts)
 {
-    std::vector<double> result(counts.size());
-    const auto norm = static_cast<double>(sum(counts));
+    std::vector<T> result(counts.size());
+    const auto norm = static_cast<T>(sum(counts));
     std::transform(std::cbegin(counts), std::cend(counts), std::begin(result),
-                   [norm] (auto count) noexcept { return static_cast<double>(count) / norm; });
+                   [norm] (auto count) noexcept { return static_cast<T>(count) / norm; });
     return result;
 }
 
 } // namespace
 
-double HardyWeinbergModel::evaluate(const Genotype<Haplotype>& genotype) const
+HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const Genotype<Haplotype>& genotype) const
 {
     if (empirical_) {
         switch (genotype.ploidy()) {
@@ -153,7 +154,7 @@ double HardyWeinbergModel::evaluate(const Genotype<Haplotype>& genotype) const
             default: return ln_hardy_weinberg_polyploid(genotype, haplotype_frequencies_);
         }
     } else {
-        static const double ln2 {std::log(2.0)}, ln3 {std::log(3.0)};
+        static const LogProbability ln2 {std::log(2.0)}, ln3 {std::log(3.0)};
         if (is_haploid(genotype)) {
             return reference_ && genotype.contains(*reference_) ? -ln2 : 0.0;
         }
@@ -168,7 +169,7 @@ double HardyWeinbergModel::evaluate(const Genotype<Haplotype>& genotype) const
         if (reference_ && !genotype.contains(*reference_)) {
             counts.push_back(1);
         }
-        auto probs = to_frequencies(counts);
+        auto probs = to_frequencies<LogProbability>(counts);
         return maths::log_multinomial_pdf(counts, probs);
     }
 }
@@ -187,7 +188,7 @@ void unique_counts(const Range& range, std::vector<unsigned>& result)
 
 } // namespace
 
-double HardyWeinbergModel::evaluate(const GenotypeIndex& genotype) const
+HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const GenotypeIndex& genotype) const
 {
     assert(!genotype.empty());
     if (empirical_) {
@@ -197,7 +198,7 @@ double HardyWeinbergModel::evaluate(const GenotypeIndex& genotype) const
             default: return ln_hardy_weinberg_polyploid(genotype, haplotype_idx_frequencies_);
         }
     } else {
-        static const double ln2 {std::log(2.0)}, ln3 {std::log(3.0)};
+        static const LogProbability ln2 {std::log(2.0)}, ln3 {std::log(3.0)};
         if (genotype.size() == 1) {
             return reference_idx_ && genotype[0] == *reference_idx_ ? -ln2 : 0.0;
         }
@@ -220,7 +221,7 @@ double HardyWeinbergModel::evaluate(const GenotypeIndex& genotype) const
         if (reference_idx_ && std::find(std::cbegin(genotype), std::cend(genotype), *reference_idx_) == std::cend(genotype)) {
             counts.push_back(1);
         }
-        auto probs = to_frequencies(counts);
+        auto probs = to_frequencies<LogProbability>(counts);
         return maths::log_multinomial_pdf(counts, probs);
     }
 }
@@ -269,7 +270,7 @@ void fill_frequencies(const Range& genotypes, HardyWeinbergModel::HaplotypeFrequ
 }
 
 template <typename Range>
-double joint_evaluate(const Range& genotypes, const HardyWeinbergModel& model)
+auto joint_evaluate(const Range& genotypes, const HardyWeinbergModel& model)
 {
     return std::accumulate(std::cbegin(genotypes), std::cend(genotypes), 0.0,
                            [&model] (auto curr, const auto& genotype) { return curr + model.evaluate(get(genotype)); });
@@ -277,7 +278,7 @@ double joint_evaluate(const Range& genotypes, const HardyWeinbergModel& model)
 
 } // namespace
 
-double HardyWeinbergModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const
+HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const
 {
     if (empirical_) {
         return joint_evaluate(genotypes, *this);
@@ -291,7 +292,7 @@ double HardyWeinbergModel::evaluate(const std::vector<Genotype<Haplotype>>& geno
     }
 }
 
-double HardyWeinbergModel::evaluate(const GenotypeReferenceVector& genotypes) const
+HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const GenotypeReferenceVector& genotypes) const
 {
     if (empirical_) {
         return joint_evaluate(genotypes, *this);
@@ -305,7 +306,7 @@ double HardyWeinbergModel::evaluate(const GenotypeReferenceVector& genotypes) co
     }
 }
 
-double HardyWeinbergModel::evaluate(const GenotypeIndexVector& genotypes) const
+HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const GenotypeIndexVector& genotypes) const
 {
     if (empirical_) {
         return joint_evaluate(genotypes, *this);
@@ -319,7 +320,7 @@ double HardyWeinbergModel::evaluate(const GenotypeIndexVector& genotypes) const
     }
 }
 
-double HardyWeinbergModel::evaluate(const GenotypeIndexReferenceVector& genotypes) const
+HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const GenotypeIndexReferenceVector& genotypes) const
 {
     if (empirical_) {
         return joint_evaluate(genotypes, *this);

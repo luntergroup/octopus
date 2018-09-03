@@ -29,8 +29,7 @@
 
 #include "utils/sequence_utils.hpp"
 #include "utils/append.hpp"
-
-#include "timers.hpp"
+#include "utils/maths.hpp"
 
 #define _unused(x) ((void)(x))
 
@@ -64,15 +63,15 @@ const char* Assembler::NonCanonicalReferenceSequence::what() const noexcept
     return std::invalid_argument::what();
 }
 
-Assembler::Assembler(const unsigned kmer_size)
-: k_ {kmer_size}
+Assembler::Assembler(const Parameters params)
+: params_ {params}
 , reference_kmers_ {}
 , reference_head_position_ {0}
 , reference_vertices_ {}
 {}
 
-Assembler::Assembler(const unsigned kmer_size, const NucleotideSequence& reference)
-: k_ {kmer_size}
+Assembler::Assembler(const Parameters params, const NucleotideSequence& reference)
+: params_ {params}
 , reference_kmers_ {}
 , reference_head_position_ {0}
 , reference_vertices_ {}
@@ -82,12 +81,17 @@ Assembler::Assembler(const unsigned kmer_size, const NucleotideSequence& referen
 
 unsigned Assembler::kmer_size() const noexcept
 {
-    return k_;
+    return params_.kmer_size;
+}
+
+Assembler::Parameters Assembler::params() const
+{
+    return params_;
 }
 
 void Assembler::insert_reference(const NucleotideSequence& sequence)
 {
-    if (sequence.size() >= k_) {
+    if (sequence.size() >= kmer_size()) {
         if (is_empty()) {
             insert_reference_into_empty_graph(sequence);
         } else if (reference_kmers_.empty()) {
@@ -100,11 +104,12 @@ void Assembler::insert_reference(const NucleotideSequence& sequence)
     }
 }
 
-void Assembler::insert_read(const NucleotideSequence& sequence)
+void Assembler::insert_read(const NucleotideSequence& sequence, const Direction strand)
 {
-    if (sequence.size() >= k_) {
+    if (sequence.size() >= kmer_size()) {
+        const bool is_forward_strand {strand == Direction::forward};
         auto kmer_begin = std::cbegin(sequence);
-        auto kmer_end   = std::next(kmer_begin, k_);
+        auto kmer_end   = std::next(kmer_begin, kmer_size());
         Kmer prev_kmer {kmer_begin, kmer_end};
         bool prev_kmer_good {true};
         auto vertex_itr = vertex_cache_.find(prev_kmer);
@@ -125,7 +130,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
                    ++next_kmer_begin, ++next_kmer_end, ++ref_kmer_itr, ++ref_vertex_itr, ++ref_edge_itr) {
                 if (std::equal(next_kmer_begin, next_kmer_end, std::cbegin(*ref_kmer_itr))) {
                     assert(ref_edge_itr != std::cend(reference_edges_));
-                    increment_weight(*ref_edge_itr);
+                    increment_weight(*ref_edge_itr, is_forward_strand);
                 } else {
                     break;
                 }
@@ -148,7 +153,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
                 if (v) {
                     if (prev_kmer_good) {
                         const auto u = vertex_cache_.at(prev_kmer);
-                        add_edge(u, *v, 1);
+                        add_edge(u, *v, 1, is_forward_strand);
                     }
                     prev_kmer_good = true;
                 } else {
@@ -161,9 +166,9 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
                     Edge e; bool e_in_graph;
                     std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
                     if (e_in_graph) {
-                        increment_weight(e);
+                        increment_weight(e, is_forward_strand);
                     } else {
-                        add_edge(u, v, 1);
+                        add_edge(u, v, 1, is_forward_strand);
                     }
                 }
                 if (is_reference(kmer_itr->second)) {
@@ -179,7 +184,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence)
                                ++next_kmer_begin, ++next_kmer_end, ++ref_kmer_itr, ++ref_vertex_itr, ++ref_edge_itr) {
                             if (std::equal(next_kmer_begin, next_kmer_end, std::cbegin(*ref_kmer_itr))) {
                                 assert(ref_edge_itr != std::cend(reference_edges_));
-                                increment_weight(*ref_edge_itr);
+                                increment_weight(*ref_edge_itr, is_forward_strand);
                             } else {
                                 break;
                             }
@@ -238,7 +243,7 @@ void Assembler::try_recover_dangling_branches()
         if (is_dangling_branch(v)) {
             const auto joining_kmer = find_joining_kmer(v);
             if (joining_kmer) {
-                add_edge(v, *joining_kmer, 1, false, false);
+                add_edge(v, *joining_kmer, 1, 0, false, false);
             }
         }
     });
@@ -415,10 +420,10 @@ bool operator<(const Assembler::Kmer& lhs, const Assembler::Kmer& rhs) noexcept
 //
 void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequence)
 {
-    assert(sequence.size() >= k_);
+    assert(sequence.size() >= kmer_size());
     vertex_cache_.reserve(sequence.size() + std::pow(4, 5));
     auto kmer_begin = std::cbegin(sequence);
-    auto kmer_end   = std::next(kmer_begin, k_);
+    auto kmer_end   = std::next(kmer_begin, kmer_size());
     reference_kmers_.emplace_back(kmer_begin, kmer_end);
     if (!contains_kmer(reference_kmers_.back())) {
         const auto u = add_vertex(reference_kmers_.back(), true);
@@ -461,11 +466,11 @@ void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequ
 
 void Assembler::insert_reference_into_populated_graph(const NucleotideSequence& sequence)
 {
-    assert(sequence.size() >= k_);
+    assert(sequence.size() >= kmer_size());
     assert(reference_kmers_.empty());
     vertex_cache_.reserve(vertex_cache_.size() + sequence.size() + std::pow(4, 5));
     auto kmer_begin = std::cbegin(sequence);
-    auto kmer_end   = std::next(kmer_begin, k_);
+    auto kmer_end   = std::next(kmer_begin, kmer_size());
     reference_kmers_.emplace_back(kmer_begin, kmer_end);
     if (!contains_kmer(reference_kmers_.back())) {
         const auto u = add_vertex(reference_kmers_.back(), true);
@@ -526,7 +531,7 @@ std::size_t Assembler::count_kmer(const Kmer& kmer) const noexcept
 
 std::size_t Assembler::reference_size() const noexcept
 {
-    return sequence_length(reference_kmers_.size(), k_);
+    return sequence_length(reference_kmers_.size(), kmer_size());
 }
 
 void Assembler::regenerate_vertex_indices()
@@ -596,15 +601,15 @@ void Assembler::clear_and_remove_all(const std::unordered_set<Vertex>& vertices)
 }
 
 Assembler::Edge Assembler::add_edge(const Vertex u, const Vertex v,
-                                    const GraphEdge::WeightType weight,
+                                    const GraphEdge::WeightType weight, GraphEdge::WeightType forward_weight,
                                     const bool is_reference, const bool is_artificial)
 {
-    return boost::add_edge(u, v, {weight, is_reference, is_artificial}, graph_).first;
+    return boost::add_edge(u, v, {weight, forward_weight, is_reference, is_artificial}, graph_).first;
 }
 
 Assembler::Edge Assembler::add_reference_edge(const Vertex u, const Vertex v)
 {
-    return add_edge(u, v, 0, true);
+    return add_edge(u, v, 0, 0, true);
 }
 
 void Assembler::remove_edge(const Vertex u, const Vertex v)
@@ -617,9 +622,11 @@ void Assembler::remove_edge(const Edge e)
     boost::remove_edge(e, graph_);
 }
 
-void Assembler::increment_weight(const Edge e)
+void Assembler::increment_weight(const Edge e, const bool is_forward)
 {
-    ++graph_[e].weight;
+    auto& edge = graph_[e];
+    ++edge.weight;
+    if (is_forward) ++edge.forward_strand_weight;
 }
 
 void Assembler::set_vertex_reference(const Vertex v)
@@ -733,7 +740,7 @@ boost::optional<Assembler::Vertex> Assembler::find_joining_kmer(const Vertex v) 
 {
     const auto& kmer = kmer_of(v);
     NucleotideSequence adjacent_kmer {std::next(std::cbegin(kmer)), std::cend(kmer)};
-    adjacent_kmer.resize(k_);
+    adjacent_kmer.resize(kmer_size());
     constexpr std::array<NucleotideSequence::value_type, 4> bases {'A', 'C', 'G', 'T'};
     for (const auto base : bases) {
         adjacent_kmer.back() = base;
@@ -749,7 +756,7 @@ boost::optional<Assembler::Vertex> Assembler::find_joining_kmer(const Vertex v) 
 Assembler::NucleotideSequence Assembler::make_sequence(const Path& path) const
 {
     assert(!path.empty());
-    NucleotideSequence result(k_ + path.size() - 1, 'N');
+    NucleotideSequence result(kmer_size() + path.size() - 1, 'N');
     const auto& first_kmer = kmer_of(path.front());
     auto itr = std::copy(std::cbegin(first_kmer), std::cend(first_kmer), std::begin(result));
     std::transform(std::next(std::cbegin(path)), std::cend(path), itr,
@@ -772,7 +779,7 @@ Assembler::NucleotideSequence Assembler::make_reference(Vertex from, const Verte
         }
         last = reference_tail();
     }
-    result.reserve(2 * k_);
+    result.reserve(2 * kmer_size());
     const auto& first_kmer = kmer_of(from);
     result.assign(std::cbegin(first_kmer), std::cend(first_kmer));
     from = next_reference(from);
@@ -1094,6 +1101,28 @@ Assembler::GraphEdge::WeightType Assembler::weight(const Path& path) const
                                   std::tie(e, good) = boost::edge(u, v, graph_);
                                   assert(good);
                                   return graph_[e].weight;
+                              });
+}
+
+std::pair<Assembler::GraphEdge::WeightType, Assembler::GraphEdge::WeightType>
+Assembler::direction_weights(const Path& path) const
+{
+    if (path.size() < 2) return {0, 0};
+    using WeightPair = std::pair<GraphEdge::WeightType, GraphEdge::WeightType>;
+    return std::inner_product(std::cbegin(path), std::prev(std::cend(path)),
+                              std::next(std::cbegin(path)), WeightPair {0, 0},
+                              [] (const auto& lhs, const auto& rhs) { return std::make_pair(lhs.first + rhs.first, lhs.second + rhs.second); },
+                              [this] (const auto& u, const auto& v) -> WeightPair {
+                                  Edge e; bool good;
+                                  std::tie(e, good) = boost::edge(u, v, graph_);
+                                  assert(good);
+                                  if (!is_artificial(e)) {
+                                      auto total_weight = graph_[e].weight;
+                                      auto forward_weight = graph_[e].forward_strand_weight;
+                                      return {forward_weight, total_weight - forward_weight};
+                                  } else {
+                                      return {0, 0};
+                                  }
                               });
 }
 
@@ -1645,9 +1674,17 @@ double Assembler::bubble_score(const Path& path) const
     const auto path_weight = weight(path);
     const auto num_low_weights = count_low_weights(path, 1);
     const auto num_low_weight_flanks = count_low_weight_flanks(path, 1);
-    auto score = static_cast<double>(path_weight) / path.size();
-    score /= std::max((num_low_weights - num_low_weight_flanks) + 2 * num_low_weight_flanks, 1u);
-    return score;
+    auto result = static_cast<double>(path_weight) / path.size();
+    result /= std::max((num_low_weights - num_low_weight_flanks) + 2 * num_low_weight_flanks, 1u);
+    if (params_.strand_tail_mass) {
+        GraphEdge::WeightType forward_weight, reverse_weight;
+        std::tie(forward_weight, reverse_weight) = direction_weights(path);
+        const auto tail_mass = maths::beta_tail_probability(static_cast<double>(forward_weight + 1),
+                                                            static_cast<double>(reverse_weight + 1),
+                                                            *params_.strand_tail_mass);
+        result *= (1.0 - tail_mass);
+    }
+    return result;
 }
 
 std::vector<Assembler::EdgePath> Assembler::extract_k_shortest_paths(Vertex src, Vertex dst, unsigned k) const
@@ -1724,12 +1761,13 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
             const auto ref_before_bubble = predecessors.at(alt_path.front());
             auto ref_seq = make_reference(ref_before_bubble, ref);
             alt_path.push_front(ref_before_bubble);
-            const auto extractable = bubble_score(alt_path) >= min_bubble_score;
+            const auto score = bubble_score(alt_path);
+            const bool is_extractable {score >= min_bubble_score};
             auto alt_seq = make_sequence(alt_path);
             alt_path.pop_front();
-            rhs_kmer_count += count_kmers(ref_seq, k_);
-            if (extractable) {
-                const auto pos = reference_head_position_ + reference_size() - sequence_length(rhs_kmer_count, k_);
+            rhs_kmer_count += count_kmers(ref_seq, kmer_size());
+            if (is_extractable) {
+                const auto pos = reference_head_position_ + reference_size() - sequence_length(rhs_kmer_count, kmer_size());
                 result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
             }
             --rhs_kmer_count; // because we padded one reference kmer to make ref_seq
@@ -1928,8 +1966,9 @@ std::deque<Assembler::Variant> Assembler::extract_bubble_paths_with_ksp(const un
                 Path alt_path {};
                 std::transform(alt_head_itr, std::next(alt_tail_itr), std::back_inserter(alt_path),
                                [this] (Edge e) { return boost::source(e, graph_); });
-                const auto num_ref_kmers = count_kmers(ref_seq, k_);
-                if (bubble_score(alt_path) >= min_bubble_score) {
+                const auto num_ref_kmers = count_kmers(ref_seq, kmer_size());
+                const auto score = bubble_score(alt_path);
+                if (score >= min_bubble_score) {
                     auto alt_seq = make_sequence(alt_path);
                     const auto pos = reference_head_position_ + subgraph.reference_offset + lhs_kmer_count;
                     result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));

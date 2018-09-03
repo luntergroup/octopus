@@ -34,14 +34,17 @@ Measure::ResultType AmbiguousReadFraction::do_evaluate(const VcfRecord& call, co
     std::vector<boost::optional<double>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
+        boost::optional<double> sample_result {};
         const auto num_overlapping_reads = count_overlapped(reads.at(sample), call);
         if (num_overlapping_reads > 0) {
-            const auto num_ambiguous_reads = count_overlapped(ambiguous_reads.at(sample), call);
-            const auto ambiguous_fraction = static_cast<double>(num_ambiguous_reads) / num_overlapping_reads;
-            result.emplace_back(ambiguous_fraction);
-        } else {
-            result.push_back(boost::none);
+            if (ambiguous_reads.count(sample) == 1) {
+                const auto num_ambiguous_reads = count_overlapped(ambiguous_reads.at(sample), call);
+                sample_result = static_cast<double>(num_ambiguous_reads) / num_overlapping_reads;
+            } else {
+                sample_result = 0;
+            }
         }
+        result.push_back(sample_result);
     }
     return result;
 }

@@ -34,7 +34,7 @@ struct IsForward
 {
     bool operator()(const AlignedRead& read) const
     {
-        return !read.is_marked_reverse_mapped();
+        return is_forward_strand(read);
     }
 };
 
@@ -42,7 +42,7 @@ struct IsReverse
 {
     bool operator()(const AlignedRead& read) const
     {
-        return read.is_marked_reverse_mapped();
+        return is_reverse_strand(read);
     }
 };
 
@@ -170,6 +170,23 @@ std::size_t count_reverse(const T& reads, const GenomicRegion& region, NonMapTag
     static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
     const auto overlapped = overlap_range(reads, region);
     return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsReverse {});
+}
+
+template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    const auto num_forward = std::count_if(std::cbegin(reads), std::cend(reads), IsForward {});
+    return std::make_pair(num_forward, reads.size() - num_forward);
+}
+
+template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    const auto overlapped = overlap_range(reads, region);
+    const auto num_forward = std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsForward {});
+    return std::make_pair(num_forward, size(overlapped) - num_forward);
 }
 
 struct IsShorter
@@ -331,6 +348,27 @@ auto max_mapping_quality(const T& reads, const GenomicRegion& region, NonMapTag)
 }
 
 template <typename T>
+double median_mapping_quality(const T& reads, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    std::vector<double> qualities(reads.size());
+    std::transform(std::cbegin(reads), std::cend(reads), std::begin(qualities),
+                   [] (const auto& read) { return static_cast<double>(read.mapping_quality()); });
+    return maths::median<double>(qualities);
+}
+
+template <typename T>
+double median_mapping_quality(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    const auto overlapped = overlap_range(reads, region);
+    std::vector<double> qualities(size(overlapped));
+    std::transform(std::cbegin(overlapped), std::cend(overlapped), std::begin(qualities),
+                   [] (const auto& read) { return static_cast<double>(read.mapping_quality()); });
+    return maths::median<double>(qualities);
+}
+
+template <typename T>
 double rmq_mapping_quality(const T& reads, NonMapTag)
 {
     static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
@@ -349,6 +387,35 @@ double rmq_mapping_quality(const T& reads, const GenomicRegion& region, NonMapTa
     std::transform(std::cbegin(overlapped), std::cend(overlapped), std::begin(qualities),
                    [] (const auto& read) { return static_cast<double>(read.mapping_quality()); });
     return maths::rmq<double>(qualities);
+}
+
+template <typename T>
+double median_base_quality(const T& reads, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    std::vector<double> qualities {};
+    qualities.reserve(count_base_pairs(reads, NonMapTag {}));
+    for (const auto& read : reads) {
+        for (const auto quality : read.base_qualities()) {
+            qualities.push_back(static_cast<double>(quality));
+        }
+    }
+    return maths::median<double>(qualities);
+}
+
+template <typename T>
+double median_base_quality(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    const auto overlapped = overlap_range(reads, region);
+    std::vector<double> qualities {};
+    qualities.reserve(count_base_pairs(reads, region, NonMapTag {}));
+    std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&qualities] (const auto& read) {
+        for (const auto quality : read.base_qualities()) {
+            qualities.push_back(static_cast<double>(quality));
+        }
+    });
+    return maths::median<double>(qualities);
 }
 
 template <typename T>
@@ -540,6 +607,28 @@ std::size_t count_reverse(const T& reads, const GenomicRegion& region, MapTag)
                            [&region] (const auto curr, const auto& sample_reads) {
                                return curr + count_reverse(sample_reads.second, region, NonMapTag {});
                            });
+}
+
+template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads, MapTag)
+{
+    std::pair<std::size_t, std::size_t> result {};
+    for (const auto& p : reads) {
+        const auto sample_counts = count_directions(p.second, NonMapTag {});
+        result.first += sample_counts.first; result.second += sample_counts.second;
+    }
+    return result;
+}
+
+template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads, const GenomicRegion& region, MapTag)
+{
+    std::pair<std::size_t, std::size_t> result {};
+    for (const auto& p : reads) {
+        const auto sample_counts = count_directions(p.second, region, NonMapTag {});
+        result.first += sample_counts.first; result.second += sample_counts.second;
+    }
+    return result;
 }
 
 template <typename T>
@@ -739,6 +828,35 @@ auto max_mapping_quality(const T& reads, const GenomicRegion& region, MapTag)
 }
 
 template <typename T>
+double median_mapping_quality(const T& reads, MapTag)
+{
+    std::vector<double> qualities {};
+    qualities.reserve(maths::sum_sizes(reads));
+    for (const auto& sample_reads : reads) {
+        std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
+                       std::back_inserter(qualities), [] (const auto& read) {
+            return static_cast<double>(read.mapping_quality());
+        });
+    }
+    return maths::median<double>(qualities);
+}
+
+template <typename T>
+double median_mapping_quality(const T& reads, const GenomicRegion& region, MapTag)
+{
+    std::vector<double> qualities {};
+    qualities.reserve(maths::sum_sizes(reads));
+    for (const auto& sample_reads : reads) {
+        const auto overlapped = overlap_range(sample_reads.second, region);
+        std::transform(std::cbegin(overlapped), std::cend(overlapped),
+                       std::back_inserter(qualities), [] (const auto& read) {
+            return static_cast<double>(read.mapping_quality());
+        });
+    }
+    return maths::median<double>(qualities);
+}
+
+template <typename T>
 double rmq_mapping_quality(const T& reads, MapTag)
 {
     std::vector<double> qualities {};
@@ -765,6 +883,38 @@ double rmq_mapping_quality(const T& reads, const GenomicRegion& region, MapTag)
                        });
     }
     return maths::rmq<double>(qualities);
+}
+
+template <typename T>
+double median_base_quality(const T& reads, MapTag)
+{
+    std::vector<double> qualities {};
+    qualities.reserve(count_base_pairs(reads, MapTag {}));
+    for (const auto& sample_reads : reads) {
+        for (const auto& read : sample_reads.second) {
+            for (const auto quality : read.base_qualities()) {
+                qualities.push_back(static_cast<double>(quality));
+            }
+        }
+    }
+    return maths::median<double>(qualities);
+}
+
+template <typename T>
+double median_base_quality(const T& reads, const GenomicRegion& region, MapTag)
+{
+    std::vector<double> qualities {};
+    qualities.reserve(count_base_pairs(reads, region, MapTag {}));
+    for (const auto& sample_reads : reads) {
+        const auto overlapped = overlap_range(sample_reads.second, region);
+        std::for_each(std::cbegin(overlapped), std::cend(overlapped),
+                      [&qualities] (const auto& read) {
+                          for (const auto quality : read.base_qualities()) {
+                              qualities.push_back(static_cast<double>(quality));
+                          }
+                      });
+    }
+    return maths::median<double>(qualities);
 }
 
 template <typename T>
@@ -898,6 +1048,18 @@ std::size_t count_reverse(const T& reads, const GenomicRegion& region)
 }
 
 template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads)
+{
+    return detail::count_directions(reads, MapTagType<T> {});
+}
+
+template <typename T>
+std::pair<std::size_t, std::size_t> count_directions(const T& reads, const GenomicRegion& region)
+{
+    return detail::count_directions(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
 AlignedRead::NucleotideSequence::size_type min_read_length(const T& reads)
 {
     return detail::min_read_length(reads, MapTagType<T> {});
@@ -1012,6 +1174,18 @@ auto max_mapping_quality(const T& reads, const GenomicRegion& region)
 }
 
 template <typename T>
+double median_mapping_quality(const T& reads)
+{
+    return detail::median_mapping_quality(reads, MapTagType<T> {});
+}
+
+template <typename T>
+double median_mapping_quality(const T& reads, const GenomicRegion& region)
+{
+    return detail::median_mapping_quality(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
 double rmq_mapping_quality(const T& reads)
 {
     return detail::rmq_mapping_quality(reads, MapTagType<T> {});
@@ -1021,6 +1195,18 @@ template <typename T>
 double rmq_mapping_quality(const T& reads, const GenomicRegion& region)
 {
     return detail::rmq_mapping_quality(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
+double median_base_quality(const T& reads)
+{
+    return detail::median_base_quality(reads, MapTagType<T> {});
+}
+
+template <typename T>
+double median_base_quality(const T& reads, const GenomicRegion& region)
+{
+    return detail::median_base_quality(reads, region, MapTagType<T> {});
 }
 
 template <typename T>

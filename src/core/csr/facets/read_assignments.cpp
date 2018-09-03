@@ -18,18 +18,11 @@ auto copy_overlapped_to_vector(const ReadContainer& reads, const Mappable& mappa
     return std::vector<AlignedRead> {std::cbegin(overlapped), std::cend(overlapped)};
 }
 
-void move_insert(std::deque<AlignedRead>& reads, const SampleName& sample, ReadMap& result)
-{
-    result[sample].insert(std::make_move_iterator(std::begin(reads)), std::make_move_iterator(std::end(reads)));
-}
-
 } // namespace
 
 ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const GenotypeMap& genotypes, const ReadMap& reads)
 : result_ {}
 {
-    AssignmentConfig assigner_config {};
-    assigner_config.ambiguous_action = AssignmentConfig::AmbiguousAction::random;
     const auto num_samples = genotypes.size();
     result_.support.reserve(num_samples);
     result_.ambiguous.reserve(num_samples);
@@ -45,9 +38,8 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
             }
             if (!local_reads.empty()) {
                 HaplotypeSupportMap genotype_support {};
-                std::deque<AlignedRead> unassigned {};
                 if (!genotype.is_homozygous()) {
-                    genotype_support = compute_haplotype_support(genotype, local_reads, unassigned, assigner_config);
+                    genotype_support = compute_haplotype_support(genotype, local_reads, result_.ambiguous[sample]);
                 } else {
                     if (is_reference(genotype[0])) {
                         genotype_support[genotype[0]] = std::move(local_reads);
@@ -56,14 +48,13 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
                         Haplotype ref {mapped_region(genotype), reference};
                         result_.support[sample][ref] = {};
                         augmented_genotype.emplace(std::move(ref));
-                        genotype_support = compute_haplotype_support(augmented_genotype, local_reads, unassigned, assigner_config);
+                        genotype_support = compute_haplotype_support(augmented_genotype, local_reads, result_.ambiguous[sample]);
                     }
                 }
                 for (auto& s : genotype_support) {
                     safe_realign_to_reference(s.second, s.first);
                     result_.support[sample][s.first] = std::move(s.second);
                 }
-                move_insert(unassigned, sample, result_.ambiguous);
             }
         }
     }
@@ -72,6 +63,25 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
 Facet::ResultType ReadAssignments::do_get() const
 {
     return std::cref(result_);
+}
+
+AlleleSupportMap
+compute_allele_support(const std::vector<Allele>& alleles, const Facet::SupportMaps& assignments, const SampleName& sample)
+{
+    if (assignments.support.count(sample) == 1) {
+        if (assignments.ambiguous.count(sample) == 1) {
+            return compute_allele_support(alleles, assignments.support.at(sample), assignments.ambiguous.at(sample));
+        } else {
+            return compute_allele_support(alleles, assignments.support.at(sample));
+        }
+    } else {
+        if (assignments.ambiguous.count(sample) == 1) {
+            const HaplotypeSupportMap empty {};
+            return compute_allele_support(alleles, empty, assignments.ambiguous.at(sample));
+        } else {
+            return {};
+        }
+    }
 }
 
 } // namespace csr

@@ -5,6 +5,7 @@
 #define measures_fwd_hpp
 
 #include "core/csr/measures/measure.hpp"
+#include "core/csr/measures/allele_depth.hpp"
 #include "core/csr/measures/allele_frequency.hpp"
 #include "core/csr/measures/depth.hpp"
 #include "core/csr/measures/mapping_quality_divergence.hpp"
@@ -14,6 +15,7 @@
 #include "core/csr/measures/quality.hpp"
 #include "core/csr/measures/quality_by_depth.hpp"
 #include "core/csr/measures/genotype_quality.hpp"
+#include "core/csr/measures/genotype_quality_by_depth.hpp"
 #include "core/csr/measures/strand_bias.hpp"
 #include "core/csr/measures/gc_content.hpp"
 #include "core/csr/measures/filtered_read_fraction.hpp"
@@ -37,5 +39,6 @@
 #include "core/csr/measures/classification_confidence.hpp"
 #include "core/csr/measures/somatic_haplotype_count.hpp"
 #include "core/csr/measures/median_somatic_mapping_quality.hpp"
+#include "core/csr/measures/strand_disequilibrium.hpp"
 
 #endif

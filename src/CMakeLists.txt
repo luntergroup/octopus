@@ -291,12 +291,16 @@ set(CORE_SOURCES
     core/csr/measures/quality_by_depth.cpp
     core/csr/measures/genotype_quality.hpp
     core/csr/measures/genotype_quality.cpp
+    core/csr/measures/genotype_quality_by_depth.hpp
+    core/csr/measures/genotype_quality_by_depth.cpp
     core/csr/measures/mapping_quality_zero_count.hpp
     core/csr/measures/mapping_quality_zero_count.cpp
     core/csr/measures/mean_mapping_quality.hpp
     core/csr/measures/mean_mapping_quality.cpp
     core/csr/measures/model_posterior.hpp
     core/csr/measures/model_posterior.cpp
+    core/csr/measures/allele_depth.hpp
+    core/csr/measures/allele_depth.cpp
     core/csr/measures/allele_frequency.hpp
     core/csr/measures/allele_frequency.cpp
     core/csr/measures/strand_bias.hpp
@@ -350,6 +354,8 @@ set(CORE_SOURCES
     core/csr/measures/somatic_haplotype_count.cpp
     core/csr/measures/median_somatic_mapping_quality.hpp
     core/csr/measures/median_somatic_mapping_quality.cpp
+    core/csr/measures/strand_disequilibrium.hpp
+    core/csr/measures/strand_disequilibrium.cpp
 
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp
@@ -366,8 +372,6 @@ set(CORE_SOURCES
     core/models/genotype/independent_population_model.cpp
     core/models/genotype/population_model.hpp
     core/models/genotype/population_model.cpp
-    core/models/genotype/tumour_model.hpp
-    core/models/genotype/tumour_model.cpp
     core/models/genotype/variational_bayes_mixture_model.hpp
     core/models/genotype/trio_model.hpp
     core/models/genotype/trio_model.cpp
@@ -382,6 +386,8 @@ set(CORE_SOURCES
     core/models/genotype/coalescent_population_prior_model.cpp
     core/models/genotype/hardy_weinberg_model.hpp
     core/models/genotype/hardy_weinberg_model.cpp
+    core/models/genotype/fixed_mixture_genotype_likelihood_model.hpp
+    core/models/genotype/fixed_mixture_genotype_likelihood_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
@@ -392,6 +398,8 @@ set(CORE_SOURCES
     core/models/error/hiseq_indel_error_model.cpp
     core/models/error/x10_indel_error_model.hpp
     core/models/error/x10_indel_error_model.cpp
+    core/models/error/umi_indel_error_model.hpp
+    core/models/error/umi_indel_error_model.cpp
     core/models/error/indel_error_model.hpp
     core/models/error/indel_error_model.cpp
     core/models/error/snv_error_model.hpp
@@ -400,6 +408,8 @@ set(CORE_SOURCES
     core/models/error/hiseq_snv_error_model.cpp
     core/models/error/x10_snv_error_model.hpp
     core/models/error/x10_snv_error_model.cpp
+    core/models/error/umi_snv_error_model.hpp
+    core/models/error/umi_snv_error_model.cpp
     core/models/error/error_model_factory.hpp
     core/models/error/error_model_factory.cpp
 

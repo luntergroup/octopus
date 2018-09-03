@@ -168,9 +168,9 @@ profile_reads(const std::vector<SampleName>& samples,
     result.sample_mean_depth.resize(samples.size());
     result.sample_median_depth.resize(samples.size());
     result.sample_depth_stdev.resize(samples.size());
-    result.max_mapping_quality = 0;
     std::deque<unsigned> depths {};
     std::vector<unsigned> read_lengths {};
+    std::vector<AlignedRead::MappingQuality> mapping_qualities {};
     for (std::size_t s {0}; s < samples.size(); ++s) {
         std::deque<unsigned> sample_depths {};
         for (const auto& reads : read_sets[s]) {
@@ -179,6 +179,8 @@ profile_reads(const std::vector<SampleName>& samples,
                 read_lengths.reserve(read_lengths.size() + reads.size());
                 std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(read_lengths),
                                [] (const auto& read) { return sequence_size(read); });
+                std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(mapping_qualities),
+                               [] (const auto& read) { return read.mapping_quality(); });
             }
         }
         if (!sample_depths.empty()) {
@@ -198,6 +200,15 @@ profile_reads(const std::vector<SampleName>& samples,
     result.depth_stdev = maths::stdev(depths);
     result.max_read_length = *std::max_element(std::cbegin(read_lengths), std::cend(read_lengths));
     result.median_read_length = maths::median(read_lengths);
+    if (!mapping_qualities.empty()) {
+        result.max_mapping_quality = *std::max_element(std::cbegin(mapping_qualities), std::cend(mapping_qualities));
+        result.median_mapping_quality = maths::median(mapping_qualities);
+        result.rmq_mapping_quality = maths::rmq(mapping_qualities);
+    } else {
+        result.max_mapping_quality = 0;
+        result.median_mapping_quality = 0;
+        result.rmq_mapping_quality = 0;
+    }
     return result;
 }
 

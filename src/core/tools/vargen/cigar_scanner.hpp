@@ -41,6 +41,7 @@ public:
             std::vector<unsigned> observed_base_qualities;
             std::vector<AlignedRead::MappingQuality> observed_mapping_qualities;
             unsigned num_fwd_observations;
+            unsigned num_edge_observations;
         };
         std::vector<SampleObservation> sample_observations;
     };

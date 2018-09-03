@@ -12,19 +12,18 @@
 #include <iostream>
 
 #include "concepts/mappable.hpp"
-#include "utils/mappable_algorithms.hpp"
-#include "utils/read_stats.hpp"
-#include "utils/maths.hpp"
-#include "utils/append.hpp"
-#include "core/models/haplotype_likelihood_model.hpp"
-#include "core/tools/haplotype_filter.hpp"
 #include "core/types/calls/call.hpp"
 #include "core/types/calls/call_wrapper.hpp"
 #include "core/types/calls/variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
-
+#include "core/models/haplotype_likelihood_model.hpp"
+#include "core/tools/haplotype_filter.hpp"
 #include "core/tools/read_assigner.hpp"
 #include "core/tools/read_realigner.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/read_stats.hpp"
+#include "utils/maths.hpp"
+#include "utils/append.hpp"
 
 namespace octopus {
 
@@ -395,6 +394,11 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
 std::size_t Caller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
 {
     return octopus::remove_duplicates(haplotypes, Haplotype {haplotype_region(haplotypes), reference_.get()});
+}
+
+boost::optional<MemoryFootprint> Caller::target_max_memory() const noexcept
+{
+    return parameters_.target_max_memory;
 }
 
 Caller::GeneratorStatus

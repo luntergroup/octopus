@@ -14,6 +14,8 @@ namespace octopus {
 class CoalescentGenotypePriorModel : public GenotypePriorModel
 {
 public:
+    using GenotypePriorModel::LogProbability;
+    
     CoalescentGenotypePriorModel() = delete;
     
     CoalescentGenotypePriorModel(CoalescentModel model) : model_ {std::move(model)} {}
@@ -28,11 +30,11 @@ public:
 private:
     CoalescentModel model_;
     
-    virtual double do_evaluate(const Genotype<Haplotype>& genotype) const override
+    virtual LogProbability do_evaluate(const Genotype<Haplotype>& genotype) const override
     {
         return model_.evaluate(genotype);
     }
-    double do_evaluate(const GenotypeIndex& genotype) const override
+    LogProbability do_evaluate(const GenotypeIndex& genotype) const override
     {
         return model_.evaluate(genotype);
     }

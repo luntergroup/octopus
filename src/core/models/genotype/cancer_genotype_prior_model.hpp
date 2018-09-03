@@ -22,6 +22,8 @@ namespace octopus {
 class CancerGenotypePriorModel
 {
 public:
+    using LogProbability = double;
+    
     CancerGenotypePriorModel() = delete;
     
     CancerGenotypePriorModel(const GenotypePriorModel& germline_model,
@@ -38,8 +40,8 @@ public:
     SomaticMutationModel& mutation_model() noexcept;
     const SomaticMutationModel& mutation_model() const noexcept;
     
-    double evaluate(const CancerGenotype<Haplotype>& genotype) const;
-    double evaluate(const CancerGenotypeIndex& genotype) const;
+    LogProbability evaluate(const CancerGenotype<Haplotype>& genotype) const;
+    LogProbability evaluate(const CancerGenotypeIndex& genotype) const;
 
 private:
     std::reference_wrapper<const GenotypePriorModel> germline_model_;
@@ -47,9 +49,9 @@ private:
     
     // p(somatic | germline)
     template <typename G, typename H>
-    double ln_probability_of_somatic_given_genotype(const H& somatic, const G& germline) const;
-    double ln_probability_of_somatic_given_haplotype(const Haplotype& somatic, const Haplotype& germline) const;
-    double ln_probability_of_somatic_given_haplotype(unsigned somatic_index, unsigned germline_index) const;
+    LogProbability ln_probability_of_somatic_given_genotype(const H& somatic, const G& germline) const;
+    LogProbability ln_probability_of_somatic_given_haplotype(const Haplotype& somatic, const Haplotype& germline) const;
+    LogProbability ln_probability_of_somatic_given_haplotype(unsigned somatic_index, unsigned germline_index) const;
 };
 
 namespace detail {
@@ -68,7 +70,8 @@ inline auto get_ploidy(const GenotypeIndex& genotype) noexcept
 
 // p(somatic | germline) = 1 / M sum [k = 1 -> M] p(somatic | germline_k) (M = germline ploidy)
 template <typename G, typename H>
-double CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const H& somatic, const G& germline) const
+CancerGenotypePriorModel::LogProbability
+CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const H& somatic, const G& germline) const
 {
     const auto ploidy = detail::get_ploidy(germline);
     assert(ploidy > 0);
@@ -76,14 +79,14 @@ double CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const 
         case 1: return ln_probability_of_somatic_given_haplotype(somatic, germline[0]);
         case 2:
         {
-            const static double ln2 {std::log(2)};
+            const static LogProbability ln2 {std::log(2)};
             const auto a = ln_probability_of_somatic_given_haplotype(somatic, germline[0]);
             const auto b = ln_probability_of_somatic_given_haplotype(somatic, germline[1]);
             return maths::log_sum_exp(a, b) - ln2;
         }
         case 3:
         {
-            const static double ln3 {std::log(3)};
+            const static LogProbability ln3 {std::log(3)};
             const auto a = ln_probability_of_somatic_given_haplotype(somatic, germline[0]);
             const auto b = ln_probability_of_somatic_given_haplotype(somatic, germline[1]);
             const auto c = ln_probability_of_somatic_given_haplotype(somatic, germline[3]);
@@ -91,7 +94,7 @@ double CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const 
         }
         default:
         {
-            std::vector<double> tmp(ploidy);
+            std::vector<LogProbability> tmp(ploidy);
             std::transform(std::cbegin(germline), std::cend(germline), std::begin(tmp),
                            [this, &somatic] (const auto& haplotype) {
                                return this->ln_probability_of_somatic_given_haplotype(somatic, haplotype);
@@ -103,14 +106,29 @@ double CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const 
 
 // non-member methods
 
-template <typename Container>
-auto calculate_log_priors(const Container& genotypes, const CancerGenotypePriorModel& model,
-                          const bool normalise = false)
+template <typename Container1, typename Container2>
+Container2&
+evaluate(const Container1& genotypes, const CancerGenotypePriorModel& model, Container2& result,
+         const bool normalise = false, const bool add = false)
 {
-    std::vector<double> result(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&model] (const auto& genotype) { return model.evaluate(genotype); });
+    if (add) {
+        assert(result.size() == genotypes.size());
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(result), std::begin(result),
+                       [&] (const auto& genotype, auto curr) { return curr + model.evaluate(genotype); });
+    } else {
+        result.resize(genotypes.size());
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                       [&] (const auto& genotype) { return model.evaluate(genotype); });
+    }
     if (normalise) maths::normalise_logs(result);
+    return result;
+}
+
+template <typename Container>
+auto evaluate(const Container& genotypes, const CancerGenotypePriorModel& model, const bool normalise = false)
+{
+    std::vector<CancerGenotypePriorModel::LogProbability> result(genotypes.size());
+    evaluate(genotypes, model, result, normalise, false);
     return result;
 }
 

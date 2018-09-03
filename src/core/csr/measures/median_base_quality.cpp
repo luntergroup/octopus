@@ -72,7 +72,7 @@ auto median_base_quality(const ReadRefSupportSet& reads, const Allele& allele)
 Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
     std::vector<boost::optional<int>> result {};
     result.reserve(call.num_alt());
     for (const auto& sample : samples) {
@@ -82,9 +82,9 @@ Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const 
             std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
             if (has_ref) alleles.erase(std::cbegin(alleles));
             if (!alleles.empty()) {
-                const auto sample_allele_support = compute_allele_support(alleles, assignments.at(sample));
-                for (const auto& allele : alleles) {
-                    const auto median_bq = median_base_quality(sample_allele_support.at(allele), allele);
+                const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
+                for (const auto& p : sample_allele_support) {
+                    const auto median_bq = median_base_quality(p.second, p.first);
                     if (median_bq) {
                         if (sample_result) {
                             sample_result = std::min(*sample_result, static_cast<int>(*median_bq));
