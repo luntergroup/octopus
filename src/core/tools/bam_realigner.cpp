@@ -65,10 +65,12 @@ bool is_homozygous_nonreference(const Genotype<Haplotype>& genotype)
     return genotype.is_homozygous() && !is_reference(genotype[0]);
 }
 
-auto vectorise(std::deque<AlignedRead>&& reads)
+auto copy_reads(AmbiguousReadList&& reads)
 {
     std::vector<AlignedRead> result {};
-    utils::append(std::move(reads), result);
+    result.reserve(reads.size());
+    std::transform(std::make_move_iterator(std::begin(reads)), std::make_move_iterator(std::end(reads)), std::back_inserter(result),
+                   [] (auto&& read) { return std::move(read.read); });
     return result;
 }
 
@@ -81,7 +83,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Ha
         if (is_homozygous_nonreference(genotype)) {
             utils::append(safe_realign_to_reference(reads, genotype[0]), result);
         } else {
-            std::deque<AlignedRead> unassigned_reads {};
+            AmbiguousReadList unassigned_reads {};
             auto support = compute_haplotype_support(genotype, reads, unassigned_reads);
             for (auto& p : support) {
                 if (!p.second.empty()) {
@@ -92,7 +94,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Ha
             }
             if (!unassigned_reads.empty()) {
                 report.n_reads_assigned += unassigned_reads.size();
-                utils::append(safe_realign_to_reference(vectorise(std::move(unassigned_reads)), genotype[0]), result);
+                utils::append(safe_realign_to_reference(copy_reads(std::move(unassigned_reads)), genotype[0]), result);
             }
         }
         std::sort(std::begin(result), std::end(result));
@@ -156,7 +158,7 @@ auto split_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Hap
             report.n_reads_assigned += reads.size();
             result.back() = safe_realign_to_reference(reads, genotype[0]);
         } else {
-            std::deque<AlignedRead> unassigned_reads {};
+            AmbiguousReadList unassigned_reads {};
             auto support = compute_haplotype_support(genotype, reads, unassigned_reads);
             std::size_t result_idx {0};
             for (const auto& haplotype : genotype) {
@@ -174,7 +176,7 @@ auto split_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Hap
             }
             if (!unassigned_reads.empty()) {
                 report.n_reads_assigned += unassigned_reads.size();
-                utils::append(std::move(unassigned_reads), result.back());
+                utils::append(copy_reads(std::move(unassigned_reads)), result.back());
             }
         }
         for (auto& set : result) std::sort(std::begin(set), std::end(set));

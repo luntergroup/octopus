@@ -55,7 +55,7 @@ std::vector<std::string> PosteriorProbabilityByDepth::do_requirements() const
 
 bool PosteriorProbabilityByDepth::is_equal(const Measure& other) const noexcept
 {
-    return depth_ == static_cast<const Depth&>(other);
+    return depth_ == static_cast<const PosteriorProbabilityByDepth&>(other).depth_;
 }
 
 } // namespace csr

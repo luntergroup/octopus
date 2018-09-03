@@ -252,8 +252,8 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
         }
         ++op_itr;
     }
-    if (op_itr != last_op_itr && size > 0) {
-        result.emplace_back(size, op_itr->flag());
+    if (op_itr != last_op_itr) {
+        result.emplace_back(size_pred(*op_itr) ? size : op_itr->size(), op_itr->flag());
     }
     return result;
 }

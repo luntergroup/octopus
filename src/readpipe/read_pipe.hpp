@@ -38,7 +38,10 @@ public:
     using ReadFilterer    = readpipe::ReadFiltererTp<ReadManager::ReadContainer>;
     using Downsampler     = readpipe::Downsampler;
     
-    //struct Report;
+    struct Report
+    {
+        readpipe::DownsamplerReportMap downsample_report;
+    };
     
     ReadPipe() = delete;
     
@@ -66,8 +69,8 @@ public:
     unsigned num_samples() const noexcept;
     const std::vector<SampleName>& samples() const noexcept;
     
-    ReadMap fetch_reads(const GenomicRegion& region) const;
-    ReadMap fetch_reads(const std::vector<GenomicRegion>& regions) const;
+    ReadMap fetch_reads(const GenomicRegion& region, boost::optional<Report&> report = boost::none) const;
+    ReadMap fetch_reads(const std::vector<GenomicRegion>& regions, boost::optional<Report&> report = boost::none) const;
     
     //Report get_report() const;
     

@@ -233,7 +233,7 @@ struct RegionState
     unsigned variant_count;
     double variant_density;
     unsigned mean_read_depth;
-    double rmq_mapping_quality;
+    AlignedRead::MappingQuality rmq_mapping_quality, median_mapping_quality;
 };
 
 auto compute_state(const GenomicRegion& region, const MappableFlatSet<Variant>& variants, const ReadMap& reads)
@@ -241,6 +241,7 @@ auto compute_state(const GenomicRegion& region, const MappableFlatSet<Variant>& 
     RegionState result {};
     result.region = region;
     result.rmq_mapping_quality = rmq_mapping_quality(reads, region);
+    result.median_mapping_quality = median_mapping_quality(reads, region);
     result.mean_read_depth = mean_coverage(reads, region) / reads.size();
     result.variant_count = count_overlapped(variants, region);
     result.variant_density = static_cast<double>(result.variant_count) / size(region);
@@ -265,7 +266,7 @@ bool should_join(const RegionState& lhs_state, const RegionState& connecting_sta
     if (size(connecting_state.region) > std::max(size(lhs_state.region), size(rhs_state.region))) {
         return false;
     }
-    if (connecting_state.rmq_mapping_quality < std::min(lhs_state.rmq_mapping_quality, rhs_state.rmq_mapping_quality)) {
+    if (connecting_state.median_mapping_quality < std::min(lhs_state.median_mapping_quality, rhs_state.median_mapping_quality)) {
         return true;
     }
     if (connecting_state.mean_read_depth > std::min(lhs_state.mean_read_depth, rhs_state.mean_read_depth)) {
@@ -299,7 +300,8 @@ auto join_dense_regions(const MappableFlatSet<GenomicRegion>& dense_regions,
 } // namespace
 
 std::vector<DenseVariationDetector::DenseRegion>
-DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads) const
+DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads,
+                               boost::optional<const ReadPipe::Report&> reads_report) const
 {
     const auto mean_read_size = mean_mapped_region_size(reads);
     auto expected_log_count = get_max_expected_log_allele_count_per_base(expected_heterozygosity_, heterozygosity_stdev_);
@@ -311,14 +313,27 @@ DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const R
     result.reserve(joined_dense_regions.size());
     double max_expected_coverage {};
     if (reads_profile_) {
-        max_expected_coverage = 2 * reads_profile_->mean_depth + 2 * reads_profile_->depth_stdev;
+        max_expected_coverage = 2 * (std::max(reads_profile_->mean_depth, reads_profile_->median_depth) / reads.size()) + 2 * reads_profile_->depth_stdev;
     } else {
-        max_expected_coverage = 2 * mean_coverage(reads);
+        max_expected_coverage = 2 * (mean_coverage(reads) / reads.size());
     }
     for (const auto& region : joined_dense_regions) {
         const auto state = compute_state(region, variants, reads);
-        if (state.variant_count > 100 && size(state.region) > 3 * mean_read_size && state.mean_read_depth > max_expected_coverage) {
+        auto total_mean_depth = state.mean_read_depth;
+        if (reads_report) {
+            const auto num_downsampled_reads = count_downsampled_reads(reads_report->downsample_report, region);
+            const auto mean_downsample_depth = static_cast<double>(num_downsampled_reads) / size(state.region);
+            total_mean_depth += mean_downsample_depth;
+        }
+        if (state.variant_count > 100 && size(state.region) > mean_read_size && total_mean_depth > max_expected_coverage) {
             result.push_back({region, DenseRegion::RecommendedAction::skip});
+        }
+        if (state.variant_count > 50
+            && reads_profile_
+            && std::min(state.median_mapping_quality, state.rmq_mapping_quality)
+              < std::max(reads_profile_->median_mapping_quality, reads_profile_->rmq_mapping_quality)
+            && state.mean_read_depth > 1000) {
+            result.push_back({region, DenseRegion::RecommendedAction::restrict_lagging});
         }
     }
     return result;

@@ -20,6 +20,7 @@ namespace octopus {
 class CoalescentPopulationPriorModel : public PopulationPriorModel
 {
 public:
+    using PopulationPriorModel::LogProbability;
     using PopulationPriorModel::GenotypeReference;
     using PopulationPriorModel::GenotypeIndiceVectorReference;
     
@@ -43,19 +44,19 @@ private:
     
     mutable std::vector<unsigned> index_buffer_;
     
-    double do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
+    LogProbability do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
     {
         return evaluate_helper(genotypes);
     }
-    double do_evaluate(const std::vector<GenotypeReference>& genotypes) const override
+    LogProbability do_evaluate(const std::vector<GenotypeReference>& genotypes) const override
     {
         return evaluate_helper(genotypes);
     }
-    double do_evaluate(const std::vector<GenotypeIndex>& indices) const override
+    LogProbability do_evaluate(const std::vector<GenotypeIndex>& indices) const override
     {
         return evaluate_helper(indices);
     }
-    double do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const override
+    LogProbability do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const override
     {
         return evaluate_helper(indices);
     }
@@ -73,15 +74,15 @@ private:
     }
     
     template <typename Range>
-    double evaluate_helper(const Range& genotypes) const;
+    LogProbability evaluate_helper(const Range& genotypes) const;
     template <typename Range>
-    double evaluate_segregation_model(const Range& genotypes) const;
-    double evaluate_segregation_model(const std::vector<std::vector<unsigned>>& indices) const;
-    double evaluate_segregation_model(const std::vector<GenotypeIndiceVectorReference>& indices) const;
+    LogProbability evaluate_segregation_model(const Range& genotypes) const;
+    LogProbability evaluate_segregation_model(const std::vector<std::vector<unsigned>>& indices) const;
+    LogProbability evaluate_segregation_model(const std::vector<GenotypeIndiceVectorReference>& indices) const;
 };
 
 template <typename Range>
-double CoalescentPopulationPriorModel::evaluate_helper(const Range& genotypes) const
+CoalescentPopulationPriorModel::LogProbability CoalescentPopulationPriorModel::evaluate_helper(const Range& genotypes) const
 {
     // p({g_1, ..., g_n}) = p(g_1 u ... u g_n) p({g_1, ..., g_n} | g_1 u ... u g_n)
     // => ln p({g_1, ..., g_n}) = ln p(g_1 u ... u g_n) + ln p({g_1, ..., g_n} | g_1 u ... u g_n)
@@ -127,7 +128,8 @@ inline auto ploidy(const Genotype<Haplotype>& genotype) noexcept
 } // namespace detail
 
 template <typename Range>
-double CoalescentPopulationPriorModel::evaluate_segregation_model(const Range& genotypes) const
+CoalescentPopulationPriorModel::LogProbability
+CoalescentPopulationPriorModel::evaluate_segregation_model(const Range& genotypes) const
 {
     if (genotypes.size() == 1) return segregation_model_.evaluate(detail::get(genotypes.front()));
     if (genotypes.size() == 2) {

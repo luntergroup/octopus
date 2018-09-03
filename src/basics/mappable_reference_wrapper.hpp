@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include "concepts/mappable.hpp"
+#include "concepts/comparable.hpp"
 
 namespace octopus {
 
@@ -16,7 +17,7 @@ namespace octopus {
  can therefore be used in containers and mappable algorithms.
  */
 template <typename T>
-class MappableReferenceWrapper : public Mappable<MappableReferenceWrapper<T>>
+class MappableReferenceWrapper : public Mappable<MappableReferenceWrapper<T>>, public Comparable<MappableReferenceWrapper<T>>
 {
 public:
     static_assert(is_mappable<std::remove_cv_t<T>>, "not a Mappable");
@@ -43,6 +44,18 @@ public:
 private:
     std::reference_wrapper<T> mappable_;
 };
+
+template <typename T>
+bool operator==(const MappableReferenceWrapper<T>& lhs, const MappableReferenceWrapper<T>& rhs)
+{
+    return lhs.get() == rhs.get();
+}
+
+template <typename T>
+bool operator<(const MappableReferenceWrapper<T>& lhs, const MappableReferenceWrapper<T>& rhs)
+{
+    return lhs.get() < rhs.get();
+}
 
 } // namespace octopus
 

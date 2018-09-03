@@ -233,6 +233,11 @@ generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes
     return detail::generate_all_genotypes(haplotypes, ploidy, std::false_type {});
 }
 
+std::size_t num_max_zygosity_genotypes(const unsigned num_elements, const unsigned ploidy)
+{
+    return boost::math::binomial_coefficient<double>(num_elements, ploidy);
+}
+
 namespace debug {
 
 void print_alleles(const Genotype<Haplotype>& genotype)

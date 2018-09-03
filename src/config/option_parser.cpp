@@ -94,6 +94,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-open-read-files",
      po::value<int>()->default_value(250),
      "Limits the number of read files that can be open simultaneously")
+    
+     ("target-working-memory",
+     po::value<MemoryFootprint>(),
+     "Target working memory footprint for analysis not including read or reference footprint")
     ;
     
     po::options_description input("I/O");
@@ -190,7 +194,11 @@ OptionMap parse_options(const int argc, const char** argv)
     ("mask-low-quality-tails",
      po::value<int>()->implicit_value(3),
      "Masks read tail bases with base quality less than this")
-    
+     
+     ("mask-tails",
+     po::value<int>()->implicit_value(1),
+     "Unconditionally mask this many read tail sbases")
+     
     ("soft-clip-masking",
      po::value<bool>()->default_value(true),
      "Turn on or off soft clip base recalibration")
@@ -497,6 +505,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("sequence-error-model",
      po::value<std::string>()->default_value("HiSeq"),
      "The sequencer error model to use (HiSeq or xTen)")
+    
+    ("max-vb-seeds",
+     po::value<int>()->default_value(12),
+     "Maximum number of seeds to use for Variational Bayes algorithms")
     ;
     
     po::options_description cancer("Calling (cancer)");
@@ -525,6 +537,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<float>()->default_value(0.01, "0.01"),
      "Minimum credible somatic allele frequency that will be reported")
     
+     ("tumour-germline-concentration",
+     po::value<float>()->default_value(1.5, "1.5"),
+     "Concentration parameter for germline haplotypes in tumour samples")
+     
     ("credible-mass",
      po::value<float>()->default_value(0.9, "0.9"),
      "Mass of the posterior density to use for evaluating allele frequencies")
@@ -536,7 +552,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("normal-contamination-risk",
      po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
      "The risk the normal sample has contamination from the tumour")
-
+    
     ("somatics-only",
      po::bool_switch()->default_value(false),
      "Only emit SOMATIC mutations")
@@ -599,11 +615,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "Enable all variant call filtering")
     
     ("filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | RPB > 0.99 | DP < 1"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | DP < 1"),
      "Boolean expression to use to filter variant calls")
     
     ("somatic-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SB > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | SC > 1 | FRF > 0.5"),
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SB > 0.9 | SD > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | SC > 1 | FRF > 0.5"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("denovo-filter-expression",
@@ -1010,7 +1026,7 @@ po::parsed_options run(po::command_line_parser& parser)
 void validate(const OptionMap& vm)
 {
     const std::vector<std::string> positive_int_options {
-        "threads", "mask-low-quality-tails", "soft-clip-mask-threshold", "mask-soft-clipped-boundary-bases",
+        "threads", "mask-low-quality-tails", "mask-tails", "soft-clip-mask-threshold", "mask-soft-clipped-boundary-bases",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
@@ -1020,7 +1036,8 @@ void validate(const OptionMap& vm)
         "max-open-read-files", "downsample-above", "downsample-target",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
-        "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones"
+        "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",
+        "max-vb-seeds"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",

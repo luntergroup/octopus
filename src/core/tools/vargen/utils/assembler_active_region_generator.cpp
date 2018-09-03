@@ -49,6 +49,7 @@ AssemblerActiveRegionGenerator::AssemblerActiveRegionGenerator(const ReferenceGe
     structual_interesting_ = contains(options.trigger_types, Options::TriggerType::structual);
     trigger_quality_ = options.trigger_quality;
     trigger_clip_size_ = options.trigger_clip_size;
+    min_expected_mutation_frequency_ = options.min_expected_mutation_frequency;
 }
 
 void AssemblerActiveRegionGenerator::add(const SampleName& sample, const AlignedRead& read)
@@ -191,18 +192,19 @@ auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<Ge
 
 auto get_interesting_hotspots(const GenomicRegion& region,
                               const std::vector<unsigned>& interesting_coverages,
-                              const std::vector<unsigned>& coverages)
+                              const std::vector<unsigned>& coverages,
+                              const double min_expected_mutation_frequency)
 {
     std::vector<bool> interesting_bases(interesting_coverages.size());
     std::transform(std::cbegin(coverages), std::cend(coverages), std::cbegin(interesting_coverages),
                    std::begin(interesting_bases),
-                   [] (const auto coverage, const auto interesting_coverage) {
+                   [=] (const auto coverage, const auto interesting_coverage) {
                        if (coverage < 10) {
                            return interesting_coverage > 0;
                        } else if (coverage <= 30) {
                            return interesting_coverage > 1;
                        } else {
-                           return 10 * interesting_coverage >= coverage;
+                           return static_cast<double>(interesting_coverage) / coverage >= min_expected_mutation_frequency;
                        }
                    });
     return select_regions(region, interesting_bases);
@@ -210,11 +212,12 @@ auto get_interesting_hotspots(const GenomicRegion& region,
 
 auto get_interesting_hotspots(const GenomicRegion& region,
                               const CoverageTracker<GenomicRegion>& interesting_read_tracker,
-                              const CoverageTracker<GenomicRegion>& tracker)
+                              const CoverageTracker<GenomicRegion>& tracker,
+                              const double min_expected_mutation_frequency)
 {
     const auto interesting_coverages = interesting_read_tracker.get(region);
     const auto coverages = tracker.get(region);
-    return get_interesting_hotspots(region, interesting_coverages, coverages);
+    return get_interesting_hotspots(region, interesting_coverages, coverages, min_expected_mutation_frequency);
 }
 
 void merge(std::vector<GenomicRegion>&& src, std::vector<GenomicRegion>& dst)
@@ -226,7 +229,8 @@ void merge(std::vector<GenomicRegion>&& src, std::vector<GenomicRegion>& dst)
 std::vector<GenomicRegion>
 get_interesting_hotspots(const GenomicRegion& region,
                          const std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>& interesting_read_tracker,
-                         const std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>& tracker)
+                         const std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>& tracker,
+                         const double min_expected_mutation_frequency)
 {
     if (interesting_read_tracker.empty()) {
         return {};
@@ -234,7 +238,7 @@ get_interesting_hotspots(const GenomicRegion& region,
         assert(!tracker.empty());
         const auto itr = std::cbegin(interesting_read_tracker);
         assert(tracker.count(itr->first) == 1);
-        return get_interesting_hotspots(region, itr->second, tracker.at(itr->first));
+        return get_interesting_hotspots(region, itr->second, tracker.at(itr->first), min_expected_mutation_frequency);
     } else {
         const auto n = size(region);
         std::vector<unsigned> pooled_interesting_coverage(n), pooled_coverage(n);
@@ -257,8 +261,8 @@ get_interesting_hotspots(const GenomicRegion& region,
                 }
             }
         }
-        auto pooled_hotspots = get_interesting_hotspots(region, pooled_interesting_coverage, pooled_coverage);
-        auto best_sample_hotspots = get_interesting_hotspots(region, best_sample_interesting_coverage, best_sample_coverage);
+        auto pooled_hotspots = get_interesting_hotspots(region, pooled_interesting_coverage, pooled_coverage, min_expected_mutation_frequency);
+        auto best_sample_hotspots = get_interesting_hotspots(region, best_sample_interesting_coverage, best_sample_coverage, min_expected_mutation_frequency);
         if (!best_sample_hotspots.empty() && best_sample_hotspots != pooled_hotspots) {
             merge(std::move(best_sample_hotspots), pooled_hotspots);
             return extract_covered_regions(pooled_hotspots);
@@ -270,7 +274,7 @@ get_interesting_hotspots(const GenomicRegion& region,
 
 std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const GenomicRegion& region) const
 {
-    auto interesting_regions = get_interesting_hotspots(region, interesting_read_coverages_, coverage_tracker_);
+    auto interesting_regions = get_interesting_hotspots(region, interesting_read_coverages_, coverage_tracker_, min_expected_mutation_frequency_);
     if (structual_interesting_) {
         for (const auto& p : clipped_coverage_tracker_) {
             auto deletion_regions = get_deletion_hotspots(region, p.second);

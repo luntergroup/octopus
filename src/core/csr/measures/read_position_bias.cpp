@@ -110,14 +110,14 @@ double calculate_position_bias(const AlleleSupportMap& support)
 Measure::ResultType ReadPositionBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
     std::vector<double> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         std::vector<Allele> alleles; bool has_ref;
         std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
         if (!alleles.empty()) {
-            const auto allele_support = compute_allele_support(alleles, assignments.at(sample));
+            const auto allele_support = compute_allele_support(alleles, assignments, sample);
             auto position_bias = calculate_position_bias(allele_support);
             result.push_back(position_bias);
         } else {

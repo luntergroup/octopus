@@ -109,6 +109,12 @@ CallerBuilder& CallerBuilder::set_reference_haplotype_protection(bool b) noexcep
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_target_memory_footprint(MemoryFootprint memory) noexcept
+{
+    params_.general.target_max_memory = memory;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_min_variant_posterior(Phred<double> posterior) noexcept
 {
     params_.min_variant_posterior = posterior;
@@ -187,6 +193,12 @@ CallerBuilder& CallerBuilder::set_independent_genotype_prior_flag(bool use_indep
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_max_vb_seeds(unsigned n) noexcept
+{
+    params_.max_vb_seeds = n;
+    return *this;
+}
+
 // cancer
 
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
@@ -228,6 +240,12 @@ CallerBuilder& CallerBuilder::set_credible_mass(double mass) noexcept
 CallerBuilder& CallerBuilder::set_min_credible_somatic_frequency(double frequency) noexcept
 {
     params_.min_credible_somatic_frequency = frequency;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_tumour_germline_concentration(double concentration) noexcept
+{
+    params_.tumour_germline_concentration = concentration;
     return *this;
 }
 
@@ -369,24 +387,25 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       });
         }},
         {"cancer", [this, &samples] () {
-            return std::make_unique<CancerCaller>(make_components(),
-                                                  params_.general,
-                                                  CancerCaller::Parameters {
-                                                      params_.min_variant_posterior,
-                                                      params_.min_somatic_posterior,
-                                                      params_.min_refcall_posterior,
-                                                      params_.ploidies.of(samples.front(), *requested_contig_),
-                                                      params_.normal_sample,
-                                                      make_cancer_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                                                      {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
-                                                      params_.min_expected_somatic_frequency,
-                                                      params_.credible_mass,
-                                                      params_.min_credible_somatic_frequency,
-                                                      params_.max_genotypes,
-                                                      params_.max_somatic_haplotypes,
-                                                      params_.normal_contamination_risk,
-                                                      params_.deduplicate_haplotypes_with_caller_model
-                                                  });
+            CancerCaller::Parameters cancer_params {
+                params_.min_variant_posterior,
+                params_.min_somatic_posterior,
+                params_.min_refcall_posterior,
+                params_.ploidies.of(samples.front(), *requested_contig_),
+                params_.normal_sample,
+                make_cancer_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
+                {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
+                params_.min_expected_somatic_frequency,
+                params_.credible_mass,
+                params_.min_credible_somatic_frequency,
+                params_.max_genotypes,
+                params_.max_somatic_haplotypes,
+                params_.normal_contamination_risk,
+                params_.deduplicate_haplotypes_with_caller_model,
+                params_.max_vb_seeds
+            };
+            cancer_params.concentrations.somatic.tumour_germline = params_.tumour_germline_concentration;
+            return std::make_unique<CancerCaller>(make_components(), params_.general, std::move(cancer_params));
         }},
         {"trio", [this] () {
             return std::make_unique<TrioCaller>(make_components(),

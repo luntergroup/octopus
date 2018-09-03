@@ -38,6 +38,7 @@ VCF_SPEC_CONSTANT lowPosteriorProbability {"LPP"};
 VCF_SPEC_CONSTANT lowDepth {"DP"};
 VCF_SPEC_CONSTANT highMappingQualityDivergence {"MQD"};
 VCF_SPEC_CONSTANT alleleBias {"AFB"};
+VCF_SPEC_CONSTANT alleleDepth {"AD"};
 VCF_SPEC_CONSTANT lowModelPosterior {"MP"};
 VCF_SPEC_CONSTANT lowMappingQuality {"MQ"};
 VCF_SPEC_CONSTANT highMappingQualityZeroCount {"MQ0"};
@@ -46,6 +47,7 @@ VCF_SPEC_CONSTANT strandBias {"SB"};
 VCF_SPEC_CONSTANT filteredReadFraction {"FRF"};
 VCF_SPEC_CONSTANT highGCRegion {"GC"};
 VCF_SPEC_CONSTANT lowGQ {"GQ"};
+VCF_SPEC_CONSTANT lowGQD {"GQD"};
 VCF_SPEC_CONSTANT highClippedReadFraction {"CRF"};
 VCF_SPEC_CONSTANT bq10 {"bq10"};
 VCF_SPEC_CONSTANT lowBaseQuality {"LBQ"};
@@ -54,6 +56,8 @@ VCF_SPEC_CONSTANT highMismatchFraction {"MF"};
 VCF_SPEC_CONSTANT somaticContamination {"SC"};
 VCF_SPEC_CONSTANT deNovoContamination {"DC"};
 VCF_SPEC_CONSTANT readPositionBias {"RPB"};
+VCF_SPEC_CONSTANT strandDisequilibrium {"SD"};
+VCF_SPEC_CONSTANT lowClassificationConfidence {"CC"};
 
 } // namespace filter
 

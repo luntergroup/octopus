@@ -17,6 +17,8 @@
 #include <iomanip>
 #include <locale>
 
+#include "maths.hpp"
+
 namespace octopus { namespace utils {
 
 std::vector<std::string> split(const std::string& str, const char delim);
@@ -39,16 +41,24 @@ std::string& capitalise_front(std::string& str) noexcept;
 std::string capitalise_front(const std::string& str);
 std::string& to_lower(std::string& str) noexcept;
 std::string to_lower(const std::string& str);
+std::string& strip_leading_zeroes(std::string& str);
+std::string strip_leading_zeroes(const std::string& str);
 
 bool is_vowel(const char c);
 bool begins_with_vowel(const std::string& str);
 
+enum class PrecisionRule { dp, sf };
+
 template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
-std::string to_string(const T val, const unsigned precision = 2)
+std::string to_string(const T val, const unsigned precision = 2, const PrecisionRule rule = PrecisionRule::dp)
 {
-    std::ostringstream out;
-    out << std::fixed << std::setprecision(precision) << val;
-    return out.str();
+    if (rule == PrecisionRule::dp) {
+        std::ostringstream out;
+        out << std::fixed << std::setprecision(precision) << val;
+        return out.str();
+    } else {
+        return to_string(val, maths::count_leading_zeros(val) + precision, PrecisionRule::dp);
+    }
 }
 
 template <typename T>

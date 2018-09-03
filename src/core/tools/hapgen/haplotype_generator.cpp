@@ -129,6 +129,7 @@ bool all_empty(const ReadMap& reads) noexcept
 HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                        const MappableFlatSet<Variant>& candidates,
                                        const ReadMap& reads,
+                                       boost::optional<const ReadPipe::Report&> reads_report,
                                        Policies policies,
                                        DenseVariationDetector dense_variation_detector)
 : policies_ {std::move(policies)}
@@ -155,7 +156,7 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
 {
     assert(!candidates.empty());
     if (!all_empty(reads_)) {
-        for (const auto& dense : dense_variation_detector.detect(candidates, reads)) {
+        for (const auto& dense : dense_variation_detector.detect(candidates, reads, reads_report)) {
             if (dense.action == DenseVariationDetector::DenseRegion::RecommendedAction::skip) {
                 if (debug_log_) {
                     stream(*debug_log_) << "Erasing " << count_contained(alleles_, dense.region)
@@ -1359,9 +1360,10 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_dense_variation_de
 
 HaplotypeGenerator HaplotypeGenerator::Builder::build(const ReferenceGenome& reference,
                                                       const MappableFlatSet<Variant>& candidates,
-                                                      const ReadMap& reads) const
+                                                      const ReadMap& reads,
+                                                      boost::optional<const ReadPipe::Report&> reads_report) const
 {
-    return HaplotypeGenerator {reference, candidates, reads, policies_, dense_variation_detector_};
+    return HaplotypeGenerator {reference, candidates, reads, std::move(reads_report), policies_, dense_variation_detector_};
 }
 
 } // namespace coretools

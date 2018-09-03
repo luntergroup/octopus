@@ -51,7 +51,7 @@ std::vector<std::string> QualityByDepth::do_requirements() const
 
 bool QualityByDepth::is_equal(const Measure& other) const noexcept
 {
-    return depth_ == static_cast<const Depth&>(other);
+    return depth_ == static_cast<const QualityByDepth&>(other).depth_;
 }
 
 } // namespace csr

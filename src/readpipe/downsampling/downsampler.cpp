@@ -8,13 +8,13 @@
 #include <functional>
 #include <iterator>
 #include <algorithm>
+#include <numeric>
 #include <random>
 #include <cassert>
 
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/random/discrete_distribution.hpp>
 
-#include "concepts/mappable.hpp"
 #include "basics/mappable_reference_wrapper.hpp"
 #include "concepts/mappable_range.hpp"
 #include "utils/mappable_algorithms.hpp"
@@ -26,6 +26,11 @@
 // https://stackoverflow.com/questions/48730363/if-we-seed-c11-mt19937-as-the-same-on-different-machines-will-we-get-the-same.
 
 namespace octopus { namespace readpipe {
+
+Downsampler::Report::DownsampleRegion::DownsampleRegion(GenomicRegion region, std::size_t num_reads)
+: region_ {std::move(region)}
+, num_reads_ {num_reads}
+{}
 
 namespace {
 
@@ -191,13 +196,15 @@ auto find_target_regions(const ReadContainer& reads, const unsigned max_coverage
 
 } // namespace
 
-std::size_t sample(ReadContainer& reads, const unsigned trigger_coverage, const unsigned target_coverage)
+Downsampler::Report sample(ReadContainer& reads, const unsigned trigger_coverage, const unsigned target_coverage)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     
-    if (reads.empty()) return 0;
+    Downsampler::Report result {};
+    
+    if (reads.empty()) return result;
     const auto targets = find_target_regions(reads, trigger_coverage, target_coverage);
-    if (targets.empty()) return 0;
+    if (targets.empty()) return result;
     
     // We avoid using ReadContainers member methods for inserting sampled reads as they are order
     //  N log(size() + N) + N * size(). This is because they assume the input range is unsorted,
@@ -218,6 +225,10 @@ std::size_t sample(ReadContainer& reads, const unsigned trigger_coverage, const 
         unsampled_read_blocks.emplace_back(make_move_iterator(end(contained)), make_move_iterator(end(reads)));
         auto sampled_reads = sample(begin(contained), end(contained), region, target_coverage);
         num_reads += sampled_reads.size();
+        const auto num_reads_in_target = size(contained);
+        assert(num_reads_in_target >= sampled_reads.size());
+        const auto num_reads_removed = num_reads_in_target - sampled_reads.size();
+        result.downsampled_regions.emplace(region, num_reads_removed);
         sampled_read_blocks.emplace_back(make_move_iterator(begin(sampled_reads)), make_move_iterator(end(sampled_reads)));
         reads.erase(begin(contained), end(reads));
         reads.shrink_to_fit();
@@ -234,7 +245,7 @@ std::size_t sample(ReadContainer& reads, const unsigned trigger_coverage, const 
         utils::append(std::move(unsampled_read_blocks[i]), buffer);
     }
     reads = ReadContainer {make_move_iterator(begin(buffer)), make_move_iterator(end(buffer))};
-    return num_reads;
+    return result;
 }
 
 // Downsampler
@@ -248,9 +259,31 @@ Downsampler::Downsampler(const unsigned trigger_coverage, const unsigned target_
     }
 }
 
-std::size_t Downsampler::downsample(ReadContainer& reads) const
+Downsampler::Report Downsampler::downsample(ReadContainer& reads) const
 {
     return sample(reads, trigger_coverage_, target_coverage_);
+}
+
+std::size_t count_downsampled_reads(const DownsamplerReportMap& reports)
+{
+    return std::accumulate(std::cbegin(reports), std::cend(reports), std::size_t {0},
+                           [] (auto curr, const auto& p) {
+                               return curr + std::accumulate(std::cbegin(p.second.downsampled_regions),
+                                                             std::cend(p.second.downsampled_regions), std::size_t {0},
+                                                             [] (auto curr, const auto& target) {
+                                   return curr + target.num_reads(); });
+                           });
+}
+
+std::size_t count_downsampled_reads(const DownsamplerReportMap& reports, const GenomicRegion& region)
+{
+    return std::accumulate(std::cbegin(reports), std::cend(reports), std::size_t {0},
+                           [&region] (auto curr, const auto& p) {
+                               const auto overlapped = overlap_range(p.second.downsampled_regions, region);
+                               return curr + std::accumulate(std::cbegin(overlapped), std::cend(overlapped), std::size_t {0},
+                                                             [] (auto curr, const auto& target) {
+                                                                 return curr + target.num_reads(); });
+                           });
 }
 
 } // namespace readpipe

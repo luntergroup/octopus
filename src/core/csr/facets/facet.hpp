@@ -25,12 +25,13 @@ class Facet : public Equitable<Facet>
 public:
     using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
     using SampleSupportMap = std::unordered_map<SampleName, HaplotypeSupportMap>;
+    using SampleAmbiguityMap = std::unordered_map<SampleName, AmbiguousReadList>;
     using LocalPloidyMap = std::unordered_map<SampleName, unsigned>;
     
     struct SupportMaps
     {
         SampleSupportMap support;
-        ReadMap ambiguous;
+        SampleAmbiguityMap ambiguous;
     };
     
     using ResultType = boost::variant<std::reference_wrapper<const ReadMap>,

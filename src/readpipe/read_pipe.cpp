@@ -128,7 +128,7 @@ void shrink_to_fit(ReadMap& reads)
 
 } // namespace
 
-ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
+ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Report&> report) const
 {
     using namespace readpipe;
     ReadMap result {samples_.size()};
@@ -172,8 +172,11 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
         }
         if (downsampler_) {
             auto reads = make_mappable_map(std::move(batch_reads));
-            const auto n = downsample(reads, *downsampler_);
-            if (debug_log_) stream(*debug_log_) << "Downsampling removed " << n << " reads from " << region;
+            auto downsample_reports = downsample(reads, *downsampler_);
+            if (debug_log_) stream(*debug_log_) << "Downsampling removed " << count_downsampled_reads(downsample_reports) << " reads from " << region;
+            if (report) {
+                report->downsample_report = std::move(downsample_reports);
+            }
             insert_each(std::move(reads), result);
         } else {
             insert_each(std::move(batch_reads), result);
@@ -183,13 +186,11 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
     return result;
 }
 
-ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
+ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions, boost::optional<Report&> report) const
 {
     assert(std::is_sorted(std::cbegin(regions), std::cend(regions)));
-    
     const auto covered_regions = extract_covered_regions(regions);
     const auto fetch_regions = join(covered_regions, 10000);
-    
     ReadMap result {samples_.size()};
     const auto total_fetch_bp = sum_region_sizes(fetch_regions);
     for (const auto& sample : samples_) {
@@ -197,13 +198,10 @@ ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
                                       std::forward_as_tuple());
         p.first->second.reserve(20 * total_fetch_bp); // TODO: use estimated coverage
     }
-    
     for (const auto& region : fetch_regions) {
-        auto reads = fetch_reads(region);
-        
+        auto reads = fetch_reads(region, report);
         const auto request_regions = contained_range(covered_regions, region);
         const auto removal_regions = extract_intervening_regions(request_regions, region);
-        
         std::for_each(std::crbegin(removal_regions), std::crend(removal_regions),
                       [&reads] (const auto& region) {
                           for (auto& p : reads) {
@@ -212,9 +210,7 @@ ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
                       });
         insert_each(std::move(reads), result);
     }
-    
     shrink_to_fit(result);
-    
     return result;
 }
 

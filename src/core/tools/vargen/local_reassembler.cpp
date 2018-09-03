@@ -99,28 +99,43 @@ void LocalReassembler::Bin::add(const AlignedRead& read)
     } else {
         read_region = contig_region(read);
     }
-    read_sequences.emplace_back(read.sequence());
+    if (is_forward_strand(read)) {
+        forward_read_sequences.emplace_back(read.sequence());
+    } else {
+        reverse_read_sequences.emplace_back(read.sequence());
+    }
 }
 
-void LocalReassembler::Bin::add(const GenomicRegion& read_region, const NucleotideSequence& read_sequence)
+void LocalReassembler::Bin::add(const AlignedRead& read, const NucleotideSequence& masked_sequence)
 {
-    if (this->read_region) {
-        this->read_region = encompassing_region(*this->read_region, contig_region(read_region));
+    if (read_region) {
+        read_region = encompassing_region(*read_region, contig_region(read));
     } else {
-        this->read_region = contig_region(read_region);
+        read_region = contig_region(read);
     }
-    read_sequences.emplace_back(read_sequence);
+    if (is_forward_strand(read)) {
+        forward_read_sequences.emplace_back(masked_sequence);
+    } else {
+        reverse_read_sequences.emplace_back(masked_sequence);
+    }
 }
 
 void LocalReassembler::Bin::clear() noexcept
 {
-    read_sequences.clear();
-    read_sequences.shrink_to_fit();
+    forward_read_sequences.clear();
+    forward_read_sequences.shrink_to_fit();
+    reverse_read_sequences.clear();
+    reverse_read_sequences.shrink_to_fit();
+}
+
+std::size_t LocalReassembler::Bin::size() const noexcept
+{
+    return forward_read_sequences.size() && reverse_read_sequences.size();
 }
 
 bool LocalReassembler::Bin::empty() const noexcept
 {
-    return read_sequences.empty();
+    return forward_read_sequences.empty() && reverse_read_sequences.empty();
 }
 
 bool LocalReassembler::do_requires_reads() const noexcept
@@ -319,7 +334,7 @@ std::vector<Variant> LocalReassembler::do_generate(const RegionSet& regions) con
                     if (masked_sequence) {
                         masked_sequence_buffer.emplace_back(std::move(*masked_sequence));
                         for (auto& bin : active_bins) {
-                            bin.add(mapped_region(read), std::cref(masked_sequence_buffer.back()));
+                            bin.add(read, std::cref(masked_sequence_buffer.back()));
                         }
                     }
                 } else {
@@ -334,8 +349,7 @@ std::vector<Variant> LocalReassembler::do_generate(const RegionSet& regions) con
     if (execution_policy_ == ExecutionPolicy::seq || bins.size() < 2) {
         for (auto& bin : bins) {
             if (debug_log_) {
-                stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
-                                    << " reads in bin " << mapped_region(bin);
+                stream(*debug_log_) << "Assembling " << bin.size() << " reads in bin " << mapped_region(bin);
             }
             const auto num_default_failures = try_assemble_with_defaults(bin, candidates);
             if (num_default_failures == default_kmer_sizes_.size()) {
@@ -351,8 +365,7 @@ std::vector<Variant> LocalReassembler::do_generate(const RegionSet& regions) con
             const auto next_bin = std::next(first_bin, batch_size);
             auto last_future = std::transform(first_bin, next_bin, std::begin(bin_futures), [&] (Bin& bin) {
                 if (debug_log_) {
-                    stream(*debug_log_) << "Assembling " << bin.read_sequences.size()
-                                            << " reads in bin " << mapped_region(bin);
+                    stream(*debug_log_) << "Assembling " << bin.size() << " reads in bin " << mapped_region(bin);
                 }
                 return std::async([&] () {
                     std::deque<Variant> result {};
@@ -535,6 +548,16 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
     }
 }
 
+void LocalReassembler::load(const Bin& bin, Assembler& assembler) const
+{
+    for (const auto& sequence : bin.forward_read_sequences) {
+        assembler.insert_read(sequence, Assembler::Direction::forward);
+    }
+    for (const auto& sequence : bin.reverse_read_sequences) {
+        assembler.insert_read(sequence, Assembler::Direction::reverse);
+    }
+}
+
 LocalReassembler::AssemblerStatus
 LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const
 {
@@ -543,11 +566,9 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     if (size(assemble_region) < kmer_size) return AssemblerStatus::failed;
     const auto reference_sequence = reference_.get().fetch_sequence(assemble_region);
     if (!utils::is_canonical_dna(reference_sequence)) return AssemblerStatus::failed;
-    Assembler assembler {kmer_size, reference_sequence};
+    Assembler assembler {{kmer_size, 0.01}, reference_sequence};
     if (assembler.is_unique_reference()) {
-        for (const auto& sequence : bin.read_sequences) {
-            assembler.insert_read(sequence);
-        }
+        load(bin, assembler);
         return try_assemble_region(assembler, reference_sequence, assemble_region, result);
     } else {
         return AssemblerStatus::failed;

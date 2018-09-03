@@ -10,7 +10,7 @@
 
 namespace octopus { namespace csr {
 
-MeasureWrapper make_measure(const std::string& name);
+MeasureWrapper make_measure(std::string name);
 
 std::vector<std::string> get_all_measure_names();
 

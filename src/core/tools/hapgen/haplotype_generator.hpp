@@ -15,10 +15,11 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
-#include "logging/logging.hpp"
 #include "basics/genomic_region.hpp"
 #include "containers/mappable_flat_set.hpp"
 #include "core/types/allele.hpp"
+#include "readpipe/read_pipe.hpp"
+#include "logging/logging.hpp"
 #include "genome_walker.hpp"
 #include "haplotype_tree.hpp"
 #include "dense_variation_detector.hpp"
@@ -58,6 +59,7 @@ public:
     HaplotypeGenerator(const ReferenceGenome& reference,
                        const MappableFlatSet<Variant>& candidates,
                        const ReadMap& reads,
+                       boost::optional<const ReadPipe::Report&> reads_report,
                        Policies policies,
                        DenseVariationDetector dense_variation_detector);
     
@@ -235,7 +237,8 @@ public:
     
     HaplotypeGenerator build(const ReferenceGenome& reference,
                              const MappableFlatSet<Variant>& candidates,
-                             const ReadMap& reads) const;
+                             const ReadMap& reads,
+                             boost::optional<const ReadPipe::Report&> reads_report = boost::none) const;
     
 private:
     Policies policies_;

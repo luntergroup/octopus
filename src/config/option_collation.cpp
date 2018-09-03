@@ -698,6 +698,10 @@ auto make_read_transformers(const OptionMap& options)
     prefilter_transformer.add(CapitaliseBases {});
     prefilter_transformer.add(CapBaseQualities {125});
     if (options.at("read-transforms").as<bool>()) {
+        if (is_set("mask-tails", options)) {
+            const auto mask_length = static_cast<MaskTail::Length>(options.at("mask-tails").as<int>());
+            prefilter_transformer.add(MaskTail {mask_length});
+        }
         if (is_set("mask-low-quality-tails", options)) {
             const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-low-quality-tails", options));
             prefilter_transformer.add(MaskLowQualityTails {threshold});
@@ -859,7 +863,13 @@ bool is_polyclone_calling(const OptionMap& options)
 
 double get_min_somatic_vaf(const OptionMap& options)
 {
-    return std::min(options.at("min-expected-somatic-frequency").as<float>(), options.at("min-credible-somatic-frequency").as<float>());
+    const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
+    const auto min_expected_frequency = options.at("min-expected-somatic-frequency").as<float>();
+    if (std::min(min_credible_frequency, min_expected_frequency) <= 1.0) {
+        return std::max(min_credible_frequency, min_expected_frequency);
+    } else {
+        return std::min(min_credible_frequency, min_expected_frequency);
+    }
 }
 
 auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::optional<SampleName> normal = boost::none)
@@ -903,6 +913,21 @@ auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 auto get_default_match_predicate() noexcept
 {
     return coretools::DefaultMatchPredicate {};
+}
+
+auto get_assembler_region_generator_frequency_trigger(const OptionMap& options)
+{
+    if (is_cancer_calling(options)) {
+        return get_min_somatic_vaf(options);
+    } else if (is_polyclone_calling(options)) {
+        return get_min_clone_vaf(options);
+    } else {
+        if (options.at("organism-ploidy").as<int>() < 4) {
+            return 0.1;
+        } else {
+            return 0.05;
+        }
+    }
 }
 
 class MissingSourceVariantFile : public MissingFileError
@@ -1079,6 +1104,10 @@ auto make_variant_generator_builder(const OptionMap& options)
     ActiveRegionGenerator::Options active_region_options {};
     if (is_set("assemble-all", options) && options.at("assemble-all").as<bool>()) {
         active_region_options.assemble_all = true;
+    } else {
+        AssemblerActiveRegionGenerator::Options assembler_region_options {};
+        assembler_region_options.min_expected_mutation_frequency = get_assembler_region_generator_frequency_trigger(options);
+        active_region_options.assembler_active_region_generator_options = assembler_region_options;
     }
     result.set_active_region_generator(std::move(active_region_options));
     return result;
@@ -1605,6 +1634,21 @@ auto get_normal_contamination_risk(const OptionMap& options)
     return result;
 }
 
+auto get_target_working_memory(const OptionMap& options)
+{
+    boost::optional<MemoryFootprint> result {};
+    if (is_set("target-working-memory", options)) {
+        static const MemoryFootprint min_target_memory {*parse_footprint("100M")};
+        result = options.at("target-working-memory").as<MemoryFootprint>();
+        auto num_threads = get_num_threads(options);
+        if (!num_threads) {
+            num_threads = std::thread::hardware_concurrency();
+        }
+        result = MemoryFootprint {std::max(result->num_bytes() / *num_threads, min_target_memory.num_bytes())};
+    }
+    return result;
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<ReadSetProfile> read_profile)
@@ -1671,6 +1715,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
         vc_builder.set_normal_contamination_risk(get_normal_contamination_risk(options));
+        vc_builder.set_tumour_germline_concentration(options.at("tumour-germline-concentration").as<float>());
+        if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_snv_denovo_mutation_rate(options.at("denovo-snv-mutation-rate").as<float>());
@@ -1690,6 +1736,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_sites_only();
     }
     vc_builder.set_likelihood_model(make_likelihood_model(options, read_profile));
+    const auto target_working_memory = get_target_working_memory(options);
+    if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     return CallerFactory {std::move(vc_builder)};
 }
 

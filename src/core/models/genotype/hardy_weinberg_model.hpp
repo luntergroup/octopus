@@ -18,6 +18,7 @@ namespace octopus {
 class HardyWeinbergModel
 {
 public:
+    using LogProbability               = double;
     using GenotypeReference            = std::reference_wrapper<const Genotype<Haplotype>>;
     using GenotypeReferenceVector      = std::vector<GenotypeReference>;
     using GenotypeIndexReference       = std::reference_wrapper<const GenotypeIndex>;
@@ -47,13 +48,13 @@ public:
     HaplotypeFrequencyMap& frequencies() noexcept;
     HaplotypeFrequencyVector& index_frequencies() noexcept;
     
-    double evaluate(const Genotype<Haplotype>& genotype) const;
-    double evaluate(const GenotypeIndex& genotype) const;
+    LogProbability evaluate(const Genotype<Haplotype>& genotype) const;
+    LogProbability evaluate(const GenotypeIndex& genotype) const;
     
-    double evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const;
-    double evaluate(const GenotypeReferenceVector& genotypes) const;
-    double evaluate(const GenotypeIndexVector& genotypes) const;
-    double evaluate(const GenotypeIndexReferenceVector& genotypes) const;
+    LogProbability evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const;
+    LogProbability evaluate(const GenotypeReferenceVector& genotypes) const;
+    LogProbability evaluate(const GenotypeIndexVector& genotypes) const;
+    LogProbability evaluate(const GenotypeIndexReferenceVector& genotypes) const;
     
 private:
     boost::optional<Haplotype> reference_;

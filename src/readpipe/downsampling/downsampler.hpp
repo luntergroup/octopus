@@ -5,11 +5,15 @@
 #define downsampler_hpp
 
 #include <cstddef>
+#include <unordered_map>
 
 #include "config/common.hpp"
+#include "concepts/mappable.hpp"
+#include "basics/genomic_region.hpp"
+#include "basics/aligned_read.hpp"
+#include "containers/mappable_flat_set.hpp"
 #include "containers/mappable_flat_multi_set.hpp"
 #include "containers/mappable_map.hpp"
-#include "basics/aligned_read.hpp"
 
 namespace octopus { namespace readpipe {
 
@@ -20,6 +24,21 @@ namespace octopus { namespace readpipe {
 class Downsampler
 {
 public:
+    struct Report
+    {
+        class DownsampleRegion : public Mappable<DownsampleRegion>
+        {
+            GenomicRegion region_;
+            std::size_t num_reads_;
+        public:
+            const GenomicRegion& mapped_region() const noexcept { return region_; }
+            std::size_t num_reads() const noexcept { return num_reads_; }
+            DownsampleRegion(GenomicRegion region, std::size_t num_reads);
+        };
+        using DownsampleRegionSet = MappableFlatSet<DownsampleRegion>;
+        DownsampleRegionSet downsampled_regions;
+    };
+    
     Downsampler() = default;
     
     Downsampler(unsigned trigger_coverage, unsigned target_coverage);
@@ -32,24 +51,28 @@ public:
     ~Downsampler() = default;
     
     // Returns the number of reads removed
-    std::size_t downsample(ReadContainer& reads) const;
+    Report downsample(ReadContainer& reads) const;
     
 private:
     unsigned trigger_coverage_ = 10'000;
     unsigned target_coverage_  = 10'000;
 };
 
+using DownsamplerReportMap = std::unordered_map<SampleName, Downsampler::Report>;
+
 template <typename Map>
 auto downsample(Map& reads, const Downsampler& downsampler)
 {
-    std::size_t result {0};
-    
+    DownsamplerReportMap result {};
+    result.reserve(reads.size());
     for (auto& p : reads) {
-        result += downsampler.downsample(p.second);
+        result.emplace(p.first, downsampler.downsample(p.second));
     }
-    
     return result;
 }
+
+std::size_t count_downsampled_reads(const DownsamplerReportMap& reports);
+std::size_t count_downsampled_reads(const DownsamplerReportMap& reports, const GenomicRegion& region);
 
 } // namespace readpipe
 } // namespace octopus
