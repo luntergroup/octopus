@@ -3,11 +3,25 @@
 import argparse
 from os import makedirs, remove
 from os.path import join, basename, exists
+import shutil
 from subprocess import call
 import csv
 from pysam import VariantFile
 import random
 import numpy as np
+
+def get_sample_names(truth_vcf_name):
+    truth_vcf = VariantFile(truth_vcf_name)
+    return [sample for sample in truth_vcf.header.samples]
+
+def index(vcf_path):
+    call(['tabix', vcf_path])
+    return vcf_path + '.tbi'
+
+def remove_vcf(vcf_path):
+    remove(vcf_path)
+    if exists(vcf_path + '.tbi'):
+        remove(vcf_path + '.tbi')
 
 def is_homozygous(gt):
     return all(a == 1 for a in gt)
@@ -63,23 +77,42 @@ def filter_somatic(in_vcf_path, out_vcf_path):
     in_vcf.close()
     out_vcf.close()
 
-def classify_calls(somatic_vcf, truth_vcf, temp_dir, regions_bed=None):
-    tp_cmd = ['bcftools', 'isec']
+def prepare_octopus_vcf_for_rtg(octopus_vcf, tumour_sample, out_vcf_name):
+    """"
+    Octopus reports non-diploid genotypes for somatic variants.
+    """
+    in_vcf = VariantFile(octopus_vcf)
+    out_vcf = VariantFile(out_vcf_name, 'w', header=in_vcf.header)
+    n_failed = 0
+    for record in in_vcf:
+        old_gt = record.samples[tumour_sample]['GT']
+        assert(len(old_gt) > 1)
+        record.samples[tumour_sample]['GT'] = (old_gt[0], old_gt[-1])
+        try:
+            out_vcf.write(record)
+        except OSError:
+            n_failed += 1
+    out_vcf.close()
+    index(out_vcf_name)
+
+def run_rtg_vcfeval(rtg_bin, rtg_ref, caller_vcf, truth_vcf, sample, out_dir, regions_bed=None):
+    rtg_cmd = [rtg_bin, 'vcfeval', '-t', rtg_ref, '-b', truth_vcf, '-c', caller_vcf, '-o', out_dir,
+               '--squash-ploidy', '--ref-overlap', '--sample', sample]
     if regions_bed is not None:
-        tp_cmd += ['-T', regions_bed]
-    tp_cmd += ['-n', '=2', '-w', '1']
-    tp_vcf = join(temp_dir, 'tp.vcf.gz')
-    tp_cmd += ['-Oz', '-o', tp_vcf]
-    tp_cmd += [somatic_vcf, truth_vcf]
-    call(tp_cmd)
-    fp_cmd = ['bcftools', 'isec', '-C']
-    if regions_bed is not None:
-        fp_cmd += ['-T', regions_bed]
-    fp_cmd += ['-n', '=1', '-w', '1']
-    fp_vcf = join(temp_dir, 'fp.vcf.gz')
-    fp_cmd += ['-Oz', '-o', fp_vcf]
-    fp_cmd += [somatic_vcf, truth_vcf]
-    call(fp_cmd)
+        rtg_cmd += ['--bed-regions', regions_bed]
+    call(rtg_cmd)
+
+def classify_calls(rtg_bin, rtg_ref, somatic_vcf, truth_vcf, tumour_sample, temp_dir, regions_bed=None):
+    eval_dir = join(temp_dir, "rtg-vcfeval")
+    rtg_vcf_name = somatic_vcf.replace('.vcf', '.rtg.vcf')
+    prepare_octopus_vcf_for_rtg(somatic_vcf, tumour_sample, rtg_vcf_name)
+    run_rtg_vcfeval(rtg_bin, rtg_ref, rtg_vcf_name, truth_vcf, tumour_sample, eval_dir, regions_bed)
+    remove_vcf(rtg_vcf_name)
+    tp_vcf = join(temp_dir, "tp.vcf.gz")
+    shutil.move(join(eval_dir, "tp.vcf.gz"), tp_vcf)
+    fp_vcf = join(temp_dir, "fp.vcf.gz")
+    shutil.move(join(eval_dir, "fp.vcf.gz"), fp_vcf)
+    shutil.rmtree(eval_dir)
     return tp_vcf, fp_vcf
 
 def subset(vcf_in_path, vcf_out_path, bed_regions):
@@ -153,6 +186,10 @@ def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out,
     call(ranger_cmd)
 
 def main(options):
+    tumour_samples = get_sample_names(options.truth)
+    if len(tumour_samples) != 1:
+        print("Truth VCF must contain one sample")
+    tumour_sample = tumour_samples[0]
     if not exists(options.out):
         makedirs(options.out)
     master_data_path = join(options.out, options.prefix + ".dat")
@@ -161,7 +198,7 @@ def main(options):
         somatic_vcf_path = join(options.out, basename(callset).replace('.vcf', 'SOMATIC.tmp.vcf'))
         filter_somatic(callset, somatic_vcf_path)
         call(['tabix', somatic_vcf_path])
-        tp_vcf_path, fp_vcf_path = classify_calls(somatic_vcf_path, options.truth, options.out, options.regions)
+        tp_vcf_path, fp_vcf_path = classify_calls(options.rtg, options.sdf, somatic_vcf_path, options.truth, tumour_sample, options.out, options.regions)
         remove(somatic_vcf_path)
         remove(somatic_vcf_path + ".tbi")
         num_tps += make_ranger_data(tp_vcf_path, options.measures, True, master_data_path, options.missing_value)
@@ -197,6 +234,14 @@ if __name__ == '__main__':
                         nargs='+',
                         required=True,
                         help='Measures to use for training')
+    parser.add_argument('--rtg',
+                        type=str,
+                        required=True,
+                        help='RTG Tools binary')
+    parser.add_argument('--sdf',
+                        type=str,
+                        required=True,
+                        help='RTG Tools SDF reference index')
     parser.add_argument('--ranger',
                         type=str,
                         required=True,
