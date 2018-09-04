@@ -53,6 +53,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<SomaticHaplotypeCount>()]       = [] () { return make_wrapped_measure<SomaticHaplotypeCount>(); };
     measure_makers[name<MedianSomaticMappingQuality>()] = [] () { return make_wrapped_measure<MedianSomaticMappingQuality>(); };
     measure_makers[name<StrandDisequilibrium>()]        = [] () { return make_wrapped_measure<StrandDisequilibrium>(); };
+    measure_makers[name<SupplementaryFraction>()]       = [] () { return make_wrapped_measure<SupplementaryFraction>(); };
 }
 
 class BadParameterList : public UserError

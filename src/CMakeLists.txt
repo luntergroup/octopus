@@ -356,6 +356,8 @@ set(CORE_SOURCES
     core/csr/measures/median_somatic_mapping_quality.cpp
     core/csr/measures/strand_disequilibrium.hpp
     core/csr/measures/strand_disequilibrium.cpp
+    core/csr/measures/supplementary_fraction.hpp
+    core/csr/measures/supplementary_fraction.cpp
 
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp

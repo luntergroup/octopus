@@ -40,5 +40,6 @@
 #include "core/csr/measures/somatic_haplotype_count.hpp"
 #include "core/csr/measures/median_somatic_mapping_quality.hpp"
 #include "core/csr/measures/strand_disequilibrium.hpp"
+#include "core/csr/measures/supplementary_fraction.hpp"
 
 #endif
