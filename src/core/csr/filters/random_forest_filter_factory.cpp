@@ -22,7 +22,7 @@ std::vector<MeasureWrapper> parse_measures(const std::vector<std::string>& measu
 
 } // namespace
 
-static const auto default_measure_names = utils::split("AC AD AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MQ MQ0 MQD PP PPD QD QUAL REFCALL RPB SB SD SHC SMQ SOMATIC STR_LENGTH STR_PERIOD", ' ');
+static const auto default_measure_names = utils::split("AC AD AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MQ MQ0 MQD PP PPD QD QUAL REFCALL RPB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD", ' ');
 
 RandomForestFilterFactory::RandomForestFilterFactory(Path ranger_forest, Path temp_directory, ForestType type)
 : ranger_forests_ {std::move(ranger_forest)}
