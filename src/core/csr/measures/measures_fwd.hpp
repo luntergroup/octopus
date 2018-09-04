@@ -27,7 +27,7 @@
 #include "core/csr/measures/mismatch_count.hpp"
 #include "core/csr/measures/mismatch_fraction.hpp"
 #include "core/csr/measures/is_refcall.hpp"
-#include "core/csr/measures/somatic_contamination.hpp"
+#include "core/csr/measures/normal_contamination.hpp"
 #include "core/csr/measures/denovo_contamination.hpp"
 #include "core/csr/measures/read_position_bias.hpp"
 #include "core/csr/measures/alt_allele_count.hpp"
@@ -40,5 +40,6 @@
 #include "core/csr/measures/somatic_haplotype_count.hpp"
 #include "core/csr/measures/median_somatic_mapping_quality.hpp"
 #include "core/csr/measures/strand_disequilibrium.hpp"
+#include "core/csr/measures/supplementary_fraction.hpp"
 
 #endif

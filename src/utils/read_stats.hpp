@@ -15,6 +15,7 @@
 #include <boost/optional.hpp>
 
 #include "basics/aligned_read.hpp"
+#include "basics/mappable_reference_wrapper.hpp"
 #include "containers/mappable_map.hpp"
 #include "mappable_algorithms.hpp"
 #include "maths.hpp"
@@ -26,9 +27,15 @@ namespace detail {
 
 template <typename T>
 constexpr bool is_aligned_read = std::is_same<std::decay_t<T>, AlignedRead>::value;
+template <typename T>
+constexpr bool is_aligned_read_mref = std::is_same<std::decay_t<T>, MappableReferenceWrapper<AlignedRead>>::value;
+template <typename T>
+constexpr bool is_aligned_read_mcref = std::is_same<std::decay_t<T>, MappableReferenceWrapper<const AlignedRead>>::value;
 
 template <typename Container>
-constexpr bool is_aligned_read_container = is_aligned_read<typename Container::value_type>;
+constexpr bool is_aligned_read_container = is_aligned_read<typename Container::value_type>
+                                        || is_aligned_read_mref<typename Container::value_type>
+                                        || is_aligned_read_mcref<typename Container::value_type>;
 
 struct IsForward
 {
@@ -187,6 +194,52 @@ std::pair<std::size_t, std::size_t> count_directions(const T& reads, const Genom
     const auto overlapped = overlap_range(reads, region);
     const auto num_forward = std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsForward {});
     return std::make_pair(num_forward, size(overlapped) - num_forward);
+}
+
+struct IsSupplementary
+{
+    bool operator()(const AlignedRead& read) const noexcept
+    {
+        return read.is_marked_supplementary_alignment();
+    }
+};
+
+template <typename T>
+std::size_t count_supplementary(const T& reads, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    return std::count_if(std::cbegin(reads), std::cend(reads), IsSupplementary {});
+}
+
+template <typename T>
+std::size_t count_supplementary(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    const auto overlapped = overlap_range(reads, region);
+    return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsSupplementary {});
+}
+
+struct IsSecondary
+{
+    bool operator()(const AlignedRead& read) const noexcept
+    {
+        return read.is_marked_secondary_alignment();
+    }
+};
+
+template <typename T>
+std::size_t count_secondary(const T& reads, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    return std::count_if(std::cbegin(reads), std::cend(reads), IsSecondary {});
+}
+
+template <typename T>
+std::size_t count_secondary(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+    const auto overlapped = overlap_range(reads, region);
+    return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsSecondary {});
 }
 
 struct IsShorter
@@ -632,6 +685,42 @@ std::pair<std::size_t, std::size_t> count_directions(const T& reads, const Genom
 }
 
 template <typename T>
+std::size_t count_supplementary(const T& reads, MapTag)
+{
+    return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
+                           [] (const auto curr, const auto& sample_reads) {
+                               return curr + count_supplementary(sample_reads.second, NonMapTag {});
+                           });
+}
+
+template <typename T>
+std::size_t count_supplementary(const T& reads, const GenomicRegion& region, MapTag)
+{
+    return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
+                           [&region] (const auto curr, const auto& sample_reads) {
+                               return curr + count_supplementary(sample_reads.second, region, NonMapTag {});
+                           });
+}
+
+template <typename T>
+std::size_t count_secondary(const T& reads, MapTag)
+{
+    return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
+                           [] (const auto curr, const auto& sample_reads) {
+                               return curr + count_secondary(sample_reads.second, NonMapTag {});
+                           });
+}
+
+template <typename T>
+std::size_t count_secondary(const T& reads, const GenomicRegion& region, MapTag)
+{
+    return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
+                           [&region] (const auto curr, const auto& sample_reads) {
+                               return curr + count_secondary(sample_reads.second, region, NonMapTag {});
+                           });
+}
+
+template <typename T>
 AlignedRead::NucleotideSequence::size_type min_read_length(const T& reads, MapTag)
 {
     boost::optional<AlignedRead::NucleotideSequence::size_type> min_length {};
@@ -1057,6 +1146,30 @@ template <typename T>
 std::pair<std::size_t, std::size_t> count_directions(const T& reads, const GenomicRegion& region)
 {
     return detail::count_directions(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
+std::size_t count_supplementary(const T& reads)
+{
+    return detail::count_supplementary(reads, MapTagType<T> {});
+}
+
+template <typename T>
+std::size_t count_supplementary(const T& reads, const GenomicRegion& region)
+{
+    return detail::count_supplementary(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
+std::size_t count_secondary(const T& reads)
+{
+    return detail::count_secondary(reads, MapTagType<T> {});
+}
+
+template <typename T>
+std::size_t count_secondary(const T& reads, const GenomicRegion& region)
+{
+    return detail::count_secondary(reads, region, MapTagType<T> {});
 }
 
 template <typename T>

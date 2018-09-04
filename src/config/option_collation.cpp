@@ -1663,7 +1663,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     
     if (caller == "population" || caller == "polyclone") {
         logging::WarningLogger log {};
-        stream(log) << "The " << caller << " calling model is an experimental feature and may not function as expected";
+        stream(log) << "The " << caller << " calling model is still in development and may not perform as expected";
     }
     
     if (is_set("refcall", options)) {

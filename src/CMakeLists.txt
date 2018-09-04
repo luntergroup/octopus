@@ -330,8 +330,8 @@ set(CORE_SOURCES
     core/csr/measures/mismatch_fraction.cpp
     core/csr/measures/is_refcall.hpp
     core/csr/measures/is_refcall.cpp
-    core/csr/measures/somatic_contamination.hpp
-    core/csr/measures/somatic_contamination.cpp
+    core/csr/measures/normal_contamination.hpp
+    core/csr/measures/normal_contamination.cpp
     core/csr/measures/denovo_contamination.hpp
     core/csr/measures/denovo_contamination.cpp
     core/csr/measures/read_position_bias.hpp
@@ -356,6 +356,8 @@ set(CORE_SOURCES
     core/csr/measures/median_somatic_mapping_quality.cpp
     core/csr/measures/strand_disequilibrium.hpp
     core/csr/measures/strand_disequilibrium.cpp
+    core/csr/measures/supplementary_fraction.hpp
+    core/csr/measures/supplementary_fraction.cpp
 
     core/models/haplotype_likelihood_cache.hpp
     core/models/haplotype_likelihood_cache.cpp

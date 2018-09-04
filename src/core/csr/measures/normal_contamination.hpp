@@ -15,7 +15,7 @@ class VcfRecord;
 
 namespace csr {
 
-class SomaticContamination : public Measure
+class NormalContamination : public Measure
 {
     const static std::string name_;
     
