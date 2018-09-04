@@ -584,6 +584,19 @@ template <> struct ProbabilityOfChildGivenParents<1, 2, 1>
     template <typename G>
     double operator()(const G& child, const G& mother, const G& father)
     {
+        return probability_of_child_given_diploid_parent(child[0], mother, mutation_model);
+    }
+    
+    const DeNovoModel& mutation_model;
+};
+
+template <> struct ProbabilityOfChildGivenParents<1, 0, 1>
+{
+    ProbabilityOfChildGivenParents(const DeNovoModel& mutation_model) : mutation_model {mutation_model} {}
+    
+    template <typename G>
+    double operator()(const G& child, const G& mother, const G& father)
+    {
         return probability_of_child_given_haploid_parent(child[0], father, mutation_model);
     }
     
@@ -640,7 +653,12 @@ auto join(const ReducedVectorMap<ParentsProbabilityPair>& parents,
     const auto child_ploidy    = child.first->genotype.get().ploidy();
     if (child_ploidy == 1) {
         if (paternal_ploidy == 1) {
-            return join(parents, child, ProbabilityOfChildGivenParents<1, 2, 1> {mutation_model});
+            if (maternal_ploidy == 0) {
+                return join(parents, child, ProbabilityOfChildGivenParents<1, 0, 1> {mutation_model});
+            }
+            if (maternal_ploidy == 2) {
+                return join(parents, child, ProbabilityOfChildGivenParents<1, 2, 1> {mutation_model});
+            }
         }
     } else if (child_ploidy == 2) {
         if (maternal_ploidy == 2) {
