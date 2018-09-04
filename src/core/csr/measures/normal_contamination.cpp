@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "somatic_contamination.hpp"
+#include "normal_contamination.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -24,11 +24,11 @@
 
 namespace octopus { namespace csr {
 
-const std::string SomaticContamination::name_ = "SC";
+const std::string NormalContamination::name_ = "NC";
 
-std::unique_ptr<Measure> SomaticContamination::do_clone() const
+std::unique_ptr<Measure> NormalContamination::do_clone() const
 {
-    return std::make_unique<SomaticContamination>(*this);
+    return std::make_unique<NormalContamination>(*this);
 }
 
 namespace {
@@ -101,7 +101,7 @@ auto copy_overlapped_to_vector(const AmbiguousReadList& reads, const MappableTyp
 
 } // namespace
 
-Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
+Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     boost::optional<int> result {};
     if (is_somatic(call)) {
@@ -179,22 +179,22 @@ Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, con
     return result;
 }
 
-Measure::ResultCardinality SomaticContamination::do_cardinality() const noexcept
+Measure::ResultCardinality NormalContamination::do_cardinality() const noexcept
 {
     return ResultCardinality::one;
 }
 
-const std::string& SomaticContamination::do_name() const
+const std::string& NormalContamination::do_name() const
 {
     return name_;
 }
 
-std::string SomaticContamination::do_describe() const
+std::string NormalContamination::do_describe() const
 {
     return "Number of reads supporting a somatic haplotype in the normal";
 }
 
-std::vector<std::string> SomaticContamination::do_requirements() const
+std::vector<std::string> NormalContamination::do_requirements() const
 {
     std::vector<std::string> result {"Samples", "Genotypes", "ReadAssignments"};
     utils::append(IsSomatic(true).requirements(), result);
