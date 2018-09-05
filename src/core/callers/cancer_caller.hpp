@@ -111,16 +111,16 @@ private:
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
-                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
+                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
     boost::optional<double>
     calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Caller::Latents& latents) const override;
     
     boost::optional<double>
     calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const;
     
     std::vector<std::unique_ptr<VariantCall>>
@@ -143,23 +143,23 @@ private:
     using ProbabilityVector              = std::vector<double>;
     
     void generate_germline_genotypes(Latents& latents, const std::vector<Haplotype>& haplotypes) const;
-    void generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void generate_cancer_genotypes_with_contaminated_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void generate_cancer_genotypes_with_no_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void generate_cancer_genotypes_with_contaminated_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void generate_cancer_genotypes_with_no_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     void generate_cancer_genotypes(Latents& latents, const std::vector<Genotype<Haplotype>>& germline_genotypes) const;
     bool has_high_normal_contamination_risk(const Latents& latents) const;
     
-    void evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void evaluate_somatic_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void evaluate_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     void set_model_priors(Latents& latents) const;
     void set_model_posteriors(Latents& latents) const;
 
     void set_cancer_genotype_prior_model(Latents& latents) const;
-    void fit_somatic_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void fit_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const;
     CNVModel::Priors get_cnv_model_priors(const GenotypePriorModel& prior_model) const;

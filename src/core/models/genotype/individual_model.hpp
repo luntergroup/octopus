@@ -10,7 +10,7 @@
 
 #include "genotype_prior_model.hpp"
 #include "core/types/haplotype.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/models/haplotype_likelihood_array.hpp"
 #include "core/types/genotype.hpp"
 #include "logging/logging.hpp"
 
@@ -51,11 +51,11 @@ public:
     bool is_primed() const noexcept;
     
     InferredLatents evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     InferredLatents evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
                              const std::vector<GenotypeIndex>& genotype_indices,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
 private:
     const GenotypePriorModel& genotype_prior_model_;

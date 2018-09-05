@@ -19,7 +19,7 @@
 
 #include "utils/maths.hpp"
 #include "utils/memory_footprint.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/models/haplotype_likelihood_array.hpp"
 
 /**
  *
@@ -50,7 +50,7 @@ using VBAlphaVector = std::vector<VBAlpha<K>>;
 class VBReadLikelihoodArray
 {
 public:
-    using BaseType = HaplotypeLikelihoodCache::LikelihoodVector;
+    using BaseType = HaplotypeLikelihoodArray::LikelihoodVector;
     
     VBReadLikelihoodArray() = default;
     
@@ -624,7 +624,7 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
 template <std::size_t K>
 MemoryFootprint
 estimate_memory_requirement(const std::vector<SampleName>& samples,
-                            const HaplotypeLikelihoodCache& likelihoods,
+                            const HaplotypeLikelihoodArray& likelihoods,
                             const std::size_t num_genotypes,
                             VariationalBayesParameters params)
 {

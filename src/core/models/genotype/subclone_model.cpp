@@ -118,7 +118,7 @@ auto generate_exhaustive_seeds(const std::size_t n)
 std::vector<LogProbabilityVector>
 compute_genotype_likelihoods_with_fixed_mixture_model(const std::vector<SampleName>& samples,
                                                       const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                                                      const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                                                       const SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& priors,
                                                       boost::optional<IndexData<CancerGenotypeIndex>> index_data)
 {
@@ -163,7 +163,7 @@ LogProbabilityVector evaluate(const std::vector<G>& genotypes, const GermlineLik
 std::vector<LogProbabilityVector>
 compute_genotype_likelihoods_with_germline_model(const std::vector<SampleName>& samples,
                                                  const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                                 const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                                                 const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                                                  boost::optional<IndexData<CancerGenotypeIndex>> index_data)
 {
     GermlineLikelihoodModel model {haplotype_log_likelihoods};
@@ -226,7 +226,7 @@ LogProbabilityVector evaluate_germlines(const std::vector<CancerGenotypeIndex>& 
 std::vector<LogProbabilityVector>
 compute_germline_genotype_likelihoods_with_germline_model(const std::vector<SampleName>& samples,
                                                           const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                                          const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                                                          const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                                                           boost::optional<IndexData<CancerGenotypeIndex>> index_data)
 {
     GermlineLikelihoodModel model {haplotype_log_likelihoods};
@@ -281,7 +281,7 @@ std::vector<LogProbabilityVector>
 generate_seeds(const std::vector<SampleName>& samples,
                const std::vector<Genotype<Haplotype>>& genotypes,
                const LogProbabilityVector& genotype_log_priors,
-               const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+               const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                const SubcloneModel::Priors& priors,
                std::size_t max_seeds,
                boost::optional<IndexData<GenotypeIndex>> index_data)
@@ -311,7 +311,7 @@ std::vector<LogProbabilityVector>
 generate_seeds(const std::vector<SampleName>& samples,
                const std::vector<CancerGenotype<Haplotype>>& genotypes,
                const LogProbabilityVector& genotype_log_priors,
-               const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+               const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                const SomaticSubcloneModel::Priors& priors,
                std::size_t max_seeds,
                boost::optional<IndexData<CancerGenotypeIndex>> index_data)

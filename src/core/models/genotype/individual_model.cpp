@@ -64,7 +64,7 @@ void print_genotype_likelihoods(const std::vector<Genotype<Haplotype>>& genotype
 
 IndividualModel::InferredLatents
 IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
-                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
@@ -78,7 +78,7 @@ IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
 IndividualModel::InferredLatents
 IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
                           const std::vector<GenotypeIndex>& genotype_indices,
-                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     assert(genotypes.size() == genotype_indices.size());

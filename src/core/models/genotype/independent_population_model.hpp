@@ -14,7 +14,7 @@
 #include "core/types/genotype.hpp"
 #include "genotype_prior_model.hpp"
 #include "individual_model.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/models/haplotype_likelihood_array.hpp"
 #include "containers/probability_matrix.hpp"
 #include "logging/logging.hpp"
 
@@ -55,12 +55,12 @@ public:
     // All samples have same ploidy
     InferredLatents evaluate(const SampleVector& samples,
                              const GenotypeVector& genotypes,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     // Samples have different ploidy
     InferredLatents evaluate(const SampleVector& samples,
                              const std::vector<GenotypeVectorReference>& genotypes,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
 
 private:
     IndividualModel individual_model_;

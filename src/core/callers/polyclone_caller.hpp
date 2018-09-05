@@ -27,7 +27,7 @@ namespace octopus {
 class GenomicRegion;
 class ReadPipe;
 class Variant;
-class HaplotypeLikelihoodCache;
+class HaplotypeLikelihoodArray;
 class VariantCall;
 
 class PolycloneCaller : public Caller
@@ -77,16 +77,16 @@ private:
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
-                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
+                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
     boost::optional<double>
     calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Caller::Latents& latents) const override;
     
     boost::optional<double>
     calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const;
     
     std::vector<std::unique_ptr<VariantCall>>

@@ -14,7 +14,7 @@
 #include "core/types/haplotype.hpp"
 #include "population_prior_model.hpp"
 #include "core/models/mutation/denovo_model.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/models/haplotype_likelihood_array.hpp"
 #include "core/types/genotype.hpp"
 #include "logging/logging.hpp"
 
@@ -71,15 +71,15 @@ public:
     InferredLatents evaluate(const GenotypeVector& maternal_genotypes,
                              const GenotypeVector& paternal_genotypes,
                              const GenotypeVector& child_genotypes,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     // Use if all samples have same ploidy
     InferredLatents evaluate(const GenotypeVector& genotypes,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     InferredLatents evaluate(const GenotypeVector& genotypes,
                              std::vector<GenotypeIndex>& genotype_indices,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
 private:
     const Trio& trio_;
@@ -90,7 +90,7 @@ private:
     
     InferredLatents evaluate_allosome(const GenotypeVector& parent_genotypes,
                                       const GenotypeVector& child_genotypes,
-                                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                                      const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
 };
     
 } // namespace model

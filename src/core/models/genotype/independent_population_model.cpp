@@ -14,7 +14,7 @@ IndependentPopulationModel::IndependentPopulationModel(const GenotypePriorModel&
 IndependentPopulationModel::InferredLatents
 IndependentPopulationModel::evaluate(const SampleVector& samples,
                                      const GenotypeVector& genotypes,
-                                     const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                                     const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     InferredLatents result {};
     result.posteriors.genotype_probabilities.reserve(samples.size());
@@ -30,7 +30,7 @@ IndependentPopulationModel::evaluate(const SampleVector& samples,
 IndependentPopulationModel::InferredLatents
 IndependentPopulationModel::evaluate(const SampleVector& samples,
                                      const std::vector<GenotypeVectorReference>& genotypes,
-                                     const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                                     const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(samples.size() == genotypes.size());
     InferredLatents result {};

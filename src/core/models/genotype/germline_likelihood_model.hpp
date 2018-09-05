@@ -8,7 +8,7 @@
 
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/models/haplotype_likelihood_array.hpp"
 
 namespace octopus { namespace model {
 
@@ -19,8 +19,8 @@ public:
     
     GermlineLikelihoodModel() = delete;
     
-    GermlineLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods);
-    GermlineLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods, const std::vector<Haplotype>& haplotypes);
+    GermlineLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods);
+    GermlineLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, const std::vector<Haplotype>& haplotypes);
     
     GermlineLikelihoodModel(const GermlineLikelihoodModel&)            = default;
     GermlineLikelihoodModel& operator=(const GermlineLikelihoodModel&) = default;
@@ -29,7 +29,7 @@ public:
     
     ~GermlineLikelihoodModel() = default;
     
-    const HaplotypeLikelihoodCache& cache() const noexcept;
+    const HaplotypeLikelihoodArray& cache() const noexcept;
     
     void prime(const std::vector<Haplotype>& haplotypes);
     void unprime() noexcept;
@@ -39,9 +39,9 @@ public:
     LogProbability evaluate(const GenotypeIndex& genotype) const;
     
 private:
-    const HaplotypeLikelihoodCache& likelihoods_;
-    std::vector<HaplotypeLikelihoodCache::LikelihoodVectorRef> indexed_likelihoods_;
-    mutable std::vector<HaplotypeLikelihoodCache::LikelihoodVectorRef> likelihood_refs_;
+    const HaplotypeLikelihoodArray& likelihoods_;
+    std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> indexed_likelihoods_;
+    mutable std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> likelihood_refs_;
     mutable std::vector<LogProbability> buffer_;
     
     // These are just for optimisation

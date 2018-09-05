@@ -19,7 +19,7 @@
 #include "containers/mappable_flat_set.hpp"
 #include "containers/mappable_map.hpp"
 #include "core/types/variant.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/models/haplotype_likelihood_array.hpp"
 #include "basics/aligned_read.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/maths.hpp"

@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef haplotype_likelihood_cache_hpp
-#define haplotype_likelihood_cache_hpp
+#ifndef haplotype_likelihood_array_hpp
+#define haplotype_likelihood_array_hpp
 
 #include <unordered_map>
 #include <vector>
@@ -20,13 +20,13 @@
 namespace octopus {
 
 /*
-    HaplotypeLikelihoodCache is essentially a matrix of haplotype likelihoods, i.e.
+    HaplotypeLikelihoodArray is essentially a matrix of haplotype likelihoods, i.e.
     p(read | haplotype) for a given set of AlignedReads and Haplotypes.
  
     The matrix can be efficiently populated as the read mapping and alignment are
     done internally which allows minimal memory allocation.
  */
-class HaplotypeLikelihoodCache
+class HaplotypeLikelihoodArray
 {
 public:
     using FlankState = HaplotypeLikelihoodModel::FlankState;
@@ -36,20 +36,20 @@ public:
     using HaplotypeRef         = std::reference_wrapper<const Haplotype>;
     using SampleLikelihoodMap  = std::unordered_map<HaplotypeRef, LikelihoodVectorRef>;
     
-    HaplotypeLikelihoodCache() = default;
+    HaplotypeLikelihoodArray() = default;
     
-    HaplotypeLikelihoodCache(unsigned max_haplotypes, const std::vector<SampleName>& samples);
+    HaplotypeLikelihoodArray(unsigned max_haplotypes, const std::vector<SampleName>& samples);
     
-    HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
+    HaplotypeLikelihoodArray(HaplotypeLikelihoodModel likelihood_model,
                              unsigned max_haplotypes,
                              const std::vector<SampleName>& samples);
     
-    HaplotypeLikelihoodCache(const HaplotypeLikelihoodCache&)            = default;
-    HaplotypeLikelihoodCache& operator=(const HaplotypeLikelihoodCache&) = default;
-    HaplotypeLikelihoodCache(HaplotypeLikelihoodCache&&)                 = default;
-    HaplotypeLikelihoodCache& operator=(HaplotypeLikelihoodCache&&)      = default;
+    HaplotypeLikelihoodArray(const HaplotypeLikelihoodArray&)            = default;
+    HaplotypeLikelihoodArray& operator=(const HaplotypeLikelihoodArray&) = default;
+    HaplotypeLikelihoodArray(HaplotypeLikelihoodArray&&)                 = default;
+    HaplotypeLikelihoodArray& operator=(HaplotypeLikelihoodArray&&)      = default;
     
-    ~HaplotypeLikelihoodCache() = default;
+    ~HaplotypeLikelihoodArray() = default;
     
     void populate(const ReadMap& reads, const std::vector<Haplotype>& haplotypes,
                   boost::optional<FlankState> flank_state = boost::none);
@@ -103,7 +103,7 @@ private:
 };
 
 template <typename S, typename Container>
-void HaplotypeLikelihoodCache::insert(S&& sample, const Haplotype& haplotype,
+void HaplotypeLikelihoodArray::insert(S&& sample, const Haplotype& haplotype,
                                       Container&& likelihoods)
 {
     sample_indices_.emplace(std::forward<S>(sample), sample_indices_.size());
@@ -111,7 +111,7 @@ void HaplotypeLikelihoodCache::insert(S&& sample, const Haplotype& haplotype,
 }
 
 template <typename Container>
-void HaplotypeLikelihoodCache::erase(const Container& haplotypes)
+void HaplotypeLikelihoodArray::erase(const Container& haplotypes)
 {
     for (const auto& haplotype : haplotypes) {
         cache_.erase(haplotype);
@@ -120,22 +120,22 @@ void HaplotypeLikelihoodCache::erase(const Container& haplotypes)
 
 // non-member methods
 
-HaplotypeLikelihoodCache merge_samples(const std::vector<SampleName>& samples,
+HaplotypeLikelihoodArray merge_samples(const std::vector<SampleName>& samples,
                                        const SampleName& new_sample,
                                        const std::vector<Haplotype>& haplotypes,
-                                       const HaplotypeLikelihoodCache& haplotype_likelihoods);
+                                       const HaplotypeLikelihoodArray& haplotype_likelihoods);
 
 namespace debug {
 
 std::vector<std::reference_wrapper<const Haplotype>>
 rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
-                const HaplotypeLikelihoodCache& haplotype_likelihoods);
+                const HaplotypeLikelihoodArray& haplotype_likelihoods);
 
 template <typename S>
 void print_read_haplotype_likelihoods(S&& stream,
                                      const std::vector<Haplotype>& haplotypes,
                                      const ReadMap& reads,
-                                     const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                     const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                      const std::size_t n = 5)
 {
     if (n == static_cast<std::size_t>(-1)) {
@@ -195,7 +195,7 @@ void print_read_haplotype_likelihoods(S&& stream,
 
 void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
                                       const ReadMap& reads,
-                                      const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       std::size_t n = 5);
 
 } // namespace debug
