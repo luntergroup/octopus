@@ -359,8 +359,8 @@ set(CORE_SOURCES
     core/csr/measures/supplementary_fraction.hpp
     core/csr/measures/supplementary_fraction.cpp
 
-    core/models/haplotype_likelihood_cache.hpp
-    core/models/haplotype_likelihood_cache.cpp
+    core/models/haplotype_likelihood_array.hpp
+    core/models/haplotype_likelihood_array.cpp
     core/models/haplotype_likelihood_model.hpp
     core/models/haplotype_likelihood_model.cpp
 

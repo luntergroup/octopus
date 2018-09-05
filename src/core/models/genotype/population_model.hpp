@@ -13,7 +13,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "population_prior_model.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/models/haplotype_likelihood_array.hpp"
 #include "containers/probability_matrix.hpp"
 #include "logging/logging.hpp"
 
@@ -63,17 +63,17 @@ public:
     // All samples have same ploidy
     InferredLatents evaluate(const SampleVector& samples,
                              const GenotypeVector& genotypes,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     // All samples have same ploidy
     InferredLatents evaluate(const SampleVector& samples,
                              const GenotypeVector& genotypes,
                              const std::vector<GenotypeIndex>& genotype_indices,
                              const std::vector<Haplotype>& haplotypes,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     // Samples have different ploidy
     InferredLatents evaluate(const SampleVector& samples,
                              const std::vector<GenotypeVectorReference>& genotypes,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
 private:
     Options options_;

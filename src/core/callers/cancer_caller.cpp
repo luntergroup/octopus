@@ -133,7 +133,7 @@ std::size_t CancerCaller::do_remove_duplicates(std::vector<Haplotype>& haplotype
 
 std::unique_ptr<CancerCaller::Caller::Latents>
 CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
-                            const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                            const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     // Store any intermediate results in Latents for reuse, so the order of model evaluation matters!
     auto result = std::make_unique<Latents>(haplotypes, samples_, parameters_);
@@ -150,7 +150,7 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 
 boost::optional<double>
 CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                        const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                        const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                         const Caller::Latents& latents) const
 {
     return calculate_model_posterior(haplotypes, haplotype_likelihoods,
@@ -163,7 +163,7 @@ void CancerCaller::set_cancer_genotype_prior_model(Latents& latents) const
     latents.cancer_genotype_prior_model_ = CancerGenotypePriorModel {*latents.germline_prior_model_, std::move(mutation_model)};
 }
 
-void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     set_cancer_genotype_prior_model(latents);
     SomaticModel::InferredLatents prev_latents;
@@ -245,7 +245,7 @@ auto demote_each(const std::vector<CancerGenotype<Haplotype>>& genotypes)
 
 boost::optional<double>
 CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                        const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                        const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                         const Latents& latents) const
 {
     if (has_normal_sample()) {
@@ -276,7 +276,7 @@ CancerCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes
 
 auto pool_likelihood(const std::vector<SampleName>& samples,
                      const std::vector<Haplotype>& haplotypes,
-                     const HaplotypeLikelihoodCache& haplotype_likelihoods)
+                     const HaplotypeLikelihoodArray& haplotype_likelihoods)
 {
     static const SampleName pooled_sample {"pool"};
     auto result = merge_samples(samples, pooled_sample, haplotypes, haplotype_likelihoods);
@@ -408,7 +408,7 @@ void filter_with_germline_model(std::vector<CancerGenotype<Haplotype>>& genotype
 
 } // namespace
 
-void CancerCaller::generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+void CancerCaller::generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto& germline_genotypes = latents.germline_genotypes_;
     const auto num_haplotypes = latents.haplotypes_.get().size();
@@ -435,7 +435,7 @@ auto calculate_max_germline_genotype_bases(const unsigned max_genotypes, const u
     return std::max(max_genotypes / num_somatic_genotypes, decltype(num_somatic_genotypes) {1});
 }
 
-void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto& haplotypes = latents.haplotypes_.get();
     const auto& germline_genotypes = latents.germline_genotypes_;
@@ -496,7 +496,7 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
     }
 }
 
-void CancerCaller::generate_cancer_genotypes_with_contaminated_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+void CancerCaller::generate_cancer_genotypes_with_contaminated_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     // TODO
     generate_cancer_genotypes_with_clean_normal(latents, haplotype_likelihoods);
@@ -522,7 +522,7 @@ BidirIt binary_find(BidirIt first, BidirIt last, const T& value, Compare cmp)
 
 } // namespace
 
-void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto& haplotypes = latents.haplotypes_.get();
     const auto& germline_genotypes = latents.germline_genotypes_;
@@ -636,7 +636,7 @@ bool CancerCaller::has_high_normal_contamination_risk(const Latents& latents) co
     return parameters_.normal_contamination_risk == Parameters::NormalContaminationRisk::high;
 }
 
-void CancerCaller::evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+void CancerCaller::evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!(latents.haplotypes_.get().empty() || latents.germline_genotypes_.empty()));
     latents.germline_prior_model_ = make_germline_prior_model(latents.haplotypes_);
@@ -653,7 +653,7 @@ void CancerCaller::evaluate_germline_model(Latents& latents, const HaplotypeLike
     }
 }
 
-void CancerCaller::evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+void CancerCaller::evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!latents.germline_genotypes_.empty() && latents.germline_prior_model_);
     auto cnv_model_priors = get_cnv_model_priors(*latents.germline_prior_model_);
@@ -670,7 +670,7 @@ void CancerCaller::evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoo
     }
 }
 
-void CancerCaller::evaluate_somatic_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+void CancerCaller::evaluate_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(latents.germline_prior_model_ && !latents.cancer_genotypes_.empty());
     assert(latents.cancer_genotype_prior_model_);
@@ -697,7 +697,7 @@ auto get_high_posterior_genotypes(const std::vector<CancerGenotype<Haplotype>>& 
     return copy_greatest_probability_values(genotypes, latents.posteriors.genotype_probabilities, 10, 1e-3);
 }
 
-void CancerCaller::evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+void CancerCaller::evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     if (has_normal_sample() && !has_high_normal_contamination_risk(latents)) {
         if (!latents.normal_germline_inferences_) {

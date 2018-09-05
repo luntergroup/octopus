@@ -155,8 +155,18 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
 , trace_log_ {logging::get_trace_log()}
 {
     assert(!candidates.empty());
+    assert(!alleles_.empty());
+    rightmost_allele_ = alleles_.rightmost();
+    active_region_ = head_region(alleles_.leftmost());
+    if (active_region_.begin() != 0) {
+        active_region_ = shift(active_region_, -1);
+    }
+    if (policies.lagging != Policies::Lagging::none) {
+        lagged_walker_ = make_lagged_walker(policies);
+    }
     if (!all_empty(reads_)) {
-        for (const auto& dense : dense_variation_detector.detect(candidates, reads, reads_report)) {
+        const auto dense_regions = dense_variation_detector.detect(candidates, reads, reads_report);
+        for (const auto& dense : dense_regions) {
             if (dense.action == DenseVariationDetector::DenseRegion::RecommendedAction::skip) {
                 if (debug_log_) {
                     stream(*debug_log_) << "Erasing " << count_contained(alleles_, dense.region)
@@ -175,15 +185,6 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
         if (alleles_.empty()) {
             alleles_.insert(candidates.back().ref_allele());
         }
-    }
-    assert(!alleles_.empty());
-    rightmost_allele_ = alleles_.rightmost();
-    active_region_ = head_region(alleles_.leftmost());
-    if (active_region_.begin() != 0) {
-        active_region_ = shift(active_region_, -1);
-    }
-    if (policies.lagging != Policies::Lagging::none) {
-        lagged_walker_ = make_lagged_walker(policies);
     }
 }
 

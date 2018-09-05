@@ -16,7 +16,7 @@
 
 namespace octopus { namespace model {
 
-FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods)
+FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods)
 : likelihoods_ {likelihoods}
 , mixtures_ {}
 , indexed_likelihoods_ {}
@@ -24,20 +24,20 @@ FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const H
 , buffer_ {}
 {}
 
-FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods,
+FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
                                                                          const std::vector<Haplotype>& haplotypes)
 : FixedMixtureGenotypeLikelihoodModel {likelihoods}
 {
     this->prime(haplotypes);
 }
 
-FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods, MixtureVector mixtures)
+FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures)
 : FixedMixtureGenotypeLikelihoodModel {likelihoods}
 {
     this->set_mixtures(std::move(mixtures));
 }
 
-FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods,
+FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
                                                                          MixtureVector mixtures,
                                                                          const std::vector<Haplotype>& haplotypes)
 : FixedMixtureGenotypeLikelihoodModel {likelihoods, std::move(mixtures)}
@@ -45,7 +45,7 @@ FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const H
     this->prime(haplotypes);
 }
 
-const HaplotypeLikelihoodCache& FixedMixtureGenotypeLikelihoodModel::cache() const noexcept
+const HaplotypeLikelihoodArray& FixedMixtureGenotypeLikelihoodModel::cache() const noexcept
 {
     return likelihoods_;
 }
@@ -60,7 +60,7 @@ void FixedMixtureGenotypeLikelihoodModel::prime(const std::vector<Haplotype>& ha
     assert(likelihoods_.is_primed());
     indexed_likelihoods_.reserve(haplotypes.size());
     std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(indexed_likelihoods_),
-                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodCache::LikelihoodVector& {
+                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodArray::LikelihoodVector& {
                        return likelihoods_[haplotype]; });
 }
 
@@ -91,7 +91,7 @@ FixedMixtureGenotypeLikelihoodModel::evaluate(const Genotype<Haplotype>& genotyp
     assert(buffer_.size() == mixtures_.size());
     likelihood_refs_.clear();
     std::transform(std::cbegin(genotype), std::cend(genotype), std::back_inserter(likelihood_refs_),
-                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodCache::LikelihoodVector& {
+                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodArray::LikelihoodVector& {
                        return likelihoods_[haplotype]; });
     LogProbability result {0};
     const auto num_reads = likelihood_refs_.front().get().size();
@@ -129,9 +129,9 @@ FixedMixtureGenotypeLikelihoodModel::evaluate(const CancerGenotype<Haplotype>& g
     assert(buffer_.size() == mixtures_.size());
     likelihood_refs_.clear();
     std::transform(std::cbegin(genotype.germline()), std::cend(genotype.germline()), std::back_inserter(likelihood_refs_),
-                  [this] (const auto& haplotype) -> const HaplotypeLikelihoodCache::LikelihoodVector& { return likelihoods_[haplotype]; });
+                  [this] (const auto& haplotype) -> const HaplotypeLikelihoodArray::LikelihoodVector& { return likelihoods_[haplotype]; });
     std::transform(std::cbegin(genotype.somatic()), std::cend(genotype.somatic()), std::back_inserter(likelihood_refs_),
-                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodCache::LikelihoodVector& { return likelihoods_[haplotype]; });
+                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodArray::LikelihoodVector& { return likelihoods_[haplotype]; });
     LogProbability result {0};
     const auto num_reads = likelihood_refs_.front().get().size();
     for (std::size_t read_idx {0}; read_idx < num_reads; ++read_idx) {

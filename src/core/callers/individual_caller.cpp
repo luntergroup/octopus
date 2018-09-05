@@ -122,7 +122,7 @@ IndividualCaller::Latents::calculate_haplotype_posteriors(const std::vector<Hapl
 
 std::unique_ptr<IndividualCaller::Caller::Latents>
 IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
-                                const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                                const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     std::vector<GenotypeIndex> genotype_indices {};
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy, genotype_indices);
@@ -138,7 +138,7 @@ IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 
 boost::optional<double>
 IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                            const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                             const Caller::Latents& latents) const
 {
     return calculate_model_posterior(haplotypes, haplotype_likelihoods, dynamic_cast<const Latents&>(latents));
@@ -157,7 +157,7 @@ static auto calculate_model_posterior(const double normal_model_log_evidence,
 
 boost::optional<double>
 IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                            const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                             const Latents& latents) const
 {
     const auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);

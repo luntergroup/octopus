@@ -275,7 +275,7 @@ void TrioCaller::Latents::set_haplotype_posteriors(const std::vector<Haplotype>&
 
 std::unique_ptr<Caller::Latents>
 TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
-                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     auto germline_prior_model = make_prior_model(haplotypes);
     DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
@@ -310,7 +310,7 @@ TrioCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 
 boost::optional<double>
 TrioCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                      const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       const Caller::Latents& latents) const
 {
     return calculate_model_posterior(haplotypes, haplotype_likelihoods, dynamic_cast<const Latents&>(latents));
@@ -333,7 +333,7 @@ static auto calculate_model_posterior(const double normal_model_log_evidence,
 
 boost::optional<double>
 TrioCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                      const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       const Latents& latents) const
 {
     const auto max_ploidy = std::max({parameters_.maternal_ploidy, parameters_.paternal_ploidy, parameters_.child_ploidy});

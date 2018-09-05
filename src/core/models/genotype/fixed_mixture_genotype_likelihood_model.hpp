@@ -9,7 +9,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/cancer_genotype.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/models/haplotype_likelihood_array.hpp"
 
 namespace octopus { namespace model {
 
@@ -21,11 +21,11 @@ public:
     
     FixedMixtureGenotypeLikelihoodModel() = delete;
     
-    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods);
-    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods,
+    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods);
+    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
                                         const std::vector<Haplotype>& haplotypes);
-    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods, MixtureVector mixtures);
-    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods, MixtureVector mixtures,
+    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures);
+    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures,
                                         const std::vector<Haplotype>& haplotypes);
     
     FixedMixtureGenotypeLikelihoodModel(const FixedMixtureGenotypeLikelihoodModel&)            = default;
@@ -35,7 +35,7 @@ public:
     
     ~FixedMixtureGenotypeLikelihoodModel() = default;
     
-    const HaplotypeLikelihoodCache& cache() const noexcept;
+    const HaplotypeLikelihoodArray& cache() const noexcept;
     const MixtureVector& mixtures() const noexcept;
     
     void prime(const std::vector<Haplotype>& haplotypes);
@@ -50,10 +50,10 @@ public:
     LogProbability evaluate(const CancerGenotypeIndex& genotype) const;
 
 private:
-    const HaplotypeLikelihoodCache& likelihoods_;
+    const HaplotypeLikelihoodArray& likelihoods_;
     MixtureVector mixtures_, log_mixtures_;
-    std::vector<HaplotypeLikelihoodCache::LikelihoodVectorRef> indexed_likelihoods_;
-    mutable std::vector<HaplotypeLikelihoodCache::LikelihoodVectorRef> likelihood_refs_;
+    std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> indexed_likelihoods_;
+    mutable std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> likelihood_refs_;
     mutable std::vector<LogProbability> buffer_;
 };
 

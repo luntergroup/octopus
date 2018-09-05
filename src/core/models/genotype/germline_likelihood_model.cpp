@@ -15,17 +15,17 @@
 
 namespace octopus { namespace model {
 
-GermlineLikelihoodModel::GermlineLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods)
+GermlineLikelihoodModel::GermlineLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods)
 : likelihoods_ {likelihoods}
 {}
 
-GermlineLikelihoodModel::GermlineLikelihoodModel(const HaplotypeLikelihoodCache& likelihoods, const std::vector<Haplotype>& haplotypes)
+GermlineLikelihoodModel::GermlineLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, const std::vector<Haplotype>& haplotypes)
 : GermlineLikelihoodModel {likelihoods}
 {
     this->prime(haplotypes);
 }
 
-const HaplotypeLikelihoodCache& GermlineLikelihoodModel::cache() const noexcept
+const HaplotypeLikelihoodArray& GermlineLikelihoodModel::cache() const noexcept
 {
     return likelihoods_;
 }
@@ -35,7 +35,7 @@ void GermlineLikelihoodModel::prime(const std::vector<Haplotype>& haplotypes)
     assert(likelihoods_.is_primed());
     indexed_likelihoods_.reserve(haplotypes.size());
     std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(indexed_likelihoods_),
-                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodCache::LikelihoodVector& {
+                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodArray::LikelihoodVector& {
                        return likelihoods_[haplotype]; });
 }
 
@@ -219,7 +219,7 @@ GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate_polypl
     likelihood_refs_.reserve(ploidy);
     likelihood_refs_.push_back(log_likelihoods1);
     std::transform(std::next(std::cbegin(genotype)), std::cend(genotype), std::back_inserter(likelihood_refs_),
-                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodCache::LikelihoodVector& {
+                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodArray::LikelihoodVector& {
                        return likelihoods_[haplotype]; });
     LogProbability result {0};
     const auto num_likelihoods = likelihood_refs_.front().get().size();
