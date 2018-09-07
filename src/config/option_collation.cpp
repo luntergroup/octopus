@@ -1289,6 +1289,22 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
+bool have_low_tolerance_for_dense_regions(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
+{
+    if (is_cancer_calling(options)) {
+        if (as_unsigned("max-somatic-haplotypes", options) < 2) {
+            return false;
+        }
+        if (input_reads_profile) {
+            const auto approx_average_depth = maths::median(input_reads_profile->sample_median_positive_depth);
+            if (approx_average_depth > 2000) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
@@ -1296,6 +1312,9 @@ auto get_dense_variation_detector(const OptionMap& options, const boost::optiona
     const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
     const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
     coretools::DenseVariationDetector::Parameters params {heterozygosity, heterozygosity_stdev};
+    if (have_low_tolerance_for_dense_regions(options, input_reads_profile)) {
+        params.density_tolerance = coretools::DenseVariationDetector::Parameters::Tolerance::low;
+    }
     return coretools::DenseVariationDetector {params, input_reads_profile};
 }
 
