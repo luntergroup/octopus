@@ -17,7 +17,9 @@
 #include "concepts/mappable.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/append.hpp"
-#include "utils/string_utils.hpp"
+
+#include <iostream> // DEBUG
+#include "timers.hpp"
 
 #define _unused(x) ((void)(x))
 
@@ -164,7 +166,6 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
     }
     if (!all_empty(reads_)) {
         const auto dense_regions = dense_variation_detector.detect(candidates, reads, reads_report);
-        std::deque<GenomicRegion> skip_regions {};
         for (const auto& dense : dense_regions) {
             if (dense.action == DenseVariationDetector::DenseRegion::RecommendedAction::skip) {
                 if (debug_log_) {
@@ -172,21 +173,8 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                         << " alleles in dense region " << dense.region;
                 }
                 alleles_.erase_contained(dense.region);
-                skip_regions.push_back(dense.region);
             } else if (is_lagging_enabled()) {
                 lagging_exclusion_zones_.insert(dense.region);
-            }
-        }
-        if (!skip_regions.empty()) {
-            logging::WarningLogger warn_log {};
-            if (skip_regions.size() == 1) {
-                stream(warn_log) << "Found 1 dense region to be skipped: " << skip_regions.front();
-            } else {
-                std::vector<std::string> skip_region_strings {};
-                skip_region_strings.reserve(skip_regions.size());
-                for (const auto& region : skip_regions) skip_region_strings.push_back(to_string(region));
-                const auto skip_regions_str = utils::join(skip_region_strings);
-                stream(warn_log) << "Found " << skip_regions.size() << " dense regions to be skipped: " << skip_regions_str;
             }
         }
         if (!lagging_exclusion_zones_.empty() && debug_log_) {
