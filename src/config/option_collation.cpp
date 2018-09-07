@@ -1295,7 +1295,8 @@ auto get_dense_variation_detector(const OptionMap& options, const boost::optiona
     const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
     const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
     const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
-    return coretools::DenseVariationDetector {heterozygosity, heterozygosity_stdev, input_reads_profile};
+    coretools::DenseVariationDetector::Parameters params {heterozygosity, heterozygosity_stdev};
+    return coretools::DenseVariationDetector {params, input_reads_profile};
 }
 
 auto get_max_indicator_join_distance() noexcept

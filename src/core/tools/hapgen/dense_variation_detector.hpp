@@ -19,6 +19,13 @@ namespace octopus { namespace coretools {
 class DenseVariationDetector
 {
 public:
+    struct Parameters
+    {
+        enum class Tolerance { low, normal, high };
+        double heterozygosity, heterozygosity_stdev;
+        Tolerance density_tolerance = Tolerance::normal;
+    };
+    
     struct DenseRegion
     {
         enum class RecommendedAction { skip, restrict_lagging };
@@ -28,8 +35,7 @@ public:
     
     DenseVariationDetector() = default;
     
-    DenseVariationDetector(double heterozygosity, double heterozygosity_stdev,
-                           boost::optional<ReadSetProfile> = boost::none);
+    DenseVariationDetector(Parameters params, boost::optional<ReadSetProfile> = boost::none);
     
     DenseVariationDetector(const DenseVariationDetector&)            = default;
     DenseVariationDetector& operator=(const DenseVariationDetector&) = default;
@@ -38,12 +44,15 @@ public:
     
     ~DenseVariationDetector() = default;
     
-    std::vector<DenseRegion> detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads,
-                                    boost::optional<const ReadPipe::Report&> reads_report = boost::none) const;
+    std::vector<DenseRegion>
+    detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads,
+           boost::optional<const ReadPipe::Report&> reads_report = boost::none) const;
 
 private:
-    double expected_heterozygosity_, heterozygosity_stdev_;
+    Parameters params_;
     boost::optional<ReadSetProfile> reads_profile_;
+    
+    double get_max_expected_log_allele_count_per_base() const noexcept;
 };
 
 } // namespace coretools
