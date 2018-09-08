@@ -197,20 +197,34 @@ void log_startup_info(const GenomeCallingComponents& components)
         stream(log) << "Processing " << search_size << "bp with automatic thread management";
     }
     auto sl = stream(log);
-    const bool is_filtered_run {components.filtered_output()};
-    if (is_filtered_run) {
+    auto output_path = components.output().path();
+    if (apply_csr(components)) {
         sl << "Writing filtered calls to ";
+        output_path = components.filtered_output()->path();
     } else {
         sl << "Writing unfiltered calls to ";
-    }
-    auto output_path = components.output().path();
-    if (is_filtered_run) {
-        output_path = components.filtered_output()->path();
     }
     if (output_path) {
         sl << *output_path;
     } else {
         sl << "stdout";
+    }
+}
+
+void log_finish_info(const GenomeCallingComponents& components, const utils::TimeInterval run_duration)
+{
+    using utils::TimeInterval;
+    logging::InfoLogger info_log {};
+    const auto search_size = sum_region_sizes(components.search_regions());
+    stream(info_log) << "Finished calling "
+                     << utils::format_with_commas(search_size) << "bp, total runtime "
+                     << run_duration;
+    auto output_path = components.output().path();
+    if (apply_csr(components)) {
+        output_path = components.filtered_output()->path();
+    }
+    if (output_path) {
+        stream(info_log) << "Calls have been written to " << *output_path;
     }
 }
 
@@ -1553,9 +1567,6 @@ void run_bam_realign(GenomeCallingComponents& components)
 void run_octopus(GenomeCallingComponents& components, std::string command)
 {
     static auto debug_log = get_debug_log();
-    logging::InfoLogger info_log {};
-    using utils::TimeInterval;
-    
     log_run_start(components);
     write_caller_output_header(components, command);
     const auto start = std::chrono::system_clock::now();
@@ -1599,10 +1610,7 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
         warn_log << "Failed to make legacy vcf";
     }
     const auto end = std::chrono::system_clock::now();
-    const auto search_size = sum_region_sizes(components.search_regions());
-    stream(info_log) << "Finished calling "
-                     << utils::format_with_commas(search_size) << "bp, total runtime "
-                     << TimeInterval {start, end};
+    log_finish_info(components, {start, end});
     run_bam_realign(components);
     cleanup(components);
 }
