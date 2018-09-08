@@ -304,8 +304,7 @@ DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const R
         }
         if (state.variant_count > 100 && size(state.region) > average_read_length && total_mean_depth > max_expected_coverage) {
             result.push_back({region, DenseRegion::RecommendedAction::skip});
-        }
-        if (state.variant_count > 50
+        } else if (state.variant_count > 50
             && reads_profile_
             && std::min(state.median_mapping_quality, state.rmq_mapping_quality)
               < std::max(reads_profile_->median_mapping_quality, reads_profile_->rmq_mapping_quality)
