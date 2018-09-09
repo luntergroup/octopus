@@ -69,7 +69,8 @@ Measure::ResultType MisalignedReadCount::do_evaluate(const VcfRecord& call, cons
     for (const auto& sample : samples) {
         int sample_result {0};
         for (const auto& p : assignments.support.at(sample)) {
-            const auto realigned_reads = safe_realign(p.second, p.first);
+            auto realigned_reads = copy_overlapped(p.second, call);
+            safe_realign(realigned_reads, p.first);
             sample_result += count_likely_misaligned(realigned_reads);
         }
         result.push_back(sample_result);
