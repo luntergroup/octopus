@@ -358,6 +358,8 @@ set(CORE_SOURCES
     core/csr/measures/strand_disequilibrium.cpp
     core/csr/measures/supplementary_fraction.hpp
     core/csr/measures/supplementary_fraction.cpp
+    core/csr/measures/misaligned_read_count.hpp
+    core/csr/measures/misaligned_read_count.cpp
 
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp
