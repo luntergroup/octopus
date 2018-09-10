@@ -34,10 +34,10 @@ static constexpr std::array<std::array<double, 31>, 11> enrichment_model
 double calculate_gap_open_rate(const double base_rate, unsigned period, unsigned num_periods) noexcept
 {
     if (period == 0 || num_periods == 0) return base_rate;
-    static constexpr auto max_period = static_cast<unsigned>(enrichment_model.size());
+    static constexpr auto max_period = static_cast<unsigned>(enrichment_model.size() - 1);
     period = std::min(period, max_period);
-    num_periods = std::min(num_periods, static_cast<unsigned>(enrichment_model[period - 1].size()));
-    return std::min(base_rate * enrichment_model[period - 1][num_periods - 1], 1.0);
+    num_periods = std::min(num_periods, static_cast<unsigned>(enrichment_model[period].size() - 1));
+    return std::min(base_rate * enrichment_model[period][num_periods], 1.0);
 }
 
 double calculate_gap_extend_rate(const double base_rate, const unsigned period, const unsigned num_periods, const double gap_open_rate)
