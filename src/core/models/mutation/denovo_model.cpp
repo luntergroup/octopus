@@ -220,16 +220,14 @@ auto recalculate_log_probability(const CigarString& cigar, const double snv_pena
     double result {0};
     std::size_t pos {0};
     for (const auto& op : cigar) {
-        using CigarFlag = CigarOperation::Flag;
-        switch (op.flag()) {
-            case CigarFlag::substitution: {
-                result += op.size() * snv_log_probability;
-                pos += op.size();
-                break;
-            }
-            case CigarFlag::deletion: pos += op.size();
-            case CigarFlag::insertion: result += std::log(calculate_indel_probability(indel_model, pos, op.size())); break;
-            default: pos += op.size();
+        if (op.flag() == CigarOperation::Flag::substitution) {
+            result += op.size() * snv_log_probability;
+            pos += op.size();
+        } else if (is_indel(op)) {
+            result += std::log(calculate_indel_probability(indel_model, pos, op.size()));
+            if (is_deletion(op)) pos += op.size();
+        } else {
+            pos += op.size();
         }
     }
     return result;
