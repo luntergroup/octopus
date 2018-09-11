@@ -22,7 +22,7 @@ public:
     {
         double indel_mutation_rate;
         unsigned max_period = 10, max_periodicity = 50, max_indel_length = 100;
-        double max_open_probability = 0.5, max_extend_probability = 1.0;
+        double max_open_probability = 0.9, max_extend_probability = 1.0;
     };
     
     struct ContextIndelModel
