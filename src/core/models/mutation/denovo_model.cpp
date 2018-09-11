@@ -39,6 +39,7 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 , num_haplotypes_hint_ {num_haplotypes_hint}
 , haplotypes_ {}
 , caching_ {caching}
+, context_indel_model_ {}
 , gap_open_penalties_ {}
 , gap_extend_penalties_ {}
 , gap_model_index_cache_ {}
@@ -171,55 +172,79 @@ void rotate_right(Container& c, const std::size_t n)
     std::rotate(std::rbegin(c), std::next(std::rbegin(c), n), std::rend(c));
 }
 
-double calculate_score(const Variant& variant, const Haplotype& context,
-                       const hmm::VariableGapExtendMutationModel& mutation_model)
+double calculate_log_probability(const Variant& variant, const Haplotype& context,
+                                 const double snv_penalty, const IndelMutationModel::ContextIndelModel& indel_model)
 {
     if (is_indel(variant)) {
         assert(contains(context, variant));
         const auto offset = static_cast<std::size_t>(begin_distance(context, variant));
-        const auto indel_length = indel_size(variant);
-        assert(offset < mutation_model.gap_open.size());
-        constexpr decltype(indel_length) max_indel_length {50};
-        return mutation_model.gap_open[offset] + (std::min(indel_length, max_indel_length) - 1) * mutation_model.gap_extend[offset];
+        return std::log(calculate_indel_probability(indel_model, offset, indel_size(variant)));
     } else {
-        return mutation_model.mutation;
+        return snv_penalty * -maths::constants::ln10Div10<>;
     }
 }
 
-double approx_align(const Haplotype& target, const Haplotype& given,
-                    const hmm::VariableGapExtendMutationModel& mutation_model)
+double calculate_approx_log_probability(const Haplotype& target, const Haplotype& given,
+                                        const double snv_penalty, const IndelMutationModel::ContextIndelModel& indel_model)
 {
     double score {0};
     const auto variants = target.difference(given);
     for (const auto& variant : variants) {
-        score += calculate_score(variant, given, mutation_model);
+        score += calculate_log_probability(variant, given, snv_penalty, indel_model);
     }
-    return score * -maths::constants::ln10Div10<>;
+    return score ;
 }
 
-void set_penalties(const IndelMutationModel::ContextIndelModel::ProbabilityVector& probabilities,
-                  hmm::VariableGapExtendMutationModel::PenaltyVector& penalties)
+void set_penalties(const IndelMutationModel::ContextIndelModel& indel_model,
+                   hmm::VariableGapExtendMutationModel::PenaltyVector& open_penalties,
+                   hmm::VariableGapExtendMutationModel::PenaltyVector& extend_penalties)
 {
-    assert(probabilities.size() == penalties.size());
-    std::transform(std::cbegin(probabilities), std::cend(probabilities), std::begin(penalties),
-                   [] (auto rate) {
+    assert(indel_model.gap_open.size() == open_penalties.size());
+    std::transform(std::cbegin(indel_model.gap_open), std::cend(indel_model.gap_open), std::begin(open_penalties),
+                   [] (auto prob) {
                        static constexpr double max_penalty {127};
-                       return std::max(std::min(std::log(rate) / -maths::constants::ln10Div10<>, max_penalty), 1.0);
+                       return std::max(std::min(std::log(prob) / -maths::constants::ln10Div10<>, max_penalty), 1.0);
                    });
+    assert(indel_model.gap_extend.size() == extend_penalties.size());
+    std::transform(std::cbegin(indel_model.gap_extend), std::cend(indel_model.gap_extend), std::begin(extend_penalties),
+                   [] (const auto& probs) {
+                       static constexpr double max_penalty {127};
+                       return std::max(std::min(std::log(probs[1]) / -maths::constants::ln10Div10<>, max_penalty), 1.0);
+                   });
+}
+
+auto recalculate_log_probability(const CigarString& cigar, const double snv_penalty,
+                                 const IndelMutationModel::ContextIndelModel& indel_model)
+{
+    const auto snv_log_probability = snv_penalty * -maths::constants::ln10Div10<>;
+    double result {0};
+    std::size_t pos {0};
+    for (const auto& op : cigar) {
+        using CigarFlag = CigarOperation::Flag;
+        switch (op.flag()) {
+            case CigarFlag::substitution: {
+                result += op.size() * snv_log_probability;
+                pos += op.size();
+                break;
+            }
+            case CigarFlag::deletion: pos += op.size();
+            case CigarFlag::insertion: result += std::log(calculate_indel_probability(indel_model, pos, op.size())); break;
+            default: pos += op.size();
+        }
+    }
+    return result;
 }
 
 } // namespace
 
 void DeNovoModel::set_gap_penalties(const Haplotype& given) const
 {
-    const auto contextual_indel_model = indel_model_.evaluate(given);
+    context_indel_model_ = indel_model_.evaluate(given);
     const auto num_bases = sequence_size(given);
-    assert(contextual_indel_model.gap_open.size() == num_bases);
+    assert(context_indel_model_.gap_open.size() == num_bases);
     gap_open_penalties_.resize(num_bases);
-    set_penalties(contextual_indel_model.gap_open, gap_open_penalties_);
-    assert(contextual_indel_model.gap_extend.size() == num_bases);
     gap_extend_penalties_.resize(num_bases);
-    set_penalties(contextual_indel_model.gap_extend, gap_extend_penalties_);
+    set_penalties(context_indel_model_, gap_open_penalties_, gap_extend_penalties_);
 }
 
 void DeNovoModel::set_gap_penalties(const unsigned given) const
@@ -252,9 +277,10 @@ DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given, 
         rotate_right(gap_open_penalties_, hmm::min_flank_pad());
         gap_extend_penalties_.resize(padded_given_.size(), mutation_model.mutation);
         rotate_right(gap_extend_penalties_, hmm::min_flank_pad());
-        result = hmm::evaluate(target.sequence(), padded_given_, mutation_model);
+        auto alignment = hmm::align(target.sequence(), padded_given_, mutation_model);
+        result = recalculate_log_probability(alignment.cigar, mutation_model.mutation, context_indel_model_);
     } else {
-        result = approx_align(target, given, mutation_model);
+        result = calculate_approx_log_probability(target, given, mutation_model.mutation, context_indel_model_);
     }
     return min_ln_probability_ ? std::max(result, *min_ln_probability_) : result;
 }

@@ -72,6 +72,7 @@ private:
     std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;
     
+    mutable IndelMutationModel::ContextIndelModel context_indel_model_;
     mutable PenaltyVector gap_open_penalties_, gap_extend_penalties_;
     mutable std::vector<boost::optional<GapPenaltyModel>> gap_model_index_cache_;
     mutable std::unordered_map<Haplotype, std::unordered_map<Haplotype, LogProbability>> value_cache_;

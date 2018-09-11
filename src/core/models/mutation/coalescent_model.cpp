@@ -310,31 +310,27 @@ CoalescentModel::SiteCountTuple CoalescentModel::count_segregating_sites_in_buff
     return std::make_tuple(site_buffer1_.size() - num_indels, num_indels, num_haplotypes + 1);
 }
 
-CoalescentModel::LogProbability CoalescentModel::calculate_buffered_indel_heterozygosity() const
+double CoalescentModel::calculate_buffered_indel_heterozygosity() const
 {
-    boost::optional<LogProbability> result {};
+    boost::optional<double> max_heterozygosity {};
     for (const auto& site : site_buffer1_) {
         if (is_indel(site)) {
             auto site_heterozygosity = calculate_heterozygosity(site);
-            if (result) {
-                result = std::max(*result, site_heterozygosity);
+            if (max_heterozygosity) {
+                max_heterozygosity = std::max(*max_heterozygosity, site_heterozygosity);
             } else {
-                result = site_heterozygosity;
+                max_heterozygosity = site_heterozygosity;
             }
         }
     }
-    return result ? *result : params_.indel_heterozygosity;
+    return max_heterozygosity ? *max_heterozygosity : params_.indel_heterozygosity;
 }
 
-CoalescentModel::LogProbability CoalescentModel::calculate_heterozygosity(const Variant& indel) const
+double CoalescentModel::calculate_heterozygosity(const Variant& indel) const
 {
     assert(is_indel(indel));
     const auto offset = static_cast<std::size_t>(begin_distance(reference_, indel));
-    const auto indel_length = indel_size(indel);
-    assert(offset < indel_heterozygosity_model_.gap_open.size());
-    constexpr decltype(indel_length) max_indel_length {50};
-    return indel_heterozygosity_model_.gap_open[offset]
-           * std::pow(indel_heterozygosity_model_.gap_extend[offset], std::min(indel_length, max_indel_length) - 1);
+    return calculate_indel_probability(indel_heterozygosity_model_, offset, indel_size(indel));
 }
 
 CoalescentProbabilityGreater::CoalescentProbabilityGreater(CoalescentModel model)
