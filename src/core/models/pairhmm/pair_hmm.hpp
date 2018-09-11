@@ -88,8 +88,42 @@ double evaluate(const std::string& target, const std::string& truth,
 //
 // Warning: The target must be contained by the truth by exactly
 // min_flank_pad() on either side.
+Alignment&
+align(const std::string& target, const std::string& truth,
+      const VariableGapExtendMutationModel& model,
+      Alignment& result);
+
+// p(target | truth, model)
+//
+// Warning: The target must be contained by the truth by exactly
+// min_flank_pad() on either side.
+Alignment
+align(const std::string& target, const std::string& truth,
+      const VariableGapExtendMutationModel& model);
+
+// p(target | truth, model)
+//
+// Warning: The target must be contained by the truth by exactly
+// min_flank_pad() on either side.
 double evaluate(const std::string& target, const std::string& truth,
                 const VariableGapOpenMutationModel& model) noexcept;
+
+// p(target | truth, model)
+//
+// Warning: The target must be contained by the truth by exactly
+// min_flank_pad() on either side.
+Alignment&
+align(const std::string& target, const std::string& truth,
+      const VariableGapOpenMutationModel& model,
+      Alignment& result);
+
+// p(target | truth, model)
+//
+// Warning: The target must be contained by the truth by exactly
+// min_flank_pad() on either side.
+Alignment
+align(const std::string& target, const std::string& truth,
+      const VariableGapOpenMutationModel& model);
 
 // p(target | truth, model)
 //
