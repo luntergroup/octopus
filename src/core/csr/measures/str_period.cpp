@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include <boost/variant.hpp>
+#include <boost/optional.hpp>
 
 #include "io/variant/vcf_record.hpp"
 #include "utils/repeat_finder.hpp"
@@ -23,13 +24,49 @@ std::unique_ptr<Measure> STRPeriod::do_clone() const
 
 namespace {
 
-struct PeriodLess
+struct RepeatContextLess
 {
     bool operator()(const TandemRepeat& lhs, const TandemRepeat& rhs) const noexcept
     {
-        return lhs.period < rhs.period;
+        // Expand to discount possible reference pad
+        const auto expanded_lhs_region = expand_lhs(mapped_region(lhs), 1);
+        const auto expanded_rhs_region = expand_lhs(mapped_region(rhs), 1);
+        if (overlap_size(expanded_lhs_region, call_) != overlap_size(expanded_rhs_region, call_)) {
+            return overlap_size(expanded_lhs_region, call_) < overlap_size(expanded_rhs_region, call_);
+        }
+        return ends_before(lhs, rhs);
     }
+    RepeatContextLess(const VcfRecord& call) : call_ {call} {};
+private:
+    const VcfRecord& call_;
 };
+
+bool could_contain(const TandemRepeat& repeat, const VcfRecord& call)
+{
+    return contains(expand(mapped_region(repeat), 1), call);
+}
+
+boost::optional<TandemRepeat> find_repeat_context(const VcfRecord& call, const Haplotype& reference)
+{
+    const auto repeats = find_exact_tandem_repeats(reference.sequence(), reference.mapped_region(), 1, 20);
+    const auto overlapping_repeats = overlap_range(repeats, expand(mapped_region(call), 1));
+    boost::optional<TandemRepeat> result {};
+    if (!empty(overlapping_repeats)) {
+        for (const auto& repeat : repeats) {
+            if (could_contain(repeat, call)) {
+                if (result) {
+                    result = std::max(repeat, *result, RepeatContextLess {call});
+                } else {
+                    result = repeat;
+                }
+            }
+        }
+        if (!result) {
+            result = *max_overlapped(repeats, call);
+        }
+    }
+    return result;
+}
 
 } // namespace
 
@@ -37,11 +74,8 @@ Measure::ResultType STRPeriod::do_evaluate(const VcfRecord& call, const FacetMap
 {
     int result {0};
     const auto& reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
-    const auto repeats = find_exact_tandem_repeats(reference.sequence(), reference.mapped_region(), 1, 6);
-    const auto overlapping_repeats = overlap_range(repeats, call);
-    if (!empty(overlapping_repeats)) {
-        result = std::max_element(std::cbegin(overlapping_repeats), std::cend(overlapping_repeats), PeriodLess {})->period;
-    }
+    const auto repeat_context = find_repeat_context(call, reference);
+    if (repeat_context) result = repeat_context->period;
     return result;
 }
 
