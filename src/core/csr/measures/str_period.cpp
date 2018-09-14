@@ -76,7 +76,7 @@ Measure::ResultType STRPeriod::do_evaluate(const VcfRecord& call, const FacetMap
     int result {0};
     const auto& reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
     const auto repeat_context = find_repeat_context(call, reference);
-    if (repeat_context) result = repeat_context->period;
+    if (repeat_context) result = repeat_context->period();
     return result;
 }
 
