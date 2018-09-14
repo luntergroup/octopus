@@ -9,6 +9,7 @@
 #include <boost/variant.hpp>
 #include <boost/optional.hpp>
 
+#include "basics/tandem_repeat.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "utils/repeat_finder.hpp"
 #include "../facets/reference_context.hpp"

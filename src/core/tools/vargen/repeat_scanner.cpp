@@ -13,6 +13,7 @@
 #include "config/common.hpp"
 #include "basics/aligned_read.hpp"
 #include "basics/cigar_string.hpp"
+#include "basics/tandem_repeat.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "concepts/mappable_range.hpp"
 #include "utils/mappable_algorithms.hpp"
@@ -232,7 +233,7 @@ find_adjacent_tandem_repeats(const ReferenceGenome& reference, const GenomicRegi
             const auto possible_adjacents = overlap_range(std::next(lhs_itr), std::cend(repeats), expand_rhs(tail_region(*lhs_itr), 1));
             for (const auto& rhs_repeat : possible_adjacents) {
                 if (are_adjacent(*lhs_itr, rhs_repeat)
-                    || static_cast<unsigned>(overlap_size(*lhs_itr, rhs_repeat)) < std::max(lhs_itr->period, rhs_repeat.period)) {
+                    || static_cast<unsigned>(overlap_size(*lhs_itr, rhs_repeat)) < std::max(lhs_itr->period(), rhs_repeat.period())) {
                     result.emplace_back(*lhs_itr, rhs_repeat);
                 }
             }
@@ -240,11 +241,6 @@ find_adjacent_tandem_repeats(const ReferenceGenome& reference, const GenomicRegi
     }
     std::sort(std::begin(result), std::end(result));
     return result;
-}
-
-auto fetch_period(const TandemRepeat& repeat, const ReferenceGenome& reference)
-{
-    return reference.fetch_sequence(head_region(repeat, repeat.period));
 }
 
 unsigned count_whole_repeats(unsigned mnv_length, unsigned repeat_period) noexcept
@@ -290,20 +286,20 @@ void RepeatScanner::generate(const GenomicRegion& region, std::vector<Variant>& 
                 for (const auto& repeat_pair : overlap_range(segment_repeat_pairs, mnv)) {
                     if (are_adjacent(repeat_pair.lhs, mnv) && contains(repeat_pair.rhs, mnv)) {
                         // insertion of lhs repeat, deletion of rhs repeat
-                        const auto num_deleted_periods = count_whole_repeats(region_size(mnv), repeat_pair.rhs.period);
-                        auto deleted_region = head_region(repeat_pair.rhs, repeat_pair.rhs.period * num_deleted_periods);
+                        const auto num_deleted_periods = count_whole_repeats(region_size(mnv), repeat_pair.rhs.period());
+                        auto deleted_region = head_region(repeat_pair.rhs, repeat_pair.rhs.period() * num_deleted_periods);
                         auto deleted_sequence = reference_.get().fetch_sequence(deleted_region);
-                        const auto num_inserted_periods = count_whole_repeats(region_size(deleted_region), repeat_pair.lhs.period);
-                        auto inserted_sequence = repeat(fetch_period(repeat_pair.lhs, reference_), num_inserted_periods);
+                        const auto num_inserted_periods = count_whole_repeats(region_size(deleted_region), repeat_pair.lhs.period());
+                        auto inserted_sequence = repeat(repeat_pair.lhs.motif(), num_inserted_periods);
                         result.emplace_back(std::move(deleted_region), std::move(deleted_sequence), "");
                         result.emplace_back(head_region(repeat_pair.lhs), "", std::move(inserted_sequence));
                     } else if (are_adjacent(mnv, repeat_pair.rhs) && contains(repeat_pair.lhs, mnv)) {
                         // insertion of rhs repeat, deletion of lhs repeat
-                        const auto num_deleted_periods = count_whole_repeats(region_size(mnv), repeat_pair.lhs.period);
-                        auto deleted_region = head_region(repeat_pair.lhs, repeat_pair.lhs.period * num_deleted_periods);
+                        const auto num_deleted_periods = count_whole_repeats(region_size(mnv), repeat_pair.lhs.period());
+                        auto deleted_region = head_region(repeat_pair.lhs, repeat_pair.lhs.period() * num_deleted_periods);
                         auto deleted_sequence = reference_.get().fetch_sequence(deleted_region);
-                        const auto num_inserted_periods = count_whole_repeats(region_size(deleted_region), repeat_pair.rhs.period);
-                        auto inserted_sequence = repeat(fetch_period(repeat_pair.rhs, reference_), num_inserted_periods);
+                        const auto num_inserted_periods = count_whole_repeats(region_size(deleted_region), repeat_pair.rhs.period());
+                        auto inserted_sequence = repeat(repeat_pair.rhs.motif(), num_inserted_periods);
                         result.emplace_back(std::move(deleted_region), std::move(deleted_sequence), "");
                         result.emplace_back(head_region(repeat_pair.rhs), "", std::move(inserted_sequence));
                     }
