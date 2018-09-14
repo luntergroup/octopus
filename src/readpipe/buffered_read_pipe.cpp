@@ -41,6 +41,7 @@ void BufferedReadPipe::clear() noexcept
 
 ReadMap BufferedReadPipe::fetch_reads(const GenomicRegion& region) const
 {
+    if (config_.max_buffer_size == 0) return source_.get().fetch_reads(region);
     setup_buffer(region);
     return copy_overlapped(buffer_, region);
 }
