@@ -73,12 +73,12 @@ IndelMutationModel::ContextIndelModel IndelMutationModel::evaluate(const Haploty
     result.gap_open.resize(haplotype_len, base_probabilities.open);
     result.gap_extend.resize(haplotype_len, base_probabilities.extend);
     for (const auto& repeat : repeats) {
-        assert(repeat.period > 0 && repeat.period <= params_.max_period);
+        assert(repeat.period() > 0 && repeat.period() <= params_.max_period);
         const auto repeat_offset = static_cast<std::size_t>(begin_distance(haplotype, repeat));
         const auto repeat_len = region_size(repeat);
-        const auto num_repeats = static_cast<unsigned>(repeat_len / repeat.period);
+        const auto num_repeats = static_cast<unsigned>(repeat_len / repeat.period());
         assert(num_repeats > 0);
-        const auto& repeat_state = indel_repeat_model_[repeat.period][std::min(num_repeats, params_.max_periodicity)];
+        const auto& repeat_state = indel_repeat_model_[repeat.period()][std::min(num_repeats, params_.max_periodicity)];
         assert(repeat_offset + repeat_len <= result.gap_open.size());
         assert(repeat_offset + repeat_len <= result.gap_extend.size());
         for (auto pos = repeat_offset; pos < (repeat_offset + repeat_len); ++pos) {

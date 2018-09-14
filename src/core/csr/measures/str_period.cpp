@@ -9,6 +9,7 @@
 #include <boost/variant.hpp>
 #include <boost/optional.hpp>
 
+#include "basics/tandem_repeat.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "utils/repeat_finder.hpp"
 #include "../facets/reference_context.hpp"
@@ -75,7 +76,7 @@ Measure::ResultType STRPeriod::do_evaluate(const VcfRecord& call, const FacetMap
     int result {0};
     const auto& reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
     const auto repeat_context = find_repeat_context(call, reference);
-    if (repeat_context) result = repeat_context->period;
+    if (repeat_context) result = repeat_context->period();
     return result;
 }
 
