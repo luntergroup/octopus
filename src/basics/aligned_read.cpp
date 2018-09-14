@@ -302,6 +302,21 @@ GenomicRegion clipped_mapped_region(const AlignedRead& read)
     return expand(mapped_region(read), -static_cast<D>(std::min(p.first, mapped_begin(read))), -static_cast<D>(p.second));
 }
 
+bool has_indel(const AlignedRead& read) noexcept
+{
+    return has_indel(read.cigar());
+}
+
+int sum_indel_sizes(const AlignedRead& read) noexcept
+{
+    return sum_indel_sizes(read.cigar());
+}
+
+int max_indel_size(const AlignedRead& read) noexcept
+{
+    return max_indel_size(read.cigar());
+}
+
 CigarString copy_cigar(const AlignedRead& read, const GenomicRegion& region)
 {
     if (contains(region, read)) return read.cigar();

@@ -94,6 +94,10 @@ bool is_front_soft_clipped(const CigarString& cigar) noexcept;
 bool is_back_soft_clipped(const CigarString& cigar) noexcept;
 bool is_soft_clipped(const CigarString& cigar) noexcept;
 
+bool has_indel(const CigarString& cigar) noexcept;
+int sum_indel_sizes(const CigarString& cigar) noexcept;
+int max_indel_size(const CigarString& cigar) noexcept;
+
 std::pair<CigarOperation::Size, CigarOperation::Size> get_soft_clipped_sizes(const CigarString& cigar) noexcept;
 
 template <typename S = CigarOperation::Size>
