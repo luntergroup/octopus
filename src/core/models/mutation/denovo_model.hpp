@@ -79,6 +79,7 @@ private:
     std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;
     
+    mutable hmm::Alignment alignment_;
     mutable LocalIndelModel tmp_indel_model_;
     mutable LocalIndelModel* local_indel_model_;
     mutable std::vector<boost::optional<LocalIndelModel>> gap_model_index_cache_;
@@ -92,6 +93,7 @@ private:
     LocalIndelModel generate_local_indel_model(const Haplotype& given) const;
     void set_local_indel_model(unsigned given) const;
     hmm::VariableGapExtendMutationModel make_hmm_model_from_cache() const;
+    void align_with_hmm(const Haplotype& target, const Haplotype& given) const;
     LogProbability evaluate_uncached(const Haplotype& target, const Haplotype& given, bool gap_penalties_cached = false) const;
     LogProbability evaluate_uncached(unsigned target, unsigned given) const;
     LogProbability evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const;
