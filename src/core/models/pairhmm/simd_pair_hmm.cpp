@@ -541,7 +541,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
                                                            _mm_add_epi16(_mm_srli_si128(_m1, 2),
                                                                          _gap_open)),
                                              _nuc_prior), inf, bandSize - 1);
-    
+        
         _backpointers[s + 1] = _mm_or_si128(_mm_or_si128(_mm_and_si128(_three, _m2),
                                                          _mm_slli_epi16(_mm_and_si128(_three, _i2), 2 * insertLabel)),
                                             _mm_slli_epi16(_mm_and_si128(_three, _d2), 2 * deleteLabel));
@@ -549,6 +549,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _m2 = _mm_andnot_si128(_three, _m2);
         _i2 = _mm_or_si128(_mm_andnot_si128(_three, _i2), _mm_srli_epi16(_three, 1));
         _d2 = _mm_or_si128(_mm_andnot_si128(_three, _d2), _three);
+    }
+    
+    if (minscoreidx < 0) {
+        // minscore was never updated so we must have overflowed badly
+        first_pos = -1;
+        return -1;
     }
     
     s = minscoreidx;    // point to the dummy match transition
@@ -881,6 +887,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _d2 = _mm_or_si128(_mm_andnot_si128(_three, _d2), _three);
     }
     
+    if (minscoreidx < 0) {
+        // minscore was never updated so we must have overflowed badly
+        first_pos = -1;
+        return -1;
+    }
+    
     s = minscoreidx;    // point to the dummy match transition
     
     auto i      = s / 2 - target_len;
@@ -1096,6 +1108,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _m2 = _mm_andnot_si128(_three, _m2);
         _i2 = _mm_or_si128(_mm_andnot_si128(_three, _i2), _mm_srli_epi16(_three, 1));
         _d2 = _mm_or_si128(_mm_andnot_si128(_three, _d2), _three);
+    }
+    
+    if (minscoreidx < 0) {
+        // minscore was never updated so we must have overflowed badly
+        first_pos = -1;
+        return -1;
     }
     
     s = minscoreidx;    // point to the dummy match transition
