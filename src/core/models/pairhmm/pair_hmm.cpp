@@ -79,6 +79,7 @@ CigarString& make_cigar(const std::vector<char>& align1, const std::vector<char>
     auto align2_itr = std::cbegin(align2);
     const auto last_align1_itr = std::find_if_not(std::crbegin(align1), std::crend(align1), [] (auto x) { return x == 0; }).base();
     const auto last_align2_itr = std::next(align2_itr, std::distance(align1_itr, last_align1_itr));
+    result.clear();
     result.reserve(std::distance(align1_itr, last_align1_itr));
     while (align1_itr != last_align1_itr) {
         const auto p = std::mismatch(align1_itr, last_align1_itr, align2_itr);
@@ -157,6 +158,9 @@ auto simd_align(const std::string& truth, const std::string& target,
                                        model.gap_open.data() + alignment_offset,
                                        model.gap_extend, model.nuc_prior,
                                        align1.data(), align2.data(), first_pos);
+        if (first_pos == -1) {
+            return std::numeric_limits<double>::lowest(); // overflow
+        }
         auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
         if (lhs_flank_size < alignment_offset) {
             lhs_flank_size = 0;
@@ -198,10 +202,12 @@ auto simd_align(const std::string& truth, const std::string& target,
     }
 }
 
-Alignment simd_align_with_cigar(const std::string& truth, const std::string& target,
-                                const std::vector<std::uint8_t>& target_qualities,
-                                const std::size_t target_offset,
-                                const MutationModel& model) noexcept
+Alignment&
+simd_align(const std::string& truth, const std::string& target,
+                      const std::vector<std::uint8_t>& target_qualities,
+                      const std::size_t target_offset,
+                      const MutationModel& model,
+                      Alignment& result)
 {
     constexpr auto pad = simd::min_flank_pad();
     const auto truth_size  = static_cast<int>(truth.size());
@@ -209,7 +215,10 @@ Alignment simd_align_with_cigar(const std::string& truth, const std::string& tar
     const auto truth_alignment_size = static_cast<int>(target_size + 2 * pad - 1);
     const auto alignment_offset = std::max(0, static_cast<int>(target_offset) - pad);
     if (alignment_offset + truth_alignment_size > truth_size) {
-        return {0, CigarString {}, std::numeric_limits<double>::lowest()};
+        result.target_offset = 0;
+        result.likelihood = std::numeric_limits<double>::lowest();
+        result.cigar = {};
+        return result;
     }
     const auto qualities = reinterpret_cast<const std::int8_t*>(target_qualities.data());
     thread_local std::vector<char> align1 {}, align2 {};
@@ -227,6 +236,9 @@ Alignment simd_align_with_cigar(const std::string& truth, const std::string& tar
                              model.gap_open.data() + alignment_offset,
                              model.gap_extend, model.nuc_prior,
                              align1.data(), align2.data(), first_pos);
+    if (first_pos == -1) {
+        throw HMMOverflow {target, truth};
+    }
     if (use_adjusted_alignment_score(truth, target, target_offset, model)) {
         auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
         if (lhs_flank_size < alignment_offset) {
@@ -267,7 +279,10 @@ Alignment simd_align_with_cigar(const std::string& truth, const std::string& tar
         }
     }
     auto mapping_position = target_offset - pad + first_pos;
-    return {mapping_position, make_cigar(align1, align2), -ln10Div10<> * static_cast<double>(score)};
+    result.target_offset = mapping_position;
+    result.likelihood = -ln10Div10<> * static_cast<double>(score);
+    make_cigar(align1, align2, result.cigar);
+    return result;
 }
 
 unsigned min_flank_pad() noexcept
@@ -342,19 +357,30 @@ double evaluate(const std::string& target, const std::string& truth,
     return simd_align(truth, target, target_qualities, target_offset, model);
 }
 
-Alignment align(const std::string& target, const std::string& truth,
-                const std::vector<std::uint8_t>& target_qualities,
-                std::size_t target_offset,
-                const MutationModel& model)
+Alignment&
+align(const std::string& target, const std::string& truth,
+      const std::vector<std::uint8_t>& target_qualities,
+      std::size_t target_offset, const MutationModel& model,
+      Alignment& result)
 {
     validate(truth, target, target_qualities, target_offset, model);
     if (std::equal(std::cbegin(target), std::cend(target), std::next(std::cbegin(truth), target_offset))) {
-        return {target_offset,
-                {CigarOperation {static_cast<CigarOperation::Size>(target.size()), CigarOperation::Flag::sequenceMatch}},
-                0};
+        result.target_offset = target_offset;
+        result.likelihood = 0;
+        result.cigar.assign({CigarOperation {static_cast<CigarOperation::Size>(target.size()), CigarOperation::Flag::sequenceMatch}});
     } else {
-        return simd_align_with_cigar(truth, target, target_qualities, target_offset, model);
+        simd_align(truth, target, target_qualities, target_offset, model, result);
     }
+    return result;
+}
+
+Alignment align(const std::string& target, const std::string& truth,
+                const std::vector<std::uint8_t>& target_qualities,
+                std::size_t target_offset, const MutationModel& model)
+{
+    Alignment result {};
+    align(target, truth, target_qualities, target_offset, model, result);
+    return result;
 }
 
 double evaluate(const std::string& target, const std::string& truth, const VariableGapExtendMutationModel& model) noexcept
@@ -411,7 +437,9 @@ align(const std::string& target, const std::string& truth,
     const auto truth_begin = next(cbegin(truth), min_flank_pad());
     const auto m1 = std::mismatch(cbegin(target), cend(target), truth_begin);
     if (m1.first == cend(target)) {
-        result = {0, {CigarOperation {static_cast<CigarOperation::Size>(target.size()), CigarOperation::Flag::sequenceMatch}}, 0};
+        result.likelihood = 0;
+        result.target_offset = 0;
+        result.cigar.assign({CigarOperation {static_cast<CigarOperation::Size>(target.size()), CigarOperation::Flag::sequenceMatch}});
         return result; // sequences are equal, can't do better than this
     }
     const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
@@ -430,6 +458,9 @@ align(const std::string& target, const std::string& truth,
                              model.gap_extend.data(),
                              model.nuc_prior,
                              first_pos, align1.data(), align2.data());
+    if (first_pos == -1) {
+        throw HMMOverflow {target, truth};
+    }
     result.likelihood = -ln10Div10<> * static_cast<double>(score);
     make_cigar(align1, align2, result.cigar);
     result.target_offset = first_pos;
@@ -499,8 +530,11 @@ align(const std::string& target, const std::string& truth,
     const auto truth_begin = next(cbegin(truth), min_flank_pad());
     const auto m1 = std::mismatch(cbegin(target), cend(target), truth_begin);
     if (m1.first == cend(target)) {
-        result = {0, {CigarOperation {static_cast<CigarOperation::Size>(target.size()), CigarOperation::Flag::sequenceMatch}}, 0};
-        return result; // sequences are equal, can't do better than this
+        // sequences are equal, can't do better than this
+        result.likelihood = 0;
+        result.target_offset = 0;
+        result.cigar.assign({CigarOperation {static_cast<CigarOperation::Size>(target.size()), CigarOperation::Flag::sequenceMatch}});
+        return result;
     }
     const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
