@@ -199,7 +199,7 @@ IndelProfiler::read_next_data_batch(VcfIterator& first, const VcfIterator& last,
     if (!records.empty()) {
         batch_region = encompassing_region(records);
         if (prev_batch_region && is_same_contig(batch_region, *prev_batch_region)) {
-            batch_region = expand_lhs(batch_region, intervening_region_size(*prev_batch_region, batch_region) / 2);
+            batch_region = right_overhang_region(batch_region, *prev_batch_region);
         } else {
             batch_region = closed_region(analysis_region, batch_region);
         }
@@ -216,15 +216,11 @@ IndelProfiler::read_next_data_batch(VcfIterator& first, const VcfIterator& last,
     DataBatch result {Haplotype {std::move(batch_region), reference}, {}, {}, {}};
     if (is_empty_region(result.reference)) return result;
     auto reads = src.fetch_reads(mapped_region(result.reference));
+    auto repeat_search_region = mapped_region(result.reference);
     if (has_coverage(reads)) {
-        result.repeats[result.reference] = find_repeats(result.reference);
-    } else {
         const auto reads_region = encompassing_region(reads);
-        if (contains(result.reference, reads_region)) {
-            result.repeats[result.reference] = find_repeats(result.reference);
-        } else {
-            const auto expanded_reference = remap(result.reference, reads_region);
-            result.repeats[result.reference] = find_repeats(expanded_reference);
+        if (!contains(result.reference, reads_region)) {
+            repeat_search_region = reads_region;
         }
     }
     if (!records.empty()) {
@@ -266,9 +262,20 @@ IndelProfiler::read_next_data_batch(VcfIterator& first, const VcfIterator& last,
         }
     }
     result.repeats.reserve(result.support.size() + 1);
+    if (contains(result.reference, repeat_search_region)) {
+        result.repeats[result.reference] = find_repeats(result.reference);
+    } else {
+        const auto expanded_reference = remap(result.reference, repeat_search_region);
+        result.repeats[result.reference] = find_repeats(expanded_reference);
+    }
     for (auto& p : result.support) {
         if (result.repeats.count(p.first) == 0) {
-            result.repeats[p.first] = find_repeats(p.first);
+            if (contains(p.first, repeat_search_region)) {
+                result.repeats[p.first] = find_repeats(p.first);
+            } else {
+                const auto expanded_haplotype = remap(p.first, repeat_search_region);
+                result.repeats[p.first] = find_repeats(expanded_haplotype);
+            }
         }
         p.second.shrink_to_fit();
     }
