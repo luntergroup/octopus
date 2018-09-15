@@ -43,6 +43,8 @@ public:
     
     ~DeNovoModel() = default;
     
+    Parameters parameters() const;
+    
     void prime(std::vector<Haplotype> haplotypes);
     void unprime() noexcept;
     bool is_primed() const noexcept;
@@ -62,19 +64,24 @@ private:
         }
     };
     
-    using PenaltyVector   = hmm::VariableGapOpenMutationModel::PenaltyVector;
-    using GapPenaltyModel = std::pair<PenaltyVector, PenaltyVector>;
+    using PenaltyVector = hmm::VariableGapOpenMutationModel::PenaltyVector;
+    struct LocalIndelModel
+    {
+        IndelMutationModel::ContextIndelModel indel;
+        PenaltyVector open, extend;
+    };
     
-    hmm::FlatGapMutationModel flat_mutation_model_;
+    Parameters params_;
+    std::int8_t snv_penalty_;
     IndelMutationModel indel_model_;
     boost::optional<LogProbability> min_ln_probability_;
     std::size_t num_haplotypes_hint_;
     std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;
     
-    mutable IndelMutationModel::ContextIndelModel context_indel_model_;
-    mutable PenaltyVector gap_open_penalties_, gap_extend_penalties_;
-    mutable std::vector<boost::optional<GapPenaltyModel>> gap_model_index_cache_;
+    mutable LocalIndelModel tmp_indel_model_;
+    mutable LocalIndelModel* local_indel_model_;
+    mutable std::vector<boost::optional<LocalIndelModel>> gap_model_index_cache_;
     mutable std::unordered_map<Haplotype, std::unordered_map<Haplotype, LogProbability>> value_cache_;
     mutable std::unordered_map<std::pair<const Haplotype*, const Haplotype*>, LogProbability, AddressPairHash> address_cache_;
     mutable std::vector<std::vector<boost::optional<double>>> guarded_index_cache_;
@@ -82,8 +89,8 @@ private:
     mutable std::string padded_given_;
     mutable bool use_unguarded_;
     
-    void set_gap_penalties(const Haplotype& given) const;
-    void set_gap_penalties(unsigned given) const;
+    LocalIndelModel generate_local_indel_model(const Haplotype& given) const;
+    void set_local_indel_model(unsigned given) const;
     hmm::VariableGapExtendMutationModel make_hmm_model_from_cache() const;
     LogProbability evaluate_uncached(const Haplotype& target, const Haplotype& given, bool gap_penalties_cached = false) const;
     LogProbability evaluate_uncached(unsigned target, unsigned given) const;
@@ -92,6 +99,5 @@ private:
 };
 
 } // namespace octopus
-
  
 #endif
