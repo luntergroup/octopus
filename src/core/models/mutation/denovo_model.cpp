@@ -36,6 +36,8 @@ DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint,
 , num_haplotypes_hint_ {num_haplotypes_hint}
 , haplotypes_ {}
 , caching_ {caching}
+, alignment_ {}
+, tmp_indel_model_ {}
 , local_indel_model_ {}
 , gap_model_index_cache_ {}
 , value_cache_ {}
@@ -149,7 +151,7 @@ auto sequence_length_distance(const Haplotype& lhs, const Haplotype& rhs) noexce
     return p.second - p.first;
 }
 
-bool can_align_with_hmm(const Haplotype& target, const Haplotype& given) noexcept
+bool can_try_align_with_hmm(const Haplotype& target, const Haplotype& given) noexcept
 {
     return sequence_length_distance(target, given) < hmm::min_flank_pad();
 }
@@ -191,13 +193,14 @@ void set_penalties(const IndelMutationModel::ContextIndelModel& indel_model,
                    [] (const auto& probs) noexcept { return probability_to_penalty(probs[1]); });
 }
 
-auto recalculate_log_probability(const CigarString& cigar, const double snv_probability,
+auto recalculate_log_probability(const CigarString& alignment, const double snv_probability,
                                  const IndelMutationModel::ContextIndelModel& indel_model)
 {
+    assert(reference_size(alignment) == indel_model.gap_open.size());
     const auto snv_log_probability = std::log(snv_probability);
     double result {0};
     std::size_t pos {0};
-    for (const auto& op : cigar) {
+    for (const auto& op : alignment) {
         if (op.flag() == CigarOperation::Flag::substitution) {
             result += op.size() * snv_log_probability;
             pos += op.size();
@@ -257,9 +260,13 @@ DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given, 
         local_indel_model_ = std::addressof(tmp_indel_model_);
     }
     LogProbability result;
-    if (can_align_with_hmm(target, given)) {
-        align_with_hmm(target, given);
-        result = recalculate_log_probability(alignment_.cigar, params_.snv_mutation_rate, local_indel_model_->indel);
+    if (can_try_align_with_hmm(target, given)) {
+        try {
+            align_with_hmm(target, given);
+            result = recalculate_log_probability(alignment_.cigar, params_.snv_mutation_rate, local_indel_model_->indel);
+        } catch (const hmm::HMMOverflow&) {
+            result = calculate_approx_log_probability(target, given, params_.snv_mutation_rate, local_indel_model_->indel);
+        }
     } else {
         result = calculate_approx_log_probability(target, given, params_.snv_mutation_rate, local_indel_model_->indel);
     }
