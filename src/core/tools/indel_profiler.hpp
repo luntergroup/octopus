@@ -94,6 +94,7 @@ private:
     void evaluate_indel_profile(const DataBatch& data, IndelProfile& result) const;
     void evaluate_support(const Genotype<Haplotype>& genotype, ReadContainer& reads, HaplotypeReadSupportMap& result) const;
     MappableFlatSet<TandemRepeat> find_repeats(const Haplotype& haplotype) const;
+    bool is_good_repeat(const TandemRepeat& repeat) const;
 };
 
 struct IndelProfiler::IndelProfile

@@ -18,6 +18,7 @@
 #include "utils/append.hpp"
 #include "utils/repeat_finder.hpp"
 #include "utils/read_stats.hpp"
+#include "utils/sequence_utils.hpp"
 #include "read_realigner.hpp"
 
 #include "logging/progress_meter.hpp"
@@ -533,12 +534,17 @@ MappableFlatSet<TandemRepeat> IndelProfiler::find_repeats(const Haplotype& haplo
 {
     auto repeats = find_tandem_repeats(haplotype, config_.min_period, config_.max_period);
     repeats.erase(std::remove_if(std::begin(repeats), std::end(repeats),
-                                 [this] (const auto& repeat) {
-                                     const auto periods = count_periods(repeat);
-                                     return periods < config_.min_periods || periods > config_.max_periods
-                                          || region_size(repeat) > config_.max_length;
-                                 }), std::end(repeats));
+                                 [this] (const auto& repeat) { return !is_good_repeat(repeat); }),
+                                 std::end(repeats));
     return find_minimum_spanning_set(std::move(repeats));
+}
+
+bool IndelProfiler::is_good_repeat(const TandemRepeat& repeat) const
+{
+    if (!(utils::is_canonical_dna_or_rna(repeat.motif()))) return false;
+    if (repeat.period() > 1 && utils::is_homopolymer(repeat.motif())) return false;
+    const auto periods = count_periods(repeat);
+    return periods >= config_.min_periods && periods <= config_.max_periods && region_size(repeat) <= config_.max_length;
 }
 
 IndelProfiler::IndelProfile
