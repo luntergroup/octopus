@@ -13,6 +13,7 @@
 #include "core/types/genotype.hpp"
 #include "core/models/mutation/coalescent_model.hpp"
 #include "core/models/genotype/population_prior_model.hpp"
+#include "core/models/genotype/genotype_prior_model.hpp"
 #include "core/models/mutation/denovo_model.hpp"
 #include "core/models/genotype/trio_model.hpp"
 
@@ -91,6 +92,7 @@ private:
                    const ReadPileupMap& pileups) const;
     
     std::unique_ptr<PopulationPriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    std::unique_ptr<GenotypePriorModel> make_single_sample_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
 
 class TrioCaller::Latents : public Caller::Latents
@@ -121,9 +123,16 @@ private:
     std::vector<double> marginal_maternal_posteriors, marginal_paternal_posteriors, marginal_child_posteriors;
     mutable std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
     std::shared_ptr<HaplotypeProbabilityMap> marginal_haplotype_posteriors;
+    std::vector<Genotype<Haplotype>> concatenated_genotypes_;
+    std::vector<double> padded_marginal_maternal_posteriors_, padded_marginal_paternal_posteriors_, padded_marginal_child_posteriors_;
+    unsigned child_ploidy_;
     
     void set_genotype_posteriors(const Trio& trio);
+    void set_genotype_posteriors_shared_genotypes(const Trio& trio);
+    void set_genotype_posteriors_unique_genotypes(const Trio& trio);
     void set_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
+    void set_haplotype_posteriors_shared_genotypes(const std::vector<Haplotype>& haplotypes);
+    void set_haplotype_posteriors_unique_genotypes(const std::vector<Haplotype>& haplotypes);
 };
 
 } // namespace octopus
