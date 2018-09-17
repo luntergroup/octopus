@@ -169,7 +169,7 @@ const std::string& MappingQualityDivergence::do_name() const
 
 std::string MappingQualityDivergence::do_describe() const
 {
-    return "Symmetric KL divergence of reads supporting the REF verses ALT alleles";
+    return "Maximum pairwise difference in median mapping qualities of reads supporting each haplotype";
 }
 
 std::vector<std::string> MappingQualityDivergence::do_requirements() const
