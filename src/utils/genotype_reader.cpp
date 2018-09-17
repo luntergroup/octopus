@@ -138,10 +138,11 @@ make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence
 auto extract_genotype(const VcfRecord& call, const SampleName& sample)
 {
     auto genotype = get_genotype(call, sample);
-    boost::optional<int> max_ref_pad {};
-    std::vector<std::size_t> unknown_pad_indices {};
     const auto ploidy = genotype.size();
     std::vector<boost::optional<ContigAllele>> result(ploidy, boost::none);
+    if (ploidy == 0) return result;
+    boost::optional<int> max_ref_pad {};
+    std::vector<std::size_t> unknown_pad_indices {};
     for (std::size_t i {0}; i < ploidy; ++i) {
         auto& allele = genotype[i];
         if (is_ref_pad_size_known(allele, call)) {
@@ -323,46 +324,39 @@ GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls,
 {
     if (calls.empty()) return {};
     GenotypeMap result {samples.size()};
-    
     for (const auto& sample : samples) {
         const auto wrapped_calls = segment_overlapped_copy(wrap_calls(calls, sample));
-        using InitList = std::initializer_list<Genotype<Haplotype>>;
         if (wrapped_calls.size() == 1) {
             if (!call_region) {
                 call_region = encompassing_region(wrapped_calls.front());
             }
-            result.emplace(std::piecewise_construct,
-                           std::forward_as_tuple(sample),
-                           std::forward_as_tuple(InitList {
-                                extract_genotype(wrapped_calls.front(), *call_region, sample, reference)
-                            }));
+            auto genotype = extract_genotype(wrapped_calls.front(), *call_region, sample, reference);
+            if (genotype.ploidy() > 0) result[sample] = {std::move(genotype)};
         } else { // wrapped_calls.size() > 1
-            auto it = std::cbegin(wrapped_calls);
+            auto call_itr = std::cbegin(wrapped_calls);
             GenomicRegion region;
             if (call_region) {
-                region = left_overhang_region(*call_region, std::next(it)->front());
+                region = left_overhang_region(*call_region, std::next(call_itr)->front());
             } else {
-                region = left_overhang_region(it->front(), std::next(it)->front());
+                region = left_overhang_region(call_itr->front(), std::next(call_itr)->front());
             }
-            result.emplace(std::piecewise_construct,
-                           std::forward_as_tuple(sample),
-                           std::forward_as_tuple(InitList {
-                                extract_genotype(*it, region, sample, reference)
-                            }));
-            ++it;
-            for (auto penultimate = std::prev(std::cend(wrapped_calls)); it != penultimate; ++it) {
-                region = *intervening_region(std::prev(it)->back(), std::next(it)->front());
-                result.at(sample).insert(extract_genotype(*it, region, sample, reference));
+            auto genotype = extract_genotype(*call_itr, region, sample, reference);
+            if (genotype.ploidy() > 0) result[sample] = {std::move(genotype)};
+            ++call_itr;
+            for (auto penultimate = std::prev(std::cend(wrapped_calls)); call_itr != penultimate; ++call_itr) {
+                region = *intervening_region(std::prev(call_itr)->back(), std::next(call_itr)->front());
+                genotype = extract_genotype(*call_itr, region, sample, reference);
+                if (genotype.ploidy() > 0) result.at(sample).insert(std::move(genotype));
             }
             if (call_region) {
-                region = right_overhang_region(*call_region, std::prev(it)->back());
+                region = right_overhang_region(*call_region, std::prev(call_itr)->back());
             } else {
-                region = right_overhang_region(it->back(), std::prev(it)->back());
+                region = right_overhang_region(call_itr->back(), std::prev(call_itr)->back());
             }
-            result.at(sample).insert(extract_genotype(*it, region, sample, reference));
+            genotype = extract_genotype(*call_itr, region, sample, reference);
+            if (genotype.ploidy() > 0) result.at(sample).insert(std::move(genotype));
         }
     }
-    
     return result;
 }
 
