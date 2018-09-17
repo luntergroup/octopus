@@ -90,6 +90,8 @@ boost::optional<fs::path> split_bamout_request(const OptionMap& options);
 
 unsigned estimate_max_open_files(const OptionMap& options);
 
+boost::optional<fs::path> data_profile_request(const OptionMap& options);
+
 } // namespace options
 } // namespace octopus
 

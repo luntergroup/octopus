@@ -2029,5 +2029,13 @@ unsigned estimate_max_open_files(const OptionMap& options)
     return result;
 }
 
+boost::optional<fs::path> data_profile_request(const OptionMap& options)
+{
+    if (is_set("data-profile", options)) {
+        return resolve_path(options.at("data-profile").as<fs::path>(), options);
+    }
+    return boost::none;
+}
+
 } // namespace options
 } // namespace octopus

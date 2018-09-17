@@ -54,6 +54,7 @@
 #include "csr/filters/variant_call_filter_factory.hpp"
 #include "readpipe/buffered_read_pipe.hpp"
 #include "core/tools/bam_realigner.hpp"
+#include "core/tools/indel_profiler.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -211,6 +212,24 @@ void log_startup_info(const GenomeCallingComponents& components)
     }
 }
 
+VcfWriter& get_final_output(GenomeCallingComponents& components)
+{
+    if (apply_csr(components)) {
+        return *components.filtered_output();
+    } else {
+        return components.output();
+    }
+}
+
+auto get_final_output_path(const GenomeCallingComponents& components)
+{
+    if (components.filtered_output()) {
+        return components.filtered_output()->path();
+    } else {
+        return components.output().path();
+    }
+}
+
 void log_finish_info(const GenomeCallingComponents& components, const utils::TimeInterval run_duration)
 {
     using utils::TimeInterval;
@@ -219,13 +238,8 @@ void log_finish_info(const GenomeCallingComponents& components, const utils::Tim
     stream(info_log) << "Finished calling "
                      << utils::format_with_commas(search_size) << "bp, total runtime "
                      << run_duration;
-    auto output_path = components.output().path();
-    if (apply_csr(components)) {
-        output_path = components.filtered_output()->path();
-    }
-    if (output_path) {
-        stream(info_log) << "Calls have been written to " << *output_path;
-    }
+    const auto output_path = get_final_output_path(components);
+    if (output_path) stream(info_log) << "Calls have been written to " << *output_path;
 }
 
 void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
@@ -1310,34 +1324,6 @@ void run_csr(GenomeCallingComponents& components)
     }
 }
 
-void convert_to_legacy(const boost::filesystem::path& src, const boost::filesystem::path& dest)
-{
-    const VcfReader in {src};
-    VcfWriter out {dest};
-    convert_to_legacy(in, out);
-}
-
-VcfWriter& get_final_output(GenomeCallingComponents& components)
-{
-    if (apply_csr(components)) {
-        return *components.filtered_output();
-    } else {
-        return components.output();
-    }
-}
-
-void run_legacy_generation(GenomeCallingComponents& components)
-{
-    if (components.legacy()) {
-        VcfWriter& final_output {get_final_output(components)};
-        const auto output_path = final_output.path();
-        if (output_path) {
-            destroy(final_output);
-            convert_to_legacy(*output_path, *components.legacy());
-        }
-    }
-}
-
 void log_run_start(const GenomeCallingComponents& components)
 {
     static auto debug_log = get_debug_log();
@@ -1352,10 +1338,10 @@ class CallingBug : public ProgramError
     {
         if (what_) {
             return "Encountered an exception during calling '" + *what_ + "'. This means there is a bug"
-            " and your results are untrustworthy.";
+                                                                          " and your results are untrustworthy.";
         } else {
             return "Encountered an unknown error during calling. This means there is a bug"
-            " and your results are untrustworthy.";
+                   " and your results are untrustworthy.";
         }
     }
     
@@ -1364,6 +1350,70 @@ public:
     CallingBug() = default;
     CallingBug(const std::exception& e) : what_ {e.what()} {}
 };
+
+void run_variant_calling(GenomeCallingComponents& components, std::string command)
+{
+    static auto debug_log = get_debug_log();
+    log_run_start(components);
+    write_caller_output_header(components, command);
+    const auto start = std::chrono::system_clock::now();
+    try {
+        if (!components.filter_request()) {
+            run_calling(components);
+        }
+    } catch (const ProgramError& e) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw;
+    } catch (const std::exception& e) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {e};
+    } catch (...) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {};
+    }
+    components.output().close();
+    try {
+        run_csr(components);
+    } catch (...) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {};
+    }
+    const auto end = std::chrono::system_clock::now();
+    log_finish_info(components, {start, end});
+}
+
+void convert_to_legacy(const boost::filesystem::path& src, const boost::filesystem::path& dest)
+{
+    const VcfReader in {src};
+    VcfWriter out {dest};
+    convert_to_legacy(in, out);
+}
+
+void run_legacy_generation(GenomeCallingComponents& components)
+{
+    if (components.legacy()) {
+        VcfWriter& final_output {get_final_output(components)};
+        const auto output_path = final_output.path();
+        if (output_path) {
+            logging::InfoLogger log {};
+            destroy(final_output);
+            convert_to_legacy(*output_path, *components.legacy());
+            stream(log) << "Legacy VCF file written to " << *components.legacy();
+        }
+    }
+}
 
 bool is_bam_realignment_requested(const GenomeCallingComponents& components)
 {
@@ -1461,16 +1511,6 @@ auto get_max_called_ploidy(const boost::filesystem::path& output_vcf, const boos
     return get_max_called_ploidy(vcf, usable_samples);
 }
 
-
-auto get_final_output_path(const GenomeCallingComponents& components)
-{
-    if (apply_csr(components)) {
-        return components.filtered_output()->path();
-    } else {
-        return components.output().path();
-    }
-}
-
 auto get_max_ploidy(const GenomeCallingComponents& components)
 {
     if (is_called_ploidy_known(components)) {
@@ -1564,54 +1604,38 @@ void run_bam_realign(GenomeCallingComponents& components)
     }
 }
 
+void run_data_profiler(GenomeCallingComponents& components)
+{
+    const auto data_profile_csv_path = components.data_profile();
+    if (data_profile_csv_path) {
+        logging::InfoLogger info_log {};
+        VcfWriter& final_output {get_final_output(components)};
+        const auto final_output_path = final_output.path();
+        if (final_output_path) {
+            info_log << "Starting indel profiler";
+            final_output.close();
+            if (is_indexable(*final_output_path)) index_vcf(*final_output_path);
+            const auto profile = profile_indels(components.read_pipe(), *final_output_path, components.reference(), components.search_regions());
+            std::ofstream profile_file {data_profile_csv_path->string()};
+            profile_file << profile;
+            stream(info_log) << "Indel profile written to " << *data_profile_csv_path;
+        } else {
+            info_log << "Did not run indel profiler as calls not written to file";
+        }
+    }
+}
+
+void run_post_calling_requests(GenomeCallingComponents& components)
+{
+    run_data_profiler(components);
+    run_bam_realign(components);
+    run_legacy_generation(components);
+}
+
 void run_octopus(GenomeCallingComponents& components, std::string command)
 {
-    static auto debug_log = get_debug_log();
-    log_run_start(components);
-    write_caller_output_header(components, command);
-    const auto start = std::chrono::system_clock::now();
-    try {
-        if (!components.filter_request()) {
-            run_calling(components);
-        }
-    } catch (const ProgramError& e) {
-        try {
-            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
-            cleanup(components);
-        } catch (...) {}
-        throw;
-    } catch (const std::exception& e) {
-        try {
-            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
-            cleanup(components);
-        } catch (...) {}
-        throw CallingBug {e};
-    } catch (...) {
-        try {
-            if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
-            cleanup(components);
-        } catch (...) {}
-        throw CallingBug {};
-    }
-    components.output().close();
-    try {
-        run_csr(components);
-    } catch (...) {
-        try {
-            if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
-            cleanup(components);
-        } catch (...) {}
-        throw CallingBug {};
-    }
-    try {
-        run_legacy_generation(components);
-    } catch (...) {
-        logging::WarningLogger warn_log {};
-        warn_log << "Failed to make legacy vcf";
-    }
-    const auto end = std::chrono::system_clock::now();
-    log_finish_info(components, {start, end});
-    run_bam_realign(components);
+    run_variant_calling(components, std::move(command));
+    run_post_calling_requests(components);
     cleanup(components);
 }
 

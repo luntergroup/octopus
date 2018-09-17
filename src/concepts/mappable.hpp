@@ -159,9 +159,9 @@ decltype(auto) contig_name(const Mappable<T>& mappable) noexcept
 }
 
 template <typename T>
-auto is_same_contig(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
+auto is_same_contig(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
 {
-    return is_same_contig(static_cast<const T&>(lhs).mapped_region(), rhs);
+    return is_same_contig(lhs, static_cast<const T&>(rhs).mapped_region());
 }
 
 template <typename T>
