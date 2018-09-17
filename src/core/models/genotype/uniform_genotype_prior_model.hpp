@@ -11,6 +11,8 @@ namespace octopus {
 class UniformGenotypePriorModel : public GenotypePriorModel
 {
 public:
+    using GenotypePriorModel::LogProbability;
+    
     UniformGenotypePriorModel() = default;
     
     UniformGenotypePriorModel(const UniformGenotypePriorModel&)            = default;
@@ -21,8 +23,8 @@ public:
     virtual ~UniformGenotypePriorModel() = default;
     
 private:
-    virtual double do_evaluate(const Genotype<Haplotype>& genotype) const override { return 1.0; }
-    virtual double do_evaluate(const GenotypeIndex& genotype) const override { return 1.0; }
+    virtual LogProbability do_evaluate(const Genotype<Haplotype>& genotype) const override { return 1.0; }
+    virtual LogProbability do_evaluate(const GenotypeIndex& genotype) const override { return 1.0; }
     bool check_is_primed() const noexcept override { return true; }
 };
 

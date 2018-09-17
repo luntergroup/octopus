@@ -94,6 +94,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-open-read-files",
      po::value<int>()->default_value(250),
      "Limits the number of read files that can be open simultaneously")
+    
+     ("target-working-memory",
+     po::value<MemoryFootprint>(),
+     "Target working memory footprint for analysis not including read or reference footprint")
     ;
     
     po::options_description input("I/O");
@@ -174,7 +178,15 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("bamout",
      po::value<fs::path>(),
-     "Output a realigned BAM file")
+     "Output realigned BAM files")
+    
+     ("split-bamout",
+      po::value<fs::path>(),
+      "Output split realigned BAM files")
+    
+     ("data-profile",
+      po::value<fs::path>(),
+      "Output a profile of polymorphisms and errors found in the data")
     ;
     
     po::options_description transforms("Read transformations");
@@ -186,7 +198,11 @@ OptionMap parse_options(const int argc, const char** argv)
     ("mask-low-quality-tails",
      po::value<int>()->implicit_value(3),
      "Masks read tail bases with base quality less than this")
-    
+     
+     ("mask-tails",
+     po::value<int>()->implicit_value(1),
+     "Unconditionally mask this many read tail sbases")
+     
     ("soft-clip-masking",
      po::value<bool>()->default_value(true),
      "Turn on or off soft clip base recalibration")
@@ -264,11 +280,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("no-reads-with-unmapped-segments",
      po::bool_switch()->default_value(false),
-     "Filter reads with unmapped template segmenets to be used for calling")
+     "Filter reads with unmapped template segments to be used for calling")
     
     ("no-reads-with-distant-segments",
      po::bool_switch()->default_value(false),
-     "Filter reads with template segmenets that are on different contigs")
+     "Filter reads with template segments that are on different contigs")
     
     ("no-adapter-contaminated-reads",
      po::bool_switch()->default_value(false),
@@ -293,6 +309,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Enable candidate generation from raw read alignments (CIGAR strings)")
     
+    ("repeat-candidate-generator",
+     po::value<bool>()->default_value(true),
+     "Enable candidate generation from adjusted read alignments (CIGAR strings) around tandem repeats")
+    
     ("assembly-candidate-generator,a",
      po::value<bool>()->default_value(true),
      "Enable candidate generation using local re-assembly")
@@ -308,7 +328,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-source-quality",
      po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
      "Only variants with quality above this value are considered for candidate generation")
-
+    
     ("extract-filtered-source-candidates",
      po::value<bool>()->default_value(false),
      "Extract variants from source VCF records that have been filtered")
@@ -401,6 +421,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("dedup-haplotypes-with-prior-model",
      po::value<bool>()->default_value(true),
      "Remove duplicate haplotypes using mutation prior model")
+    
+    ("protect-reference-haplotype",
+     po::value<bool>()->default_value(true),
+     "Protect the reference haplotype from filtering")
     ;
     
     po::options_description caller("Calling (general)");
@@ -416,7 +440,8 @@ OptionMap parse_options(const int argc, const char** argv)
     ("contig-ploidies,p",
      po::value<std::vector<ContigPloidy>>()->multitoken()
      ->default_value(std::vector<ContigPloidy> {
-        {boost::none, "Y", 1}, {boost::none, "MT", 1}}, "Y=1 MT=1")
+        {boost::none, "Y", 1}, {boost::none, "chrY", 1},
+        {boost::none, "MT", 1}, {boost::none, "chrM", 1}}, "Y=1 chrY=1 MT=1 chrM=1")
      ->composing(),
      "Space-separated list of contig (contig=ploidy) or sample contig"
      " (sample:contig=ploidy) ploidies")
@@ -427,7 +452,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " (sample:contig=ploidy) ploidies, one per line")
     
     ("min-variant-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
+     po::value<Phred<double>>()->default_value(Phred<double> {1.0}),
      "Report variant alleles with posterior probability (phred scale) greater than this")
     
     ("refcall",
@@ -484,6 +509,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("sequence-error-model",
      po::value<std::string>()->default_value("HiSeq"),
      "The sequencer error model to use (HiSeq or xTen)")
+    
+    ("max-vb-seeds",
+     po::value<int>()->default_value(12),
+     "Maximum number of seeds to use for Variational Bayes algorithms")
     ;
     
     po::options_description cancer("Calling (cancer)");
@@ -512,6 +541,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<float>()->default_value(0.01, "0.01"),
      "Minimum credible somatic allele frequency that will be reported")
     
+     ("tumour-germline-concentration",
+     po::value<float>()->default_value(1.5, "1.5"),
+     "Concentration parameter for germline haplotypes in tumour samples")
+     
     ("credible-mass",
      po::value<float>()->default_value(0.9, "0.9"),
      "Mass of the posterior density to use for evaluating allele frequencies")
@@ -523,7 +556,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("normal-contamination-risk",
      po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
      "The risk the normal sample has contamination from the tumour")
-
+    
     ("somatics-only",
      po::bool_switch()->default_value(false),
      "Only emit SOMATIC mutations")
@@ -539,11 +572,11 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>(),
      "Paternal sample")
     
-    ("snv-denovo-mutation-rate",
+    ("denovo-snv-mutation-rate",
      po::value<float>()->default_value(1.3e-8, "1.3e-8"),
      "SNV de novo mutation rate, per base per generation")
     
-    ("indel-denovo-mutation-rate",
+    ("denovo-indel-mutation-rate",
      po::value<float>()->default_value(1e-9, "1e-9"),
      "INDEL de novo mutation rate, per base per generation")
     
@@ -561,6 +594,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-clones",
      po::value<int>()->default_value(3),
      "Maximum number of unique clones to consider")
+    
+    ("min-clone-frequency",
+     po::value<float>()->default_value(0.01, "0.01"),
+     "Minimum expected clone frequency in the sample")
     ;
     
     po::options_description phasing("Phasing");
@@ -582,19 +619,19 @@ OptionMap parse_options(const int argc, const char** argv)
      "Enable all variant call filtering")
     
     ("filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | RPB > 0.99"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | DP < 1"),
      "Boolean expression to use to filter variant calls")
     
     ("somatic-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SB > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | SC > 1 | FRF > 0.5"),
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SB > 0.9 | SD > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | NC > 1 | FRF > 0.5"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("denovo-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | GQ < 20 | MQ < 30 | SB > 0.9 | BQ < 20 | DP < 3 | DC > 1 | MF > 0.2 | FRF > 0.5"),
+     po::value<std::string>()->default_value("QUAL < 50 | PP < 40 | GQ < 20 | MQ < 30 | AF < 0.1 | SB > 0.95 | BQ < 20 | DP < 10 | DC > 1 | MF > 0.2 | FRF > 0.5 | MP < 30 | MQ0 > 2"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("refcall-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 5 | MF > 0.2"),
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 10 | MF > 0.2"),
      "Boolean expression to use to filter homozygous reference calls")
     
     ("use-calling-reads-for-filtering",
@@ -993,7 +1030,7 @@ po::parsed_options run(po::command_line_parser& parser)
 void validate(const OptionMap& vm)
 {
     const std::vector<std::string> positive_int_options {
-        "threads", "mask-low-quality-tails", "soft-clip-mask-threshold", "mask-soft-clipped-boundary-bases",
+        "threads", "mask-low-quality-tails", "mask-tails", "soft-clip-mask-threshold", "mask-soft-clipped-boundary-bases",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
@@ -1003,12 +1040,13 @@ void validate(const OptionMap& vm)
         "max-open-read-files", "downsample-above", "downsample-target",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
-        "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones"
+        "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",
+        "max-vb-seeds"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
         "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "credible-mass",
-        "snv-denovo-mutation-rate", "indel-denovo-mutation-rate"
+        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");

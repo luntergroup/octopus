@@ -27,6 +27,8 @@ namespace octopus {
 class CoalescentModel
 {
 public:
+    using LogProbability = double;
+    
     struct Parameters
     {
         double snp_heterozygosity   = 0.001;
@@ -56,9 +58,9 @@ public:
     bool is_primed() const noexcept;
     
     // ln p(haplotype(s))
-    double evaluate(const Haplotype& haplotype) const;
+    LogProbability evaluate(const Haplotype& haplotype) const;
     template <typename Container> double evaluate(const Container& haplotypes) const;
-    double evaluate(const std::vector<unsigned>& haplotype_indices) const;
+    LogProbability evaluate(const std::vector<unsigned>& haplotype_indices) const;
     
 private:
     using VariantReference = std::reference_wrapper<const Variant>;
@@ -84,12 +86,12 @@ private:
     mutable std::unordered_map<const Haplotype*, std::vector<Variant>> difference_address_cache_;
     mutable std::vector<boost::optional<std::vector<Variant>>> index_cache_;
     mutable std::vector<bool> index_flag_buffer_;
-    mutable std::vector<std::vector<boost::optional<double>>> k_indel_zero_result_cache_;
-    mutable std::unordered_map<SiteCountIndelTuple, double, SiteCountTupleHash> k_indel_pos_result_cache_;
+    mutable std::vector<std::vector<boost::optional<LogProbability>>> k_indel_zero_result_cache_;
+    mutable std::unordered_map<SiteCountIndelTuple, LogProbability, SiteCountTupleHash> k_indel_pos_result_cache_;
     
-    double evaluate(const SiteCountTuple& t) const;
-    double evaluate(unsigned k_snp, unsigned n) const;
-    double evaluate(unsigned k_snp, unsigned k_indel, unsigned n) const;
+    LogProbability evaluate(const SiteCountTuple& t) const;
+    LogProbability evaluate(unsigned k_snp, unsigned n) const;
+    LogProbability evaluate(unsigned k_snp, unsigned k_indel, unsigned n) const;
     
     void fill_site_buffer(const Haplotype& haplotype) const;
     template <typename Container> void fill_site_buffer(const Container& haplotypes) const;
@@ -106,7 +108,7 @@ private:
 };
 
 template <typename Container>
-double CoalescentModel::evaluate(const Container& haplotypes) const
+CoalescentModel::LogProbability CoalescentModel::evaluate(const Container& haplotypes) const
 {
     return evaluate(count_segregating_sites(haplotypes));
 }
@@ -157,7 +159,7 @@ struct CoalescentProbabilityGreater
 private:
     CoalescentModel model_;
     mutable std::vector<Haplotype> buffer_;
-    mutable std::unordered_map<Haplotype, double, std::hash<Haplotype>, HaveSameAlleles> cache_;
+    mutable std::unordered_map<Haplotype, CoalescentModel::LogProbability, std::hash<Haplotype>, HaveSameAlleles> cache_;
 };
 
 } // namespace octopus

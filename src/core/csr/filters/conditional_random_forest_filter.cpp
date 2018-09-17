@@ -179,7 +179,7 @@ void ConditionalRandomForestFilter::record(const std::size_t call_idx, std::size
 {
     assert(!measures.empty());
     const auto forest_idx = choose_forest(measures);
-    const auto num_forests = static_cast<decltype(forest_idx)>( data_buffer_.size());
+    const auto num_forests = static_cast<std::remove_const_t<decltype(forest_idx)>>(data_buffer_.size());
     if (forest_idx >= 0 && forest_idx < num_forests) {
         auto& buffer = data_buffer_[forest_idx][sample_idx];
         std::transform(std::cbegin(measures), std::prev(std::cend(measures), num_chooser_measures_),

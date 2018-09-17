@@ -21,11 +21,14 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
     }},
     {std::type_index(typeid(SomaticCall)), [] (auto& hb) {
         hb.add_info("SOMATIC", "0", "Flag", "Indicates that the record is a somatic mutation, for cancer genomics");
-        hb.add_format("VAF_CR", "2", "Float", "Credible region for the Variant Allele Frequency");
+        hb.add_info("PP", "1", "Float", "Posterior probability for assertions made in ALT and FORMAT (Phred scale)");
         hb.add_info("MP", "1", "Float", "Model posterior");
+        hb.add_format("MAP_VAF", "1", "Float", "Maximum a posteriori Variant Allele Frequency");
+        hb.add_format("VAF_CR", "2", "Float", "Credible region for the Variant Allele Frequency");
     }},
     {std::type_index(typeid(DenovoCall)), [] (auto& hb) {
         hb.add_info("DENOVO", "0", "Flag", "Indicates that the record is a de novo mutation");
+        hb.add_info("PP", "1", "Float", "Posterior probability for assertions made in ALT and FORMAT (Phred scale)");
         hb.add_info("MP", "1", "Float", "Model posterior");
     }},
     {std::type_index(typeid(DenovoReferenceReversionCall)), [] (auto& hb) {

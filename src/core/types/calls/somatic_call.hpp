@@ -33,9 +33,10 @@ public:
     
     SomaticCall() = delete;
     
-    template <typename V, typename C>
+    template <typename V, typename C, typename M>
     SomaticCall(V&& variant, const CancerGenotype<Allele>& genotype_call,
-                Phred<double> genotype_posterior, C&& credible_regions, Phred<double> quality);
+                Phred<double> genotype_posterior, C&& credible_regions, M&& map_vafs,
+                Phred<double> quality, boost::optional<Phred<double>> posterior = boost::none);
     
     SomaticCall(const SomaticCall&)            = default;
     SomaticCall& operator=(const SomaticCall&) = default;
@@ -43,25 +44,25 @@ public:
     SomaticCall& operator=(SomaticCall&&)      = default;
     
     virtual ~SomaticCall() = default;
-    
     virtual void decorate(VcfRecord::Builder& record) const override;
-    
     virtual bool requires_model_evaluation() const noexcept override { return true; }
     
 protected:
     std::unordered_map<SampleName, GenotypeCredibleRegions> credible_regions_;
+    std::unordered_map<SampleName, double> map_vafs_;
 private:
     virtual std::unique_ptr<Call> do_clone() const override;
 };
 
-template <typename V, typename C>
+template <typename V, typename C, typename M>
 SomaticCall::SomaticCall(V&& variant,
                          const CancerGenotype<Allele>& genotype_call,
                          Phred<double> genotype_posterior,
-                         C&& credible_regions,
-                         Phred<double> quality)
-: VariantCall {std::forward<V>(variant), decltype(genotype_calls_) {}, quality}
+                         C&& credible_regions, M&& map_vafs,
+                         Phred<double> quality, boost::optional<Phred<double>> posterior)
+: VariantCall {std::forward<V>(variant), decltype(genotype_calls_) {}, quality, posterior}
 , credible_regions_ {std::forward<C>(credible_regions)}
+, map_vafs_ {std::forward<M>(map_vafs)}
 {
     if (variant_.ref_allele() == variant_.alt_allele()) {
         Allele::NucleotideSequence missing_sequence(ref_sequence_size(variant_), 'N');

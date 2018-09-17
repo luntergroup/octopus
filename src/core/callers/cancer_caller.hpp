@@ -21,7 +21,6 @@
 #include "core/models/mutation/somatic_mutation_model.hpp"
 #include "core/models/genotype/individual_model.hpp"
 #include "core/models/genotype/subclone_model.hpp"
-#include "core/models/genotype/tumour_model.hpp"
 #include "basics/phred.hpp"
 #include "caller.hpp"
 
@@ -40,6 +39,22 @@ public:
     struct Parameters
     {
         enum class NormalContaminationRisk { high, low };
+        
+        struct Concentrations
+        {
+            struct CNVModelConcentrations
+            {
+                double normal = 50., tumour = .5;
+            };
+            struct SomaticModelConcentrations
+            {
+                double normal_germline = 50., normal_somatic = .05, tumour_germline = 1.5, tumour_somatic = 1.;
+            };
+            
+            CNVModelConcentrations cnv;
+            SomaticModelConcentrations somatic;
+        };
+        
         Phred<double> min_variant_posterior, min_somatic_posterior, min_refcall_posterior;
         unsigned ploidy;
         boost::optional<SampleName> normal_sample;
@@ -50,9 +65,8 @@ public:
         unsigned max_somatic_haplotypes = 1;
         NormalContaminationRisk normal_contamination_risk = NormalContaminationRisk::low;
         bool deduplicate_haplotypes_with_germline_model = true;
-        double cnv_normal_alpha = 50.0, cnv_tumour_alpha = 0.5;
-        double somatic_normal_germline_alpha = 50.0, somatic_normal_somatic_alpha = 0.05;
-        double somatic_tumour_germline_alpha = 1.5, somatic_tumour_somatic_alpha = 1.0;
+        boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
+        Concentrations concentrations = Concentrations {};
     };
     
     CancerCaller() = delete;
@@ -71,7 +85,7 @@ public:
 private:
     using GermlineModel = model::IndividualModel;
     using CNVModel      = model::SubcloneModel;
-    using TumourModel   = model::TumourModel;
+    using SomaticModel  = model::SomaticSubcloneModel;
     
     class Latents;
     friend Latents;
@@ -97,16 +111,16 @@ private:
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
-                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
+                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
     boost::optional<double>
     calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Caller::Latents& latents) const override;
     
     boost::optional<double>
     calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const;
     
     std::vector<std::unique_ptr<VariantCall>>
@@ -129,39 +143,42 @@ private:
     using ProbabilityVector              = std::vector<double>;
     
     void generate_germline_genotypes(Latents& latents, const std::vector<Haplotype>& haplotypes) const;
-    void generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void generate_cancer_genotypes_with_contaminated_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void generate_cancer_genotypes_with_no_normal(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void generate_cancer_genotypes_with_contaminated_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void generate_cancer_genotypes_with_no_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     void generate_cancer_genotypes(Latents& latents, const std::vector<Genotype<Haplotype>>& germline_genotypes) const;
     bool has_high_normal_contamination_risk(const Latents& latents) const;
     
-    void evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void evaluate_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-    void evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    void evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void evaluate_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     void set_model_priors(Latents& latents) const;
     void set_model_posteriors(Latents& latents) const;
-    
-    void fit_tumour_model(Latents& latents, const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+
+    void set_cancer_genotype_prior_model(Latents& latents) const;
+    void fit_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const;
     CNVModel::Priors get_cnv_model_priors(const GenotypePriorModel& prior_model) const;
-    TumourModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
-    TumourModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
+    SomaticModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
+    SomaticModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
     CNVModel::Priors get_normal_noise_model_priors(const GenotypePriorModel& prior_model) const;
     
     GermlineGenotypeProbabilityMap calculate_germline_genotype_posteriors(const Latents& latents) const;
-    Phred<double> calculate_somatic_probability(const Latents& latents) const;
+    double calculate_somatic_mass(const Latents& latents) const;
+    Phred<double> calculate_segregation_probability(const Variant& variant, const Latents& latents, double somatic_mass) const;
     
     // logging
     void log(const ModelPosteriors& model_posteriors) const;
     void log(const GenotypeVector& germline_genotypes,
              const GermlineGenotypeProbabilityMap& germline_genotype_posteriors,
+             const GermlineModel::InferredLatents& germline_inferences,
              const CNVModel::InferredLatents& cnv_inferences,
              const CancerGenotypeVector& cancer_genotypes,
-             const TumourModel::InferredLatents& tumour_inferences) const;
+             const SomaticModel::InferredLatents& tumour_inferences) const;
 };
 
 class CancerCaller::Latents : public Caller::Latents
@@ -172,31 +189,30 @@ public:
     
     Latents() = delete;
     
-    Latents(const std::vector<Haplotype>& haplotypes,
-            const std::vector<SampleName>& samples);
+    Latents(const std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& samples,
+            const CancerCaller::Parameters& parameters);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const override;
     
 private:
     std::reference_wrapper<const std::vector<Haplotype>> haplotypes_;
+    std::reference_wrapper<const std::vector<SampleName>> samples_;
+    std::reference_wrapper<const CancerCaller::Parameters> parameters_;
+    
     std::vector<Genotype<Haplotype>> germline_genotypes_;
     unsigned somatic_ploidy_ = 1;
     std::vector<CancerGenotype<Haplotype>> cancer_genotypes_;
     boost::optional<std::vector<std::vector<unsigned>>> germline_genotype_indices_ = boost::none;
     boost::optional<std::vector<CancerGenotypeIndex>> cancer_genotype_indices_ = boost::none;
-    
-    std::reference_wrapper<const std::vector<SampleName>> samples_;
-    boost::optional<std::reference_wrapper<const SampleName>> normal_sample_ = boost::none;
-    
     CancerCaller::ModelPriors model_priors_;
     std::unique_ptr<GenotypePriorModel> germline_prior_model_ = nullptr;
     boost::optional<CancerGenotypePriorModel> cancer_genotype_prior_model_ = boost::none;
     std::unique_ptr<GermlineModel> germline_model_ = nullptr;
     GermlineModel::InferredLatents germline_model_inferences_;
     CNVModel::InferredLatents cnv_model_inferences_;
-    TumourModel::InferredLatents tumour_model_inferences_;
-    boost::optional<TumourModel::InferredLatents> noise_model_inferences_ = boost::none;
+    SomaticModel::InferredLatents somatic_model_inferences_;
+    boost::optional<SomaticModel::InferredLatents> noise_model_inferences_ = boost::none;
     boost::optional<GermlineModel::InferredLatents> normal_germline_inferences_ = boost::none;
     CancerCaller::ModelPosteriors model_posteriors_;
     

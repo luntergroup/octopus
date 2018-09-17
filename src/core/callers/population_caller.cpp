@@ -251,7 +251,7 @@ auto assign_samples_to_genotypes(std::vector<unsigned> ploidies, const Genotypes
 
 std::unique_ptr<PopulationCaller::Caller::Latents>
 PopulationCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
-                                const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                                const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     if (use_independence_model()) {
         return infer_latents_with_independence_model(haplotypes, haplotype_likelihoods);
@@ -742,7 +742,7 @@ bool PopulationCaller::use_independence_model() const noexcept
 
 std::unique_ptr<Caller::Latents>
 PopulationCaller::infer_latents_with_joint_model(const std::vector<Haplotype>& haplotypes,
-                                                 const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                                                 const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto prior_model = make_joint_prior_model(haplotypes);
     prior_model->prime(haplotypes);
@@ -763,7 +763,7 @@ PopulationCaller::infer_latents_with_joint_model(const std::vector<Haplotype>& h
 
 std::unique_ptr<Caller::Latents>
 PopulationCaller::infer_latents_with_independence_model(const std::vector<Haplotype>& haplotypes,
-                                                        const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                                                        const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto prior_model = make_independent_prior_model(haplotypes);
     const model::IndependentPopulationModel model {*prior_model, debug_log_};

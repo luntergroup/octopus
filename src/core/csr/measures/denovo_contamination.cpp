@@ -103,38 +103,53 @@ auto get_denovo_haplotypes(const VcfRecord& denovo, const Facet::GenotypeMap& ge
     return get_denovo_haplotypes(genotypes, denovo_alleles);
 }
 
+template <typename MappableType>
+auto copy_overlapped_to_vector(const AmbiguousReadList& reads, const MappableType& mappable)
+{
+    const auto overlapped = overlap_range(reads, mappable);
+    std::vector<AlignedRead> result {};
+    result.reserve(size(overlapped));
+    std::transform(std::cbegin(overlapped), std::cend(overlapped), std::back_inserter(result),
+                   [] (const auto& read) { return read.read; });
+    return result;
+}
+
 } // namespace
 
 Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     boost::optional<int> result {};
     if (is_denovo(call, facets)) {
-        result = 0;
         const auto& samples = get_value<Samples>(facets.at("Samples"));
         const auto& pedigree = get_value<Pedigree>(facets.at("Pedigree"));
         assert(is_trio(samples, pedigree)); // TODO: Implement for general pedigree
         const auto trio = *make_trio(samples[find_child_idx(samples, pedigree)], pedigree);
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto denovo_haplotypes = get_denovo_haplotypes(call, genotypes, trio);
-        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
+        if (denovo_haplotypes.empty()) {
+            return result;
+        }
+        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
         Genotype<Haplotype> denovo_genotype {static_cast<unsigned>(denovo_haplotypes.size() + 1)};
         HaplotypeProbabilityMap haplotype_priors {};
         haplotype_priors.reserve(denovo_haplotypes.size() + 1);
         for (const auto& haplotype : denovo_haplotypes) {
+            assert(is_same_region(haplotype, denovo_haplotypes.front()));
             denovo_genotype.emplace(haplotype);
             haplotype_priors[haplotype] = -1;
         }
         const std::array<SampleName, 2> parents {trio.mother(), trio.father()};
+        result = 0;
         for (const auto& sample : parents) {
-            for (const auto& p : assignments.at(sample)) {
-                const auto overlapped_reads = copy_overlapped(p.second, call);
-                if (!overlapped_reads.empty()) {
+            for (const auto& p : assignments.support.at(sample)) {
+                auto supporting_reads = copy_overlapped(p.second, call);
+                if (!supporting_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
                     if (!denovo_genotype.contains(assigned_haplotype)) {
                         auto dummy = denovo_genotype;
                         dummy.emplace(assigned_haplotype);
                         haplotype_priors[assigned_haplotype] = 0;
-                        const auto support = compute_haplotype_support(dummy, overlapped_reads, haplotype_priors);
+                        const auto support = compute_haplotype_support(dummy, supporting_reads, haplotype_priors);
                         haplotype_priors.erase(assigned_haplotype);
                         for (const auto& denovo : denovo_haplotypes) {
                             if (support.count(denovo) == 1) {
@@ -143,7 +158,32 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
                         }
                     } else {
                         // This could happen if we don't call all 'de novo' alleles on the called de novo haplotype.
-                        *result += overlapped_reads.size();
+                        *result += supporting_reads.size();
+                    }
+                }
+            }
+            if (assignments.ambiguous.count(sample) == 1 && !assignments.ambiguous.at(sample).empty()) {
+                const auto ambiguous_reads = copy_overlapped_to_vector(assignments.ambiguous.at(sample), call);
+                if (!ambiguous_reads.empty()) {
+                    const auto overlapped_genotypes = overlap_range(genotypes.at(sample), call);
+                    if (size(overlapped_genotypes) == 1) {
+                        const auto& called_genotype = overlapped_genotypes.front();
+                        auto dummy = called_genotype;
+                        for (const auto& haplotype : denovo_haplotypes) {
+                            dummy.emplace(haplotype);
+                        }
+                        for (const auto& haplptype : called_genotype) {
+                            haplotype_priors[haplptype] = 0;
+                        }
+                        const auto support = compute_haplotype_support(dummy, ambiguous_reads, haplotype_priors);
+                        for (const auto& haplotype : called_genotype) {
+                            haplotype_priors.erase(haplotype);
+                        }
+                        for (const auto& denovo : denovo_haplotypes) {
+                            if (support.count(denovo) == 1) {
+                                *result += support.at(denovo).size();
+                            }
+                        }
                     }
                 }
             }

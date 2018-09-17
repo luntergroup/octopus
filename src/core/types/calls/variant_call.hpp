@@ -21,7 +21,7 @@ public:
     VariantCall() = delete;
     
     template <typename V, typename T>
-    VariantCall(V&& variant, T&& genotype_calls, Phred<double> quality);
+    VariantCall(V&& variant, T&& genotype_calls, Phred<double> quality, boost::optional<Phred<double>> posterior = boost::none);
     
     virtual ~VariantCall() = default;
     
@@ -46,6 +46,8 @@ public:
     
 protected:
     Variant variant_;
+    boost::optional<Phred<double>> posterior_;
+    
     bool all_genotypes_are_self_contained() const;
     
 private:
@@ -53,8 +55,10 @@ private:
 };
 
 template <typename V, typename T>
-VariantCall::VariantCall(V&& variant, T&& genotype_calls, Phred<double> quality)
-: Call {std::forward<T>(genotype_calls), quality}, variant_ {std::forward<V>(variant)}
+VariantCall::VariantCall(V&& variant, T&& genotype_calls, Phred<double> quality, boost::optional<Phred<double>> posterior)
+: Call {std::forward<T>(genotype_calls), quality}
+, variant_ {std::forward<V>(variant)}
+, posterior_ {posterior}
 {}
 
 } // namespace octopus

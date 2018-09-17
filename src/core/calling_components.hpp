@@ -71,6 +71,8 @@ public:
     boost::optional<Path> legacy() const;
     boost::optional<Path> filter_request() const;
     boost::optional<Path> bamout() const;
+    boost::optional<Path> split_bamout() const;
+    boost::optional<Path> data_profile() const;
     
 private:
     struct Components
@@ -108,7 +110,7 @@ private:
         boost::optional<VcfWriter> filtered_output;
         boost::optional<Path> legacy;
         boost::optional<Path> filter_request_;
-        boost::optional<Path> bamout_;
+        boost::optional<Path> bamout_, split_bamout_, data_profile_;
         
         void setup_progress_meter(const options::OptionMap& options);
         void set_read_buffer_size(const options::OptionMap& options);

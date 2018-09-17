@@ -53,6 +53,8 @@ set(BASICS_SOURCES
     basics/trio.cpp
     basics/read_pileup.hpp
     basics/read_pileup.cpp
+    basics/tandem_repeat.hpp
+    basics/tandem_repeat.cpp
 )
 
 set(CONTAINERS_SOURCES
@@ -291,12 +293,16 @@ set(CORE_SOURCES
     core/csr/measures/quality_by_depth.cpp
     core/csr/measures/genotype_quality.hpp
     core/csr/measures/genotype_quality.cpp
+    core/csr/measures/genotype_quality_by_depth.hpp
+    core/csr/measures/genotype_quality_by_depth.cpp
     core/csr/measures/mapping_quality_zero_count.hpp
     core/csr/measures/mapping_quality_zero_count.cpp
     core/csr/measures/mean_mapping_quality.hpp
     core/csr/measures/mean_mapping_quality.cpp
     core/csr/measures/model_posterior.hpp
     core/csr/measures/model_posterior.cpp
+    core/csr/measures/allele_depth.hpp
+    core/csr/measures/allele_depth.cpp
     core/csr/measures/allele_frequency.hpp
     core/csr/measures/allele_frequency.cpp
     core/csr/measures/strand_bias.hpp
@@ -326,8 +332,8 @@ set(CORE_SOURCES
     core/csr/measures/mismatch_fraction.cpp
     core/csr/measures/is_refcall.hpp
     core/csr/measures/is_refcall.cpp
-    core/csr/measures/somatic_contamination.hpp
-    core/csr/measures/somatic_contamination.cpp
+    core/csr/measures/normal_contamination.hpp
+    core/csr/measures/normal_contamination.cpp
     core/csr/measures/denovo_contamination.hpp
     core/csr/measures/denovo_contamination.cpp
     core/csr/measures/read_position_bias.hpp
@@ -340,9 +346,25 @@ set(CORE_SOURCES
     core/csr/measures/str_length.cpp
     core/csr/measures/str_period.hpp
     core/csr/measures/str_period.cpp
+    core/csr/measures/posterior_probability.hpp
+    core/csr/measures/posterior_probability.cpp
+    core/csr/measures/posterior_probability_by_depth.hpp
+    core/csr/measures/posterior_probability_by_depth.cpp
+    core/csr/measures/classification_confidence.hpp
+    core/csr/measures/classification_confidence.cpp
+    core/csr/measures/somatic_haplotype_count.hpp
+    core/csr/measures/somatic_haplotype_count.cpp
+    core/csr/measures/median_somatic_mapping_quality.hpp
+    core/csr/measures/median_somatic_mapping_quality.cpp
+    core/csr/measures/strand_disequilibrium.hpp
+    core/csr/measures/strand_disequilibrium.cpp
+    core/csr/measures/supplementary_fraction.hpp
+    core/csr/measures/supplementary_fraction.cpp
+    core/csr/measures/misaligned_read_count.hpp
+    core/csr/measures/misaligned_read_count.cpp
 
-    core/models/haplotype_likelihood_cache.hpp
-    core/models/haplotype_likelihood_cache.cpp
+    core/models/haplotype_likelihood_array.hpp
+    core/models/haplotype_likelihood_array.cpp
     core/models/haplotype_likelihood_model.hpp
     core/models/haplotype_likelihood_model.cpp
 
@@ -356,8 +378,6 @@ set(CORE_SOURCES
     core/models/genotype/independent_population_model.cpp
     core/models/genotype/population_model.hpp
     core/models/genotype/population_model.cpp
-    core/models/genotype/tumour_model.hpp
-    core/models/genotype/tumour_model.cpp
     core/models/genotype/variational_bayes_mixture_model.hpp
     core/models/genotype/trio_model.hpp
     core/models/genotype/trio_model.cpp
@@ -372,6 +392,8 @@ set(CORE_SOURCES
     core/models/genotype/coalescent_population_prior_model.cpp
     core/models/genotype/hardy_weinberg_model.hpp
     core/models/genotype/hardy_weinberg_model.cpp
+    core/models/genotype/fixed_mixture_genotype_likelihood_model.hpp
+    core/models/genotype/fixed_mixture_genotype_likelihood_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
@@ -382,6 +404,8 @@ set(CORE_SOURCES
     core/models/error/hiseq_indel_error_model.cpp
     core/models/error/x10_indel_error_model.hpp
     core/models/error/x10_indel_error_model.cpp
+    core/models/error/umi_indel_error_model.hpp
+    core/models/error/umi_indel_error_model.cpp
     core/models/error/indel_error_model.hpp
     core/models/error/indel_error_model.cpp
     core/models/error/snv_error_model.hpp
@@ -390,6 +414,8 @@ set(CORE_SOURCES
     core/models/error/hiseq_snv_error_model.cpp
     core/models/error/x10_snv_error_model.hpp
     core/models/error/x10_snv_error_model.cpp
+    core/models/error/umi_snv_error_model.hpp
+    core/models/error/umi_snv_error_model.cpp
     core/models/error/error_model_factory.hpp
     core/models/error/error_model_factory.cpp
 
@@ -415,6 +441,8 @@ set(CORE_SOURCES
     core/tools/read_realigner.cpp
     core/tools/bam_realigner.hpp
     core/tools/bam_realigner.cpp
+    core/tools/indel_profiler.hpp
+    core/tools/indel_profiler.cpp
 
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp
@@ -444,6 +472,8 @@ set(CORE_SOURCES
     core/tools/vargen/variant_generator_builder.cpp
     core/tools/vargen/active_region_generator.hpp
     core/tools/vargen/active_region_generator.cpp
+    core/tools/vargen/repeat_scanner.hpp
+    core/tools/vargen/repeat_scanner.cpp
     
     core/tools/vargen/utils/assembler.hpp
     core/tools/vargen/utils/assembler.cpp

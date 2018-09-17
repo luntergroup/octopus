@@ -54,6 +54,7 @@
 #include "csr/filters/variant_call_filter_factory.hpp"
 #include "readpipe/buffered_read_pipe.hpp"
 #include "core/tools/bam_realigner.hpp"
+#include "core/tools/indel_profiler.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -197,21 +198,48 @@ void log_startup_info(const GenomeCallingComponents& components)
         stream(log) << "Processing " << search_size << "bp with automatic thread management";
     }
     auto sl = stream(log);
-    const bool is_filtered_run {components.filtered_output()};
-    if (is_filtered_run) {
+    auto output_path = components.output().path();
+    if (apply_csr(components)) {
         sl << "Writing filtered calls to ";
+        output_path = components.filtered_output()->path();
     } else {
         sl << "Writing unfiltered calls to ";
-    }
-    auto output_path = components.output().path();
-    if (is_filtered_run) {
-        output_path = components.filtered_output()->path();
     }
     if (output_path) {
         sl << *output_path;
     } else {
         sl << "stdout";
     }
+}
+
+VcfWriter& get_final_output(GenomeCallingComponents& components)
+{
+    if (apply_csr(components)) {
+        return *components.filtered_output();
+    } else {
+        return components.output();
+    }
+}
+
+auto get_final_output_path(const GenomeCallingComponents& components)
+{
+    if (components.filtered_output()) {
+        return components.filtered_output()->path();
+    } else {
+        return components.output().path();
+    }
+}
+
+void log_finish_info(const GenomeCallingComponents& components, const utils::TimeInterval run_duration)
+{
+    using utils::TimeInterval;
+    logging::InfoLogger info_log {};
+    const auto search_size = sum_region_sizes(components.search_regions());
+    stream(info_log) << "Finished calling "
+                     << utils::format_with_commas(search_size) << "bp, total runtime "
+                     << run_duration;
+    const auto output_path = get_final_output_path(components);
+    if (output_path) stream(info_log) << "Calls have been written to " << *output_path;
 }
 
 void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
@@ -1296,34 +1324,6 @@ void run_csr(GenomeCallingComponents& components)
     }
 }
 
-void convert_to_legacy(const boost::filesystem::path& src, const boost::filesystem::path& dest)
-{
-    const VcfReader in {src};
-    VcfWriter out {dest};
-    convert_to_legacy(in, out);
-}
-
-VcfWriter& get_final_output(GenomeCallingComponents& components)
-{
-    if (apply_csr(components)) {
-        return *components.filtered_output();
-    } else {
-        return components.output();
-    }
-}
-
-void run_legacy_generation(GenomeCallingComponents& components)
-{
-    if (components.legacy()) {
-        VcfWriter& final_output {get_final_output(components)};
-        const auto output_path = final_output.path();
-        if (output_path) {
-            destroy(final_output);
-            convert_to_legacy(*output_path, *components.legacy());
-        }
-    }
-}
-
 void log_run_start(const GenomeCallingComponents& components)
 {
     static auto debug_log = get_debug_log();
@@ -1338,10 +1338,10 @@ class CallingBug : public ProgramError
     {
         if (what_) {
             return "Encountered an exception during calling '" + *what_ + "'. This means there is a bug"
-            " and your results are untrustworthy.";
+                                                                          " and your results are untrustworthy.";
         } else {
             return "Encountered an unknown error during calling. This means there is a bug"
-            " and your results are untrustworthy.";
+                   " and your results are untrustworthy.";
         }
     }
     
@@ -1351,136 +1351,9 @@ public:
     CallingBug(const std::exception& e) : what_ {e.what()} {}
 };
 
-bool is_bam_realignment_requested(const GenomeCallingComponents& components)
-{
-    return static_cast<bool>(components.bamout());
-}
-
-bool is_stdout_final_output(const GenomeCallingComponents& components)
-{
-    return (components.filtered_output() && !components.filtered_output()->path()) || !components.output().path();
-}
-
-bool check_bam_realign(const GenomeCallingComponents& components)
-{
-    logging::WarningLogger warn_log {};
-    if (components.samples().size() > 1) {
-        warn_log << "BAM realignment currently only supported for single sample";
-        return false;
-    }
-    if (components.read_manager().num_files() > 1) {
-        warn_log << "BAM realignment currently only supported for single input BAM";
-        return false;
-    }
-    if (is_stdout_final_output(components)) {
-        warn_log << "BAM realignment is not supported for stdout calling";
-        return false;
-    }
-    return true;
-}
-
-auto get_bam_realignment_vcf(const GenomeCallingComponents& components)
-{
-    if (components.filtered_output()) {
-        return *components.filtered_output()->path();
-    } else {
-        return *components.output().path();
-    }
-}
-
-bool is_sam_type(const boost::filesystem::path& path)
-{
-    const auto type = path.extension().string();
-    return type == ".bam" || type == ".sam" || type == ".cram";
-}
-
-bool is_called_ploidy_known(const GenomeCallingComponents& components)
-{
-    const auto contigs = components.contigs();
-    return std::all_of(std::cbegin(contigs), std::cend(contigs), [&] (const auto& contig) {
-        const auto caller = components.caller_factory().make(components.contigs().front());
-        return caller->min_callable_ploidy() == caller->max_callable_ploidy();
-    });
-}
-
-auto get_max_called_ploidy(VcfReader& vcf)
-{
-    const auto samples = vcf.fetch_header().samples();
-    unsigned result {0};
-    for (auto p = vcf.iterate(); p.first != p.second; ++p.first) {
-        for (const auto& sample : samples) {
-            result = std::max(p.first->ploidy(sample), result);
-        }
-    }
-    return result;
-}
-
-auto get_max_called_ploidy(const boost::filesystem::path& output_vcf)
-{
-    VcfReader vcf {output_vcf};
-    return get_max_called_ploidy(vcf);
-}
-
-auto get_final_output_path(const GenomeCallingComponents& components)
-{
-    if (apply_csr(components)) {
-        return components.filtered_output()->path();
-    } else {
-        return components.output().path();
-    }
-}
-
-auto get_max_ploidy(const GenomeCallingComponents& components)
-{
-    if (is_called_ploidy_known(components)) {
-        return get_max_ploidy(components.samples(), components.contigs(), components.ploidies());
-    } else {
-        assert(get_final_output_path(components));
-        return get_max_called_ploidy(*get_final_output_path(components));
-    }
-}
-
-auto get_haplotype_bam_paths(const boost::filesystem::path& prefix, const unsigned max_ploidy)
-{
-    std::vector<boost::filesystem::path> result {};
-    result.reserve(max_ploidy + 1); // + 1 for unassigned reads
-    for (unsigned i {1}; i <= max_ploidy + 1; ++i) {
-        result.emplace_back(prefix.string() + std::to_string(i) + ".bam");
-    }
-    return result;
-}
-
-auto get_bamout_paths(const GenomeCallingComponents& components)
-{
-    namespace fs = boost::filesystem;
-    std::vector<fs::path> result {};
-    auto request = components.bamout();
-    if (!request) return result;
-    if (is_sam_type(*request)) {
-        result.assign({*request});
-    } else {
-        result = get_haplotype_bam_paths(*request, get_max_ploidy(components));
-    }
-    return result;
-}
-
-void run_bam_realign(GenomeCallingComponents& components)
-{
-    if (is_bam_realignment_requested(components)) {
-        if (check_bam_realign(components)) {
-            components.read_manager().close();
-            realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
-                    get_bamout_paths(components), components.reference());
-        }
-    }
-}
-
-void run_octopus(GenomeCallingComponents& components, std::string command)
+void run_variant_calling(GenomeCallingComponents& components, std::string command)
 {
     static auto debug_log = get_debug_log();
-    logging::InfoLogger info_log {};
-    using utils::TimeInterval;
-    
     log_run_start(components);
     write_caller_output_header(components, command);
     const auto start = std::chrono::system_clock::now();
@@ -1517,18 +1390,252 @@ void run_octopus(GenomeCallingComponents& components, std::string command)
         } catch (...) {}
         throw CallingBug {};
     }
-    try {
-        run_legacy_generation(components);
-    } catch (...) {
-        logging::WarningLogger warn_log {};
-        warn_log << "Failed to make legacy vcf";
-    }
     const auto end = std::chrono::system_clock::now();
-    const auto search_size = sum_region_sizes(components.search_regions());
-    stream(info_log) << "Finished calling "
-                     << utils::format_with_commas(search_size) << "bp, total runtime "
-                     << TimeInterval {start, end};
+    log_finish_info(components, {start, end});
+}
+
+void convert_to_legacy(const boost::filesystem::path& src, const boost::filesystem::path& dest)
+{
+    const VcfReader in {src};
+    VcfWriter out {dest};
+    convert_to_legacy(in, out);
+}
+
+void run_legacy_generation(GenomeCallingComponents& components)
+{
+    if (components.legacy()) {
+        VcfWriter& final_output {get_final_output(components)};
+        const auto output_path = final_output.path();
+        if (output_path) {
+            logging::InfoLogger log {};
+            destroy(final_output);
+            convert_to_legacy(*output_path, *components.legacy());
+            stream(log) << "Legacy VCF file written to " << *components.legacy();
+        }
+    }
+}
+
+bool is_bam_realignment_requested(const GenomeCallingComponents& components)
+{
+    return static_cast<bool>(components.bamout());
+}
+
+bool is_split_bam_realignment_requested(const GenomeCallingComponents& components)
+{
+    return static_cast<bool>(components.split_bamout());
+}
+
+bool is_stdout_final_output(const GenomeCallingComponents& components)
+{
+    return (components.filtered_output() && !components.filtered_output()->path()) || !components.output().path();
+}
+
+bool check_bam_realign(const GenomeCallingComponents& components)
+{
+    logging::WarningLogger warn_log {};
+    if (components.read_manager().num_files() != components.samples().size()) {
+        warn_log << "BAM realignment currently only supported for single sample BAMs";
+        return false;
+    }
+    if (is_stdout_final_output(components)) {
+        warn_log << "BAM realignment is not supported for stdout calling";
+        return false;
+    }
+    return true;
+}
+
+auto get_bam_realignment_vcf(const GenomeCallingComponents& components)
+{
+    if (components.filtered_output()) {
+        return *components.filtered_output()->path();
+    } else {
+        return *components.output().path();
+    }
+}
+
+bool is_sam_type(const boost::filesystem::path& path)
+{
+    const auto type = path.extension().string();
+    return type == ".bam" || type == ".sam" || type == ".cram";
+}
+
+bool is_called_ploidy_known(const GenomeCallingComponents& components)
+{
+    const auto contigs = components.contigs();
+    return std::all_of(std::cbegin(contigs), std::cend(contigs), [&] (const auto& contig) {
+        const auto caller = components.caller_factory().make(components.contigs().front());
+        return caller->min_callable_ploidy() == caller->max_callable_ploidy();
+    });
+}
+
+auto get_max_called_ploidy(VcfReader& vcf, const std::vector<VcfRecord::SampleName>& samples)
+{
+    unsigned result {0};
+    for (auto p = vcf.iterate(); p.first != p.second; ++p.first) {
+        for (const auto& sample : samples) {
+            result = std::max(p.first->ploidy(sample), result);
+        }
+    }
+    return result;
+}
+
+auto get_max_called_ploidy(VcfReader& vcf)
+{
+    return get_max_called_ploidy(vcf, vcf.fetch_header().samples());
+}
+
+auto get_max_called_ploidy(const boost::filesystem::path& output_vcf)
+{
+    VcfReader vcf {output_vcf};
+    return get_max_called_ploidy(vcf);
+}
+
+auto get_bam_sampltes(const boost::filesystem::path& bam_path)
+{
+    io::ReadReader bam {bam_path};
+    return bam.extract_samples();
+}
+
+auto get_max_called_ploidy(const boost::filesystem::path& output_vcf, const boost::filesystem::path& in_bam)
+{
+    auto bam_samples = get_bam_sampltes(in_bam);
+    std::sort(std::begin(bam_samples), std::end(bam_samples));
+    VcfReader vcf {output_vcf};
+    auto vcf_samples = vcf.fetch_header().samples();
+    std::sort(std::begin(vcf_samples), std::end(vcf_samples));
+    std::vector<VcfRecord::SampleName> usable_samples {};
+    usable_samples.reserve(std::min(bam_samples.size(), vcf_samples.size()));
+    std::set_intersection(std::cbegin(bam_samples), std::cend(bam_samples),
+                          std::cbegin(vcf_samples), std::cend(vcf_samples),
+                          std::back_inserter(usable_samples));
+    return get_max_called_ploidy(vcf, usable_samples);
+}
+
+auto get_max_ploidy(const GenomeCallingComponents& components)
+{
+    if (is_called_ploidy_known(components)) {
+        return get_max_ploidy(components.samples(), components.contigs(), components.ploidies());
+    } else {
+        assert(get_final_output_path(components));
+        return get_max_called_ploidy(*get_final_output_path(components));
+    }
+}
+
+auto get_haplotype_bam_paths(const boost::filesystem::path& prefix, const unsigned max_ploidy)
+{
+    std::vector<boost::filesystem::path> result {};
+    result.reserve(max_ploidy + 1); // + 1 for unassigned reads
+    for (unsigned i {1}; i <= max_ploidy + 1; ++i) {
+        result.emplace_back(prefix.string() + "_" + std::to_string(i) + ".bam");
+    }
+    return result;
+}
+
+void run_bam_realign(GenomeCallingComponents& components)
+{
+    if (is_bam_realignment_requested(components)) {
+        if (check_bam_realign(components)) {
+            components.read_manager().close();
+            if (components.read_manager().paths().size() == 1) {
+                realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
+                        *components.bamout(), components.reference());
+            } else {
+                namespace fs = boost::filesystem;
+                const auto bamout_directory = *components.bamout();
+                if (fs::exists(bamout_directory)) {
+                    if (!fs::is_directory(bamout_directory)) {
+                        logging::ErrorLogger error_log {};
+                        stream(error_log) << "The given evidence bam directory " << bamout_directory << " is not a directory";
+                        return;
+                    }
+                } else {
+                    if (!fs::create_directory(bamout_directory)) {
+                        logging::ErrorLogger error_log {};
+                        stream(error_log) << "Failed to create temporary directory " << bamout_directory << " - check permissions";
+                        return;
+                    }
+                }
+                for (const auto& bamin_path : components.read_manager().paths()) {
+                    auto bamout_path = bamout_directory;
+                    bamout_path /= bamin_path.filename();
+                    if (bamin_path != bamout_path) {
+                        realign(bamin_path, get_bam_realignment_vcf(components), bamout_path, components.reference());
+                    } else {
+                        logging::WarningLogger warn_log {};
+                        stream(warn_log) << "Cannot make evidence bam " << bamout_path << " as it is an input bam";
+                    }
+                }
+            }
+        }
+    }
+    if (is_split_bam_realignment_requested(components)) {
+        if (check_bam_realign(components)) {
+            components.read_manager().close();
+            if (components.read_manager().paths().size() == 1) {
+                auto out_paths = get_haplotype_bam_paths(*components.split_bamout(), get_max_ploidy(components));
+                realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
+                        std::move(out_paths), components.reference());
+            } else {
+                namespace fs = boost::filesystem;
+                const auto bamout_directory = *components.split_bamout();
+                if (fs::exists(bamout_directory)) {
+                    if (!fs::is_directory(bamout_directory)) {
+                        logging::ErrorLogger error_log {};
+                        stream(error_log) << "The given evidence bam directory " << bamout_directory << " is not a directory";
+                        return;
+                    }
+                } else {
+                    if (!fs::create_directory(bamout_directory)) {
+                        logging::ErrorLogger error_log {};
+                        stream(error_log) << "Failed to create temporary directory " << bamout_directory << " - check permissions";
+                        return;
+                    }
+                }
+                const auto realignment_vcf = get_bam_realignment_vcf(components);
+                for (const auto& bamin_path : components.read_manager().paths()) {
+                    auto bamout_prefix = bamout_directory;
+                    bamout_prefix /= bamin_path.filename().stem();
+                    const auto max_ploidy = get_max_called_ploidy(realignment_vcf, bamin_path);
+                    auto bamout_paths = get_haplotype_bam_paths(bamout_prefix, max_ploidy);
+                    realign(bamin_path, realignment_vcf, std::move(bamout_paths), components.reference());
+                }
+            }
+        }
+    }
+}
+
+void run_data_profiler(GenomeCallingComponents& components)
+{
+    const auto data_profile_csv_path = components.data_profile();
+    if (data_profile_csv_path) {
+        logging::InfoLogger info_log {};
+        VcfWriter& final_output {get_final_output(components)};
+        const auto final_output_path = final_output.path();
+        if (final_output_path) {
+            info_log << "Starting indel profiler";
+            final_output.close();
+            if (is_indexable(*final_output_path)) index_vcf(*final_output_path);
+            const auto profile = profile_indels(components.read_pipe(), *final_output_path, components.reference(), components.search_regions());
+            std::ofstream profile_file {data_profile_csv_path->string()};
+            profile_file << profile;
+            stream(info_log) << "Indel profile written to " << *data_profile_csv_path;
+        } else {
+            info_log << "Did not run indel profiler as calls not written to file";
+        }
+    }
+}
+
+void run_post_calling_requests(GenomeCallingComponents& components)
+{
+    run_data_profiler(components);
     run_bam_realign(components);
+    run_legacy_generation(components);
+}
+
+void run_octopus(GenomeCallingComponents& components, std::string command)
+{
+    run_variant_calling(components, std::move(command));
+    run_post_calling_requests(components);
     cleanup(components);
 }
 

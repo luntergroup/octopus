@@ -18,6 +18,7 @@
 #include "config/common.hpp"
 #include "basics/contig_region.hpp"
 #include "basics/cigar_string.hpp"
+#include "basics/aligned_read.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/models/error/snv_error_model.hpp"
 #include "core/models/error/indel_error_model.hpp"
@@ -27,12 +28,18 @@
 
 namespace octopus {
 
-class AlignedRead;
-
 class HaplotypeLikelihoodModel
 {
 public:
     using Penalty = hmm::MutationModel::Penalty;
+    
+    struct Config
+    {
+        bool use_mapping_quality = true;
+        boost::optional<AlignedRead::MappingQuality> mapping_quality_cap_trigger = boost::none;
+        AlignedRead::MappingQuality mapping_quality_cap = 120;
+        bool use_flank_state = true;
+    };
     
     struct FlankState
     {
@@ -53,20 +60,12 @@ public:
     };
     
     HaplotypeLikelihoodModel();
-    
-    HaplotypeLikelihoodModel(bool use_mapping_quality, bool use_flank_state = true);
-    
+    HaplotypeLikelihoodModel(Config config);
+    HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
+                             std::unique_ptr<IndelErrorModel> indel_model);
     HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
                              std::unique_ptr<IndelErrorModel> indel_model,
-                             bool use_mapping_quality = true,
-                             bool use_flank_state = true);
-    
-    HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
-                             std::unique_ptr<IndelErrorModel> indel_model,
-                             const Haplotype& haplotype,
-                             boost::optional<FlankState> flank_state = boost::none,
-                             bool use_mapping_quality = true,
-                             bool use_flank_state = true);
+                             Config config);
     
     HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&);
     HaplotypeLikelihoodModel& operator=(const HaplotypeLikelihoodModel&);
@@ -107,8 +106,7 @@ private:
     
     std::vector<Penalty> haplotype_gap_open_penalities_;
     Penalty haplotype_gap_extension_penalty_;
-    bool use_mapping_quality_ = true;
-    bool use_flank_state_ = true;
+    Config config_;
 };
 
 class HaplotypeLikelihoodModel::ShortHaplotypeError : public std::runtime_error

@@ -29,7 +29,8 @@ auto sum_sizes(const std::vector<std::reference_wrapper<const std::vector<T>>>& 
                            [] (auto curr, const auto& v) noexcept { return curr + v.get().size(); });
 }
 
-double CoalescentPopulationPriorModel::evaluate_segregation_model(const std::vector<GenotypeIndex>& indices) const
+CoalescentPopulationPriorModel::LogProbability
+CoalescentPopulationPriorModel::evaluate_segregation_model(const std::vector<GenotypeIndex>& indices) const
 {
     if (indices.size() == 1) {
         return segregation_model_.evaluate(indices.front());
@@ -43,7 +44,8 @@ double CoalescentPopulationPriorModel::evaluate_segregation_model(const std::vec
     return segregation_model_.evaluate(index_buffer_);
 }
 
-double CoalescentPopulationPriorModel::evaluate_segregation_model(const std::vector<GenotypeIndiceVectorReference>& indices) const
+CoalescentPopulationPriorModel::LogProbability
+CoalescentPopulationPriorModel::evaluate_segregation_model(const std::vector<GenotypeIndiceVectorReference>& indices) const
 {
     if (indices.size() == 1) {
         return segregation_model_.evaluate(indices.front().get());

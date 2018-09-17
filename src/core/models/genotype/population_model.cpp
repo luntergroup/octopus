@@ -148,7 +148,7 @@ HardyWeinbergModel make_hardy_weinberg_model(const ModelConstants& constants)
 GenotypeLogLikelihoodMatrix
 compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
                                  const std::vector<Genotype<Haplotype>>& genotypes,
-                                 const HaplotypeLikelihoodCache& haplotype_likelihoods)
+                                 const HaplotypeLikelihoodArray& haplotype_likelihoods)
 {
     assert(!genotypes.empty());
     GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
@@ -555,7 +555,7 @@ void calculate_posterior_marginals(const std::vector<T>& genotypes,
 
 PopulationModel::InferredLatents
 PopulationModel::evaluate(const SampleVector& samples, const GenotypeVector& genotypes,
-                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     const auto genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
@@ -578,7 +578,7 @@ PopulationModel::evaluate(const SampleVector& samples,
                           const GenotypeVector& genotypes,
                           const std::vector<GenotypeIndex>& genotype_indices,
                           const std::vector<Haplotype>& haplotypes,
-                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
     const auto genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
@@ -600,7 +600,7 @@ PopulationModel::evaluate(const SampleVector& samples,
 PopulationModel::InferredLatents
 PopulationModel::evaluate(const SampleVector& samples,
                           const std::vector<GenotypeVectorReference>& genotypes,
-                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     return InferredLatents {};
 }

@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "haplotype_likelihood_cache.hpp"
+#include "haplotype_likelihood_array.hpp"
 
 #include <utility>
 #include <cassert>
@@ -13,7 +13,7 @@ namespace octopus {
 
 // public methods
 
-HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(const unsigned max_haplotypes,
+HaplotypeLikelihoodArray::HaplotypeLikelihoodArray(const unsigned max_haplotypes,
                                                    const std::vector<SampleName>& samples)
 : cache_ {max_haplotypes}
 , sample_indices_ {samples.size()}
@@ -21,7 +21,7 @@ HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(const unsigned max_haplotypes
     mapping_positions_.resize(maxMappingPositions);
 }
 
-HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
+HaplotypeLikelihoodArray::HaplotypeLikelihoodArray(HaplotypeLikelihoodModel likelihood_model,
                                                    unsigned max_haplotypes,
                                                    const std::vector<SampleName>& samples)
 : likelihood_model_ {std::move(likelihood_model)}
@@ -31,13 +31,13 @@ HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(HaplotypeLikelihoodModel like
     mapping_positions_.resize(maxMappingPositions);
 }
 
-HaplotypeLikelihoodCache::ReadPacket::ReadPacket(Iterator first, Iterator last)
+HaplotypeLikelihoodArray::ReadPacket::ReadPacket(Iterator first, Iterator last)
 : first {first}
 , last {last}
 , num_reads {static_cast<std::size_t>(std::distance(first, last))}
 {}
 
-void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
+void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
                                         const std::vector<Haplotype>& haplotypes,
                                         boost::optional<FlankState> flank_state)
 {
@@ -90,25 +90,25 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
     read_iterators_.clear();
 }
 
-std::size_t HaplotypeLikelihoodCache::num_likelihoods(const SampleName& sample) const
+std::size_t HaplotypeLikelihoodArray::num_likelihoods(const SampleName& sample) const
 {
     return std::cbegin(cache_)->second.at(sample_indices_.at(sample)).size();
 }
 
-const HaplotypeLikelihoodCache::LikelihoodVector&
-HaplotypeLikelihoodCache::operator()(const SampleName& sample, const Haplotype& haplotype) const
+const HaplotypeLikelihoodArray::LikelihoodVector&
+HaplotypeLikelihoodArray::operator()(const SampleName& sample, const Haplotype& haplotype) const
 {
     return cache_.at(haplotype)[sample_indices_.at(sample)];
 }
 
-const HaplotypeLikelihoodCache::LikelihoodVector&
-HaplotypeLikelihoodCache::operator[](const Haplotype& haplotype) const
+const HaplotypeLikelihoodArray::LikelihoodVector&
+HaplotypeLikelihoodArray::operator[](const Haplotype& haplotype) const
 {
     return cache_.at(haplotype)[*primed_sample_];
 }
 
-HaplotypeLikelihoodCache::SampleLikelihoodMap
-HaplotypeLikelihoodCache::extract_sample(const SampleName& sample) const
+HaplotypeLikelihoodArray::SampleLikelihoodMap
+HaplotypeLikelihoodArray::extract_sample(const SampleName& sample) const
 {
     const auto sample_index = sample_indices_.at(sample);
     SampleLikelihoodMap result {cache_.size()};
@@ -118,41 +118,41 @@ HaplotypeLikelihoodCache::extract_sample(const SampleName& sample) const
     return result;
 }
 
-bool HaplotypeLikelihoodCache::contains(const Haplotype& haplotype) const noexcept
+bool HaplotypeLikelihoodArray::contains(const Haplotype& haplotype) const noexcept
 {
     return cache_.count(haplotype) == 1;
 }
 
-bool HaplotypeLikelihoodCache::is_empty() const noexcept
+bool HaplotypeLikelihoodArray::is_empty() const noexcept
 {
     return cache_.empty();
 }
 
-void HaplotypeLikelihoodCache::clear() noexcept
+void HaplotypeLikelihoodArray::clear() noexcept
 {
     cache_.clear();
     sample_indices_.clear();
     unprime();
 }
 
-bool HaplotypeLikelihoodCache::is_primed() const noexcept
+bool HaplotypeLikelihoodArray::is_primed() const noexcept
 {
     return static_cast<bool>(primed_sample_);
 }
 
-void HaplotypeLikelihoodCache::prime(const SampleName& sample) const
+void HaplotypeLikelihoodArray::prime(const SampleName& sample) const
 {
     primed_sample_ = sample_indices_.at(sample);
 }
 
-void HaplotypeLikelihoodCache::unprime() const noexcept
+void HaplotypeLikelihoodArray::unprime() const noexcept
 {
     primed_sample_ = boost::none;
 }
 
 // private methods
 
-void HaplotypeLikelihoodCache::set_read_iterators_and_sample_indices(const ReadMap& reads)
+void HaplotypeLikelihoodArray::set_read_iterators_and_sample_indices(const ReadMap& reads)
 {
     read_iterators_.clear();
     sample_indices_.clear();
@@ -172,14 +172,14 @@ void HaplotypeLikelihoodCache::set_read_iterators_and_sample_indices(const ReadM
 
 // non-member methods
 
-HaplotypeLikelihoodCache merge_samples(const std::vector<SampleName>& samples,
+HaplotypeLikelihoodArray merge_samples(const std::vector<SampleName>& samples,
                                        const SampleName& new_sample,
                                        const std::vector<Haplotype>& haplotypes,
-                                       const HaplotypeLikelihoodCache& haplotype_likelihoods)
+                                       const HaplotypeLikelihoodArray& haplotype_likelihoods)
 {
-    HaplotypeLikelihoodCache result {static_cast<unsigned>(haplotypes.size()), {new_sample}};
+    HaplotypeLikelihoodArray result {static_cast<unsigned>(haplotypes.size()), {new_sample}};
     for (const auto& haplotype : haplotypes) {
-        HaplotypeLikelihoodCache::LikelihoodVector likelihoods {};
+        HaplotypeLikelihoodArray::LikelihoodVector likelihoods {};
         for (const auto& sample : samples) {
             const auto& m = haplotype_likelihoods(sample, haplotype);
             likelihoods.insert(std::end(likelihoods), std::cbegin(m), std::cend(m));
@@ -194,7 +194,7 @@ namespace debug {
 
 std::vector<std::reference_wrapper<const Haplotype>>
 rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
-                const HaplotypeLikelihoodCache& haplotype_likelihoods)
+                const HaplotypeLikelihoodArray& haplotype_likelihoods)
 {
     std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> ranks {};
     ranks.reserve(haplotypes.size());
@@ -215,7 +215,7 @@ rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& samp
 
 void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
                                       const ReadMap& reads,
-                                      const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       const std::size_t n)
 {
     print_read_haplotype_likelihoods(std::cout, haplotypes, reads, haplotype_likelihoods, n);

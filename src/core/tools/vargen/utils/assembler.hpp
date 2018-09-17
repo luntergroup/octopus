@@ -36,15 +36,22 @@ class Assembler
 {
 public:
     using NucleotideSequence = std::string;
+    enum class Direction { forward, reverse };
     
     struct Variant;
     class NonCanonicalReferenceSequence;
     class NonUniqueReferenceSequence {};
     
+    struct Parameters
+    {
+        unsigned kmer_size;
+        boost::optional<double> strand_tail_mass = boost::none;
+    };
+    
     Assembler() = delete;
     
-    Assembler(unsigned kmer_size);
-    Assembler(unsigned kmer_size, const NucleotideSequence& reference);
+    Assembler(Parameters params);
+    Assembler(Parameters params, const NucleotideSequence& reference);
     
     Assembler(const Assembler&)            = delete;
     Assembler& operator=(const Assembler&) = delete;
@@ -54,13 +61,14 @@ public:
     ~Assembler() = default;
     
     unsigned kmer_size() const noexcept;
+    Parameters params() const;
     
     // Threads the given reference sequence into the graph.
     // Throws an exception if there is already reference sequence present.
     void insert_reference(const NucleotideSequence& sequence);
     
     // Threads the given read sequence into the graph
-    void insert_read(const NucleotideSequence& sequence);
+    void insert_read(const NucleotideSequence& sequence, Direction strand);
     
     // Returns the current number of unique kmers in the graph
     std::size_t num_kmers() const noexcept;
@@ -133,7 +141,7 @@ private:
     {
         using WeightType = unsigned;
         using ScoreType  = double;
-        WeightType weight;
+        WeightType weight, forward_strand_weight;
         bool is_reference = false, is_artificial = false;
         ScoreType transition_score = 0;
     };
@@ -164,7 +172,7 @@ private:
         std::size_t reference_offset;
     };
     
-    unsigned k_;
+    Parameters params_;
     
     std::deque<Kmer> reference_kmers_;
     std::size_t reference_head_position_;
@@ -189,11 +197,12 @@ private:
     void remove_vertex(Vertex v);
     void clear_and_remove_vertex(Vertex v);
     void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
-    Edge add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, bool is_reference = false, bool is_artificial = false);
+    Edge add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, GraphEdge::WeightType forward_weight,
+                  bool is_reference = false, bool is_artificial = false);
     Edge add_reference_edge(Vertex u, Vertex v);
     void remove_edge(Vertex u, Vertex v);
     void remove_edge(Edge e);
-    void increment_weight(Edge e);
+    void increment_weight(Edge e, bool is_forward);
     void set_vertex_reference(Vertex v);
     void set_vertex_reference(const Kmer& kmer);
     void set_edge_reference(Edge e);
@@ -238,6 +247,7 @@ private:
     bool connects_to_path(Edge e, const Path& path) const;
     bool is_dependent_on_path(Edge e, const Path& path) const;
     GraphEdge::WeightType weight(const Path& path) const;
+    std::pair<GraphEdge::WeightType, GraphEdge::WeightType> direction_weights(const Path& path) const;
     unsigned count_low_weights(const Path& path, unsigned low_weight) const;
     bool has_low_weight_flanks(const Path& path, unsigned low_weight) const;
     unsigned count_low_weight_flanks(const Path& path, unsigned low_weight) const;

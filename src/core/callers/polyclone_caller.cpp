@@ -161,7 +161,7 @@ void erase_indices(std::vector<T>& v, const std::vector<std::size_t>& indices)
 }
 
 void reduce(std::vector<Genotype<Haplotype>>& genotypes, const GenotypePriorModel& genotype_prior_model,
-            const HaplotypeLikelihoodCache& haplotype_likelihoods, const std::size_t n)
+            const HaplotypeLikelihoodArray& haplotype_likelihoods, const std::size_t n)
 {
     if (genotypes.size() <= n) return;
     const model::IndividualModel approx_model {genotype_prior_model};
@@ -173,7 +173,7 @@ void reduce(std::vector<Genotype<Haplotype>>& genotypes, const GenotypePriorMode
                     std::end(genotypes));
 }
 
-void fit_sublone_model(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods,
+void fit_sublone_model(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
                        const GenotypePriorModel& genotype_prior_model, const SampleName& sample, const unsigned max_clones,
                        const double haploid_model_evidence, const std::function<double(unsigned)>& clonality_prior,
                        const std::size_t max_genotypes, std::vector<Genotype<Haplotype>>& polyploid_genotypes,
@@ -184,7 +184,7 @@ void fit_sublone_model(const std::vector<Haplotype>& haplotypes, const Haplotype
     for (unsigned num_clones {2}; num_clones <= max_clones; ++num_clones) {
         const auto clonal_model_prior = clonality_prior(num_clones);
         if (clonal_model_prior == 0.0) break;
-        auto genotypes = generate_all_full_rank_genotypes(haplotypes, num_clones);
+        auto genotypes = generate_all_max_zygosity_genotypes(haplotypes, num_clones);
         reduce(genotypes, genotype_prior_model, haplotype_likelihoods, max_genotypes);
         if (debug_log) stream(*debug_log) << "Generated " << genotypes.size() << " genotypes with clonality " << num_clones;
         if (genotypes.empty()) break;
@@ -209,7 +209,7 @@ void fit_sublone_model(const std::vector<Haplotype>& haplotypes, const Haplotype
 } // namespace
 
 std::unique_ptr<PolycloneCaller::Caller::Latents>
-PolycloneCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+PolycloneCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     auto haploid_genotypes = generate_all_genotypes(haplotypes, 1);
     if (debug_log_) stream(*debug_log_) << "There are " << haploid_genotypes.size() << " candidate haploid genotypes";
@@ -231,7 +231,7 @@ PolycloneCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const H
 
 boost::optional<double>
 PolycloneCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                           const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                           const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                            const Caller::Latents& latents) const
 {
     return calculate_model_posterior(haplotypes, haplotype_likelihoods, dynamic_cast<const Latents&>(latents));
@@ -239,7 +239,7 @@ PolycloneCaller::calculate_model_posterior(const std::vector<Haplotype>& haploty
 
 boost::optional<double>
 PolycloneCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                           const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                           const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                            const Latents& latents) const
 {
     return boost::none;

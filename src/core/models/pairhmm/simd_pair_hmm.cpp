@@ -415,6 +415,200 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 }
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,
+          int truth_len, int target_len,
+          const std::int8_t* gap_open, const std::int8_t* gap_extend,
+          short nuc_prior,
+          int& first_pos, char* aln1, char* aln2) noexcept
+{
+    using SimdInt = __m128i;
+    
+    assert(truth_len > bandSize && (truth_len == target_len + 2 * bandSize - 1));
+    
+    constexpr int matchLabel  {0};
+    constexpr int insertLabel {1};
+    constexpr int deleteLabel {3};
+    static const SimdInt _three {_mm_set1_epi16(3)};
+    
+    nuc_prior <<= 2;
+    
+    SimdInt _m1 {_mm_set1_epi16(inf)};
+    auto _i1 = _m1;
+    auto _d1 = _m1;
+    auto _m2 = _m1;
+    auto _i2 = _m1;
+    auto _d2 = _m1;
+    
+    SimdInt _nuc_prior  {_mm_set1_epi16(nuc_prior)};
+    
+    SimdInt _initmask   {_mm_set_epi16(0,0,0,0,0,0,0,-1)};
+    SimdInt _initmask2  {_mm_set_epi16(0,0,0,0,0,0,0,-0x8000)};
+    
+    // truth is initialized with the n-long prefix, in forward direction
+    // target is initialized as empty; reverse direction
+    SimdInt _truthwin  {_mm_set_epi16(truth[7], truth[6], truth[5], truth[4],
+                                      truth[3], truth[2], truth[1], truth[0])};
+    SimdInt _targetwin  {_m1};
+    SimdInt _qualitieswin {_mm_set1_epi16(64 << 2)};
+    
+    // if N, make nScore; if != N, make inf
+    SimdInt _truthnqual {_mm_add_epi16(_mm_and_si128(_mm_cmpeq_epi16(_truthwin, _mm_set1_epi16('N')),
+                                                     _mm_set1_epi16(nScore - inf)),
+                                       _mm_set1_epi16(inf))};
+    
+    SimdInt _gap_open {_mm_set_epi16(gap_open[7] << 2,gap_open[6] << 2,gap_open[5] << 2,gap_open[4] << 2,
+                                     gap_open[3] << 2,gap_open[2] << 2,gap_open[1] << 2,gap_open[0] << 2)};
+    SimdInt _gap_extend {_mm_set_epi16(gap_extend[7] << 2,gap_extend[6] << 2,gap_extend[5] << 2,gap_extend[4] << 2,
+                                       gap_extend[3] << 2,gap_extend[2] << 2,gap_extend[1] << 2,gap_extend[0] << 2)};
+    
+    SmallVector<SimdInt> _backpointers(2 * (truth_len + bandSize));
+    
+    short cur_score {0}, minscore {inf}, minscoreidx {-1};
+    
+    int s {0};
+    for (; s <= 2 * (target_len + bandSize); s += 2) {
+        // truth is current; target needs updating
+        _targetwin    = _mm_slli_si128(_targetwin, 2);
+        _qualitieswin = _mm_slli_si128(_qualitieswin, 2);
+        
+        if (s / 2 < target_len) {
+            _targetwin    = _mm_insert_epi16(_targetwin, target[s / 2], 0);
+            _qualitieswin = _mm_insert_epi16(_qualitieswin, qualities[s / 2] << 2, 0);
+        } else {
+            _targetwin    = _mm_insert_epi16(_targetwin, '0', 0);
+            _qualitieswin = _mm_insert_epi16(_qualitieswin, 64 << 2, 0);
+        }
+        
+        // S even
+        _m1 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m1));
+        _m2 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m2));
+        _m1 = _mm_min_epi16(_m1, _mm_min_epi16(_i1, _d1));
+        
+        if (s / 2 >= target_len) {
+            cur_score = extract_epi16(_m1, s / 2 - target_len);
+            if (cur_score < minscore) {
+                minscore = cur_score;
+                minscoreidx = s;     // point back to the match state at this entry, so as not to
+            }                        // have to store the state at s-2
+        }
+        
+        _m1 = _mm_add_epi16(_m1, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
+                                                                _qualitieswin), _truthnqual));
+        _d1 = _mm_min_epi16(_mm_add_epi16(_d2, _gap_extend),
+                            _mm_add_epi16(_mm_min_epi16(_m2, _i2),
+                                          _mm_srli_si128(_gap_open, 2))); // allow I->D
+        _d1 = _mm_insert_epi16(_mm_slli_si128(_d1, 2), inf, 0);
+        _i1 = _mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_i2, _gap_extend),
+                                          _mm_add_epi16(_m2, _gap_open)),
+                            _nuc_prior);
+    
+        _backpointers[s] = _mm_or_si128(_mm_or_si128(_mm_and_si128(_three, _m1),
+                                                     _mm_slli_epi16(_mm_and_si128(_three, _i1),
+                                                                    2 * insertLabel)),
+                                        _mm_slli_epi16(_mm_and_si128(_three, _d1), 2 * deleteLabel));
+        // set state labels
+        _m1 = _mm_andnot_si128(_three, _m1);
+        _i1 = _mm_or_si128(_mm_andnot_si128(_three, _i1), _mm_srli_epi16(_three, 1));
+        _d1 = _mm_or_si128(_mm_andnot_si128(_three, _d1), _three);
+        
+        // S odd; truth needs updating; target is current
+        const auto pos = bandSize + s / 2;
+        const char base {(pos < truth_len) ? truth[pos] : 'N'};
+        _truthwin   = _mm_insert_epi16(_mm_srli_si128(_truthwin, 2), base, bandSize - 1);
+        _truthnqual = _mm_insert_epi16(_mm_srli_si128(_truthnqual, 2), base == 'N' ? nScore : inf, bandSize - 1);
+        const auto gap_idx = pos < truth_len ? pos : truth_len - 1;
+        _gap_open   = _mm_insert_epi16(_mm_srli_si128(_gap_open, 2), gap_open[gap_idx] << 2, bandSize - 1);
+        _gap_extend = _mm_insert_epi16(_mm_srli_si128(_gap_extend, 2), gap_extend[gap_idx] << 2, bandSize - 1);
+        
+        _initmask  = _mm_slli_si128(_initmask, 2);
+        _initmask2 = _mm_slli_si128(_initmask2, 2);
+        
+        _m2 = _mm_min_epi16(_m2, _mm_min_epi16(_i2, _d2));
+        
+        if (s / 2 >= target_len) {
+            cur_score = extract_epi16(_m2, s / 2 - target_len);
+            if (cur_score < minscore) {
+                minscore = cur_score;
+                minscoreidx = s + 1;
+            }
+        }
+        
+        _m2 = _mm_add_epi16(_m2, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_targetwin, _truthwin),
+                                                                _qualitieswin), _truthnqual));
+        _d2 = _mm_min_epi16(_mm_add_epi16(_d1, _gap_extend),
+                            _mm_add_epi16(_mm_min_epi16(_m1, _i1), _gap_open)); // allow I->D
+        _i2 = _mm_insert_epi16(_mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_mm_srli_si128(_i1, 2),
+                                                                         _gap_extend),
+                                                           _mm_add_epi16(_mm_srli_si128(_m1, 2),
+                                                                         _gap_open)),
+                                             _nuc_prior), inf, bandSize - 1);
+        
+        _backpointers[s + 1] = _mm_or_si128(_mm_or_si128(_mm_and_si128(_three, _m2),
+                                                         _mm_slli_epi16(_mm_and_si128(_three, _i2), 2 * insertLabel)),
+                                            _mm_slli_epi16(_mm_and_si128(_three, _d2), 2 * deleteLabel));
+        // set state labels
+        _m2 = _mm_andnot_si128(_three, _m2);
+        _i2 = _mm_or_si128(_mm_andnot_si128(_three, _i2), _mm_srli_epi16(_three, 1));
+        _d2 = _mm_or_si128(_mm_andnot_si128(_three, _d2), _three);
+    }
+    
+    if (minscoreidx < 0) {
+        // minscore was never updated so we must have overflowed badly
+        first_pos = -1;
+        return -1;
+    }
+    
+    s = minscoreidx;    // point to the dummy match transition
+    
+    auto i      = s / 2 - target_len;
+    auto y      = target_len;
+    auto x      = s - y;
+    auto alnidx = 0;
+    auto state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * matchLabel)) & 3;
+    
+    s -= 2;
+    
+    // this is 2*y (s even) or 2*y+1 (s odd)
+    while (y > 0) {
+        const auto new_state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * state)) & 3;
+        
+        if (state == matchLabel) {
+            s -= 2;
+            aln1[alnidx] = truth[--x];
+            aln2[alnidx] = target[--y];
+        } else if (state == insertLabel) {
+            i += s & 1;
+            s -= 1;
+            aln1[alnidx] = gap;
+            aln2[alnidx] = target[--y];
+        } else {
+            s -= 1;
+            i -= s & 1;
+            aln1[alnidx] = truth[--x];
+            aln2[alnidx] = gap;
+        }
+        state = new_state;
+        alnidx++;
+    }
+    
+    aln1[alnidx] = 0;
+    aln2[alnidx] = 0;
+    
+    first_pos = x;
+    
+    // reverse them
+    for (int j {alnidx - 1}, i = 0; i < j; ++i, j--) {
+        x = aln1[i];
+        y = aln2[i];
+        aln1[i] = aln1[j];
+        aln2[i] = aln2[j];
+        aln1[j] = x;
+        aln2[j] = y;
+    }
+    
+    return (minscore + 0x8000) >> 2;
+}
+
+int align(const char* truth, const char* target, const std::int8_t* qualities,
           const int truth_len, const int target_len,
           const char* snv_mask, const std::int8_t* snv_prior,
           const std::int8_t* gap_open, short gap_extend, short nuc_prior) noexcept
@@ -693,6 +887,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _d2 = _mm_or_si128(_mm_andnot_si128(_three, _d2), _three);
     }
     
+    if (minscoreidx < 0) {
+        // minscore was never updated so we must have overflowed badly
+        first_pos = -1;
+        return -1;
+    }
+    
     s = minscoreidx;    // point to the dummy match transition
     
     auto i      = s / 2 - target_len;
@@ -908,6 +1108,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         _m2 = _mm_andnot_si128(_three, _m2);
         _i2 = _mm_or_si128(_mm_andnot_si128(_three, _i2), _mm_srli_epi16(_three, 1));
         _d2 = _mm_or_si128(_mm_andnot_si128(_three, _d2), _three);
+    }
+    
+    if (minscoreidx < 0) {
+        // minscore was never updated so we must have overflowed badly
+        first_pos = -1;
+        return -1;
     }
     
     s = minscoreidx;    // point to the dummy match transition

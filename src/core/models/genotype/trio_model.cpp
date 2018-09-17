@@ -584,6 +584,19 @@ template <> struct ProbabilityOfChildGivenParents<1, 2, 1>
     template <typename G>
     double operator()(const G& child, const G& mother, const G& father)
     {
+        return probability_of_child_given_diploid_parent(child[0], mother, mutation_model);
+    }
+    
+    const DeNovoModel& mutation_model;
+};
+
+template <> struct ProbabilityOfChildGivenParents<1, 0, 1>
+{
+    ProbabilityOfChildGivenParents(const DeNovoModel& mutation_model) : mutation_model {mutation_model} {}
+    
+    template <typename G>
+    double operator()(const G& child, const G& mother, const G& father)
+    {
         return probability_of_child_given_haploid_parent(child[0], father, mutation_model);
     }
     
@@ -640,7 +653,12 @@ auto join(const ReducedVectorMap<ParentsProbabilityPair>& parents,
     const auto child_ploidy    = child.first->genotype.get().ploidy();
     if (child_ploidy == 1) {
         if (paternal_ploidy == 1) {
-            return join(parents, child, ProbabilityOfChildGivenParents<1, 2, 1> {mutation_model});
+            if (maternal_ploidy == 0) {
+                return join(parents, child, ProbabilityOfChildGivenParents<1, 0, 1> {mutation_model});
+            }
+            if (maternal_ploidy == 2) {
+                return join(parents, child, ProbabilityOfChildGivenParents<1, 2, 1> {mutation_model});
+            }
         }
     } else if (child_ploidy == 2) {
         if (maternal_ploidy == 2) {
@@ -698,7 +716,7 @@ TrioModel::InferredLatents
 TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
                     const GenotypeVector& paternal_genotypes,
                     const GenotypeVector& child_genotypes,
-                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                    const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     if (maternal_genotypes.empty()) {
         haplotype_likelihoods.prime(trio_.father());
@@ -734,14 +752,14 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
 }
 
 TrioModel::InferredLatents
-TrioModel::evaluate(const GenotypeVector& genotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+TrioModel::evaluate(const GenotypeVector& genotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     return evaluate(genotypes, genotypes, genotypes, haplotype_likelihoods);
 }
 
 TrioModel::InferredLatents
 TrioModel::evaluate(const GenotypeVector& genotypes, std::vector<GenotypeIndex>& genotype_indices,
-                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                    const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(prior_model_.is_primed() && mutation_model_.is_primed());
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
@@ -818,7 +836,7 @@ auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& parent,
 TrioModel::InferredLatents
 TrioModel::evaluate_allosome(const GenotypeVector& parent_genotypes,
                              const GenotypeVector& child_genotypes,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!parent_genotypes.empty() && child_genotypes.empty());
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};

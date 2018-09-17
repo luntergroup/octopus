@@ -13,8 +13,16 @@
 #include <boost/lexical_cast.hpp>
 
 #include "io/variant/vcf_spec.hpp"
+#include "utils/append.hpp"
 
 namespace octopus { namespace csr {
+
+void Measure::do_set_parameters(std::vector<std::string> params)
+{
+    if (!params.empty()) {
+        throw BadMeasureParameters {this->name()};
+    }
+}
 
 struct MeasureSerialiseVisitor : boost::static_visitor<>
 {
@@ -93,6 +101,21 @@ void Measure::annotate(VcfRecord::Builder& record, const ResultType& value) cons
 
 // non-member methods
 
+std::string long_name(const Measure& measure)
+{
+    auto result = measure.name();
+    const auto params = measure.parameters();
+    if (!params.empty()) {
+        result += '[' + utils::join(params, ',') + ']';
+    }
+    return result;
+}
+
+std::string long_name(const MeasureWrapper& measure)
+{
+    return long_name(*measure.base());
+}
+
 struct IsMissingMeasureVisitor : public boost::static_visitor<bool>
 {
     template <typename T> bool operator()(const boost::optional<T>& value) const noexcept { return !value; }
@@ -104,10 +127,30 @@ bool is_missing(const Measure::ResultType& value) noexcept
     return boost::apply_visitor(IsMissingMeasureVisitor {}, value);
 }
 
+std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>& measures)
+{
+    std::vector<std::string> result {};
+    result.reserve(3 * measures.size()); // Just a guess
+    for (const auto& measure : measures) {
+        utils::append(measure.requirements(), result);
+    }
+    std::sort(std::begin(result), std::end(result));
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    return result;
+}
+
 struct VectorIndexGetterVisitor : public boost::static_visitor<Measure::ResultType>
 {
     VectorIndexGetterVisitor(std::size_t idx) : idx_ {idx} {}
     template <typename T> T operator()(const std::vector<T>& value) const noexcept { return value[idx_]; }
+    template <typename T> boost::optional<T> operator()(const boost::optional<std::vector<T>>& value) const noexcept
+    {
+        if (value) {
+            return (*value)[idx_];
+        } else {
+            return boost::none;
+        }
+    }
     template <typename T> T operator()(const T& value) const noexcept { return value; }
 private:
     std::size_t idx_;

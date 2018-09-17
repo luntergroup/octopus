@@ -20,6 +20,7 @@
 #include "utils/maths.hpp"
 #include "utils/beta_distribution.hpp"
 #include "utils/genotype_reader.hpp"
+#include "utils/string_utils.hpp"
 #include "../facets/samples.hpp"
 #include "../facets/read_assignments.hpp"
 
@@ -38,6 +39,26 @@ StrandBias::StrandBias(const double critical_value)
 std::unique_ptr<Measure> StrandBias::do_clone() const
 {
     return std::make_unique<StrandBias>(*this);
+}
+
+void StrandBias::do_set_parameters(std::vector<std::string> params)
+{
+    if (params.size() != 1) {
+        throw BadMeasureParameters {this->name(), "only has one parameter (min proportion difference)"};
+    }
+    try {
+        min_difference_ = boost::lexical_cast<decltype(min_difference_)>(params.front());
+    } catch (const boost::bad_lexical_cast&) {
+        throw BadMeasureParameters {this->name(), "given parameter \"" + params.front() + "\" cannot be parsed"};
+    }
+    if (min_difference_ < 0 || min_difference_ > 1) {
+        throw BadMeasureParameters {this->name(), "min proportion difference must be between 0 and 1"};
+    }
+}
+
+std::vector<std::string> StrandBias::do_parameters() const
+{
+    return {utils::to_string(min_difference_, 2)};
 }
 
 namespace {
@@ -145,7 +166,7 @@ double calculate_max_prob_different(const DirectionCountVector& direction_counts
 Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
     std::vector<boost::optional<double>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
@@ -154,7 +175,7 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
             std::vector<Allele> alleles; bool has_ref;
             std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
             assert(!alleles.empty());
-            const auto sample_allele_support = compute_allele_support(alleles, assignments.at(sample));
+            const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
             const auto direction_counts = get_direction_counts(sample_allele_support, mapped_region(call));
             double prob;
             if (use_resampling_) {

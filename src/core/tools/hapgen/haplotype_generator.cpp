@@ -129,6 +129,7 @@ bool all_empty(const ReadMap& reads) noexcept
 HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                        const MappableFlatSet<Variant>& candidates,
                                        const ReadMap& reads,
+                                       boost::optional<const ReadPipe::Report&> reads_report,
                                        Policies policies,
                                        DenseVariationDetector dense_variation_detector)
 : policies_ {std::move(policies)}
@@ -154,8 +155,13 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
 , trace_log_ {logging::get_trace_log()}
 {
     assert(!candidates.empty());
+    assert(!alleles_.empty());
+    if (policies.lagging != Policies::Lagging::none) {
+        lagged_walker_ = make_lagged_walker(policies);
+    }
     if (!all_empty(reads_)) {
-        for (const auto& dense : dense_variation_detector.detect(candidates, reads)) {
+        const auto dense_regions = dense_variation_detector.detect(candidates, reads, reads_report);
+        for (const auto& dense : dense_regions) {
             if (dense.action == DenseVariationDetector::DenseRegion::RecommendedAction::skip) {
                 if (debug_log_) {
                     stream(*debug_log_) << "Erasing " << count_contained(alleles_, dense.region)
@@ -175,14 +181,10 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
             alleles_.insert(candidates.back().ref_allele());
         }
     }
-    assert(!alleles_.empty());
     rightmost_allele_ = alleles_.rightmost();
     active_region_ = head_region(alleles_.leftmost());
     if (active_region_.begin() != 0) {
         active_region_ = shift(active_region_, -1);
-    }
-    if (policies.lagging != Policies::Lagging::none) {
-        lagged_walker_ = make_lagged_walker(policies);
     }
 }
 
@@ -651,7 +653,7 @@ auto find_rightmost_expanded(const std::vector<GenomicRegion>& blocks, const Map
 auto expand_lhs_by_max_ref_dist(const GenomicRegion& region, const MappableFlatSet<Allele>& alleles, const HaplotypeTree tree)
 {
     const auto max_ref_dist = max_ref_distance(region, alleles, tree);
-    return expand_lhs(region, std::min(max_ref_dist, static_cast<decltype(max_ref_dist)>(region.begin())));
+    return expand_lhs(region, std::min(max_ref_dist, static_cast<std::remove_const_t<decltype(max_ref_dist)>>(region.begin())));
 }
 
 auto get_leftmost_expanded(const std::vector<GenomicRegion>& blocks, const MappableFlatSet<Allele>& alleles,
@@ -767,7 +769,6 @@ void HaplotypeGenerator::update_lagged_next_active_region() const
         return;
     }
     const auto max_lagged_region = find_max_lagged_region();
-    assert(has_contained(alleles_, max_lagged_region));
     if (!overlaps(active_region_, max_lagged_region)) {
         next_active_region_ = std::move(max_lagged_region);
     } else {
@@ -934,10 +935,17 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
             reset_next_active_region();
             novel_active_region = right_overhang_region(active_region_, active_region_before_holdout);
             if (begins_before(novel_active_region, novel_region_before_holdout)) {
-                assert(!is_before(novel_active_region, novel_region_before_holdout));
-                novel_active_region = closed_region(novel_region_before_holdout, novel_active_region);
+                if (!is_before(novel_active_region, novel_region_before_holdout)) {
+                    novel_active_region = closed_region(novel_region_before_holdout, novel_active_region);
+                }
             }
             novel_active_alleles = overlap_range(alleles_, novel_active_region);
+            assert(!empty(novel_active_alleles));
+            while (begins_before(novel_active_alleles.front(), active_region_before_holdout)
+                   && ends_before(novel_active_alleles.front(), novel_active_region)) {
+                novel_active_alleles.advance_begin(1);
+                assert(!empty(novel_active_alleles));
+            }
             last_added_novel_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
             if (overlaps(active_region_, top_holdout_region())) {
                 next_holdout_region = *overlapped_region(active_region_, top_holdout_region());
@@ -1353,9 +1361,10 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_dense_variation_de
 
 HaplotypeGenerator HaplotypeGenerator::Builder::build(const ReferenceGenome& reference,
                                                       const MappableFlatSet<Variant>& candidates,
-                                                      const ReadMap& reads) const
+                                                      const ReadMap& reads,
+                                                      boost::optional<const ReadPipe::Report&> reads_report) const
 {
-    return HaplotypeGenerator {reference, candidates, reads, policies_, dense_variation_detector_};
+    return HaplotypeGenerator {reference, candidates, reads, std::move(reads_report), policies_, dense_variation_detector_};
 }
 
 } // namespace coretools

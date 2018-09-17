@@ -19,7 +19,7 @@ public:
     DenovoReferenceReversionCall() = delete;
     
     template <typename A, typename T>
-    DenovoReferenceReversionCall(A&& allele, T&& genotype_calls, Phred<double> quality);
+    DenovoReferenceReversionCall(A&& allele, T&& genotype_calls, Phred<double> quality, Phred<double> posterior);
     
     DenovoReferenceReversionCall(const DenovoReferenceReversionCall&)            = default;
     DenovoReferenceReversionCall& operator=(const DenovoReferenceReversionCall&) = default;
@@ -37,8 +37,9 @@ private:
 };
 
 template <typename A, typename T>
-DenovoReferenceReversionCall::DenovoReferenceReversionCall(A&& allele, T&& genotype_calls, Phred<double> quality)
-: DenovoCall {Variant {allele, std::forward<A>(allele)}, std::forward<T>(genotype_calls), quality}
+DenovoReferenceReversionCall::DenovoReferenceReversionCall(A&& allele, T&& genotype_calls,
+                                                           Phred<double> quality, Phred<double> posterior)
+: DenovoCall {Variant {allele, std::forward<A>(allele)}, std::forward<T>(genotype_calls), quality, posterior}
 {}
 
 } // namespace octopus

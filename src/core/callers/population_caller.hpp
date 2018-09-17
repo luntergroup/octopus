@@ -24,7 +24,7 @@ namespace octopus {
 class GenomicRegion;
 class ReadPipe;
 class Variant;
-class HaplotypeLikelihoodCache;
+class HaplotypeLikelihoodArray;
 class VariantCall;
 
 class PopulationCaller : public Caller
@@ -69,7 +69,7 @@ private:
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
-                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
+                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const override;
@@ -84,10 +84,10 @@ private:
     bool use_independence_model() const noexcept;
     std::unique_ptr<Caller::Latents>
     infer_latents_with_joint_model(const std::vector<Haplotype>& haplotypes,
-                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     std::unique_ptr<Caller::Latents>
     infer_latents_with_independence_model(const std::vector<Haplotype>& haplotypes,
-                                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     std::unique_ptr<PopulationPriorModel> make_joint_prior_model(const std::vector<Haplotype>& haplotypes) const;
     std::unique_ptr<GenotypePriorModel> make_independent_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };

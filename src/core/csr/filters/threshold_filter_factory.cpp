@@ -71,8 +71,10 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<MeanMappingQuality>()]       = lowMappingQuality;
     filter_names[name<ModelPosterior>()]           = lowModelPosterior;
     filter_names[name<Quality>()]                  = lowQuality;
+    filter_names[name<PosteriorProbability>()]     = lowPosteriorProbability;
     filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
     filter_names[name<GenotypeQuality>()]          = lowGQ;
+    filter_names[name<GenotypeQualityByDepth>()]   = lowGQD;
     filter_names[name<StrandBias>()]               = strandBias;
     filter_names[name<FilteredReadFraction>()]     = filteredReadFraction;
     filter_names[name<GCContent>()]                = highGCRegion;
@@ -80,9 +82,12 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<MedianBaseQuality>()]        = lowBaseQuality;
     filter_names[name<MismatchCount>()]            = highMismatchCount;
     filter_names[name<MismatchFraction>()]         = highMismatchFraction;
-    filter_names[name<SomaticContamination>()]     = somaticContamination;
+    filter_names[name<NormalContamination>()]      = normalContamination;
     filter_names[name<DeNovoContamination>()]      = deNovoContamination;
     filter_names[name<ReadPositionBias>()]         = readPositionBias;
+    filter_names[name<StrandDisequilibrium>()]     = strandDisequilibrium;
+    filter_names[name<ClassificationConfidence>()] = lowClassificationConfidence;
+    filter_names[name<AlleleDepth>()]              = alleleDepth;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)
@@ -109,7 +114,7 @@ template <typename T>
 auto make_condition(const std::string& measure_name, const std::string& comparator, const T threshold_target)
 {
     auto measure = make_measure(measure_name);
-    if (measure_name == name<StrandBias>()) {
+    if (measure.name() == name<StrandBias>()) {
         measure = make_wrapped_measure<StrandBias>(threshold_target);
     }
     auto threshold = make_threshold(comparator, threshold_target);

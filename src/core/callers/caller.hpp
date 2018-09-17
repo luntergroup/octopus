@@ -21,7 +21,7 @@
 #include "core/types/variant.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/tools/coretools.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/models/haplotype_likelihood_array.hpp"
 #include "containers/mappable_flat_set.hpp"
 #include "containers/probability_matrix.hpp"
 #include "logging/progress_meter.hpp"
@@ -29,6 +29,7 @@
 #include "io/variant/vcf_record.hpp"
 #include "core/tools/vcf_record_factory.hpp"
 #include "basics/read_pileup.hpp"
+#include "utils/memory_footprint.hpp"
 
 namespace octopus {
 
@@ -113,6 +114,8 @@ public:
         unsigned max_haplotypes;
         Phred<double> haplotype_extension_threshold, saturation_limit;
         bool allow_model_filtering;
+        bool protect_reference_haplotype;
+        boost::optional<MemoryFootprint> target_max_memory;
     };
     
 private:
@@ -132,23 +135,25 @@ private:
     virtual std::string do_name() const = 0;
     virtual CallTypeSet do_call_types() const = 0;
     virtual unsigned do_min_callable_ploidy() const { return 1; }
-    virtual unsigned do_max_callable_ploidy() const { return max_callable_ploidy(); };
+    virtual unsigned do_max_callable_ploidy() const { return min_callable_ploidy(); };
 
 protected:
     virtual std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const;
     
     using ReadPileupMap = std::unordered_map<SampleName, ReadPileups>;
+    
+    boost::optional<MemoryFootprint> target_max_memory() const noexcept;
 
 private:
     virtual std::unique_ptr<Latents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
-                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
+                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const = 0;
     
     virtual Genotype<Haplotype> call_genotype(const Latents& latents, const SampleName& sample) const;
     
     virtual boost::optional<double>
     calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const { return boost::none; }
     
     virtual std::vector<std::unique_ptr<VariantCall>>
@@ -162,20 +167,21 @@ private:
     
     std::deque<CallWrapper>
     call_variants(const GenomicRegion& call_region,  const MappableFlatSet<Variant>& candidates,
-                  const ReadMap& reads, ProgressMeter& progress_meter) const;
+                  const ReadMap& reads, const ReadPipe::Report& read_report, ProgressMeter& progress_meter) const;
     bool refcalls_requested() const noexcept;
     MappableFlatSet<Variant> generate_candidate_variants(const GenomicRegion& region) const;
-    HaplotypeGenerator make_haplotype_generator(const MappableFlatSet<Variant>& candidates, const ReadMap& reads) const;
-    HaplotypeLikelihoodCache make_haplotype_likelihood_cache() const;
+    HaplotypeGenerator make_haplotype_generator(const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
+                                                const ReadPipe::Report& read_report) const;
+    HaplotypeLikelihoodArray make_haplotype_likelihood_cache() const;
     VcfRecordFactory make_record_factory(const ReadMap& reads) const;
     std::vector<Haplotype>
-    filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods,
+    filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
            const std::deque<Haplotype>& protected_haplotypes) const;
-    bool populate(HaplotypeLikelihoodCache& haplotype_likelihoods, const GenomicRegion& active_region,
+    bool populate(HaplotypeLikelihoodArray& haplotype_likelihoods, const GenomicRegion& active_region,
                   const std::vector<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
                   const ReadMap& active_reads) const;
     std::vector<std::reference_wrapper<const Haplotype>>
-    get_removable_haplotypes(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodCache& haplotype_likelihoods,
+    get_removable_haplotypes(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
                              const Latents::HaplotypeProbabilityMap& haplotype_posteriors,
                              const std::deque<Haplotype>& protected_haplotypes, unsigned max_to_remove) const;
     GeneratorStatus
@@ -188,25 +194,25 @@ private:
                                     HaplotypeGenerator& haplotype_generator) const;
     void remove_duplicates(std::vector<Haplotype>& haplotypes) const;
     bool filter_haplotypes(std::vector<Haplotype>& haplotypes, HaplotypeGenerator& haplotype_generator,
-                           HaplotypeLikelihoodCache& haplotype_likelihoods,
+                           HaplotypeLikelihoodArray& haplotype_likelihoods,
                            const std::deque<Haplotype>& protected_haplotypes) const;
     bool is_saturated(const std::vector<Haplotype>& haplotypes, const Latents& latents) const;
     unsigned count_probable_haplotypes(const Caller::Latents::HaplotypeProbabilityMap& haplotype_posteriors) const;
     void filter_haplotypes(bool prefilter_had_removal_impact, const std::vector<Haplotype>& haplotypes,
-                           HaplotypeGenerator& haplotype_generator, const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                           HaplotypeGenerator& haplotype_generator, const HaplotypeLikelihoodArray& haplotype_likelihoods,
                            const Latents& latents, const std::deque<Haplotype>& protected_haplotypes) const;
     void call_variants(const GenomicRegion& active_region, const GenomicRegion& call_region,
                        const boost::optional<GenomicRegion>& next_active_region,
                        const boost::optional<GenomicRegion>& backtrack_region,
                        const MappableFlatSet<Variant>& candidates, const std::vector<Haplotype>& haplotypes,
-                       const HaplotypeLikelihoodCache& haplotype_likelihoods, const ReadMap& reads,
+                       const HaplotypeLikelihoodArray& haplotype_likelihoods, const ReadMap& reads,
                        const Latents& latents, std::deque<CallWrapper>& result,
                        boost::optional<GenomicRegion>& prev_called_region, GenomicRegion& completed_region) const;
     GenotypeCallMap get_genotype_calls(const Latents& latents) const;
     std::deque<Haplotype> get_called_haplotypes(const Latents& latents) const;
     void set_model_posteriors(std::vector<CallWrapper>& calls, const Latents& latents,
                               const std::vector<Haplotype>& haplotypes,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     void set_phasing(std::vector<CallWrapper>& calls, const Latents& latents,
                      const std::vector<Haplotype>& haplotypes, const GenomicRegion& call_region) const;
     bool done_calling(const GenomicRegion& region) const noexcept;

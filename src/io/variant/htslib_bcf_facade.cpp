@@ -192,12 +192,15 @@ std::size_t HtslibBcfFacade::count_records(const GenomicRegion& region) const
 HtslibBcfFacade::RecordIteratorPtrPair HtslibBcfFacade::iterate(const UnpackPolicy level) const
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
-    
     if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
+        const auto error = sr->errnum;
         sr.release();
-        throw std::runtime_error {"failed to open file " + file_path_.string()};
+        if (error == idx_load_failed) {
+            throw std::runtime_error {"failed to open index for file " + file_path_.string()};
+        } else {
+            throw std::runtime_error {"failed to open file " + file_path_.string()};
+        }
     }
-    
     return std::make_pair(std::make_unique<RecordIterator>(*this, std::move(sr), level),
                           std::make_unique<RecordIterator>(*this));
 }
@@ -206,15 +209,18 @@ HtslibBcfFacade::RecordIteratorPtrPair
 HtslibBcfFacade::iterate(const std::string& contig, const UnpackPolicy level) const
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
-    
     if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) {
         throw std::runtime_error {"failed load contig " + contig};
     }
     if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
+        const auto error = sr->errnum;
         sr.release();
-        throw std::runtime_error {"failed to open file " + file_path_.string()};
+        if (error == idx_load_failed) {
+            throw std::runtime_error {"failed to open index for file " + file_path_.string()};
+        } else {
+            throw std::runtime_error {"failed to open file " + file_path_.string()};
+        }
     }
-    
     return std::make_pair(std::make_unique<RecordIterator>(*this, std::move(sr), level),
                           std::make_unique<RecordIterator>(*this));
 }
@@ -224,15 +230,18 @@ HtslibBcfFacade::iterate(const GenomicRegion& region, const UnpackPolicy level) 
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     const auto region_str = to_string(region);
-    
     if (bcf_sr_set_regions(sr.get(), region_str.c_str(), 0) != 0) {
         throw std::runtime_error {"failed load region " + region_str};
     }
     if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
+        const auto error = sr->errnum;
         sr.release();
-        throw std::runtime_error {"failed to open file " + file_path_.string()};
+        if (error == idx_load_failed) {
+            throw std::runtime_error {"failed to open index for file " + file_path_.string()};
+        } else {
+            throw std::runtime_error {"failed to open file " + file_path_.string()};
+        }
     }
-    
     return std::make_pair(std::make_unique<RecordIterator>(*this, std::move(sr), level),
                           std::make_unique<RecordIterator>(*this));
 }
@@ -758,7 +767,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     auto ptr = floatformat;
                     for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
                         values[sample].reserve(num_values_per_sample);
-                        std::transform(ptr, ptr + num_samples, std::back_inserter(values[sample]),
+                        std::transform(ptr, ptr + num_values_per_sample, std::back_inserter(values[sample]),
                                        [] (auto v) {
                                            return v != bcf_float_missing ? std::to_string(v) : bcf_missing_str;
                                        });

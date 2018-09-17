@@ -1,11 +1,10 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef somatic_contamination_hpp
-#define somatic_contamination_hpp
+#ifndef classification_confidence_hpp
+#define classification_confidence_hpp
 
 #include <string>
-#include <vector>
 
 #include "measure.hpp"
 
@@ -15,16 +14,14 @@ class VcfRecord;
 
 namespace csr {
 
-class SomaticContamination : public Measure
+class ClassificationConfidence : public Measure
 {
     const static std::string name_;
-    
     std::unique_ptr<Measure> do_clone() const override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
     ResultCardinality do_cardinality() const noexcept override;
     const std::string& do_name() const override;
     std::string do_describe() const override;
-    std::vector<std::string> do_requirements() const override;
 };
 
 } // namespace csr

@@ -113,6 +113,12 @@ bool is_dna_rna_ambiguous(const SequenceType& sequence) // i.e. is_dna(sequence)
 }
 
 template <typename SequenceType>
+bool is_canonical_dna_or_rna(const SequenceType& sequence) noexcept
+{
+    return std::all_of(std::cbegin(sequence), std::cend(sequence), detail::is_dna_or_rna_nucleotide);
+}
+
+template <typename SequenceType>
 void transcribe(SequenceType& dna_sequence)
 {
     std::replace(std::begin(dna_sequence), std::end(dna_sequence), 'T', 'U');

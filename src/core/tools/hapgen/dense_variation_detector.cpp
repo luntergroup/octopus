@@ -26,19 +26,12 @@
 
 namespace octopus { namespace coretools {
 
-DenseVariationDetector::DenseVariationDetector(double heterozygosity, double heterozygosity_stdev,
-                                               boost::optional<ReadSetProfile> reads_profile)
-: expected_heterozygosity_ {heterozygosity}
-, heterozygosity_stdev_ {heterozygosity_stdev}
+DenseVariationDetector::DenseVariationDetector(Parameters params, boost::optional<ReadSetProfile> reads_profile)
+: params_ {params}
 , reads_profile_ {std::move(reads_profile)}
 {}
 
 namespace {
-
-auto get_max_expected_log_allele_count_per_base(double heterozygosity, double heterozygosity_stdev) noexcept
-{
-    return heterozygosity + 6 * heterozygosity_stdev;
-}
 
 struct AlleleBlock : public Mappable<AlleleBlock>, public Comparable<AlleleBlock>
 {
@@ -58,22 +51,6 @@ auto sum_block_counts(const Range& block_range) noexcept
 {
     return std::accumulate(std::cbegin(block_range), std::cend(block_range), 0.0,
                            [] (const auto curr, const AlleleBlock& block) noexcept { return curr + block.log_count; });
-}
-
-bool all_empty(const ReadMap& reads) noexcept
-{
-    return std::all_of(std::cbegin(reads), std::cend(reads), [](const auto& p) noexcept { return p.second.empty(); });
-}
-
-auto mean_mapped_region_size(const ReadMap& reads) noexcept
-{
-    double total_read_size {0};
-    std::size_t num_reads {0};
-    for (const auto& p : reads) {
-        total_read_size += sum_region_sizes(p.second);
-        num_reads += p.second.size();
-    }
-    return total_read_size / num_reads;
 }
 
 auto calculate_positional_coverage(const MappableFlatSet<Variant>& variants, const GenomicRegion& region)
@@ -233,7 +210,7 @@ struct RegionState
     unsigned variant_count;
     double variant_density;
     unsigned mean_read_depth;
-    double rmq_mapping_quality;
+    AlignedRead::MappingQuality rmq_mapping_quality, median_mapping_quality;
 };
 
 auto compute_state(const GenomicRegion& region, const MappableFlatSet<Variant>& variants, const ReadMap& reads)
@@ -241,6 +218,7 @@ auto compute_state(const GenomicRegion& region, const MappableFlatSet<Variant>& 
     RegionState result {};
     result.region = region;
     result.rmq_mapping_quality = rmq_mapping_quality(reads, region);
+    result.median_mapping_quality = median_mapping_quality(reads, region);
     result.mean_read_depth = mean_coverage(reads, region) / reads.size();
     result.variant_count = count_overlapped(variants, region);
     result.variant_density = static_cast<double>(result.variant_count) / size(region);
@@ -265,7 +243,7 @@ bool should_join(const RegionState& lhs_state, const RegionState& connecting_sta
     if (size(connecting_state.region) > std::max(size(lhs_state.region), size(rhs_state.region))) {
         return false;
     }
-    if (connecting_state.rmq_mapping_quality < std::min(lhs_state.rmq_mapping_quality, rhs_state.rmq_mapping_quality)) {
+    if (connecting_state.median_mapping_quality < std::min(lhs_state.median_mapping_quality, rhs_state.median_mapping_quality)) {
         return true;
     }
     if (connecting_state.mean_read_depth > std::min(lhs_state.mean_read_depth, rhs_state.mean_read_depth)) {
@@ -299,11 +277,12 @@ auto join_dense_regions(const MappableFlatSet<GenomicRegion>& dense_regions,
 } // namespace
 
 std::vector<DenseVariationDetector::DenseRegion>
-DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads) const
+DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads,
+                               boost::optional<const ReadPipe::Report&> reads_report) const
 {
-    const auto mean_read_size = mean_mapped_region_size(reads);
-    auto expected_log_count = get_max_expected_log_allele_count_per_base(expected_heterozygosity_, heterozygosity_stdev_);
-    const auto dense_zone_log_count_threshold = expected_log_count * mean_read_size;
+    const auto average_read_length = mean_read_length(reads);
+    auto expected_log_count = get_max_expected_log_allele_count_per_base();
+    const auto dense_zone_log_count_threshold = expected_log_count * average_read_length;
     auto dense_regions = find_dense_regions(variants, reads, dense_zone_log_count_threshold, 1);
     if (dense_regions.empty()) return {};
     auto joined_dense_regions = join_dense_regions(dense_regions, variants, reads);
@@ -311,17 +290,46 @@ DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const R
     result.reserve(joined_dense_regions.size());
     double max_expected_coverage {};
     if (reads_profile_) {
-        max_expected_coverage = 2 * reads_profile_->mean_depth + 2 * reads_profile_->depth_stdev;
+        max_expected_coverage = 2 * (std::max(reads_profile_->mean_depth, reads_profile_->median_depth) / reads.size()) + 2 * reads_profile_->depth_stdev;
     } else {
-        max_expected_coverage = 2 * mean_coverage(reads);
+        max_expected_coverage = 2 * (mean_coverage(reads) / reads.size());
     }
     for (const auto& region : joined_dense_regions) {
         const auto state = compute_state(region, variants, reads);
-        if (state.variant_count > 100 && size(state.region) > 3 * mean_read_size && state.mean_read_depth > max_expected_coverage) {
+        auto total_mean_depth = state.mean_read_depth;
+        if (reads_report) {
+            const auto num_downsampled_reads = count_downsampled_reads(reads_report->downsample_report, region);
+            const auto mean_downsample_depth = static_cast<double>(num_downsampled_reads) / size(state.region);
+            total_mean_depth += mean_downsample_depth;
+        }
+        if (state.variant_count > 100 && size(state.region) > average_read_length && total_mean_depth > max_expected_coverage) {
             result.push_back({region, DenseRegion::RecommendedAction::skip});
+        } else if (state.variant_count > 50
+            && reads_profile_
+            && std::min(state.median_mapping_quality, state.rmq_mapping_quality)
+              < std::max(reads_profile_->median_mapping_quality, reads_profile_->rmq_mapping_quality)
+            && state.mean_read_depth > 1000) {
+            if (params_.density_tolerance == Parameters::Tolerance::low) {
+                result.push_back({region, DenseRegion::RecommendedAction::skip});
+            } else {
+                result.push_back({region, DenseRegion::RecommendedAction::restrict_lagging});
+            }
         }
     }
     return result;
+}
+
+double DenseVariationDetector::get_max_expected_log_allele_count_per_base() const noexcept
+{
+    using Tolerance = Parameters::Tolerance;
+    double stdev_multiplier {1};
+    switch (params_.density_tolerance) {
+        case Tolerance::low: stdev_multiplier = 3; break;
+        case Tolerance::high: stdev_multiplier = 7; break;
+        case Tolerance::normal:
+        default: stdev_multiplier = 6;
+    }
+    return params_.heterozygosity + stdev_multiplier * params_.heterozygosity_stdev;
 }
 
 } // namespace coretools

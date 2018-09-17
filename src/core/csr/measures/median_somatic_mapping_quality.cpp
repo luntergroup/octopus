@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "somatic_contamination.hpp"
+#include "median_somatic_mapping_quality.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -10,6 +10,7 @@
 #include <boost/optional.hpp>
 #include <boost/range/combine.hpp>
 
+#include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
@@ -17,6 +18,7 @@
 #include "io/variant/vcf_record.hpp"
 #include "utils/genotype_reader.hpp"
 #include "utils/append.hpp"
+#include "utils/maths.hpp"
 #include "is_somatic.hpp"
 #include "../facets/samples.hpp"
 #include "../facets/genotypes.hpp"
@@ -24,11 +26,11 @@
 
 namespace octopus { namespace csr {
 
-const std::string SomaticContamination::name_ = "SC";
+const std::string MedianSomaticMappingQuality::name_ = "SMQ";
 
-std::unique_ptr<Measure> SomaticContamination::do_clone() const
+std::unique_ptr<Measure> MedianSomaticMappingQuality::do_clone() const
 {
-    return std::make_unique<SomaticContamination>(*this);
+    return std::make_unique<MedianSomaticMappingQuality>(*this);
 }
 
 namespace {
@@ -90,12 +92,11 @@ auto get_somatic_haplotypes(const VcfRecord& somatic, const Facet::GenotypeMap& 
 
 } // namespace
 
-Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
+Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<int> result {};
+    const auto& samples = get_value<Samples>(facets.at("Samples"));
+    std::vector<boost::optional<int>> result(samples.size(), boost::none);
     if (is_somatic(call)) {
-        result = 0;
-        const auto& samples = get_value<Samples>(facets.at("Samples"));
         const auto somatic_status = boost::get<std::vector<bool>>(IsSomatic(true).evaluate(call, facets));
         std::vector<SampleName> somatic_samples {}, normal_samples {};
         somatic_samples.reserve(samples.size()); normal_samples.reserve(samples.size());
@@ -106,65 +107,53 @@ Measure::ResultType SomaticContamination::do_evaluate(const VcfRecord& call, con
                 normal_samples.push_back(tup.get<0>());
             }
         }
+        if (somatic_samples.empty() || normal_samples.empty()) return result;
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
+        if (somatic_haplotypes.empty()) return result;
         const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
-        Genotype<Haplotype> somatic_genotype {static_cast<unsigned>(somatic_haplotypes.size() + 1)};
-        HaplotypeProbabilityMap haplotype_priors {};
-        haplotype_priors.reserve(somatic_haplotypes.size() + 1);
-        for (const auto& haplotype : somatic_haplotypes) {
-            somatic_genotype.emplace(haplotype);
-            haplotype_priors[haplotype] = -1;
-        }
-        for (const auto& sample : normal_samples) {
-            for (const auto& p : assignments.at(sample)) {
-                const auto overlapped_reads = copy_overlapped(p.second, call);
-                if (!overlapped_reads.empty()) {
-                    const Haplotype& assigned_haplotype {p.first};
-                    if (!somatic_genotype.contains(assigned_haplotype)) {
-                        auto dummy = somatic_genotype;
-                        dummy.emplace(assigned_haplotype);
-                        haplotype_priors[assigned_haplotype] = 0;
-                        const auto support = compute_haplotype_support(dummy, overlapped_reads, haplotype_priors);
-                        haplotype_priors.erase(assigned_haplotype);
-                        for (const auto& somatic : somatic_haplotypes) {
-                            if (support.count(somatic) == 1) {
-                                *result += support.at(somatic).size();
-                            }
-                        }
-                    } else {
-                        // This could happen if we don't call all 'somatic' alleles on the called somatic haplotype.
-                        *result += overlapped_reads.size();
-                    }
+        std::transform(std::cbegin(samples), std::cend(samples), std::begin(result), [&] (const auto& sample) -> boost::optional<int> {
+            if (normal_samples.empty()
+                || std::find(std::cbegin(somatic_samples), std::cend(somatic_samples), sample) != std::cend(somatic_samples)) {
+                std::vector<AlignedRead::MappingQuality> somatic_mqs {};
+                for (const auto& haplotype : somatic_haplotypes) {
+                    const auto& somatic_support = assignments.at(sample).at(haplotype);
+                    somatic_mqs.reserve(somatic_mqs.size() + somatic_support.size());
+                    std::transform(std::cbegin(somatic_support), std::cend(somatic_support), std::back_inserter(somatic_mqs),
+                                   [] (const AlignedRead& read) { return read.mapping_quality(); });
+                }
+                if (!somatic_mqs.empty()) {
+                    return maths::median(somatic_mqs);
                 }
             }
-        }
+            return boost::none;
+        });
     }
     return result;
 }
 
-Measure::ResultCardinality SomaticContamination::do_cardinality() const noexcept
+Measure::ResultCardinality MedianSomaticMappingQuality::do_cardinality() const noexcept
 {
-    return ResultCardinality::one;
+    return ResultCardinality::num_samples;
 }
 
-const std::string& SomaticContamination::do_name() const
+const std::string& MedianSomaticMappingQuality::do_name() const
 {
     return name_;
 }
 
-std::string SomaticContamination::do_describe() const
+std::string MedianSomaticMappingQuality::do_describe() const
 {
-    return "Number of reads supporting a somatic haplotype in the normal";
+    return "Median mapping quality of reads assigned to called somatic haplotypes";
 }
 
-std::vector<std::string> SomaticContamination::do_requirements() const
+std::vector<std::string> MedianSomaticMappingQuality::do_requirements() const
 {
     std::vector<std::string> result {"Samples", "Genotypes", "ReadAssignments"};
     utils::append(IsSomatic(true).requirements(), result);
     sort_unique(result);
     return result;
 }
-
+    
 } // namespace csr
 } // namespace octopus

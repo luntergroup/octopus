@@ -19,7 +19,7 @@
 #include "containers/mappable_flat_set.hpp"
 #include "containers/mappable_map.hpp"
 #include "core/types/variant.hpp"
-#include "core/models/haplotype_likelihood_cache.hpp"
+#include "core/models/haplotype_likelihood_array.hpp"
 #include "basics/aligned_read.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/maths.hpp"
@@ -48,18 +48,6 @@ unsigned get_pool_size(VariantCallFilter::ConcurrencyPolicy policy)
     }
 }
 
-auto get_facets(const std::vector<MeasureWrapper>& measures)
-{
-    std::vector<std::string> result {};
-    result.reserve(measures.size()); // Just a guess
-    for (const auto& measure : measures) {
-        utils::append(measure.requirements(), result);
-    }
-    std::sort(std::begin(result), std::end(result));
-    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    return result;
-}
-
 } // namespace
 
 // public methods
@@ -71,7 +59,7 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
 : measures_ {std::move(measures)}
 , debug_log_ {logging::get_debug_log()}
 , facet_factory_ {std::move(facet_factory)}
-, facet_names_ {get_facets(measures_)}
+, facet_names_ {get_all_requirements(measures_)}
 , output_config_ {output_config}
 , duplicate_measures_ {}
 , workers_ {get_pool_size(threading)}

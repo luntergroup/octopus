@@ -41,6 +41,7 @@ public:
             std::vector<unsigned> observed_base_qualities;
             std::vector<AlignedRead::MappingQuality> observed_mapping_qualities;
             unsigned num_fwd_observations;
+            unsigned num_edge_observations;
         };
         std::vector<SampleObservation> sample_observations;
     };
@@ -167,10 +168,14 @@ struct DefaultInclusionPredicate
 struct DefaultSomaticInclusionPredicate
 {
     DefaultSomaticInclusionPredicate() = default;
-    DefaultSomaticInclusionPredicate(SampleName normal) : normal_ {std::move(normal)} {}
+    DefaultSomaticInclusionPredicate(double min_expected_vaf)
+    : normal_ {}, min_expected_vaf_ {min_expected_vaf} {}
+    DefaultSomaticInclusionPredicate(SampleName normal, double min_expected_vaf = 0.01)
+    : normal_ {std::move(normal)}, min_expected_vaf_ {min_expected_vaf} {}
     bool operator()(const CigarScanner::ObservedVariant& candidate);
 private:
     boost::optional<SampleName> normal_;
+    double min_expected_vaf_ = 0.01;
 };
 
 struct SimpleThresholdInclusionPredicate

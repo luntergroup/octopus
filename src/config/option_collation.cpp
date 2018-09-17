@@ -400,14 +400,80 @@ InputRegionMap extract_search_regions(const ReferenceGenome& reference,
 {
     return extract_search_regions(get_all_contig_regions(reference), skip_regions);
 }
-        
-std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparsed_regions,
-                                         const ReferenceGenome& reference)
+
+bool is_region_range(const std::vector<std::string>& unparsed_regions, const ReferenceGenome& reference)
+{
+    return unparsed_regions.size() == 3 && unparsed_regions[1] == "to" && !reference.has_contig("to");
+}
+
+class BadRegionRange : public UserError
+{
+    std::string do_where() const override
+    {
+        return "make_region_range";
+    }
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "The region " << lhs_ << " is after " << rhs_;
+        if (!is_same_contig(lhs_, rhs_)) {
+            ss << " in reference index";
+        }
+        return ss.str();
+    }
+    std::string do_help() const override
+    {
+        return "Ensure the region range format is <lhs> to <rhs> where lhs occurs before rhs in the reference index";
+    }
+    
+    GenomicRegion lhs_, rhs_;
+public:
+    BadRegionRange(GenomicRegion lhs, GenomicRegion rhs) : lhs_ {lhs}, rhs_ {rhs} {}
+};
+
+std::vector<GenomicRegion> make_region_range(GenomicRegion lhs, GenomicRegion rhs, const ReferenceGenome& reference)
+{
+    assert(reference.has_contig(lhs.contig_name()) && reference.has_contig(rhs.contig_name()));
+    std::vector<GenomicRegion> result {};
+    if (is_same_contig(lhs, rhs)) {
+        if (lhs == rhs || (begins_before(lhs, rhs) && ends_before(lhs, rhs))) {
+            result.push_back(closed_region(lhs, rhs));
+        } else {
+            throw BadRegionRange {lhs, rhs};
+        }
+    } else {
+        auto reference_contigs = reference.contig_names();
+        const auto lhs_itr = std::find(std::cbegin(reference_contigs), std::cend(reference_contigs), lhs.contig_name());
+        assert(lhs_itr != std::cend(reference_contigs));
+        const auto rhs_itr = std::find(std::next(lhs_itr), std::cend(reference_contigs), rhs.contig_name());
+        if (rhs_itr != std::cend(reference_contigs)) {
+            result.reserve(std::distance(lhs_itr, rhs_itr) + 1);
+            result.emplace_back(lhs.contig_name(), lhs.begin(), reference.contig_region(lhs.contig_name()).end());
+            std::transform(std::next(lhs_itr), rhs_itr, std::back_inserter(result),
+                           [&] (const auto& contig) { return reference.contig_region(contig); });
+            result.emplace_back(rhs.contig_name(), 0, rhs.end());
+        } else {
+            throw BadRegionRange {lhs, rhs};
+        }
+    }
+    return result;
+}
+
+std::vector<GenomicRegion> parse_region_range(const std::string& lhs, const std::string& rhs, const ReferenceGenome& reference)
+{
+    return make_region_range(io::parse_region(lhs, reference), io::parse_region(rhs, reference), reference);
+}
+
+std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparsed_regions, const ReferenceGenome& reference)
 {
     std::vector<GenomicRegion> result {};
-    result.reserve(unparsed_regions.size());
-    for (const auto& unparsed_region : unparsed_regions) {
-        result.push_back(io::parse_region(unparsed_region, reference));
+    if (is_region_range(unparsed_regions, reference)) {
+        result = parse_region_range(unparsed_regions.front(), unparsed_regions.back(), reference);
+    } else {
+        result.reserve(unparsed_regions.size());
+        for (const auto& unparsed_region : unparsed_regions) {
+            result.push_back(io::parse_region(unparsed_region, reference));
+        }
     }
     return result;
 }
@@ -632,6 +698,10 @@ auto make_read_transformers(const OptionMap& options)
     prefilter_transformer.add(CapitaliseBases {});
     prefilter_transformer.add(CapBaseQualities {125});
     if (options.at("read-transforms").as<bool>()) {
+        if (is_set("mask-tails", options)) {
+            const auto mask_length = static_cast<MaskTail::Length>(options.at("mask-tails").as<int>());
+            prefilter_transformer.add(MaskTail {mask_length});
+        }
         if (is_set("mask-low-quality-tails", options)) {
             const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-low-quality-tails", options));
             prefilter_transformer.add(MaskLowQualityTails {threshold});
@@ -786,13 +856,41 @@ bool is_cancer_calling(const OptionMap& options)
     return options.at("caller").as<std::string>() == "cancer" || options.count("normal-sample") == 1;
 }
 
-auto get_default_somatic_inclusion_predicate(boost::optional<SampleName> normal)
+bool is_polyclone_calling(const OptionMap& options)
 {
-    if (normal) {
-        return coretools::DefaultSomaticInclusionPredicate {*normal};
+    return options.at("caller").as<std::string>() == "polyclone";
+}
+
+double get_min_somatic_vaf(const OptionMap& options)
+{
+    const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
+    const auto min_expected_frequency = options.at("min-expected-somatic-frequency").as<float>();
+    if (std::min(min_credible_frequency, min_expected_frequency) <= 1.0) {
+        return std::max(min_credible_frequency, min_expected_frequency);
     } else {
-        return coretools::DefaultSomaticInclusionPredicate {};
+        return std::min(min_credible_frequency, min_expected_frequency);
     }
+}
+
+auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::optional<SampleName> normal = boost::none)
+{
+    const auto min_vaf = get_min_somatic_vaf(options);
+    if (normal) {
+        return coretools::DefaultSomaticInclusionPredicate {*normal, min_vaf};
+    } else {
+        return coretools::DefaultSomaticInclusionPredicate {min_vaf};
+    }
+}
+
+double get_min_clone_vaf(const OptionMap& options)
+{
+    return options.at("min-clone-frequency").as<float>();
+}
+
+auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
+{
+    const auto min_vaf = get_min_clone_vaf(options);
+    return coretools::DefaultSomaticInclusionPredicate {min_vaf};
 }
 
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
@@ -800,11 +898,13 @@ auto get_default_inclusion_predicate(const OptionMap& options) noexcept
     using namespace coretools;
     using InclusionPredicate = CigarScanner::Options::InclusionPredicate;
     if (is_cancer_calling(options)) {
-        boost::optional<SampleName> normal {};
+        boost::optional<SampleName> normal{};
         if (is_set("normal-sample", options)) {
             normal = options.at("normal-sample").as<SampleName>();
         }
-        return InclusionPredicate {get_default_somatic_inclusion_predicate(normal)};
+        return InclusionPredicate {get_default_somatic_inclusion_predicate(options, normal)};
+    } else if (is_polyclone_calling(options)) {
+        return InclusionPredicate {get_default_somatic_inclusion_predicate(options)};
     } else {
         return InclusionPredicate {get_default_germline_inclusion_predicate()};
     }
@@ -813,6 +913,21 @@ auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 auto get_default_match_predicate() noexcept
 {
     return coretools::DefaultMatchPredicate {};
+}
+
+auto get_assembler_region_generator_frequency_trigger(const OptionMap& options)
+{
+    if (is_cancer_calling(options)) {
+        return get_min_somatic_vaf(options);
+    } else if (is_polyclone_calling(options)) {
+        return get_min_clone_vaf(options);
+    } else {
+        if (options.at("organism-ploidy").as<int>() < 4) {
+            return 0.1;
+        } else {
+            return 0.05;
+        }
+    }
 }
 
 class MissingSourceVariantFile : public MissingFileError
@@ -907,6 +1022,9 @@ auto make_variant_generator_builder(const OptionMap& options)
         scanner_options.misalignment_parameters = misalign_params;
         result.set_cigar_scanner(std::move(scanner_options));
     }
+    if (options.at("repeat-candidate-generator").as<bool>()) {
+        result.set_repeat_scanner(RepeatScanner::Options {});
+    }
     if (use_assembler) {
         LocalReassembler::Options reassembler_options {};
         const auto kmer_sizes = options.at("kmer-sizes").as<std::vector<int>>();
@@ -986,6 +1104,10 @@ auto make_variant_generator_builder(const OptionMap& options)
     ActiveRegionGenerator::Options active_region_options {};
     if (is_set("assemble-all", options) && options.at("assemble-all").as<bool>()) {
         active_region_options.assemble_all = true;
+    } else {
+        AssemblerActiveRegionGenerator::Options assembler_region_options {};
+        assembler_region_options.min_expected_mutation_frequency = get_assembler_region_generator_frequency_trigger(options);
+        active_region_options.assembler_active_region_generator_options = assembler_region_options;
     }
     result.set_active_region_generator(std::move(active_region_options));
     return result;
@@ -1167,13 +1289,33 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
+bool have_low_tolerance_for_dense_regions(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
+{
+    if (is_cancer_calling(options)) {
+        if (as_unsigned("max-somatic-haplotypes", options) < 2) {
+            return false;
+        }
+        if (input_reads_profile) {
+            const auto approx_average_depth = maths::median(input_reads_profile->sample_median_positive_depth);
+            if (approx_average_depth > 2000) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
     const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
     const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
     const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
-    return coretools::DenseVariationDetector {heterozygosity, heterozygosity_stdev, input_reads_profile};
+    coretools::DenseVariationDetector::Parameters params {heterozygosity, heterozygosity_stdev};
+    if (have_low_tolerance_for_dense_regions(options, input_reads_profile)) {
+        params.density_tolerance = coretools::DenseVariationDetector::Parameters::Tolerance::low;
+    }
+    return coretools::DenseVariationDetector {params, input_reads_profile};
 }
 
 auto get_max_indicator_join_distance() noexcept
@@ -1458,14 +1600,42 @@ auto make_snv_error_model(const OptionMap& options)
     }
 }
 
-HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options)
+AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+{
+    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
+    if (read_profile) {
+        if (read_profile->median_read_length > 200) {
+            return 2 * minimum;
+        } else {
+            return std::max(read_profile->max_mapping_quality, minimum);
+        }
+    } else {
+        return minimum;
+    }
+}
+
+AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+{
+    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
+    if (read_profile) {
+        return std::max(read_profile->max_mapping_quality, minimum);
+    } else {
+        return minimum;
+    }
+}
+
+HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
     auto snv_error_model = make_snv_error_model(options);
     auto indel_error_model = make_indel_error_model(options);
-    auto model_mapping_quality = options.at("model-mapping-quality").as<bool>();
-    auto use_flank_state = allow_flank_scoring(options);
-    return HaplotypeLikelihoodModel {std::move(snv_error_model), std::move(indel_error_model),
-                                     model_mapping_quality, use_flank_state};
+    HaplotypeLikelihoodModel::Config config {};
+    config.use_mapping_quality = options.at("model-mapping-quality").as<bool>();
+    config.use_flank_state = allow_flank_scoring(options);
+    if (config.use_mapping_quality) {
+        config.mapping_quality_cap = calculate_mapping_quality_cap(options, read_profile);
+        config.mapping_quality_cap_trigger = calculate_mapping_quality_cap_trigger(options, read_profile);
+    }
+    return HaplotypeLikelihoodModel {std::move(snv_error_model), std::move(indel_error_model), config};
 }
 
 bool allow_model_filtering(const OptionMap& options)
@@ -1484,13 +1654,28 @@ auto get_normal_contamination_risk(const OptionMap& options)
     return result;
 }
 
+auto get_target_working_memory(const OptionMap& options)
+{
+    boost::optional<MemoryFootprint> result {};
+    if (is_set("target-working-memory", options)) {
+        static const MemoryFootprint min_target_memory {*parse_footprint("100M")};
+        result = options.at("target-working-memory").as<MemoryFootprint>();
+        auto num_threads = get_num_threads(options);
+        if (!num_threads) {
+            num_threads = std::thread::hardware_concurrency();
+        }
+        result = MemoryFootprint {std::max(result->num_bytes() / *num_threads, min_target_memory.num_bytes())};
+    }
+    return result;
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
-                                  const boost::optional<ReadSetProfile> input_reads_profile)
+                                  const boost::optional<ReadSetProfile> read_profile)
 {
     CallerBuilder vc_builder {reference, read_pipe,
                               make_variant_generator_builder(options),
-                              make_haplotype_generator_builder(options, input_reads_profile)};
+                              make_haplotype_generator_builder(options, read_profile)};
 	const auto pedigree = read_ped_file(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
     check_caller(caller, read_pipe.samples(), options);
@@ -1498,7 +1683,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     
     if (caller == "population" || caller == "polyclone") {
         logging::WarningLogger log {};
-        stream(log) << "The " << caller << " calling model is an experimental feature and may not function as expected";
+        stream(log) << "The " << caller << " calling model is still in development and may not perform as expected";
     }
     
     if (is_set("refcall", options)) {
@@ -1528,6 +1713,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_ploidies(get_ploidy_map(options));
     vc_builder.set_max_haplotypes(get_max_haplotypes(options));
     vc_builder.set_haplotype_extension_threshold(options.at("haplotype-extension-threshold").as<Phred<double>>());
+    vc_builder.set_reference_haplotype_protection(options.at("protect-reference-haplotype").as<bool>());
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
     if (!options.at("use-uniform-genotype-priors").as<bool>()) {
@@ -1539,10 +1725,6 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (caller == "cancer") {
         if (is_set("normal-sample", options)) {
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
-        } else {
-            logging::WarningLogger log {};
-            log << "Tumour only calling requested. "
-                "Please note this feature is still under development and results and runtimes may be poor";
         }
         vc_builder.set_max_somatic_haplotypes(as_unsigned("max-somatic-haplotypes", options));
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
@@ -1553,10 +1735,12 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
         vc_builder.set_normal_contamination_risk(get_normal_contamination_risk(options));
+        vc_builder.set_tumour_germline_concentration(options.at("tumour-germline-concentration").as<float>());
+        if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
-        vc_builder.set_snv_denovo_mutation_rate(options.at("snv-denovo-mutation-rate").as<float>());
-        vc_builder.set_indel_denovo_mutation_rate(options.at("indel-denovo-mutation-rate").as<float>());
+        vc_builder.set_snv_denovo_mutation_rate(options.at("denovo-snv-mutation-rate").as<float>());
+        vc_builder.set_indel_denovo_mutation_rate(options.at("denovo-indel-mutation-rate").as<float>());
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     } else if (caller == "polyclone") {
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
@@ -1571,7 +1755,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
     }
-    vc_builder.set_likelihood_model(make_likelihood_model(options));
+    vc_builder.set_likelihood_model(make_likelihood_model(options, read_profile));
+    const auto target_working_memory = get_target_working_memory(options);
+    if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     return CallerFactory {std::move(vc_builder)};
 }
 
@@ -1818,6 +2004,14 @@ boost::optional<fs::path> bamout_request(const OptionMap& options)
     return boost::none;
 }
 
+boost::optional<fs::path> split_bamout_request(const OptionMap& options)
+{
+    if (is_set("split-bamout", options)) {
+        return resolve_path(options.at("split-bamout").as<fs::path>(), options);
+    }
+    return boost::none;
+}
+
 unsigned max_open_read_files(const OptionMap& options)
 {
     return 2 * std::min(as_unsigned("max-open-read-files", options), count_read_paths(options));
@@ -1833,6 +2027,14 @@ unsigned estimate_max_open_files(const OptionMap& options)
     result += is_call_filtering_requested(options);
     result += is_legacy_vcf_requested(options);
     return result;
+}
+
+boost::optional<fs::path> data_profile_request(const OptionMap& options)
+{
+    if (is_set("data-profile", options)) {
+        return resolve_path(options.at("data-profile").as<fs::path>(), options);
+    }
+    return boost::none;
 }
 
 } // namespace options

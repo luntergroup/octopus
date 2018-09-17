@@ -24,11 +24,8 @@
 #include "logging/logging.hpp"
 #include "core/types/calls/germline_variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
-
 #include "core/models/genotype/uniform_genotype_prior_model.hpp"
 #include "core/models/genotype/coalescent_genotype_prior_model.hpp"
-
-#include "timers.hpp"
 
 namespace octopus {
 
@@ -125,20 +122,23 @@ IndividualCaller::Latents::calculate_haplotype_posteriors(const std::vector<Hapl
 
 std::unique_ptr<IndividualCaller::Caller::Latents>
 IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
-                                const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+                                const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
-    auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
+    std::vector<GenotypeIndex> genotype_indices {};
+    auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy, genotype_indices);
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
-    const auto prior_model = make_prior_model(haplotypes);
-    const model::IndividualModel model {*prior_model, debug_log_};
+    auto prior_model = make_prior_model(haplotypes);
+    prior_model->prime(haplotypes);
+    model::IndividualModel model {*prior_model, debug_log_};
+    model.prime(haplotypes);
     haplotype_likelihoods.prime(sample());
-    auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
+    auto inferences = model.evaluate(genotypes, genotype_indices, haplotype_likelihoods);
     return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
 }
 
 boost::optional<double>
 IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                            const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                             const Caller::Latents& latents) const
 {
     return calculate_model_posterior(haplotypes, haplotype_likelihoods, dynamic_cast<const Latents&>(latents));
@@ -157,7 +157,7 @@ static auto calculate_model_posterior(const double normal_model_log_evidence,
 
 boost::optional<double>
 IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
-                                            const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                             const Latents& latents) const
 {
     const auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);

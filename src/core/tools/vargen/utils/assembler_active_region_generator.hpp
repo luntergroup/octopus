@@ -25,9 +25,13 @@ public:
     struct Options
     {
         enum class TriggerType { snv, indel, structual };
-        std::vector<TriggerType> trigger_types;
-        AlignedRead::BaseQuality trigger_quality;
-        AlignedRead::MappingDomain::Size trigger_clip_size;
+        // TriggerType::snv looks for reads containing SNVs
+        // TriggerType::indel looks for reads containing indels and soft clipping
+        // TriggerType::structual looks for deletion hotspots
+        std::vector<TriggerType> trigger_types = {TriggerType::indel};
+        AlignedRead::BaseQuality trigger_quality = 10;
+        AlignedRead::MappingDomain::Size trigger_clip_size = 2;
+        double min_expected_mutation_frequency = 0.1;
     };
     
     AssemblerActiveRegionGenerator() = delete;
@@ -58,6 +62,7 @@ private:
     bool snvs_interesting_ = false, indels_interesting_ = true, structual_interesting_ = false;
     AlignedRead::BaseQuality trigger_quality_ = 10;
     AlignedRead::MappingDomain::Size trigger_clip_size_ = 2;
+    double min_expected_mutation_frequency_;
     CoverageTrackerMap coverage_tracker_, interesting_read_coverages_, clipped_coverage_tracker_;
     
     bool is_interesting(const AlignedRead& read) const;

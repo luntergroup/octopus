@@ -141,7 +141,7 @@ T median_unsorted(ForwardIt first, ForwardIt last)
 }
 
 template <typename T = double, typename ForwardIt>
-auto median_sorted(ForwardIt first, ForwardIt last)
+T median_sorted(ForwardIt first, ForwardIt last)
 {
     const auto n = std::distance(first, last);
     assert(n > 0);
@@ -155,7 +155,7 @@ auto median_sorted(ForwardIt first, ForwardIt last)
 }
 
 template <typename T = double, typename ForwardIt>
-auto median_const(ForwardIt first, ForwardIt last)
+T median_const(ForwardIt first, ForwardIt last)
 {
     if (std::is_sorted(first, last)) {
         return median_sorted<T>(first, last);
@@ -168,25 +168,25 @@ auto median_const(ForwardIt first, ForwardIt last)
 } // namespace detail
 
 template <typename T = double, typename ForwardIt>
-auto median(ForwardIt first, ForwardIt last)
+T median(ForwardIt first, ForwardIt last)
 {
     return detail::median_unsorted<T>(first, last);
 }
 
 template <typename T = double, typename Range>
-auto median(Range& values)
+T median(Range& values)
 {
     return median<T>(std::begin(values), std::end(values));
 }
 
 template <typename T = double, typename Range>
-auto median(const Range& values)
+T median(const Range& values)
 {
     return detail::median_const<T>(std::cbegin(values), std::cend(values));
 }
 
 template <typename InputIt, typename UnaryOperation>
-double stdev(InputIt first, InputIt last, UnaryOperation unary_op)
+auto stdev(InputIt first, InputIt last, UnaryOperation unary_op)
 {
     const auto m = mean(first, last, unary_op);
     const auto n = std::distance(first, last);
@@ -213,7 +213,7 @@ auto stdev(const Container& values, UnaryOperation unary_op)
     return stdev(std::cbegin(values), std::cend(values), unary_op);
 }
 
-template <typename RealType, typename InputIt>
+template <typename RealType = double, typename InputIt>
 RealType rmq(InputIt first, InputIt last)
 {
     if (first == last) return 0.0;
@@ -221,7 +221,7 @@ RealType rmq(InputIt first, InputIt last)
                      / static_cast<RealType>(std::distance(first, last)));
 }
 
-template <typename RealType, typename Container>
+template <typename RealType = double, typename Container>
 RealType rmq(const Container& values)
 {
     return rmq<RealType>(std::cbegin(values), std::cend(values));
@@ -299,6 +299,51 @@ RealType log_factorial(IntegerType x)
                        [] (IntegerType a) { return std::log(static_cast<RealType>(a)); });
         return std::accumulate(std::cbegin(tx), std::cend(tx), RealType {0});
     }
+}
+
+template <typename InputIt>
+auto entropy(InputIt first, InputIt last)
+{
+    using RealType = typename std::iterator_traits<InputIt>::value_type;
+    static_assert(std::is_floating_point<RealType>::value,
+                  "entropy is only defined for floating point values");
+    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log(p); });
+}
+
+template <typename Container>
+auto entropy(const Container& values)
+{
+    return entropy(std::cbegin(values), std::cend(values));
+}
+
+template <typename InputIt>
+auto entropy2(InputIt first, InputIt last)
+{
+    using RealType = typename std::iterator_traits<InputIt>::value_type;
+    static_assert(std::is_floating_point<RealType>::value,
+                  "entropy2 is only defined for floating point values");
+    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log2(p); });
+}
+
+template <typename Container>
+auto entropy2(const Container& values)
+{
+    return entropy2(std::cbegin(values), std::cend(values));
+}
+
+template <typename InputIt>
+auto entropy10(InputIt first, InputIt last)
+{
+    using RealType = typename std::iterator_traits<InputIt>::value_type;
+    static_assert(std::is_floating_point<RealType>::value,
+                  "entropy10 is only defined for floating point values");
+    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log10(p); });
+}
+
+template <typename Container>
+auto entropy10(const Container& values)
+{
+    return entropy10(std::cbegin(values), std::cend(values));
 }
 
 template <typename IntegerType, typename RealType,
@@ -440,7 +485,7 @@ auto dirichlet_entropy(ForwardIt first_alpha, ForwardIt last_alpha)
     const auto K = static_cast<T>(std::distance(first_alpha, last_alpha));
     const auto a0 = std::accumulate(first_alpha, last_alpha, T {0});
     using boost::math::digamma;
-    return log_beta(first_alpha, last_alpha) - (K - a0) * digamma(a0)
+    return log_beta(first_alpha, last_alpha) + (a0 - K) * digamma(a0)
            - std::accumulate(first_alpha, last_alpha, T {0}, [] (auto curr, auto a) { return curr + (a - 1) * digamma(a); });
 }
 
@@ -750,6 +795,12 @@ RealType beta_sf(const RealType a, const RealType b, const RealType x)
     return boost::math::cdf(boost::math::complement(beta_dist, x));
 }
 
+template <typename RealType>
+RealType beta_tail_probability(const RealType a, const RealType b, const RealType x)
+{
+    return beta_cdf(a, b, x) + beta_sf(a, b, RealType {1} - x);
+}
+
 namespace detail {
 
 template <typename RealType>
@@ -796,7 +847,7 @@ beta_hdi_skewed(const RealType a, const RealType b, const RealType mass)
 
 template <typename RealType>
 std::pair<RealType, RealType>
-beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
+beta_hdi(RealType a, RealType b, const RealType mass)
 {
     static_assert(std::is_floating_point<RealType>::value, "beta_hdi only works for floating point types");
     if (mass < RealType {0} || mass > RealType {1}) {
@@ -826,6 +877,13 @@ beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
         return detail::beta_hdi_unbounded_rhs(a, mass);
     }
     return detail::beta_hdi_skewed(a, b, mass);
+}
+
+template <typename RealType>
+RealType dirichlet_variance(const std::vector<RealType>& alphas, const std::size_t k)
+{
+    const auto a_0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), RealType {});
+    return (alphas[k] * (a_0 - alphas[k])) / (a_0 * a_0 * (a_0 + 1));
 }
 
 template <typename RealType>

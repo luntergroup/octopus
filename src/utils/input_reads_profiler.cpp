@@ -13,6 +13,7 @@
 #include "mappable_algorithms.hpp"
 #include "maths.hpp"
 #include "append.hpp"
+#include "read_stats.hpp"
 
 namespace octopus {
 
@@ -146,12 +147,22 @@ auto get_read_bytes(const std::vector<ReadSetSamples>& read_sets)
     return result;
 }
 
+template <typename T>
+auto copy_positive(const std::deque<T>& values)
+{
+    std::vector<T> result {};
+    result.reserve(values.size());
+    std::copy_if(std::cbegin(values), std::cend(values), std::back_inserter(result), [] (T value) { return value > 0; });
+    return result;
+}
+
 } // namespace
 
-boost::optional<ReadSetProfile> profile_reads(const std::vector<SampleName>& samples,
-                                              const InputRegionMap& input_regions,
-                                              const ReadManager& source,
-                                              ReadSetProfileConfig config)
+boost::optional<ReadSetProfile>
+profile_reads(const std::vector<SampleName>& samples,
+              const InputRegionMap& input_regions,
+              const ReadManager& source,
+              ReadSetProfileConfig config)
 {
     if (input_regions.empty()) return boost::none;
     const auto sampling_regions = get_covered_sample_regions(samples, input_regions, source);
@@ -164,34 +175,76 @@ boost::optional<ReadSetProfile> profile_reads(const std::vector<SampleName>& sam
     result.mean_read_bytes = maths::mean(bytes);
     result.read_bytes_stdev = maths::stdev(bytes);
     result.sample_mean_depth.resize(samples.size());
+    result.sample_median_depth.resize(samples.size());
     result.sample_depth_stdev.resize(samples.size());
+    result.sample_median_positive_depth.resize(samples.size());
+    result.sample_mean_positive_depth.resize(samples.size());
     std::deque<unsigned> depths {};
+    std::vector<unsigned> read_lengths {};
+    std::vector<AlignedRead::MappingQuality> mapping_qualities {};
     for (std::size_t s {0}; s < samples.size(); ++s) {
         std::deque<unsigned> sample_depths {};
         for (const auto& reads : read_sets[s]) {
             if (!reads.empty()) {
                 utils::append(calculate_positional_coverage(reads), sample_depths);
+                read_lengths.reserve(read_lengths.size() + reads.size());
+                std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(read_lengths),
+                               [] (const auto& read) { return sequence_size(read); });
+                std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(mapping_qualities),
+                               [] (const auto& read) { return read.mapping_quality(); });
             }
         }
         if (!sample_depths.empty()) {
             result.sample_mean_depth[s] = maths::mean(sample_depths);
+            result.sample_median_depth[s] = maths::median(sample_depths);
             result.sample_depth_stdev[s] = maths::stdev(sample_depths);
+            const auto sample_positive_depths = copy_positive(sample_depths);
+            if (!sample_positive_depths.empty()) {
+                result.sample_median_positive_depth[s] = maths::median(sample_positive_depths);
+                result.sample_mean_positive_depth[s] = maths::mean(sample_positive_depths);
+            } else {
+                result.sample_median_positive_depth[s] = 0;
+                result.sample_mean_positive_depth[s] = 0;
+            }
         } else {
             result.sample_mean_depth[s] = 0;
+            result.sample_median_depth[s] = 0;
             result.sample_depth_stdev[s] = 0;
+            result.sample_median_positive_depth[s] = 0;
         }
         utils::append(std::move(sample_depths), depths);
     }
     assert(!depths.empty());
     result.mean_depth = maths::mean(depths);
+    result.median_depth = maths::median(depths);
     result.depth_stdev = maths::stdev(depths);
+    const auto positive_depths = copy_positive(depths);
+    if (!positive_depths.empty()) {
+        result.median_positive_depth = maths::median(positive_depths);
+        result.mean_positive_depth = maths::mean(positive_depths);
+    } else {
+        result.median_positive_depth = 0;
+        result.mean_positive_depth = 0;
+    }
+    result.max_read_length = *std::max_element(std::cbegin(read_lengths), std::cend(read_lengths));
+    result.median_read_length = maths::median(read_lengths);
+    if (!mapping_qualities.empty()) {
+        result.max_mapping_quality = *std::max_element(std::cbegin(mapping_qualities), std::cend(mapping_qualities));
+        result.median_mapping_quality = maths::median(mapping_qualities);
+        result.rmq_mapping_quality = maths::rmq(mapping_qualities);
+    } else {
+        result.max_mapping_quality = 0;
+        result.median_mapping_quality = 0;
+        result.rmq_mapping_quality = 0;
+    }
     return result;
 }
 
-boost::optional<std::size_t> estimate_mean_read_size(const std::vector<SampleName>& samples,
-                                                     const InputRegionMap& input_regions,
-                                                     ReadManager& read_manager,
-                                                     const unsigned max_sample_size)
+boost::optional<std::size_t>
+estimate_mean_read_size(const std::vector<SampleName>& samples,
+                        const InputRegionMap& input_regions,
+                        ReadManager& read_manager,
+                        const unsigned max_sample_size)
 {
     if (input_regions.empty()) return boost::none;
     const auto sample_regions = get_covered_sample_regions(samples, input_regions, read_manager);

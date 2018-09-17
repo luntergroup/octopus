@@ -10,6 +10,7 @@
 #include "io/variant/vcf_record.hpp"
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
+#include "core/tools/read_assigner.hpp"
 #include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
 #include "../facets/read_assignments.hpp"
@@ -49,8 +50,8 @@ Measure::ResultType MismatchCount::do_evaluate(const VcfRecord& call, const Face
         std::vector<Allele> alleles; bool has_ref;
         std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
         int sample_result {0};
-        if (alleles.empty()) {
-            const auto sample_allele_support = compute_allele_support(alleles, assignments.support.at(sample));
+        if (!alleles.empty()) {
+            const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
             for (const auto& p : sample_allele_support) {
                 for (const auto& read : p.second) {
                     sample_result += mismatches(read, p.first);

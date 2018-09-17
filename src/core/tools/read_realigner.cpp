@@ -84,25 +84,34 @@ void realign(AlignedRead& read, const Haplotype& haplotype, HaplotypeLikelihoodM
     realign(read, haplotype, alignment.mapping_position, std::move(alignment.cigar));
 }
 
+HaplotypeLikelihoodModel make_default_haplotype_likelihood_model()
+{
+    HaplotypeLikelihoodModel::Config config {};
+    config.use_mapping_quality = false;
+    return {nullptr, make_indel_error_model(), config};
+}
+
 } // namespace
 
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
-    realign(reads, haplotype, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false});
+    realign(reads, haplotype, make_default_haplotype_likelihood_model());
 }
 
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
 {
-    const auto read_hashes = compute_read_hashes(reads);
-    static constexpr unsigned char mapperKmerSize {6};
-    auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
-    populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
-    auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
-    model.reset(haplotype);
-    for (std::size_t i {0}; i < reads.size(); ++i) {
-        auto mapping_positions = map_query_to_target(read_hashes[i], haplotype_hashes, haplotype_mapping_counts);
-        reset_mapping_counts(haplotype_mapping_counts);
-        realign(reads[i], haplotype, model.align(reads[i], mapping_positions));
+    if (!reads.empty()) {
+        const auto read_hashes = compute_read_hashes(reads);
+        static constexpr unsigned char mapperKmerSize {6};
+        auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
+        populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
+        auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
+        model.reset(haplotype);
+        for (std::size_t i {0}; i < reads.size(); ++i) {
+            auto mapping_positions = map_query_to_target(read_hashes[i], haplotype_hashes, haplotype_mapping_counts);
+            reset_mapping_counts(haplotype_mapping_counts);
+            realign(reads[i], haplotype, model.align(reads[i], mapping_positions));
+        }
     }
 }
 
@@ -116,17 +125,19 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
 
 std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
-    return realign(reads, haplotype, HaplotypeLikelihoodModel {nullptr, make_indel_error_model(), false});
+    return realign(reads, haplotype, make_default_haplotype_likelihood_model());
 }
 
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
-    auto expanded_haplotype = expand_for_realignment(haplotype, reads);
-    try {
-        realign(reads, expanded_haplotype);
-    } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
-        expanded_haplotype = expand(expanded_haplotype, e.required_extension());
-        realign(reads, expanded_haplotype);
+    if (!reads.empty()) {
+        auto expanded_haplotype = expand_for_realignment(haplotype, reads);
+        try {
+            realign(reads, expanded_haplotype);
+        } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
+            expanded_haplotype = expand(expanded_haplotype, e.required_extension());
+            realign(reads, expanded_haplotype);
+        }
     }
 }
 

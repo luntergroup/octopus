@@ -18,6 +18,7 @@
 #include "readpipe/read_pipe.hpp"
 #include "core/tools/coretools.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
+#include "utils/memory_footprint.hpp"
 #include "caller.hpp"
 #include "cancer_caller.hpp"
 
@@ -49,6 +50,9 @@ public:
     CallerBuilder& set_caller(std::string caller);
     CallerBuilder& set_refcall_type(Caller::RefCallType type) noexcept;
     CallerBuilder& set_sites_only() noexcept;
+    CallerBuilder& set_reference_haplotype_protection(bool b) noexcept;
+    CallerBuilder& set_target_memory_footprint(MemoryFootprint memory) noexcept;
+    
     CallerBuilder& set_min_variant_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_min_refcall_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_max_haplotypes(unsigned n) noexcept;
@@ -62,6 +66,7 @@ public:
     CallerBuilder& set_likelihood_model(HaplotypeLikelihoodModel model) noexcept;
     CallerBuilder& set_model_based_haplotype_dedup(bool use) noexcept;
     CallerBuilder& set_independent_genotype_prior_flag(bool use_independent) noexcept;
+    CallerBuilder& set_max_vb_seeds(unsigned n) noexcept;
     
     // cancer
     CallerBuilder& set_normal_sample(SampleName normal_sample);
@@ -71,6 +76,7 @@ public:
     CallerBuilder& set_min_expected_somatic_frequency(double frequency) noexcept;
     CallerBuilder& set_credible_mass(double mass) noexcept;
     CallerBuilder& set_min_credible_somatic_frequency(double frequency) noexcept;
+    CallerBuilder& set_tumour_germline_concentration(double concentration) noexcept;
     CallerBuilder& set_min_somatic_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_normal_contamination_risk(NormalContaminationRisk risk) noexcept;
     
@@ -110,6 +116,7 @@ private:
         unsigned max_genotypes, max_joint_genotypes;
         bool deduplicate_haplotypes_with_caller_model;
         bool use_independent_genotype_priors;
+        boost::optional<unsigned> max_vb_seeds;
         
         // cancer
         boost::optional<SampleName> normal_sample;
@@ -118,6 +125,7 @@ private:
         double min_expected_somatic_frequency;
         double credible_mass;
         double min_credible_somatic_frequency;
+        double tumour_germline_concentration;
         Phred<double> min_somatic_posterior;
         NormalContaminationRisk normal_contamination_risk;
         bool call_somatics_only;

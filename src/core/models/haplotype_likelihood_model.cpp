@@ -10,7 +10,6 @@
 
 #include "core/models/error/error_model_factory.hpp"
 #include "concepts/mappable.hpp"
-#include "basics/aligned_read.hpp"
 #include "utils/maths.hpp"
 
 namespace octopus {
@@ -67,35 +66,29 @@ void HaplotypeLikelihoodModel::clear() noexcept
 }
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel()
-: HaplotypeLikelihoodModel {make_snv_error_model(), make_indel_error_model()}
-{}
+: HaplotypeLikelihoodModel {make_snv_error_model(), make_indel_error_model(), Config {}} {}
 
-HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(bool use_mapping_quality, bool use_flank_state)
-: HaplotypeLikelihoodModel {make_snv_error_model(), make_indel_error_model(), use_mapping_quality, use_flank_state}
-{}
+HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(Config config)
+: HaplotypeLikelihoodModel {make_snv_error_model(), make_indel_error_model(), config} {}
+
+HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
+                                                   std::unique_ptr<IndelErrorModel> indel_model)
+: HaplotypeLikelihoodModel {std::move(snv_model), std::move(indel_model), Config {}} {}
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
                                                    std::unique_ptr<IndelErrorModel> indel_model,
-                                                   bool use_mapping_quality, bool use_flank_state)
+                                                   Config config)
 : snv_error_model_ {std::move(snv_model)}
 , indel_error_model_ {std::move(indel_model)}
 , haplotype_ {nullptr}
 , haplotype_flank_state_ {}
 , haplotype_gap_open_penalities_ {}
 , haplotype_gap_extension_penalty_ {}
-, use_mapping_quality_ {use_mapping_quality}
-, use_flank_state_ {use_flank_state}
-{}
-
-HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel> snv_model,
-                                                   std::unique_ptr<IndelErrorModel> indel_model,
-                                                   const Haplotype& haplotype,
-                                                   boost::optional<FlankState> flank_state,
-                                                   bool use_mapping_quality,
-                                                   bool use_flank_state)
-: HaplotypeLikelihoodModel {std::move(snv_model), std::move(indel_model), use_mapping_quality, use_flank_state}
+, config_ {config}
 {
-    this->reset(haplotype, std::move(flank_state));
+    if (config_.mapping_quality_cap_trigger && *config_.mapping_quality_cap_trigger >= config_.mapping_quality_cap) {
+        config_.mapping_quality_cap_trigger = boost::none;
+    }
 }
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel& other)
@@ -118,8 +111,7 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(const HaplotypeLikelihoodMode
     haplotype_snv_reverse_priors_ = other.haplotype_snv_reverse_priors_;
     haplotype_gap_open_penalities_ = other.haplotype_gap_open_penalities_;
     haplotype_gap_extension_penalty_ = other.haplotype_gap_extension_penalty_;
-    use_mapping_quality_ = other.use_mapping_quality_;
-    use_flank_state_ = other.use_flank_state_;
+    config_ = other.config_;
 }
 
 HaplotypeLikelihoodModel& HaplotypeLikelihoodModel::operator=(const HaplotypeLikelihoodModel& other)
@@ -144,13 +136,12 @@ void swap(HaplotypeLikelihoodModel& lhs, HaplotypeLikelihoodModel& rhs) noexcept
     swap(lhs.haplotype_snv_reverse_priors_, rhs.haplotype_snv_reverse_priors_);
     swap(lhs.haplotype_gap_open_penalities_, rhs.haplotype_gap_open_penalities_);
     swap(lhs.haplotype_gap_extension_penalty_, rhs.haplotype_gap_extension_penalty_);
-    swap(lhs.use_mapping_quality_, rhs.use_mapping_quality_);
-    swap(lhs.use_flank_state_, rhs.use_flank_state_);
+    swap(lhs.config_, rhs.config_);
 }
 
 bool HaplotypeLikelihoodModel::can_use_flank_state() const noexcept
 {
-    return use_flank_state_;
+    return config_.use_flank_state;
 }
 
 double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read) const
@@ -259,15 +250,19 @@ double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
         model.rhs_flank_size = 0;
     }
     const auto ln_prob_given_mapped = max_score(read, *haplotype_, first_mapping_position, last_mapping_position, model);
-    if (use_mapping_quality_) {
+    if (config_.use_mapping_quality) {
         // This calculation is approximately
         // p(read | hap) = p(read missmapped) p(read | hap, missmapped)
         //                  + p(read correctly mapped) p(read | hap, correctly mapped)
         // = p(read correctly mapped) p(read | hap, correctly mapped)
         //      + p(read missmapped)
         // assuming p(read | hap, missmapped) = 1
+        auto mapping_quality = read.mapping_quality();
+        if (config_.mapping_quality_cap_trigger && mapping_quality >= *config_.mapping_quality_cap_trigger) {
+            mapping_quality = config_.mapping_quality_cap;
+        }
         using octopus::maths::constants::ln10Div10;
-        const auto ln_prob_missmapped = -ln10Div10<> * read.mapping_quality();
+        const auto ln_prob_missmapped = -ln10Div10<> * mapping_quality;
         const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
         const auto result = maths::log_sum_exp(ln_prob_mapped + ln_prob_given_mapped, ln_prob_missmapped);
         return result > -1e-15 ? 0.0 : result;
@@ -370,9 +365,13 @@ HaplotypeLikelihoodModel::align(const AlignedRead& read, MappingPositionItr firs
         model.rhs_flank_size = 0;
     }
     auto result = compute_optimal_alignment(read, *haplotype_, first_mapping_position, last_mapping_position, model);
-    if (use_mapping_quality_) {
+    if (config_.use_mapping_quality) {
+        auto mapping_quality = read.mapping_quality();
+        if (config_.mapping_quality_cap_trigger && mapping_quality >= *config_.mapping_quality_cap_trigger) {
+            mapping_quality = config_.mapping_quality_cap;
+        }
         using octopus::maths::constants::ln10Div10;
-        const auto ln_prob_missmapped = -ln10Div10<> * read.mapping_quality();
+        const auto ln_prob_missmapped = -ln10Div10<> * mapping_quality;
         const auto ln_prob_mapped = std::log(1.0 - std::exp(ln_prob_missmapped));
         result.likelihood = maths::log_sum_exp(ln_prob_mapped + result.likelihood, ln_prob_missmapped);
         result.likelihood = result.likelihood > -1e-15 ? 0.0 : result.likelihood;
@@ -384,7 +383,9 @@ HaplotypeLikelihoodModel::align(const AlignedRead& read, MappingPositionItr firs
 
 HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string sequencer, bool use_mapping_quality)
 {
-    return HaplotypeLikelihoodModel {make_snv_error_model(sequencer), make_indel_error_model(sequencer), use_mapping_quality};
+    HaplotypeLikelihoodModel::Config config {};
+    config.use_mapping_quality = use_mapping_quality;
+    return HaplotypeLikelihoodModel {make_snv_error_model(sequencer), make_indel_error_model(sequencer), config};
 }
 
 } // namespace octopus
