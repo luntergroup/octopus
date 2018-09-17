@@ -16,7 +16,7 @@ bool is_good_seed(const TandemRepeat& repeat, const InexactRepeatDefinition& rep
 {
     const auto repeat_length = region_size(repeat);
     return repeat_length >= repeat_def.min_exact_repeat_seed_length
-           && repeat_length / repeat.period >= repeat_def.min_exact_repeat_seed_periods;
+           && repeat_length / repeat.period() >= repeat_def.min_exact_repeat_seed_periods;
 }
 
 std::vector<GenomicRegion>
@@ -35,10 +35,10 @@ find_repeat_regions(const std::vector<TandemRepeat>& repeats, const GenomicRegio
     std::vector<GenomicRegion> hits {};
     hits.reserve(repeats.size());
     for (const auto& seed : seeds) {
-        const auto expanded_seed_region = expand(seed.region, repeat_def.max_seed_join_distance);
+        const auto expanded_seed_region = expand(mapped_region(seed), repeat_def.max_seed_join_distance);
         const auto overlapped_repeats = overlap_range(repeat_begin_itr, std::cend(repeats), expanded_seed_region);
         for (const auto& repeat : overlapped_repeats) {
-            hits.push_back(repeat.region);
+            hits.push_back(mapped_region(repeat));
         }
         repeat_begin_itr = overlapped_repeats.begin().base();
     }

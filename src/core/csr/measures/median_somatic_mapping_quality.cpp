@@ -107,7 +107,7 @@ Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& ca
                 normal_samples.push_back(tup.get<0>());
             }
         }
-        if (somatic_samples.empty()) return result;
+        if (somatic_samples.empty() || normal_samples.empty()) return result;
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
         if (somatic_haplotypes.empty()) return result;

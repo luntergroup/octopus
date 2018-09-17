@@ -19,14 +19,14 @@ namespace octopus {
 struct ReadSetProfileConfig
 {
     unsigned max_samples_per_sample = 10;
-    unsigned max_sample_size = 1000;
+    unsigned max_sample_size = 100'000;
 };
 
 struct ReadSetProfile
 {
     std::size_t mean_read_bytes, read_bytes_stdev;
-    std::size_t mean_depth, median_depth, depth_stdev;
-    std::vector<std::size_t> sample_mean_depth, sample_median_depth;
+    std::size_t mean_depth, median_depth, depth_stdev, median_positive_depth, mean_positive_depth;
+    std::vector<std::size_t> sample_mean_depth, sample_median_depth, sample_median_positive_depth, sample_mean_positive_depth;
     std::vector<std::size_t> sample_depth_stdev;
     AlignedRead::NucleotideSequence::size_type max_read_length, median_read_length;
     AlignedRead::MappingQuality max_mapping_quality, median_mapping_quality, rmq_mapping_quality;

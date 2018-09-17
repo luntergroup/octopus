@@ -147,6 +147,15 @@ auto get_read_bytes(const std::vector<ReadSetSamples>& read_sets)
     return result;
 }
 
+template <typename T>
+auto copy_positive(const std::deque<T>& values)
+{
+    std::vector<T> result {};
+    result.reserve(values.size());
+    std::copy_if(std::cbegin(values), std::cend(values), std::back_inserter(result), [] (T value) { return value > 0; });
+    return result;
+}
+
 } // namespace
 
 boost::optional<ReadSetProfile>
@@ -168,6 +177,8 @@ profile_reads(const std::vector<SampleName>& samples,
     result.sample_mean_depth.resize(samples.size());
     result.sample_median_depth.resize(samples.size());
     result.sample_depth_stdev.resize(samples.size());
+    result.sample_median_positive_depth.resize(samples.size());
+    result.sample_mean_positive_depth.resize(samples.size());
     std::deque<unsigned> depths {};
     std::vector<unsigned> read_lengths {};
     std::vector<AlignedRead::MappingQuality> mapping_qualities {};
@@ -187,10 +198,19 @@ profile_reads(const std::vector<SampleName>& samples,
             result.sample_mean_depth[s] = maths::mean(sample_depths);
             result.sample_median_depth[s] = maths::median(sample_depths);
             result.sample_depth_stdev[s] = maths::stdev(sample_depths);
+            const auto sample_positive_depths = copy_positive(sample_depths);
+            if (!sample_positive_depths.empty()) {
+                result.sample_median_positive_depth[s] = maths::median(sample_positive_depths);
+                result.sample_mean_positive_depth[s] = maths::mean(sample_positive_depths);
+            } else {
+                result.sample_median_positive_depth[s] = 0;
+                result.sample_mean_positive_depth[s] = 0;
+            }
         } else {
             result.sample_mean_depth[s] = 0;
             result.sample_median_depth[s] = 0;
             result.sample_depth_stdev[s] = 0;
+            result.sample_median_positive_depth[s] = 0;
         }
         utils::append(std::move(sample_depths), depths);
     }
@@ -198,6 +218,14 @@ profile_reads(const std::vector<SampleName>& samples,
     result.mean_depth = maths::mean(depths);
     result.median_depth = maths::median(depths);
     result.depth_stdev = maths::stdev(depths);
+    const auto positive_depths = copy_positive(depths);
+    if (!positive_depths.empty()) {
+        result.median_positive_depth = maths::median(positive_depths);
+        result.mean_positive_depth = maths::mean(positive_depths);
+    } else {
+        result.median_positive_depth = 0;
+        result.mean_positive_depth = 0;
+    }
     result.max_read_length = *std::max_element(std::cbegin(read_lengths), std::cend(read_lengths));
     result.median_read_length = maths::median(read_lengths);
     if (!mapping_qualities.empty()) {

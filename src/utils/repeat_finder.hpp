@@ -11,25 +11,13 @@
 
 #include "io/reference/reference_genome.hpp"
 #include "basics/genomic_region.hpp"
+#include "basics/tandem_repeat.hpp"
 #include "concepts/mappable.hpp"
+#include "concepts/comparable.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "tandem/tandem.hpp"
 
 namespace octopus {
-
-struct TandemRepeat : public Mappable<TandemRepeat>
-{
-    using SizeType = GenomicRegion::Size;
-    TandemRepeat() = delete;
-    template <typename T>
-    TandemRepeat(T region, GenomicRegion::Size period)
-    : region {std::forward<T>(region)}, period {period} {}
-    
-    GenomicRegion region;
-    GenomicRegion::Size period;
-    
-    const GenomicRegion& mapped_region() const noexcept { return region; }
-};
 
 struct InexactRepeatDefinition
 {
@@ -61,7 +49,7 @@ find_exact_tandem_repeats(SequenceType& sequence, const GenomicRegion& region,
         result.emplace_back(GenomicRegion {region.contig_name(),
                                            static_cast<GenomicRegion::Size>(run.pos + offset),
                                            static_cast<GenomicRegion::Size>(run.pos + run.length + offset)
-        }, run.period);
+        }, SequenceType {std::next(std::cbegin(sequence), run.pos), std::next(std::cbegin(sequence), run.pos + run.period)});
     }
     return result;
 }

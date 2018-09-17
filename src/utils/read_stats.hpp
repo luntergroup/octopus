@@ -281,6 +281,40 @@ AlignedRead::NucleotideSequence::size_type max_read_length(const T& reads, const
 }
 
 template <typename T>
+AlignedRead::NucleotideSequence::size_type mean_read_length(const T& reads, NonMapTag)
+{
+    if (reads.empty()) return 0;
+    return maths::mean(std::cbegin(reads), std::cend(reads), [] (const auto& read) { return sequence_size(read); });
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type mean_read_length(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    const auto overlapped = overlap_range(reads, region);
+    if (empty(overlapped)) return 0;
+    return maths::mean(std::cbegin(overlapped), std::cend(overlapped), [] (const auto& read) { return sequence_size(read); });
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type median_read_length(const T& reads, NonMapTag)
+{
+    if (reads.empty()) return 0;
+    std::vector<AlignedRead::NucleotideSequence::size_type> lengths(reads.size());
+    std::transform(std::cbegin(reads), std::cend(reads), std::begin(lengths), [] (const auto& read) { return sequence_size(read); });
+    return maths::median(lengths);
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type median_read_length(const T& reads, const GenomicRegion& region, NonMapTag)
+{
+    const auto overlapped = overlap_range(reads, region);
+    if (empty(overlapped)) return 0;
+    std::vector<AlignedRead::NucleotideSequence::size_type> lengths(size(overlapped));
+    std::transform(std::cbegin(overlapped), std::cend(overlapped), std::begin(lengths), [] (const auto& read) { return sequence_size(read); });
+    return maths::median(lengths);
+}
+
+template <typename T>
 std::size_t count_base_pairs(const T& reads, NonMapTag)
 {
     static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
@@ -805,6 +839,66 @@ AlignedRead::NucleotideSequence::size_type max_read_length(const T& reads, const
 }
 
 template <typename T>
+AlignedRead::NucleotideSequence::size_type mean_read_length(const T& reads, MapTag)
+{
+    if (reads.empty()) return 0;
+    if (reads.size() == 1) return mean_read_length(std::cbegin(reads)->second, NonMapTag {});
+    double total_length {}; std::size_t num_reads {};
+    for (const auto& p : reads) {
+        for (const auto& read : p.second) {
+            total_length += sequence_size(read);
+            ++num_reads;
+        }
+    }
+    return total_length / num_reads;
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type mean_read_length(const T& reads, const GenomicRegion& region, MapTag)
+{
+    if (reads.empty()) return 0;
+    if (reads.size() == 1) return mean_read_length(std::cbegin(reads)->second, region, NonMapTag {});
+    double total_length {}; std::size_t num_reads {};
+    for (const auto& p : reads) {
+        const auto overlapped = overlap_range(p.second, region);
+        for (const auto& read : overlapped) {
+            total_length += sequence_size(read);
+            ++num_reads;
+        }
+    }
+    return total_length / num_reads;
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type median_read_length(const T& reads, MapTag)
+{
+    if (reads.empty()) return 0;
+    if (reads.size() == 1) return median_read_length(std::cbegin(reads)->second, NonMapTag {});
+    std::vector<AlignedRead::NucleotideSequence::size_type> lengths(count_reads(reads));
+    auto length_itr = std::begin(lengths);
+    for (const auto& p : reads) {
+        length_itr = std::transform(std::cbegin(p.second), std::cend(p.second), length_itr,
+                                    [] (const auto& read) { return sequence_size(read); });
+    }
+    return maths::median(lengths);
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type median_read_length(const T& reads, const GenomicRegion& region, MapTag)
+{
+    if (reads.empty()) return 0;
+    if (reads.size() == 1) return median_read_length(std::cbegin(reads)->second, region, NonMapTag {});
+    std::vector<AlignedRead::NucleotideSequence::size_type> lengths(count_reads(reads, region));
+    auto length_itr = std::begin(lengths);
+    for (const auto& p : reads) {
+        const auto overlapped = overlap_range(p.second, region);
+        length_itr = std::transform(std::cbegin(overlapped), std::cend(overlapped), length_itr,
+                                    [] (const auto& read) { return sequence_size(read); });
+    }
+    return maths::median(lengths);
+}
+
+template <typename T>
 std::size_t count_base_pairs(const T& reads, MapTag)
 {
     return std::accumulate(std::cbegin(reads), std::cend(reads), std::size_t {0},
@@ -1194,6 +1288,30 @@ template <typename T>
 AlignedRead::NucleotideSequence::size_type max_read_length(const T& reads, const GenomicRegion& region)
 {
     return detail::max_read_length(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type mean_read_length(const T& reads)
+{
+    return detail::mean_read_length(reads, MapTagType<T> {});
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type mean_read_length(const T& reads, const GenomicRegion& region)
+{
+    return detail::mean_read_length(reads, region, MapTagType<T> {});
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type median_read_length(const T& reads)
+{
+    return detail::median_read_length(reads, MapTagType<T> {});
+}
+
+template <typename T>
+AlignedRead::NucleotideSequence::size_type median_read_length(const T& reads, const GenomicRegion& region)
+{
+    return detail::median_read_length(reads, region, MapTagType<T> {});
 }
 
 template <typename T>

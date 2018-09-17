@@ -98,7 +98,7 @@ X10IndelErrorModel::do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_o
     }
     switch (max_repeat.period) {
         case 2:
-        case 3: return 1;
+        case 3: return 2;
         default: return defaultGapExtension_;
     }
 }

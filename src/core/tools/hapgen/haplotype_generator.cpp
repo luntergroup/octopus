@@ -156,11 +156,6 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
 {
     assert(!candidates.empty());
     assert(!alleles_.empty());
-    rightmost_allele_ = alleles_.rightmost();
-    active_region_ = head_region(alleles_.leftmost());
-    if (active_region_.begin() != 0) {
-        active_region_ = shift(active_region_, -1);
-    }
     if (policies.lagging != Policies::Lagging::none) {
         lagged_walker_ = make_lagged_walker(policies);
     }
@@ -185,6 +180,11 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
         if (alleles_.empty()) {
             alleles_.insert(candidates.back().ref_allele());
         }
+    }
+    rightmost_allele_ = alleles_.rightmost();
+    active_region_ = head_region(alleles_.leftmost());
+    if (active_region_.begin() != 0) {
+        active_region_ = shift(active_region_, -1);
     }
 }
 

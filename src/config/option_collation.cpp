@@ -1289,13 +1289,33 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
+bool have_low_tolerance_for_dense_regions(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
+{
+    if (is_cancer_calling(options)) {
+        if (as_unsigned("max-somatic-haplotypes", options) < 2) {
+            return false;
+        }
+        if (input_reads_profile) {
+            const auto approx_average_depth = maths::median(input_reads_profile->sample_median_positive_depth);
+            if (approx_average_depth > 2000) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
     const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
     const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
     const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
-    return coretools::DenseVariationDetector {heterozygosity, heterozygosity_stdev, input_reads_profile};
+    coretools::DenseVariationDetector::Parameters params {heterozygosity, heterozygosity_stdev};
+    if (have_low_tolerance_for_dense_regions(options, input_reads_profile)) {
+        params.density_tolerance = coretools::DenseVariationDetector::Parameters::Tolerance::low;
+    }
+    return coretools::DenseVariationDetector {params, input_reads_profile};
 }
 
 auto get_max_indicator_join_distance() noexcept
@@ -2007,6 +2027,14 @@ unsigned estimate_max_open_files(const OptionMap& options)
     result += is_call_filtering_requested(options);
     result += is_legacy_vcf_requested(options);
     return result;
+}
+
+boost::optional<fs::path> data_profile_request(const OptionMap& options)
+{
+    if (is_set("data-profile", options)) {
+        return resolve_path(options.at("data-profile").as<fs::path>(), options);
+    }
+    return boost::none;
 }
 
 } // namespace options

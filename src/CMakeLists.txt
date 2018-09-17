@@ -53,6 +53,8 @@ set(BASICS_SOURCES
     basics/trio.cpp
     basics/read_pileup.hpp
     basics/read_pileup.cpp
+    basics/tandem_repeat.hpp
+    basics/tandem_repeat.cpp
 )
 
 set(CONTAINERS_SOURCES
@@ -358,6 +360,8 @@ set(CORE_SOURCES
     core/csr/measures/strand_disequilibrium.cpp
     core/csr/measures/supplementary_fraction.hpp
     core/csr/measures/supplementary_fraction.cpp
+    core/csr/measures/misaligned_read_count.hpp
+    core/csr/measures/misaligned_read_count.cpp
 
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp
@@ -437,6 +441,8 @@ set(CORE_SOURCES
     core/tools/read_realigner.cpp
     core/tools/bam_realigner.hpp
     core/tools/bam_realigner.cpp
+    core/tools/indel_profiler.hpp
+    core/tools/indel_profiler.cpp
 
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp

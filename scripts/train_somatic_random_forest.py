@@ -87,7 +87,8 @@ def prepare_octopus_vcf_for_rtg(octopus_vcf, tumour_sample, out_vcf_name):
     for record in in_vcf:
         old_gt = record.samples[tumour_sample]['GT']
         assert(len(old_gt) > 1)
-        record.samples[tumour_sample]['GT'] = (old_gt[0], old_gt[-1])
+        somatic_allele = next(a for a in reversed(list(old_gt)) if a is not None and a > 0)
+        record.samples[tumour_sample]['GT'] = (old_gt[0], somatic_allele)
         try:
             out_vcf.write(record)
         except OSError:

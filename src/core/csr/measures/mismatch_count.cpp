@@ -10,6 +10,7 @@
 #include "io/variant/vcf_record.hpp"
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
+#include "core/tools/read_assigner.hpp"
 #include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
 #include "../facets/read_assignments.hpp"

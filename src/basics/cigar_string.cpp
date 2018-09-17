@@ -210,6 +210,28 @@ bool is_soft_clipped(const CigarString& cigar) noexcept
     return is_front_soft_clipped(cigar) || is_back_soft_clipped(cigar);
 }
 
+bool has_indel(const CigarString& cigar) noexcept
+{
+    return std::find_if(std::cbegin(cigar), std::cend(cigar), [] (const auto& op) { return is_indel(op); }) != std::cend(cigar);
+}
+
+int indel_size(const CigarOperation& op) noexcept
+{
+    return is_indel(op) ? (is_insertion(op) ? op.size() : -static_cast<int>(op.size())) : 0;
+}
+
+int sum_indel_sizes(const CigarString& cigar) noexcept
+{
+    return std::accumulate(std::cbegin(cigar), std::end(cigar), 0, [] (auto curr, const auto& op) { return curr + indel_size(op); });
+}
+
+int max_indel_size(const CigarString& cigar) noexcept
+{
+    auto max_itr = std::max_element(std::cbegin(cigar), std::cend(cigar), [] (const auto& lhs, const auto& rhs) {
+                                    return std::abs(indel_size(lhs)) < std::abs(indel_size(rhs)); });
+    return max_itr != std::cend(cigar) ? indel_size(*max_itr) : 0;
+}
+
 std::pair<CigarOperation::Size, CigarOperation::Size>
 get_soft_clipped_sizes(const CigarString& cigar) noexcept
 {

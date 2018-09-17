@@ -141,7 +141,7 @@ T median_unsorted(ForwardIt first, ForwardIt last)
 }
 
 template <typename T = double, typename ForwardIt>
-auto median_sorted(ForwardIt first, ForwardIt last)
+T median_sorted(ForwardIt first, ForwardIt last)
 {
     const auto n = std::distance(first, last);
     assert(n > 0);
@@ -155,7 +155,7 @@ auto median_sorted(ForwardIt first, ForwardIt last)
 }
 
 template <typename T = double, typename ForwardIt>
-auto median_const(ForwardIt first, ForwardIt last)
+T median_const(ForwardIt first, ForwardIt last)
 {
     if (std::is_sorted(first, last)) {
         return median_sorted<T>(first, last);
@@ -168,25 +168,25 @@ auto median_const(ForwardIt first, ForwardIt last)
 } // namespace detail
 
 template <typename T = double, typename ForwardIt>
-auto median(ForwardIt first, ForwardIt last)
+T median(ForwardIt first, ForwardIt last)
 {
     return detail::median_unsorted<T>(first, last);
 }
 
 template <typename T = double, typename Range>
-auto median(Range& values)
+T median(Range& values)
 {
     return median<T>(std::begin(values), std::end(values));
 }
 
 template <typename T = double, typename Range>
-auto median(const Range& values)
+T median(const Range& values)
 {
     return detail::median_const<T>(std::cbegin(values), std::cend(values));
 }
 
 template <typename InputIt, typename UnaryOperation>
-double stdev(InputIt first, InputIt last, UnaryOperation unary_op)
+auto stdev(InputIt first, InputIt last, UnaryOperation unary_op)
 {
     const auto m = mean(first, last, unary_op);
     const auto n = std::distance(first, last);

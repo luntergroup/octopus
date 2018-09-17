@@ -103,8 +103,8 @@ private:
     SiteCountTuple count_segregating_sites(const Haplotype& haplotype) const;
     template <typename Container> SiteCountTuple count_segregating_sites(const Container& haplotypes) const;
     SiteCountTuple count_segregating_sites_in_buffer(unsigned num_haplotypes) const;
-    LogProbability calculate_buffered_indel_heterozygosity() const;
-    LogProbability calculate_heterozygosity(const Variant& indel) const;
+    double calculate_buffered_indel_heterozygosity() const;
+    double calculate_heterozygosity(const Variant& indel) const;
 };
 
 template <typename Container>
