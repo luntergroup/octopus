@@ -603,6 +603,22 @@ template <> struct ProbabilityOfChildGivenParents<1, 0, 1>
     const DeNovoModel& mutation_model;
 };
 
+template <> struct ProbabilityOfChildGivenParents<1, 1, 1>
+{
+    ProbabilityOfChildGivenParents(const DeNovoModel& mutation_model) : mutation_model {mutation_model} {}
+    
+    template <typename G>
+    double operator()(const G& child, const G& mother, const G& father)
+    {
+        static const double ln2 {std::log(2)};
+        const auto p1 = probability_of_child_given_haploid_parent(child[0], mother, mutation_model);
+        const auto p2 = probability_of_child_given_haploid_parent(child[0], father, mutation_model);
+        return maths::log_sum_exp(p1, p2) - ln2;
+    }
+    
+    const DeNovoModel& mutation_model;
+};
+
 using JointProbability = TrioModel::Latents::JointProbability;
 
 template <typename F>
@@ -656,6 +672,9 @@ auto join(const ReducedVectorMap<ParentsProbabilityPair>& parents,
             if (maternal_ploidy == 0) {
                 return join(parents, child, ProbabilityOfChildGivenParents<1, 0, 1> {mutation_model});
             }
+            if (maternal_ploidy == 1) {
+                return join(parents, child, ProbabilityOfChildGivenParents<1, 1, 1> {mutation_model});
+            }
             if (maternal_ploidy == 2) {
                 return join(parents, child, ProbabilityOfChildGivenParents<1, 2, 1> {mutation_model});
             }
@@ -668,8 +687,6 @@ auto join(const ReducedVectorMap<ParentsProbabilityPair>& parents,
             if (paternal_ploidy == 2) {
                 return join(parents, child, ProbabilityOfChildGivenParents<2, 2, 2> {mutation_model});
             }
-        } else {
-        
         }
     } else if (child_ploidy == 3 && maternal_ploidy == 3 && paternal_ploidy == 3) {
         return join(parents, child, ProbabilityOfChildGivenParents<3, 3, 3> {mutation_model});
@@ -838,7 +855,7 @@ TrioModel::evaluate_allosome(const GenotypeVector& parent_genotypes,
                              const GenotypeVector& child_genotypes,
                              const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
-    assert(!parent_genotypes.empty() && child_genotypes.empty());
+    assert(!parent_genotypes.empty() && !child_genotypes.empty());
     const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
     assert(haplotype_likelihoods.is_primed());
     auto parent_likelihoods = compute_likelihoods(parent_genotypes, likelihood_model);
