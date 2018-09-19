@@ -79,12 +79,24 @@ void RandomForestFilter::prepare_for_registration(const SampleList& samples) con
 
 namespace {
 
+template <typename T>
+double lexical_cast_to_double(const T& value)
+{
+    auto result = boost::lexical_cast<double>(value);
+    if (result > 0 && result < 1e-300) {
+        // Floor to prevent libc++ bug:
+        // https://stackoverflow.com/questions/52410931/why-does-clang-stdostream-write-a-double-that-stdistream-cant-read
+        result = 0;
+    }
+    return result;
+}
+
 struct MeasureDoubleVisitor : boost::static_visitor<>
 {
     double result;
     template <typename T> void operator()(const T& value)
     {
-        result = boost::lexical_cast<double>(value);
+        result = lexical_cast_to_double(value);
     }
     template <typename T> void operator()(const boost::optional<T>& value)
     {

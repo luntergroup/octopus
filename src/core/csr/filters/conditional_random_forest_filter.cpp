@@ -19,12 +19,12 @@
 
 #include "basics/phred.hpp"
 #include "utils/concat.hpp"
+#include "utils/maths.hpp"
 #include "exceptions/missing_file_error.hpp"
 #include "exceptions/program_error.hpp"
 #include "exceptions/malformed_file_error.hpp"
 
 namespace octopus { namespace csr {
-
 
 namespace {
 
@@ -122,12 +122,24 @@ void ConditionalRandomForestFilter::prepare_for_registration(const SampleList& s
 
 namespace {
 
+template <typename T>
+double lexical_cast_to_double(const T& value)
+{
+    auto result = boost::lexical_cast<double>(value);
+    if (result > 0 && result < 1e-300) {
+        // Floor to prevent libc++ bug:
+        // https://stackoverflow.com/questions/52410931/why-does-clang-stdostream-write-a-double-that-stdistream-cant-read
+        result = 0;
+    }
+    return result;
+}
+
 struct MeasureDoubleVisitor : boost::static_visitor<>
 {
     double result;
     template <typename T> void operator()(const T& value)
     {
-        result = boost::lexical_cast<double>(value);
+        result = lexical_cast_to_double(value);
     }
     template <typename T> void operator()(const boost::optional<T>& value)
     {
