@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef read_position_bias_hpp
-#define read_position_bias_hpp
+#ifndef read_side_bias_hpp
+#define read_side_bias_hpp
 
 #include <string>
 #include <vector>
@@ -15,7 +15,7 @@ class VcfRecord;
 
 namespace csr {
 
-class ReadPositionBias : public Measure
+class ReadSideBias : public Measure
 {
     const static std::string name_;
     std::unique_ptr<Measure> do_clone() const override;

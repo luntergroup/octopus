@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "read_position_bias.hpp"
+#include "read_side_bias.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -22,11 +22,11 @@
 
 namespace octopus { namespace csr {
 
-const std::string ReadPositionBias::name_ = "RPB";
+const std::string ReadSideBias::name_ = "RSB";
 
-std::unique_ptr<Measure> ReadPositionBias::do_clone() const
+std::unique_ptr<Measure> ReadSideBias::do_clone() const
 {
-    return std::make_unique<ReadPositionBias>(*this);
+    return std::make_unique<ReadSideBias>(*this);
 }
 
 namespace {
@@ -107,7 +107,7 @@ double calculate_position_bias(const AlleleSupportMap& support)
 
 } // namespace
 
-Measure::ResultType ReadPositionBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
+Measure::ResultType ReadSideBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
@@ -127,22 +127,22 @@ Measure::ResultType ReadPositionBias::do_evaluate(const VcfRecord& call, const F
     return result;
 }
 
-Measure::ResultCardinality ReadPositionBias::do_cardinality() const noexcept
+Measure::ResultCardinality ReadSideBias::do_cardinality() const noexcept
 {
     return ResultCardinality::num_samples;
 }
 
-const std::string& ReadPositionBias::do_name() const
+const std::string& ReadSideBias::do_name() const
 {
     return name_;
 }
 
-std::string ReadPositionBias::do_describe() const
+std::string ReadSideBias::do_describe() const
 {
-    return "Bias of variant position in supporting reads";
+    return "Bias of variant side (head or tail half) in supporting reads";
 }
 
-std::vector<std::string> ReadPositionBias::do_requirements() const
+std::vector<std::string> ReadSideBias::do_requirements() const
 {
     return {"Samples", "ReadAssignments"};
 }
