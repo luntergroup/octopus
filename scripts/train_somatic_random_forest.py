@@ -10,6 +10,8 @@ from pysam import VariantFile
 import random
 import numpy as np
 
+default_measures = "AC AD AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD".split()
+
 def get_sample_names(truth_vcf_name):
     truth_vcf = VariantFile(truth_vcf_name)
     return [sample for sample in truth_vcf.header.samples]
@@ -26,42 +28,19 @@ def remove_vcf(vcf_path):
 def is_homozygous(gt):
     return all(a == 1 for a in gt)
 
-def to_float(val):
-    if val == '.':
-        return np.nan
-    else:
-        try:
-            return float(val)
-        except ValueError:
-            return val
-
-def get_value(rec, feature):
-    if feature == "POS":
-        return rec.pos
-    elif feature == "REF":
-        return rec.ref
-    elif feature == "ALT":
-        return list(rec.alts)
-    elif feature == "QUAL":
+def get_annotation(field, rec):
+    if field == 'QUAL':
         return rec.qual
-    elif feature == 'AS':
-        return max([len(allele) for allele in rec.alleles])
-    elif feature in rec.info:
-        val = rec.info[feature]
-        if type(val) == tuple:
-            return tuple([to_float(v) for v in val])
-        else:
-            return to_float(val)
-    elif feature in rec.samples[0]:
-        if feature == 'GT':
-            return int(is_homozygous(rec.samples[0][feature]))
-        else:
-            return int(rec.samples[0][feature])
+    elif field == 'GQ':
+        return rec.samples[0]['GQ']
     else:
-        return np.nan
+        res = rec.info[field]
+        if type(res) == tuple:
+            res = list(res)
+        return res
 
 def is_somatic(rec):
-    return any(get_value(rec, 'SOMATIC'))
+    return get_annotation('SOMATIC', rec)
 
 def filter_somatic(in_vcf_path, out_vcf_path):
     in_vcf = VariantFile(in_vcf_path)
@@ -120,42 +99,33 @@ def subset(vcf_in_path, vcf_out_path, bed_regions):
     call(['bcftools', 'view', '-R', bed_regions, '-O', 'z', '-o', vcf_out_path, vcf_in_path])
 
 def is_missing(x):
-    if x == '.':
-        return True
-    x = float(x)
-    return np.isnan(x)
+    return x == '.' or np.isnan(float(x))
 
-def to_str(x, missing_value):
-    if is_missing(x):
-        return str(missing_value)
-    else:
-        return str(x)
+def annotation_to_string(x, missing_value):
+    return str(missing_value) if is_missing(x) else str(x)
 
-def get_data(rec, features, n_samples, missing_value):
+def get_annotations(rec, features, n_samples, missing_value):
     result = [[] for _ in range(n_samples)]
     for feature in features:
-        value = get_value(rec, feature)
-        if type(value) == tuple:
+        value = get_annotation(feature, rec)
+        if type(value) == tuple or type(value) == list:
             assert len(value) == n_samples
-            result = [curr + [to_str(v, missing_value)] for curr, v in zip(result, value)]
+            result = [curr + [annotation_to_string(v, missing_value)] for curr, v in zip(result, value)]
         else:
-            value_str = to_str(value, missing_value)
+            value_str = annotation_to_string(value, missing_value)
             for d in result:
                 d.append(value_str)
     return result
 
-def make_ranger_data(octopus_vcf_path, measures, is_tp, out, missing_value):
+def make_ranger_data(octopus_vcf_path, measures, classifcation, out, missing_value):
     vcf = VariantFile(octopus_vcf_path)
     n_samples = len(vcf.header.samples)
     n_records = 0
     with open(out, 'a') as ranger_dat:
         datwriter = csv.writer(ranger_dat, delimiter=' ')
         for rec in vcf:
-            for row in get_data(rec, measures, n_samples, missing_value):
-                if is_tp:
-                    row.append('1')
-                else:
-                    row.append('0')
+            for row in get_annotations(rec, measures, n_samples, missing_value):
+                row.append(str(int(classifcation)))
                 datwriter.writerow(row)
                 n_records += 1
     return n_records
@@ -224,7 +194,7 @@ if __name__ == '__main__':
                         help='Octopus cancer calling model calls with CSR annotations')
     parser.add_argument('-T', '--regions',
                         type=str,
-                        required=True,
+                        default=None,
                         help='BED files containing regions to use')
     parser.add_argument('--truth',
                         type=str,
@@ -233,7 +203,7 @@ if __name__ == '__main__':
     parser.add_argument('--measures',
                         type=str,
                         nargs='+',
-                        required=True,
+                        default=default_measures,
                         help='Measures to use for training')
     parser.add_argument('--rtg',
                         type=str,
