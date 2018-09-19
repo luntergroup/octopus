@@ -155,22 +155,22 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::legacy()
 
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::filter_request() const
 {
-    return components_.filter_request_;
+    return components_.filter_request;
 }
 
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::bamout() const
 {
-    return components_.bamout_;
+    return components_.bamout;
 }
 
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::split_bamout() const
 {
-    return components_.split_bamout_;
+    return components_.split_bamout;
 }
 
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::data_profile() const
 {
-    return components_.data_profile_;
+    return components_.data_profile;
 }
 
 bool GenomeCallingComponents::sites_only() const noexcept
@@ -485,35 +485,39 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , samples {extract_samples(options, this->read_manager)}
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
-, temp_directory {get_temp_directory(options)}
-, reads_profile_ {profile_reads(this->samples, this->regions, this->read_manager)}
+, reads_profile {profile_reads(this->samples, this->regions, this->read_manager)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)}
-, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile_)}
-, call_filter_factory {options::make_call_filter_factory(this->reference, this->read_pipe, options, this->temp_directory)}
+, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile)}
 , filter_read_pipe {}
 , output {std::move(output)}
+, filtered_output {}
 , num_threads {options::get_num_threads(options)}
 , read_buffer_size {}
 , progress_meter {regions}
 , ploidies {options::get_ploidy_map(options)}
 , pedigree {options::get_pedigree(options, samples)}
 , sites_only {options::call_sites_only(options)}
-, filtered_output {}
 , legacy {}
-, filter_request_ {}
-, bamout_ {options::bamout_request(options)}
-, split_bamout_ {options::split_bamout_request(options)}
-, data_profile_ {options::data_profile_request(options)}
+, filter_request {}
+, bamout {options::bamout_request(options)}
+, split_bamout {options::split_bamout_request(options)}
+, data_profile {options::data_profile_request(options)}
 {
     drop_unused_samples(this->samples, this->read_manager);
     setup_progress_meter(options);
     set_read_buffer_size(options);
-    setup_writers(options);
     setup_filter_read_pipe(options);
-    filter_request_ = options::filter_request(options);
-    if (filter_request_ && !all_samples_in_vcf(samples, *filter_request_)) {
+    filter_request = options::filter_request(options);
+    if (filter_request && !all_samples_in_vcf(samples, *filter_request)) {
+        throw InputVCFError {*filter_request};
+    }
+    temp_directory = get_temp_directory(options);
+    try {
+        call_filter_factory = options::make_call_filter_factory(this->reference, this->read_pipe, options, this->temp_directory);
+        setup_writers(options);
+    } catch (...) {
         if (temp_directory) fs::remove_all(*temp_directory);
-        throw InputVCFError {*filter_request_};
+        throw;
     }
 }
 
@@ -532,7 +536,7 @@ void GenomeCallingComponents::Components::setup_progress_meter(const options::Op
 void GenomeCallingComponents::Components::set_read_buffer_size(const options::OptionMap& options)
 {
     if (!samples.empty() && !regions.empty() && read_manager.good()) {
-        read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options), reads_profile_);
+        read_buffer_size = calculate_max_num_reads(options::get_target_read_buffer_size(options), reads_profile);
     }
 }
 

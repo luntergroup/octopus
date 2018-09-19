@@ -94,23 +94,25 @@ private:
         std::vector<SampleName> samples;
         InputRegionMap regions;
         std::vector<GenomicRegion::ContigName> contigs;
-        boost::optional<Path> temp_directory;
-        boost::optional<ReadSetProfile> reads_profile_;
+        boost::optional<ReadSetProfile> reads_profile;
         ReadPipe read_pipe;
         CallerFactory caller_factory;
-        std::unique_ptr<VariantCallFilterFactory> call_filter_factory;
         boost::optional<ReadPipe> filter_read_pipe;
         VcfWriter output;
+        boost::optional<VcfWriter> filtered_output;
         boost::optional<unsigned> num_threads;
         std::size_t read_buffer_size;
         ProgressMeter progress_meter;
         PloidyMap ploidies;
         boost::optional<Pedigree> pedigree;
         bool sites_only;
-        boost::optional<VcfWriter> filtered_output;
         boost::optional<Path> legacy;
-        boost::optional<Path> filter_request_;
-        boost::optional<Path> bamout_, split_bamout_, data_profile_;
+        boost::optional<Path> filter_request;
+        boost::optional<Path> bamout, split_bamout, data_profile;
+        // Components that require temporary directory during construction appear last to make
+        // exception handling easier.
+        boost::optional<Path> temp_directory;
+        std::unique_ptr<VariantCallFilterFactory> call_filter_factory;
         
         void setup_progress_meter(const options::OptionMap& options);
         void set_read_buffer_size(const options::OptionMap& options);
