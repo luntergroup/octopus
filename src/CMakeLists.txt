@@ -362,6 +362,10 @@ set(CORE_SOURCES
     core/csr/measures/supplementary_fraction.cpp
     core/csr/measures/misaligned_read_count.hpp
     core/csr/measures/misaligned_read_count.cpp
+    core/csr/measures/read_tail_bias.hpp
+    core/csr/measures/read_tail_bias.cpp
+    core/csr/measures/read_end_bias.hpp
+    core/csr/measures/read_end_bias.cpp
 
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp

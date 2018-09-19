@@ -55,6 +55,8 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<StrandDisequilibrium>()]        = [] () { return make_wrapped_measure<StrandDisequilibrium>(); };
     measure_makers[name<SupplementaryFraction>()]       = [] () { return make_wrapped_measure<SupplementaryFraction>(); };
     measure_makers[name<MisalignedReadCount>()]         = [] () { return make_wrapped_measure<MisalignedReadCount>(); };
+    measure_makers[name<ReadTailBias>()]                = [] () { return make_wrapped_measure<ReadTailBias>(); };
+    measure_makers[name<ReadEndBias>()]                 = [] () { return make_wrapped_measure<ReadEndBias>(); };
 }
 
 class BadParameterList : public UserError
