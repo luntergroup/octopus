@@ -612,7 +612,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum phase score (phred scale) required to report sites as phased")
     ;
     
-    po::options_description call_filtering("CSR filtering");
+    po::options_description call_filtering("Variant filtering");
     call_filtering.add_options()
     ("call-filtering,f",
      po::value<bool>()->default_value(true),
@@ -642,9 +642,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Keep a copy of unfiltered calls")
     
-    ("csr-training",
+    ("training-annotations",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Activates CSR training mode with the given measures - outputs all calls as PASS and annotates output VCF with measure values")
+     "Outputs all calls as PASS and annotates output VCF with the given measures or measure set")
     
     ("filter-vcf",
      po::value<fs::path>(),
