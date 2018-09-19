@@ -62,6 +62,8 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::normalContamination, "Somatic haplotypes detected in a called normal sample"},
 {spec::filter::deNovoContamination, "De novo allele detected in the offsprings parents"},
 {spec::filter::readPositionBias, "Position of variant in supporting reads is biased"},
+{spec::filter::readTailBias, "Variant is biased towards tail of supporting reads"},
+{spec::filter::readEndBias, "Variant is biased towards ends (head or tail) of supporting reads"},
 {spec::filter::strandDisequilibrium, "Reads overlapping the site are biased to one strand"},
 {spec::filter::lowClassificationConfidence, "Classification confidence is low"},
 {spec::filter::alleleDepth, "Low empirical allele depth"}

@@ -85,6 +85,8 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<NormalContamination>()]      = normalContamination;
     filter_names[name<DeNovoContamination>()]      = deNovoContamination;
     filter_names[name<ReadPositionBias>()]         = readPositionBias;
+    filter_names[name<ReadTailBias>()]             = readTailBias;
+    filter_names[name<ReadEndBias>()]              = readEndBias;
     filter_names[name<StrandDisequilibrium>()]     = strandDisequilibrium;
     filter_names[name<ClassificationConfidence>()] = lowClassificationConfidence;
     filter_names[name<AlleleDepth>()]              = alleleDepth;
