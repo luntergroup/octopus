@@ -60,6 +60,7 @@ VCF_SPEC_CONSTANT readTailBias {"RTB"};
 VCF_SPEC_CONSTANT readEndBias {"REB"};
 VCF_SPEC_CONSTANT strandDisequilibrium {"SD"};
 VCF_SPEC_CONSTANT lowClassificationConfidence {"CC"};
+VCF_SPEC_CONSTANT somaticMappingQuality {"SMQ"};
 
 } // namespace filter
 
