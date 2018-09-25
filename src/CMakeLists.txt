@@ -368,6 +368,10 @@ set(CORE_SOURCES
     core/csr/measures/read_end_bias.cpp
     core/csr/measures/variant_length.hpp
     core/csr/measures/variant_length.cpp
+    core/csr/measures/base_mismatch_count.hpp
+    core/csr/measures/base_mismatch_count.cpp
+    core/csr/measures/base_mismatch_fraction.hpp
+    core/csr/measures/base_mismatch_fraction.cpp
 
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp
