@@ -366,6 +366,8 @@ set(CORE_SOURCES
     core/csr/measures/read_tail_bias.cpp
     core/csr/measures/read_end_bias.hpp
     core/csr/measures/read_end_bias.cpp
+    core/csr/measures/variant_length.hpp
+    core/csr/measures/variant_length.cpp
 
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp
