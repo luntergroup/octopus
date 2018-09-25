@@ -58,7 +58,7 @@ private:
     
     const static std::string call_qual_name_;
     
-    boost::optional<std::string> call_quality_name() const override;
+    boost::optional<std::string> genotype_quality_name() const override;
     void annotate(VcfHeader::Builder& header) const override;
     void prepare_for_registration(const SampleList& samples) const override;
     void record(std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const override;

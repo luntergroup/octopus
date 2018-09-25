@@ -37,7 +37,7 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
 
 const std::string RandomForestFilter::call_qual_name_ = "RFQUAL";
 
-boost::optional<std::string> RandomForestFilter::call_quality_name() const
+boost::optional<std::string> RandomForestFilter::genotype_quality_name() const
 {
     return call_qual_name_;
 }
