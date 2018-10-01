@@ -41,7 +41,7 @@ namespace bc = boost::container;
 
 } // namespace
 
-char* convert(const std::string& source)
+char* malloc_copy(const std::string& source)
 {
     const auto result = (char*) std::malloc(source.length() + 1);
     source.copy(result, source.length());
@@ -320,8 +320,8 @@ void HtslibBcfFacade::write(const VcfHeader& header)
     for (auto& p : header.basic_fields()) {
         auto hrec = (bcf_hrec_t*) std::malloc(sizeof(bcf_hrec_t));
         hrec->type  = BCF_HL_GEN;
-        hrec->key   = convert(p.first);
-        hrec->value = convert(p.second);
+        hrec->key   = malloc_copy(p.first);
+        hrec->value = malloc_copy(p.second);
         hrec->nkeys = 0;
         hrec->keys  = nullptr;
         hrec->vals  = nullptr;
@@ -335,7 +335,7 @@ void HtslibBcfFacade::write(const VcfHeader& header)
             auto hrec = (bcf_hrec_t*) std::malloc(sizeof(bcf_hrec_t));
             
             hrec->type  = type;
-            hrec->key   = convert(tag);
+            hrec->key   = malloc_copy(tag);
             hrec->nkeys = static_cast<int>(fields.size());
             hrec->keys  = (char**) std::malloc(sizeof(char*) * fields.size());
             hrec->vals  = (char**) std::malloc(sizeof(char*) * fields.size());
@@ -344,16 +344,16 @@ void HtslibBcfFacade::write(const VcfHeader& header)
             // Make sure the reserved fields are written in the required order
             for (const auto& field : vcfspec::header::meta::struc::order) {
                 if (fields.count(field) == 1) {
-                    hrec->keys[i] = convert(field);
-                    hrec->vals[i] = convert(fields[field]);
+                    hrec->keys[i] = malloc_copy(field);
+                    hrec->vals[i] = malloc_copy(fields[field]);
                     fields.erase(field);
                     ++i;
                 }
             }
             // The rest of the fields go in whatever order they come in the map
             for (const auto& field : fields) {
-                hrec->keys[i] = convert(field.first);
-                hrec->vals[i] = convert(field.second);
+                hrec->keys[i] = malloc_copy(field.first);
+                hrec->vals[i] = malloc_copy(field.second);
                 ++i;
             }
             hrec->value = nullptr;
@@ -511,7 +511,7 @@ void extract_id(const bcf1_t* record, VcfRecord::Builder& builder)
 
 void set_id(bcf1_t* record, const std::string& id)
 {
-    record->d.id = convert(id);
+    record->d.id = malloc_copy(id);
 }
 
 void extract_ref(const bcf1_t* record, VcfRecord::Builder& builder)
@@ -576,44 +576,39 @@ void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& b
     float* floatinfo {nullptr};
     char* stringinfo {nullptr};
     int* flaginfo {nullptr}; // not actually populated
-    
     builder.reserve_info(record->n_info);
-    
     for (unsigned i {0}; i < record->n_info; ++i) {
-        int nintinfo {0};
-        int nfloatinfo {0};
-        int nstringinfo {0};
-        int nflaginfo {0};
+        int nintinfo {0}, nfloatinfo {0}, nstringinfo {0}, nflaginfo {0};
         const auto key_id = record->d.info[i].key;
-        
         if (key_id >= header->n[BCF_DT_ID]) {
             throw std::runtime_error {"HtslibBcfFacade: found INFO key not present in header file"};
         }
-        
         const char* key {header->id[BCF_DT_ID][key_id].key};
         std::vector<std::string> values {};
-        
         switch (bcf_hdr_id2type(header, BCF_HL_INFO, key_id)) {
-            case BCF_HT_INT:
-                if (bcf_get_info_int32(header, record, key, &intinfo, &nintinfo) > 0) {
-                    values.reserve(nintinfo);
-                    std::transform(intinfo, intinfo + nintinfo, std::back_inserter(values),
-                                   [] (auto v) {
+            case BCF_HT_INT: {
+                const auto num_values_written = bcf_get_info_int32(header, record, key, &intinfo, &nintinfo);
+                if (num_values_written > 0) {
+                    values.reserve(num_values_written);
+                    std::transform(intinfo, intinfo + num_values_written, std::back_inserter(values),
+                                   [](auto v) {
                                        return v != bcf_int32_missing ? std::to_string(v) : bcf_missing_str;
                                    });
                 }
                 break;
-            case BCF_HT_REAL:
-                if (bcf_get_info_float(header, record, key, &floatinfo, &nfloatinfo) > 0) {
-                    values.reserve(nfloatinfo);
-                    std::transform(floatinfo, floatinfo + nfloatinfo, std::back_inserter(values),
+            }
+            case BCF_HT_REAL: {
+                const auto num_values_written = bcf_get_info_float(header, record, key, &floatinfo, &nfloatinfo);
+                if (num_values_written > 0) {
+                    values.reserve(num_values_written);
+                    std::transform(floatinfo, floatinfo + num_values_written, std::back_inserter(values),
                                    [] (auto v) {
                                        return v != bcf_float_missing ? std::to_string(v) : bcf_missing_str;
                                    });
                 }
                 break;
-            case BCF_HT_STR:
-            {
+            }
+            case BCF_HT_STR: {
                 const auto nchars = bcf_get_info_string(header, record, key, &stringinfo, &nstringinfo);
                 if (nchars > 0) {
                     std::string tmp(stringinfo, nchars);
@@ -621,15 +616,14 @@ void extract_info(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder& b
                 }
                 break;
             }
-            case BCF_HT_FLAG:
+            case BCF_HT_FLAG: {
                 values.reserve(1);
                 values.emplace_back((bcf_get_info_flag(header, record, key, &flaginfo, &nflaginfo) == 1) ? "1" : "0");
                 break;
+            }
         }
-        
         builder.set_info(key, std::move(values));
     }
-    
     if (intinfo != nullptr) std::free(intinfo);
     if (floatinfo != nullptr) std::free(floatinfo);
     if (stringinfo != nullptr) std::free(stringinfo);
@@ -738,19 +732,18 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
         std::free(gt);
         ++first_format;
     }
-    int nintformat {};
     int* intformat {nullptr};
-    int nfloatformat {};
     float* floatformat {nullptr};
-    int nstringformat {};
     char** stringformat {nullptr};
+    int nintformat {}, nfloatformat {}, nstringformat {};
     for (auto itr = first_format, end = std::cend(format); itr != end; ++itr) {
         const auto& key = *itr;
         std::vector<std::vector<std::string>> values(num_samples, std::vector<std::string> {});
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
-            case BCF_HT_INT:
-                if (bcf_get_format_int32(header, record, key.c_str(), &intformat, &nintformat) > 0) {
-                    const auto num_values_per_sample = nintformat / num_samples;
+            case BCF_HT_INT: {
+                const auto num_values_written = bcf_get_format_int32(header, record, key.c_str(), &intformat, &nintformat);
+                if (num_values_written > 0) {
+                    const auto num_values_per_sample = num_values_written / num_samples;
                     auto ptr = intformat;
                     for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
                         values[sample].reserve(num_values_per_sample);
@@ -761,9 +754,11 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     }
                 }
                 break;
-            case BCF_HT_REAL:
-                if (bcf_get_format_float(header, record, key.c_str(), &floatformat, &nfloatformat) > 0) {
-                    const auto num_values_per_sample = nfloatformat / num_samples;
+            }
+            case BCF_HT_REAL: {
+                const auto num_values_written = bcf_get_format_float(header, record, key.c_str(), &floatformat, &nfloatformat);
+                if (num_values_written > 0) {
+                    const auto num_values_per_sample = num_values_written / num_samples;
                     auto ptr = floatformat;
                     for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
                         values[sample].reserve(num_values_per_sample);
@@ -774,6 +769,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     }
                 }
                 break;
+            }
             case BCF_HT_STR:
                 // TODO: Check this usage is correct. What if more than one value per sample?
                 if (bcf_get_format_string(header, record, key.c_str(), &stringformat, &nstringformat) > 0) {
