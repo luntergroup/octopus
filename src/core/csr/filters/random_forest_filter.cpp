@@ -44,7 +44,7 @@ boost::optional<std::string> RandomForestFilter::genotype_quality_name() const
 
 void RandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
-    header.add_info(call_qual_name_, "1", "Float", "Empirical quality score from random forest classifier");
+    header.add_format(call_qual_name_, "1", "Float", "Empirical quality score from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
 }
 
