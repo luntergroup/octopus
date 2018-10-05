@@ -29,7 +29,7 @@ def download_forests(forest_dir, version):
         print("No forest directory found, making one")
         os.makedirs(forest_dir)
     for forest in forests:
-        forest_name = forest + '.' + version + '.forest'
+        forest_name = forest + '.v' + version + '.forest'
         forest_url = os.path.join(forest_url_base, forest_name)
         forest_file = os.path.join(forest_dir, forest_name)
         try:
