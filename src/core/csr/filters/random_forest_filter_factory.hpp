@@ -27,8 +27,7 @@ public:
     using Path = RandomForestFilter::Path;
     enum class ForestType { germline, somatic, denovo };
     
-    RandomForestFilterFactory() = default;
-    
+    RandomForestFilterFactory();
     RandomForestFilterFactory(Path ranger_forest, Path temp_directory, ForestType type = ForestType::germline);
     RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path temp_directory);
     
@@ -38,6 +37,8 @@ public:
     RandomForestFilterFactory& operator=(RandomForestFilterFactory&&)      = default;
     
     ~RandomForestFilterFactory() = default;
+    
+    std::vector<MeasureWrapper> measures() const;
 
 private:
     std::vector<MeasureWrapper> measures_;

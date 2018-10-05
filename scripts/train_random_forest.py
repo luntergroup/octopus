@@ -9,6 +9,8 @@ from pysam import VariantFile
 import random
 import numpy as np
 
+default_measures = "AC AD AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD".split()
+
 def run_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads, out_path):
     call([octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed, '-o', out_path, '--threads', str(threads),
           '--legacy', '--csr-train'] + measures)
@@ -38,42 +40,33 @@ def eval_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads,
     run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf, rtf_eval_dir)
     return rtf_eval_dir
 
-def is_missing(x):
-    if x == '.':
-        return True
-    x = float(x)
-    return np.isnan(x)
-
-def to_str(x, missing_value):
-    if is_missing(x):
-        return str(missing_value)
-    else:
-        return str(x)
-
-def get_field(field, rec, missing_value):
-    if field == 'QUAL':
-        return to_str(rec.qual, missing_value)
-    elif field == 'GQ':
-        return to_str(rec.samples[0]['GQ'], missing_value)
-    else:
-        val = rec.info[field]
-        if type(val) == tuple:
-            val = val[0]
-        return to_str(val, missing_value)
-
 def subset(vcf_in_path, vcf_out_path, bed_regions):
     call(['bcftools', 'view', '-R', bed_regions, '-O', 'z', '-o', vcf_out_path, vcf_in_path])
 
-def make_ranger_data(octopus_vcf_path, measures, is_tp, out, missing_value):
+def get_annotation(field, rec):
+    if field == 'QUAL':
+        return rec.qual
+    elif field == 'GQ':
+        return rec.samples[0]['GQ']
+    else:
+        res = rec.info[field]
+        if type(res) == tuple:
+            res = res[0]
+        return res
+
+def is_missing(x):
+    return x == '.' or np.isnan(float(x))
+
+def annotation_to_string(x, missing_value):
+    return str(missing_value) if is_missing(x) else str(x)
+
+def make_ranger_data(octopus_vcf_path, out_path, classifcation, measures, missing_value=-1):
     vcf = VariantFile(octopus_vcf_path)
-    with open(out, 'w') as ranger_dat:
+    with open(out_path, 'w') as ranger_data:
         datwriter = csv.writer(ranger_dat, delimiter=' ')
         for rec in vcf:
-            row = [get_field(measure, rec, missing_value) for measure in measures]
-            if is_tp:
-                row.append('1')
-            else:
-                row.append('0')
+            row = [annotation_to_string(get_annotation(measure, rec), missing_value) for measure in measures]
+            row.append(str(int(classifcation)))
             datwriter.writerow(row)
 
 def concat(filenames, outpath):
@@ -114,13 +107,13 @@ def main(options):
         tp_train_vcf_path = tp_vcf_path.replace("tp.vcf", "tp.train.vcf")
         subset(tp_vcf_path, tp_train_vcf_path, options.regions)
         tp_data_path = tp_train_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(tp_train_vcf_path, options.measures, True, tp_data_path, options.missing_value)
+        make_ranger_data(tp_train_vcf_path, tp_data_path, True, options.measures, options.missing_value)
         data_paths.append(tp_data_path)
         fp_vcf_path = join(rtg_eval, "fp.vcf.gz")
         fp_train_vcf_path = fp_vcf_path.replace("fp.vcf", "fp.train.vcf")
         subset(fp_vcf_path, fp_train_vcf_path, options.regions)
         fp_data_path = fp_train_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(fp_train_vcf_path, options.measures, False, fp_data_path, options.missing_value)
+        make_ranger_data(fp_train_vcf_path, fp_data_path, False, options.measures, options.missing_value)
         data_paths.append(fp_data_path)
         tmp_paths += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_path = join(options.out, options.prefix + ".dat")
@@ -154,7 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--measures',
                         type=str,
                         nargs='+',
-                        required=True,
+                        default=default_measures,
                         help='Measures to use for training')
     parser.add_argument('--truth',
                         type=str,

@@ -44,7 +44,7 @@ auto extract_mapping_qualities(const ReadRefSupportSet& reads)
 
 auto extract_mapping_qualities(const AlleleSupportMap& support, const bool drop_empty = true)
 {
-    std::vector<MappingQualityVector> result{};
+    std::vector<MappingQualityVector> result {};
     result.reserve(support.size());
     for (const auto& p : support) {
         if (!p.second.empty() || !drop_empty) {
@@ -149,7 +149,9 @@ Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call,
             if (!alleles.empty()) {
                 const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
                 const auto mapping_qualities = extract_mapping_qualities(sample_allele_support);
-                sample_result = max_pairwise_median_mapping_quality_difference(mapping_qualities);
+                if (!mapping_qualities.empty()) {
+                    sample_result = max_pairwise_median_mapping_quality_difference(mapping_qualities);
+                }
             }
         }
         result.push_back(sample_result);

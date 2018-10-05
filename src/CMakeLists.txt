@@ -336,8 +336,8 @@ set(CORE_SOURCES
     core/csr/measures/normal_contamination.cpp
     core/csr/measures/denovo_contamination.hpp
     core/csr/measures/denovo_contamination.cpp
-    core/csr/measures/read_position_bias.hpp
-    core/csr/measures/read_position_bias.cpp
+    core/csr/measures/read_side_bias.hpp
+    core/csr/measures/read_side_bias.cpp
     core/csr/measures/alt_allele_count.hpp
     core/csr/measures/alt_allele_count.cpp
     core/csr/measures/overlaps_tandem_repeat.hpp
@@ -362,6 +362,16 @@ set(CORE_SOURCES
     core/csr/measures/supplementary_fraction.cpp
     core/csr/measures/misaligned_read_count.hpp
     core/csr/measures/misaligned_read_count.cpp
+    core/csr/measures/read_tail_bias.hpp
+    core/csr/measures/read_tail_bias.cpp
+    core/csr/measures/read_end_bias.hpp
+    core/csr/measures/read_end_bias.cpp
+    core/csr/measures/variant_length.hpp
+    core/csr/measures/variant_length.cpp
+    core/csr/measures/base_mismatch_count.hpp
+    core/csr/measures/base_mismatch_count.cpp
+    core/csr/measures/base_mismatch_fraction.hpp
+    core/csr/measures/base_mismatch_fraction.cpp
 
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp

@@ -42,7 +42,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<IsRefcall>()]                   = [] () { return make_wrapped_measure<IsRefcall>(); };
     measure_makers[name<NormalContamination>()]         = [] () { return make_wrapped_measure<NormalContamination>(); };
     measure_makers[name<DeNovoContamination>()]         = [] () { return make_wrapped_measure<DeNovoContamination>(); };
-    measure_makers[name<ReadPositionBias>()]            = [] () { return make_wrapped_measure<ReadPositionBias>(); };
+    measure_makers[name<ReadSideBias>()]                = [] () { return make_wrapped_measure<ReadSideBias>(); };
     measure_makers[name<AltAlleleCount>()]              = [] () { return make_wrapped_measure<AltAlleleCount>(); };
     measure_makers[name<OverlapsTandemRepeat>()]        = [] () { return make_wrapped_measure<OverlapsTandemRepeat>(); };
     measure_makers[name<STRLength>()]                   = [] () { return make_wrapped_measure<STRLength>(); };
@@ -55,6 +55,11 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<StrandDisequilibrium>()]        = [] () { return make_wrapped_measure<StrandDisequilibrium>(); };
     measure_makers[name<SupplementaryFraction>()]       = [] () { return make_wrapped_measure<SupplementaryFraction>(); };
     measure_makers[name<MisalignedReadCount>()]         = [] () { return make_wrapped_measure<MisalignedReadCount>(); };
+    measure_makers[name<ReadTailBias>()]                = [] () { return make_wrapped_measure<ReadTailBias>(); };
+    measure_makers[name<ReadEndBias>()]                 = [] () { return make_wrapped_measure<ReadEndBias>(); };
+    measure_makers[name<VariantLength>()]               = [] () { return make_wrapped_measure<VariantLength>(); };
+    measure_makers[name<BaseMismatchCount>()]           = [] () { return make_wrapped_measure<BaseMismatchCount>(); };
+    measure_makers[name<BaseMismatchFraction>()]        = [] () { return make_wrapped_measure<BaseMismatchFraction>(); };
 }
 
 class BadParameterList : public UserError

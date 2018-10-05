@@ -25,7 +25,7 @@ class TrainingFilterFactory : public VariantCallFilterFactory
 public:
     TrainingFilterFactory() = default;
     
-    TrainingFilterFactory(const std::set<std::string>& measure_names);
+    TrainingFilterFactory(const std::set<std::string>& measures);
     
     TrainingFilterFactory(const TrainingFilterFactory&)            = default;
     TrainingFilterFactory& operator=(const TrainingFilterFactory&) = default;

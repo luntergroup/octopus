@@ -10,6 +10,7 @@
 #include <iostream>
 #include <cassert>
 #include <cmath>
+#include <limits>
 
 #include <boost/variant.hpp>
 #include <boost/lexical_cast.hpp>
@@ -19,12 +20,12 @@
 
 #include "basics/phred.hpp"
 #include "utils/concat.hpp"
+#include "utils/maths.hpp"
 #include "exceptions/missing_file_error.hpp"
 #include "exceptions/program_error.hpp"
 #include "exceptions/malformed_file_error.hpp"
 
 namespace octopus { namespace csr {
-
 
 namespace {
 
@@ -72,14 +73,14 @@ ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_
 
 const std::string ConditionalRandomForestFilter::call_qual_name_ = "RFQUAL";
 
-boost::optional<std::string> ConditionalRandomForestFilter::call_quality_name() const
+boost::optional<std::string> ConditionalRandomForestFilter::genotype_quality_name() const
 {
     return call_qual_name_;
 }
 
 void ConditionalRandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
-    header.add_info(call_qual_name_, "1", "Float", "Empirical quality score from random forest classifier");
+    header.add_format(call_qual_name_, "1", "Float", "Empirical quality score from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
 }
 
@@ -122,12 +123,28 @@ void ConditionalRandomForestFilter::prepare_for_registration(const SampleList& s
 
 namespace {
 
+template <typename T>
+bool is_subnormal(const T x) noexcept
+{
+    return std::fpclassify(x) == FP_SUBNORMAL;
+}
+
+template <typename T>
+double lexical_cast_to_double(const T& value)
+{
+    auto result = boost::lexical_cast<double>(value);
+    if (is_subnormal(result)) {
+        result = 0;
+    }
+    return result;
+}
+
 struct MeasureDoubleVisitor : boost::static_visitor<>
 {
     double result;
     template <typename T> void operator()(const T& value)
     {
-        result = boost::lexical_cast<double>(value);
+        result = lexical_cast_to_double(value);
     }
     template <typename T> void operator()(const boost::optional<T>& value)
     {

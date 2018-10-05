@@ -29,7 +29,7 @@
 #include "core/csr/measures/is_refcall.hpp"
 #include "core/csr/measures/normal_contamination.hpp"
 #include "core/csr/measures/denovo_contamination.hpp"
-#include "core/csr/measures/read_position_bias.hpp"
+#include "core/csr/measures/read_side_bias.hpp"
 #include "core/csr/measures/alt_allele_count.hpp"
 #include "core/csr/measures/overlaps_tandem_repeat.hpp"
 #include "core/csr/measures/str_length.hpp"
@@ -42,5 +42,10 @@
 #include "core/csr/measures/strand_disequilibrium.hpp"
 #include "core/csr/measures/supplementary_fraction.hpp"
 #include "core/csr/measures/misaligned_read_count.hpp"
+#include "core/csr/measures/read_tail_bias.hpp"
+#include "core/csr/measures/read_end_bias.hpp"
+#include "core/csr/measures/variant_length.hpp"
+#include "core/csr/measures/base_mismatch_count.hpp"
+#include "core/csr/measures/base_mismatch_fraction.hpp"
 
 #endif

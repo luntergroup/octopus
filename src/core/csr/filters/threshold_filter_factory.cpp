@@ -64,30 +64,33 @@ using MeasureToFilterKeyMap = std::unordered_map<std::string, std::string>;
 void init(MeasureToFilterKeyMap& filter_names)
 {
     using namespace octopus::vcf::spec::filter;
-    filter_names[name<AlleleFrequency>()]          = alleleBias;
-    filter_names[name<Depth>()]                    = lowDepth;
-    filter_names[name<MappingQualityDivergence>()] = highMappingQualityDivergence;
-    filter_names[name<MappingQualityZeroCount>()]  = highMappingQualityZeroCount;
-    filter_names[name<MeanMappingQuality>()]       = lowMappingQuality;
-    filter_names[name<ModelPosterior>()]           = lowModelPosterior;
-    filter_names[name<Quality>()]                  = lowQuality;
-    filter_names[name<PosteriorProbability>()]     = lowPosteriorProbability;
-    filter_names[name<QualityByDepth>()]           = lowQualityByDepth;
-    filter_names[name<GenotypeQuality>()]          = lowGQ;
-    filter_names[name<GenotypeQualityByDepth>()]   = lowGQD;
-    filter_names[name<StrandBias>()]               = strandBias;
-    filter_names[name<FilteredReadFraction>()]     = filteredReadFraction;
-    filter_names[name<GCContent>()]                = highGCRegion;
-    filter_names[name<ClippedReadFraction>()]      = highClippedReadFraction;
-    filter_names[name<MedianBaseQuality>()]        = lowBaseQuality;
-    filter_names[name<MismatchCount>()]            = highMismatchCount;
-    filter_names[name<MismatchFraction>()]         = highMismatchFraction;
-    filter_names[name<NormalContamination>()]      = normalContamination;
-    filter_names[name<DeNovoContamination>()]      = deNovoContamination;
-    filter_names[name<ReadPositionBias>()]         = readPositionBias;
-    filter_names[name<StrandDisequilibrium>()]     = strandDisequilibrium;
-    filter_names[name<ClassificationConfidence>()] = lowClassificationConfidence;
-    filter_names[name<AlleleDepth>()]              = alleleDepth;
+    filter_names[name<AlleleFrequency>()]             = alleleBias;
+    filter_names[name<Depth>()]                       = lowDepth;
+    filter_names[name<MappingQualityDivergence>()]    = highMappingQualityDivergence;
+    filter_names[name<MappingQualityZeroCount>()]     = highMappingQualityZeroCount;
+    filter_names[name<MeanMappingQuality>()]          = lowMappingQuality;
+    filter_names[name<ModelPosterior>()]              = lowModelPosterior;
+    filter_names[name<Quality>()]                     = lowQuality;
+    filter_names[name<PosteriorProbability>()]        = lowPosteriorProbability;
+    filter_names[name<QualityByDepth>()]              = lowQualityByDepth;
+    filter_names[name<GenotypeQuality>()]             = lowGQ;
+    filter_names[name<GenotypeQualityByDepth>()]      = lowGQD;
+    filter_names[name<StrandBias>()]                  = strandBias;
+    filter_names[name<FilteredReadFraction>()]        = filteredReadFraction;
+    filter_names[name<GCContent>()]                   = highGCRegion;
+    filter_names[name<ClippedReadFraction>()]         = highClippedReadFraction;
+    filter_names[name<MedianBaseQuality>()]           = lowBaseQuality;
+    filter_names[name<MismatchCount>()]               = highMismatchCount;
+    filter_names[name<MismatchFraction>()]            = highMismatchFraction;
+    filter_names[name<NormalContamination>()]         = normalContamination;
+    filter_names[name<DeNovoContamination>()]         = deNovoContamination;
+    filter_names[name<ReadSideBias>()]                = readSideBias;
+    filter_names[name<ReadTailBias>()]                = readTailBias;
+    filter_names[name<ReadEndBias>()]                 = readEndBias;
+    filter_names[name<StrandDisequilibrium>()]        = strandDisequilibrium;
+    filter_names[name<ClassificationConfidence>()]    = lowClassificationConfidence;
+    filter_names[name<AlleleDepth>()]                 = alleleDepth;
+    filter_names[name<MedianSomaticMappingQuality>()] = somaticMappingQuality;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)

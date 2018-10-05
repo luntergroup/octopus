@@ -10,6 +10,7 @@
 #include <iostream>
 #include <cassert>
 #include <cmath>
+#include <limits>
 
 #include <boost/variant.hpp>
 #include <boost/lexical_cast.hpp>
@@ -36,14 +37,14 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
 
 const std::string RandomForestFilter::call_qual_name_ = "RFQUAL";
 
-boost::optional<std::string> RandomForestFilter::call_quality_name() const
+boost::optional<std::string> RandomForestFilter::genotype_quality_name() const
 {
     return call_qual_name_;
 }
 
 void RandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
-    header.add_info(call_qual_name_, "1", "Float", "Empirical quality score from random forest classifier");
+    header.add_format(call_qual_name_, "1", "Float", "Empirical quality score from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
 }
 
@@ -79,12 +80,28 @@ void RandomForestFilter::prepare_for_registration(const SampleList& samples) con
 
 namespace {
 
+template <typename T>
+bool is_subnormal(const T x) noexcept
+{
+    return std::fpclassify(x) == FP_SUBNORMAL;
+}
+
+template <typename T>
+double lexical_cast_to_double(const T& value)
+{
+    auto result = boost::lexical_cast<double>(value);
+    if (is_subnormal(result)) {
+        result = 0;
+    }
+    return result;
+}
+
 struct MeasureDoubleVisitor : boost::static_visitor<>
 {
     double result;
     template <typename T> void operator()(const T& value)
     {
-        result = boost::lexical_cast<double>(value);
+        result = lexical_cast_to_double(value);
     }
     template <typename T> void operator()(const boost::optional<T>& value)
     {

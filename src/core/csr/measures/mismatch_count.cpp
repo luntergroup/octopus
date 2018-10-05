@@ -24,11 +24,18 @@ std::unique_ptr<Measure> MismatchCount::do_clone() const
     return std::make_unique<MismatchCount>(*this);
 }
 
+namespace {
+
+bool completely_contains(const AlignedRead& read, const Allele& allele)
+{
+    return contains(read, allele) && !are_adjacent(read, allele);
+}
+
 bool mismatches(const AlignedRead& read, const Allele& allele)
 {
     if (!overlaps(read, allele)) return false;
     const auto read_section = copy_sequence(read, mapped_region(allele));
-    if (contains(read, allele)) {
+    if (completely_contains(read, allele)) {
         return read_section != allele.sequence();
     } else {
         if (read_section.size() > sequence_size(allele)) return true;
@@ -39,6 +46,8 @@ bool mismatches(const AlignedRead& read, const Allele& allele)
         }
     }
 }
+
+} // namespace
 
 Measure::ResultType MismatchCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {

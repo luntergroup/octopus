@@ -55,9 +55,12 @@ VCF_SPEC_CONSTANT highMismatchCount {"MC"};
 VCF_SPEC_CONSTANT highMismatchFraction {"MF"};
 VCF_SPEC_CONSTANT normalContamination {"NC"};
 VCF_SPEC_CONSTANT deNovoContamination {"DC"};
-VCF_SPEC_CONSTANT readPositionBias {"RPB"};
+VCF_SPEC_CONSTANT readSideBias {"RSB"};
+VCF_SPEC_CONSTANT readTailBias {"RTB"};
+VCF_SPEC_CONSTANT readEndBias {"REB"};
 VCF_SPEC_CONSTANT strandDisequilibrium {"SD"};
 VCF_SPEC_CONSTANT lowClassificationConfidence {"CC"};
+VCF_SPEC_CONSTANT somaticMappingQuality {"SMQ"};
 
 } // namespace filter
 
