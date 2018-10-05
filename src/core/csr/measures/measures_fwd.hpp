@@ -44,5 +44,8 @@
 #include "core/csr/measures/misaligned_read_count.hpp"
 #include "core/csr/measures/read_tail_bias.hpp"
 #include "core/csr/measures/read_end_bias.hpp"
+#include "core/csr/measures/variant_length.hpp"
+#include "core/csr/measures/base_mismatch_count.hpp"
+#include "core/csr/measures/base_mismatch_fraction.hpp"
 
 #endif

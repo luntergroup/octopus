@@ -28,6 +28,15 @@ def remove_vcf(vcf_path):
 def is_homozygous(gt):
     return all(a == 1 for a in gt)
 
+def to_float(val):
+    if val == '.':
+        return np.nan
+    else:
+        try:
+            return float(val)
+        except ValueError:
+            return val
+
 def get_annotation(field, rec):
     if field == 'QUAL':
         return rec.qual
@@ -36,11 +45,12 @@ def get_annotation(field, rec):
     else:
         res = rec.info[field]
         if type(res) == tuple:
-            res = list(res)
-        return res
+            return [to_float(v) for v in res]
+        else:
+            return to_float(res)
 
 def is_somatic(rec):
-    return get_annotation('SOMATIC', rec)
+    return any(get_annotation('SOMATIC', rec))
 
 def filter_somatic(in_vcf_path, out_vcf_path):
     in_vcf = VariantFile(in_vcf_path)
@@ -108,10 +118,13 @@ def get_annotations(rec, features, n_samples, missing_value):
     result = [[] for _ in range(n_samples)]
     for feature in features:
         value = get_annotation(feature, rec)
-        if type(value) == tuple or type(value) == list:
-            assert len(value) == n_samples
+        is_list = type(value) == tuple or type(value) == list
+        if is_list and len(value) == n_samples:
             result = [curr + [annotation_to_string(v, missing_value)] for curr, v in zip(result, value)]
         else:
+            if is_list:
+                assert len(value) == 1
+                value = value[0]
             value_str = annotation_to_string(value, missing_value)
             for d in result:
                 d.append(value_str)

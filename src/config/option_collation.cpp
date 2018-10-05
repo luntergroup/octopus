@@ -1786,16 +1786,16 @@ std::string get_refcall_filter_expression(const OptionMap& options)
     return options.at("refcall-filter-expression").as<std::string>();
 }
 
-bool is_csr_training(const OptionMap& options)
+bool is_filter_training_mode(const OptionMap& options)
 {
-    return options.count("csr-training") > 0;
+    return options.count("training-annotations") > 0;
 }
 
 std::set<std::string> get_training_measures(const OptionMap& options)
 {
     std::set<std::string> result {};
-    if (is_csr_training(options)) {
-        for (const auto& measure : options.at("csr-training").as<std::vector<std::string>>()) {
+    if (is_filter_training_mode(options)) {
+        for (const auto& measure : options.at("training-annotations").as<std::vector<std::string>>()) {
             result.insert(measure);
         }
     }
@@ -1868,7 +1868,7 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                 return nullptr;
             }
         } else {
-            if (is_csr_training(options)) {
+            if (is_filter_training_mode(options)) {
                 return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
             } else {
                 auto germline_filter_expression = get_germline_filter_expression(options);
@@ -1981,11 +1981,6 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
 bool is_legacy_vcf_requested(const OptionMap& options)
 {
     return options.at("legacy").as<bool>();
-}
-
-bool is_csr_training_mode(const OptionMap& options)
-{
-    return is_csr_training(options);
 }
 
 boost::optional<fs::path> filter_request(const OptionMap& options)

@@ -24,6 +24,14 @@ std::vector<MeasureWrapper> parse_measures(const std::vector<std::string>& measu
 
 static const auto default_measure_names = utils::split("AC AD AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD", ' ');
 
+RandomForestFilterFactory::RandomForestFilterFactory()
+: ranger_forests_ {}
+, forest_types_ {}
+, temp_directory_ {}
+{
+    measures_ = parse_measures(default_measure_names);
+}
+
 RandomForestFilterFactory::RandomForestFilterFactory(Path ranger_forest, Path temp_directory, ForestType type)
 : ranger_forests_ {std::move(ranger_forest)}
 , forest_types_ {type}
@@ -43,6 +51,11 @@ RandomForestFilterFactory::RandomForestFilterFactory(Path germline_ranger_forest
 std::unique_ptr<VariantCallFilterFactory> RandomForestFilterFactory::do_clone() const
 {
     return std::make_unique<RandomForestFilterFactory>(*this);
+}
+
+std::vector<MeasureWrapper> RandomForestFilterFactory::measures() const
+{
+    return measures_;
 }
 
 std::unique_ptr<VariantCallFilter>

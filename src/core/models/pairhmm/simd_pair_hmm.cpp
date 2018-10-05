@@ -569,8 +569,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     
     // this is 2*y (s even) or 2*y+1 (s odd)
     while (y > 0) {
+        if (s < 0 || i < 0) {
+            // This should never happen so must have overflowed
+            first_pos = -1;
+            return -1;
+        }
         const auto new_state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * state)) & 3;
-        
         if (state == matchLabel) {
             s -= 2;
             aln1[alnidx] = truth[--x];
@@ -589,12 +593,9 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         state = new_state;
         alnidx++;
     }
-    
     aln1[alnidx] = 0;
     aln2[alnidx] = 0;
-    
     first_pos = x;
-    
     // reverse them
     for (int j {alnidx - 1}, i = 0; i < j; ++i, j--) {
         x = aln1[i];
@@ -604,7 +605,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         aln1[j] = x;
         aln2[j] = y;
     }
-    
     return (minscore + 0x8000) >> 2;
 }
 
@@ -905,8 +905,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     
     // this is 2*y (s even) or 2*y+1 (s odd)
     while (y > 0) {
+        if (s < 0 || i < 0) {
+            // This should never happen so must have overflowed
+            first_pos = -1;
+            return -1;
+        }
         const auto new_state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * state)) & 3;
-        
         if (state == matchLabel) {
             s -= 2;
             aln1[alnidx] = truth[--x];
@@ -925,12 +929,9 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         state = new_state;
         alnidx++;
     }
-    
     aln1[alnidx] = 0;
     aln2[alnidx] = 0;
-    
     first_pos = x;
-    
     // reverse them
     for (int j {alnidx - 1}, i = 0; i < j; ++i, j--) {
         x = aln1[i];
@@ -940,7 +941,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         aln1[j] = x;
         aln2[j] = y;
     }
-    
     return (minscore + 0x8000) >> 2;
 }
 
@@ -1128,8 +1128,12 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     
     // this is 2*y (s even) or 2*y+1 (s odd)
     while (y > 0) {
+        if (s < 0 || i < 0) {
+            // This should never happen so must have overflowed
+            first_pos = -1;
+            return -1;
+        }
         const auto new_state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * state)) & 3;
-        
         if (state == matchLabel) {
             s -= 2;
             aln1[alnidx] = truth[--x];
@@ -1148,11 +1152,9 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         state = new_state;
         alnidx++;
     }
-    
     aln1[alnidx] = 0;
     aln2[alnidx] = 0;
     first_pos = x;
-    
     // reverse them
     for (int j {alnidx - 1}, i = 0; i < j; ++i, j--) {
         x = aln1[i];
@@ -1162,7 +1164,6 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
         aln1[j] = x;
         aln2[j] = y;
     }
-    
     return (minscore + 0x8000) >> 2;
 }
 

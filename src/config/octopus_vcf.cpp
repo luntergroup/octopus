@@ -66,7 +66,8 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::readEndBias, "Variant is biased towards ends (head or tail) of supporting reads"},
 {spec::filter::strandDisequilibrium, "Reads overlapping the site are biased to one strand"},
 {spec::filter::lowClassificationConfidence, "Classification confidence is low"},
-{spec::filter::alleleDepth, "Low empirical allele depth"}
+{spec::filter::alleleDepth, "Low empirical allele depth"},
+{spec::filter::somaticMappingQuality, "Low somatic mapping quality"}
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)

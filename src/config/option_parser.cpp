@@ -612,7 +612,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum phase score (phred scale) required to report sites as phased")
     ;
     
-    po::options_description call_filtering("CSR filtering");
+    po::options_description call_filtering("Variant filtering");
     call_filtering.add_options()
     ("call-filtering,f",
      po::value<bool>()->default_value(true),
@@ -623,7 +623,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Boolean expression to use to filter variant calls")
     
     ("somatic-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SB > 0.9 | SD > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | NC > 1 | FRF > 0.5"),
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SMQ < 40 | SB > 0.9 | SD > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | NC > 1 | FRF > 0.5"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("denovo-filter-expression",
@@ -642,9 +642,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Keep a copy of unfiltered calls")
     
-    ("csr-training",
+    ("training-annotations",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Activates CSR training mode with the given measures - outputs all calls as PASS and annotates output VCF with measure values")
+     "Outputs all calls as PASS and annotates output VCF with the given measures or measure set")
     
     ("filter-vcf",
      po::value<fs::path>(),
