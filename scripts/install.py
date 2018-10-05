@@ -14,6 +14,9 @@ google_cloud_octopus_base = "https://storage.googleapis.com/luntergroup/octopus"
 forest_url_base = os.path.join(google_cloud_octopus_base, "forests")
 forests = ['germline', 'somatic']
 
+def get_octopus_version():
+    return "0.5.1-beta"
+
 def is_unix():
     system = platform.system()
     return system == "Darwin" or system == "Linux"
@@ -21,12 +24,12 @@ def is_unix():
 def download_file(url, file_name):
     urllib.request.urlretrieve(url, file_name)
 
-def download_forests(forest_dir):
+def download_forests(forest_dir, version):
     if not os.path.exists(forest_dir):
         print("No forest directory found, making one")
         os.makedirs(forest_dir)
     for forest in forests:
-        forest_name = forest + '.forest'
+        forest_name = forest + '.' + version + '.forest'
         forest_url = os.path.join(forest_url_base, forest_name)
         forest_file = os.path.join(forest_dir, forest_name)
         try:
@@ -39,6 +42,9 @@ def main(args):
     script_dir = os.path.dirname(os.path.realpath(__file__))
     octopus_dir = os.path.dirname(script_dir)
     root_cmake = os.path.join(octopus_dir, "CMakeLists.txt")
+    octopus_version = get_octopus_version()
+
+    print("Installing Octopus " + octopus_version)
 
     if not os.path.exists(root_cmake):
         print("octopus source directory corrupted: root CMakeLists.txt is missing. Please re-download source code.")
@@ -107,7 +113,7 @@ def main(args):
     if args["download"]:
         if len(forests) > 0:
             forest_dir = os.path.join(octopus_dir, "resources/forests")
-            download_forests(forest_dir)
+            download_forests(forest_dir, octopus_version)
 
     sys.exit(ret)
 
