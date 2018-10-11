@@ -252,6 +252,11 @@ void DeNovoModel::align_with_hmm(const Haplotype& target, const Haplotype& given
     hmm::align(target.sequence(), padded_given_, hmm_model, alignment_);
 }
 
+bool is_valid_alignment(const hmm::Alignment& alignment) noexcept
+{
+    return alignment.target_offset == hmm::min_flank_pad();
+}
+
 DeNovoModel::LogProbability
 DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given, const bool gap_penalties_cached) const
 {
@@ -263,7 +268,11 @@ DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given, 
     if (can_try_align_with_hmm(target, given)) {
         try {
             align_with_hmm(target, given);
-            result = recalculate_log_probability(alignment_.cigar, params_.snv_mutation_rate, local_indel_model_->indel);
+            if (is_valid_alignment(alignment_)) {
+                result = recalculate_log_probability(alignment_.cigar, params_.snv_mutation_rate, local_indel_model_->indel);
+            } else {
+                result = calculate_approx_log_probability(target, given, params_.snv_mutation_rate, local_indel_model_->indel);
+            }
         } catch (const hmm::HMMOverflow&) {
             result = calculate_approx_log_probability(target, given, params_.snv_mutation_rate, local_indel_model_->indel);
         }
