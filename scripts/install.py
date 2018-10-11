@@ -15,7 +15,7 @@ forest_url_base = os.path.join(google_cloud_octopus_base, "forests")
 forests = ['germline', 'somatic']
 
 def get_octopus_version():
-    return "0.5.1-beta"
+    return "0.5.2-beta"
 
 def is_unix():
     system = platform.system()
