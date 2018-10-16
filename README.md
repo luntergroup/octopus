@@ -112,10 +112,10 @@ On some systems, you may also need to specify a C compiler which is the same ver
 $ ./scripts/install.py -cxx g++-7 -c gcc-7 
 ```
 
-By default this installs to `/bin` relative to where you installed octopus. To install to a root directory (e.g. `/usr/local/bin`) use:
+By default this installs to `/bin` relative to where you installed octopus. To install to a different location (e.g. `/usr/local/bin`) use:
 
 ```shell
-$ ./scripts/install.py --root
+$ ./scripts/install.py --prefix /user/local/bin
 ```
 
 If anything goes wrong with the build process and you need to start again, be sure to add the command `--clean`.
@@ -130,10 +130,10 @@ $ cd octopus/build
 $ cmake .. && make install
 ```
 
-To install to root (e.g. `/usr/local/bin`) use the `-D` option:
+To install to different location (e.g. `/usr/local/bin`) use:
 
 ```shell
-$ cmake -DINSTALL_ROOT=ON ..
+$ cmake -DCMAKE_INSTALL_PREFIX=/usr/local/bin ..
 ```
 
 CMake will try to find a suitable compiler on your system, if you'd like you use a specific compiler use the `-D` option, for example:

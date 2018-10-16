@@ -15,7 +15,7 @@ forest_url_base = os.path.join(google_cloud_octopus_base, "forests")
 forests = ['germline', 'somatic']
 
 def get_octopus_version():
-    return "0.5.1-beta"
+    return "0.5.2-beta"
 
 def is_unix():
     system = platform.system()
@@ -76,8 +76,8 @@ def main(args):
         os.remove(cmake_cache_file)
 
     cmake_options = []
-    if args["root"]:
-        cmake_options.extend(["-DINSTALL_ROOT=ON", octopus_dir])
+    if args["prefix"]:
+        cmake_options.append("-DCMAKE_INSTALL_PREFIX=" + args["prefix"])
     if args["c_compiler"]:
         cmake_options.append("-DCMAKE_C_COMPILER=" + args["c_compiler"])
     if args["cxx_compiler"]:
@@ -92,10 +92,16 @@ def main(args):
         cmake_options.append("-DBUILD_SHARED_LIBS=OFF")
     if args["boost"]:
         cmake_options.append("-DBOOST_ROOT=" + args["boost"])
+    if args["htslib"]:
+        cmake_options.append("-DHTSLIB_ROOT=" + args["htslib"])
     if args["verbose"]:
         cmake_options.append("CMAKE_VERBOSE_MAKEFILE:BOOL=ON")
 
-    ret = call(["cmake"] + cmake_options + [".."])
+    try:
+        # CMake version 3 is called cmake3 in CentOS (see https://github.com/luntergroup/octopus/issues/37).
+        ret = call(["cmake3"] + cmake_options + [".."])
+    except FileNotFoundError:
+        ret = call(["cmake"] + cmake_options + [".."])
 
     if ret == 0:
         make_options = []
@@ -119,15 +125,20 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--prefix',
+                        required=False,
+                        type=str,
+                        help='Install into given location')
     parser.add_argument('--clean',
                         help='Do a clean install',
                         action='store_true')
-    parser.add_argument('--root',
-                        help='Install into /usr/local/bin',
-                        action='store_true')
     parser.add_argument('-c', '--c_compiler',
+                        required=False,
+                        type=str,
                         help='C compiler path to use')
     parser.add_argument('-cxx', '--cxx_compiler',
+                        required=False,
+                        type=str,
                         help='C++ compiler path to use')
     parser.add_argument('--keep_cache',
                         help='Do not refresh CMake cache',
@@ -145,8 +156,15 @@ if __name__ == '__main__':
                         help='The number of threads to use for building',
                         type=int)
     parser.add_argument('--boost',
+                        required=False,
+                        type=str,
                         help='The Boost library root')
+    parser.add_argument('--htslib',
+                        required=False,
+                        type=str,
+                        help='The HTSlib library root')
     parser.add_argument('--download',
+                        required=False,
                         help='Try to download octopus classifiers',
                         action='store_true')
     parser.add_argument('--verbose',

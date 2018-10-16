@@ -80,7 +80,7 @@ auto get_denovo_haplotypes(const Facet::GenotypeMap& genotypes, const std::vecto
     std::vector<Haplotype> result {};
     if (!denovos.empty()) {
         const auto allele_region = denovos.front().mapped_region();
-        for (const auto& p :genotypes) {
+        for (const auto& p : genotypes) {
             const auto& overlapped_genotypes = overlap_range(p.second, allele_region);
             if (size(overlapped_genotypes) == 1) {
                 const auto& genotype = overlapped_genotypes.front();
@@ -97,10 +97,23 @@ auto get_denovo_haplotypes(const Facet::GenotypeMap& genotypes, const std::vecto
     return result;
 }
 
+bool contains(const MappableFlatSet<Genotype<Haplotype>>& genotypes, const Haplotype& haplotype)
+{
+    return std::any_of(std::cbegin(genotypes), std::cend(genotypes), [&] (const auto& genotype) { return genotype.contains(haplotype); });
+}
+
+bool is_parental_haplotype(const Haplotype& haplotype, const Facet::GenotypeMap& genotypes, const Trio& trio)
+{
+    return contains(genotypes.at(trio.mother()), haplotype) || contains(genotypes.at(trio.father()), haplotype);
+}
+
 auto get_denovo_haplotypes(const VcfRecord& denovo, const Facet::GenotypeMap& genotypes, const Trio& trio)
 {
     const auto denovo_alleles = get_denovo_alleles(denovo, trio);
-    return get_denovo_haplotypes(genotypes, denovo_alleles);
+    auto result = get_denovo_haplotypes(genotypes, denovo_alleles);
+    const auto is_parental = [&] (const auto& haplotype) { return is_parental_haplotype(haplotype, genotypes, trio); };
+    result.erase(std::remove_if(std::begin(result), std::end(result), is_parental), std::end(result));
+    return result;
 }
 
 template <typename MappableType>
