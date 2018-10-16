@@ -76,8 +76,8 @@ def main(args):
         os.remove(cmake_cache_file)
 
     cmake_options = []
-    if args["root"]:
-        cmake_options.extend(["-DINSTALL_ROOT=ON", octopus_dir])
+    if args["prefix"]:
+        cmake_options.append("-DCMAKE_INSTALL_PREFIX=" + args["prefix"])
     if args["c_compiler"]:
         cmake_options.append("-DCMAKE_C_COMPILER=" + args["c_compiler"])
     if args["cxx_compiler"]:
@@ -123,15 +123,20 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--prefix',
+                        required=False,
+                        type=str,
+                        help='Install into given location')
     parser.add_argument('--clean',
                         help='Do a clean install',
                         action='store_true')
-    parser.add_argument('--root',
-                        help='Install into /usr/local/bin',
-                        action='store_true')
     parser.add_argument('-c', '--c_compiler',
+                        required=False,
+                        type=str,
                         help='C compiler path to use')
     parser.add_argument('-cxx', '--cxx_compiler',
+                        required=False,
+                        type=str,
                         help='C++ compiler path to use')
     parser.add_argument('--keep_cache',
                         help='Do not refresh CMake cache',
@@ -149,8 +154,11 @@ if __name__ == '__main__':
                         help='The number of threads to use for building',
                         type=int)
     parser.add_argument('--boost',
+                        required=False,
+                        type=str,
                         help='The Boost library root')
     parser.add_argument('--download',
+                        required=False,
                         help='Try to download octopus classifiers',
                         action='store_true')
     parser.add_argument('--verbose',

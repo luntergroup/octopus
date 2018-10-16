@@ -36,7 +36,13 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-message("-- Build type is " ${CMAKE_BUILD_TYPE})
+message("-- Build type: " ${CMAKE_BUILD_TYPE})
+
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    SET(CMAKE_INSTALL_PREFIX "${octopus_SOURCE_DIR}/bin" CACHE PATH "Installing to ${octopus_SOURCE_DIR}$" FORCE)
+endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+
+message("-- Installation prefix: " ${CMAKE_INSTALL_PREFIX})
 
 # for the main octopus executable
 add_subdirectory(lib)
