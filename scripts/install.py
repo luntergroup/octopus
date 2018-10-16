@@ -92,6 +92,8 @@ def main(args):
         cmake_options.append("-DBUILD_SHARED_LIBS=OFF")
     if args["boost"]:
         cmake_options.append("-DBOOST_ROOT=" + args["boost"])
+    if args["htslib"]:
+        cmake_options.append("-DHTSLIB_ROOT=" + args["htslib"])
     if args["verbose"]:
         cmake_options.append("CMAKE_VERBOSE_MAKEFILE:BOOL=ON")
 
@@ -157,6 +159,10 @@ if __name__ == '__main__':
                         required=False,
                         type=str,
                         help='The Boost library root')
+    parser.add_argument('--htslib',
+                        required=False,
+                        type=str,
+                        help='The HTSlib library root')
     parser.add_argument('--download',
                         required=False,
                         help='Try to download octopus classifiers',
