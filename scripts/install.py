@@ -95,7 +95,11 @@ def main(args):
     if args["verbose"]:
         cmake_options.append("CMAKE_VERBOSE_MAKEFILE:BOOL=ON")
 
-    ret = call(["cmake"] + cmake_options + [".."])
+    try:
+        # CMake version 3 is called cmake3 in CentOS (see https://github.com/luntergroup/octopus/issues/37).
+        ret = call(["cmake3"] + cmake_options + [".."])
+    except FileNotFoundError:
+        ret = call(["cmake"] + cmake_options + [".."])
 
     if ret == 0:
         make_options = []
