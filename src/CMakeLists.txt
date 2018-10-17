@@ -202,6 +202,8 @@ set(CORE_SOURCES
     core/callers/trio_caller.cpp
     core/callers/polyclone_caller.hpp
     core/callers/polyclone_caller.cpp
+    core/callers/cell_caller.hpp
+    core/callers/cell_caller.cpp
 
     core/types/calls/call_types.hpp
     core/types/calls/call.hpp
