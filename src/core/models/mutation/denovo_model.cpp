@@ -165,8 +165,7 @@ double calculate_log_probability(const Variant& variant, const Haplotype& contex
         if (is_simple_indel(variant)) {
             return std::log(calculate_indel_probability(indel_model, offset, indel_size(variant)));
         } else {
-            return std::log(calculate_indel_probability(indel_model, offset, alt_sequence_size(variant)))
-                    + std::log(calculate_indel_probability(indel_model, offset, region_size(variant)));
+            return std::log(calculate_indel_probability(indel_model, offset, ref_sequence_size(variant) + alt_sequence_size(variant)));
         }
     } else {
         return snv_penalty * -maths::constants::ln10Div10<>;
